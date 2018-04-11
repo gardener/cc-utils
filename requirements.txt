@@ -1,0 +1,14 @@
+# add requirements for local tests. Install with: pip3 install -r requirements.txt
+Mako
+deepdiff
+deepmerge
+ensure
+# force pre-released version (remove version after 1.x was released)
+github3.py==1.0.0a4
+kubernetes
+requests
+semver
+sseclient-py
+toposort
+urllib3
+

@@ -1,0 +1,175 @@
+#!/usr/bin/env python3
+
+# Copyright 2018 The Gardener Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import argparse
+import os
+import pkgutil
+import inspect
+import itertools
+import sys
+
+import ctx
+
+import_errs = []
+
+def print_import_errs():
+    import util
+    for ie in import_errs:
+        util.verbose(ie)
+
+def main():
+    '''
+    Creates a command line parser (using argparse) for each python module found in this
+    directory (except for _this_ module). For each module, a sub-command named as the
+    module name is added. Each function defined in a given module is again added as a
+    sub-sub-command. Based on the function signature, optional arguments are added.
+    This parser is then used to parse the given ARGV. Provided that parsing succeeds,
+    the thus specified function is executed.
+    '''
+    parser = argparse.ArgumentParser()
+    add_global_args(parser)
+    sub_command_parsers = parser.add_subparsers()
+    for _, module_name, _ in pkgutil.iter_modules([os.path.dirname(os.path.abspath(__file__))]):
+    # skip own module name
+        if module_name == os.path.splitext(os.path.basename(__file__))[0]:
+            continue
+        add_module(module_name, sub_command_parsers)
+    if len(sys.argv) == 1:
+        parser.print_usage()
+        print_import_errs()
+        sys.exit(1)
+    parsed = parser.parse_args()
+    # write parsed args to global ctx module so called module functions may
+    # retrieve if (see util.ctx)
+    ctx.args = parsed
+    parsed.module.args = parsed
+    parsed.func(parsed)
+    print_import_errs()
+
+def add_global_args(parser):
+    parser.add_argument('--quiet', action='store_true')
+    parser.add_argument('--verbose', action='store_true')
+
+def add_module(module_name, parser):
+    try:
+        module = __import__(module_name)
+    except ImportError as ie:
+        import_errs.append('failed to import {m}: {e}'.format(m=module_name, e=ie))
+        # ignore errors due to missing dependencies
+        return
+    # skip if module defines a symbol 'main'
+    if hasattr(module, 'main'):
+        return
+    module_parser = parser.add_parser(module_name)
+    module_parser.set_defaults(
+      func=display_usage_function(module_parser),
+      module=module
+    )
+    # add module-specific arguments
+    if hasattr(module, '__add_module_command_args'):
+        getattr(module, '__add_module_command_args')(module_parser)
+
+    function_parsers = module_parser.add_subparsers()
+
+    for fname, function in inspect.getmembers(module, predicate=inspect.isfunction):
+        if fname.startswith('_'):
+            continue # skip "private" functions
+        function_parser = function_parsers.add_parser(fname)
+        fspec = inspect.getfullargspec(function)
+        function_parser.set_defaults(func=run_function(function))
+
+        action = None
+        # defaults are filled "from the end", so reverse both argnames and defaults
+        for argname, default in reversed(list(
+            itertools.zip_longest(
+              reversed(fspec.args),
+              reversed(fspec.defaults or []),
+              fillvalue=NotImplemented # workaround to be able to discriminate from None
+              )
+          )):
+            cl_arg = '--' + argname.replace('_', '-')
+            annotation = fspec.annotations.get(argname, None)
+            argtype = None
+            action = None
+            kwargs = {}
+            if annotation:
+                from util import CliHint
+                # special case: CliHint
+                if type(annotation) == CliHint:
+                    typehint = annotation.typehint
+                    kwargs.update(annotation.argparse_args)
+                else:
+                    typehint = annotation
+                # handle type-specific actions (lists, booleans, ..)
+                if type(typehint) == type: # primitives (str, bool, int, ..)
+                    argtype = typehint
+                    if typehint == bool:
+                        action = 'store_true'
+                        argtype = None # type must not be set for store_true/store_false actions
+                elif type(typehint) == list:
+                    action = 'append'
+            if default != NotImplemented:
+                required = False
+            else:
+                required = True
+                default = None # set back to None to not have argparser behave strangely :-)
+
+            # add_argument does not allow 'type' as a parameter in some cases;
+            # workaround this by omitting it in all cases where it is None anyway
+            if argtype is not None and not 'type' in kwargs:
+                kwargs['type'] = argtype
+
+            if default:
+                help_text = kwargs.get('help', '')
+                help_text += '(default: %(default)s)'
+                kwargs['help'] = help_text
+
+            function_parser.add_argument(
+              cl_arg,
+              required=required,
+              default=default,
+              action=action,
+              **kwargs
+            )
+
+            if annotation == bool and not argname.startswith('no'):
+                kwargs['help'] = '(default: False)'
+                cl_arg = '--no-' + argname.replace('_', '-')
+                action = 'store_false'
+                function_parser.add_argument(
+                  cl_arg,
+                  required=False,
+                  action=action,
+                  dest=argname.replace('-', '_'),
+                  **kwargs
+                )
+
+def run_function(function):
+    def function_runner(args):
+        fspec = inspect.getfullargspec(function)
+        function_args = []
+        for argname in fspec.args:
+            function_args.append(getattr(args, argname))
+        function(*function_args)
+    return function_runner
+
+def display_usage_function(parser):
+    def display_usage(_):
+        parser.print_usage()
+    return display_usage
+
+if __name__ == '__main__':
+    main()

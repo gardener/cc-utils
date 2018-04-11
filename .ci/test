@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+set -e
+
+# usage: $1: <src-dir>
+
+src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
+
+python3 -m unittest discover --verbose --start-directory "${src_dir}" -p '*_test.py'

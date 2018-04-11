@@ -1,0 +1,260 @@
+# Copyright 2018 The Gardener Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import unittest
+
+from unittest.mock import MagicMock
+
+import model as examinee
+from model import ModelValidationError
+
+class TeamCredentialTest(unittest.TestCase):
+    def setUp(self):
+        self.raw_dict = TeamCredentialTest.create_valid_test_dictionary()
+
+    @staticmethod
+    def create_valid_test_dictionary():
+        return {
+            'teamname': 'bar',
+            'username': 'foo',
+            'password': 'baz',
+            'gitAuthTeam': 'foo/bar',
+            'githubAuthClientId': 'foobarbaz',
+            'githubAuthClientSecret': 'hush',
+            'githubAuthAuthUrl': 'foo://some.url',
+            'githubAuthApiUrl': 'bar://another.url',
+            'githubAuthTokenUrl': 'baz://yet.another.url',
+        }
+
+    def test_team_credentials_complete_basic_auth_detected(self):
+        test_object = examinee.ConcourseTeamCredentials(self.raw_dict)
+        self.assertTrue(test_object.has_basic_auth_credentials())
+
+    def test_team_credentials_complete_github_oauth_detected(self):
+        test_object = examinee.ConcourseTeamCredentials(self.raw_dict)
+        self.assertTrue(test_object.has_github_oauth_credentials())
+
+    def test_validation_fails_on_empty_dict(self):
+        raw_dict = {}
+        with self.assertRaises(ModelValidationError):
+            examinee.ConcourseTeamCredentials(raw_dict)
+
+    def test_git_auth_team_getter(self):
+        test_object = examinee.ConcourseTeamCredentials(self.raw_dict)
+
+        org, team = test_object.github_auth_team(split=True)
+        self.assertEqual(org, 'foo')
+        self.assertEqual(team, 'bar')
+
+        org_team = test_object.github_auth_team(split=False)
+        self.assertEqual(org_team, 'foo/bar')
+
+    def test_validation_fails_on_missing_teamname(self):
+        self.raw_dict.pop('teamname')
+        with self.assertRaises(ModelValidationError):
+            examinee.ConcourseTeamCredentials(self.raw_dict)
+
+    def test_validation_fails_on_missing_basic_auth_value(self):
+        for key in ('username', 'password'):
+            with self.subTest(value=key):
+                test_dict = TeamCredentialTest.create_valid_test_dictionary()
+                test_dict.pop(key)
+                with self.assertRaises(ModelValidationError):
+                    examinee.ConcourseTeamCredentials(test_dict)
+
+    def test_validation_fails_on_missing_github_oauth_value(self):
+        for key in ('gitAuthTeam', 'githubAuthClientId', 'githubAuthClientSecret'):
+            with self.subTest(value=key):
+                test_dict = TeamCredentialTest.create_valid_test_dictionary()
+                test_dict.pop(key)
+                with self.assertRaises(ModelValidationError):
+                    examinee.ConcourseTeamCredentials(test_dict)
+
+    def test_validation_fails_on_missing_github_oauth_urls(self):
+        for key in ('githubAuthAuthUrl', 'githubAuthApiUrl', 'githubAuthTokenUrl'):
+            with self.subTest(url=key):
+                test_dict = TeamCredentialTest.create_valid_test_dictionary()
+                test_dict.pop(key)
+                with self.assertRaises(ModelValidationError):
+                    examinee.ConcourseTeamCredentials(test_dict)
+
+    def test_validation_fails_on_invalid_github_oauth_teamname(self):
+        for value in ('foo/bar/baz', '/foo', 'bar/', 'baz'):
+            with self.subTest(value=value):
+                test_dict = TeamCredentialTest.create_valid_test_dictionary()
+                test_dict['gitAuthTeam'] = value
+                with self.assertRaises(ModelValidationError):
+                    examinee.ConcourseTeamCredentials(test_dict)
+
+
+class EmailConfigTest(unittest.TestCase):
+    def setUp(self):
+        self.raw_dict = EmailConfigTest.create_valid_test_dictionary()
+
+    @staticmethod
+    def create_valid_test_dictionary():
+        return {
+            'host': 'mail.foo.bar',
+            'port': 666,
+            'technicalUser': {'username': 'u', 'password': 'p'}
+        }
+
+    def test_validation_fails_on_missing_key(self):
+        for key in ('host', 'port', 'technicalUser'):
+            with self.subTest(key=key):
+                test_dict = EmailConfigTest.create_valid_test_dictionary()
+                test_dict.pop(key)
+                with self.assertRaises(ModelValidationError):
+                    examinee.EmailConfig(name='foo', raw_dict=test_dict)
+
+    def test_validation_fails_on_invalid_credentials(self):
+        for key in ('username', 'password'):
+            with self.subTest(key=key):
+                test_dict = EmailConfigTest.create_valid_test_dictionary()
+                test_dict['technicalUser'].pop(key)
+                with self.assertRaises(ModelValidationError):
+                    examinee.EmailConfig(name='bar', raw_dict=test_dict)
+
+
+class GithubConfigTest(unittest.TestCase):
+    def setUp(self):
+        self.raw_dict = GithubConfigTest.create_valid_test_dictionary()
+
+    @staticmethod
+    def create_valid_test_dictionary():
+        return {
+            'sshUrl': 'ssh://foo@bar.baz',
+            'httpUrl': 'https://foo.bar',
+            'apiUrl': 'https://api.foo.bar',
+            'disable_tls_validation': True,
+            'webhook_token': 'foobarbaz',
+            'webhook_user': {
+                'authToken': 'bazbarfoo',
+            },
+            'technicalUser': {
+                'username': 'foo',
+                'password': 'bar',
+                'authToken': 'foobar',
+                'privateKey': 'barfoobaz',
+            },
+        }
+
+    def test_validation_fails_on_missing_key(self):
+        for key in ('sshUrl', 'httpUrl', 'apiUrl', 'disable_tls_validation', 'webhook_token', 'webhook_user', 'technicalUser'):
+            with self.subTest(key=key):
+                test_dict = GithubConfigTest.create_valid_test_dictionary()
+                test_dict.pop(key)
+                with self.assertRaises(ModelValidationError):
+                    examinee.GithubConfig(name='gitabc', raw_dict=test_dict)
+
+    def test_validation_fails_on_invalid_webhook_user(self):
+                self.raw_dict['webhook_user'].pop('authToken')
+                with self.assertRaises(ModelValidationError):
+                    examinee.GithubConfig(name='gitbla', raw_dict=self.raw_dict)
+
+    def test_validation_fails_on_invalid_technicalUser(self):
+        for key in ('username', 'password', 'authToken', 'privateKey'):
+            with self.subTest(key=key):
+                test_dict = GithubConfigTest.create_valid_test_dictionary()
+                test_dict['technicalUser'].pop(key)
+                with self.assertRaises(ModelValidationError):
+                    examinee.GithubConfig(name='anothergit', raw_dict=test_dict)
+
+
+class ConcourseConfigTest(unittest.TestCase):
+    def setUp(self):
+        self.raw_dict = ConcourseConfigTest.create_valid_test_dictionary()
+
+    @staticmethod
+    def create_valid_test_dictionary():
+        return {
+            'pipeline_definitions_dir': 'foo/bar',
+            'deploymentCfgDir': 'bar/foo',
+            'externalUrl': 'foo://bar.baz',
+            'proxyUrl': 'bar://foo.baz',
+            'teams': {
+                'main': TeamCredentialTest.create_valid_test_dictionary(),
+            },
+            'helm_chart_default_values_config':'foo',
+        }
+
+    def test_validation_fails_on_missing_key(self):
+        for key in ('pipeline_definitions_dir', 'deploymentCfgDir', 'externalUrl', 'proxyUrl', 'teams', 'helm_chart_default_values_config'):
+            with self.subTest(key=key):
+                test_dict = ConcourseConfigTest.create_valid_test_dictionary()
+                test_dict.pop(key)
+                with self.assertRaises(ModelValidationError):
+                    examinee.ConcourseConfig(name='x', raw_dict=test_dict)
+
+    def test_validation_fails_on_empty_teams(self):
+        self.raw_dict['teams'].pop('main')
+        with self.assertRaises(ModelValidationError):
+            examinee.ConcourseConfig(name='ateam', raw_dict=self.raw_dict)
+
+    def test_validation_fails_on_absent_main_team(self):
+        self.raw_dict['teams'].pop('main')
+        self.raw_dict['teams']['foo'] = TeamCredentialTest.create_valid_test_dictionary()
+        with self.assertRaises(ModelValidationError):
+            examinee.ConcourseConfig(name='bteam', raw_dict=self.raw_dict)
+
+    def test_validation_fails_on_invalid_team(self):
+        self.raw_dict['teams']['main'].pop('teamname')
+        with self.assertRaises(ModelValidationError):
+            examinee.ConcourseConfig(name='cteam', raw_dict=self.raw_dict)
+
+
+class BasicCredentialsTest(unittest.TestCase):
+    def setUp(self):
+        self.raw_dict = {
+            'username':'foo',
+            'password':'bar',
+        }
+
+    def test_validation_fails_on_missing_key(self):
+        for key in ('username', 'password'):
+            with self.subTest(key=key):
+                test_dict = self.raw_dict.copy()
+                test_dict.pop(key)
+                with self.assertRaises(ModelValidationError):
+                    examinee.BasicCredentials(test_dict)
+
+
+class JobMappingTest(unittest.TestCase):
+    def setUp(self):
+        self.valid_dict = {
+            'concourse_team_name':'bar',
+            'definition_dirs':['foo', 'baz'],
+        }
+
+    def test_validation_fails_on_missing_key(self):
+        for key in ('concourse_team_name', 'definition_dirs'):
+            with self.subTest(key=key):
+                test_dict = self.valid_dict.copy()
+                test_dict.pop(key)
+                with self.assertRaises(ModelValidationError):
+                    examinee.JobMapping(test_dict)
+
+
+class JobMappingSetTest(unittest.TestCase):
+    def setUp(self):
+        jmt = JobMappingTest()
+        jmt.setUp()
+        self.valid_raw = [jmt.valid_dict]
+
+    def test_ctor_fails_on_non_iterable_mappings_object(self):
+        with self.assertRaises(TypeError):
+            class NonIterable(object):
+                pass
+            examinee.JobMappingSet(name='amap', raw_dict=NonIterable())
+

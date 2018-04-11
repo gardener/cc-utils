@@ -1,0 +1,14 @@
+#!/bin/bash -e
+
+set -e
+
+# usage: $1: <src-dir>
+
+src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
+
+python3 $(which pylint3) -j 4 --errors-only \
+  ${src_dir}/*.py \
+  ${src_dir}/concourse/*.py \
+  ${src_dir}/mail/*.py \
+  ${src_dir}/test/*.py \
+  ${src_dir}/test/concourse/*.py
