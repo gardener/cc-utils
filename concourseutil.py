@@ -214,15 +214,11 @@ def _list_github_resources(
       passwd=concourse_passwd
     )
     github_hostname = urlparse(github_url).netloc
-    info(github_hostname)
     pipeline_names = concourse_pipelines if concourse_pipelines else concourse_api.pipelines()
     for pipeline_name in pipeline_names:
         pipeline_cfg = concourse_api.pipeline_cfg(pipeline_name)
         resources = pipeline_cfg.resources
         resources = filter(lambda r: r.has_webhook_token(), resources)
-        resources = list(resources)
-        for r in resources:
-            info('hostname: ' + r.github_source().hostname())
         # only process repositories from concourse's "default" github repository
         resources = filter(lambda r: r.github_source().hostname() == github_hostname, resources)
 
