@@ -221,6 +221,14 @@ class KubernetesNamespaceHelper(object):
         ns = V1Namespace(metadata=metadata)
         return self.core_api.create_namespace(ns)
 
+    def create_if_absent(self, namespace: str):
+        '''Create a new namespace iff it does not already exist'''
+        ensure_not_empty(namespace)
+
+        existing_namespace = self.get_namespace(namespace)
+        if not existing_namespace:
+            self.create_namespace(namespace)
+
     @ensure_annotations
     def delete_namespace(self, namespace: str):
         ensure_not_empty(namespace)
