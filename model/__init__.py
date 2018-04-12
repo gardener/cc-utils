@@ -442,9 +442,6 @@ class ConcourseConfig(NamedModelElement):
     def deployment_cfg_dir(self):
         return self.snd.deploymentCfgDir
 
-    def pipeline_definitions_dir(self):
-        return self.snd.pipeline_definitions_dir
-
     def helm_chart_default_values_config(self):
         return self.snd.helm_chart_default_values_config
 
@@ -452,7 +449,7 @@ class ConcourseConfig(NamedModelElement):
         return self.raw.get('helm_chart_values', None)
 
     def _required_attributes(self):
-        return ['pipeline_definitions_dir', 'deploymentCfgDir', 'externalUrl', 'proxyUrl', 'teams', 'helm_chart_default_values_config']
+        return ['deploymentCfgDir', 'externalUrl', 'proxyUrl', 'teams', 'helm_chart_default_values_config']
 
     def _validate_dict(self):
         super()._validate_dict()

@@ -179,7 +179,6 @@ class ConcourseConfigTest(unittest.TestCase):
     @staticmethod
     def create_valid_test_dictionary():
         return {
-            'pipeline_definitions_dir': 'foo/bar',
             'deploymentCfgDir': 'bar/foo',
             'externalUrl': 'foo://bar.baz',
             'proxyUrl': 'bar://foo.baz',
@@ -190,7 +189,7 @@ class ConcourseConfigTest(unittest.TestCase):
         }
 
     def test_validation_fails_on_missing_key(self):
-        for key in ('pipeline_definitions_dir', 'deploymentCfgDir', 'externalUrl', 'proxyUrl', 'teams', 'helm_chart_default_values_config'):
+        for key in ('deploymentCfgDir', 'externalUrl', 'proxyUrl', 'teams', 'helm_chart_default_values_config'):
             with self.subTest(key=key):
                 test_dict = ConcourseConfigTest.create_valid_test_dictionary()
                 test_dict.pop(key)
