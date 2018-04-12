@@ -22,6 +22,7 @@ import shlex
 
 from ensure import ensure, ensure_annotations
 from urllib3.exceptions import ReadTimeoutError
+from urllib3.exceptions import ProtocolError
 
 from kubernetes import config, client, watch
 from kubernetes.client.rest import ApiException
@@ -378,7 +379,7 @@ def _wait_for_shoot(namespace, on_event, expected_result, timeout_seconds:int=12
         try:
             for e in w.stream(custom_api.list_namespaced_custom_object,
               group='garden.sapcloud.io',
-              version='v1',
+              version='v1beta1',
               namespace=namespace,
               plural='shoots',
               # we need to reduce the request-timeout due to our workaround
@@ -393,12 +394,16 @@ def _wait_for_shoot(namespace, on_event, expected_result, timeout_seconds:int=12
         except ConnectionResetError as cre:
             # ignore connection errors against k8s api endpoint (these may be temporary)
             info('connection reset error from k8s API endpoint - ignored: ' + str(cre))
+        except ProtocolError as err:
+            info('http connection error - ignored')
+        except KeyError as err:
+            info("key {} not yet available - ignored".format(str(err)))
     # handle case where timeout was exceeded, but w.stream returned erroneously (see bug
     # description above)
     raise RuntimeError(result)
 
 
-def retrieve_operator_log_entries(
+def retrieve_controller_manager_log_entries(
   pod_name:str,
   namespace:str,
   only_if_newer_than_rfc3339_ts:str=None,
