@@ -125,7 +125,6 @@ def render_pipelines(
 def replicate_pipelines(
     cfg_set,
     concourse_cfg,
-    team_name,
     job_mapping,
     definitions_root_dir,
     template_path,
@@ -136,6 +135,7 @@ def replicate_pipelines(
         ensure_directory_exists(os.path.abspath(os.path.join(definitions_root_dir, dd)))
         for dd in job_mapping.definition_dirs()
     ]
+    team_name = job_mapping.team_name()
     team_credentials = concourse_cfg.team_credentials(team_name)
 
     pipeline_names = set()
