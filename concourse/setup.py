@@ -137,13 +137,16 @@ def deploy_or_upgrade_concourse(
     config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
     configuration_set = config_factory.cfg_set(cfg_name=config_name)
     concourse_cfg = configuration_set.concourse()
+    helmchart_cfg_type = 'concourse_helmchart'
 
-    default_helm_value_cfg_name = concourse_cfg.helm_chart_default_values_config()
     default_helm_values = config_factory._cfg_element(
-        cfg_type_name = 'concourse_base_values',
-        cfg_name = default_helm_value_cfg_name
+        cfg_type_name = helmchart_cfg_type,
+        cfg_name = concourse_cfg.helm_chart_default_values_config()
     ).raw
-    custom_helm_values = concourse_cfg.helm_chart_values()
+    custom_helm_values = config_factory._cfg_element(
+        cfg_type_name = helmchart_cfg_type,
+        cfg_name = concourse_cfg.helm_chart_values()
+    ).raw
     deployment_cfg_dir = os.path.join(config_dir, concourse_cfg.deployment_cfg_dir())
 
     # create namespace if absent
