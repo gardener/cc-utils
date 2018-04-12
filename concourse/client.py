@@ -131,7 +131,7 @@ class AuthenticatedRequestBuilder(object):
 
     def delete(self, url: str, return_type=None, **kwargs):
         return self._request(
-                method=requests.put,
+                method=requests.delete,
                 url=url,
                 return_type=None,
                 **kwargs
