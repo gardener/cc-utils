@@ -436,6 +436,9 @@ class ConcourseConfig(NamedModelElement):
             return self.snd.proxyUrl
         return self.external_url()
 
+    def job_mapping_cfg_name(self):
+        return self.snd.job_mapping
+
     def team_credentials(self, teamname):
         return ConcourseTeamCredentials(self.snd.teams[teamname])
 
