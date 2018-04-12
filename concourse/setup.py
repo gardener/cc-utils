@@ -121,6 +121,17 @@ def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
     return instance_specific_values
 
 
+def deploy_concourse_landscape(
+        config_dir: str,
+        config_name: str,
+        deployment_name: str='concourse',
+):
+    deploy_or_upgrade_concourse(
+        config_dir=config_dir,
+        config_name=config_name,
+        deployment_name=deployment_name,
+    )
+
 # intentionally hard-coded; review / adjustment of "values.yaml" is required in most cases
 # of version upgrades
 CONCOURSE_HELM_CHART_VERSION = "1.2.1"
