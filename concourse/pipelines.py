@@ -121,3 +121,38 @@ def render_pipelines(
             pipeline_args
     )
 
+
+def replicate_pipelines(
+    cfg_set,
+    concourse_cfg,
+    team_name,
+    job_mapping,
+    definitions_root_dir,
+    template_path,
+    template_include_dir,
+):
+    ensure_directory_exists(definitions_root_dir)
+    definition_dirs = [
+        ensure_directory_exists(os.path.abspath(os.path.join(definitions_root_dir, dd)))
+        for dd in job_mapping.definition_dirs()
+    ]
+    team_credentials = concourse_cfg.team_credentials(team_name)
+
+    pipeline_names = set()
+
+    for rendered_pipeline, _, pipeline_args in generate_pipelines(
+        definition_directories=definition_dirs,
+        template_path=template_path,
+        template_include_dir=template_include_dir,
+        config_set=cfg_set,
+    ):
+        pipeline_name = pipeline_args.name
+        pipeline_names.add(pipeline_name)
+        info('deploying pipeline {p} to team {t}'.format(p=pipeline_name, t=team_name))
+        deploy_pipeline(
+            pipeline_definition=rendered_pipeline,
+            pipeline_name=pipeline_name,
+            concourse_cfg=concourse_cfg,
+            team_credentials=team_credentials,
+        )
+
