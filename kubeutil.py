@@ -25,11 +25,11 @@ from urllib3.exceptions import ReadTimeoutError
 
 from kubernetes import config, client, watch
 from kubernetes.client.rest import ApiException
-from kubernetes.client import CoreV1Api, V1ObjectMeta, V1Secret, V1ServiceAccount, V1LocalObjectReference, V1Namespace
+from kubernetes.client import CoreV1Api, V1ObjectMeta, V1Secret, V1ServiceAccount, V1LocalObjectReference, V1Namespace, V1Service
 import kubernetes.client
 from kubernetes.config.kube_config import KubeConfigLoader
 
-from util import fail, info, ensure_file_exists, ensure_not_empty
+from util import fail, info, ensure_file_exists, ensure_not_empty, ensure_not_none
 from util import ctx as global_ctx
 
 class Ctx(object):
@@ -72,6 +72,9 @@ class Ctx(object):
 
     def namespace_helper(self) -> 'KubernetesNamespaceHelper':
         return KubernetesNamespaceHelper(self.create_core_api())
+
+    def service_helper(self) -> 'KubernetesServiceHelper':
+        return KubernetesServiceHelper(self.create_core_api())
 
     def create_core_api(self):
         cfg = self.get_kubecfg()
@@ -223,6 +226,48 @@ class KubernetesNamespaceHelper(object):
                 continue
             return ns
         return None
+
+class KubernetesServiceHelper(object):
+    def __init__(self, core_api: CoreV1Api):
+        self.core_api = core_api
+
+    def replace_or_create_service(self, namespace: str, service: V1Service):
+        '''Create a service in a given namespace. If the service already exists,
+        the previous version will be deleted beforehand
+        '''
+        ensure_not_empty(namespace)
+        ensure_not_none(service)
+
+        service_name = service.metadata.name
+        existing_service = self.get_service(namespace=namespace, name=service_name)
+        if existing_service:
+            self.core_api.delete_namespaced_service(namespace=namespace, name=service_name)
+        self.create_service(namespace=namespace, service=service)
+
+    def create_service(self, namespace: str, service: V1Service):
+        '''Create a service in a given namespace. Raises an `ApiException` if such a Service
+        already exists.
+        '''
+        ensure_not_empty(namespace)
+        ensure_not_none(service)
+
+        self.core_api.create_namespaced_service(namespace=namespace, body=service)
+
+    def get_service(self, namespace: str, name: str) -> V1Service:
+        '''Return the `V1Service` with the given name in the given namespace, or `None` if
+        no such service exists.
+        '''
+        ensure_not_empty(namespace)
+        ensure_not_empty(name)
+
+        try:
+            service = self.core_api.read_namespaced_service(name=name, namespace=namespace)
+        except ApiException as ae:
+            if ae.status == 404:
+                return None
+            raise ae
+        return service
+
 
 ctx = Ctx()
 
