@@ -18,6 +18,7 @@ import subprocess
 from copy import copy
 from ensure import ensure_annotations
 from github3.github import GitHubEnterprise, GitHub
+from urllib.parse import urlparse
 
 from util import parse_yaml_file, info, fail, which, warning, CliHints, CliHint
 from util import ctx as global_ctx
@@ -203,7 +204,8 @@ def _list_github_resources(
   concourse_user:str='kubernetes',
   concourse_passwd:str='kubernetes',
   concourse_team:str='kubernetes',
-  concourse_pipelines=None
+  concourse_pipelines=None,
+  github_url:str=None,
 ):
     concourse_api = concourse.ConcourseApi(base_url=concourse_url, team_name=concourse_team)
     concourse_api.login(
@@ -211,11 +213,15 @@ def _list_github_resources(
       username=concourse_user,
       passwd=concourse_passwd
     )
+    github_hostname = urlparse(github_url).netloc
     pipeline_names = concourse_pipelines if concourse_pipelines else concourse_api.pipelines()
     for pipeline_name in pipeline_names:
         pipeline_cfg = concourse_api.pipeline_cfg(pipeline_name)
         resources = pipeline_cfg.resources
         resources = filter(lambda r: r.has_webhook_token(), resources)
+        # only process repositories from concourse's "default" github repository
+        resources = filter(lambda r: r.github_source().hostname() == github_hostname, resources)
+
         for resource in resources:
             yield resource
 
@@ -238,6 +244,7 @@ def sync_webhooks(
       concourse_passwd=concourse_passwd,
       concourse_team=concourse_team,
       concourse_pipelines=concourse_pipelines,
+      github_url=github_url,
     )
     github_obj = _create_github_api_object(
           github_url=github_url,

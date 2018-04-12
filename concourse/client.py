@@ -476,6 +476,9 @@ class GithubSource(object):
         # hardcode assumption: second part always denotes organisation
         return path.split('/')[2]
 
+    def hostname(self):
+        return urlparse(self.uri).netloc
+
     def access_token(self):
         return self.raw['access_token']
 
