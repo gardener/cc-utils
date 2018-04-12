@@ -25,7 +25,7 @@ from util import (
     SimpleNamespaceDict, parse_yaml_file, fail, ensure_directory_exists, ensure_file_exists, info, is_yaml_file
 )
 
-from concourse import client as client
+from concourse import client
 from model import ConcourseTeamCredentials, ConcourseConfig
 
 def enumerate_pipeline_definitions(directories):
@@ -155,4 +155,18 @@ def replicate_pipelines(
             concourse_cfg=concourse_cfg,
             team_credentials=team_credentials,
         )
+
+    concourse_api = client.ConcourseApi(base_url=concourse_cfg.external_url(), team_name=team_name)
+    concourse_api.login(
+        team=team_name,
+        username=team_credentials.username(),
+        passwd=team_credentials.passwd()
+    )
+
+    # rm pipelines that were not contained in job_mapping
+    pipelines_to_remove = set(concourse_api.pipelines()) - pipeline_names
+
+    for pipeline_name in pipelines_to_remove:
+        info('removing pipeline: {p}'.format(p=pipeline_name))
+        concourse_api.delete_pipeline(pipeline_name)
 
