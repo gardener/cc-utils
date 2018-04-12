@@ -456,7 +456,7 @@ class ConcourseConfig(NamedModelElement):
         # We check for the existence of the 'main'-team as it is the only team that is *required* to
         # exist for any concourse server.
         if not self.snd.teams['main']:
-            raise ModelValidationError('No team \'main\' defined.')
+            raise ModelValidationError('No team "main" defined.')
         # implicitly validate main team
         self.team_credentials('main')
 
