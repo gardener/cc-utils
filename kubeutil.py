@@ -25,7 +25,10 @@ from urllib3.exceptions import ReadTimeoutError
 
 from kubernetes import config, client, watch
 from kubernetes.client.rest import ApiException
-from kubernetes.client import CoreV1Api, V1ObjectMeta, V1Secret, V1ServiceAccount, V1LocalObjectReference, V1Namespace, V1Service
+from kubernetes.client import (
+    CoreV1Api, AppsV1Api, V1ObjectMeta, V1Secret, V1ServiceAccount,
+    V1LocalObjectReference, V1Namespace, V1Service, V1Deployment
+)
 import kubernetes.client
 from kubernetes.config.kube_config import KubeConfigLoader
 
@@ -76,6 +79,9 @@ class Ctx(object):
     def service_helper(self) -> 'KubernetesServiceHelper':
         return KubernetesServiceHelper(self.create_core_api())
 
+    def deployment_helper(self) -> 'KubernetesDeploymentHelper':
+        return KubernetesDeploymentHelper(self.create_apps_api())
+
     def create_core_api(self):
         cfg = self.get_kubecfg()
         return client.CoreV1Api(cfg)
@@ -88,6 +94,9 @@ class Ctx(object):
         cfg = self.get_kubecfg()
         return client.CustomObjectsApi(cfg)
 
+    def create_apps_api(self):
+        cfg = self.get_kubecfg()
+        return client.AppsV1Api(cfg)
 
 def __add_module_command_args(parser):
     parser.add_argument('--kubeconfig', required=False)
@@ -267,6 +276,46 @@ class KubernetesServiceHelper(object):
                 return None
             raise ae
         return service
+
+
+class KubernetesDeploymentHelper(object):
+    def __init__(self, apps_api: AppsV1Api):
+        self.apps_api = apps_api
+
+    def replace_or_create_deployment(self, namespace: str, deployment: V1Deployment):
+        '''Create a deployment in a given namespace. If the deployment already exists,
+        the previous version will be deleted beforehand.
+        '''
+        ensure_not_empty(namespace)
+        ensure_not_none(deployment)
+
+        deployment_name = deployment.metadata.name
+        existing_deployment = self.get_deployment(namespace=namespace, name=deployment_name)
+        if existing_deployment:
+            self.apps_api.delete_namespaced_deployment(namespace=namespace, name=deployment_name, body=kubernetes.client.V1DeleteOptions())
+        self.create_deployment(namespace=namespace, deployment=deployment)
+
+    def create_deployment(self, namespace: str, deployment: V1Deployment):
+        '''Create a deployment in a given namespace. Raises an `ApiException` if such a deployment
+        already exists.'''
+        ensure_not_empty(namespace)
+        ensure_not_none(deployment)
+
+        self.apps_api.create_namespaced_deployment(namespace=namespace, body=deployment)
+
+    def get_deployment(self, namespace: str, name: str) -> V1Deployment:
+        '''Return the `V1Deployment` with the given name in the given namespace, or `None` if
+        no such deployment exists.'''
+        ensure_not_empty(namespace)
+        ensure_not_empty(name)
+
+        try:
+            deployment = self.apps_api.read_namespaced_deployment(name=name, namespace=namespace)
+        except ApiException as ae:
+            if ae.status == 404:
+                return None
+            raise ae
+        return deployment
 
 
 ctx = Ctx()
