@@ -33,7 +33,7 @@ from model import (
     ConcourseConfig,
     SecretsServerConfig,
 )
-from util import ctx as global_ctx, ensure_file_exists, ensure_directory_exists
+from util import ctx as global_ctx, ensure_file_exists, ensure_directory_exists, ensure_not_empty, ensure_not_none
 from kubeutil import (
     KubernetesNamespaceHelper,
     KubernetesSecretHelper,
@@ -108,6 +108,8 @@ def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
     Creates a dict containing instance specific helm values not explicitly stated in
     the `ConcourseConfig`'s helm_chart_values.
     '''
+    ensure_not_none(concourse_cfg)
+
     # 'main'-team credentials need to be included in the values.yaml, unlike the other teams
     creds = concourse_cfg.team_credentials('main')
     external_url = concourse_cfg.external_url()
@@ -143,6 +145,9 @@ def deploy_concourse_landscape(
         config_name: str,
         deployment_name: str='concourse',
 ):
+    ensure_directory_exists(config_dir)
+    ensure_not_empty(config_name)
+
     deploy_secrets_server(
         config_dir=config_dir,
         config_name=config_name,
@@ -165,6 +170,9 @@ def deploy_or_upgrade_concourse(
         deployment_name: str='concourse',
 ):
     """Deploys (or upgrades) Concourse using the Helm CLI"""
+    ensure_directory_exists(config_dir)
+    ensure_not_empty(config_name)
+
     helm_executable = util.which("helm")
     namespace = deployment_name
 
@@ -235,6 +243,9 @@ def deploy_secrets_server(
         config_dir: str,
         config_name: str,
 ):
+    ensure_directory_exists(config_dir)
+    ensure_not_empty(config_name)
+
     config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
     config_set = config_factory.cfg_set(cfg_name=config_name)
     secrets_server_config = config_set.secrets_server()
@@ -268,6 +279,8 @@ def deploy_secrets_server(
 def generate_secrets_server_service(
     secrets_server_config: SecretsServerConfig,
 ):
+    ensure_not_none(secrets_server_config)
+
     # We need to ensure that the labels and selectors match between the deployment and the service,
     # therefore we base them on the configured service name.
     service_name = secrets_server_config.service_name()
@@ -292,6 +305,8 @@ def generate_secrets_server_service(
 def generate_secrets_server_deployment(
     secrets_server_config: SecretsServerConfig,
 ):
+    ensure_not_none(secrets_server_config)
+
     service_name = secrets_server_config.service_name()
     secret_name = secrets_server_config.secrets().concourse_secret_name()
     # We need to ensure that the labels and selectors match for both the deployment and the service,
