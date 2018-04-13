@@ -58,7 +58,7 @@ def deploy_or_upgrade_concourse(
     if dry_run:
         return
 
-    setup.deploy_or_upgrade_concourse(
+    setup.deploy_concourse_landscape(
         config_dir=config_dir,
         config_name=config_name,
         deployment_name=deployment_name,

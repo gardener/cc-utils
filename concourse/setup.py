@@ -27,9 +27,26 @@ import yaml
 import util
 import kubeutil
 
-from model import ConfigFactory, ConcourseConfig
+from model import (
+    ConfigFactory,
+    ConfigurationSet,
+    ConcourseConfig,
+    SecretsServerConfig,
+)
 from util import ctx as global_ctx, ensure_file_exists, ensure_directory_exists
-from kubeutil import (KubernetesNamespaceHelper, KubernetesSecretHelper, KubernetesServiceAccountHelper)
+from kubeutil import (
+    KubernetesNamespaceHelper,
+    KubernetesSecretHelper,
+    KubernetesServiceAccountHelper,
+    KubernetesDeploymentHelper,
+    KubernetesServiceHelper,
+)
+
+from kubernetes.client import (
+    V1Service, V1ObjectMeta, V1ServiceSpec, V1ServicePort, V1Deployment,
+    V1DeploymentSpec, V1PodTemplateSpec, V1PodSpec, V1Container, V1ResourceRequirements, V1ContainerPort,
+    V1Probe, V1TCPSocketAction, V1VolumeMount, V1Volume, V1SecretVolumeSource, V1LabelSelector
+)
 
 
 IMAGE_PULL_SECRET_NAME = "ci-gcr-readonly"
@@ -121,6 +138,23 @@ def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
     return instance_specific_values
 
 
+def deploy_concourse_landscape(
+        config_dir: str,
+        config_name: str,
+        deployment_name: str='concourse',
+):
+    deploy_secrets_server(
+        config_dir=config_dir,
+        config_name=config_name,
+    )
+    # Concourse is deployed last since Helm will lose connection if deployment takes more than ~60 seconds.
+    # Helm will still continue deploying server-side, but the client will report an error.
+    deploy_or_upgrade_concourse(
+        config_dir=config_dir,
+        config_name=config_name,
+        deployment_name=deployment_name,
+    )
+
 # intentionally hard-coded; review / adjustment of "values.yaml" is required in most cases
 # of version upgrades
 CONCOURSE_HELM_CHART_VERSION = "1.2.1"
@@ -196,3 +230,135 @@ def deploy_or_upgrade_concourse(
         # run helm from inside the temporary directory so that the prepared file paths work
         subprocess.run(subprocess_args, check=True, cwd=temp_dir, env=helm_env)
 
+
+def deploy_secrets_server(
+        config_dir: str,
+        config_name: str,
+):
+    config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
+    config_set = config_factory.cfg_set(cfg_name=config_name)
+    secrets_server_config = config_set.secrets_server()
+
+    ctx = kubeutil.ctx
+    service_helper = ctx.service_helper()
+    deployment_helper = ctx.deployment_helper()
+    secrets_helper = ctx.secret_helper()
+    namespace_helper = ctx.namespace_helper()
+
+    namespace = secrets_server_config.namespace()
+    namespace_helper.create_if_absent(namespace)
+
+    secret_name = secrets_server_config.secrets().concourse_secret_name()
+    # Deploy an empty secret if none exists so that the secrets-server can start.
+    # However, if there is already a secret we should not purge its contents.
+    if not secrets_helper.get_secret(secret_name, namespace):
+        secrets_helper.put_secret(
+            name=secret_name,
+            data={},
+            namespace=namespace,
+        )
+
+    service = generate_secrets_server_service(secrets_server_config)
+    deployment = generate_secrets_server_deployment(secrets_server_config)
+
+    service_helper.replace_or_create_service(namespace, service)
+    deployment_helper.replace_or_create_deployment(namespace, deployment)
+
+
+def generate_secrets_server_service(
+    secrets_server_config: SecretsServerConfig,
+):
+    # We need to ensure that the labels and selectors match between the deployment and the service,
+    # therefore we base them on the configured service name.
+    service_name = secrets_server_config.service_name()
+    selector = {'app':service_name}
+
+    return V1Service(
+        kind='Service',
+        metadata=V1ObjectMeta(
+            name=service_name,
+        ),
+        spec=V1ServiceSpec(
+            type='ClusterIP',
+            ports=[
+                V1ServicePort(protocol='TCP', port=80, target_port=8080),
+            ],
+            selector=selector,
+            session_affinity='None',
+        ),
+    )
+
+
+def generate_secrets_server_deployment(
+    secrets_server_config: SecretsServerConfig,
+):
+    service_name = secrets_server_config.service_name()
+    secret_name = secrets_server_config.secrets().concourse_secret_name()
+    # We need to ensure that the labels and selectors match for both the deployment and the service,
+    # therefore we base them on the configured service name.
+    labels={'app':service_name}
+
+    return V1Deployment(
+        kind='Deployment',
+        metadata=V1ObjectMeta(
+            name=service_name,
+            labels=labels
+        ),
+        spec=V1DeploymentSpec(
+            replicas=1,
+            selector=V1LabelSelector(match_labels=labels),
+            template=V1PodTemplateSpec(
+                metadata=V1ObjectMeta(labels=labels),
+                spec=V1PodSpec(
+                    containers=[
+                        V1Container(
+                            image='eu.gcr.io/gardener-project/cc/job-image:0.20.0',
+                            image_pull_policy='IfNotPresent',
+                            name='secrets-server',
+                            resources=V1ResourceRequirements(
+                                requests={'cpu':'50m', 'memory': '50Mi'},
+                                limits={'cpu':'50m', 'memory': '50Mi'},
+                            ),
+                            command=['bash'],
+                            args=[
+                                '-c',
+                                '''
+                                # switch to secrets serving directory (create it if missing, i.e. if no other secrets are mounted there)
+                                mkdir -p /secrets && cd /secrets
+                                # make Kubernetes serviceaccount secrets available by default
+                                cp -r /var/run/secrets/kubernetes.io/serviceaccount serviceaccount
+                                # store Kubernetes service endpoint env as file for consumer
+                                env | grep KUBERNETES_SERVICE > serviceaccount/env
+                                # launch minimalistic python server in that directory serving requests across all network interfaces
+                                python3 -m http.server 8080
+                                '''
+                            ],
+                            ports=[
+                                V1ContainerPort(container_port=8080),
+                            ],
+                            liveness_probe=V1Probe(
+                                tcp_socket=V1TCPSocketAction(port=8080),
+                                initial_delay_seconds=10,
+                                period_seconds=10,
+                            ),
+                            volume_mounts=[
+                                V1VolumeMount(
+                                    name=secret_name,
+                                    mount_path='/secrets/concourse-secrets',
+                                    read_only=True,
+                                ),
+                            ],
+                        ),
+                    ],
+                    volumes=[
+                        V1Volume(
+                            name=secret_name,
+                            secret=V1SecretVolumeSource(
+                                secret_name=secret_name,
+                            )
+                        )
+                    ]
+                )
+            )
+        )
+    )
