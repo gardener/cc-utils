@@ -27,8 +27,9 @@ from urllib3.exceptions import ProtocolError
 from kubernetes import config, client, watch
 from kubernetes.client.rest import ApiException
 from kubernetes.client import (
-    CoreV1Api, AppsV1Api, V1ObjectMeta, V1Secret, V1ServiceAccount,
-    V1LocalObjectReference, V1Namespace, V1Service, V1Deployment
+    CoreV1Api, AppsV1Api, ExtensionsV1beta1Api, V1ObjectMeta, V1Secret, V1ServiceAccount,
+    V1LocalObjectReference, V1Namespace, V1Service, V1Deployment,
+    V1beta1Ingress,
 )
 import kubernetes.client
 from kubernetes.config.kube_config import KubeConfigLoader
@@ -83,6 +84,9 @@ class Ctx(object):
     def deployment_helper(self) -> 'KubernetesDeploymentHelper':
         return KubernetesDeploymentHelper(self.create_apps_api())
 
+    def ingress_helper(self) -> 'KubernetesIngressHelper':
+        return KubernetesIngressHelper(self.create_extensions_v1beta1_api())
+
     def create_core_api(self):
         cfg = self.get_kubecfg()
         return client.CoreV1Api(cfg)
@@ -98,6 +102,10 @@ class Ctx(object):
     def create_apps_api(self):
         cfg = self.get_kubecfg()
         return client.AppsV1Api(cfg)
+
+    def create_extensions_v1beta1_api(self):
+        cfg = self.get_kubecfg()
+        return client.ExtensionsV1beta1Api(cfg)
 
 def __add_module_command_args(parser):
     parser.add_argument('--kubeconfig', required=False)
@@ -325,6 +333,46 @@ class KubernetesDeploymentHelper(object):
                 return None
             raise ae
         return deployment
+
+
+class KubernetesIngressHelper(object):
+    def __init__(self, extensions_v1beta1_api: ExtensionsV1beta1Api):
+        self.extensions_v1beta1_api = extensions_v1beta1_api
+
+    def replace_or_create_ingress(self, namespace: str, ingress: V1beta1Ingress):
+        '''Create an ingress in a given namespace. If the ingress already exists,
+        the previous version will be deleted beforehand.
+        '''
+        ensure_not_empty(namespace)
+        ensure_not_none(ingress)
+
+        ingress_name = ingress.metadata.name
+        existing_ingress = self.get_ingress(namespace=namespace, name=ingress_name)
+        if existing_ingress:
+            self.extensions_v1beta1_api.delete_namespaced_ingress(namespace=namespace, name=ingress_name, body=kubernetes.client.V1DeleteOptions())
+        self.create_ingress(namespace=namespace, ingress=ingress)
+
+    def create_ingress(self, namespace: str, ingress: V1beta1Ingress):
+        '''Create an ingress in a given namespace. Raises an `ApiException` if such an ingress
+        already exists.'''
+        ensure_not_empty(namespace)
+        ensure_not_none(ingress)
+
+        self.extensions_v1beta1_api.create_namespaced_ingress(namespace=namespace, body=ingress)
+
+    def get_ingress(self, namespace: str, name: str) -> V1beta1Ingress:
+        '''Return the `V1beta1Ingress` with the given name in the given namespace, or `None` if
+        no such ingress exists.'''
+        ensure_not_empty(namespace)
+        ensure_not_empty(name)
+
+        try:
+            ingress = self.extensions_v1beta1_api.read_namespaced_ingress(name=name, namespace=namespace)
+        except ApiException as ae:
+            if ae.status == 404:
+                return None
+            raise ae
+        return ingress
 
 
 ctx = Ctx()
