@@ -45,7 +45,9 @@ from kubeutil import (
 from kubernetes.client import (
     V1Service, V1ObjectMeta, V1ServiceSpec, V1ServicePort, V1Deployment,
     V1DeploymentSpec, V1PodTemplateSpec, V1PodSpec, V1Container, V1ResourceRequirements, V1ContainerPort,
-    V1Probe, V1TCPSocketAction, V1VolumeMount, V1Volume, V1SecretVolumeSource, V1LabelSelector
+    V1Probe, V1TCPSocketAction, V1VolumeMount, V1Volume, V1SecretVolumeSource, V1LabelSelector,
+    V1beta1Ingress, V1beta1IngressSpec, V1beta1IngressRule, V1beta1HTTPIngressRuleValue, V1beta1HTTPIngressPath,
+    V1beta1IngressBackend, V1beta1IngressTLS, V1EnvVar,
 )
 
 
@@ -151,6 +153,11 @@ def deploy_concourse_landscape(
     deploy_secrets_server(
         config_dir=config_dir,
         config_name=config_name,
+    )
+    deploy_delaying_proxy(
+        config_dir=config_dir,
+        config_name=config_name,
+        deployment_name=deployment_name,
     )
     # Concourse is deployed last since Helm will lose connection if deployment takes more than ~60 seconds.
     # Helm will still continue deploying server-side, but the client will report an error.
@@ -276,6 +283,38 @@ def deploy_secrets_server(
     deployment_helper.replace_or_create_deployment(namespace, deployment)
 
 
+def deploy_delaying_proxy(
+    config_dir: str,
+    config_name: str,
+    deployment_name: str,
+):
+    ensure_directory_exists(config_dir)
+    ensure_not_empty(config_name)
+    ensure_not_empty(deployment_name)
+
+    config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
+    config_set = config_factory.cfg_set(cfg_name=config_name)
+    concourse_cfg = config_set.concourse()
+
+    ctx = kubeutil.ctx
+    service_helper = ctx.service_helper()
+    deployment_helper = ctx.deployment_helper()
+    namespace_helper = ctx.namespace_helper()
+    ingress_helper = ctx.ingress_helper()
+
+    namespace = deployment_name
+    namespace_helper.create_if_absent(namespace)
+
+    service = generate_delaying_proxy_service()
+    deployment = generate_delaying_proxy_deployment(concourse_cfg)
+    ingress = generate_delaying_proxy_ingress(concourse_cfg)
+
+    service_helper.replace_or_create_service(namespace, service)
+    deployment_helper.replace_or_create_deployment(namespace, deployment)
+    ingress_helper.replace_or_create_ingress(namespace, ingress)
+
+
+
 def generate_secrets_server_service(
     secrets_server_config: SecretsServerConfig,
 ):
@@ -376,4 +415,99 @@ def generate_secrets_server_deployment(
                 )
             )
         )
+    )
+
+
+def generate_delaying_proxy_deployment(concourse_cfg: ConcourseConfig):
+    ensure_not_none(concourse_cfg)
+
+    external_url = concourse_cfg.external_url()
+    label = {'app':'delaying-proxy'}
+
+    return V1Deployment(
+        kind='Deployment',
+        metadata=V1ObjectMeta(name='delaying-proxy'),
+        spec=V1DeploymentSpec(
+            replicas=1,
+            selector=V1LabelSelector(match_labels=label),
+            template=V1PodTemplateSpec(
+                metadata=V1ObjectMeta(labels=label),
+                spec=V1PodSpec(
+                    containers=[
+                        V1Container(
+                            image='eu.gcr.io/gardener-project/cc/github-enterprise-proxy:0.1.0',
+                            image_pull_policy='IfNotPresent',
+                            name='delaying-proxy',
+                            ports=[
+                                V1ContainerPort(container_port=8080),
+                            ],
+                            liveness_probe=V1Probe(
+                                tcp_socket=V1TCPSocketAction(port=8080),
+                                initial_delay_seconds=10,
+                                period_seconds=10,
+                            ),
+                            env=[
+                                V1EnvVar(name='CONCOURSE_URL', value=external_url),
+                            ],
+                        ),
+                    ],
+                )
+            )
+        )
+    )
+
+
+def generate_delaying_proxy_ingress(concourse_cfg: ConcourseConfig):
+    ensure_not_none(concourse_cfg)
+
+    proxy_url = concourse_cfg.proxy_url()
+    host = urlparse(proxy_url).netloc
+
+    return V1beta1Ingress(
+        kind='Ingress',
+        metadata=V1ObjectMeta(
+            name='delaying-proxy',
+            annotations={'kubernetes.io/ingress.class':'nginx'},
+        ),
+        spec=V1beta1IngressSpec(
+            rules=[
+                V1beta1IngressRule(
+                    host=host,
+                    http=V1beta1HTTPIngressRuleValue(
+                        paths=[
+                            V1beta1HTTPIngressPath(
+                                backend=V1beta1IngressBackend(
+                                    service_name='delaying-proxy-svc',
+                                    service_port=80,
+                                ),
+                            ),
+                        ],
+                    ),
+                ),
+            ],
+            tls=[
+                V1beta1IngressTLS(
+                    hosts=[host],
+                    secret_name='concourse-web-tls'
+                ),
+            ],
+        ),
+    )
+
+
+def generate_delaying_proxy_service():
+    return V1Service(
+        kind='Service',
+        metadata=V1ObjectMeta(
+            name='delaying-proxy-svc',
+            labels={'app':'delaying-proxy-svc'},
+        ),
+        spec=V1ServiceSpec(
+            type='ClusterIP',
+            ports=[
+                V1ServicePort(name='default', protocol='TCP', port=80, target_port=8080),
+            ],
+            selector={'app':'delaying-proxy'},
+            session_affinity='None',
+        ),
     )
