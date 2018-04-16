@@ -149,6 +149,7 @@ def deploy_concourse_landscape(
 ):
     ensure_directory_exists(config_dir)
     ensure_not_empty(config_name)
+    ensure_helm_setup()
 
     deploy_secrets_server(
         config_dir=config_dir,
@@ -167,6 +168,15 @@ def deploy_concourse_landscape(
         deployment_name=deployment_name,
     )
 
+
+def ensure_helm_setup():
+    """Ensure that Helm is installed and its repo-list is up-to-date. Return the path to the found Helm executable"""
+    helm_executable = util.which('helm')
+    with open(os.devnull) as devnull:
+        subprocess.run([helm_executable, 'repo', 'update'], check=True, stdout=devnull)
+    return helm_executable
+
+
 # intentionally hard-coded; review / adjustment of "values.yaml" is required in most cases
 # of version upgrades
 CONCOURSE_HELM_CHART_VERSION = "1.2.1"
@@ -179,8 +189,8 @@ def deploy_or_upgrade_concourse(
     """Deploys (or upgrades) Concourse using the Helm CLI"""
     ensure_directory_exists(config_dir)
     ensure_not_empty(config_name)
+    helm_executable = ensure_helm_setup()
 
-    helm_executable = util.which("helm")
     namespace = deployment_name
 
     config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
