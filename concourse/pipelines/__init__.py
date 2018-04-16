@@ -47,10 +47,10 @@ def generate_pipelines(
 
     for pipeline_definition in pipeline_definitions:
         rendering_results = render_pipelines(
-                pipeline_definition=pipeline_definition,
-                config_set=config_set,
-                template_path=template_path,
-                template_include_dir=template_include_dir
+            pipeline_definition=pipeline_definition,
+            config_set=config_set,
+            template_path=template_path,
+            template_include_dir=template_include_dir
         )
         for rendered_pipeline, instance_definition, pipeline_args in rendering_results:
             yield (rendered_pipeline, instance_definition, pipeline_args)
@@ -112,6 +112,7 @@ def render_pipelines(
     factory = DefinitionFactory(raw_dict=dict(instance_definition.template_args.items()))
     pipeline_metadata = SimpleNamespaceDict()
     pipeline_metadata.definition = factory.create_pipeline_args()
+    pipeline_metadata.name = instance_definition.name
 
     # determine pipeline name (if there is main-repo, append the configured branch name)
     for variant in pipeline_metadata.definition.variants():
@@ -119,13 +120,11 @@ def render_pipelines(
         if not variant.has_main_repository():
             continue
         main_repo = variant.main_repository()
-        pipeline_metadata.name = '-'.join([instance_definition.name, main_repo.branch()])
+        pipeline_metadata.pipeline_name = '-'.join([instance_definition.name, main_repo.branch()])
         break
     else:
         # fallback in case no main_repository was found
-        pipeline_metadata.name = instance_definition.name
-
-    #pipeline_metadata = SimpleNamespaceDict({'name': pipeline_definition.pipeline.name})
+        pipeline_metadata.pipeline_name = instance_definition.name
 
     t = mako.template.Template(filename=template_file, lookup=lookup)
     yield (
@@ -157,13 +156,13 @@ def replicate_pipelines(
 
     pipeline_names = set()
 
-    for rendered_pipeline, _, pipeline_args in generate_pipelines(
+    for rendered_pipeline, _, pipeline_metadata in generate_pipelines(
         definition_directories=definition_dirs,
         template_path=template_path,
         template_include_dir=template_include_dir,
         config_set=cfg_set,
     ):
-        pipeline_name = pipeline_args.name
+        pipeline_name = pipeline_args.pipeline_name
         pipeline_names.add(pipeline_name)
         info('deploying pipeline {p} to team {t}'.format(p=pipeline_name, t=team_name))
         deploy_pipeline(
