@@ -120,7 +120,9 @@ def render_pipelines(
             continue
         main_repo = variant.main_repository()
         pipeline_metadata.name = '-'.join([instance_definition.name, main_repo.branch()])
+        break
     else:
+        # fallback in case no main_repository was found
         pipeline_metadata.name = instance_definition.name
 
     #pipeline_metadata = SimpleNamespaceDict({'name': pipeline_definition.pipeline.name})
