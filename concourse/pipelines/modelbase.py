@@ -66,7 +66,7 @@ class PipelineStep(ModelBase):
             raw_dict['depends'] = set(raw_dict['depends'])
         if raw_dict.get('output_dir', None):
             name = raw_dict['output_dir']
-            self.add_output(name, name + '_path')
+            self.add_output(name + '_path', name + '_path')
 
     def image(self):
         return self.raw.get('image', None)
