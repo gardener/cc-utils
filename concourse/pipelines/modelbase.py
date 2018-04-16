@@ -84,7 +84,7 @@ class PipelineStep(ModelBase):
 
         # an optional attribute specifying the "output directory"
         # due to "historical" reasons, append '-path' suffix
-        return self.raw.get('output_dir') + '-path'
+        return self.raw.get('output_dir') + '_path'
 
     def output(self, name):
         return self.outputs()[name]

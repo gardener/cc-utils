@@ -102,7 +102,7 @@ class PublishTraitTransformer(TraitTransformer):
         for input_step_name in input_step_names:
             input_step = pipeline_args.step(input_step_name)
             input_name = input_step.output_dir()
-            prepare_step.add_output(input_name, input_name)
+            prepare_step.add_input(input_name, input_name)
 
 
         # prepare-step depdends on every other step, except publish and release
