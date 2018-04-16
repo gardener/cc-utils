@@ -34,7 +34,7 @@ def enumerate_pipeline_definitions(directories):
         for path, _, files in os.walk(directory):
             abs_files = map(lambda f: os.path.join(path, f), files)
             for f in filter(is_yaml_file, abs_files):
-                if f == '.repository_mapping':
+                if f.endswith('.repository_mapping'):
                     continue
                 yield parse_yaml_file(f)
 
