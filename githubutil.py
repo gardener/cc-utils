@@ -125,6 +125,19 @@ def _create_github_api_object(
     return github
 
 
+def branches(
+    github_cfg,
+    repo_owner: str,
+    repo_name: str,
+):
+    github_api = _create_github_api_object(
+        github_auth_token=github_cfg.credentials().auth_token(),
+        github_url=github_cfg.http_url(),
+    )
+    repo = github_api.repository(repo_owner, repo_name)
+    return list(map(lambda r: r.name, repo.branches()))
+
+
 def release_and_prepare_next_dev_cycle(
     github_url: str,
     github_auth_token:str,
