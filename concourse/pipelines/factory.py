@@ -12,7 +12,7 @@ from concourse.pipelines.model import (
         PipelineDefinition,
 )
 from concourse.pipelines.model.repositories import RepositoryConfig
-import concourse.pipelines.model.traits as traits
+from concourse.pipelines.model.traits import TraitsFactory
 
 class DefinitionFactory(object):
     def __init__(self, raw_dict):
@@ -115,7 +115,7 @@ class DefinitionFactory(object):
         if 'traits' in raw_dict:
             traits_args = normalise_to_dict(raw_dict['traits'])
             traits_dict = {
-                    name: traits.TraitsFactory.create(
+                    name: TraitsFactory.create(
                         name=name,
                         variant_name=variant_name,
                         args_dict=args if args else {}

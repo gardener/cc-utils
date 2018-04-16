@@ -24,6 +24,7 @@ import mako.template
 from util import (
     SimpleNamespaceDict, parse_yaml_file, fail, ensure_directory_exists, ensure_file_exists, info, is_yaml_file
 )
+from concourse.pipelines.factory import DefinitionFactory
 
 from concourse import client
 from model import ConcourseTeamCredentials, ConcourseConfig
@@ -109,6 +110,9 @@ def render_pipelines(
         # hacky: add (hard-coded) lib directory (in cc-pipelines) to sys.path
         import sys
         sys.path.append(os.path.join(template_include_dir, 'lib'))
+
+    factory = DefinitionFactory(raw_dict=dict(instance_definition.template_args.items()))
+    pipeline_args.definition = factory.create_pipeline_args()
 
     t = mako.template.Template(filename=template_file, lookup=lookup)
     yield (
