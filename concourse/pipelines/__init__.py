@@ -162,7 +162,7 @@ def replicate_pipelines(
         template_include_dir=template_include_dir,
         config_set=cfg_set,
     ):
-        pipeline_name = pipeline_args.pipeline_name
+        pipeline_name = pipeline_metadata.pipeline_name
         pipeline_names.add(pipeline_name)
         info('deploying pipeline {p} to team {t}'.format(p=pipeline_name, t=team_name))
         deploy_pipeline(
