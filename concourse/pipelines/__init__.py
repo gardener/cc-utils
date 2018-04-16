@@ -96,8 +96,6 @@ def render_pipelines(
     template_path,
     template_include_dir=None
 ):
-    #TODO: find a better way to pass pipeline name to template
-    pipeline_args = SimpleNamespaceDict({'name': pipeline_definition.pipeline.name})
 
     instance_definition = pipeline_definition.pipeline
     template_name = instance_definition.template
@@ -112,17 +110,30 @@ def render_pipelines(
         sys.path.append(os.path.join(template_include_dir, 'lib'))
 
     factory = DefinitionFactory(raw_dict=dict(instance_definition.template_args.items()))
-    pipeline_args.definition = factory.create_pipeline_args()
+    pipeline_metadata = SimpleNamespaceDict()
+    pipeline_metadata.definition = factory.create_pipeline_args()
+
+    # determine pipeline name (if there is main-repo, append the configured branch name)
+    for variant in pipeline_metadata.definition.variants():
+        # hack: take the first "main_repository" we find
+        if not variant.has_main_repository():
+            continue
+        main_repo = variant.main_repository()
+        pipeline_metadata.name = '-'.join([instance_definition.name, main_repo.branch()])
+    else:
+        pipeline_metadata.name = instance_definition.name
+
+    #pipeline_metadata = SimpleNamespaceDict({'name': pipeline_definition.pipeline.name})
 
     t = mako.template.Template(filename=template_file, lookup=lookup)
     yield (
             t.render(
                 instance_args=instance_definition.template_args,
                 config_set=config_set,
-                pipeline=pipeline_args
+                pipeline=pipeline_metadata
                 ),
             instance_definition,
-            pipeline_args
+            pipeline_metadata
     )
 
 

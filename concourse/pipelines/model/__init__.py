@@ -79,6 +79,9 @@ class PipelineArgs(ModelBase):
     def repository(self, name):
         return self._repos_dict[name]
 
+    def has_main_repository(self):
+        return self._main_repository_name is not None
+
     def main_repository(self):
         return self.repository(self._main_repository_name)
 
