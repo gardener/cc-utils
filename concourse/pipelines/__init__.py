@@ -18,25 +18,35 @@ import sys
 own_dir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(own_dir, os.path.pardir))
 
+from copy import deepcopy
+
 import argparse
 import mako.template
 
 from util import (
-    SimpleNamespaceDict, parse_yaml_file, fail, ensure_directory_exists, ensure_file_exists, info, is_yaml_file
+    SimpleNamespaceDict, parse_yaml_file, fail, ensure_directory_exists, ensure_file_exists, info, is_yaml_file, merge_dicts
 )
+from githubutil import branches
+
 from concourse.pipelines.factory import DefinitionFactory
 
 from concourse import client
 from model import ConcourseTeamCredentials, ConcourseConfig
 
+
 def enumerate_pipeline_definitions(directories):
     for directory in directories:
-        for path, _, files in os.walk(directory):
-            abs_files = map(lambda f: os.path.join(path, f), files)
-            for f in filter(is_yaml_file, abs_files):
-                if f.endswith('.repository_mapping'):
-                    continue
-                yield parse_yaml_file(f)
+        # for now, hard-code mandatory .repository_mapping
+        repo_mapping = parse_yaml_file(os.path.join(directory, '.repository_mapping'))
+        repo_definition_mapping = {repo_path: list() for repo_path in repo_mapping.keys()}
+
+        for repo_path, definition_files in repo_mapping.items():
+            for definition_file_path in definition_files:
+                abs_file = os.path.abspath(os.path.join(directory, definition_file_path))
+                pipeline_raw_definition = parse_yaml_file(abs_file, as_snd=False)
+                repo_definition_mapping[repo_path].append(pipeline_raw_definition)
+
+        return repo_definition_mapping
 
 
 def generate_pipelines(
@@ -45,7 +55,30 @@ def generate_pipelines(
         template_include_dir,
         config_set: 'ConfigurationSet'
     ):
-    pipeline_definitions = enumerate_pipeline_definitions(definition_directories)
+    repo_pipeline_definition_mappings = enumerate_pipeline_definitions(definition_directories)
+
+    # inject base repo definition, multiply by branches
+    pipeline_definitions = []
+    github_cfg = config_set.github()
+
+
+    for repo_path, pipeline_defs in repo_pipeline_definition_mappings.items():
+        # determine branches
+        org, repo_name = repo_path.split('/')
+        branch_names = branches(github_cfg=github_cfg, repo_owner=org, repo_name=repo_name)
+
+        for pd in pipeline_defs:
+            for branch_name in branch_names:
+                pd = deepcopy(pd)
+                main_repo_raw = {'path': repo_path, 'branch': branch_name}
+                # todo: mv this into pipeline-definition-factory
+                template_args = pd['pipeline']['template_args']
+                if template_args.get('repo'):
+                    merged_main_repo = merge_dicts(template_args['repo'], main_repo_raw)
+                    template_args['repo'] = merged_main_repo
+                else:
+                    template_args['repo'] = main_repo_raw
+                pipeline_definitions.append(SimpleNamespaceDict(pd))
 
     for pipeline_definition in pipeline_definitions:
         rendering_results = render_pipelines(
@@ -173,6 +206,8 @@ def replicate_pipelines(
             concourse_cfg=concourse_cfg,
             team_credentials=team_credentials,
         )
+
+    return # XXX remove again
 
     concourse_api = client.ConcourseApi(base_url=concourse_cfg.external_url(), team_name=team_name)
     concourse_api.login(
