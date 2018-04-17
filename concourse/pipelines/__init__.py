@@ -46,7 +46,7 @@ def enumerate_pipeline_definitions(directories):
                 pipeline_raw_definition = parse_yaml_file(abs_file, as_snd=False)
                 repo_definition_mapping[repo_path].append(pipeline_raw_definition)
 
-        return repo_definition_mapping
+        yield repo_definition_mapping
 
 
 def generate_pipelines(
