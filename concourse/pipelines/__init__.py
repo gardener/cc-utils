@@ -207,8 +207,6 @@ def replicate_pipelines(
             team_credentials=team_credentials,
         )
 
-    return # XXX remove again
-
     concourse_api = client.ConcourseApi(base_url=concourse_cfg.external_url(), team_name=team_name)
     concourse_api.login(
         team=team_name,
