@@ -19,6 +19,7 @@ own_dir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(own_dir, os.path.pardir))
 
 from copy import deepcopy
+import itertools
 
 import argparse
 import mako.template
@@ -55,7 +56,9 @@ def generate_pipelines(
         template_include_dir,
         config_set: 'ConfigurationSet'
     ):
-    repo_pipeline_definition_mappings = enumerate_pipeline_definitions(definition_directories)
+    repo_pipeline_definition_mappings = itertools.chain(
+            *enumerate_pipeline_definitions(definition_directories)
+    )
 
     # inject base repo definition, multiply by branches
     pipeline_definitions = []
