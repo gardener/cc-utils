@@ -74,16 +74,20 @@ def generate_pipelines(
             for branch_name in branch_names:
                 pd = deepcopy(pd)
                 main_repo_raw = {'path': repo_path, 'branch': branch_name}
-                # todo: mv this into pipeline-definition-factory
-                template_args = pd['pipeline']['template_args']
-                base_definition = template_args.get('base_definition')
-                if base_definition:
+                for pipeline_name, pipeline_args in pd.items():
+                    # todo: mv this into pipeline-definition-factory
+                    base_definition = pipeline_args['base_definition']
                     if base_definition.get('repo'):
                         merged_main_repo = merge_dicts(base_definition['repo'], main_repo_raw)
                         base_definition['repo'] = merged_main_repo
                     else:
                         base_definition['repo'] = main_repo_raw
-                pipeline_definitions.append(SimpleNamespaceDict(pd))
+                    # create "old" structure as a quick temporary hack
+                    pipeline_definition = {
+                        'pipeline': pipeline_args,
+                    }
+                    pipeline_definition['name'] = pipeline_name
+                    pipeline_definitions.append(SimpleNamespaceDict(pipeline_definition))
 
     for pipeline_definition in pipeline_definitions:
         rendering_results = render_pipelines(
@@ -136,9 +140,7 @@ def render_pipelines(
     template_path,
     template_include_dir=None
 ):
-
-    instance_definition = pipeline_definition.pipeline
-    template_name = instance_definition.template
+    template_name = pipeline_definition.pipeline.template
     template_file = find_template_file(template_name, template_path)
 
     if template_include_dir:
@@ -149,10 +151,10 @@ def render_pipelines(
         import sys
         sys.path.append(os.path.join(template_include_dir, 'lib'))
 
-    factory = DefinitionFactory(raw_dict=dict(instance_definition.template_args.items()))
+    factory = DefinitionFactory(raw_dict=dict(pipeline_definition.pipeline))
     pipeline_metadata = SimpleNamespaceDict()
     pipeline_metadata.definition = factory.create_pipeline_args()
-    pipeline_metadata.name = instance_definition.name
+    pipeline_metadata.name = pipeline_definition.name
 
     # determine pipeline name (if there is main-repo, append the configured branch name)
     for variant in pipeline_metadata.definition.variants():
@@ -160,20 +162,20 @@ def render_pipelines(
         if not variant.has_main_repository():
             continue
         main_repo = variant.main_repository()
-        pipeline_metadata.pipeline_name = '-'.join([instance_definition.name, main_repo.branch()])
+        pipeline_metadata.pipeline_name = '-'.join([pipeline_definition.name, main_repo.branch()])
         break
     else:
         # fallback in case no main_repository was found
-        pipeline_metadata.pipeline_name = instance_definition.name
+        pipeline_metadata.pipeline_name = pipeline_definition.name
 
     t = mako.template.Template(filename=template_file, lookup=lookup)
     yield (
             t.render(
-                instance_args=instance_definition.template_args,
+                instance_args=pipeline_definition.pipeline,
                 config_set=config_set,
                 pipeline=pipeline_metadata
                 ),
-            instance_definition,
+            pipeline_definition.pipeline,
             pipeline_metadata
     )
 
