@@ -27,6 +27,8 @@ import yaml
 import util
 import kubeutil
 
+import concourse.client as client
+
 from model import (
     ConfigFactory,
     ConfigurationSet,
@@ -323,6 +325,27 @@ def deploy_delaying_proxy(
     deployment_helper.replace_or_create_deployment(namespace, deployment)
     ingress_helper.replace_or_create_ingress(namespace, ingress)
 
+
+def set_teams(config: ConcourseConfig):
+    ensure_not_none(config)
+
+    # Use special, always existing 'main'-team. It is the only team that can change credentials
+    main_team_credentials = config.team_credentials('main')
+
+    concourse_api = client.ConcourseApi(
+        base_url=config.external_url(),
+        team_name=main_team_credentials.teamname(),
+    )
+    concourse_api.login(
+        team=main_team_credentials.teamname(),
+        username=main_team_credentials.username(),
+        passwd=main_team_credentials.passwd(),
+    )
+    for team in config.all_team_credentials():
+        # We skip the main team here since we cannot update all its credentials at this time.
+        if team.teamname == "main":
+            continue
+        concourse_api.set_team(team)
 
 
 def generate_secrets_server_service(

@@ -92,26 +92,12 @@ def destroy_concourse(release: str, dry_run: bool = True):
 def set_teams(
     config_dir: CliHints.existing_dir('Path to a directory containing Concourse-configuration (e.g. cc-config)'),
     config_name: CliHint(typehint=str, help='Which of the configurations contained in "--config-file" to use.'),
-    config_file: CliHint(typehint=str, help='File inside "--config-dir" containing the configurations.')="configs.yaml",
     ):
-    factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
-    config_set = factory.cfg_set(cfg_name=config_name)
+    config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
+    config_set = config_factory.cfg_set(cfg_name=config_name)
     config = config_set.concourse()
-    main_team_credentials = config.team_credentials("main")
-    concourse_api = concourse.ConcourseApi(
-        base_url=config.external_url(),
-        team_name=main_team_credentials.teamname(),
-    )
-    concourse_api.login(
-        team=main_team_credentials.teamname(),
-        username=main_team_credentials.username(),
-        passwd=main_team_credentials.passwd(),
-    )
-    for team in config.all_team_credentials():
-        # We skip the main team here since we cannot update all its credentials at this time.
-        if team.teamname == "main":
-            continue
-        concourse_api.set_team(team)
+
+    setup.set_teams(config=config)
 
 
 def _display_info(dry_run: bool, operation: str, **kwargs):
