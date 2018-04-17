@@ -45,6 +45,7 @@ def deploy_and_run_smoketest_pipeline(
     job_name = 'cc-smoketest-master-head-update-job'
 
     pipeline_definition = parse_yaml_file(pipeline_definition_file)
+    return # XXX temporary workaround
 
     rendered_pipelines = list(
         render_pipelines(
