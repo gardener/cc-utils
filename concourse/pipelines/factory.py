@@ -21,10 +21,14 @@ class DefinitionFactory(object):
         if not 'variants' in raw_dict:
             raise ModelValidationError('at least one variant must be specified')
 
-        for args_name, value in self.raw_dict['base_definition'].items():
-            self.raw_dict[args_name] = value
+        # temporary hack: restore original structure (where base definition was every attribute
+        # except for those named 'variants')
+        # TODO: rework subsequent processing steps
+        if 'base_definition' in self.raw_dict:
+            for args_name, value in self.raw_dict['base_definition'].items():
+                self.raw_dict[args_name] = value
 
-        del self.raw_dict['base_definition']
+            del self.raw_dict['base_definition']
 
 
     def create_pipeline_args(self):
