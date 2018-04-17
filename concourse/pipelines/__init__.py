@@ -46,7 +46,7 @@ def enumerate_pipeline_definitions(directories):
                 pipeline_raw_definition = parse_yaml_file(abs_file, as_snd=False)
                 repo_definition_mapping[repo_path].append(pipeline_raw_definition)
 
-        yield repo_definition_mapping
+        yield repo_definition_mapping.items()
 
 
 def generate_pipelines(
@@ -62,7 +62,7 @@ def generate_pipelines(
     github_cfg = config_set.github()
 
 
-    for repo_path, pipeline_defs in repo_pipeline_definition_mappings.items():
+    for repo_path, pipeline_defs in repo_pipeline_definition_mappings:
         # determine branches
         org, repo_name = repo_path.split('/')
         branch_names = branches(github_cfg=github_cfg, repo_owner=org, repo_name=repo_name)
