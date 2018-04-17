@@ -329,8 +329,8 @@ def deploy_delaying_proxy(
 def set_teams(config: ConcourseConfig):
     ensure_not_none(config)
 
-    # Use special, always existing 'main'-team. It is the only team that can change credentials
-    main_team_credentials = config.team_credentials('main')
+    # Use main-team, i.e. the team that can change the other teams' credentials
+    main_team_credentials = config.main_team_credentials()
 
     concourse_api = client.ConcourseApi(
         base_url=config.external_url(),

@@ -442,6 +442,9 @@ class ConcourseConfig(NamedModelElement):
     def team_credentials(self, teamname):
         return ConcourseTeamCredentials(self.snd.teams[teamname])
 
+    def main_team_credentials(self):
+        return self.team_credentials('main')
+
     def deployment_cfg_dir(self):
         return self.snd.deploymentCfgDir
 
