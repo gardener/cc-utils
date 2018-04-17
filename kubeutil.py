@@ -334,6 +334,36 @@ class KubernetesDeploymentHelper(object):
             raise ae
         return deployment
 
+    def wait_until_deployment_available(self, namespace: str, name: str, timeout_seconds: int=60) -> bool:
+        '''Block until the given deployment has at least one available replica or `timeout_seconds` seconds elapsed.
+        Return `True` if the deployment is available, `False` if a timeout occured.
+        '''
+        ensure_not_empty(namespace)
+        ensure_not_empty(name)
+
+        w = watch.Watch()
+        # Work around IncompleteRead errors resulting in ProtocolErrors - no fault of our own
+        start_time = int(time.time())
+        while (start_time + timeout_seconds) > time.time():
+            try:
+                for event in w.stream(
+                    self.apps_api.list_namespaced_deployment,
+                    namespace=namespace,
+                    timeout_seconds=timeout_seconds
+                ):
+                    deployment_spec = event['object']
+                    if deployment_spec is not None:
+                        if deployment_spec.metadata.name == name:
+                            if deployment_spec.status.available_replicas is not None and deployment_spec.status.available_replicas > 0:
+                                return True
+                    # Check explicitly if timeout occurred, since we might've been restarted due to a ProtocolError
+                    if (start_time + timeout_seconds) < time.time():
+                        return False
+                # Regular Watch.stream() timeout occurred, no need for further checks
+                return False
+            except ProtocolError as err:
+                info('http connection error - ignored')
+
 
 class KubernetesIngressHelper(object):
     def __init__(self, extensions_v1beta1_api: ExtensionsV1beta1Api):
