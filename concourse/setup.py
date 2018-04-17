@@ -37,7 +37,7 @@ from model import (
     ConcourseConfig,
     SecretsServerConfig,
 )
-from util import ctx as global_ctx, ensure_file_exists, ensure_directory_exists, ensure_not_empty, ensure_not_none, fail
+from util import ctx as global_ctx, ensure_file_exists, ensure_directory_exists, ensure_not_empty, ensure_not_none, info, fail
 from kubeutil import (
     KubernetesNamespaceHelper,
     KubernetesSecretHelper,
@@ -160,15 +160,20 @@ def deploy_concourse_landscape(
     config_set = config_factory.cfg_set(cfg_name=config_name)
     concourse_cfg = config_set.concourse()
 
+    info('Deploying secrets-server ...')
     deploy_secrets_server(
         config_dir=config_dir,
         config_name=config_name,
     )
+
+    info('Deploying delaying proxy ...')
     deploy_delaying_proxy(
         config_dir=config_dir,
         config_name=config_name,
         deployment_name=deployment_name,
     )
+
+    info('Deploying Concourse ...')
     # Concourse is deployed last since Helm will lose connection if deployment takes more than ~60 seconds.
     # Helm will still continue deploying server-side, but the client will report an error.
     deploy_or_upgrade_concourse(
@@ -177,6 +182,7 @@ def deploy_concourse_landscape(
         deployment_name=deployment_name,
     )
 
+    info('Waiting until the webserver can be reached ...')
     deployment_helper = kubeutil.ctx.deployment_helper()
     is_web_deployment_available = deployment_helper.wait_until_deployment_available(
         namespace=deployment_name,
@@ -194,9 +200,12 @@ def deploy_concourse_landscape(
                 ns = deployment_name,
             )
         )
+    info('Webserver became accessible.')
+
     # Even though the deployment is available, the ingress might need a few seconds to update.
     time.sleep(3)
 
+    info('Setting teams on Concourse ...')
     set_teams(config=concourse_cfg)
 
 
