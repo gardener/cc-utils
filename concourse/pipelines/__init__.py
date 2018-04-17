@@ -76,11 +76,13 @@ def generate_pipelines(
                 main_repo_raw = {'path': repo_path, 'branch': branch_name}
                 # todo: mv this into pipeline-definition-factory
                 template_args = pd['pipeline']['template_args']
-                if template_args.get('repo'):
-                    merged_main_repo = merge_dicts(template_args['repo'], main_repo_raw)
-                    template_args['repo'] = merged_main_repo
-                else:
-                    template_args['repo'] = main_repo_raw
+                base_definition = template_args.get('base_definition')
+                if base_definition:
+                    if base_definition.get('repo'):
+                        merged_main_repo = merge_dicts(base_definition['repo'], main_repo_raw)
+                        base_definition['repo'] = merged_main_repo
+                    else:
+                        base_definition['repo'] = main_repo_raw
                 pipeline_definitions.append(SimpleNamespaceDict(pd))
 
     for pipeline_definition in pipeline_definitions:
