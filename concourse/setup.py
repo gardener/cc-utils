@@ -17,9 +17,11 @@ import shutil
 import sys
 import subprocess
 import tempfile
+import time
 
 from ensure import ensure_annotations
 from string import Template
+from textwrap import dedent
 from urllib.parse import urlparse
 
 import yaml
@@ -35,7 +37,7 @@ from model import (
     ConcourseConfig,
     SecretsServerConfig,
 )
-from util import ctx as global_ctx, ensure_file_exists, ensure_directory_exists, ensure_not_empty, ensure_not_none
+from util import ctx as global_ctx, ensure_file_exists, ensure_directory_exists, ensure_not_empty, ensure_not_none, fail
 from kubeutil import (
     KubernetesNamespaceHelper,
     KubernetesSecretHelper,
@@ -148,10 +150,15 @@ def deploy_concourse_landscape(
         config_dir: str,
         config_name: str,
         deployment_name: str='concourse',
+        timeout_seconds: int='180'
 ):
     ensure_directory_exists(config_dir)
     ensure_not_empty(config_name)
     ensure_helm_setup()
+
+    config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
+    config_set = config_factory.cfg_set(cfg_name=config_name)
+    concourse_cfg = config_set.concourse()
 
     deploy_secrets_server(
         config_dir=config_dir,
@@ -169,6 +176,28 @@ def deploy_concourse_landscape(
         config_name=config_name,
         deployment_name=deployment_name,
     )
+
+    deployment_helper = kubeutil.ctx.deployment_helper()
+    is_web_deployment_available = deployment_helper.wait_until_deployment_available(
+        namespace=deployment_name,
+        name='concourse-web',
+        timeout_seconds=timeout_seconds,
+    )
+    if not is_web_deployment_available:
+        fail(
+            dedent(
+                """No Concourse webserver reachable after {t} second(s).
+                Check status of Pods created by "concourse-web"-deployment in namespace {ns}
+                """
+            ).format(
+                t = timeout_seconds,
+                ns = deployment_name,
+            )
+        )
+    # Even though the deployment is available, the ingress might need a few seconds to update.
+    time.sleep(3)
+
+    set_teams(config=concourse_cfg)
 
 
 def ensure_helm_setup():
