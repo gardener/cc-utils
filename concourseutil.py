@@ -41,6 +41,7 @@ def deploy_or_upgrade_concourse(
     config_dir: CliHints.existing_dir("Directory containing Concourse configuration (e.g.: A checked-out kubernetes/cc-config repository)."),
     config_name: CliHint(typehint=str, help="Which of the configurations contained in --config-dir to use."),
     deployment_name: CliHint(typehint=str, help="Name under which Concourse will be deployed. Will also be the identifier of the namespace into which it is deployed.")='concourse',
+    timeout_seconds: CliHint(typehint=int, help="Maximum time (in seconds) to wait after deploying for the Concourse-webserver to become available.")=180,
     dry_run: bool=True,
     ):
     '''Deploys a new concourse-instance using the given deployment name and config-directory.'''
@@ -62,6 +63,7 @@ def deploy_or_upgrade_concourse(
         config_dir=config_dir,
         config_name=config_name,
         deployment_name=deployment_name,
+        timeout_seconds=timeout_seconds,
     )
 
 
