@@ -76,7 +76,7 @@ def generate_pipelines(
                 main_repo_raw = {'path': repo_path, 'branch': branch_name}
                 for pipeline_name, pipeline_args in pd.items():
                     # todo: mv this into pipeline-definition-factory
-                    base_definition = pipeline_args['base_definition']
+                    base_definition = pipeline_args.get('base_definition', {})
                     if base_definition.get('repo'):
                         merged_main_repo = merge_dicts(base_definition['repo'], main_repo_raw)
                         base_definition['repo'] = merged_main_repo
