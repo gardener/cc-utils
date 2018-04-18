@@ -68,7 +68,8 @@ def generate_pipelines(
     for repo_path, pipeline_defs in repo_pipeline_definition_mappings:
         # determine branches
         org, repo_name = repo_path.split('/')
-        branch_names = branches(github_cfg=github_cfg, repo_owner=org, repo_name=repo_name)
+        #branch_names = branches(github_cfg=github_cfg, repo_owner=org, repo_name=repo_name)
+        branch_names = ['master'] # hotfix: hard-code branch names to 'master' only
 
         for pd in pipeline_defs:
             for branch_name in branch_names:
