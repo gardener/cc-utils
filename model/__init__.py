@@ -449,9 +449,6 @@ class ConcourseConfig(NamedModelElement):
     def main_team_credentials(self):
         return self.team_credentials('main')
 
-    def deployment_cfg_dir(self):
-        return self.snd.deploymentCfgDir
-
     def helm_chart_default_values_config(self):
         return self.snd.helm_chart_default_values_config
 
@@ -466,8 +463,9 @@ class ConcourseConfig(NamedModelElement):
 
     def tls_config(self):
         return self.snd.tls_config
+
     def _required_attributes(self):
-        return ['deploymentCfgDir', 'externalUrl', 'proxyUrl', 'teams', 'helm_chart_default_values_config']
+        return ['externalUrl', 'proxyUrl', 'teams', 'helm_chart_default_values_config']
 
     def _validate_dict(self):
         super()._validate_dict()

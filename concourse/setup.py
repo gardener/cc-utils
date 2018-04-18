@@ -281,7 +281,6 @@ def deploy_or_upgrade_concourse(
         cfg_type_name = helmchart_cfg_type,
         cfg_name = concourse_cfg.helm_chart_values()
     ).raw
-    deployment_cfg_dir = os.path.join(config_dir, concourse_cfg.deployment_cfg_dir())
 
     # create namespace if absent
     namespace_helper = KubernetesNamespaceHelper(kubeutil.Ctx().create_core_api())
