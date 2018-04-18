@@ -21,6 +21,7 @@ from github3.repos.repo import Repository
 
 import util
 import version
+from model import ConfigFactory
 
 class GitHubHelper(object):
     GITHUB_TIMESTAMP_UTC_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
@@ -136,6 +137,63 @@ def branches(
     )
     repo = github_api.repository(repo_owner, repo_name)
     return list(map(lambda r: r.name, repo.branches()))
+
+
+def replicate_pipeline_definitions(
+    definition_dir: str,
+    cfg_dir: str,
+    cfg_name: str,
+):
+    '''
+    replicates pipeline definitions from cc-pipelines to component repositories.
+    will only be required until definitions are moved to component repositories.
+    '''
+    util.ensure_directory_exists(definition_dir)
+    util.ensure_directory_exists(cfg_dir)
+
+    cfg_factory = ConfigFactory.from_cfg_dir(cfg_dir)
+    cfg_set = cfg_factory.cfg_set(cfg_name)
+    github_cfg = cfg_set.github()
+
+    github = _create_github_api_object(
+        github_url=github_cfg.http_url(),
+        github_auth_token=github_cfg.credentials().auth_token(),
+        github_verify_ssl=False
+    )
+
+    repo_mappings = util.parse_yaml_file(os.path.join(definition_dir, '.repository_mapping'))
+
+    for repo_path, definition_file in repo_mappings.items():
+        # hack: definition_file is a list with always exactly one entry
+        definition_file = util.ensure_file_exists(os.path.join(definition_dir, definition_file[0]))
+        with open(definition_file) as f:
+            definition_contents = f.read()
+
+        repo_owner, repo_name = repo_path.split('/')
+
+
+        helper = GitHubHelper(
+            github=github,
+            repository_owner=repo_owner,
+            repository_name=repo_name,
+        )
+        # only do this for branch 'master' to avoid merge conflicts
+        for branch_name in ['master']: #branches(github_cfg, repo_owner, repo_name):
+            util.info('Replicating pipeline-definition: {r}:{b}'.format(
+                    r=repo_path,
+                    b=branch_name,
+                )
+            )
+            # create pipeline definition file in .ci/pipeline_definitions
+            try:
+                helper.create_or_update_file(
+                    repository_branch=branch_name,
+                    repository_version_file_path='.ci/pipeline_definitions',
+                    file_contents=definition_contents,
+                    commit_message="Import cc-pipeline definition"
+                )
+            except:
+                pass # keep going
 
 
 def release_and_prepare_next_dev_cycle(
