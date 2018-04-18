@@ -229,7 +229,7 @@ def replicate_pipelines(
         concourse_api.delete_pipeline(pipeline_name)
 
     # order pipelines alphabetically
-    pipeline_names = concourse_api.pipelines()
+    pipeline_names = list(concourse_api.pipelines())
     pipeline_names.sort()
     concourse_api.order_pipelines(pipeline_names)
 
