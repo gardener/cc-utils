@@ -228,3 +228,8 @@ def replicate_pipelines(
         info('removing pipeline: {p}'.format(p=pipeline_name))
         concourse_api.delete_pipeline(pipeline_name)
 
+    # order pipelines alphabetically
+    pipeline_names = concourse_api.pipelines()
+    pipeline_names.sort()
+    concourse_api.order_pipelines(pipeline_names)
+
