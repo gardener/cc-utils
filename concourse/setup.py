@@ -36,6 +36,7 @@ from model import (
     ConfigurationSet,
     ConcourseConfig,
     SecretsServerConfig,
+    TlsConfig,
 )
 from util import ctx as global_ctx, ensure_file_exists, ensure_directory_exists, ensure_not_empty, ensure_not_none, info, fail
 from kubeutil import (
@@ -98,30 +99,30 @@ def create_image_pull_secret(
 
 
 @ensure_annotations
-def create_tls_secret(namespace: str, config_path: str):
-    """Creates the TLS secret for concourse web component in the K8s cluster"""
-    # XXX: move those to cc-config
-    tls_key_file = "concourse-tls.key"
-    tls_cert_file = "concourse-tls.crt"
-    tls_secret_name = "concourse-web-tls"
+def create_tls_secret(
+    tls_config: TlsConfig,
+    tls_secret_name: str,
+    namespace: str,
+):
+    """Creates the configured TLS secret for the Concourse web-component in the K8s cluster"""
+    ensure_not_none(tls_config)
+    ensure_not_empty(tls_secret_name)
+    ensure_not_empty(namespace)
 
-    secret_helper = KubernetesSecretHelper(kubeutil.Ctx().create_core_api())
+    namespace_helper = kubeutil.ctx.namespace_helper()
+    namespace_helper.create_if_absent(namespace)
+
+    secret_helper = kubeutil.ctx.secret_helper()
     if not secret_helper.get_secret(tls_secret_name, namespace):
-        tls_key_path = os.path.join(config_path, tls_key_file)
-        tls_crt_path = os.path.join(config_path, tls_cert_file)
-        util.ensure_file_exists(tls_key_path)
-        util.ensure_file_exists(tls_crt_path)
-
-        with open(tls_key_path) as tls_key, open(tls_crt_path) as tls_crt:
-            data = {
-                "tls.key":tls_key.read(),
-                "tls.crt":tls_crt.read()
-            }
-            secret_helper.put_secret(
-                name=tls_secret_name,
-                data=data,
-                namespace=namespace,
-            )
+        data = {
+            'tls.key':tls_config.private_key(),
+            'tls.crt':tls_config.certificate(),
+        }
+        secret_helper.put_secret(
+            name=tls_secret_name,
+            data=data,
+            namespace=namespace,
+        )
 
 
 def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
@@ -176,10 +177,21 @@ def deploy_concourse_landscape(
     config_set = config_factory.cfg_set(cfg_name=config_name)
     concourse_cfg = config_set.concourse()
 
+    tls_config_name = concourse_cfg.tls_config()
+    tls_config = config_factory._cfg_element(cfg_type_name='tls_config', cfg_name=tls_config_name)
+    tls_secret_name = concourse_cfg.tls_secret_name()
+
     info('Creating default image-pull-secret ...')
     create_image_pull_secret(
         config_factory=config_factory,
         config_name=config_name,
+        namespace=deployment_name,
+    )
+
+    info('Creating tls-secret ...')
+    create_tls_secret(
+        tls_config=tls_config,
+        tls_secret_name=tls_secret_name,
         namespace=deployment_name,
     )
 
@@ -275,8 +287,6 @@ def deploy_or_upgrade_concourse(
     namespace_helper = KubernetesNamespaceHelper(kubeutil.Ctx().create_core_api())
     if not namespace_helper.get_namespace(namespace):
         namespace_helper.create_namespace(namespace)
-
-    create_tls_secret(namespace, deployment_cfg_dir)
 
     DEFAULT_HELM_VALUES_FILE_NAME = 'default_helm_values'
     CUSTOM_HELM_VALUES_FILE_NAME = 'custom_helm_values'
