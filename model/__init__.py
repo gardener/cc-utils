@@ -415,7 +415,11 @@ class GcrCredentials(BasicCredentials):
     '''
     Not intended to be instantiated by users of this module
     '''
-    pass
+    def host(self):
+        return self.snd.host
+
+    def email(self):
+        return self.snd.email
 
 
 class ConcourseConfig(NamedModelElement):
@@ -454,6 +458,14 @@ class ConcourseConfig(NamedModelElement):
     def helm_chart_values(self):
         return self.raw.get('helm_chart_values', None)
 
+    def image_pull_secret(self):
+        return self.snd.imagePullSecret
+
+    def tls_secret_name(self):
+        return self.snd.tls_secret_name
+
+    def tls_config(self):
+        return self.snd.tls_config
     def _required_attributes(self):
         return ['deploymentCfgDir', 'externalUrl', 'proxyUrl', 'teams', 'helm_chart_default_values_config']
 
@@ -631,3 +643,14 @@ class SecretsServerSecrets(ModelBase):
 
     def cfg_set_names(self):
         return self.raw['cfg_sets']
+
+
+class TlsConfig(NamedModelElement):
+    def private_key(self):
+        return self.snd.private_key
+
+    def certificate(self):
+        return self.snd.certificate
+
+    def _required_attributes(self):
+        return ['private_key', 'certificate']
