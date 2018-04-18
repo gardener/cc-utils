@@ -458,6 +458,13 @@ class Resource(object):
     def github_source(self):
         return GithubSource(self.source, self.concourse_api)
 
+    def __str__(self):
+        return 'Concourse Resource {n}. Type: {t}, webhook_token: {wht}'.format(
+            n=self.name,
+            t=self.type,
+            wht=self.webhook_token(),
+        )
+
 
 class GithubSource(object):
     '''
