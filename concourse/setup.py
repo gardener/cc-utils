@@ -120,6 +120,7 @@ def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
     creds = concourse_cfg.team_credentials('main')
     external_url = concourse_cfg.external_url()
     external_host = urlparse(external_url).netloc
+    concourse_tls_secret_name = concourse_cfg.tls_secret_name()
 
     instance_specific_values = {
         'concourse': {
@@ -137,7 +138,7 @@ def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
             'ingress': {
                 'hosts': [external_host],
                 'tls': [{
-                      'secretName': 'concourse-web-tls',
+                      'secretName': concourse_tls_secret_name,
                       'hosts': [external_host],
                       }],
             }
@@ -533,6 +534,7 @@ def generate_delaying_proxy_ingress(concourse_cfg: ConcourseConfig):
 
     proxy_url = concourse_cfg.proxy_url()
     host = urlparse(proxy_url).netloc
+    tls_secret_name = concourse_cfg.tls_secret_name()
 
     return V1beta1Ingress(
         kind='Ingress',
@@ -559,7 +561,7 @@ def generate_delaying_proxy_ingress(concourse_cfg: ConcourseConfig):
             tls=[
                 V1beta1IngressTLS(
                     hosts=[host],
-                    secret_name='concourse-web-tls'
+                    secret_name=tls_secret_name
                 ),
             ],
         ),
