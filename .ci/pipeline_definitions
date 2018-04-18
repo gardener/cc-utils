@@ -1,0 +1,16 @@
+cc-utils:
+  template: 'default'
+  base_definition:
+    repo: ~
+    steps:
+      lint: ~
+      test: ~
+  variants:
+    head-update: ~
+    pull-request:
+      traits:
+        pull-request:
+          repo: 'source'  # default
+          policies:
+            require-label: 'ok-to-test' # default
+            build-forks: true # default
