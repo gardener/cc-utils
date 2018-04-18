@@ -214,6 +214,33 @@ def _list_github_resources(
             yield resource
 
 
+def sync_webhooks_from_cfg(
+    cfg_dir,
+    cfg_name,
+    team_name,
+):
+    '''
+    convenience wrapper for sync_webhooks for local usage with cc-config repo
+    '''
+    cfg_factory = ConfigFactory.from_cfg_dir(cfg_dir)
+    cfg_set = cfg_factory.cfg_set(cfg_name)
+    github_cfg = cfg_set.github()
+    github_cred = github_cfg.credentials()
+    concourse_cfg = cfg_set.concourse()
+    team_cfg = concourse_cfg.team_credentials(team_name)
+
+    sync_webhooks(
+      github_auth_token=github_cred.auth_token(),
+      github_url=github_cfg.http_url(),
+      github_verify_ssl=False,
+      concourse_verify_ssl=False,
+      concourse_url=concourse_cfg.external_url(),
+      concourse_proxy_url=concourse_cfg.external_url(),
+      concourse_user=team_cfg.username(),
+      concourse_passwd=team_cfg.passwd(),
+      concourse_team=team_cfg.teamname(),
+    )
+
 def sync_webhooks(
   github_auth_token:str,
   github_url:str,
