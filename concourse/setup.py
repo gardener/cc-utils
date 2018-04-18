@@ -54,31 +54,46 @@ from kubernetes.client import (
     V1beta1IngressBackend, V1beta1IngressTLS, V1EnvVar,
 )
 
-
-IMAGE_PULL_SECRET_NAME = "ci-gcr-readonly"
-IMAGE_PULL_SECRET_FILE = "ci-gcr-readonly.yml"
-
-
 @ensure_annotations
-def create_image_pull_secret(namespace: str, config_path: str):
+def create_image_pull_secret(
+    config_factory: ConfigFactory,
+    config_name: str,
+    namespace: str,
+):
     """Create an image pull secret in the K8s cluster to allow pods to download images from gcr"""
-    core_api = kubeutil.Ctx().create_core_api()
-    secret_helper = KubernetesSecretHelper(core_api)
-    gcr = util.parse_yaml_file(os.path.join(config_path, IMAGE_PULL_SECRET_FILE))
-    if not secret_helper.get_secret(IMAGE_PULL_SECRET_NAME, namespace):
+    ensure_not_none(config_factory)
+    ensure_not_empty(config_name)
+    ensure_not_empty(namespace)
+
+    config_set = config_factory.cfg_set(cfg_name=config_name)
+    concourse_config = config_set.concourse()
+    image_pull_secret_name = concourse_config.image_pull_secret()
+
+    container_registry = config_factory._cfg_element(
+        cfg_type_name='container_registry',
+        cfg_name=image_pull_secret_name,
+    )
+    credentials = container_registry.credentials()
+
+    namespace_helper = kubeutil.ctx.namespace_helper()
+    namespace_helper.create_if_absent(namespace)
+
+    secret_helper = kubeutil.ctx.secret_helper()
+    if not secret_helper.get_secret(image_pull_secret_name, namespace):
         secret_helper.create_gcr_secret(
             namespace=namespace,
-            name=IMAGE_PULL_SECRET_NAME,
-            password=gcr['password'].replace('\n', ''),
-            user_name=gcr['user'],
-            email=gcr['email'],
-            server_url=gcr['host']
+            name=image_pull_secret_name,
+            password=credentials.passwd(),
+            user_name=credentials.username(),
+            email=credentials.email(),
+            server_url=credentials.host(),
         )
-        service_accout_helper = KubernetesServiceAccountHelper(core_api)
-        service_accout_helper.patch_image_pull_secret_into_service_account(
+
+        service_account_helper = kubeutil.ctx.service_account_helper()
+        service_account_helper.patch_image_pull_secret_into_service_account(
             name="default",
             namespace=namespace,
-            image_pull_secret_name=IMAGE_PULL_SECRET_NAME
+            image_pull_secret_name=image_pull_secret_name
         )
 
 
@@ -160,6 +175,13 @@ def deploy_concourse_landscape(
     config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
     config_set = config_factory.cfg_set(cfg_name=config_name)
     concourse_cfg = config_set.concourse()
+
+    info('Creating default image-pull-secret ...')
+    create_image_pull_secret(
+        config_factory=config_factory,
+        config_name=config_name,
+        namespace=deployment_name,
+    )
 
     info('Deploying secrets-server ...')
     deploy_secrets_server(
@@ -254,7 +276,6 @@ def deploy_or_upgrade_concourse(
     if not namespace_helper.get_namespace(namespace):
         namespace_helper.create_namespace(namespace)
 
-    create_image_pull_secret(namespace, deployment_cfg_dir)
     create_tls_secret(namespace, deployment_cfg_dir)
 
     DEFAULT_HELM_VALUES_FILE_NAME = 'default_helm_values'
