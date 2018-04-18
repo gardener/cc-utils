@@ -575,9 +575,9 @@ def _wait_for_shoot(namespace, on_event, expected_result, timeout_seconds:int=12
             # ignore connection errors against k8s api endpoint (these may be temporary)
             info('connection reset error from k8s API endpoint - ignored: ' + str(cre))
         except ProtocolError as err:
-            info('http connection error - ignored')
+            pass
         except KeyError as err:
-            info("key {} not yet available - ignored".format(str(err)))
+            pass
     # handle case where timeout was exceeded, but w.stream returned erroneously (see bug
     # description above)
     raise RuntimeError(result)
