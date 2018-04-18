@@ -184,6 +184,9 @@ class ConcourseApiRoutes(object):
     def pipelines(self):
         return self._api_url('pipelines')
 
+    def order_pipelines(self):
+        return self._api_url('pipelines', 'ordering')
+
     @ensure_annotations
     def pipeline(self, pipeline_name: str):
         return self._api_url('pipelines', pipeline_name)
@@ -288,6 +291,10 @@ class ConcourseApi(object):
         pipelines_url = self.routes.pipelines()
         response = self._get(pipelines_url)
         return map(select_attr('name'), response)
+
+    def order_pipelines(self, pipeline_names):
+        url = self.routes.order_pipelines()
+        self._put(url, json.dumps(pipeline_names))
 
     @ensure_annotations
     def pipeline_cfg(self, pipeline_name: str):
