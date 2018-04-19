@@ -366,10 +366,11 @@ class ConcourseApi(object):
     def set_team(self, team_credentials: ConcourseTeamCredentials):
         body = {}
         if team_credentials.has_basic_auth_credentials():
-            body['basic_auth'] = {
-                'basic_auth_username': team_credentials.username(),
-                'basic_auth_password': team_credentials.passwd(),
+            basic_auth_cfg = {
+                'username': team_credentials.username(),
+                'password': team_credentials.passwd(),
             }
+            body['auth'] = {'basicauth': basic_auth_cfg}
         if team_credentials.has_github_oauth_credentials():
             github_org, github_team = team_credentials.github_auth_team(split=True)
             github_cfg = {
@@ -387,8 +388,10 @@ class ConcourseApi(object):
                     'token_url': team_credentials.github_auth_token_url(),
                     'api_url': team_credentials.github_auth_api_url(),
                 })
-
-            body['auth'] = {'github' : github_cfg}
+            if 'auth' in body:
+                body['auth'].update({'github' : github_cfg})
+            else:
+                body['auth'] = {'github' : github_cfg}
 
         team_url = self.routes.team_url(team_credentials.teamname())
 
