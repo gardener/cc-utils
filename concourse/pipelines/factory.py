@@ -21,16 +21,6 @@ class DefinitionFactory(object):
         if not 'variants' in raw_dict:
             raise ModelValidationError('at least one variant must be specified')
 
-        # temporary hack: restore original structure (where base definition was every attribute
-        # except for those named 'variants')
-        # TODO: rework subsequent processing steps
-        if 'base_definition' in self.raw_dict:
-            for args_name, value in self.raw_dict['base_definition'].items():
-                self.raw_dict[args_name] = value
-
-            del self.raw_dict['base_definition']
-
-
     def create_pipeline_args(self):
         merged_variants_dict = self._create_variants_dict(self.raw_dict)
 
@@ -51,9 +41,7 @@ class DefinitionFactory(object):
     def _create_variants_dict(self, raw_dict):
         variants_dict = normalise_to_dict(deepcopy(raw_dict['variants']))
 
-        # everything but the variants attribute
-        base_dict = deepcopy(raw_dict)
-        del base_dict['variants']
+        base_dict = deepcopy(raw_dict['base_definition'])
 
         merged_variants = {}
         for variant_name, variant_args in variants_dict.items():
