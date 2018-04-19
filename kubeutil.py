@@ -34,7 +34,7 @@ from kubernetes.client import (
 import kubernetes.client
 from kubernetes.config.kube_config import KubeConfigLoader
 
-from util import fail, info, ensure_file_exists, ensure_not_empty, ensure_not_none
+from util import fail, info, verbose, ensure_file_exists, ensure_not_empty, ensure_not_none
 from util import ctx as global_ctx
 
 class Ctx(object):
@@ -575,9 +575,9 @@ def _wait_for_shoot(namespace, on_event, expected_result, timeout_seconds:int=12
             # ignore connection errors against k8s api endpoint (these may be temporary)
             info('connection reset error from k8s API endpoint - ignored: ' + str(cre))
         except ProtocolError as err:
-            pass
+            verbose('http connection error - ignored')
         except KeyError as err:
-            pass
+            verbose("key {} not yet available - ignored".format(str(err)))
     # handle case where timeout was exceeded, but w.stream returned erroneously (see bug
     # description above)
     raise RuntimeError(result)
