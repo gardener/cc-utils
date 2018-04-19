@@ -79,7 +79,6 @@ class DefinitionFactory(object):
         # traits
         base_def._traits_dict = self._create_traits(raw_dict, variant_name)
 
-        # repositories (attention: those depend on build steps)
         self._create_repos(base_def, raw_dict)
         self._inject_publish_repos(base_def)
 
