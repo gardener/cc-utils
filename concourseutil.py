@@ -170,7 +170,7 @@ def deploy_pipeline(
         pipeline_name: CliHint('the name under which the pipeline shall be deployed'),
         team_name: CliHint('name of the target team'),
         config_dir: CliHints.existing_dir('directory containing Concourse configuration'),
-        config_name: CliHints.existing_file('identifier of the configuration in the config directory to use')
+        config_name: CliHint('identifier of the configuration in the config directory to use')
 ):
     cfg_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
     concourse_cfg = cfg_factory.concourse(config_name)
