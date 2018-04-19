@@ -140,15 +140,17 @@ def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
 
     instance_specific_values = {
         'concourse': {
-            'username': creds.username(),
-            'password': creds.passwd(),
+            'externalURL': external_url,
+        },
+        'secrets': {
+            'basicAuthUsername': creds.username(),
+            'basicAuthPassword': creds.passwd(),
             'githubAuthAuthUrl': creds.github_auth_auth_url(),
             'githubAuthTokenUrl': creds.github_auth_token_url(),
             'githubAuthApiUrl': creds.github_auth_api_url(),
             'githubAuthClientId': creds.github_auth_client_id(),
             'githubAuthClientSecret': creds.github_auth_client_secret(),
             'githubAuthTeam': creds.github_auth_team(),
-            'externalURL': external_url,
         },
         'web': {
             'ingress': {
@@ -254,7 +256,7 @@ def ensure_helm_setup():
 
 # intentionally hard-coded; review / adjustment of "values.yaml" is required in most cases
 # of version upgrades
-CONCOURSE_HELM_CHART_VERSION = "1.2.1"
+CONCOURSE_HELM_CHART_VERSION = "1.3.0"
 
 def deploy_or_upgrade_concourse(
         config_dir: str,
