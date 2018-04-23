@@ -14,15 +14,31 @@ from concourse.pipelines.model import (
 from concourse.pipelines.model.repositories import RepositoryConfig
 from concourse.pipelines.model.traits import TraitsFactory
 
-class DefinitionFactory(object):
-    def __init__(self, raw_dict):
-        self.raw_dict = ensure_not_none(raw_dict)
+def ensure_dict(d, allow_empty=True):
+    if allow_empty and d is None:
+        return {}
+    if not allow_empty and not d:
+        raise ModelValidationError('a non-empty dict is required')
+    if not isinstance(d, dict):
+        raise ModelValidationError('a dict is required')
+    return d
 
-        if not 'variants' in raw_dict:
-            raise ModelValidationError('at least one variant must be specified')
+class RawPipelineDefinitionDescriptor(object):
+    '''
+    Container type holding a single (raw) pipeline definition and metadata.
+    Basic value validation is done in the c'tor.
+    '''
+    def __init__(self, name, base_definition, variants):
+        self.name = ensure_not_none(name)
+        self.base_definition = ensure_dict(base_definition, allow_empty=True)
+        self.variants = ensure_dict(variants, allow_empty=False)
+
+class DefinitionFactory(object):
+    def __init__(self, raw_definition_descriptor: RawPipelineDefinitionDescriptor):
+        self.raw_definition_descriptor = ensure_not_none(raw_definition_descriptor)
 
     def create_pipeline_args(self):
-        merged_variants_dict = self._create_variants_dict(self.raw_dict)
+        merged_variants_dict = self._create_variants_dict(self.raw_definition_descriptor)
 
         variants = {}
 
@@ -38,10 +54,10 @@ class DefinitionFactory(object):
         return pipeline_definition
 
 
-    def _create_variants_dict(self, raw_dict):
-        variants_dict = normalise_to_dict(deepcopy(raw_dict['variants']))
+    def _create_variants_dict(self, raw_definition_descriptor):
+        variants_dict = normalise_to_dict(deepcopy(raw_definition_descriptor.variants))
 
-        base_dict = deepcopy(raw_dict['base_definition'])
+        base_dict = deepcopy(raw_definition_descriptor.base_definition)
 
         merged_variants = {}
         for variant_name, variant_args in variants_dict.items():

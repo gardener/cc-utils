@@ -29,7 +29,7 @@ from util import (
 )
 from githubutil import branches
 
-from concourse.pipelines.factory import DefinitionFactory
+from concourse.pipelines.factory import DefinitionFactory, RawPipelineDefinitionDescriptor
 
 from concourse import client
 from model import ConcourseTeamCredentials, ConcourseConfig
@@ -152,7 +152,12 @@ def render_pipelines(
         import sys
         sys.path.append(os.path.join(template_include_dir, 'lib'))
 
-    factory = DefinitionFactory(raw_dict=dict(pipeline_definition.pipeline))
+    definition_descriptor = RawPipelineDefinitionDescriptor(
+        name=pipeline_definition.name,
+        base_definition=dict(pipeline_definition.pipeline.base_definition.items()),
+        variants=dict(pipeline_definition.pipeline.variants.items())
+    )
+    factory = DefinitionFactory(raw_definition_descriptor=definition_descriptor)
     pipeline_metadata = SimpleNamespaceDict()
     pipeline_metadata.definition = factory.create_pipeline_args()
     pipeline_metadata.name = pipeline_definition.name
