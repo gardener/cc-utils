@@ -84,18 +84,18 @@ class DefinitionFactory(object):
 
 
     def _create_variant(self, raw_dict, variant_name) -> PipelineArgs:
-        base_def = PipelineArgs(name=variant_name, raw_dict=raw_dict)
+        variant = PipelineArgs(name=variant_name, raw_dict=raw_dict)
 
         # build steps
-        base_def._steps_dict = self._create_build_steps(raw_dict)
+        variant._steps_dict = self._create_build_steps(raw_dict)
 
         # traits
-        base_def._traits_dict = self._create_traits(raw_dict, variant_name)
+        variant._traits_dict = self._create_traits(raw_dict, variant_name)
 
-        self._create_repos(base_def, raw_dict)
-        self._inject_publish_repos(base_def)
+        self._create_repos(variant, raw_dict)
+        self._inject_publish_repos(variant)
 
-        return base_def
+        return variant
 
     def _apply_traits(self, pipeline_def):
         transformers = [trait.transformer() for trait in pipeline_def._traits_dict.values()]
