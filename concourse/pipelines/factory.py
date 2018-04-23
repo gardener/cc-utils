@@ -56,8 +56,8 @@ class DefinitionFactory(object):
         variants = {}
 
         for variant_name, variant_dict in merged_variants_dict.items():
-            variant = self._create_base_definition(raw_dict=variant_dict, variant_name=variant_name)
-            self._apply_variant_specifics(variant_name, variant)
+            variant = self._create_variant(raw_dict=variant_dict, variant_name=variant_name)
+            self._apply_traits(variant)
             variants[variant_name] = variant
             variant.validate()
 
@@ -82,16 +82,9 @@ class DefinitionFactory(object):
 
         return merged_variants
 
-    def _apply_variant_specifics(self, variant_name: str, variant: 'PipelineArgs'):
-        # add variant-specifics
-        variant.variant_name = variant_name
 
-        self._apply_traits(variant)
-
-        return variant
-
-    def _create_base_definition(self, raw_dict, variant_name):
-        base_def = PipelineArgs(raw_dict=raw_dict)
+    def _create_variant(self, raw_dict, variant_name) -> PipelineArgs:
+        base_def = PipelineArgs(name=variant_name, raw_dict=raw_dict)
 
         # build steps
         base_def._steps_dict = self._create_build_steps(raw_dict)

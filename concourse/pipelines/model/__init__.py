@@ -7,8 +7,9 @@ from concourse.pipelines.modelbase import (
 from concourse.pipelines.model.repositories import RepositoryConfig
 
 class PipelineArgs(ModelBase):
-    def __init__(self, raw_dict: dict, *args, **kwargs):
+    def __init__(self, name: str, raw_dict: dict, *args, **kwargs):
         self._main_repository_name = None
+        self.variant_name = name
         super().__init__(raw_dict=raw_dict, *args, **kwargs)
 
     def traits(self):
