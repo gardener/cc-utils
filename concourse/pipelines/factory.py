@@ -33,11 +33,23 @@ class RawPipelineDefinitionDescriptor(object):
         self.base_definition = ensure_dict(base_definition, allow_empty=True)
         self.variants = ensure_dict(variants, allow_empty=False)
 
+
 class DefinitionFactory(object):
+    '''
+    Creates `PipelineDefinition` instances from "raw" `PipelineDefinitionDescriptor`s.
+
+    "Raw" definitions are associative arrays of a certain structure. They are read from
+    declaring components and are typically maintained by (human) component owners.
+
+    Definitions feature an (optional) two-level inheritance hierarchy: A base definition and
+    an arbitrary set of variants. At least one variant is required. Variants represent concrete
+    single job definitions. Attributes defined in a base definition are inherited into each
+    variant. Variants may overwrite inherited attributes.
+    '''
     def __init__(self, raw_definition_descriptor: RawPipelineDefinitionDescriptor):
         self.raw_definition_descriptor = ensure_not_none(raw_definition_descriptor)
 
-    def create_pipeline_args(self):
+    def create_pipeline_definition(self) -> PipelineDefinition:
         merged_variants_dict = self._create_variants_dict(self.raw_definition_descriptor)
 
         variants = {}
