@@ -4,7 +4,7 @@ from concourse.pipelines.modelbase import (
     ModelBase,
     select_attr,
 )
-from concourse.pipelines.model.repositories import RepositoryConfig
+from concourse.pipelines.model.resources import RepositoryConfig
 
 class PipelineArgs(ModelBase):
     def __init__(self, name: str, raw_dict: dict, *args, **kwargs):

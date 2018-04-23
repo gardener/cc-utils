@@ -12,7 +12,7 @@ from concourse.pipelines.model import (
         PipelineArgs,
         PipelineDefinition,
 )
-from concourse.pipelines.model.repositories import RepositoryConfig
+from concourse.pipelines.model.resources import RepositoryConfig
 from concourse.pipelines.model.traits import TraitsFactory
 
 def ensure_dict(d, allow_empty=True):
