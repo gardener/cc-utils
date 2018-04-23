@@ -59,16 +59,11 @@ class DefinitionFactory(object):
 
         # add variant-specifics
         variant.variant_name = variant_name
-
         variant.variant_args = variant_args
-
-        # post-process repositories
-        repos = set(variant._repos_dict.values())
 
         self._apply_traits(variant)
 
         return variant
-
 
     def _create_base_definition(self, raw_dict, variant_name):
         base_def = PipelineArgs(raw_dict=raw_dict)
