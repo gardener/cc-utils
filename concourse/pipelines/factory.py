@@ -2,6 +2,7 @@ from copy import deepcopy
 import toposort
 
 from util import merge_dicts
+from model import ModelValidationError
 from concourse.pipelines.modelbase import (
         PipelineStep,
         normalise_to_dict,
@@ -78,16 +79,12 @@ class DefinitionFactory(object):
                 merged_variants[variant_name] =  merge_dicts(base_dict, variant_args)
             else:
                 merged_variants[variant_name] = deepcopy(base_dict)
-            merged_variants[variant_name]['variant_args'] = variant_args
 
         return merged_variants
 
     def _apply_variant_specifics(self, variant_name: str, variant: 'PipelineArgs'):
-        variant_args = variant.raw['variant_args']
-
         # add variant-specifics
         variant.variant_name = variant_name
-        variant.variant_args = variant_args
 
         self._apply_traits(variant)
 
