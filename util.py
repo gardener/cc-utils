@@ -170,6 +170,7 @@ def which(cmd_name: str) -> str:
         fail("{cmd} not found in PATH".format(cmd=cmd_name))
     return cmd_path
 
+
 def merge_dicts(base: dict, other: dict, list_semantics='set_merge'):
     '''
     merges copies of the given dict instances and returns the merge result.
