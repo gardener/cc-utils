@@ -95,15 +95,6 @@ class PipelineArgs(ModelBase):
     def has_publish_repository(self, name):
         return name in self._publish_repos_dict
 
-    def variant_names(self):
-        return self._variants_dict.keys()
-
-    def variants(self):
-        return self._variants_dict.values()
-
-    def variant(self, name):
-        return self._variants_dict.get(name, None)
-
     def validate(self):
         for ps in self.steps():
             ps.validate()
