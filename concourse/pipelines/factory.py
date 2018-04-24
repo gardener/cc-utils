@@ -159,13 +159,17 @@ class DefinitionFactory(object):
             name = 'source' if not 'name' in repo_dict else repo_dict['name']
             pipeline_def._repos_dict[name] =  RepositoryConfig(
                 raw_dict=repo_dict,
-                name=name,
+                logical_name=name,
+                qualifier=None,
                 is_main_repo=True
             )
             pipeline_def._main_repository_name = name
         if 'repos' in raw_dict:
             pipeline_def._repos_dict.update({
-                cfg_dict['name']: RepositoryConfig(raw_dict=cfg_dict, is_main_repo=False)
+                cfg_dict['name']: RepositoryConfig(
+                    logical_name=cfg_dict['name'],
+                    raw_dict=cfg_dict, is_main_repo=False
+                )
                 for cfg_dict in raw_dict['repos']
             })
 
@@ -178,7 +182,7 @@ class DefinitionFactory(object):
                 source_repo = pipeline_def._repos_dict[repo_name]
                 publish_repo = RepositoryConfig(
                     raw_dict=dict(source_repo.raw),
-                    name=repo_name + '-output',
-                    logical_name=repo_name
+                    logical_name=repo_name,
+                    qualifier='output',
                 )
                 pipeline_def._publish_repos_dict[repo_name] = publish_repo

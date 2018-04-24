@@ -1,26 +1,108 @@
 import os
 
 from concourse.pipelines.modelbase import ModelBase
+from util import ensure_not_none as not_none
 
 def sane_env_var_name(name):
   return name.replace('-', '_').upper()
 
-class RepositoryConfig(ModelBase):
+class ResourceIdentifier(object):
+    def __init__(
+        self,
+        type_name,
+        base_name,
+        qualifier,
+        logical_name=None,
+    ):
+        self._type_name = not_none(type_name)
+        self._base_name = not_none(base_name)
+        self._qualifier = qualifier if qualifier else ''
+        self._logical_name = logical_name
+
+    def name(self):
+        parts = [self._type_name, self._base_name]
+        if len(self._qualifier) > 0:
+            parts.append(self._qualifier)
+
+        return '-'.join(parts)
+
+    def base_name(self):
+        return self._base_name
+
+    def type_name(self):
+        return self._type_name
+
+    def logical_name(self):
+        return self._logical_name
+
+    def __eq__(self, other):
+        if not isinstance(other, ResourceIdentifier):
+            return False
+        return self.name() == other.name()
+
+    def __hash__(self):
+        return hash((self._type_name, self._base_name, self._qualifier))
+
+    def __str__(self):
+        return 'ResourceId: type {t}, base_name bn}, qualifier {q}, resource_name {rn}'.format(
+            t=self.type_name(),
+            bn=self.base_name(),
+            q=self._qualifier,
+            rn=self.name()
+        )
+
+
+class Resource(ModelBase):
+    def __init__(
+        self,
+        resource_identifier: ResourceIdentifier,
+        *args,
+        **kwargs
+    ):
+        self._resource_identifier = resource_identifier
+        super().__init__(*args, **kwargs)
+
+    def __str__(self):
+        return 'Resource with id: {id}'.format(id=self._resource_identifier)
+
+    def __eq__(self, other):
+        if not isinstance(other, Resource):
+            return False
+        return self._resource_identifier == other._resource_identifier
+
+    def __hash__(self):
+        return self._resource_identifier.__hash__()
+
+
+class RepositoryConfig(Resource):
     def __init__(
             self,
-            name: str=None,
             logical_name: str=None,
+            qualifier: str=None,
             is_pull_request: bool=False,
             is_main_repo: bool=False,
             *args, **kwargs
         ):
-        if name:
-            kwargs['raw_dict']['name'] = name
-        if logical_name:
-            kwargs['raw_dict']['logical_name'] = logical_name
         self._is_pull_request = is_pull_request
         self._is_main_repo = is_main_repo
-        super().__init__(*args, **kwargs)
+
+
+        # todo: handle "qualifier"
+        if is_pull_request:
+            type_name='pull-request'
+        else:
+            type_name='git'
+
+        base_name = kwargs['raw_dict']['path'].replace('/', '_')
+
+        resource_identifier = ResourceIdentifier(
+            type_name=type_name,
+            base_name=base_name,
+            qualifier=qualifier,
+            logical_name=logical_name
+        )
+
+        super().__init__(resource_identifier=resource_identifier, *args, **kwargs)
 
     def custom_init(self, raw_dict):
         if 'trigger' in raw_dict:
@@ -32,21 +114,16 @@ class RepositoryConfig(ModelBase):
         return self.raw.get('cfg_name', None)
 
     def resource_name(self):
-        # todo: use actual resource type
-        if '-' in self.name():
-            suffix = '-' + self.name().split('-')[-1]
-        else:
-            suffix = ''
-
-        return self.repo_path().replace('/', '_') + suffix
+        # TODO: replace usages with access to resource_id
+        return self._resource_identifier.name()
 
     def name(self):
-        return self.raw['name']
+        # TODO: replace usages with access to resource_id
+        return self._resource_identifier.name()
 
     def logical_name(self):
-        if self.raw.get('logical_name', None):
-            return self.raw['logical_name']
-        return self.raw['name']
+        # TODO: replace usages with access to resource_id
+        return self._resource_identifier.logical_name()
 
     def git_resource_name(self):
         # todo: either rm this method, or resource_name

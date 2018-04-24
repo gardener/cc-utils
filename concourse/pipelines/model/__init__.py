@@ -64,8 +64,8 @@ class PipelineArgs(ModelBase):
         pr_repo = self.repository(name)
         return RepositoryConfig(
             raw_dict=dict(pr_repo.raw),
-            name=name + '-pr',
             logical_name=name,
+            qualifier='pr',
             is_pull_request=True
         )
 
