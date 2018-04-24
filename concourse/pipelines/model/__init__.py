@@ -123,36 +123,3 @@ class PipelineDefinition(object):
     def variant(self, name: str):
         return self._variants_dict[name]
 
-    def git_resources(self):
-        return self.git_resources_dict().values()
-
-    def git_resources_dict(self):
-        resources = {}
-        for v in self.variants():
-            for r in v.repositories():
-                if r._is_pull_request:
-                    continue
-                resources[r.resource_name()] = r
-        return resources
-
-    def repositories(self):
-        return self.git_resources()
-
-    def repository(self, name):
-        repos = filter(lambda r: r.logical_name() == name, self.repositories())
-        return repos.__next__()
-
-    def publish_repositories(self):
-        repositories = {}
-        for v in self.variants():
-            for pub_repo in v.publish_repositories():
-                repositories[pub_repo.resource_name()] = pub_repo
-        return repositories.values()
-
-    def pr_repositories(self):
-        repositories = {}
-        for v in self.variants():
-            for pr_repo in v.pr_repositories():
-                repositories[pr_repo.resource_name()] = pr_repo
-        return repositories.values()
-
