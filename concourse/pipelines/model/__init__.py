@@ -3,12 +3,14 @@ import toposort
 from concourse.pipelines.modelbase import (
     ModelBase,
     select_attr,
+    not_none,
 )
 from concourse.pipelines.model.resources import RepositoryConfig
 
 class PipelineArgs(ModelBase):
-    def __init__(self, name: str, raw_dict: dict, *args, **kwargs):
+    def __init__(self, name: str, raw_dict: dict, resource_registry, *args, **kwargs):
         self._main_repository_name = None
+        self._resource_registry = not_none(resource_registry)
         self.variant_name = name
         super().__init__(raw_dict=raw_dict, *args, **kwargs)
 

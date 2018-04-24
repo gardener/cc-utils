@@ -8,6 +8,8 @@ def ensure_not_none(value):
     if value is None:
         raise ValueError('must not be none')
     return value
+# export shorter alias
+not_none = ensure_not_none
 
 class ModelBase(object):
     def __init__(self, raw_dict: dict):

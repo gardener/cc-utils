@@ -104,7 +104,11 @@ class DefinitionFactory(object):
 
 
     def _create_variant(self, raw_dict, variant_name, resource_registry) -> PipelineArgs:
-        variant = PipelineArgs(name=variant_name, raw_dict=raw_dict)
+        variant = PipelineArgs(
+            name=variant_name,
+            raw_dict=raw_dict,
+            resource_registry=resource_registry
+        )
 
         # build steps
         variant._steps_dict = self._create_build_steps(raw_dict)
