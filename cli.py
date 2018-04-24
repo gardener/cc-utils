@@ -64,12 +64,7 @@ def add_global_args(parser):
     parser.add_argument('--verbose', action='store_true')
 
 def add_module(module_name, parser):
-    try:
-        module = __import__(module_name)
-    except ImportError as ie:
-        import_errs.append('failed to import {m}: {e}'.format(m=module_name, e=ie))
-        # ignore errors due to missing dependencies
-        return
+    module = __import__(module_name)
     # skip if module defines a symbol 'main'
     if hasattr(module, 'main'):
         return
