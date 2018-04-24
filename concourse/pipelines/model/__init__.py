@@ -110,7 +110,12 @@ class PipelineArgs(ModelBase):
 
 
 class PipelineDefinition(object):
-    _variants_dict = {}
+    def __init__(self):
+        self._variants_dict = {}
+        self._resource_registry = None
+
+    def resource_registry(self):
+        return self._resource_registry
 
     def variants(self):
         return self._variants_dict.values()

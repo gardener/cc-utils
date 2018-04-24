@@ -1,7 +1,6 @@
 import os
 
-from concourse.pipelines.modelbase import ModelBase
-from util import ensure_not_none as not_none
+from concourse.pipelines.modelbase import ModelBase, ensure_not_none as not_none
 
 def sane_env_var_name(name):
   return name.replace('-', '_').upper()
@@ -11,7 +10,7 @@ class ResourceIdentifier(object):
         self,
         type_name,
         base_name,
-        qualifier,
+        qualifier=None,
         logical_name=None,
     ):
         self._type_name = not_none(type_name)
@@ -62,6 +61,9 @@ class Resource(ModelBase):
         self._resource_identifier = resource_identifier
         super().__init__(*args, **kwargs)
 
+    def resource_identifier(self):
+        return self._resource_identifier
+
     def __str__(self):
         return 'Resource with id: {id}'.format(id=self._resource_identifier)
 
@@ -72,6 +74,27 @@ class Resource(ModelBase):
 
     def __hash__(self):
         return self._resource_identifier.__hash__()
+
+
+class ResourceRegistry(object):
+    def __init__(self):
+        self.resources_dict = {}
+
+    def add_resource(self, resource, discard_duplicates=True):
+        if not isinstance(resource, Resource):
+            raise ValueError('not an instance of Resource')
+
+        resource_id = resource.resource_identifier()
+        if resource_id in self.resources_dict:
+            if discard_duplicates:
+                return # nothing to do (resource already existed)
+            raise ValueError('insertion conflict: {id}'.format(id=resource_id))
+        self.resources_dict[resource_id] = resource
+
+    def resources(self, type_name):
+        for id,r in self.resources_dict.items():
+            if id.type_name() == type_name:
+                yield r
 
 
 class RepositoryConfig(Resource):

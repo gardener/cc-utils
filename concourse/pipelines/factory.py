@@ -1,4 +1,5 @@
 from copy import deepcopy
+from itertools import chain
 import toposort
 
 from util import merge_dicts
@@ -12,7 +13,7 @@ from concourse.pipelines.model import (
         PipelineArgs,
         PipelineDefinition,
 )
-from concourse.pipelines.model.resources import RepositoryConfig
+from concourse.pipelines.model.resources import RepositoryConfig, ResourceRegistry
 from concourse.pipelines.model.traits import TraitsFactory
 
 def ensure_dict(d, allow_empty=True):
@@ -53,16 +54,22 @@ class DefinitionFactory(object):
     def create_pipeline_definition(self) -> PipelineDefinition:
         merged_variants_dict = self._create_variants_dict(self.raw_definition_descriptor)
 
+        resource_registry = ResourceRegistry()
         variants = {}
 
         for variant_name, variant_dict in merged_variants_dict.items():
-            variant = self._create_variant(raw_dict=variant_dict, variant_name=variant_name)
+            variant = self._create_variant(
+                raw_dict=variant_dict,
+                variant_name=variant_name,
+                resource_registry=resource_registry,
+            )
             self._apply_traits(variant)
             variants[variant_name] = variant
             variant.validate()
 
         pipeline_definition = PipelineDefinition()
         pipeline_definition._variants_dict = variants
+        pipeline_definition._resource_registry = resource_registry
 
         return pipeline_definition
 
@@ -83,7 +90,7 @@ class DefinitionFactory(object):
         return merged_variants
 
 
-    def _create_variant(self, raw_dict, variant_name) -> PipelineArgs:
+    def _create_variant(self, raw_dict, variant_name, resource_registry) -> PipelineArgs:
         variant = PipelineArgs(name=variant_name, raw_dict=raw_dict)
 
         # build steps
@@ -94,6 +101,10 @@ class DefinitionFactory(object):
 
         self._create_repos(variant, raw_dict)
         self._inject_publish_repos(variant)
+
+        # collect repositories
+        for repo in chain(variant._repos_dict.values(), variant._publish_repos_dict.values()):
+            resource_registry.add_resource(repo, discard_duplicates=True)
 
         return variant
 
@@ -186,3 +197,4 @@ class DefinitionFactory(object):
                     qualifier='output',
                 )
                 pipeline_def._publish_repos_dict[repo_name] = publish_repo
+
