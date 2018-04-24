@@ -64,6 +64,11 @@ class DefinitionFactory(object):
                 resource_registry=resource_registry,
             )
             self._apply_traits(variant)
+
+            # collect repositories
+            for repo in chain(variant._repos_dict.values(), variant._publish_repos_dict.values()):
+                resource_registry.add_resource(repo, discard_duplicates=True)
+
             variants[variant_name] = variant
             variant.validate()
 
@@ -101,10 +106,6 @@ class DefinitionFactory(object):
 
         self._create_repos(variant, raw_dict)
         self._inject_publish_repos(variant)
-
-        # collect repositories
-        for repo in chain(variant._repos_dict.values(), variant._publish_repos_dict.values()):
-            resource_registry.add_resource(repo, discard_duplicates=True)
 
         return variant
 
