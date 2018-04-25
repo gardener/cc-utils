@@ -86,15 +86,15 @@ def _client():
     try:
         if bool(args.server_endpoint) ^ bool(args.concourse_cfg_name):
             raise ValueError('either all or none of server-endpoint and concourse-cfg-name must be set')
+        if args.server_endpoint or args.cache_file:
+            return SecretsServerClient(
+                endpoint_url=args.server_endpoint,
+                concourse_secret_name=args.concourse_cfg_name,
+                cache_file=args.cache_file
+            )
     except AttributeError:
         pass # ignore
 
-    if args.server_endpoint or args.cache_file:
-        return SecretsServerClient(
-            endpoint_url=args.server_endpoint,
-            concourse_secret_name=args.concourse_cfg_name,
-            cache_file=args.cache_file
-        )
     # fall-back to environemnt variables
     return SecretsServerClient.from_env()
 
