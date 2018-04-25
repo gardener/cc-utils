@@ -21,7 +21,7 @@ from github3.repos.repo import Repository
 
 import util
 import version
-from model import ConfigFactory
+from model import ConfigFactory, GithubConfig
 
 class GitHubHelper(object):
     GITHUB_TIMESTAMP_UTC_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
