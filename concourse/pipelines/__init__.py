@@ -15,8 +15,6 @@
 # enable toplevel imports
 import os
 import sys
-own_dir = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(own_dir, os.path.pardir))
 
 from copy import deepcopy
 import itertools

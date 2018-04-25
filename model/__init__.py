@@ -288,12 +288,6 @@ class ConfigurationSet(NamedModelElement):
 
             self.raw[cfg_type_name] = entry
 
-    def _cfg_types(self):
-        '''
-        returns a sequence containing the names of all contained configuration types
-        '''
-        return self._mappings.keys()
-
     def _cfg_mappings(self):
         return self.raw.items()
 

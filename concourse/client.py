@@ -558,6 +558,8 @@ class BuildEvents(object):
         '''
         client = sseclient.SSEClient(self.response)
         should_stop = False
+        # pylint: disable=no-member
+        # events attrib is added by response
         for event in client.events():
             if event is None or not event.data or len(event.data.strip()) == 0:
                 return True
@@ -577,6 +579,7 @@ class BuildEvents(object):
             if should_stop:
                 client.close()
                 return True
+        # pylint: enable=no-member
 
 
 class BuildStatus(Enum):
