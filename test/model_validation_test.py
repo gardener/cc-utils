@@ -227,32 +227,3 @@ class BasicCredentialsTest(unittest.TestCase):
                 with self.assertRaises(ModelValidationError):
                     examinee.BasicCredentials(test_dict)
 
-
-class JobMappingTest(unittest.TestCase):
-    def setUp(self):
-        self.valid_dict = {
-            'concourse_team_name':'bar',
-            'definition_dirs':['foo', 'baz'],
-        }
-
-    def test_validation_fails_on_missing_key(self):
-        for key in ('concourse_team_name', 'definition_dirs'):
-            with self.subTest(key=key):
-                test_dict = self.valid_dict.copy()
-                test_dict.pop(key)
-                with self.assertRaises(ModelValidationError):
-                    examinee.JobMapping(test_dict)
-
-
-class JobMappingSetTest(unittest.TestCase):
-    def setUp(self):
-        jmt = JobMappingTest()
-        jmt.setUp()
-        self.valid_raw = [jmt.valid_dict]
-
-    def test_ctor_fails_on_non_iterable_mappings_object(self):
-        with self.assertRaises(TypeError):
-            class NonIterable(object):
-                pass
-            examinee.JobMappingSet(name='amap', raw_dict=NonIterable())
-

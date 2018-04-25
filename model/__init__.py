@@ -543,24 +543,18 @@ class JobMappingSet(NamedModelElement):
         super().__init__(*args, **kwargs)
 
     def job_mappings(self):
-        return [JobMapping(raw_dict=dict(raw)) for raw in self.raw]
+        return {name: JobMapping(name=name, raw_dict=raw) for name, raw in self.raw.items()}
 
 
-class JobMapping(ModelBase):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
+class JobMapping(NamedModelElement):
     def team_name(self)->str:
-        return self.snd.concourse_team_name
+        return self.snd.concourse_target_team
 
     def definition_dirs(self):
         return self.raw['definition_dirs']
 
     def _required_attributes(self):
-        return ['concourse_team_name', 'definition_dirs']
-
-    def _validate_dict(self):
-        super()._validate_dict()
+        return ['concourse_target_team']
 
 
 class KubernetesConfig(NamedModelElement):
