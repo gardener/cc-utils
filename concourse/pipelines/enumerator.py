@@ -16,6 +16,18 @@ import os
 from util import (
     parse_yaml_file
 )
+from model import JobMapping
+
+class PipelineEnumerator(object):
+    def __init__(self, base_dir, cfg_set):
+        self.base_dir = base_dir
+        self.cfg_set = cfg_set
+
+    def enumerate_pipeline_definitions(self, job_mapping: JobMapping):
+        for pd in enumerate_pipeline_definitions(
+                [os.path.join(self.base_dir, d) for d in job_mapping.definition_dirs()]
+        ):
+            yield pd
 
 def enumerate_pipeline_definitions(directories):
     for directory in directories:

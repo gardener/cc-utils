@@ -141,7 +141,7 @@ def render_pipeline(
 
 
 def render_pipelines(
-        definition_directories: [str],
+        definitions_root_dir: str,
         template_path: [str],
         config_dir: str,
         config_name: str,
@@ -154,15 +154,20 @@ def render_pipelines(
     cfg_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
     config_set = cfg_factory.cfg_set(cfg_name=config_name)
 
-    for rendered_pipeline, definition, pipeline_args in pipelines.generate_pipelines(
-            definition_directories=definition_directories,
-            template_path=template_path,
-            template_include_dir=template_include_dir,
-            config_set=config_set
-        ):
-        out_name = os.path.join(out_dir, pipeline_args.name + '.yaml')
-        with open(out_name, 'w') as f:
-            f.write(rendered_pipeline)
+    concourse_cfg = config_set.concourse()
+    job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
+
+    for job_mapping in job_mapping_set.job_mappings().values():
+        for rendered_pipeline, definition, pipeline_args in pipelines.generate_pipelines(
+                definitions_root_dir=definitions_root_dir,
+                job_mapping=job_mapping,
+                template_path=template_path,
+                template_include_dir=template_include_dir,
+                config_set=config_set
+            ):
+            out_name = os.path.join(out_dir, pipeline_args.name + '.yaml')
+            with open(out_name, 'w') as f:
+                f.write(rendered_pipeline)
 
 
 def deploy_pipeline(

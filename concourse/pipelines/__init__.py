@@ -26,20 +26,26 @@ from util import (
 from githubutil import branches
 
 from concourse.pipelines.factory import DefinitionFactory, RawPipelineDefinitionDescriptor
-from concourse.pipelines.enumerator import enumerate_pipeline_definitions
+from concourse.pipelines.enumerator import PipelineEnumerator
 
 from concourse import client
 from model import ConcourseTeamCredentials, ConcourseConfig
 
 
 def generate_pipelines(
-        definition_directories,
+        definitions_root_dir,
+        job_mapping,
         template_path,
         template_include_dir,
         config_set: 'ConfigurationSet'
     ):
+    enumerator = PipelineEnumerator(
+        base_dir=definitions_root_dir,
+        cfg_set=config_set,
+    )
+
     repo_pipeline_definition_mappings = itertools.chain(
-            *enumerate_pipeline_definitions(definition_directories)
+            *enumerator.enumerate_pipeline_definitions(job_mapping)
     )
 
     # inject base repo definition, multiply by branches
@@ -177,17 +183,14 @@ def replicate_pipelines(
     template_include_dir,
 ):
     ensure_directory_exists(definitions_root_dir)
-    definition_dirs = [
-        ensure_directory_exists(os.path.abspath(os.path.join(definitions_root_dir, dd)))
-        for dd in job_mapping.definition_dirs()
-    ]
     team_name = job_mapping.team_name()
     team_credentials = concourse_cfg.team_credentials(team_name)
 
     pipeline_names = set()
 
     for rendered_pipeline, _, pipeline_metadata in generate_pipelines(
-        definition_directories=definition_dirs,
+        definitions_root_dir=definitions_root_dir,
+        job_mapping=job_mapping,
         template_path=template_path,
         template_include_dir=template_include_dir,
         config_set=cfg_set,
