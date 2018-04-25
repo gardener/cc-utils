@@ -83,6 +83,24 @@ class ResourceRegistry(object):
     def __init__(self):
         self.resources_dict = {}
 
+    def __contains__(self, item):
+        if isinstance(item, Resource):
+            id = item.resource_identifier()
+        elif isinstance(item, ResourceIdentifier):
+            id = item
+        else:
+            return False
+        return id in self.resources_dict
+
+    def __getitem__(self, item):
+        if isinstance(item, Resource):
+            id = item.resource_identifier()
+        elif isinstance(item, ResourceIdentifier):
+            id = item
+        else:
+            id = item
+        return self.resources_dict[id]
+
     def add_resource(self, resource, discard_duplicates=True):
         if not isinstance(resource, Resource):
             raise ValueError('not an instance of Resource')
@@ -106,7 +124,7 @@ class ResourceRegistry(object):
         return filter(filter_expr, self.resources_dict.values())
 
     def resource(self, resource_identifier):
-        return self.resources_dict[resource_identifier]
+        return self[resource_identifier]
 
 
 class RepositoryConfig(Resource):
