@@ -21,29 +21,15 @@ import argparse
 import mako.template
 
 from util import (
-    SimpleNamespaceDict, parse_yaml_file, fail, ensure_directory_exists, ensure_file_exists, info, is_yaml_file, merge_dicts
+    SimpleNamespaceDict, fail, ensure_directory_exists, ensure_file_exists, info, is_yaml_file, merge_dicts
 )
 from githubutil import branches
 
 from concourse.pipelines.factory import DefinitionFactory, RawPipelineDefinitionDescriptor
+from concourse.pipelines.enumerator import enumerate_pipeline_definitions
 
 from concourse import client
 from model import ConcourseTeamCredentials, ConcourseConfig
-
-
-def enumerate_pipeline_definitions(directories):
-    for directory in directories:
-        # for now, hard-code mandatory .repository_mapping
-        repo_mapping = parse_yaml_file(os.path.join(directory, '.repository_mapping'))
-        repo_definition_mapping = {repo_path: list() for repo_path in repo_mapping.keys()}
-
-        for repo_path, definition_files in repo_mapping.items():
-            for definition_file_path in definition_files:
-                abs_file = os.path.abspath(os.path.join(directory, definition_file_path))
-                pipeline_raw_definition = parse_yaml_file(abs_file, as_snd=False)
-                repo_definition_mapping[repo_path].append(pipeline_raw_definition)
-
-        yield repo_definition_mapping.items()
 
 
 def generate_pipelines(
