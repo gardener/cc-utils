@@ -83,8 +83,12 @@ def __add_module_command_args(parser):
 
 def _client():
     args = ctx().args
-    if bool(args.server_endpoint) ^ bool(args.concourse_cfg_name):
-        raise ValueError('either all or none of server-endpoint and concourse-cfg-name must be set')
+    try:
+        if bool(args.server_endpoint) ^ bool(args.concourse_cfg_name):
+            raise ValueError('either all or none of server-endpoint and concourse-cfg-name must be set')
+    except AttributeError:
+        pass # ignore
+
     if args.server_endpoint or args.cache_file:
         return SecretsServerClient(
             endpoint_url=args.server_endpoint,
