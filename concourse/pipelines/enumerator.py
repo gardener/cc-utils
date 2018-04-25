@@ -12,11 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+from copy import deepcopy
+from itertools import chain
 
 from util import (
-    parse_yaml_file
+    parse_yaml_file,
+    merge_dicts,
 )
 from model import JobMapping
+from concourse.pipelines.factory import RawPipelineDefinitionDescriptor
+
 
 class PipelineEnumerator(object):
     def __init__(self, base_dir, cfg_set):
@@ -24,10 +29,40 @@ class PipelineEnumerator(object):
         self.cfg_set = cfg_set
 
     def enumerate_pipeline_definitions(self, job_mapping: JobMapping):
-        for pd in enumerate_pipeline_definitions(
+        for repo_path, pd in enumerate_pipeline_definitions(
                 [os.path.join(self.base_dir, d) for d in job_mapping.definition_dirs()]
         ):
-            yield pd
+            for definitions in pd:
+                for name, definition in definitions.items():
+                    yield self._preprocess_and_wrap_into_descriptors(repo_path, ['master'], definitions)
+
+    def _preprocess_and_wrap_into_descriptors(self, repo_path, branches, raw_definitions):
+        for name, definition in raw_definitions.items():
+            for branch in branches:
+                pipeline_definition = deepcopy(definition)
+                base_definition = self._inject_main_repo(
+                    base_definition=definition.get('base_definition', {}),
+                    repo_path=repo_path,
+                    branch_name=branch,
+                )
+                yield RawPipelineDefinitionDescriptor(
+                    name=name, #'-'.join(name, branch),
+                    base_definition=base_definition,
+                    variants=definition['variants'],
+                    template=definition['template'],
+                )
+
+    def _inject_main_repo(self, base_definition, repo_path, branch_name):
+        main_repo_raw = {'path': repo_path, 'branch': branch_name}
+
+        if base_definition.get('repo'):
+            merged_main_repo = merge_dicts(base_definition['repo'], main_repo_raw)
+            base_definition['repo'] = merged_main_repo
+        else:
+            base_definition['repo'] = main_repo_raw
+
+        return base_definition
+
 
 def enumerate_pipeline_definitions(directories):
     for directory in directories:
@@ -41,4 +76,5 @@ def enumerate_pipeline_definitions(directories):
                 pipeline_raw_definition = parse_yaml_file(abs_file, as_snd=False)
                 repo_definition_mapping[repo_path].append(pipeline_raw_definition)
 
-        yield repo_definition_mapping.items()
+        for repo_path, definitions in  repo_definition_mapping.items():
+            yield (repo_path, definitions)

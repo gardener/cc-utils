@@ -30,10 +30,11 @@ class RawPipelineDefinitionDescriptor(object):
     Container type holding a single (raw) pipeline definition and metadata.
     Basic value validation is done in the c'tor.
     '''
-    def __init__(self, name, base_definition, variants):
+    def __init__(self, name, base_definition, variants, template):
         self.name = ensure_not_none(name)
         self.base_definition = ensure_dict(base_definition, allow_empty=True)
         self.variants = ensure_dict(variants, allow_empty=False)
+        self.template = ensure_not_none(template)
 
 
 class DefinitionFactory(object):

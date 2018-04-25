@@ -44,39 +44,10 @@ def generate_pipelines(
         cfg_set=config_set,
     )
 
-    repo_pipeline_definition_mappings = itertools.chain(
-            *enumerator.enumerate_pipeline_definitions(job_mapping)
-    )
+    pipeline_definitions = itertools.chain(*enumerator.enumerate_pipeline_definitions(job_mapping))
 
-    # inject base repo definition, multiply by branches
-    pipeline_definitions = []
     github_cfg = config_set.github()
 
-
-    for repo_path, pipeline_defs in repo_pipeline_definition_mappings:
-        # determine branches
-        org, repo_name = repo_path.split('/')
-        #branch_names = branches(github_cfg=github_cfg, repo_owner=org, repo_name=repo_name)
-        branch_names = ['master'] # hotfix: hard-code branch names to 'master' only
-
-        for pd in pipeline_defs:
-            for branch_name in branch_names:
-                pd = deepcopy(pd)
-                main_repo_raw = {'path': repo_path, 'branch': branch_name}
-                for pipeline_name, pipeline_args in pd.items():
-                    # todo: mv this into pipeline-definition-factory
-                    base_definition = pipeline_args.get('base_definition', {})
-                    if base_definition.get('repo'):
-                        merged_main_repo = merge_dicts(base_definition['repo'], main_repo_raw)
-                        base_definition['repo'] = merged_main_repo
-                    else:
-                        base_definition['repo'] = main_repo_raw
-                    # create "old" structure as a quick temporary hack
-                    pipeline_definition = {
-                        'pipeline': pipeline_args,
-                    }
-                    pipeline_definition['name'] = pipeline_name
-                    pipeline_definitions.append(SimpleNamespaceDict(pipeline_definition))
 
     for pipeline_definition in pipeline_definitions:
         rendering_results = render_pipelines(
@@ -124,12 +95,12 @@ def find_template_file(template_name:str, template_path:[str]):
 
 
 def render_pipelines(
-    pipeline_definition,
+    pipeline_definition: RawPipelineDefinitionDescriptor,
     config_set: 'ConfigurationSet',
     template_path,
     template_include_dir=None
 ):
-    template_name = pipeline_definition.pipeline.template
+    template_name = pipeline_definition.template
     template_file = find_template_file(template_name, template_path)
 
     if template_include_dir:
@@ -140,15 +111,11 @@ def render_pipelines(
         import sys
         sys.path.append(os.path.join(template_include_dir, 'lib'))
 
-    definition_descriptor = RawPipelineDefinitionDescriptor(
-        name=pipeline_definition.name,
-        base_definition=dict(pipeline_definition.pipeline.base_definition.items()),
-        variants=dict(pipeline_definition.pipeline.variants.items())
-    )
-    factory = DefinitionFactory(raw_definition_descriptor=definition_descriptor)
+    factory = DefinitionFactory(raw_definition_descriptor=pipeline_definition)
     pipeline_metadata = SimpleNamespaceDict()
     pipeline_metadata.definition = factory.create_pipeline_definition()
     pipeline_metadata.name = pipeline_definition.name
+    generated_model = pipeline_metadata.definition
 
     # determine pipeline name (if there is main-repo, append the configured branch name)
     for variant in pipeline_metadata.definition.variants():
@@ -165,11 +132,11 @@ def render_pipelines(
     t = mako.template.Template(filename=template_file, lookup=lookup)
     yield (
             t.render(
-                instance_args=pipeline_definition.pipeline,
+                instance_args=generated_model,
                 config_set=config_set,
                 pipeline=pipeline_metadata
                 ),
-            pipeline_definition.pipeline,
+            generated_model,
             pipeline_metadata
     )
 
