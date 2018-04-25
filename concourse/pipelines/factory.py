@@ -67,7 +67,14 @@ class DefinitionFactory(object):
 
             # collect repositories
             for repo in chain(variant._repos_dict.values(), variant._publish_repos_dict.values()):
-                resource_registry.add_resource(repo, discard_duplicates=True)
+                if repo in resource_registry:
+                    existing_repo = resource_registry.resource(repo)
+                    # hack: patch-in should-trigger (the proper way to implement this
+                    # would be to separate (effective) resource-definitions from additional
+                    # resource-specialisations as contained in variants
+                    existing_repo._trigger |= repo.should_trigger()
+                else:
+                    resource_registry.add_resource(deepcopy(repo), discard_duplicates=False)
 
             variants[variant_name] = variant
             variant.validate()
