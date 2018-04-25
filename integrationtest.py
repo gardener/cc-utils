@@ -18,6 +18,7 @@ from util import fail, info, parse_yaml_file
 from model import ConfigFactory
 from concourse.client import ConcourseApi
 from concourse.pipelines import render_pipelines, deploy_pipeline
+from concourse.pipelines.factory import RawPipelineDefinitionDescriptor
 
 '''
 Integration tests for concourse pipeline generator
@@ -44,14 +45,20 @@ def deploy_and_run_smoketest_pipeline(
     pipeline_name = 'cc-smoketest'
     job_name = 'cc-smoketest-master-head-update-job'
 
-    pipeline_definition = parse_yaml_file(pipeline_definition_file)
-    return # XXX temporary workaround
+    pipeline_definition = parse_yaml_file(pipeline_definition_file, as_snd=False)
+
+    pipeline_descriptor = RawPipelineDefinitionDescriptor(
+        name=pipeline_name,
+        base_definition=pipeline_definition[pipeline_name]['base_definition'],
+        variants=pipeline_definition[pipeline_name]['variants'],
+        template=pipeline_definition[pipeline_name]['template'],
+    )
 
     rendered_pipelines = list(
         render_pipelines(
-            pipeline_definition=pipeline_definition,
+            pipeline_definition=pipeline_descriptor,
             config_set=config_set,
-            template_path=template_path,
+            template_path=[template_path],
             template_include_dir=template_include_dir,
         )
     )
