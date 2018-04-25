@@ -18,7 +18,8 @@ import json
 
 from urllib.parse import urlparse
 
-from util import ensure_file_exists, parse_yaml_file, ensure_directory_exists, SimpleNamespaceDict, ensure_not_none
+from model.base import NamedModelElement, ModelBase, ModelValidationError
+from util import ensure_file_exists, parse_yaml_file, ensure_directory_exists, ensure_not_none
 
 '''
 Configuration model and retrieval handling.
@@ -31,48 +32,6 @@ They create concrete configuration instances. While technically modifiable, all 
 instances should not be altered by users. Configuration objects should usually not be
 instantiated by users of this module.
 '''
-
-class ModelValidationError(ValueError):
-    '''
-    exception to be raised upon model validation errors
-    '''
-    pass
-
-
-class ModelBase(object):
-    '''
-    Base class for 'dict-based' configuration classes (i.e. classes that expose contents
-    from a dict through a set of 'getter' methods.
-
-    Extenders _may_ overwrite `_required_attributes(self)` and return an iterable of attribute
-    identifiers. If such an iterable is returned, the constructor will ensure that all specified
-    attributes be contained in the given dictionary (ModelValidationError is raised on absent attribs).
-    '''
-    def __init__(self, raw_dict):
-        self.raw = ensure_not_none(raw_dict)
-        self.snd = SimpleNamespaceDict(raw_dict)
-        self._validate_dict()
-
-    def _required_attributes(self):
-        return []
-
-    def _validate_dict(self):
-        required_attribs = self._required_attributes()
-        missing_keys = [k for k in required_attribs if k not in self.raw]
-        if len(list(missing_keys)) > 0:
-            raise ModelValidationError('missing required attribute(s): {a}'.format(
-                a=', '.join(missing_keys))
-            )
-
-
-class NamedModelElement(ModelBase):
-    def __init__(self, name, raw_dict, *args, **kwargs):
-        self._name = ensure_not_none(name)
-        super().__init__(raw_dict=raw_dict, *args, **kwargs)
-
-    def name(self):
-        return self._name
-
 
 class ConfigFactory(object):
     '''

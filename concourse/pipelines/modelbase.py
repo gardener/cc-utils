@@ -2,7 +2,7 @@ import string
 
 from abc import abstractmethod
 
-from model import ModelValidationError
+from model.base import ModelValidationError
 
 def ensure_not_none(value):
     if value is None:

@@ -17,7 +17,7 @@ import unittest
 from unittest.mock import MagicMock
 
 import model as examinee
-from model import ModelValidationError
+from model.base import ModelValidationError
 
 class TeamCredentialTest(unittest.TestCase):
     def setUp(self):

@@ -3,7 +3,7 @@ from itertools import chain
 import toposort
 
 from util import merge_dicts
-from model import ModelValidationError
+from model.base import ModelValidationError
 from concourse.pipelines.modelbase import (
         PipelineStep,
         normalise_to_dict,
