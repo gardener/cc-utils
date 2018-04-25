@@ -28,6 +28,9 @@ class ResourceIdentifier(object):
     def base_name(self):
         return self._base_name
 
+    def qualifier(self):
+        return self._qualifier
+
     def type_name(self):
         return self._type_name
 
@@ -91,10 +94,19 @@ class ResourceRegistry(object):
             raise ValueError('insertion conflict: {id}'.format(id=resource_id))
         self.resources_dict[resource_id] = resource
 
-    def resources(self, type_name):
-        for id,r in self.resources_dict.items():
-            if id.type_name() == type_name:
-                yield r
+    def resources(self, type_name, qualifier=None):
+        def filter_expr(resource):
+            id = resource.resource_identifier()
+            if not id.type_name() == type_name:
+                return False
+            if qualifier is not None and id.qualifier() != qualifier:
+                return False
+            return True
+
+        return filter(filter_expr, self.resources_dict.values())
+
+    def resource(self, resource_identifier):
+        return self.resources_dict[resource_identifier]
 
 
 class RepositoryConfig(Resource):
