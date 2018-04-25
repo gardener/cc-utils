@@ -111,10 +111,12 @@ class GitHubHelper(object):
 
 
 def _create_github_api_object(
-    github_auth_token:str,
-    github_url: str='https://github.com',
-    github_verify_ssl:bool=False
+    github_cfg: 'GithubConfig',
 ):
+    github_url = github_cfg.http_url()
+    github_auth_token = github_cfg.credentials.auth_token()
+    github_verify_ssl = github_cfg.tls_validation()
+
     if github_url.strip('/') == 'https://github.com':
         github = GitHub(token=github_auth_token)
     else:
@@ -131,10 +133,7 @@ def branches(
     repo_owner: str,
     repo_name: str,
 ):
-    github_api = _create_github_api_object(
-        github_auth_token=github_cfg.credentials().auth_token(),
-        github_url=github_cfg.http_url(),
-    )
+    github_api = _create_github_api_object(github_cfg=github_cfg)
     repo = github_api.repository(repo_owner, repo_name)
     return list(map(lambda r: r.name, repo.branches()))
 
@@ -155,11 +154,7 @@ def replicate_pipeline_definitions(
     cfg_set = cfg_factory.cfg_set(cfg_name)
     github_cfg = cfg_set.github()
 
-    github = _create_github_api_object(
-        github_url=github_cfg.http_url(),
-        github_auth_token=github_cfg.credentials().auth_token(),
-        github_verify_ssl=False
-    )
+    github = _create_github_api_object(github_cfg=github_cfg)
 
     repo_mappings = util.parse_yaml_file(os.path.join(definition_dir, '.repository_mapping'))
 
@@ -197,8 +192,7 @@ def replicate_pipeline_definitions(
 
 
 def release_and_prepare_next_dev_cycle(
-    github_url: str,
-    github_auth_token:str,
+    github_cfg_name: str,
     github_repository_owner: str,
     github_repository_name: str,
     repository_branch: str,
@@ -209,8 +203,11 @@ def release_and_prepare_next_dev_cycle(
     prerelease_suffix: str="dev",
     author_name: str="gardener-ci",
     author_email: str="gardener.ci.user@gmail.com",
-    github_verify_ssl:bool=False
 ):
+    # retrieve github-cfg from secrets-server
+    from config import _retrieve_model_element
+    github_cfg = _retrieve_model_element(cfg_type='github', cfg_name=github_cfg_name)
+
     # Do all the version handling upfront to catch errors early
     # Bump release version and add suffix
     next_version = version.process_version(
@@ -223,11 +220,7 @@ def release_and_prepare_next_dev_cycle(
         prerelease=prerelease_suffix
     )
 
-    github = _create_github_api_object(
-        github_url=github_url,
-        github_auth_token=github_auth_token,
-        github_verify_ssl=github_verify_ssl
-    )
+    github = _create_github_api_object(github_cfg=github_cfg)
 
     helper = GitHubHelper(
         github=github,
@@ -266,16 +259,10 @@ def release_and_prepare_next_dev_cycle(
 
 
 def retrieve_email_addresses(
-    github_auth_token:str,
-    github_users: [str],
-    github_url: str='https://github.com',
+    github_cfg: GithubConfig,
     out_file: str=None
 ):
-    github = _create_github_api_object(
-        github_auth_token=github_auth_token,
-        github_url=github_url,
-        github_verify_ssl=False
-    )
+    github = _create_github_api_object(github_cfg=github_cfg)
     def retrieve_email(username: str):
         user = github.user(username)
         return user.email
