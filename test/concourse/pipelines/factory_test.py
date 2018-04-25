@@ -99,3 +99,10 @@ class DefinitionFactoryTest(unittest.TestCase):
         self.assertFalse(main_repo_v2.should_trigger())
         self.assertTrue(other_repo_v2.should_trigger())
 
+        # ensure different trigger logic in resource_registry:
+        # if any variant declares a repository to be triggering, this should be the result
+        registry = result.resource_registry()
+        main_repo_from_registry = registry.resource(main_repo.resource_identifier())
+
+        self.assertTrue(main_repo_from_registry.should_trigger())
+
