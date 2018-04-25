@@ -214,7 +214,7 @@ def replicate_pipelines(
 
     for pipeline_name in pipelines_to_remove:
         info('removing pipeline: {p}'.format(p=pipeline_name))
-        #concourse_api.delete_pipeline(pipeline_name)
+        concourse_api.delete_pipeline(pipeline_name)
 
     # order pipelines alphabetically
     pipeline_names = list(concourse_api.pipelines())
