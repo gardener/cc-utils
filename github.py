@@ -114,6 +114,32 @@ class GithubWebHookSyncer(object):
             return True
         return False
 
+    @ensure_annotations
+    def add_or_update_hooks(
+        self,
+        owner:str,
+        repository_name:str,
+        callback_urls, # List[str]
+        hook_name:str=DEFAULT_HOOK_NAME,
+        events:list=DEFAULT_HOOK_EVENTS,
+        content_type:str=DEFAULT_HOOK_CONTENT_TYPE,
+        active:bool=True,
+        skip_ssl_validation=False
+    ):
+        '''
+        convenience wrapper for add_or_update_hook, processing an iterable of callback_urls
+        '''
+        for callback_url in callback_urls:
+            self.add_or_update_hook(
+                owner=owner,
+                repository_name=repository_name,
+                callback_url=callback_url,
+                hook_name=hook_name,
+                events=events,
+                content_type=content_type,
+                active=active,
+                skip_ssl_validation=skip_ssl_validation,
+            )
 
     @ensure_annotations
     def add_or_update_hook(
@@ -137,7 +163,7 @@ class GithubWebHookSyncer(object):
 
         @param owner: repository owner
         @param repository_name: repository name
-        @param callback_url: URL the webhook should call
+        @param callback_urls: URLs the webhook should call
         @param hook_name: the webhook's name
         @param events: the events for which the webhook should trigger
         @param content_type: webhook content type (see github webhook documentation)

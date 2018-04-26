@@ -254,7 +254,7 @@ def sync_webhooks(
   concourse_team:str='kubernetes',
   concourse_pipelines:[str]=None
 ):
-    pullrequest_resources = _list_github_resources(
+    github_resources = _list_github_resources(
       concourse_url=concourse_url,
       concourse_user=concourse_user,
       concourse_passwd=concourse_passwd,
@@ -262,15 +262,24 @@ def sync_webhooks(
       concourse_pipelines=concourse_pipelines,
       github_url=github_cfg.http_url(),
     )
+    # group by repositories
+    path_to_resources = {}
+    for gh_res in github_resources:
+        repo_path = gh_res.github_source().repo_path()
+        if not repo_path in path_to_resources:
+            path_to_resources[repo_path] = [gh_res]
+        else:
+            path_to_resources[repo_path].append(gh_res)
+
     github_obj = _create_github_api_object(github_cfg=github_cfg)
 
     webhook_syncer = github.GithubWebHookSyncer(github_obj)
     failed_hooks = 0
 
-    for res in pullrequest_resources:
+    for repo, resources in path_to_resources.items():
         try:
             _sync_webhook(
-              res=res,
+              resources=resources,
               webhook_syncer=webhook_syncer,
               concourse_proxy_url=concourse_proxy_url,
               skip_ssl_validation=not concourse_verify_ssl
@@ -284,34 +293,46 @@ def sync_webhooks(
 
 
 def _sync_webhook(
-  res:concourse.Resource,
+  resources:[concourse.Resource],
   webhook_syncer:github.GithubWebHookSyncer,
   concourse_proxy_url: str,
   skip_ssl_validation: bool=False
 ):
-    pipeline = res.pipeline
+    first_res = resources[0]
+    first_github_src = first_res.github_source()
+    pipeline = first_res.pipeline
+
     # construct webhook endpoint
     routes = copy(pipeline.concourse_api.routes)
     # workaround: direct webhooks against delaying proxy
     routes.base_url = concourse_proxy_url
+    repository = first_github_src.parse_repository()
+    organisation = first_github_src.parse_organisation()
 
-    github_src = res.github_source()
+    # collect callback URLs
+    def webhook_url(gh_res):
+        github_src = gh_res.github_source()
+        webhook_url = routes.resource_check_webhook(
+          pipeline_name=pipeline.name,
+          resource_name=gh_res.name,
+          webhook_token=gh_res.webhook_token()
+        )
+        return webhook_url
 
-    repository = github_src.parse_repository()
-    organisation = github_src.parse_organisation()
-    webhook_url = routes.resource_check_webhook(
-      pipeline_name=pipeline.name,
-      resource_name=res.name,
-      webhook_token=res.webhook_token()
-    )
+    webhook_urls = set(map(webhook_url, resources))
 
-    webhook_syncer.add_or_update_hook(
+    webhook_syncer.add_or_update_hooks(
       owner=organisation,
       repository_name=repository,
-      callback_url=webhook_url,
+      callback_urls=webhook_urls,
       skip_ssl_validation=skip_ssl_validation
     )
-    info('updated hook for: {o}/{r}'.format(o=organisation, r=repository))
+    info('updated {c} hook(s) for: {o}/{r}'.format(
+        c=len(webhook_urls),
+        o=organisation,
+        r=repository
+        )
+    )
 
 
 def diff_pipelines(left_file: CliHints.yaml_file(), right_file: CliHints.yaml_file()):
