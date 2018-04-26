@@ -483,13 +483,16 @@ class GithubSource(object):
         self.raw = raw_dict
         self.uri = raw_dict['uri']
 
+    def repo_path(self):
+        return urlparse(self.uri).path
+
     def parse_organisation(self):
-        path = urlparse(self.uri).path
+        path = self.repo_path()
         # hardcode assumption: first part always denotes organisation
         return path.split('/')[1]
 
     def parse_repository(self):
-        path = urlparse(self.uri).path
+        path = self.repo_path()
         # hardcode assumption: second part always denotes organisation
         return path.split('/')[2]
 
