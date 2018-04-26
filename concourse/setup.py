@@ -37,8 +37,19 @@ from model import (
     ConcourseConfig,
     SecretsServerConfig,
     TlsConfig,
+    GcrCredentials,
+    KubernetesConfig,
+    NamedModelElement,
 )
-from util import ctx as global_ctx, ensure_file_exists, ensure_directory_exists, ensure_not_empty, ensure_not_none, info, fail
+from util import (
+    ctx as global_ctx,
+    ensure_file_exists,
+    ensure_directory_exists,
+    ensure_not_empty,
+    ensure_not_none,
+    info,
+    fail,
+)
 from kubeutil import (
     KubernetesNamespaceHelper,
     KubernetesSecretHelper,
@@ -57,29 +68,20 @@ from kubernetes.client import (
 
 @ensure_annotations
 def create_image_pull_secret(
-    config_factory: ConfigFactory,
-    config_name: str,
+    credentials: GcrCredentials,
+    image_pull_secret_name: str,
     namespace: str,
 ):
     """Create an image pull secret in the K8s cluster to allow pods to download images from gcr"""
-    ensure_not_none(config_factory)
-    ensure_not_empty(config_name)
+    ensure_not_none(credentials)
+    ensure_not_empty(image_pull_secret_name)
     ensure_not_empty(namespace)
 
-    config_set = config_factory.cfg_set(cfg_name=config_name)
-    concourse_config = config_set.concourse()
-    image_pull_secret_name = concourse_config.image_pull_secret()
-
-    container_registry = config_factory._cfg_element(
-        cfg_type_name='container_registry',
-        cfg_name=image_pull_secret_name,
-    )
-    credentials = container_registry.credentials()
-
-    namespace_helper = kubeutil.ctx.namespace_helper()
+    ctx = kubeutil.ctx
+    namespace_helper = ctx.namespace_helper()
     namespace_helper.create_if_absent(namespace)
 
-    secret_helper = kubeutil.ctx.secret_helper()
+    secret_helper = ctx.secret_helper()
     if not secret_helper.get_secret(image_pull_secret_name, namespace):
         secret_helper.create_gcr_secret(
             namespace=namespace,
@@ -90,7 +92,7 @@ def create_image_pull_secret(
             server_url=credentials.host(),
         )
 
-        service_account_helper = kubeutil.ctx.service_account_helper()
+        service_account_helper = ctx.service_account_helper()
         service_account_helper.patch_image_pull_secret_into_service_account(
             name="default",
             namespace=namespace,
@@ -109,10 +111,11 @@ def create_tls_secret(
     ensure_not_empty(tls_secret_name)
     ensure_not_empty(namespace)
 
-    namespace_helper = kubeutil.ctx.namespace_helper()
+    ctx = kubeutil.ctx
+    namespace_helper = ctx.namespace_helper()
     namespace_helper.create_if_absent(namespace)
 
-    secret_helper = kubeutil.ctx.secret_helper()
+    secret_helper = ctx.secret_helper()
     if not secret_helper.get_secret(tls_secret_name, namespace):
         data = {
             'tls.key':tls_config.private_key(),
@@ -166,27 +169,52 @@ def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
 
 
 def deploy_concourse_landscape(
-        config_dir: str,
+        config_factory: ConfigFactory,
         config_name: str,
         deployment_name: str='concourse',
         timeout_seconds: int='180'
 ):
-    ensure_directory_exists(config_dir)
+    ensure_not_none(config_factory)
     ensure_not_empty(config_name)
     ensure_helm_setup()
 
-    config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
+    # Fetch all the necessary config
     config_set = config_factory.cfg_set(cfg_name=config_name)
     concourse_cfg = config_set.concourse()
 
+    # Container-registry config
+    image_pull_secret_name = concourse_cfg.image_pull_secret()
+    container_registry = config_factory._cfg_element(
+        cfg_type_name='container_registry',
+        cfg_name=image_pull_secret_name,
+    )
+    cr_credentials = container_registry.credentials()
+
+    # TLS config
     tls_config_name = concourse_cfg.tls_config()
     tls_config = config_factory._cfg_element(cfg_type_name='tls_config', cfg_name=tls_config_name)
     tls_secret_name = concourse_cfg.tls_secret_name()
 
+    # Secrets server
+    secrets_server_config = config_set.secrets_server()
+
+    # Helm config
+    helmchart_cfg_type = 'concourse_helmchart'
+    default_helm_values = config_factory._cfg_element(
+        cfg_type_name = helmchart_cfg_type,
+        cfg_name = concourse_cfg.helm_chart_default_values_config()
+    ).raw
+    custom_helm_values = config_factory._cfg_element(
+        cfg_type_name = helmchart_cfg_type,
+        cfg_name = concourse_cfg.helm_chart_values()
+    ).raw
+
+    kubernetes_config = config_set.kubernetes()
+
     info('Creating default image-pull-secret ...')
     create_image_pull_secret(
-        config_factory=config_factory,
-        config_name=config_name,
+        credentials=cr_credentials,
+        image_pull_secret_name=image_pull_secret_name,
         namespace=deployment_name,
     )
 
@@ -199,23 +227,22 @@ def deploy_concourse_landscape(
 
     info('Deploying secrets-server ...')
     deploy_secrets_server(
-        config_dir=config_dir,
-        config_name=config_name,
+        secrets_server_config=secrets_server_config,
     )
 
     info('Deploying delaying proxy ...')
     deploy_delaying_proxy(
-        config_dir=config_dir,
-        config_name=config_name,
+        concourse_cfg=concourse_cfg,
         deployment_name=deployment_name,
     )
-
     info('Deploying Concourse ...')
     # Concourse is deployed last since Helm will lose connection if deployment takes more than ~60 seconds.
     # Helm will still continue deploying server-side, but the client will report an error.
     deploy_or_upgrade_concourse(
-        config_dir=config_dir,
-        config_name=config_name,
+        default_helm_values=default_helm_values,
+        custom_helm_values=custom_helm_values,
+        concourse_cfg=concourse_cfg,
+        kubernetes_config=kubernetes_config,
         deployment_name=deployment_name,
     )
 
@@ -259,33 +286,22 @@ def ensure_helm_setup():
 CONCOURSE_HELM_CHART_VERSION = "1.3.0"
 
 def deploy_or_upgrade_concourse(
-        config_dir: str,
-        config_name: str,
+        default_helm_values: NamedModelElement,
+        custom_helm_values: NamedModelElement,
+        concourse_cfg: ConcourseConfig,
+        kubernetes_config: KubernetesConfig,
         deployment_name: str='concourse',
 ):
     """Deploys (or upgrades) Concourse using the Helm CLI"""
-    ensure_directory_exists(config_dir)
-    ensure_not_empty(config_name)
+    ensure_not_none(default_helm_values)
+    ensure_not_none(custom_helm_values)
+    ensure_not_none(concourse_cfg)
     helm_executable = ensure_helm_setup()
 
     namespace = deployment_name
 
-    config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
-    configuration_set = config_factory.cfg_set(cfg_name=config_name)
-    concourse_cfg = configuration_set.concourse()
-    helmchart_cfg_type = 'concourse_helmchart'
-
-    default_helm_values = config_factory._cfg_element(
-        cfg_type_name = helmchart_cfg_type,
-        cfg_name = concourse_cfg.helm_chart_default_values_config()
-    ).raw
-    custom_helm_values = config_factory._cfg_element(
-        cfg_type_name = helmchart_cfg_type,
-        cfg_name = concourse_cfg.helm_chart_values()
-    ).raw
-
     # create namespace if absent
-    namespace_helper = KubernetesNamespaceHelper(kubeutil.Ctx().create_core_api())
+    namespace_helper = kubeutil.ctx.namespace_helper()
     if not namespace_helper.get_namespace(namespace):
         namespace_helper.create_namespace(namespace)
 
@@ -323,22 +339,14 @@ def deploy_or_upgrade_concourse(
         with open(os.path.join(temp_dir, INSTANCE_SPECIFIC_HELM_VALUES_FILE_NAME), 'w') as f:
             yaml.dump(create_instance_specific_helm_values(concourse_cfg=concourse_cfg), f)
         with open(os.path.join(temp_dir, KUBECONFIG_FILE_NAME), 'w') as f:
-            yaml.dump(configuration_set.kubernetes().kubeconfig(), f)
+            yaml.dump(kubernetes_config.kubeconfig(), f)
 
         # run helm from inside the temporary directory so that the prepared file paths work
         subprocess.run(subprocess_args, check=True, cwd=temp_dir, env=helm_env)
 
 
-def deploy_secrets_server(
-        config_dir: str,
-        config_name: str,
-):
-    ensure_directory_exists(config_dir)
-    ensure_not_empty(config_name)
-
-    config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
-    config_set = config_factory.cfg_set(cfg_name=config_name)
-    secrets_server_config = config_set.secrets_server()
+def deploy_secrets_server(secrets_server_config: SecretsServerConfig):
+    ensure_not_none(secrets_server_config)
 
     ctx = kubeutil.ctx
     service_helper = ctx.service_helper()
@@ -367,17 +375,11 @@ def deploy_secrets_server(
 
 
 def deploy_delaying_proxy(
-    config_dir: str,
-    config_name: str,
+    concourse_cfg: ConcourseConfig,
     deployment_name: str,
 ):
-    ensure_directory_exists(config_dir)
-    ensure_not_empty(config_name)
+    ensure_not_none(concourse_cfg)
     ensure_not_empty(deployment_name)
-
-    config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
-    config_set = config_factory.cfg_set(cfg_name=config_name)
-    concourse_cfg = config_set.concourse()
 
     ctx = kubeutil.ctx
     service_helper = ctx.service_helper()

@@ -60,8 +60,9 @@ def deploy_or_upgrade_concourse(
     if dry_run:
         return
 
+    config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
     setup.deploy_concourse_landscape(
-        config_dir=config_dir,
+        config_factory=config_factory,
         config_name=config_name,
         deployment_name=deployment_name,
         timeout_seconds=timeout_seconds,
