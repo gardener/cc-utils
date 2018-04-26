@@ -235,9 +235,7 @@ def sync_webhooks_from_cfg(
     team_cfg = concourse_cfg.team_credentials(team_name)
 
     sync_webhooks(
-      github_auth_token=github_cred.auth_token(),
-      github_url=github_cfg.http_url(),
-      github_verify_ssl=False,
+      github_cfg=github_cfg,
       concourse_verify_ssl=False,
       concourse_url=concourse_cfg.external_url(),
       concourse_proxy_url=concourse_cfg.external_url(),
@@ -247,9 +245,7 @@ def sync_webhooks_from_cfg(
     )
 
 def sync_webhooks(
-  github_auth_token:str,
-  github_url:str,
-  github_verify_ssl:bool=False,
+  github_cfg:'GithubConfig',
   concourse_verify_ssl:bool=False,
   concourse_url:str=None,
   concourse_proxy_url:str=None,
@@ -264,13 +260,9 @@ def sync_webhooks(
       concourse_passwd=concourse_passwd,
       concourse_team=concourse_team,
       concourse_pipelines=concourse_pipelines,
-      github_url=github_url,
+      github_url=github_cfg.http_url(),
     )
-    github_obj = _create_github_api_object(
-          github_url=github_url,
-          github_auth_token=github_auth_token,
-          github_verify_ssl=github_verify_ssl
-    )
+    github_obj = _create_github_api_object(github_cfg=github_cfg)
 
     webhook_syncer = github.GithubWebHookSyncer(github_obj)
     failed_hooks = 0
