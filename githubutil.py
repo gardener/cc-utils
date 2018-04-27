@@ -112,9 +112,14 @@ class GitHubHelper(object):
 
 def _create_github_api_object(
     github_cfg: 'GithubConfig',
+    webhook_user: bool=False,
 ):
     github_url = github_cfg.http_url()
-    github_auth_token = github_cfg.credentials().auth_token()
+    if not webhook_user:
+        github_auth_token = github_cfg.credentials().auth_token()
+    else:
+        github_auth_token = github_cfg.webhook_secret()
+
     github_verify_ssl = github_cfg.tls_validation()
 
     if github_url.strip('/') == 'https://github.com':

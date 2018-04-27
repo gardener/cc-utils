@@ -270,7 +270,7 @@ def sync_webhooks(
         else:
             path_to_resources[repo_path].append(gh_res)
 
-    github_obj = _create_github_api_object(github_cfg=github_cfg)
+    github_obj = _create_github_api_object(github_cfg=github_cfg, webhook_user=True)
 
     webhook_syncer = github.GithubWebHookSyncer(github_obj)
     failed_hooks = 0
