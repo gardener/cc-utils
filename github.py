@@ -253,7 +253,9 @@ class GithubWebHookSyncer(object):
         removed = 0
         for hook in repository.hooks():
             processed += 1
-            url = hook.config['url']
+            url = hook.config.get('url')
+            if not url:
+                continue # strangely, sometimes webhooks do not have a callback url
             if url in urls_to_keep:
                 continue
             elif not url_filter_fun(url):
