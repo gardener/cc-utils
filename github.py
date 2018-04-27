@@ -225,3 +225,29 @@ class GithubWebHookSyncer(object):
                 )
             )
 
+    def remove_outdated_hooks(
+        self,
+        owner:str,
+        repository_name:str,
+        urls_to_keep
+    ):
+        repository = self.github.repository(
+            owner=owner,
+            repository=repository_name
+        )
+
+        processed = 0
+        removed = 0
+        for hook in repository.hooks():
+            processed += 1
+            url = hook.config['url']
+            if url in urls_to_keep:
+                continue
+            elif not 'concourse' in url:
+                continue
+            else:
+                hook.delete()
+                removed +=1
+
+        return (processed, removed)
+

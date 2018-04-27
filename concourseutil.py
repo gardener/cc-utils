@@ -327,12 +327,19 @@ def _sync_webhook(
       callback_urls=webhook_urls,
       skip_ssl_validation=skip_ssl_validation
     )
+    processed, removed = webhook_syncer.remove_outdated_hooks(
+      owner=organisation,
+      repository_name=repository,
+      urls_to_keep=webhook_urls
+    )
     info('updated {c} hook(s) for: {o}/{r}'.format(
         c=len(webhook_urls),
         o=organisation,
         r=repository
         )
     )
+    if removed > 0:
+        info('removed {c} outdated hook(s)'.format(c=removed))
 
 
 def diff_pipelines(left_file: CliHints.yaml_file(), right_file: CliHints.yaml_file()):
