@@ -236,24 +236,23 @@ def sync_webhooks_from_cfg(
 
     sync_webhooks(
       github_cfg=github_cfg,
-      concourse_verify_ssl=False,
-      concourse_url=concourse_cfg.external_url(),
-      concourse_proxy_url=concourse_cfg.external_url(),
-      concourse_user=team_cfg.username(),
-      concourse_passwd=team_cfg.passwd(),
+      concourse_cfg=concourse_cfg,
       concourse_team=team_cfg.teamname(),
     )
 
 def sync_webhooks(
   github_cfg:'GithubConfig',
-  concourse_verify_ssl:bool=False,
-  concourse_url:str=None,
-  concourse_proxy_url:str=None,
-  concourse_user:str='kubernetes',
-  concourse_passwd:str='kubernetes',
+  concourse_cfg:'ConcourseConfig',
   concourse_team:str='kubernetes',
-  concourse_pipelines:[str]=None
+  concourse_pipelines:[str]=None,
+  concourse_verify_ssl:bool=False,
 ):
+    concourse_url = concourse_cfg.external_url()
+    concourse_proxy_url = concourse_cfg.external_url()
+    team_cfg = concourse_cfg.team_credentials(concourse_team)
+    concourse_user = team_cfg.username()
+    concourse_passwd = team_cfg.passwd()
+
     github_resources = _list_github_resources(
       concourse_url=concourse_url,
       concourse_user=concourse_user,
@@ -281,6 +280,7 @@ def sync_webhooks(
             _sync_webhook(
               resources=resources,
               webhook_syncer=webhook_syncer,
+              concourse_cfg=concourse_cfg,
               concourse_proxy_url=concourse_proxy_url,
               skip_ssl_validation=not concourse_verify_ssl
             )
@@ -293,8 +293,9 @@ def sync_webhooks(
 
 
 def _sync_webhook(
-  resources:[concourse.Resource],
-  webhook_syncer:github.GithubWebHookSyncer,
+  resources: [concourse.Resource],
+  webhook_syncer: github.GithubWebHookSyncer,
+  concourse_cfg: 'ConcourseConfig',
   concourse_proxy_url: str,
   skip_ssl_validation: bool=False
 ):
@@ -315,7 +316,8 @@ def _sync_webhook(
         webhook_url = routes.resource_check_webhook(
           pipeline_name=pipeline.name,
           resource_name=gh_res.name,
-          webhook_token=gh_res.webhook_token()
+          webhook_token=gh_res.webhook_token(),
+          concourse_id=concourse_cfg.name(),
         )
         return webhook_url
 

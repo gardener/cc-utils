@@ -16,7 +16,7 @@ from ensure import ensure_annotations
 import json
 import requests
 from urllib3.exceptions import InsecureRequestWarning
-from urllib.parse import urljoin, urlparse, urlparse
+from urllib.parse import urljoin, urlparse, urlencode
 import warnings
 from enum import Enum
 import sseclient
@@ -200,7 +200,14 @@ class ConcourseApiRoutes(object):
         return self._api_url('pipelines', pipeline_name, 'unpause')
 
     @ensure_annotations
-    def resource_check_webhook(self, pipeline_name: str, resource_name: str, webhook_token: str):
+    def resource_check_webhook(
+        self,
+        pipeline_name: str,
+        resource_name: str,
+        webhook_token: str,
+        concourse_id: str,
+    ):
+        query_args = urlencode({'webhook_token': webhook_token, 'concourse_id': concourse_id})
         return self._api_url(
           'pipelines',
           pipeline_name,
@@ -208,7 +215,7 @@ class ConcourseApiRoutes(object):
           resource_name,
           'check',
           'webhook'
-        ) + '?webhook_token=' + webhook_token
+        ) + '?' + query_args
 
     @ensure_annotations
     def job_builds(self, pipeline_name: str, job_name: str):
