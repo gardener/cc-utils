@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from ensure import ensure, ensure_annotations
+from github3.exceptions import NotFoundError
 from github3.github import GitHub
 from github3.repos.hook import Hook
 from github3.repos.repo import Repository
@@ -44,6 +45,9 @@ class GithubWebHookSyncer(object):
         hook_name:str,
         callback_url:str
     ):
+        '''
+        @raises github3.exceptions.NotFoundError in case of missing privileges to enumerate webhooks
+        '''
         hooks = filter(lambda h: h.name == hook_name, repository.hooks())
         hooks = filter(lambda h: self._has_similar_url(h, callback_url), hooks)
         hooks = list(hooks)
@@ -180,11 +184,19 @@ class GithubWebHookSyncer(object):
                     r=repository_name
                 )
             )
-        hook = self._retrieve_existing_hook_or_none(
-            repository=repository,
-            hook_name=hook_name,
-            callback_url=callback_url
-        )
+        try:
+            hook = self._retrieve_existing_hook_or_none(
+                repository=repository,
+                hook_name=hook_name,
+                callback_url=callback_url
+            )
+        except NotFoundError:
+            raise RuntimeError(
+                'failed to retrieve webhooks for {o}/{r}. Verify credentials'.format(
+                    o=owner,
+                    r=repository_name,
+                )
+            )
 
         # create_hook requires additional parameter 'name'
         hook_kwargs = {}
