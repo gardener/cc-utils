@@ -229,7 +229,8 @@ class GithubWebHookSyncer(object):
         self,
         owner:str,
         repository_name:str,
-        urls_to_keep
+        urls_to_keep,
+        url_filter_fun,
     ):
         repository = self.github.repository(
             owner=owner,
@@ -243,7 +244,7 @@ class GithubWebHookSyncer(object):
             url = hook.config['url']
             if url in urls_to_keep:
                 continue
-            elif not 'concourse' in url:
+            elif not url_filter_fun(url):
                 continue
             else:
                 hook.delete()

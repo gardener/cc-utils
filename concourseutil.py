@@ -18,7 +18,7 @@ import subprocess
 from copy import copy
 from ensure import ensure_annotations
 from github3.github import GitHubEnterprise, GitHub
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 from util import parse_yaml_file, info, fail, which, warning, CliHints, CliHint
 from util import ctx as global_ctx
@@ -329,10 +329,17 @@ def _sync_webhook(
       callback_urls=webhook_urls,
       skip_ssl_validation=skip_ssl_validation
     )
+
+    def url_filter(url):
+        concourse_id = parse_qs(urlparse(url).query).get('concourse_id')
+        return concourse_id and concourse_cfg.name() in concourse_id
+
     processed, removed = webhook_syncer.remove_outdated_hooks(
       owner=organisation,
       repository_name=repository,
-      urls_to_keep=webhook_urls
+      urls_to_keep=webhook_urls,
+      # only process webhooks that were created by "us"
+      url_filter_fun=url_filter,
     )
     info('updated {c} hook(s) for: {o}/{r}'.format(
         c=len(webhook_urls),
