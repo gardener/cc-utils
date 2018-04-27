@@ -20,6 +20,7 @@ from ensure import ensure_annotations
 from github3.github import GitHubEnterprise, GitHub
 from urllib.parse import urlparse, parse_qs
 
+from util import ctx
 from util import parse_yaml_file, info, fail, which, warning, CliHints, CliHint
 from util import ctx as global_ctx
 from concourse import pipelines
@@ -220,14 +221,13 @@ def _list_github_resources(
 
 
 def sync_webhooks_from_cfg(
-    cfg_dir,
-    cfg_name,
     team_name,
+    cfg_name,
 ):
     '''
     convenience wrapper for sync_webhooks for local usage with cc-config repo
     '''
-    cfg_factory = ConfigFactory.from_cfg_dir(cfg_dir)
+    cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(cfg_name)
     github_cfg = cfg_set.github()
     github_cred = github_cfg.credentials()

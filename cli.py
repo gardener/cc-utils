@@ -55,13 +55,15 @@ def main():
     # write parsed args to global ctx module so called module functions may
     # retrieve if (see util.ctx)
     ctx.args = parsed
-    parsed.module.args = parsed
-    parsed.func(parsed)
+    if hasattr(parsed, 'module'):
+        parsed.module.args = parsed
+        parsed.func(parsed)
     print_import_errs()
 
 def add_global_args(parser):
     parser.add_argument('--quiet', action='store_true')
     parser.add_argument('--verbose', action='store_true')
+    parser.add_argument('--cfg-dir', default=None)
 
 def add_module(module_name, parser):
     module = __import__(module_name)
