@@ -111,6 +111,11 @@ class Ctx(object):
         cfg = self.get_kubecfg()
         return client.ExtensionsV1beta1Api(cfg)
 
+    def create_version_api(self):
+        cfg = self.get_kubecfg()
+        return client.VersionApi(cfg)
+
+
 def __add_module_command_args(parser):
     parser.add_argument('--kubeconfig', required=False)
     return parser
@@ -662,3 +667,7 @@ def create_gcr_secret(
           user_name=user_name,
           server_url=server_url
         )
+
+def get_cluster_version_info():
+    api = ctx.create_version_api()
+    return api.get_code()
