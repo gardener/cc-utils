@@ -39,30 +39,25 @@ def __add_module_command_args(parser):
 
 
 def deploy_or_upgrade_concourse(
-    config_dir: CliHints.existing_dir("Directory containing Concourse configuration (e.g.: A checked-out kubernetes/cc-config repository)."),
     config_name: CliHint(typehint=str, help="Which of the configurations contained in --config-dir to use."),
     deployment_name: CliHint(typehint=str, help="Name under which Concourse will be deployed. Will also be the identifier of the namespace into which it is deployed.")='concourse',
     timeout_seconds: CliHint(typehint=int, help="Maximum time (in seconds) to wait after deploying for the Concourse-webserver to become available.")=180,
     dry_run: bool=True,
-    ):
+):
     '''Deploys a new concourse-instance using the given deployment name and config-directory.'''
     which("helm")
 
-    config_dir = os.path.abspath(config_dir)
     namespace = deployment_name
     _display_info(
         dry_run=dry_run,
         operation="DEPLOYED",
         deployment_name=deployment_name,
-        config_dir=config_dir
     )
 
     if dry_run:
         return
 
-    config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
     setup.deploy_concourse_landscape(
-        config_factory=config_factory,
         config_name=config_name,
         deployment_name=deployment_name,
         timeout_seconds=timeout_seconds,
@@ -94,10 +89,9 @@ def destroy_concourse(release: str, dry_run: bool = True):
 
 
 def set_teams(
-    config_dir: CliHints.existing_dir('Path to a directory containing Concourse-configuration (e.g. cc-config)'),
     config_name: CliHint(typehint=str, help='Which of the configurations contained in "--config-file" to use.'),
-    ):
-    config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
+):
+    config_factory = ctx().cfg_factory()
     config_set = config_factory.cfg_set(cfg_name=config_name)
     config = config_set.concourse()
 

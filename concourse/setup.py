@@ -169,16 +169,15 @@ def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
 
 
 def deploy_concourse_landscape(
-        config_factory: ConfigFactory,
         config_name: str,
         deployment_name: str='concourse',
         timeout_seconds: int='180'
 ):
-    ensure_not_none(config_factory)
     ensure_not_empty(config_name)
     ensure_helm_setup()
 
     # Fetch all the necessary config
+    config_factory = global_ctx().cfg_factory()
     config_set = config_factory.cfg_set(cfg_name=config_name)
     concourse_cfg = config_set.concourse()
 
