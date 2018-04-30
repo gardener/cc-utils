@@ -200,8 +200,8 @@ def _list_github_resources(
 
 
 def sync_webhooks_from_cfg(
-    team_name,
-    cfg_name,
+    team_name: str,
+    cfg_name: str,
 ):
     '''
     convenience wrapper for sync_webhooks for local usage with cc-config repo
