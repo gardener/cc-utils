@@ -209,7 +209,9 @@ def deploy_concourse_landscape(
         cfg_name = concourse_cfg.helm_chart_values()
     ).raw
 
+    # Set the global context to the cluster specified by the given config
     kubernetes_config = config_set.kubernetes()
+    kubeutil.ctx.set_kubecfg(kubernetes_config.kubeconfig())
 
     info('Creating default image-pull-secret ...')
     create_image_pull_secret(
