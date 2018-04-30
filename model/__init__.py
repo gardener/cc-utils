@@ -578,6 +578,9 @@ class KubernetesConfig(NamedModelElement):
     def kubeconfig(self):
         return self.raw.get('kubeconfig')
 
+    def cluster_version(self):
+        return self.raw.get('version')
+
 
 class SecretsServerConfig(NamedModelElement):
     def namespace(self):
