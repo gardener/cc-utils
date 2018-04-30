@@ -181,6 +181,12 @@ def deploy_concourse_landscape(
     config_set = config_factory.cfg_set(cfg_name=config_name)
     concourse_cfg = config_set.concourse()
 
+    # Set the global context to the cluster specified by the given config
+    kubernetes_config = config_set.kubernetes()
+    kubeutil.ctx.set_kubecfg(kubernetes_config.kubeconfig())
+
+    ensure_cluster_version(kubernetes_config)
+
     # Container-registry config
     image_pull_secret_name = concourse_cfg.image_pull_secret()
     container_registry = config_factory._cfg_element(
@@ -207,10 +213,6 @@ def deploy_concourse_landscape(
         cfg_type_name = helmchart_cfg_type,
         cfg_name = concourse_cfg.helm_chart_values()
     ).raw
-
-    # Set the global context to the cluster specified by the given config
-    kubernetes_config = config_set.kubernetes()
-    kubeutil.ctx.set_kubecfg(kubernetes_config.kubeconfig())
 
     info('Creating default image-pull-secret ...')
     create_image_pull_secret(
@@ -272,6 +274,26 @@ def deploy_concourse_landscape(
 
     info('Setting teams on Concourse ...')
     set_teams(config=concourse_cfg)
+
+
+def ensure_cluster_version(kubernetes_config: KubernetesConfig):
+    ensure_not_none(kubernetes_config)
+
+    cluster_version_info = kubeutil.get_cluster_version_info()
+    configured_version_info = kubernetes_config.cluster_version()
+
+    if (
+        cluster_version_info.major != configured_version_info['major'] or
+        cluster_version_info.minor != configured_version_info['minor']
+    ):
+        fail(
+            'Incompatible k8s-cluster-version "Major: {a_major} Minor: {a_minor}". Expected "Major: {e_major} Minor: {e_minor}".'.format(
+                a_major=cluster_version_info.major,
+                a_minor=cluster_version_info.minor,
+                e_major=configured_version_info['major'],
+                e_minor=configured_version_info['minor'],
+            )
+        )
 
 
 def ensure_helm_setup():
