@@ -47,14 +47,7 @@ class Ctx(object):
         if not kubeconfig_dict:
             self.kubeconfig = None
             return
-
-        configuration = kubernetes.client.Configuration()
-        cfg_loader = KubeConfigLoader(dict(kubeconfig_dict))
-        cfg_loader.load_and_set(configuration)
-        # pylint: disable=no-member
-        kubernetes.client.Configuration.set_default(configuration)
-        # pylint: enable=no-member
-        self.kubeconfig = configuration
+        self.set_kubecfg(kubeconfig_dict=kubeconfig_dict)
 
     def get_kubecfg(self):
         if self.kubeconfig:
@@ -68,6 +61,17 @@ class Ctx(object):
         if not kubeconfig:
             fail('KUBECONFIG env var must be set')
         return config.load_kube_config(ensure_file_exists(kubeconfig))
+
+    def set_kubecfg(self, kubeconfig_dict: dict):
+        ensure_not_none(kubeconfig_dict)
+
+        configuration = kubernetes.client.Configuration()
+        cfg_loader = KubeConfigLoader(dict(kubeconfig_dict))
+        cfg_loader.load_and_set(configuration)
+        # pylint: disable=no-member
+        kubernetes.client.Configuration.set_default(configuration)
+        # pylint: enable=no-member
+        self.kubeconfig = configuration
 
     def secret_helper(self) -> 'KubernetesSecretHelper':
         return KubernetesSecretHelper(self.create_core_api())
