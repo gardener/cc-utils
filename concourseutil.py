@@ -119,28 +119,6 @@ def render_secrets(cfg_dir: CliHints.existing_dir(), cfg_name: str, out_file: st
     # todo: serialise configuration set or rm function
 
 
-def render_pipeline(
-        pipeline_definition_file: str,
-        config_dir: str,
-        config_name: str,
-        template_path: [str],
-        template_include_dir: str
-    ):
-    pipeline_definition = parse_yaml_file(pipeline_definition_file)
-    template_path = template_path
-
-    cfg_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
-    config_set = cfg_factory.cfg_set(cfg_name=config_name)
-
-    for pipeline_str, _, _ in pipelines.render_pipelines(
-            pipeline_definition,
-            config_set,
-            template_path,
-            template_include_dir
-        ):
-        print(pipeline_str)
-
-
 def render_pipelines(
         definitions_root_dir: str,
         template_path: [str],
