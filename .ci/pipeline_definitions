@@ -6,8 +6,8 @@ cc-utils:
       lint: ~
       test: ~
   variants:
-    head-update: ~
-    pull-request:
+    head_update: ~
+    pull_request:
       traits:
         pull-request:
           repo: 'source'  # default
