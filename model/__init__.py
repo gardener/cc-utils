@@ -553,8 +553,19 @@ class JobMapping(NamedModelElement):
     def definition_dirs(self):
         return self.raw['definition_dirs']
 
+    def github_organisations(self):
+        return [GithubOrganisationConfig(name, raw) for name, raw in self.snd.github_orgs.items()]
+
     def _required_attributes(self):
         return ['concourse_target_team']
+
+
+class GithubOrganisationConfig(NamedModelElement):
+    def github_cfg_name(self):
+        return self.snd.github_cfg
+
+    def org_name(self):
+        return self.snd.github_org
 
 
 class KubernetesConfig(NamedModelElement):
