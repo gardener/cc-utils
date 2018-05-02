@@ -18,6 +18,7 @@ import sys
 
 from github3.github import GitHub, GitHubEnterprise
 from github3.repos.repo import Repository
+from github3.exceptions import NotFoundError
 
 import util
 import version
@@ -58,10 +59,14 @@ class GitHubHelper(object):
         file_contents: str,
         commit_message: str
     )-> str:
-        contents = self.repository.file_contents(
-            path=repository_version_file_path,
-            ref=repository_branch
-        )
+        try:
+            contents = self.repository.file_contents(
+                path=repository_version_file_path,
+                ref=repository_branch
+            )
+        except NotFoundError:
+            contents = None # file did not yet exist
+
         if contents:
             decoded_contents = contents.decoded.decode('utf-8')
             if decoded_contents == file_contents:
