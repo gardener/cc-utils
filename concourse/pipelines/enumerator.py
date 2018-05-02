@@ -14,11 +14,15 @@
 import os
 from copy import deepcopy
 from itertools import chain
+import yaml
+from github3.exceptions import NotFoundError
 
 from util import (
     parse_yaml_file,
     merge_dicts,
+    info,
 )
+from githubutil import _create_github_api_object
 from model import JobMapping
 from concourse.pipelines.factory import RawPipelineDefinitionDescriptor
 
@@ -29,28 +33,66 @@ class PipelineEnumerator(object):
         self.cfg_set = cfg_set
 
     def enumerate_pipeline_definitions(self, job_mapping: JobMapping):
+        # handle definition directories (legacy-case)
+        info('scanning legacy mappings')
         for repo_path, pd in enumerate_pipeline_definitions(
                 [os.path.join(self.base_dir, d) for d in job_mapping.definition_dirs()]
         ):
             for definitions in pd:
                 for name, definition in definitions.items():
-                    yield self._preprocess_and_wrap_into_descriptors(repo_path, ['master'], definitions)
+                    info('from mapping: ' + name)
+                    yield self._preprocess_and_wrap_into_descriptors(repo_path, 'master', definitions)
+        info('scanning repositories')
+        # scan github repositories
+        for github_org_cfg in job_mapping.github_organisations():
+            github_cfg = self.cfg_set.github(github_org_cfg.github_cfg_name())
+            github_org_name = github_org_cfg.org_name()
 
-    def _preprocess_and_wrap_into_descriptors(self, repo_path, branches, raw_definitions):
+            branch_filter = lambda b: b == 'master'
+            github_api = _create_github_api_object(github_cfg)
+            github_org = github_api.organization(github_org_name)
+
+            for repository in github_org.repositories():
+                yield self._scan_repository_for_definitions(
+                    github_org_name,
+                    repository,
+                    branch_filter
+                )
+
+    def _scan_repository_for_definitions(self, org_name, repository, branch_filter):
+        for branch_name in filter(branch_filter, map(lambda b: b.name, repository.branches())):
+            try:
+                definitions = repository.file_contents(
+                    path='.ci/pipeline_definitions',
+                    ref=branch_name
+                )
+            except NotFoundError:
+                continue # no pipeline definition for this branch
+
+            info('from repo: ' + repository.name + ':' + branch_name)
+            definitions = yaml.load(definitions.decoded.decode('utf-8'))
+            for definition_descriptor in self._preprocess_and_wrap_into_descriptors(
+                repo_path='/'.join([org_name, repository.name]),
+                branch=branch_name,
+                raw_definitions=definitions
+            ):
+                yield definition_descriptor
+
+
+    def _preprocess_and_wrap_into_descriptors(self, repo_path, branch, raw_definitions):
         for name, definition in raw_definitions.items():
-            for branch in branches:
-                pipeline_definition = deepcopy(definition)
-                base_definition = self._inject_main_repo(
-                    base_definition=definition.get('base_definition', {}),
-                    repo_path=repo_path,
-                    branch_name=branch,
-                )
-                yield RawPipelineDefinitionDescriptor(
-                    name=name, #'-'.join(name, branch),
-                    base_definition=base_definition,
-                    variants=definition['variants'],
-                    template=definition['template'],
-                )
+            pipeline_definition = deepcopy(definition)
+            base_definition = self._inject_main_repo(
+                base_definition=definition.get('base_definition', {}),
+                repo_path=repo_path,
+                branch_name=branch,
+            )
+            yield RawPipelineDefinitionDescriptor(
+                name=name, #'-'.join(name, branch),
+                base_definition=base_definition,
+                variants=definition['variants'],
+                template=definition['template'],
+            )
 
     def _inject_main_repo(self, base_definition, repo_path, branch_name):
         main_repo_raw = {'path': repo_path, 'branch': branch_name}
