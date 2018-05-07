@@ -28,7 +28,8 @@ def deploy_and_run_smoketest_pipeline(
     config_dir: str,
     config_name: str,
     concourse_team_name: str,
-    cc_pipelines_repo_dir: str
+    cc_pipelines_repo_dir: str,
+    wait_for_job_execution: bool=False,
 ):
     config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
     config_set = config_factory.cfg_set(cfg_name=config_name)
@@ -85,6 +86,10 @@ def deploy_and_run_smoketest_pipeline(
     # trigger an execution and wait for it to finish
     info('triggering smoketest job {jn}'.format(jn=job_name))
     api.trigger_build(pipeline_name, job_name)
+
+    if not wait_for_job_execution:
+        info('will not wait for job-execution to finish (--wait-for-job-execution not set)')
+        return
 
     # wait for the job to finish (currently we expect it to succeed)
     # todo: evaluate whether its structure meets our spec
