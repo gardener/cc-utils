@@ -71,12 +71,11 @@ class PipelineEnumerator(object):
 
             info('from repo: ' + repository.name + ':' + branch_name)
             definitions = yaml.load(definitions.decoded.decode('utf-8'))
-            for definition_descriptor in self._preprocess_and_wrap_into_descriptors(
+            yield from self._preprocess_and_wrap_into_descriptors(
                 repo_path='/'.join([org_name, repository.name]),
                 branch=branch_name,
                 raw_definitions=definitions
-            ):
-                yield definition_descriptor
+            )
 
 
     def _preprocess_and_wrap_into_descriptors(self, repo_path, branch, raw_definitions):

@@ -189,8 +189,7 @@ def _list_github_resources(
         # only process repositories from concourse's "default" github repository
         resources = filter(lambda r: r.github_source().hostname() == github_hostname, resources)
 
-        for resource in resources:
-            yield resource
+        yield from resources
 
 
 def sync_webhooks_from_cfg(
