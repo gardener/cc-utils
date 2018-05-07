@@ -6,6 +6,7 @@ from .version import VersionTrait
 from .cron import CronTrait
 from .pullrequest import PullRequestTrait
 from .release import ReleaseTrait
+from .scheduling import SchedulingTrait
 from .publish import PublishTrait
 
 TRAITS = {
@@ -13,6 +14,7 @@ TRAITS = {
     'cronjob': CronTrait,
     'pull-request': PullRequestTrait,
     'release': ReleaseTrait,
+    'scheduling': SchedulingTrait,
     'publish': PublishTrait,
 }
 
