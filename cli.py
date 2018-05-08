@@ -22,11 +22,11 @@ import itertools
 import sys
 
 import ctx
+import util
 
 import_errs = []
 
 def print_import_errs():
-    import util
     for ie in import_errs:
         util.verbose(ie)
 
@@ -55,6 +55,8 @@ def main():
     # write parsed args to global ctx module so called module functions may
     # retrieve if (see util.ctx)
     ctx.args = parsed
+    # mark 'cli' mode
+    util._set_cli(True)
     if hasattr(parsed, 'module'):
         parsed.module.args = parsed
         parsed.func(parsed)

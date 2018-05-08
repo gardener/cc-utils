@@ -17,8 +17,16 @@ import sys
 import os
 import yaml
 
-class Failure(SystemExit):
+class Failure(RuntimeError):
     pass
+
+def _set_cli(is_cli: bool):
+    ctx().args._cli = is_cli
+    global Failure
+    if is_cli:
+        class Failure(SystemExit): pass
+    else:
+        class Failure(RuntimeError): pass
 
 
 def ensure_file_exists(path: str):
@@ -83,6 +91,9 @@ def _quiet():
 
 def _verbose():
     return ctx().args and ctx().args.verbose
+
+def _cli():
+    return bool(ctx().args and hasattr(ctx().args, '._cli') and ctx().args._cli)
 
 
 def fail(msg=None):
