@@ -327,12 +327,10 @@ class GithubConfig(NamedModelElement):
         return GithubCredentials(self.snd.technicalUser)
 
     def _required_attributes(self):
-        return ['sshUrl', 'httpUrl', 'apiUrl', 'disable_tls_validation', 'webhook_token', 'webhook_user', 'technicalUser']
+        return ['sshUrl', 'httpUrl', 'apiUrl', 'disable_tls_validation', 'webhook_token', 'technicalUser']
 
     def _validate_dict(self):
         super()._validate_dict()
-        if not self.snd.webhook_user.authToken:
-            raise ModelValidationError('Missing required github-config attribute: webhook_user.authToken')
         # validation of credentials implicitly happens in the constructor
         self.credentials()
 

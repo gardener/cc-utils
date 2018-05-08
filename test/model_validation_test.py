@@ -139,9 +139,6 @@ class GithubConfigTest(unittest.TestCase):
             'apiUrl': 'https://api.foo.bar',
             'disable_tls_validation': True,
             'webhook_token': 'foobarbaz',
-            'webhook_user': {
-                'authToken': 'bazbarfoo',
-            },
             'technicalUser': {
                 'username': 'foo',
                 'password': 'bar',
@@ -151,17 +148,12 @@ class GithubConfigTest(unittest.TestCase):
         }
 
     def test_validation_fails_on_missing_key(self):
-        for key in ('sshUrl', 'httpUrl', 'apiUrl', 'disable_tls_validation', 'webhook_token', 'webhook_user', 'technicalUser'):
+        for key in ('sshUrl', 'httpUrl', 'apiUrl', 'disable_tls_validation', 'webhook_token', 'technicalUser'):
             with self.subTest(key=key):
                 test_dict = GithubConfigTest.create_valid_test_dictionary()
                 test_dict.pop(key)
                 with self.assertRaises(ModelValidationError):
                     examinee.GithubConfig(name='gitabc', raw_dict=test_dict)
-
-    def test_validation_fails_on_invalid_webhook_user(self):
-                self.raw_dict['webhook_user'].pop('authToken')
-                with self.assertRaises(ModelValidationError):
-                    examinee.GithubConfig(name='gitbla', raw_dict=self.raw_dict)
 
     def test_validation_fails_on_invalid_technicalUser(self):
         for key in ('username', 'password', 'authToken', 'privateKey'):
