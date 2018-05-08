@@ -22,6 +22,7 @@ from util import (
     ensure_directory_exists,
     ensure_not_empty,
     ensure_not_none,
+    info,
     fail,
     CliHint,
     ctx,
@@ -147,5 +148,6 @@ def notify(src_dir: str, subject: str, body: str, email_cfg_name: str):
         mail_template=body,
         subject=subject
     )
+    info('sent email to: {r}'.format(r=recipients))
 
 
