@@ -30,10 +30,18 @@ def _cfg_factory_from_dir():
     return factory
 
 
+def _cfg_factory_from_secrets_server():
+    import config
+    return config._parse_model(config._client().retrieve_secrets())
+
+
 def cfg_factory():
     from util import fail
 
     factory = _cfg_factory_from_dir()
+    # fallback to secrets-server
+    if not factory:
+        factory = _cfg_factory_from_secrets_server()
 
     if not factory:
         fail('cfg_factory is required. configure using the global --cfg-dir option or via env')
