@@ -526,7 +526,7 @@ class EmailConfig(NamedModelElement):
         return EmailCredentials(self.snd.credentials)
 
     def _required_attributes(self):
-        return ['host', 'port', 'technicalUser']
+        return ['host', 'port', 'credentials']
 
     def _validate_dict(self):
         super()._validate_dict()
