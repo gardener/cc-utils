@@ -120,10 +120,7 @@ def _create_github_api_object(
     webhook_user: bool=False,
 ):
     github_url = github_cfg.http_url()
-    if not webhook_user:
-        github_auth_token = github_cfg.credentials().auth_token()
-    else:
-        github_auth_token = github_cfg.webhook_secret()
+    github_auth_token = github_cfg.credentials().auth_token()
 
     github_verify_ssl = github_cfg.tls_validation()
 
