@@ -2,9 +2,6 @@
 
 set -e
 
-echo "faking an error"
-exit 1
-
 # usage: $1: <src-dir>
 
 src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
