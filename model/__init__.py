@@ -321,7 +321,7 @@ class GithubConfig(NamedModelElement):
         return not self.snd.disable_tls_validation
 
     def webhook_secret(self):
-        return self.snd.webhook_user.authToken
+        return self.snd.webhook_token
 
     def credentials(self):
         return GithubCredentials(self.snd.technicalUser)
