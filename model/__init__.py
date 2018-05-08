@@ -522,6 +522,9 @@ class EmailConfig(NamedModelElement):
     def use_tls(self):
         return self.snd.use_tls
 
+    def sender_name(self):
+        return self.snd.sender_name
+
     def credentials(self):
         return EmailCredentials(self.snd.credentials)
 
