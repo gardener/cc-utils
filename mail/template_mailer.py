@@ -20,21 +20,11 @@ from email.mime.text import MIMEText
 
 from util import ensure_file_exists
 
-def create_body(template_file: str, replace_tokens: dict, replace_token_files: [str]):
-    with open(ensure_file_exists(template_file)) as f:
-        contents = f.read()
+def create_body(mail_template: str, replace_tokens: dict):
+    for key, value in replace_tokens.items():
+        mail_template = mail_template.replace(key, value)
 
-        # replace tokens (first for files, so that cli-tokens are also
-        # processed)
-        for key, fname in replace_token_files:
-            with open(ensure_file_exists(fname)) as f:
-                r = f.read()
-                contents = contents.replace(key, r)
-
-        for key, value in replace_tokens:
-            contents = contents.replace(key, value)
-
-        return contents
+    return mail_template
 
 
 def send_mail(smtp_server: str, msg: str, sender: str, recipients: str):

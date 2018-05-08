@@ -13,18 +13,19 @@
 # limitations under the License.
 
 import smtplib
+import typing
 
-from util import ensure_file_exists, ensure_not_empty, fail, CliHint, ctx
+from model import EmailConfig
+from util import ensure_file_exists, ensure_not_empty, ensure_not_none, fail, CliHint, ctx, CliHints
 from mail import template_mailer as mailer
 
 def send_mail(
     email_cfg_name: CliHint(help="reference to an email cfg (see repo cc-config / secrets-server)"),
     recipients: CliHint(typehint=[str], help="Recipient email address"),
-    mail_template: CliHint(help="Template file used as mail body"),
+    mail_template_file: CliHints.existing_file(),
     subject: CliHint(help="email subject"),
     cc_recipients: CliHint(typehint=[str], help="Carbon copy email address")=[],
     replace_token: CliHint(typehint=[str], help="<key>=<value> will replace all occurrences in the mail body.")=[],
-    replace_token_file: CliHint(typehint=[str], help="<key>=<value> pairs file")=[],
 ):
     '''
     Sends an email using the specified email_cfg (retrieved from a cfg_factory) to the specified
@@ -32,22 +33,18 @@ def send_mail(
     (optional) replace-tokens are given.
 
     @param recipients: mail recipients (email addresses)
-    @param mail_template: path to the mail template file. Must exist.
+    @param mail_template_file: path to the mail template file. Must exist.
     @param subject: email subject
     @param cc_recipients: cc mail recipients
     @param replace_token: format: <token>=<replace-value> - tokens in mail-body are replaced
-    @param replace_token_file: file containing newline-separated replace_tokens
     '''
     ensure_not_empty(email_cfg_name)
-    ensure_not_empty(recipients)
-    ensure_file_exists(mail_template)
-    ensure_not_empty(subject)
 
     cfg_factory = ctx().cfg_factory()
     email_cfg = cfg_factory.email(email_cfg_name)
 
-    for rtf in replace_token_file:
-        ensure_file_exists(rtf)
+    with open(mail_template_file) as f:
+        mail_template = f.read()
 
     # validate template-tokens
     invalid_tokens = filter(lambda t: not isinstance(t, str) or not '=' in t, replace_token)
@@ -58,13 +55,35 @@ def send_mail(
         )
 
     # parse replace-tokens
-    tokens = map(lambda t: t.split('=', 1), replace_token)
+    replace_tokens = dict(map(lambda t: t.split('=', 1), replace_token))
+
+    _send_mail(
+        email_cfg=email_cfg,
+        recipients=recipients,
+        mail_template=mail_template,
+        subject=subject,
+        cc_recipients=cc_recipients,
+        replace_tokens=replace_tokens,
+    )
+
+
+def _send_mail(
+    email_cfg: EmailConfig,
+    recipients: typing.Iterable[str],
+    mail_template: str,
+    subject: str,
+    replace_tokens: dict={},
+    cc_recipients: typing.Iterable[str]=[],
+):
+    ensure_not_none(email_cfg)
+    ensure_not_empty(recipients)
+    ensure_not_none(mail_template)
+    ensure_not_empty(subject)
 
     # create body from template
     mail_body = mailer.create_body(
-        template_file=mail_template,
-        replace_tokens=tokens,
-        replace_token_files=replace_token_file
+        mail_template=mail_template,
+        replace_tokens=replace_tokens,
     )
 
     # create mail envelope
