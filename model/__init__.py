@@ -519,8 +519,11 @@ class EmailConfig(NamedModelElement):
     def smtp_port(self):
         return self.snd.port
 
+    def use_tls(self):
+        return self.snd.use_tls
+
     def credentials(self):
-        return EmailCredentials(self.snd.technicalUser)
+        return EmailCredentials(self.snd.credentials)
 
     def _required_attributes(self):
         return ['host', 'port', 'technicalUser']
