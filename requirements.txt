@@ -3,7 +3,6 @@ Mako
 deepdiff
 deepmerge
 ensure
-# force pre-released version (remove version after 1.x was released)
 github3.py==1.1.0
 kubernetes
 requests
