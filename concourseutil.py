@@ -117,7 +117,6 @@ def render_secrets(cfg_dir: CliHints.existing_dir(), cfg_name: str, out_file: st
 def render_pipelines(
         definitions_root_dir: str,
         template_path: [str],
-        config_dir: str,
         config_name: str,
         template_include_dir: str,
         out_dir: str
@@ -125,7 +124,7 @@ def render_pipelines(
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
 
-    cfg_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
+    cfg_factory = ctx().cfg_factory()
     config_set = cfg_factory.cfg_set(cfg_name=config_name)
 
     concourse_cfg = config_set.concourse()

@@ -18,14 +18,24 @@ Execution context. Filled upon invocation of cli.py, read by submodules
 
 args=None # the parsed command line arguments
 
-def cfg_factory():
-    from util import ensure_directory_exists, fail
+def _cfg_factory_from_dir():
     if not args or not args.cfg_dir:
-        fail('cfg_factory is required. configure using the global --cfg-dir option or via env')
+        return None
 
+    from util import ensure_directory_exists
     cfg_dir = ensure_directory_exists(args.cfg_dir)
 
     from model import ConfigFactory
-
     factory = ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)
+    return factory
+
+
+def cfg_factory():
+    from util import fail
+
+    factory = _cfg_factory_from_dir()
+
+    if not factory:
+        fail('cfg_factory is required. configure using the global --cfg-dir option or via env')
+
     return factory
