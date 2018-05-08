@@ -141,15 +141,8 @@ def notify(
     subject: str,
     body: str,
     email_cfg_name: str,
-    src_dir: str=None,
-    src_dirs: typing.Iterable[str]=[],
+    src_dirs: [str]=[],
     ):
-    ensure_directory_exists(src_dir)
-
-    src_dirs = set(src_dirs)
-    if src_dir:
-        src_dirs.add(src_dir)
-
     recipients = determine_mail_recipients(src_dirs=src_dirs)
     email_cfg = ctx().cfg_factory().email(email_cfg_name)
 
