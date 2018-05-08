@@ -125,21 +125,32 @@ def _send_mail(
     )
 
 
-def determine_mail_recipients(src_dir: str):
+def determine_mail_recipients(src_dirs: str):
     recipients = set()
 
-    repo = git.Repo(ensure_directory_exists(src_dir))
-    head_commit = repo.commit(repo.head)
+    for src_dir in src_dirs:
+        repo = git.Repo(ensure_directory_exists(src_dir))
+        head_commit = repo.commit(repo.head)
 
-    recipients.add(head_commit.author.email.lower())
-    recipients.add(head_commit.committer.email.lower())
+        recipients.add(head_commit.author.email.lower())
+        recipients.add(head_commit.committer.email.lower())
 
     return recipients
 
-def notify(src_dir: str, subject: str, body: str, email_cfg_name: str):
+def notify(
+    subject: str,
+    body: str,
+    email_cfg_name: str,
+    src_dir: str=None,
+    src_dirs: typing.Iterable[str]=[],
+    ):
     ensure_directory_exists(src_dir)
 
-    recipients = determine_mail_recipients(src_dir=src_dir)
+    src_dirs = set(src_dirs)
+    if src_dir:
+        src_dirs.add(src_dir)
+
+    recipients = determine_mail_recipients(src_dirs=src_dirs)
     email_cfg = ctx().cfg_factory().email(email_cfg_name)
 
     _send_mail(
