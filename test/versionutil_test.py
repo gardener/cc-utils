@@ -24,6 +24,7 @@ from unittest.mock import MagicMock
 
 from test._test_utils import capture_out
 
+from util import Failure
 import versionutil as examinee
 
 class VersionutilTest(unittest.TestCase):
@@ -86,7 +87,7 @@ class VersionutilTest(unittest.TestCase):
 
     def test_fail_on_empty_stdin(self):
         with capture_out():
-            with self.assertRaises(SystemExit) as se:
+            with self.assertRaises(Failure) as se:
                 examinee.process_version(
                     operation='set_build_metadata',
                     build_metadata='test'
@@ -97,7 +98,7 @@ class VersionutilTest(unittest.TestCase):
         test_file_path = 'file_that_should_not_exist'
         self.assertTrue(os.path.isfile(test_file_path) is False)
         with capture_out():
-            with self.assertRaises(SystemExit) as se:
+            with self.assertRaises(Failure) as se:
                 examinee.process_version(
                     input_file=test_file_path,
                     operation='set_build_metadata',
@@ -108,7 +109,7 @@ class VersionutilTest(unittest.TestCase):
     def test_fail_on_output_file_with_absent_parent_directory(self):
         test_file_path = 'directory_that_should_not_exist/test_file'
         with capture_out():
-            with self.assertRaises(SystemExit) as se:
+            with self.assertRaises(Failure) as se:
                 examinee.process_version(
                     version_string='1.1.1',
                     output_file=test_file_path,

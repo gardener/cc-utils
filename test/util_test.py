@@ -16,6 +16,7 @@ import unittest
 
 from test._test_utils import capture_out
 
+from util import Failure
 import util as examinee
 
 class UtilTest(unittest.TestCase):
@@ -40,7 +41,7 @@ class UtilTest(unittest.TestCase):
 
     def test_fail(self):
         with capture_out() as (stdout, stderr):
-            with self.assertRaises(SystemExit):
+            with self.assertRaises(Failure):
                 examinee.fail(msg='foo bar')
 
         self.assertEqual('ERROR: foo bar', stdout.getvalue().strip())
@@ -55,7 +56,7 @@ class UtilTest(unittest.TestCase):
 
         for value in forbidden:
             with capture_out() as (stdout, stderr):
-                with self.assertRaises(SystemExit):
+                with self.assertRaises(Failure):
                     examinee.ensure_not_empty(value)
             self.assertIn('must not be empty', stdout.getvalue().strip())
             self.assertTrue(len(stderr.getvalue()) == 0)
@@ -69,7 +70,7 @@ class UtilTest(unittest.TestCase):
         self.assertEqual(existing_file, result)
 
         with capture_out() as (stdout, stderr):
-            with self.assertRaises(SystemExit):
+            with self.assertRaises(Failure):
                 examinee.ensure_file_exists('no such file, I hope')
         self.assertIn('not an existing file', stdout.getvalue().strip())
         self.assertTrue(len(stderr.getvalue()) == 0)

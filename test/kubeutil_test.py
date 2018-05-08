@@ -19,6 +19,7 @@ import sys
 
 from test._test_utils import capture_out
 import kubeutil
+from util import Failure
 
 class CtxTest(unittest.TestCase):
     def setUp(self):
@@ -50,7 +51,7 @@ class CtxTest(unittest.TestCase):
 
         # silence output (we do not care about it, though)
         with capture_out() as (stdout, stderr):
-            with self.assertRaises(SystemExit):
+            with self.assertRaises(Failure):
                 self.examinee.get_kubecfg()
 
 
