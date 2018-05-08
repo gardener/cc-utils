@@ -12,11 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import git
 import smtplib
 import typing
 
 from model import EmailConfig
-from util import ensure_file_exists, ensure_not_empty, ensure_not_none, fail, CliHint, ctx, CliHints
+from util import (
+    ensure_file_exists,
+    ensure_directory_exists,
+    ensure_not_empty,
+    ensure_not_none,
+    fail,
+    CliHint,
+    ctx,
+    CliHints,
+)
 from mail import template_mailer as mailer
 
 def send_mail(
@@ -103,9 +113,39 @@ def _send_mail(
     credentials = email_cfg.credentials()
     smtp_server.login(user=credentials.username(), password=credentials.passwd())
 
+    recipients = set(recipients)
+    recipients.update(cc_recipients)
+
     mailer.send_mail(
         smtp_server=smtp_server,
         msg=mail,
         sender=credentials.username(),
-        recipients=recipients + cc_recipients
+        recipients=recipients
     )
+
+
+def determine_mail_recipients(src_dir: str):
+    recipients = set()
+
+    repo = git.Repo(ensure_directory_exists(src_dir))
+    head_commit = repo.commit(repo.head)
+
+    recipients.add(head_commit.author.email.lower())
+    recipients.add(head_commit.committer.email.lower())
+
+    return recipients
+
+def notify(src_dir: str, subject: str, body: str, email_cfg_name: str):
+    ensure_directory_exists(src_dir)
+
+    recipients = determine_mail_recipients(src_dir=src_dir)
+    email_cfg = ctx().cfg_factory().email(email_cfg_name)
+
+    _send_mail(
+        email_cfg=email_cfg,
+        recipients=recipients,
+        mail_template=body,
+        subject=subject
+    )
+
+
