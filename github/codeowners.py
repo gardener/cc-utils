@@ -106,7 +106,7 @@ class CodeOwnerEntryResolver(object):
                 warning('invalid codeowners-entry: {e}'.format(codeowner_entry))
                 continue
             if not codeowner_entry.startswith('@'):
-                yield codeowners_entry # plain email address
+                yield codeowner_entry # plain email address
             elif not '/' in codeowner_entry:
                 email_addr = self._determine_email_address(codeowner_entry[1:])
                 if email_addr:
