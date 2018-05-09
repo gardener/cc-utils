@@ -65,6 +65,7 @@ def deploy_pipeline(
         pipeline_name: str,
         concourse_cfg: ConcourseConfig,
         team_credentials: ConcourseTeamCredentials,
+        unpause_pipeline: bool=True,
     ):
     api = client.ConcourseApi(
         base_url=concourse_cfg.external_url(),
@@ -76,7 +77,8 @@ def deploy_pipeline(
         team_credentials.passwd(),
     )
     api.set_pipeline(name=pipeline_name, pipeline_definition=pipeline_definition)
-    api.unpause_pipeline(pipeline_name=pipeline_name)
+    if unpause_pipeline:
+        api.unpause_pipeline(pipeline_name=pipeline_name)
 
 
 def find_template_file(template_name:str, template_path:[str]):
@@ -148,6 +150,7 @@ def replicate_pipelines(
     definitions_root_dir,
     template_path,
     template_include_dir,
+    unpause_pipelines: bool=True,
 ):
     ensure_directory_exists(definitions_root_dir)
     team_name = job_mapping.team_name()
@@ -170,6 +173,7 @@ def replicate_pipelines(
             pipeline_name=pipeline_name,
             concourse_cfg=concourse_cfg,
             team_credentials=team_credentials,
+            unpause_pipeline=unpause_pipelines,
         )
 
     concourse_api = client.ConcourseApi(base_url=concourse_cfg.external_url(), team_name=team_name)
