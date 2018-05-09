@@ -29,6 +29,8 @@ from util import (
     CliHints,
 )
 from mail import template_mailer as mailer
+import githubutil
+from github.codeowners import CodeownersParser, CodeOwnerEntryResolver
 
 def send_mail(
     email_cfg_name: CliHint(help="reference to an email cfg (see repo cc-config / secrets-server)"),
@@ -125,7 +127,7 @@ def _send_mail(
     )
 
 
-def determine_mail_recipients(src_dirs: [str]):
+def determine_mail_recipients(src_dirs: [str], github_cfg=None):
     recipients = set()
 
     for src_dir in src_dirs:
@@ -134,6 +136,18 @@ def determine_mail_recipients(src_dirs: [str]):
 
         recipients.add(head_commit.author.email.lower())
         recipients.add(head_commit.committer.email.lower())
+
+    if not github_cfg:
+        return recipients
+
+    github_api = githubutil._create_github_api_object(github_cfg)
+    parser = CodeownersParser(repo_dir=src_dir)
+    resolver = CodeOwnerEntryResolver(github_api=github_api)
+
+    codeowner_entries = parser.parse_codeowners_entries()
+    resolved_email_addresses = set(resolver.resolve_email_addresses(codeowner_entries))
+
+    recipients.update(resolved_email_addresses)
 
     return recipients
 
