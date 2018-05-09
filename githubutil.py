@@ -270,6 +270,7 @@ def release_and_prepare_next_dev_cycle(
 
 def retrieve_email_addresses(
     github_cfg: GithubConfig,
+    github_users: [str],
     out_file: str=None
 ):
     github = _create_github_api_object(github_cfg=github_cfg)
