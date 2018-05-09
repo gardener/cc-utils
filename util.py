@@ -146,6 +146,10 @@ def ensure_not_none(value):
         fail('passed value must not be None')
     return value
 
+# export shorted aliases
+not_none = ensure_not_none
+not_empty = ensure_not_empty
+
 
 def is_yaml_file(path: CliHints.existing_file()):
     with open(path) as f:
