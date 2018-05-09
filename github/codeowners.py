@@ -15,6 +15,7 @@ from pathlib import Path
 
 from util import existing_dir, not_none, warning
 
+# pylint: disable=no-member
 class CodeownersParser(object):
     '''
     Parses GitHub CODEOWNSERS files [0] from the documented default locations for a given
@@ -55,6 +56,7 @@ class CodeownersParser(object):
 
             # filter out empty strings (the empty string evaluates to False)
             yield from filter(bool, github_ids)
+# pylint: enable=no-member
 
 
 def _first(iterable, condition):
