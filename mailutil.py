@@ -156,9 +156,17 @@ def notify(
     body: str,
     email_cfg_name: str,
     src_dirs: [str],
+    github_cfg_name: str=None,
     ):
-    recipients = determine_mail_recipients(src_dirs=src_dirs)
-    email_cfg = ctx().cfg_factory().email(email_cfg_name)
+    cfg_factory = ctx().cfg_factory()
+
+    if github_cfg_name:
+        github_cfg = cfg_factory.github(github_cfg_name)
+    else:
+        github_cfg = None
+
+    recipients = determine_mail_recipients(src_dirs=src_dirs, github_cfg=github_cfg)
+    email_cfg = cfg_factory.email(email_cfg_name)
 
     _send_mail(
         email_cfg=email_cfg,
