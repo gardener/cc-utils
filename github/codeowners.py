@@ -59,11 +59,11 @@ class CodeownersParser(object):
 # pylint: enable=no-member
 
 
-def _first(iterable, condition):
-    for i in iterable:
-        if condition:
-            return i
-    return None
+def _first(iterable):
+    try:
+        return next(iterable)
+    except StopIteration:
+        return None
 
 
 class CodeOwnerEntryResolver(object):
