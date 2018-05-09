@@ -155,7 +155,7 @@ def notify(
     subject: str,
     body: str,
     email_cfg_name: str,
-    src_dirs: [str]=[],
+    src_dirs: [str],
     ):
     recipients = determine_mail_recipients(src_dirs=src_dirs)
     email_cfg = ctx().cfg_factory().email(email_cfg_name)
