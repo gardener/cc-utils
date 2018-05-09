@@ -125,7 +125,7 @@ def _send_mail(
     )
 
 
-def determine_mail_recipients(src_dirs: str):
+def determine_mail_recipients(src_dirs: [str]):
     recipients = set()
 
     for src_dir in src_dirs:
