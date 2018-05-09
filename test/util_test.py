@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import unittest
+import pathlib
 
 from test._test_utils import capture_out
 
@@ -74,6 +75,10 @@ class UtilTest(unittest.TestCase):
                 examinee.ensure_file_exists('no such file, I hope')
         self.assertIn('not an existing file', stdout.getvalue().strip())
         self.assertTrue(len(stderr.getvalue()) == 0)
+
+        # should also work with pathlib.Path
+        existing_file = pathlib.Path(existing_file)
+        self.assertEqual(examinee.ensure_file_exists(existing_file), existing_file)
 
     def test_urljoin(self):
         self.assertEqual('foo/bar', examinee.urljoin('foo/bar'))

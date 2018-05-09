@@ -15,6 +15,7 @@
 import shutil
 import sys
 import os
+import pathlib
 import yaml
 
 class Failure(RuntimeError):
@@ -29,14 +30,22 @@ def _set_cli(is_cli: bool):
         class Failure(RuntimeError): pass
 
 
-def ensure_file_exists(path: str):
-    if not os.path.isfile(path):
+def ensure_file_exists(path):
+    if isinstance(path, pathlib.Path):
+        is_file = path.is_file()
+    else:
+        is_file = os.path.isfile(path)
+    if not is_file:
         fail('not an existing file: ' + str(path))
     return path
 
 
 def ensure_directory_exists(path: str):
-    if not os.path.isdir(path):
+    if isinstance(path, pathlib.Path):
+        is_dir = path.is_dir()
+    else:
+        is_dir = os.path.isdir(path)
+    if not is_dir:
         fail('not an existing directory: ' + str(path))
     return path
 
