@@ -275,7 +275,7 @@ def deploy_concourse_landscape(
     info('Setting teams on Concourse ...')
     set_teams(config=concourse_cfg)
 
-
+# pylint: disable=no-member
 def ensure_cluster_version(kubernetes_config: KubernetesConfig):
     ensure_not_none(kubernetes_config)
 
@@ -294,6 +294,7 @@ def ensure_cluster_version(kubernetes_config: KubernetesConfig):
                 e_minor=configured_version_info['minor'],
             )
         )
+# pylint: enable=no-member
 
 
 def ensure_helm_setup():
