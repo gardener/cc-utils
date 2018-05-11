@@ -127,45 +127,45 @@ def _send_mail(
     )
 
 
-def determine_mail_recipients(src_dirs: [str], github_cfg=None):
-    recipients = set()
+def determine_mail_recipients(src_dir, github_cfg_name):
+    '''
+    returns a generator yielding all email addresses for the given (git) repository work tree
+    Email addresses are looked up:
+    - from head commit: author and committer
+    - from *CODEOWNERS files [0]
 
-    for src_dir in src_dirs:
-        repo = git.Repo(ensure_directory_exists(src_dir))
-        head_commit = repo.commit(repo.head)
+    Email addresses are not de-duplicated (this should be done by consumers)
 
-        recipients.add(head_commit.author.email.lower())
-        recipients.add(head_commit.committer.email.lower())
+    [0] https://help.github.com/articles/about-codeowners/
+    '''
+    cfg_factory = ctx().cfg_factory()
 
-    if not github_cfg:
-        return recipients
-
+    github_cfg = cfg_factory.github(github_cfg_name)
     github_api = githubutil._create_github_api_object(github_cfg)
+
+    # commiter/author from head commit
+    repo = git.Repo(ensure_directory_exists(src_dir))
+    head_commit = repo.commit(repo.head)
+    yield head_commit.author.email.lower()
+    yield head_commit.committer.email.lower()
+
+    # codeowners
     parser = CodeownersParser(repo_dir=src_dir)
     resolver = CodeOwnerEntryResolver(github_api=github_api)
 
     codeowner_entries = parser.parse_codeowners_entries()
-    resolved_email_addresses = set(resolver.resolve_email_addresses(codeowner_entries))
+    yield from resolver.resolve_email_addresses(codeowner_entries)
 
-    recipients.update(resolved_email_addresses)
-
-    return recipients
 
 def notify(
     subject: str,
     body: str,
     email_cfg_name: str,
-    src_dirs: [str],
-    github_cfg_name: str=None,
+    recipients: typing.Iterable[str],
     ):
+    recipients = set(recipients)
     cfg_factory = ctx().cfg_factory()
 
-    if github_cfg_name:
-        github_cfg = cfg_factory.github(github_cfg_name)
-    else:
-        github_cfg = None
-
-    recipients = determine_mail_recipients(src_dirs=src_dirs, github_cfg=github_cfg)
     email_cfg = cfg_factory.email(email_cfg_name)
 
     _send_mail(
