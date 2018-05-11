@@ -200,6 +200,10 @@ class ConcourseApiRoutes(object):
         return self._api_url('pipelines', pipeline_name, 'unpause')
 
     @ensure_annotations
+    def expose_pipeline(self, pipeline_name: str):
+        return self._api_url('pipelines', pipeline_name, 'expose')
+
+    @ensure_annotations
     def resource_check_webhook(
         self,
         pipeline_name: str,
@@ -332,6 +336,14 @@ class ConcourseApi(object):
         self.request_builder.put(
                 unpause_url,
                 body=""
+        )
+
+    @ensure_annotations
+    def expose_pipeline(self, pipeline_name: str):
+        expose_url = self.routes.expose_pipeline(pipeline_name)
+        self.request_builder.put(
+                expose_url,
+                body="",
         )
 
     @ensure_annotations
