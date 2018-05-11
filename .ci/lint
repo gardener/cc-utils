@@ -4,7 +4,6 @@ set -e
 
 # usage: $1: <src-dir>
 
-exit 1
 src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
 
 python3 $(which pylint3) -j 4 --errors-only \
