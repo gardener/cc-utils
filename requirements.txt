@@ -3,6 +3,7 @@ GitPython
 Mako
 deepdiff
 deepmerge
+docker-py
 ensure
 github3.py==1.1.0
 kubernetes
