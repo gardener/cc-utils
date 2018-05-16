@@ -77,7 +77,7 @@ class ProtecodeApi(object):
     def list_apps(self, group_id, custom_attribs={}):
         url = self._routes.apps(group_id=group_id, custom_attribs=custom_attribs)
 
-        result = requsts.get(
+        result = requests.get(
             url=url,
             auth=self._auth,
         )
