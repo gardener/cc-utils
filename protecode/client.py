@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from functools import partial
+from urllib.parse import urlencode
 
 import requests
 
@@ -26,6 +27,17 @@ class ProtecodeApiRoutes(object):
 
     def _url(self, *parts):
         return urljoin(self._base_url, *parts)
+
+    def apps(self, group_id, custom_attribs={}):
+        url = self._api_url('apps')
+        if group_id:
+            url = urljoin(url, 'group', str(group_id))
+
+        search_query = ' '.join(['meta:' + str(k) + '=' + str(v) for k,v in custom_attribs.items()])
+        if search_query:
+            url += '?' + urlencode({'q': search_query})
+
+        return url
 
     def groups(self):
         return self._api_url('groups')
@@ -60,6 +72,15 @@ class ProtecodeApi(object):
             data=data,
         )
 
+        return result.json()
+
+    def list_apps(self, group_id, custom_attribs={}):
+        url = self._routes.apps(group_id=group_id, custom_attribs=custom_attribs)
+
+        result = requsts.get(
+            url=url,
+            auth=self._auth,
+        )
         return result.json()
 
 
