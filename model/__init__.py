@@ -401,9 +401,6 @@ class ConcourseConfig(NamedModelElement):
     '''
     Not intended to be instantiated by users of this module
     '''
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def all_team_credentials(self):
         return [ConcourseTeamCredentials(team_dict) for team_dict in self.snd.teams.values()]
 
@@ -567,9 +564,6 @@ class EmailCredentials(BasicCredentials):
 
 
 class JobMappingSet(NamedModelElement):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def job_mappings(self):
         return {name: JobMapping(name=name, raw_dict=raw) for name, raw in self.raw.items()}
 
