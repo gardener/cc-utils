@@ -373,6 +373,24 @@ class GcrCredentials(BasicCredentials):
         return self.snd.email
 
 
+class ProtecodeConfig(NamedModelElement):
+    '''
+    Not intended to be instantiated by users of this module
+    '''
+    def credentials(self):
+        return ProtecodeCredentials(self.snd.credentials)
+
+    def api_url(self):
+        return self.snd.api_url
+
+    def tls_verify(self):
+        return self.raw.get('tls_verify', True)
+
+
+class ProtecodeCredentials(BasicCredentials):
+    pass
+
+
 class ConcourseConfig(NamedModelElement):
     '''
     Not intended to be instantiated by users of this module
