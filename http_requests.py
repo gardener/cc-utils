@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import requests
+from requests.auth import HTTPBasicAuth
 
 class AuthenticatedRequestBuilder(object):
     '''
@@ -34,7 +35,7 @@ class AuthenticatedRequestBuilder(object):
         if auth_token:
             self.headers={'Authorization': 'Bearer {}'.format(auth_token)}
         if basic_auth_username and basic_auth_passwd:
-            self.auth = (basic_auth_username, basic_auth_passwd)
+            self.auth = HTTPBasicAuth(basic_auth_username, basic_auth_passwd)
 
         self.verify_ssl = verify_ssl
 
