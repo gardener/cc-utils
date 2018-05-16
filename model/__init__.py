@@ -157,6 +157,9 @@ class ConfigFactory(object):
     def secrets_server(self, cfg_name):
         return self._cfg_element(cfg_type_name='secrets_server', cfg_name=cfg_name)
 
+    def protecode(self, cfg_name):
+        return self._cfg_element(cfg_type_name='protecode', cfg_name=cfg_name)
+
 
 class ConfigType(ModelBase):
     '''
@@ -285,6 +288,9 @@ class ConfigurationSet(NamedModelElement):
 
     def secrets_server(self, cfg_name=None):
         return self.cfg_factory.secrets_server(self._default_name('secrets_server', cfg_name))
+
+    def protecode(self, cfg_name=None):
+        return self.cfg_factory.protecode(self._default_name('protecode', cfg_name))
 
 
 class BasicCredentials(ModelBase):
