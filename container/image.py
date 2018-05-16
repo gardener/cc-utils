@@ -14,7 +14,7 @@
 
 import docker
 
-def retrieve_container_image(container_registry_cfg, image_reference):
+def retrieve_container_image(image_reference):
     client = docker.Client()
     client.pull(image_reference)
     return client.get_image(image_reference)
