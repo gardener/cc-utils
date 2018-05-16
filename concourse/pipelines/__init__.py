@@ -153,8 +153,6 @@ def replicate_pipelines(
     definitions_root_dir,
     template_path,
     template_include_dir,
-    unpause_pipelines: bool=True,
-    expose_pipelines: bool=True,
 ):
     ensure_directory_exists(definitions_root_dir)
     team_name = job_mapping.team_name()
@@ -162,24 +160,18 @@ def replicate_pipelines(
 
     pipeline_names = set()
 
-    for rendered_pipeline, _, pipeline_metadata in generate_pipelines(
+    pipeline_definitions = generate_pipelines(
         definitions_root_dir=definitions_root_dir,
         job_mapping=job_mapping,
         template_path=template_path,
         template_include_dir=template_include_dir,
         config_set=cfg_set,
-    ):
-        pipeline_name = pipeline_metadata.pipeline_name
-        pipeline_names.add(pipeline_name)
-        info('deploying pipeline {p} to team {t}'.format(p=pipeline_name, t=team_name))
-        deploy_pipeline(
-            pipeline_definition=rendered_pipeline,
-            pipeline_name=pipeline_name,
-            concourse_cfg=concourse_cfg,
-            team_credentials=team_credentials,
-            unpause_pipeline=unpause_pipelines,
-            expose_pipeline=expose_pipelines,
-        )
+    )
+    deploy_pipelines(
+        pipeline_definitions=pipeline_definitions,
+        concourse_cfg=concourse_cfg,
+        team_credentials=team_credentials,
+    )
 
     concourse_api = client.ConcourseApi(base_url=concourse_cfg.external_url(), team_name=team_name)
     concourse_api.login(
@@ -200,3 +192,29 @@ def replicate_pipelines(
     pipeline_names.sort()
     concourse_api.order_pipelines(pipeline_names)
 
+
+def deploy_pipelines(
+        pipeline_definitions,
+        concourse_cfg: ConcourseConfig,
+        team_credentials: ConcourseTeamCredentials,
+    ):
+    api = client.ConcourseApi(
+        base_url=concourse_cfg.external_url(),
+        team_name=team_credentials.teamname(),
+    )
+    api.login(
+        team_credentials.teamname(),
+        team_credentials.username(),
+        team_credentials.passwd(),
+    )
+
+    known_pipelines = api.pipelines()
+    team_name = team_credentials.teamname()
+
+    for rendered_pipeline, _, pipeline_metadata in pipeline_definitions:
+        pipeline_name = pipeline_metadata.pipeline_name
+        api.set_pipeline(name=pipeline_name, pipeline_definition=rendered_pipeline)
+        info('deploying pipeline {p} to team {t}'.format(p=pipeline_name, t=team_name))
+        # only unpause if pipeline is new, leave it as it was otherwise
+        if pipeline_name not in known_pipelines:
+            api.unpause_pipeline(pipeline_name=pipeline_name)
