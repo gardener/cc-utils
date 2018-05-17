@@ -92,12 +92,12 @@ class ProtecodeApi(object):
 
     def set_metadata(self, product_id: int, custom_attribs: dict):
         url = self._routes.product_custom_data(product_id=product_id)
-        headers = ('META-' + key + ':' + value for key, value in custom_attribs)
+        headers = {'META-' + str(key): str(value) for key, value in custom_attribs.items()}
 
         result = self._post(
             url=url,
             auth=self._auth,
-            headers=headers
+            headers=headers,
         )
         return result.json()
 
