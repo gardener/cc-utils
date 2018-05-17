@@ -31,7 +31,7 @@ class ProtecodeApiRoutes(object):
     def apps(self, group_id, custom_attribs={}):
         url = self._api_url('apps')
         if group_id:
-            url = urljoin(url, 'group', str(group_id))
+            url = urljoin(url, str(group_id))
 
         search_query = ' '.join(['meta:' + str(k) + '=' + str(v) for k,v in custom_attribs.items()])
         if search_query:
