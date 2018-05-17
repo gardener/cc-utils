@@ -63,12 +63,16 @@ class ProtecodeApi(object):
             verify_ssl=tls_verify
         )
 
+        self._get = partial(requests.get, verify=tls_verify)
+        self._post = partial(requests.post, verify=tls_verify)
+        self._put = partial(requests.put, verify=tls_verify)
+
     def upload(self, application_name, group_id, data, custom_attribs={}):
         url = self._routes.upload(file_name=application_name)
         headers = {'Group': str(group_id)}
         headers.update({'META-' + k: v for k,v in custom_attribs.items()})
 
-        result = requests.put(
+        result = self._put(
             url=url,
             headers=headers,
             auth=self._auth,
@@ -80,7 +84,7 @@ class ProtecodeApi(object):
     def list_apps(self, group_id, custom_attribs={}):
         url = self._routes.apps(group_id=group_id, custom_attribs=custom_attribs)
 
-        result = requests.get(
+        result = self._get(
             url=url,
             auth=self._auth,
         )
@@ -90,7 +94,7 @@ class ProtecodeApi(object):
         url = self._routes.product_custom_data(product_id=product_id)
         headers = ('META-' + key + ':' + value for key, value in custom_attribs)
 
-        result = requests.post(
+        result = self._post(
             url=url,
             auth=self._auth,
             headers=headers
@@ -100,7 +104,7 @@ class ProtecodeApi(object):
     def metadata(self, product_id: int):
         url = self._routes.product_custom_data(product_id=product_id)
 
-        result = requests.post(
+        result = self._post(
             url=url,
             auth=self._auth,
             headers={},
