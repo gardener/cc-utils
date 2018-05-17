@@ -133,6 +133,7 @@ def attribute(cfg_type: str, cfg_name: str, key: str):
 
     while attrib_path:
         attrib = raw.get(attrib_path.pop())
+        raw = attrib
 
     print(str(attrib))
 
