@@ -48,6 +48,9 @@ class ProtecodeApiRoutes(object):
     def product(self, product_id: int):
         return self._api_url('product')
 
+    def product_custom_data(self, product_id: int):
+        return self._api_url('product', str(product_id), 'custom-data')
+
 
 class ProtecodeApi(object):
     def __init__(self, api_routes, basic_credentials, tls_verify=False):
@@ -82,6 +85,27 @@ class ProtecodeApi(object):
             auth=self._auth,
         )
         return result.json()
+
+    def set_metadata(self, product_id: int, custom_attribs: dict):
+        url = self._routes.product_custom_data(product_id=product_id)
+        headers = ('META-' + key + ':' + value for key, value in custom_attribs)
+
+        result = requests.post(
+            url=url,
+            auth=self._auth,
+            headers=headers
+        )
+        return result.json()
+
+    def metadata(self, product_id: int):
+        url = self._routes.product_custom_data(product_id=product_id)
+
+        result = requests.post(
+            url=url,
+            auth=self._auth,
+            headers={},
+        )
+        return result.json().get('custom_data', {})
 
 
 def from_cfg(protecode_cfg):
