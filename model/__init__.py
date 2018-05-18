@@ -136,6 +136,9 @@ class ConfigFactory(object):
         element_instance = element_type(**kwargs)
         return element_instance
 
+    def aws(self, cfg_name):
+        return self._cfg_element(cfg_type_name='aws', cfg_name=cfg_name)
+
     def concourse(self, cfg_name):
         return self._cfg_element(cfg_type_name='concourse', cfg_name=cfg_name)
 
@@ -204,7 +207,7 @@ class ConfigSetSerialiser(object):
                     cfg_mappings[cfg_type] = set()
                 cfg_mappings[cfg_type].update(cfg_set_mapping['config_names'])
 
-        # assumption: all cfg_sets share the same cfg_factory / all cfg_names are organised in one
+        # assumption: all cfg_sets share the same cfg_factory / all cfg_names are organized in one
         # global, flat namespace
         def serialise_element(cfg_type, cfg_names):
             elem_cfgs = {}
@@ -267,6 +270,9 @@ class ConfigurationSet(NamedModelElement):
             return self.raw[cfg_type_name]['default']
         else:
             return cfg_name
+
+    def aws(self, cfg_name=None):
+        return self.cfg_factory.aws(self._default_name('aws', cfg_name))
 
     def email(self, cfg_name=None):
         return self.cfg_factory.email(self._default_name('email', cfg_name))
@@ -396,6 +402,18 @@ class ProtecodeConfig(NamedModelElement):
 class ProtecodeCredentials(BasicCredentials):
     pass
 
+class AwsProfile(NamedModelElement):
+    def region(self):
+        return self.snd.region
+
+    def access_key_id(self):
+        return self.snd.aws_access_key_id
+
+    def secret_access_key(self):
+        return self.snd.aws_secret_access_key
+
+    def _required_attributes(self):
+        return ['region','access_key_id','secret_access_key']
 
 class ConcourseConfig(NamedModelElement):
     '''
