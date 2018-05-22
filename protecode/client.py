@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from functools import partial
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote
 
 import requests
 
@@ -43,7 +43,7 @@ class ProtecodeApiRoutes(object):
         return self._api_url('groups')
 
     def upload(self, file_name):
-        return self._api_url('upload')
+        return self._api_url('upload', quote(file_name))
 
     def product(self, product_id: int):
         return self._api_url('product')
