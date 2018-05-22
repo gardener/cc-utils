@@ -23,7 +23,7 @@ import mako.template
 from util import (
     SimpleNamespaceDict, fail, ensure_directory_exists, ensure_file_exists, info, is_yaml_file, merge_dicts
 )
-from githubutil import branches
+from github.util import branches
 
 from concourse.pipelines.factory import DefinitionFactory, RawPipelineDefinitionDescriptor
 from concourse.pipelines.enumerator import PipelineEnumerator

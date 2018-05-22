@@ -29,7 +29,7 @@ from util import (
     CliHints,
 )
 from mail import template_mailer as mailer
-import githubutil
+import github.util
 from github.codeowners import CodeownersParser, CodeOwnerEntryResolver
 
 def send_mail(
@@ -141,7 +141,7 @@ def determine_mail_recipients(src_dir, github_cfg_name):
     cfg_factory = ctx().cfg_factory()
 
     github_cfg = cfg_factory.github(github_cfg_name)
-    github_api = githubutil._create_github_api_object(github_cfg)
+    github_api = github.util._create_github_api_object(github_cfg)
 
     # commiter/author from head commit
     repo = git.Repo(ensure_directory_exists(src_dir))

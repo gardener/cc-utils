@@ -50,7 +50,7 @@ from util import (
     info,
     fail,
 )
-from kubeutil import (
+from kube.helper import (
     KubernetesNamespaceHelper,
     KubernetesSecretHelper,
     KubernetesServiceAccountHelper,

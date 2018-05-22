@@ -22,7 +22,7 @@ from util import (
     merge_dicts,
     info,
 )
-from githubutil import _create_github_api_object
+from github.util import _create_github_api_object
 from model import JobMapping
 from concourse.pipelines.factory import RawPipelineDefinitionDescriptor
 

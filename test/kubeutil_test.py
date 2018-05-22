@@ -19,17 +19,18 @@ import sys
 
 from test._test_utils import capture_out
 import kubeutil
+import kube.ctx
 from util import Failure
 
 class CtxTest(unittest.TestCase):
     def setUp(self):
-        self.examinee = kubeutil.Ctx()
+        self.examinee = kubeutil.ctx
         self.fixture_ctx = types.SimpleNamespace()
         self.fixture_args = types.SimpleNamespace()
         self.fixture_ctx.args = self.fixture_args
-        kubeutil.global_ctx = lambda: self.fixture_ctx
+        kube.ctx.global_ctx = lambda: self.fixture_ctx
         self.kubernetes_config_mock = MagicMock()
-        kubeutil.config = self.kubernetes_config_mock
+        kube.ctx.config = self.kubernetes_config_mock
 
     def test_get_kubecfg_cli_arg_should_have_precedence(self):
         # kubeconfig specified via CLI should have precedence over env var

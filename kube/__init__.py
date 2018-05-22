@@ -11,24 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import sys
-import os
-
-# add modules from root dir to module search path
-# so unit test modules can use regular imports
-sys.path.extend(
-    (
-        os.path.join(
-            os.path.realpath(os.path.dirname(__file__)),
-            os.pardir
-        ),
-        os.path.realpath(os.path.dirname(__file__)),
-        os.path.join(
-            os.path.realpath(os.path.dirname(__file__)),
-            os.pardir,
-            'cli',
-        ),
-        os.path.realpath(os.path.dirname(__file__)),
-    )
-)
