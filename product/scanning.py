@@ -25,12 +25,12 @@ class ProtecodeUtil(object):
         self._group_id = group_id
 
     def _image_ref_metadata(self, container_image):
-        return {'image_reference': container_image.image_reference()}
+        return {'image-reference': container_image.image_reference()}
 
     def _component_metadata(self, component):
         return {
-            'component_name': component.name(),
-            'component_version': component.version(),
+            'component-name': component.name(),
+            'component-version': component.version(),
         }
 
     def _upload_name(self, container_image, component):
