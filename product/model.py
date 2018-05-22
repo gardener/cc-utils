@@ -16,6 +16,10 @@ from model.base import ModelBase, NamedModelElement
 from util import parse_yaml_file
 
 class Product(NamedModelElement):
+    @staticmethod
+    def from_dict(name: str, raw_dict: dict):
+        return Product(name=name, raw_dict=raw_dict)
+
     def components(self):
         return (Component(name=name, raw_dict=raw_dict) for name, raw_dict in self.snd.components.items())
 
