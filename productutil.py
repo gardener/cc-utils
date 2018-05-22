@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from concurrent.futures import ThreadPoolExecutor
 
 from util import CliHints, parse_yaml_file, ctx, info
 from product.model import Product
@@ -20,6 +21,7 @@ import protecode.client
 def upload_product_images(
     protecode_cfg_name: str,
     product_cfg_file: CliHints.existing_file(),
+    parallel_jobs: int=4,
     ):
     cfg_factory = ctx().cfg_factory()
     protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
@@ -31,6 +33,14 @@ def upload_product_images(
         raw_dict=parse_yaml_file(product_cfg_file)
     )
 
+    executor = ThreadPoolExecutor(max_workers=parallel_jobs)
+    tasks = _create_tasks(product_model, protecode_util)
+    results = executor.map(lambda task: task(), tasks)
+
+    for result in results:
+        info('result: {r}'.format(r=result))
+
+def _create_tasks(product_model, protecode_util):
     for component in product_model.components():
         info('processing component: {c}'.format(c=component.name()))
         for container_image in component.container_images():
@@ -39,7 +49,10 @@ def upload_product_images(
                 ci=container_image.name()
                 )
             )
-            result = protecode_util.upload_image(container_image, component)
-            info('result: {r}'.format(r=result))
+            def upload_image():
+                result = protecode_util.upload_image(container_image, component)
+                return result
+            yield upload_image
+
 
 
