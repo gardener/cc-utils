@@ -80,10 +80,12 @@ def destroy_concourse(release: str, dry_run: bool = True):
     namespace_helper.delete_namespace(namespace=release)
     helm_env = os.environ.copy()
 
+    # pylint: disable=no-member
     # Check for optional arg --kubeconfig
     cli_args = global_ctx().args
     if cli_args and hasattr(cli_args, 'kubeconfig') and cli_args.kubeconfig:
         helm_env['KUBECONFIG'] = cli_args.kubeconfig
+    # pylint: enable=no-member
 
     subprocess.run([helm_executable, "delete", release, "--purge"], env=helm_env)
 

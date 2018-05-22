@@ -15,6 +15,8 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
+from util import warning
+
 class AuthenticatedRequestBuilder(object):
     '''
     Wrapper around the 'requests' library, handling concourse-specific
