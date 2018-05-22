@@ -78,6 +78,10 @@ class ProtecodeApi(object):
             auth=self._auth,
             data=data,
         )
+        if result.status_code < 200 or result.status_code >= 300:
+            print('received an error: {c} {m}'.format(c=result.status_code, m=result.content))
+            print('url: {u}'.format(u=url))
+            raise RuntimeError(result.content)
 
         return result.json()
 
