@@ -83,7 +83,7 @@ class ProtecodeApi(object):
             print('url: {u}'.format(u=url))
             raise RuntimeError(result.content)
 
-        return result.json()
+        return result.json().get('results')
 
     def list_apps(self, group_id, custom_attribs={}):
         url = self._routes.apps(group_id=group_id, custom_attribs=custom_attribs)
@@ -92,7 +92,7 @@ class ProtecodeApi(object):
             url=url,
             auth=self._auth,
         )
-        return result.json()
+        return result.json().get('products')
 
     def set_metadata(self, product_id: int, custom_attribs: dict):
         url = self._routes.product_custom_data(product_id=product_id)
