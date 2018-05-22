@@ -98,11 +98,13 @@ def _quiet():
     return ctx().args and ctx().args.quiet
 
 
+# pylint: disable=no-member
 def _verbose():
     return ctx().args and ctx().args.verbose
 
 def _cli():
     return bool(ctx().args and hasattr(ctx().args, '._cli') and ctx().args._cli)
+# pylint: enable=no-member
 
 
 def fail(msg=None):
