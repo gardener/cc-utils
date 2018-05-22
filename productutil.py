@@ -42,11 +42,12 @@ def upload_product_images(
 
 def _create_tasks(product_model, protecode_util):
     for component in product_model.components():
-        info('processing component: {c}'.format(c=component.name()))
+        info('processing component: {c}:{v}'.format(c=component.name(), v=component.version()))
         for container_image in component.container_images():
-            info('processing container image: {c}:{ci}'.format(
+            info('processing container image: {c}:{ci}:{v}'.format(
                 c=component.name(),
-                ci=container_image.name()
+                ci=container_image.name(),
+                v=container_image.version(),
                 )
             )
             def upload_image():
