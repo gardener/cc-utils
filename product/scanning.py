@@ -40,7 +40,7 @@ class ProtecodeUtil(object):
 
     def upload_image(self, container_image: ContainerImage, component: Component):
         metadata = self._image_ref_metadata(container_image)
-        metadata.update(self._component_metadata(component)
+        metadata.update(self._component_metadata(component))
 
         # check if the image has already been uploaded for this component
         existing_products = self._api.list_apps(
