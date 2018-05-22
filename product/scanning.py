@@ -25,6 +25,12 @@ class ProtecodeUtil(object):
     def _image_ref_metadata(self, container_image):
         return {'image_reference': container_image.image_reference()}
 
+    def _component_metadata(self, component):
+        return {
+            'component_name': component.name(),
+            'component_version': component.version(),
+        }
+
     def _upload_name(self, container_image, component):
         return '{c}_{i}_{v}'.format(
             c=component.name(),
@@ -33,11 +39,13 @@ class ProtecodeUtil(object):
         )
 
     def upload_image(self, container_image: ContainerImage, component: Component):
-        image_metadata = self._image_ref_metadata(container_image)
-        # check if the image has already been uploaded
+        metadata = self._image_ref_metadata(container_image)
+        metadata.update(self._component_metadata(component)
+
+        # check if the image has already been uploaded for this component
         existing_products = self._api.list_apps(
             group_id=self._group_id,
-            custom_attribs=image_metadata
+            custom_attribs=metadata
         )
         if len(existing_products) > 0:
             if len(existing_products) > 1:
@@ -51,7 +59,7 @@ class ProtecodeUtil(object):
             application_name=self._upload_name(container_image=container_image, component=component),
             group_id=self._group_id,
             data=image_data.stream(),
-            custom_attribs=image_metadata,
+            custom_attribs=metadata,
         )
 
         return result
