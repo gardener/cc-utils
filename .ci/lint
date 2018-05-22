@@ -6,6 +6,14 @@ set -e
 
 src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
 
-python3 $(which pylint3) -j 4 --errors-only \
-  ${src_dir}/**/*.py
+echo 'Running pylint for all python modules..'
+
+if python3 $(which pylint3) -j 4 --errors-only \
+  ${src_dir}/**/*.py; then
+    echo 'Linting succeeded'
+    exit 0
+else
+    echo 'Linting found errors (see above)'
+    exit 1
+fi
 
