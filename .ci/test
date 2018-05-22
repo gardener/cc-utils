@@ -6,4 +6,10 @@ set -e
 
 src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
 
-python3 -m unittest discover --verbose --start-directory "${src_dir}" -p '*_test.py'
+if python3 -m unittest discover --verbose --start-directory "${src_dir}" -p '*_test.py'; then
+    echo 'Unittest executions succeeded'
+    exit 0
+else
+    echo 'Errors were found whilst executing unittests (see above)'
+    exit 1
+fi
