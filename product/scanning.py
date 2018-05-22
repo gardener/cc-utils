@@ -11,11 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from functools import partial
 
 from protecode.client import ProtecodeApi
 from util import not_none, warning
 from container.image import retrieve_container_image
-from .model import ContainerImage, Component
+from .model import ContainerImage, Component, UploadResult, UploadStatus
+
 
 class ProtecodeUtil(object):
     def __init__(self, protecode_api: ProtecodeApi, group_id=None):
@@ -42,6 +44,8 @@ class ProtecodeUtil(object):
         metadata = self._image_ref_metadata(container_image)
         metadata.update(self._component_metadata(component))
 
+        upload_result = partial(UploadResult, container_image=container_image, component=component)
+
         # check if the image has already been uploaded for this component
         existing_products = self._api.list_apps(
             group_id=self._group_id,
@@ -51,7 +55,11 @@ class ProtecodeUtil(object):
             if len(existing_products) > 1:
                 warning('found more than one product for image {i}'.format(i=container_image))
             # use first (or only) match (we already printed a warning if we found more than one)
-            return existing_products[0]
+            raw_result =  existing_products[0]
+            return upload_result(
+                status=UploadStatus.SKIPPED_ALREADY_EXISTED,
+                raw_result=raw_result,
+            )
 
         # image was not yet uploaded - do this now
         image_data = retrieve_container_image(container_image.image_reference())
@@ -62,5 +70,8 @@ class ProtecodeUtil(object):
             custom_attribs=metadata,
         )
 
-        return result
+        return upload_result(
+            status=UploadStatus.UPLOADED_PENDING, # todo: wait for scanning
+            raw_result=result
+        )
 

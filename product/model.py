@@ -11,9 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from enum import Enum
 
 from model.base import ModelBase, NamedModelElement
-from util import parse_yaml_file
+from util import parse_yaml_file, not_none
+
+#############################################################################
+## product descriptor model
 
 class Product(NamedModelElement):
     @staticmethod
@@ -35,4 +39,28 @@ class ContainerImage(NamedModelElement):
 
     def version(self):
         return self.snd.version
+
+#############################################################################
+## upload result model
+
+class UploadStatus(Enum):
+    SKIPPED_ALREADY_EXISTED = 1
+    UPLOADED_PENDING = 2
+    UPLOADED_DONE = 4
+
+class UploadResult(object):
+    def __init__(
+            self,
+            status: UploadStatus,
+            component: Component,
+            container_image: ContainerImage,
+            raw_result: str,
+    ):
+        self.status = not_none(status)
+        self.component = not_none(component)
+        self.container_image = not_none(container_image)
+        if raw_result:
+            self.raw_result = raw_result
+        else:
+            self.raw_result = None
 
