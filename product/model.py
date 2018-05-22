@@ -64,3 +64,10 @@ class UploadResult(object):
         else:
             self.raw_result = None
 
+    def __str__(self):
+        return '{c}:{i} - {s}'.format(
+            c=self.component.name(),
+            i=self.container_image.name(),
+            s=self.status
+        )
+
