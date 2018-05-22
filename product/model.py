@@ -33,3 +33,6 @@ class ContainerImage(NamedModelElement):
     def image_reference(self):
         return self.snd.image_reference
 
+    def version(self):
+        return self.snd.version
+
