@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
 from functools import partial
 from urllib.parse import urlencode, quote
+import time
 
 import requests
 
 from util import not_empty, not_none, urljoin
 from http_requests import AuthenticatedRequestBuilder, check_http_code
+from .model import AnalysisResult, ProcessingStatus
 
 
 class ProtecodeApiRoutes(object):
@@ -96,12 +99,31 @@ class ProtecodeApi(object):
 
         return result.json().get('results')
 
+    def scan_result(self, product_id: int):
+        url = self._routes.product(product_id=product_id)
+
+        result = self._get(
+            url=url,
+        ).json()['results']
+
+        return AnalysisResult(raw_dict=result)
+
+    def wait_for_scan_result(self, product_id: int, polling_interval_seconds=10):
+        result = self.scan_result(product_id=product_id)
+        if result.status() in (ProcessingStatus.READY, ProcessingStatus.FAILED):
+            return result
+        # keep polling until result is ready
+        time.sleep(polling_interval_seconds)
+        return self.wait_for_scan_result(
+            product_id=product_id,
+            polling_interval_seconds=polling_interval_seconds
+        )
+
     def list_apps(self, group_id, custom_attribs={}):
         url = self._routes.apps(group_id=group_id, custom_attribs=custom_attribs)
 
         result = self._get(
             url=url,
-            auth=self._auth,
         )
         return result.json().get('products')
 
