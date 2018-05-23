@@ -51,7 +51,11 @@ def _create_tasks(product_model, protecode_util):
                 )
             )
             def upload_image():
-                result = protecode_util.upload_image(container_image, component)
+                result = protecode_util.upload_image(
+                    container_image=container_image,
+                    component=component,
+                    wait_for_result=True,
+                )
                 return result
             yield upload_image
 

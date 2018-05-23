@@ -40,7 +40,12 @@ class ProtecodeUtil(object):
             v=container_image.version(),
         )
 
-    def upload_image(self, container_image: ContainerImage, component: Component):
+    def upload_image(
+            self,
+            container_image: ContainerImage,
+            component: Component,
+            wait_for_result: bool=False
+        ):
         metadata = self._image_ref_metadata(container_image)
         metadata.update(self._component_metadata(component))
 
@@ -69,6 +74,9 @@ class ProtecodeUtil(object):
             data=image_data.stream(),
             custom_attribs=metadata,
         )
+
+        if wait_for_result:
+            result = self._api.wait_for_result(product_id=result.product_id())
 
         return upload_result(
             status=UploadStatus.UPLOADED_PENDING, # todo: wait for scanning
