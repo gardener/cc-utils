@@ -35,6 +35,7 @@ def check_http_code(function):
             warning('{c} - {m}: {u}'.format(c=result.status_code, m=result.content, u=url))
         result.raise_for_status()
         return result
+    return http_checker
 
 
 class AuthenticatedRequestBuilder(object):
