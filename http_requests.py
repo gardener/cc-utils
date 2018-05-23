@@ -11,11 +11,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from functools import wraps
 
 import requests
 from requests.auth import HTTPBasicAuth
 
 from util import warning
+
+def check_http_code(function):
+    '''
+    a decorator that will check on `requests.Response` instances returned by HTTP requests
+    issued with `requests`. In case the response code indicates an error, a warning is logged
+    and a `requests.HTTPError` is raised.
+
+    @param: the function to wrap; should be `requests.<http-verb>`, e.g. requests.get
+    @raises: `requests.HTTPError` if response's status code indicates an error
+    '''
+    @wraps(function)
+    def http_checker(*args, **kwargs):
+        result = function(*args, **kwargs)
+        if result.status_code < 200 or result.status_code >= 300:
+            url = kwargs.get('url', None)
+            warning('{c} - {m}: {u}'.format(c=result.status_code, m=result.content, u=url))
+        result.raise_for_status()
+        return result
+
 
 class AuthenticatedRequestBuilder(object):
     '''

@@ -18,7 +18,7 @@ from urllib.parse import urlencode, quote
 import requests
 
 from util import not_empty, not_none, urljoin
-from http_requests import AuthenticatedRequestBuilder
+from http_requests import AuthenticatedRequestBuilder, check_http_code
 
 class ProtecodeApiRoutes(object):
     def __init__(self, base_url):
@@ -57,15 +57,24 @@ class ProtecodeApi(object):
         self._routes = not_none(api_routes)
         self._credentials = not_none(basic_credentials)
         self._auth = (basic_credentials.username(), basic_credentials.passwd())
+        self._tls_verify = tls_verify
         self._request_builder = AuthenticatedRequestBuilder(
             basic_auth_username=basic_credentials.username(),
             basic_auth_passwd=basic_credentials.passwd(),
             verify_ssl=tls_verify
         )
 
-        self._get = partial(requests.get, verify=tls_verify)
-        self._post = partial(requests.post, verify=tls_verify)
-        self._put = partial(requests.put, verify=tls_verify)
+    @check_http_code
+    def _get(self, *args, **kwargs):
+        return partial(requests.get, verify=self._tls_verify)(*args, **kwargs)
+
+    @check_http_code
+    def _post(self, *args, **kwargs):
+        return partial(requests.post, verify=self._tls_verify)(*args, **kwargs)
+
+    @check_http_code
+    def _put(self, *args, **kwargs):
+        return partial(requests.put, verify=self._tls_verify)(*args, **kwargs)
 
     def upload(self, application_name, group_id, data, custom_attribs={}):
         url = self._routes.upload(file_name=application_name)
@@ -78,10 +87,6 @@ class ProtecodeApi(object):
             auth=self._auth,
             data=data,
         )
-        if result.status_code < 200 or result.status_code >= 300:
-            print('received an error: {c} {m}'.format(c=result.status_code, m=result.content))
-            print('url: {u}'.format(u=url))
-            raise RuntimeError(result.content)
 
         return result.json().get('results')
 
