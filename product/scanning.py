@@ -14,6 +14,7 @@
 from functools import partial
 
 from protecode.client import ProtecodeApi
+from protecode.model import ProcessingStatus
 from util import not_none, warning
 from container.image import retrieve_container_image
 from .model import ContainerImage, Component, UploadResult, UploadStatus
@@ -78,8 +79,13 @@ class ProtecodeUtil(object):
         if wait_for_result:
             result = self._api.wait_for_scan_result(product_id=result.product_id())
 
+        if result.status() == ProcessingStatus.BUSY:
+            upload_status = UploadStatus.UPLOADED_PENDING
+        else:
+            upload_status = UploadStatus.UPLOADED_DONE
+
         return upload_result(
-            status=UploadStatus.UPLOADED_PENDING, # todo: wait for scanning
+            status=upload_status,
             result=result
         )
 
