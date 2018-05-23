@@ -73,15 +73,15 @@ class ProtecodeApi(object):
 
     @check_http_code
     def _get(self, *args, **kwargs):
-        return partial(requests.get, verify=self._tls_verify)(*args, **kwargs)
+        return partial(requests.get, verify=self._tls_verify, auth=self._auth)(*args, **kwargs)
 
     @check_http_code
     def _post(self, *args, **kwargs):
-        return partial(requests.post, verify=self._tls_verify)(*args, **kwargs)
+        return partial(requests.post, verify=self._tls_verify, auth=self._auth)(*args, **kwargs)
 
     @check_http_code
     def _put(self, *args, **kwargs):
-        return partial(requests.put, verify=self._tls_verify)(*args, **kwargs)
+        return partial(requests.put, verify=self._tls_verify, auth=self._auth)(*args, **kwargs)
 
     def upload(self, application_name, group_id, data, custom_attribs={}):
         url = self._routes.upload(file_name=application_name)
@@ -91,7 +91,6 @@ class ProtecodeApi(object):
         result = self._put(
             url=url,
             headers=headers,
-            auth=self._auth,
             data=data,
         )
 
@@ -112,7 +111,6 @@ class ProtecodeApi(object):
 
         result = self._post(
             url=url,
-            auth=self._auth,
             headers=headers,
         )
         return result.json()
@@ -122,7 +120,6 @@ class ProtecodeApi(object):
 
         result = self._post(
             url=url,
-            auth=self._auth,
             headers={},
         )
         return result.json().get('custom_data', {})
