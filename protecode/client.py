@@ -20,7 +20,14 @@ import requests
 from util import not_empty, not_none, urljoin
 from http_requests import AuthenticatedRequestBuilder, check_http_code
 
+
 class ProtecodeApiRoutes(object):
+    '''
+    calculates API routes (URLs) for a subset of the URL endpoints exposed by
+    "Protecode" (https://protecode.mo.sap.corp)
+
+    Not intended to be instantiated by users of this module
+    '''
     def __init__(self, base_url):
         self._base_url = not_empty(base_url)
         self._api_url = partial(self._url, 'api')
