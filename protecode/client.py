@@ -97,7 +97,7 @@ class ProtecodeApi(object):
             data=data,
         )
 
-        return result.json().get('results')
+        return AnalysisResult(raw_dict=result.json().get('results'))
 
     def scan_result(self, product_id: int):
         url = self._routes.product(product_id=product_id)
@@ -125,7 +125,7 @@ class ProtecodeApi(object):
         result = self._get(
             url=url,
         )
-        return result.json().get('products')
+        return [AnalysisResult(p) for p in result.json().get('products')]
 
     def set_metadata(self, product_id: int, custom_attribs: dict):
         url = self._routes.product_custom_data(product_id=product_id)

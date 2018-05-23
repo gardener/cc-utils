@@ -14,6 +14,7 @@
 from enum import Enum
 
 from model.base import ModelBase, NamedModelElement
+from protecode.model import AnalysisResult
 from util import parse_yaml_file, not_none
 
 #############################################################################
@@ -54,15 +55,15 @@ class UploadResult(object):
             status: UploadStatus,
             component: Component,
             container_image: ContainerImage,
-            raw_result: str,
+            result: AnalysisResult,
     ):
         self.status = not_none(status)
         self.component = not_none(component)
         self.container_image = not_none(container_image)
-        if raw_result:
-            self.raw_result = raw_result
+        if result:
+            self.result = result
         else:
-            self.raw_result = None
+            self.result = None
 
     def __str__(self):
         return '{c}:{i} - {s}'.format(

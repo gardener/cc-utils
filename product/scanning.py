@@ -55,10 +55,10 @@ class ProtecodeUtil(object):
             if len(existing_products) > 1:
                 warning('found more than one product for image {i}'.format(i=container_image))
             # use first (or only) match (we already printed a warning if we found more than one)
-            raw_result =  existing_products[0]
+            result =  existing_products[0]
             return upload_result(
                 status=UploadStatus.SKIPPED_ALREADY_EXISTED,
-                raw_result=raw_result,
+                result=result,
             )
 
         # image was not yet uploaded - do this now
@@ -72,6 +72,6 @@ class ProtecodeUtil(object):
 
         return upload_result(
             status=UploadStatus.UPLOADED_PENDING, # todo: wait for scanning
-            raw_result=result
+            result=result
         )
 
