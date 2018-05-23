@@ -76,7 +76,7 @@ class ProtecodeUtil(object):
         )
 
         if wait_for_result:
-            result = self._api.wait_for_result(product_id=result.product_id())
+            result = self._api.wait_for_scan_result(product_id=result.product_id())
 
         return upload_result(
             status=UploadStatus.UPLOADED_PENDING, # todo: wait for scanning
