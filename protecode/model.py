@@ -22,5 +22,8 @@ class ProcessingStatus(Enum):
     FAILED = 'F'
 
 class AnalysisResult(ModelBase):
+    def product_id(self):
+        return self.snd.product_id
+
     def status(self) ->ProcessingStatus:
         return ProcessingStatus(self.snd.status)
