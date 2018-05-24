@@ -233,11 +233,13 @@ def deploy_concourse_landscape(
         secrets_server_config=secrets_server_config,
     )
 
-    info('Deploying delaying proxy ...')
-    deploy_delaying_proxy(
-        concourse_cfg=concourse_cfg,
-        deployment_name=deployment_name,
-    )
+    if concourse_cfg.deploy_delaying_proxy():
+        info('Deploying delaying proxy ...')
+        deploy_delaying_proxy(
+            concourse_cfg=concourse_cfg,
+            deployment_name=deployment_name,
+        )
+
     info('Deploying Concourse ...')
     # Concourse is deployed last since Helm will lose connection if deployment takes more than ~60 seconds.
     # Helm will still continue deploying server-side, but the client will report an error.
