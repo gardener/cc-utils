@@ -16,6 +16,7 @@ from enum import Enum
 from functools import partial
 from urllib.parse import urlencode, quote
 import time
+from typing import List
 
 import requests
 
@@ -86,7 +87,7 @@ class ProtecodeApi(object):
     def _put(self, *args, **kwargs):
         return partial(requests.put, verify=self._tls_verify, auth=self._auth)(*args, **kwargs)
 
-    def upload(self, application_name, group_id, data, custom_attribs={}):
+    def upload(self, application_name, group_id, data, custom_attribs={}) -> AnalysisResult:
         url = self._routes.upload(file_name=application_name)
         headers = {'Group': str(group_id)}
         headers.update({'META-' + k: v for k,v in custom_attribs.items()})
@@ -99,7 +100,7 @@ class ProtecodeApi(object):
 
         return AnalysisResult(raw_dict=result.json().get('results'))
 
-    def scan_result(self, product_id: int):
+    def scan_result(self, product_id: int) -> AnalysisResult:
         url = self._routes.product(product_id=product_id)
 
         result = self._get(
@@ -119,7 +120,7 @@ class ProtecodeApi(object):
             polling_interval_seconds=polling_interval_seconds
         )
 
-    def list_apps(self, group_id, custom_attribs={}):
+    def list_apps(self, group_id, custom_attribs={}) -> List[AnalysisResult]:
         url = self._routes.apps(group_id=group_id, custom_attribs=custom_attribs)
 
         result = self._get(
