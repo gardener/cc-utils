@@ -454,8 +454,11 @@ class ConcourseConfig(NamedModelElement):
     def tls_config(self):
         return self.snd.tls_config
 
+    def deploy_delaying_proxy(self):
+        return self.snd.deploy_delaying_proxy
+
     def _required_attributes(self):
-        return ['externalUrl', 'proxyUrl', 'teams', 'helm_chart_default_values_config']
+        return ['externalUrl', 'teams', 'helm_chart_default_values_config']
 
     def _validate_dict(self):
         super()._validate_dict()
@@ -463,6 +466,8 @@ class ConcourseConfig(NamedModelElement):
         # exist for any concourse server.
         if not self.snd.teams['main']:
             raise ModelValidationError('No team "main" defined.')
+        if self.deploy_delaying_proxy() and self.proxy_url() is None:
+            raise ModelValidationError('Delaying proxy deployment is configured but no proxy-URL is defined.')
         # implicitly validate main team
         self.team_credentials('main')
 
