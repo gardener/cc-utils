@@ -22,6 +22,7 @@ def upload_product_images(
     protecode_cfg_name: str,
     product_cfg_file: CliHints.existing_file(),
     parallel_jobs: int=4,
+    cve_threshold: int=7,
     ):
     cfg_factory = ctx().cfg_factory()
     protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
@@ -39,6 +40,20 @@ def upload_product_images(
 
     for result in results:
         info('result: {r}'.format(r=result))
+        analysis_result = result.result
+
+        vulnerable_components = list(filter(
+            lambda c: c.highest_major_cve_severity() >= cve_threshold, analysis_result.components()
+        ))
+
+        if vulnerable_components:
+            highest_cve = max(map(lambda c: c.highest_major_cve_severity(), vulnerable_components))
+            if highest_cve >= cve_threshold:
+                info('Highest found CVE Severity: {cve} - Action required'.format(cve=highest_cve))
+        else:
+            info('CVE below configured threshold - clean')
+
+
 
 def _create_tasks(product_model, protecode_util):
     for component in product_model.components():
