@@ -426,9 +426,7 @@ class ConcourseConfig(NamedModelElement):
         return self.snd.externalUrl
 
     def proxy_url(self):
-        if self.snd.proxyUrl:
-            return self.snd.proxyUrl
-        return self.external_url()
+        return self.snd.proxyUrl
 
     def job_mapping_cfg_name(self):
         return self.snd.job_mapping
