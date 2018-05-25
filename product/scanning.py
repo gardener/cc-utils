@@ -50,6 +50,7 @@ class ProtecodeUtil(object):
             self,
             container_image: ContainerImage,
             component: Component,
+            full_result: bool=True,
         ):
         metadata = self._metadata(container_image=container_image, component=component)
         existing_products = self._api.list_apps(
@@ -60,7 +61,10 @@ class ProtecodeUtil(object):
             if len(existing_products) > 1:
                 warning('found more than one product for image {i}'.format(i=container_image))
             # use first (or only) match (we already printed a warning if we found more than one)
-            return  existing_products[0]
+            product =  existing_products[0]
+            if not full_result:
+                return product
+            return self._api.scan_result(product_id=product.product_id())
 
     def upload_image(
             self,
