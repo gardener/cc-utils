@@ -134,6 +134,10 @@ class ConcourseApiRoutes(object):
         return self._api_url('pipelines', pipeline_name, 'jobs', job_name, 'builds')
 
     @ensure_annotations
+    def job_build(self, pipeline_name: str, job_name: str, build_name: str):
+        return self._api_url('pipelines', pipeline_name, 'jobs', job_name, 'builds', build_name)
+
+    @ensure_annotations
     def build_events(self, build_id):
         return self._api_url('builds', str(build_id), 'events', prefix_team=False)
 
@@ -265,6 +269,12 @@ class ConcourseApi(object):
         builds = [Build(build_dict, self) for build_dict in response]
         builds = sorted(builds, key=lambda b: b.id())
         return builds
+
+    @ensure_annotations
+    def job_build(self, pipeline_name: str, job_name: str, build_name: str):
+        build_url = self.routes.job_build(pipeline_name, job_name, build_name)
+        response = self._get(build_url)
+        return Build(response, self)
 
     @ensure_annotations
     def trigger_build(self, pipeline_name: str, job_name: str):
