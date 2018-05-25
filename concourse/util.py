@@ -110,8 +110,9 @@ def _sync_webhook(
     # construct webhook endpoint
     routes = copy(pipeline.concourse_api.routes)
 
-    # workaround: direct webhooks against delaying proxy
-    routes.base_url = concourse_cfg.proxy_url()
+    # workaround: direct webhooks against delaying proxy if configured
+    if concourse_cfg.deploy_delaying_proxy():
+        routes.base_url = concourse_cfg.proxy_url()
 
     repository = first_github_src.parse_repository()
     organisation = first_github_src.parse_organisation()
