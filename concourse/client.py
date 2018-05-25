@@ -46,6 +46,21 @@ Other types defined in this module are not intended to be instantiated by users.
 '''
 
 
+def from_cfg(concourse_cfg, team_name: str):
+    concourse_api = ConcourseApi(
+        base_url=concourse_cfg.external_url(),
+        team_name=team_name,
+    )
+    # prepare api (perform a login)
+    team_credentials = concourse_cfg.team_credentials(team_name)
+    concourse_api.login(
+        team=team_name,
+        username=team_credentials.username(),
+        passwd=team_credentials.passwd(),
+    )
+    return concourse_api
+
+
 def select_attr(name: str):
     return lambda o: o.get(name)
 
