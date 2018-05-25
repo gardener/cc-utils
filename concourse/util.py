@@ -55,7 +55,6 @@ def sync_webhooks(
   concourse_verify_ssl:bool=False,
 ):
     concourse_url = concourse_cfg.external_url()
-    concourse_proxy_url = concourse_cfg.external_url()
     team_cfg = concourse_cfg.team_credentials(concourse_team)
     concourse_user = team_cfg.username()
     concourse_passwd = team_cfg.passwd()
@@ -88,7 +87,6 @@ def sync_webhooks(
               resources=resources,
               webhook_syncer=webhook_syncer,
               concourse_cfg=concourse_cfg,
-              concourse_proxy_url=concourse_proxy_url,
               skip_ssl_validation=not concourse_verify_ssl
             )
         except RuntimeError as rte:
@@ -103,7 +101,6 @@ def _sync_webhook(
   resources: [concourse.Resource],
   webhook_syncer: github.GithubWebHookSyncer,
   concourse_cfg: 'ConcourseConfig',
-  concourse_proxy_url: str,
   skip_ssl_validation: bool=False
 ):
     first_res = resources[0]
@@ -112,8 +109,10 @@ def _sync_webhook(
 
     # construct webhook endpoint
     routes = copy(pipeline.concourse_api.routes)
+
     # workaround: direct webhooks against delaying proxy
-    routes.base_url = concourse_proxy_url
+    routes.base_url = concourse_cfg.proxy_url()
+
     repository = first_github_src.parse_repository()
     organisation = first_github_src.parse_organisation()
 
