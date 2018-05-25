@@ -41,18 +41,17 @@ class ProtecodeUtil(object):
             v=container_image.version(),
         )
 
-    def upload_image(
+    def _metadata(self, container_image: ContainerImage, component: Component):
+        metadata = self._image_ref_metadata(container_image)
+        metadata.update(self._component_metadata(component))
+        return metadata
+
+    def retrieve_scan_result(
             self,
             container_image: ContainerImage,
             component: Component,
-            wait_for_result: bool=False
         ):
-        metadata = self._image_ref_metadata(container_image)
-        metadata.update(self._component_metadata(component))
-
-        upload_result = partial(UploadResult, container_image=container_image, component=component)
-
-        # check if the image has already been uploaded for this component
+        metadata = self._metadata(container_image=container_image, component=component)
         existing_products = self._api.list_apps(
             group_id=self._group_id,
             custom_attribs=metadata
@@ -61,10 +60,28 @@ class ProtecodeUtil(object):
             if len(existing_products) > 1:
                 warning('found more than one product for image {i}'.format(i=container_image))
             # use first (or only) match (we already printed a warning if we found more than one)
-            result =  existing_products[0]
+            return  existing_products[0]
+
+    def upload_image(
+            self,
+            container_image: ContainerImage,
+            component: Component,
+            wait_for_result: bool=False
+        ):
+        metadata = self._metadata(container_image=container_image, component=component)
+
+        upload_result = partial(UploadResult, container_image=container_image, component=component)
+
+        # check if the image has already been uploaded for this component
+        scan_result = self.retrieve_scan_result(
+            container_image=container_image,
+            component=component,
+        )
+
+        if scan_result:
             return upload_result(
                 status=UploadStatus.SKIPPED_ALREADY_EXISTED,
-                result=result,
+                result=scan_result,
             )
 
         # image was not yet uploaded - do this now
