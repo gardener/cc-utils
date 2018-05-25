@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from enum import Enum
+from typing import Iterable
 
 from model.base import ModelBase
 
@@ -21,9 +22,49 @@ class ProcessingStatus(Enum):
     READY = 'R'
     FAILED = 'F'
 
+
 class AnalysisResult(ModelBase):
     def product_id(self):
         return self.snd.product_id
 
-    def status(self) ->ProcessingStatus:
+    def status(self) -> ProcessingStatus:
         return ProcessingStatus(self.snd.status)
+
+    def components(self) -> 'Iterable[Component]':
+        return (Component(raw_dict=raw) for raw in self.snd.components)
+
+
+class Component(ModelBase):
+    def name(self):
+        return self.snd.lib
+
+    def vulnerabilities(self) -> 'Iterable[Vulnerability]':
+        return (Vulnerability(raw_dict=raw) for raw in self.snd.vulns)
+
+    def highest_major_cve_severity(self) -> int:
+        try:
+            return max(
+                map(
+                    lambda v: v.cve_major_severity(),
+                    filter(lambda v: not v.historical(), self.vulnerabilities())
+                )
+            )
+        except ValueError:
+            return -1
+
+
+class Vulnerability(ModelBase):
+    def historical(self):
+        return not self.snd.exact
+
+    def cve(self):
+        return self.snd.vuln.cve
+
+    def cve_severity_str(self):
+        return str(self.snd.vuln.cvss)
+
+    def cve_major_severity(self) -> int:
+        if self.cve_severity_str():
+            return int(self.cve_severity_str().split('.')[0])
+        else:
+            return -1
