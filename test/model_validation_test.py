@@ -177,10 +177,11 @@ class ConcourseConfigTest(unittest.TestCase):
                 'main': TeamCredentialTest.create_valid_test_dictionary(),
             },
             'helm_chart_default_values_config':'foo',
+            'deploy_delaying_proxy':True,
         }
 
     def test_validation_fails_on_missing_key(self):
-        for key in ('externalUrl', 'proxyUrl', 'teams', 'helm_chart_default_values_config'):
+        for key in ('externalUrl', 'teams', 'helm_chart_default_values_config'):
             with self.subTest(key=key):
                 test_dict = ConcourseConfigTest.create_valid_test_dictionary()
                 test_dict.pop(key)
@@ -202,6 +203,11 @@ class ConcourseConfigTest(unittest.TestCase):
         self.raw_dict['teams']['main'].pop('teamname')
         with self.assertRaises(ModelValidationError):
             examinee.ConcourseConfig(name='cteam', raw_dict=self.raw_dict)
+
+    def test_validation_fails_on_absent_proxy_url_when_proxy_is_configured(self):
+        self.raw_dict.pop('proxyUrl')
+        with self.assertRaises(ModelValidationError):
+            examinee.ConcourseConfig(name='dteam', raw_dict=self.raw_dict)
 
 
 class BasicCredentialsTest(unittest.TestCase):
