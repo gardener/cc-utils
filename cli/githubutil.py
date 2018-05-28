@@ -13,7 +13,11 @@
 # limitations under the License.
 
 import version
+from urllib.parse import urlparse, parse_qs
+from github3.exceptions import NotFoundError
 
+from util import ctx, not_empty, info, warning, verbose
+from github import GithubWebHookSyncer, CONCOURSE_ID
 from github.util import GitHubHelper, _create_github_api_object
 
 def release_and_prepare_next_dev_cycle(
@@ -82,4 +86,46 @@ def release_and_prepare_next_dev_cycle(
         commit_message="Prepare next dev cycle " + next_version_dev
     )
 
+def remove_webhooks(
+    github_org_name: str,
+    github_cfg_name: str,
+    concourse_cfg_name: str,
+):
+    '''
+    Remove all webhooks which belong to the given concourse_cfg_name
+    '''
+    not_empty(github_org_name)
+    not_empty(github_cfg_name)
+    not_empty(concourse_cfg_name)
 
+    cfg_factory = ctx().cfg_factory()
+    github_cfg = cfg_factory.github(github_cfg_name)
+
+    github_api = _create_github_api_object(github_cfg=github_cfg)
+    github_org = github_api.organization(github_org_name)
+    webhook_syncer = GithubWebHookSyncer(github_api)
+
+    def filter_function(url):
+        concourse_id = parse_qs(urlparse(url).query).get(CONCOURSE_ID)
+        should_delete = concourse_id and concourse_cfg_name in concourse_id
+        return should_delete
+
+    for repository in github_org.repositories():
+        removed = 0
+        try:
+            _, removed = webhook_syncer.remove_outdated_hooks(
+                owner=github_org_name,
+                repository_name=repository.name,
+                urls_to_keep=[],
+                url_filter_fun=filter_function
+            )
+        except NotFoundError as err:
+            warning("{msg}. Please check privileges for repository {repo}".format(
+                msg=err,
+                repo=repository.name)
+        )
+
+        if removed > 0:
+            info("Removed {num} webhook from repository {repo}".format(num=removed, repo=repository.name))
+        else:
+            verbose("Nothing to do for repository {repo}".format(repo=repository.name))

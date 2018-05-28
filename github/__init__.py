@@ -22,6 +22,7 @@ from urllib.parse import urlparse
 DEFAULT_HOOK_EVENTS = ['create', 'pull_request', 'push']
 DEFAULT_HOOK_NAME = 'web' # see https://developer.github.com/v3/repos/hooks/
 DEFAULT_HOOK_CONTENT_TYPE = 'json'
+CONCOURSE_ID = 'concourse_id'
 
 class GithubWebHookSyncer(object):
     '''
