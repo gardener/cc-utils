@@ -527,7 +527,7 @@ class BuildEvents(object):
         self.response = response
 
 
-    def process_events(self, callback=None, yield_cb=False):
+    def process_events(self, callback=None, filter_for_task_id=None, yield_cb=False):
         '''
         processes all received streaming events in a blocking manner until the
         'finish-task' event is reached, which marks the end of a build execution.
@@ -550,13 +550,24 @@ class BuildEvents(object):
             if not data:
                 continue
 
-            if callback:
+            if filter_for_task_id:
+                if data.origin and data.origin.id == filter_for_task_id:
+                    matches_task_filter = True
+                else:
+                    matches_task_filter = False
+            else:
+                matches_task_filter = True
+
+            if matches_task_filter and parsed.event == 'finish-task':
+                should_stop = True # do not wait any longer as our task has finished
+
+            if callback and matches_task_filter:
                 result = callback(data)
                 if result and yield_cb:
                     yield result
 
             # if 'finish-task' event is reached, we always want to stop
-            if not should_stop and data.event in ('finish-task', 'end'):
+            if not should_stop and data.event == 'end':
                 should_stop = True
 
             if should_stop:
@@ -573,7 +584,17 @@ class BuildEvents(object):
             if not log_data.origin or not log_data.payload or log_data.origin.id != task_id:
                 return
             return log_data.payload
-        yield from self.process_events(callback=filter_log, yield_cb=True)
+
+        def stop_if_task_ended(event_data):
+            if not event_data.event or event_data.event != 'finish-task':
+                return False
+            return True
+
+        yield from self.process_events(
+            callback=filter_log,
+            filter_for_task_id=task_id,
+            yield_cb=True
+        )
 
 
 class BuildStatus(Enum):
