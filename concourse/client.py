@@ -481,7 +481,32 @@ class Build(ModelBase):
 
 
 class BuildPlan(ModelBase):
-    pass
+    def task_id(self, task_name: str):
+        '''
+        determines the task-id for the given task_name
+        If the task_name is not unique, the task-id for the first-found task with
+        the given name is returned.
+        If no task with the given name is found, `None` is returned.
+        '''
+        plan = self.raw_dict.plan
+        def find_tid(p):
+            if 'task' in p:
+                task = p.get('task')
+                if task.get('name') == task_name:
+                    return p.get('id') # end recursion
+
+            for k, v in p.items():
+                # recursively traverse plan dict
+                if isinstance(v, dict):
+                    task_id = find_tid(v)
+                    if task_id:
+                        return task_id
+                if isinstance(v, list):
+                    for element in v:
+                        task_id = find_tid(element)
+                        if task_id:
+                            return task_id
+        return find_tid(plan)
 
 
 class BuildEvents(object):
