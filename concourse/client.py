@@ -527,15 +527,13 @@ class BuildEvents(object):
         self.response = response
 
 
-    def process_events(self, callback=None):
+    def process_events(self, callback=None, yield_cb=False):
         '''
         processes all received streaming events in a blocking manner until the
         'finish-task' event is reached, which marks the end of a build execution.
 
         An optional callback may be specified, which is called for each received event
-        with the parsed event data (wrapped into a SimpleNamespaceDict). If the callback's
-        return value evaluates to true in a boolean context, further event processing will
-        be stopped.
+        with the parsed event data (wrapped into a SimpleNamespaceDict).
 
         @param callback: callable accepting exactly one positional argument
         '''
@@ -553,7 +551,9 @@ class BuildEvents(object):
                 continue
 
             if callback:
-                should_stop = callback(data)
+                result = callback(data)
+                if result and yield_cb:
+                    yield result
 
             # if 'finish-task' event is reached, we always want to stop
             if not should_stop and data.event == 'finish-task':
@@ -563,6 +563,17 @@ class BuildEvents(object):
                 client.close()
                 return True
         # pylint: enable=no-member
+
+    def iter_buildlog(self, task_id: str):
+        '''
+        returns an iterator yielding the build-log for the task identified by the given task_id.
+        Task IDs may be retrieved from `BuildPlan#task_id`.
+        '''
+        def filter_log(log_data):
+            if not log_data.origin or not log_data.payload or log_data.origin.id != task_id:
+                return
+            return log_data.payload
+        yield from self.process_events(callback=filter_log, yield_cb=True)
 
 
 class BuildStatus(Enum):
