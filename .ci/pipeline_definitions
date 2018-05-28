@@ -6,6 +6,11 @@ cc-utils:
       lint: ~
       test: ~
   variants:
+    failing:
+      repo:
+        trigger: false
+      steps:
+        failing: ~
     head_update: ~
     pull_request:
       traits:
