@@ -556,7 +556,7 @@ class BuildEvents(object):
                     yield result
 
             # if 'finish-task' event is reached, we always want to stop
-            if not should_stop and data.event == 'finish-task':
+            if not should_stop and data.event in ('finish-task', 'end'):
                 should_stop = True
 
             if should_stop:
