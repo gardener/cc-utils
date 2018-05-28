@@ -138,7 +138,7 @@ def _sync_webhook(
     )
 
     def url_filter(url):
-        concourse_id = parse_qs(urlparse(url).query).get('concourse_id')
+        concourse_id = parse_qs(urlparse(url).query).get(github.CONCOURSE_ID)
         return concourse_id and concourse_cfg.name() in concourse_id
 
     processed, removed = webhook_syncer.remove_outdated_hooks(
