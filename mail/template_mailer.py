@@ -37,7 +37,7 @@ def create_mail(
         recipients: [str],
         text: str,
         cc_recipients: [str]=[],
-        mail_type: str='html'
+        mail_type: str='plain'
     )->MIMEText:
     msg = MIMEText(text, mail_type)
     msg['Subject'] = subject
