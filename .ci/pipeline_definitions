@@ -17,5 +17,5 @@ cc-utils:
         pull-request:
           repo: 'source'  # default
           policies:
-            require-label: 'ok-to-test' # default
+            require-label: 'reviewed/ok-to-test' # default
             build-forks: true # default
