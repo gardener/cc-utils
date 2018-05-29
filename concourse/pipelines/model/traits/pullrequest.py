@@ -14,7 +14,7 @@ class PullRequestTrait(Trait):
     def policies(self):
         policies_dict = self.raw.get('policies')
         if not policies_dict:
-            policies_dict = {'require-label': 'ok-to-test'}
+            policies_dict = {'require-label': 'reviewed/ok-to-test'}
 
         return PullRequestPolicies(raw_dict=policies_dict)
 
