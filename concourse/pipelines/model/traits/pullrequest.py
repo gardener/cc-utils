@@ -1,6 +1,6 @@
 from util import ensure_not_none
 
-from concourse.pipelines.modelbase import Trait, TraitTransformer, ModelBase
+from concourse.pipelines.modelbase import Trait, TraitTransformer, ModelBase, PipelineStep
 
 class PullRequestPolicies(ModelBase):
     def require_label(self):
@@ -26,6 +26,11 @@ class PullRequestTraitTransformer(TraitTransformer):
     def __init__(self, trait, *args, **kwargs):
         self.trait = trait
         super().__init__(*args, **kwargs)
+
+    def inject_steps(self):
+        # declare no dependencies --> run asap, but do not block other steps
+        rm_pr_label_step = PipelineStep(name='rm_pr_label', raw_dict={}, is_synthetic=True)
+        yield rm_pr_label_step
 
     def process_pipeline_args(self, pipeline_args: 'PipelineArgs'):
         repo_name = self.trait.repository_name()
