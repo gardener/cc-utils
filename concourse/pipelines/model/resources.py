@@ -209,12 +209,6 @@ class RepositoryConfig(Resource):
             raise RuntimeError('resource is not a pull-request')
         return os.path.join(self.resource_name(), '.git', 'id')
 
-    def pr_id(self):
-        if not self._is_pull_request:
-            raise RuntimeError('resource is not a pull-request')
-        with open(self.pr_id_path()) as f:
-            return f.read().strip()
-
     def env_var_value_dict(self):
         name = self.logical_name()
         return dict([
