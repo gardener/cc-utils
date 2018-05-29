@@ -46,9 +46,6 @@ def generate_pipelines(
 
     pipeline_definitions = itertools.chain(*enumerator.enumerate_pipeline_definitions(job_mapping))
 
-    github_cfg = config_set.github()
-
-
     for pipeline_definition in pipeline_definitions:
         rendering_results = render_pipelines(
             pipeline_definition=pipeline_definition,

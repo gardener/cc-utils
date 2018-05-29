@@ -32,7 +32,7 @@ class PipelineEnumerator(object):
         self.base_dir = base_dir
         self.cfg_set = cfg_set
 
-    def enumerate_pipeline_definitions(self, job_mapping: JobMapping):
+    def enumerate_pipeline_definitions(self, job_mapping: JobMapping) -> RawPipelineDefinitionDescriptor:
         # handle definition directories (legacy-case)
         info('scanning legacy mappings')
         for repo_path, pd in enumerate_pipeline_definitions(
@@ -42,6 +42,7 @@ class PipelineEnumerator(object):
                 for name, definition in definitions.items():
                     info('from mapping: ' + name)
                     yield self._preprocess_and_wrap_into_descriptors(repo_path, 'master', definitions)
+
         info('scanning repositories')
         # scan github repositories
         for github_org_cfg in job_mapping.github_organisations():
@@ -59,7 +60,7 @@ class PipelineEnumerator(object):
                     branch_filter
                 )
 
-    def _scan_repository_for_definitions(self, org_name, repository, branch_filter):
+    def _scan_repository_for_definitions(self, org_name, repository, branch_filter) -> RawPipelineDefinitionDescriptor:
         for branch_name in filter(branch_filter, map(lambda b: b.name, repository.branches())):
             try:
                 definitions = repository.file_contents(
@@ -78,7 +79,7 @@ class PipelineEnumerator(object):
             )
 
 
-    def _preprocess_and_wrap_into_descriptors(self, repo_path, branch, raw_definitions):
+    def _preprocess_and_wrap_into_descriptors(self, repo_path, branch, raw_definitions) -> RawPipelineDefinitionDescriptor:
         for name, definition in raw_definitions.items():
             pipeline_definition = deepcopy(definition)
             base_definition = self._inject_main_repo(
