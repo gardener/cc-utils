@@ -29,17 +29,17 @@ class ConfigFactorySmokeTestsMixin(object):
     '''
     def test_cfg_types_parsing(self):
         types = self.examinee._cfg_types()
-        self.assertEqual(types.keys(), {'a_type', 'cfg_set'})
+        self.assertEqual(types.keys(), {'a_type', 'defined_but_unused_type', 'cfg_set'})
 
     def test_cfg_set_parsing(self):
-        first_set = self.examinee.cfg_set('first_set')
-        second_set = self.examinee.cfg_set('second_set')
+        singleton_set = self.examinee.cfg_set('singleton_set')
+        set_with_multiple_values = self.examinee.cfg_set('set_with_multiple_values')
 
-        self.assertIsNotNone(first_set)
-        self.assertIsNotNone(second_set)
+        self.assertIsNotNone(singleton_set)
+        self.assertIsNotNone(set_with_multiple_values)
 
-        first_element = first_set._cfg_element('a_type')
-        second_element = second_set._cfg_element('a_type')
+        first_element = singleton_set._cfg_element('a_type')
+        second_element = set_with_multiple_values._cfg_element('a_type')
 
         self.assertIsNotNone(first_element)
         self.assertIsNotNone(second_element)
@@ -54,6 +54,65 @@ class ConfigFactorySmokeTestsMixin(object):
         first_elem_from_fac = self.examinee._cfg_element('a_type', 'first_value_of_a')
 
         self.assertEqual(first_elem_from_fac.raw, first_element.raw)
+
+    ### Tests for _cfg_element_names and _cfg_elements in ConfigFactory
+
+    def test_cfg_element_names_should_return_all_element_names(self):
+        cfg_names_set = set(self.examinee._cfg_element_names(
+                cfg_type_name='a_type',
+            ))
+        self.assertEqual(cfg_names_set, {'first_value_of_a','second_value_of_a', 'ignored_value_of_a'})
+
+    def test_cfg_element_names_fails_on_unknown_config_type(self):
+        with self.assertRaises(ValueError):
+            cfg_set = set(self.examinee._cfg_elements(
+                cfg_type_name='made_up_config_type',
+            ))
+
+    ### Tests for _cfg_element_names and _cfg_elements in ConfigurationSet
+
+    def test_cfg_element_names_in_config_set_returns_empty_iterable_for_defined_but_unused_type(self):
+        cfg_set = self.examinee.cfg_set('singleton_set')
+        cfg_names_set = cfg_set._cfg_element_names(
+                cfg_type_name='defined_but_unused_type',
+            )
+        for name in cfg_names_set:
+            self.fail('Expected empty Iterable')
+
+
+    def test_cfg_element_names_in_config_set_works_with_single_entry(self):
+        # We specifically test the single-entry-case here because they are normalised
+        # internally the ConfigSet
+        cfg_set = self.examinee.cfg_set('singleton_set')
+        cfg_names_set = cfg_set._cfg_element_names(
+                cfg_type_name='a_type',
+            )
+        self.assertEqual(cfg_names_set, {'first_value_of_a'})
+
+    def test_cfg_element_names_in_config_set_works_with_multiple_elements(self):
+        cfg_set = self.examinee.cfg_set('set_with_multiple_values')
+        cfg_names_set = cfg_set._cfg_element_names(
+                cfg_type_name='a_type',
+            )
+        self.assertEqual(cfg_names_set, {'first_value_of_a','second_value_of_a'})
+
+    def test_cfg_element_names_in_config_set_fails_on_unknown_config_type(self):
+        cfg_set = self.examinee.cfg_set('singleton_set')
+        with self.assertRaises(ValueError):
+            cfg_names_set = cfg_set._cfg_element_names(
+                cfg_type_name='made_up_config_type',
+            )
+
+    def test_cfg_elements_in_config_set_returns_correct_element(self):
+        cfg_set = self.examinee.cfg_set('singleton_set')
+        cfg_elements_set = set(cfg_set._cfg_elements(
+                cfg_type_name='a_type',
+            ))
+        self.assertEqual(len(cfg_elements_set), 1)
+        cfg_elem = cfg_elements_set.pop()
+        # We currently do not have a custom __eq__ method, so we explicitly
+        # compare the dictionaries here
+        self.assertEquals(cfg_elem.raw, {'some_value':123})
 
 
 class ConfigFactoryCfgDirDeserialisationTest(unittest.TestCase, ConfigFactorySmokeTestsMixin):
@@ -73,6 +132,12 @@ class ConfigFactoryCfgDirDeserialisationTest(unittest.TestCase, ConfigFactorySmo
           model:
             cfg_type_name: a_type
             type: NamedModelElement
+        defined_but_unused_type:
+          src:
+          - file: defined_but_unused_type_values.xxx
+          model:
+            cfg_type_name: defined_but_unused_type
+            type: NamedModelElement
         cfg_set:
           src:
           - file: configs
@@ -83,20 +148,31 @@ class ConfigFactoryCfgDirDeserialisationTest(unittest.TestCase, ConfigFactorySmo
 
         # cfg_set definitions
         self.configs_file = self._file('configs', '''
-        first_set:
+        singleton_set:
             a_type: first_value_of_a
         second_set:
             a_type: second_value_of_a
+        set_with_multiple_values:
+            a_type:
+              config_names:
+              - first_value_of_a
+              - second_value_of_a
+              default: second_value_of_a
         ''')
 
         # value definitions
-        self.values_file = self._file('a_type_values.xxx','''
+        self.a_type_values_file = self._file('a_type_values.xxx','''
         first_value_of_a:
             some_value: 123
         second_value_of_a:
             some_value: 42
         ignored_value_of_a:
             some_value: xxx
+        ''')
+
+        self.defined_but_unused_type_values_file = self._file('defined_but_unused_type_values.xxx','''
+        unused:
+            some_value: 7
         ''')
 
         self.examinee = ConfigFactory.from_cfg_dir(
@@ -138,15 +214,24 @@ class ConfigFactoryDictDeserialisationTest(unittest.TestCase, ConfigFactorySmoke
             {
                 'model': { 'cfg_type_name': 'a_type', 'type': 'NamedModelElement' }
             },
+            'defined_but_unused_type':
+            {
+                'model': { 'cfg_type_name': 'defined_but_unused_type', 'type': 'NamedModelElement' }
+            },
             'cfg_set':
             {
                 'model': { 'cfg_type_name': 'cfg_set', 'type': 'ConfigurationSet' }
-            }
+            },
         }
         # config sets
         cfg_sets = {
-                'first_set': {'a_type': 'first_value_of_a'},
-                'second_set': {'a_type': 'second_value_of_a'}
+                'singleton_set': {'a_type': 'first_value_of_a'},
+                'set_with_multiple_values': {
+                    'a_type': {
+                          'config_names': ['first_value_of_a', 'second_value_of_a'],
+                          'default': 'second_value_of_a',
+                    },
+                },
         }
         # value definitions
         values = {

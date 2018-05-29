@@ -19,7 +19,13 @@ import json
 from urllib.parse import urlparse
 
 from model.base import NamedModelElement, ModelBase, ModelValidationError
-from util import ensure_file_exists, parse_yaml_file, ensure_directory_exists, ensure_not_none
+from util import (
+    ensure_file_exists,
+    parse_yaml_file,
+    ensure_directory_exists,
+    ensure_not_none,
+    ensure_not_empty,
+)
 
 '''
 Configuration model and retrieval handling.
@@ -135,6 +141,60 @@ class ConfigFactory(object):
 
         element_instance = element_type(**kwargs)
         return element_instance
+
+    def _cfg_elements(self, cfg_type_name: str):
+        '''Returns an iterable yielding all cfg_elements for a given type known to this ConfigFactory.
+
+        Parameters
+        ----------
+        cfg_type_name: str
+            The name of the cfg_type (as defined in the config-repository) whose instances should be retrieved.
+
+        Yields
+        -------
+        NamedModelElement
+            Instance of the given cfg_type.
+
+        Raises
+        ------
+        ValueError
+            If the specified cfg_type is unknown.
+        '''
+        ensure_not_empty(cfg_type_name)
+
+        for element_name in self._cfg_element_names(cfg_type_name):
+            yield self._cfg_element(cfg_type_name, element_name)
+
+    def _cfg_element_names(self, cfg_type_name: str):
+        '''Returns an iterable containing the names of all cfg-elements for a given cfg_type known to this ConfigFactory.
+
+        Parameters
+        ----------
+        cfg_type_name: str
+            The name of the cfg_type (as defined in the config-repository) whose names should be retrieved.
+
+        Returns
+        -------
+        Iterable[str]
+            Contains the names of all cfg-elements of the given cfg_type known to this ConfigFactory.
+
+        Raises
+        ------
+        ValueError
+            If the specified cfg_type is unknown.
+        '''
+        ensure_not_empty(cfg_type_name)
+
+        known_types = self._cfg_types()
+        if not cfg_type_name in known_types:
+            raise ValueError("Unknown config type '{c}'. Known types: {k}".format(
+                c = cfg_type_name,
+                k = ', '.join(known_types.keys()),
+            ))
+        if cfg_type_name in self.raw:
+            return set(self.raw[cfg_type_name].keys())
+        else:
+            return set()
 
     def aws(self, cfg_name):
         return self._cfg_element(cfg_type_name='aws', cfg_name=cfg_name)
@@ -264,6 +324,58 @@ class ConfigurationSet(NamedModelElement):
             cfg_type_name=cfg_type_name,
             cfg_name=cfg_name,
         )
+
+    def _cfg_elements(self, cfg_type_name: str):
+        '''Returns an iterable yielding all cfg_elements for a given type in this ConfigurationSet.
+
+        Parameters
+        ----------
+        cfg_type_name: str
+            The name of the cfg_type (as defined in the config-repository) whose instances should be retrieved.
+
+        Yields
+        -------
+        NamedModelElement
+            Instance of the given cfg_type.
+
+        Raises
+        ------
+        ValueError
+            If the specified cfg_type is unknown.
+        '''
+        ensure_not_empty(cfg_type_name)
+
+        for element_name in self._cfg_element_names(cfg_type_name):
+            yield self._cfg_element(cfg_type_name, element_name)
+
+    def _cfg_element_names(self, cfg_type_name: str):
+        '''Returns an iterable containing the names of all cfg-elements for a given cfg_type
+        in this ConfigurationSet.
+
+        Parameters
+        ----------
+        cfg_type_name: str
+            The name of the cfg_type (as defined in the config-repository) whose names should be retrieved.
+
+        Returns
+        -------
+        Iterable[str]
+            Contains the names of all cfg-elements of the given cfg_type in this ConfigSet.
+
+        Raises
+        ------
+        ValueError
+            If the specified cfg_type is unknown.
+        '''
+        ensure_not_empty(cfg_type_name)
+
+        # ask factory for all known names. This ensures that the existance of the type is checked.
+        all_cfg_element_names = self.cfg_factory._cfg_element_names(cfg_type_name=cfg_type_name)
+
+        if cfg_type_name in self.raw.keys():
+            return all_cfg_element_names & set(self.raw[cfg_type_name]['config_names'])
+        else:
+            return set()
 
     def _default_name(self, cfg_type_name, cfg_name=None):
         if not cfg_name:
