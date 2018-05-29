@@ -123,7 +123,8 @@ def remove_webhooks(
             warning("{msg}. Please check privileges for repository {repo}".format(
                 msg=err,
                 repo=repository.name)
-        )
+            )
+            continue
 
         if removed > 0:
             info("Removed {num} webhook from repository {repo}".format(num=removed, repo=repository.name))
