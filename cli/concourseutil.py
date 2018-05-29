@@ -18,7 +18,7 @@ import subprocess
 from util import ctx
 from util import info, fail, which, warning, CliHints, CliHint
 from util import ctx as global_ctx
-from concourse import pipelines
+from concourse.pipelines import replicator
 import concourse.setup as setup
 from concourse.util import sync_webhooks
 from model import ConfigFactory
@@ -121,7 +121,7 @@ def render_pipelines(
     job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
 
     for job_mapping in job_mapping_set.job_mappings().values():
-        for rendered_pipeline, definition, pipeline_args in pipelines.generate_pipelines(
+        for rendered_pipeline, definition, pipeline_args in replicator.generate_pipelines(
                 definitions_root_dir=definitions_root_dir,
                 job_mapping=job_mapping,
                 template_path=template_path,
@@ -147,7 +147,7 @@ def deploy_pipeline(
     with open(pipeline_file) as f:
         pipeline_definition = f.read()
 
-    pipelines.deploy_pipeline(
+    replicator.deploy_pipeline(
         pipeline_definition=pipeline_definition,
         pipeline_name=pipeline_name,
         concourse_cfg=concourse_cfg,

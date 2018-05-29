@@ -17,7 +17,7 @@ import os
 from util import fail, info, parse_yaml_file
 from model import ConfigFactory
 from concourse.client import ConcourseApi
-from concourse.pipelines import render_pipelines, deploy_pipeline
+from concourse.pipelines.replicator import render_pipelines, deploy_pipeline
 from concourse.pipelines.factory import RawPipelineDefinitionDescriptor
 
 '''
