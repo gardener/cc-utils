@@ -181,8 +181,12 @@ def deploy_concourse_landscape(
     config_set = config_factory.cfg_set(cfg_name=config_name)
     concourse_cfg = config_set.concourse()
 
-    # Set the global context to the cluster specified by the given config
-    kubernetes_config = config_set.kubernetes()
+    # Set the global context to the cluster specified in the ConcourseConfig
+    kubernetes_config_name = concourse_cfg.kubernetes_cluster_config()
+    kubernetes_config = config_factory._cfg_element(
+        cfg_type_name = 'kubernetes',
+        cfg_name = kubernetes_config_name,
+    )
     kubeutil.ctx.set_kubecfg(kubernetes_config.kubeconfig())
 
     ensure_cluster_version(kubernetes_config)
