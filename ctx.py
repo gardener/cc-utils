@@ -19,10 +19,9 @@ Execution context. Filled upon invocation of cli.py, read by submodules
 args=None # the parsed command line arguments
 
 def _cfg_factory_from_dir():
-    # pylint: disable=no-member
-    if not args or not args.cfg_dir:
+    # XXX: args does always have a cfg_dir attribute, but pylint does not always understand this
+    if not args or not hasattr(args, 'cfg_dir') and not getattr(args, 'cfg_dir'):
         return None
-    # pylint: enable=no-member
 
     from util import ensure_directory_exists
     cfg_dir = ensure_directory_exists(args.cfg_dir)
