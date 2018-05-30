@@ -455,8 +455,11 @@ class ConcourseConfig(NamedModelElement):
     def deploy_delaying_proxy(self):
         return self.snd.deploy_delaying_proxy
 
+    def kubernetes_cluster_config(self):
+        return self.snd.kubernetes_cluster_config
+
     def _required_attributes(self):
-        return ['externalUrl', 'teams', 'helm_chart_default_values_config']
+        return ['externalUrl', 'teams', 'helm_chart_default_values_config', 'kubernetes_cluster_config']
 
     def _validate_dict(self):
         super()._validate_dict()

@@ -178,10 +178,11 @@ class ConcourseConfigTest(unittest.TestCase):
             },
             'helm_chart_default_values_config':'foo',
             'deploy_delaying_proxy':True,
+            'kubernetes_cluster_config': 'bar'
         }
 
     def test_validation_fails_on_missing_key(self):
-        for key in ('externalUrl', 'teams', 'helm_chart_default_values_config'):
+        for key in ('externalUrl', 'teams', 'helm_chart_default_values_config','kubernetes_cluster_config'):
             with self.subTest(key=key):
                 test_dict = ConcourseConfigTest.create_valid_test_dictionary()
                 test_dict.pop(key)
