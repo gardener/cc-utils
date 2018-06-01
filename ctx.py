@@ -24,7 +24,7 @@ def _cfg_factory_from_dir():
         return None
 
     from util import ensure_directory_exists
-    cfg_dir = ensure_directory_exists(args.cfg_dir)
+    cfg_dir = ensure_directory_exists(getattr(args, 'cfg_dir'))
 
     from model import ConfigFactory
     factory = ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)
