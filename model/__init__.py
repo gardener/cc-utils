@@ -543,9 +543,6 @@ class ConcourseConfig(NamedModelElement):
     def job_mapping_cfg_name(self):
         return self.snd.job_mapping
 
-    def job_mapping(self):
-        return self.cfg_factory.job_mapping(self.job_mapping_cfg_name())
-
     def team_credentials(self, teamname):
         return ConcourseTeamCredentials(self.snd.teams[teamname])
 
