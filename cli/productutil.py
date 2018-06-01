@@ -54,6 +54,15 @@ def upload_product_images(
             info('CVE below configured threshold - clean')
 
 
+def _create_task(protecode_util, container_image, component, wait_for_result):
+    def task_function():
+        return protecode_util.upload_image(
+            container_image=container_image,
+            component=component,
+            wait_for_result=True,
+        )
+    return task_function
+
 
 def _create_tasks(product_model, protecode_util):
     for component in product_model.components():
@@ -65,14 +74,12 @@ def _create_tasks(product_model, protecode_util):
                 v=container_image.version(),
                 )
             )
-            def upload_image():
-                result = protecode_util.upload_image(
+            yield _create_task(
+                    protecode_util=protecode_util,
                     container_image=container_image,
                     component=component,
                     wait_for_result=True,
-                )
-                return result
-            yield upload_image
+                    )
 
 
 
