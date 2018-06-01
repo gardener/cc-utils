@@ -88,7 +88,8 @@ def add_module(module_name, parser):
     for fname, function in inspect.getmembers(module, predicate=inspect.isfunction):
         if fname.startswith('_'):
             continue # skip "private" functions
-        function_parser = function_parsers.add_parser(fname)
+        function_docstring = inspect.getdoc(function)
+        function_parser = function_parsers.add_parser(fname, description=function_docstring)
         fspec = inspect.getfullargspec(function)
         function_parser.set_defaults(func=run_function(function))
 
