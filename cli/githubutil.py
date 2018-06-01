@@ -16,7 +16,7 @@ import version
 from urllib.parse import urlparse, parse_qs
 from github3.exceptions import NotFoundError
 
-from util import ctx, not_empty, info, warning, verbose
+from util import ctx, not_empty, info, warning, verbose, CliHint
 from github import GithubWebHookSyncer, CONCOURSE_ID
 from github.util import GitHubHelper, _create_github_api_object
 
@@ -87,9 +87,9 @@ def release_and_prepare_next_dev_cycle(
     )
 
 def remove_webhooks(
-    github_org_name: str,
-    github_cfg_name: str,
-    concourse_cfg_name: str,
+    github_org_name: CliHint(help='process all repositories in the given github organisation'),
+    github_cfg_name: CliHint(help='github_cfg name (see cc-config repo)'),
+    concourse_cfg_name: CliHint(help='the concourse_cfg name for which webhooks are to be removed'),
 ):
     '''
     Remove all webhooks which belong to the given concourse_cfg_name
