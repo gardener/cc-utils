@@ -18,7 +18,51 @@ from github3.exceptions import NotFoundError
 
 from util import ctx, not_empty, info, warning, verbose, CliHint
 from github import GithubWebHookSyncer, CONCOURSE_ID
-from github.util import GitHubHelper, _create_github_api_object
+from github.util import (GitHubHelper, _create_github_api_object,
+                         _create_team, _add_user_to_team, _add_all_repos_to_team)
+
+
+def assign_github_team_to_repo(
+    github_cfg_name: str,
+    github_org_name: str,
+    auth_token: CliHint(help="Token from an org admin user. Token must have 'admin:org' scope"),
+    team_name: str='ci'
+):
+    '''
+    Assign team 'team_name' to all repositories in organization 'github_org_name' and
+    give the team admin rights on those repositories. The team will be created if it does not exist
+    and the technical github user (from github_cfg_name) will be assigned to the team.
+    The token of the technical github user must have the privilege to create webhooks (scope admin:repo_hook)
+    The 'auth_token' parameter must belong to an org admin. The token must have 'admin:org' privileges.
+    '''
+    cfg_factory = ctx().cfg_factory()
+    github_cfg = cfg_factory.github(github_cfg_name)
+    github_username = github_cfg.credentials().username()
+
+    github = _create_github_api_object(
+        github_cfg=github_cfg,
+        auth_token=auth_token
+    )
+
+    _create_team(
+        github=github,
+        organization_name=github_org_name,
+        team_name=team_name
+    )
+
+    _add_user_to_team(
+        github=github,
+        organization_name=github_org_name,
+        team_name=team_name,
+        user_name=github_username
+    )
+
+    _add_all_repos_to_team(
+        github=github,
+        organization_name=github_org_name,
+        team_name=team_name
+    )
+
 
 def release_and_prepare_next_dev_cycle(
     github_cfg_name: str,
