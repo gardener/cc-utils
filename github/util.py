@@ -116,8 +116,7 @@ class GitHubHelper(object):
 
 
 def _create_github_api_object(
-    github_cfg: 'GithubConfig',
-    webhook_user: bool=False,
+    github_cfg: 'GithubConfig'
 ):
     github_url = github_cfg.http_url()
     github_auth_token = github_cfg.credentials().auth_token()
