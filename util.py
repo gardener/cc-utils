@@ -150,7 +150,7 @@ def ansi_format_string(character_string: str, format_name: str):
 
 def fail(msg=None):
     if msg:
-        print('ERROR: ' + msg)
+        print(ansi_format_string('ERROR: ', 'bold red') + msg)
     raise Failure(1)
 
 
@@ -166,7 +166,7 @@ def warning(msg:str):
     if _quiet():
         return
     if msg:
-        print('WARNING: ' + msg)
+        print(ansi_format_string('WARNING: ', 'bold yellow') + msg)
         sys.stdout.flush()
 
 
