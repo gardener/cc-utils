@@ -106,10 +106,51 @@ def _cli():
     return bool(ctx().args and hasattr(ctx().args, '._cli') and ctx().args._cli)
 # pylint: enable=no-member
 
+KNOWN_FORMATS = {
+    'bold red': '\033[91m\033[1m',
+    'bold yellow': '\033[33m\033[1m',
+}
+
+# A collection of string-identifiers of terminals capable of rendering the defined formats
+FORMATTING_COMPATIBLE_TERMINALS = ['xterm']
+
+def ansi_format_string(character_string: str, format_name: str):
+    '''Format a string using ANSI escape sequences.
+
+    This function wraps a string in the appropriate ANSI escape sequence for the given format name
+    after checking whether a compatible terminal is connected to sys.stdout. If the connected terminal is
+    found to be incompatible (or there is no terminal connected), the input string is returned unaltered.
+
+    Parameters
+    ------
+    character_string : str
+        A string to be formatted.
+    format_name : str
+        A string alias denoting one of a few specific known formats to apply to the string.
+        Known aliases: 'bold red' and 'bold yellow'
+
+    Returns
+    ------
+    str
+        The string wrapped in ANSI colour escape sequences if there is a compatible terminal connected
+        to stdoud and a valid format name was given, the unmodified input string otherwise.
+    '''
+    FORMAT_END = '\033[0m'
+
+    ensure_not_none(character_string)
+
+    if format_name not in KNOWN_FORMATS:
+        raise ValueError("Unknown format name: {n}".format(n=format_name))
+    if not sys.stdout.isatty():
+        return character_string
+
+    if 'TERM' in os.environ and os.environ['TERM'] in FORMATTING_COMPATIBLE_TERMINALS:
+        return KNOWN_FORMATS[format_name] + character_string + FORMAT_END
+
 
 def fail(msg=None):
     if msg:
-        print('ERROR: ' + msg)
+        print(ansi_format_string('ERROR: ', 'bold red') + msg)
     raise Failure(1)
 
 
@@ -125,7 +166,7 @@ def warning(msg:str):
     if _quiet():
         return
     if msg:
-        print('WARNING: ' + msg)
+        print(ansi_format_string('WARNING: ', 'bold yellow') + msg)
         sys.stdout.flush()
 
 
