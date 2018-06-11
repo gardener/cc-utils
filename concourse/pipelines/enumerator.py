@@ -14,6 +14,7 @@
 import os
 from copy import deepcopy
 from itertools import chain
+import functools
 import yaml
 from github3.exceptions import NotFoundError
 
@@ -41,7 +42,7 @@ class PipelineEnumerator(object):
             for definitions in pd:
                 for name, definition in definitions.items():
                     info('from mapping: ' + name)
-                    yield self._preprocess_and_wrap_into_descriptors(repo_path, 'master', definitions)
+                    yield from self._preprocess_and_wrap_into_descriptors(repo_path, 'master', definitions)
 
         info('scanning repositories')
         # scan github repositories
@@ -54,7 +55,7 @@ class PipelineEnumerator(object):
             github_org = github_api.organization(github_org_name)
 
             for repository in github_org.repositories():
-                yield self._scan_repository_for_definitions(
+                yield from self._scan_repository_for_definitions(
                     github_org_name,
                     repository,
                     branch_filter
@@ -120,3 +121,35 @@ def enumerate_pipeline_definitions(directories):
 
         for repo_path, definitions in  repo_definition_mapping.items():
             yield (repo_path, definitions)
+
+
+class TemplateRetriever(object):
+    '''
+    Provides mako templates by name. Templates are cached.
+    '''
+    def __init__(self, template_path):
+        if type(template_path) == str:
+            self.template_path = (template_path,)
+        else:
+            self.template_path = template_path
+
+    @functools.lru_cache()
+    def template_file(self, template_name):
+        # TODO: do not hard-code file name extension
+        template_file_name = template_name + '.yaml'
+        for path in self.template_path:
+            for dirpath, _, filenames in os.walk(path):
+                if template_file_name in filenames:
+                    return os.path.join(dirpath, template_file_name)
+        fail(
+            'could not find template {t}, tried in {p}'.format(
+                t=str(template_name),
+                p=','.join(map(str, template_path))
+            )
+        )
+
+    @functools.lru_cache()
+    def template_contents(self, template_name):
+        with open(self.template_file(template_name=template_name)) as f:
+            return f.read()
+

@@ -26,7 +26,7 @@ from util import (
 from github.util import branches
 
 from concourse.pipelines.factory import DefinitionFactory, RawPipelineDefinitionDescriptor
-from concourse.pipelines.enumerator import PipelineEnumerator
+from concourse.pipelines.enumerator import PipelineEnumerator, TemplateRetriever
 
 from concourse import client
 from model import ConcourseTeamCredentials, ConcourseConfig
@@ -44,7 +44,7 @@ def generate_pipelines(
         cfg_set=config_set,
     )
 
-    pipeline_definitions = itertools.chain(*enumerator.enumerate_pipeline_definitions(job_mapping))
+    pipeline_definitions = enumerator.enumerate_pipeline_definitions(job_mapping)
 
     for pipeline_definition in pipeline_definitions:
         rendering_results = render_pipelines(
@@ -81,21 +81,6 @@ def deploy_pipeline(
         api.expose_pipeline(pipeline_name=pipeline_name)
 
 
-def find_template_file(template_name:str, template_path:[str]):
-    # TODO: do not hard-code file name extension
-    template_file_name = template_name + '.yaml'
-    for path in template_path:
-        for dirpath, _, filenames in os.walk(path):
-            if template_file_name in filenames:
-                return os.path.join(dirpath, template_file_name)
-    fail(
-        'could not find template {t}, tried in {p}'.format(
-            t=str(template_name),
-            p=','.join(map(str, template_path))
-        )
-    )
-
-
 def render_pipelines(
     pipeline_definition: RawPipelineDefinitionDescriptor,
     config_set: 'ConfigurationSet',
@@ -103,7 +88,8 @@ def render_pipelines(
     template_include_dir=None
 ):
     template_name = pipeline_definition.template
-    template_file = find_template_file(template_name, template_path)
+    template_retriever = TemplateRetriever(template_path=template_path)
+    template_contents = template_retriever.template_contents(template_name)
 
     if template_include_dir:
         template_include_dir = os.path.abspath(template_include_dir)
@@ -131,7 +117,7 @@ def render_pipelines(
         # fallback in case no main_repository was found
         pipeline_metadata.pipeline_name = pipeline_definition.name
 
-    t = mako.template.Template(filename=template_file, lookup=lookup)
+    t = mako.template.Template(template_contents, lookup=lookup)
     yield (
             t.render(
                 instance_args=generated_model,
