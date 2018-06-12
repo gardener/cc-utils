@@ -109,7 +109,7 @@ def _cli():
 
 def fail(msg=None):
     if msg:
-        print('ERROR: ' + msg)
+        print('ERROR: ' + str(msg))
     raise Failure(1)
 
 
@@ -117,7 +117,7 @@ def info(msg:str):
     if _quiet():
         return
     if msg:
-        print('INFO: ' + msg)
+        print('INFO: ' + str(msg))
         sys.stdout.flush()
 
 
@@ -125,7 +125,7 @@ def warning(msg:str):
     if _quiet():
         return
     if msg:
-        print('WARNING: ' + msg)
+        print('WARNING: ' + str(msg))
         sys.stdout.flush()
 
 
