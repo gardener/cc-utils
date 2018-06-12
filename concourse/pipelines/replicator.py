@@ -118,7 +118,7 @@ def replicate_pipelines(
         definition_deployer=deployer,
     )
 
-    replicator.replicate()
+    return replicator.replicate()
 
 
 class Renderer(object):
@@ -313,7 +313,6 @@ class PipelineReplicator(object):
                 concourse_target_results[concourse_target_key] = set()
             concourse_target_results[concourse_target_key].add(result)
 
-
         for concourse_target_key, results in concourse_target_results.items():
             # TODO: implement eq for concourse_cfg
             concourse_cfg, concourse_team = next(iter(
@@ -338,5 +337,20 @@ class PipelineReplicator(object):
             pipeline_names = list(concourse_api.pipelines())
             pipeline_names.sort()
             concourse_api.order_pipelines(pipeline_names)
+
+        # evaluate results
+        failed_descriptors = list(filter(lambda d: d.deploy_status == DeployStatus.FAILED, results))
+        if len(failed_descriptors) == 0:
+            info('Successfully replicated {d} pipeline(s)'.format(d=len(results)))
+            return True
+
+        warning('Errors occurred whilst replicating {d} pipeline(s):'.format(
+            d=len(failed_descriptors)
+            )
+        )
+        for failed_descriptor in failed_descriptors:
+            warning(failed_descriptor.definition_descriptor.pipeline_name)
+            return False
+
 
 
