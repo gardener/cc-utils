@@ -14,7 +14,6 @@ cc-utils:
     head_update: ~
     pull_request:
       traits:
-        no_such_trait: ~
         pull-request:
           repo: 'source'  # default
           policies:
