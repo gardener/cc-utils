@@ -15,14 +15,23 @@
 import datetime
 import os
 import sys
+from enum import Enum
 
 from github3.github import GitHub, GitHubEnterprise
 from github3.repos.repo import Repository
-from github3.exceptions import NotFoundError
+from github3.exceptions import NotFoundError, ForbiddenError
+from github3.orgs import Team
 
 import util
 import version
 from model import ConfigFactory, GithubConfig
+
+
+class RepoPermission(Enum):
+    PULL = "pull"
+    PUSH = "push"
+    ADMIN = "admin"
+
 
 class GitHubHelper(object):
     GITHUB_TIMESTAMP_UTC_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
@@ -116,10 +125,12 @@ class GitHubHelper(object):
 
 
 def _create_github_api_object(
-    github_cfg: 'GithubConfig'
+    github_cfg: 'GithubConfig',
+    auth_token: str=None
 ):
+    '''parameter 'auth_token' will override the token from 'github_cfg' '''
     github_url = github_cfg.http_url()
-    github_auth_token = github_cfg.credentials().auth_token()
+    github_auth_token = auth_token if auth_token else github_cfg.credentials().auth_token()
 
     github_verify_ssl = github_cfg.tls_validation()
 
@@ -221,3 +232,93 @@ def retrieve_email_addresses(
         )
     )
 
+
+def _create_team(
+    github: GitHub,
+    organization_name: str,
+    team_name: str
+):
+    # passed GitHub object must have org. admin authorization to create a team
+    organization = github.organization(organization_name)
+    team = _retrieve_team_by_name_or_none(organization, team_name)
+    if team:
+        util.verbose("Team {name} already exists".format(name=team_name))
+        return
+
+    try:
+        organization.create_team(name=team_name)
+        util.info("Team {name} created".format(name=team_name))
+    except ForbiddenError as err:
+        util.fail("{err} Cannot create team {name} in org {org} due to missing privileges".format(
+            err=err,
+            name=team_name,
+            org=organization_name
+        ))
+
+
+def _add_user_to_team(
+    github: GitHub,
+    organization_name: str,
+    team_name: str,
+    user_name: str
+):
+    # passed GitHub object must have org. admin authorization to add a user to a team
+    organization = github.organization(organization_name)
+    team = _retrieve_team_by_name_or_none(organization, team_name)
+    if not team:
+        util.fail("Team {name} does not exist".format(name=team_name))
+
+    if team.is_member(user_name):
+        util.verbose("{username} is already assigned to team {teamname}".format(
+            username=user_name,
+            teamname=team_name
+        ))
+        return
+
+    if team.add_member(username=user_name):
+        util.info("Added {username} to team {teamname}".format(
+            username=user_name,
+            teamname=team_name
+        ))
+    else:
+        util.fail("Could not add {username} to team {teamname}. Please check for missing privileges".format(
+            username=user_name,
+            teamname=team_name
+        ))
+
+
+def _add_all_repos_to_team(
+    github: GitHub,
+    organization_name: str,
+    team_name: str,
+    permission: RepoPermission=RepoPermission.ADMIN
+):
+    '''Add all repos found in 'organization_name' to the given 'team_name'. Default permission is 'admin' '''
+    # passed GitHub object must have org. admin authorization to assign team to repo with admin rights
+    organization = github.organization(organization_name)
+    team = _retrieve_team_by_name_or_none(organization, team_name)
+    if not team:
+        util.fail("Team {name} does not exist".format(name=team_name))
+
+    for repo in organization.repositories():
+        if team.has_repository(repo.full_name):
+            util.verbose("Team {teamnname} already assigned to repo {reponame}".format(
+                teamnname=team_name,
+                reponame=repo.full_name
+            ))
+            continue
+
+        team.add_repository(repository=repo.full_name, permission=permission.value)
+        util.info("Added team {teamname} to repository {reponame}".format(
+            teamname=team_name,
+            reponame=repo.full_name
+        ))
+
+
+def _retrieve_team_by_name_or_none(
+    organization: 'github3.orgs.Organization',
+    team_name: str
+) -> Team:
+
+    team_list = list(filter(lambda t: t.name == team_name, organization.teams()))
+    return team_list[0] if team_list else None
