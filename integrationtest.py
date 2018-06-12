@@ -76,7 +76,7 @@ def deploy_and_run_smoketest_pipeline(
     definition_descriptor = preprocessor.process_definition_descriptor(definition_descriptor)
     rendering_result = renderer.render(definition_descriptor)
 
-    deployment_result = deployer.deploy(rendering_result)
+    deployment_result = deployer.deploy(rendering_result.definition_descriptor)
 
     if not deployment_result.deploy_status == DeployStatus.SUCCEEDED:
         fail('deployment failed')
