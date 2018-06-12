@@ -18,6 +18,7 @@ from enum import Enum
 from copy import deepcopy
 import itertools
 import functools
+import traceback
 
 import argparse
 import mako.template
@@ -135,6 +136,20 @@ class Renderer(object):
             self.cfg_set = cfg_set
 
     def render(self, definition_descriptor):
+        try:
+            definition_descriptor = self._render(definition_descriptor)
+            return RenderResult(
+                definition_descriptor,
+                render_status=RenderStatus.SUCCEEDED,
+            )
+        except Exception as e:
+            traceback.print_exc()
+            return RenderResult(
+                definition_descriptor,
+                render_status=RenderStatus.FAILED
+            )
+
+    def _render(self, definition_descriptor):
         effective_definition = definition_descriptor.pipeline_definition
 
         # handle inheritance
@@ -180,9 +195,26 @@ class Renderer(object):
         return definition_descriptor
 
 
+class RenderStatus(Enum):
+    SUCCEEDED = 0
+    FAILED = 1
+
+
+class RenderResult(object):
+    def __init__(
+        self,
+        definition_descriptor,
+        render_status
+    ):
+        self.definition_descriptor = not_none(definition_descriptor)
+        self.render_status = not_none(render_status)
+
+
 class DeployStatus(Enum):
     SUCCEEDED = 0
     FAILED = 1
+    SKIPPED = 2
+
 
 class DeployResult(object):
     def __init__(
@@ -192,6 +224,7 @@ class DeployResult(object):
     ):
         self.definition_descriptor = not_none(definition_descriptor)
         self.deploy_status = not_none(deploy_status)
+
 
 class DefinitionDeployer(object):
     def deploy(self, definition_descriptor, pipeline):
@@ -296,7 +329,13 @@ class PipelineReplicator(object):
                     definition_descriptor
             )
             result = self.definition_renderer.render(preprocessed)
-            deploy_result = self.definition_deployer.deploy(result)
+            if result.render_status == RenderStatus.SUCCEEDED:
+                deploy_result = self.definition_deployer.deploy(result.definition_descriptor)
+            else:
+                deploy_result = DeployResult(
+                    definition_descriptor=definition_descriptor,
+                    deploy_status=DeployStatus.SKIPPED,
+                )
             yield deploy_result
 
     def replicate(self):
@@ -313,18 +352,18 @@ class PipelineReplicator(object):
                 concourse_target_results[concourse_target_key] = set()
             concourse_target_results[concourse_target_key].add(result)
 
-        for concourse_target_key, results in concourse_target_results.items():
+        for concourse_target_key, concourse_results in concourse_target_results.items():
             # TODO: implement eq for concourse_cfg
             concourse_cfg, concourse_team = next(iter(
-                results)).definition_descriptor.concourse_target()
-            results = concourse_target_results[concourse_target_key]
+                concourse_results)).definition_descriptor.concourse_target()
+            concourse_results = concourse_target_results[concourse_target_key]
             concourse_api = _concourse_api(
                 concourse_cfg=concourse_cfg,
                 team_name=concourse_team,
             )
             # find pipelines to remove
             deployed_pipeline_names = set(map(
-                lambda r: r.definition_descriptor.pipeline_name, results
+                lambda r: r.definition_descriptor.pipeline_name, concourse_results
             ))
 
             pipelines_to_remove = set(concourse_api.pipelines()) - deployed_pipeline_names
@@ -339,18 +378,21 @@ class PipelineReplicator(object):
             concourse_api.order_pipelines(pipeline_names)
 
         # evaluate results
-        failed_descriptors = list(filter(lambda d: d.deploy_status == DeployStatus.FAILED, results))
-        if len(failed_descriptors) == 0:
-            info('Successfully replicated {d} pipeline(s)'.format(d=len(results)))
+        failed_descriptors = [d for d in results if d.deploy_status != DeployStatus.SUCCEEDED]
+        failed_count = len(failed_descriptors)
+
+        info('Successfully replicated {d} pipeline(s)'.format(d=len(results) - failed_count))
+
+        if failed_count == 0:
             return True
 
         warning('Errors occurred whilst replicating {d} pipeline(s):'.format(
-            d=len(failed_descriptors)
+            d=failed_count,
             )
         )
         for failed_descriptor in failed_descriptors:
             warning(failed_descriptor.definition_descriptor.pipeline_name)
-            return False
+        return False
 
 
 
