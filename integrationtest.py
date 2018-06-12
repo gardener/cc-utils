@@ -74,11 +74,11 @@ def deploy_and_run_smoketest_pipeline(
     )
 
     definition_descriptor = preprocessor.process_definition_descriptor(definition_descriptor)
-    definition_descriptor = renderer.render(definition_descriptor)
+    rendering_result = renderer.render(definition_descriptor)
 
-    result = deployer.deploy(definition_descriptor)
+    deployment_result = deployer.deploy(rendering_result)
 
-    if not result.deploy_status == DeployStatus.SUCCEEDED:
+    if not deployment_result.deploy_status == DeployStatus.SUCCEEDED:
         fail('deployment failed')
 
     # skip triggering for now
@@ -93,7 +93,7 @@ def deploy_and_run_smoketest_pipeline(
 
     # trigger an execution and wait for it to finish
     info('triggering smoketest job {jn}'.format(jn=job_name))
-    api.trigger_build(definition_descriptor.pipeline_name, job_name)
+    api.trigger_build(deployment_result.definition_descriptor.pipeline_name, job_name)
 
     if not wait_for_job_execution:
         info('will not wait for job-execution to finish (--wait-for-job-execution not set)')
