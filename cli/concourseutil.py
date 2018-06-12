@@ -18,7 +18,8 @@ import subprocess
 from util import ctx
 from util import info, fail, which, warning, CliHints, CliHint
 from util import ctx as global_ctx
-from concourse.pipelines import replicator
+from concourse.pipelines.replicator import *
+from concourse.pipelines.enumerator import *
 import concourse.setup as setup
 from concourse.util import sync_webhooks
 from model import ConfigFactory
@@ -120,39 +121,35 @@ def render_pipelines(
     concourse_cfg = config_set.concourse()
     job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
 
+    github_enumerators = []
     for job_mapping in job_mapping_set.job_mappings().values():
-        for rendered_pipeline, definition, pipeline_args in replicator.generate_pipelines(
-                definitions_root_dir=definitions_root_dir,
+        github_enumerators.append(
+            GithubOrganisationDefinitionEnumerator(
                 job_mapping=job_mapping,
-                template_path=template_path,
-                template_include_dir=template_include_dir,
-                config_set=config_set
-            ):
-            out_name = os.path.join(out_dir, pipeline_args.name + '.yaml')
-            with open(out_name, 'w') as f:
-                f.write(rendered_pipeline)
+                cfg_set=config_set
+            )
+        )
 
+    preprocessor = DefinitionDescriptorPreprocessor()
 
-def deploy_pipeline(
-        pipeline_file: CliHint('generated pipeline definition to deploy'),
-        pipeline_name: CliHint('the name under which the pipeline shall be deployed'),
-        team_name: CliHint('name of the target team'),
-        config_dir: CliHints.existing_dir('directory containing Concourse configuration'),
-        config_name: CliHint('identifier of the configuration in the config directory to use')
-):
-    cfg_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
-    concourse_cfg = cfg_factory.concourse(config_name)
-    team_credentials = concourse_cfg.team_credentials(team_name)
-
-    with open(pipeline_file) as f:
-        pipeline_definition = f.read()
-
-    replicator.deploy_pipeline(
-        pipeline_definition=pipeline_definition,
-        pipeline_name=pipeline_name,
-        concourse_cfg=concourse_cfg,
-        team_credentials=team_credentials,
+    template_retriever = TemplateRetriever(template_path=template_path)
+    renderer = Renderer(
+        template_retriever=template_retriever,
+        template_include_dir=template_include_dir,
+        cfg_set=config_set,
     )
+
+    deployer = FilesystemDeployer(base_dir=out_dir)
+
+    replicator = PipelineReplicator(
+        definition_enumerators=github_enumerators,
+        descriptor_preprocessor=preprocessor,
+        definition_renderer=renderer,
+        definition_deployer=deployer
+    )
+
+    for result in replicator.replicate():
+        pass
 
 
 def sync_webhooks_from_cfg(

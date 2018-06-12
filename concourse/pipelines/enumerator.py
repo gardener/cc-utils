@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import os
 from copy import deepcopy
 from itertools import chain
@@ -22,31 +23,102 @@ from util import (
     parse_yaml_file,
     merge_dicts,
     info,
+    ensure_directory_exists,
+    not_empty,
+    not_none,
 )
 from github.util import _create_github_api_object
 from model import JobMapping
 from concourse.pipelines.factory import RawPipelineDefinitionDescriptor
 
+class DefinitionDescriptorPreprocessor(object):
+    def process_definition_descriptor(self, descriptor):
+        self._add_branch_to_pipeline_name(descriptor)
+        return self._inject_main_repo(descriptor)
 
-class PipelineEnumerator(object):
-    def __init__(self, base_dir, cfg_set):
-        self.base_dir = base_dir
+    def _add_branch_to_pipeline_name(self, descriptor):
+        descriptor.pipeline_name = '{n}-{b}'.format(
+            n=descriptor.pipeline_name,
+            b=descriptor.main_repo.get('branch'),
+        )
+        return descriptor
+
+    def _inject_main_repo(self, descriptor):
+        descriptor.override_definitions.append({
+            'base_definition':
+            {
+                'repo': descriptor.main_repo
+            }
+        })
+
+        return descriptor
+
+class DefinitionEnumerator(object):
+    def enumerate_definition_descriptors(self):
+        raise NotImplementedError('subclasses must override')
+
+    def _wrap_into_descriptors(
+        self,
+        repo_path,
+        branch,
+        raw_definitions
+        ) -> 'DefinitionDescriptor':
+        for name, definition in raw_definitions.items():
+            pipeline_definition = deepcopy(definition)
+            yield DefinitionDescriptor(
+                pipeline_name=name,
+                pipeline_definition=pipeline_definition,
+                template_name=pipeline_definition['template'],
+                main_repo={'path': repo_path, 'branch': branch},
+                concourse_target_cfg=self.cfg_set.concourse(),
+                concourse_target_team=self.job_mapping.team_name(),
+                override_definitions=[{},],
+            )
+
+
+
+class MappingfileDefinitionEnumerator(DefinitionEnumerator):
+    def __init__(self, base_dir, job_mapping, cfg_set):
+        self.base_dir = ensure_directory_exists(base_dir)
+        self.job_mapping = job_mapping
         self.cfg_set = cfg_set
 
-    def enumerate_pipeline_definitions(self, job_mapping: JobMapping) -> RawPipelineDefinitionDescriptor:
+    def enumerate_definition_descriptors(self):
         # handle definition directories (legacy-case)
         info('scanning legacy mappings')
-        for repo_path, pd in enumerate_pipeline_definitions(
-                [os.path.join(self.base_dir, d) for d in job_mapping.definition_dirs()]
+        for repo_path, pd in self._enumerate_pipeline_definitions(
+                [os.path.join(self.base_dir, d) for d in self.job_mapping.definition_dirs()]
         ):
             for definitions in pd:
                 for name, definition in definitions.items():
                     info('from mapping: ' + name)
-                    yield from self._preprocess_and_wrap_into_descriptors(repo_path, 'master', definitions)
+                    yield from self._wrap_into_descriptors(repo_path, 'master', definitions)
 
+    def _enumerate_pipeline_definitions(self, directories):
+        for directory in directories:
+            # for now, hard-code mandatory .repository_mapping
+            repo_mapping = parse_yaml_file(os.path.join(directory, '.repository_mapping'))
+            repo_definition_mapping = {repo_path: list() for repo_path in repo_mapping.keys()}
+
+            for repo_path, definition_files in repo_mapping.items():
+                for definition_file_path in definition_files:
+                    abs_file = os.path.abspath(os.path.join(directory, definition_file_path))
+                    pipeline_raw_definition = parse_yaml_file(abs_file, as_snd=False)
+                    repo_definition_mapping[repo_path].append(pipeline_raw_definition)
+
+            for repo_path, definitions in  repo_definition_mapping.items():
+                yield (repo_path, definitions)
+
+
+class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
+    def __init__(self, job_mapping, cfg_set):
+        self.job_mapping = not_none(job_mapping)
+        self.cfg_set = not_none(cfg_set)
+
+    def enumerate_definition_descriptors(self):
         info('scanning repositories')
         # scan github repositories
-        for github_org_cfg in job_mapping.github_organisations():
+        for github_org_cfg in self.job_mapping.github_organisations():
             github_cfg = self.cfg_set.github(github_org_cfg.github_cfg_name())
             github_org_name = github_org_cfg.org_name()
 
@@ -73,54 +145,40 @@ class PipelineEnumerator(object):
 
             info('from repo: ' + repository.name + ':' + branch_name)
             definitions = yaml.load(definitions.decoded.decode('utf-8'))
-            yield from self._preprocess_and_wrap_into_descriptors(
+            yield from self._wrap_into_descriptors(
                 repo_path='/'.join([org_name, repository.name]),
                 branch=branch_name,
                 raw_definitions=definitions
             )
 
 
-    def _preprocess_and_wrap_into_descriptors(self, repo_path, branch, raw_definitions) -> RawPipelineDefinitionDescriptor:
-        for name, definition in raw_definitions.items():
-            pipeline_definition = deepcopy(definition)
-            base_definition = self._inject_main_repo(
-                base_definition=definition.get('base_definition', {}),
-                repo_path=repo_path,
-                branch_name=branch,
-            )
-            yield RawPipelineDefinitionDescriptor(
-                name=name, #'-'.join(name, branch),
-                base_definition=base_definition,
-                variants=definition['variants'],
-                template=definition['template'],
-            )
+class DefinitionDescriptor(object):
+    def __init__(
+        self,
+        pipeline_name,
+        pipeline_definition,
+        template_name,
+        main_repo,
+        concourse_target_cfg,
+        concourse_target_team,
+        override_definitions=[{},]
+    ):
+        self.pipeline_name = not_empty(pipeline_name)
+        self.pipeline_definition = not_none(pipeline_definition)
+        self.template_name = not_empty(template_name)
+        self.main_repo = not_none(main_repo)
+        self.concourse_target_cfg = not_none(concourse_target_cfg)
+        self.concourse_target_team = not_none(concourse_target_team)
+        self.override_definitions = not_none(override_definitions)
 
-    def _inject_main_repo(self, base_definition, repo_path, branch_name):
-        main_repo_raw = {'path': repo_path, 'branch': branch_name}
+    def concourse_target(self):
+        return (self.concourse_target_cfg, self.concourse_target_team)
 
-        if base_definition.get('repo'):
-            merged_main_repo = merge_dicts(base_definition['repo'], main_repo_raw)
-            base_definition['repo'] = merged_main_repo
-        else:
-            base_definition['repo'] = main_repo_raw
-
-        return base_definition
-
-
-def enumerate_pipeline_definitions(directories):
-    for directory in directories:
-        # for now, hard-code mandatory .repository_mapping
-        repo_mapping = parse_yaml_file(os.path.join(directory, '.repository_mapping'))
-        repo_definition_mapping = {repo_path: list() for repo_path in repo_mapping.keys()}
-
-        for repo_path, definition_files in repo_mapping.items():
-            for definition_file_path in definition_files:
-                abs_file = os.path.abspath(os.path.join(directory, definition_file_path))
-                pipeline_raw_definition = parse_yaml_file(abs_file, as_snd=False)
-                repo_definition_mapping[repo_path].append(pipeline_raw_definition)
-
-        for repo_path, definitions in  repo_definition_mapping.items():
-            yield (repo_path, definitions)
+    def concourse_target_key(self):
+        return '{n}:{t}'.format(
+            n=self.concourse_target_cfg.name(),
+            t=self.concourse_target_team
+        )
 
 
 class TemplateRetriever(object):

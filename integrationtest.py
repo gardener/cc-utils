@@ -17,8 +17,13 @@ import os
 from util import fail, info, parse_yaml_file
 from model import ConfigFactory
 from concourse.client import ConcourseApi
-from concourse.pipelines.replicator import render_pipelines, deploy_pipeline
+from concourse.pipelines.replicator import Renderer, ConcourseDeployer, DeployStatus
 from concourse.pipelines.factory import RawPipelineDefinitionDescriptor
+from concourse.pipelines.enumerator import (
+    DefinitionDescriptorPreprocessor,
+    DefinitionDescriptor,
+    TemplateRetriever,
+)
 
 '''
 Integration tests for concourse pipeline generator
@@ -47,34 +52,37 @@ def deploy_and_run_smoketest_pipeline(
     job_name = 'cc-smoketest-master-head-update-job'
 
     pipeline_definition = parse_yaml_file(pipeline_definition_file, as_snd=False)
-
-    pipeline_descriptor = RawPipelineDefinitionDescriptor(
-        name=pipeline_name,
-        base_definition=pipeline_definition[pipeline_name]['base_definition'],
-        variants=pipeline_definition[pipeline_name]['variants'],
-        template=pipeline_definition[pipeline_name]['template'],
+    definition_descriptor = DefinitionDescriptor(
+        pipeline_name=pipeline_name,
+        pipeline_definition=pipeline_definition[pipeline_name],
+        template_name=pipeline_definition[pipeline_name]['template'],
+        main_repo={'path': 'kubernetes/cc-smoketest', 'branch': 'master'},
+        concourse_target_cfg=concourse_cfg,
+        concourse_target_team=concourse_team_name,
     )
 
-    rendered_pipelines = list(
-        render_pipelines(
-            pipeline_definition=pipeline_descriptor,
-            config_set=config_set,
-            template_path=[template_path],
-            template_include_dir=template_include_dir,
-        )
+    preprocessor = DefinitionDescriptorPreprocessor()
+    template_retriever = TemplateRetriever(template_path=template_path)
+    renderer = Renderer(
+        template_retriever=template_retriever,
+        template_include_dir=template_include_dir,
+        cfg_set=config_set,
     )
-    if len(rendered_pipelines) == 0:
-        fail("smoke-test pipeline definition not found")
-    if len(rendered_pipelines) > 1:
-        fail("expected exactly one smoketest pipeline-definition, got {n}".format(n=len(rendered_pipelines)))
-    pipeline_definition, _, _ = rendered_pipelines[0]
+    deployer = ConcourseDeployer(
+        unpause_pipelines=True,
+        expose_pipelines=True
+    )
 
-    deploy_pipeline(
-      pipeline_definition=pipeline_definition,
-      pipeline_name=pipeline_name,
-      concourse_cfg=concourse_cfg,
-      team_credentials=team_credentials,
-    )
+    definition_descriptor = preprocessor.process_definition_descriptor(definition_descriptor)
+    definition_descriptor = renderer.render(definition_descriptor)
+
+    result = deployer.deploy(definition_descriptor)
+
+    if not result.deploy_status == DeployStatus.SUCCEEDED:
+        fail('deployment failed')
+
+    # skip triggering for now
+    return
 
     api = ConcourseApi(base_url=concourse_cfg.external_url(), team_name=concourse_team_name)
     api.login(
@@ -85,7 +93,7 @@ def deploy_and_run_smoketest_pipeline(
 
     # trigger an execution and wait for it to finish
     info('triggering smoketest job {jn}'.format(jn=job_name))
-    api.trigger_build(pipeline_name, job_name)
+    api.trigger_build(definition_descriptor.pipeline_name, job_name)
 
     if not wait_for_job_execution:
         info('will not wait for job-execution to finish (--wait-for-job-execution not set)')
