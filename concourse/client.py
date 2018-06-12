@@ -449,7 +449,7 @@ class GithubSource(object):
         return path.split('/')[2]
 
     def hostname(self):
-        return urlparse(self.uri).netloc
+        return urlparse(self.uri).hostname
 
     def access_token(self):
         return self.raw['access_token']
