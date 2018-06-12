@@ -148,7 +148,7 @@ def render_pipelines(
         definition_deployer=deployer
     )
 
-    replicator.replicate():
+    replicator.replicate()
 
 
 def sync_webhooks_from_cfg(
