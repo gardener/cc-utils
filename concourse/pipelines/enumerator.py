@@ -123,7 +123,6 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
         executor = ThreadPoolExecutor(max_workers=6)
 
         # scan github repositories
-        definition_futures = []
         for github_org_cfg in self.job_mapping.github_organisations():
             github_cfg = self.cfg_set.github(github_org_cfg.github_cfg_name())
             github_org_name = github_org_cfg.org_name()
@@ -132,20 +131,20 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
             github_api = _create_github_api_object(github_cfg)
             github_org = github_api.organization(github_org_name)
 
-            for repository in github_org.repositories():
-                definition_futures.append(
-                    executor.submit(
-                        self._scan_repository_for_definitions,
-                        github_org_name,
-                        repository,
-                        branch_filter
-                    )
-                )
+            scan_repository_for_definitions = functools.partial(
+                self._scan_repository_for_definitions,
+                org_name=github_org_name,
+                branch_filter=branch_filter,
+            )
 
-        for definition_future in concurrent.futures.as_completed(definition_futures):
-            yield from definition_future.result()
+            for definition_descriptors in executor.map(
+                scan_repository_for_definitions,
+                github_org.repositories(),
+            ):
+                yield from definition_descriptors
 
-    def _scan_repository_for_definitions(self, org_name, repository, branch_filter) -> RawPipelineDefinitionDescriptor:
+
+    def _scan_repository_for_definitions(self, repository, org_name, branch_filter) -> RawPipelineDefinitionDescriptor:
         for branch_name in filter(branch_filter, map(lambda b: b.name, repository.branches())):
             try:
                 definitions = repository.file_contents(
