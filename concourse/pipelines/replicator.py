@@ -16,6 +16,8 @@ import sys
 
 from enum import Enum
 from copy import deepcopy
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 import itertools
 import functools
 import traceback
@@ -112,11 +114,14 @@ def replicate_pipelines(
         expose_pipelines=expose_pipelines,
     )
 
+    result_processor = ReplicationResultProcessor()
+
     replicator = PipelineReplicator(
         definition_enumerators=definition_enumerators,
         descriptor_preprocessor=preprocessor,
         definition_renderer=renderer,
         definition_deployer=deployer,
+        result_processor=result_processor,
     )
 
     return replicator.replicate()
@@ -305,44 +310,8 @@ class ConcourseDeployer(DefinitionDeployer):
                 deploy_status=DeployStatus.FAILED,
             )
 
-
-class PipelineReplicator(object):
-    def __init__(
-            self,
-            definition_enumerators,
-            descriptor_preprocessor,
-            definition_renderer,
-            definition_deployer
-        ):
-        self.definition_enumerators = definition_enumerators
-        self.descriptor_preprocessor = descriptor_preprocessor
-        self.definition_renderer = definition_renderer
-        self.definition_deployer = definition_deployer
-
-    def _enumerate_definitions(self):
-        for enumerator in self.definition_enumerators:
-            yield from enumerator.enumerate_definition_descriptors()
-
-    def _replicate(self):
-        for definition_descriptor in self._enumerate_definitions():
-            preprocessed = self.descriptor_preprocessor.process_definition_descriptor(
-                    definition_descriptor
-            )
-            result = self.definition_renderer.render(preprocessed)
-            if result.render_status == RenderStatus.SUCCEEDED:
-                deploy_result = self.definition_deployer.deploy(result.definition_descriptor)
-            else:
-                deploy_result = DeployResult(
-                    definition_descriptor=definition_descriptor,
-                    deploy_status=DeployStatus.SKIPPED,
-                )
-            yield deploy_result
-
-    def replicate(self):
-        results = []
-        for result in self._replicate():
-            results.append(result)
-
+class ReplicationResultProcessor(object):
+    def process_results(self, results):
         # collect pipelines by concourse target (concourse_cfg, team_name) as key
         concourse_target_results = {}
         for result in results:
@@ -393,6 +362,65 @@ class PipelineReplicator(object):
         for failed_descriptor in failed_descriptors:
             warning(failed_descriptor.definition_descriptor.pipeline_name)
         return False
+
+class PipelineReplicator(object):
+    def __init__(
+            self,
+            definition_enumerators,
+            descriptor_preprocessor,
+            definition_renderer,
+            definition_deployer,
+            result_processor=None,
+        ):
+        self.definition_enumerators = definition_enumerators
+        self.descriptor_preprocessor = descriptor_preprocessor
+        self.definition_renderer = definition_renderer
+        self.definition_deployer = definition_deployer
+        self.result_processor = result_processor
+
+    def _enumerate_definitions(self):
+        for enumerator in self.definition_enumerators:
+            yield from enumerator.enumerate_definition_descriptors()
+
+    def _process_definition_descriptor(self, definition_descriptor):
+            preprocessed = self.descriptor_preprocessor.process_definition_descriptor(
+                    definition_descriptor
+            )
+            result = self.definition_renderer.render(preprocessed)
+
+            if result.render_status == RenderStatus.SUCCEEDED:
+                deploy_result = self.definition_deployer.deploy(result.definition_descriptor)
+            else:
+                deploy_result = DeployResult(
+                    definition_descriptor=definition_descriptor,
+                    deploy_status=DeployStatus.SKIPPED,
+                )
+            return deploy_result
+
+
+    def _replicate(self):
+        executor = ThreadPoolExecutor(max_workers=8)
+
+        result_futures = []
+        for definition_descriptor in self._enumerate_definitions():
+            result_futures.append(
+                executor.submit(
+                    self._process_definition_descriptor,
+                    definition_descriptor,
+                )
+            )
+
+        for result_future in concurrent.futures.as_completed(result_futures):
+            yield result_future.result()
+
+    def replicate(self):
+        results = []
+        for result in self._replicate():
+            results.append(result)
+
+        if self.result_processor:
+            return self.result_processor.process_results(results)
+
 
 
 

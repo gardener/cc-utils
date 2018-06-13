@@ -13,10 +13,13 @@
 # limitations under the License.
 
 import os
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from itertools import chain
 import functools
 import yaml
+
 from github3.exceptions import NotFoundError
 
 from util import (
@@ -117,7 +120,10 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
 
     def enumerate_definition_descriptors(self):
         info('scanning repositories')
+        executor = ThreadPoolExecutor(max_workers=6)
+
         # scan github repositories
+        definition_futures = []
         for github_org_cfg in self.job_mapping.github_organisations():
             github_cfg = self.cfg_set.github(github_org_cfg.github_cfg_name())
             github_org_name = github_org_cfg.org_name()
@@ -127,11 +133,17 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
             github_org = github_api.organization(github_org_name)
 
             for repository in github_org.repositories():
-                yield from self._scan_repository_for_definitions(
-                    github_org_name,
-                    repository,
-                    branch_filter
+                definition_futures.append(
+                    executor.submit(
+                        self._scan_repository_for_definitions,
+                        github_org_name,
+                        repository,
+                        branch_filter
+                    )
                 )
+
+        for definition_future in concurrent.futures.as_completed(definition_futures):
+            yield from definition_future.result()
 
     def _scan_repository_for_definitions(self, org_name, repository, branch_filter) -> RawPipelineDefinitionDescriptor:
         for branch_name in filter(branch_filter, map(lambda b: b.name, repository.branches())):
