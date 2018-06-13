@@ -397,21 +397,12 @@ class PipelineReplicator(object):
                 )
             return deploy_result
 
-
     def _replicate(self):
         executor = ThreadPoolExecutor(max_workers=8)
-
-        result_futures = []
-        for definition_descriptor in self._enumerate_definitions():
-            result_futures.append(
-                executor.submit(
-                    self._process_definition_descriptor,
-                    definition_descriptor,
-                )
-            )
-
-        for result_future in concurrent.futures.as_completed(result_futures):
-            yield result_future.result()
+        yield from executor.map(
+            self._process_definition_descriptor,
+            self._enumerate_definitions(),
+        )
 
     def replicate(self):
         results = []
