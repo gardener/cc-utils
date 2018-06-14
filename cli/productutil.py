@@ -67,11 +67,11 @@ def _create_task(protecode_util, container_image, component, wait_for_result):
 def _create_tasks(product_model, protecode_util):
     for component in product_model.components():
         info('processing component: {c}:{v}'.format(c=component.name(), v=component.version()))
-        for container_image in component.container_images():
-            info('processing container image: {c}:{ci}:{v}'.format(
+        component_dependencies = component.dependencies()
+        for container_image in component_dependencies.container_images():
+            info('processing container image: {c}:{cir}'.format(
                 c=component.name(),
-                ci=container_image.name(),
-                v=container_image.version(),
+                cir=container_image.image_reference(),
                 )
             )
             yield _create_task(

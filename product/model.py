@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from enum import Enum
 
 from model.base import ModelBase, NamedModelElement
@@ -26,20 +27,38 @@ class Product(NamedModelElement):
         return Product(name=name, raw_dict=raw_dict)
 
     def components(self):
-        return (Component(name=name, raw_dict=raw_dict) for name, raw_dict in self.snd.components.items())
+        return map(Component, self.snd.components)
 
-class Component(NamedModelElement):
-    def container_images(self):
-        return (ContainerImage(name=name, raw_dict=raw_dict) for name, raw_dict in self.snd.container_images.items())
+
+class ComponentReference(ModelBase):
+    def name(self):
+        return self.snd.name
+
     def version(self):
         return self.snd.version
 
-class ContainerImage(NamedModelElement):
+
+class Component(ComponentReference):
+    def dependencies(self):
+        return ComponentDependencies(raw_dict=self.snd.dependencies)
+
+
+class ComponentDependencies(ModelBase):
+    def container_images(self):
+        if not self.snd.container_images:
+            return ()
+        return map(ContainerImage, self.snd.container_images)
+
+    def components(self):
+        if not self.snd.components:
+            return ()
+        return map(ComponentReference, self.snd.components)
+
+
+class ContainerImage(ModelBase):
     def image_reference(self):
         return self.snd.image_reference
 
-    def version(self):
-        return self.snd.version
 
 #############################################################################
 ## upload result model
@@ -66,9 +85,9 @@ class UploadResult(object):
             self.result = None
 
     def __str__(self):
-        return '{c}:{i} - {s}'.format(
+        return '{c}:{ir} - {s}'.format(
             c=self.component.name(),
-            i=self.container_image.name(),
+            ir=self.container_image.image_reference(),
             s=self.status
         )
 
