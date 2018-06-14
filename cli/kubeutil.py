@@ -178,7 +178,6 @@ def _wait_for_shoot(namespace, on_event, expected_result, timeout_seconds:int=12
     start_time = int(time.time())
 
     custom_api = ctx.create_custom_api()
-    w = watch.Watch()
     # very, very sad: workaround until fixed:
     #    https://github.com/kubernetes-incubator/client-python/issues/124
     # (after about a minute, "some" watches (e.g. not observed when watching namespaces),
@@ -188,6 +187,7 @@ def _wait_for_shoot(namespace, on_event, expected_result, timeout_seconds:int=12
     should_exit = False
     result = None
     while not should_exit and (start_time + timeout_seconds) > time.time():
+        w = watch.Watch()
         try:
             for e in w.stream(custom_api.list_namespaced_custom_object,
               group='garden.sapcloud.io',
@@ -203,13 +203,17 @@ def _wait_for_shoot(namespace, on_event, expected_result, timeout_seconds:int=12
                     if result != expected_result:
                         raise RuntimeError(result)
                     return
-        except ConnectionResetError as cre:
-            # ignore connection errors against k8s api endpoint (these may be temporary)
-            info('connection reset error from k8s API endpoint - ignored: ' + str(cre))
-        except ProtocolError as err:
-            verbose('http connection error - ignored')
-        except KeyError as err:
-            verbose("key {} not yet available - ignored".format(str(err)))
+        except (ConnectionResetError, ProtocolError, KeyError) as e:
+            if type(e) == ConnectionResetError:
+                # ignore connection errors against k8s api endpoint (these may be temporary)
+                info('connection reset error from k8s API endpoint - ignored: ' + str(e))
+            elif type(e) == ProtocolError:
+                verbose('http connection error - ignored')
+            elif type(e) == KeyError:
+                verbose("key {} not yet available - ignored".format(str(e)))
+        # close the watch in case it exited due to the bug referenced above
+        # to prevent resource leakage (watch might stay open otherwise)
+        w.stop()
     # handle case where timeout was exceeded, but w.stream returned erroneously (see bug
     # description above)
     raise RuntimeError(result)
