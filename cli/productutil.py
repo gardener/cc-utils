@@ -21,13 +21,14 @@ import protecode.client
 def upload_product_images(
     protecode_cfg_name: str,
     product_cfg_file: CliHints.existing_file(),
+    protecode_group_id: int=5,
     parallel_jobs: int=4,
     cve_threshold: int=7,
     ):
     cfg_factory = ctx().cfg_factory()
     protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
     protecode_api = protecode.client.from_cfg(protecode_cfg)
-    protecode_util = ProtecodeUtil(protecode_api=protecode_api, group_id=5)
+    protecode_util = ProtecodeUtil(protecode_api=protecode_api, group_id=protecode_group_id)
 
     product_model = Product.from_dict(
         name='gardener-product',
