@@ -29,6 +29,9 @@ class Product(NamedModelElement):
     def components(self):
         return map(Component, self.snd.components)
 
+    def component(self, name):
+        return next(filter(lambda c: c.name() == name, self.components()), None)
+
 
 class ComponentReference(ModelBase):
     def name(self):
@@ -40,7 +43,11 @@ class ComponentReference(ModelBase):
 
 class Component(ComponentReference):
     def dependencies(self):
-        return ComponentDependencies(raw_dict=self.snd.dependencies)
+        dependencies_dict = self.snd.dependencies
+        if dependencies_dict:
+            return ComponentDependencies(raw_dict=dependencies_dict)
+        else:
+            return ComponentDependencies(raw_dict={})
 
 
 class ComponentDependencies(ModelBase):
