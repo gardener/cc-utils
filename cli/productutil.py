@@ -13,9 +13,10 @@
 # limitations under the License.
 from concurrent.futures import ThreadPoolExecutor
 import yaml
+import json
 
-from util import CliHints, parse_yaml_file, ctx, info
-from product.model import Product, Component, ComponentReference, ContainerImage
+from util import CliHints, parse_yaml_file, ctx, info, fail
+from product.model import Product, Component, ComponentReference, ContainerImage, merge_products
 from product.scanning import ProtecodeUtil
 import protecode.client
 
@@ -102,6 +103,20 @@ def component_descriptor(
         dependencies.add_container_image_dependency(ci_dependency)
 
     product_dict = {'components': [component.raw]}
-    print(yaml.dump([product_dict], indent=2))
+    print(yaml.dump(product_dict, indent=2))
 
+def merge_descriptors(descriptors: [str]):
+    if len(descriptors) < 2:
+        fail('at least two descriptors are required for merging')
+
+    parse_product_file = lambda f: Product.from_dict(parse_yaml_file(f))
+    merged = parse_product_file(descriptors[0])
+
+    for descriptor in map(parse_product_file, descriptors[1:]):
+        merged = merge_products(merged, descriptor)
+
+    # workaround snd-issues (TODO: remove snd)
+    cleansed_dict = json.loads(json.dumps(merged.raw))
+
+    print(yaml.dump(cleansed_dict, indent=2))
 
