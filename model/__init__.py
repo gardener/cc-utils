@@ -448,7 +448,7 @@ class GithubConfig(NamedModelElement):
         return self.snd.webhook_token
 
     def credentials(self):
-        return GithubCredentials(self.snd.technicalUser)
+        return GithubCredentials(self.raw.get('technicalUser'))
 
     def _required_attributes(self):
         return ['sshUrl', 'httpUrl', 'apiUrl', 'disable_tls_validation', 'webhook_token', 'technicalUser']
@@ -464,13 +464,16 @@ class GithubCredentials(BasicCredentials):
     Not intended to be instantiated by users of this module
     '''
     def auth_token(self):
-        return self.snd.authToken
+        return self.raw.get('authToken')
+
+    def set_auth_token(self, auth_token):
+        self.raw['authToken'] = auth_token
 
     def private_key(self):
-        return self.snd.privateKey
+        return self.raw.get('privateKey')
 
     def email_address(self):
-        return self.snd.emailAddress
+        return self.raw.get('emailAddress')
 
     def _required_attributes(self):
         required_attribs = set(super()._required_attributes())
