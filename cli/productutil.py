@@ -101,6 +101,7 @@ def component_descriptor(
         ci_dependency = ContainerImage.create(image_reference=container_image_dependency)
         dependencies.add_container_image_dependency(ci_dependency)
 
-    print(yaml.dump([component.raw], indent=2))
+    product_dict = {'components': [component.raw]}
+    print(yaml.dump([product_dict], indent=2))
 
 
