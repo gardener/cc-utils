@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from copy import copy
+from copy import deepcopy
 from enum import Enum
 
 from model.base import ModelBase, NamedModelElement
@@ -22,13 +22,18 @@ from util import parse_yaml_file, not_none
 #############################################################################
 ## product descriptor model
 
-class Product(NamedModelElement):
+class Product(ModelBase):
     @staticmethod
-    def from_dict(name: str, raw_dict: dict):
-        return Product(name=name, raw_dict=raw_dict)
+    def from_dict(raw_dict: dict):
+        return Product(raw_dict=raw_dict)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not 'components' in self.raw:
+            self.raw['components'] = []
 
     def components(self):
-        return map(Component, self.snd.components)
+        return map(Component, self.raw['components'])
 
     def component(self, component_reference):
         if not isinstance(component_reference, ComponentReference):
@@ -39,6 +44,9 @@ class Product(NamedModelElement):
             filter(lambda c: c == component_reference, self.components()),
             None
         )
+
+    def add_component(self, component):
+        self.raw['components'].append(component.raw)
 
 
 class ComponentReference(ModelBase):
@@ -61,7 +69,7 @@ class ComponentReference(ModelBase):
 class Component(ComponentReference):
     @staticmethod
     def create(name, version):
-        return Component(raw_dict={'name': name, 'version': version, 'dependencies':{}})
+        return Component(raw_dict={'name': name, 'version': version})
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -75,9 +83,9 @@ class Component(ComponentReference):
 class ComponentDependencies(ModelBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not self.snd.container_images:
+        if not 'container_images' in self.raw:
             self.raw['container_images'] = []
-        if not self.snd.components:
+        if not 'components' in self.raw:
             self.raw['components'] = []
 
     def container_images(self):
@@ -91,10 +99,10 @@ class ComponentDependencies(ModelBase):
         return map(ComponentReference, self.snd.components)
 
     def add_container_image_dependency(self, container_image):
-        self.raw['container_images'].append(container_image.raw)
+        self.raw.get('container_images').append(container_image.raw)
 
     def add_component_dependency(self, component_reference):
-        self.raw['components'].append(component_reference.raw)
+        self.raw.get('components').append(component_reference.raw)
 
 
 class ContainerImage(ModelBase):
@@ -104,6 +112,30 @@ class ContainerImage(ModelBase):
 
     def image_reference(self):
         return self.snd.image_reference
+
+
+def merge_products(left_product, right_product):
+    not_none(left_product)
+    not_none(right_product)
+
+    # start with a copy of left_product
+    merged = Product.from_dict(raw_dict=deepcopy(left_product.raw))
+    for component in right_product.components():
+        existing_component = merged.component(component)
+        if existing_component:
+            # it is acceptable to add an existing component iff it is identical
+            if existing_component.raw == component.raw:
+                continue # skip
+            else:
+                raise ValueError(
+                    'conflicting component definitions: {c1}, {c2}'.format(
+                        c1=':'.join((existing_component.name(), existing_component.version())),
+                        c2=':'.join((component.name(), component.version())),
+                    )
+                )
+        merged.add_component(component)
+
+    return merged
 
 
 #############################################################################

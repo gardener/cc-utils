@@ -32,7 +32,6 @@ def upload_product_images(
     protecode_util = ProtecodeUtil(protecode_api=protecode_api, group_id=protecode_group_id)
 
     product_model = Product.from_dict(
-        name='gardener-product',
         raw_dict=parse_yaml_file(product_cfg_file)
     )
 

@@ -11,12 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from copy import deepcopy
 
 import unittest
 
 import product.model
 
-class ProductDeserialisationTest(unittest.TestCase):
+class ProductModelTest(unittest.TestCase):
     def setUp(self):
         self.raw_dict = {
             'components':
@@ -52,7 +53,7 @@ class ProductDeserialisationTest(unittest.TestCase):
         }
 
     def test_deserialisation_returns_correct_model(self):
-        examinee = product.model.Product.from_dict(name='product_name', raw_dict=self.raw_dict)
+        examinee = product.model.Product.from_dict(raw_dict=self.raw_dict)
 
         components = list(examinee.components())
         self.assertEquals(len(components), 2)
@@ -82,4 +83,43 @@ class ProductDeserialisationTest(unittest.TestCase):
         self.assertEqual(len(list(second_dependencies.components())), 0)
         self.assertEqual(len(list(second_dependencies.container_images())), 0)
 
+    def test_merge_identical_products(self):
+        left_model = product.model.Product.from_dict(raw_dict=self.raw_dict)
+        right_model = product.model.Product.from_dict(raw_dict=self.raw_dict)
+
+        merged = product.model.merge_products(left_model, right_model)
+
+        components = list(merged.components())
+        self.assertEquals(len(components), 2)
+
+    def test_merge_conflicting_products_should_raise(self):
+        left_model = product.model.Product.from_dict(raw_dict=deepcopy(self.raw_dict))
+        right_model = product.model.Product.from_dict(raw_dict=deepcopy(self.raw_dict))
+
+        # add a new dependency to create a conflicting definition
+        container_image_dep = product.model.ContainerImage.create(image_reference='dontcare')
+        first_comp_deps = right_model.component(('first_component', 'first_version')).dependencies()
+        first_comp_deps.add_container_image_dependency(container_image_dep)
+
+        with self.assertRaises(ValueError):
+            product.model.merge_products(left_model, right_model)
+
+    def test_merge_products(self):
+        left_model = product.model.Product.from_dict(raw_dict={})
+        right_model = product.model.Product.from_dict(raw_dict={})
+
+        left_component1 = product.model.Component.create(name='lcomp1', version='1')
+        right_component1 = product.model.Component.create(name='rcomp1', version='2')
+
+        left_model.add_component(left_component1)
+        right_model.add_component(right_component1)
+
+        merged = product.model.merge_products(left_model, right_model)
+        print(merged.raw)
+
+        merged_components = list(merged.components())
+        self.assertEqual(len(merged_components), 2)
+
+        self.assertIsNotNone(merged.component(('lcomp1', '1')))
+        self.assertIsNotNone(merged.component(('rcomp1', '2')))
 
