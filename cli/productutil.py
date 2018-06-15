@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from concurrent.futures import ThreadPoolExecutor
+import yaml
 
 from util import CliHints, parse_yaml_file, ctx, info
-from product.model import Product
+from product.model import Product, Component, ComponentReference, ContainerImage
 from product.scanning import ProtecodeUtil
 import protecode.client
 
@@ -82,5 +83,25 @@ def _create_tasks(product_model, protecode_util):
                     wait_for_result=True,
                     )
 
+
+def component_descriptor(
+    name: str,
+    version: str,
+    component_dependencies: [str],
+    container_image_dependencies: [str],
+):
+    component = Component.create(name=name, version=version)
+    dependencies = component.dependencies()
+
+    for component_dependency_str in component_dependencies:
+        cname, cversion = component_dependency_str.split(':')
+        component_ref = ComponentReference.create(name=cname, version=cversion)
+        dependencies.add_component_dependency(component_ref)
+
+    for container_image_dependency in container_image_dependencies:
+        ci_dependency = ContainerImage.create(image_reference=container_image_dependency)
+        dependencies.add_container_image_dependency(ci_dependency)
+
+    print(yaml.dump([component.raw], indent=2))
 
 

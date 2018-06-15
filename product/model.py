@@ -42,6 +42,10 @@ class Product(NamedModelElement):
 
 
 class ComponentReference(ModelBase):
+    @staticmethod
+    def create(name, version):
+        return ComponentReference(raw_dict={'name': name, 'version': version})
+
     def name(self):
         return self.snd.name
 
@@ -55,15 +59,27 @@ class ComponentReference(ModelBase):
 
 
 class Component(ComponentReference):
+    @staticmethod
+    def create(name, version):
+        return Component(raw_dict={'name': name, 'version': version, 'dependencies':{}})
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.snd.dependencies:
+            self.raw['dependencies'] = {}
+
     def dependencies(self):
-        dependencies_dict = self.snd.dependencies
-        if dependencies_dict:
-            return ComponentDependencies(raw_dict=dependencies_dict)
-        else:
-            return ComponentDependencies(raw_dict={})
+        return ComponentDependencies(raw_dict=self.raw['dependencies'])
 
 
 class ComponentDependencies(ModelBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.snd.container_images:
+            self.raw['container_images'] = []
+        if not self.snd.components:
+            self.raw['components'] = []
+
     def container_images(self):
         if not self.snd.container_images:
             return ()
@@ -74,8 +90,18 @@ class ComponentDependencies(ModelBase):
             return ()
         return map(ComponentReference, self.snd.components)
 
+    def add_container_image_dependency(self, container_image):
+        self.raw['container_images'].append(container_image.raw)
+
+    def add_component_dependency(self, component_reference):
+        self.raw['components'].append(component_reference.raw)
+
 
 class ContainerImage(ModelBase):
+    @staticmethod
+    def create(image_reference):
+        return ContainerImage(raw_dict={'image_reference': image_reference})
+
     def image_reference(self):
         return self.snd.image_reference
 
