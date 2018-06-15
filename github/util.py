@@ -126,11 +126,9 @@ class GitHubHelper(object):
 
 def _create_github_api_object(
     github_cfg: 'GithubConfig',
-    auth_token: str=None
 ):
-    '''parameter 'auth_token' will override the token from 'github_cfg' '''
     github_url = github_cfg.http_url()
-    github_auth_token = auth_token if auth_token else github_cfg.credentials().auth_token()
+    github_auth_token = github_cfg.credentials().auth_token()
 
     github_verify_ssl = github_cfg.tls_validation()
 

@@ -39,9 +39,11 @@ def assign_github_team_to_repo(
     github_cfg = cfg_factory.github(github_cfg_name)
     github_username = github_cfg.credentials().username()
 
+    # overwrite auth_token
+    github_cfg.credentials().set_auth_token(auth_token=auth_token)
+
     github = _create_github_api_object(
         github_cfg=github_cfg,
-        auth_token=auth_token
     )
 
     _create_team(
