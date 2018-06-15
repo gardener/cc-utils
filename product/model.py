@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import copy
 from enum import Enum
 
 from model.base import ModelBase, NamedModelElement
@@ -29,8 +30,15 @@ class Product(NamedModelElement):
     def components(self):
         return map(Component, self.snd.components)
 
-    def component(self, name):
-        return next(filter(lambda c: c.name() == name, self.components()), None)
+    def component(self, component_reference):
+        if not isinstance(component_reference, ComponentReference):
+            name, version = component_reference
+            component_reference = ComponentReference(raw_dict={'name':name, 'version': version})
+
+        return next(
+            filter(lambda c: c == component_reference, self.components()),
+            None
+        )
 
 
 class ComponentReference(ModelBase):
@@ -39,6 +47,11 @@ class ComponentReference(ModelBase):
 
     def version(self):
         return self.snd.version
+
+    def __eq__(self, other):
+        if not isinstance(other, ComponentReference):
+            return False
+        return (self.name(), self.version()) == (other.name(), other.version())
 
 
 class Component(ComponentReference):

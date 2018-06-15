@@ -57,8 +57,8 @@ class ProductDeserialisationTest(unittest.TestCase):
         components = list(examinee.components())
         self.assertEquals(len(components), 2)
 
-        first_component = examinee.component('first_component')
-        second_component = examinee.component('second_component')
+        first_component = examinee.component(('first_component', 'first_version'))
+        second_component = examinee.component(('second_component', 'second_version'))
 
         self.assertEquals(first_component.name(), 'first_component')
         self.assertEquals(second_component.name(), 'second_component')
