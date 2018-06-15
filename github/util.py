@@ -130,6 +130,7 @@ class GitHubHelper(object):
             draft=draft,
             prerelease=prerelease,
         )
+        return release
 
     def retrieve_email_address(self, user_name):
         user = self.repository.user(user_name)
