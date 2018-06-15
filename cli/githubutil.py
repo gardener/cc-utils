@@ -117,7 +117,7 @@ def release_and_prepare_next_dev_cycle(
         author_name=author_name,
         author_email=author_email
     )
-    helper.repository.create_release(
+    helper.create_release(
       tag_name=release_version,
       body=release_notes,
       draft=False,

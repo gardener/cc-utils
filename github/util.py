@@ -117,6 +117,20 @@ class GitHubHelper(object):
             tagger=author
         )
 
+    def create_release(
+        self,
+        tag_name: str,
+        body: str,
+        draft: bool=False,
+        prerelease: bool=False,
+    ):
+        release = self.repository.create_release(
+            tag_name=tag_name,
+            body=body,
+            draft=draft,
+            prerelease=prerelease,
+        )
+
     def retrieve_email_address(self, user_name):
         user = self.repository.user(user_name)
         if not user:
