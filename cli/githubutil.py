@@ -78,6 +78,7 @@ def release_and_prepare_next_dev_cycle(
     prerelease_suffix: str="dev",
     author_name: str="gardener-ci",
     author_email: str="gardener.ci.user@gmail.com",
+    component_descriptor_file_path: str=None,
 ):
     # retrieve github-cfg from secrets-server
     from config import _retrieve_model_element
@@ -117,12 +118,23 @@ def release_and_prepare_next_dev_cycle(
         author_name=author_name,
         author_email=author_email
     )
-    helper.create_release(
+    release = helper.create_release(
       tag_name=release_version,
       body=release_notes,
       draft=False,
       prerelease=False
     )
+
+    if component_descriptor_file_path:
+        with open(component_descriptor_file_path) as f:
+            # todo: validate descriptor
+            component_descriptor_contents = f.read()
+        release.upload_asset(
+            content_type='application/x-yaml',
+            name='component_descriptor',
+            asset=component_descriptor_contents,
+            label='component_descriptor',
+        )
 
     # Prepare version file for next dev cycle
     helper.create_or_update_file(
