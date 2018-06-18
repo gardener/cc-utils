@@ -517,6 +517,7 @@ class ProtecodeConfig(NamedModelElement):
 class ProtecodeCredentials(BasicCredentials):
     pass
 
+
 class AwsProfile(NamedModelElement):
     def region(self):
         return self.snd.region
@@ -529,6 +530,7 @@ class AwsProfile(NamedModelElement):
 
     def _required_attributes(self):
         return ['region','access_key_id','secret_access_key']
+
 
 class ConcourseConfig(NamedModelElement):
     '''
@@ -572,6 +574,13 @@ class ConcourseConfig(NamedModelElement):
 
     def kubernetes_cluster_config(self):
         return self.snd.kubernetes_cluster_config
+
+    def disable_github_pr_webhooks(self):
+        '''
+        If set to True, the rendered concourse pull-request resources don't have webhooks configured.
+        This is because of problems using webhooks on our internal Github.
+        '''
+        return self.raw.get('disable_webhook_for_pr', False)
 
     def _required_attributes(self):
         return ['externalUrl', 'teams', 'helm_chart_default_values_config', 'kubernetes_cluster_config']
