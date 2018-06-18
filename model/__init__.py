@@ -450,6 +450,12 @@ class GithubConfig(NamedModelElement):
     def credentials(self):
         return GithubCredentials(self.raw.get('technicalUser'))
 
+    def use_polling_for_pr(self):
+        return self.snd.use_polling_for_pr
+
+    def polling_interval_for_pr(self):
+        return self.snd.polling_interval_for_pr
+
     def _required_attributes(self):
         return ['sshUrl', 'httpUrl', 'apiUrl', 'disable_tls_validation', 'webhook_token', 'technicalUser']
 
@@ -457,6 +463,8 @@ class GithubConfig(NamedModelElement):
         super()._validate_dict()
         # validation of credentials implicitly happens in the constructor
         self.credentials()
+        if self.use_polling_for_pr() and self.polling_interval_for_pr() is None:
+            raise ModelValidationError('Polling is configured for pull requests but no interval is defined.')
 
 
 class GithubCredentials(BasicCredentials):
