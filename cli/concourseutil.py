@@ -121,14 +121,22 @@ def render_pipelines(
     concourse_cfg = config_set.concourse()
     job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
 
-    github_enumerators = []
+    def_enumerators = []
     for job_mapping in job_mapping_set.job_mappings().values():
-        github_enumerators.append(
+        def_enumerators.append(
             GithubOrganisationDefinitionEnumerator(
                 job_mapping=job_mapping,
                 cfg_set=config_set
             )
         )
+        if job_mapping.definition_dirs():
+            def_enumerators.append(
+                MappingfileDefinitionEnumerator(
+                    base_dir=definitions_root_dir,
+                    job_mapping=job_mapping,
+                    cfg_set=config_set,
+                )
+            )
 
     preprocessor = DefinitionDescriptorPreprocessor()
 
@@ -142,7 +150,7 @@ def render_pipelines(
     deployer = FilesystemDeployer(base_dir=out_dir)
 
     replicator = PipelineReplicator(
-        definition_enumerators=github_enumerators,
+        definition_enumerators=def_enumerators,
         descriptor_preprocessor=preprocessor,
         definition_renderer=renderer,
         definition_deployer=deployer
