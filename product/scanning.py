@@ -35,10 +35,18 @@ class ProtecodeUtil(object):
         }
 
     def _upload_name(self, container_image, component):
+        image_reference = container_image.image_reference()
+        image_path, image_tag = image_reference.split(':')
+        image_name = image_path.split('/')[-1]
+        print('{c}_{i}_{v}'.format(
+            c=component.name(),
+            i=image_name,
+            v=image_tag,
+        ))
         return '{c}_{i}_{v}'.format(
             c=component.name(),
-            i=container_image.name(),
-            v=container_image.version(),
+            i=image_name,
+            v=image_tag,
         )
 
     def _metadata(self, container_image: ContainerImage, component: Component):
