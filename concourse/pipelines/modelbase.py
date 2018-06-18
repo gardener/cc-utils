@@ -152,9 +152,11 @@ class PipelineStep(ModelBase):
             # image must be a valid docker image reference
             allowed_characters = string.ascii_letters + string.digits +'.-_/:'
             if not all(map(lambda c: c in allowed_characters, image_reference)):
-                fail('forbidden character in image reference: ' + str(image_reference))
+                raise ModelValidationError('forbidden character in image reference: ' + str(image_reference))
             if not ':' in image_reference:
-                fail('image reference must contain colon charater:' + str(image_reference))
+                raise ModelValidationError('image reference must contain colon charater:' + str(image_reference))
+        if isinstance(self.raw.get('arguments', None), dict):
+            raise ModelValidationError('step arguments must be a scalar value or a list')
 
     def __str__(self):
         descr = 'PipelineStep {n} - depends: {d}, inputs: {i}, outputs: {o}'.format(
