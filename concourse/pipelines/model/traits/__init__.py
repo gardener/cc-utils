@@ -16,6 +16,7 @@ from util import ensure_not_none
 
 from concourse.pipelines.modelbase import ModelValidationError
 
+from .component_descriptor import ComponentDescriptorTrait
 from .cron import CronTrait
 from .publish import PublishTrait
 from .pullrequest import PullRequestTrait
@@ -26,6 +27,7 @@ from .version import VersionTrait
 TRAITS = {
     'version': VersionTrait,
     'cronjob': CronTrait,
+    'component_descriptor': ComponentDescriptorTrait,
     'pull-request': PullRequestTrait,
     'release': ReleaseTrait,
     'scheduling': SchedulingTrait,
