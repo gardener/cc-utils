@@ -1,4 +1,5 @@
 import string
+import shlex
 
 from abc import abstractmethod
 
@@ -72,6 +73,32 @@ class PipelineStep(ModelBase):
 
     def image(self):
         return self.raw.get('image', None)
+
+    def command_string(self):
+        '''Calculate and return the combined command-string consisting of the executable and all arguments.
+
+        If no arguments are specified, this method returns the shell-escaped executable as given by
+        `self.execute()`. If there is one argument specified, it is assumed to be properly shell-escaped and
+        the space-seperated concatenation of the shell-escaped executable and the argument is returned.
+        Finally, if a list of arguments is configured for the step, a space-seperated concatenation of the
+        shell-escaped executable and each argument (individually shell-escaped) is returned.
+
+        Returns
+        ------
+        str
+            A properly shell-escaped string consisting of the executable followed by all arguments.
+        '''
+        arguments = self.raw.get('arguments', None)
+        shell_escaped_executable = shlex.quote(self.execute())
+
+        if arguments is None:
+            shell_escaped_arguments = []
+        elif not isinstance(arguments, list):
+            shell_escaped_arguments = [str(arguments)]
+        else:
+            shell_escaped_arguments = [shlex.quote(str(argument)) for argument in arguments]
+
+        return ' '.join([shell_escaped_executable] + shell_escaped_arguments)
 
     def registry(self):
         return self.raw.get('registry', None)
