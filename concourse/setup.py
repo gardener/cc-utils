@@ -571,7 +571,7 @@ def generate_delaying_proxy_deployment(concourse_cfg: ConcourseConfig):
                 spec=V1PodSpec(
                     containers=[
                         V1Container(
-                            image='eu.gcr.io/gardener-project/cc/github-enterprise-proxy:0.1.0',
+                            image='eu.gcr.io/gardener-project/cc/github-enterprise-proxy:0.3.0',
                             image_pull_policy='IfNotPresent',
                             name='delaying-proxy',
                             ports=[
