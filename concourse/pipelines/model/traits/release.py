@@ -48,6 +48,6 @@ class ReleaseTraitTransformer(TraitTransformer):
         if main_repo:
             main_repo._trigger = False
 
-    def depends(self):
-        return {'publish'}
+    def dependencies(self):
+        return super().dependencies() | {'publish'}
 
