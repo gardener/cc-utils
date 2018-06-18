@@ -2,12 +2,12 @@ from util import ensure_not_none
 
 from concourse.pipelines.modelbase import ModelValidationError
 
-from .version import VersionTrait
 from .cron import CronTrait
+from .publish import PublishTrait
 from .pullrequest import PullRequestTrait
 from .release import ReleaseTrait
 from .scheduling import SchedulingTrait
-from .publish import PublishTrait
+from .version import VersionTrait
 
 TRAITS = {
     'version': VersionTrait,
