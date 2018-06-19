@@ -1,3 +1,4 @@
+import os
 import string
 import shlex
 
@@ -116,9 +117,13 @@ class PipelineStep(ModelBase):
     def registry(self):
         return self.raw.get('registry', None)
 
-    def executable(self):
-        # by default, run an executable named as the step
-        return self.raw.get('execute', self.name)
+    def executable(self, path_to_executable: str=None):
+        # by default, run an executable named as the step.
+        if path_to_executable is None:
+            executable = self.raw.get('execute', self.name)
+        else:
+            executable = os.path.join(path_to_executable, self.raw.get('execute', self.name))
+        return executable
 
     def output_dir(self):
         if not 'output_dir' in self.raw:
