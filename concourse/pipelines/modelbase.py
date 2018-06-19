@@ -87,7 +87,7 @@ class PipelineStep(ModelBase):
     def image(self):
         return self.raw.get('image', None)
 
-    def command_string(self):
+    def execute(self):
         '''Calculate and return the combined command-string consisting of the executable and all arguments.
 
         If no arguments are specified, this method returns the shell-escaped executable as given by
@@ -102,7 +102,7 @@ class PipelineStep(ModelBase):
             A properly shell-escaped string consisting of the executable followed by all arguments.
         '''
         arguments = self.raw.get('arguments', None)
-        shell_escaped_executable = shlex.quote(self.execute())
+        shell_escaped_executable = shlex.quote(self.executable())
 
         if arguments is None:
             shell_escaped_arguments = []
@@ -116,7 +116,7 @@ class PipelineStep(ModelBase):
     def registry(self):
         return self.raw.get('registry', None)
 
-    def execute(self):
+    def executable(self):
         # by default, run an executable named as the step
         return self.raw.get('execute', self.name)
 
