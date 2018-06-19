@@ -313,7 +313,7 @@ def ensure_helm_setup():
 
 # intentionally hard-coded; review / adjustment of "values.yaml" is required in most cases
 # of version upgrades
-CONCOURSE_HELM_CHART_VERSION = "1.3.0"
+CONCOURSE_HELM_CHART_VERSION = "1.9.0"
 
 def deploy_or_upgrade_concourse(
         default_helm_values: NamedModelElement,
