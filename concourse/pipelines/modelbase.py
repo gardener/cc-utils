@@ -116,9 +116,9 @@ class PipelineStep(ModelBase):
     def registry(self):
         return self.raw.get('registry', None)
 
-    def execute(self):
+    def execute(self, executable_path_prefix: str=''):
         # by default, run an executable named as the step
-        return self.raw.get('execute', self.name)
+        return os.path.join(executable_path_prefix, self.raw.get('execute', self.name))
 
     def output_dir(self):
         if not 'output_dir' in self.raw:
