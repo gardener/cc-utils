@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import datetime
+import functools
 import os
 import sys
 from enum import Enum
@@ -139,6 +140,7 @@ class GitHubHelper(object):
         return user
 
 
+@functools.lru_cache()
 def _create_github_api_object(
     github_cfg: 'GithubConfig',
 ):
