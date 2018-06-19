@@ -14,11 +14,8 @@ runtime dependencies). All functions are exposed via a command line interface
 
 ## Modules
 
-* `cli.py`: exposes all other modules' functions via a CLI
-* `concourseutil.py`: concourse utils exposed via CLI
+* `cli.py`: CLI generator
+* `cli/*.py`: all defined functions are exposed via cli.py <module_name> <function_name>
 * `concourse/*`: concourse utils / REST API client
 * `ctx.py`: used internally to pass arguments from CLI to modules
-* `gcloud.py`: utils to interact with Google Cloud
-* `github.py`: wrapper for GitHub API (webhook handling)
-* `kubeutil.py`: utils for kubernetes API calls (for integration-tests)
 * `util.py`: internal reuse functions shared by most modules
