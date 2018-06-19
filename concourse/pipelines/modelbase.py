@@ -1,3 +1,4 @@
+import os
 import string
 import shlex
 
@@ -87,14 +88,23 @@ class PipelineStep(ModelBase):
     def image(self):
         return self.raw.get('image', None)
 
-    def command_string(self):
-        '''Calculate and return the combined command-string consisting of the executable and all arguments.
+    def execute(self, path_to_executable: str=None):
+        '''Calculate and return a string consisting of the executable and all arguments.
 
         If no arguments are specified, this method returns the shell-escaped executable as given by
-        `self.execute()`. If there is one argument specified, it is assumed to be properly shell-escaped and
-        the space-seperated concatenation of the shell-escaped executable and the argument is returned.
+        `self.executable()`. If there is one argument specified, it is assumed to be properly shell-
+        escaped and the space-seperated concatenation of the shell-escaped executable and the argument
+        is returned.
         Finally, if a list of arguments is configured for the step, a space-seperated concatenation of the
         shell-escaped executable and each argument (individually shell-escaped) is returned.
+
+        If a path is passed as argument to this function it will be joined with the name of the executable
+        before shell-escaping.
+
+        Parameters
+        ---------
+        path_to_executable : str
+            A string representing the path to the shell-executable.
 
         Returns
         ------
@@ -102,7 +112,7 @@ class PipelineStep(ModelBase):
             A properly shell-escaped string consisting of the executable followed by all arguments.
         '''
         arguments = self.raw.get('arguments', None)
-        shell_escaped_executable = shlex.quote(self.execute())
+        shell_escaped_executable = shlex.quote(self.executable(path_to_executable))
 
         if arguments is None:
             shell_escaped_arguments = []
@@ -116,9 +126,13 @@ class PipelineStep(ModelBase):
     def registry(self):
         return self.raw.get('registry', None)
 
-    def execute(self):
-        # by default, run an executable named as the step
-        return self.raw.get('execute', self.name)
+    def executable(self, path_to_executable: str=None):
+        # by default, run an executable named as the step.
+        if path_to_executable is None:
+            executable = self.raw.get('execute', self.name)
+        else:
+            executable = os.path.join(path_to_executable, self.raw.get('execute', self.name))
+        return executable
 
     def output_dir(self):
         if not 'output_dir' in self.raw:
