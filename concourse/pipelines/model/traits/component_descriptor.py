@@ -40,6 +40,9 @@ class ComponentDescriptorTrait(Trait):
         if not step['name'] == 'component_descriptor':
             raise ModelValidationError('component_descriptor step name must be component_descriptor')
 
+    def component_name(self):
+        return self.raw['component_name']
+
     def step_name(self):
         return self.raw['step']['name']
 
