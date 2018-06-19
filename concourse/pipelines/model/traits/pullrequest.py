@@ -14,7 +14,8 @@
 
 from util import ensure_not_none
 
-from concourse.pipelines.modelbase import Trait, TraitTransformer, ModelBase, PipelineStep, ScriptType
+from concourse.pipelines.model.step import PipelineStep
+from concourse.pipelines.modelbase import Trait, TraitTransformer, ModelBase, ScriptType
 
 class PullRequestPolicies(ModelBase):
     def require_label(self):

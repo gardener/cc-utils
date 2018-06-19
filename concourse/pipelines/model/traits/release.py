@@ -14,8 +14,8 @@
 
 from util import ensure_not_none
 
+from concourse.pipelines.model.step import PipelineStep
 from concourse.pipelines.modelbase import (
-  PipelineStep,
   Trait,
   TraitTransformer
 )

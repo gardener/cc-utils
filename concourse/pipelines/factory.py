@@ -4,8 +4,8 @@ import toposort
 
 from util import merge_dicts
 from model.base import ModelValidationError
+from concourse.pipelines.model.step import PipelineStep
 from concourse.pipelines.modelbase import (
-        PipelineStep,
         normalise_to_dict,
         ensure_not_none,
 )
