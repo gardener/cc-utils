@@ -92,7 +92,7 @@ class PipelineStep(ModelBase):
         execute = self.raw.get('execute', self.name)
         if not isinstance(execute, list):
             return [str(execute)]
-        return map(lambda e: shlex.quote(str(e)), execute)
+        return [shlex.quote(str(e)) for e in execute]
 
     def executable(self, prefix=''):
         # by default, run an executable named as the step
