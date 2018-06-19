@@ -144,16 +144,18 @@ def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
     instance_specific_values = {
         'concourse': {
             'externalURL': external_url,
+            'githubAuth': {
+                'team': creds.github_auth_team(),
+                'authUrl': creds.github_auth_auth_url(),
+                'tokenUrl': creds.github_auth_token_url(),
+                'apiUrl': creds.github_auth_api_url(),
+            }
         },
         'secrets': {
             'basicAuthUsername': creds.username(),
             'basicAuthPassword': creds.passwd(),
-            'githubAuthAuthUrl': creds.github_auth_auth_url(),
-            'githubAuthTokenUrl': creds.github_auth_token_url(),
-            'githubAuthApiUrl': creds.github_auth_api_url(),
             'githubAuthClientId': creds.github_auth_client_id(),
             'githubAuthClientSecret': creds.github_auth_client_secret(),
-            'githubAuthTeam': creds.github_auth_team(),
         },
         'web': {
             'ingress': {
