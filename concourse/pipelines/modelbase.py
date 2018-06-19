@@ -88,40 +88,22 @@ class PipelineStep(ModelBase):
     def image(self):
         return self.raw.get('image', None)
 
-    def command_string(self):
-        '''Calculate and return the combined command-string consisting of the executable and all arguments.
-
-        If no arguments are specified, this method returns the shell-escaped executable as given by
-        `self.execute()`. If there is one argument specified, it is assumed to be properly shell-escaped and
-        the space-seperated concatenation of the shell-escaped executable and the argument is returned.
-        Finally, if a list of arguments is configured for the step, a space-seperated concatenation of the
-        shell-escaped executable and each argument (individually shell-escaped) is returned.
-
-        Returns
-        ------
-        str
-            A properly shell-escaped string consisting of the executable followed by all arguments.
-        '''
-        arguments = self.raw.get('arguments', None)
-        shell_escaped_executable = shlex.quote(self.execute())
-
-        if arguments is None:
-            shell_escaped_arguments = []
-        elif not isinstance(arguments, list):
-            shell_escaped_arguments = [str(arguments)]
-        else:
-            shell_escaped_arguments = [shlex.quote(str(argument)) for argument in arguments]
-
-        return ' '.join([shell_escaped_executable] + shell_escaped_arguments)
+    def _argv(self):
+        execute = self.raw.get('execute', self.name)
+        if not isinstance(execute, list):
+            return [str(execute)]
+        return map(lambda e: shlex.quote(str(e)), execute)
 
     def executable(self, prefix=''):
         # by default, run an executable named as the step
         if isinstance(prefix, str):
             prefix = [prefix]
-        return os.path.join(*prefix, self.raw.get('execute', self.name))
+        return os.path.join(*prefix, self._argv()[0])
 
     def execute(self, prefix=''):
-        return self.executable(prefix=prefix)
+        argv = self._argv()
+        argv[0] = self.executable(prefix=prefix)
+        return ' '.join(argv)
 
     def registry(self):
         return self.raw.get('registry', None)
@@ -174,8 +156,6 @@ class PipelineStep(ModelBase):
                 raise ModelValidationError('forbidden character in image reference: ' + str(image_reference))
             if not ':' in image_reference:
                 raise ModelValidationError('image reference must contain colon charater:' + str(image_reference))
-        if isinstance(self.raw.get('arguments', None), dict):
-            raise ModelValidationError('step arguments must be a scalar value or a list')
 
     def __str__(self):
         descr = 'PipelineStep {n} - depends: {d}, inputs: {i}, outputs: {o}'.format(
