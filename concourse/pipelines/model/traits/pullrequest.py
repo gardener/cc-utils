@@ -14,7 +14,7 @@
 
 from util import ensure_not_none
 
-from concourse.pipelines.modelbase import Trait, TraitTransformer, ModelBase, PipelineStep
+from concourse.pipelines.modelbase import Trait, TraitTransformer, ModelBase, PipelineStep, ScriptType
 
 class PullRequestPolicies(ModelBase):
     def require_label(self):
@@ -43,7 +43,12 @@ class PullRequestTraitTransformer(TraitTransformer):
 
     def inject_steps(self):
         # declare no dependencies --> run asap, but do not block other steps
-        rm_pr_label_step = PipelineStep(name='rm_pr_label', raw_dict={}, is_synthetic=True)
+        rm_pr_label_step = PipelineStep(
+                name='rm_pr_label',
+                raw_dict={},
+                is_synthetic=True,
+                script_type=ScriptType.PYTHON3
+        )
         yield rm_pr_label_step
 
     def process_pipeline_args(self, pipeline_args: 'PipelineArgs'):
