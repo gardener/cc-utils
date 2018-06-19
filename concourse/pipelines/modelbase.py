@@ -2,6 +2,7 @@ import string
 import shlex
 
 from abc import abstractmethod
+from enum import Enum
 
 from model.base import ModelValidationError
 
@@ -53,11 +54,16 @@ class TraitTransformer(object):
     def process_pipeline_args(self, pipeline_args: 'PipelineArgs'):
         raise NotImplementedError()
 
+class ScriptType(Enum):
+    BOURNE_SHELL = 0
+    PYTHON3 = 1
+
 
 class PipelineStep(ModelBase):
-    def __init__(self, name, is_synthetic=False, *args, **kwargs):
+    def __init__(self, name, is_synthetic=False, script_type=ScriptType.BOURNE_SHELL, *args, **kwargs):
         self.name = name
         self.is_synthetic = is_synthetic
+        self._script_type = script_type
         self._outputs_dict = {}
         self._inputs_dict = {}
         super().__init__(*args, **kwargs)
@@ -70,6 +76,13 @@ class PipelineStep(ModelBase):
         if raw_dict.get('output_dir', None):
             name = raw_dict['output_dir']
             self.add_output(name + '_path', name + '_path')
+
+    def script_type(self) -> ScriptType:
+        '''
+        returns the step's "script type". The script type specifies the execution environment in which
+        the script payload is run (script payloads are hard-coded in pipeline templates).
+        '''
+        return self._script_type
 
     def image(self):
         return self.raw.get('image', None)
