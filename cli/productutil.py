@@ -152,7 +152,7 @@ def add_dependencies(
         raise('component {c}:{v} was not found in {f}'.format(
             c=component_name,
             v=component_version,
-            f=descriptor_file
+            f=descriptor_src_file
             )
         )
     _parse_and_add_dependencies(
