@@ -18,8 +18,13 @@ from github3.exceptions import NotFoundError
 
 from util import ctx, not_empty, info, warning, verbose, CliHint
 from github import GithubWebHookSyncer, CONCOURSE_ID
-from github.util import (GitHubHelper, _create_github_api_object,
-                         _create_team, _add_user_to_team, _add_all_repos_to_team)
+from github.util import (
+    GitHubHelper,
+    _create_github_api_object,
+    _create_team,
+    _add_user_to_team,
+    _add_all_repos_to_team
+)
 import product.model
 
 
