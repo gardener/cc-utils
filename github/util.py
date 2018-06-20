@@ -14,6 +14,7 @@
 
 import datetime
 import functools
+import io
 import os
 import sys
 from enum import Enum
@@ -138,6 +139,21 @@ class GitHubHelper(object):
         if not user:
             util.fail('no such user: {u}'.format(u=user_name))
         return user
+
+    def retrieve_asset_contents(self, release_tag: str, asset_label: str):
+        util.not_none(release_tag)
+        util.not_none(asset_label)
+
+        release = self.repository.release_from_tag(release_tag)
+        for asset in release.assets():
+            if asset.label == asset_label:
+                break
+        else:
+            raise ValueError('no asset with label {l} found'.format(l=asset_label))
+
+        buffer = io.BytesIO()
+        asset.download(buffer)
+        return buffer.getvalue().decode()
 
 
 @functools.lru_cache()
