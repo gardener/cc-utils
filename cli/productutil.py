@@ -16,7 +16,8 @@ import yaml
 import json
 
 from util import CliHints, parse_yaml_file, ctx, info, fail
-from product.model import Product, Component, ComponentReference, ContainerImage, merge_products
+from product.model import Product, Component, ComponentReference, ContainerImage
+from product.util import merge_products
 from product.scanning import ProtecodeUtil
 import protecode.client
 
@@ -104,6 +105,7 @@ def component_descriptor(
 
     product_dict = {'components': [component.raw]}
     print(yaml.dump(product_dict, indent=2))
+
 
 def merge_descriptors(descriptors: [str]):
     if len(descriptors) < 2:

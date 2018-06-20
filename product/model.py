@@ -114,30 +114,6 @@ class ContainerImage(ModelBase):
         return self.snd.image_reference
 
 
-def merge_products(left_product, right_product):
-    not_none(left_product)
-    not_none(right_product)
-
-    # start with a copy of left_product
-    merged = Product.from_dict(raw_dict=deepcopy(dict(left_product.raw.items())))
-    for component in right_product.components():
-        existing_component = merged.component(component)
-        if existing_component:
-            # it is acceptable to add an existing component iff it is identical
-            if existing_component.raw == component.raw:
-                continue # skip
-            else:
-                raise ValueError(
-                    'conflicting component definitions: {c1}, {c2}'.format(
-                        c1=':'.join((existing_component.name(), existing_component.version())),
-                        c2=':'.join((component.name(), component.version())),
-                    )
-                )
-        merged.add_component(component)
-
-    return merged
-
-
 #############################################################################
 ## upload result model
 
