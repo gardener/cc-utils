@@ -15,11 +15,10 @@ from concurrent.futures import ThreadPoolExecutor
 import yaml
 import json
 
-from github.util import GitHubHelper, _create_github_api_object
 from util import CliHints, parse_yaml_file, ctx, info, fail
 import product.model
 from product.model import Product, Component, ComponentReference, ContainerImage
-from product.util import merge_products
+from product.util import merge_products, ComponentDescriptorResolver
 from product.scanning import ProtecodeUtil
 import protecode.client
 
@@ -134,15 +133,13 @@ def retrieve_component_descriptor(
     cfg_factory = ctx().cfg_factory()
     github_cfg = cfg_factory.github(github_cfg_name)
 
-    github_helper = GitHubHelper(
+    resolver = ComponentDescriptorResolver(
         github_cfg=github_cfg,
-        repository_owner=github_org,
-        repository_name=name
+        github_organisation=github_org,
     )
 
-    print(github_helper.retrieve_asset_contents(
-        release_tag=version,
-        asset_label=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME
-        )
-    )
+    component_reference = ComponentReference.create(name=name, version=version)
+    resolved_descriptor = resolver.retrieve_component_descriptor(component_reference)
+
+    print(resolved_descriptor)
 
