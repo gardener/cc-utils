@@ -14,7 +14,10 @@
 
 import os
 
-from util import fail, info, parse_yaml_file
+import yaml
+
+from github.util import GitHubRepositoryHelper, _create_github_api_object
+from util import fail, info
 from model import ConfigFactory
 from concourse.client import ConcourseApi
 from concourse.pipelines.replicator import Renderer, ConcourseDeployer, DeployStatus
@@ -45,13 +48,24 @@ def deploy_and_run_smoketest_pipeline(
     # our pipelines repository
     calcdir = lambda path: os.path.join(cc_pipelines_repo_dir, path)
 
-    pipeline_definition_file = calcdir('definitions/test/cc-smoketest.yaml')
     template_path = calcdir('templates')
     template_include_dir = cc_pipelines_repo_dir
     pipeline_name = 'cc-smoketest'
     job_name = 'cc-smoketest-master-head-update-job'
 
-    pipeline_definition = parse_yaml_file(pipeline_definition_file, as_snd=False)
+    # retrieve pipeline-definition from github at hardcoded location
+    github_cfg = config_set.github()
+    helper = GitHubRepositoryHelper(
+      github_cfg=github_cfg,
+      owner='kubernetes',
+      name='cc-smoketest',
+    )
+    pipeline_definition = yaml.load(
+        helper.retrieve_text_file_contents(
+            file_path='.ci/smoketest-pipeline.yaml',
+        ),
+    )
+
     definition_descriptor = DefinitionDescriptor(
         pipeline_name=pipeline_name,
         pipeline_definition=pipeline_definition[pipeline_name],
