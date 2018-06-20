@@ -16,7 +16,7 @@ from copy import deepcopy
 import itertools
 import yaml
 
-from github.util import GitHubHelper
+from github.util import GitHubRepositoryHelper
 from util import not_none
 from .model import Product, COMPONENT_DESCRIPTOR_ASSET_NAME
 
@@ -30,7 +30,7 @@ class ComponentDescriptorResolver(object):
         self.github_cfg = github_cfg
 
     def _repository_helper(self, component_reference):
-        return GitHubHelper(
+        return GitHubRepositoryHelper(
             github_cfg=self.github_cfg,
             repository_owner=self.github_organisation,
             repository_name=component_reference.name(),

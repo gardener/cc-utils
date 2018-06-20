@@ -35,7 +35,7 @@ class RepoPermission(Enum):
     ADMIN = "admin"
 
 
-class GitHubHelper(object):
+class GitHubRepositoryHelper(object):
     GITHUB_TIMESTAMP_UTC_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
     def __init__(
@@ -213,7 +213,7 @@ def replicate_pipeline_definitions(
         repo_owner, repo_name = repo_path.split('/')
 
 
-        helper = GitHubHelper(
+        helper = GitHubRepositoryHelper(
             github_cfg=github_cfg,
             repository_owner=repo_owner,
             repository_name=repo_name,
