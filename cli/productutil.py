@@ -139,7 +139,28 @@ def retrieve_component_descriptor(
     )
 
     component_reference = ComponentReference.create(name=name, version=version)
-    resolved_descriptor = resolver.retrieve_component_descriptor(component_reference)
+    resolved_descriptor = resolver.retrieve_raw_descriptor(component_reference)
 
     print(resolved_descriptor)
+
+
+def resolve_component_descriptor(
+    component_descriptor_file: CliHints.existing_file(),
+    github_org: str='gardener',
+    github_cfg_name: str='github_com'
+):
+    cfg_factory = ctx().cfg_factory()
+    github_cfg = cfg_factory.github(github_cfg_name)
+
+    resolver = ComponentDescriptorResolver(
+        github_cfg=github_cfg,
+        github_organisation=github_org,
+    )
+
+    with open(component_descriptor_file) as f:
+        component_descriptor = Product.from_dict(yaml.load(f))
+
+    resolved_descriptor = resolver.resolve_component_references(product=component_descriptor)
+
+    print(yaml.dump(resolved_descriptor.raw))
 

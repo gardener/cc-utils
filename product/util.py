@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from copy import deepcopy
+import itertools
 import yaml
 
 from github.util import GitHubHelper
@@ -35,7 +36,7 @@ class ComponentDescriptorResolver(object):
             repository_name=component_reference.name(),
         )
 
-    def retrieve_component_descriptor(self, component_reference, as_dict=False):
+    def retrieve_raw_descriptor(self, component_reference, as_dict=False):
         repo_helper = self._repository_helper(component_reference)
         dependency_descriptor = repo_helper.retrieve_asset_contents(
                 release_tag=component_reference.version(),
@@ -46,12 +47,29 @@ class ComponentDescriptorResolver(object):
         else:
             return dependency_descriptor
 
-    def resolve(self, component_reference):
-        dependency_descriptor = self.retrieve_component_descriptor(
+    def retrieve_descriptor(self, component_reference):
+        dependency_descriptor = self.retrieve_raw_descriptor(
             component_reference=component_reference,
             as_dict=True,
         )
         return Product.from_dict(dependency_descriptor)
+
+    def resolve_component_references(
+        self,
+        product,
+    ):
+        def unresolved_references(component):
+            component_references = component.dependencies().components()
+            yield from filter(lambda cr: not product.component(cr), component_references)
+
+        merged = Product.from_dict(raw_dict=deepcopy(dict(product.raw.items())))
+
+        for component_reference in itertools.chain(*map(unresolved_references, product.components())):
+            resolved_descriptor = self.retrieve_descriptor(component_reference)
+            merged = merge_products(merged, resolved_descriptor)
+
+        return merged
+
 
 
 def merge_products(left_product, right_product):
@@ -77,21 +95,5 @@ def merge_products(left_product, right_product):
 
     return merged
 
-
-def resolve_component_references(
-    product,
-    component_descriptor_resolver,
-):
-    def unresolved_references(component):
-        component_references = component.dependencies().components()
-        yield from filter(lambda cr: not product.component(cr), component_references)
-
-    merged = Product.from_dict(raw_dict=deepcopy(dict(product.raw.items())))
-
-    for component_reference in map(unresolved_references, product.components()):
-        resolved_descriptor = component_descriptor_resolver.resolve(component_reference)
-        merged = merge_products(merged, resolved_descriptor)
-
-    return merged
 
 
