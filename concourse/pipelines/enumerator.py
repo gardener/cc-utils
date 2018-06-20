@@ -26,6 +26,7 @@ from util import (
     parse_yaml_file,
     merge_dicts,
     info,
+    verbose,
     ensure_directory_exists,
     not_empty,
     not_none,
@@ -119,13 +120,13 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
         self.cfg_set = not_none(cfg_set)
 
     def enumerate_definition_descriptors(self):
-        info('scanning repositories')
         executor = ThreadPoolExecutor(max_workers=6)
 
         # scan github repositories
         for github_org_cfg in self.job_mapping.github_organisations():
             github_cfg = self.cfg_set.github(github_org_cfg.github_cfg_name())
             github_org_name = github_org_cfg.org_name()
+            info('scanning github organisation {gho}'.format(gho=github_org_name))
 
             branch_filter = lambda b: b == 'master'
             github_api = _create_github_api_object(github_cfg)
@@ -154,7 +155,7 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
             except NotFoundError:
                 continue # no pipeline definition for this branch
 
-            info('from repo: ' + repository.name + ':' + branch_name)
+            verbose('from repo: ' + repository.name + ':' + branch_name)
             definitions = yaml.load(definitions.decoded.decode('utf-8'))
             yield from self._wrap_into_descriptors(
                 repo_path='/'.join([org_name, repository.name]),

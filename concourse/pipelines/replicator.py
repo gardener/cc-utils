@@ -143,6 +143,7 @@ class Renderer(object):
     def render(self, definition_descriptor):
         try:
             definition_descriptor = self._render(definition_descriptor)
+            info('rendered pipeline {pn}'.format(pn=definition_descriptor.pipeline_name))
             return RenderResult(
                 definition_descriptor,
                 render_status=RenderStatus.SUCCEEDED,
