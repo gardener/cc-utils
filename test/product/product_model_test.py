@@ -16,6 +16,7 @@ from copy import deepcopy
 import unittest
 
 import product.model
+import product.util
 
 class ProductModelTest(unittest.TestCase):
     def setUp(self):
@@ -87,7 +88,7 @@ class ProductModelTest(unittest.TestCase):
         left_model = product.model.Product.from_dict(raw_dict=self.raw_dict)
         right_model = product.model.Product.from_dict(raw_dict=self.raw_dict)
 
-        merged = product.model.merge_products(left_model, right_model)
+        merged = product.util.merge_products(left_model, right_model)
 
         components = list(merged.components())
         self.assertEquals(len(components), 2)
@@ -102,7 +103,7 @@ class ProductModelTest(unittest.TestCase):
         first_comp_deps.add_container_image_dependency(container_image_dep)
 
         with self.assertRaises(ValueError):
-            product.model.merge_products(left_model, right_model)
+            product.util.merge_products(left_model, right_model)
 
     def test_merge_products(self):
         left_model = product.model.Product.from_dict(raw_dict={})
@@ -114,7 +115,7 @@ class ProductModelTest(unittest.TestCase):
         left_model.add_component(left_component1)
         right_model.add_component(right_component1)
 
-        merged = product.model.merge_products(left_model, right_model)
+        merged = product.util.merge_products(left_model, right_model)
         print(merged.raw)
 
         merged_components = list(merged.components())
