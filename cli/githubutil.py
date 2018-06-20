@@ -102,10 +102,8 @@ def release_and_prepare_next_dev_cycle(
         prerelease=prerelease_suffix
     )
 
-    github = _create_github_api_object(github_cfg=github_cfg)
-
     helper = GitHubHelper(
-        github=github,
+        github_cfg=github_cfg,
         repository_owner=github_repository_owner,
         repository_name=github_repository_name,
     )

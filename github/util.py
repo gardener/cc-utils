@@ -40,11 +40,11 @@ class GitHubHelper(object):
 
     def __init__(
         self,
-        github: GitHub,
+        github_cfg,
         repository_owner: str,
         repository_name: str,
     ):
-        self.github = github
+        self.github = _create_github_api_object(github_cfg)
         self.repository = self._create_repository(
             repository_owner=repository_owner,
             repository_name=repository_name
@@ -202,8 +202,6 @@ def replicate_pipeline_definitions(
     cfg_set = cfg_factory.cfg_set(cfg_name)
     github_cfg = cfg_set.github()
 
-    github = _create_github_api_object(github_cfg=github_cfg)
-
     repo_mappings = util.parse_yaml_file(os.path.join(definition_dir, '.repository_mapping'))
 
     for repo_path, definition_file in repo_mappings.items():
@@ -216,7 +214,7 @@ def replicate_pipeline_definitions(
 
 
         helper = GitHubHelper(
-            github=github,
+            github_cfg=github_cfg,
             repository_owner=repo_owner,
             repository_name=repo_name,
         )

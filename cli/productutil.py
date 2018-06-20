@@ -135,7 +135,7 @@ def retrieve_component_descriptor(
     github_cfg = cfg_factory.github(github_cfg_name)
 
     github_helper = GitHubHelper(
-        github=_create_github_api_object(github_cfg),
+        github_cfg=github_cfg,
         repository_owner=github_org,
         repository_name=name
     )
