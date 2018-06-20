@@ -15,7 +15,9 @@ from concurrent.futures import ThreadPoolExecutor
 import yaml
 import json
 
+from github.util import GitHubHelper, _create_github_api_object
 from util import CliHints, parse_yaml_file, ctx, info, fail
+import product.model
 from product.model import Product, Component, ComponentReference, ContainerImage
 from product.util import merge_products
 from product.scanning import ProtecodeUtil
@@ -121,4 +123,26 @@ def merge_descriptors(descriptors: [str]):
     cleansed_dict = json.loads(json.dumps(merged.raw))
 
     print(yaml.dump(cleansed_dict, indent=2))
+
+
+def retrieve_component_descriptor(
+    name: str,
+    version: str,
+    github_org: str='gardener',
+    github_cfg_name: str='github_com',
+):
+    cfg_factory = ctx().cfg_factory()
+    github_cfg = cfg_factory.github(github_cfg_name)
+
+    github_helper = GitHubHelper(
+        github=_create_github_api_object(github_cfg),
+        repository_owner=github_org,
+        repository_name=name
+    )
+
+    print(github_helper.retrieve_asset_contents(
+        release_tag=version,
+        asset_label=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME
+        )
+    )
 
