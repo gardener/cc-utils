@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import functools
+
 '''
 Execution context. Filled upon invocation of cli.py, read by submodules
 '''
@@ -36,6 +38,7 @@ def _cfg_factory_from_secrets_server():
     return config._parse_model(config._client().retrieve_secrets())
 
 
+@functools.lru_cache()
 def cfg_factory():
     from util import fail
 
