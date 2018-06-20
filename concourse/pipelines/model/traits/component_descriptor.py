@@ -20,6 +20,7 @@ from concourse.pipelines.modelbase import (
   Trait,
   TraitTransformer,
   ModelValidationError,
+  ScriptType,
   normalise_to_dict,
 )
 
@@ -62,7 +63,8 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
         self.descriptor_step = PipelineStep(
             name=self.trait.step_name(),
             raw_dict={},
-            is_synthetic=True
+            is_synthetic=True,
+            script_type=ScriptType.PYTHON3,
         )
         self.descriptor_step.add_output('component_descriptor_dir', 'component_descriptor_dir')
         yield self.descriptor_step
