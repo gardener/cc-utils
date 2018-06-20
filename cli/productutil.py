@@ -136,13 +136,14 @@ def merge_descriptors(descriptors: [str]):
     print(yaml.dump(cleansed_dict, indent=2))
 
 def add_dependencies(
-    descriptor_file: CliHints.existing_file(),
+    descriptor_src_file: CliHints.existing_file(),
     component_name: str,
     component_version: str,
+    descriptor_out_file: str=None,
     component_dependencies: [str]=[],
     container_image_dependencies: [str]=[]
 ):
-    product = Product.from_dict(parse_yaml_file(descriptor_file))
+    product = Product.from_dict(parse_yaml_file(descriptor_src_file))
 
     component = product.component(
         ComponentReference.create(name=component_name, version=component_version)
@@ -161,7 +162,11 @@ def add_dependencies(
     )
 
     product_dict = json.loads(json.dumps({'components': [component.raw]}))
-    print(yaml.dump(product_dict, indent=2))
+    if not descriptor_out_file:
+        print(yaml.dump(product_dict, indent=2))
+    else:
+        with open(descriptor_out_file, 'w') as f:
+            yaml.dump(product_dict, f, indent=2)
 
 
 def retrieve_component_descriptor(
