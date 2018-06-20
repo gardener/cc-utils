@@ -86,13 +86,11 @@ def _create_tasks(product_model, protecode_util):
                     )
 
 
-def component_descriptor(
-    name: str,
-    version: str,
-    component_dependencies: [str],
-    container_image_dependencies: [str],
+def _parse_and_add_dependencies(
+    component,
+    component_dependencies,
+    container_image_dependencies,
 ):
-    component = Component.create(name=name, version=version)
     dependencies = component.dependencies()
 
     for component_dependency_str in component_dependencies:
@@ -103,6 +101,20 @@ def component_descriptor(
     for container_image_dependency in container_image_dependencies:
         ci_dependency = ContainerImage.create(image_reference=container_image_dependency)
         dependencies.add_container_image_dependency(ci_dependency)
+
+
+def component_descriptor(
+    name: str,
+    version: str,
+    component_dependencies: [str],
+    container_image_dependencies: [str],
+):
+    component = Component.create(name=name, version=version)
+    _parse_and_add_dependencies(
+        component,
+        component_dependencies,
+        container_image_dependencies,
+    )
 
     product_dict = {'components': [component.raw]}
     print(yaml.dump(product_dict, indent=2))
@@ -122,6 +134,34 @@ def merge_descriptors(descriptors: [str]):
     cleansed_dict = json.loads(json.dumps(merged.raw))
 
     print(yaml.dump(cleansed_dict, indent=2))
+
+def add_dependencies(
+    descriptor_file: CliHints.existing_file(),
+    component_name: str,
+    component_version: str,
+    component_dependencies: [str]=[],
+    container_image_dependencies: [str]=[]
+):
+    product = Product.from_dict(parse_yaml_file(descriptor_file))
+
+    component = product.component(
+        ComponentReference.create(name=component_name, version=component_version)
+    )
+    if not component:
+        raise('component {c}:{v} was not found in {f}'.format(
+            c=component_name,
+            v=component_version,
+            f=descriptor_file
+            )
+        )
+    _parse_and_add_dependencies(
+        component,
+        component_dependencies,
+        container_image_dependencies,
+    )
+
+    product_dict = json.loads(json.dumps({'components': [component.raw]}))
+    print(yaml.dump(product_dict, indent=2))
 
 
 def retrieve_component_descriptor(
