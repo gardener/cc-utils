@@ -19,7 +19,7 @@ from github3.exceptions import NotFoundError
 from util import ctx, not_empty, info, warning, verbose, CliHint
 from github import GithubWebHookSyncer, CONCOURSE_ID
 from github.util import (
-    GitHubHelper,
+    GitHubRepositoryHelper,
     _create_github_api_object,
     _create_team,
     _add_user_to_team,
@@ -102,7 +102,7 @@ def release_and_prepare_next_dev_cycle(
         prerelease=prerelease_suffix
     )
 
-    helper = GitHubHelper(
+    helper = GitHubRepositoryHelper(
         github_cfg=github_cfg,
         repository_owner=github_repository_owner,
         repository_name=github_repository_name,
