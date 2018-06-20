@@ -22,6 +22,9 @@ from util import parse_yaml_file, not_none
 #############################################################################
 ## product descriptor model
 
+# the asset name component descriptors are stored as part of component github releases
+COMPONENT_DESCRIPTOR_ASSET_NAME = 'component_descriptor'
+
 class Product(ModelBase):
     @staticmethod
     def from_dict(raw_dict: dict):

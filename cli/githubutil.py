@@ -20,6 +20,7 @@ from util import ctx, not_empty, info, warning, verbose, CliHint
 from github import GithubWebHookSyncer, CONCOURSE_ID
 from github.util import (GitHubHelper, _create_github_api_object,
                          _create_team, _add_user_to_team, _add_all_repos_to_team)
+import product.model
 
 
 def assign_github_team_to_repo(
@@ -131,9 +132,9 @@ def release_and_prepare_next_dev_cycle(
             component_descriptor_contents = f.read()
         release.upload_asset(
             content_type='application/x-yaml',
-            name='component_descriptor',
+            name=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
             asset=component_descriptor_contents,
-            label='component_descriptor',
+            label=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
         )
 
     # Prepare version file for next dev cycle
