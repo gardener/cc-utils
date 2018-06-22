@@ -104,14 +104,14 @@ def release_and_prepare_next_dev_cycle(
 
     helper = GitHubRepositoryHelper(
         github_cfg=github_cfg,
-        repository_owner=github_repository_owner,
-        repository_name=github_repository_name,
+        owner=github_repository_owner,
+        name=github_repository_name,
+        default_branch=repository_branch,
     )
 
     # Persist version change, create release commit
     release_commit_sha = helper.create_or_update_file(
-        repository_branch=repository_branch,
-        repository_version_file_path=repository_version_file_path,
+        file_path=repository_version_file_path,
         file_contents=release_version,
         commit_message="Release " + release_version
     )
@@ -142,8 +142,7 @@ def release_and_prepare_next_dev_cycle(
 
     # Prepare version file for next dev cycle
     helper.create_or_update_file(
-        repository_branch=repository_branch,
-        repository_version_file_path=repository_version_file_path,
+        file_path=repository_version_file_path,
         file_contents=next_version_dev,
         commit_message="Prepare next dev cycle " + next_version_dev
     )
