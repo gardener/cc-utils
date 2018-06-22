@@ -44,6 +44,21 @@ class ProductModelTest(unittest.TestCase):
                                 'image_reference': 'first_creference:version',
                             }
                         ],
+                        'web':
+                        [
+                            {
+                                'name': 'first_web',
+                                'version': 'web_version',
+                                'url': 'https://example.org',
+                            },
+                        ],
+                        'generic':
+                        [
+                            {
+                                'name': 'generic',
+                                'version': 'generic_version',
+                            },
+                        ],
                     },
                 },
                 # second_component
@@ -85,6 +100,21 @@ class ProductModelTest(unittest.TestCase):
 
         self.assertEqual(len(list(second_dependencies.components())), 0)
         self.assertEqual(len(list(second_dependencies.container_images())), 0)
+
+        first_web_deps = list(first_dependencies.web_dependencies())
+        self.assertEqual(len(first_web_deps), 1)
+        first_web_dep = first_web_deps[0]
+
+        self.assertEqual(first_web_dep.name(), 'first_web')
+        self.assertEqual(first_web_dep.version(), 'web_version')
+        self.assertEqual(first_web_dep.url(), 'https://example.org')
+
+        first_generic_deps = list(first_dependencies.generic_dependencies())
+        self.assertEqual(len(first_generic_deps), 1)
+        first_generic_dep = first_generic_deps[0]
+
+        self.assertEqual(first_generic_dep.name(), 'generic')
+        self.assertEqual(first_generic_dep.version(), 'generic_version')
 
     def test_merge_identical_products(self):
         left_model = product.model.Product.from_dict(raw_dict=self.raw_dict)

@@ -125,6 +125,10 @@ class ComponentDependencies(ModelBase):
             self.raw['container_images'] = []
         if not 'components' in self.raw:
             self.raw['components'] = []
+        if not 'web' in self.raw:
+            self.raw['web'] = []
+        if not 'generic' in self.raw:
+            self.raw['generic'] = []
 
     def container_images(self):
         if not self.snd.container_images:
@@ -135,6 +139,16 @@ class ComponentDependencies(ModelBase):
         if not self.snd.components:
             return ()
         return (ComponentReference(**raw_dict) for raw_dict in self.snd.components)
+
+    def web_dependencies(self):
+        if not self.snd.web:
+            return ()
+        return (WebDependency(**raw_dict) for raw_dict in self.snd.web)
+
+    def generic_dependencies(self):
+        if not self.snd.generic:
+            return ()
+        return (GenericDependency(**raw_dict) for raw_dict in self.snd.generic)
 
     def add_container_image_dependency(self, container_image):
         self.raw.get('container_images').append(container_image.raw)
