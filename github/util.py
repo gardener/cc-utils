@@ -70,10 +70,7 @@ class GitHubRepositoryHelper(object):
             branch = self.default_branch
 
         try:
-            contents = self.repository.file_contents(
-                path=file_path,
-                ref=branch,
-            )
+            contents = self.retrieve_file_contents(file_path=file_path, branch=branch)
         except NotFoundError:
             contents = None # file did not yet exist
 
@@ -96,6 +93,15 @@ class GitHubRepositoryHelper(object):
                 branch=branch,
             )
         return response['commit'].sha
+
+    def retrieve_file_contents(self, file_path: str, branch: str=None):
+        if branch is None:
+            branch = self.default_branch
+
+        return self.repository.file_contents(
+            path=file_path,
+            ref=branch,
+        )
 
     def create_tag(
         self,
