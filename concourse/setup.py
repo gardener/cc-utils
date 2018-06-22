@@ -140,6 +140,7 @@ def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
     external_url = concourse_cfg.external_url()
     external_host = urlparse(external_url).netloc
     concourse_tls_secret_name = concourse_cfg.tls_secret_name()
+    cname_record = concourse_cfg.cname_record()
 
     instance_specific_values = {
         'concourse': {
@@ -159,10 +160,10 @@ def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
         },
         'web': {
             'ingress': {
-                'hosts': [external_host],
+                'hosts': [external_host, cname_record],
                 'tls': [{
                       'secretName': concourse_tls_secret_name,
-                      'hosts': [external_host],
+                      'hosts': [external_host, cname_record],
                       }],
             }
         }

@@ -582,6 +582,12 @@ class ConcourseConfig(NamedModelElement):
         '''
         return self.raw.get('disable_webhook_for_pr', False)
 
+    def cname_record(self):
+        '''
+        Returns the CNAME which resolves to the current active Concourse instance.
+        '''
+        return self.raw.get('cname_record')
+
     def _required_attributes(self):
         return ['externalUrl', 'teams', 'helm_chart_default_values_config', 'kubernetes_cluster_config']
 
