@@ -99,7 +99,13 @@ def _parse_and_add_dependencies(
         dependencies.add_component_dependency(component_ref)
 
     for container_image_dependency in container_image_dependencies:
-        ci_dependency = ContainerImage.create(image_reference=container_image_dependency)
+        name, ref, version = container_image_dependency.split(':')
+        image_ref = ':'.join((ref, version))
+        ci_dependency = ContainerImage.create(
+            name=name,
+            version=version,
+            image_reference=image_ref,
+        )
         dependencies.add_container_image_dependency(ci_dependency)
 
 

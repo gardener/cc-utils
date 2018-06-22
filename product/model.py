@@ -36,12 +36,12 @@ class Product(ModelBase):
             self.raw['components'] = []
 
     def components(self):
-        return map(Component, self.raw['components'])
+        return (Component(**raw_dict) for raw_dict in self.raw['components'])
 
     def component(self, component_reference):
         if not isinstance(component_reference, ComponentReference):
             name, version = component_reference
-            component_reference = ComponentReference(raw_dict={'name':name, 'version': version})
+            component_reference = ComponentReference(name=name, version=version)
 
         return next(
             filter(lambda c: c == component_reference, self.components()),
@@ -58,6 +58,10 @@ class DependencyBase(ModelBase):
 
     Not intended to be instantiated.
     '''
+    def __init__(self, name, version, **kwargs):
+        raw_dict = {'name': name, 'version': version, **kwargs}
+        super().__init__(raw_dict=raw_dict)
+
     def name(self):
         return self.snd.name
 
@@ -68,7 +72,7 @@ class DependencyBase(ModelBase):
 class ComponentReference(DependencyBase):
     @staticmethod
     def create(name, version):
-        return ComponentReference(raw_dict={'name': name, 'version': version})
+        return ComponentReference(name=name, version=version)
 
     def __eq__(self, other):
         if not isinstance(other, ComponentReference):
@@ -78,17 +82,32 @@ class ComponentReference(DependencyBase):
 
 class ContainerImage(DependencyBase):
     @staticmethod
-    def create(image_reference):
-        return ContainerImage(raw_dict={'image_reference': image_reference})
+    def create(name, version, image_reference):
+        return ContainerImage(name=name, version=version, image_reference=image_reference)
 
     def image_reference(self):
         return self.snd.image_reference
 
 
+class WebDependency(DependencyBase):
+    @staticmethod
+    def create(name, version, url):
+        return WebDependency(name=name, version=version, url=url)
+
+    def url(self):
+        return self.snd.url
+
+
+class GenericDependency(DependencyBase):
+    @staticmethod
+    def create(name, version):
+        return GenericDependency(name=name, version=version)
+
+
 class Component(ComponentReference):
     @staticmethod
     def create(name, version):
-        return Component(raw_dict={'name': name, 'version': version})
+        return Component(name=name, version=version)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -110,12 +129,12 @@ class ComponentDependencies(ModelBase):
     def container_images(self):
         if not self.snd.container_images:
             return ()
-        return map(ContainerImage, self.snd.container_images)
+        return (ContainerImage(**raw_dict) for raw_dict in self.snd.container_images)
 
     def components(self):
         if not self.snd.components:
             return ()
-        return map(ComponentReference, self.snd.components)
+        return (ComponentReference(**raw_dict) for raw_dict in self.snd.components)
 
     def add_container_image_dependency(self, container_image):
         self.raw.get('container_images').append(container_image.raw)

@@ -39,7 +39,9 @@ class ProductModelTest(unittest.TestCase):
                         'container_images':
                         [
                             {
-                                'image_reference': 'first_creference',
+                                'name': 'first',
+                                'version': 'version',
+                                'image_reference': 'first_creference:version',
                             }
                         ],
                     },
@@ -79,7 +81,7 @@ class ProductModelTest(unittest.TestCase):
         self.assertEqual(first_component_dep.name(), 'second_component')
         self.assertEqual(first_component_dep.version(), 'second_version')
 
-        self.assertEqual(first_container_dep.image_reference(), 'first_creference')
+        self.assertEqual(first_container_dep.image_reference(), 'first_creference:version')
 
         self.assertEqual(len(list(second_dependencies.components())), 0)
         self.assertEqual(len(list(second_dependencies.container_images())), 0)
@@ -98,7 +100,11 @@ class ProductModelTest(unittest.TestCase):
         right_model = product.model.Product.from_dict(raw_dict=deepcopy(self.raw_dict))
 
         # add a new dependency to create a conflicting definition
-        container_image_dep = product.model.ContainerImage.create(image_reference='dontcare')
+        container_image_dep = product.model.ContainerImage.create(
+                name='container_name',
+                version='container_version',
+                image_reference='dontcare',
+        )
         first_comp_deps = right_model.component(('first_component', 'first_version')).dependencies()
         first_comp_deps.add_container_image_dependency(container_image_dep)
 
