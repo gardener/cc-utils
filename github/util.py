@@ -40,40 +40,39 @@ class GitHubRepositoryHelper(object):
 
     def __init__(
         self,
-        github_cfg,
-        repository_owner: str,
-        repository_name: str,
+        github_cfg: GithubConfig,
+        owner: str,
+        name: str,
+        default_branch: str='master',
     ):
         self.github = _create_github_api_object(github_cfg)
         self.repository = self._create_repository(
-            repository_owner=repository_owner,
-            repository_name=repository_name
+            owner=owner,
+            name=name
         )
+        self.default_branch = default_branch
 
-    def _create_repository(
-        self,
-        repository_owner: str,
-        repository_name: str
-    ):
+    def _create_repository(self, owner: str, name: str):
         repository = self.github.repository(
-                owner=repository_owner,
-                repository=repository_name
+                owner=owner,
+                repository=name
         )
-        if not repository:
-            util.fail("Could not retrieve repository {owner}/{name}".format(owner=repository_owner, name=repository_name))
         return repository
 
     def create_or_update_file(
         self,
-        repository_branch: str,
-        repository_version_file_path: str,
+        file_path: str,
         file_contents: str,
-        commit_message: str
+        commit_message: str,
+        branch: str=None,
     )-> str:
+        if branch is None:
+            branch = self.default_branch
+
         try:
             contents = self.repository.file_contents(
-                path=repository_version_file_path,
-                ref=repository_branch
+                path=file_path,
+                ref=branch,
             )
         except NotFoundError:
             contents = None # file did not yet exist
@@ -82,20 +81,21 @@ class GitHubRepositoryHelper(object):
             decoded_contents = contents.decoded.decode('utf-8')
             if decoded_contents == file_contents:
                 # Nothing to do
-                return util.info("Repository file contents are identical to passed file contents.")
+                return util.info('Repository file contents are identical to passed file contents.')
             else:
-                response = contents.update(commit_message, file_contents.encode('utf-8'), branch=repository_branch)
+                response = contents.update(
+                    message=commit_message,
+                    content=file_contents.encode('utf-8'),
+                    branch=branch,
+                )
         else:
             response = self.repository.create_file(
-                path=repository_version_file_path,
+                path=file_path,
                 message=commit_message,
                 content=file_contents.encode('utf-8'),
-                branch=repository_branch
+                branch=branch,
             )
-        if not response:
-            util.fail('failed to update or create file (missing privileges?)')
-
-        return response["commit"].sha
+        return response['commit'].sha
 
     def create_tag(
         self,
@@ -107,9 +107,9 @@ class GitHubRepositoryHelper(object):
         repository_reference_type: str='commit'
     ):
         author = {
-            "name": author_name,
-            "email": author_email,
-            "date": datetime.datetime.now(datetime.timezone.utc).strftime(self.GITHUB_TIMESTAMP_UTC_FORMAT)
+            'name': author_name,
+            'email': author_email,
+            'date': datetime.datetime.now(datetime.timezone.utc).strftime(self.GITHUB_TIMESTAMP_UTC_FORMAT)
         }
         self.repository.create_tag(
             tag=tag_name,
@@ -133,12 +133,6 @@ class GitHubRepositoryHelper(object):
             prerelease=prerelease,
         )
         return release
-
-    def retrieve_email_address(self, user_name):
-        user = self.repository.user(user_name)
-        if not user:
-            util.fail('no such user: {u}'.format(u=user_name))
-        return user
 
     def retrieve_asset_contents(self, release_tag: str, asset_label: str):
         util.not_none(release_tag)
@@ -212,11 +206,10 @@ def replicate_pipeline_definitions(
 
         repo_owner, repo_name = repo_path.split('/')
 
-
         helper = GitHubRepositoryHelper(
             github_cfg=github_cfg,
-            repository_owner=repo_owner,
-            repository_name=repo_name,
+            owner=repo_owner,
+            name=repo_name,
         )
         # only do this for branch 'master' to avoid merge conflicts
         for branch_name in ['master']: #branches(github_cfg, repo_owner, repo_name):
@@ -228,8 +221,8 @@ def replicate_pipeline_definitions(
             # create pipeline definition file in .ci/pipeline_definitions
             try:
                 helper.create_or_update_file(
-                    repository_branch=branch_name,
-                    repository_version_file_path='.ci/pipeline_definitions',
+                    branch=branch_name,
+                    file_path='.ci/pipeline_definitions',
                     file_contents=definition_contents,
                     commit_message="Import cc-pipeline definition"
                 )

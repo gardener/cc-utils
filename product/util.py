@@ -32,8 +32,8 @@ class ComponentDescriptorResolver(object):
     def _repository_helper(self, component_reference):
         return GitHubRepositoryHelper(
             github_cfg=self.github_cfg,
-            repository_owner=self.github_organisation,
-            repository_name=component_reference.name(),
+            owner=self.github_organisation,
+            name=component_reference.name(),
         )
 
     def retrieve_raw_descriptor(self, component_reference, as_dict=False):
