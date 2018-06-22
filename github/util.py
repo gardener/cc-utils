@@ -103,6 +103,18 @@ class GitHubRepositoryHelper(object):
             ref=branch,
         )
 
+    def retrieve_text_file_contents(
+        self,
+        file_path: str,
+        branch: str=None,
+        encoding: str='utf-8',
+    ):
+        if branch is None:
+            branch = self.default_branch
+
+        contents = self.retrieve_file_contents(file_path, branch)
+        return contents.decoded.decode(encoding)
+
     def create_tag(
         self,
         tag_name: str,
