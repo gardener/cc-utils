@@ -52,21 +52,37 @@ class Product(ModelBase):
         self.raw['components'].append(component.raw)
 
 
-class ComponentReference(ModelBase):
-    @staticmethod
-    def create(name, version):
-        return ComponentReference(raw_dict={'name': name, 'version': version})
+class DependencyBase(ModelBase):
+    '''
+    Base class for dependencies
 
+    Not intended to be instantiated.
+    '''
     def name(self):
         return self.snd.name
 
     def version(self):
         return self.snd.version
 
+
+class ComponentReference(DependencyBase):
+    @staticmethod
+    def create(name, version):
+        return ComponentReference(raw_dict={'name': name, 'version': version})
+
     def __eq__(self, other):
         if not isinstance(other, ComponentReference):
             return False
         return (self.name(), self.version()) == (other.name(), other.version())
+
+
+class ContainerImage(DependencyBase):
+    @staticmethod
+    def create(image_reference):
+        return ContainerImage(raw_dict={'image_reference': image_reference})
+
+    def image_reference(self):
+        return self.snd.image_reference
 
 
 class Component(ComponentReference):
@@ -106,15 +122,6 @@ class ComponentDependencies(ModelBase):
 
     def add_component_dependency(self, component_reference):
         self.raw.get('components').append(component_reference.raw)
-
-
-class ContainerImage(ModelBase):
-    @staticmethod
-    def create(image_reference):
-        return ContainerImage(raw_dict={'image_reference': image_reference})
-
-    def image_reference(self):
-        return self.snd.image_reference
 
 
 #############################################################################
