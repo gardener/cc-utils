@@ -123,6 +123,8 @@ def add_module(module_name, parser):
                         argtype = None # type must not be set for store_true/store_false actions
                 elif type(typehint) == list:
                     action = 'append'
+                elif callable(typehint):
+                    argtype = typehint
             if default != NotImplemented:
                 required = False
             else:
@@ -134,6 +136,9 @@ def add_module(module_name, parser):
             if argtype is not None and not 'type' in kwargs:
                 kwargs['type'] = argtype
 
+            if action:
+                kwargs['action'] = action
+
             if default:
                 help_text = kwargs.get('help', '')
                 help_text += '(default: %(default)s)'
@@ -143,18 +148,16 @@ def add_module(module_name, parser):
               cl_arg,
               required=required,
               default=default,
-              action=action,
               **kwargs
             )
 
             if annotation == bool and not argname.startswith('no'):
                 kwargs['help'] = '(default: False)'
                 cl_arg = '--no-' + argname.replace('_', '-')
-                action = 'store_false'
+                kwargs['action'] = 'store_false'
                 function_parser.add_argument(
                   cl_arg,
                   required=False,
-                  action=action,
                   dest=argname.replace('-', '_'),
                   **kwargs
                 )
