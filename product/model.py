@@ -156,6 +156,12 @@ class ComponentDependencies(ModelBase):
     def add_component_dependency(self, component_reference):
         self.raw.get('components').append(component_reference.raw)
 
+    def add_web_dependency(self, web_dependency):
+        self.raw.get('web').append(web_dependency.raw)
+
+    def add_generic_dependency(self, generic_dependency):
+        self.raw.get('generic').append(generic_dependency.raw)
+
 
 #############################################################################
 ## upload result model
