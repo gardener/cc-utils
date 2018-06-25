@@ -138,7 +138,7 @@ _parse_generic_deps = _parse_dependency_str_func(
 def component_descriptor(
     name: str,
     version: str,
-    component_dependencies: CliHint(typehint=_parse_container_image_deps, action='append')=[],
+    component_dependencies: CliHint(typehint=_parse_component_deps, action='append')=[],
     container_image_dependencies: CliHint(typehint=_parse_container_image_deps, action='append')=[],
     web_dependencies: CliHint(typehint=_parse_web_deps, action='append')=[],
     generic_dependencies: CliHint(typehint=_parse_generic_deps, action='append')=[],
@@ -179,7 +179,7 @@ def add_dependencies(
     component_name: str,
     component_version: str,
     descriptor_out_file: str=None,
-    component_dependencies: CliHint(typehint=_parse_container_image_deps, action='append')=[],
+    component_dependencies: CliHint(typehint=_parse_component_deps, action='append')=[],
     container_image_dependencies: CliHint(typehint=_parse_container_image_deps, action='append')=[],
     web_dependencies: CliHint(typehint=_parse_web_deps, action='append')=[],
     generic_dependencies: CliHint(typehint=_parse_generic_deps, action='append')=[],
