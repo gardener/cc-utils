@@ -11,13 +11,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import argparse
 from concurrent.futures import ThreadPoolExecutor
 import yaml
 import json
 
-from util import CliHints, parse_yaml_file, ctx, info, fail
+from util import CliHints, CliHint, parse_yaml_file, ctx, info, fail
 import product.model
-from product.model import Product, Component, ComponentReference, ContainerImage
+from product.model import (
+    Component,
+    ComponentReference,
+    ContainerImage,
+    GenericDependency,
+    Product,
+    WebDependency,
+)
 from product.util import merge_products, ComponentDescriptorResolver
 from product.scanning import ProtecodeUtil
 import protecode.client
@@ -86,41 +94,66 @@ def _create_tasks(product_model, protecode_util):
                     )
 
 
-def _parse_and_add_dependencies(
-    component,
-    component_dependencies,
-    container_image_dependencies,
-):
-    dependencies = component.dependencies()
+def _parse_dependency_str_func(
+        factory_function,
+        required_attributes=('name', 'version'),
+        forbid_extra_attribs=True
+    ):
+    def parse_dependency_str(token):
+        try:
+            parsed = json.loads(token)
+        except json.decoder.JSONDecodeError as jde:
+            raise argparse.ArgumentTypeError('Invalid JSON document: ' + '\n'.join(jde.args))
+        missing_attribs = [attrib for attrib in required_attributes if not attrib in parsed]
+        if missing_attribs:
+            raise argparse.ArgumentTypeError('missing required attributes: {ma}'.format(
+                ma=', '.join(missing_attribs))
+            )
+        if forbid_extra_attribs:
+            extra_attribs = [attrib for attrib in parsed.keys() if not attrib in required_attributes]
+            if extra_attribs:
+                raise argparse.ArgumentTypeError('unknown attributes: {ua}'.format(
+                    ua=', '.join(extra_attribs))
+                )
+        return factory_function(**parsed)
+    return parse_dependency_str
 
-    for component_dependency_str in component_dependencies:
-        cname, cversion = component_dependency_str.split(':')
-        component_ref = ComponentReference.create(name=cname, version=cversion)
-        dependencies.add_component_dependency(component_ref)
 
-    for container_image_dependency in container_image_dependencies:
-        name, ref, version = container_image_dependency.split(':')
-        image_ref = ':'.join((ref, version))
-        ci_dependency = ContainerImage.create(
-            name=name,
-            version=version,
-            image_reference=image_ref,
-        )
-        dependencies.add_container_image_dependency(ci_dependency)
+_parse_component_deps = _parse_dependency_str_func(
+    factory_function=ComponentReference.create
+)
+_parse_container_image_deps = _parse_dependency_str_func(
+    factory_function=ContainerImage.create,
+    required_attributes=('name', 'version', 'image_reference')
+)
+_parse_web_deps = _parse_dependency_str_func(
+    factory_function=WebDependency.create,
+    required_attributes=('name', 'version', 'url')
+)
+_parse_generic_deps = _parse_dependency_str_func(
+    factory_function=GenericDependency.create,
+)
 
 
 def component_descriptor(
     name: str,
     version: str,
-    component_dependencies: [str],
-    container_image_dependencies: [str],
+    component_dependencies: CliHint(typehint=_parse_container_image_deps, action='append')=[],
+    container_image_dependencies: CliHint(typehint=_parse_container_image_deps, action='append')=[],
+    web_dependencies: CliHint(typehint=_parse_web_deps, action='append')=[],
+    generic_dependencies: CliHint(typehint=_parse_generic_deps, action='append')=[],
 ):
     component = Component.create(name=name, version=version)
-    _parse_and_add_dependencies(
-        component,
-        component_dependencies,
-        container_image_dependencies,
-    )
+    component_deps = component.dependencies()
+
+    for component_ref in component_dependencies:
+        component_deps.add_component_dependency(component_ref)
+    for image_dep in container_image_dependencies:
+        component_deps.add_container_image_dependency(image_dep)
+    for web_dep in web_dependencies:
+        component_deps.add_web_dependency(web_dep)
+    for generic_dep in generic_dependencies:
+        component_deps.add_generic_dependency(generic_dep)
 
     product_dict = {'components': [component.raw]}
     print(yaml.dump(product_dict, indent=2))
@@ -146,8 +179,10 @@ def add_dependencies(
     component_name: str,
     component_version: str,
     descriptor_out_file: str=None,
-    component_dependencies: [str]=[],
-    container_image_dependencies: [str]=[]
+    component_dependencies: CliHint(typehint=_parse_container_image_deps, action='append')=[],
+    container_image_dependencies: CliHint(typehint=_parse_container_image_deps, action='append')=[],
+    web_dependencies: CliHint(typehint=_parse_web_deps, action='append')=[],
+    generic_dependencies: CliHint(typehint=_parse_generic_deps, action='append')=[],
 ):
     product = Product.from_dict(parse_yaml_file(descriptor_src_file))
 
@@ -161,11 +196,17 @@ def add_dependencies(
             f=descriptor_src_file
             )
         )
-    _parse_and_add_dependencies(
-        component,
-        component_dependencies,
-        container_image_dependencies,
-    )
+
+    component_deps = component.dependencies()
+
+    for component_ref in component_dependencies:
+        component_deps.add_component_dependency(component_ref)
+    for image_dep in container_image_dependencies:
+        component_deps.add_container_image_dependency(image_dep)
+    for web_dep in web_dependencies:
+        component_deps.add_web_dependency(web_dep)
+    for generic_dep in generic_dependencies:
+        component_deps.add_generic_dependency(generic_dep)
 
     product_dict = json.loads(json.dumps({'components': [component.raw]}))
     if not descriptor_out_file:
