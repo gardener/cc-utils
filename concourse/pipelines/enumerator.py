@@ -17,6 +17,7 @@ import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from itertools import chain
+from urllib.parse import urlparse
 import functools
 import yaml
 
@@ -64,6 +65,7 @@ class DefinitionEnumerator(object):
     def _wrap_into_descriptors(
         self,
         repo_path,
+        repo_hostname,
         branch,
         raw_definitions
         ) -> 'DefinitionDescriptor':
@@ -73,7 +75,7 @@ class DefinitionEnumerator(object):
                 pipeline_name=name,
                 pipeline_definition=pipeline_definition,
                 template_name=pipeline_definition['template'],
-                main_repo={'path': repo_path, 'branch': branch},
+                main_repo={'path': repo_path, 'branch': branch, 'hostname': repo_hostname},
                 concourse_target_cfg=self.cfg_set.concourse(),
                 concourse_target_team=self.job_mapping.team_name(),
                 override_definitions=[{},],
@@ -96,7 +98,13 @@ class MappingfileDefinitionEnumerator(DefinitionEnumerator):
             for definitions in pd:
                 for name, definition in definitions.items():
                     info('from mapping: ' + name)
-                    yield from self._wrap_into_descriptors(repo_path, 'master', definitions)
+                    yield from self._wrap_into_descriptors(
+                        repo_path=repo_path,
+                        # XXX un-hardcode
+                        repo_hostname='github.com',
+                        branch='master',
+                        raw_definition=definitions
+                    )
 
     def _enumerate_pipeline_definitions(self, directories):
         for directory in directories:
@@ -134,6 +142,7 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
 
             scan_repository_for_definitions = functools.partial(
                 self._scan_repository_for_definitions,
+                github_cfg=github_cfg,
                 org_name=github_org_name,
                 branch_filter=branch_filter,
             )
@@ -145,7 +154,13 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
                 yield from definition_descriptors
 
 
-    def _scan_repository_for_definitions(self, repository, org_name, branch_filter) -> RawPipelineDefinitionDescriptor:
+    def _scan_repository_for_definitions(
+        self,
+        repository,
+        github_cfg,
+        org_name,
+        branch_filter
+    ) -> RawPipelineDefinitionDescriptor:
         for branch_name in filter(branch_filter, map(lambda b: b.name, repository.branches())):
             try:
                 definitions = repository.file_contents(
@@ -155,10 +170,13 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
             except NotFoundError:
                 continue # no pipeline definition for this branch
 
+            repo_hostname = urlparse(github_cfg.http_url()).hostname
+
             verbose('from repo: ' + repository.name + ':' + branch_name)
             definitions = yaml.load(definitions.decoded.decode('utf-8'))
             yield from self._wrap_into_descriptors(
                 repo_path='/'.join([org_name, repository.name]),
+                repo_hostname=repo_hostname,
                 branch=branch_name,
                 raw_definitions=definitions
             )

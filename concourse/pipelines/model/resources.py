@@ -205,6 +205,9 @@ class RepositoryConfig(Resource):
     def repo_owner(self):
         return self.repo_path().split('/')[0]
 
+    def repo_hostname(self):
+        return self.raw.get('hostname').lower()
+
     def branch(self):
         return self.raw['branch']
 

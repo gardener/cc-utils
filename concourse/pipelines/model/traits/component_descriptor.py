@@ -74,6 +74,15 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
             release_step = pipeline_args.step('release')
             release_step.add_input('component_descriptor_dir', 'component_descriptor_dir')
 
+        # inject component_name if not configured
+        if not 'component_name' in self.trait.raw:
+            main_repo = pipeline_args.main_repository()
+            component_name = '/'.join((
+                main_repo.repo_hostname(),
+                main_repo.repo_path(),
+            ))
+            self.trait.raw['component_name'] = component_name
+
     def dependencies(self):
         # dependency is required, as we need to patch the 'release' step
         return super().dependencies() | {'release'}
