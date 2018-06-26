@@ -450,6 +450,9 @@ class GithubConfig(NamedModelElement):
     def credentials(self):
         return GithubCredentials(self.raw.get('technicalUser'))
 
+    def matches_hostname(self, host_name):
+        return host_name.lower() == urlparse(self.http_url()).hostname.lower()
+
     def _required_attributes(self):
         return ['sshUrl', 'httpUrl', 'apiUrl', 'disable_tls_validation', 'webhook_token', 'technicalUser']
 
