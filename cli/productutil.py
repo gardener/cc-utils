@@ -13,6 +13,7 @@
 # limitations under the License.
 import argparse
 from concurrent.futures import ThreadPoolExecutor
+import github3.exceptions
 import yaml
 import json
 
@@ -227,7 +228,10 @@ def retrieve_component_descriptor(
     )
 
     component_reference = ComponentReference.create(name=name, version=version)
-    resolved_descriptor = resolver.retrieve_raw_descriptor(component_reference)
+    try:
+        resolved_descriptor = resolver.retrieve_raw_descriptor(component_reference)
+    except github3.exceptions.NotFoundError:
+        fail('no component descriptor found: {n}:{v}'.format(n=name, v=version))
 
     print(resolved_descriptor)
 
