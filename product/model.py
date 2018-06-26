@@ -74,6 +74,15 @@ class ComponentReference(DependencyBase):
     def create(name, version):
         return ComponentReference(name=name, version=version)
 
+    def github_host(self):
+        return self.name().split('/')[0]
+
+    def github_organisation(self):
+        return self.name().split('/')[1]
+
+    def github_repo(self):
+        return self.name().split('/')[2]
+
     def __eq__(self, other):
         if not isinstance(other, ComponentReference):
             return False

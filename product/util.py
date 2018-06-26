@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from copy import deepcopy
+import functools
 import itertools
 import yaml
 
@@ -23,17 +24,25 @@ from .model import Product, COMPONENT_DESCRIPTOR_ASSET_NAME
 class ComponentDescriptorResolver(object):
     def __init__(
         self,
-        github_cfg,
-        github_organisation='gardener',
+        cfg_factory,
     ):
-        self.github_organisation = github_organisation
-        self.github_cfg = github_cfg
+        self.cfg_factory=not_none(cfg_factory)
+
+    @functools.lru_cache()
+    def _github_cfg_for_hostname(self, host_name):
+        not_none(host_name)
+        for github_cfg in self.cfg_factory._cfg_elements(cfg_type_name='github'):
+            if github_cfg.matches_hostname(host_name=host_name):
+                return github_cfg
+        raise RuntimeError('no github_cfg for {h}'.format(host_name))
 
     def _repository_helper(self, component_reference):
         return GitHubRepositoryHelper(
-            github_cfg=self.github_cfg,
-            owner=self.github_organisation,
-            name=component_reference.name(),
+            github_cfg=self._github_cfg_for_hostname(
+                host_name=component_reference.github_host(),
+            ),
+            owner=component_reference.github_organisation(),
+            name=component_reference.github_repo(),
         )
 
     def retrieve_raw_descriptor(self, component_reference, as_dict=False):

@@ -219,15 +219,11 @@ def add_dependencies(
 def retrieve_component_descriptor(
     name: str,
     version: str,
-    github_org: str='gardener',
-    github_cfg_name: str='github_com',
 ):
     cfg_factory = ctx().cfg_factory()
-    github_cfg = cfg_factory.github(github_cfg_name)
 
     resolver = ComponentDescriptorResolver(
-        github_cfg=github_cfg,
-        github_organisation=github_org,
+        cfg_factory=cfg_factory,
     )
 
     component_reference = ComponentReference.create(name=name, version=version)
@@ -238,15 +234,11 @@ def retrieve_component_descriptor(
 
 def resolve_component_descriptor(
     component_descriptor_file: CliHints.existing_file(),
-    github_org: str='gardener',
-    github_cfg_name: str='github_com'
 ):
     cfg_factory = ctx().cfg_factory()
-    github_cfg = cfg_factory.github(github_cfg_name)
 
     resolver = ComponentDescriptorResolver(
-        github_cfg=github_cfg,
-        github_organisation=github_org,
+        cfg_factory=cfg_factory,
     )
 
     with open(component_descriptor_file) as f:
