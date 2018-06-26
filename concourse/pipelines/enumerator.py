@@ -161,7 +161,13 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
         org_name,
         branch_filter
     ) -> RawPipelineDefinitionDescriptor:
-        for branch_name in filter(branch_filter, map(lambda b: b.name, repository.branches())):
+        # always use default branch for now
+        try:
+            default_branch = repository.default_branch
+        except:
+            default_branch = 'master'
+
+        for branch_name in [default_branch]:
             try:
                 definitions = repository.file_contents(
                     path='.ci/pipeline_definitions',
