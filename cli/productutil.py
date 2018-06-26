@@ -190,7 +190,7 @@ def add_dependencies(
         ComponentReference.create(name=component_name, version=component_version)
     )
     if not component:
-        raise('component {c}:{v} was not found in {f}'.format(
+        fail('component {c}:{v} was not found in {f}'.format(
             c=component_name,
             v=component_version,
             f=descriptor_src_file
