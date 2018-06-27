@@ -25,10 +25,38 @@ from util import parse_yaml_file, not_none
 # the asset name component descriptors are stored as part of component github releases
 COMPONENT_DESCRIPTOR_ASSET_NAME = 'component_descriptor'
 
-class Product(ModelBase):
+
+class ProductModelBase(ModelBase):
+    '''
+    Base class for product model classes.
+
+    Not intended to be instantiated.
+    '''
+    def __init__(self, **kwargs):
+        raw_dict = {**kwargs}
+        super().__init__(raw_dict=raw_dict)
+
+
+class DependencyBase(ProductModelBase):
+    '''
+    Base class for dependencies
+
+    Not intended to be instantiated.
+    '''
+    def __init__(self, name, version, **kwargs):
+        super().__init__(name=name, version=version, **kwargs)
+
+    def name(self):
+        return self.snd.name
+
+    def version(self):
+        return self.snd.version
+
+
+class Product(ProductModelBase):
     @staticmethod
     def from_dict(raw_dict: dict):
-        return Product(raw_dict=raw_dict)
+        return Product(**raw_dict)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -50,23 +78,6 @@ class Product(ModelBase):
 
     def add_component(self, component):
         self.raw['components'].append(component.raw)
-
-
-class DependencyBase(ModelBase):
-    '''
-    Base class for dependencies
-
-    Not intended to be instantiated.
-    '''
-    def __init__(self, name, version, **kwargs):
-        raw_dict = {'name': name, 'version': version, **kwargs}
-        super().__init__(raw_dict=raw_dict)
-
-    def name(self):
-        return self.snd.name
-
-    def version(self):
-        return self.snd.version
 
 
 class ComponentReference(DependencyBase):
@@ -124,10 +135,10 @@ class Component(ComponentReference):
             self.raw['dependencies'] = {}
 
     def dependencies(self):
-        return ComponentDependencies(raw_dict=self.raw['dependencies'])
+        return ComponentDependencies(**self.raw['dependencies'])
 
 
-class ComponentDependencies(ModelBase):
+class ComponentDependencies(ProductModelBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not 'container_images' in self.raw:

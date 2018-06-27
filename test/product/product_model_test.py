@@ -15,6 +15,8 @@ from copy import deepcopy
 
 import unittest
 
+from _test_utils import AssertMixin
+
 import product.model
 import product.util
 
@@ -160,3 +162,12 @@ class ProductModelTest(unittest.TestCase):
         self.assertIsNotNone(merged.component(('lcomp1', '1')))
         self.assertIsNotNone(merged.component(('rcomp1', '2')))
 
+
+class DependenciesModelTest(unittest.TestCase, AssertMixin):
+    def test_ctor(self):
+        result = product.model.ComponentDependencies()
+
+        self.assertEmpty(result.web_dependencies())
+        self.assertEmpty(result.generic_dependencies())
+        self.assertEmpty(result.container_images())
+        self.assertEmpty(result.components())
