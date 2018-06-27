@@ -165,7 +165,7 @@ def is_yaml_file(path: CliHints.existing_file()):
 
 
 def parse_yaml_file(path: CliHints.existing_file(), as_snd=True):
-    with open(path) as f:
+    with open(str(path)) as f:
         if as_snd:
             return SimpleNamespaceDict(yaml.load(f))
         else:
