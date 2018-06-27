@@ -52,6 +52,11 @@ class DependencyBase(ProductModelBase):
     def version(self):
         return self.snd.version
 
+    def __eq__(self, other):
+        if not isinstance(other, DependencyBase):
+            return False
+        return self.raw == other.raw
+
 
 class Product(ProductModelBase):
     @staticmethod
@@ -151,24 +156,16 @@ class ComponentDependencies(ProductModelBase):
             self.raw['generic'] = []
 
     def container_images(self):
-        if not self.snd.container_images:
-            return ()
-        return (ContainerImage(**raw_dict) for raw_dict in self.snd.container_images)
+        return (ContainerImage(**raw_dict) for raw_dict in self.raw.get('container_images'))
 
     def components(self):
-        if not self.snd.components:
-            return ()
-        return (ComponentReference(**raw_dict) for raw_dict in self.snd.components)
+        return (ComponentReference(**raw_dict) for raw_dict in self.raw.get('components'))
 
     def web_dependencies(self):
-        if not self.snd.web:
-            return ()
-        return (WebDependency(**raw_dict) for raw_dict in self.snd.web)
+        return (WebDependency(**raw_dict) for raw_dict in self.raw.get('web'))
 
     def generic_dependencies(self):
-        if not self.snd.generic:
-            return ()
-        return (GenericDependency(**raw_dict) for raw_dict in self.snd.generic)
+        return (GenericDependency(**raw_dict) for raw_dict in self.raw.get('generic'))
 
     def add_container_image_dependency(self, container_image):
         self.raw.get('container_images').append(container_image.raw)

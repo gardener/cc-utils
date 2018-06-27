@@ -165,9 +165,26 @@ class ProductModelTest(unittest.TestCase):
 
 class DependenciesModelTest(unittest.TestCase, AssertMixin):
     def test_ctor(self):
-        result = product.model.ComponentDependencies()
+        examinee = product.model.ComponentDependencies()
 
-        self.assertEmpty(result.web_dependencies())
-        self.assertEmpty(result.generic_dependencies())
-        self.assertEmpty(result.container_images())
-        self.assertEmpty(result.components())
+        self.assertEmpty(examinee.web_dependencies())
+        self.assertEmpty(examinee.generic_dependencies())
+        self.assertEmpty(examinee.container_images())
+        self.assertEmpty(examinee.components())
+
+        ci_dep = product.model.ContainerImage(name='cn', version='cv', image_reference='cir')
+        comp_dep = product.model.ComponentReference(name='c', version='c')
+        web_dep = product.model.WebDependency(name='wn', version='wv', url='u')
+        gen_dep = product.model.GenericDependency(name='gn', version='gv')
+
+        examinee.add_container_image_dependency(ci_dep)
+        self.assertEqual((ci_dep,), tuple(examinee.container_images()))
+
+        examinee.add_component_dependency(comp_dep)
+        self.assertEqual((comp_dep,), tuple(examinee.components()))
+
+        examinee.add_web_dependency(web_dep)
+        self.assertEqual((web_dep,), tuple(examinee.web_dependencies()))
+
+        examinee.add_generic_dependency(gen_dep)
+        self.assertEqual((gen_dep,), tuple(examinee.generic_dependencies()))
