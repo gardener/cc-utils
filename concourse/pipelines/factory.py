@@ -209,5 +209,7 @@ class DefinitionFactory(object):
                     logical_name=repo_name,
                     qualifier='output',
                 )
+                # publish repos should never trigger (and therefore get no webhook assigned)
+                publish_repo._trigger = False
                 pipeline_def._publish_repos_dict[repo_name] = publish_repo
 
