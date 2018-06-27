@@ -40,4 +40,4 @@ class AssertMixin(object):
         except StopIteration:
             return # ok - iterable was empty
         except Exception as e:
-            raise self.failureException(e.msg)
+            raise self.failureException(str(e))
