@@ -15,6 +15,7 @@
 from contextlib import contextmanager
 from io import StringIO
 import sys
+import typing
 
 @contextmanager
 def capture_out():
@@ -25,3 +26,18 @@ def capture_out():
         yield sys.stdout, sys.stderr
     finally:
         sys.stdout, sys.stderr = old_stdout, old_stderr
+
+class AssertMixin(object):
+    def assertEmpty(self, iterable, msg=None):
+        if issubclass(type(iterable), typing.Sequence):
+            leng = len(iterable)
+            if leng == 0:
+                return
+            raise self.failureException('iterable was not empty')
+        try:
+            next(iterable)
+            raise self.failureException('iterable was not empty')
+        except StopIteration:
+            return # ok - iterable was empty
+        except Exception as e:
+            raise self.failureException(e.msg)
