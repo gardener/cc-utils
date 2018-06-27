@@ -172,6 +172,9 @@ class DependenciesModelTest(unittest.TestCase, AssertMixin):
         self.assertEmpty(examinee.container_images())
         self.assertEmpty(examinee.components())
 
+    def test_adding_dependencies(self):
+        examinee = product.model.ComponentDependencies()
+
         ci_dep = product.model.ContainerImage(name='cn', version='cv', image_reference='cir')
         comp_dep = product.model.ComponentReference(name='c', version='c')
         web_dep = product.model.WebDependency(name='wn', version='wv', url='u')
@@ -188,3 +191,10 @@ class DependenciesModelTest(unittest.TestCase, AssertMixin):
 
         examinee.add_generic_dependency(gen_dep)
         self.assertEqual((gen_dep,), tuple(examinee.generic_dependencies()))
+
+        # adding the same dependency multiple times must be ignored
+        redundant_dep = product.model.GenericDependency(name='gn', version='gv')
+        self.assertEqual(redundant_dep, gen_dep)
+        examinee.add_generic_dependency(redundant_dep)
+        self.assertEqual((gen_dep,), tuple(examinee.generic_dependencies()))
+

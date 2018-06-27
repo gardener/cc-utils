@@ -57,6 +57,9 @@ class DependencyBase(ProductModelBase):
             return False
         return self.raw == other.raw
 
+    def __hash__(self):
+        return hash(tuple(sorted(self.raw.items())))
+
 
 class Product(ProductModelBase):
     @staticmethod
@@ -146,14 +149,9 @@ class Component(ComponentReference):
 class ComponentDependencies(ProductModelBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not 'container_images' in self.raw:
-            self.raw['container_images'] = []
-        if not 'components' in self.raw:
-            self.raw['components'] = []
-        if not 'web' in self.raw:
-            self.raw['web'] = []
-        if not 'generic' in self.raw:
-            self.raw['generic'] = []
+        for attrib_name in ('container_images', 'components', 'web', 'generic'):
+            if not attrib_name in self.raw:
+                self.raw[attrib_name] = []
 
     def container_images(self):
         return (ContainerImage(**raw_dict) for raw_dict in self.raw.get('container_images'))
@@ -168,16 +166,20 @@ class ComponentDependencies(ProductModelBase):
         return (GenericDependency(**raw_dict) for raw_dict in self.raw.get('generic'))
 
     def add_container_image_dependency(self, container_image):
-        self.raw.get('container_images').append(container_image.raw)
+        if not container_image in self.container_images():
+            self.raw.get('container_images').append(container_image.raw)
 
     def add_component_dependency(self, component_reference):
-        self.raw.get('components').append(component_reference.raw)
+        if not component_reference in self.components():
+            self.raw.get('components').append(component_reference.raw)
 
     def add_web_dependency(self, web_dependency):
-        self.raw.get('web').append(web_dependency.raw)
+        if not web_dependency in self.web_dependencies():
+            self.raw.get('web').append(web_dependency.raw)
 
     def add_generic_dependency(self, generic_dependency):
-        self.raw.get('generic').append(generic_dependency.raw)
+        if not generic_dependency in self.generic_dependencies():
+            self.raw.get('generic').append(generic_dependency.raw)
 
 
 #############################################################################
