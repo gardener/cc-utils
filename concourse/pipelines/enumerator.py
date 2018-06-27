@@ -103,7 +103,7 @@ class MappingfileDefinitionEnumerator(DefinitionEnumerator):
                         # XXX un-hardcode
                         repo_hostname='github.com',
                         branch='master',
-                        raw_definition=definitions
+                        raw_definitions=definitions
                     )
 
     def _enumerate_pipeline_definitions(self, directories):
