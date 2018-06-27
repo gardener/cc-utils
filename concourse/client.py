@@ -600,4 +600,5 @@ class BuildEvents(object):
 class BuildStatus(Enum):
     SUCCEEDED = "succeeded"
     FAILED = "failed"
+    ERRORED = "errored"
     RUNNING = "started"
