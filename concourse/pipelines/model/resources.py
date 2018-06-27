@@ -214,6 +214,9 @@ class RepositoryConfig(Resource):
     def should_trigger(self):
         return self._trigger
 
+    def is_main_repo(self):
+        return self._is_main_repo
+
     def head_sha_path(self):
         if self._is_pull_request:
             head_sha = '.git/head_sha'
