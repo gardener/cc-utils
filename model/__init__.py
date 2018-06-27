@@ -591,6 +591,9 @@ class ConcourseConfig(NamedModelElement):
         '''
         return self.raw.get('cname_record')
 
+    def helm_chart_version(self):
+        return self.raw.get('helm_chart_version')
+
     def _required_attributes(self):
         return ['externalUrl', 'teams', 'helm_chart_default_values_config', 'kubernetes_cluster_config']
 

@@ -314,10 +314,6 @@ def ensure_helm_setup():
     return helm_executable
 
 
-# intentionally hard-coded; review / adjustment of "values.yaml" is required in most cases
-# of version upgrades
-CONCOURSE_HELM_CHART_VERSION = "1.9.0"
-
 def deploy_or_upgrade_concourse(
         default_helm_values: NamedModelElement,
         custom_helm_values: NamedModelElement,
@@ -330,6 +326,8 @@ def deploy_or_upgrade_concourse(
     ensure_not_none(custom_helm_values)
     ensure_not_none(concourse_cfg)
     helm_executable = ensure_helm_setup()
+    helm_chart_version = concourse_cfg.helm_chart_version()
+    ensure_not_none(helm_chart_version)
 
     namespace = deployment_name
 
@@ -354,7 +352,7 @@ def deploy_or_upgrade_concourse(
         "--values", DEFAULT_HELM_VALUES_FILE_NAME,
         "--values", CUSTOM_HELM_VALUES_FILE_NAME,
         "--values", INSTANCE_SPECIFIC_HELM_VALUES_FILE_NAME,
-        "--version", CONCOURSE_HELM_CHART_VERSION,
+        "--version", helm_chart_version,
         namespace, # release name is the same as namespace name
         "stable/concourse"
     ]
