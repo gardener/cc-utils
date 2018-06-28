@@ -119,7 +119,7 @@ def _sync_webhook(
     def webhook_url(gh_res):
         github_src = gh_res.github_source()
         webhook_url = routes.resource_check_webhook(
-          pipeline_name=pipeline.name,
+          pipeline_name=gh_res.pipeline.name,
           resource_name=gh_res.name,
           webhook_token=gh_res.webhook_token(),
           concourse_id=concourse_cfg.name(),
