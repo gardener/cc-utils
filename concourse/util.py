@@ -41,8 +41,6 @@ def list_github_resources(
         pipeline_cfg = concourse_api.pipeline_cfg(pipeline_name)
         resources = pipeline_cfg.resources
         resources = filter(lambda r: r.has_webhook_token(), resources)
-        # only process repositories from concourse's "default" github repository
-        resources = filter(lambda r: r.github_source().hostname() == github_hostname, resources)
 
         yield from resources
 
