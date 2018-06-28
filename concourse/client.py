@@ -22,7 +22,7 @@ import sseclient
 
 from http_requests import AuthenticatedRequestBuilder
 from model import ConcourseTeamCredentials
-from util import fail, warning, ensure_not_empty, SimpleNamespaceDict
+from util import fail, warning, ensure_not_empty
 
 warnings.filterwarnings('ignore', 'Unverified HTTPS request is being made.*', InsecureRequestWarning)
 
@@ -361,7 +361,7 @@ class ModelBase(object):
     '''
     def __init__(self, raw_dict: dict, concourse_api:ConcourseApi):
         self.api = concourse_api
-        self.raw_dict = SimpleNamespaceDict(raw_dict)
+        self.raw_dict = raw_dict
 
 
 class PipelineConfig(object):
@@ -533,7 +533,7 @@ class BuildEvents(object):
         'finish-task' event is reached, which marks the end of a build execution.
 
         An optional callback may be specified, which is called for each received event
-        with the parsed event data (wrapped into a SimpleNamespaceDict).
+        with the parsed event data (wrapped into a dictionary).
 
         @param callback: callable accepting exactly one positional argument
         '''
@@ -544,8 +544,8 @@ class BuildEvents(object):
         for event in client.events():
             if event is None or not event.data or len(event.data.strip()) == 0:
                 return True
-            parsed = SimpleNamespaceDict(json.loads(event.data))
-            data = parsed.data
+            parsed = json.loads(event.data)
+            data = parsed.get('data')
 
             if not data:
                 continue

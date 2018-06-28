@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from util import ensure_not_none, SimpleNamespaceDict
+from util import ensure_not_none
 
 class ModelValidationError(ValueError):
     '''
@@ -31,7 +31,6 @@ class ModelBase(object):
     '''
     def __init__(self, raw_dict):
         self.raw = ensure_not_none(raw_dict)
-        self.snd = SimpleNamespaceDict(raw_dict)
         self._validate_dict()
 
     def _required_attributes(self):

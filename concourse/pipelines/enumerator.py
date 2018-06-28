@@ -115,7 +115,7 @@ class MappingfileDefinitionEnumerator(DefinitionEnumerator):
             for repo_path, definition_files in repo_mapping.items():
                 for definition_file_path in definition_files:
                     abs_file = os.path.abspath(os.path.join(directory, definition_file_path))
-                    pipeline_raw_definition = parse_yaml_file(abs_file, as_snd=False)
+                    pipeline_raw_definition = parse_yaml_file(abs_file)
                     repo_definition_mapping[repo_path].append(pipeline_raw_definition)
 
             for repo_path, definitions in  repo_definition_mapping.items():

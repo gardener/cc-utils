@@ -26,7 +26,6 @@ import argparse
 import mako.template
 
 from util import (
-    SimpleNamespaceDict,
     fail,
     warning,
     ensure_directory_exists,
@@ -176,22 +175,22 @@ class Renderer(object):
         )
 
         factory = DefinitionFactory(raw_definition_descriptor=pipeline_definition)
-        pipeline_metadata = SimpleNamespaceDict()
+        pipeline_metadata = dict()
         pipeline_metadata['definition'] = factory.create_pipeline_definition()
         pipeline_metadata['name'] = pipeline_definition.name
-        generated_model = pipeline_metadata.definition
+        generated_model = pipeline_metadata.get('definition')
 
         # determine pipeline name (if there is main-repo, append the configured branch name)
-        for variant in pipeline_metadata.definition.variants():
+        for variant in pipeline_metadata.get('definition').variants():
             # hack: take the first "main_repository" we find
             if not variant.has_main_repository():
                 continue
             main_repo = variant.main_repository()
-            pipeline_metadata.pipeline_name = '-'.join([pipeline_definition.name, main_repo.branch()])
+            pipeline_metadata['pipeline_name'] = '-'.join([pipeline_definition.name, main_repo.branch()])
             break
         else:
             # fallback in case no main_repository was found
-            pipeline_metadata.pipeline_name = pipeline_definition.name
+            pipeline_metadata['pipeline_name'] = pipeline_definition.name
 
         t = mako.template.Template(template_contents, lookup=self.lookup)
 
