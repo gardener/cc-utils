@@ -53,10 +53,10 @@ class DependencyBase(ProductModelBase):
         super().__init__(name=name, version=version, **kwargs)
 
     def name(self):
-        return self.snd.name
+        return self.raw.get('name')
 
     def version(self):
-        return self.snd.version
+        return self.raw.get('version')
 
     def __eq__(self, other):
         if not isinstance(other, DependencyBase):
@@ -120,7 +120,7 @@ class ContainerImage(DependencyBase):
         return ContainerImage(name=name, version=version, image_reference=image_reference)
 
     def image_reference(self):
-        return self.snd.image_reference
+        return self.raw.get('image_reference')
 
 
 class WebDependency(DependencyBase):
@@ -129,7 +129,7 @@ class WebDependency(DependencyBase):
         return WebDependency(name=name, version=version, url=url)
 
     def url(self):
-        return self.snd.url
+        return self.raw.get('url')
 
 
 class GenericDependency(DependencyBase):
@@ -145,7 +145,7 @@ class Component(ComponentReference):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not self.snd.dependencies:
+        if not self.raw.get('dependencies'):
             self.raw['dependencies'] = {}
 
     def dependencies(self):

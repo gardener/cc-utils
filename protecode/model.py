@@ -25,21 +25,21 @@ class ProcessingStatus(Enum):
 
 class AnalysisResult(ModelBase):
     def product_id(self):
-        return self.snd.product_id
+        return self.raw.get('product_id')
 
     def status(self) -> ProcessingStatus:
-        return ProcessingStatus(self.snd.status)
+        return ProcessingStatus(self.raw.get('status'))
 
     def components(self) -> 'Iterable[Component]':
-        return (Component(raw_dict=raw) for raw in self.snd.components)
+        return (Component(raw_dict=raw) for raw in self.raw.get('components'))
 
 
 class Component(ModelBase):
     def name(self):
-        return self.snd.lib
+        return self.raw.get('lib')
 
     def vulnerabilities(self) -> 'Iterable[Vulnerability]':
-        return (Vulnerability(raw_dict=raw) for raw in self.snd.vulns)
+        return (Vulnerability(raw_dict=raw) for raw in self.raw.get('vulns'))
 
     def highest_major_cve_severity(self) -> int:
         try:
@@ -55,13 +55,13 @@ class Component(ModelBase):
 
 class Vulnerability(ModelBase):
     def historical(self):
-        return not self.snd.exact
+        return not self.raw.get('exact')
 
     def cve(self):
-        return self.snd.vuln.cve
+        return self.raw.get('vuln').get('cve')
 
     def cve_severity_str(self):
-        return str(self.snd.vuln.cvss)
+        return str(self.raw.get('vuln').get('cvss'))
 
     def cve_major_severity(self) -> int:
         if self.cve_severity_str():

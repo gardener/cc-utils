@@ -20,8 +20,6 @@ import sys
 own_dir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(own_dir, os.path.pardir))
 
-from util import SimpleNamespaceDict as SND
-
 SEMVER_OPS = set([
     'bump_minor',
     'bump_major',
@@ -65,7 +63,7 @@ def process_version(
         if build_metadata_length < 0:
             raise ValueError('Build metadata length must be >= 0')
 
-    parsed_version = SND(semver.parse(version_str))
+    parsed_version = dict(semver.parse(version_str))
 
     if operation == APPEND_PRERELEASE and not parsed_version['prerelease']:
         raise ValueError('Given SemVer must have prerelease-version to append to.')

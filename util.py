@@ -53,21 +53,10 @@ def ensure_directory_exists(path: str):
 existing_file = ensure_file_exists
 existing_dir = ensure_directory_exists
 
-class SimpleNamespaceDict(dict):
-    def __getattr__(self, name):
-        element = self.get(name)
-        if isinstance(element, dict):
-            return SimpleNamespaceDict(element)
-        if isinstance(element, list):
-            return map(SimpleNamespaceDict, element)
-        return element
-    def __getitem__(self, name):
-        return self.__getattr__(name)
-
 
 class CliHint(object):
     def __init__(self, typehint=str, *args, **kwargs):
-        self.argparse_args = SimpleNamespaceDict(*args, **kwargs)
+        self.argparse_args = dict(*args, **kwargs)
         self.typehint = typehint
 
 
@@ -163,12 +152,8 @@ def is_yaml_file(path: CliHints.existing_file()):
             raise
     return False
 
-
-def parse_yaml_file(path: CliHints.existing_file(), as_snd=True):
+def parse_yaml_file(path: CliHints.existing_file()):
     with open(str(path)) as f:
-        if as_snd:
-            return SimpleNamespaceDict(yaml.load(f))
-        else:
             return yaml.load(f)
 
 

@@ -69,7 +69,7 @@ class ConfigFactory(object):
                 raise ValueError('currently, only exactly one cfg file is supported per type')
 
             cfg_file = cfg_sources[0].file()
-            parsed_cfg =  parse_yaml_file(os.path.join(cfg_dir, cfg_file), as_snd=False)
+            parsed_cfg =  parse_yaml_file(os.path.join(cfg_dir, cfg_file))
             return parsed_cfg
 
         # parse all configurations
@@ -229,21 +229,21 @@ class ConfigType(ModelBase):
     represents a configuration type (used for serialisation and deserialisation)
     '''
     def sources(self):
-        return map(ConfigTypeSource, self.snd.src)
+        return map(ConfigTypeSource, self.raw.get('src'))
 
     def factory_method(self):
-        return self.snd.model.factory_method
+        return self.raw.get('model').get('factory_method')
 
     def cfg_type_name(self):
-        return self.snd.model.cfg_type_name
+        return self.raw.get('model').get('cfg_type_name')
 
     def cfg_type(self):
-        return self.snd.model.type
+        return self.raw.get('model').get('type')
 
 
 class ConfigTypeSource(ModelBase):
     def file(self):
-        return self.snd.file
+        return self.raw.get('file')
 
 
 class ConfigSetSerialiser(object):
@@ -419,10 +419,10 @@ class BasicCredentials(ModelBase):
     Not intended to be instantiated
     '''
     def username(self):
-        return self.snd.username
+        return self.raw.get('username')
 
     def passwd(self):
-        return self.snd.password
+        return self.raw.get('password')
 
     def _required_attributes(self):
         return ['username', 'password']
@@ -433,19 +433,19 @@ class GithubConfig(NamedModelElement):
     Not intended to be instantiated by users of this module
     '''
     def ssh_url(self):
-        return self.snd.sshUrl
+        return self.raw.get('sshUrl')
 
     def http_url(self):
-        return self.snd.httpUrl
+        return self.raw.get('httpUrl')
 
     def api_url(self):
-        return self.snd.apiUrl
+        return self.raw.get('apiUrl')
 
     def tls_validation(self):
-        return not self.snd.disable_tls_validation
+        return not self.raw.get('disable_tls_validation')
 
     def webhook_secret(self):
-        return self.snd.webhook_token
+        return self.raw.get('webhook_token')
 
     def credentials(self):
         return GithubCredentials(self.raw.get('technicalUser'))
@@ -489,7 +489,7 @@ class ContainerRegistryConfig(NamedModelElement):
     '''
     def credentials(self):
         # this cfg currently only contains credentials
-        return GcrCredentials(self.snd)
+        return GcrCredentials(self.raw)
 
 
 class GcrCredentials(BasicCredentials):
@@ -497,10 +497,10 @@ class GcrCredentials(BasicCredentials):
     Not intended to be instantiated by users of this module
     '''
     def host(self):
-        return self.snd.host
+        return self.raw.get('host')
 
     def email(self):
-        return self.snd.email
+        return self.raw.get('email')
 
 
 class ProtecodeConfig(NamedModelElement):
@@ -508,10 +508,10 @@ class ProtecodeConfig(NamedModelElement):
     Not intended to be instantiated by users of this module
     '''
     def credentials(self):
-        return ProtecodeCredentials(self.snd.credentials)
+        return ProtecodeCredentials(self.raw.get('credentials'))
 
     def api_url(self):
-        return self.snd.api_url
+        return self.raw.get('api_url')
 
     def tls_verify(self):
         return self.raw.get('tls_verify', True)
@@ -523,13 +523,13 @@ class ProtecodeCredentials(BasicCredentials):
 
 class AwsProfile(NamedModelElement):
     def region(self):
-        return self.snd.region
+        return self.raw.get('region')
 
     def access_key_id(self):
-        return self.snd.aws_access_key_id
+        return self.raw.get('aws_access_key_id')
 
     def secret_access_key(self):
-        return self.snd.aws_secret_access_key
+        return self.raw.get('aws_secret_access_key')
 
     def _required_attributes(self):
         return ['region','access_key_id','secret_access_key']
@@ -540,43 +540,43 @@ class ConcourseConfig(NamedModelElement):
     Not intended to be instantiated by users of this module
     '''
     def all_team_credentials(self):
-        return [ConcourseTeamCredentials(team_dict) for team_dict in self.snd.teams.values()]
+        return [ConcourseTeamCredentials(team_dict) for team_dict in self.raw.get('teams').get('values')]
 
     def external_url(self):
-        return self.snd.externalUrl
+        return self.raw.get('externalUrl')
 
     def proxy_url(self):
-        return self.snd.proxyUrl
+        return self.raw.get('proxyUrl')
 
     def job_mapping_cfg_name(self):
-        return self.snd.job_mapping
+        return self.raw.get('job_mapping')
 
     def team_credentials(self, teamname):
-        return ConcourseTeamCredentials(self.snd.teams[teamname])
+        return ConcourseTeamCredentials(self.raw.get('teams').get(teamname))
 
     def main_team_credentials(self):
         return self.team_credentials('main')
 
     def helm_chart_default_values_config(self):
-        return self.snd.helm_chart_default_values_config
+        return self.raw.get('helm_chart_default_values_config')
 
     def helm_chart_values(self):
         return self.raw.get('helm_chart_values', None)
 
     def image_pull_secret(self):
-        return self.snd.imagePullSecret
+        return self.raw.get('imagePullSecret')
 
     def tls_secret_name(self):
-        return self.snd.tls_secret_name
+        return self.raw.get('tls_secret_name')
 
     def tls_config(self):
-        return self.snd.tls_config
+        return self.raw.get('tls_config')
 
     def deploy_delaying_proxy(self):
-        return self.snd.deploy_delaying_proxy
+        return self.raw.get('deploy_delaying_proxy')
 
     def kubernetes_cluster_config(self):
-        return self.snd.kubernetes_cluster_config
+        return self.raw.get('kubernetes_cluster_config')
 
     def disable_github_pr_webhooks(self):
         '''
@@ -601,7 +601,7 @@ class ConcourseConfig(NamedModelElement):
         super()._validate_dict()
         # We check for the existence of the 'main'-team as it is the only team that is *required* to
         # exist for any concourse server.
-        if not self.snd.teams['main']:
+        if not self.raw.get('teams').get('main'):
             raise ModelValidationError('No team "main" defined.')
         if self.deploy_delaying_proxy() and self.proxy_url() is None:
             raise ModelValidationError('Delaying proxy deployment is configured but no proxy-URL is defined.')
@@ -614,7 +614,7 @@ class ConcourseTeamCredentials(BasicCredentials):
     Not intended to be instantiated by users of this module
     '''
     def teamname(self):
-        return self.snd.teamname
+        return self.raw.get('teamname')
 
     def github_auth_team(self, split: bool=False):
         '''
@@ -624,44 +624,44 @@ class ConcourseTeamCredentials(BasicCredentials):
         @param split: if `true` the function will return the organisation and team as a list with two elements,
         i.e. `(organization, team)`
         '''
-        if split and self.snd.gitAuthTeam:
-            return self.snd.gitAuthTeam.split('/')
-        return self.snd.gitAuthTeam
+        if split and self.raw.get('gitAuthTeam'):
+            return self.raw.get('gitAuthTeam').split('/')
+        return self.raw.get('gitAuthTeam')
 
     def github_auth_client_id(self):
-        return self.snd.githubAuthClientId
+        return self.raw.get('githubAuthClientId')
 
     def github_auth_client_secret(self):
-        return self.snd.githubAuthClientSecret
+        return self.raw.get('githubAuthClientSecret')
 
     def github_auth_auth_url(self):
-        return self.snd.githubAuthAuthUrl
+        return self.raw.get('githubAuthAuthUrl')
 
     def github_auth_token_url(self):
-        return self.snd.githubAuthTokenUrl
+        return self.raw.get('githubAuthTokenUrl')
 
     def github_auth_api_url(self):
-        return self.snd.githubAuthApiUrl
+        return self.raw.get('githubAuthApiUrl')
 
     def has_basic_auth_credentials(self):
-        if self.snd.username or self.snd.password:
+        if self.raw.get('username') or self.raw.get('password'):
             return True
         return False
 
     def has_github_oauth_credentials(self):
         if (
-            self.snd.gitAuthTeam or
-            self.snd.githubAuthClientId or
-            self.snd.githubAuthClientSecret
+            self.raw.get('gitAuthTeam') or
+            self.raw.get('githubAuthClientId') or
+            self.raw.get('githubAuthClientSecret')
         ):
             return True
         return False
 
     def has_custom_github_auth_urls(self):
         if (
-          self.snd.githubAuthAuthUrl or
-          self.snd.githubAuthTokenUrl or
-          self.snd.githubAuthApiUrl
+          self.raw.get('githubAuthAuthUrl') or
+          self.raw.get('githubAuthTokenUrl') or
+          self.raw.get('githubAuthApiUrl')
         ):
             return True
         return False
@@ -693,19 +693,19 @@ class EmailConfig(NamedModelElement):
     Not intended to be instantiated by users of this module
     '''
     def smtp_host(self):
-        return self.snd.host
+        return self.raw.get('host')
 
     def smtp_port(self):
-        return self.snd.port
+        return self.raw.get('port')
 
     def use_tls(self):
-        return self.snd.use_tls
+        return self.raw.get('use_tls')
 
     def sender_name(self):
-        return self.snd.sender_name
+        return self.raw.get('sender_name')
 
     def credentials(self):
-        return EmailCredentials(self.snd.credentials)
+        return EmailCredentials(self.raw.get('credentials'))
 
     def _required_attributes(self):
         return ['host', 'port', 'credentials']
@@ -730,13 +730,13 @@ class JobMappingSet(NamedModelElement):
 
 class JobMapping(NamedModelElement):
     def team_name(self)->str:
-        return self.snd.concourse_target_team
+        return self.raw.get('concourse_target_team')
 
     def definition_dirs(self):
         return self.raw['definition_dirs']
 
     def github_organisations(self):
-        return [GithubOrganisationConfig(name, raw) for name, raw in self.snd.github_orgs.items()]
+        return [GithubOrganisationConfig(name, raw) for name, raw in self.raw.get('github_orgs').items()]
 
     def _required_attributes(self):
         return ['concourse_target_team']
@@ -744,10 +744,10 @@ class JobMapping(NamedModelElement):
 
 class GithubOrganisationConfig(NamedModelElement):
     def github_cfg_name(self):
-        return self.snd.github_cfg
+        return self.raw.get('github_cfg')
 
     def org_name(self):
-        return self.snd.github_org
+        return self.raw.get('github_org')
 
 
 class KubernetesConfig(NamedModelElement):
@@ -760,10 +760,10 @@ class KubernetesConfig(NamedModelElement):
 
 class SecretsServerConfig(NamedModelElement):
     def namespace(self):
-        return self.snd.namespace
+        return self.raw.get('namespace')
 
     def service_name(self):
-        return self.snd.service_name
+        return self.raw.get('service_name')
 
     def endpoint_url(self):
         return 'http://{sn}.{ns}.svc.cluster.local'.format(
@@ -777,10 +777,10 @@ class SecretsServerConfig(NamedModelElement):
 
 class SecretsServerSecrets(ModelBase):
     def concourse_secret_name(self):
-        return self.snd.concourse_config.name
+        return self.raw.get('concourse_config').get('name')
 
     def concourse_attribute(self):
-        return self.snd.concourse_config.attribute
+        return self.raw.get('concourse_config').get('attribute')
 
     def cfg_set_names(self):
         return self.raw['cfg_sets']
@@ -788,10 +788,10 @@ class SecretsServerSecrets(ModelBase):
 
 class TlsConfig(NamedModelElement):
     def private_key(self):
-        return self.snd.private_key
+        return self.raw.get('private_key')
 
     def certificate(self):
-        return self.snd.certificate
+        return self.raw.get('certificate')
 
     def _required_attributes(self):
         return ['private_key', 'certificate']
