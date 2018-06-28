@@ -177,8 +177,8 @@ class Renderer(object):
 
         factory = DefinitionFactory(raw_definition_descriptor=pipeline_definition)
         pipeline_metadata = SimpleNamespaceDict()
-        pipeline_metadata.definition = factory.create_pipeline_definition()
-        pipeline_metadata.name = pipeline_definition.name
+        pipeline_metadata['definition'] = factory.create_pipeline_definition()
+        pipeline_metadata['name'] = pipeline_definition.name
         generated_model = pipeline_metadata.definition
 
         # determine pipeline name (if there is main-repo, append the configured branch name)
