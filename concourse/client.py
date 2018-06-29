@@ -551,7 +551,7 @@ class BuildEvents(object):
                 continue
 
             if filter_for_task_id:
-                if data.origin and data.origin.id == filter_for_task_id:
+                if data.get('origin') and data['origin'].get('id') == filter_for_task_id:
                     matches_task_filter = True
                 else:
                     matches_task_filter = False
@@ -581,9 +581,13 @@ class BuildEvents(object):
         Task IDs may be retrieved from `BuildPlan#task_id`.
         '''
         def filter_log(log_data):
-            if not log_data.origin or not log_data.payload or log_data.origin.id != task_id:
+            if (
+                not log_data.get('origin') or
+                not log_data.get('payload') or
+                log_data['origin'].get('id') != task_id
+            ):
                 return
-            return log_data.payload
+            return log_data['payload']
 
         def stop_if_task_ended(event_data):
             if not event_data.event or event_data.event != 'finish-task':
