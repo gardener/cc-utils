@@ -173,19 +173,19 @@ class ComponentDependencies(ProductModelBase):
 
     def add_container_image_dependency(self, container_image):
         if not container_image in self.container_images():
-            self.raw.get('container_images').append(container_image.raw)
+            self.raw['container_images'].append(container_image.raw)
 
     def add_component_dependency(self, component_reference):
         if not component_reference in self.components():
-            self.raw.get('components').append(component_reference.raw)
+            self.raw['components'].append(component_reference.raw)
 
     def add_web_dependency(self, web_dependency):
         if not web_dependency in self.web_dependencies():
-            self.raw.get('web').append(web_dependency.raw)
+            self.raw['web'].append(web_dependency.raw)
 
     def add_generic_dependency(self, generic_dependency):
         if not generic_dependency in self.generic_dependencies():
-            self.raw.get('generic').append(generic_dependency.raw)
+            self.raw['generic'].append(generic_dependency.raw)
 
 
 #############################################################################
