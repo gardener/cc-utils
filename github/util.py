@@ -24,6 +24,7 @@ from github3.github import GitHub, GitHubEnterprise
 from github3.repos.repo import Repository
 from github3.exceptions import NotFoundError, ForbiddenError
 from github3.orgs import Team
+import requests
 
 import util
 import version
@@ -181,7 +182,10 @@ class GitHubRepositoryHelper(object):
             if asset.label == asset_label:
                 break
         else:
-            raise ValueError('no asset with label {l} found'.format(l=asset_label))
+            response = requests.Response()
+            response.status_code = 404
+            response.json = lambda: {'message':'no asset with label {l} found'.format(l=asset_label)}
+            raise NotFoundError(resp=response)
 
         buffer = io.BytesIO()
         asset.download(buffer)
