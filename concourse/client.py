@@ -558,7 +558,7 @@ class BuildEvents(object):
             else:
                 matches_task_filter = True
 
-            if matches_task_filter and parsed.event == 'finish-task':
+            if matches_task_filter and parsed.get('event') == 'finish-task':
                 should_stop = True # do not wait any longer as our task has finished
 
             if callback and matches_task_filter:
@@ -567,7 +567,7 @@ class BuildEvents(object):
                     yield result
 
             # if 'finish-task' event is reached, we always want to stop
-            if not should_stop and data.event == 'end':
+            if not should_stop and data.get('event') == 'end':
                 should_stop = True
 
             if should_stop:
