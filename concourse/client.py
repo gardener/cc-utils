@@ -462,16 +462,16 @@ class Build(ModelBase):
     Not intended to be instantiated by users of this module
     '''
     def id(self):
-        return int(self.raw_dict.id)
+        return int(self.raw_dict.get('id'))
 
     def start_time(self):
-        return int(self.raw_dict.start_time)
+        return int(self.raw_dict.get('start_time'))
 
     def stop_time(self):
-        return int(self.raw_dict.end_time)
+        return int(self.raw_dict.get('end_time'))
 
     def status(self):
-        return BuildStatus(self.raw_dict.status)
+        return BuildStatus(self.raw_dict.get('status'))
 
     def plan(self):
         return self.api.build_plan(self.id())
@@ -488,7 +488,7 @@ class BuildPlan(ModelBase):
         the given name is returned.
         If no task with the given name is found, `None` is returned.
         '''
-        plan = self.raw_dict.plan
+        plan = self.raw_dict.get('plan')
         def find_tid(p):
             if 'task' in p:
                 task = p.get('task')
