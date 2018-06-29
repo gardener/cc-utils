@@ -17,6 +17,7 @@ import functools
 import io
 import os
 import sys
+import urllib.parse
 from enum import Enum
 
 from github3.github import GitHub, GitHubEnterprise
@@ -187,6 +188,25 @@ class GitHubRepositoryHelper(object):
         return buffer.getvalue().decode()
 
 
+def github_api_ctor(github_url: str):
+    '''returns the appropriate github3.GitHub constructor for the given github URL
+
+    In case github_url does not refer to github.com, the c'tor for GithubEnterprise is
+    returned with the url argument preset, thus disburdening users to differentiate
+    between github.com and non-github.com cases.
+    '''
+    parsed = urllib.parse.urlparse(github_url)
+    if parsed.scheme:
+        hostname = parsed.hostname
+    else:
+        raise ValueError('failed to parse url: ' + str(github_url))
+
+    if hostname.lower() == 'github.com':
+        return GitHub
+    else:
+        return functools.partial(GitHubEnterprise, url=github_url)
+
+
 @functools.lru_cache()
 def _create_github_api_object(
     github_cfg: 'GithubConfig',
@@ -196,15 +216,16 @@ def _create_github_api_object(
 
     github_verify_ssl = github_cfg.tls_validation()
 
-    if github_url.strip('/') == 'https://github.com':
-        github = GitHub(token=github_auth_token)
-    else:
-        github = GitHubEnterprise(url=github_url, token=github_auth_token, verify=github_verify_ssl)
+    github_ctor = github_api_ctor(github_url=github_url)
+    github_api = github_ctor(
+        token=github_auth_token,
+        verify=github_verify_ssl,
+    )
 
-    if not github:
+    if not github_api:
         util.fail("Could not connect to GitHub-instance {url}".format(url=github_url))
 
-    return github
+    return github_api
 
 
 def branches(
