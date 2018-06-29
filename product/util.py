@@ -17,16 +17,16 @@ import functools
 import itertools
 import yaml
 
-from github.util import GitHubRepositoryHelper
+from github.util import GitHubRepositoryHelper, github_api_ctor
 from util import not_none
 from .model import Product, COMPONENT_DESCRIPTOR_ASSET_NAME
 
 class ComponentDescriptorResolver(object):
     def __init__(
         self,
-        cfg_factory,
+        cfg_factory=None,
     ):
-        self.cfg_factory=not_none(cfg_factory)
+        self.cfg_factory=cfg_factory
 
     @functools.lru_cache()
     def _github_cfg_for_hostname(self, host_name):
@@ -36,14 +36,34 @@ class ComponentDescriptorResolver(object):
                 return github_cfg
         raise RuntimeError('no github_cfg for {h}'.format(host_name))
 
+    @functools.lru_cache()
+    def _github_api_for_hostname(self, host_name):
+        not_none(host_name)
+        # hard-code schema to https
+        url = 'https://' + host_name
+        ctor = github_api_ctor(github_url=url)
+        return ctor()
+
+
     def _repository_helper(self, component_reference):
-        return GitHubRepositoryHelper(
-            github_cfg=self._github_cfg_for_hostname(
-                host_name=component_reference.github_host(),
-            ),
-            owner=component_reference.github_organisation(),
-            name=component_reference.github_repo(),
+        gh_helper_ctor = functools.partial(
+                GitHubRepositoryHelper,
+                owner=component_reference.github_organisation(),
+                name=component_reference.github_repo(),
         )
+
+        if self.cfg_factory:
+            return gh_helper_ctor(
+                github_cfg=self._github_cfg_for_hostname(
+                    host_name=component_reference.github_host(),
+                )
+            )
+        else:
+            return gh_helper_ctor(
+                github_api=self._github_api_for_hostname(
+                    host_name=component_reference.github_host(),
+                )
+            )
 
     def retrieve_raw_descriptor(self, component_reference, as_dict=False):
         repo_helper = self._repository_helper(component_reference)
