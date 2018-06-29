@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from copy import deepcopy
+import github3.exceptions
 import functools
 import itertools
 import yaml
@@ -20,6 +21,17 @@ import yaml
 from github.util import GitHubRepositoryHelper, github_api_ctor
 from util import not_none
 from .model import Product, COMPONENT_DESCRIPTOR_ASSET_NAME
+
+class ComponentResolutionException(Exception):
+    def __init__(self, msg, component_reference):
+        self.msg = msg
+        self.component_reference = component_reference
+
+    def __str__(self):
+        return 'error resolving {cr}: {msg}'.format(
+            cr=self.component_reference,
+            msg=self.msg,
+        )
 
 class ComponentDescriptorResolver(object):
     def __init__(
@@ -77,10 +89,17 @@ class ComponentDescriptorResolver(object):
             return dependency_descriptor
 
     def retrieve_descriptor(self, component_reference):
-        dependency_descriptor = self.retrieve_raw_descriptor(
-            component_reference=component_reference,
-            as_dict=True,
-        )
+        try:
+            dependency_descriptor = self.retrieve_raw_descriptor(
+                component_reference=component_reference,
+                as_dict=True,
+            )
+        except github3.exceptions.NotFoundError as nfe:
+            raise ComponentResolutionException(
+                msg=nfe.msg,
+                component_reference=component_reference,
+            )
+
         return Product.from_dict(dependency_descriptor)
 
     def resolve_component_references(
