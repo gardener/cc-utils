@@ -44,6 +44,12 @@ class ModelBase(object):
                 a=', '.join(missing_keys))
             )
 
+    def __str__(self):
+        return '{c} {a}'.format(
+            c=self.__class__.__name__,
+            a=str(self.raw),
+        )
+
 
 class NamedModelElement(ModelBase):
     def __init__(self, name, raw_dict, *args, **kwargs):

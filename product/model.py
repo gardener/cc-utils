@@ -36,12 +36,6 @@ class ProductModelBase(ModelBase):
         raw_dict = {**kwargs}
         super().__init__(raw_dict=raw_dict)
 
-    def __str__(self):
-        return '{c} {a}'.format(
-            c=self.__class__.__name__,
-            a=str(self.raw),
-        )
-
 
 class DependencyBase(ProductModelBase):
     '''
