@@ -163,6 +163,25 @@ class ProductModelTest(unittest.TestCase):
         self.assertIsNotNone(merged.component(('rcomp1', '2')))
 
 
+class ComponentModelTest(unittest.TestCase, AssertMixin):
+    def test_ctor(self):
+        examinee = product.model.Component(name='github.com/example/name', version='1.2.3')
+
+        self.assertEqual(examinee.name(), 'github.com/example/name')
+        self.assertEqual(examinee.version(), '1.2.3')
+
+    def test_add_dependencies(self):
+        examinee = product.model.Component(name='github.com/example/name', version='1.2.3')
+        deps = examinee.dependencies()
+        self.assertEmpty(deps.components())
+
+        component_dep = product.model.ComponentReference(name='github.com/foo/bar', version='2')
+
+        deps.add_component_dependency(component_dep)
+
+        self.assertEqual(tuple(deps.components()), (component_dep,))
+
+
 class DependenciesModelTest(unittest.TestCase, AssertMixin):
     def test_ctor(self):
         examinee = product.model.ComponentDependencies()
