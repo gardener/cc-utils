@@ -143,10 +143,10 @@ class Component(ComponentReference):
             self.raw['dependencies'] = {}
 
     def dependencies(self):
-        return ComponentDependencies(**self.raw['dependencies'])
+        return ComponentDependencies(raw_dict=self.raw['dependencies'])
 
 
-class ComponentDependencies(ProductModelBase):
+class ComponentDependencies(ModelBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for attrib_name in ('container_images', 'components', 'web', 'generic'):

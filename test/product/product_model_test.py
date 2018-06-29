@@ -184,7 +184,7 @@ class ComponentModelTest(unittest.TestCase, AssertMixin):
 
 class DependenciesModelTest(unittest.TestCase, AssertMixin):
     def test_ctor(self):
-        examinee = product.model.ComponentDependencies()
+        examinee = product.model.ComponentDependencies(raw_dict={})
 
         self.assertEmpty(examinee.web_dependencies())
         self.assertEmpty(examinee.generic_dependencies())
@@ -192,7 +192,7 @@ class DependenciesModelTest(unittest.TestCase, AssertMixin):
         self.assertEmpty(examinee.components())
 
     def test_adding_dependencies(self):
-        examinee = product.model.ComponentDependencies()
+        examinee = product.model.ComponentDependencies(raw_dict={})
 
         ci_dep = product.model.ContainerImage(name='cn', version='cv', image_reference='cir')
         comp_dep = product.model.ComponentReference(name='c', version='c')
