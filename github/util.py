@@ -188,7 +188,7 @@ class GitHubRepositoryHelper(object):
         return buffer.getvalue().decode()
 
 
-def github_api_ctor(github_url: str):
+def github_api_ctor(github_url: str, verify_ssl: bool=True):
     '''returns the appropriate github3.GitHub constructor for the given github URL
 
     In case github_url does not refer to github.com, the c'tor for GithubEnterprise is
@@ -204,7 +204,7 @@ def github_api_ctor(github_url: str):
     if hostname.lower() == 'github.com':
         return GitHub
     else:
-        return functools.partial(GitHubEnterprise, url=github_url)
+        return functools.partial(GitHubEnterprise, url=github_url, verify=verify_ssl)
 
 
 @functools.lru_cache()
@@ -214,12 +214,11 @@ def _create_github_api_object(
     github_url = github_cfg.http_url()
     github_auth_token = github_cfg.credentials().auth_token()
 
-    github_verify_ssl = github_cfg.tls_validation()
+    verify_ssl = github_cfg.tls_validation()
 
-    github_ctor = github_api_ctor(github_url=github_url)
+    github_ctor = github_api_ctor(github_url=github_url, verify_ssl=verify_ssl)
     github_api = github_ctor(
         token=github_auth_token,
-        verify=github_verify_ssl,
     )
 
     if not github_api:
