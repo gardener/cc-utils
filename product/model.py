@@ -37,15 +37,12 @@ class ProductModelBase(ModelBase):
         super().__init__(raw_dict=raw_dict)
 
 
-class DependencyBase(ProductModelBase):
+class DependencyBase(ModelBase):
     '''
     Base class for dependencies
 
     Not intended to be instantiated.
     '''
-    def __init__(self, name, version, **kwargs):
-        super().__init__(name=name, version=version, **kwargs)
-
     def name(self):
         return self.raw.get('name')
 
@@ -72,12 +69,12 @@ class Product(ProductModelBase):
             self.raw['components'] = []
 
     def components(self):
-        return (Component(**raw_dict) for raw_dict in self.raw['components'])
+        return (Component(raw_dict=raw_dict) for raw_dict in self.raw['components'])
 
     def component(self, component_reference):
         if not isinstance(component_reference, ComponentReference):
             name, version = component_reference
-            component_reference = ComponentReference(name=name, version=version)
+            component_reference = ComponentReference.create(name=name, version=version)
 
         return next(
             filter(lambda c: c == component_reference, self.components()),
@@ -91,7 +88,7 @@ class Product(ProductModelBase):
 class ComponentReference(DependencyBase):
     @staticmethod
     def create(name, version):
-        return ComponentReference(name=name, version=version)
+        return ComponentReference(raw_dict={'name':name, 'version':version})
 
     def github_host(self):
         return self.name().split('/')[0]
@@ -111,7 +108,9 @@ class ComponentReference(DependencyBase):
 class ContainerImage(DependencyBase):
     @staticmethod
     def create(name, version, image_reference):
-        return ContainerImage(name=name, version=version, image_reference=image_reference)
+        return ContainerImage(
+            raw_dict={'name':name, 'version':version, 'image_reference':image_reference}
+        )
 
     def image_reference(self):
         return self.raw.get('image_reference')
@@ -120,7 +119,9 @@ class ContainerImage(DependencyBase):
 class WebDependency(DependencyBase):
     @staticmethod
     def create(name, version, url):
-        return WebDependency(name=name, version=version, url=url)
+        return WebDependency(
+            raw_dict={'name':name, 'version':version, 'url':url}
+        )
 
     def url(self):
         return self.raw.get('url')
@@ -129,13 +130,13 @@ class WebDependency(DependencyBase):
 class GenericDependency(DependencyBase):
     @staticmethod
     def create(name, version):
-        return GenericDependency(name=name, version=version)
+        return GenericDependency(raw_dict={'name':name, 'version':version})
 
 
 class Component(ComponentReference):
     @staticmethod
     def create(name, version):
-        return Component(name=name, version=version)
+        return Component(raw_dict={'name':name, 'version':version})
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -154,16 +155,16 @@ class ComponentDependencies(ModelBase):
                 self.raw[attrib_name] = []
 
     def container_images(self):
-        return (ContainerImage(**raw_dict) for raw_dict in self.raw.get('container_images'))
+        return (ContainerImage(raw_dict=raw_dict) for raw_dict in self.raw.get('container_images'))
 
     def components(self):
-        return (ComponentReference(**raw_dict) for raw_dict in self.raw.get('components'))
+        return (ComponentReference(raw_dict=raw_dict) for raw_dict in self.raw.get('components'))
 
     def web_dependencies(self):
-        return (WebDependency(**raw_dict) for raw_dict in self.raw.get('web'))
+        return (WebDependency(raw_dict=raw_dict) for raw_dict in self.raw.get('web'))
 
     def generic_dependencies(self):
-        return (GenericDependency(**raw_dict) for raw_dict in self.raw.get('generic'))
+        return (GenericDependency(raw_dict=raw_dict) for raw_dict in self.raw.get('generic'))
 
     def add_container_image_dependency(self, container_image):
         if not container_image in self.container_images():

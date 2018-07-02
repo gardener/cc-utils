@@ -164,18 +164,21 @@ class ProductModelTest(unittest.TestCase):
 
 
 class ComponentModelTest(unittest.TestCase, AssertMixin):
-    def test_ctor(self):
-        examinee = product.model.Component(name='github.com/example/name', version='1.2.3')
+    def test_create(self):
+        examinee = product.model.Component.create(name='github.com/example/name', version='1.2.3')
 
         self.assertEqual(examinee.name(), 'github.com/example/name')
         self.assertEqual(examinee.version(), '1.2.3')
 
     def test_add_dependencies(self):
-        examinee = product.model.Component(name='github.com/example/name', version='1.2.3')
+        examinee = product.model.Component.create(name='github.com/example/name', version='1.2.3')
         deps = examinee.dependencies()
         self.assertEmpty(deps.components())
 
-        component_dep = product.model.ComponentReference(name='github.com/foo/bar', version='2')
+        component_dep = product.model.ComponentReference.create(
+                name='github.com/foo/bar',
+                version='2'
+        )
 
         deps.add_component_dependency(component_dep)
 
@@ -194,10 +197,10 @@ class DependenciesModelTest(unittest.TestCase, AssertMixin):
     def test_adding_dependencies(self):
         examinee = product.model.ComponentDependencies(raw_dict={})
 
-        ci_dep = product.model.ContainerImage(name='cn', version='cv', image_reference='cir')
-        comp_dep = product.model.ComponentReference(name='c', version='c')
-        web_dep = product.model.WebDependency(name='wn', version='wv', url='u')
-        gen_dep = product.model.GenericDependency(name='gn', version='gv')
+        ci_dep = product.model.ContainerImage.create(name='cn', version='cv', image_reference='cir')
+        comp_dep = product.model.ComponentReference.create(name='c', version='c')
+        web_dep = product.model.WebDependency.create(name='wn', version='wv', url='u')
+        gen_dep = product.model.GenericDependency.create(name='gn', version='gv')
 
         examinee.add_container_image_dependency(ci_dep)
         self.assertEqual((ci_dep,), tuple(examinee.container_images()))
@@ -212,7 +215,7 @@ class DependenciesModelTest(unittest.TestCase, AssertMixin):
         self.assertEqual((gen_dep,), tuple(examinee.generic_dependencies()))
 
         # adding the same dependency multiple times must be ignored
-        redundant_dep = product.model.GenericDependency(name='gn', version='gv')
+        redundant_dep = product.model.GenericDependency.create(name='gn', version='gv')
         self.assertEqual(redundant_dep, gen_dep)
         examinee.add_generic_dependency(redundant_dep)
         self.assertEqual((gen_dep,), tuple(examinee.generic_dependencies()))
