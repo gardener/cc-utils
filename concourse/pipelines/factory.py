@@ -146,20 +146,22 @@ class DefinitionFactory(object):
             transformer.process_pipeline_args(pipeline_def)
 
     def _create_traits(self, raw_dict, variant_name):
-        if 'traits' in raw_dict:
-            traits_args = normalise_to_dict(raw_dict['traits'])
-            traits_dict = {
-                    name: TraitsFactory.create(
-                        name=name,
-                        variant_name=variant_name,
-                        args_dict=args if args else {}
-                    )
-                    for name, args in traits_args.items()
-            }
-            return traits_dict
-        else:
-            return {}
+        if 'traits' not in raw_dict:
+            raw_dict['traits'] = {}
 
+        if 'options' not in raw_dict['traits']:
+            raw_dict['traits']['options'] = {}
+
+        traits_args = normalise_to_dict(raw_dict['traits'])
+        traits_dict = {
+                name: TraitsFactory.create(
+                    name=name,
+                    variant_name=variant_name,
+                    args_dict=args if args else {}
+                )
+                for name, args in traits_args.items()
+        }
+        return traits_dict
 
     def _create_build_steps(self, raw_dict):
         steps_dict = {}
