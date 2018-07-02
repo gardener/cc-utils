@@ -23,6 +23,7 @@ from .pullrequest import PullRequestTrait
 from .release import ReleaseTrait
 from .scheduling import SchedulingTrait
 from .version import VersionTrait
+from .options import OptionsTrait
 
 TRAITS = {
     'version': VersionTrait,
@@ -32,6 +33,7 @@ TRAITS = {
     'release': ReleaseTrait,
     'scheduling': SchedulingTrait,
     'publish': PublishTrait,
+    'options': OptionsTrait,
 }
 
 class TraitsFactory(object):
