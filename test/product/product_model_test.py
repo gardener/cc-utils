@@ -17,6 +17,7 @@ import unittest
 
 from _test_utils import AssertMixin
 
+import model.base
 import product.model
 import product.util
 
@@ -27,14 +28,14 @@ class ProductModelTest(unittest.TestCase):
             [
                 # first_component
                 {
-                    'name': 'first_component',
+                    'name': 'example.org/foo/first_component',
                     'version': 'first_version',
                     'dependencies':
                     {
                         'components':
                         [
                             {
-                                'name': 'second_component',
+                                'name': 'example.org/bar/second_component',
                                 'version': 'second_version',
                             }
                         ],
@@ -65,7 +66,7 @@ class ProductModelTest(unittest.TestCase):
                 },
                 # second_component
                 {
-                    'name': 'second_component',
+                    'name': 'example.org/bar/second_component',
                     'version': 'second_version',
                     'dependencies': None # no dependencies
                 }
@@ -78,11 +79,11 @@ class ProductModelTest(unittest.TestCase):
         components = list(examinee.components())
         self.assertEquals(len(components), 2)
 
-        first_component = examinee.component(('first_component', 'first_version'))
-        second_component = examinee.component(('second_component', 'second_version'))
+        first_component = examinee.component(('example.org/foo/first_component', 'first_version'))
+        second_component = examinee.component(('example.org/bar/second_component', 'second_version'))
 
-        self.assertEquals(first_component.name(), 'first_component')
-        self.assertEquals(second_component.name(), 'second_component')
+        self.assertEquals(first_component.name(), 'example.org/foo/first_component')
+        self.assertEquals(second_component.name(), 'example.org/bar/second_component')
 
         first_dependencies = first_component.dependencies()
         second_dependencies = second_component.dependencies()
@@ -95,7 +96,7 @@ class ProductModelTest(unittest.TestCase):
         self.assertEqual(len(first_container_deps), 1)
         first_container_dep = first_container_deps[0]
 
-        self.assertEqual(first_component_dep.name(), 'second_component')
+        self.assertEqual(first_component_dep.name(), 'example.org/bar/second_component')
         self.assertEqual(first_component_dep.version(), 'second_version')
 
         self.assertEqual(first_container_dep.image_reference(), 'first_creference:version')
@@ -137,7 +138,10 @@ class ProductModelTest(unittest.TestCase):
                 version='container_version',
                 image_reference='dontcare',
         )
-        first_comp_deps = right_model.component(('first_component', 'first_version')).dependencies()
+        first_comp_deps = right_model.component((
+                    'example.org/foo/first_component',
+                    'first_version')
+                ).dependencies()
         first_comp_deps.add_container_image_dependency(container_image_dep)
 
         with self.assertRaises(ValueError):
@@ -147,8 +151,8 @@ class ProductModelTest(unittest.TestCase):
         left_model = product.model.Product.from_dict(raw_dict={})
         right_model = product.model.Product.from_dict(raw_dict={})
 
-        left_component1 = product.model.Component.create(name='lcomp1', version='1')
-        right_component1 = product.model.Component.create(name='rcomp1', version='2')
+        left_component1 = product.model.Component.create(name='x/y/lcomp1', version='1')
+        right_component1 = product.model.Component.create(name='x/y/rcomp1', version='2')
 
         left_model.add_component(left_component1)
         right_model.add_component(right_component1)
@@ -159,8 +163,8 @@ class ProductModelTest(unittest.TestCase):
         merged_components = list(merged.components())
         self.assertEqual(len(merged_components), 2)
 
-        self.assertIsNotNone(merged.component(('lcomp1', '1')))
-        self.assertIsNotNone(merged.component(('rcomp1', '2')))
+        self.assertIsNotNone(merged.component(('x/y/lcomp1', '1')))
+        self.assertIsNotNone(merged.component(('x/y/rcomp1', '2')))
 
 
 class ComponentModelTest(unittest.TestCase, AssertMixin):
@@ -185,6 +189,29 @@ class ComponentModelTest(unittest.TestCase, AssertMixin):
         self.assertEqual(tuple(deps.components()), (component_dep,))
 
 
+class ComponentReferenceModelTest(unittest.TestCase):
+    def test_validate_component_name(self):
+        examinee = product.model.ComponentReference.validate_component_name
+
+        invalid_component_names = (
+            '',
+            'http://github.com/example/example',
+            'github.com',
+            'github.com/',
+            'github.com/foo',
+            'github.com/foo/',
+            'github.com/foo/bar/x',
+        )
+
+        for component_name in invalid_component_names:
+            with self.assertRaises(model.base.ModelValidationError):
+                examinee(component_name)
+
+        # test valid names
+        examinee('github.com/example/example')
+        examinee('github.com/example/example/')
+
+
 class DependenciesModelTest(unittest.TestCase, AssertMixin):
     def test_ctor(self):
         examinee = product.model.ComponentDependencies(raw_dict={})
@@ -198,7 +225,7 @@ class DependenciesModelTest(unittest.TestCase, AssertMixin):
         examinee = product.model.ComponentDependencies(raw_dict={})
 
         ci_dep = product.model.ContainerImage.create(name='cn', version='cv', image_reference='cir')
-        comp_dep = product.model.ComponentReference.create(name='c', version='c')
+        comp_dep = product.model.ComponentReference.create(name='h/o/c', version='c')
         web_dep = product.model.WebDependency.create(name='wn', version='wv', url='u')
         gen_dep = product.model.GenericDependency.create(name='gn', version='gv')
 

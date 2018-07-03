@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import urllib.parse
 from copy import deepcopy
 from enum import Enum
 
-from model.base import ModelBase, NamedModelElement
+from model.base import ModelBase, NamedModelElement, ModelValidationError
 from protecode.model import AnalysisResult
 from util import parse_yaml_file, not_none
 
@@ -87,6 +88,28 @@ class Product(ProductModelBase):
 
 class ComponentReference(DependencyBase):
     @staticmethod
+    def validate_component_name(name: str):
+        not_none(name)
+
+        if len(name) == 0:
+            raise ModelValidationError('Component name must not be empty')
+
+        # valid component names are fully qualified github repository URLs without a schema
+        # (e.g. github.com/example_org/example_name)
+        if urllib.parse.urlparse(name).scheme:
+            raise ModelValidationError('Component name must not contain schema')
+
+        # prepend dummy schema so that urlparse will parse away the hostname
+        parsed = urllib.parse.urlparse('dummy://' + name)
+
+        if not parsed.hostname:
+            raise ModelValidationError(name)
+
+        path_parts = parsed.path.strip('/').split('/')
+        if not len(path_parts) == 2:
+            raise ModelValidationError('Component name must end with github repository path')
+
+    @staticmethod
     def create(name, version):
         return ComponentReference(raw_dict={'name':name, 'version':version})
 
@@ -98,6 +121,9 @@ class ComponentReference(DependencyBase):
 
     def github_repo(self):
         return self.name().split('/')[2]
+
+    def _validate_dict(self):
+        ComponentReference.validate_component_name(self.raw.get('name'))
 
     def __eq__(self, other):
         if not isinstance(other, ComponentReference):
