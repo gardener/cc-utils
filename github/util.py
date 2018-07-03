@@ -179,7 +179,7 @@ class GitHubRepositoryHelper(object):
 
         release = self.repository.release_from_tag(release_tag)
         for asset in release.assets():
-            if asset.label == asset_label:
+            if asset.label == asset_label or asset.name == asset_label:
                 break
         else:
             response = requests.Response()
