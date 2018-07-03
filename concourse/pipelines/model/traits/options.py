@@ -21,6 +21,11 @@ class OptionsTrait(Trait):
             return self.raw.get('build_logs_to_retain')
         return 1000
 
+    def serial(self):
+        if 'serial' in self.raw:
+            return self.raw.get('serial')
+        return False
+
     def transformer(self):
         return OptionsTraitTransformer(trait=self, name=self.name)
 
@@ -31,4 +36,7 @@ class OptionsTraitTransformer(TraitTransformer):
         self.trait = ensure_not_none(trait)
     
     def process_pipeline_args(self, pipeline_args: 'PipelineArgs'):
-        pass
+        for trait_name in pipeline_args.traits().keys():
+            # variants with 'cronjob' or 'release' trait should always run sequentially
+            if trait_name == 'cronjob' or trait_name == 'release':
+                self.trait.raw['serial'] = True
