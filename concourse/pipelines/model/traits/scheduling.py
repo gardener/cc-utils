@@ -26,7 +26,7 @@ class SchedulingTrait(Trait):
         return SchedulingTraitTransformer(name=self.name)
 
     def suppress_parallel_execution(self):
-        return self.raw.get('suppress_parallel_execution', False)
+        return self.raw.get('suppress_parallel_execution', None)
 
 
 class SchedulingTraitTransformer(TraitTransformer):
