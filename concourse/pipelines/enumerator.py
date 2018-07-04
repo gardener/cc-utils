@@ -70,7 +70,8 @@ class DefinitionEnumerator(object):
         repo_path,
         repo_hostname,
         branch,
-        raw_definitions
+        raw_definitions,
+        override_definitions={},
         ) -> 'DefinitionDescriptor':
         for name, definition in raw_definitions.items():
             pipeline_definition = deepcopy(definition)
@@ -81,7 +82,7 @@ class DefinitionEnumerator(object):
                 main_repo={'path': repo_path, 'branch': branch, 'hostname': repo_hostname},
                 concourse_target_cfg=self.cfg_set.concourse(),
                 concourse_target_team=self.job_mapping.team_name(),
-                override_definitions=[{},],
+                override_definitions=[override_definitions.get(name,{}),],
             )
 
 
@@ -150,6 +151,9 @@ class BranchCfgEntry(NamedModelElement):
                 return True
         return False
 
+    def override_definitions(self):
+        return self.raw.get('inherit', {})
+
 
 class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
     def __init__(self, job_mapping, cfg_set):
@@ -204,11 +208,12 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
                 default_branch = repository.default_branch
             except:
                 default_branch = 'master'
-            yield default_branch; return
+            yield (default_branch, None); return
 
         for branch in repository.branches():
-            if branch_cfg.cfg_entry_for_branch(branch.name):
-                yield branch.name
+            cfg_entry = branch_cfg.cfg_entry_for_branch(branch.name)
+            if cfg_entry:
+                yield (branch.name, cfg_entry)
 
     def _scan_repository_for_definitions(
         self,
@@ -216,7 +221,7 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
         github_cfg,
         org_name,
     ) -> RawPipelineDefinitionDescriptor:
-        for branch_name in self._determine_repository_branches(repository=repository):
+        for branch_name, cfg_entry in self._determine_repository_branches(repository=repository):
             try:
                 definitions = repository.file_contents(
                     path='.ci/pipeline_definitions',
@@ -226,6 +231,7 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
                 continue # no pipeline definition for this branch
 
             repo_hostname = urlparse(github_cfg.http_url()).hostname
+            override_definitions = cfg_entry.override_definitions() if cfg_entry else {}
 
             verbose('from repo: ' + repository.name + ':' + branch_name)
             definitions = yaml.load(definitions.decoded.decode('utf-8'))
@@ -233,7 +239,8 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
                 repo_path='/'.join([org_name, repository.name]),
                 repo_hostname=repo_hostname,
                 branch=branch_name,
-                raw_definitions=definitions
+                raw_definitions=definitions,
+                override_definitions=override_definitions,
             )
 
 
