@@ -28,6 +28,7 @@ from util import (
     parse_yaml_file,
     merge_dicts,
     info,
+    fail,
     verbose,
     ensure_directory_exists,
     not_empty,
