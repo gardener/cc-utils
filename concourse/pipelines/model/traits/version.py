@@ -32,7 +32,6 @@ class VersionTrait(Trait):
 
     def _preprocess(self):
         return self.raw.get('preprocess', 'inject-commit-hash')
-        self.args = ensure_not_none(trait_args)
 
     def versionfile_relpath(self):
         return self.raw.get('versionfile', 'VERSION')
