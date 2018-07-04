@@ -151,6 +151,7 @@ class Renderer(object):
                 render_status=RenderStatus.SUCCEEDED,
             )
         except Exception as e:
+            warning('erroneous pipeline definition: ' + definition_descriptor.pipeline_name)
             traceback.print_exc()
             return RenderResult(
                 definition_descriptor,
