@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import re
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
@@ -34,6 +35,7 @@ from util import (
 )
 from github.util import _create_github_api_object
 from model import JobMapping
+from model.base import ModelBase, NamedModelElement
 from concourse.pipelines.factory import RawPipelineDefinitionDescriptor
 
 class DefinitionDescriptorPreprocessor(object):
@@ -122,6 +124,32 @@ class MappingfileDefinitionEnumerator(DefinitionEnumerator):
                 yield (repo_path, definitions)
 
 
+class BranchCfg(ModelBase):
+    def cfg_entries(self):
+        return (
+            BranchCfgEntry(name=name, raw_dict=raw_dict)
+            for name, raw_dict in self.raw.get('cfgs').items()
+        )
+
+    def cfg_entry_for_branch(self, branch):
+        for entry in self.cfg_entries():
+            if entry.branch_matches(branch):
+                return entry
+            # todo: handle conflicts
+        return None
+
+
+class BranchCfgEntry(NamedModelElement):
+    def branches(self):
+        return self.raw.get('branches')
+
+    def branch_matches(self, branch):
+        for b in self.branches():
+            if re.fullmatch(b, branch):
+                return True
+        return False
+
+
 class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
     def __init__(self, job_mapping, cfg_set):
         self.job_mapping = not_none(job_mapping)
@@ -153,6 +181,35 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
             ):
                 yield from definition_descriptors
 
+    def _branch_cfg_or_none(
+        self,
+        repository,
+    ):
+        try:
+            branch_cfg = repository.file_contents(
+                path='branch.cfg',
+                ref='refs/meta/ci',
+            ).decoded.decode('utf-8')
+            return BranchCfg(raw_dict=yaml.load(branch_cfg))
+        except NotFoundError:
+            return None # no branch cfg present
+
+    def _determine_repository_branches(
+        self,
+        repository,
+    ):
+        branch_cfg = self._branch_cfg_or_none(repository=repository)
+        if not branch_cfg:
+            # fallback for components w/o branch_cfg: use default branch
+            try:
+                default_branch = repository.default_branch
+            except:
+                default_branch = 'master'
+            yield default_branch; return
+
+        for branch in repository.branches():
+            if branch_cfg.cfg_entry_for_branch(branch.name):
+                yield branch.name
 
     def _scan_repository_for_definitions(
         self,
@@ -161,13 +218,7 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
         org_name,
         branch_filter
     ) -> RawPipelineDefinitionDescriptor:
-        # always use default branch for now
-        try:
-            default_branch = repository.default_branch
-        except:
-            default_branch = 'master'
-
-        for branch_name in [default_branch]:
+        for branch_name in self._determine_repository_branches(repository=repository):
             try:
                 definitions = repository.file_contents(
                     path='.ci/pipeline_definitions',
