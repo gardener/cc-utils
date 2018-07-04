@@ -287,7 +287,7 @@ class TemplateRetriever(object):
         fail(
             'could not find template {t}, tried in {p}'.format(
                 t=str(template_name),
-                p=','.join(map(str, template_path))
+                p=','.join(map(str, self.template_path))
             )
         )
 
