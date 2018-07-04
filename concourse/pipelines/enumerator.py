@@ -165,7 +165,6 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
             github_org_name = github_org_cfg.org_name()
             info('scanning github organisation {gho}'.format(gho=github_org_name))
 
-            branch_filter = lambda b: b == 'master'
             github_api = _create_github_api_object(github_cfg)
             github_org = github_api.organization(github_org_name)
 
@@ -173,7 +172,6 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
                 self._scan_repository_for_definitions,
                 github_cfg=github_cfg,
                 org_name=github_org_name,
-                branch_filter=branch_filter,
             )
 
             for definition_descriptors in executor.map(
@@ -217,7 +215,6 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
         repository,
         github_cfg,
         org_name,
-        branch_filter
     ) -> RawPipelineDefinitionDescriptor:
         for branch_name in self._determine_repository_branches(repository=repository):
             try:
