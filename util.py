@@ -213,3 +213,39 @@ def merge_dicts(base: dict, other: dict, list_semantics='set_merge'):
     # copy dicts, so they remain unmodified
     return merger.merge(deepcopy(base), deepcopy(other))
 
+
+class FluentIterable(object):
+    ''' a fluent object stream processing chain builder inspired by guava's FluentIterable
+
+    Example:
+        result = FluentIterable(items=(1,2,3))
+            .filter(lambda e: e < 2)
+            .map(lambda e: e * 2)
+            .as_generator()
+
+    '''
+    def __init__(self, items):
+        def starter():
+            yield from items
+        self.ops = [starter]
+
+    def filter(self, filter_func):
+        last_op = self.ops[-1]
+        def f():
+            yield from filter(filter_func, last_op())
+        self.ops.append(f)
+        return self
+
+    def map(self, map_func):
+        last_op = self.ops[-1]
+        def m():
+            yield from map(map_func, last_op())
+        self.ops.append(m)
+        return self
+
+    def as_generator(self):
+        return self.ops[-1]()
+
+    def as_list(self):
+        return list(self.as_generator())
+
