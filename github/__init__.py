@@ -22,7 +22,19 @@ from urllib.parse import urlparse
 DEFAULT_HOOK_EVENTS = ['create', 'pull_request', 'push']
 DEFAULT_HOOK_NAME = 'web' # see https://developer.github.com/v3/repos/hooks/
 DEFAULT_HOOK_CONTENT_TYPE = 'json'
-CONCOURSE_ID = 'concourse_id'
+
+class WebhookQueryAttributes(object):
+    WEBHOOK_TOKEN_ATTRIBUTE_NAME = 'webhook_token'
+    CONCOURSE_ID_ATTRIBUTE_NAME = 'concourse_id'
+
+    def __init__(
+        self,
+        webhook_token: str,
+        concourse_id: str,
+    ):
+        self.webhook_token = webhook_token
+        self.concourse_id = concourse_id
+
 
 class GithubWebHookSyncer(object):
     '''

@@ -20,6 +20,7 @@ import warnings
 from enum import Enum
 import sseclient
 
+from github import WebhookQueryAttributes
 from http_requests import AuthenticatedRequestBuilder
 from model import ConcourseTeamCredentials
 from util import fail, warning, ensure_not_empty
@@ -131,10 +132,12 @@ class ConcourseApiRoutes(object):
         self,
         pipeline_name: str,
         resource_name: str,
-        webhook_token: str,
-        concourse_id: str,
+        query_attributes: WebhookQueryAttributes,
     ):
-        query_args = urlencode({'webhook_token': webhook_token, 'concourse_id': concourse_id})
+        query_args = urlencode({
+            WebhookQueryAttributes.WEBHOOK_TOKEN_ATTRIBUTE_NAME: query_attributes.webhook_token,
+            WebhookQueryAttributes.CONCOURSE_ID_ATTRIBUTE_NAME: query_attributes.concourse_id,
+        })
         return self._api_url(
             'pipelines',
             pipeline_name,

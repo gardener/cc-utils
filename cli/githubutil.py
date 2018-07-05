@@ -17,7 +17,7 @@ from urllib.parse import urlparse, parse_qs
 from github3.exceptions import NotFoundError
 
 from util import ctx, not_empty, info, warning, verbose, CliHint
-from github import GithubWebHookSyncer, CONCOURSE_ID
+from github import GithubWebHookSyncer, WebhookQueryAttributes
 from github.util import (
     GitHubRepositoryHelper,
     _create_github_api_object,
@@ -167,7 +167,7 @@ def remove_webhooks(
     webhook_syncer = GithubWebHookSyncer(github_api)
 
     def filter_function(url):
-        concourse_id = parse_qs(urlparse(url).query).get(CONCOURSE_ID)
+        concourse_id = parse_qs(urlparse(url).query).get(WebhookQueryAttributes.CONCOURSE_ID_ATTRIBUTE_NAME)
         should_delete = concourse_id and concourse_cfg_name in concourse_id
         return should_delete
 
