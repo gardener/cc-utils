@@ -22,18 +22,18 @@ from util import parse_yaml_file, info, fail, which, warning, CliHints, CliHint
 
 
 def list_github_resources(
-  concourse_url:str,
-  concourse_user:str='kubernetes',
-  concourse_passwd:str='kubernetes',
-  concourse_team:str='kubernetes',
-  concourse_pipelines=None,
-  github_url:str=None,
+    concourse_url: str,
+    concourse_user: str='kubernetes',
+    concourse_passwd: str='kubernetes',
+    concourse_team: str='kubernetes',
+    concourse_pipelines=None,
+    github_url: str=None,
 ):
     concourse_api = concourse.ConcourseApi(base_url=concourse_url, team_name=concourse_team)
     concourse_api.login(
-      team=concourse_team,
-      username=concourse_user,
-      passwd=concourse_passwd
+        team=concourse_team,
+        username=concourse_user,
+        passwd=concourse_passwd
     )
     github_hostname = urlparse(github_url).netloc
     pipeline_names = concourse_pipelines if concourse_pipelines else concourse_api.pipelines()
@@ -46,11 +46,11 @@ def list_github_resources(
 
 
 def sync_webhooks(
-  github_cfg:'GithubConfig',
-  concourse_cfg:'ConcourseConfig',
-  concourse_team:str='kubernetes',
-  concourse_pipelines:[str]=None,
-  concourse_verify_ssl:bool=False,
+    github_cfg: 'GithubConfig',
+    concourse_cfg: 'ConcourseConfig',
+    concourse_team: str='kubernetes',
+    concourse_pipelines: [str]=None,
+    concourse_verify_ssl: bool=False,
 ):
     concourse_url = concourse_cfg.external_url()
     team_cfg = concourse_cfg.team_credentials(concourse_team)
@@ -58,12 +58,12 @@ def sync_webhooks(
     concourse_passwd = team_cfg.passwd()
 
     github_resources = list_github_resources(
-      concourse_url=concourse_url,
-      concourse_user=concourse_user,
-      concourse_passwd=concourse_passwd,
-      concourse_team=concourse_team,
-      concourse_pipelines=concourse_pipelines,
-      github_url=github_cfg.http_url(),
+        concourse_url=concourse_url,
+        concourse_user=concourse_user,
+        concourse_passwd=concourse_passwd,
+        concourse_team=concourse_team,
+        concourse_pipelines=concourse_pipelines,
+        github_url=github_cfg.http_url(),
     )
     # group by repositories
     path_to_resources = {}
@@ -82,10 +82,10 @@ def sync_webhooks(
     for repo, resources in path_to_resources.items():
         try:
             _sync_webhook(
-              resources=resources,
-              webhook_syncer=webhook_syncer,
-              concourse_cfg=concourse_cfg,
-              skip_ssl_validation=not concourse_verify_ssl
+                resources=resources,
+                webhook_syncer=webhook_syncer,
+                concourse_cfg=concourse_cfg,
+                skip_ssl_validation=not concourse_verify_ssl
             )
         except RuntimeError as rte:
             failed_hooks += 1
@@ -96,10 +96,10 @@ def sync_webhooks(
 
 
 def _sync_webhook(
-  resources: [concourse.Resource],
-  webhook_syncer: github.GithubWebHookSyncer,
-  concourse_cfg: 'ConcourseConfig',
-  skip_ssl_validation: bool=False
+    resources: [concourse.Resource],
+    webhook_syncer: github.GithubWebHookSyncer,
+    concourse_cfg: 'ConcourseConfig',
+    skip_ssl_validation: bool=False
 ):
     first_res = resources[0]
     first_github_src = first_res.github_source()
@@ -119,20 +119,20 @@ def _sync_webhook(
     def webhook_url(gh_res):
         github_src = gh_res.github_source()
         webhook_url = routes.resource_check_webhook(
-          pipeline_name=gh_res.pipeline.name,
-          resource_name=gh_res.name,
-          webhook_token=gh_res.webhook_token(),
-          concourse_id=concourse_cfg.name(),
+            pipeline_name=gh_res.pipeline.name,
+            resource_name=gh_res.name,
+            webhook_token=gh_res.webhook_token(),
+            concourse_id=concourse_cfg.name(),
         )
         return webhook_url
 
     webhook_urls = set(map(webhook_url, resources))
 
     webhook_syncer.add_or_update_hooks(
-      owner=organisation,
-      repository_name=repository,
-      callback_urls=webhook_urls,
-      skip_ssl_validation=skip_ssl_validation
+        owner=organisation,
+        repository_name=repository,
+        callback_urls=webhook_urls,
+        skip_ssl_validation=skip_ssl_validation
     )
 
     def url_filter(url):

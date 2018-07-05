@@ -136,12 +136,12 @@ class ConcourseApiRoutes(object):
     ):
         query_args = urlencode({'webhook_token': webhook_token, 'concourse_id': concourse_id})
         return self._api_url(
-          'pipelines',
-          pipeline_name,
-          'resources',
-          resource_name,
-          'check',
-          'webhook'
+            'pipelines',
+            pipeline_name,
+            'resources',
+            resource_name,
+            'check',
+            'webhook'
         ) + '?' + query_args
 
     @ensure_annotations
