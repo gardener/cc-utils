@@ -85,7 +85,7 @@ def destroy_concourse(release: str, dry_run: bool = True):
 
 
 def set_teams(
-    config_name: CliHint(typehint=str, help='Which of the configurations contained in "--config-file" to use.'),
+    config_name: CliHint(typehint=str, help='Which of the configuration sets contained in "--cfg-dir" to use.'),
 ):
     config_factory = ctx().cfg_factory()
     config_set = config_factory.cfg_set(cfg_name=config_name)
