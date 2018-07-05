@@ -540,7 +540,7 @@ class ConcourseConfig(NamedModelElement):
     Not intended to be instantiated by users of this module
     '''
     def all_team_credentials(self):
-        return [ConcourseTeamCredentials(team_dict) for team_dict in self.raw.get('teams').get('values')]
+        return [ConcourseTeamCredentials(team_dict) for team_dict in self.raw.get('teams').values()]
 
     def external_url(self):
         return self.raw.get('externalUrl')
