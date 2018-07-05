@@ -105,6 +105,47 @@ def _display_info(dry_run: bool, operation: str, **kwargs):
         warning("this was a --dry-run. Set the --no-dry-run flag to actually deploy")
 
 
+def render_pipeline(
+    definition_file: CliHints.existing_file(),
+    template_path: CliHints.existing_dir(),
+    template_include_dir: CliHints.existing_dir(),
+    cfg_name: str,
+    out_dir: CliHints.existing_dir(),
+):
+    cfg_factory = ctx().cfg_factory()
+    cfg_set = cfg_factory.cfg_set(cfg_name=cfg_name)
+
+    def_enumerators = [
+        SimpleFileDefinitionEnumerator(
+            definition_file=definition_file,
+            cfg_set=cfg_set,
+            repo_path='example/example',
+            repo_branch='master',
+            repo_host='github.com',
+        )
+    ]
+
+    preprocessor = DefinitionDescriptorPreprocessor()
+
+    template_retriever = TemplateRetriever(template_path=template_path)
+    renderer = Renderer(
+        template_retriever=template_retriever,
+        template_include_dir=template_include_dir,
+        cfg_set=cfg_set,
+    )
+
+    deployer = FilesystemDeployer(base_dir=out_dir)
+
+    replicator = PipelineReplicator(
+        definition_enumerators=def_enumerators,
+        descriptor_preprocessor=preprocessor,
+        definition_renderer=renderer,
+        definition_deployer=deployer
+    )
+
+    replicator.replicate()
+
+
 def render_pipelines(
         definitions_root_dir: str,
         template_path: [str],

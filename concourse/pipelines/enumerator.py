@@ -126,6 +126,30 @@ class MappingfileDefinitionEnumerator(DefinitionEnumerator):
                 yield (repo_path, definitions)
 
 
+class SimpleFileDefinitionEnumerator(DefinitionEnumerator):
+    def __init__(self, definition_file, cfg_set, repo_path, repo_branch, repo_host='github.com'):
+        self.definition_file = definition_file
+        self.repo_path = repo_path
+        self.repo_branch = repo_branch
+        self.repo_host = repo_host
+        self.cfg_set = cfg_set
+        import model
+        self.job_mapping = model.JobMapping(
+            name='dummy',
+            raw_dict={'concourse_target_team': 'dummy'},
+        )
+
+    def enumerate_definition_descriptors(self):
+        info('enumerating explicitly specified definition file')
+
+        yield from self._wrap_into_descriptors(
+            repo_path=self.repo_path,
+            repo_hostname=self.repo_host,
+            branch=self.repo_branch,
+            raw_definitions=parse_yaml_file(self.definition_file),
+        )
+
+
 class BranchCfg(ModelBase):
     def cfg_entries(self):
         return (
