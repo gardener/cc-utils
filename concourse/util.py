@@ -118,11 +118,14 @@ def _sync_webhook(
     # collect callback URLs
     def webhook_url(gh_res):
         github_src = gh_res.github_source()
+        query_attributes = github.WebhookQueryAttributes(
+            webhook_token=gh_res.webhook_token(),
+            concourse_id=concourse_cfg.name(),
+        )
         webhook_url = routes.resource_check_webhook(
             pipeline_name=gh_res.pipeline.name,
             resource_name=gh_res.name,
-            webhook_token=gh_res.webhook_token(),
-            concourse_id=concourse_cfg.name(),
+            query_attributes=query_attributes,
         )
         return webhook_url
 
@@ -136,7 +139,7 @@ def _sync_webhook(
     )
 
     def url_filter(url):
-        concourse_id = parse_qs(urlparse(url).query).get(github.CONCOURSE_ID)
+        concourse_id = parse_qs(urlparse(url).query).get(github.WebhookQueryAttributes.CONCOURSE_ID_ATTRIBUTE_NAME)
         return concourse_id and concourse_cfg.name() in concourse_id
 
     processed, removed = webhook_syncer.remove_outdated_hooks(
