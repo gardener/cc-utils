@@ -33,7 +33,7 @@ def __add_module_command_args(parser):
 
 
 def deploy_or_upgrade_concourse(
-    config_name: CliHint(typehint=str, help="Which of the configurations contained in --config-dir to use."),
+    config_name: CliHint(typehint=str, help="the cfg_set to use"),
     deployment_name: CliHint(typehint=str, help="Name under which Concourse will be deployed. Will also be the identifier of the namespace into which it is deployed.")='concourse',
     timeout_seconds: CliHint(typehint=int, help="Maximum time (in seconds) to wait after deploying for the Concourse-webserver to become available.")=180,
     dry_run: bool=True,
