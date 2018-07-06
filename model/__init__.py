@@ -40,16 +40,14 @@ instantiated by users of this module.
 '''
 
 class ConfigFactory(object):
-    '''
-    Creates `ConfigurationSet` instances from a configuration collection.
+    '''Creates configuration model element instances from the underlying configuration source
 
-    Currently, the only example for configuration collections is the contents of
-    the private github repository 'kubernetes/cc-config', whose
-    root directory is accepted as an input.
+    Configuration elements are organised in a two-level hierarchy: Configuration type
+    (named cfg_type by convention) which specifies a configuration schema (and semantics) and
+    Configuration element name (named cfg_name or element_name by convention).
 
-    The returned `ConfigurationSet` instances could in turn also be regarded as
-    factories, as they create concrete configuration model instances from configuration
-    data contained in the given configuration directory.
+    There is a special configuration type named `ConfigurationSet`, which is used to group
+    sets of configuration elements. Configuration sets expose an API equivalent to ConfigFactory.
     '''
 
     CFG_TYPES = 'cfg_types'
