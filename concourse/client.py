@@ -137,6 +137,7 @@ class ConcourseApiRoutes(object):
         query_args = urlencode({
             WebhookQueryAttributes.WEBHOOK_TOKEN_ATTRIBUTE_NAME: query_attributes.webhook_token,
             WebhookQueryAttributes.CONCOURSE_ID_ATTRIBUTE_NAME: query_attributes.concourse_id,
+            WebhookQueryAttributes.JOB_MAPPING_ID_ATTRIBUTE_NAME: query_attributes.job_mapping_id,
         })
         return self._api_url(
             'pipelines',

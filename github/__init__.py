@@ -26,14 +26,17 @@ DEFAULT_HOOK_CONTENT_TYPE = 'json'
 class WebhookQueryAttributes(object):
     WEBHOOK_TOKEN_ATTRIBUTE_NAME = 'webhook_token'
     CONCOURSE_ID_ATTRIBUTE_NAME = 'concourse_id'
+    JOB_MAPPING_ID_ATTRIBUTE_NAME = 'job_mapping_id'
 
     def __init__(
         self,
         webhook_token: str,
         concourse_id: str,
+        job_mapping_id: str,
     ):
         self.webhook_token = webhook_token
         self.concourse_id = concourse_id
+        self.job_mapping_id = job_mapping_id
 
 
 class GithubWebHookSyncer(object):
