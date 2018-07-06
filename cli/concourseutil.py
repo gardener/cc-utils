@@ -221,7 +221,7 @@ def sync_webhooks_from_cfg(
           github_cfg=github_cfg,
           concourse_cfg=concourse_cfg,
           job_mapping=job_mapping,
-          concourse_team=team.teamname(),
+          concourse_team_credentials=team,
         )
 
 
