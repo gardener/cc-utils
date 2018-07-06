@@ -18,6 +18,7 @@ from copy import copy
 import github
 from github.util import _create_github_api_object
 import concourse.client as concourse
+from model import ConcourseTeamCredentials, ConcourseConfig, GithubConfig, JobMapping
 from util import parse_yaml_file, info, fail, which, warning, CliHints, CliHint
 
 
@@ -46,17 +47,17 @@ def list_github_resources(
 
 
 def sync_webhooks(
-    github_cfg: 'GithubConfig',
-    concourse_cfg: 'ConcourseConfig',
-    job_mapping: 'JobMapping',
-    concourse_team: str='kubernetes',
+    github_cfg: GithubConfig,
+    concourse_cfg: ConcourseConfig,
+    job_mapping: JobMapping,
+    concourse_team_credentials: ConcourseTeamCredentials,
     concourse_pipelines: [str]=None,
     concourse_verify_ssl: bool=False,
 ):
     concourse_url = concourse_cfg.external_url()
-    team_cfg = concourse_cfg.team_credentials(concourse_team)
-    concourse_user = team_cfg.username()
-    concourse_passwd = team_cfg.passwd()
+    concourse_team = concourse_team_credentials.teamname()
+    concourse_user = concourse_team_credentials.username()
+    concourse_passwd = concourse_team_credentials.passwd()
 
     github_resources = list_github_resources(
         concourse_url=concourse_url,
