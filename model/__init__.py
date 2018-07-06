@@ -369,32 +369,15 @@ class ConfigurationSet(NamedModelElement):
         else:
             return cfg_name
 
-    def aws(self, cfg_name=None):
-        return self.cfg_factory.aws(self._default_name('aws', cfg_name))
+    def __getattr__(self, cfg_type_name):
+        if not hasattr(self.cfg_factory, cfg_type_name):
+            raise AttributeError(name)
+        factory_method = getattr(self.cfg_factory, cfg_type_name)
 
-    def email(self, cfg_name=None):
-        return self.cfg_factory.email(self._default_name('email', cfg_name))
+        if not callable(factory_method):
+            raise AttributeError(name)
 
-    def concourse(self, cfg_name=None):
-        return self.cfg_factory.concourse(self._default_name('concourse', cfg_name))
-
-    def github(self, cfg_name=None):
-        return self.cfg_factory.github(self._default_name('github', cfg_name))
-
-    def container_registry(self, cfg_name=None):
-        return self.cfg_factory.container_registry(self._default_name('container_registry', cfg_name))
-
-    def job_mapping(self, cfg_name=None):
-        return self.cfg_factory.job_mapping(self._default_name('job_mapping', cfg_name))
-
-    def kubernetes(self, cfg_name=None):
-        return self.cfg_factory.kubernetes(self._default_name('kubernetes', cfg_name))
-
-    def secrets_server(self, cfg_name=None):
-        return self.cfg_factory.secrets_server(self._default_name('secrets_server', cfg_name))
-
-    def protecode(self, cfg_name=None):
-        return self.cfg_factory.protecode(self._default_name('protecode', cfg_name))
+        return functools.partial(factory_method, cfg_type_name=cfg_type_name)
 
 
 class BasicCredentials(ModelBase):
