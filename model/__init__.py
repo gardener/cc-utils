@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import functools
 import os
 import sys
 import json
@@ -45,6 +46,11 @@ class ConfigFactory(object):
     Configuration elements are organised in a two-level hierarchy: Configuration type
     (named cfg_type by convention) which specifies a configuration schema (and semantics) and
     Configuration element name (named cfg_name or element_name by convention).
+
+    Configuration model elements may be retrieved through one of two methods:
+
+        - via the generic `_cfg_element(cfg_type_name, cfg_name)`
+        - via a "factory method" (if defined in cfg_type) - example: `github(cfg_name)`
 
     There is a special configuration type named `ConfigurationSet`, which is used to group
     sets of configuration elements. Configuration sets expose an API equivalent to ConfigFactory.
@@ -194,32 +200,14 @@ class ConfigFactory(object):
         else:
             return set()
 
-    def aws(self, cfg_name):
-        return self._cfg_element(cfg_type_name='aws', cfg_name=cfg_name)
+    def __getattr__(self, cfg_type_name):
+        for cfg_type in self._cfg_types().values():
+            if cfg_type.factory_method() == cfg_type_name:
+                break
+        else:
+            raise AttributeError(name)
 
-    def concourse(self, cfg_name):
-        return self._cfg_element(cfg_type_name='concourse', cfg_name=cfg_name)
-
-    def container_registry(self, cfg_name):
-        return self._cfg_element(cfg_type_name='container_registry', cfg_name=cfg_name)
-
-    def email(self, cfg_name):
-        return self._cfg_element(cfg_type_name='email', cfg_name=cfg_name)
-
-    def github(self, cfg_name):
-        return self._cfg_element(cfg_type_name='github', cfg_name=cfg_name)
-
-    def job_mapping(self, cfg_name):
-        return self._cfg_element(cfg_type_name='job_mapping', cfg_name=cfg_name)
-
-    def kubernetes(self, cfg_name):
-        return self._cfg_element(cfg_type_name='kubernetes', cfg_name=cfg_name)
-
-    def secrets_server(self, cfg_name):
-        return self._cfg_element(cfg_type_name='secrets_server', cfg_name=cfg_name)
-
-    def protecode(self, cfg_name):
-        return self._cfg_element(cfg_type_name='protecode', cfg_name=cfg_name)
+        return functools.partial(self._cfg_element, cfg_type_name)
 
 
 class ConfigType(ModelBase):
