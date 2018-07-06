@@ -10,7 +10,7 @@ relevant for the 'gardener' project.
 
 Python3 is required as a runtime (see requirements.txt for additional
 runtime dependencies). All functions are exposed via a command line interface
-(cli.py).
+(`./cli.py`).
 
 ## Modules
 
