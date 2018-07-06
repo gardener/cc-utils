@@ -48,6 +48,7 @@ def list_github_resources(
 def sync_webhooks(
     github_cfg: 'GithubConfig',
     concourse_cfg: 'ConcourseConfig',
+    job_mapping: 'JobMapping',
     concourse_team: str='kubernetes',
     concourse_pipelines: [str]=None,
     concourse_verify_ssl: bool=False,
@@ -84,6 +85,7 @@ def sync_webhooks(
             _sync_webhook(
                 resources=resources,
                 webhook_syncer=webhook_syncer,
+                job_mapping_name=job_mapping.name(),
                 concourse_cfg=concourse_cfg,
                 skip_ssl_validation=not concourse_verify_ssl
             )
@@ -98,6 +100,7 @@ def sync_webhooks(
 def _sync_webhook(
     resources: [concourse.Resource],
     webhook_syncer: github.GithubWebHookSyncer,
+    job_mapping_name: str,
     concourse_cfg: 'ConcourseConfig',
     skip_ssl_validation: bool=False
 ):
@@ -121,6 +124,7 @@ def _sync_webhook(
         query_attributes = github.WebhookQueryAttributes(
             webhook_token=gh_res.webhook_token(),
             concourse_id=concourse_cfg.name(),
+            job_mapping_id=job_mapping_name,
         )
         webhook_url = routes.resource_check_webhook(
             pipeline_name=gh_res.pipeline.name,
@@ -139,8 +143,17 @@ def _sync_webhook(
     )
 
     def url_filter(url):
-        concourse_id = parse_qs(urlparse(url).query).get(github.WebhookQueryAttributes.CONCOURSE_ID_ATTRIBUTE_NAME)
-        return concourse_id and concourse_cfg.name() in concourse_id
+        parsed_url = parse_qs(urlparse(url).query)
+        concourse_id = parsed_url.get(github.WebhookQueryAttributes.CONCOURSE_ID_ATTRIBUTE_NAME)
+        job_mapping_id = parsed_url.get(github.WebhookQueryAttributes.JOB_MAPPING_ID_ATTRIBUTE_NAME)
+        # we consider an url for removal iff it contains parameters 'concourse_id' and 'job_mapping_id'
+        # that match the configured concourse_id and job_mapping_name
+        return (
+            concourse_id is not None and
+            concourse_cfg.name() in concourse_id and
+            job_mapping_id is not None and
+            job_mapping_name in job_mapping_id
+        )
 
     processed, removed = webhook_syncer.remove_outdated_hooks(
       owner=organisation,

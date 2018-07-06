@@ -201,7 +201,6 @@ def render_pipelines(
 
 
 def sync_webhooks_from_cfg(
-    team_name: str,
     cfg_name: str,
 ):
     '''
@@ -212,13 +211,18 @@ def sync_webhooks_from_cfg(
     github_cfg = cfg_set.github()
     github_cred = github_cfg.credentials()
     concourse_cfg = cfg_set.concourse()
-    team_cfg = concourse_cfg.team_credentials(team_name)
+    job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
 
-    sync_webhooks(
-      github_cfg=github_cfg,
-      concourse_cfg=concourse_cfg,
-      concourse_team=team_cfg.teamname(),
-    )
+    for job_mapping in job_mapping_set.job_mappings().values():
+        team_name = job_mapping.team_name()
+        info("syncing webhooks (team: {})".format(team_name))
+        team = concourse_cfg.team_credentials(team_name)
+        sync_webhooks(
+          github_cfg=github_cfg,
+          concourse_cfg=concourse_cfg,
+          job_mapping=job_mapping,
+          concourse_team=team.teamname(),
+        )
 
 
 def diff_pipelines(left_file: CliHints.yaml_file(), right_file: CliHints.yaml_file()):
