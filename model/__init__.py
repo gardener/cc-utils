@@ -377,10 +377,12 @@ class ConfigurationSet(NamedModelElement):
         if not callable(factory_method):
             raise AttributeError(name)
 
-        return functools.partial(
-            factory_method,
-            cfg_name=self._default_name(cfg_type_name=cfg_type_name)
-        )
+        def get_default_element(cfg_name=None):
+            if not cfg_name:
+                cfg_name = self._default_name(cfg_type_name=cfg_type_name)
+
+            return factory_method(cfg_name=cfg_name)
+        return get_default_element
 
 
 class BasicCredentials(ModelBase):
