@@ -136,7 +136,14 @@ class ConfigFactory(object):
 
         # for now, let's assume all of our model element types are subtypes of NamedModelElement
         # (with the exception of ConfigurationSet)
-        kwargs = {'raw_dict': self._configs(cfg_type.cfg_type_name())[cfg_name]}
+        configs = self._configs(cfg_type.cfg_type_name())
+        if not cfg_name in configs:
+            raise ValueError('no such cfg element: {cn}. Known elements: {es}'.format(
+                cn=cfg_name,
+                es=', '.join(configs.keys())
+                )
+            )
+        kwargs = {'raw_dict': configs[cfg_name]}
 
         if element_type == ConfigurationSet:
             kwargs.update({'cfg_name': cfg_name, 'cfg_factory': self})
