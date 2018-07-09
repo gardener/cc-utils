@@ -186,40 +186,29 @@ def deploy_concourse_landscape(
 
     # Set the global context to the cluster specified in the ConcourseConfig
     kubernetes_config_name = concourse_cfg.kubernetes_cluster_config()
-    kubernetes_config = config_factory._cfg_element(
-        cfg_type_name = 'kubernetes',
-        cfg_name = kubernetes_config_name,
-    )
+    kubernetes_config = config_factory.kubernetes(kubernetes_config_name)
     kubeutil.ctx.set_kubecfg(kubernetes_config.kubeconfig())
 
     ensure_cluster_version(kubernetes_config)
 
     # Container-registry config
     image_pull_secret_name = concourse_cfg.image_pull_secret()
-    container_registry = config_factory._cfg_element(
-        cfg_type_name='container_registry',
-        cfg_name=image_pull_secret_name,
-    )
+    container_registry = config_factory.container_registry(image_pull_secret_name)
     cr_credentials = container_registry.credentials()
 
     # TLS config
     tls_config_name = concourse_cfg.tls_config()
-    tls_config = config_factory._cfg_element(cfg_type_name='tls_config', cfg_name=tls_config_name)
+    tls_config = config_factory.tls_config(tls_config_name)
     tls_secret_name = concourse_cfg.tls_secret_name()
 
     # Secrets server
     secrets_server_config = config_set.secrets_server()
 
     # Helm config
-    helmchart_cfg_type = 'concourse_helmchart'
-    default_helm_values = config_factory._cfg_element(
-        cfg_type_name = helmchart_cfg_type,
-        cfg_name = concourse_cfg.helm_chart_default_values_config()
-    ).raw
-    custom_helm_values = config_factory._cfg_element(
-        cfg_type_name = helmchart_cfg_type,
-        cfg_name = concourse_cfg.helm_chart_values()
-    ).raw
+    helm_chart_default_values_name = concourse_cfg.helm_chart_default_values_config()
+    default_helm_values = config_factory.concourse_helmchart(helm_chart_default_values_name).raw
+    helm_chart_values_name = concourse_cfg.helm_chart_values()
+    custom_helm_values = config_factory.concourse_helmchart(helm_chart_values_name).raw
 
     info('Creating default image-pull-secret ...')
     create_image_pull_secret(
