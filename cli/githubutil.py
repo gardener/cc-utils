@@ -16,7 +16,7 @@ import version
 from urllib.parse import urlparse, parse_qs
 from github3.exceptions import NotFoundError
 
-from util import ctx, not_empty, info, warning, verbose, CliHint
+from util import ctx, not_empty, info, warning, verbose, CliHint, CliHints
 from github import GithubWebHookSyncer, WebhookQueryAttributes
 from github.util import (
     GitHubRepositoryHelper,
@@ -148,17 +148,21 @@ def release_and_prepare_next_dev_cycle(
     )
 
 def remove_webhooks(
-    github_org_name: CliHint(help='process all repositories in the given github organisation'),
-    github_cfg_name: CliHint(help='github_cfg name (see cc-config repo)'),
-    concourse_cfg_name: CliHint(help='the concourse_cfg name for which webhooks are to be removed'),
+    github_org_name: CliHints.non_empty_string(
+        help_string='process all repositories in the given github organisation'
+    ),
+    github_cfg_name: CliHints.non_empty_string(
+        help_string='github_cfg name (see cc-config repo)'
+    ),
+    concourse_cfg_name: CliHints.non_empty_string(
+        help_string='the concourse_cfg name for which webhooks are to be removed'
+    ),
+    job_mapping_name: CliHint(help='the name of the job mapping whose webhooks are to be removed') = None,
 ):
     '''
-    Remove all webhooks which belong to the given concourse_cfg_name
+    Remove all webhooks which belong to the given Concourse-config name. If a job-mapping id is given as well,
+    only webhooks tagged with both Concourse-config name and job-mapping id will be deleted.
     '''
-    not_empty(github_org_name)
-    not_empty(github_cfg_name)
-    not_empty(concourse_cfg_name)
-
     cfg_factory = ctx().cfg_factory()
     github_cfg = cfg_factory.github(github_cfg_name)
 
@@ -167,8 +171,13 @@ def remove_webhooks(
     webhook_syncer = GithubWebHookSyncer(github_api)
 
     def filter_function(url):
-        concourse_id = parse_qs(urlparse(url).query).get(WebhookQueryAttributes.CONCOURSE_ID_ATTRIBUTE_NAME)
-        should_delete = concourse_id and concourse_cfg_name in concourse_id
+        parsed_url = parse_qs(urlparse(url).query)
+        concourse_id = parsed_url.get(WebhookQueryAttributes.CONCOURSE_ID_ATTRIBUTE_NAME)
+        job_mapping_id = parsed_url.get(WebhookQueryAttributes.JOB_MAPPING_ID_ATTRIBUTE_NAME)
+        job_id_matches_or_absent = job_mapping_id is None or job_mapping_name in job_mapping_id
+        concourse_id_matches = concourse_id is not None and concourse_cfg_name in concourse_id
+
+        should_delete = job_id_matches_or_absent and concourse_id_matches
         return should_delete
 
     for repository in github_org.repositories():
