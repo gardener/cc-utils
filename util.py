@@ -76,6 +76,10 @@ class CliHints(object):
     def existing_dir(help_string:str='an existing directory'):
         return CliHint(typehint=str, help=help_string, type=ensure_directory_exists)
 
+    @staticmethod
+    def non_empty_string(help_string: str='a non-empty string'):
+        return CliHint(typehint=str, help=help_string, type=ensure_not_empty)
+
 
 def ctx():
     # late import because the ctx module is altered after all existing modules have
