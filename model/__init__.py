@@ -19,7 +19,7 @@ import json
 
 from urllib.parse import urlparse
 
-from model.base import NamedModelElement, ModelBase, ModelValidationError
+from model.base import NamedModelElement, ModelBase, ModelValidationError, ConfigElementNotFoundError
 from util import (
     ensure_file_exists,
     parse_yaml_file,
@@ -138,7 +138,7 @@ class ConfigFactory(object):
         # (with the exception of ConfigurationSet)
         configs = self._configs(cfg_type.cfg_type_name())
         if not cfg_name in configs:
-            raise ValueError('no such cfg element: {cn}. Known elements: {es}'.format(
+            raise ConfigElementNotFoundError('no such cfg element: {cn}. Known elements: {es}'.format(
                 cn=cfg_name,
                 es=', '.join(configs.keys())
                 )
