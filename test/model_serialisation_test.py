@@ -17,6 +17,7 @@ import json
 
 import model
 from model import ConfigSetSerialiser as CSS, ConfigFactory
+from model.base import ConfigElementNotFoundError
 
 def simple_cfg_dict():
     types = {
@@ -83,7 +84,7 @@ class ConfigSetSerialiserTest(unittest.TestCase):
             # second_set must not have been included
             deserialised.cfg_set('second_set')
 
-        with self.assertRaises(KeyError):
+        with self.assertRaises(ConfigElementNotFoundError):
             # only explicitly referenced values must be included
             deserialised._cfg_element('a_type', 'ignored_value_of_a')
 
@@ -97,7 +98,7 @@ class ConfigSetSerialiserTest(unittest.TestCase):
         self.assertEqual(first_cfg_set.raw, self.first_cfg_set.raw)
         self.assertEqual(second_cfg_set.raw, self.second_cfg_set.raw)
 
-        with self.assertRaises(KeyError):
+        with self.assertRaises(ConfigElementNotFoundError):
             # only explicitly referenced values must be included
             deserialised._cfg_element('a_type', 'ignored_value_of_a')
 
