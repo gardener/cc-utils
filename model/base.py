@@ -20,6 +20,10 @@ class ModelValidationError(ValueError):
     pass
 
 
+class ConfigElementNotFoundError(ValueError):
+    pass
+
+
 class ModelBase(object):
     '''
     Base class for 'dict-based' configuration classes (i.e. classes that expose contents
