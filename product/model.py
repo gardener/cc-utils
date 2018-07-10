@@ -130,6 +130,9 @@ class ComponentReference(DependencyBase):
             return False
         return (self.name(), self.version()) == (other.name(), other.version())
 
+    def __hash__(self):
+        return hash((self.name(), self.version()))
+
 
 class ContainerImage(DependencyBase):
     @staticmethod
