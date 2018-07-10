@@ -19,9 +19,10 @@ import itertools
 import yaml
 
 import decorator
+import version
 from github.util import GitHubRepositoryHelper, github_api_ctor
 from util import not_none, FluentIterable
-from .model import Product, COMPONENT_DESCRIPTOR_ASSET_NAME
+from .model import Product, ComponentReference, COMPONENT_DESCRIPTOR_ASSET_NAME
 
 class ComponentResolutionException(Exception):
     def __init__(self, msg, component_reference):
@@ -34,7 +35,7 @@ class ComponentResolutionException(Exception):
             msg=self.msg,
         )
 
-class ComponentDescriptorResolver(object):
+class ResolverBase(object):
     def __init__(
         self,
         cfg_factory=None,
@@ -78,6 +79,8 @@ class ComponentDescriptorResolver(object):
                 )
             )
 
+
+class ComponentDescriptorResolver(ResolverBase):
     def retrieve_raw_descriptor(self, component_reference, as_dict=False):
         repo_helper = self._repository_helper(component_reference)
         dependency_descriptor = repo_helper.retrieve_asset_contents(
@@ -119,6 +122,13 @@ class ComponentDescriptorResolver(object):
 
         return merged
 
+
+class ComponentResolver(ResolverBase):
+    def latest_component_version(self, component_name: str):
+        component_reference = ComponentReference.create(name=component_name, version=None)
+        repo_helper = self._repository_helper(component_reference)
+        latest_version = version.find_latest_version(repo_helper.release_versions())
+        return latest_version
 
 
 def merge_products(left_product, right_product):
