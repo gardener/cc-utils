@@ -18,8 +18,9 @@ import functools
 import itertools
 import yaml
 
+import decorator
 from github.util import GitHubRepositoryHelper, github_api_ctor
-from util import not_none
+from util import not_none, FluentIterable
 from .model import Product, COMPONENT_DESCRIPTOR_ASSET_NAME
 
 class ComponentResolutionException(Exception):
@@ -144,4 +145,33 @@ def merge_products(left_product, right_product):
     return merged
 
 
+@decorator.args_not_none('left_product', 'right_product')
+def diff_products(left_product, right_product):
+    # only take component references into account for now and assume
+    # that component versions are always identical content-wise
+    left_components = set(left_product.components())
+    right_components = set(right_product.components())
 
+    if left_components == right_components:
+        return None # no diff
+
+    components_only_left = left_components - right_components
+    components_only_right = right_components - left_components
+
+    def find_changed_component(changed_component, components):
+        for c in components:
+            if c.name() == changed_component.name():
+                return (changed_component, c)
+        return (changed_component, None) # no pair component found
+
+
+    components_with_changed_versions = FluentIterable(items=components_only_left) \
+        .map(functools.partial(find_changed_component, components=right_components)) \
+        .filter(lambda cs: cs[1] is not None) \
+        .as_list()
+
+    return {
+        'components_only_left': components_only_left,
+        'components_only_right': components_only_right,
+        'components_with_version_changes': components_with_changed_versions,
+    }
