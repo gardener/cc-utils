@@ -23,8 +23,6 @@ class PullRequestPolicies(ModelBase):
 
 
 class PullRequestTrait(Trait):
-    def repository_name(self):
-        return self.raw.get('repo', 'source')
 
     def policies(self):
         policies_dict = self.raw.get('policies')
@@ -53,9 +51,9 @@ class PullRequestTraitTransformer(TraitTransformer):
         yield rm_pr_label_step
 
     def process_pipeline_args(self, pipeline_args: 'PipelineArgs'):
-        repo_name = self.trait.repository_name()
+        repo_name = pipeline_args.main_repository().logical_name()
 
-        # convert to PR
+        # convert main-repo to PR
         pr_repo = pipeline_args.pr_repository(repo_name)
         pr_repo._trigger = True
 
