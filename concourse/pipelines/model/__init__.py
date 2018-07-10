@@ -66,16 +66,6 @@ class PipelineArgs(ModelBase):
     def has_step(self, step_name):
         return step_name in self.step_names()
 
-    def pr_repositories(self):
-        # short-cut if we do not have trait 'pull-request'
-        if not self.has_trait('pull-request'):
-            return []
-
-        pr_repo = self.pr_repository(self._main_repository_name)
-        if pr_repo is None:
-            return []
-        return [pr_repo]
-
     def pr_repository(self, name):
         pr_repo = self.repository(name)
         return RepositoryConfig(
