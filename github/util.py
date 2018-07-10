@@ -16,6 +16,7 @@ import datetime
 import functools
 import io
 import os
+import semver
 import sys
 import urllib.parse
 from enum import Enum
@@ -190,6 +191,12 @@ class GitHubRepositoryHelper(object):
         buffer = io.BytesIO()
         asset.download(buffer)
         return buffer.getvalue().decode()
+
+    def release_versions(self):
+        for release in self.repository.releases():
+            try:
+                yield semver.parse_version_info(release.tag_name)
+            except ValueError: pass # ignore
 
 
 def github_api_ctor(github_url: str, verify_ssl: bool=True):
