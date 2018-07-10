@@ -149,13 +149,13 @@ def release_and_prepare_next_dev_cycle(
 
 def remove_webhooks(
     github_org_name: CliHints.non_empty_string(
-        help_string='process all repositories in the given github organisation'
+        help='process all repositories in the given github organisation'
     ),
     github_cfg_name: CliHints.non_empty_string(
-        help_string='github_cfg name (see cc-config repo)'
+        help='github_cfg name (see cc-config repo)'
     ),
     concourse_cfg_name: CliHints.non_empty_string(
-        help_string='the concourse_cfg name for which webhooks are to be removed'
+        help='the concourse_cfg name for which webhooks are to be removed'
     ),
     job_mapping_name: CliHint(help='the name of the job mapping whose webhooks are to be removed') = None,
 ):

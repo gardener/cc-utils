@@ -65,20 +65,20 @@ class CliHints(object):
     predefined cli hint instances
     '''
     @staticmethod
-    def existing_file(help_string:str='an existing file'):
-        return CliHint(typehint=str, help=help_string, type=ensure_file_exists)
+    def existing_file(help: str='an existing file', **kwargs):
+        return CliHint(type=ensure_file_exists, help=help, **kwargs)
 
     @staticmethod
-    def yaml_file(help_string:str='an existing YAML file'):
-        return CliHint(typehint=str, help=help_string, type=parse_yaml_file)
+    def yaml_file(help: str='an existing YAML file', **kwargs):
+        return CliHint(type=parse_yaml_file, help=help, **kwargs)
 
     @staticmethod
-    def existing_dir(help_string:str='an existing directory'):
-        return CliHint(typehint=str, help=help_string, type=ensure_directory_exists)
+    def existing_dir(help: str='an existing directory', **kwargs):
+        return CliHint(type=ensure_directory_exists, help=help, **kwargs)
 
     @staticmethod
-    def non_empty_string(help_string: str='a non-empty string'):
-        return CliHint(typehint=str, help=help_string, type=ensure_not_empty)
+    def non_empty_string(help:str = 'a non-empty string', **kwargs):
+        return CliHint(type=ensure_not_empty, help=help, **kwargs)
 
 
 def ctx():
