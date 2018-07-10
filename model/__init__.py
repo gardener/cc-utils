@@ -212,7 +212,7 @@ class ConfigFactory(object):
             if cfg_type.factory_method() == cfg_type_name:
                 break
         else:
-            raise AttributeError(name)
+            raise AttributeError(cfg_type_name)
 
         return functools.partial(self._cfg_element, cfg_type_name)
 
@@ -378,11 +378,11 @@ class ConfigurationSet(NamedModelElement):
 
     def __getattr__(self, cfg_type_name):
         if not hasattr(self.cfg_factory, cfg_type_name):
-            raise AttributeError(name)
+            raise AttributeError(cfg_type_name)
         factory_method = getattr(self.cfg_factory, cfg_type_name)
 
         if not callable(factory_method):
-            raise AttributeError(name)
+            raise AttributeError(cfg_type_name)
 
         def get_default_element(cfg_name=None):
             if not cfg_name:
