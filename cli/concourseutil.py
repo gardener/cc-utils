@@ -41,7 +41,6 @@ def deploy_or_upgrade_concourse(
     '''Deploys a new concourse-instance using the given deployment name and config-directory.'''
     which("helm")
 
-    namespace = deployment_name
     _display_info(
         dry_run=dry_run,
         operation="DEPLOYED",
@@ -58,30 +57,26 @@ def deploy_or_upgrade_concourse(
     )
 
 
-def destroy_concourse(release: str, dry_run: bool = True):
+def destroy_concourse(
+    config_name: CliHint(typehint=str, help="The config set to use"),
+    release_name: CliHint(typehint=str, help="Name of the Concourse helm release. Will also be the identifier of the namespace into which Concourse is deployed")='concourse',
+    dry_run: bool = True
+):
+    '''Destroys a concourse-instance using the given helm release name'''
+
     _display_info(
         dry_run=dry_run,
         operation="DESTROYED",
-        deployment_name=release,
+        deployment_name=release_name,
     )
 
     if dry_run:
         return
 
-    helm_executable = which("helm")
-    context = kubeutil.Ctx()
-    namespace_helper = KubernetesNamespaceHelper(context.create_core_api())
-    namespace_helper.delete_namespace(namespace=release)
-    helm_env = os.environ.copy()
-
-    # pylint: disable=no-member
-    # Check for optional arg --kubeconfig
-    cli_args = global_ctx().args
-    if cli_args and hasattr(cli_args, 'kubeconfig') and cli_args.kubeconfig:
-        helm_env['KUBECONFIG'] = cli_args.kubeconfig
-    # pylint: enable=no-member
-
-    subprocess.run([helm_executable, "delete", release, "--purge"], env=helm_env)
+    setup.destroy_concourse_landscape(
+        config_name=config_name,
+        release_name=release_name
+    )
 
 
 def set_teams(

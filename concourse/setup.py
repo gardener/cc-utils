@@ -23,6 +23,7 @@ from ensure import ensure_annotations
 from string import Template
 from textwrap import dedent
 from urllib.parse import urlparse
+from subprocess import CalledProcessError
 
 import yaml
 
@@ -48,7 +49,9 @@ from util import (
     ensure_not_empty,
     ensure_not_none,
     info,
+    warning,
     fail,
+    which,
 )
 from kube.helper import (
     KubernetesNamespaceHelper,
@@ -272,6 +275,46 @@ def deploy_concourse_landscape(
 
     info('Setting teams on Concourse ...')
     set_teams(config=concourse_cfg)
+
+
+def destroy_concourse_landscape(config_name: str, release_name: str):
+    # Fetch concourse and kubernetes config
+    config_factory = global_ctx().cfg_factory()
+    config_set = config_factory.cfg_set(cfg_name=config_name)
+    concourse_cfg = config_set.concourse()
+
+    kubernetes_config_name = concourse_cfg.kubernetes_cluster_config()
+    kubernetes_config = config_factory.kubernetes(kubernetes_config_name)
+    context = kubeutil.ctx
+    context.set_kubecfg(kubernetes_config.kubeconfig())
+
+    # Delete helm release
+    helm_cmd_path = which("helm")
+    KUBECONFIG_FILE_NAME = 'kubecfg'
+    helm_env = os.environ.copy()
+    helm_env['KUBECONFIG'] = KUBECONFIG_FILE_NAME
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        with open(os.path.join(temp_dir, KUBECONFIG_FILE_NAME), 'w') as f:
+            yaml.dump(kubernetes_config.kubeconfig(), f)
+
+        try:
+            subprocess.run(
+                [helm_cmd_path, "delete", release_name, "--purge"],
+                env=helm_env,
+                check=True,
+                cwd=temp_dir
+            )
+        except CalledProcessError:
+            # ignore sporadic connection timeouts from infrastructure
+            warning("Connection to K8s cluster lost. Continue with deleting namespace {ns}".format(
+                ns=release_name
+            ))
+
+    # delete namespace
+    namespace_helper = context.namespace_helper()
+    namespace_helper.delete_namespace(namespace=release_name)
+
 
 # pylint: disable=no-member
 def ensure_cluster_version(kubernetes_config: KubernetesConfig):
