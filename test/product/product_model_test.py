@@ -158,7 +158,6 @@ class ProductModelTest(unittest.TestCase):
         right_model.add_component(right_component1)
 
         merged = product.util.merge_products(left_model, right_model)
-        print(merged.raw)
 
         merged_components = list(merged.components())
         self.assertEqual(len(merged_components), 2)
