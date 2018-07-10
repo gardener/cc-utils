@@ -88,6 +88,17 @@ def process_version(
     return processed_version
 
 
+def find_latest_version(versions):
+    latest_candidate = None
+
+    for candidate in versions:
+        if latest_candidate and candidate > latest_candidate:
+            latest_candidate = candidate
+        else:
+            latest_candidate = candidate
+    return latest_candidate
+
+
 def find_latest_version_with_matching_major(reference_version: semver.VersionInfo, versions):
     latest_candidate = None
     for candidate in versions:
