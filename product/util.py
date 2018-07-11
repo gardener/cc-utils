@@ -60,6 +60,10 @@ class ResolverBase(object):
 
 
     def _repository_helper(self, component_reference):
+        if isinstance(component_reference, tuple):
+            name, version = component_reference
+            component_reference = ComponentReference.create(name=name, version=version)
+
         gh_helper_ctor = functools.partial(
                 GitHubRepositoryHelper,
                 owner=component_reference.github_organisation(),
@@ -82,6 +86,10 @@ class ResolverBase(object):
 
 class ComponentDescriptorResolver(ResolverBase):
     def retrieve_raw_descriptor(self, component_reference, as_dict=False):
+        if isinstance(component_reference, tuple):
+            name, version = component_reference
+            component_reference = ComponentReference.create(name=name, version=version)
+
         repo_helper = self._repository_helper(component_reference)
         dependency_descriptor = repo_helper.retrieve_asset_contents(
                 release_tag=component_reference.version(),
