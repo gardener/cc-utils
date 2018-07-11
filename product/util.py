@@ -164,11 +164,11 @@ def merge_products(left_product, right_product):
 
 
 @decorator.args_not_none('left_product', 'right_product')
-def diff_products(left_product, right_product, ignore_components=()):
+def diff_products(left_product, right_product, ignore_component_names=()):
     # only take component references into account for now and assume
     # that component versions are always identical content-wise
-    left_components = set(left_product.components()) - set(ignore_components)
-    right_components = set(right_product.components()) - set(ignore_components)
+    left_components = {c for c in left_product.components() if c.name() not in ignore_component_names}
+    right_components = {c for c in right_product.components() if c.name() not in ignore_component_names}
 
     if left_components == right_components:
         return None # no diff
