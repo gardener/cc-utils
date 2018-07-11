@@ -19,18 +19,34 @@ import os
 import semver
 import sys
 import urllib.parse
+
 from enum import Enum
+
+import requests
 
 from github3.github import GitHub, GitHubEnterprise
 from github3.repos.repo import Repository
 from github3.exceptions import NotFoundError, ForbiddenError
 from github3.orgs import Team
-import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 import util
 import version
 from model import ConfigFactory, GithubConfig
 
+default_http_adapter = HTTPAdapter(
+    max_retries = Retry(
+        total=3,
+        connect=3,
+        read=3,
+        status=3,
+        redirect=False,
+        status_forcelist=[500, 503],
+        raise_on_status=False,
+        respect_retry_after_header=True,
+    )
+)
 
 class RepoPermission(Enum):
     PULL = "pull"
@@ -234,6 +250,10 @@ def _create_github_api_object(
 
     if not github_api:
         util.fail("Could not connect to GitHub-instance {url}".format(url=github_url))
+
+    # patch github's requests.session to enable retrying when encountering sporadic errors
+    session = github_api.session
+    session.mount(github_url, default_http_adapter)
 
     return github_api
 
