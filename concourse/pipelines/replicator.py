@@ -172,13 +172,14 @@ class Renderer(object):
             name=definition_descriptor.pipeline_name,
             base_definition=effective_definition.get('base_definition', {}),
             variants=effective_definition.get('variants', {}),
-            template=template_name
+            template=template_name,
         )
 
         factory = DefinitionFactory(raw_definition_descriptor=pipeline_definition)
         pipeline_metadata = dict()
         pipeline_metadata['definition'] = factory.create_pipeline_definition()
         pipeline_metadata['name'] = pipeline_definition.name
+        pipeline_metadata['target_team'] = definition_descriptor.concourse_target_team
         generated_model = pipeline_metadata.get('definition')
 
         # determine pipeline name (if there is main-repo, append the configured branch name)
