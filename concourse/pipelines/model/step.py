@@ -36,6 +36,10 @@ class PipelineStep(ModelBase):
             name = raw_dict['output_dir']
             self.add_output(name + '_path', name + '_path')
 
+        if 'inputs' in raw_dict:
+            for name, variable_name in raw_dict.get('inputs').items():
+                self.add_input(name, variable_name)
+
     def script_type(self) -> ScriptType:
         '''
         returns the step's "script type". The script type specifies the execution environment in which
