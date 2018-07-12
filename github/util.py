@@ -29,7 +29,7 @@ from github3.repos.repo import Repository
 from github3.exceptions import NotFoundError, ForbiddenError
 from github3.orgs import Team
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
+from urllib3.util.retry import Retry
 
 import util
 import version
