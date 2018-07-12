@@ -9,8 +9,8 @@ from concourse.pipelines.modelbase import (
         normalise_to_dict,
         ensure_not_none,
 )
+from concourse.pipelines.model.job import JobVariant
 from concourse.pipelines.model import (
-        JobVariant,
         PipelineDefinition,
 )
 from concourse.pipelines.model.resources import RepositoryConfig, ResourceRegistry
