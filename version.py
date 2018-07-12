@@ -92,9 +92,8 @@ def find_latest_version(versions):
     latest_candidate = None
 
     for candidate in versions:
-        if latest_candidate and candidate > latest_candidate:
-            latest_candidate = candidate
-        else:
+        if not latest_candidate: latest_candidate = candidate; continue
+        if candidate > latest_candidate:
             latest_candidate = candidate
     return latest_candidate
 
