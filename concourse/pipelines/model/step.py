@@ -35,10 +35,13 @@ class PipelineStep(ModelBase):
         if raw_dict.get('output_dir', None):
             name = raw_dict['output_dir']
             self.add_output(name + '_path', name + '_path')
+        if not 'vars' in raw_dict:
+            raw_dict['vars'] = {}
 
         if 'inputs' in raw_dict:
             for name, variable_name in raw_dict.get('inputs').items():
                 self.add_input(name, variable_name)
+
 
     def script_type(self) -> ScriptType:
         '''
@@ -99,6 +102,9 @@ class PipelineStep(ModelBase):
         if name in self._inputs_dict:
             raise ValueError('input already exists: ' + str(name))
         self._inputs_dict[name] = variable_name
+
+    def variables(self):
+        return self.raw.get('vars')
 
     def publish_repository_names(self):
         return self.raw.get('publish_to', [])
