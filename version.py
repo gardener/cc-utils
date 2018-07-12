@@ -61,11 +61,11 @@ def process_version(
         if not build_metadata:
             raise ValueError('Build metadata must be given when replacing.')
         if build_metadata_length < 0:
-            raise ValueError('Build metadata length must be >= 0')
+            raise ValueError('Build metadata must not be empty')
 
-    parsed_version = dict(semver.parse(version_str))
+    parsed_version = semver.parse_version_info(version_str)
 
-    if operation == APPEND_PRERELEASE and not parsed_version['prerelease']:
+    if operation == APPEND_PRERELEASE and not parsed_version.prerelease:
         raise ValueError('Given SemVer must have prerelease-version to append to.')
 
     if hasattr(semver, operation):
@@ -74,16 +74,16 @@ def process_version(
     elif operation == NOOP:
         processed_version = version_str
     elif operation == APPEND_PRERELEASE:
-        parsed_version['prerelease'] += "-" + prerelease
-        processed_version = semver.format_version(**parsed_version)
+        prerelease = '-'.join((parsed_version.prerelease, prerelease))
+        processed_version = str(parsed_version._replace(prerelease = prerelease))
     else:
-        parsed_version['prerelease'] = None
-        parsed_version['build'] = None
+        parsed_version = parsed_version._replace(prerelease=None)
+        parsed_version = parsed_version._replace(build=None)
         if operation in [SET_PRERELEASE, SET_PRERELEASE_AND_BUILD]:
-            parsed_version['prerelease'] = prerelease
+            parsed_version = parsed_version._replace(prerelease=prerelease)
         if operation in [SET_BUILD_METADATA, SET_PRERELEASE_AND_BUILD]:
-            parsed_version['build'] = build_metadata[:build_metadata_length]
-        processed_version = semver.format_version(**parsed_version)
+            parsed_version = parsed_version._replace(build=build_metadata[:build_metadata_length])
+        processed_version = str(parsed_version)
 
     return processed_version
 
