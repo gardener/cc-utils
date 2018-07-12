@@ -69,7 +69,7 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
         self.descriptor_step.add_output('component_descriptor_dir', 'component_descriptor_dir')
         yield self.descriptor_step
 
-    def process_pipeline_args(self, pipeline_args: 'PipelineArgs'):
+    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         if pipeline_args.has_step('release'):
             release_step = pipeline_args.step('release')
             release_step.add_input('component_descriptor_dir', 'component_descriptor_dir')

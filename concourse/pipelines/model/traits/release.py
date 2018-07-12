@@ -38,7 +38,7 @@ class ReleaseTraitTransformer(TraitTransformer):
         self.release_step = PipelineStep(name='release', raw_dict={}, is_synthetic=True)
         yield self.release_step
 
-    def process_pipeline_args(self, pipeline_args: 'PipelineArgs'):
+    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         # we depend on all other steps
         for step in pipeline_args.steps():
             self.release_step._add_dependency(step)

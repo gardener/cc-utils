@@ -30,6 +30,6 @@ class SchedulingTrait(Trait):
 
 
 class SchedulingTraitTransformer(TraitTransformer):
-    def process_pipeline_args(self, pipeline_args: 'PipelineArgs'):
+    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         # no-op
         pass

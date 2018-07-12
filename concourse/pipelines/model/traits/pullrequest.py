@@ -50,7 +50,7 @@ class PullRequestTraitTransformer(TraitTransformer):
         )
         yield rm_pr_label_step
 
-    def process_pipeline_args(self, pipeline_args: 'PipelineArgs'):
+    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         repo_name = pipeline_args.main_repository().logical_name()
 
         # convert main-repo to PR

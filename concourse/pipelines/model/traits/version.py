@@ -51,7 +51,7 @@ class VersionTraitTransformer(TraitTransformer):
 
         yield self.version_step
 
-    def process_pipeline_args(self, pipeline_args: 'PipelineArgs'):
+    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         # all steps depend from us and may consume our output
         for step in pipeline_args.steps():
             if step == self.version_step:

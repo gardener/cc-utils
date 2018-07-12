@@ -92,7 +92,7 @@ class PublishTraitTransformer(TraitTransformer):
         yield prepare_step
         yield publish_step
 
-    def process_pipeline_args(self, pipeline_args: 'PipelineArgs'):
+    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         main_repo = pipeline_args.main_repository()
         prepare_step = pipeline_args.step('prepare')
         publish_step = pipeline_args.step('publish')

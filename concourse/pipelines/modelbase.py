@@ -63,7 +63,7 @@ class TraitTransformer(object):
         return {self.name}
 
     @abstractmethod
-    def process_pipeline_args(self, pipeline_args: 'PipelineArgs'):
+    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         raise NotImplementedError()
 
 class ScriptType(Enum):

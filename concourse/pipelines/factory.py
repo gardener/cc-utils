@@ -10,7 +10,7 @@ from concourse.pipelines.modelbase import (
         ensure_not_none,
 )
 from concourse.pipelines.model import (
-        PipelineArgs,
+        JobVariant,
         PipelineDefinition,
 )
 from concourse.pipelines.model.resources import RepositoryConfig, ResourceRegistry
@@ -103,8 +103,8 @@ class DefinitionFactory(object):
         return merged_variants
 
 
-    def _create_variant(self, raw_dict, variant_name, resource_registry) -> PipelineArgs:
-        variant = PipelineArgs(
+    def _create_variant(self, raw_dict, variant_name, resource_registry) -> JobVariant:
+        variant = JobVariant(
             name=variant_name,
             raw_dict=raw_dict,
             resource_registry=resource_registry

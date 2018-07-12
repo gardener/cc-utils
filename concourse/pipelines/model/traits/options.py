@@ -31,5 +31,5 @@ class OptionsTraitTransformer(TraitTransformer):
         super().__init__(*args, **kwargs)
         self.trait = ensure_not_none(trait)
     
-    def process_pipeline_args(self, pipeline_args: 'PipelineArgs'):
+    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         pass

@@ -32,7 +32,7 @@ class CronTrait(Trait):
 
 
 class CronTraitTransformer(TraitTransformer):
-    def process_pipeline_args(self, pipeline_args: 'PipelineArgs'):
+    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         # todo: inject cron-resource - until then, this is a noop
         pass
 
