@@ -11,10 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import semver
 import unittest
 
 import version as examinee
+
+class Version_find_latest_version(unittest.TestCase):
+    def test_find_latest_version(self):
+        versions = (semver.parse_version_info(v) for v in (
+                '0.0.10',
+                '0.20.1',
+                '2.50.100',
+                '3.0.1',
+                '1.0.0',
+            )
+        )
+        result = examinee.find_latest_version(versions)
+        self.assertEqual(str(result), '3.0.1')
+
 
 class Version_process_version_Test(unittest.TestCase):
     def test_invalid_version(self):
