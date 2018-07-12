@@ -11,3 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+class PipelineDefinition(object):
+    def __init__(self):
+        self._variants_dict = {}
+        self._resource_registry = None
+
+    def resource_registry(self):
+        return self._resource_registry
+
+    def variants(self):
+        return self._variants_dict.values()
+
+    def variant(self, name: str):
+        return self._variants_dict[name]
+

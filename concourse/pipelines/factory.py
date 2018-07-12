@@ -10,9 +10,7 @@ from concourse.pipelines.modelbase import (
         ensure_not_none,
 )
 from concourse.pipelines.model.job import JobVariant
-from concourse.pipelines.model import (
-        PipelineDefinition,
-)
+from concourse.pipelines.model.pipeline import PipelineDefinition
 from concourse.pipelines.model.resources import RepositoryConfig, ResourceRegistry
 from concourse.pipelines.model.traits import TraitsFactory
 
