@@ -16,7 +16,7 @@ import unittest
 
 import version as examinee
 
-class VersionModuleTest(unittest.TestCase):
+class Version_process_version_Test(unittest.TestCase):
     def test_invalid_version(self):
         with self.assertRaises(ValueError):
             examinee.process_version(version_str='invalid', operation='noop')
