@@ -37,6 +37,12 @@ class PipelineArgs(ModelBase):
     def has_trait(self, name):
         return name in self.traits()
 
+    def job_name(self):
+        return '{b}-{n}-job'.format(
+            b=self.main_repository().branch(),
+            n=self.variant_name,
+        )
+
     def steps(self):
         return self._steps_dict.values()
 
