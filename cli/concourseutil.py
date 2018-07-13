@@ -14,9 +14,17 @@
 
 import os
 import subprocess
+import yaml
 
 from util import ctx
-from util import info, fail, which, warning, CliHints, CliHint
+from util import (
+    info,
+    fail,
+    which,
+    warning,
+    CliHints,
+    CliHint,
+)
 from util import ctx as global_ctx
 from concourse.pipelines.replicator import *
 from concourse.pipelines.enumerator import *
@@ -98,6 +106,49 @@ def _display_info(dry_run: bool, operation: str, **kwargs):
 
     if dry_run:
         warning("this was a --dry-run. Set the --no-dry-run flag to actually deploy")
+
+
+def update_certificate(
+    tls_config_name: CliHint(typehint=str, help="TLS config element name which should be updated"),
+    certificate_file: CliHints.existing_file(help="Path to the certificate file to use"),
+    key_file: CliHints.existing_file(help="Path to the private key file to use"),
+    output_path: CliHints.existing_dir(help="Path where the updated TLS config file should be created")
+):
+    # Stuff used for yaml formatting, when dumping a dictionary
+    class LiteralStr(str):
+        """Used to create yaml block style indicator | """
+        pass
+
+    def literal_str_representer(dumper, data):
+        """Used to create yaml block style indicator"""
+        return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
+
+    # read new certificate data
+    certificate_file = os.path.abspath(certificate_file)
+    private_key_file = os.path.abspath(key_file)
+    with open(certificate_file) as f:
+        certificate = f.read()
+    with open(private_key_file) as f:
+        private_key = f.read()
+
+    # set new certificate data to specified argument 'tls_config_name'
+    cfg_factory = ctx().cfg_factory()
+    tls_config_element = cfg_factory.tls_config(tls_config_name)
+    tls_config_element.set_private_key(private_key)
+    tls_config_element.set_certificate(certificate)
+
+   # patch tls config dict so that yaml.dump outputs literal strings using '|'
+    yaml.add_representer(LiteralStr, literal_str_representer)
+    configs = cfg_factory._configs('tls_config')
+    for k1, v1 in configs.items():
+        for k2, v2 in v1.items():
+            configs[k1][k2] = LiteralStr(configs[k1][k2])
+
+    # dump updated tls config to given output path
+    tls_config_type = cfg_factory._cfg_types()['tls_config']
+    tls_config_file = list(tls_config_type.sources())[0].file()
+    with open(os.path.join(output_path, tls_config_file), 'w') as f:
+        yaml.dump(configs, f, indent=2, default_flow_style=False)
 
 
 def render_pipeline(

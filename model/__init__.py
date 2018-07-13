@@ -774,5 +774,11 @@ class TlsConfig(NamedModelElement):
     def certificate(self):
         return self.raw.get('certificate')
 
+    def set_private_key(self, private_key: str):
+        self.raw['private_key'] = private_key
+
+    def set_certificate(self, certificate: str):
+        self.raw['certificate'] = certificate
+
     def _required_attributes(self):
         return ['private_key', 'certificate']
