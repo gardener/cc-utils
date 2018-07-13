@@ -130,6 +130,11 @@ class UpgradePullRequest(object):
         # PR is obsolete if same or newer component version is already configured in reference
         return greatest_component_version >= semver.parse_version_info(self.to_component.version())
 
+    def purge(self):
+        self.pull_request.close()
+        head_ref = 'refs/heads/' + self.pull_request.head.ref
+        self.pull_request.repository.ref(head_ref).delete()
+
 
 class PullRequestUtil(RepositoryHelperBase):
     PR_TITLE_PATTERN = re.compile(r'^\[ci::(.*):(.*)->(.*)\]$')
@@ -179,7 +184,7 @@ class PullRequestUtil(RepositoryHelperBase):
         parsed_prs = util.FluentIterable(self.repository.pull_requests()) \
             .filter(self._has_upgrade_pr_title) \
             .map(self._parse_pr_title) \
-            .as_generator()
+            .as_list()
         return parsed_prs
 
 
