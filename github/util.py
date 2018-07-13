@@ -28,26 +28,13 @@ from github3.github import GitHub, GitHubEnterprise
 from github3.repos.repo import Repository
 from github3.exceptions import NotFoundError, ForbiddenError
 from github3.orgs import Team
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 import util
 import version
+
+from http_requests import default_http_adapter
 from product.model import ComponentReference
 from model import ConfigFactory, GithubConfig
-
-default_http_adapter = HTTPAdapter(
-    max_retries = Retry(
-        total=3,
-        connect=3,
-        read=3,
-        status=3,
-        redirect=False,
-        status_forcelist=[500, 503],
-        raise_on_status=False,
-        respect_retry_after_header=True,
-    )
-)
 
 class RepoPermission(enum.Enum):
     PULL = "pull"
