@@ -110,10 +110,10 @@ def release_and_prepare_next_dev_cycle(
     )
 
     # Persist version change, create release commit
-    release_commit_sha = helper.create_or_update_file(
+    release_commit_sha = helper.update_version_file(
         file_path=repository_version_file_path,
-        file_contents=release_version,
-        commit_message="Release " + release_version
+        to_version=release_version,
+        commit_message="Release " + release_version,
     )
     helper.create_tag(
         tag_name=release_version,
