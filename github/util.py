@@ -54,7 +54,7 @@ class RepoPermission(Enum):
     ADMIN = "admin"
 
 
-class GitHubRepositoryHelper(object):
+class RepositoryHelperBase(object):
     GITHUB_TIMESTAMP_UTC_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
     def __init__(
@@ -97,6 +97,8 @@ class GitHubRepositoryHelper(object):
         )
         return repository
 
+
+class GitHubRepositoryHelper(RepositoryHelperBase):
     def create_or_update_file(
         self,
         file_path: str,
