@@ -18,7 +18,7 @@ import argparse
 import smtplib
 from email.mime.text import MIMEText
 
-from util import ensure_file_exists
+from util import existing_file
 
 def create_body(mail_template: str, replace_tokens: dict):
     for key, value in replace_tokens.items():

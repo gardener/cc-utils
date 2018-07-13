@@ -33,7 +33,7 @@ def process_version(
     if input_file and version_string:
         util.fail("Only one of '--input-file' and '--version-string' may be specified.")
     if input_file:
-        util.ensure_file_exists(input_file)
+        util.existing_file(input_file)
     if output_file:
         if output_file != sys.stdout:
             if type(output_file) != list:

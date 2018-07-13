@@ -17,7 +17,7 @@ import subprocess
 
 import git
 
-from util import ensure_not_empty, ensure_directory_exists, fail
+from util import ensure_not_empty, existing_dir, fail
 
 def update_submodule(
     repo_path: str,
@@ -58,7 +58,7 @@ def update_submodule(
     str
         The hexadecimal SHA-1 hash of the created commit
     '''
-    repo_path = ensure_directory_exists(os.path.abspath(repo_path))
+    repo_path = existing_dir(os.path.abspath(repo_path))
 
     ensure_not_empty(submodule_path)
     if '/' in submodule_path:

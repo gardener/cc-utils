@@ -28,8 +28,8 @@ import mako.template
 from util import (
     fail,
     warning,
-    ensure_directory_exists,
-    ensure_file_exists,
+    existing_dir,
+    existing_file,
     not_empty,
     not_none,
     info,
@@ -243,7 +243,7 @@ class DefinitionDeployer(object):
 
 class FilesystemDeployer(DefinitionDeployer):
     def __init__(self, base_dir):
-        self.base_dir = ensure_directory_exists(base_dir)
+        self.base_dir = existing_dir(base_dir)
 
     def deploy(self, definition_descriptor):
         try:

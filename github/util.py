@@ -277,8 +277,8 @@ def replicate_pipeline_definitions(
     replicates pipeline definitions from cc-pipelines to component repositories.
     will only be required until definitions are moved to component repositories.
     '''
-    util.ensure_directory_exists(definition_dir)
-    util.ensure_directory_exists(cfg_dir)
+    util.existing_dir(definition_dir)
+    util.existing_dir(cfg_dir)
 
     cfg_factory = ConfigFactory.from_cfg_dir(cfg_dir)
     cfg_set = cfg_factory.cfg_set(cfg_name)
@@ -288,7 +288,7 @@ def replicate_pipeline_definitions(
 
     for repo_path, definition_file in repo_mappings.items():
         # hack: definition_file is a list with always exactly one entry
-        definition_file = util.ensure_file_exists(os.path.join(definition_dir, definition_file[0]))
+        definition_file = util.existing_file(os.path.join(definition_dir, definition_file[0]))
         with open(definition_file) as f:
             definition_contents = f.read()
 

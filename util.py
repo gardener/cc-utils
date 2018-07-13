@@ -30,7 +30,7 @@ def _set_cli(is_cli: bool):
         class Failure(RuntimeError): pass
 
 
-def ensure_file_exists(path):
+def existing_file(path):
     if isinstance(path, pathlib.Path):
         is_file = path.is_file()
     else:
@@ -40,7 +40,7 @@ def ensure_file_exists(path):
     return path
 
 
-def ensure_directory_exists(path: str):
+def existing_dir(path: str):
     if isinstance(path, pathlib.Path):
         is_dir = path.is_dir()
     else:
@@ -48,10 +48,6 @@ def ensure_directory_exists(path: str):
     if not is_dir:
         fail('not an existing directory: ' + str(path))
     return path
-
-# export shorted aliases
-existing_file = ensure_file_exists
-existing_dir = ensure_directory_exists
 
 
 class CliHint(object):
@@ -66,7 +62,7 @@ class CliHints(object):
     '''
     @staticmethod
     def existing_file(help: str='an existing file', **kwargs):
-        return CliHint(type=ensure_file_exists, help=help, **kwargs)
+        return CliHint(type=existing_file, help=help, **kwargs)
 
     @staticmethod
     def yaml_file(help: str='an existing YAML file', **kwargs):
@@ -74,7 +70,7 @@ class CliHints(object):
 
     @staticmethod
     def existing_dir(help: str='an existing directory', **kwargs):
-        return CliHint(type=ensure_directory_exists, help=help, **kwargs)
+        return CliHint(type=existing_dir, help=help, **kwargs)
 
     @staticmethod
     def non_empty_string(help:str = 'a non-empty string', **kwargs):

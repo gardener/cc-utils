@@ -21,9 +21,9 @@ from urllib.parse import urlparse
 
 from model.base import NamedModelElement, ModelBase, ModelValidationError, ConfigElementNotFoundError
 from util import (
-    ensure_file_exists,
+    existing_file,
     parse_yaml_file,
-    ensure_directory_exists,
+    existing_dir,
     ensure_not_none,
     ensure_not_empty,
 )
@@ -60,7 +60,7 @@ class ConfigFactory(object):
 
     @staticmethod
     def from_cfg_dir(cfg_dir: str, cfg_types_file='config_types.yaml'):
-        cfg_dir = ensure_directory_exists(os.path.abspath(cfg_dir))
+        cfg_dir = existing_dir(os.path.abspath(cfg_dir))
         cfg_types_dict = parse_yaml_file(os.path.join(cfg_dir, cfg_types_file))
         raw = {}
 

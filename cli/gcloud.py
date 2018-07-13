@@ -14,10 +14,10 @@
 
 from subprocess import run, STDOUT, PIPE, CalledProcessError
 
-from util import ensure_file_exists, ensure_not_empty, fail
+from util import existing_file, ensure_not_empty, fail
 
 def authenticate_service_account(credentials_file):
-    ensure_file_exists(credentials_file)
+    existing_file(credentials_file)
     run([
       'gcloud', 'auth', 'activate-service-account',
       '--key-file', credentials_file

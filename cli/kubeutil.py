@@ -28,7 +28,7 @@ from kubernetes.client import (
 import kubernetes.client
 from kubernetes.config.kube_config import KubeConfigLoader
 
-from util import fail, info, verbose, ensure_file_exists, ensure_not_empty, ensure_not_none
+from util import fail, info, verbose, existing_file, ensure_not_empty, ensure_not_none
 from kube.ctx import Ctx
 
 
@@ -282,7 +282,7 @@ def create_gcr_secret(
   user_name: str='_json_key',
   server_url: str='https://eu.gcr.io'
 ):
-    ensure_file_exists(secret_file)
+    existing_file(secret_file)
     secret_helper = ctx.secret_helper()
     with open(secret_file, 'r') as fh:
         gcr_secret = fh.read()

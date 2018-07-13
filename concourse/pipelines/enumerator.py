@@ -30,7 +30,7 @@ from util import (
     info,
     fail,
     verbose,
-    ensure_directory_exists,
+    existing_dir,
     not_empty,
     not_none,
 )
@@ -89,7 +89,7 @@ class DefinitionEnumerator(object):
 
 class MappingfileDefinitionEnumerator(DefinitionEnumerator):
     def __init__(self, base_dir, job_mapping, cfg_set):
-        self.base_dir = ensure_directory_exists(base_dir)
+        self.base_dir = existing_dir(base_dir)
         self.job_mapping = job_mapping
         self.cfg_set = cfg_set
 

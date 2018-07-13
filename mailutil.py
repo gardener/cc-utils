@@ -18,8 +18,8 @@ import typing
 
 from model import EmailConfig
 from util import (
-    ensure_file_exists,
-    ensure_directory_exists,
+    existing_file,
+    existing_dir,
     ensure_not_empty,
     ensure_not_none,
     info,
@@ -144,7 +144,7 @@ def determine_mail_recipients(src_dir, github_cfg_name):
     github_api = github.util._create_github_api_object(github_cfg)
 
     # commiter/author from head commit
-    repo = git.Repo(ensure_directory_exists(src_dir))
+    repo = git.Repo(existing_dir(src_dir))
     head_commit = repo.commit(repo.head)
     yield head_commit.author.email.lower()
     yield head_commit.committer.email.lower()

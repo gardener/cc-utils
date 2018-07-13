@@ -44,8 +44,8 @@ from model import (
 )
 from util import (
     ctx as global_ctx,
-    ensure_file_exists,
-    ensure_directory_exists,
+    existing_file,
+    existing_dir,
     ensure_not_empty,
     ensure_not_none,
     info,

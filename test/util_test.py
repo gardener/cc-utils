@@ -62,23 +62,23 @@ class UtilTest(unittest.TestCase):
             self.assertIn('must not be empty', stdout.getvalue().strip())
             self.assertTrue(len(stderr.getvalue()) == 0)
 
-    def test_ensure_file_exists(self):
+    def test_existing_file(self):
         import sys
         existing_file = sys.executable
 
-        result = examinee.ensure_file_exists(existing_file)
+        result = examinee.existing_file(existing_file)
 
         self.assertEqual(existing_file, result)
 
         with capture_out() as (stdout, stderr):
             with self.assertRaises(Failure):
-                examinee.ensure_file_exists('no such file, I hope')
+                examinee.existing_file('no such file, I hope')
         self.assertIn('not an existing file', stdout.getvalue().strip())
         self.assertTrue(len(stderr.getvalue()) == 0)
 
         # should also work with pathlib.Path
         existing_file = pathlib.Path(existing_file)
-        self.assertEqual(examinee.ensure_file_exists(existing_file), existing_file)
+        self.assertEqual(examinee.existing_file(existing_file), existing_file)
 
     def test_urljoin(self):
         self.assertEqual('foo/bar', examinee.urljoin('foo/bar'))
