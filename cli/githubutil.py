@@ -17,7 +17,7 @@ from urllib.parse import urlparse, parse_qs
 from github3.exceptions import NotFoundError
 
 from util import ctx, not_empty, info, warning, verbose, CliHint, CliHints
-from github import GithubWebHookSyncer, WebhookQueryAttributes
+from github.webhook import GithubWebHookSyncer, WebhookQueryAttributes
 from github.util import (
     GitHubRepositoryHelper,
     _create_github_api_object,

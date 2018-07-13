@@ -15,7 +15,7 @@
 from urllib.parse import urlparse, parse_qs
 from copy import copy
 
-import github
+import github.webhook
 from github.util import _create_github_api_object
 import concourse.client as concourse
 from model import ConcourseTeamCredentials, ConcourseConfig, GithubConfig, JobMapping
@@ -78,7 +78,7 @@ def sync_webhooks(
 
     github_obj = _create_github_api_object(github_cfg=github_cfg)
 
-    webhook_syncer = github.GithubWebHookSyncer(github_obj)
+    webhook_syncer = github.webhook.GithubWebHookSyncer(github_obj)
     failed_hooks = 0
 
     for repo, resources in path_to_resources.items():
@@ -100,7 +100,7 @@ def sync_webhooks(
 
 def _sync_webhook(
     resources: [concourse.Resource],
-    webhook_syncer: github.GithubWebHookSyncer,
+    webhook_syncer: github.webhook.GithubWebHookSyncer,
     job_mapping_name: str,
     concourse_cfg: 'ConcourseConfig',
     skip_ssl_validation: bool=False
@@ -122,7 +122,7 @@ def _sync_webhook(
     # collect callback URLs
     def webhook_url(gh_res):
         github_src = gh_res.github_source()
-        query_attributes = github.WebhookQueryAttributes(
+        query_attributes = github.webhook.WebhookQueryAttributes(
             webhook_token=gh_res.webhook_token(),
             concourse_id=concourse_cfg.name(),
             job_mapping_id=job_mapping_name,
@@ -145,8 +145,8 @@ def _sync_webhook(
 
     def url_filter(url):
         parsed_url = parse_qs(urlparse(url).query)
-        concourse_id = parsed_url.get(github.WebhookQueryAttributes.CONCOURSE_ID_ATTRIBUTE_NAME)
-        job_mapping_id = parsed_url.get(github.WebhookQueryAttributes.JOB_MAPPING_ID_ATTRIBUTE_NAME)
+        concourse_id = parsed_url.get(github.webhook.WebhookQueryAttributes.CONCOURSE_ID_ATTRIBUTE_NAME)
+        job_mapping_id = parsed_url.get(github.webhook.WebhookQueryAttributes.JOB_MAPPING_ID_ATTRIBUTE_NAME)
         # we consider an url for removal iff it contains parameters 'concourse_id' and 'job_mapping_id'
         # that match the configured concourse_id and job_mapping_name
         return (

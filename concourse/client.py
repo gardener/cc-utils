@@ -20,7 +20,7 @@ import warnings
 from enum import Enum
 import sseclient
 
-from github import WebhookQueryAttributes
+from github.webhook import WebhookQueryAttributes
 from http_requests import AuthenticatedRequestBuilder
 from model import ConcourseTeamCredentials
 from util import fail, warning, not_empty
