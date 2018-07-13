@@ -17,6 +17,7 @@ import enum
 import functools
 import io
 import os
+import re
 import semver
 import sys
 import urllib.parse
@@ -32,6 +33,7 @@ from urllib3.util.retry import Retry
 
 import util
 import version
+from product.model import ComponentReference
 from model import ConfigFactory, GithubConfig
 
 default_http_adapter = HTTPAdapter(
@@ -95,6 +97,90 @@ class RepositoryHelperBase(object):
                 repository=name
         )
         return repository
+
+
+class UpgradePullRequest(object):
+    def __init__(self, pull_request, from_component, to_component):
+        self.pull_request = util.not_none(pull_request)
+        if from_component.name() != to_component.name():
+            raise ValueError('component names do not match')
+        self.component_name = from_component.name()
+
+        self.from_component = from_component
+        self.to_component = to_component
+
+    def is_obsolete(self, reference_product):
+        '''returns a boolean indicating whether or not this Upgrade PR is "obsolete"
+
+        A Upgrade is considered to be obsolete, iff the following conditions hold true:
+        - the reference product contains a component reference with the same name
+        - the destination version is greater than the greatest reference component version
+        '''
+        # find matching component versions
+        reference_components = sorted(
+            [rc for rc in reference_product.components() if rc.name() == self.component_name],
+            key=lambda c: semver.parse_version_info(c.version())
+        )
+        if not reference_components:
+            return False # special case: we have a new component
+
+        # sorted will return the greatest version last
+        greatest_component_version = semver.parse_version_info(reference_components[-1].version())
+
+        # PR is obsolete if same or newer component version is already configured in reference
+        return greatest_component_version >= semver.parse_version_info(self.to_component.version())
+
+
+class PullRequestUtil(RepositoryHelperBase):
+    PR_TITLE_PATTERN = re.compile(r'^\[ci::(.*):(.*)->(.*)\]$')
+
+    @staticmethod
+    def calculate_pr_title(
+            component_name: str,
+            from_version: str,
+            to_version: str,
+    ) -> str:
+        return '[ci::{cn}:{fv}->{tv}]'.format(
+            cn=component_name,
+            fv=from_version,
+            tv=to_version,
+        )
+
+    def _has_upgrade_pr_title(self, pull_request)-> bool:
+        return bool(self.PR_TITLE_PATTERN.fullmatch(pull_request.title))
+
+    def _parse_pr_title(self, pull_request):
+        util.not_none(pull_request)
+
+        match = self.PR_TITLE_PATTERN.fullmatch(pull_request.title)
+        if match is None:
+            raise ValueError("PR-title '{t}' did not match title-schema".format(
+                t=pull_request.title)
+            )
+
+        component_name = match.group(1)
+        from_version = match.group(2)
+        to_version = match.group(3)
+
+        from_component_ref = ComponentReference.create(name=component_name, version=from_version)
+        to_component_ref = ComponentReference.create(name=component_name, version=to_version)
+
+        return UpgradePullRequest(
+            pull_request=pull_request,
+            from_component=from_component_ref,
+            to_component=to_component_ref,
+        )
+
+    def enumerate_upgrade_pull_requests(self):
+        '''returns a dictionary containing all (open) component ugprade pull requests
+
+        {pull_request: ComponentUpgradeVector}
+        '''
+        parsed_prs = util.FluentIterable(self.repository.pull_requests()) \
+            .filter(self._has_upgrade_pr_title) \
+            .map(self._parse_pr_title) \
+            .as_generator()
+        return parsed_prs
 
 
 class GitHubRepositoryHelper(RepositoryHelperBase):
