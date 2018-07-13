@@ -23,7 +23,7 @@ import sseclient
 from github import WebhookQueryAttributes
 from http_requests import AuthenticatedRequestBuilder
 from model import ConcourseTeamCredentials
-from util import fail, warning, ensure_not_empty
+from util import fail, warning, not_empty
 
 warnings.filterwarnings('ignore', 'Unverified HTTPS request is being made.*', InsecureRequestWarning)
 
@@ -242,7 +242,7 @@ class ConcourseApi(object):
     def pipeline_cfg(self, pipeline_name: str):
         pipeline_cfg_url = self.routes.pipeline_cfg(pipeline_name)
         response = self._get(pipeline_cfg_url)
-        ensure_not_empty(response)
+        not_empty(response)
         return PipelineConfig(response, concourse_api=self, name=pipeline_name)
 
     @ensure_annotations

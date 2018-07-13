@@ -48,8 +48,8 @@ class UtilTest(unittest.TestCase):
         self.assertEqual('ERROR: foo bar', stdout.getvalue().strip())
         self.assertTrue(len(stderr.getvalue()) == 0)
 
-    def test_ensure_not_empty(self):
-        result = examinee.ensure_not_empty('foo')
+    def test_not_empty(self):
+        result = examinee.not_empty('foo')
 
         self.assertEqual('foo', result)
 
@@ -58,7 +58,7 @@ class UtilTest(unittest.TestCase):
         for value in forbidden:
             with capture_out() as (stdout, stderr):
                 with self.assertRaises(Failure):
-                    examinee.ensure_not_empty(value)
+                    examinee.not_empty(value)
             self.assertIn('must not be empty', stdout.getvalue().strip())
             self.assertTrue(len(stderr.getvalue()) == 0)
 

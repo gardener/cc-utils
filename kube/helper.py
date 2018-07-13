@@ -26,7 +26,7 @@ from kubernetes.client import (
 from kubernetes.client.rest import ApiException
 from ensure import ensure, ensure_annotations
 
-from util import info, ensure_not_empty, ensure_not_none
+from util import info, not_empty, not_none
 
 class KubernetesSecretHelper(object):
     '''Helper class for handling kubernetes secret objects'''
@@ -78,7 +78,7 @@ class KubernetesSecretHelper(object):
         to-str conversion is encoded as a utf-8 byte array. Thus such a conversion must
         not have done before.
         '''
-        ne = ensure_not_empty
+        ne = not_empty
         metadata = V1ObjectMeta(name=ne(name), namespace=ne(namespace))
 
         secret_data = {
@@ -142,14 +142,14 @@ class KubernetesNamespaceHelper(object):
 
     def create_namespace(self, namespace: str):
         '''Creates a new namespace and returns it'''
-        ensure_not_empty(namespace)
+        not_empty(namespace)
         metadata = V1ObjectMeta(name=namespace)
         ns = V1Namespace(metadata=metadata)
         return self.core_api.create_namespace(ns)
 
     def create_if_absent(self, namespace: str):
         '''Create a new namespace iff it does not already exist'''
-        ensure_not_empty(namespace)
+        not_empty(namespace)
 
         existing_namespace = self.get_namespace(namespace)
         if not existing_namespace:
@@ -157,7 +157,7 @@ class KubernetesNamespaceHelper(object):
 
     @ensure_annotations
     def delete_namespace(self, namespace: str):
-        ensure_not_empty(namespace)
+        not_empty(namespace)
         self.core_api.delete_namespace(name=namespace, body={})
 
     def get_namespace(self, namespace: str):
@@ -178,8 +178,8 @@ class KubernetesServiceHelper(object):
         '''Create a service in a given namespace. If the service already exists,
         the previous version will be deleted beforehand
         '''
-        ensure_not_empty(namespace)
-        ensure_not_none(service)
+        not_empty(namespace)
+        not_none(service)
 
         service_name = service.metadata.name
         existing_service = self.get_service(namespace=namespace, name=service_name)
@@ -191,8 +191,8 @@ class KubernetesServiceHelper(object):
         '''Create a service in a given namespace. Raises an `ApiException` if such a Service
         already exists.
         '''
-        ensure_not_empty(namespace)
-        ensure_not_none(service)
+        not_empty(namespace)
+        not_none(service)
 
         self.core_api.create_namespaced_service(namespace=namespace, body=service)
 
@@ -200,8 +200,8 @@ class KubernetesServiceHelper(object):
         '''Return the `V1Service` with the given name in the given namespace, or `None` if
         no such service exists.
         '''
-        ensure_not_empty(namespace)
-        ensure_not_empty(name)
+        not_empty(namespace)
+        not_empty(name)
 
         try:
             service = self.core_api.read_namespaced_service(name=name, namespace=namespace)
@@ -220,8 +220,8 @@ class KubernetesDeploymentHelper(object):
         '''Create a deployment in a given namespace. If the deployment already exists,
         the previous version will be deleted beforehand.
         '''
-        ensure_not_empty(namespace)
-        ensure_not_none(deployment)
+        not_empty(namespace)
+        not_none(deployment)
 
         deployment_name = deployment.metadata.name
         existing_deployment = self.get_deployment(namespace=namespace, name=deployment_name)
@@ -232,16 +232,16 @@ class KubernetesDeploymentHelper(object):
     def create_deployment(self, namespace: str, deployment: V1Deployment):
         '''Create a deployment in a given namespace. Raises an `ApiException` if such a deployment
         already exists.'''
-        ensure_not_empty(namespace)
-        ensure_not_none(deployment)
+        not_empty(namespace)
+        not_none(deployment)
 
         self.apps_api.create_namespaced_deployment(namespace=namespace, body=deployment)
 
     def get_deployment(self, namespace: str, name: str) -> V1Deployment:
         '''Return the `V1Deployment` with the given name in the given namespace, or `None` if
         no such deployment exists.'''
-        ensure_not_empty(namespace)
-        ensure_not_empty(name)
+        not_empty(namespace)
+        not_empty(name)
 
         try:
             deployment = self.apps_api.read_namespaced_deployment(name=name, namespace=namespace)
@@ -255,8 +255,8 @@ class KubernetesDeploymentHelper(object):
         '''Block until the given deployment has at least one available replica or `timeout_seconds` seconds elapsed.
         Return `True` if the deployment is available, `False` if a timeout occured.
         '''
-        ensure_not_empty(namespace)
-        ensure_not_empty(name)
+        not_empty(namespace)
+        not_empty(name)
 
         w = watch.Watch()
         # Work around IncompleteRead errors resulting in ProtocolErrors - no fault of our own
@@ -290,8 +290,8 @@ class KubernetesIngressHelper(object):
         '''Create an ingress in a given namespace. If the ingress already exists,
         the previous version will be deleted beforehand.
         '''
-        ensure_not_empty(namespace)
-        ensure_not_none(ingress)
+        not_empty(namespace)
+        not_none(ingress)
 
         ingress_name = ingress.metadata.name
         existing_ingress = self.get_ingress(namespace=namespace, name=ingress_name)
@@ -302,16 +302,16 @@ class KubernetesIngressHelper(object):
     def create_ingress(self, namespace: str, ingress: V1beta1Ingress):
         '''Create an ingress in a given namespace. Raises an `ApiException` if such an ingress
         already exists.'''
-        ensure_not_empty(namespace)
-        ensure_not_none(ingress)
+        not_empty(namespace)
+        not_none(ingress)
 
         self.extensions_v1beta1_api.create_namespaced_ingress(namespace=namespace, body=ingress)
 
     def get_ingress(self, namespace: str, name: str) -> V1beta1Ingress:
         '''Return the `V1beta1Ingress` with the given name in the given namespace, or `None` if
         no such ingress exists.'''
-        ensure_not_empty(namespace)
-        ensure_not_empty(name)
+        not_empty(namespace)
+        not_empty(name)
 
         try:
             ingress = self.extensions_v1beta1_api.read_namespaced_ingress(name=name, namespace=namespace)

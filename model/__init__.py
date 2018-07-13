@@ -24,8 +24,8 @@ from util import (
     existing_file,
     parse_yaml_file,
     existing_dir,
-    ensure_not_none,
-    ensure_not_empty,
+    not_none,
+    not_empty,
 )
 
 '''
@@ -86,12 +86,12 @@ class ConfigFactory(object):
 
     @staticmethod
     def from_dict(raw_dict: dict):
-        raw = ensure_not_none(raw_dict)
+        raw = not_none(raw_dict)
 
         return ConfigFactory(raw_dict=raw)
 
     def __init__(self, raw_dict: dict):
-        self.raw = ensure_not_none(raw_dict)
+        self.raw = not_none(raw_dict)
         if not self.CFG_TYPES in self.raw:
             raise ValueError('missing required attribute: {ct}'.format(ct=self.CFG_TYPES))
 
@@ -171,7 +171,7 @@ class ConfigFactory(object):
         ValueError
             If the specified cfg_type is unknown.
         '''
-        ensure_not_empty(cfg_type_name)
+        not_empty(cfg_type_name)
 
         for element_name in self._cfg_element_names(cfg_type_name):
             yield self._cfg_element(cfg_type_name, element_name)
@@ -194,7 +194,7 @@ class ConfigFactory(object):
         ValueError
             If the specified cfg_type is unknown.
         '''
-        ensure_not_empty(cfg_type_name)
+        not_empty(cfg_type_name)
 
         known_types = self._cfg_types()
         if not cfg_type_name in known_types:
@@ -241,8 +241,8 @@ class ConfigTypeSource(ModelBase):
 
 class ConfigSetSerialiser(object):
     def __init__(self, cfg_sets: 'ConfigurationSet', cfg_factory: ConfigFactory):
-        self.cfg_sets = ensure_not_none(cfg_sets)
-        self.cfg_factory = ensure_not_none(cfg_factory)
+        self.cfg_sets = not_none(cfg_sets)
+        self.cfg_factory = not_none(cfg_factory)
 
     def serialise(self, output_format='json'):
         if not output_format == 'json':
@@ -291,7 +291,7 @@ class ConfigurationSet(NamedModelElement):
     Not intended to be instantiated by users of this module
     '''
     def __init__(self, cfg_factory, cfg_name, *args, **kwargs):
-        self.cfg_factory = ensure_not_none(cfg_factory)
+        self.cfg_factory = not_none(cfg_factory)
         super().__init__(name=cfg_name, *args, **kwargs)
 
         # normalise cfg mappings
@@ -336,7 +336,7 @@ class ConfigurationSet(NamedModelElement):
         ValueError
             If the specified cfg_type is unknown.
         '''
-        ensure_not_empty(cfg_type_name)
+        not_empty(cfg_type_name)
 
         for element_name in self._cfg_element_names(cfg_type_name):
             yield self._cfg_element(cfg_type_name, element_name)
@@ -360,7 +360,7 @@ class ConfigurationSet(NamedModelElement):
         ValueError
             If the specified cfg_type is unknown.
         '''
-        ensure_not_empty(cfg_type_name)
+        not_empty(cfg_type_name)
 
         # ask factory for all known names. This ensures that the existance of the type is checked.
         all_cfg_element_names = self.cfg_factory._cfg_element_names(cfg_type_name=cfg_type_name)

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from util import ensure_not_none
+from util import not_none
 from concourse.pipelines.modelbase import Trait, TraitTransformer
 
 class OptionsTrait(Trait):
@@ -29,7 +29,7 @@ class OptionsTrait(Trait):
 class OptionsTraitTransformer(TraitTransformer):
     def __init__(self, trait: OptionsTrait, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.trait = ensure_not_none(trait)
+        self.trait = not_none(trait)
     
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         pass

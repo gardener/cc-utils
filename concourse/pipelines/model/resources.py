@@ -14,7 +14,7 @@
 
 import os
 
-from concourse.pipelines.modelbase import ModelBase, ensure_not_none as not_none
+from concourse.pipelines.modelbase import ModelBase, not_none as not_none
 
 def sane_env_var_name(name):
   return name.replace('-', '_').upper()

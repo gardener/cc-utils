@@ -17,7 +17,7 @@ import subprocess
 
 import git
 
-from util import ensure_not_empty, existing_dir, fail
+from util import not_empty, existing_dir, fail
 
 def update_submodule(
     repo_path: str,
@@ -60,14 +60,14 @@ def update_submodule(
     '''
     repo_path = existing_dir(os.path.abspath(repo_path))
 
-    ensure_not_empty(submodule_path)
+    not_empty(submodule_path)
     if '/' in submodule_path:
         fail('This implementation only supports toplevel submodules: {s}'.format(s=submodule_path))
 
-    ensure_not_empty(tree_ish)
-    ensure_not_empty(commit_hash)
-    ensure_not_empty(author)
-    ensure_not_empty(email)
+    not_empty(tree_ish)
+    not_empty(commit_hash)
+    not_empty(author)
+    not_empty(email)
 
     repo = git.Repo(repo_path)
     _ensure_submodule_exists(repo, submodule_path)

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from util import ensure_not_none
+from util import not_none
 
 from concourse.pipelines.modelbase import ModelValidationError
 
@@ -41,7 +41,7 @@ class TraitsFactory(object):
     def create(name: str, variant_name: str, args_dict: dict):
         if not name in TRAITS:
             raise ModelValidationError('no such trait: ' + str(name))
-        ensure_not_none(args_dict)
+        not_none(args_dict)
 
         ctor = TRAITS[name]
 

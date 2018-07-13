@@ -7,7 +7,7 @@ from model.base import ModelValidationError
 from concourse.pipelines.model.step import PipelineStep
 from concourse.pipelines.modelbase import (
         normalise_to_dict,
-        ensure_not_none,
+        not_none,
 )
 from concourse.pipelines.model.job import JobVariant
 from concourse.pipelines.model.pipeline import PipelineDefinition
@@ -29,10 +29,10 @@ class RawPipelineDefinitionDescriptor(object):
     Basic value validation is done in the c'tor.
     '''
     def __init__(self, name, base_definition, variants, template='default'):
-        self.name = ensure_not_none(name)
+        self.name = not_none(name)
         self.base_definition = ensure_dict(base_definition, allow_empty=True)
         self.variants = ensure_dict(variants, allow_empty=False)
-        self.template = ensure_not_none(template)
+        self.template = not_none(template)
 
 
 class DefinitionFactory(object):
@@ -48,7 +48,7 @@ class DefinitionFactory(object):
     variant. Variants may overwrite inherited attributes.
     '''
     def __init__(self, raw_definition_descriptor: RawPipelineDefinitionDescriptor):
-        self.raw_definition_descriptor = ensure_not_none(raw_definition_descriptor)
+        self.raw_definition_descriptor = not_none(raw_definition_descriptor)
 
     def create_pipeline_definition(self) -> PipelineDefinition:
         merged_variants_dict = self._create_variants_dict(self.raw_definition_descriptor)

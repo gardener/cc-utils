@@ -14,7 +14,7 @@
 
 from subprocess import run, STDOUT, PIPE, CalledProcessError
 
-from util import existing_file, ensure_not_empty, fail
+from util import existing_file, not_empty, fail
 
 def authenticate_service_account(credentials_file):
     existing_file(credentials_file)
@@ -26,7 +26,7 @@ def authenticate_service_account(credentials_file):
     )
 
 def determine_image_digest(image_reference):
-    ensure_not_empty(image_reference)
+    not_empty(image_reference)
     result = run([
       'gcloud', 'container', 'images', 'describe', image_reference,
       '--format', 'value(image_summary.fully_qualified_digest)'
@@ -36,7 +36,7 @@ def determine_image_digest(image_reference):
     return result.stdout.strip()
 
 def image_exists(image_reference):
-    ensure_not_empty(image_reference)
+    not_empty(image_reference)
     try:
         determine_image_digest(image_reference)
         return True
@@ -44,7 +44,7 @@ def image_exists(image_reference):
         return False
 
 def untag_image(image_reference):
-    ensure_not_empty(image_reference)
+    not_empty(image_reference)
     run([
       'gcloud', 'container', 'images', 'untag', '--quiet', image_reference
       ],
@@ -52,7 +52,7 @@ def untag_image(image_reference):
     )
 
 def untag_and_delete_image_if_no_longer_tagged(image_reference):
-    ensure_not_empty(image_reference)
+    not_empty(image_reference)
 
     # first determine image digest (required to delete after untagging)
     image_digest = determine_image_digest(image_reference)
@@ -66,7 +66,7 @@ def untag_and_delete_image_if_no_longer_tagged(image_reference):
     return result.returncode == 0
 
 def deploy_image(image_reference):
-    ensure_not_empty(image_reference)
+    not_empty(image_reference)
     result = run([
       'gcloud', 'docker', '--', 'push', image_reference,
       ],

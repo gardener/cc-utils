@@ -74,7 +74,7 @@ class CliHints(object):
 
     @staticmethod
     def non_empty_string(help:str = 'a non-empty string', **kwargs):
-        return CliHint(type=ensure_not_empty, help=help, **kwargs)
+        return CliHint(type=not_empty, help=help, **kwargs)
 
 
 def ctx():
@@ -126,20 +126,16 @@ def verbose(msg:str):
         sys.stdout.flush()
 
 
-def ensure_not_empty(value):
+def not_empty(value):
     if not value or len(value) == 0:
         fail('passed value must not be empty')
     return value
 
 
-def ensure_not_none(value):
+def not_none(value):
     if value is None:
         fail('passed value must not be None')
     return value
-
-# export shorted aliases
-not_none = ensure_not_none
-not_empty = ensure_not_empty
 
 
 def is_yaml_file(path: CliHints.existing_file()):
@@ -196,8 +192,8 @@ def merge_dicts(base: dict, other: dict, list_semantics='set_merge'):
     undesired. In this case, set `list_semantics` to 'None'
 
     '''
-    ensure_not_none(base)
-    ensure_not_none(other)
+    not_none(base)
+    not_none(other)
 
     from deepmerge import Merger
 

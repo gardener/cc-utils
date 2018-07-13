@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from util import ensure_not_none
+from util import not_none
 
 class ModelValidationError(ValueError):
     '''
@@ -34,7 +34,7 @@ class ModelBase(object):
     attributes be contained in the given dictionary (ModelValidationError is raised on absent attribs).
     '''
     def __init__(self, raw_dict):
-        self.raw = ensure_not_none(raw_dict)
+        self.raw = not_none(raw_dict)
         self._validate_dict()
 
     def _required_attributes(self):
@@ -57,7 +57,7 @@ class ModelBase(object):
 
 class NamedModelElement(ModelBase):
     def __init__(self, name, raw_dict, *args, **kwargs):
-        self._name = ensure_not_none(name)
+        self._name = not_none(name)
         super().__init__(raw_dict=raw_dict, *args, **kwargs)
 
     def name(self):

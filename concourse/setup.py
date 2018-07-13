@@ -46,8 +46,8 @@ from util import (
     ctx as global_ctx,
     existing_file,
     existing_dir,
-    ensure_not_empty,
-    ensure_not_none,
+    not_empty,
+    not_none,
     info,
     warning,
     fail,
@@ -76,9 +76,9 @@ def create_image_pull_secret(
     namespace: str,
 ):
     """Create an image pull secret in the K8s cluster to allow pods to download images from gcr"""
-    ensure_not_none(credentials)
-    ensure_not_empty(image_pull_secret_name)
-    ensure_not_empty(namespace)
+    not_none(credentials)
+    not_empty(image_pull_secret_name)
+    not_empty(namespace)
 
     ctx = kubeutil.ctx
     namespace_helper = ctx.namespace_helper()
@@ -110,9 +110,9 @@ def create_tls_secret(
     namespace: str,
 ):
     """Creates the configured TLS secret for the Concourse web-component in the K8s cluster"""
-    ensure_not_none(tls_config)
-    ensure_not_empty(tls_secret_name)
-    ensure_not_empty(namespace)
+    not_none(tls_config)
+    not_empty(tls_secret_name)
+    not_empty(namespace)
 
     ctx = kubeutil.ctx
     namespace_helper = ctx.namespace_helper()
@@ -136,7 +136,7 @@ def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
     Creates a dict containing instance specific helm values not explicitly stated in
     the `ConcourseConfig`'s helm_chart_values.
     '''
-    ensure_not_none(concourse_cfg)
+    not_none(concourse_cfg)
 
     # 'main'-team credentials need to be included in the values.yaml, unlike the other teams
     creds = concourse_cfg.team_credentials('main')
@@ -179,7 +179,7 @@ def deploy_concourse_landscape(
         deployment_name: str='concourse',
         timeout_seconds: int='180'
 ):
-    ensure_not_empty(config_name)
+    not_empty(config_name)
     ensure_helm_setup()
 
     # Fetch all the necessary config
@@ -318,7 +318,7 @@ def destroy_concourse_landscape(config_name: str, release_name: str):
 
 # pylint: disable=no-member
 def ensure_cluster_version(kubernetes_config: KubernetesConfig):
-    ensure_not_none(kubernetes_config)
+    not_none(kubernetes_config)
 
     cluster_version_info = kubeutil.get_cluster_version_info()
     configured_version_info = kubernetes_config.cluster_version()
@@ -354,12 +354,12 @@ def deploy_or_upgrade_concourse(
         deployment_name: str='concourse',
 ):
     """Deploys (or upgrades) Concourse using the Helm CLI"""
-    ensure_not_none(default_helm_values)
-    ensure_not_none(custom_helm_values)
-    ensure_not_none(concourse_cfg)
+    not_none(default_helm_values)
+    not_none(custom_helm_values)
+    not_none(concourse_cfg)
     helm_executable = ensure_helm_setup()
     helm_chart_version = concourse_cfg.helm_chart_version()
-    ensure_not_none(helm_chart_version)
+    not_none(helm_chart_version)
 
     namespace = deployment_name
 
@@ -409,7 +409,7 @@ def deploy_or_upgrade_concourse(
 
 
 def deploy_secrets_server(secrets_server_config: SecretsServerConfig):
-    ensure_not_none(secrets_server_config)
+    not_none(secrets_server_config)
 
     ctx = kubeutil.ctx
     service_helper = ctx.service_helper()
@@ -441,8 +441,8 @@ def deploy_delaying_proxy(
     concourse_cfg: ConcourseConfig,
     deployment_name: str,
 ):
-    ensure_not_none(concourse_cfg)
-    ensure_not_empty(deployment_name)
+    not_none(concourse_cfg)
+    not_empty(deployment_name)
 
     ctx = kubeutil.ctx
     service_helper = ctx.service_helper()
@@ -463,7 +463,7 @@ def deploy_delaying_proxy(
 
 
 def set_teams(config: ConcourseConfig):
-    ensure_not_none(config)
+    not_none(config)
 
     # Use main-team, i.e. the team that can change the other teams' credentials
     main_team_credentials = config.main_team_credentials()
@@ -487,7 +487,7 @@ def set_teams(config: ConcourseConfig):
 def generate_secrets_server_service(
     secrets_server_config: SecretsServerConfig,
 ):
-    ensure_not_none(secrets_server_config)
+    not_none(secrets_server_config)
 
     # We need to ensure that the labels and selectors match between the deployment and the service,
     # therefore we base them on the configured service name.
@@ -513,7 +513,7 @@ def generate_secrets_server_service(
 def generate_secrets_server_deployment(
     secrets_server_config: SecretsServerConfig,
 ):
-    ensure_not_none(secrets_server_config)
+    not_none(secrets_server_config)
 
     service_name = secrets_server_config.service_name()
     secret_name = secrets_server_config.secrets().concourse_secret_name()
@@ -588,7 +588,7 @@ def generate_secrets_server_deployment(
 
 
 def generate_delaying_proxy_deployment(concourse_cfg: ConcourseConfig):
-    ensure_not_none(concourse_cfg)
+    not_none(concourse_cfg)
 
     external_url = concourse_cfg.external_url()
     label = {'app':'delaying-proxy'}
@@ -627,7 +627,7 @@ def generate_delaying_proxy_deployment(concourse_cfg: ConcourseConfig):
 
 
 def generate_delaying_proxy_ingress(concourse_cfg: ConcourseConfig):
-    ensure_not_none(concourse_cfg)
+    not_none(concourse_cfg)
 
     proxy_url = concourse_cfg.proxy_url()
     host = urlparse(proxy_url).netloc

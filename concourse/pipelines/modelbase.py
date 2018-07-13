@@ -18,16 +18,16 @@ from enum import Enum
 
 from model.base import ModelValidationError
 
-def ensure_not_none(value):
+def not_none(value):
     if value is None:
         raise ValueError('must not be none')
     return value
 # export shorter alias
-not_none = ensure_not_none
+not_none = not_none
 
 class ModelBase(object):
     def __init__(self, raw_dict: dict):
-        ensure_not_none(raw_dict)
+        not_none(raw_dict)
         self.custom_init(raw_dict)
         self.raw = raw_dict
 
@@ -40,9 +40,9 @@ class ModelBase(object):
 
 class Trait(object): # todo: base on NamedModelBase
     def __init__(self, name: str, variant_name: str, raw_dict: dict):
-        self.name = ensure_not_none(name)
-        self.variant_name = ensure_not_none(variant_name)
-        self.raw = ensure_not_none(raw_dict)
+        self.name = not_none(name)
+        self.variant_name = not_none(variant_name)
+        self.raw = not_none(raw_dict)
 
     @abstractmethod
     def transformer(self):
@@ -54,7 +54,7 @@ class Trait(object): # todo: base on NamedModelBase
 
 class TraitTransformer(object):
     def __init__(self, name: str):
-        self.name = ensure_not_none(name)
+        self.name = not_none(name)
 
     def inject_steps(self):
         return []

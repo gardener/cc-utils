@@ -28,7 +28,7 @@ from kubernetes.client import (
 import kubernetes.client
 from kubernetes.config.kube_config import KubeConfigLoader
 
-from util import fail, info, verbose, existing_file, ensure_not_empty, ensure_not_none
+from util import fail, info, verbose, existing_file, not_empty, not_none
 from kube.ctx import Ctx
 
 
@@ -48,7 +48,7 @@ def delete_namespace(namespace):
     namespace_helper.delete_namespace(namespace)
 
 def delete_namespace_unless_shoots_present(namespace):
-    ensure_not_empty(namespace)
+    not_empty(namespace)
     custom_api = ctx.create_custom_api()
 
     result = custom_api.list_namespaced_custom_object(
@@ -64,7 +64,7 @@ def delete_namespace_unless_shoots_present(namespace):
 
 def copy_secrets(from_ns: str, to_ns: str, secret_names: [str]):
     for arg in [from_ns, to_ns, secret_names]:
-        ensure_not_empty(arg)
+        not_empty(arg)
     info('args: from: {}, to: {}, names: {}'.format(from_ns, to_ns, secret_names))
 
     core_api = ctx.create_core_api()
@@ -79,7 +79,7 @@ def copy_secrets(from_ns: str, to_ns: str, secret_names: [str]):
         core_api.create_namespaced_secret(namespace=to_ns, body=secret)
 
 def wait_for_ns(namespace):
-    ensure_not_empty(namespace)
+    not_empty(namespace)
 
     core_api = ctx.create_core_api()
     w = watch.Watch()
@@ -94,9 +94,9 @@ def wait_for_ns(namespace):
         w.stop()
 
 def wait_for_shoot_cluster_operation_success(namespace:str, shoot_name:str, optype:str, timeout_seconds:int=120):
-    ensure_not_empty(namespace)
-    ensure_not_empty(shoot_name)
-    optype = ensure_not_empty(optype).lower()
+    not_empty(namespace)
+    not_empty(shoot_name)
+    optype = not_empty(optype).lower()
     info('will wait for a maximum of {} minute(s) for cluster {} to reach state {}d'.format(
       math.ceil(timeout_seconds/60), shoot_name, optype)
     )
@@ -133,8 +133,8 @@ def wait_for_shoot_cluster_operation_success(namespace:str, shoot_name:str, opty
         fail('Shoot cluster did not reach state {}d within {} minute(s)'.format(optype, math.ceil(timeout_seconds/60)))
 
 def wait_for_shoot_cluster_to_become_healthy(namespace:str, shoot_name:str, timeout_seconds:int=120):
-    ensure_not_empty(namespace)
-    ensure_not_empty(shoot_name)
+    not_empty(namespace)
+    not_empty(shoot_name)
     info('will wait for a maximum of {} minute(s) for cluster {} to become healthy'.format(
       math.ceil(timeout_seconds/60),
       shoot_name
@@ -174,7 +174,7 @@ def wait_for_shoot_cluster_to_become_healthy(namespace:str, shoot_name:str, time
 
 
 def _wait_for_shoot(namespace, on_event, expected_result, timeout_seconds:int=120):
-    ensure_not_empty(namespace)
+    not_empty(namespace)
     start_time = int(time.time())
 
     custom_api = ctx.create_custom_api()
@@ -226,10 +226,10 @@ def retrieve_controller_manager_log_entries(
   filter_for_shoot_name:str=None,
   minimal_loglevel:str=None
   ):
-    ensure_not_empty(namespace)
-    ensure_not_empty(pod_name)
+    not_empty(namespace)
+    not_empty(pod_name)
     if filter_for_shoot_name:
-        ensure_not_empty(filter_for_shoot_name)
+        not_empty(filter_for_shoot_name)
 
     kwargs = {'name': pod_name, 'namespace': namespace}
 

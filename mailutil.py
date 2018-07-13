@@ -20,8 +20,8 @@ from model import EmailConfig
 from util import (
     existing_file,
     existing_dir,
-    ensure_not_empty,
-    ensure_not_none,
+    not_empty,
+    not_none,
     info,
     fail,
     CliHint,
@@ -51,7 +51,7 @@ def send_mail(
     @param cc_recipients: cc mail recipients
     @param replace_token: format: <token>=<replace-value> - tokens in mail-body are replaced
     '''
-    ensure_not_empty(email_cfg_name)
+    not_empty(email_cfg_name)
 
     cfg_factory = ctx().cfg_factory()
     email_cfg = cfg_factory.email(email_cfg_name)
@@ -88,10 +88,10 @@ def _send_mail(
     replace_tokens: dict={},
     cc_recipients: typing.Iterable[str]=[],
 ):
-    ensure_not_none(email_cfg)
-    ensure_not_empty(recipients)
-    ensure_not_none(mail_template)
-    ensure_not_empty(subject)
+    not_none(email_cfg)
+    not_empty(recipients)
+    not_none(mail_template)
+    not_empty(subject)
 
     # create body from template
     mail_body = mailer.create_body(

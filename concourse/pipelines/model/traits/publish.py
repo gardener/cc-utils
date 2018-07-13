@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from util import ensure_not_none
+from util import not_none
 from model import NamedModelElement
 
 from concourse.pipelines.model.step import PipelineStep
@@ -78,7 +78,7 @@ class PublishTrait(Trait):
 class PublishTraitTransformer(TraitTransformer):
     def __init__(self, trait: PublishTrait, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.trait = ensure_not_none(trait)
+        self.trait = not_none(trait)
 
     def inject_steps(self):
         # 'publish' step

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from util import ensure_not_none
+from util import not_none
 
 from concourse.pipelines.modelbase import (
   Trait,

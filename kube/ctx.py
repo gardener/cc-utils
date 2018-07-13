@@ -18,7 +18,7 @@ import kubernetes.client
 from kubernetes import config, client
 from kubernetes.config.kube_config import KubeConfigLoader
 
-from util import ctx as global_ctx, fail, existing_file, ensure_not_none
+from util import ctx as global_ctx, fail, existing_file, not_none
 from kube.helper import (
     KubernetesSecretHelper,
     KubernetesServiceAccountHelper,
@@ -54,7 +54,7 @@ class Ctx(object):
         return config.load_kube_config(existing_file(kubeconfig))
 
     def set_kubecfg(self, kubeconfig_dict: dict):
-        ensure_not_none(kubeconfig_dict)
+        not_none(kubeconfig_dict)
 
         configuration = kubernetes.client.Configuration()
         cfg_loader = KubeConfigLoader(dict(kubeconfig_dict))
