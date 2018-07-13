@@ -49,6 +49,8 @@ def existing_dir(path: str):
         fail('not an existing directory: ' + str(path))
     return path
 
+# temporarily expose long symbol name
+ensure_directory_exists = existing_dir
 
 class CliHint(object):
     def __init__(self, typehint=str, *args, **kwargs):
