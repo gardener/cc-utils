@@ -13,14 +13,13 @@
 # limitations under the License.
 
 import datetime
+import enum
 import functools
 import io
 import os
 import semver
 import sys
 import urllib.parse
-
-from enum import Enum
 
 import requests
 
@@ -48,7 +47,7 @@ default_http_adapter = HTTPAdapter(
     )
 )
 
-class RepoPermission(Enum):
+class RepoPermission(enum.Enum):
     PULL = "pull"
     PUSH = "push"
     ADMIN = "admin"
