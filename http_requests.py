@@ -75,6 +75,10 @@ class AuthenticatedRequestBuilder(object):
         if basic_auth_username and basic_auth_passwd:
             self.auth = HTTPBasicAuth(basic_auth_username, basic_auth_passwd)
 
+        session = requests.Session()
+        session.mount('', default_http_adapter)
+        self.session = session
+
         self.verify_ssl = verify_ssl
 
     def _check_http_code(self, result, url):
@@ -113,7 +117,7 @@ class AuthenticatedRequestBuilder(object):
 
     def get(self, url: str, return_type: str='json', **kwargs):
         return self._request(
-                method=requests.get,
+                method=self.session.get,
                 url=url,
                 return_type=return_type,
                 **kwargs
@@ -121,7 +125,7 @@ class AuthenticatedRequestBuilder(object):
 
     def put(self, url: str, body, **kwargs):
         return self._request(
-                method=requests.put,
+                method=self.session.put,
                 url=url,
                 return_type=None,
                 data=str(body),
@@ -130,7 +134,7 @@ class AuthenticatedRequestBuilder(object):
 
     def post(self, url: str, body, **kwargs):
         return self._request(
-                method=requests.post,
+                method=self.session.post,
                 url=url,
                 return_type=None,
                 data=str(body),
@@ -139,7 +143,7 @@ class AuthenticatedRequestBuilder(object):
 
     def delete(self, url: str, return_type=None, **kwargs):
         return self._request(
-                method=requests.delete,
+                method=self.session.delete,
                 url=url,
                 return_type=None,
                 **kwargs
