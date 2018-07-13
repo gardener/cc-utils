@@ -148,9 +148,19 @@ def is_yaml_file(path: CliHints.existing_file()):
             raise
     return False
 
+
 def parse_yaml_file(path: CliHints.existing_file()):
     with open(str(path)) as f:
             return yaml.load(f)
+
+
+def random_str(prefix=None, length=12):
+    import random, string
+    if prefix:
+        length -= len(prefix)
+    else:
+        prefix = ''
+    return prefix + ''.join(random.choice(string.ascii_lowercase) for _ in range(length))
 
 
 def urljoin(*parts):
