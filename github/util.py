@@ -55,6 +55,12 @@ class RepoPermission(enum.Enum):
     ADMIN = "admin"
 
 
+class VersionDecrementationError(ValueError):
+    '''Error to be raised when a desired operation would result in an unintended version decrease.
+    '''
+    pass
+
+
 class RepositoryHelperBase(object):
     GITHUB_TIMESTAMP_UTC_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
@@ -223,6 +229,37 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
                 branch=branch,
             )
         return response['commit'].sha
+
+
+    def update_version_file(
+      self,
+      file_path: str,
+      to_version: str,
+      commit_message: str,
+      branch: str=None,
+    ):
+      if branch is None:
+          branch = self.default_branch
+
+      contents = self.retrieve_file_contents(file_path=file_path, branch=branch)
+      version_string = contents.decoded.decode('utf-8')
+      if semver.compare(version_string, to_version) <= 1:
+          raise VersionDecrementationError(
+              (
+                  'Attempting to update version to {to}, but it is already {actual}'
+              ).format(
+                  to=to_version,
+                  actual=version_string,
+              )
+          )
+      else:
+          response = contents.update(
+              message=commit_message,
+              content=file_contents.encode('utf-8'),
+              branch=branch,
+          )
+      return response['commit'].sha
+
 
     def retrieve_file_contents(self, file_path: str, branch: str=None):
         if branch is None:
