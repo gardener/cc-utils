@@ -136,7 +136,7 @@ class UpgradePullRequest(object):
 
     def purge(self):
         self.pull_request.close()
-        head_ref = 'refs/heads/' + self.pull_request.head.ref
+        head_ref = 'heads/' + self.pull_request.head.ref
         self.pull_request.repository.ref(head_ref).delete()
 
 
