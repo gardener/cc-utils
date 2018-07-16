@@ -130,6 +130,10 @@ class UpgradePullRequest(object):
         # PR is obsolete if same or newer component version is already configured in reference
         return greatest_component_version >= semver.parse_version_info(self.to_component.version())
 
+    def target_matches(self, component_reference):
+        return component_reference.name() == self.component_name and \
+            component_reference.version() == self.to_component.version()
+
     def purge(self):
         self.pull_request.close()
         head_ref = 'refs/heads/' + self.pull_request.head.ref
