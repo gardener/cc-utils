@@ -16,7 +16,7 @@ import version
 from urllib.parse import urlparse, parse_qs
 from github3.exceptions import NotFoundError
 
-from util import ctx, not_empty, info, warning, verbose, CliHint, CliHints
+from util import ctx, not_empty, info, warning, fail, verbose, CliHint, CliHints
 from github.webhook import GithubWebHookSyncer, WebhookQueryAttributes
 from github.util import (
     GitHubRepositoryHelper,
@@ -108,6 +108,13 @@ def release_and_prepare_next_dev_cycle(
         name=github_repository_name,
         default_branch=repository_branch,
     )
+
+    if helper.tag_exists(tag_name=release_version):
+        fail(
+            "Cannot create tag '{t}' in preparation for release: Tag already exists in the repository.".format(
+                t=release_version,
+            )
+        )
 
     # Persist version change, create release commit
     release_commit_sha = helper.create_or_update_file(

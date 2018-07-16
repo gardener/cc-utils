@@ -286,6 +286,17 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         )
         return release
 
+    def tag_exists(
+        self,
+        tag_name: str,
+    ):
+        util.not_empty(tag_name)
+        try:
+            tag_ref = self.repository.ref('tags/' + tag_name)
+            return True
+        except NotFoundError:
+            return False
+
     def retrieve_asset_contents(self, release_tag: str, asset_label: str):
         util.not_none(release_tag)
         util.not_none(asset_label)
