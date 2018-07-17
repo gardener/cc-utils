@@ -17,7 +17,41 @@ import subprocess
 
 import git
 
-from util import not_empty, existing_dir, fail
+from util import not_empty, not_none, existing_dir, fail
+
+class GitHelper(object):
+    def __init__(self, repo):
+        not_none(repo)
+        if not isinstance(repo, git.Repo):
+            # assume it's a file path if it's not already a git.Repo
+            repo = git.Repo(repo)
+        self.repo = repo
+
+    def _changed_file_paths(self):
+        lines = git.cmd.Git(self.repo.working_tree_dir).status('--porcelain=1', '-z').split('\x00')
+        # output of git status --porcelain=1 and -z is guaranteed to not change in the future
+        return [line[3:] for line in lines if line]
+
+    def index_to_commit(self, message, parent_commits=None):
+        '''moves all diffs from worktree to a new commit without modifying branches
+
+        @param parent_commits: optional iterable of parent commits; head is used if absent
+        @return the git.Commit object representing the newly created commit
+        '''
+        if not parent_commits:
+            parent_commits = [self.repo.head.commit]
+        # add all changes
+        self.repo.index.add(self._changed_file_paths())
+        tree = self.repo.index.write_tree()
+        commit = git.Commit.create_from_tree(
+            repo=self.repo,
+            tree=tree,
+            parent_commits=parent_commits,
+            message=message
+        )
+        self.repo.index.reset()
+        return commit
+
 
 def update_submodule(
     repo_path: str,
