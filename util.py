@@ -163,6 +163,13 @@ def random_str(prefix=None, length=12):
     return prefix + ''.join(random.choice(string.ascii_lowercase) for _ in range(length))
 
 
+def check_env(name: str):
+    not_none(name)
+    if name in os.environ:
+        return os.environ[name]
+    fail('env var {n} must be set'.format(n=name))
+
+
 def urljoin(*parts):
     if len(parts) == 1:
         return parts[0]
