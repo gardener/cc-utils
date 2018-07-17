@@ -14,23 +14,45 @@
 
 import os
 import subprocess
+import urllib.parse
 
 import git
 
-from util import not_empty, not_none, existing_dir, fail
+from util import not_empty, not_none, existing_dir, fail, random_str
 
 class GitHelper(object):
-    def __init__(self, repo):
+    def __init__(self, repo, github_cfg, github_repo_path):
         not_none(repo)
         if not isinstance(repo, git.Repo):
             # assume it's a file path if it's not already a git.Repo
             repo = git.Repo(repo)
         self.repo = repo
+        self.github_cfg = github_cfg
+        self.github_repo_path = github_repo_path
 
     def _changed_file_paths(self):
         lines = git.cmd.Git(self.repo.working_tree_dir).status('--porcelain=1', '-z').split('\x00')
         # output of git status --porcelain=1 and -z is guaranteed to not change in the future
         return [line[3:] for line in lines if line]
+
+    def _authenticated_remote(self):
+        base_url = urllib.parse.urlparse(self.github_cfg.http_url())
+        credentials = self.github_cfg.credentials()
+        credentials_str = ':'.join((credentials.username(), credentials.passwd()))
+        push_url = urllib.parse.urlunparse((
+            base_url.scheme,
+            '@'.join((credentials_str, base_url.hostname)),
+            self.github_repo_path,
+            '',
+            '',
+            ''
+        ))
+        remote = git.remote.Remote.add(
+            repo=self.repo,
+            name=random_str(),
+            url=push_url,
+        )
+        return remote
 
     def index_to_commit(self, message, parent_commits=None):
         '''moves all diffs from worktree to a new commit without modifying branches
@@ -52,6 +74,14 @@ class GitHelper(object):
         self.repo.index.reset()
         return commit
 
+    def push(self, from_ref, to_ref):
+        remote = self._authenticated_remote()
+        remote.push(':'.join((
+            from_ref,
+            to_ref,
+            ))
+        )
+        self.repo.delete_remote(remote)
 
 def update_submodule(
     repo_path: str,
