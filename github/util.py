@@ -21,6 +21,7 @@ import re
 import semver
 import sys
 import urllib.parse
+from pydash import _
 
 import requests
 
@@ -76,6 +77,9 @@ class RepositoryHelperBase(object):
             owner=owner,
             name=name
         )
+        self.owner = owner
+        self.repository_name = name
+
         self.default_branch = default_branch
 
     def _create_repository(self, owner: str, name: str):
@@ -258,6 +262,10 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             tagger=author
         )
 
+    def get_latest_release(self):
+        release = self.repository.latest_release()
+        return release
+
     def create_release(
         self,
         tag_name: str,
@@ -307,6 +315,14 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             try:
                 yield semver.parse_version_info(release.tag_name)
             except ValueError: pass # ignore
+
+    def release_tags(self):
+        return _.map(self.repository.releases(), 'tag_name')
+
+    def search_issues_in_repo(self, query: str):
+        query = "repo:{org}/{repo} {query}".format(org=self.owner, repo=self.repository_name, query=query)
+        search_result = self.github.search_issues(query)
+        return search_result
 
 
 def github_api_ctor(github_url: str, verify_ssl: bool=True):
