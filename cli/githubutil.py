@@ -122,7 +122,7 @@ def release_and_prepare_next_dev_cycle(
         )
 
     if generate_release_notes:
-        release_notes = generate_release_notes(repo_dir=repo_dir, helper=helper, repository_branch=repository_branch, commit_range=commit_range)
+        release_notes = generate_release_notes(repo_dir=repo_dir, helper=helper, repository_branch=repository_branch)
     else:
         release_notes = 'release notes'
 
