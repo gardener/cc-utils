@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import argparse
+import functools
 import os
 import pkgutil
 import inspect
@@ -30,6 +31,13 @@ def print_import_errs():
     for ie in import_errs:
         util.verbose(ie)
 
+if 'COLUMNS' not in os.environ:
+    # Create a custom width formatter by fixing two arguments for the default formatter class, namely
+    # 'width' (defaults to 80 - 2) and 'max_help_position' (defaults to 24)
+    FORMATTER_CLASS = functools.partial(argparse.HelpFormatter, max_help_position=40, width=118)
+else:
+    FORMATTER_CLASS = argparse.HelpFormatter
+
 def main():
     '''
     Creates a command line parser (using argparse) for each python module found in this
@@ -39,7 +47,8 @@ def main():
     This parser is then used to parse the given ARGV. Provided that parsing succeeds,
     the thus specified function is executed.
     '''
-    parser = argparse.ArgumentParser()
+
+    parser = argparse.ArgumentParser(formatter_class=FORMATTER_CLASS)
     add_global_args(parser)
     sub_command_parsers = parser.add_subparsers()
     cli_module_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cli')
@@ -74,7 +83,7 @@ def add_module(module_name, parser):
     # skip if module defines a symbol 'main'
     if hasattr(module, 'main'):
         return
-    module_parser = parser.add_parser(module_name)
+    module_parser = parser.add_parser(module_name, formatter_class=FORMATTER_CLASS)
     module_parser.set_defaults(
       func=display_usage_function(module_parser),
       module=module
@@ -89,7 +98,11 @@ def add_module(module_name, parser):
         if fname.startswith('_'):
             continue # skip "private" functions
         function_docstring = inspect.getdoc(function)
-        function_parser = function_parsers.add_parser(fname, description=function_docstring)
+        function_parser = function_parsers.add_parser(
+            fname,
+            description=function_docstring,
+            formatter_class=FORMATTER_CLASS,
+        )
         fspec = inspect.getfullargspec(function)
         function_parser.set_defaults(func=run_function(function))
 
