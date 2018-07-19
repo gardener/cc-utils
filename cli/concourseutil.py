@@ -25,14 +25,16 @@ from util import (
     CliHints,
     CliHint,
 )
-from util import ctx as global_ctx
-from concourse.pipelines.replicator import *
-from concourse.pipelines.enumerator import *
 import concourse.setup as setup
-from concourse.util import sync_webhooks
-from model import ConfigFactory
 import kubeutil
+
+from util import ctx as global_ctx
+from concourse import client
+from concourse.util import sync_webhooks
+from concourse.pipelines.enumerator import *
+from concourse.pipelines.replicator import *
 from kube.helper import KubernetesNamespaceHelper
+from model import ConfigFactory
 
 
 def __add_module_command_args(parser):
@@ -282,3 +284,29 @@ def diff_pipelines(left_file: CliHints.yaml_file(), right_file: CliHints.yaml_fi
     else:
         info('the yaml documents are equivalent')
 
+
+def trigger_resource_check(
+    cfg_name: CliHints.non_empty_string(help="The config set to use"),
+    team_name: CliHints.non_empty_string(help="Name of the concourse team to which the pipeline belongs"),
+    pipeline_name: CliHints.non_empty_string(help="Name of the pipeline which contains the resource"),
+    resource_name: CliHints.non_empty_string(help="Name of the resource to check"),
+):
+    '''Triggers a check of the specified Concourse resource, identical to Fly's check-resource command.
+    '''
+    cfg_factory = ctx().cfg_factory()
+    cfg_set = cfg_factory.cfg_set(cfg_name)
+    concourse_cfg = cfg_set.concourse()
+    team_credentials = concourse_cfg.team_credentials(team_name)
+    api = client.ConcourseApi(
+        base_url=concourse_cfg.external_url(),
+        team_name=team_credentials.teamname(),
+    )
+    api.login(
+        team_credentials.teamname(),
+        team_credentials.username(),
+        team_credentials.passwd(),
+    )
+    api.trigger_resource_check(
+        pipeline_name=pipeline_name,
+        resource_name=resource_name,
+    )
