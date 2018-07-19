@@ -301,7 +301,6 @@ class ConcourseDeployer(DefinitionDeployer):
                 api.unpause_pipeline(pipeline_name=pipeline_name)
             if self.expose_pipelines:
                 api.expose_pipeline(pipeline_name=pipeline_name)
-                # XXX TODO
             return DeployResult(
                 definition_descriptor=definition_descriptor,
                 deploy_status=DeployStatus.SUCCEEDED,
