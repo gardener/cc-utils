@@ -124,7 +124,7 @@ def release_and_prepare_next_dev_cycle(
     )
     helper.create_tag(
         tag_name=release_version,
-        tag_message=release_notes,
+        tag_message="Release " + release_version,
         repository_reference=release_commit_sha,
         author_name=author_name,
         author_email=author_email
