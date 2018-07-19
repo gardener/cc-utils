@@ -133,7 +133,7 @@ def calculate_range(
     range_end = None
     try:
         range_end = repo.git.describe(branch_head) # better readable range_end by describing head commit
-    except git.exc.GitCommandError:
+    except git.exc.GitError:
         range_end = branch_head.hexsha
 
     commit_range = "{start}..{end}".format(start=range_start, end=range_end)
@@ -247,20 +247,20 @@ def extract_release_notes(
 ) -> list:
     release_notes = list()
 
-    quotes = re.findall(
+    code_blocks = re.findall(
         r"``` *(improvement|noteworthy)( (user|operator)?)?.*?\n(.*?)\n```",
         text,
         re.MULTILINE | re.DOTALL
     )
-    for quote in quotes:
-        quote = _.map(quote, lambda obj: _.trim(obj))
+    for code_block in code_blocks:
+        code_block = _.map(code_block, lambda obj: _.trim(obj))
 
-        text = quote[3]
+        text = code_block[3]
         if not text or 'none' == text.lower():
             continue
 
-        category = quote[0]
-        target_group = quote[2] or 'user'
+        category = code_block[0]
+        target_group = code_block[2] or 'user'
 
         release_notes.append(ReleaseNote(
             category_id=category,
