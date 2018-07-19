@@ -20,6 +20,7 @@ import warnings
 from enum import Enum
 import sseclient
 
+import util
 from github.webhook import WebhookQueryAttributes
 from http_requests import AuthenticatedRequestBuilder
 from model import ConcourseTeamCredentials
@@ -134,19 +135,17 @@ class ConcourseApiRoutes(object):
         resource_name: str,
         query_attributes: WebhookQueryAttributes,
     ):
-        query_args = urlencode({
+        base_url = self.resource_check(pipeline_name, resource_name)
+        query = urlencode({
             WebhookQueryAttributes.WEBHOOK_TOKEN_ATTRIBUTE_NAME: query_attributes.webhook_token,
             WebhookQueryAttributes.CONCOURSE_ID_ATTRIBUTE_NAME: query_attributes.concourse_id,
             WebhookQueryAttributes.JOB_MAPPING_ID_ATTRIBUTE_NAME: query_attributes.job_mapping_id,
         })
-        return self._api_url(
-            'pipelines',
-            pipeline_name,
-            'resources',
-            resource_name,
-            'check',
-            'webhook'
-        ) + '?' + query_args
+        return util.urljoin(base_url, 'webhook?' + query)
+
+    @ensure_annotations
+    def resource_check(self, pipeline_name: str, resource_name: str):
+        return self._api_url('pipelines', pipeline_name, 'resources', resource_name, 'check')
 
     @ensure_annotations
     def job_builds(self, pipeline_name: str, job_name: str):
@@ -355,6 +354,12 @@ class ConcourseApi(object):
           team_url,
           json.dumps(body)
         )
+
+    @ensure_annotations
+    def trigger_resource_check(self, pipeline_name: str, resource_name: str):
+        url = self.routes.resource_check(pipeline_name=pipeline_name, resource_name=resource_name)
+        # Resource checks are triggered by a POST with an empty JSON-document as body against the resource's check-url
+        response = self._post(url, body='{}')
 
 
 class ModelBase(object):
