@@ -262,10 +262,6 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             tagger=author
         )
 
-    def get_latest_release(self):
-        release = self.repository.latest_release()
-        return release
-
     def create_release(
         self,
         tag_name: str,
