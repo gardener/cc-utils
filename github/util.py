@@ -354,9 +354,12 @@ def _create_github_api_object(
     if not github_api:
         util.fail("Could not connect to GitHub-instance {url}".format(url=github_url))
 
-    # patch github's requests.session to enable retrying when encountering sporadic errors
+    # patch github's requests.session to enable retrying when encountering sporadic errors. The requests library
+    # sorts these adapters by prefix length, descending, and auto-inserts adapters for http and https. Therefore
+    # we have to mount our default adapter explicitly to both.
     session = github_api.session
-    session.mount(github_url, default_http_adapter)
+    session.mount('http://', default_http_adapter)
+    session.mount('https://', default_http_adapter)
 
     return github_api
 
