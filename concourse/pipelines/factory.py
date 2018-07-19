@@ -124,9 +124,16 @@ class DefinitionFactory(object):
         transformers_dict = {t.name: t for t in transformers}
         transformer_names = set(transformers_dict.keys())
 
+        for transformer in transformers:
+            if not set(transformer.dependencies()).issubset(transformer_names):
+                missing = transformer_names - set(transformer.dependencies())
+                raise ModelValidationError(
+                    'trait requires missing traits: ' + ', '.join(missing)
+                )
+
         # order transformers according to dependencies
         transformer_dependencies = {
-            t.name: t.dependencies() & transformer_names for t in transformers
+            t.name: t.order_dependencies() & transformer_names for t in transformers
         }
 
         ordered_transformers = []

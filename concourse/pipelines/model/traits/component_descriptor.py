@@ -84,6 +84,9 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
             self.trait.raw['component_name'] = component_name
 
     def dependencies(self):
+        return super().dependencies() | {'version'}
+
+    def order_dependencies(self):
         # dependency is required, as we need to patch the 'release' step
         return super().dependencies() | {'release'}
 

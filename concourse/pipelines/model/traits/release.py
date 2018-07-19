@@ -49,5 +49,8 @@ class ReleaseTraitTransformer(TraitTransformer):
             main_repo._trigger = False
 
     def dependencies(self):
+        return super().dependencies() | {'version'}
+
+    def order_dependencies(self):
         return super().dependencies() | {'publish'}
 
