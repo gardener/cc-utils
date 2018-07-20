@@ -47,8 +47,8 @@ class ConfigFactorySmokeTestsMixin(object):
         self.assertTrue(isinstance(first_element, model.NamedModelElement))
         self.assertTrue(isinstance(second_element, model.NamedModelElement))
 
-        self.assertEquals(first_element.raw, {'some_value': 123})
-        self.assertEquals(second_element.raw, {'some_value': 42})
+        self.assertEqual(first_element.raw, {'some_value': 123})
+        self.assertEqual(second_element.raw, {'some_value': 42})
 
         # cfg_set is a reference to elements retrieved from the factory
         first_elem_from_fac = self.examinee._cfg_element('a_type', 'first_value_of_a')
@@ -112,7 +112,7 @@ class ConfigFactorySmokeTestsMixin(object):
         cfg_elem = cfg_elements_set.pop()
         # We currently do not have a custom __eq__ method, so we explicitly
         # compare the dictionaries here
-        self.assertEquals(cfg_elem.raw, {'some_value':123})
+        self.assertEqual(cfg_elem.raw, {'some_value':123})
 
 
 class ConfigFactoryCfgDirDeserialisationTest(unittest.TestCase, ConfigFactorySmokeTestsMixin):
