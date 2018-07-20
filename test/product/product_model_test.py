@@ -77,13 +77,13 @@ class ProductModelTest(unittest.TestCase):
         examinee = product.model.Product.from_dict(raw_dict=self.raw_dict)
 
         components = list(examinee.components())
-        self.assertEquals(len(components), 2)
+        self.assertEqual(len(components), 2)
 
         first_component = examinee.component(('example.org/foo/first_component', 'first_version'))
         second_component = examinee.component(('example.org/bar/second_component', 'second_version'))
 
-        self.assertEquals(first_component.name(), 'example.org/foo/first_component')
-        self.assertEquals(second_component.name(), 'example.org/bar/second_component')
+        self.assertEqual(first_component.name(), 'example.org/foo/first_component')
+        self.assertEqual(second_component.name(), 'example.org/bar/second_component')
 
         first_dependencies = first_component.dependencies()
         second_dependencies = second_component.dependencies()
@@ -126,7 +126,7 @@ class ProductModelTest(unittest.TestCase):
         merged = product.util.merge_products(left_model, right_model)
 
         components = list(merged.components())
-        self.assertEquals(len(components), 2)
+        self.assertEqual(len(components), 2)
 
     def test_merge_conflicting_products_should_raise(self):
         left_model = product.model.Product.from_dict(raw_dict=deepcopy(self.raw_dict))

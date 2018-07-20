@@ -78,7 +78,7 @@ class ConfigSetSerialiserTest(unittest.TestCase):
         deserialised = self.deserialise(result)
 
         first_cfg_set = deserialised.cfg_set('first_set')
-        self.assertEquals(first_cfg_set.raw, self.first_cfg_set.raw)
+        self.assertEqual(first_cfg_set.raw, self.first_cfg_set.raw)
 
         with self.assertRaises(ValueError):
             # second_set must not have been included
