@@ -144,6 +144,9 @@ def release_tags(
     repo: git.Repo
 ) -> list:
     release_tags = helper.release_tags()
+    # you can remove the directive to disable the undefined-variable error once pylint is updated
+    # with fix https://github.com/PyCQA/pylint/commit/db01112f7e4beadf7cd99c5f9237d580309f0494 included
+    # pylint: disable=undefined-variable
     tags = _ \
         .chain(repo.tags) \
         .map(lambda tag: {"tag": tag.name, "commit": tag.commit.hexsha}) \
@@ -151,6 +154,7 @@ def release_tags(
         .key_by('commit') \
         .map_values('tag') \
         .value()
+    # pylint: enable=undefined-variable
     return tags
 
 def reachable_release_tags_from_commit(
