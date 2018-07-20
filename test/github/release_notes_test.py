@@ -184,6 +184,41 @@ class ReleaseNotesTest(unittest.TestCase):
             _.nth(release_notes, 0)
         )
 
+    def test_rls_note_extraction_no_release_notes(self):
+        def verify_no_release_note(text: str):
+            release_notes = extract_release_notes(
+                pr_number=42,
+                text=text,
+                user_login='foo'
+            )
+            self.assertEqual(0, len(release_notes))
+
+        text = \
+            '``` improvement user\n'\
+            '\n'\
+            '```'
+        verify_no_release_note(text)
+
+        text = \
+            '``` improvement user\n'\
+            ' NONE \n'\
+            '```'
+        verify_no_release_note(text)
+
+        text = \
+            '``` improvement user\n'\
+            'none\n'\
+            '```'
+        verify_no_release_note(text)
+
+        text = \
+            '``` improvement user\n'\
+            '```'
+        verify_no_release_note(text)
+
+        text = 'some random description'
+        verify_no_release_note(text)
+
     def test_build_markdown(self):
         release_note_objs = [
             ReleaseNote(
@@ -209,3 +244,9 @@ class ReleaseNotesTest(unittest.TestCase):
             '* rls note 1 (#42, @foo)\n'\
             '* rls note 2 (#42, @foo)'
         self.assertEquals(expected_str, actual_str)
+
+    def test_build_markdown_no_release_notes(self):
+        release_note_objs = []
+
+        expected_str = 'no release notes available'
+        self.assertEquals(expected_str, build_markdown(release_note_objs))
