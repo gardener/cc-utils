@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pydash import _
-from collections import namedtuple
-from semver import parse_version_info
-import git
 import re
+from collections import namedtuple
+
+import git
+from git.exc import GitError
+from pydash import _
+from semver import parse_version_info
+from github.util import GitHubRepositoryHelper
 
 from util import info, warning, fail, verbose, existing_dir
-from github.util import GitHubRepositoryHelper
 
 ReleaseNote = namedtuple('ReleaseNote', \
     ["category_id", "target_group_id", "text", "pr_number", "user_login"] \
@@ -133,7 +135,7 @@ def calculate_range(
     range_end = None
     try:
         range_end = repo.git.describe(branch_head) # better readable range_end by describing head commit
-    except git.exc.GitError:
+    except GitError:
         range_end = branch_head.hexsha
 
     commit_range = "{start}..{end}".format(start=range_start, end=range_end)
