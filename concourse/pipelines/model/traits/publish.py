@@ -37,7 +37,7 @@ class PublishDockerImageDescriptor(NamedModelElement):
         return self.raw['inputs'].get('steps', [])
 
     def registry_name(self):
-        return self.raw['registry']
+        return self.raw.get('registry')
 
     def image_reference(self):
         return self.raw['image']

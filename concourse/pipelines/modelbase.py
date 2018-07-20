@@ -59,6 +59,9 @@ class TraitTransformer(object):
     def inject_steps(self):
         return []
 
+    def order_dependencies(self):
+        return {self.name}
+
     def dependencies(self):
         return {self.name}
 

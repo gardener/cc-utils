@@ -24,6 +24,7 @@ from concourse.pipelines.modelbase import (
   normalise_to_dict,
 )
 
+COMPONENT_DESCRIPTOR_DIR_INPUT = ('component_descriptor_dir', 'component_descriptor_dir')
 
 class ComponentDescriptorTrait(Trait):
     def __init__(self, *args, **kwargs):
@@ -66,13 +67,13 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
             is_synthetic=True,
             script_type=ScriptType.PYTHON3,
         )
-        self.descriptor_step.add_output('component_descriptor_dir', 'component_descriptor_dir')
+        self.descriptor_step.add_output(*COMPONENT_DESCRIPTOR_DIR_INPUT)
         yield self.descriptor_step
 
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         if pipeline_args.has_step('release'):
             release_step = pipeline_args.step('release')
-            release_step.add_input('component_descriptor_dir', 'component_descriptor_dir')
+            release_step.add_input(*COMPONENT_DESCRIPTOR_DIR_INPUT)
 
         # inject component_name if not configured
         if not 'component_name' in self.trait.raw:
@@ -84,6 +85,9 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
             self.trait.raw['component_name'] = component_name
 
     def dependencies(self):
+        return super().dependencies() | {'version'}
+
+    def order_dependencies(self):
         # dependency is required, as we need to patch the 'release' step
         return super().dependencies() | {'release'}
 
