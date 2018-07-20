@@ -97,12 +97,12 @@ def release_and_prepare_next_dev_cycle(
     repository_branch: str,
     repository_version_file_path: str,
     release_version: str,
-    generate_release_notes: bool,
     version_operation: str="bump_minor",
     prerelease_suffix: str="dev",
     author_name: str="gardener-ci",
     author_email: str="gardener.ci.user@gmail.com",
     component_descriptor_file_path: str=None,
+    generate_release_notes: bool=True,
     repo_dir: str=None
 ):
     github_cfg = ctx().cfg_factory().github(github_cfg_name)
