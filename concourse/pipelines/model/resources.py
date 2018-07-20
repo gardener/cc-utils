@@ -60,7 +60,7 @@ class ResourceIdentifier(object):
         return hash((self._type_name, self._base_name, self._qualifier))
 
     def __str__(self):
-        return 'ResourceId: type {t}, base_name bn}, qualifier {q}, resource_name {rn}'.format(
+        return 'ResourceId: type {t}, base_name {bn}, qualifier {q}, resource_name {rn}'.format(
             t=self.type_name(),
             bn=self.base_name(),
             q=self._qualifier,
