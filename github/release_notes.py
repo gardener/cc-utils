@@ -29,11 +29,11 @@ ReleaseNote = namedtuple('ReleaseNote', \
 Category = namedtuple("Category", ["identifier", "title"])
 TargetGroup = namedtuple("TargetGroup", ["identifier", "title"])
 categories = \
-    Category(identifier='noteworthy', title='## Most notable changes'), \
-    Category(identifier='improvement', title='## Improvements')
+    Category(identifier='noteworthy', title='# Most notable changes'), \
+    Category(identifier='improvement', title='# Improvements')
 target_groups = \
-    TargetGroup(identifier='user', title='### To end users'), \
-    TargetGroup(identifier='operator', title='### To operations team')
+    TargetGroup(identifier='user', title='## To end users'), \
+    TargetGroup(identifier='operator', title='## To operations team')
 
 def generate_release_notes(
     repo_dir: str,
@@ -145,6 +145,14 @@ def release_tags(
     helper: GitHubRepositoryHelper,
     repo: git.Repo
 ) -> list:
+    def is_valid_semver(tag_name):
+        try:
+            parse_version_info(tag_name)
+            return True
+        except ValueError:
+            warning('{tag} is not a valid SemVer string'.format(tag=tag_name))
+            return False
+
     release_tags = helper.release_tags()
     # you can remove the directive to disable the undefined-variable error once pylint is updated
     # with fix https://github.com/PyCQA/pylint/commit/db01112f7e4beadf7cd99c5f9237d580309f0494 included
@@ -153,6 +161,7 @@ def release_tags(
         .chain(repo.tags) \
         .map(lambda tag: {"tag": tag.name, "commit": tag.commit.hexsha}) \
         .filter(lambda item: _.find(release_tags, lambda el: el == item['tag'])) \
+        .filter(lambda item: is_valid_semver(item['tag'])) \
         .key_by('commit') \
         .map_values('tag') \
         .value()
