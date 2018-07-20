@@ -102,7 +102,7 @@ def release_and_prepare_next_dev_cycle(
     author_name: str="gardener-ci",
     author_email: str="gardener.ci.user@gmail.com",
     component_descriptor_file_path: str=None,
-    generate_release_notes: bool=True,
+    should_generate_release_notes: bool=True,
     repo_dir: str=None
 ):
     github_cfg = ctx().cfg_factory().github(github_cfg_name)
@@ -121,7 +121,7 @@ def release_and_prepare_next_dev_cycle(
             )
         )
 
-    if generate_release_notes:
+    if should_generate_release_notes:
         release_notes = generate_release_notes(repo_dir=repo_dir, helper=helper, repository_branch=repository_branch)
     else:
         release_notes = 'release notes'
