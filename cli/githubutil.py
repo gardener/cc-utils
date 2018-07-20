@@ -16,7 +16,7 @@ import version
 from urllib.parse import urlparse, parse_qs
 from github3.exceptions import NotFoundError
 
-from util import ctx, not_empty, info, warning, fail, verbose, CliHint, CliHints
+from util import ctx, not_empty, info, warning, fail, verbose, CliHint, CliHints, existing_dir
 from github.webhook import GithubWebHookSyncer, WebhookQueryAttributes
 from github.util import (
     GitHubRepositoryHelper,
@@ -25,7 +25,9 @@ from github.util import (
     _add_user_to_team,
     _add_all_repos_to_team
 )
+from github.release_notes import generate_release_notes
 import product.model
+
 
 
 def assign_github_team_to_repo(
@@ -71,6 +73,22 @@ def assign_github_team_to_repo(
         team_name=team_name
     )
 
+def generate_release_notes_cli(
+    repo_dir: str,
+    github_cfg_name: str,
+    github_repository_owner: str,
+    github_repository_name: str,
+    repository_branch: str,
+    commit_range: str=None
+):
+    github_cfg = ctx().cfg_factory().github(github_cfg_name)
+    helper = GitHubRepositoryHelper(
+        github_cfg=github_cfg,
+        owner=github_repository_owner,
+        name=github_repository_name,
+        default_branch=repository_branch,
+    )
+    generate_release_notes(repo_dir=repo_dir, helper=helper, repository_branch=repository_branch, commit_range=commit_range)
 
 def release_and_prepare_next_dev_cycle(
     github_cfg_name: str,
@@ -79,28 +97,15 @@ def release_and_prepare_next_dev_cycle(
     repository_branch: str,
     repository_version_file_path: str,
     release_version: str,
-    release_notes: str,
     version_operation: str="bump_minor",
     prerelease_suffix: str="dev",
     author_name: str="gardener-ci",
     author_email: str="gardener.ci.user@gmail.com",
     component_descriptor_file_path: str=None,
+    generate_release_notes: bool=True,
+    repo_dir: str=None
 ):
-    # retrieve github-cfg from secrets-server
-    from config import _retrieve_model_element
-    github_cfg = _retrieve_model_element(cfg_type='github', cfg_name=github_cfg_name)
-
-    # Do all the version handling upfront to catch errors early
-    # Bump release version and add suffix
-    next_version = version.process_version(
-        version_str=release_version,
-        operation=version_operation
-    )
-    next_version_dev = version.process_version(
-        version_str=next_version,
-        operation='set_prerelease',
-        prerelease=prerelease_suffix
-    )
+    github_cfg = ctx().cfg_factory().github(github_cfg_name)
 
     helper = GitHubRepositoryHelper(
         github_cfg=github_cfg,
@@ -115,6 +120,23 @@ def release_and_prepare_next_dev_cycle(
                 t=release_version,
             )
         )
+
+    if generate_release_notes:
+        release_notes = generate_release_notes(repo_dir=repo_dir, helper=helper, repository_branch=repository_branch)
+    else:
+        release_notes = 'release notes'
+
+    # Do all the version handling upfront to catch errors early
+    # Bump release version and add suffix
+    next_version = version.process_version(
+        version_str=release_version,
+        operation=version_operation
+    )
+    next_version_dev = version.process_version(
+        version_str=next_version,
+        operation='set_prerelease',
+        prerelease=prerelease_suffix
+    )
 
     # Persist version change, create release commit
     release_commit_sha = helper.create_or_update_file(
