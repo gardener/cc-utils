@@ -27,7 +27,8 @@ def process_version(
     operation: CliHint(help="version transformation", choices=version.ALL_OPS)=None,
     prerelease: CliHint(help="value to set prerelease to")=None,
     build_metadata: CliHint(help="value to set build-metadata to")=None,
-    build_metadata_length: CliHint(help="cut-off build-metadata after specified # of chars")=12
+    build_metadata_length: CliHint(help="cut-off build-metadata after specified # of chars")=12,
+    verbatim_version: CliHint(help="value to set the version to")=None
     ):
     # validate arguments
     if input_file and version_string:
@@ -66,7 +67,8 @@ def process_version(
             operation=operation,
             prerelease=prerelease,
             build_metadata=build_metadata,
-            build_metadata_length=build_metadata_length
+            build_metadata_length=build_metadata_length,
+            verbatim_version=verbatim_version,
         )
     except ValueError as ve:
         util.fail(str(ve))
