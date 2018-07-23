@@ -239,8 +239,8 @@ class ReleaseNotesTest(unittest.TestCase):
         actual_str = build_markdown(release_note_objs)
 
         expected_str = \
-            '## Improvements\n'\
-            '### To end users\n'\
+            '# Improvements\n'\
+            '## To end users\n'\
             '* rls note 1 (#42, @foo)\n'\
             '* rls note 2 (#42, @foo)'
         self.assertEquals(expected_str, actual_str)
