@@ -156,6 +156,18 @@ class Version_process_version_Test(unittest.TestCase):
         )
         self.assertEqual(parsed, '3.1.4-foo-baz+bar')
 
+    def test_set_verbatim_with_verbatim_version(self):
+        parsed = examinee.process_version(
+            version_str='3.1.4-foo+bar',
+            operation='set_verbatim',
+            verbatim_version='master',
+        )
+        self.assertEqual(parsed, 'master')
+
+    def test_set_verbatim_without_verbatim_version(self):
+        with self.assertRaises(ValueError):
+            examinee.process_version(version_str='3.1.4-foo', operation='set_verbatim', prerelease='baz')
+
     def test_bump_major(self):
         parsed = examinee.process_version(version_str='2.4.6', operation='bump_major')
         self.assertEqual(parsed, '3.0.0')

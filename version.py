@@ -32,13 +32,15 @@ SET_PRERELEASE = 'set_prerelease'
 APPEND_PRERELEASE = 'append_prerelease'
 SET_BUILD_METADATA = 'set_build_metadata'
 SET_PRERELEASE_AND_BUILD = 'set_prerelease_and_build'
+SET_VERBATIM = 'set_verbatim'
 
 CUSTOM_OPS = set([
     NOOP,
     SET_PRERELEASE,
     APPEND_PRERELEASE,
     SET_BUILD_METADATA,
-    SET_PRERELEASE_AND_BUILD
+    SET_PRERELEASE_AND_BUILD,
+    SET_VERBATIM
 ])
 
 ALL_OPS = SEMVER_OPS.union(CUSTOM_OPS)
@@ -53,7 +55,8 @@ def process_version(
     # By default we use 12 chars, following the advice given in
     # https://blog.cuviper.com/2013/11/10/how-short-can-git-abbreviate/
     # as we usually use git commit hashes
-    build_metadata_length: int=12
+    build_metadata_length: int=12,
+    verbatim_version: str=None,
     ):
     if operation in [SET_PRERELEASE,SET_PRERELEASE_AND_BUILD,APPEND_PRERELEASE] and not prerelease:
         raise ValueError('Prerelease must be given when replacing or appending.')
@@ -62,6 +65,8 @@ def process_version(
             raise ValueError('Build metadata must be given when replacing.')
         if build_metadata_length < 0:
             raise ValueError('Build metadata must not be empty')
+    if operation == SET_VERBATIM and (not verbatim_version or prerelease or build_metadata):
+        raise ValueError('Exactly verbatim-version must be given when using operation set_verbatim')
 
     parsed_version = semver.parse_version_info(version_str)
 
@@ -73,6 +78,8 @@ def process_version(
         processed_version = function(version_str)
     elif operation == NOOP:
         processed_version = version_str
+    elif operation == SET_VERBATIM:
+        processed_version = str(verbatim_version)
     elif operation == APPEND_PRERELEASE:
         prerelease = '-'.join((parsed_version.prerelease, prerelease))
         processed_version = str(parsed_version._replace(prerelease = prerelease))
