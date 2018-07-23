@@ -14,7 +14,7 @@
 import os
 import sys
 
-from enum import Enum
+from enum import Enum, IntEnum
 from copy import deepcopy
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
@@ -34,7 +34,8 @@ from util import (
     not_none,
     info,
     is_yaml_file,
-    merge_dicts
+    merge_dicts,
+    FluentIterable
 )
 from github.util import branches
 
@@ -220,10 +221,11 @@ class RenderResult(object):
         self.render_status = not_none(render_status)
 
 
-class DeployStatus(Enum):
-    SUCCEEDED = 0
-    FAILED = 1
-    SKIPPED = 2
+class DeployStatus(IntEnum):
+    SUCCEEDED = 1
+    FAILED = 2
+    SKIPPED = 4
+    CREATED = 8
 
 
 class DeployResult(object):
@@ -292,7 +294,7 @@ class ConcourseDeployer(DefinitionDeployer):
                 concourse_cfg=definition_descriptor.concourse_target_cfg,
                 team_name=definition_descriptor.concourse_target_team,
             )
-            api.set_pipeline(
+            response = api.set_pipeline(
                 name=pipeline_name,
                 pipeline_definition=pipeline_definition
             )
@@ -301,9 +303,18 @@ class ConcourseDeployer(DefinitionDeployer):
                 api.unpause_pipeline(pipeline_name=pipeline_name)
             if self.expose_pipelines:
                 api.expose_pipeline(pipeline_name=pipeline_name)
+
+            deploy_status = DeployStatus.SUCCEEDED
+            if response is client.SetPipelineResult.CREATED:
+                deploy_status |= DeployStatus.CREATED
+            elif response is client.SetPipelineResult.UPDATED:
+                pass
+            else:
+                raise NotImplementedError
+
             return DeployResult(
                 definition_descriptor=definition_descriptor,
-                deploy_status=DeployStatus.SUCCEEDED,
+                deploy_status=deploy_status,
             )
         except Exception as e:
             import traceback
@@ -345,13 +356,20 @@ class ReplicationResultProcessor(object):
                 info('removing pipeline: {p}'.format(p=pipeline_name))
                 concourse_api.delete_pipeline(pipeline_name)
 
+            # trigger resource checks in new pipelines
+            self._initialise_new_pipeline_resources(concourse_api, concourse_results)
+
             # order pipelines alphabetically
             pipeline_names = list(concourse_api.pipelines())
             pipeline_names.sort()
             concourse_api.order_pipelines(pipeline_names)
 
         # evaluate results
-        failed_descriptors = [d for d in results if d.deploy_status != DeployStatus.SUCCEEDED]
+        failed_descriptors = [
+            d for d in results
+            if not d.deploy_status & DeployStatus.SUCCEEDED
+        ]
+
         failed_count = len(failed_descriptors)
 
         info('Successfully replicated {d} pipeline(s)'.format(d=len(results) - failed_count))
@@ -366,6 +384,28 @@ class ReplicationResultProcessor(object):
         for failed_descriptor in failed_descriptors:
             warning(failed_descriptor.definition_descriptor.pipeline_name)
         return False
+
+    def _initialise_new_pipeline_resources(self, concourse_api, results):
+        newly_deployed_pipeline_names = map(
+            lambda result: result.definition_descriptor.pipeline_name,
+            filter(
+                lambda result: result.deploy_status & DeployStatus.CREATED,
+                results,
+            )
+        )
+        for pipeline_name in newly_deployed_pipeline_names:
+            info('triggering initial resource check for pipeline {p}'.format(p=pipeline_name))
+            config = concourse_api.pipeline_cfg(pipeline_name=pipeline_name)
+
+            trigger_pipeline_resource_check = functools.partial(
+                concourse_api.trigger_resource_check,
+                pipeline_name=pipeline_name,
+            )
+
+            FluentIterable(concourse_api.pipeline_resources(pipeline_name)) \
+            .filter(lambda resource: resource.has_webhook_token()) \
+            .map(lambda resource: trigger_pipeline_resource_check(resource_name=resource.name)) \
+            .as_list()
 
 class PipelineReplicator(object):
     def __init__(
