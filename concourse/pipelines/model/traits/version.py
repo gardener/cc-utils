@@ -22,7 +22,7 @@ from concourse.pipelines.modelbase import (
 
 
 class VersionTrait(Trait):
-    PREPROCESS_OPS = {'finalise', 'finalize', 'inject-commit-hash', 'noop'}
+    PREPROCESS_OPS = {'finalize', 'inject-commit-hash', 'noop'}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
