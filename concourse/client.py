@@ -66,6 +66,10 @@ def from_cfg(concourse_cfg, team_name: str):
 def select_attr(name: str):
     return lambda o: o.get(name)
 
+class SetPipelineResult(Enum):
+    UPDATED = 0
+    CREATED = 1
+
 
 # GLOBAL DEFINES
 CONCOURSE_API_SUFFIX = 'api/v1'
@@ -222,6 +226,7 @@ class ConcourseApi(object):
 
         url = self.routes.pipeline_cfg(name)
         self._put(url, str(pipeline_definition), headers=headers)
+        return SetPipelineResult.CREATED if previous_version is None else SetPipelineResult.UPDATED
 
     @ensure_annotations
     def delete_pipeline(self, name: str):
