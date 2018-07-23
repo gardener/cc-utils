@@ -63,6 +63,12 @@ class ConcourseApiRoutesTest(unittest.TestCase):
             'https://made-up-concourse.com/api/v1/teams/foo/pipelines/baz/expose',
         )
 
+    def test_resource_check_route(self):
+        self.assertEqual(
+            self.examinee.resource_check(pipeline_name='baz', resource_name='bar'),
+            'https://made-up-concourse.com/api/v1/teams/foo/pipelines/baz/resources/bar/check',
+        )
+
     def test_resource_check_webhook_route(self):
         webhook_route = self.examinee.resource_check_webhook(
             pipeline_name='baz',
