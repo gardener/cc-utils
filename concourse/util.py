@@ -36,14 +36,11 @@ def list_github_resources(
         username=concourse_user,
         passwd=concourse_passwd
     )
-    github_hostname = urlparse(github_url).netloc
     pipeline_names = concourse_pipelines if concourse_pipelines else concourse_api.pipelines()
-    for pipeline_name in pipeline_names:
-        pipeline_cfg = concourse_api.pipeline_cfg(pipeline_name)
-        resources = pipeline_cfg.resources
-        resources = filter(lambda r: r.has_webhook_token(), resources)
-
-        yield from resources
+    yield from filter(
+      lambda r: r.has_webhook_token(),
+      concourse_api.pipeline_resources(pipeline_names=pipeline_names),
+    )
 
 
 def sync_webhooks(

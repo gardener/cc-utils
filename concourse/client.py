@@ -12,18 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ensure import ensure_annotations
 import json
-from urllib3.exceptions import InsecureRequestWarning
-from urllib.parse import urljoin, urlparse, urlencode
 import warnings
-from enum import Enum
-import sseclient
 
+from ensure import ensure_annotations
+from enum import Enum
+from functools import reduce
+from urllib.parse import urljoin, urlparse, urlencode
+from urllib3.exceptions import InsecureRequestWarning
+
+import sseclient
 import util
+
 from github.webhook import WebhookQueryAttributes
-from http_requests import AuthenticatedRequestBuilder
 from model import ConcourseTeamCredentials
+from http_requests import AuthenticatedRequestBuilder
 from util import fail, warning, not_empty
 
 warnings.filterwarnings('ignore', 'Unverified HTTPS request is being made.*', InsecureRequestWarning)
@@ -248,6 +251,14 @@ class ConcourseApi(object):
         response = self._get(pipeline_cfg_url)
         not_empty(response)
         return PipelineConfig(response, concourse_api=self, name=pipeline_name)
+
+    def pipeline_resources(self, pipeline_names):
+        if isinstance(pipeline_names, str):
+            pipeline_names = [pipeline_names]
+
+        resources = map(lambda name: self.pipeline_cfg(pipeline_name=name).resources, pipeline_names)
+        for resource_list in resources:
+            yield from resource_list
 
     @ensure_annotations
     def pipeline_config_version(self, pipeline_name: str):
