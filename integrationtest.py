@@ -94,38 +94,3 @@ def deploy_and_run_smoketest_pipeline(
 
     if not deployment_result.deploy_status & DeployStatus.SUCCEEDED:
         fail('deployment failed')
-
-    # skip triggering for now
-    return
-
-    api = ConcourseApi(base_url=concourse_cfg.external_url(), team_name=concourse_team_name)
-    api.login(
-        team=team_credentials.teamname(),
-        username=team_credentials.username(),
-        passwd=team_credentials.passwd()
-    )
-
-    # trigger an execution and wait for it to finish
-    info('triggering smoketest job {jn}'.format(jn=job_name))
-    api.trigger_build(deployment_result.definition_descriptor.pipeline_name, job_name)
-
-    if not wait_for_job_execution:
-        info('will not wait for job-execution to finish (--wait-for-job-execution not set)')
-        return
-
-    # wait for the job to finish (currently we expect it to succeed)
-    # todo: evaluate whether its structure meets our spec
-
-    builds = api.job_builds(pipeline_name, job_name)
-    if not builds or len(builds) < 1:
-        fail('no builds were found (expected at least one!)')
-
-    last_build = builds[-1] # please let this be ours
-
-    # now wait for it to finish
-    build_event_handler = api.build_events(last_build.id())
-    build_event_handler.process_events()
-
-    info('it seems as if the job finished sucessfully; life is good :-)')
-
-
