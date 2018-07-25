@@ -92,7 +92,7 @@ def deploy_and_run_smoketest_pipeline(
 
     deployment_result = deployer.deploy(rendering_result.definition_descriptor)
 
-    if not deployment_result.deploy_status == DeployStatus.SUCCEEDED:
+    if not deployment_result.deploy_status & DeployStatus.SUCCEEDED:
         fail('deployment failed')
 
     # skip triggering for now
