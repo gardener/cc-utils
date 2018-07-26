@@ -320,6 +320,11 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         search_result = self.github.search_issues(query)
         return search_result
 
+    def unique_repo_name(self):
+        '''returns a unique repository name in the format of a component reference name'''
+        parsed = urllib.parse.urlparse(self.repository.html_url)
+        return "{hostname}{path}".format(hostname=parsed.hostname, path=parsed.path)
+
 
 def github_api_ctor(github_url: str, verify_ssl: bool=True):
     '''returns the appropriate github3.GitHub constructor for the given github URL

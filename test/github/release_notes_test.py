@@ -17,7 +17,7 @@ from pydash import _
 
 from github.release_notes import (
     extract_release_notes,
-    ReleaseNote,
+    create_release_note_obj,
     build_markdown
 )
 
@@ -30,19 +30,66 @@ class ReleaseNotesTest(unittest.TestCase):
         release_notes = extract_release_notes(
             pr_number=42,
             text=text,
-            user_login='foo'
+            user_login='foo',
+            current_repo='github.com/gardener/current-repo'
         )
 
         self.assertEqual(1, len(release_notes))
         self.assertEqual(
-            ReleaseNote(
+            create_release_note_obj(
                 category_id='improvement',
                 target_group_id='user',
                 text='this is a release note text',
-                pr_number=42,
-                user_login='foo'),
+                reference_is_pr=True,
+                reference_id=42,
+                user_login='foo',
+                origin_repo='github.com/gardener/current-repo',
+                is_current_repo=True
+            ),
             _.nth(release_notes, 0)
         )
+
+    def test_rls_note_extraction_ignore_noise_in_header(self):
+        def verify_noise_ignored(text):
+            release_notes = extract_release_notes(
+                pr_number=42,
+                text=text,
+                user_login='foo',
+                current_repo='github.com/o/r'
+            )
+
+            self.assertEqual(1, len(release_notes))
+            self.assertEqual(
+                create_release_note_obj(
+                    category_id='improvement',
+                    target_group_id='user',
+                    text='rlstext',
+                    reference_is_pr=True,
+                    reference_id=42,
+                    user_login='foo',
+                    origin_repo='github.com/o/r',
+                    is_current_repo=True
+                ),
+                _.nth(release_notes, 0)
+            )
+        text = \
+            '``` improvement user \n'\
+            'rlstext\n'\
+            '```'
+        verify_noise_ignored(text)
+
+        text = \
+            '``` improvement user     \n'\
+            'rlstext\n'\
+            '```'
+        verify_noise_ignored(text)
+
+        text = \
+            '``` improvement user this is some noise that should be ignored\n'\
+            'rlstext\n'\
+            '```'
+        verify_noise_ignored(text)
+
 
     def test_rls_note_extraction_noteworthy(self):
         text = \
@@ -52,19 +99,96 @@ class ReleaseNotesTest(unittest.TestCase):
         release_notes = extract_release_notes(
             pr_number=42,
             text=text,
-            user_login='foo'
+            user_login='foo',
+            current_repo='github.com/gardener/current-repo'
         )
 
         self.assertEqual(1, len(release_notes))
         self.assertEqual(
-            ReleaseNote(
+            create_release_note_obj(
                 category_id='noteworthy',
                 target_group_id='operator',
                 text='notew-text',
-                pr_number=42,
-                user_login='foo'),
+                reference_is_pr=True,
+                reference_id=42,
+                user_login='foo',
+                origin_repo='github.com/gardener/current-repo',
+                is_current_repo=True
+            ),
             _.nth(release_notes, 0)
         )
+
+    def test_rls_note_extraction_origin(self):
+        def origin_test(
+            code_block,
+            exp_ref_id,
+            exp_usr,
+            exp_text,
+            exp_ref_is_pr=True
+        ):
+            release_notes = extract_release_notes(
+                pr_number=42,
+                text=code_block,
+                user_login='pr-transport-user',
+                current_repo='github.com/gardener/current-repo'
+            )
+            self.assertEqual(1, len(release_notes))
+            self.assertEqual(
+                create_release_note_obj(
+                    category_id='improvement',
+                    target_group_id='user',
+                    text=exp_text,
+                    reference_is_pr=exp_ref_is_pr,
+                    reference_id=exp_ref_id,
+                    user_login=exp_usr,
+                    origin_repo='github.com/gardener/origin-component',
+                    is_current_repo=False
+                ),
+                _.nth(release_notes, 0)
+            )
+
+        code_block = \
+            '``` improvement user github.com/gardener/origin-component #1 @original-user-foo\n'\
+            'origin, pr refid and user\n'\
+            '```'
+        origin_test(code_block, exp_ref_id=1, exp_usr='original-user-foo', exp_text='origin, pr refid and user')
+
+        code_block = \
+            '``` improvement user github.com/gardener/origin-component $commit-id @original-user-foo\n'\
+            'origin, commit refid and user\n'\
+            '```'
+        origin_test(code_block, exp_ref_id='commit-id', exp_ref_is_pr=False, exp_usr='original-user-foo', exp_text='origin, commit refid and user')
+
+        code_block = \
+            '``` improvement user github.com/gardener/origin-component #1 @original-user-foo some random noise\n'\
+            'noise test\n'\
+            '```'
+        origin_test(code_block, exp_ref_id=1, exp_usr='original-user-foo', exp_text='noise test')
+
+        code_block = \
+            '``` improvement user github.com/gardener/origin-component #1 some random noise\n'\
+            'no user specified\n'\
+            '```'
+        origin_test(code_block, exp_ref_id=1, exp_usr=None, exp_text='no user specified')
+
+        code_block = \
+            '``` improvement user github.com/gardener/origin-component @user some random noise\n'\
+            'no pull request ref_id specified\n'\
+            '```'
+        origin_test(code_block, exp_ref_id=None, exp_ref_is_pr=False, exp_usr='user', exp_text='no pull request ref_id specified')
+
+        code_block = \
+            '``` improvement user github.com/gardener/origin-component\n'\
+            'origin_repo only\n'\
+            '```'
+        origin_test(code_block, exp_ref_id=None, exp_ref_is_pr=False, exp_usr=None, exp_text='origin_repo only')
+
+        code_block = \
+            '``` improvement user github.com/gardener/origin-component some random noise\n'\
+            'origin_repo only - with noise\n'\
+            '```'
+        origin_test(code_block, exp_ref_id=None, exp_ref_is_pr=False, exp_usr=None, exp_text='origin_repo only - with noise')
+
 
     def test_multiple_rls_note_extraction(self):
         text = \
@@ -72,44 +196,57 @@ class ReleaseNotesTest(unittest.TestCase):
             '``` improvement user\n'\
             'imp-user-text\n'\
             '```\n'\
-            '``` improvement operator\n'\
-            'imp-op-text\n'\
-            '```\n'\
+            '``` improvement operator\r\n'\
+            'imp-op-text with carriage return and newline feed\r\n'\
+            '```\r\n'\
             '``` noteworthy operator\n'\
             'notew-text\n'\
             '```'
         release_notes = extract_release_notes(
             pr_number=42,
             text=text,
-            user_login='foo'
+            user_login='foo',
+            current_repo='github.com/gardener/current-repo'
         )
 
         self.assertEqual(3, len(release_notes))
         self.assertEqual(
-            ReleaseNote(
+            create_release_note_obj(
                 category_id='improvement',
                 target_group_id='user',
                 text='imp-user-text',
-                pr_number=42,
-                user_login='foo'),
+                reference_is_pr=True,
+                reference_id=42,
+                user_login='foo',
+                origin_repo='github.com/gardener/current-repo',
+                is_current_repo=True
+            ),
             _.nth(release_notes, 0)
         )
         self.assertEqual(
-            ReleaseNote(
+            create_release_note_obj(
                 category_id='improvement',
                 target_group_id='operator',
-                text='imp-op-text',
-                pr_number=42,
-                user_login='foo'),
+                text='imp-op-text with carriage return and newline feed',
+                reference_is_pr=True,
+                reference_id=42,
+                user_login='foo',
+                origin_repo='github.com/gardener/current-repo',
+                is_current_repo=True
+            ),
             _.nth(release_notes, 1)
         )
         self.assertEqual(
-            ReleaseNote(
+            create_release_note_obj(
                 category_id='noteworthy',
                 target_group_id='operator',
                 text='notew-text',
-                pr_number=42,
-                user_login='foo'),
+                reference_is_pr=True,
+                reference_id=42,
+                user_login='foo',
+                origin_repo='github.com/gardener/current-repo',
+                is_current_repo=True
+            ),
             _.nth(release_notes, 2)
         )
 
@@ -123,23 +260,28 @@ class ReleaseNotesTest(unittest.TestCase):
         release_notes = extract_release_notes(
             pr_number=42,
             text=text,
-            user_login='foo'
+            user_login='foo',
+            current_repo='github.com/gardener/current-repo'
         )
 
         self.assertEqual(1, len(release_notes))
         self.assertEqual(
-            ReleaseNote(
+            create_release_note_obj(
                 category_id='improvement',
                 target_group_id='user',
                 text='first line\nsecond line\r\nthird line',
-                pr_number=42,
-                user_login='foo'),
+                reference_is_pr=True,
+                reference_id=42,
+                user_login='foo',
+                origin_repo='github.com/gardener/current-repo',
+                is_current_repo=True
+            ),
             _.nth(release_notes, 0)
         )
 
     def test_rls_note_extraction_trim_text(self):
         text = \
-            '``` improvement user\n'\
+            '``` improvement user \n'\
             '\n'\
             '        text with spaces      '\
             '\n'\
@@ -148,39 +290,22 @@ class ReleaseNotesTest(unittest.TestCase):
         release_notes = extract_release_notes(
             pr_number=42,
             text=text,
-            user_login='foo'
+            user_login='foo',
+            current_repo='github.com/gardener/current-repo'
         )
 
         self.assertEqual(1, len(release_notes))
         self.assertEqual(
-            ReleaseNote(
+            create_release_note_obj(
                 category_id='improvement',
                 target_group_id='user',
                 text='text with spaces',
-                pr_number=42,
-                user_login='foo'),
-            _.nth(release_notes, 0)
-        )
-
-    def test_rls_note_extraction_no_target_group_should_default_to_user(self):
-        text = \
-            '``` improvement\n'\
-            'text\n'\
-            '```'
-        release_notes = extract_release_notes(
-            pr_number=42,
-            text=text,
-            user_login='foo'
-        )
-
-        self.assertEqual(1, len(release_notes))
-        self.assertEqual(
-            ReleaseNote(
-                category_id='improvement',
-                target_group_id='user',
-                text='text',
-                pr_number=42,
-                user_login='foo'),
+                reference_is_pr=True,
+                reference_id=42,
+                user_login='foo',
+                origin_repo='github.com/gardener/current-repo',
+                is_current_repo=True
+            ),
             _.nth(release_notes, 0)
         )
 
@@ -189,7 +314,8 @@ class ReleaseNotesTest(unittest.TestCase):
             release_notes = extract_release_notes(
                 pr_number=42,
                 text=text,
-                user_login='foo'
+                user_login='foo',
+                current_repo='github.com/gardener/current-repo'
             )
             self.assertEqual(0, len(release_notes))
 
@@ -216,37 +342,215 @@ class ReleaseNotesTest(unittest.TestCase):
             '```'
         verify_no_release_note(text)
 
+        text = \
+            '``` improvement\n'\
+            'required target_group is missing in code block header\n'\
+            '```'
+        verify_no_release_note(text)
+
         text = 'some random description'
         verify_no_release_note(text)
 
-    def test_build_markdown(self):
+    def test_markdown_multiline_rls_note(self):
+        multiline_text = \
+        'first line with header\n'\
+        'second line\n'\
+        'third line\n'
         release_note_objs = [
-            ReleaseNote(
-              category_id='improvement',
-              target_group_id='user',
-              text='rls note 1',
-              pr_number=42,
-              user_login='foo'
-            ),
-            ReleaseNote(
+            create_release_note_obj(
                 category_id='improvement',
                 target_group_id='user',
-                text='rls note 2',
-                pr_number=42,
-                user_login='foo'
+                text=multiline_text,
+                reference_is_pr=True,
+                reference_id=42,
+                user_login='foo',
+                origin_repo='github.com/gardener/current-repo',
+                is_current_repo=True
             )
         ]
-        actual_str = build_markdown(release_note_objs)
+        actual_str = build_markdown(release_note_objs=release_note_objs)
 
         expected_str = \
-            '# Improvements\n'\
-            '## To end users\n'\
-            '* rls note 1 (#42, @foo)\n'\
-            '* rls note 2 (#42, @foo)'
-        self.assertEquals(expected_str, actual_str)
+            '# [current-repo]\n'\
+            '## Improvements\n'\
+            '* *[USER]* first line with header (#42, [@foo](https://github.com/foo))\n'\
+            '  * second line\n'\
+            '  * third line'
+        self.assertEqual(expected_str, actual_str)
 
-    def test_build_markdown_no_release_notes(self):
+    def test_markdown_pr(self):
+        release_note_objs = [
+            create_release_note_obj(
+                category_id='improvement',
+                target_group_id='user',
+                text='rls note 1',
+                reference_is_pr=True,
+                reference_id=42,
+                user_login='foo',
+                origin_repo='github.com/gardener/current-repo',
+                is_current_repo=True
+            ),
+            create_release_note_obj(
+                category_id='noteworthy',
+                target_group_id='operator',
+                text='other component rls note',
+                reference_is_pr=True,
+                reference_id=1,
+                user_login='bar',
+                origin_repo='github.com/gardener/a-foo-bar',
+                is_current_repo=False
+            )
+        ]
+        actual_str = build_markdown(release_note_objs=release_note_objs)
+
+        expected_str = \
+            '# [a-foo-bar]\n'\
+            '## Most notable changes\n'\
+            '* *[OPERATOR]* other component rls note ([gardener/a-foo-bar#1](https://github.com/gardener/a-foo-bar/pull/1), [@bar](https://github.com/bar))\n'\
+            '# [current-repo]\n'\
+            '## Improvements\n'\
+            '* *[USER]* rls note 1 (#42, [@foo](https://github.com/foo))'
+        self.assertEqual(expected_str, actual_str)
+
+    def test_markdown_commit(self):
+        release_note_objs = [
+            create_release_note_obj(
+                category_id='improvement',
+                target_group_id='user',
+                text='rls note 1',
+                reference_is_pr=False,
+                reference_id='commit-id-1',
+                user_login='foo',
+                origin_repo='github.com/gardener/current-repo',
+                is_current_repo=True
+            ),
+            create_release_note_obj(
+                category_id='noteworthy',
+                target_group_id='operator',
+                text='other component rls note',
+                reference_is_pr=False,
+                reference_id='commit-id-2',
+                user_login='bar',
+                origin_repo='github.com/gardener/a-foo-bar',
+                is_current_repo=False
+            )
+        ]
+        actual_str = build_markdown(release_note_objs=release_note_objs)
+
+        expected_str = \
+            '# [a-foo-bar]\n'\
+            '## Most notable changes\n'\
+            '* *[OPERATOR]* other component rls note ([gardener/a-foo-bar@commit-id-2](https://github.com/gardener/a-foo-bar/commit/commit-id-2), [@bar](https://github.com/bar))\n'\
+            '# [current-repo]\n'\
+            '## Improvements\n'\
+            '* *[USER]* rls note 1 (commit-id-1, [@foo](https://github.com/foo))'
+        self.assertEqual(expected_str, actual_str)
+
+    def test_markdown_origin_user(self):
+        release_note_objs = [
+            create_release_note_obj(
+                category_id='improvement',
+                target_group_id='operator',
+                text='no origin user',
+                reference_is_pr=True,
+                reference_id=42,
+                user_login=None,
+                origin_repo='github.com/o/repo',
+                is_current_repo=False
+            ),
+            create_release_note_obj(
+                category_id='improvement',
+                target_group_id='operator',
+                text='no user',
+                reference_is_pr=True,
+                reference_id=1,
+                user_login=None,
+                origin_repo='github.com/gardener/current-repo',
+                is_current_repo=True
+            )
+        ]
+        actual_str = build_markdown(release_note_objs=release_note_objs)
+        expected_str = \
+            '# [current-repo]\n'\
+            '## Improvements\n'\
+            '* *[OPERATOR]* no user (#1)\n'\
+            '# [repo]\n'\
+            '## Improvements\n'\
+            '* *[OPERATOR]* no origin user ([o/repo#42](https://github.com/o/repo/pull/42))'
+        self.assertEqual(expected_str, actual_str)
+
+    def test_markdown_no_reference(self):
+        release_note_objs = [
+            create_release_note_obj(
+                category_id='noteworthy',
+                target_group_id='operator',
+                text='no origin reference',
+                reference_is_pr=False,
+                reference_id=None,
+                user_login='bar',
+                origin_repo='github.com/gardener/a-foo-bar',
+                is_current_repo=False
+            ),
+            create_release_note_obj(
+                category_id='improvement',
+                target_group_id='user',
+                text='no reference',
+                reference_is_pr=False,
+                reference_id=None,
+                user_login='foo',
+                origin_repo='github.com/gardener/current-repo',
+                is_current_repo=True
+            )
+        ]
+        actual_str = build_markdown(release_note_objs=release_note_objs)
+
+        expected_str = \
+            '# [a-foo-bar]\n'\
+            '## Most notable changes\n'\
+            '* *[OPERATOR]* no origin reference ([@bar](https://github.com/bar))\n'\
+            '# [current-repo]\n'\
+            '## Improvements\n'\
+            '* *[USER]* no reference ([@foo](https://github.com/foo))'
+        self.assertEqual(expected_str, actual_str)
+
+    def test_markdown_no_reference_no_user(self):
+        release_note_objs = [
+            create_release_note_obj(
+                category_id='noteworthy',
+                target_group_id='operator',
+                text='no origin reference no user',
+                reference_is_pr=False,
+                reference_id=None,
+                user_login=None,
+                origin_repo='github.com/gardener/a-foo-bar',
+                is_current_repo=False
+            ),
+            create_release_note_obj(
+                category_id='improvement',
+                target_group_id='user',
+                text='no reference no user',
+                reference_is_pr=False,
+                reference_id=None,
+                user_login=None,
+                origin_repo='github.com/gardener/current-repo',
+                is_current_repo=True
+            )
+        ]
+        actual_str = build_markdown(release_note_objs=release_note_objs)
+
+        expected_str = \
+            '# [a-foo-bar]\n'\
+            '## Most notable changes\n'\
+            '* *[OPERATOR]* no origin reference no user\n'\
+            '# [current-repo]\n'\
+            '## Improvements\n'\
+            '* *[USER]* no reference no user'
+        self.assertEqual(expected_str, actual_str)
+
+    def test_markdown_no_release_notes(self):
         release_note_objs = []
 
         expected_str = 'no release notes available'
-        self.assertEquals(expected_str, build_markdown(release_note_objs))
+        self.assertEqual(expected_str, build_markdown(
+            release_note_objs=release_note_objs
+        ))
