@@ -214,6 +214,21 @@ class RepositoryConfig(Resource):
     def should_trigger(self):
         return self._trigger
 
+    def _trigger_paths(self):
+        return self.raw.get('trigger_paths', None)
+
+    def trigger_paths(self):
+        paths = self._trigger_paths()
+        if not paths:
+            return ()
+        return paths.get('include', ())
+
+    def ignore_paths(self):
+        paths = self._trigger_paths()
+        if not paths:
+            return ()
+        return paths.get('exclude', ())
+
     def is_main_repo(self):
         return self._is_main_repo
 
