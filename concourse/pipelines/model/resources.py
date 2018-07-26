@@ -217,13 +217,13 @@ class RepositoryConfig(Resource):
     def _trigger_paths(self):
         return self.raw.get('trigger_paths', None)
 
-    def trigger_paths(self):
+    def trigger_include_paths(self):
         paths = self._trigger_paths()
         if not paths:
             return ()
         return paths.get('include', ())
 
-    def ignore_paths(self):
+    def trigger_exclude_paths(self):
         paths = self._trigger_paths()
         if not paths:
             return ()
