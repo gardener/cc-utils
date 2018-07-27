@@ -43,7 +43,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_is_pr=True,
                 reference_id=42,
                 user_login='foo',
-                origin_repo='github.com/gardener/current-repo',
+                source_repo='github.com/gardener/current-repo',
                 is_current_repo=True
             ),
             _.nth(release_notes, 0)
@@ -55,7 +55,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 pr_number=42,
                 text=text,
                 user_login='foo',
-                current_repo='github.com/o/r'
+                current_repo='github.com/s/repo'
             )
 
             self.assertEqual(1, len(release_notes))
@@ -67,7 +67,7 @@ class ReleaseNotesTest(unittest.TestCase):
                     reference_is_pr=True,
                     reference_id=42,
                     user_login='foo',
-                    origin_repo='github.com/o/r',
+                    source_repo='github.com/s/repo',
                     is_current_repo=True
                 ),
                 _.nth(release_notes, 0)
@@ -112,14 +112,14 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_is_pr=True,
                 reference_id=42,
                 user_login='foo',
-                origin_repo='github.com/gardener/current-repo',
+                source_repo='github.com/gardener/current-repo',
                 is_current_repo=True
             ),
             _.nth(release_notes, 0)
         )
 
-    def test_rls_note_extraction_origin(self):
-        def origin_test(
+    def test_rls_note_extraction_src_repo(self):
+        def source_repo_test(
             code_block,
             exp_ref_id,
             exp_usr,
@@ -141,53 +141,53 @@ class ReleaseNotesTest(unittest.TestCase):
                     reference_is_pr=exp_ref_is_pr,
                     reference_id=exp_ref_id,
                     user_login=exp_usr,
-                    origin_repo='github.com/gardener/origin-component',
+                    source_repo='github.com/gardener/source-component',
                     is_current_repo=False
                 ),
                 _.nth(release_notes, 0)
             )
 
         code_block = \
-            '``` improvement user github.com/gardener/origin-component #1 @original-user-foo\n'\
-            'origin, pr refid and user\n'\
+            '``` improvement user github.com/gardener/source-component #1 @original-user-foo\n'\
+            'source repo, pr refid and user\n'\
             '```'
-        origin_test(code_block, exp_ref_id=1, exp_usr='original-user-foo', exp_text='origin, pr refid and user')
+        source_repo_test(code_block, exp_ref_id=1, exp_usr='original-user-foo', exp_text='source repo, pr refid and user')
 
         code_block = \
-            '``` improvement user github.com/gardener/origin-component $commit-id @original-user-foo\n'\
-            'origin, commit refid and user\n'\
+            '``` improvement user github.com/gardener/source-component $commit-id @original-user-foo\n'\
+            'source repo, commit refid and user\n'\
             '```'
-        origin_test(code_block, exp_ref_id='commit-id', exp_ref_is_pr=False, exp_usr='original-user-foo', exp_text='origin, commit refid and user')
+        source_repo_test(code_block, exp_ref_id='commit-id', exp_ref_is_pr=False, exp_usr='original-user-foo', exp_text='source repo, commit refid and user')
 
         code_block = \
-            '``` improvement user github.com/gardener/origin-component #1 @original-user-foo some random noise\n'\
+            '``` improvement user github.com/gardener/source-component #1 @original-user-foo some random noise\n'\
             'noise test\n'\
             '```'
-        origin_test(code_block, exp_ref_id=1, exp_usr='original-user-foo', exp_text='noise test')
+        source_repo_test(code_block, exp_ref_id=1, exp_usr='original-user-foo', exp_text='noise test')
 
         code_block = \
-            '``` improvement user github.com/gardener/origin-component #1 some random noise\n'\
+            '``` improvement user github.com/gardener/source-component #1 some random noise\n'\
             'no user specified\n'\
             '```'
-        origin_test(code_block, exp_ref_id=1, exp_usr=None, exp_text='no user specified')
+        source_repo_test(code_block, exp_ref_id=1, exp_usr=None, exp_text='no user specified')
 
         code_block = \
-            '``` improvement user github.com/gardener/origin-component @user some random noise\n'\
+            '``` improvement user github.com/gardener/source-component @user some random noise\n'\
             'no pull request ref_id specified\n'\
             '```'
-        origin_test(code_block, exp_ref_id=None, exp_ref_is_pr=False, exp_usr='user', exp_text='no pull request ref_id specified')
+        source_repo_test(code_block, exp_ref_id=None, exp_ref_is_pr=False, exp_usr='user', exp_text='no pull request ref_id specified')
 
         code_block = \
-            '``` improvement user github.com/gardener/origin-component\n'\
-            'origin_repo only\n'\
+            '``` improvement user github.com/gardener/source-component\n'\
+            'source_repo only\n'\
             '```'
-        origin_test(code_block, exp_ref_id=None, exp_ref_is_pr=False, exp_usr=None, exp_text='origin_repo only')
+        source_repo_test(code_block, exp_ref_id=None, exp_ref_is_pr=False, exp_usr=None, exp_text='source_repo only')
 
         code_block = \
-            '``` improvement user github.com/gardener/origin-component some random noise\n'\
-            'origin_repo only - with noise\n'\
+            '``` improvement user github.com/gardener/source-component some random noise\n'\
+            'source_repo only - with noise\n'\
             '```'
-        origin_test(code_block, exp_ref_id=None, exp_ref_is_pr=False, exp_usr=None, exp_text='origin_repo only - with noise')
+        source_repo_test(code_block, exp_ref_id=None, exp_ref_is_pr=False, exp_usr=None, exp_text='source_repo only - with noise')
 
 
     def test_multiple_rls_note_extraction(self):
@@ -218,7 +218,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_is_pr=True,
                 reference_id=42,
                 user_login='foo',
-                origin_repo='github.com/gardener/current-repo',
+                source_repo='github.com/gardener/current-repo',
                 is_current_repo=True
             ),
             _.nth(release_notes, 0)
@@ -231,7 +231,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_is_pr=True,
                 reference_id=42,
                 user_login='foo',
-                origin_repo='github.com/gardener/current-repo',
+                source_repo='github.com/gardener/current-repo',
                 is_current_repo=True
             ),
             _.nth(release_notes, 1)
@@ -244,7 +244,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_is_pr=True,
                 reference_id=42,
                 user_login='foo',
-                origin_repo='github.com/gardener/current-repo',
+                source_repo='github.com/gardener/current-repo',
                 is_current_repo=True
             ),
             _.nth(release_notes, 2)
@@ -273,7 +273,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_is_pr=True,
                 reference_id=42,
                 user_login='foo',
-                origin_repo='github.com/gardener/current-repo',
+                source_repo='github.com/gardener/current-repo',
                 is_current_repo=True
             ),
             _.nth(release_notes, 0)
@@ -303,7 +303,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_is_pr=True,
                 reference_id=42,
                 user_login='foo',
-                origin_repo='github.com/gardener/current-repo',
+                source_repo='github.com/gardener/current-repo',
                 is_current_repo=True
             ),
             _.nth(release_notes, 0)
@@ -364,7 +364,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_is_pr=True,
                 reference_id=42,
                 user_login='foo',
-                origin_repo='github.com/gardener/current-repo',
+                source_repo='github.com/gardener/current-repo',
                 is_current_repo=True
             )
         ]
@@ -387,7 +387,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_is_pr=True,
                 reference_id=42,
                 user_login='foo',
-                origin_repo='github.com/gardener/current-repo',
+                source_repo='github.com/gardener/current-repo',
                 is_current_repo=True
             ),
             create_release_note_obj(
@@ -397,7 +397,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_is_pr=True,
                 reference_id=1,
                 user_login='bar',
-                origin_repo='github.com/gardener/a-foo-bar',
+                source_repo='github.com/gardener/a-foo-bar',
                 is_current_repo=False
             )
         ]
@@ -421,7 +421,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_is_pr=False,
                 reference_id='commit-id-1',
                 user_login='foo',
-                origin_repo='github.com/gardener/current-repo',
+                source_repo='github.com/gardener/current-repo',
                 is_current_repo=True
             ),
             create_release_note_obj(
@@ -431,7 +431,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_is_pr=False,
                 reference_id='commit-id-2',
                 user_login='bar',
-                origin_repo='github.com/gardener/a-foo-bar',
+                source_repo='github.com/gardener/a-foo-bar',
                 is_current_repo=False
             )
         ]
@@ -446,16 +446,16 @@ class ReleaseNotesTest(unittest.TestCase):
             '* *[USER]* rls note 1 (commit-id-1, [@foo](https://github.com/foo))'
         self.assertEqual(expected_str, actual_str)
 
-    def test_markdown_origin_user(self):
+    def test_markdown_source_repo_user(self):
         release_note_objs = [
             create_release_note_obj(
                 category_id='improvement',
                 target_group_id='operator',
-                text='no origin user',
+                text='no source repo user',
                 reference_is_pr=True,
                 reference_id=42,
                 user_login=None,
-                origin_repo='github.com/o/repo',
+                source_repo='github.com/s/repo',
                 is_current_repo=False
             ),
             create_release_note_obj(
@@ -465,7 +465,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_is_pr=True,
                 reference_id=1,
                 user_login=None,
-                origin_repo='github.com/gardener/current-repo',
+                source_repo='github.com/gardener/current-repo',
                 is_current_repo=True
             )
         ]
@@ -476,7 +476,7 @@ class ReleaseNotesTest(unittest.TestCase):
             '* *[OPERATOR]* no user (#1)\n'\
             '# [repo]\n'\
             '## Improvements\n'\
-            '* *[OPERATOR]* no origin user ([o/repo#42](https://github.com/o/repo/pull/42))'
+            '* *[OPERATOR]* no source repo user ([s/repo#42](https://github.com/s/repo/pull/42))'
         self.assertEqual(expected_str, actual_str)
 
     def test_markdown_no_reference(self):
@@ -484,11 +484,11 @@ class ReleaseNotesTest(unittest.TestCase):
             create_release_note_obj(
                 category_id='noteworthy',
                 target_group_id='operator',
-                text='no origin reference',
+                text='no source repo reference',
                 reference_is_pr=False,
                 reference_id=None,
                 user_login='bar',
-                origin_repo='github.com/gardener/a-foo-bar',
+                source_repo='github.com/gardener/a-foo-bar',
                 is_current_repo=False
             ),
             create_release_note_obj(
@@ -498,7 +498,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_is_pr=False,
                 reference_id=None,
                 user_login='foo',
-                origin_repo='github.com/gardener/current-repo',
+                source_repo='github.com/gardener/current-repo',
                 is_current_repo=True
             )
         ]
@@ -507,7 +507,7 @@ class ReleaseNotesTest(unittest.TestCase):
         expected_str = \
             '# [a-foo-bar]\n'\
             '## Most notable changes\n'\
-            '* *[OPERATOR]* no origin reference ([@bar](https://github.com/bar))\n'\
+            '* *[OPERATOR]* no source repo reference ([@bar](https://github.com/bar))\n'\
             '# [current-repo]\n'\
             '## Improvements\n'\
             '* *[USER]* no reference ([@foo](https://github.com/foo))'
@@ -518,11 +518,11 @@ class ReleaseNotesTest(unittest.TestCase):
             create_release_note_obj(
                 category_id='noteworthy',
                 target_group_id='operator',
-                text='no origin reference no user',
+                text='no source repo reference no user',
                 reference_is_pr=False,
                 reference_id=None,
                 user_login=None,
-                origin_repo='github.com/gardener/a-foo-bar',
+                source_repo='github.com/gardener/a-foo-bar',
                 is_current_repo=False
             ),
             create_release_note_obj(
@@ -532,7 +532,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_is_pr=False,
                 reference_id=None,
                 user_login=None,
-                origin_repo='github.com/gardener/current-repo',
+                source_repo='github.com/gardener/current-repo',
                 is_current_repo=True
             )
         ]
@@ -541,7 +541,7 @@ class ReleaseNotesTest(unittest.TestCase):
         expected_str = \
             '# [a-foo-bar]\n'\
             '## Most notable changes\n'\
-            '* *[OPERATOR]* no origin reference no user\n'\
+            '* *[OPERATOR]* no source repo reference no user\n'\
             '# [current-repo]\n'\
             '## Improvements\n'\
             '* *[USER]* no reference no user'

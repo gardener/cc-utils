@@ -31,7 +31,7 @@ ReleaseNote = namedtuple('ReleaseNote', [
     "reference_is_pr",
     "reference_id",
     "user_login",
-    "origin_repo",
+    "source_repo",
     "is_current_repo",
     "component_name"
 ])
@@ -43,7 +43,7 @@ def create_release_note_obj(
     reference_is_pr: str,
     reference_id: str,
     user_login: str,
-    origin_repo: str,
+    source_repo: str,
     is_current_repo: bool
 )->ReleaseNote:
 
@@ -57,9 +57,9 @@ def create_release_note_obj(
         reference_is_pr=reference_is_pr,
         reference_id=reference_id,
         user_login=user_login,
-        origin_repo=origin_repo,
+        source_repo=source_repo,
         is_current_repo=is_current_repo,
-        component_name=ComponentName(name=origin_repo)
+        component_name=ComponentName(name=source_repo)
     )
 
 Node = namedtuple("Node", ["identifier", "title", "nodes", "matches_rn_field"])
@@ -123,8 +123,8 @@ def build_markdown(
             if rn_obj.reference_id:
                 if rn_obj.reference_is_pr:
                     reference_prefix = '#'
-                    reference_link = 'https://{origin_repo}/pull/{ref_id}'.format(
-                        origin_repo=rn_obj.origin_repo,
+                    reference_link = 'https://{source_repo}/pull/{ref_id}'.format(
+                        source_repo=rn_obj.source_repo,
                         ref_id=rn_obj.reference_id
                     )
                 else: # commit
@@ -134,8 +134,8 @@ def build_markdown(
                         # for the current repo we use gitHub's feature to auto-link to references,
                         # hence in case of commits we don't need a prefix
                         reference_prefix = ''
-                    reference_link = 'https://{origin_repo}/commit/{ref_id}'.format(
-                        origin_repo=rn_obj.origin_repo,
+                    reference_link = 'https://{source_repo}/commit/{ref_id}'.format(
+                        source_repo=rn_obj.source_repo,
                         ref_id=rn_obj.reference_id
                 )
 
@@ -234,12 +234,12 @@ def build_markdown(
     origin_nodes = _\
         .chain(release_note_objs)\
         .sort_by(lambda rn_obj: rn_obj.component_name.github_repo())\
-        .uniq_by(lambda rn_obj: rn_obj.origin_repo)\
+        .uniq_by(lambda rn_obj: rn_obj.source_repo)\
         .map(lambda rn_obj: Node(
-            identifier=rn_obj.origin_repo,
+            identifier=rn_obj.source_repo,
             title='[{origin_name}]'.format(origin_name=rn_obj.component_name.github_repo()),
             nodes=categories,
-            matches_rn_field='origin_repo'
+            matches_rn_field='source_repo'
         ))\
         .value()
 
@@ -406,7 +406,7 @@ def extract_release_notes(
 
     r = re.compile(
         r"``` *(?P<category>improvement|noteworthy) (?P<target_group>user|operator)"
-        "( (?P<origin_repo>\S+/\S+/\S+)(( (?P<reference_type>#|\$)(?P<reference_id>\S+))?"
+        "( (?P<source_repo>\S+/\S+/\S+)(( (?P<reference_type>#|\$)(?P<reference_id>\S+))?"
         "( @(?P<user>\S+))?)( .*?)?|( .*?)?)\r?\n(?P<text>.*?)\n```",
         re.MULTILINE | re.DOTALL
     )
@@ -419,13 +419,13 @@ def extract_release_notes(
 
         category = code_block['category']
         target_group = code_block['target_group']
-        origin_repo = code_block['origin_repo']
-        if origin_repo:
+        source_repo = code_block['source_repo']
+        if source_repo:
             reference_is_pr = code_block['reference_type'] == '#'
             reference_id = code_block['reference_id'] or None
             user_login = code_block['user'] or None
         else:
-            origin_repo = current_repo
+            source_repo = current_repo
             reference_is_pr = True
             reference_id = pr_number
 
@@ -437,12 +437,12 @@ def extract_release_notes(
                 reference_is_pr=reference_is_pr,
                 reference_id=reference_id,
                 user_login=user_login,
-                origin_repo=origin_repo,
-                is_current_repo=current_repo == origin_repo
+                source_repo=source_repo,
+                is_current_repo=current_repo == source_repo
             ))
         except ModelValidationError:
-            warning('skipping invalid origin repository: {origin_repo}'.format(
-                origin_repo=origin_repo
+            warning('skipping invalid origin repository: {source_repo}'.format(
+                source_repo=source_repo
             ))
             continue
     return release_notes
