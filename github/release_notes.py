@@ -14,7 +14,6 @@
 
 import re
 from collections import namedtuple
-
 import git
 from git.exc import GitError
 from pydash import _
@@ -22,18 +21,74 @@ from semver import parse_version_info
 from github.util import GitHubRepositoryHelper
 
 from util import info, warning, fail, verbose, existing_dir
+from product.model import ComponentName
+from model.base import ModelValidationError
 
-ReleaseNote = namedtuple('ReleaseNote', \
-    ["category_id", "target_group_id", "text", "pr_number", "user_login"] \
-)
-Category = namedtuple("Category", ["identifier", "title"])
-TargetGroup = namedtuple("TargetGroup", ["identifier", "title"])
-categories = \
-    Category(identifier='noteworthy', title='# Most notable changes'), \
-    Category(identifier='improvement', title='# Improvements')
+ReleaseNote = namedtuple('ReleaseNote', [
+    "category_id",
+    "target_group_id",
+    "text",
+    "reference_is_pr",
+    "reference_id",
+    "user_login",
+    "source_repo",
+    "is_current_repo",
+    "component_name"
+])
+
+def create_release_note_obj(
+    category_id: str,
+    target_group_id: str,
+    text: str,
+    reference_is_pr: str,
+    reference_id: str,
+    user_login: str,
+    source_repo: str,
+    is_current_repo: bool
+)->ReleaseNote:
+
+    if reference_id:
+        reference_id=str(reference_id)
+
+    return ReleaseNote(
+        category_id=category_id,
+        target_group_id=target_group_id,
+        text=text,
+        reference_is_pr=reference_is_pr,
+        reference_id=reference_id,
+        user_login=user_login,
+        source_repo=source_repo,
+        is_current_repo=is_current_repo,
+        component_name=ComponentName(name=source_repo)
+    )
+
+Node = namedtuple("Node", ["identifier", "title", "nodes", "matches_rn_field"])
 target_groups = \
-    TargetGroup(identifier='user', title='## To end users'), \
-    TargetGroup(identifier='operator', title='## To operations team')
+    Node(
+        identifier='user',
+        title='USER',
+        nodes=None,
+        matches_rn_field='target_group_id'
+    ), \
+    Node(
+        identifier='operator',
+        title='OPERATOR',
+        nodes=None,
+        matches_rn_field='target_group_id'
+    )
+categories = \
+    Node(
+        identifier='noteworthy',
+        title='Most notable changes',
+        nodes=target_groups,
+        matches_rn_field='category_id'
+    ), \
+    Node(
+        identifier='improvement',
+        title='Improvements',
+        nodes=target_groups,
+        matches_rn_field='category_id'
+    )
 
 def generate_release_notes(
     repo_dir: str,
@@ -43,10 +98,12 @@ def generate_release_notes(
 ):
     repo = git.Repo(existing_dir(repo_dir))
 
+    current_repo_name = ComponentName.from_github_repo_url(helper.repository.html_url).name()
+
     if not commit_range:
         commit_range = calculate_range(repository_branch, repo, helper)
     pr_numbers = fetch_pr_numbers_in_range(repo, commit_range)
-    release_note_objs = fetch_release_notes_from_prs(helper, pr_numbers)
+    release_note_objs = fetch_release_notes_from_prs(helper, pr_numbers, current_repo_name)
     release_notes_str = build_markdown(release_note_objs)
 
     info(release_notes_str)
@@ -55,67 +112,145 @@ def generate_release_notes(
 def build_markdown(
     release_note_objs: list
 ) -> str:
-    def release_notes_for_target_group(
-        category: Category,
-        target_group: TargetGroup,
-        release_note_objs: list()
-    ) -> list:
-        release_note_objs = _.filter(
-            release_note_objs,
-            lambda release_note:
-                category.identifier == release_note.category_id
-                and target_group.identifier == release_note.target_group_id
-        )
 
-        release_note_lines = list()
-        if release_note_objs:
-            release_note_lines.append(target_group.title)
-            for release_note in release_note_objs:
-                for i, rls_note_line in enumerate(release_note.text.splitlines()):
-                    if i == 0:
-                        release_note_lines.append(
-                            '* {rls_note_line} (#{pr_num}, @{user})'
-                                .format(
-                                    pr_num=release_note.pr_number,
-                                    user=release_note.user_login,
-                                    rls_note_line=rls_note_line
-                                )
-                        )
+    def get_header_suffix(
+        rn_obj: ReleaseNote
+    )->str:
+        header_suffix = ''
+        if rn_obj.user_login or rn_obj.reference_id:
+            header_suffix_list = list()
+            cn = rn_obj.component_name
+            if rn_obj.reference_id:
+                if rn_obj.reference_is_pr:
+                    reference_prefix = '#'
+                    reference_link = 'https://{source_repo}/pull/{ref_id}'.format(
+                        source_repo=rn_obj.source_repo,
+                        ref_id=rn_obj.reference_id
+                    )
+                else: # commit
+                    if not rn_obj.is_current_repo:
+                        reference_prefix = '@'
                     else:
-                        release_note_lines.append('  * {rls_note_line}'.format(
-                            rls_note_line=rls_note_line
-                        ))
-        return release_note_lines
+                        # for the current repo we use gitHub's feature to auto-link to references,
+                        # hence in case of commits we don't need a prefix
+                        reference_prefix = ''
+                    reference_link = 'https://{source_repo}/commit/{ref_id}'.format(
+                        source_repo=rn_obj.source_repo,
+                        ref_id=rn_obj.reference_id
+                )
 
-    def release_notes_for_category(
-        category: Category,
+                reference = '{reference_prefix}{ref_id}'.format(
+                    reference_prefix=reference_prefix,
+                    ref_id=rn_obj.reference_id,
+                )
+
+                if rn_obj.is_current_repo:
+                    header_suffix_list.append(reference)
+                else:
+                    header_suffix_list.append(
+                        '[{org}/{repo}{reference}]({ref_link})'.format(
+                            org=cn.github_organisation(),
+                            repo=cn.github_repo(),
+                            reference=reference,
+                            ref_link=reference_link
+                        )
+                    )
+            if rn_obj.user_login:
+                header_suffix_list.append('[@{u}](https://{github_host}/{u})'.format(
+                    u=rn_obj.user_login,
+                    github_host=cn.github_host()
+                ))
+            header_suffix = ' ({s})'.format(
+                s=', '.join(header_suffix_list)
+            )
+        return header_suffix
+
+    def build_bullet_point_head(
+        line: str,
+        tag: str,
+        rn_obj: ReleaseNote
+    )->str:
+        header_suffix = get_header_suffix(rn_obj)
+
+        return '* *[{tag}]* {rls_note_line}{header_suffix}'.format(
+                    tag=tag,
+                    rls_note_line=line,
+                    header_suffix=header_suffix
+                )
+    def to_md_bullet_points(
+        tag: str,
+        rn_objs: list,
+    ):
+        bullet_points = list()
+        for rn_obj in rn_objs:
+            for i, rls_note_line in enumerate(rn_obj.text.splitlines()):
+                if i == 0:
+                    bullet_points.append(
+                        build_bullet_point_head(line=rls_note_line, tag=tag, rn_obj=rn_obj)
+                    )
+                else:
+                    bullet_points.append('  * {rls_note_line}'.format(
+                        rls_note_line=rls_note_line
+                    ))
+        return bullet_points
+    def nodes_to_markdown_lines(
+        nodes: list,
+        level: int,
         release_note_objs: list
     ) -> list:
-        rn_lines = list()
-        rn_lines_category = list()
-        for target_group in target_groups:
-            rn_lines_category.extend(
-                release_notes_for_target_group(
-                    category=category,
-                    target_group=target_group,
-                    release_note_objs=release_note_objs
-                )
+        md_lines = list()
+        for node in nodes:
+            filtered_rn_objects = _.filter(
+                release_note_objs,
+                lambda rn: node.identifier == _.get(rn, node.matches_rn_field)
             )
+            if not filtered_rn_objects:
+                continue
+            if node.nodes:
+                tmp_md_lines = nodes_to_markdown_lines(
+                    nodes=node.nodes,
+                    level=level + 1,
+                    release_note_objs=filtered_rn_objects
+                )
+                skip_title = False
+            else:
+                tmp_md_lines = to_md_bullet_points(
+                    tag=node.title,
+                    rn_objs=filtered_rn_objects
+                )
+                # title is used as bullet point tag -> no need for additional title
+                skip_title = True
 
-        if rn_lines_category:
-            rn_lines.append(category.title)
-            rn_lines.extend(rn_lines_category)
-        return rn_lines
+            # only add title if there are lines below the title
+            if tmp_md_lines:
+                if not skip_title:
+                    md_lines.append('{hashtags} {title}'.format(
+                        hashtags=_.repeat('#', level),
+                        title=node.title
+                    ))
+                md_lines.extend(tmp_md_lines)
+        return md_lines
 
-    release_note_lines = list()
-    for category in categories:
-        release_note_lines.extend(release_notes_for_category(
-            category=category,
-            release_note_objs=release_note_objs
-        ))
+    origin_nodes = _\
+        .chain(release_note_objs)\
+        .sort_by(lambda rn_obj: rn_obj.component_name.github_repo())\
+        .uniq_by(lambda rn_obj: rn_obj.source_repo)\
+        .map(lambda rn_obj: Node(
+            identifier=rn_obj.source_repo,
+            title='[{origin_name}]'.format(origin_name=rn_obj.component_name.github_repo()),
+            nodes=categories,
+            matches_rn_field='source_repo'
+        ))\
+        .value()
 
-    if release_note_lines:
-        return '\n'.join(release_note_lines)
+    md_lines = nodes_to_markdown_lines(
+        nodes=origin_nodes,
+        level=1,
+        release_note_objs=release_note_objs
+    )
+
+    if md_lines:
+        return '\n'.join(md_lines)
     else: # fallback
         return 'no release notes available'
 
@@ -134,7 +269,8 @@ def calculate_range(
 
     range_end = None
     try:
-        range_end = repo.git.describe(branch_head) # better readable range_end by describing head commit
+        # better readable range_end by describing head commit
+        range_end = repo.git.describe(branch_head)
     except GitError:
         range_end = branch_head.hexsha
 
@@ -155,7 +291,8 @@ def release_tags(
 
     release_tags = helper.release_tags()
     # you can remove the directive to disable the undefined-variable error once pylint is updated
-    # with fix https://github.com/PyCQA/pylint/commit/db01112f7e4beadf7cd99c5f9237d580309f0494 included
+    # with fix https://github.com/PyCQA/pylint/commit/db01112f7e4beadf7cd99c5f9237d580309f0494
+    # included
     # pylint: disable=undefined-variable
     tags = _ \
         .chain(repo.tags) \
@@ -191,7 +328,6 @@ def reachable_release_tags_from_commit(
         )
         if not_visited_parents:
             queue.extend(not_visited_parents)
-            # queue.sort(key=lambda commit: commit.committed_date, reverse=True) #not needed anymore as we sort by semver at the end
             visited |= set(_.map(not_visited_parents, lambda commit: commit.hexsha))
 
     reachable_tags.sort(key=lambda t: parse_version_info(t), reverse=True)
@@ -203,7 +339,10 @@ def reachable_release_tags_from_commit(
         if not root_commit:
             fail('could not determine root commit from rev {rev}'.format(rev=commit.hexsha))
         if next(root_commits, None):
-            fail('cannot determine range for release notes. Repository has multiple root commits. Specify range via commit_range parameter.')
+            fail(
+                'cannot determine range for release notes. Repository has multiple root commits. '
+                'Specify range via commit_range parameter.'
+            )
         reachable_tags.append(root_commit.hexsha)
 
     return reachable_tags
@@ -230,7 +369,8 @@ def fetch_pr_numbers_in_range(
 
 def fetch_release_notes_from_prs(
     helper: GitHubRepositoryHelper,
-    pr_numbers_in_range: set
+    pr_numbers_in_range: set,
+    current_repo:str
 ) -> list:
     # we should consider adding a release-note label to the PRs
     # to reduce the number of search results
@@ -247,7 +387,8 @@ def fetch_release_notes_from_prs(
         release_notes_pr = extract_release_notes(
             pr_number=pr_number,
             text=pr_dict['body'],
-            user_login=_.get(pr_dict, 'user.login')
+            user_login=_.get(pr_dict, 'user.login'),
+            current_repo=current_repo
         )
         if not release_notes_pr:
             continue
@@ -258,30 +399,50 @@ def fetch_release_notes_from_prs(
 def extract_release_notes(
     pr_number: int,
     text: str,
-    user_login: str
+    user_login: str,
+    current_repo: str
 ) -> list:
     release_notes = list()
 
-    code_blocks = re.findall(
-        r"``` *(improvement|noteworthy)( (user|operator)?)?.*?\n(.*?)\n```",
-        text,
+    r = re.compile(
+        r"``` *(?P<category>improvement|noteworthy) (?P<target_group>user|operator)"
+        "( (?P<source_repo>\S+/\S+/\S+)(( (?P<reference_type>#|\$)(?P<reference_id>\S+))?"
+        "( @(?P<user>\S+))?)( .*?)?|( .*?)?)\r?\n(?P<text>.*?)\n```",
         re.MULTILINE | re.DOTALL
     )
-    for code_block in code_blocks:
-        code_block = _.map(code_block, lambda obj: _.trim(obj))
+    for m in r.finditer(text):
+        code_block = m.groupdict()
 
-        text = code_block[3]
+        text = _.trim(code_block['text'])
         if not text or 'none' == text.lower():
             continue
 
-        category = code_block[0]
-        target_group = code_block[2] or 'user'
+        category = code_block['category']
+        target_group = code_block['target_group']
+        source_repo = code_block['source_repo']
+        if source_repo:
+            reference_is_pr = code_block['reference_type'] == '#'
+            reference_id = code_block['reference_id'] or None
+            user_login = code_block['user'] or None
+        else:
+            source_repo = current_repo
+            reference_is_pr = True
+            reference_id = pr_number
 
-        release_notes.append(ReleaseNote(
-            category_id=category,
-            target_group_id=target_group,
-            text=text,
-            pr_number=pr_number,
-            user_login=user_login
-        ))
+        try:
+            release_notes.append(create_release_note_obj(
+                category_id=category,
+                target_group_id=target_group,
+                text=text,
+                reference_is_pr=reference_is_pr,
+                reference_id=reference_id,
+                user_login=user_login,
+                source_repo=source_repo,
+                is_current_repo=current_repo == source_repo
+            ))
+        except ModelValidationError:
+            warning('skipping invalid origin repository: {source_repo}'.format(
+                source_repo=source_repo
+            ))
+            continue
     return release_notes
