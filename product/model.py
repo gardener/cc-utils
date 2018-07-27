@@ -18,7 +18,7 @@ from enum import Enum
 
 from model.base import ModelBase, NamedModelElement, ModelValidationError
 from protecode.model import AnalysisResult
-from util import parse_yaml_file, not_none
+from util import parse_yaml_file, not_none, urljoin
 
 #############################################################################
 ## product descriptor model
@@ -110,6 +110,18 @@ class ComponentName(object):
             raise ModelValidationError('Component name must end with github repository path')
 
         return name
+
+    @staticmethod
+    def from_github_repo_url(repo_url):
+        parsed = urllib.parse.urlparse(repo_url)
+        if parsed.scheme:
+            component_name = repo_url = urljoin(*parsed[1:3])
+        else:
+            component_name = repo_url
+
+        ComponentName.validate_component_name(component_name)
+
+        return ComponentName(name=component_name)
 
     def __init__(self, name: str):
         self._name = ComponentName.validate_component_name(name)

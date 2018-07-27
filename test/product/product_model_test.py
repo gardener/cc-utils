@@ -219,6 +219,16 @@ class ComponentNameModelTest(unittest.TestCase):
         examinee('github.com/example/example')
         examinee('github.com/example/example/')
 
+    def test_from_github_repo_url(self):
+        examinee = product.model.ComponentName.from_github_repo_url
+
+        result1 = examinee('https://github.xxx/foo_org/bar_name')
+        result2 = examinee('github.xxx/foo_org/bar_name')
+
+        for result in (result1, result2):
+            self.assertEqual(result.github_repo(), 'bar_name')
+            self.assertEqual(result.github_organisation(), 'foo_org')
+            self.assertEqual(result.github_host(), 'github.xxx')
 
 
 class DependenciesModelTest(unittest.TestCase, AssertMixin):
