@@ -21,7 +21,7 @@ from semver import parse_version_info
 from github.util import GitHubRepositoryHelper
 
 from util import info, warning, fail, verbose, existing_dir
-from product.model import ComponentReference
+from product.model import ComponentName
 from model.base import ModelValidationError
 
 ReleaseNote = namedtuple('ReleaseNote', [
@@ -33,7 +33,7 @@ ReleaseNote = namedtuple('ReleaseNote', [
     "user_login",
     "origin_repo",
     "is_current_repo",
-    "component_ref"
+    "component_name"
 ])
 
 def create_release_note_obj(
@@ -59,7 +59,7 @@ def create_release_note_obj(
         user_login=user_login,
         origin_repo=origin_repo,
         is_current_repo=is_current_repo,
-        component_ref=ComponentReference.create(name=origin_repo, version=None)
+        component_name=ComponentName(name=origin_repo)
     )
 
 Node = namedtuple("Node", ["identifier", "title", "nodes", "matches_rn_field"])
@@ -98,10 +98,12 @@ def generate_release_notes(
 ):
     repo = git.Repo(existing_dir(repo_dir))
 
+    current_repo_name = ComponentName.from_github_repo_url(helper.repository.html_url).name()
+
     if not commit_range:
         commit_range = calculate_range(repository_branch, repo, helper)
     pr_numbers = fetch_pr_numbers_in_range(repo, commit_range)
-    release_note_objs = fetch_release_notes_from_prs(helper, pr_numbers, helper.unique_repo_name())
+    release_note_objs = fetch_release_notes_from_prs(helper, pr_numbers, current_repo_name)
     release_notes_str = build_markdown(release_note_objs)
 
     info(release_notes_str)
@@ -117,7 +119,7 @@ def build_markdown(
         header_suffix = ''
         if rn_obj.user_login or rn_obj.reference_id:
             header_suffix_list = list()
-            cr = rn_obj.component_ref
+            cn = rn_obj.component_name
             if rn_obj.reference_id:
                 if rn_obj.reference_is_pr:
                     reference_prefix = '#'
@@ -147,8 +149,8 @@ def build_markdown(
                 else:
                     header_suffix_list.append(
                         '[{org}/{repo}{reference}]({ref_link})'.format(
-                            org=cr.github_organisation(),
-                            repo=cr.github_repo(),
+                            org=cn.github_organisation(),
+                            repo=cn.github_repo(),
                             reference=reference,
                             ref_link=reference_link
                         )
@@ -156,7 +158,7 @@ def build_markdown(
             if rn_obj.user_login:
                 header_suffix_list.append('[@{u}](https://{github_host}/{u})'.format(
                     u=rn_obj.user_login,
-                    github_host=cr.github_host()
+                    github_host=cn.github_host()
                 ))
             header_suffix = ' ({s})'.format(
                 s=', '.join(header_suffix_list)
@@ -231,11 +233,11 @@ def build_markdown(
 
     origin_nodes = _\
         .chain(release_note_objs)\
-        .sort_by(lambda rn_obj: rn_obj.component_ref.github_repo())\
+        .sort_by(lambda rn_obj: rn_obj.component_name.github_repo())\
         .uniq_by(lambda rn_obj: rn_obj.origin_repo)\
         .map(lambda rn_obj: Node(
             identifier=rn_obj.origin_repo,
-            title='[{origin_name}]'.format(origin_name=rn_obj.component_ref.github_repo()),
+            title='[{origin_name}]'.format(origin_name=rn_obj.component_name.github_repo()),
             nodes=categories,
             matches_rn_field='origin_repo'
         ))\
@@ -338,7 +340,7 @@ def reachable_release_tags_from_commit(
             fail('could not determine root commit from rev {rev}'.format(rev=commit.hexsha))
         if next(root_commits, None):
             fail(
-                'cannot determine range for release notes. Repository has multiple root commits.'\
+                'cannot determine range for release notes. Repository has multiple root commits. '
                 'Specify range via commit_range parameter.'
             )
         reachable_tags.append(root_commit.hexsha)
@@ -402,28 +404,26 @@ def extract_release_notes(
 ) -> list:
     release_notes = list()
 
-    code_blocks = re.findall(
-        r""\
-            "``` *(improvement|noteworthy) (user|operator)"\
-            "( (\S+/\S+/\S+)(( (#|\$)(\S+))?( @(\S+))?)( .*?)?|( .*?)?)"\
-            "\r?\n(.*?)\n```",
-        text,
+    r = re.compile(
+        r"``` *(?P<category>improvement|noteworthy) (?P<target_group>user|operator)"
+        "( (?P<origin_repo>\S+/\S+/\S+)(( (?P<reference_type>#|\$)(?P<reference_id>\S+))?"
+        "( @(?P<user>\S+))?)( .*?)?|( .*?)?)\r?\n(?P<text>.*?)\n```",
         re.MULTILINE | re.DOTALL
     )
-    for code_block in code_blocks:
-        code_block = _.map(code_block, lambda obj: _.trim(obj))
+    for m in r.finditer(text):
+        code_block = m.groupdict()
 
-        text = code_block[12]
+        text = _.trim(code_block['text'])
         if not text or 'none' == text.lower():
             continue
 
-        category = code_block[0]
-        target_group = code_block[1]
-        origin_repo = code_block[3]
+        category = code_block['category']
+        target_group = code_block['target_group']
+        origin_repo = code_block['origin_repo']
         if origin_repo:
-            reference_is_pr = code_block[6] == '#'
-            reference_id = code_block[7] or None
-            user_login = code_block[9] or None
+            reference_is_pr = code_block['reference_type'] == '#'
+            reference_id = code_block['reference_id'] or None
+            user_login = code_block['user'] or None
         else:
             origin_repo = current_repo
             reference_is_pr = True
