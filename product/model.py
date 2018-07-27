@@ -86,7 +86,7 @@ class Product(ProductModelBase):
         self.raw['components'].append(component.raw)
 
 
-class ComponentReference(DependencyBase):
+class ComponentName(object):
     @staticmethod
     def validate_component_name(name: str):
         not_none(name)
@@ -109,9 +109,13 @@ class ComponentReference(DependencyBase):
         if not len(path_parts) == 2:
             raise ModelValidationError('Component name must end with github repository path')
 
-    @staticmethod
-    def create(name, version):
-        return ComponentReference(raw_dict={'name':name, 'version':version})
+        return name
+
+    def __init__(self, name: str):
+        self._name = ComponentName.validate_component_name(name)
+
+    def name(self):
+        return self._name
 
     def github_host(self):
         return self.name().split('/')[0]
@@ -122,8 +126,29 @@ class ComponentReference(DependencyBase):
     def github_repo(self):
         return self.name().split('/')[2]
 
+
+class ComponentReference(DependencyBase):
+    @staticmethod
+    def create(name, version):
+        return ComponentReference(
+            raw_dict={'name': name, 'version':version},
+        )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._componentName = ComponentName(kwargs['raw_dict']['name'])
+
+    def github_host(self):
+        return self._componentName.github_host()
+
+    def github_organisation(self):
+        return self._componentName.github_organisation()
+
+    def github_repo(self):
+        return self._componentName.github_repo()
+
     def _validate_dict(self):
-        ComponentReference.validate_component_name(self.raw.get('name'))
+        ComponentName.validate_component_name(self.raw.get('name'))
 
     def __eq__(self, other):
         if not isinstance(other, ComponentReference):

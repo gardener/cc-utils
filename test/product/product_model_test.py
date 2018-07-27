@@ -189,8 +189,17 @@ class ComponentModelTest(unittest.TestCase, AssertMixin):
 
 
 class ComponentReferenceModelTest(unittest.TestCase):
+    def test_component_name_parsing(self):
+        examinee = product.model.ComponentReference.create(name='github.com/org/rname', version='1')
+
+        self.assertEqual(examinee.github_host(), 'github.com')
+        self.assertEqual(examinee.github_organisation(), 'org')
+        self.assertEqual(examinee.github_repo(), 'rname')
+
+
+class ComponentNameModelTest(unittest.TestCase):
     def test_validate_component_name(self):
-        examinee = product.model.ComponentReference.validate_component_name
+        examinee = product.model.ComponentName.validate_component_name
 
         invalid_component_names = (
             '',
@@ -209,6 +218,7 @@ class ComponentReferenceModelTest(unittest.TestCase):
         # test valid names
         examinee('github.com/example/example')
         examinee('github.com/example/example/')
+
 
 
 class DependenciesModelTest(unittest.TestCase, AssertMixin):
