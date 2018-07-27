@@ -33,6 +33,10 @@ class CronTrait(Trait):
 
 class CronTraitTransformer(TraitTransformer):
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):
-        # todo: inject cron-resource - until then, this is a noop
-        pass
+        main_repo = pipeline_args.main_repository()
+        if main_repo:
+            if not 'trigger' in pipeline_args.raw['repo']:
+                main_repo._trigger = False
+        # todo: inject cron-resource
+
 
