@@ -63,7 +63,7 @@ class GitHelper(object):
         if not parent_commits:
             parent_commits = [self.repo.head.commit]
         # add all changes
-        self.repo.index.add(self._changed_file_paths())
+        git.cmd.Git(self.repo.working_tree_dir).add('.')
         tree = self.repo.index.write_tree()
         commit = git.Commit.create_from_tree(
             repo=self.repo,
