@@ -18,7 +18,7 @@ from pydash import _
 from github.release_notes import (
     extract_release_notes,
     create_release_note_obj,
-    build_markdown
+    MarkdownRenderer
 )
 
 class ReleaseNotesTest(unittest.TestCase):
@@ -368,7 +368,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 is_current_repo=True
             )
         ]
-        actual_str = build_markdown(release_note_objs=release_note_objs)
+        actual_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
 
         expected_str = \
             '# [current-repo]\n'\
@@ -401,7 +401,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 is_current_repo=False
             )
         ]
-        actual_str = build_markdown(release_note_objs=release_note_objs)
+        actual_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
 
         expected_str = \
             '# [a-foo-bar]\n'\
@@ -435,7 +435,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 is_current_repo=False
             )
         ]
-        actual_str = build_markdown(release_note_objs=release_note_objs)
+        actual_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
 
         expected_str = \
             '# [a-foo-bar]\n'\
@@ -469,7 +469,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 is_current_repo=True
             )
         ]
-        actual_str = build_markdown(release_note_objs=release_note_objs)
+        actual_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_str = \
             '# [current-repo]\n'\
             '## Improvements\n'\
@@ -502,7 +502,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 is_current_repo=True
             )
         ]
-        actual_str = build_markdown(release_note_objs=release_note_objs)
+        actual_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
 
         expected_str = \
             '# [a-foo-bar]\n'\
@@ -536,7 +536,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 is_current_repo=True
             )
         ]
-        actual_str = build_markdown(release_note_objs=release_note_objs)
+        actual_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
 
         expected_str = \
             '# [a-foo-bar]\n'\
@@ -551,6 +551,4 @@ class ReleaseNotesTest(unittest.TestCase):
         release_note_objs = []
 
         expected_str = 'no release notes available'
-        self.assertEqual(expected_str, build_markdown(
-            release_note_objs=release_note_objs
-        ))
+        self.assertEqual(expected_str, MarkdownRenderer(release_note_objs=release_note_objs).render())
