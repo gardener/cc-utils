@@ -122,7 +122,11 @@ def release_and_prepare_next_dev_cycle(
         )
 
     if should_generate_release_notes:
-        release_notes = generate_release_notes(repo_dir=repo_dir, helper=helper, repository_branch=repository_branch)
+        release_notes = generate_release_notes(
+            repo_dir=repo_dir,
+            helper=helper,
+            repository_branch=repository_branch
+        )
     else:
         release_notes = 'release notes'
 
@@ -138,6 +142,12 @@ def release_and_prepare_next_dev_cycle(
         prerelease=prerelease_suffix
     )
 
+    draft_name = draft_release_name_for_version(release_version)
+    draft_release = helper.draft_release_with_name(draft_name)
+    if draft_release:
+        verbose('cleaning up draft release {name}'.format(name=draft_release.name))
+        draft_release.delete()
+
     # Persist version change, create release commit
     release_commit_sha = helper.create_or_update_file(
         file_path=repository_version_file_path,
@@ -152,10 +162,10 @@ def release_and_prepare_next_dev_cycle(
         author_email=author_email
     )
     release = helper.create_release(
-      tag_name=release_version,
-      body=release_notes,
-      draft=False,
-      prerelease=False
+        tag_name=release_version,
+        body=release_notes,
+        draft=False,
+        prerelease=False
     )
 
     if component_descriptor_file_path:
@@ -175,6 +185,48 @@ def release_and_prepare_next_dev_cycle(
         file_contents=next_version_dev,
         commit_message="Prepare next dev cycle " + next_version_dev
     )
+
+def draft_release_name_for_version(release_version: str):
+    return "{v}-draft".format(v=release_version)
+
+def create_or_update_draft_release(
+    github_cfg_name: str,
+    github_repository_owner: str,
+    github_repository_name: str,
+    repository_branch: str,
+    release_version: str,
+    repo_dir: str=None
+):
+    github_cfg = ctx().cfg_factory().github(github_cfg_name)
+
+    helper = GitHubRepositoryHelper(
+        github_cfg=github_cfg,
+        owner=github_repository_owner,
+        name=github_repository_name,
+        default_branch=repository_branch,
+    )
+
+    release_notes = generate_release_notes(
+        repo_dir=repo_dir,
+        helper=helper,
+        repository_branch=repository_branch
+    )
+
+    draft_name = draft_release_name_for_version(release_version)
+    draft_release = helper.draft_release_with_name(draft_name)
+    if not draft_release:
+        release = helper.create_release(
+            tag_name='',
+            name=draft_name,
+            body=release_notes,
+            draft=True,
+            prerelease=False
+        )
+    else:
+        if not draft_release.body == release_notes:
+            draft_release.edit(body=release_notes)
+        else:
+            info('draft release notes are already up to date')
 
 def remove_webhooks(
     github_org_name: CliHints.non_empty_string(

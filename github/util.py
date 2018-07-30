@@ -27,6 +27,7 @@ import requests
 
 from github3.github import GitHub, GitHubEnterprise
 from github3.repos.repo import Repository
+from github3.repos.release import Release
 from github3.exceptions import NotFoundError, ForbiddenError
 from github3.orgs import Team
 
@@ -268,13 +269,23 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         body: str,
         draft: bool=False,
         prerelease: bool=False,
+        name: str=None
     ):
         release = self.repository.create_release(
             tag_name=tag_name,
             body=body,
             draft=draft,
             prerelease=prerelease,
+            name=name
         )
+        return release
+
+    def draft_release_with_name(
+        self,
+        name: str
+    )->Release:
+        releases = list(self.repository.releases())
+        release = _.find(releases, lambda rls: rls.draft == True and rls.name == name)
         return release
 
     def tag_exists(
