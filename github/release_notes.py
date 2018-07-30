@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
+from abc import abstractmethod
 from collections import namedtuple
 import git
 from git.exc import GitError
-from pydash import _
-from semver import parse_version_info
 from github.util import GitHubRepositoryHelper
+from pydash import _
+import re
+from semver import parse_version_info
 
 from util import info, warning, fail, verbose, existing_dir
 from product.model import ComponentName
@@ -62,34 +63,6 @@ def create_release_note_obj(
         component_name=ComponentName(name=source_repo)
     )
 
-Node = namedtuple("Node", ["identifier", "title", "nodes", "matches_rn_field"])
-target_groups = \
-    Node(
-        identifier='user',
-        title='USER',
-        nodes=None,
-        matches_rn_field='target_group_id'
-    ), \
-    Node(
-        identifier='operator',
-        title='OPERATOR',
-        nodes=None,
-        matches_rn_field='target_group_id'
-    )
-categories = \
-    Node(
-        identifier='noteworthy',
-        title='Most notable changes',
-        nodes=target_groups,
-        matches_rn_field='category_id'
-    ), \
-    Node(
-        identifier='improvement',
-        title='Improvements',
-        nodes=target_groups,
-        matches_rn_field='category_id'
-    )
-
 def generate_release_notes(
     repo_dir: str,
     helper: GitHubRepositoryHelper,
@@ -104,16 +77,94 @@ def generate_release_notes(
         commit_range = calculate_range(repository_branch, repo, helper)
     pr_numbers = fetch_pr_numbers_in_range(repo, commit_range)
     release_note_objs = fetch_release_notes_from_prs(helper, pr_numbers, current_repo_name)
-    release_notes_str = build_markdown(release_note_objs)
+    release_notes_str = MarkdownRenderer(release_note_objs).render()
 
     info(release_notes_str)
     return release_notes_str
 
-def build_markdown(
-    release_note_objs: list
-) -> str:
+class Renderer(object):
+    Node = namedtuple("Node", ["identifier", "title", "nodes", "matches_rn_field"])
 
-    def get_header_suffix(
+    target_groups = \
+        Node(
+            identifier='user',
+            title='USER',
+            nodes=None,
+            matches_rn_field='target_group_id'
+        ), \
+        Node(
+            identifier='operator',
+            title='OPERATOR',
+            nodes=None,
+            matches_rn_field='target_group_id'
+        )
+    categories = \
+        Node(
+            identifier='noteworthy',
+            title='Most notable changes',
+            nodes=target_groups,
+            matches_rn_field='category_id'
+        ), \
+        Node(
+            identifier='improvement',
+            title='Improvements',
+            nodes=target_groups,
+            matches_rn_field='category_id'
+        )
+
+    def __init__(self, release_note_objs: list):
+        self.release_note_objs = release_note_objs
+
+    def render(self)->str:
+        origin_nodes = _\
+            .chain(self.release_note_objs)\
+            .sort_by(lambda rn_obj: rn_obj.component_name.github_repo())\
+            .uniq_by(lambda rn_obj: rn_obj.source_repo)\
+            .map(lambda rn_obj: Renderer.Node(
+                identifier=rn_obj.source_repo,
+                title='[{origin_name}]'.format(origin_name=rn_obj.component_name.github_repo()),
+                nodes=Renderer.categories,
+                matches_rn_field='source_repo'
+            ))\
+            .value()
+
+        md_lines = self._nodes_to_lines(
+            nodes=origin_nodes,
+            level=1,
+            release_note_objs=self.release_note_objs
+        )
+
+        if md_lines:
+            return '\n'.join(md_lines)
+        else: # fallback
+            return 'no release notes available'
+
+    @abstractmethod
+    def _nodes_to_lines(
+        self,
+        nodes: list,
+        level: int,
+        release_note_objs: list
+    )->list:
+        pass
+
+class MarkdownRenderer(Renderer):
+
+    def _nodes_to_lines(
+        self,
+        nodes: list,
+        level: int,
+        release_note_objs: list
+    )->list:
+        lines = MarkdownRenderer._nodes_to_markdown_lines(
+            nodes=nodes,
+            level=level,
+            release_note_objs=release_note_objs
+        )
+        return lines
+
+    @staticmethod
+    def _get_header_suffix(
         rn_obj: ReleaseNote
     )->str:
         header_suffix = ''
@@ -165,19 +216,21 @@ def build_markdown(
             )
         return header_suffix
 
-    def build_bullet_point_head(
+    @staticmethod
+    def _build_bullet_point_head(
         line: str,
         tag: str,
         rn_obj: ReleaseNote
     )->str:
-        header_suffix = get_header_suffix(rn_obj)
+        header_suffix = MarkdownRenderer._get_header_suffix(rn_obj)
 
         return '* *[{tag}]* {rls_note_line}{header_suffix}'.format(
                     tag=tag,
                     rls_note_line=line,
                     header_suffix=header_suffix
                 )
-    def to_md_bullet_points(
+    @staticmethod
+    def _to_md_bullet_points(
         tag: str,
         rn_objs: list,
     ):
@@ -186,14 +239,20 @@ def build_markdown(
             for i, rls_note_line in enumerate(rn_obj.text.splitlines()):
                 if i == 0:
                     bullet_points.append(
-                        build_bullet_point_head(line=rls_note_line, tag=tag, rn_obj=rn_obj)
+                        MarkdownRenderer._build_bullet_point_head(
+                            line=rls_note_line,
+                            tag=tag,
+                            rn_obj=rn_obj
+                        )
                     )
                 else:
                     bullet_points.append('  * {rls_note_line}'.format(
                         rls_note_line=rls_note_line
                     ))
         return bullet_points
-    def nodes_to_markdown_lines(
+
+    @staticmethod
+    def _nodes_to_markdown_lines(
         nodes: list,
         level: int,
         release_note_objs: list
@@ -207,14 +266,14 @@ def build_markdown(
             if not filtered_rn_objects:
                 continue
             if node.nodes:
-                tmp_md_lines = nodes_to_markdown_lines(
+                tmp_md_lines = MarkdownRenderer._nodes_to_markdown_lines(
                     nodes=node.nodes,
                     level=level + 1,
                     release_note_objs=filtered_rn_objects
                 )
                 skip_title = False
             else:
-                tmp_md_lines = to_md_bullet_points(
+                tmp_md_lines = MarkdownRenderer._to_md_bullet_points(
                     tag=node.title,
                     rn_objs=filtered_rn_objects
                 )
@@ -230,29 +289,6 @@ def build_markdown(
                     ))
                 md_lines.extend(tmp_md_lines)
         return md_lines
-
-    origin_nodes = _\
-        .chain(release_note_objs)\
-        .sort_by(lambda rn_obj: rn_obj.component_name.github_repo())\
-        .uniq_by(lambda rn_obj: rn_obj.source_repo)\
-        .map(lambda rn_obj: Node(
-            identifier=rn_obj.source_repo,
-            title='[{origin_name}]'.format(origin_name=rn_obj.component_name.github_repo()),
-            nodes=categories,
-            matches_rn_field='source_repo'
-        ))\
-        .value()
-
-    md_lines = nodes_to_markdown_lines(
-        nodes=origin_nodes,
-        level=1,
-        release_note_objs=release_note_objs
-    )
-
-    if md_lines:
-        return '\n'.join(md_lines)
-    else: # fallback
-        return 'no release notes available'
 
 def calculate_range(
     repository_branch: str,
