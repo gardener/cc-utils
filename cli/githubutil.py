@@ -25,8 +25,8 @@ from github.util import (
     _add_user_to_team,
     _add_all_repos_to_team
 )
-from github.release_notes import generate_release_notes
 import product.model
+from github.release_notes import generate_release_notes, get_release_note_blocks
 
 
 
@@ -227,6 +227,30 @@ def create_or_update_draft_release(
             draft_release.edit(body=release_notes)
         else:
             info('draft release notes are already up to date')
+
+def get_release_note_blocks_cli(
+    repo_dir: str,
+    github_cfg_name: str,
+    github_repository_owner: str,
+    github_repository_name: str,
+    repository_branch: str,
+    commit_range: str=None
+):
+    github_cfg = ctx().cfg_factory().github(github_cfg_name)
+
+    helper = GitHubRepositoryHelper(
+        github_cfg=github_cfg,
+        owner=github_repository_owner,
+        name=github_repository_name,
+        default_branch=repository_branch,
+    )
+
+    get_release_note_blocks(
+        repo_dir=repo_dir,
+        helper=helper,
+        repository_branch=repository_branch,
+        commit_range=commit_range
+    )
 
 def remove_webhooks(
     github_org_name: CliHints.non_empty_string(
