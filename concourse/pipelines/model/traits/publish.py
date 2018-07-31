@@ -45,6 +45,9 @@ class PublishDockerImageDescriptor(NamedModelElement):
     def tag_as_latest(self):
         return self.raw.get('tag_as_latest', False)
 
+    def target_name(self):
+        return self.raw.get('target_name')
+
     def dockerfile_relpath(self):
         return self.raw.get('dockerfile', 'Dockerfile')
 
