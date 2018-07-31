@@ -319,12 +319,18 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
 
     def release_versions(self):
         for release in self.repository.releases():
+            if release.draft:
+                continue
             try:
                 yield semver.parse_version_info(release.tag_name)
             except ValueError: pass # ignore
 
     def release_tags(self):
-        return _.map(self.repository.releases(), 'tag_name')
+        return _ \
+            .chain(self.repository.releases()) \
+            .filter(lambda rls: rls.draft == False) \
+            .map('tag_name') \
+            .value()
 
     def search_issues_in_repo(self, query: str):
         query = "repo:{org}/{repo} {query}".format(org=self.owner, repo=self.repository_name, query=query)
