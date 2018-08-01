@@ -36,21 +36,11 @@ class GitHelper(object):
         return [line[3:] for line in lines if line]
 
     def _authenticated_remote(self):
-        base_url = urllib.parse.urlparse(self.github_cfg.http_url())
-        credentials = self.github_cfg.credentials()
-        credentials_str = ':'.join((credentials.username(), credentials.passwd()))
-        push_url = urllib.parse.urlunparse((
-            base_url.scheme,
-            '@'.join((credentials_str, base_url.hostname)),
-            self.github_repo_path,
-            '',
-            '',
-            ''
-        ))
+        url = url_with_credentials(self.github_cfg, self.github_repo_path)
         remote = git.remote.Remote.add(
             repo=self.repo,
             name=random_str(),
-            url=push_url,
+            url=url,
         )
         return remote
 
@@ -82,6 +72,20 @@ class GitHelper(object):
             ))
         )
         self.repo.delete_remote(remote)
+
+def url_with_credentials(github_cfg, github_repo_path):
+    base_url = urllib.parse.urlparse(github_cfg.http_url())
+    credentials = github_cfg.credentials()
+    credentials_str = ':'.join((credentials.username(), credentials.passwd()))
+    url = urllib.parse.urlunparse((
+        base_url.scheme,
+        '@'.join((credentials_str, base_url.hostname)),
+        github_repo_path,
+        '',
+        '',
+        ''
+    ))
+    return url
 
 def update_submodule(
     repo_path: str,
