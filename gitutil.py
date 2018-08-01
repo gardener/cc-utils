@@ -73,6 +73,14 @@ class GitHelper(object):
         )
         self.repo.delete_remote(remote)
 
+def clone_repository(
+        to_path: str,
+        github_cfg,
+        github_repo_path: str
+    ):
+        url = url_with_credentials(github_cfg, github_repo_path)
+        git.Git(to_path).clone(url)
+
 def url_with_credentials(github_cfg, github_repo_path):
     base_url = urllib.parse.urlparse(github_cfg.http_url())
     credentials = github_cfg.credentials()
