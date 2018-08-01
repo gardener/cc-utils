@@ -229,6 +229,8 @@ class ComponentNameModelTest(unittest.TestCase):
             self.assertEqual(result.github_repo(), 'bar_name')
             self.assertEqual(result.github_organisation(), 'foo_org')
             self.assertEqual(result.github_host(), 'github.xxx')
+            self.assertEqual(result.github_repo_path(), 'foo_org/bar_name')
+            self.assertEqual(result.config_name(), 'github_xxx')
 
 
 class DependenciesModelTest(unittest.TestCase, AssertMixin):

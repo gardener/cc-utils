@@ -138,6 +138,13 @@ class ComponentName(object):
     def github_repo(self):
         return self.name().split('/')[2]
 
+    def github_repo_path(self):
+        return self.github_organisation() + '/' + self.github_repo()
+
+    def config_name(self):
+        return self.github_host().replace('.', '_')
+
+
     def __eq__(self, other):
         if not isinstance(other, ComponentName):
             return False
@@ -165,6 +172,12 @@ class ComponentReference(DependencyBase):
 
     def github_repo(self):
         return self._componentName.github_repo()
+
+    def github_repo_path(self):
+        return self._componentName.github_repo_path()
+
+    def config_name(self):
+        return self._componentName.config_name()
 
     def _validate_dict(self):
         ComponentName.validate_component_name(self.raw.get('name'))
