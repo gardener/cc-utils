@@ -40,7 +40,7 @@ ReleaseNote = namedtuple('ReleaseNote', [
 def generate_release_notes(
     repo_dir: str,
     helper: GitHubRepositoryHelper,
-    repository_branch: str,
+    repository_branch: str=None,
     commit_range: str=None
 ):
     release_note_objs = _get_rls_note_objs(
@@ -57,7 +57,7 @@ def generate_release_notes(
 def get_release_note_blocks(
     repo_dir: str,
     helper: GitHubRepositoryHelper,
-    repository_branch: str,
+    repository_branch: str=None,
     commit_range: str=None
 ):
     release_note_objs = _get_rls_note_objs(
@@ -86,7 +86,7 @@ def release_note_objs_to_block_str(
 def _get_rls_note_objs(
     repo_dir: str,
     helper: GitHubRepositoryHelper,
-    repository_branch: str,
+    repository_branch: str=None,
     commit_range: str=None
 )->list:
     repo = git.Repo(existing_dir(repo_dir))
