@@ -318,11 +318,9 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         return buffer.getvalue().decode()
 
     def release_versions(self):
-        for release in self.repository.releases():
-            if release.draft:
-                continue
+        for tag_name in self.release_tags():
             try:
-                yield semver.parse_version_info(release.tag_name)
+                yield semver.parse_version_info(tag_name)
             except ValueError: pass # ignore
 
     def release_tags(self):
