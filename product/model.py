@@ -119,8 +119,6 @@ class ComponentName(object):
         else:
             component_name = repo_url
 
-        ComponentName.validate_component_name(component_name)
-
         return ComponentName(name=component_name)
 
     def __init__(self, name: str):
