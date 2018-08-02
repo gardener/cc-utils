@@ -32,9 +32,9 @@ ReleaseNote = namedtuple('ReleaseNote', [
     "reference_is_pr",
     "reference_id",
     "user_login",
-    "source_repo",
     "is_current_repo",
-    "component_name"
+    "from_same_github_instance",
+    "cn_source_repo"
 ])
 
 def generate_release_notes(
@@ -51,7 +51,9 @@ def generate_release_notes(
     )
     release_notes_str = MarkdownRenderer(release_note_objs).render()
 
-    info(release_notes_str)
+    info('Release notes:\n{rn}'.format(
+        rn=release_notes_str
+    ))
     return release_notes_str
 
 def get_release_note_blocks(
@@ -95,6 +97,9 @@ def _get_rls_note_objs(
 
     if not commit_range:
         commit_range = calculate_range(repository_branch, repo, helper)
+    info('Fetching release notes from revision range: {range}'.format(
+        range=commit_range
+    ))
     pr_numbers = fetch_pr_numbers_in_range(repo, commit_range)
     release_note_objs = fetch_release_notes_from_prs(helper, pr_numbers, current_repo_name)
     return release_note_objs
@@ -197,7 +202,6 @@ def fetch_pr_numbers_in_range(
     repo: git.Repo,
     commit_range: str
 ) -> set:
-    info('git log {range}'.format(range=commit_range))
     gitLogs = repo.git.log(commit_range, pretty='%s').splitlines()
     pr_numbers = set()
     for commitMessage in gitLogs:
@@ -221,6 +225,7 @@ def fetch_release_notes_from_prs(
     # to reduce the number of search results
     prs_iter = helper.search_issues_in_repo('type:pull is:closed')
 
+    cn_current_repo = ComponentName(current_repo)
     release_notes = list()
     for pr_iter in prs_iter:
         pr_dict = pr_iter.as_dict()
@@ -233,7 +238,7 @@ def fetch_release_notes_from_prs(
             pr_number=pr_number,
             text=pr_dict['body'],
             user_login=_.get(pr_dict, 'user.login'),
-            current_repo=current_repo
+            cn_current_repo=cn_current_repo
         )
         if not release_notes_pr:
             continue
@@ -245,7 +250,7 @@ def extract_release_notes(
     pr_number: int,
     text: str,
     user_login: str,
-    current_repo: str
+    cn_current_repo: ComponentName
 ) -> list:
     release_notes = list()
 
@@ -270,7 +275,7 @@ def extract_release_notes(
             reference_id = code_block['reference_id'] or None
             user_login = code_block['user'] or None
         else:
-            source_repo = current_repo
+            source_repo = cn_current_repo.name()
             reference_is_pr = True
             reference_id = pr_number
 
@@ -283,7 +288,7 @@ def extract_release_notes(
                 reference_id=reference_id,
                 user_login=user_login,
                 source_repo=source_repo,
-                is_current_repo=current_repo == source_repo
+                cn_current_repo=cn_current_repo
             ))
         except ModelValidationError:
             warning('skipping invalid origin repository: {source_repo}'.format(
@@ -292,34 +297,41 @@ def extract_release_notes(
             continue
     return release_notes
 
+def get_or_call(obj, path):
+    value = _.get(obj, path)
+    if callable(value):
+        return value()
+    else:
+        return value
+
 class Renderer(object):
-    Node = namedtuple("Node", ["identifier", "title", "nodes", "matches_rn_field"])
+    Node = namedtuple("Node", ["identifier", "title", "nodes", "matches_rn_field_path"])
 
     target_groups = \
         Node(
             identifier='user',
             title='USER',
             nodes=None,
-            matches_rn_field='target_group_id'
+            matches_rn_field_path='target_group_id'
         ), \
         Node(
             identifier='operator',
             title='OPERATOR',
             nodes=None,
-            matches_rn_field='target_group_id'
+            matches_rn_field_path='target_group_id'
         )
     categories = \
         Node(
             identifier='noteworthy',
             title='Most notable changes',
             nodes=target_groups,
-            matches_rn_field='category_id'
+            matches_rn_field_path='category_id'
         ), \
         Node(
             identifier='improvement',
             title='Improvements',
             nodes=target_groups,
-            matches_rn_field='category_id'
+            matches_rn_field_path='category_id'
         )
 
     def __init__(self, release_note_objs: list):
@@ -328,13 +340,13 @@ class Renderer(object):
     def render(self)->str:
         origin_nodes = _\
             .chain(self.release_note_objs)\
-            .sort_by(lambda rn_obj: rn_obj.component_name.github_repo())\
-            .uniq_by(lambda rn_obj: rn_obj.source_repo)\
+            .sort_by(lambda rn_obj: rn_obj.cn_source_repo.github_repo())\
+            .uniq_by(lambda rn_obj: rn_obj.cn_source_repo.name())\
             .map(lambda rn_obj: Renderer.Node(
-                identifier=rn_obj.source_repo,
-                title='[{origin_name}]'.format(origin_name=rn_obj.component_name.github_repo()),
+                identifier=rn_obj.cn_source_repo.name(),
+                title='[{origin_name}]'.format(origin_name=rn_obj.cn_source_repo.github_repo()),
                 nodes=Renderer.categories,
-                matches_rn_field='source_repo'
+                matches_rn_field_path='cn_source_repo.name' # path points to a function
             ))\
             .value()
 
@@ -380,12 +392,12 @@ class MarkdownRenderer(Renderer):
         header_suffix = ''
         if rn_obj.user_login or rn_obj.reference_id:
             header_suffix_list = list()
-            cn = rn_obj.component_name
+            cn = rn_obj.cn_source_repo
             if rn_obj.reference_id:
                 if rn_obj.reference_is_pr:
                     reference_prefix = '#'
                     reference_link = 'https://{source_repo}/pull/{ref_id}'.format(
-                        source_repo=rn_obj.source_repo,
+                        source_repo=rn_obj.cn_source_repo.name(),
                         ref_id=rn_obj.reference_id
                     )
                 else: # commit
@@ -396,7 +408,7 @@ class MarkdownRenderer(Renderer):
                         # hence in case of commits we don't need a prefix
                         reference_prefix = ''
                     reference_link = 'https://{source_repo}/commit/{ref_id}'.format(
-                        source_repo=rn_obj.source_repo,
+                        source_repo=rn_obj.cn_source_repo.name(),
                         ref_id=rn_obj.reference_id
                 )
 
@@ -408,19 +420,31 @@ class MarkdownRenderer(Renderer):
                 if rn_obj.is_current_repo:
                     header_suffix_list.append(reference)
                 else:
-                    header_suffix_list.append(
-                        '[{org}/{repo}{reference}]({ref_link})'.format(
-                            org=cn.github_organisation(),
-                            repo=cn.github_repo(),
-                            reference=reference,
-                            ref_link=reference_link
+                    if rn_obj.from_same_github_instance:
+                        header_suffix_list.append(
+                            '{repo_path}{reference}'.format(
+                                repo_path=cn.github_repo_path(),
+                                reference=reference
+                            )
                         )
-                    )
+                    else:
+                        header_suffix_list.append(
+                            '[{repo_path}{reference}]({ref_link})'.format(
+                                repo_path=cn.github_repo_path(),
+                                reference=reference,
+                                ref_link=reference_link
+                            )
+                        )
             if rn_obj.user_login:
-                header_suffix_list.append('[@{u}](https://{github_host}/{u})'.format(
-                    u=rn_obj.user_login,
-                    github_host=cn.github_host()
-                ))
+                if rn_obj.from_same_github_instance:
+                    header_suffix_list.append('@{u}'.format(
+                        u=rn_obj.user_login
+                    ))
+                else:
+                    header_suffix_list.append('[@{u}](https://{github_host}/{u})'.format(
+                        u=rn_obj.user_login,
+                        github_host=cn.github_host()
+                    ))
             header_suffix = ' ({s})'.format(
                 s=', '.join(header_suffix_list)
             )
@@ -471,7 +495,7 @@ class MarkdownRenderer(Renderer):
         for node in nodes:
             filtered_rn_objects = _.filter(
                 release_note_objs,
-                lambda rn: node.identifier == _.get(rn, node.matches_rn_field)
+                lambda rn: node.identifier == get_or_call(rn, node.matches_rn_field_path)
             )
             if not filtered_rn_objects:
                 continue
@@ -511,11 +535,14 @@ class ReleaseNoteBlock(ReleaseNote):
         reference_id: str,
         user_login: str,
         source_repo: str,
-        is_current_repo: bool
+        cn_current_repo: ComponentName,
     ):
         if reference_id:
             reference_id=str(reference_id)
 
+        cn_source_repo = ComponentName(name=source_repo)
+        is_current_repo = cn_current_repo == cn_source_repo
+        from_same_github_instance = cn_current_repo.github_host() == cn_source_repo.github_host()
         self = super().__new__(
             cls,
             category_id,
@@ -524,9 +551,9 @@ class ReleaseNoteBlock(ReleaseNote):
             reference_is_pr,
             reference_id,
             user_login,
-            source_repo,
             is_current_repo,
-            ComponentName(name=source_repo)
+            from_same_github_instance,
+            cn_source_repo
         )
         return self
 
@@ -559,7 +586,7 @@ class ReleaseNoteBlock(ReleaseNote):
             '```'.format(
                 cat=self.category_id,
                 t_grp=self.target_group_id,
-                src_repo=self.source_repo,
+                src_repo=self.cn_source_repo.name(),
                 ref=self.ref(),
                 user=self.user(),
                 text=self.text
