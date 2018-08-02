@@ -21,13 +21,20 @@ class PullRequestPolicies(ModelBase):
     def require_label(self):
         return self.raw.get('require-label')
 
+    def replacement_labels(self):
+        return self.raw.get('replacement-labels')
+
 
 class PullRequestTrait(Trait):
 
     def policies(self):
         policies_dict = self.raw.get('policies')
         if not policies_dict:
-            policies_dict = {'require-label': 'reviewed/ok-to-test'}
+            policies_dict = {
+                'require-label': 'reviewed/ok-to-test',
+                'replacement-labels': ['needs/ok-to-test'],
+            }
+
 
         return PullRequestPolicies(raw_dict=policies_dict)
 
