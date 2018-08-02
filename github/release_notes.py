@@ -204,17 +204,23 @@ def fetch_pr_numbers_in_range(
 ) -> set:
     gitLogs = repo.git.log(commit_range, pretty='%s').splitlines()
     pr_numbers = set()
-    for commitMessage in gitLogs:
-        if commitMessage.startswith('Merge pull'):
-            pr_number = _.head(re.findall(r"#(\d+|$)", commitMessage))
-            if pr_number:
-                pr_numbers.add(pr_number)
+    for commit_message in gitLogs:
+        pr_number = pr_number_from_message(commit_message)
+
+        if pr_number:
+            pr_numbers.add(pr_number)
 
     verbose('Merged pull request numbers in range {range}: {pr_numbers}'.format(
         range=commit_range,
         pr_numbers=pr_numbers
     ))
     return pr_numbers
+
+def pr_number_from_message(commit_message: str):
+    pr_number = _.head(re.findall(r"Merge pull request #(\d+|$)", commit_message))
+    if not pr_number: # Squash commit
+        pr_number = _.head(re.findall(r" \(#(\d+)\)", commit_message))
+    return pr_number
 
 def fetch_release_notes_from_prs(
     helper: GitHubRepositoryHelper,
