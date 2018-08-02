@@ -326,7 +326,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
     def release_tags(self):
         return _ \
             .chain(self.repository.releases()) \
-            .filter(lambda rls: rls.draft == False) \
+            .filter(lambda rls: rls.draft == False or rls.prerelease == False) \
             .map('tag_name') \
             .value()
 
