@@ -17,6 +17,7 @@ from pydash import _
 
 from github.release_notes import (
     extract_release_notes,
+    pr_number_from_message,
     ReleaseNoteBlock,
     MarkdownRenderer,
     release_note_objs_to_block_str
@@ -393,7 +394,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_is_pr=True,
                 reference_id='42',
                 user_login='foo',
-                source_repo='enterprise.github.corp/o/s',
+                source_repo='madeup.enterprise.github.corp/o/s',
                 cn_current_repo=self.cn_current_repo
             )
         ]
@@ -402,7 +403,7 @@ class ReleaseNotesTest(unittest.TestCase):
         expected_str = \
             '# [s]\n'\
             '## Improvements\n'\
-            '* *[USER]* from other github instance ([o/s#42](https://enterprise.github.corp/o/s/pull/42), [@foo](https://enterprise.github.corp/foo))'
+            '* *[USER]* from other github instance ([o/s#42](https://madeup.enterprise.github.corp/o/s/pull/42), [@foo](https://madeup.enterprise.github.corp/foo))'
         self.assertEqual(expected_str, actual_str)
 
     def test_markdown_reference_pr(self):
@@ -687,4 +688,14 @@ class ReleaseNotesTest(unittest.TestCase):
         'another one'\
         '\n```'
         self.assertEqual(expected, release_note_objs_to_block_str(rn_objs))
+
+    def test_pr_number_from_message(self):
+        self.assertEqual('42', pr_number_from_message('Merge pull request #42'))
+        self.assertEqual('42', pr_number_from_message('Merge pull request #42 Merge pull request #79'))
+        self.assertEqual('42', pr_number_from_message('Merge pull request #42 some text'))
+        self.assertEqual('42', pr_number_from_message('Merge pull request #42\nsome text'))
+        self.assertEqual('1', pr_number_from_message('Squash commit (#1)'))
+
+        self.assertIsNone(pr_number_from_message('not supported format #42'))
+        self.assertIsNone(pr_number_from_message('some commit'))
 
