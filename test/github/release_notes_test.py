@@ -22,8 +22,12 @@ from github.release_notes import (
     release_note_objs_to_block_str
 )
 from model.base import ModelValidationError
+from product.model import ComponentName
 
 class ReleaseNotesTest(unittest.TestCase):
+    def setUp(self):
+        self.cn_current_repo = ComponentName('github.com/gardener/current-repo')
+
     def test_rls_note_extraction_improvement(self):
         text = \
             '``` improvement user\n'\
@@ -33,7 +37,7 @@ class ReleaseNotesTest(unittest.TestCase):
             pr_number='42',
             text=text,
             user_login='foo',
-            current_repo='github.com/gardener/current-repo'
+            cn_current_repo=self.cn_current_repo
         )
 
         self.assertEqual(1, len(release_notes))
@@ -46,7 +50,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id='42',
                 user_login='foo',
                 source_repo='github.com/gardener/current-repo',
-                is_current_repo=True
+                cn_current_repo=self.cn_current_repo
             ),
             _.nth(release_notes, 0)
         )
@@ -57,7 +61,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 pr_number='42',
                 text=text,
                 user_login='foo',
-                current_repo='github.com/s/repo'
+                cn_current_repo=self.cn_current_repo
             )
 
             self.assertEqual(1, len(release_notes))
@@ -69,8 +73,8 @@ class ReleaseNotesTest(unittest.TestCase):
                     reference_is_pr=True,
                     reference_id='42',
                     user_login='foo',
-                    source_repo='github.com/s/repo',
-                    is_current_repo=True
+                    source_repo='github.com/gardener/current-repo',
+                    cn_current_repo=self.cn_current_repo
                 ),
                 _.nth(release_notes, 0)
             )
@@ -102,7 +106,7 @@ class ReleaseNotesTest(unittest.TestCase):
             pr_number='42',
             text=text,
             user_login='foo',
-            current_repo='github.com/gardener/current-repo'
+            cn_current_repo=self.cn_current_repo
         )
 
         self.assertEqual(1, len(release_notes))
@@ -115,7 +119,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id='42',
                 user_login='foo',
                 source_repo='github.com/gardener/current-repo',
-                is_current_repo=True
+                cn_current_repo=self.cn_current_repo
             ),
             _.nth(release_notes, 0)
         )
@@ -132,7 +136,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 pr_number='42',
                 text=code_block,
                 user_login='pr-transport-user',
-                current_repo='github.com/gardener/current-repo'
+                cn_current_repo=self.cn_current_repo
             )
             self.assertEqual(1, len(release_notes))
             self.assertEqual(
@@ -144,7 +148,7 @@ class ReleaseNotesTest(unittest.TestCase):
                     reference_id=exp_ref_id,
                     user_login=exp_usr,
                     source_repo='github.com/gardener/source-component',
-                    is_current_repo=False
+                    cn_current_repo=self.cn_current_repo
                 ),
                 _.nth(release_notes, 0)
             )
@@ -208,7 +212,7 @@ class ReleaseNotesTest(unittest.TestCase):
             pr_number='42',
             text=text,
             user_login='foo',
-            current_repo='github.com/gardener/current-repo'
+            cn_current_repo=self.cn_current_repo
         )
 
         self.assertEqual(3, len(release_notes))
@@ -221,7 +225,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id='42',
                 user_login='foo',
                 source_repo='github.com/gardener/current-repo',
-                is_current_repo=True
+                cn_current_repo=self.cn_current_repo
             ),
             _.nth(release_notes, 0)
         )
@@ -234,7 +238,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id='42',
                 user_login='foo',
                 source_repo='github.com/gardener/current-repo',
-                is_current_repo=True
+                cn_current_repo=self.cn_current_repo
             ),
             _.nth(release_notes, 1)
         )
@@ -247,7 +251,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id='42',
                 user_login='foo',
                 source_repo='github.com/gardener/current-repo',
-                is_current_repo=True
+                cn_current_repo=self.cn_current_repo
             ),
             _.nth(release_notes, 2)
         )
@@ -263,7 +267,7 @@ class ReleaseNotesTest(unittest.TestCase):
             pr_number='42',
             text=text,
             user_login='foo',
-            current_repo='github.com/gardener/current-repo'
+            cn_current_repo=self.cn_current_repo
         )
 
         self.assertEqual(1, len(release_notes))
@@ -276,7 +280,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id='42',
                 user_login='foo',
                 source_repo='github.com/gardener/current-repo',
-                is_current_repo=True
+                cn_current_repo=self.cn_current_repo
             ),
             _.nth(release_notes, 0)
         )
@@ -293,7 +297,7 @@ class ReleaseNotesTest(unittest.TestCase):
             pr_number='42',
             text=text,
             user_login='foo',
-            current_repo='github.com/gardener/current-repo'
+            cn_current_repo=self.cn_current_repo
         )
 
         self.assertEqual(1, len(release_notes))
@@ -306,7 +310,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id='42',
                 user_login='foo',
                 source_repo='github.com/gardener/current-repo',
-                is_current_repo=True
+                cn_current_repo=self.cn_current_repo
             ),
             _.nth(release_notes, 0)
         )
@@ -317,7 +321,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 pr_number='42',
                 text=text,
                 user_login='foo',
-                current_repo='github.com/gardener/current-repo'
+                cn_current_repo=self.cn_current_repo
             )
             self.assertEqual(0, len(release_notes))
 
@@ -367,7 +371,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id='42',
                 user_login='foo',
                 source_repo='github.com/gardener/current-repo',
-                is_current_repo=True
+                cn_current_repo=self.cn_current_repo
             )
         ]
         actual_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
@@ -375,12 +379,33 @@ class ReleaseNotesTest(unittest.TestCase):
         expected_str = \
             '# [current-repo]\n'\
             '## Improvements\n'\
-            '* *[USER]* first line with header (#42, [@foo](https://github.com/foo))\n'\
+            '* *[USER]* first line with header (#42, @foo)\n'\
             '  * second line\n'\
             '  * third line'
         self.assertEqual(expected_str, actual_str)
 
-    def test_markdown_pr(self):
+    def test_markdown_from_other_github(self):
+        release_note_objs = [
+            ReleaseNoteBlock(
+                category_id='improvement',
+                target_group_id='user',
+                text='from other github instance',
+                reference_is_pr=True,
+                reference_id='42',
+                user_login='foo',
+                source_repo='enterprise.github.corp/o/s',
+                cn_current_repo=self.cn_current_repo
+            )
+        ]
+        actual_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
+
+        expected_str = \
+            '# [s]\n'\
+            '## Improvements\n'\
+            '* *[USER]* from other github instance ([o/s#42](https://enterprise.github.corp/o/s/pull/42), [@foo](https://enterprise.github.corp/foo))'
+        self.assertEqual(expected_str, actual_str)
+
+    def test_markdown_reference_pr(self):
         release_note_objs = [
             ReleaseNoteBlock(
                 category_id='improvement',
@@ -390,7 +415,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id='42',
                 user_login='foo',
                 source_repo='github.com/gardener/current-repo',
-                is_current_repo=True
+                cn_current_repo=self.cn_current_repo
             ),
             ReleaseNoteBlock(
                 category_id='noteworthy',
@@ -400,7 +425,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id=1,
                 user_login='bar',
                 source_repo='github.com/gardener/a-foo-bar',
-                is_current_repo=False
+                cn_current_repo=self.cn_current_repo
             )
         ]
         actual_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
@@ -408,13 +433,13 @@ class ReleaseNotesTest(unittest.TestCase):
         expected_str = \
             '# [a-foo-bar]\n'\
             '## Most notable changes\n'\
-            '* *[OPERATOR]* other component rls note ([gardener/a-foo-bar#1](https://github.com/gardener/a-foo-bar/pull/1), [@bar](https://github.com/bar))\n'\
+            '* *[OPERATOR]* other component rls note (gardener/a-foo-bar#1, @bar)\n'\
             '# [current-repo]\n'\
             '## Improvements\n'\
-            '* *[USER]* rls note 1 (#42, [@foo](https://github.com/foo))'
+            '* *[USER]* rls note 1 (#42, @foo)'
         self.assertEqual(expected_str, actual_str)
 
-    def test_markdown_commit(self):
+    def test_markdown_reference_commit(self):
         release_note_objs = [
             ReleaseNoteBlock(
                 category_id='improvement',
@@ -424,7 +449,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id='commit-id-1',
                 user_login='foo',
                 source_repo='github.com/gardener/current-repo',
-                is_current_repo=True
+                cn_current_repo=self.cn_current_repo
             ),
             ReleaseNoteBlock(
                 category_id='noteworthy',
@@ -434,7 +459,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id='commit-id-2',
                 user_login='bar',
                 source_repo='github.com/gardener/a-foo-bar',
-                is_current_repo=False
+                cn_current_repo=self.cn_current_repo
             )
         ]
         actual_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
@@ -442,46 +467,13 @@ class ReleaseNotesTest(unittest.TestCase):
         expected_str = ''\
             '# [a-foo-bar]\n'\
             '## Most notable changes\n'\
-            '* *[OPERATOR]* other component rls note ([gardener/a-foo-bar@commit-id-2](https://github.com/gardener/a-foo-bar/commit/commit-id-2), [@bar](https://github.com/bar))\n'\
+            '* *[OPERATOR]* other component rls note (gardener/a-foo-bar@commit-id-2, @bar)\n'\
             '# [current-repo]\n'\
             '## Improvements\n'\
-            '* *[USER]* rls note 1 (commit-id-1, [@foo](https://github.com/foo))'
+            '* *[USER]* rls note 1 (commit-id-1, @foo)'
         self.assertEqual(expected_str, actual_str)
 
-    def test_markdown_source_repo_user(self):
-        release_note_objs = [
-            ReleaseNoteBlock(
-                category_id='improvement',
-                target_group_id='operator',
-                text='no source repo user',
-                reference_is_pr=True,
-                reference_id='42',
-                user_login=None,
-                source_repo='github.com/s/repo',
-                is_current_repo=False
-            ),
-            ReleaseNoteBlock(
-                category_id='improvement',
-                target_group_id='operator',
-                text='no user',
-                reference_is_pr=True,
-                reference_id=1,
-                user_login=None,
-                source_repo='github.com/gardener/current-repo',
-                is_current_repo=True
-            )
-        ]
-        actual_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
-        expected_str = \
-            '# [current-repo]\n'\
-            '## Improvements\n'\
-            '* *[OPERATOR]* no user (#1)\n'\
-            '# [repo]\n'\
-            '## Improvements\n'\
-            '* *[OPERATOR]* no source repo user ([s/repo#42](https://github.com/s/repo/pull/42))'
-        self.assertEqual(expected_str, actual_str)
-
-    def test_markdown_no_reference(self):
+    def test_markdown_user(self):
         release_note_objs = [
             ReleaseNoteBlock(
                 category_id='noteworthy',
@@ -491,7 +483,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id=None,
                 user_login='bar',
                 source_repo='github.com/gardener/a-foo-bar',
-                is_current_repo=False
+                cn_current_repo=self.cn_current_repo
             ),
             ReleaseNoteBlock(
                 category_id='improvement',
@@ -501,7 +493,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id=None,
                 user_login='foo',
                 source_repo='github.com/gardener/current-repo',
-                is_current_repo=True
+                cn_current_repo=self.cn_current_repo
             )
         ]
         actual_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
@@ -509,10 +501,10 @@ class ReleaseNotesTest(unittest.TestCase):
         expected_str = \
             '# [a-foo-bar]\n'\
             '## Most notable changes\n'\
-            '* *[OPERATOR]* no source repo reference ([@bar](https://github.com/bar))\n'\
+            '* *[OPERATOR]* no source repo reference (@bar)\n'\
             '# [current-repo]\n'\
             '## Improvements\n'\
-            '* *[USER]* no reference ([@foo](https://github.com/foo))'
+            '* *[USER]* no reference (@foo)'
         self.assertEqual(expected_str, actual_str)
 
     def test_markdown_no_reference_no_user(self):
@@ -525,7 +517,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id=None,
                 user_login=None,
                 source_repo='github.com/gardener/a-foo-bar',
-                is_current_repo=False
+                cn_current_repo=self.cn_current_repo
             ),
             ReleaseNoteBlock(
                 category_id='improvement',
@@ -535,7 +527,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id=None,
                 user_login=None,
                 source_repo='github.com/gardener/current-repo',
-                is_current_repo=True
+                cn_current_repo=self.cn_current_repo
             )
         ]
         actual_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
@@ -565,7 +557,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id='commit-id',
                 user_login='foo',
                 source_repo=None,
-                is_current_repo=False
+                cn_current_repo=self.cn_current_repo
             )
             self.fail('a ReleaseNoteBlock always has a source repository, even if it points to the "current" repository')
         except RuntimeError:
@@ -580,7 +572,7 @@ class ReleaseNotesTest(unittest.TestCase):
             reference_id=None,
             user_login=None,
             source_repo='github.com/gardener/a-foo-bar',
-            is_current_repo=False
+            cn_current_repo=self.cn_current_repo
         )
         expected = \
         '``` noteworthy operator github.com/gardener/a-foo-bar\n'\
@@ -596,7 +588,7 @@ class ReleaseNotesTest(unittest.TestCase):
             reference_id=None,
             user_login='foo',
             source_repo='github.com/gardener/a-foo-bar',
-            is_current_repo=False
+            cn_current_repo=self.cn_current_repo
         )
         expected = \
         '``` noteworthy operator github.com/gardener/a-foo-bar @foo\n'\
@@ -612,7 +604,7 @@ class ReleaseNotesTest(unittest.TestCase):
             reference_id='42',
             user_login=None,
             source_repo='github.com/gardener/a-foo-bar',
-            is_current_repo=False
+            cn_current_repo=self.cn_current_repo
         )
         expected = \
         '``` noteworthy operator github.com/gardener/a-foo-bar #42\n'\
@@ -628,7 +620,7 @@ class ReleaseNotesTest(unittest.TestCase):
             reference_id='commit-id',
             user_login='foo',
             source_repo='github.com/gardener/a-foo-bar',
-            is_current_repo=False
+            cn_current_repo=self.cn_current_repo
         )
         expected = \
         '``` noteworthy operator github.com/gardener/a-foo-bar $commit-id @foo\n'\
@@ -654,7 +646,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id='commit-id',
                 user_login='foo',
                 source_repo='github.com/gardener/a-foo-bar',
-                is_current_repo=False
+                cn_current_repo=self.cn_current_repo
             )
         ]
         expected = \
@@ -672,7 +664,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id='commit-id',
                 user_login='foo',
                 source_repo='github.com/gardener/a-foo-bar',
-                is_current_repo=True
+                cn_current_repo=self.cn_current_repo
             ),
             ReleaseNoteBlock(
                 category_id='noteworthy',
@@ -682,7 +674,7 @@ class ReleaseNotesTest(unittest.TestCase):
                 reference_id='commit-id',
                 user_login='foo',
                 source_repo='github.com/s/repo',
-                is_current_repo=False
+                cn_current_repo=self.cn_current_repo
             ),
         ]
         expected = \
