@@ -1,7 +1,6 @@
 cc-utils:
   template: 'default'
   base_definition:
-    repo: ~
     steps:
       lint: ~
       test: ~
@@ -10,7 +9,8 @@ cc-utils:
       repo:
         trigger: false
       steps:
-        failing: ~
+        failing:
+          publish_to: ['source']
     head_update: ~
     pull_request:
       traits:
