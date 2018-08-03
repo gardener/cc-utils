@@ -160,17 +160,16 @@ class Renderer(object):
             )
 
     def _render(self, definition_descriptor):
-        effective_definition = definition_descriptor.pipeline_definition
 
         # handle inheritance
-        for override in definition_descriptor.override_definitions:
-            effective_definition = merge_dicts(effective_definition, override)
+        effective_descriptor = definition_descriptor.effective_descriptor()
+        effective_definition = effective_descriptor.pipeline_definition
 
-        template_name = definition_descriptor.template_name()
+        template_name = effective_descriptor.template_name()
         template_contents = self.template_retriever.template_contents(template_name)
 
         pipeline_definition = RawPipelineDefinitionDescriptor(
-            name=definition_descriptor.pipeline_name,
+            name=effective_descriptor.pipeline_name,
             base_definition=effective_definition.get('base_definition', {}),
             variants=effective_definition.get('variants', {}),
             template=template_name,
@@ -180,7 +179,7 @@ class Renderer(object):
         pipeline_metadata = dict()
         pipeline_metadata['definition'] = factory.create_pipeline_definition()
         pipeline_metadata['name'] = pipeline_definition.name
-        pipeline_metadata['target_team'] = definition_descriptor.concourse_target_team
+        pipeline_metadata['target_team'] = effective_descriptor.concourse_target_team
         generated_model = pipeline_metadata.get('definition')
 
         # determine pipeline name (if there is main-repo, append the configured branch name)
