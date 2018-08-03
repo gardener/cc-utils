@@ -100,7 +100,7 @@ def _get_rls_note_objs(
     info('Fetching release notes from revision range: {range}'.format(
         range=commit_range
     ))
-    pr_numbers = fetch_pr_numbers_in_range(repo, commit_range)
+    pr_numbers = fetch_pr_numbers_in_range(repo, commit_range, repository_branch)
     release_note_objs = fetch_release_notes_from_prs(helper, pr_numbers, current_repo_name)
     return release_note_objs
 
@@ -200,9 +200,15 @@ def reachable_release_tags_from_commit(
 
 def fetch_pr_numbers_in_range(
     repo: git.Repo,
-    commit_range: str
+    commit_range: str,
+    repository_branch: str=None
 ) -> set:
-    gitLogs = repo.git.log(commit_range, pretty='%s').splitlines()
+    args = [commit_range]
+    if repository_branch:
+        args.append(repository_branch)
+    kwargs = {'pretty': '%s'}
+
+    gitLogs = repo.git.log(*args, **kwargs).splitlines()
     pr_numbers = set()
     for commit_message in gitLogs:
         pr_number = pr_number_from_message(commit_message)
