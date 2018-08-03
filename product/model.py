@@ -142,6 +142,13 @@ class ComponentName(object):
     def config_name(self):
         return self.github_host().replace('.', '_')
 
+    def github_url(self):
+        # hard-code schema to https
+        return 'https://' + self.github_host()
+
+    def github_repo_url(self):
+        # hard-code schema to https
+        return 'https://' + self.name()
 
     def __eq__(self, other):
         if not isinstance(other, ComponentName):

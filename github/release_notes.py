@@ -402,8 +402,8 @@ class MarkdownRenderer(Renderer):
             if rn_obj.reference_id:
                 if rn_obj.reference_is_pr:
                     reference_prefix = '#'
-                    reference_link = 'https://{source_repo}/pull/{ref_id}'.format(
-                        source_repo=rn_obj.cn_source_repo.name(),
+                    reference_link = '{source_repo_url}/pull/{ref_id}'.format(
+                        source_repo_url=rn_obj.cn_source_repo.github_repo_url(),
                         ref_id=rn_obj.reference_id
                     )
                 else: # commit
@@ -413,8 +413,8 @@ class MarkdownRenderer(Renderer):
                         # for the current repo we use gitHub's feature to auto-link to references,
                         # hence in case of commits we don't need a prefix
                         reference_prefix = ''
-                    reference_link = 'https://{source_repo}/commit/{ref_id}'.format(
-                        source_repo=rn_obj.cn_source_repo.name(),
+                    reference_link = '{source_repo_url}/commit/{ref_id}'.format(
+                        source_repo_url=rn_obj.cn_source_repo.github_repo_url(),
                         ref_id=rn_obj.reference_id
                 )
 
@@ -447,9 +447,9 @@ class MarkdownRenderer(Renderer):
                         u=rn_obj.user_login
                     ))
                 else:
-                    header_suffix_list.append('[@{u}](https://{github_host}/{u})'.format(
+                    header_suffix_list.append('[@{u}]({github_url}/{u})'.format(
                         u=rn_obj.user_login,
-                        github_host=cn.github_host()
+                        github_url=cn.github_url()
                     ))
             header_suffix = ' ({s})'.format(
                 s=', '.join(header_suffix_list)
