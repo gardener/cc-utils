@@ -78,7 +78,6 @@ class DefinitionEnumerator(object):
             yield DefinitionDescriptor(
                 pipeline_name=name,
                 pipeline_definition=pipeline_definition,
-                template_name=pipeline_definition['template'],
                 main_repo={'path': repo_path, 'branch': branch, 'hostname': repo_hostname},
                 concourse_target_cfg=self.cfg_set.concourse(),
                 concourse_target_team=self.job_mapping.team_name(),
@@ -273,7 +272,6 @@ class DefinitionDescriptor(object):
         self,
         pipeline_name,
         pipeline_definition,
-        template_name,
         main_repo,
         concourse_target_cfg,
         concourse_target_team,
@@ -281,11 +279,13 @@ class DefinitionDescriptor(object):
     ):
         self.pipeline_name = not_empty(pipeline_name)
         self.pipeline_definition = not_none(pipeline_definition)
-        self.template_name = not_empty(template_name)
         self.main_repo = not_none(main_repo)
         self.concourse_target_cfg = not_none(concourse_target_cfg)
         self.concourse_target_team = not_none(concourse_target_team)
         self.override_definitions = not_none(override_definitions)
+
+    def template_name(self):
+        return self.pipeline_definition.get('template', 'default')
 
     def concourse_target(self):
         return (self.concourse_target_cfg, self.concourse_target_team)

@@ -69,7 +69,6 @@ def deploy_and_run_smoketest_pipeline(
     definition_descriptor = DefinitionDescriptor(
         pipeline_name=pipeline_name,
         pipeline_definition=pipeline_definition[pipeline_name],
-        template_name=pipeline_definition[pipeline_name]['template'],
         main_repo={'path': 'kubernetes/cc-smoketest', 'branch': 'master'},
         concourse_target_cfg=concourse_cfg,
         concourse_target_team=concourse_team_name,
