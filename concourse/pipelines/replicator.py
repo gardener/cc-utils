@@ -166,7 +166,7 @@ class Renderer(object):
         for override in definition_descriptor.override_definitions:
             effective_definition = merge_dicts(effective_definition, override)
 
-        template_name = definition_descriptor.template_name
+        template_name = definition_descriptor.template_name()
         template_contents = self.template_retriever.template_contents(template_name)
 
         pipeline_definition = RawPipelineDefinitionDescriptor(
