@@ -296,6 +296,23 @@ class DefinitionDescriptor(object):
             t=self.concourse_target_team
         )
 
+    def effective_descriptor(self) -> 'DefinitionDescriptor':
+        '''Return the DefinitionDescriptor resulting from the application of all override_definitions
+        '''
+        effective_definition = self.pipeline_definition
+        for override in self.override_definitions:
+            effective_definition = merge_dicts(effective_definition, override)
+
+        # TODO: Currently, the main-repository is passed along. However, the merging of the effective definition might
+        # have actually changed that in various ways.
+        return DefinitionDescriptor(
+                pipeline_name=self.pipeline_name,
+                pipeline_definition=effective_definition,
+                main_repo=self.main_repo,
+                concourse_target_cfg=self.concourse_target_cfg,
+                concourse_target_team=self.concourse_target_team,
+            )
+
 
 class TemplateRetriever(object):
     '''
