@@ -37,6 +37,12 @@ ReleaseNote = namedtuple('ReleaseNote', [
     "cn_source_repo"
 ])
 
+Commit = namedtuple('Commit', [
+    "hash",
+    "subject",
+    "message"
+])
+
 def generate_release_notes(
     repo_dir: str,
     helper: GitHubRepositoryHelper,
@@ -93,15 +99,22 @@ def _get_rls_note_objs(
 )->list:
     repo = git.Repo(existing_dir(repo_dir))
 
-    current_repo_name = ComponentName.from_github_repo_url(helper.repository.html_url).name()
+    cn_current_repo = ComponentName.from_github_repo_url(helper.repository.html_url)
 
     if not commit_range:
         commit_range = calculate_range(repository_branch, repo, helper)
     info('Fetching release notes from revision range: {range}'.format(
         range=commit_range
     ))
-    pr_numbers = fetch_pr_numbers_in_range(repo, commit_range, repository_branch)
-    release_note_objs = fetch_release_notes_from_prs(helper, pr_numbers, current_repo_name)
+    commits = get_commits_in_range(repo, commit_range, repository_branch)
+    pr_numbers = fetch_pr_numbers_from_commits(commits)
+    verbose('Merged pull request numbers in range {range}: {pr_numbers}'.format(
+        range=commit_range,
+        pr_numbers=pr_numbers
+    ))
+    release_note_objs = fetch_release_notes_from_prs(helper, pr_numbers, cn_current_repo)
+    release_note_objs.extend(fetch_release_notes_from_commits(commits, cn_current_repo))
+
     return release_note_objs
 
 def calculate_range(
@@ -197,47 +210,76 @@ def reachable_release_tags_from_commit(
 
     return reachable_tags
 
-
-def fetch_pr_numbers_in_range(
+def get_commits_in_range(
     repo: git.Repo,
     commit_range: str,
     repository_branch: str=None
-) -> set:
+):
     args = [commit_range]
     if repository_branch:
         args.append(repository_branch)
-    kwargs = {'pretty': '%s'}
 
-    gitLogs = repo.git.log(*args, **kwargs).splitlines()
+    GIT_FORMAT_KEYS = [
+        "%H",   # commit hash
+        "%s",   # subject
+        "%B"    # raw body
+    ]
+    pretty_format = '%x00'.join(GIT_FORMAT_KEYS) # field separator
+    pretty_format += '%x01' #line ending
+
+    kwargs = {'pretty': pretty_format}
+    git_logs = _.split(repo.git.log(*args, **kwargs), '\x01')
+
+    return commits_from_logs(git_logs)
+
+def commits_from_logs(
+    git_logs: list
+):
+    r = re.compile(
+        r"(?P<commit_hash>\S+?)\x00(?P<commit_subject>.*)\x00(?P<commit_message>.*)",
+        re.MULTILINE | re.DOTALL
+    )
+
+    commits = _\
+        .chain(git_logs) \
+        .map(lambda c: r.finditer(c)) \
+        .map(lambda iter: next(iter)) \
+        .map(lambda m: m.groupdict()) \
+        .map(lambda g: Commit(
+            hash=g['commit_hash'],
+            subject=g['commit_subject'],
+            message=g['commit_message']
+        )) \
+        .value()
+    return commits
+
+def fetch_pr_numbers_from_commits(
+    commits: list
+) -> set:
     pr_numbers = set()
-    for commit_message in gitLogs:
-        pr_number = pr_number_from_message(commit_message)
+    for commit in commits:
+        pr_number = pr_number_from_subject(commit.subject)
 
         if pr_number:
             pr_numbers.add(pr_number)
 
-    verbose('Merged pull request numbers in range {range}: {pr_numbers}'.format(
-        range=commit_range,
-        pr_numbers=pr_numbers
-    ))
     return pr_numbers
 
-def pr_number_from_message(commit_message: str):
-    pr_number = _.head(re.findall(r"Merge pull request #(\d+|$)", commit_message))
+def pr_number_from_subject(commit_subject: str):
+    pr_number = _.head(re.findall(r"Merge pull request #(\d+|$)", commit_subject))
     if not pr_number: # Squash commit
-        pr_number = _.head(re.findall(r" \(#(\d+)\)", commit_message))
+        pr_number = _.head(re.findall(r" \(#(\d+)\)", commit_subject))
     return pr_number
 
 def fetch_release_notes_from_prs(
     helper: GitHubRepositoryHelper,
     pr_numbers_in_range: set,
-    current_repo:str
+    cn_current_repo: ComponentName
 ) -> list:
     # we should consider adding a release-note label to the PRs
     # to reduce the number of search results
     prs_iter = helper.search_issues_in_repo('type:pull is:closed')
 
-    cn_current_repo = ComponentName(current_repo)
     release_notes = list()
     for pr_iter in prs_iter:
         pr_dict = pr_iter.as_dict()
@@ -247,10 +289,11 @@ def fetch_release_notes_from_prs(
             continue
 
         release_notes_pr = extract_release_notes(
-            pr_number=pr_number,
+            reference_id=pr_number,
             text=pr_dict['body'],
             user_login=_.get(pr_dict, 'user.login'),
-            cn_current_repo=cn_current_repo
+            cn_current_repo=cn_current_repo,
+            reference_is_pr=True
         )
         if not release_notes_pr:
             continue
@@ -258,11 +301,33 @@ def fetch_release_notes_from_prs(
         release_notes.extend(release_notes_pr)
     return release_notes
 
+def fetch_release_notes_from_commits(
+    commits: list,
+    cn_current_repo: ComponentName
+):
+    release_notes = list()
+    for commit in commits:
+
+        release_notes_commit = extract_release_notes(
+            reference_id=commit.hash,
+            text=commit.message,
+            user_login=None, # we do not have the gitHub user at hand
+            cn_current_repo=cn_current_repo,
+            reference_is_pr=False
+        )
+        if not release_notes_commit:
+            continue
+
+        release_notes.extend(release_notes_commit)
+    return release_notes
+
+
 def extract_release_notes(
-    pr_number: int,
+    reference_is_pr: bool,
+    reference_id: int,
     text: str,
     user_login: str,
-    cn_current_repo: ComponentName
+    cn_current_repo: ComponentName,
 ) -> list:
     release_notes = list()
 
@@ -288,8 +353,8 @@ def extract_release_notes(
             user_login = code_block['user'] or None
         else:
             source_repo = cn_current_repo.name()
-            reference_is_pr = True
-            reference_id = pr_number
+            reference_is_pr = reference_is_pr
+            reference_id = reference_id
 
         try:
             release_notes.append(ReleaseNoteBlock(
@@ -406,12 +471,10 @@ class MarkdownRenderer(Renderer):
             header_suffix_list = list()
             cn = rn_obj.cn_source_repo
             if rn_obj.reference_id:
+                reference_id_text = rn_obj.reference_id
+
                 if rn_obj.reference_is_pr:
                     reference_prefix = '#'
-                    reference_link = '{source_repo_url}/pull/{ref_id}'.format(
-                        source_repo_url=rn_obj.cn_source_repo.github_repo_url(),
-                        ref_id=rn_obj.reference_id
-                    )
                 else: # commit
                     if not rn_obj.is_current_repo:
                         reference_prefix = '@'
@@ -419,14 +482,12 @@ class MarkdownRenderer(Renderer):
                         # for the current repo we use gitHub's feature to auto-link to references,
                         # hence in case of commits we don't need a prefix
                         reference_prefix = ''
-                    reference_link = '{source_repo_url}/commit/{ref_id}'.format(
-                        source_repo_url=rn_obj.cn_source_repo.github_repo_url(),
-                        ref_id=rn_obj.reference_id
-                )
+                    if not rn_obj.from_same_github_instance:
+                        reference_id_text = rn_obj.reference_id[0:12] # short commit hash
 
                 reference = '{reference_prefix}{ref_id}'.format(
                     reference_prefix=reference_prefix,
-                    ref_id=rn_obj.reference_id,
+                    ref_id=reference_id_text,
                 )
 
                 if rn_obj.is_current_repo:
@@ -440,6 +501,16 @@ class MarkdownRenderer(Renderer):
                             )
                         )
                     else:
+                        if rn_obj.reference_is_pr:
+                            reference_link = '{source_repo_url}/pull/{ref_id}'.format(
+                                source_repo_url=rn_obj.cn_source_repo.github_repo_url(),
+                                ref_id=rn_obj.reference_id
+                            )
+                        else: # commit
+                            reference_link = '{source_repo_url}/commit/{ref_id}'.format(
+                                source_repo_url=rn_obj.cn_source_repo.github_repo_url(),
+                                ref_id=rn_obj.reference_id
+                        )
                         header_suffix_list.append(
                             '[{repo_path}{reference}]({ref_link})'.format(
                                 repo_path=cn.github_repo_path(),
