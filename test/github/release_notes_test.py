@@ -16,11 +16,14 @@ import unittest
 from pydash import _
 
 from github.release_notes import (
-    extract_release_notes,
-    pr_number_from_message,
     ReleaseNoteBlock,
     MarkdownRenderer,
-    release_note_objs_to_block_str
+    Commit,
+    extract_release_notes,
+    pr_number_from_subject,
+    release_note_objs_to_block_str,
+    commits_from_logs,
+    fetch_release_notes_from_commits
 )
 from model.base import ModelValidationError
 from product.model import ComponentName
@@ -35,7 +38,8 @@ class ReleaseNotesTest(unittest.TestCase):
             'this is a release note text\n'\
             '```'
         release_notes = extract_release_notes(
-            pr_number='42',
+            reference_id='42',
+            reference_is_pr=True,
             text=text,
             user_login='foo',
             cn_current_repo=self.cn_current_repo
@@ -59,7 +63,8 @@ class ReleaseNotesTest(unittest.TestCase):
     def test_rls_note_extraction_ignore_noise_in_header(self):
         def verify_noise_ignored(text):
             release_notes = extract_release_notes(
-                pr_number='42',
+                reference_id='42',
+                reference_is_pr=True,
                 text=text,
                 user_login='foo',
                 cn_current_repo=self.cn_current_repo
@@ -104,7 +109,8 @@ class ReleaseNotesTest(unittest.TestCase):
             'notew-text\n'\
             '```'
         release_notes = extract_release_notes(
-            pr_number='42',
+            reference_id='42',
+            reference_is_pr=True,
             text=text,
             user_login='foo',
             cn_current_repo=self.cn_current_repo
@@ -134,7 +140,8 @@ class ReleaseNotesTest(unittest.TestCase):
             exp_ref_is_pr=True
         ):
             release_notes = extract_release_notes(
-                pr_number='42',
+                reference_id='42',
+                reference_is_pr=True,
                 text=code_block,
                 user_login='pr-transport-user',
                 cn_current_repo=self.cn_current_repo
@@ -210,7 +217,8 @@ class ReleaseNotesTest(unittest.TestCase):
             'notew-text\n'\
             '```'
         release_notes = extract_release_notes(
-            pr_number='42',
+            reference_id='42',
+            reference_is_pr=True,
             text=text,
             user_login='foo',
             cn_current_repo=self.cn_current_repo
@@ -265,7 +273,8 @@ class ReleaseNotesTest(unittest.TestCase):
             'third line\n'\
             '```'
         release_notes = extract_release_notes(
-            pr_number='42',
+            reference_id='42',
+            reference_is_pr=True,
             text=text,
             user_login='foo',
             cn_current_repo=self.cn_current_repo
@@ -295,7 +304,8 @@ class ReleaseNotesTest(unittest.TestCase):
             '\n'\
             '```'
         release_notes = extract_release_notes(
-            pr_number='42',
+            reference_id='42',
+            reference_is_pr=True,
             text=text,
             user_login='foo',
             cn_current_repo=self.cn_current_repo
@@ -319,7 +329,8 @@ class ReleaseNotesTest(unittest.TestCase):
     def test_rls_note_extraction_no_release_notes(self):
         def verify_no_release_note(text: str):
             release_notes = extract_release_notes(
-                pr_number='42',
+                reference_id='42',
+                reference_is_pr=True,
                 text=text,
                 user_login='foo',
                 cn_current_repo=self.cn_current_repo
@@ -457,9 +468,19 @@ class ReleaseNotesTest(unittest.TestCase):
                 target_group_id='operator',
                 text='other component rls note',
                 reference_is_pr=False,
-                reference_id='commit-id-2',
+                reference_id='very-long-commit-id-that-will-not-be-shortened',
                 user_login='bar',
                 source_repo='github.com/gardener/a-foo-bar',
+                cn_current_repo=self.cn_current_repo
+            ),
+            ReleaseNoteBlock(
+                category_id='noteworthy',
+                target_group_id='operator',
+                text='release note from different github instance',
+                reference_is_pr=False,
+                reference_id='very-long-commit-id-that-will-be-shortened',
+                user_login='bar',
+                source_repo='madeup.enterprise.github.corp/o/s',
                 cn_current_repo=self.cn_current_repo
             )
         ]
@@ -468,10 +489,13 @@ class ReleaseNotesTest(unittest.TestCase):
         expected_str = ''\
             '# [a-foo-bar]\n'\
             '## Most notable changes\n'\
-            '* *[OPERATOR]* other component rls note (gardener/a-foo-bar@commit-id-2, @bar)\n'\
+            '* *[OPERATOR]* other component rls note (gardener/a-foo-bar@very-long-commit-id-that-will-not-be-shortened, @bar)\n'\
             '# [current-repo]\n'\
             '## Improvements\n'\
-            '* *[USER]* rls note 1 (commit-id-1, @foo)'
+            '* *[USER]* rls note 1 (commit-id-1, @foo)\n'\
+            '# [s]\n'\
+            '## Most notable changes\n'\
+            '* *[OPERATOR]* release note from different github instance ([o/s@very-long-co](https://madeup.enterprise.github.corp/o/s/commit/very-long-commit-id-that-will-be-shortened), [@bar](https://madeup.enterprise.github.corp/bar))'
         self.assertEqual(expected_str, actual_str)
 
     def test_markdown_user(self):
@@ -689,13 +713,59 @@ class ReleaseNotesTest(unittest.TestCase):
         '\n```'
         self.assertEqual(expected, release_note_objs_to_block_str(rn_objs))
 
-    def test_pr_number_from_message(self):
-        self.assertEqual('42', pr_number_from_message('Merge pull request #42'))
-        self.assertEqual('42', pr_number_from_message('Merge pull request #42 Merge pull request #79'))
-        self.assertEqual('42', pr_number_from_message('Merge pull request #42 some text'))
-        self.assertEqual('42', pr_number_from_message('Merge pull request #42\nsome text'))
-        self.assertEqual('1', pr_number_from_message('Squash commit (#1)'))
+    def test_pr_number_from_subject(self):
+        self.assertEqual('42', pr_number_from_subject('Merge pull request #42'))
+        self.assertEqual('42', pr_number_from_subject('Merge pull request #42 Merge pull request #79'))
+        self.assertEqual('42', pr_number_from_subject('Merge pull request #42 some text'))
+        self.assertEqual('42', pr_number_from_subject('Merge pull request #42\nsome text'))
+        self.assertEqual('1', pr_number_from_subject('Squash commit (#1)'))
 
-        self.assertIsNone(pr_number_from_message('not supported format #42'))
-        self.assertIsNone(pr_number_from_message('some commit'))
+        self.assertIsNone(pr_number_from_subject('not supported format #42'))
+        self.assertIsNone(pr_number_from_subject('some commit'))
 
+    def test_commits_from_logs(self):
+        logs = []
+        self.assertEqual([], commits_from_logs(logs))
+
+        logs = [
+            'commit-id1\x00subject1\x00message1',
+            '\ncommit-id2\x00subject2\x00message2',
+            '\n',
+            'random text'
+        ]
+        actual_commits = commits_from_logs(logs)
+        expected_commits = [
+            Commit(hash='commit-id1', subject='subject1', message='message1'),
+            Commit(hash='commit-id2', subject='subject2', message='message2'),
+        ]
+        self.assertEqual(expected_commits, actual_commits)
+
+    def fetch_release_notes_from_commits(self):
+        commits = [
+            Commit(hash='commit-id1', subject='subject1', message='message1'),
+            Commit(hash='commit-id2', subject='subject2', message='```improvement user\nrelease note text in commit\n```'),
+            Commit(hash='commit-id3', subject='subject2', message='foo\n```improvement user\nrelease note text in commit 2\n```\nbar')
+        ]
+        actual_rn_objs = fetch_release_notes_from_commits(commits, self.cn_current_repo)
+        expected_rn_objs = [
+            ReleaseNoteBlock(
+                category_id='improvement',
+                target_group_id='user',
+                text='release note text in commit',
+                reference_is_pr=False,
+                reference_id='commit-id2',
+                user_login=None,
+                source_repo=self.cn_current_repo,
+                cn_current_repo=self.cn_current_repo),
+            ReleaseNoteBlock(
+                category_id='improvement',
+                target_group_id='user',
+                text='release note text in commit 2',
+                reference_is_pr=False,
+                reference_id='commit-id3',
+                user_login=None,
+                source_repo=self.cn_current_repo,
+                cn_current_repo=self.cn_current_repo),
+        ]
+
+        self.assertEqual(expected_rn_objs, actual_rn_objs)
