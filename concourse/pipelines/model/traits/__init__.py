@@ -24,6 +24,7 @@ from .release import ReleaseTrait
 from .scheduling import SchedulingTrait
 from .version import VersionTrait
 from .options import OptionsTrait
+from .draft_release import DraftReleaseTrait
 from .update_component_deps import UpdateComponentDependenciesTrait
 
 TRAITS = {
@@ -36,6 +37,7 @@ TRAITS = {
     'publish': PublishTrait,
     'options': OptionsTrait,
     'update_component_deps': UpdateComponentDependenciesTrait,
+    'draft_release': DraftReleaseTrait,
 }
 
 class TraitsFactory(object):
