@@ -222,6 +222,10 @@ def merge_dicts(base: dict, other: dict, list_semantics='set_merge'):
         strategy_cfg = [(list, ['merge']), (dict, ['merge'])]
         merger = Merger(strategy_cfg, ['override'], ['override'])
 
+    elif list_semantics == 'None':
+        strategy_cfg = [(dict, ['merge'])]
+        merger = Merger(strategy_cfg, ['override'], ['override'])
+
     from copy import deepcopy
     # copy dicts, so they remain unmodified
     return merger.merge(deepcopy(base), deepcopy(other))
