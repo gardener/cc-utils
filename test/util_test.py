@@ -96,4 +96,17 @@ class UtilTest(unittest.TestCase):
             examinee.urljoin('gnu://foo.bar/', '/abc/', '/def/')
         )
 
+    def test_merge_dicts_simple(self):
+        left = {1: {2: 3}}
+        right = {1: {4: 5}, 6: 7}
+
+        merged = examinee.merge_dicts(left, right)
+
+        self.assertEqual(
+            merged,
+            {
+                1: {2: 3, 4: 5},
+                6: 7,
+            }
+        )
 
