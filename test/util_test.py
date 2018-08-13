@@ -110,3 +110,14 @@ class UtilTest(unittest.TestCase):
             }
         )
 
+    def test_merge_dicts_with_set_merge_retains_order(self):
+        left = {1: [3, 1, 0]}
+        right = {1: [1, 2, 4]}
+
+        merged = examinee.merge_dicts(left, right)
+
+        self.assertEqual(
+            merged,
+            {1: [3, 1, 0, 2, 4]},
+        )
+

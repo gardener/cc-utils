@@ -217,7 +217,8 @@ def merge_dicts(base: dict, other: dict, list_semantics='set_merge'):
     if list_semantics == 'set_merge':
         # monkey-patch merge-strategy for lists
         list_merge_strategy = Merger.PROVIDED_TYPE_STRATEGIES[list]
-        list_merge_strategy.strategy_merge = lambda c, p, base, other: list(set(base) | set(other))
+        list_merge_strategy.strategy_merge = lambda c, p, base, other: \
+            list(base) + [e for e in other if not e in base]
 
         strategy_cfg = [(list, ['merge']), (dict, ['merge'])]
         merger = Merger(strategy_cfg, ['override'], ['override'])
