@@ -206,7 +206,7 @@ def merge_dicts(base: dict, other: dict, list_semantics='set_merge'):
 
     By default, different from the original implementation, a "set-merge" will be applied to
     lists. This results in deduplication and potential change of element order, which may be
-    undesired. In this case, set `list_semantics` to 'None'
+    undesired. In this case, set `list_semantics` to None
 
     '''
     not_none(base)
@@ -221,10 +221,11 @@ def merge_dicts(base: dict, other: dict, list_semantics='set_merge'):
 
         strategy_cfg = [(list, ['merge']), (dict, ['merge'])]
         merger = Merger(strategy_cfg, ['override'], ['override'])
-
-    elif list_semantics == 'None':
+    elif list_semantics is None:
         strategy_cfg = [(dict, ['merge'])]
         merger = Merger(strategy_cfg, ['override'], ['override'])
+    else:
+        raise NotImplementedError
 
     from copy import deepcopy
     # copy dicts, so they remain unmodified
