@@ -195,7 +195,7 @@ def which(cmd_name: str) -> str:
     return cmd_path
 
 
-def merge_dicts(base: dict, other: dict, list_semantics='set_merge'):
+def merge_dicts(base: dict, other: dict, list_semantics='merge'):
     '''
     merges copies of the given dict instances and returns the merge result.
     The arguments remain unmodified. However, it must be possible to copy them
@@ -204,9 +204,9 @@ def merge_dicts(base: dict, other: dict, list_semantics='set_merge'):
     Merging is done using the `deepmerge` module. In case of merge conflicts, values from
     `other` overwrite values from `base`.
 
-    By default, different from the original implementation, a "set-merge" will be applied to
-    lists. This results in deduplication and potential change of element order, which may be
-    undesired. In this case, set `list_semantics` to None
+    By default, different from the original implementation, a merge will be applied to
+    lists. This results in deduplication retaining element order. The elements from `other` are
+    appended to those from `base`.
 
     '''
     not_none(base)
@@ -214,7 +214,7 @@ def merge_dicts(base: dict, other: dict, list_semantics='set_merge'):
 
     from deepmerge import Merger
 
-    if list_semantics == 'set_merge':
+    if list_semantics == 'merge':
         # monkey-patch merge-strategy for lists
         list_merge_strategy = Merger.PROVIDED_TYPE_STRATEGIES[list]
         list_merge_strategy.strategy_merge = lambda c, p, base, other: \
