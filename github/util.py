@@ -328,6 +328,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             .chain(self.repository.releases()) \
             .filter(lambda rls: rls.draft == False or rls.prerelease == False) \
             .map('tag_name') \
+            .filter(lambda tag: tag is not None) \
             .value()
 
     def search_issues_in_repo(self, query: str):
