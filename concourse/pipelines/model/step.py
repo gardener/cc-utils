@@ -16,7 +16,12 @@ import os
 import string
 import shlex
 
-from concourse.pipelines.modelbase import ModelBase, ModelValidationError, ScriptType
+from concourse.pipelines.modelbase import (
+    ModelBase,
+    ModelValidationError,
+    ScriptType,
+    normalise_to_dict,
+)
 
 class PipelineStep(ModelBase):
     def __init__(self, name, is_synthetic=False, script_type=ScriptType.BOURNE_SHELL, *args, **kwargs):
@@ -25,6 +30,7 @@ class PipelineStep(ModelBase):
         self._script_type = script_type
         self._outputs_dict = {}
         self._inputs_dict = {}
+        self._publish_to_dict = {}
         super().__init__(*args, **kwargs)
 
     def custom_init(self, raw_dict: dict):
@@ -42,6 +48,8 @@ class PipelineStep(ModelBase):
             for name, variable_name in raw_dict.get('inputs').items():
                 self.add_input(name, variable_name)
 
+        if 'publish_to' in raw_dict:
+            self._publish_to_dict = normalise_to_dict(raw_dict['publish_to'])
 
     def script_type(self) -> ScriptType:
         '''
@@ -107,7 +115,10 @@ class PipelineStep(ModelBase):
         return self.raw.get('vars')
 
     def publish_repository_names(self):
-        return self.raw.get('publish_to', [])
+        return self._publish_to_dict.keys()
+
+    def publish_repository_dict(self):
+        return self._publish_to_dict
 
     def _add_dependency(self, step: 'PipelineStep'):
         self.raw['depends'].add(step.name)
