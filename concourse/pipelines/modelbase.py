@@ -69,11 +69,10 @@ class TraitTransformer(object):
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         raise NotImplementedError()
 
+
 class ScriptType(Enum):
     BOURNE_SHELL = 0
     PYTHON3 = 1
-
-
 
 
 def normalise_to_dict(dictish):
