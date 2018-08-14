@@ -214,6 +214,9 @@ class RepositoryConfig(Resource):
     def should_trigger(self):
         return self._trigger
 
+    def force_push(self):
+        return self.raw.get('force_push', False)
+
     def _trigger_paths(self):
         return self.raw.get('trigger_paths', None)
 
