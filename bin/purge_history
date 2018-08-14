@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+
+# Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+####
+# Rewrites a git repository's history such as to squash commits outside of a specifyable
+# time range thus limiting the repository's object store growth.
+#
+# This is considered to be useful mainly for git repositories used for backup purposes where
+# historical states become irrelevant after some time.
+#
+# Some assumptions and caveats:
+# - linear commit history assumed (no merge commits present)
+# - no concurrent modification of target repository
+# - caller is required to perform a force-push after this script returned
+# - any consumer of the target repository must be able to handle altered commit history
+#
+# Usage:
+# pass environment variables:
+# - REPO_DIR     - points to git repository work tree directory (.git assumed to reside in it)
+# - RETAIN_RANGE - time range understood by git (e.g. 2days, 1week, ..)
+# - BRANCH       - defaults to 'master'
+#
+# The newest commit outside of the specified time range (=older) is determined. All commits
+# older than said commit are squashed into one (which becomes the new root commit). Any other
+# commit accessible from $BRANCH is cherry-picked (thus the commit history within the specified
+# range is retained). Finally, $BRANCH is forcefully reset to the resulting tip of the new
+# commit history.
+####
+
+set -eo pipefail
+
+if [ -z "$REPO_DIR" ]; then
+  echo "REPO_DIR must be set"
+  exit 1
+elif [ ! -d "${REPO_DIR}" ]; then
+  echo "not an existing directory: ${REPO_DIR}"
+  exit 1
+fi
+
+if [ -z "$RETAIN_RANGE" ]; then
+  echo "RETAIN_RANGE must be set"
+  exit 1
+fi
+
+if [ -z "$BRANCH" ]; then
+  echo "using default branch 'master'"
+  BRANCH="master"
+fi
+
+CUTOFF_BRANCH="cutoff"
+
+# assume .git directory resides below REPO_DIR
+export GIT_DIR="${REPO_DIR}/.git"
+export GIT_WORK_TREE="${REPO_DIR}"
+
+# determine where we should cut-off history
+cut_commit="$(git rev-list -1 --before="${RETAIN_RANGE}" ${BRANCH})"
+
+if [ -z "${cut_commit}" ]; then
+  echo "no commit outside of retain range (${RETAIN_RANGE})"
+  exit 0
+fi
+
+echo "will cut-off history after: ${cut_commit}"
+
+git checkout --orphan="${CUTOFF_BRANCH}" "${cut_commit}"
+git commit -m "cut-off history"
+
+# import all commits from original history
+git rev-list --reverse "${cut_commit}".."${BRANCH}" | git cherry-pick --stdin
+
+# forcefully reset original branch
+git checkout -f "${BRANCH}" "${CUTOFF_BRANCH}"
+
+# rm temporary branch
+git branch -D "${CUTOFF_BRANCH}"
+
+echo "branch ${BRANCH} now points to new history with cut-off history - need to force-push"
