@@ -83,7 +83,7 @@ git commit -m "cut-off history"
 git rev-list --reverse "${cut_commit}".."${BRANCH}" | git cherry-pick --stdin
 
 # forcefully reset original branch
-git checkout -f "${BRANCH}" "${CUTOFF_BRANCH}"
+git checkout -B "${BRANCH}" "${CUTOFF_BRANCH}"
 
 # rm temporary branch
 git branch -D "${CUTOFF_BRANCH}"
