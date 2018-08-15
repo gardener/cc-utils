@@ -39,6 +39,20 @@ class ModelDefaultsMixin(object):
         return {}
 
 
+class ModelValidationMixin(object):
+    def _required_attributes(self):
+        return {}
+
+    def validate(self):
+        missing_attributes = [a for a in self._required_attributes() if a not in self.raw]
+        if missing_attributes:
+            raise ModelValidationError(
+                'the following required attributes are absent: {m}'.format(
+                    m=', '.join(missing_attributes),
+                )
+            )
+
+
 class ModelBase(ModelDefaultsMixin):
     def __init__(self, raw_dict: dict):
         not_none(raw_dict)
