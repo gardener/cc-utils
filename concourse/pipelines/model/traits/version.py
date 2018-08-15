@@ -22,7 +22,14 @@ from concourse.pipelines.modelbase import (
 
 
 class VersionTrait(Trait):
-    PREPROCESS_OPS = {'finalize', 'inject-commit-hash', 'noop', 'use-branch-name', 'inject-branch-name'}
+    PREPROCESS_OPS = {
+        'finalise',
+        'finalize',
+        'inject-branch-name',
+        'inject-commit-hash',
+        'noop',
+        'use-branch-name',
+}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -41,7 +48,6 @@ class VersionTrait(Trait):
 
     def transformer(self):
         return VersionTraitTransformer(name=self.name)
-
 
 
 class VersionTraitTransformer(TraitTransformer):
