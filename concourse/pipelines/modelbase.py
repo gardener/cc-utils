@@ -16,6 +16,7 @@
 from abc import abstractmethod
 from enum import Enum
 
+import util
 from model.base import ModelValidationError
 
 def not_none(value):
@@ -27,8 +28,16 @@ def not_none(value):
 class ModelBase(object):
     def __init__(self, raw_dict: dict):
         not_none(raw_dict)
+        # apply default values
+        self.raw = util.merge_dicts(
+            self._defaults_dict(),
+            raw_dict,
+        )
+
         self.custom_init(raw_dict)
-        self.raw = raw_dict
+
+    def _defaults_dict(self):
+        return {}
 
     def validate(self):
         pass
