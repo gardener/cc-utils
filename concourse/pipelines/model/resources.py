@@ -177,6 +177,10 @@ class RepositoryConfig(Resource):
         else:
             self._trigger = self._is_main_repo
 
+        self._disable_ci_skip = raw_dict.get('disable_ci_skip', False)
+        if not 'disable_ci_skip' in raw_dict:
+            self._disable_ci_skip = not self._is_main_repo
+
     def cfg_name(self):
         return self.raw.get('cfg_name', None)
 
@@ -234,6 +238,9 @@ class RepositoryConfig(Resource):
 
     def is_main_repo(self):
         return self._is_main_repo
+
+    def disable_ci_skip(self):
+        return self._disable_ci_skip
 
     def head_sha_path(self):
         if self._is_pull_request:
