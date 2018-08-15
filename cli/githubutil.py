@@ -18,6 +18,7 @@ from urllib.parse import urlparse, parse_qs
 from github3.exceptions import NotFoundError
 
 from util import ctx, info, warning, fail, verbose, CliHint, CliHints
+from gitutil import GitHelper
 from github.webhook import GithubWebHookSyncer, WebhookQueryAttributes
 from github.util import (
     GitHubRepositoryHelper,
@@ -27,7 +28,9 @@ from github.util import (
     _add_all_repos_to_team
 )
 import product.model
-from github.release_notes import generate_release_notes, get_release_note_blocks
+from github.release_notes.util import ReleaseNotes
+from github.release_notes.renderer import MarkdownRenderer
+from slack.util import SlackHelper
 
 
 def assign_github_team_to_repo(
@@ -90,12 +93,15 @@ def generate_release_notes_cli(
         name=github_repository_name,
         default_branch=repository_branch,
     )
-    generate_release_notes(
-        repo_dir=repo_dir,
-        helper=helper,
+    repo_path = github_repo_path(owner=github_repository_owner, name=github_repository_name)
+    git_helper = GitHelper(repo=repo_dir, github_cfg=github_cfg, github_repo_path=repo_path)
+
+    ReleaseNotes.create(
+        github_helper=helper,
+        git_helper=git_helper,
         repository_branch=repository_branch,
         commit_range=commit_range
-    )
+    ).render_with(MarkdownRenderer)
 
 
 def release_and_prepare_next_dev_cycle(
@@ -111,7 +117,9 @@ def release_and_prepare_next_dev_cycle(
     author_email: str="gardener.ci.user@gmail.com",
     component_descriptor_file_path: str=None,
     should_generate_release_notes: bool=True,
-    repo_dir: str=None
+    repo_dir: str=None,
+    slack_cfg_name: str=None,
+    slack_channel: str=None
 ):
     github_cfg = ctx().cfg_factory().github(github_cfg_name)
 
@@ -130,13 +138,25 @@ def release_and_prepare_next_dev_cycle(
         )
 
     if should_generate_release_notes:
-        release_notes = generate_release_notes(
-            repo_dir=repo_dir,
-            helper=helper,
+        repo_path = github_repo_path(owner=github_repository_owner, name=github_repository_name)
+        git_helper = GitHelper(repo=repo_dir, github_cfg=github_cfg, github_repo_path=repo_path)
+        release_notes = ReleaseNotes.create(
+            github_helper=helper,
+            git_helper=git_helper,
             repository_branch=repository_branch
         )
+        release_notes_md = release_notes.render_with(MarkdownRenderer)
+
+        if slack_cfg_name and slack_channel:
+            title = '[{n}] {v} released'.format(n=github_repository_name, v=release_version)
+            slack_cfg = ctx().cfg_factory().slack(slack_cfg_name)
+            SlackHelper(slack_cfg).post_to_slack(
+                channel=slack_channel,
+                title=title,
+                message=release_notes_md
+            )
     else:
-        release_notes = 'release notes'
+        release_notes_md = 'release notes'
 
     # Do all the version handling upfront to catch errors early
     # Bump release version and add suffix
@@ -171,7 +191,7 @@ def release_and_prepare_next_dev_cycle(
     )
     release = helper.create_release(
         tag_name=release_version,
-        body=release_notes,
+        body=release_notes_md,
         draft=False,
         prerelease=False
     )
@@ -215,12 +235,14 @@ def create_or_update_draft_release(
         name=github_repository_name,
         default_branch=repository_branch,
     )
+    repo_path = github_repo_path(owner=github_repository_owner, name=github_repository_name)
+    git_helper = GitHelper(repo=repo_dir, github_cfg=github_cfg, github_repo_path=repo_path)
 
-    release_notes = generate_release_notes(
-        repo_dir=repo_dir,
-        helper=helper,
+    release_notes_md = ReleaseNotes.create(
+        github_helper=helper,
+        git_helper=git_helper,
         repository_branch=repository_branch
-    )
+    ).render_with(MarkdownRenderer)
 
     draft_name = draft_release_name_for_version(release_version)
     draft_release = helper.draft_release_with_name(draft_name)
@@ -228,23 +250,23 @@ def create_or_update_draft_release(
         helper.create_release(
             tag_name='',
             name=draft_name,
-            body=release_notes,
+            body=release_notes_md,
             draft=True,
             prerelease=False
         )
     else:
-        if not draft_release.body == release_notes:
-            draft_release.edit(body=release_notes)
+        if not draft_release.body == release_notes_md:
+            draft_release.edit(body=release_notes_md)
         else:
             info('draft release notes are already up to date')
 
 
-def get_release_note_blocks_cli(
+def release_note_blocks_cli(
     repo_dir: str,
     github_cfg_name: str,
     github_repository_owner: str,
     github_repository_name: str,
-    repository_branch: str,
+    repository_branch: str=None,
     commit_range: str=None
 ):
     github_cfg = ctx().cfg_factory().github(github_cfg_name)
@@ -255,13 +277,15 @@ def get_release_note_blocks_cli(
         name=github_repository_name,
         default_branch=repository_branch,
     )
+    repo_path = github_repo_path(owner=github_repository_owner, name=github_repository_name)
+    git_helper = GitHelper(repo=repo_dir, github_cfg=github_cfg, github_repo_path=repo_path)
 
-    get_release_note_blocks(
-        repo_dir=repo_dir,
-        helper=helper,
+    ReleaseNotes.create(
+        github_helper=helper,
+        git_helper=git_helper,
         repository_branch=repository_branch,
         commit_range=commit_range
-    )
+    ).release_note_blocks()
 
 
 def remove_webhooks(
@@ -319,3 +343,7 @@ def remove_webhooks(
             )
         else:
             verbose("Nothing to do for repository {repo}".format(repo=repository.name))
+
+
+def github_repo_path(owner, name):
+    return owner + '/' + name

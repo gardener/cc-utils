@@ -16,6 +16,7 @@
 import os
 import subprocess
 import urllib.parse
+from pydash import _
 
 import git
 
@@ -93,6 +94,10 @@ class GitHelper(object):
             if use_ssh:
                 os.unlink(tmp_id)
                 del os.environ['GIT_SSH_COMMAND']
+
+    def branch_head(self, branch_name: str):
+        remote = _.head(self._authenticated_remote().fetch(branch_name))
+        return remote.commit
 
 
 def clone_repository(
