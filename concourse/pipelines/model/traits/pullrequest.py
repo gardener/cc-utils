@@ -15,7 +15,12 @@
 from util import not_none
 
 from concourse.pipelines.model.step import PipelineStep
-from concourse.pipelines.modelbase import Trait, TraitTransformer, ModelBase, ScriptType
+from concourse.pipelines.modelbase import (
+    Trait,
+    TraitTransformer,
+    ModelBase,
+    ScriptType,
+)
 
 class PullRequestPolicies(ModelBase):
     def require_label(self):
@@ -26,16 +31,16 @@ class PullRequestPolicies(ModelBase):
 
 
 class PullRequestTrait(Trait):
-
-    def policies(self):
-        policies_dict = self.raw.get('policies')
-        if not policies_dict:
-            policies_dict = {
+    def _defaults_dict(self):
+        return {
+            'policies': {
                 'require-label': 'reviewed/ok-to-test',
                 'replacement-labels': ['needs/ok-to-test'],
             }
+        }
 
-
+    def policies(self):
+        policies_dict = self.raw['policies']
         return PullRequestPolicies(raw_dict=policies_dict)
 
     def transformer(self):

@@ -25,8 +25,13 @@ class ReleaseTrait(Trait):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def _defaults_dict(self):
+        return {
+            'nextversion': 'bump_minor',
+        }
+
     def nextversion(self):
-        return self.raw.get('nextversion', 'bump_minor')
+        return self.raw['nextversion']
 
     def transformer(self):
         return ReleaseTraitTransformer(name=self.name)

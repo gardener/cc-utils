@@ -20,21 +20,35 @@ from concourse.pipelines.modelbase import (
   Trait,
   TraitTransformer,
   ModelValidationError,
+  ModelDefaultsMixin,
   normalise_to_dict,
 )
 
-class PublishDockerImageDescriptor(NamedModelElement):
+class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._apply_defaults(raw_dict=self.raw)
 
-        if not 'inputs' in self.raw:
-            self.raw['inputs'] = {}
+    def _defaults_dict(self):
+        return {
+            'inputs': {
+                'repos': None, # None -> default to main repository
+                'steps': {},
+            },
+            'tag_as_latest': False,
+            'dockerfile': 'Dockerfile',
+            'dir': None,
+
+        }
+
+    def _inputs(self):
+        return self.raw['inputs']
 
     def input_repos(self):
-        return self.raw['inputs'].get('repos', None) # None -> default to main_repository
+        return self._inputs()['repos']
 
     def input_steps(self):
-        return self.raw['inputs'].get('steps', [])
+        return self._inputs()['steps']
 
     def registry_name(self):
         return self.raw.get('registry')
@@ -43,16 +57,16 @@ class PublishDockerImageDescriptor(NamedModelElement):
         return self.raw['image']
 
     def tag_as_latest(self):
-        return self.raw.get('tag_as_latest', False)
+        return self.raw['tag_as_latest']
 
     def target_name(self):
         return self.raw.get('target_name')
 
     def dockerfile_relpath(self):
-        return self.raw.get('dockerfile', 'Dockerfile')
+        return self.raw['dockerfile']
 
     def builddir_relpath(self):
-        return self.raw.get('dir', None)
+        return self.raw['dir']
 
     def resource_name(self):
         parts = self.image_reference().split('/')

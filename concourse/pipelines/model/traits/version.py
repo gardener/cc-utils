@@ -37,14 +37,21 @@ class VersionTrait(Trait):
         if not self._preprocess() in self.PREPROCESS_OPS:
             raise ValueError('preprocess must be one of: ' + ', '.join(self.PREPROCESS_OPS))
 
+    def _defaults_dict(self):
+        return {
+            'preprocess': 'inject-commit-hash',
+            'versionfile': 'VERSION',
+            'inject_effective_version': False,
+        }
+
     def _preprocess(self):
-        return self.raw.get('preprocess', 'inject-commit-hash')
+        return self.raw['preprocess']
 
     def versionfile_relpath(self):
-        return self.raw.get('versionfile', 'VERSION')
+        return self.raw['versionfile']
 
     def inject_effective_version(self):
-        return self.raw.get('inject_effective_version', False)
+        return self.raw['inject_effective_version']
 
     def transformer(self):
         return VersionTraitTransformer(name=self.name)

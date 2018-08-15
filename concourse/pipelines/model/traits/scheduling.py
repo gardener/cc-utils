@@ -21,6 +21,11 @@ from concourse.pipelines.modelbase import (
 
 
 class SchedulingTrait(Trait):
+    def _defaults_dict(self):
+        return {
+            'suppress_parallel_execution': None,
+        }
+
     # XXX: merge this with cron-trait
     def transformer(self):
         return SchedulingTraitTransformer(name=self.name)

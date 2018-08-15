@@ -20,8 +20,13 @@ from concourse.pipelines.modelbase import Trait, TraitTransformer, ModelBase, Sc
 from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
 
 class UpdateComponentDependenciesTrait(Trait):
+    def _defaults_dict(self):
+        return {
+            'set_dependency_version_script': '.ci/set_dependency_version',
+        }
+
     def set_dependency_version_script_path(self):
-        return self.raw.get('set_dependency_version_script', '.ci/set_dependency_version')
+        return self.raw['set_dependency_version_script']
 
     def transformer(self):
         return UpdateComponentDependenciesTraitTransformer(trait=self, name=self.name)

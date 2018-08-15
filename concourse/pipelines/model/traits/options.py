@@ -16,11 +16,17 @@ from util import not_none
 from concourse.pipelines.modelbase import Trait, TraitTransformer
 
 class OptionsTrait(Trait):
+    def _defaults_dict(self):
+        return {
+            'build_logs_to_retain': 1000,
+            'public_build_logs': False,
+        }
+
     def build_logs_to_retain(self):
-        return self.raw.get('build_logs_to_retain', 1000)
+        return self.raw['build_logs_to_retain']
 
     def public_build_logs(self):
-        return self.raw.get('public_build_logs', False)
+        return self.raw['public_build_logs']
 
     def transformer(self):
         return OptionsTraitTransformer(trait=self, name=self.name)
