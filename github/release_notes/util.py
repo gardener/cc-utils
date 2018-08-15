@@ -1,0 +1,404 @@
+# Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed
+# under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from abc import abstractmethod
+import git
+from git.exc import GitError
+from github.util import GitHubRepositoryHelper
+from pydash import _
+import re
+from semver import parse_version_info
+
+from github.release_notes.model import (
+    ReleaseNote,
+    Commit,
+    ReleaseNoteBlock,
+    ReferenceType,
+    Reference,
+    reference_type_for_type_identifier,
+    ref_type_pull_request,
+    ref_type_commit
+)
+from github.release_notes.renderer import Renderer
+from gitutil import GitHelper
+from util import info, warning, fail, verbose, existing_dir
+from product.model import ComponentName
+from model.base import ModelValidationError
+
+
+class ReleaseNotes(object):
+    def __init__(
+        self,
+        release_note_objs: list
+    ):
+        self.release_note_objs = release_note_objs
+
+    @staticmethod
+    def create(
+        github_helper: GitHubRepositoryHelper,
+        git_helper: GitHelper,
+        repository_branch: str=None,
+        commit_range: str=None
+    ):
+        release_note_objs = _rls_note_objs(
+            github_helper=github_helper,
+            git_helper=git_helper,
+            repository_branch=repository_branch,
+            commit_range=commit_range
+        )
+        return ReleaseNotes(release_note_objs)
+
+    def render_with(self, RendererCls: Renderer):
+        release_notes_str = RendererCls(self.release_note_objs).render()
+
+        info('[{renderer}] Release notes:\n{rn}'.format(
+            renderer=RendererCls.__name__,
+            rn=release_notes_str
+        ))
+        return release_notes_str
+
+    def release_note_blocks(self):
+        block_strings = _.map(
+            self.release_note_objs,
+            lambda rls_note_obj: rls_note_obj.to_block_str()
+        )
+
+        if block_strings:
+            release_notes_str = '\n\n'.join(block_strings)
+        else:
+            release_notes_str = ''
+
+        info('Release note blocks:\n{rn}'.format(rn=release_notes_str))
+        return release_notes_str
+
+
+def _rls_note_objs(
+    github_helper: GitHubRepositoryHelper,
+    git_helper: GitHelper,
+    repository_branch: str=None,
+    commit_range: str=None
+)->list:
+    cn_current_repo = ComponentName.from_github_repo_url(github_helper.repository.html_url)
+
+    if not commit_range:
+        commit_range = calculate_range(repository_branch, git_helper, github_helper)
+    info('Fetching release notes from revision range: {range}'.format(
+        range=commit_range
+    ))
+    commits = commits_in_range(git_helper.repo, commit_range, repository_branch)
+    pr_numbers = fetch_pr_numbers_from_commits(commits)
+    verbose('Merged pull request numbers in range {range}: {pr_numbers}'.format(
+        range=commit_range,
+        pr_numbers=pr_numbers
+    ))
+    release_note_objs = fetch_release_notes_from_prs(github_helper, pr_numbers, cn_current_repo)
+    release_note_objs.extend(fetch_release_notes_from_commits(commits, cn_current_repo))
+
+    return release_note_objs
+
+
+def calculate_range(
+    repository_branch: str,
+    git_helper: GitHelper,
+    github_helper: GitHubRepositoryHelper,
+) -> str:
+    repo = git_helper.repo
+    branch_head = git_helper.branch_head(branch_name=repository_branch)
+    if not branch_head:
+        fail('could not determine branch head of {branch} branch'.format(
+            branch=repository_branch
+        ))
+    range_start = _.head(reachable_release_tags_from_commit(github_helper, repo, branch_head))
+
+    try:
+        # better readable range_end by describing head commit
+        range_end = repo.git.describe(branch_head)
+    except GitError as err:
+        warning('failed to describe branch head, maybe the repository has no tags? '
+            'GitError: {err}. Falling back to branch head commit hash.'.format(
+                err=err
+            ))
+        range_end = branch_head.hexsha
+
+    commit_range = "{start}..{end}".format(start=range_start, end=range_end)
+    return commit_range
+
+
+def release_tags(
+    github_helper: GitHubRepositoryHelper,
+    repo: git.Repo
+) -> list:
+    def is_valid_semver(tag_name):
+        try:
+            parse_version_info(tag_name)
+            return True
+        except ValueError:
+            warning('{tag} is not a valid SemVer string'.format(tag=tag_name))
+            return False
+
+    release_tags = github_helper.release_tags()
+    # you can remove the directive to disable the undefined-variable error once pylint is updated
+    # with fix https://github.com/PyCQA/pylint/commit/db01112f7e4beadf7cd99c5f9237d580309f0494
+    # included
+    # pylint: disable=undefined-variable
+    tags = _ \
+        .chain(repo.tags) \
+        .map(lambda tag: {"tag": tag.name, "commit": tag.commit.hexsha}) \
+        .filter(lambda item: _.find(release_tags, lambda el: el == item['tag'])) \
+        .filter(lambda item: is_valid_semver(item['tag'])) \
+        .key_by('commit') \
+        .map_values('tag') \
+        .value()
+    # pylint: enable=undefined-variable
+    return tags
+
+
+def reachable_release_tags_from_commit(
+    github_helper: GitHubRepositoryHelper,
+    repo: git.Repo,
+    commit: git.objects.Commit
+) -> list:
+    tags = release_tags(github_helper, repo)
+
+    visited = set()
+    queue = list()
+    queue.append(commit)
+    visited.add(commit.hexsha)
+
+    reachable_tags = list()
+
+    while queue:
+        commit = queue.pop(0)
+        if commit.hexsha in tags:
+            reachable_tags.append(tags[commit.hexsha])
+        not_visited_parents = _.filter(commit.parents,
+            lambda parent_commit: parent_commit.hexsha not in visited
+        )
+        if not_visited_parents:
+            queue.extend(not_visited_parents)
+            visited |= set(_.map(not_visited_parents, lambda commit: commit.hexsha))
+
+    reachable_tags.sort(key=lambda t: parse_version_info(t), reverse=True)
+
+    if not reachable_tags:
+        warning('no release tag found, falling back to root commit')
+        root_commits = repo.iter_commits(rev=commit, max_parents=0)
+        root_commit = next(root_commits, None)
+        if not root_commit:
+            fail('could not determine root commit from rev {rev}'.format(rev=commit.hexsha))
+        if next(root_commits, None):
+            fail(
+                'cannot determine range for release notes. Repository has multiple root commits. '
+                'Specify range via commit_range parameter.'
+            )
+        reachable_tags.append(root_commit.hexsha)
+
+    return reachable_tags
+
+
+def commits_in_range(
+    repo: git.Repo,
+    commit_range: str,
+    repository_branch: str=None
+):
+    args = [commit_range]
+    if repository_branch:
+        args.append(repository_branch)
+
+    GIT_FORMAT_KEYS = [
+        "%H",   # commit hash
+        "%s",   # subject
+        "%B"    # raw body
+    ]
+    pretty_format = '%x00'.join(GIT_FORMAT_KEYS) # field separator
+    pretty_format += '%x01' #line ending
+
+    kwargs = {'pretty': pretty_format}
+    git_logs = _.split(repo.git.log(*args, **kwargs), '\x01')
+
+    return commits_from_logs(git_logs)
+
+
+def commits_from_logs(
+    git_logs: list
+):
+    r = re.compile(
+        r"(?P<commit_hash>\S+?)\x00(?P<commit_subject>.*)\x00(?P<commit_message>.*)",
+        re.MULTILINE | re.DOTALL
+    )
+
+    commits = _\
+        .chain(git_logs) \
+        .map(lambda c: r.search(c)) \
+        .filter(lambda m: m is not None) \
+        .map(lambda m: m.groupdict()) \
+        .map(lambda g: Commit(
+            hash=g['commit_hash'],
+            subject=g['commit_subject'],
+            message=g['commit_message']
+        )) \
+        .value()
+    return commits
+
+
+def fetch_pr_numbers_from_commits(
+    commits: list
+) -> set:
+    pr_numbers = set()
+    for commit in commits:
+        pr_number = pr_number_from_subject(commit.subject)
+
+        if pr_number:
+            pr_numbers.add(pr_number)
+
+    return pr_numbers
+
+
+def pr_number_from_subject(commit_subject: str):
+    pr_number = _.head(re.findall(r"Merge pull request #(\d+)", commit_subject))
+    if not pr_number: # Squash commit
+        pr_number = _.head(re.findall(r" \(#(\d+)\)$", commit_subject))
+    return pr_number
+
+
+def fetch_release_notes_from_prs(
+    github_helper: GitHubRepositoryHelper,
+    pr_numbers_in_range: set,
+    cn_current_repo: ComponentName
+) -> list:
+    # we should consider adding a release-note label to the PRs
+    # to reduce the number of search results
+    prs_iter = github_helper.search_issues_in_repo('type:pull is:closed')
+
+    release_notes = list()
+    for pr_iter in prs_iter:
+        pr_dict = pr_iter.as_dict()
+
+        pr_number = pr_dict['number']
+        if not str(pr_number) in pr_numbers_in_range:
+            continue
+
+        release_notes_pr = extract_release_notes(
+            reference_id=pr_number,
+            text=pr_dict['body'],
+            user_login=_.get(pr_dict, 'user.login'),
+            cn_current_repo=cn_current_repo,
+            reference_type=ref_type_pull_request
+        )
+        if not release_notes_pr:
+            continue
+
+        release_notes.extend(release_notes_pr)
+    return release_notes
+
+
+def fetch_release_notes_from_commits(
+    commits: list,
+    cn_current_repo: ComponentName
+):
+    release_notes = list()
+    for commit in commits:
+        release_notes_commit = extract_release_notes(
+            reference_id=commit.hash,
+            text=commit.message,
+            user_login=None, # we do not have the gitHub user at hand
+            cn_current_repo=cn_current_repo,
+            reference_type=ref_type_commit
+        )
+        if not release_notes_commit:
+            continue
+
+        release_notes.extend(release_notes_commit)
+    return release_notes
+
+
+def extract_release_notes(
+    reference_type: ReferenceType,
+    text: str,
+    user_login: str,
+    cn_current_repo: ComponentName,
+    reference_id: str=None
+) -> list:
+    """
+    Keyword arguments:
+    reference_type -- type of reference_id, either pull request or commit
+    reference_id -- reference identifier, could be a pull request number or commit hash
+    text -- release note text
+    user_login -- github user_login, used for referencing the user
+        in the release note via @<user_login>
+    cn_current_repo -- component name of the current repository
+    """
+    release_notes = list()
+
+    r = re.compile(
+        r"``` *(?P<category>improvement|noteworthy) (?P<target_group>user|operator)"
+        r"( (?P<source_repo>\S+/\S+/\S+)(( (?P<reference_type>#|\$)(?P<reference_id>\S+))?"
+        r"( @(?P<user>\S+))?)( .*?)?|( .*?)?)\r?\n(?P<text>.*?)\n```",
+        re.MULTILINE | re.DOTALL
+    )
+    for m in r.finditer(text):
+        code_block = m.groupdict()
+        try:
+            rls_note_block = release_note_block(
+                code_block=code_block,
+                reference_type=reference_type,
+                reference_id=reference_id,
+                user_login=user_login,
+                cn_current_repo=cn_current_repo
+            )
+            if not rls_note_block:
+                continue
+            release_notes.append(rls_note_block)
+        except ModelValidationError:
+            warning('skipping invalid origin repository: {source_repo}'.format(
+                source_repo=source_repo
+            ))
+            continue
+    return release_notes
+
+
+def release_note_block(
+    code_block: dict,
+    reference_type: ReferenceType,
+    user_login: str,
+    cn_current_repo: ComponentName,
+    reference_id: str=None
+)->ReleaseNoteBlock:
+    text = _.trim(code_block.get('text'))
+    if not text or 'none' == text.lower():
+        return None
+
+    category = code_block.get('category')
+    target_group = code_block.get('target_group')
+    source_repo = code_block.get('source_repo')
+    if source_repo:
+        reference_type = reference_type_for_type_identifier(code_block.get('reference_type'))
+        reference_id = code_block.get('reference_id')
+        user_login = code_block.get('user')
+    else:
+        source_repo = cn_current_repo.name()
+        reference_type = reference_type
+        reference_id = reference_id
+
+    return ReleaseNoteBlock(
+            category_id=category,
+            target_group_id=target_group,
+            text=text,
+            reference_type=reference_type,
+            reference_id=reference_id,
+            user_login=user_login,
+            source_repo=source_repo,
+            cn_current_repo=cn_current_repo
+        )

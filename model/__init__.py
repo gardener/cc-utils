@@ -796,3 +796,11 @@ class TlsConfig(NamedModelElement):
 
     def _required_attributes(self):
         return ['private_key', 'certificate']
+
+
+class SlackConfig(NamedModelElement):
+    def api_token(self):
+        return self.raw.get('api_token')
+
+    def _required_attributes(self):
+        return ['api_token']

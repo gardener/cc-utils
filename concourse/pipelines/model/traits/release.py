@@ -34,6 +34,12 @@ class ReleaseTrait(Trait):
     def nextversion(self):
         return self.raw['nextversion']
 
+    def slackchannel(self):
+        return self.raw.get('slackchannel')
+
+    def slack_cfg_name(self):
+        return self.raw.get('slackcfgname')
+
     def transformer(self):
         return ReleaseTraitTransformer(name=self.name)
 
