@@ -30,17 +30,16 @@ class ComponentDescriptorTrait(Trait):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # init defaults
-        if not 'step' in self.raw:
-            self.raw['step'] = {}
-        step = self.raw['step']
-        if not 'name' in step:
-            step['name'] = 'component_descriptor'
-
         # todo: make step name actually configurable (need concept to express
         # step-specific behaviour, first)
-        if not step['name'] == 'component_descriptor':
+        if not self.step_name() == 'component_descriptor':
             raise ModelValidationError('component_descriptor step name must be component_descriptor')
+
+    def _defaults_dict(self):
+        return {
+            'step': {'name': 'component_descriptor'},
+            'resolve_dependencies': True,
+        }
 
     def component_name(self):
         return self.raw['component_name']
@@ -49,7 +48,7 @@ class ComponentDescriptorTrait(Trait):
         return self.raw['step']['name']
 
     def resolve_dependencies(self):
-        return self.raw.get('resolve_dependencies', True)
+        return self.raw['resolve_dependencies']
 
     def transformer(self):
         return ComponentDescriptorTraitTransformer(trait=self, name=self.name)
