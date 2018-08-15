@@ -21,8 +21,13 @@ class CronTrait(Trait):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def _defaults_dict(self):
+        return {
+            'interval': '5m',
+        }
+
     def interval(self):
-        return self.raw.get('interval', '5m')
+        return self.raw['interval']
 
     def resource_name(self):
         return self.variant_name + '-' + self.interval() + '-cron' # variant-names must be unique, so this should suffice
