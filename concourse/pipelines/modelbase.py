@@ -25,19 +25,26 @@ def not_none(value):
     return value
 
 
-class ModelBase(object):
-    def __init__(self, raw_dict: dict):
-        not_none(raw_dict)
-        # apply default values
+class ModelDefaultsMixin(object):
+    def _defaults_dict(self):
+        return {}
+
+    def _apply_defaults(self, raw_dict):
         self.raw = util.merge_dicts(
             self._defaults_dict(),
             raw_dict,
         )
 
-        self.custom_init(self.raw)
-
     def _defaults_dict(self):
         return {}
+
+
+class ModelBase(ModelDefaultsMixin):
+    def __init__(self, raw_dict: dict):
+        not_none(raw_dict)
+
+        self._apply_defaults(raw_dict=raw_dict)
+        self.custom_init(self.raw)
 
     def validate(self):
         pass
