@@ -172,6 +172,16 @@ class RepositoryConfig(Resource):
 
         super().__init__(resource_identifier=resource_identifier, *args, **kwargs)
 
+    def _defaults_dict(self):
+        return {
+            'cfg_name': None,
+            # 'disable_ci_skip', False # TODO: adding it as a default will make it
+            # impossible to find out whether or not the user specified the default
+            # value explicitly
+            'force_push': False,
+            'trigger_paths': {'include': {}, 'exclude': {}}
+        }
+
     def custom_init(self, raw_dict):
         if 'trigger' in raw_dict:
             self._trigger = raw_dict['trigger']
@@ -183,7 +193,7 @@ class RepositoryConfig(Resource):
             self._disable_ci_skip = not self._is_main_repo
 
     def cfg_name(self):
-        return self.raw.get('cfg_name', None)
+        return self.raw['cfg_name']
 
     def resource_name(self):
         # TODO: replace usages with access to resource_id
@@ -216,22 +226,18 @@ class RepositoryConfig(Resource):
         return self._trigger
 
     def force_push(self):
-        return self.raw.get('force_push', False)
+        return self.raw['force_push']
 
     def _trigger_paths(self):
-        return self.raw.get('trigger_paths', None)
+        return self.raw['trigger_paths']
 
     def trigger_include_paths(self):
         paths = self._trigger_paths()
-        if not paths:
-            return ()
-        return paths.get('include', ())
+        return paths['include']
 
     def trigger_exclude_paths(self):
         paths = self._trigger_paths()
-        if not paths:
-            return ()
-        return paths.get('exclude', ())
+        return paths['exclude']
 
     def is_main_repo(self):
         return self._is_main_repo
