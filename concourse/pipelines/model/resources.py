@@ -197,10 +197,6 @@ class RepositoryConfig(Resource):
         # TODO: replace usages with access to resource_id
         return self._resource_identifier.logical_name()
 
-    def git_resource_name(self):
-        # todo: either rm this method, or resource_name
-        return self.resource_name()
-
     def repo_path(self):
         return self.raw['path'] # owner/repo_name
 
