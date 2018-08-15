@@ -14,10 +14,11 @@
 
 import os
 
-from concourse.pipelines.modelbase import ModelBase, not_none as not_none
+from concourse.pipelines.modelbase import ModelBase, not_none
 
 def sane_env_var_name(name):
-  return name.replace('-', '_').upper()
+    not_none(name)
+    return name.replace('-', '_').upper()
 
 class ResourceIdentifier(object):
     def __init__(
