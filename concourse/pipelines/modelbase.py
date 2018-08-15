@@ -34,7 +34,7 @@ class ModelBase(object):
             raw_dict,
         )
 
-        self.custom_init(raw_dict)
+        self.custom_init(self.raw)
 
     def _defaults_dict(self):
         return {}
