@@ -53,11 +53,11 @@ class ModelBase(ModelDefaultsMixin):
         pass
 
 
-class Trait(object): # todo: base on NamedModelBase
+class Trait(ModelDefaultsMixin): # todo: base on NamedModelBase
     def __init__(self, name: str, variant_name: str, raw_dict: dict):
         self.name = not_none(name)
         self.variant_name = not_none(variant_name)
-        self.raw = not_none(raw_dict)
+        self._apply_defaults(not_none(raw_dict))
 
     @abstractmethod
     def transformer(self):
