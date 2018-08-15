@@ -16,6 +16,8 @@ import os
 import string
 import shlex
 
+import util
+
 from concourse.pipelines.modelbase import (
     ModelBase,
     ModelValidationError,
@@ -33,23 +35,27 @@ class PipelineStep(ModelBase):
         self._publish_to_dict = {}
         super().__init__(*args, **kwargs)
 
+    def _defaults_dict(self):
+        return {
+            'depends': {self.name}, # toposort lib requires non-empty dependency sets
+            'execute': self.name,
+            'image': None,
+            'inputs': {},
+            'output_dir': None,
+            'publish_to': {},
+            'vars': {},
+        }
+
     def custom_init(self, raw_dict: dict):
-        if not 'depends' in raw_dict:
-            raw_dict['depends'] = {self.name} # toposort lib requires non-empty dependecy sets
-        else:
-            raw_dict['depends'] = set(raw_dict['depends'])
+        raw_dict['depends'] = set(raw_dict['depends'])
         if raw_dict.get('output_dir', None):
             name = raw_dict['output_dir']
             self.add_output(name + '_path', name + '_path')
-        if not 'vars' in raw_dict:
-            raw_dict['vars'] = {}
 
-        if 'inputs' in raw_dict:
-            for name, variable_name in raw_dict.get('inputs').items():
-                self.add_input(name, variable_name)
+        for name, variable_name in raw_dict.get('inputs').items():
+            self.add_input(name, variable_name)
 
-        if 'publish_to' in raw_dict:
-            self._publish_to_dict = normalise_to_dict(raw_dict['publish_to'])
+        self._publish_to_dict = normalise_to_dict(raw_dict['publish_to'])
 
     def script_type(self) -> ScriptType:
         '''
@@ -59,10 +65,10 @@ class PipelineStep(ModelBase):
         return self._script_type
 
     def image(self):
-        return self.raw.get('image', None)
+        return self.raw['image']
 
     def _argv(self):
-        execute = self.raw.get('execute', self.name)
+        execute = self.raw['execute']
         if not isinstance(execute, list):
             return [str(execute)]
         return [shlex.quote(str(e)) for e in execute]
@@ -82,7 +88,7 @@ class PipelineStep(ModelBase):
         return self.raw.get('registry', None)
 
     def output_dir(self):
-        if not 'output_dir' in self.raw:
+        if not self.raw['output_dir']:
             return None
 
         # an optional attribute specifying the "output directory"
@@ -107,6 +113,9 @@ class PipelineStep(ModelBase):
         return self.inputs()[name]
 
     def add_input(self, name, variable_name):
+        util.not_none(name)
+        util.not_none(variable_name)
+
         if name in self._inputs_dict:
             raise ValueError('input already exists: ' + str(name))
         self._inputs_dict[name] = variable_name
