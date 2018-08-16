@@ -1,0 +1,20 @@
+#!/bin/bash -e
+
+set -e
+
+# usage: $1: <src-dir>
+
+src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
+
+echo 'Running pylint for all python modules..'
+
+if pyflakes ${src_dir}/**/*.py; then
+    echo 'pyflakes succeeded'
+    exit 0
+else
+    echo 'pyflakes found errors (see above)'
+    echo 'XXX will still return 0, but this should be fixed!'
+    # TODO: set to 1
+    exit 0
+fi
+
