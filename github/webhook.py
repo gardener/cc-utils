@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ensure import ensure, ensure_annotations
+from ensure import ensure_annotations
 from github3.exceptions import NotFoundError
 from github3.github import GitHub
 from github3.repos.hook import Hook

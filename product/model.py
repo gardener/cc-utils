@@ -13,12 +13,11 @@
 # limitations under the License.
 
 import urllib.parse
-from copy import deepcopy
 from enum import Enum
 
-from model.base import ModelBase, NamedModelElement, ModelValidationError
+from model.base import ModelBase, ModelValidationError
 from protecode.model import AnalysisResult
-from util import parse_yaml_file, not_none, urljoin
+from util import not_none, urljoin
 
 #############################################################################
 ## product descriptor model

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pathlib import Path
+from github3 import GitHub
 
 from util import existing_dir, not_none, warning
 
@@ -75,7 +76,7 @@ class CodeOwnerEntryResolver(object):
 
     [0] https://help.github.com/articles/about-codeowners/
     '''
-    def __init__(self, github_api: 'GitHub'):
+    def __init__(self, github_api: GitHub):
         self.github_api = not_none(github_api)
 
     def _determine_email_address(self, github_user_name: str):

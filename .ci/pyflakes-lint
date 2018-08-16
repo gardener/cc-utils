@@ -13,8 +13,6 @@ if pyflakes ${src_dir}/**/*.py; then
     exit 0
 else
     echo 'pyflakes found errors (see above)'
-    echo 'XXX will still return 0, but this should be fixed!'
-    # TODO: set to 1
-    exit 0
+    exit 1
 fi
 

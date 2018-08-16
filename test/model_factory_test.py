@@ -65,7 +65,7 @@ class ConfigFactorySmokeTestsMixin(object):
 
     def test_cfg_element_names_fails_on_unknown_config_type(self):
         with self.assertRaises(ValueError):
-            cfg_set = set(self.examinee._cfg_elements(
+            set(self.examinee._cfg_elements(
                 cfg_type_name='made_up_config_type',
             ))
 
@@ -99,9 +99,7 @@ class ConfigFactorySmokeTestsMixin(object):
     def test_cfg_element_names_in_config_set_fails_on_unknown_config_type(self):
         cfg_set = self.examinee.cfg_set('singleton_set')
         with self.assertRaises(ValueError):
-            cfg_names_set = cfg_set._cfg_element_names(
-                cfg_type_name='made_up_config_type',
-            )
+            cfg_set._cfg_element_names(cfg_type_name='made_up_config_type')
 
     def test_cfg_elements_in_config_set_returns_correct_element(self):
         cfg_set = self.examinee.cfg_set('singleton_set')

@@ -25,14 +25,13 @@ from pydash import _
 
 import requests
 
+import github3
 from github3.github import GitHub, GitHubEnterprise
-from github3.repos.repo import Repository
 from github3.repos.release import Release
 from github3.exceptions import NotFoundError, ForbiddenError
 from github3.orgs import Team
 
 import util
-import version
 
 from http_requests import default_http_adapter
 from product.model import ComponentReference
@@ -294,7 +293,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
     ):
         util.not_empty(tag_name)
         try:
-            tag_ref = self.repository.ref('tags/' + tag_name)
+            self.repository.ref('tags/' + tag_name)
             return True
         except NotFoundError:
             return False
@@ -560,7 +559,7 @@ def _add_all_repos_to_team(
 
 
 def _retrieve_team_by_name_or_none(
-    organization: 'github3.orgs.Organization',
+    organization: github3.orgs.Organization,
     team_name: str
 ) -> Team:
 

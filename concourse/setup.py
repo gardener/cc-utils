@@ -13,14 +13,11 @@
 # limitations under the License.
 
 import os
-import shutil
-import sys
 import subprocess
 import tempfile
 import time
 
 from ensure import ensure_annotations
-from string import Template
 from textwrap import dedent
 from urllib.parse import urlparse
 from subprocess import CalledProcessError
@@ -33,8 +30,6 @@ import kubeutil
 import concourse.client as client
 
 from model import (
-    ConfigFactory,
-    ConfigurationSet,
     ConcourseConfig,
     SecretsServerConfig,
     TlsConfig,
@@ -44,21 +39,12 @@ from model import (
 )
 from util import (
     ctx as global_ctx,
-    existing_file,
-    existing_dir,
     not_empty,
     not_none,
     info,
     warning,
     fail,
     which,
-)
-from kube.helper import (
-    KubernetesNamespaceHelper,
-    KubernetesSecretHelper,
-    KubernetesServiceAccountHelper,
-    KubernetesDeploymentHelper,
-    KubernetesServiceHelper,
 )
 
 from kubernetes.client import (

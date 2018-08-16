@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import os
-import subprocess
 import yaml
 
 from util import ctx
@@ -26,15 +25,21 @@ from util import (
     CliHint,
 )
 import concourse.setup as setup
-import kubeutil
 
-from util import ctx as global_ctx
 from concourse import client
 from concourse.util import sync_webhooks
-from concourse.pipelines.enumerator import *
-from concourse.pipelines.replicator import *
-from kube.helper import KubernetesNamespaceHelper
-from model import ConfigFactory
+from concourse.pipelines.enumerator import (
+    DefinitionDescriptorPreprocessor,
+    GithubOrganisationDefinitionEnumerator,
+    MappingfileDefinitionEnumerator,
+    SimpleFileDefinitionEnumerator,
+    TemplateRetriever,
+)
+from concourse.pipelines.replicator import (
+    FilesystemDeployer,
+    PipelineReplicator,
+    Renderer,
+)
 
 
 def __add_module_command_args(parser):
@@ -257,7 +262,6 @@ def sync_webhooks_from_cfg(
     cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(cfg_name)
     github_cfg = cfg_set.github()
-    github_cred = github_cfg.credentials()
     concourse_cfg = cfg_set.concourse()
     job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
 

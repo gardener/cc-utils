@@ -19,7 +19,7 @@ import github.webhook
 from github.util import _create_github_api_object
 import concourse.client as concourse
 from model import ConcourseTeamCredentials, ConcourseConfig, GithubConfig, JobMapping
-from util import parse_yaml_file, info, fail, which, warning, CliHints, CliHint
+from util import info, fail
 
 
 def list_github_resources(
@@ -118,7 +118,6 @@ def _sync_webhook(
 
     # collect callback URLs
     def webhook_url(gh_res):
-        github_src = gh_res.github_source()
         query_attributes = github.webhook.WebhookQueryAttributes(
             webhook_token=gh_res.webhook_token(),
             concourse_id=concourse_cfg.name(),

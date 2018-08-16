@@ -18,7 +18,6 @@ import yaml
 import json
 
 from util import CliHints, CliHint, parse_yaml_file, ctx, info, fail
-import product.model
 from product.model import (
     Component,
     ComponentReference,

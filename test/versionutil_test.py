@@ -14,7 +14,6 @@
 
 import io
 import os
-import sys
 import stat
 import tempfile
 import unittest

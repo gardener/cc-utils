@@ -16,6 +16,7 @@ import unittest
 from unittest.mock import MagicMock
 import types
 import sys
+import os
 
 from test._test_utils import capture_out
 import kubeutil
@@ -34,14 +35,14 @@ class CtxTest(unittest.TestCase):
 
     def test_get_kubecfg_cli_arg_should_have_precedence(self):
         # kubeconfig specified via CLI should have precedence over env var
-        kubeutil.os.environ = {'KUBECONFIG': 'should_be_ignored'}
+        os.environ = {'KUBECONFIG': 'should_be_ignored'}
         self.fixture_args.kubeconfig = sys.executable
 
         self.examinee.get_kubecfg()
         self.kubernetes_config_mock.load_kube_config.assert_called_with(sys.executable)
 
     def test_get_kubecfg_env_should_be_honoured(self):
-        kubeutil.os.environ = {'KUBECONFIG': sys.executable}
+        os.environ = {'KUBECONFIG': sys.executable}
 
         self.examinee.get_kubecfg()
 

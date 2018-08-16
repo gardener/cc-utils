@@ -16,7 +16,7 @@ import os
 import requests
 import json
 
-from util import urljoin, fail
+from util import urljoin
 from util import ctx, CliHints
 from model import ConfigFactory, ConfigSetSerialiser as CSS
 

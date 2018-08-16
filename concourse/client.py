@@ -17,7 +17,6 @@ import warnings
 
 from ensure import ensure_annotations
 from enum import Enum
-from functools import reduce
 from urllib.parse import urljoin, urlparse, urlencode
 from urllib3.exceptions import InsecureRequestWarning
 
@@ -27,7 +26,7 @@ import util
 from github.webhook import WebhookQueryAttributes
 from model import ConcourseTeamCredentials
 from http_requests import AuthenticatedRequestBuilder
-from util import fail, warning, not_empty
+from util import warning, not_empty
 
 warnings.filterwarnings('ignore', 'Unverified HTTPS request is being made.*', InsecureRequestWarning)
 
@@ -313,7 +312,7 @@ class ConcourseApi(object):
     @ensure_annotations
     def trigger_build(self, pipeline_name: str, job_name: str):
         trigger_url = self.routes.job_builds(pipeline_name, job_name)
-        response = self._post(trigger_url)
+        self._post(trigger_url)
 
     @ensure_annotations
     def build_plan(self, build_id):
@@ -374,8 +373,9 @@ class ConcourseApi(object):
     @ensure_annotations
     def trigger_resource_check(self, pipeline_name: str, resource_name: str):
         url = self.routes.resource_check(pipeline_name=pipeline_name, resource_name=resource_name)
-        # Resource checks are triggered by a POST with an empty JSON-document as body against the resource's check-url
-        response = self._post(url, body='{}')
+        # Resource checks are triggered by a POST with an empty JSON-document as body against
+        # the resource's check-url
+        self._post(url, body='{}')
 
 
 class ModelBase(object):

@@ -14,17 +14,17 @@
 import base64
 import json
 import time
-from urllib3.exceptions import ReadTimeoutError, ProtocolError
+from urllib3.exceptions import ProtocolError
 
 import kubernetes
-from kubernetes import client, watch
+from kubernetes import watch
 from kubernetes.client import (
     CoreV1Api, AppsV1Api, ExtensionsV1beta1Api, V1ObjectMeta, V1Secret, V1ServiceAccount,
     V1LocalObjectReference, V1Namespace, V1Service, V1Deployment,
     V1beta1Ingress,
 )
 from kubernetes.client.rest import ApiException
-from ensure import ensure, ensure_annotations
+from ensure import ensure_annotations
 
 from util import info, not_empty, not_none
 
@@ -278,7 +278,7 @@ class KubernetesDeploymentHelper(object):
                         return False
                 # Regular Watch.stream() timeout occurred, no need for further checks
                 return False
-            except ProtocolError as err:
+            except ProtocolError:
                 info('http connection error - ignored')
 
 

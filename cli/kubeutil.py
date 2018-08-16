@@ -12,23 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import re
 import time
 import math
 import shlex
 
-from ensure import ensure, ensure_annotations
 from urllib3.exceptions import ReadTimeoutError, ProtocolError
 
-from kubernetes import client, watch
+from kubernetes import watch
 from kubernetes.client import (
         V1ObjectMeta, # todo: mv-out this import
 )
-import kubernetes.client
-from kubernetes.config.kube_config import KubeConfigLoader
 
-from util import fail, info, verbose, existing_file, not_empty, not_none
+from util import fail, info, verbose, existing_file, not_empty
 from kube.ctx import Ctx
 
 
@@ -168,7 +164,7 @@ def wait_for_shoot_cluster_to_become_healthy(namespace:str, shoot_name:str, time
         _wait_for_shoot(namespace, on_event=on_event, expected_result='healthy', timeout_seconds=timeout_seconds)
         info('Shoot cluster became healthy')
     except RuntimeError as rte:
-        fail('cluster did not become healthy')
+        fail('cluster did not become healthy: ' + str(rte))
     except ReadTimeoutError:
         fail('cluster did not become healthy within {} minute(s)'.format(math.ceil(timeout_seconds/60)))
 

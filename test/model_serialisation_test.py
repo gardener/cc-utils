@@ -15,7 +15,6 @@
 import unittest
 import json
 
-import model
 from model import ConfigSetSerialiser as CSS, ConfigFactory
 from model.base import ConfigElementNotFoundError
 

@@ -16,7 +16,7 @@ import version
 from urllib.parse import urlparse, parse_qs
 from github3.exceptions import NotFoundError
 
-from util import ctx, not_empty, info, warning, fail, verbose, CliHint, CliHints, existing_dir
+from util import ctx, info, warning, fail, verbose, CliHint, CliHints
 from github.webhook import GithubWebHookSyncer, WebhookQueryAttributes
 from github.util import (
     GitHubRepositoryHelper,
@@ -215,7 +215,7 @@ def create_or_update_draft_release(
     draft_name = draft_release_name_for_version(release_version)
     draft_release = helper.draft_release_with_name(draft_name)
     if not draft_release:
-        release = helper.create_release(
+        helper.create_release(
             tag_name='',
             name=draft_name,
             body=release_notes,

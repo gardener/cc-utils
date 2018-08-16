@@ -14,8 +14,6 @@
 
 import unittest
 
-from unittest.mock import MagicMock
-
 import model as examinee
 from model.base import ModelValidationError
 

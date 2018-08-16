@@ -21,7 +21,6 @@ from urllib.parse import urlparse
 
 from model.base import NamedModelElement, ModelBase, ModelValidationError, ConfigElementNotFoundError
 from util import (
-    existing_file,
     parse_yaml_file,
     existing_dir,
     not_none,
