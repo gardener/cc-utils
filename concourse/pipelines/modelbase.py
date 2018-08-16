@@ -66,6 +66,9 @@ class ModelBase(ModelDefaultsMixin, ModelValidationMixin):
     def custom_init(self, raw_dict: dict):
         pass
 
+    def _children(self):
+        return ()
+
 
 class Trait(ModelBase):
     def __init__(self, name: str, variant_name: str, raw_dict: dict):

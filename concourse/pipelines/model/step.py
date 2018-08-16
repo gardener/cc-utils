@@ -136,6 +136,7 @@ class PipelineStep(ModelBase):
         return set(self.raw['depends'])
 
     def validate(self):
+        super().validate()
         if self.image():
             image_reference = self.image()
             # image must be a valid docker image reference

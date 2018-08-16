@@ -28,6 +28,11 @@ class JobVariant(ModelBase):
         self.variant_name = name
         super().__init__(raw_dict=raw_dict, *args, **kwargs)
 
+    def _children(self):
+        yield from self.steps()
+        yield from self.traits().values()
+        yield from self.repositories()
+
     def traits(self):
         return self._traits_dict
 
@@ -124,8 +129,4 @@ class JobVariant(ModelBase):
 
     def has_publish_repository(self, name):
         return name in self._publish_repos_dict
-
-    def validate(self):
-        for ps in self.steps():
-            ps.validate()
 
