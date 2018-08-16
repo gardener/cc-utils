@@ -44,6 +44,9 @@ class ModelValidationMixin(object):
         return {}
 
     def validate(self):
+        self._validate_required_attributes()
+
+    def _validate_required_attributes(self):
         missing_attributes = [a for a in self._required_attributes() if a not in self.raw]
         if missing_attributes:
             raise ModelValidationError(
@@ -53,25 +56,22 @@ class ModelValidationMixin(object):
             )
 
 
-class ModelBase(ModelDefaultsMixin):
+class ModelBase(ModelDefaultsMixin, ModelValidationMixin):
     def __init__(self, raw_dict: dict):
         not_none(raw_dict)
 
         self._apply_defaults(raw_dict=raw_dict)
         self.custom_init(self.raw)
 
-    def validate(self):
-        pass
-
     def custom_init(self, raw_dict: dict):
         pass
 
 
-class Trait(ModelDefaultsMixin): # todo: base on NamedModelBase
+class Trait(ModelBase):
     def __init__(self, name: str, variant_name: str, raw_dict: dict):
         self.name = not_none(name)
         self.variant_name = not_none(variant_name)
-        self._apply_defaults(not_none(raw_dict))
+        super().__init__(raw_dict=raw_dict)
 
     @abstractmethod
     def transformer(self):
