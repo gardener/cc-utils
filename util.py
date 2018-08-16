@@ -17,8 +17,10 @@ import os
 import pathlib
 import shutil
 import sys
+
 import yaml
 
+from colors import color
 
 class Failure(RuntimeError):
     pass
@@ -107,9 +109,32 @@ def _cli():
     return bool(ctx().args and hasattr(ctx().args, '._cli') and ctx().args._cli)
 
 
+# A collection of string-identifiers of terminals capable of rendering colours
+FORMATTING_COMPATIBLE_TERMINALS = ['xterm']
+
+
+def build_message(category: str, message: str, colour: str='white', style: str='bold'):
+    '''
+        Build a message consisting of a category (typically 'INFO' or similar) and a message-string,
+        separated by a colon. Additionally, the name of one of the 8 basic
+        ANSI-Colors (e.g.: 'blue') may be given to specify the colour with which the category-string
+        shall be reendered if the current terminal supports ANSI-escape-codes.
+        Finally, the name of an ANSI-style (e.g.: 'bold' or 'italic') may also be given.
+    '''
+    current_terminal_type = ctx().Config.TERMINAL.value.terminal_type()
+    is_colour_supported = current_terminal_type in FORMATTING_COMPATIBLE_TERMINALS
+    if is_colour_supported:
+        category = color(category, fg=colour, style=style)
+
+    return '{category}: {message}'.format(
+        category=category,
+        message=message,
+    )
+
+
 def fail(msg=None):
     if msg:
-        print('ERROR: ' + str(msg))
+        print(build_message(category='ERROR', colour='red', message=msg))
     raise Failure(1)
 
 
@@ -117,7 +142,7 @@ def info(msg:str):
     if _quiet():
         return
     if msg:
-        print('INFO: ' + str(msg))
+        print(build_message(category='INFO', colour='blue', message=msg))
         sys.stdout.flush()
 
 
@@ -125,7 +150,7 @@ def warning(msg:str):
     if _quiet():
         return
     if msg:
-        print('WARNING: ' + str(msg))
+        print(build_message(category='WARNING', colour='yellow', message=msg))
         sys.stdout.flush()
 
 
