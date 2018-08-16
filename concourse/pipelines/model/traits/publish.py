@@ -38,7 +38,6 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin):
             'tag_as_latest': False,
             'dockerfile': 'Dockerfile',
             'dir': None,
-
         }
 
     def _inputs(self):
