@@ -16,12 +16,10 @@ import os
 
 import yaml
 
-from github.util import GitHubRepositoryHelper, _create_github_api_object
-from util import fail, info
+from github.util import GitHubRepositoryHelper
+from util import fail
 from model import ConfigFactory
-from concourse.client import ConcourseApi
 from concourse.pipelines.replicator import Renderer, ConcourseDeployer, DeployStatus
-from concourse.pipelines.factory import RawPipelineDefinitionDescriptor
 from concourse.pipelines.enumerator import (
     DefinitionDescriptorPreprocessor,
     DefinitionDescriptor,
@@ -42,7 +40,6 @@ def deploy_and_run_smoketest_pipeline(
     config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
     config_set = config_factory.cfg_set(cfg_name=config_name)
     concourse_cfg = config_set.concourse()
-    team_credentials = concourse_cfg.team_credentials(concourse_team_name)
 
     # as this is an integration test, hard-code assumptions about the layout of
     # our pipelines repository
@@ -51,7 +48,6 @@ def deploy_and_run_smoketest_pipeline(
     template_path = calcdir('templates')
     template_include_dir = cc_pipelines_repo_dir
     pipeline_name = 'cc-smoketest'
-    job_name = 'cc-smoketest-master-head-update-job'
 
     # retrieve pipeline-definition from github at hardcoded location
     github_cfg = config_set.github()

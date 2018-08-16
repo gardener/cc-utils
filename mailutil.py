@@ -18,7 +18,6 @@ import typing
 
 from model import EmailConfig
 from util import (
-    existing_file,
     existing_dir,
     not_empty,
     not_none,
