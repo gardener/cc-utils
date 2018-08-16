@@ -8,6 +8,7 @@ ensure==0.6.2
 github3.py==1.1.0
 kubernetes==5.0.0
 pydash==4.6.0
+pyflakes
 requests==2.18.4
 semver==2.8.0
 sseclient-py==1.7
