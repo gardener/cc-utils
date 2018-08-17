@@ -34,10 +34,15 @@ def print_import_errs():
         util.verbose(ie)
 
 
-if 'COLUMNS' not in os.environ:
-    # Use custom width formatter by fixing two arguments for the default formatter class, namely
-    # 'width' (defaults to 80 - 2) and 'max_help_position' (defaults to 24)
-    FORMATTER_CLASS = functools.partial(argparse.HelpFormatter, max_help_position=40, width=100)
+if ctx.Config.TERMINAL.value.output_columns() is not None:
+    column_width = ctx.Config.TERMINAL.value.output_columns()
+    # Create a custom width formatter by fixing two arguments for the default formatter class,
+    # namely 'width' (defaults to 80 - 2) and 'max_help_position' (defaults to 24)
+    FORMATTER_CLASS = functools.partial(
+        argparse.HelpFormatter,
+        max_help_position=24,
+        width=column_width
+    )
 else:
     FORMATTER_CLASS = argparse.HelpFormatter
 
