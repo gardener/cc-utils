@@ -158,7 +158,8 @@ def parse_yaml_file(path: CliHints.existing_file()):
 
 
 def random_str(prefix=None, length=12):
-    import random, string
+    import random
+    import string
     if prefix:
         length -= len(prefix)
     else:
