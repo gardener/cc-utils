@@ -82,27 +82,51 @@ class Version_process_version_Test(unittest.TestCase):
         self.assertEqual(parsed, '1.3.5+someRandom')
 
     def test_set_prerelease_without_suffix(self):
-        parsed = examinee.process_version(version_str='1.2.3', operation='set_prerelease', prerelease='dev')
+        parsed = examinee.process_version(
+            version_str='1.2.3',
+            operation='set_prerelease',
+            prerelease='dev'
+        )
         self.assertEqual(parsed, '1.2.3-dev')
 
     def test_set_build_metadata_without_suffix(self):
-        parsed = examinee.process_version(version_str='3.3.3', operation='set_build_metadata', build_metadata='build')
+        parsed = examinee.process_version(
+            version_str='3.3.3',
+            operation='set_build_metadata',
+            build_metadata='build'
+        )
         self.assertEqual(parsed, '3.3.3+build')
 
     def test_set_prerelease_with_prerelease(self):
-        parsed = examinee.process_version(version_str='1.2.3-foo', operation='set_prerelease', prerelease='dev')
+        parsed = examinee.process_version(
+            version_str='1.2.3-foo',
+            operation='set_prerelease',
+            prerelease='dev'
+        )
         self.assertEqual(parsed, '1.2.3-dev')
 
     def test_set_build_metadata_with_prerelease(self):
-        parsed = examinee.process_version(version_str='3.3.3-foo', operation='set_build_metadata', build_metadata='build')
+        parsed = examinee.process_version(
+            version_str='3.3.3-foo',
+            operation='set_build_metadata',
+            build_metadata='build'
+        )
         self.assertEqual(parsed, '3.3.3+build')
 
     def test_set_prerelease_with_build_metadata(self):
-        parsed = examinee.process_version(version_str='1.2.3+foo', operation='set_prerelease', prerelease='dev')
+        parsed = examinee.process_version(
+            version_str='1.2.3+foo',
+            operation='set_prerelease',
+            prerelease='dev'
+        )
         self.assertEqual(parsed, '1.2.3-dev')
 
     def test_set_build_metadata_with_build_metadata(self):
-        parsed = examinee.process_version(version_str='3.3.3+foo', operation='set_build_metadata', build_metadata='build')
+        parsed = examinee.process_version(
+            version_str='3.3.3+foo',
+            operation='set_build_metadata',
+            build_metadata='build'
+        )
         self.assertEqual(parsed, '3.3.3+build')
 
     def test_set_prerelease_and_build_metadata_without_suffix(self):
@@ -167,7 +191,11 @@ class Version_process_version_Test(unittest.TestCase):
 
     def test_set_verbatim_without_verbatim_version(self):
         with self.assertRaises(ValueError):
-            examinee.process_version(version_str='3.1.4-foo', operation='set_verbatim', prerelease='baz')
+            examinee.process_version(
+                version_str='3.1.4-foo',
+                operation='set_verbatim',
+                prerelease='baz'
+            )
 
     def test_bump_major(self):
         parsed = examinee.process_version(version_str='2.4.6', operation='bump_major')

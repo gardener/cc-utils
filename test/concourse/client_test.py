@@ -22,17 +22,29 @@ from github.webhook import WebhookQueryAttributes
 
 class ConcourseApiRoutesTest(unittest.TestCase):
     def setUp(self):
-        self.examinee = client.ConcourseApiRoutes(base_url='https://made-up-concourse.com', team='foo')
+        self.examinee = client.ConcourseApiRoutes(
+            base_url='https://made-up-concourse.com',
+            team='foo'
+        )
 
     def test_team_route(self):
         self.assertEqual(self.examinee.team_url(), 'https://made-up-concourse.com/api/v1/teams/foo')
-        self.assertEqual(self.examinee.team_url(team='bar'), 'https://made-up-concourse.com/api/v1/teams/bar')
+        self.assertEqual(
+            self.examinee.team_url(team='bar'),
+            'https://made-up-concourse.com/api/v1/teams/bar'
+        )
 
     def test_login_route(self):
-        self.assertEqual(self.examinee.login(), 'https://made-up-concourse.com/api/v1/teams/foo/auth/token')
+        self.assertEqual(
+            self.examinee.login(),
+            'https://made-up-concourse.com/api/v1/teams/foo/auth/token'
+        )
 
     def test_pipelines_route(self):
-        self.assertEqual(self.examinee.pipelines(), 'https://made-up-concourse.com/api/v1/teams/foo/pipelines')
+        self.assertEqual(
+            self.examinee.pipelines(),
+            'https://made-up-concourse.com/api/v1/teams/foo/pipelines'
+        )
 
     def test_order_pipelines_route(self):
         self.assertEqual(

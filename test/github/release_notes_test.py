@@ -14,7 +14,9 @@
 # limitations under the License.
 
 import unittest
+
 from pydash import _
+from textwrap import dedent
 
 from github.release_notes import (
     ReleaseNoteBlock,
@@ -166,43 +168,78 @@ class ReleaseNotesTest(unittest.TestCase):
             '``` improvement user github.com/gardener/source-component #1 @original-user-foo\n'\
             'source repo, pr refid and user\n'\
             '```'
-        source_repo_test(code_block, exp_ref_id=1, exp_usr='original-user-foo', exp_text='source repo, pr refid and user')
+        source_repo_test(
+            code_block,
+            exp_ref_id=1,
+            exp_usr='original-user-foo',
+            exp_text='source repo, pr refid and user'
+        )
 
         code_block = \
-            '``` improvement user github.com/gardener/source-component $commit-id @original-user-foo\n'\
-            'source repo, commit refid and user\n'\
-            '```'
-        source_repo_test(code_block, exp_ref_id='commit-id', exp_ref_is_pr=False, exp_usr='original-user-foo', exp_text='source repo, commit refid and user')
+'''``` improvement user github.com/gardener/source-component $commit-id @original-user-foo
+source repo, commit refid and user
+```'''
+
+        source_repo_test(
+            code_block,
+            exp_ref_id='commit-id',
+            exp_ref_is_pr=False,
+            exp_usr='original-user-foo',
+            exp_text='source repo, commit refid and user'
+        )
 
         code_block = \
-            '``` improvement user github.com/gardener/source-component #1 @original-user-foo some random noise\n'\
-            'noise test\n'\
-            '```'
-        source_repo_test(code_block, exp_ref_id=1, exp_usr='original-user-foo', exp_text='noise test')
+'''``` improvement user github.com/gardener/source-component #1 @original-user-foo some random noise
+noise test
+```'''
+        source_repo_test(
+            code_block,
+            exp_ref_id=1,
+            exp_usr='original-user-foo',
+            exp_text='noise test'
+        )
 
         code_block = \
-            '``` improvement user github.com/gardener/source-component #1 some random noise\n'\
-            'no user specified\n'\
-            '```'
+'''``` improvement user github.com/gardener/source-component #1 some random noise
+no user specified
+```'''
         source_repo_test(code_block, exp_ref_id=1, exp_usr=None, exp_text='no user specified')
 
         code_block = \
             '``` improvement user github.com/gardener/source-component @user some random noise\n'\
             'no pull request ref_id specified\n'\
             '```'
-        source_repo_test(code_block, exp_ref_id=None, exp_ref_is_pr=False, exp_usr='user', exp_text='no pull request ref_id specified')
+        source_repo_test(
+            code_block,
+            exp_ref_id=None,
+            exp_ref_is_pr=False,
+            exp_usr='user',
+            exp_text='no pull request ref_id specified'
+        )
 
         code_block = \
-            '``` improvement user github.com/gardener/source-component\n'\
-            'source_repo only\n'\
-            '```'
-        source_repo_test(code_block, exp_ref_id=None, exp_ref_is_pr=False, exp_usr=None, exp_text='source_repo only')
+'''``` improvement user github.com/gardener/source-component
+source_repo only
+```'''
+        source_repo_test(
+            code_block,
+            exp_ref_id=None,
+            exp_ref_is_pr=False,
+            exp_usr=None,
+            exp_text='source_repo only'
+        )
 
         code_block = \
-            '``` improvement user github.com/gardener/source-component some random noise\n'\
-            'source_repo only - with noise\n'\
-            '```'
-        source_repo_test(code_block, exp_ref_id=None, exp_ref_is_pr=False, exp_usr=None, exp_text='source_repo only - with noise')
+'''``` improvement user github.com/gardener/source-component some random noise
+source_repo only - with noise
+```'''
+        source_repo_test(
+            code_block,
+            exp_ref_id=None,
+            exp_ref_is_pr=False,
+            exp_usr=None,
+            exp_text='source_repo only - with noise'
+        )
 
 
     def test_multiple_rls_note_extraction(self):
@@ -413,9 +450,13 @@ class ReleaseNotesTest(unittest.TestCase):
         actual_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
 
         expected_str = \
-            '# [s]\n'\
-            '## Improvements\n'\
-            '* *[USER]* from other github instance ([o/s#42](https://madeup.enterprise.github.corp/o/s/pull/42), [@foo](https://madeup.enterprise.github.corp/foo))'
+        '\n'.join((
+            '# [s]',
+            '## Improvements',
+            '* *[USER]* from other github instance '
+            '([o/s#42](https://madeup.enterprise.github.corp/o/s/pull/42), '
+            '[@foo](https://madeup.enterprise.github.corp/foo))'
+        ))
         self.assertEqual(expected_str, actual_str)
 
     def test_markdown_reference_pr(self):
@@ -490,13 +531,17 @@ class ReleaseNotesTest(unittest.TestCase):
         expected_str = ''\
             '# [a-foo-bar]\n'\
             '## Most notable changes\n'\
-            '* *[OPERATOR]* other component rls note (gardener/a-foo-bar@very-long-commit-id-that-will-not-be-shortened, @bar)\n'\
+            '* *[OPERATOR]* other component rls note ' \
+            '(gardener/a-foo-bar@very-long-commit-id-that-will-not-be-shortened, @bar)\n'\
             '# [current-repo]\n'\
             '## Improvements\n'\
             '* *[USER]* rls note 1 (commit-id-1, @foo)\n'\
             '# [s]\n'\
             '## Most notable changes\n'\
-            '* *[OPERATOR]* release note from different github instance ([o/s@very-long-co](https://madeup.enterprise.github.corp/o/s/commit/very-long-commit-id-that-will-be-shortened), [@bar](https://madeup.enterprise.github.corp/bar))'
+            '* *[OPERATOR]* release note from different github instance ' \
+            '([o/s@very-long-co](https://madeup.enterprise.github.corp/o/s/commit/'\
+            'very-long-commit-id-that-will-be-shortened), '\
+            '[@bar](https://madeup.enterprise.github.corp/bar))'
         self.assertEqual(expected_str, actual_str)
 
     def test_markdown_user(self):
@@ -571,7 +616,10 @@ class ReleaseNotesTest(unittest.TestCase):
         release_note_objs = []
 
         expected_str = 'no release notes available'
-        self.assertEqual(expected_str, MarkdownRenderer(release_note_objs=release_note_objs).render())
+        self.assertEqual(
+            expected_str,
+            MarkdownRenderer(release_note_objs=release_note_objs).render()
+        )
 
     def test_rls_note_obj_to_block_str(self):
         try:
@@ -585,7 +633,10 @@ class ReleaseNotesTest(unittest.TestCase):
                 source_repo=None,
                 cn_current_repo=self.cn_current_repo
             )
-            self.fail('a ReleaseNoteBlock always has a source repository, even if it points to the "current" repository')
+            self.fail(
+                'a ReleaseNoteBlock always has a source repository, '
+                'even if it points to the "current" repository'
+            )
         except RuntimeError:
             pass
 
@@ -716,7 +767,10 @@ class ReleaseNotesTest(unittest.TestCase):
 
     def test_pr_number_from_subject(self):
         self.assertEqual('42', pr_number_from_subject('Merge pull request #42'))
-        self.assertEqual('42', pr_number_from_subject('Merge pull request #42 Merge pull request #79'))
+        self.assertEqual(
+            '42',
+            pr_number_from_subject('Merge pull request #42 Merge pull request #79')
+        )
         self.assertEqual('42', pr_number_from_subject('Merge pull request #42 some text'))
         self.assertEqual('42', pr_number_from_subject('Merge pull request #42\nsome text'))
         self.assertEqual('1', pr_number_from_subject('Squash commit (#1)'))
@@ -744,8 +798,16 @@ class ReleaseNotesTest(unittest.TestCase):
     def fetch_release_notes_from_commits(self):
         commits = [
             Commit(hash='commit-id1', subject='subject1', message='message1'),
-            Commit(hash='commit-id2', subject='subject2', message='```improvement user\nrelease note text in commit\n```'),
-            Commit(hash='commit-id3', subject='subject2', message='foo\n```improvement user\nrelease note text in commit 2\n```\nbar')
+            Commit(
+                hash='commit-id2',
+                subject='subject2',
+                message='```improvement user\nrelease note text in commit\n```'
+            ),
+            Commit(
+                hash='commit-id3',
+                subject='subject2',
+                message='foo\n```improvement user\nrelease note text in commit 2\n```\nbar'
+            )
         ]
         actual_rn_objs = fetch_release_notes_from_commits(commits, self.cn_current_repo)
         expected_rn_objs = [

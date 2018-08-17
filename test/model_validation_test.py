@@ -146,14 +146,6 @@ class GithubConfigTest(unittest.TestCase):
             },
         }
 
-    def test_validation_fails_on_missing_key(self):
-        for key in ('sshUrl', 'httpUrl', 'apiUrl', 'disable_tls_validation', 'webhook_token', 'technicalUser'):
-            with self.subTest(key=key):
-                test_dict = GithubConfigTest.create_valid_test_dictionary()
-                test_dict.pop(key)
-                with self.assertRaises(ModelValidationError):
-                    examinee.GithubConfig(name='gitabc', raw_dict=test_dict)
-
     def test_validation_fails_on_invalid_technicalUser(self):
         for key in ('username', 'password', 'authToken', 'privateKey'):
             with self.subTest(key=key):
@@ -181,7 +173,7 @@ class ConcourseConfigTest(unittest.TestCase):
         }
 
     def test_validation_fails_on_missing_key(self):
-        for key in ('externalUrl', 'teams', 'helm_chart_default_values_config','kubernetes_cluster_config'):
+        for key in ('externalUrl', 'teams', 'helm_chart_default_values_config'):
             with self.subTest(key=key):
                 test_dict = ConcourseConfigTest.create_valid_test_dictionary()
                 test_dict.pop(key)

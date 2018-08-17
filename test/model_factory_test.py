@@ -62,7 +62,10 @@ class ConfigFactorySmokeTestsMixin(object):
         cfg_names_set = set(self.examinee._cfg_element_names(
                 cfg_type_name='a_type',
             ))
-        self.assertEqual(cfg_names_set, {'first_value_of_a','second_value_of_a', 'ignored_value_of_a'})
+        self.assertEqual(
+            cfg_names_set,
+            {'first_value_of_a','second_value_of_a', 'ignored_value_of_a'}
+        )
 
     def test_cfg_element_names_fails_on_unknown_config_type(self):
         with self.assertRaises(ValueError):
@@ -72,7 +75,7 @@ class ConfigFactorySmokeTestsMixin(object):
 
     ### Tests for _cfg_element_names and _cfg_elements in ConfigurationSet
 
-    def test_cfg_element_names_in_config_set_returns_empty_iterable_for_defined_but_unused_type(self):
+    def test_cfg_element_names_in_cfg_set_returns_empty_iterable_for_defined_but_unused_type(self):
         cfg_set = self.examinee.cfg_set('singleton_set')
         cfg_names_set = cfg_set._cfg_element_names(
                 cfg_type_name='defined_but_unused_type',
@@ -169,10 +172,13 @@ class ConfigFactoryCfgDirDeserialisationTest(unittest.TestCase, ConfigFactorySmo
             some_value: xxx
         ''')
 
-        self.defined_but_unused_type_values_file = self._file('defined_but_unused_type_values.xxx','''
-        unused:
-            some_value: 7
-        ''')
+        self.defined_but_unused_type_values_file = self._file(
+            'defined_but_unused_type_values.xxx',
+            '''
+            unused:
+                some_value: 7
+        '''
+        )
 
         self.examinee = ConfigFactory.from_cfg_dir(
             cfg_dir=self.tmpdir.name,
