@@ -87,7 +87,7 @@ class JobVariant(ModelBase):
         if self.has_step(step.name):
             raise ValueError('conflict: pipeline definition already contained step {s}'.format(
                 s=step.name
-                )
+            )
             )
         self._steps_dict[step.name] = step
 

@@ -119,7 +119,7 @@ def add_module(module_name, parser):
               reversed(fspec.args),
               reversed(fspec.defaults or []),
               fillvalue=NotImplemented # workaround to be able to discriminate from None
-              )
+            )
           )):
             cl_arg = '--' + argname.replace('_', '-')
             annotation = fspec.annotations.get(argname, None)

@@ -71,7 +71,7 @@ class GitHelper(object):
         remote.push(':'.join((
             from_ref,
             to_ref,
-            ))
+        ))
         )
         self.repo.delete_remote(remote)
 

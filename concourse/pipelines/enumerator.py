@@ -75,7 +75,7 @@ class DefinitionEnumerator(object):
         branch,
         raw_definitions,
         override_definitions={},
-        ) -> 'DefinitionDescriptor':
+    ) -> 'DefinitionDescriptor':
         for name, definition in raw_definitions.items():
             pipeline_definition = deepcopy(definition)
             yield DefinitionDescriptor(
@@ -311,7 +311,7 @@ class DefinitionDescriptor(object):
                 main_repo=self.main_repo,
                 concourse_target_cfg=self.concourse_target_cfg,
                 concourse_target_team=self.concourse_target_team,
-            )
+        )
 
 
 class TemplateRetriever(object):

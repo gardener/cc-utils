@@ -101,7 +101,7 @@ def wait_for_shoot_cluster_operation_success(
     shoot_name:str,
     optype:str,
     timeout_seconds:int=120
-    ):
+):
     not_empty(namespace)
     not_empty(shoot_name)
     optype = not_empty(optype).lower()
@@ -150,7 +150,7 @@ def wait_for_shoot_cluster_operation_success(
         fail('Shoot cluster did not reach state {}d within {} minute(s)'.format(
             optype,
             math.ceil(timeout_seconds/60)
-            )
+        )
         )
 
 
@@ -158,13 +158,13 @@ def wait_for_shoot_cluster_to_become_healthy(
     namespace:str,
     shoot_name:str,
     timeout_seconds:int=120
-    ):
+):
     not_empty(namespace)
     not_empty(shoot_name)
     info('will wait for a maximum of {} minute(s) for cluster {} to become healthy'.format(
       math.ceil(timeout_seconds/60),
       shoot_name
-      )
+    )
     )
 
     def on_event(event)->(bool,str):
@@ -190,7 +190,7 @@ def wait_for_shoot_cluster_to_become_healthy(
         unhealthy_components = [c for c,s in health_status if not s]
         info('the following components are still unhealthy: {}'.format(
             ' '.join(unhealthy_components)
-            )
+        )
         )
         return False,'unhealthy'
 
@@ -207,7 +207,7 @@ def wait_for_shoot_cluster_to_become_healthy(
     except ReadTimeoutError:
         fail('cluster did not become healthy within {} minute(s)'.format(
             math.ceil(timeout_seconds/60)
-            )
+        )
         )
 
 
@@ -263,7 +263,7 @@ def retrieve_controller_manager_log_entries(
   only_if_newer_than_rfc3339_ts:str=None,
   filter_for_shoot_name:str=None,
   minimal_loglevel:str=None
-  ):
+):
     not_empty(namespace)
     not_empty(pod_name)
     if filter_for_shoot_name:

@@ -65,7 +65,7 @@ def send_mail(
     if len(list(invalid_tokens)) > 0:
         fail('all replace-tokens must be of form <key>=<value>: ' + ' '.join(
             invalid_tokens
-            )
+        )
         )
 
     # parse replace-tokens
@@ -163,7 +163,7 @@ def notify(
     body: str,
     email_cfg_name: str,
     recipients: typing.Iterable[str],
-    ):
+):
     recipients = set(recipients)
     cfg_factory = ctx().cfg_factory()
 

@@ -26,7 +26,7 @@ class Version_find_latest_version(unittest.TestCase):
                 '2.50.100',
                 '3.0.1',
                 '1.0.0',
-            )
+        )
         )
         result = examinee.find_latest_version(versions)
         self.assertEqual(str(result), '3.0.1')

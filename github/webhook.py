@@ -101,7 +101,7 @@ class GithubWebHookSyncer(object):
             raise RuntimeError('failed to create webhook {n} for repo {r}'.format(
                 n=hook_name,
                 r=str(repository)
-                )
+            )
             )
         return hook
 

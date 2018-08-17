@@ -96,7 +96,7 @@ class ComponentDescriptorResolver(ResolverBase):
         dependency_descriptor = repo_helper.retrieve_asset_contents(
                 release_tag=component_reference.version(),
                 asset_label=COMPONENT_DESCRIPTOR_ASSET_NAME,
-            )
+        )
         if as_dict:
             return yaml.load(dependency_descriptor)
         else:

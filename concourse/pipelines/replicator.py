@@ -386,7 +386,7 @@ class ReplicationResultProcessor(object):
 
         warning('Errors occurred whilst replicating {d} pipeline(s):'.format(
             d=failed_count,
-            )
+        )
         )
         for failed_descriptor in failed_descriptors:
             warning(failed_descriptor.definition_descriptor.pipeline_name)

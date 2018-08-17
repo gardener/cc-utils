@@ -441,7 +441,7 @@ def replicate_pipeline_definitions(
             util.info('Replicating pipeline-definition: {r}:{b}'.format(
                     r=repo_path,
                     b=branch_name,
-                )
+            )
             )
             # create pipeline definition file in .ci/pipeline_definitions
             try:
@@ -477,7 +477,7 @@ def retrieve_email_addresses(
     util.verbose('retrieved {sc} email address(es) from {uc} user(s)'.format(
         sc=email_addresses_count,
         uc=len(github_users)
-        )
+    )
     )
 
 

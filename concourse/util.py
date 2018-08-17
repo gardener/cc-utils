@@ -168,7 +168,7 @@ def _sync_webhook(
         c=len(webhook_urls),
         o=organisation,
         r=repository
-        )
+    )
     )
     if removed > 0:
         info('removed {c} outdated hook(s)'.format(c=removed))

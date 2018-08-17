@@ -31,7 +31,7 @@ def process_version(
     build_metadata: CliHint(help="value to set build-metadata to")=None,
     build_metadata_length: CliHint(help="cut-off build-metadata after specified # of chars")=12,
     verbatim_version: CliHint(help="value to set the version to")=None
-    ):
+):
     # validate arguments
     if input_file and version_string:
         util.fail("Only one of '--input-file' and '--version-string' may be specified.")

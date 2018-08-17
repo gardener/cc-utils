@@ -38,7 +38,7 @@ def upload_product_images(
     protecode_group_id: int=5,
     parallel_jobs: int=4,
     cve_threshold: int=7,
-    ):
+):
     cfg_factory = ctx().cfg_factory()
     protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
     protecode_api = protecode.client.from_cfg(protecode_cfg)
@@ -86,7 +86,7 @@ def _create_tasks(product_model, protecode_util):
             info('processing container image: {c}:{cir}'.format(
                 c=component.name(),
                 cir=container_image.image_reference(),
-                )
+            )
             )
             yield _create_task(
                     protecode_util=protecode_util,
@@ -199,7 +199,7 @@ def add_dependencies(
             c=component_name,
             v=component_version,
             f=descriptor_src_file
-            )
+        )
         )
 
     component_deps = component.dependencies()

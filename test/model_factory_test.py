@@ -63,7 +63,7 @@ class ConfigFactorySmokeTestsMixin(object):
     def test_cfg_element_names_should_return_all_element_names(self):
         cfg_names_set = set(self.examinee._cfg_element_names(
                 cfg_type_name='a_type',
-            ))
+        ))
         self.assertEqual(
             cfg_names_set,
             {'first_value_of_a','second_value_of_a', 'ignored_value_of_a'}
@@ -81,7 +81,7 @@ class ConfigFactorySmokeTestsMixin(object):
         cfg_set = self.examinee.cfg_set('singleton_set')
         cfg_names_set = cfg_set._cfg_element_names(
                 cfg_type_name='defined_but_unused_type',
-            )
+        )
         for name in cfg_names_set:
             self.fail('Expected empty Iterable')
 
@@ -91,14 +91,14 @@ class ConfigFactorySmokeTestsMixin(object):
         cfg_set = self.examinee.cfg_set('singleton_set')
         cfg_names_set = cfg_set._cfg_element_names(
                 cfg_type_name='a_type',
-            )
+        )
         self.assertEqual(cfg_names_set, {'first_value_of_a'})
 
     def test_cfg_element_names_in_config_set_works_with_multiple_elements(self):
         cfg_set = self.examinee.cfg_set('set_with_multiple_values')
         cfg_names_set = cfg_set._cfg_element_names(
                 cfg_type_name='a_type',
-            )
+        )
         self.assertEqual(cfg_names_set, {'first_value_of_a','second_value_of_a'})
 
     def test_cfg_element_names_in_config_set_fails_on_unknown_config_type(self):
@@ -110,7 +110,7 @@ class ConfigFactorySmokeTestsMixin(object):
         cfg_set = self.examinee.cfg_set('singleton_set')
         cfg_elements_set = set(cfg_set._cfg_elements(
                 cfg_type_name='a_type',
-            ))
+        ))
         self.assertEqual(len(cfg_elements_set), 1)
         cfg_elem = cfg_elements_set.pop()
         # We currently do not have a custom __eq__ method, so we explicitly

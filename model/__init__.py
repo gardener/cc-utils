@@ -118,7 +118,7 @@ class ConfigFactory(object):
             raise ValueError('no cfg named {c} in {cs}'.format(
                 c=cfg_name,
                 cs=', '.join(configs_dict.keys())
-                )
+            )
             )
         return ConfigurationSet(
             cfg_factory=self,
@@ -144,7 +144,7 @@ class ConfigFactory(object):
             raise ConfigElementNotFoundError('no such cfg element: {cn}. Known: {es}'.format(
                 cn=cfg_name,
                 es=', '.join(configs.keys())
-                )
+            )
             )
         kwargs = {'raw_dict': configs[cfg_name]}
 

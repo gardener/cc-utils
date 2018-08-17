@@ -23,7 +23,7 @@ def authenticate_service_account(credentials_file):
     run([
       'gcloud', 'auth', 'activate-service-account',
       '--key-file', credentials_file
-      ],
+    ],
       stdout=PIPE, stderr=STDOUT, check=True
     )
 
@@ -33,7 +33,7 @@ def determine_image_digest(image_reference):
     result = run([
       'gcloud', 'container', 'images', 'describe', image_reference,
       '--format', 'value(image_summary.fully_qualified_digest)'
-      ],
+    ],
       stdout=PIPE, stderr=STDOUT, check=True
     )
     return result.stdout.strip()
@@ -52,7 +52,7 @@ def untag_image(image_reference):
     not_empty(image_reference)
     run([
       'gcloud', 'container', 'images', 'untag', '--quiet', image_reference
-      ],
+    ],
       stdout=PIPE, stderr=STDOUT, check=True
     )
 
@@ -66,7 +66,7 @@ def untag_and_delete_image_if_no_longer_tagged(image_reference):
     # try to delete (do not raise if this fails, as this is an expected case)
     result = run([
       'gcloud', 'container', 'images', 'delete', '--quiet', image_digest
-      ],
+    ],
       stdout=PIPE, stderr=STDOUT, check=False
     )
     return result.returncode == 0
@@ -76,7 +76,7 @@ def deploy_image(image_reference):
     not_empty(image_reference)
     result = run([
       'gcloud', 'docker', '--', 'push', image_reference,
-      ],
+    ],
       stdout=PIPE, stderr=STDOUT, check=False
     )
     if result.returncode != 0:
