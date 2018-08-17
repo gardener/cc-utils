@@ -5,16 +5,19 @@ set -e
 # usage: $1: <src-dir>
 
 src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
+pushd "${src_dir}"
 
 echo 'running pycodestyle..'
 
 # line lengths
 echo 'checking line lengths'
-if pycodestyle --select=E5 "${src_dir}"; then
+if pycodestyle --select=E5; then
     echo 'pycodestyle succeeded'
+    popd
     exit 0
 else
     echo 'Linting found errors (see above)'
+    popd
     exit 1
 fi
 
