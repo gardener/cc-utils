@@ -196,7 +196,7 @@ class GithubWebHookSyncer(object):
         )
         if not repository:
             raise RuntimeError(
-                'failed to access {o}/{r}. Verify that the repository exists and the credentials are correct.'.format(
+                'failed to access {o}/{r}. Verify credentials and repository path'.format(
                     o=owner,
                     r=repository_name
                 )

@@ -253,7 +253,8 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         author = {
             'name': author_name,
             'email': author_email,
-            'date': datetime.datetime.now(datetime.timezone.utc).strftime(self.GITHUB_TIMESTAMP_UTC_FORMAT)
+            'date': datetime.datetime.now(datetime.timezone.utc)
+                    .strftime(self.GITHUB_TIMESTAMP_UTC_FORMAT)
         }
         self.repository.create_tag(
             tag=tag_name,
@@ -332,7 +333,11 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             .value()
 
     def search_issues_in_repo(self, query: str):
-        query = "repo:{org}/{repo} {query}".format(org=self.owner, repo=self.repository_name, query=query)
+        query = "repo:{org}/{repo} {query}".format(
+            org=self.owner,
+            repo=self.repository_name,
+            query=query
+        )
         search_result = self.github.search_issues(query)
         return search_result
 
@@ -382,9 +387,6 @@ def _create_github_api_object(
     if not github_api:
         util.fail("Could not connect to GitHub-instance {url}".format(url=github_url))
 
-    # patch github's requests.session to enable retrying when encountering sporadic errors. The requests library
-    # sorts these adapters by prefix length, descending, and auto-inserts adapters for http and https. Therefore
-    # we have to mount our default adapter explicitly to both.
     session = github_api.session
     session.mount('http://', default_http_adapter)
     session.mount('https://', default_http_adapter)
@@ -525,7 +527,7 @@ def _add_user_to_team(
             teamname=team_name
         ))
     else:
-        util.fail("Could not add {username} to team {teamname}. Please check for missing privileges".format(
+        util.fail("Could not add {username} to team {teamname}. Check for missing privileges".format(
             username=user_name,
             teamname=team_name
         ))
@@ -537,8 +539,8 @@ def _add_all_repos_to_team(
     team_name: str,
     permission: RepoPermission=RepoPermission.ADMIN
 ):
-    '''Add all repos found in 'organization_name' to the given 'team_name'. Default permission is 'admin' '''
-    # passed GitHub object must have org. admin authorization to assign team to repo with admin rights
+    '''Add all repos found in `organization_name` to the given `team_name`'''
+    # passed GitHub object must have org admin authorization to assign team to repo with admin rights
     organization = github.organization(organization_name)
     team = _retrieve_team_by_name_or_none(organization, team_name)
     if not team:
