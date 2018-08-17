@@ -9,6 +9,7 @@ from concourse.pipelines.modelbase import (
         normalise_to_dict,
         not_none,
 )
+from concourse.pipelines.validator import PipelineDefinitionValidator
 from concourse.pipelines.model.job import JobVariant
 from concourse.pipelines.model.pipeline import PipelineDefinition
 from concourse.pipelines.model.resources import RepositoryConfig, ResourceRegistry
@@ -80,11 +81,13 @@ class DefinitionFactory(object):
                     resource_registry.add_resource(deepcopy(repo), discard_duplicates=False)
 
             variants[variant_name] = variant
-            variant.validate()
 
         pipeline_definition = PipelineDefinition()
         pipeline_definition._variants_dict = variants
         pipeline_definition._resource_registry = resource_registry
+
+        validator = PipelineDefinitionValidator(pipeline_definition=pipeline_definition)
+        validator.validate()
 
         return pipeline_definition
 

@@ -55,6 +55,18 @@ class PipelineStep(ModelBase):
             'vars': {},
         }
 
+    def _optional_attributes(self):
+        return {
+            'output_dir',
+            'vars',
+            'publish_to',
+            'execute',
+            'inputs',
+            'image',
+            'depends',
+            'registry',
+        }
+
     def custom_init(self, raw_dict: dict):
         raw_dict['depends'] = set(raw_dict['depends'])
         if raw_dict.get('output_dir', None):

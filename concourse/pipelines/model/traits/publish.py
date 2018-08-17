@@ -82,8 +82,10 @@ class PublishTrait(Trait):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if 'dockerimages' not in self.raw:
-            raise ModelValidationError('missing required attribute "dockerimages"')
+    def _required_attributes(self):
+        return {
+            'dockerimages'
+        }
 
     def dockerimages(self):
         return [

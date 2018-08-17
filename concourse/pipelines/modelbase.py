@@ -49,7 +49,9 @@ class ModelValidationMixin(object):
         return ()
 
     def _known_attributes(self):
-        return set(self._required_attributes()) | set(self._optional_attributes())
+        return set(self._required_attributes()) | \
+                set(self._optional_attributes()) | \
+                set(self._defaults_dict().keys())
 
     def validate(self):
         self._validate_required_attributes()
@@ -68,7 +70,8 @@ class ModelValidationMixin(object):
         unknown_attributes = [a for a in self.raw if a not in self._known_attributes()]
         if unknown_attributes:
             raise ModelValidationError(
-                'the following attributes are unknown: {m}'.format(
+                '{e}: the following attributes are unknown: {m}'.format(
+                    e=str(self),
                     m=', '.join(unknown_attributes)
                 )
             )

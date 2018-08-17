@@ -181,7 +181,18 @@ class RepositoryConfig(Resource):
             # impossible to find out whether or not the user specified the default
             # value explicitly
             'force_push': False,
-            'trigger_paths': {'include': {}, 'exclude': {}}
+            'trigger_paths': {'include': {}, 'exclude': {}},
+            'name': 'source',
+
+        }
+
+    def _optional_attributes(self):
+        return {
+            'branch',
+            'hostname',
+            'path',
+            'trigger',
+            'disable_ci_skip',
         }
 
     def custom_init(self, raw_dict):

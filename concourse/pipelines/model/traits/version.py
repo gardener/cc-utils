@@ -45,6 +45,10 @@ class VersionTrait(Trait):
             'inject_effective_version': False,
         }
 
+    def _optional_attributes(self):
+        return {
+        }
+
     def _preprocess(self):
         return self.raw['preprocess']
 

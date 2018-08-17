@@ -43,6 +43,11 @@ class ComponentDescriptorTrait(Trait):
             'resolve_dependencies': True,
         }
 
+    def _optional_attributes(self):
+        return  {
+            'component_name',
+        }
+
     def component_name(self):
         return self.raw['component_name']
 
