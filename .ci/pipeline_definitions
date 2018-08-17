@@ -2,7 +2,6 @@ cc-utils:
   template: 'default'
   base_definition:
     steps:
-      pylint-lint: ~
       pyflakes-lint: ~
       test: ~
   variants:
