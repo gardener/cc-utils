@@ -131,7 +131,11 @@ class KubernetesServiceAccountHelper(object):
         reference = V1LocalObjectReference()
         reference.name = image_pull_secret_name
         service_account.image_pull_secrets = [reference]
-        self.core_api.patch_namespaced_service_account(name=name, namespace=namespace, body=service_account)
+        self.core_api.patch_namespaced_service_account(
+            name=name,
+            namespace=namespace,
+            body=service_account
+        )
 
 
 class KubernetesNamespaceHelper(object):
@@ -227,7 +231,11 @@ class KubernetesDeploymentHelper(object):
         deployment_name = deployment.metadata.name
         existing_deployment = self.get_deployment(namespace=namespace, name=deployment_name)
         if existing_deployment:
-            self.apps_api.delete_namespaced_deployment(namespace=namespace, name=deployment_name, body=kubernetes.client.V1DeleteOptions())
+            self.apps_api.delete_namespaced_deployment(
+                namespace=namespace,
+                name=deployment_name,
+                body=kubernetes.client.V1DeleteOptions()
+            )
         self.create_deployment(namespace=namespace, deployment=deployment)
 
     def create_deployment(self, namespace: str, deployment: V1Deployment):
@@ -252,8 +260,8 @@ class KubernetesDeploymentHelper(object):
             raise ae
         return deployment
 
-    def wait_until_deployment_available(self, namespace: str, name: str, timeout_seconds: int=60) -> bool:
-        '''Block until the given deployment has at least one available replica or `timeout_seconds` seconds elapsed.
+    def wait_until_deployment_available(self, namespace: str, name: str, timeout_seconds: int=60):
+        '''Block until the given deployment has at least one available replica (or timeout)
         Return `True` if the deployment is available, `False` if a timeout occured.
         '''
         not_empty(namespace)
@@ -272,9 +280,10 @@ class KubernetesDeploymentHelper(object):
                     deployment_spec = event['object']
                     if deployment_spec is not None:
                         if deployment_spec.metadata.name == name:
-                            if deployment_spec.status.available_replicas is not None and deployment_spec.status.available_replicas > 0:
+                            if deployment_spec.status.available_replicas is not None \
+                                    and deployment_spec.status.available_replicas > 0:
                                 return True
-                    # Check explicitly if timeout occurred, since we might've been restarted due to a ProtocolError
+                    # Check explicitly if timeout occurred
                     if (start_time + timeout_seconds) < time.time():
                         return False
                 # Regular Watch.stream() timeout occurred, no need for further checks
@@ -297,7 +306,11 @@ class KubernetesIngressHelper(object):
         ingress_name = ingress.metadata.name
         existing_ingress = self.get_ingress(namespace=namespace, name=ingress_name)
         if existing_ingress:
-            self.extensions_v1beta1_api.delete_namespaced_ingress(namespace=namespace, name=ingress_name, body=kubernetes.client.V1DeleteOptions())
+            self.extensions_v1beta1_api.delete_namespaced_ingress(
+                namespace=namespace,
+                name=ingress_name,
+                body=kubernetes.client.V1DeleteOptions()
+            )
         self.create_ingress(namespace=namespace, ingress=ingress)
 
     def create_ingress(self, namespace: str, ingress: V1beta1Ingress):
@@ -315,7 +328,10 @@ class KubernetesIngressHelper(object):
         not_empty(name)
 
         try:
-            ingress = self.extensions_v1beta1_api.read_namespaced_ingress(name=name, namespace=namespace)
+            ingress = self.extensions_v1beta1_api.read_namespaced_ingress(
+                name=name,
+                namespace=namespace
+            )
         except ApiException as ae:
             if ae.status == 404:
                 return None
