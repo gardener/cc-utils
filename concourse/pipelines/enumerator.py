@@ -304,8 +304,6 @@ class DefinitionDescriptor(object):
         for override in self.override_definitions:
             effective_definition = merge_dicts(effective_definition, override)
 
-        # TODO: Currently, the main-repository is passed along. Look into whether it's feasible/useful to infer the
-        # main-repository from the passed definition
         return DefinitionDescriptor(
                 pipeline_name=self.pipeline_name,
                 pipeline_definition=effective_definition,

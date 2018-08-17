@@ -33,7 +33,11 @@ class DraftReleaseTrait(Trait):
 class DraftReleaseTraitTransformer(TraitTransformer):
     def inject_steps(self):
         # inject 'release' step
-        self.release_step = PipelineStep(name='create_draft_release_notes', raw_dict={}, is_synthetic=True)
+        self.release_step = PipelineStep(
+            name='create_draft_release_notes',
+            raw_dict={},
+            is_synthetic=True
+        )
         yield self.release_step
 
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):

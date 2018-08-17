@@ -31,7 +31,8 @@ class CronTrait(Trait):
         return self.raw['interval']
 
     def resource_name(self):
-        return self.variant_name + '-' + self.interval() + '-cron' # variant-names must be unique, so this should suffice
+         # variant-names must be unique, so this should suffice
+        return self.variant_name + '-' + self.interval() + '-cron'
 
     def transformer(self):
         return CronTraitTransformer(name=self.name)
@@ -44,5 +45,4 @@ class CronTraitTransformer(TraitTransformer):
             if not 'trigger' in pipeline_args.raw['repo']:
                 main_repo._trigger = False
         # todo: inject cron-resource
-
 

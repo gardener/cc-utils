@@ -189,7 +189,9 @@ class Renderer(object):
             if not variant.has_main_repository():
                 continue
             main_repo = variant.main_repository()
-            pipeline_metadata['pipeline_name'] = '-'.join([pipeline_definition.name, main_repo.branch()])
+            pipeline_metadata['pipeline_name'] = '-'.join(
+                [pipeline_definition.name, main_repo.branch()]
+            )
             break
         else:
             # fallback in case no main_repository was found
@@ -298,7 +300,10 @@ class ConcourseDeployer(DefinitionDeployer):
                 name=pipeline_name,
                 pipeline_definition=pipeline_definition
             )
-            info('Deployed pipeline: ' + pipeline_name + ' to team: ' + definition_descriptor.concourse_target_team)
+            info(
+                'Deployed pipeline: ' + pipeline_name +
+                ' to team: ' + definition_descriptor.concourse_target_team
+            )
             if self.unpause_pipelines:
                 api.unpause_pipeline(pipeline_name=pipeline_name)
             if self.expose_pipelines:

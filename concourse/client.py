@@ -98,7 +98,8 @@ class ConcourseApiRoutes(object):
     def _api_url(self, *parts, **kwargs):
         prefix_team = kwargs.get('prefix_team', True)
         team_name = self.team
-        base_url = self.team_url(team_name) if prefix_team else urljoin(self.base_url, self.api_suffix)
+        base_url = self.team_url(team_name) if prefix_team else \
+                    urljoin(self.base_url, self.api_suffix)
         # preserve all parts of base url
         base_url +='/'
 

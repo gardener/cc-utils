@@ -27,7 +27,14 @@ from concourse.pipelines.modelbase import (
 )
 
 class PipelineStep(ModelBase):
-    def __init__(self, name, is_synthetic=False, script_type=ScriptType.BOURNE_SHELL, *args, **kwargs):
+    def __init__(
+        self,
+        name,
+        is_synthetic=False,
+        script_type=ScriptType.BOURNE_SHELL,
+        *args,
+        **kwargs
+    ):
         self.name = name
         self.is_synthetic = is_synthetic
         self._script_type = script_type
@@ -60,8 +67,10 @@ class PipelineStep(ModelBase):
 
     def script_type(self) -> ScriptType:
         '''
-        returns the step's "script type". The script type specifies the execution environment in which
-        the script payload is run (script payloads are hard-coded in pipeline templates).
+        returns the step's "script type"
+
+        The script type specifies the execution environment in which the script payload is run
+        (script payloads are hard-coded in pipeline templates).
         '''
         return self._script_type
 
@@ -143,9 +152,13 @@ class PipelineStep(ModelBase):
             # image must be a valid docker image reference
             allowed_characters = string.ascii_letters + string.digits +'.-_/:'
             if not all(map(lambda c: c in allowed_characters, image_reference)):
-                raise ModelValidationError('forbidden character in image reference: ' + str(image_reference))
+                raise ModelValidationError(
+                    'forbidden character in image reference: ' + str(image_reference)
+                )
             if not ':' in image_reference:
-                raise ModelValidationError('image reference must contain colon charater:' + str(image_reference))
+                raise ModelValidationError(
+                    'image reference must contain colon charater:' + str(image_reference)
+                )
 
     def __str__(self):
         descr = 'PipelineStep {n} - depends: {d}, inputs: {i}, outputs: {o}'.format(

@@ -142,10 +142,14 @@ def _sync_webhook(
 
     def url_filter(url):
         parsed_url = parse_qs(urlparse(url).query)
-        concourse_id = parsed_url.get(github.webhook.WebhookQueryAttributes.CONCOURSE_ID_ATTRIBUTE_NAME)
-        job_mapping_id = parsed_url.get(github.webhook.WebhookQueryAttributes.JOB_MAPPING_ID_ATTRIBUTE_NAME)
-        # we consider an url for removal iff it contains parameters 'concourse_id' and 'job_mapping_id'
-        # that match the configured concourse_id and job_mapping_name
+        concourse_id = parsed_url.get(
+            github.webhook.WebhookQueryAttributes.CONCOURSE_ID_ATTRIBUTE_NAME
+        )
+        job_mapping_id = parsed_url.get(
+            github.webhook.WebhookQueryAttributes.JOB_MAPPING_ID_ATTRIBUTE_NAME
+        )
+        # consider an url for removal iff it contains parameters 'concourse_id' and 'job_mapping_id'
+        # matching given concourse_id and job_mapping_name
         return (
             concourse_id is not None and
             concourse_cfg.name() in concourse_id and

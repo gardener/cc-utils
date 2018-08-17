@@ -49,11 +49,31 @@ from util import (
 )
 
 from kubernetes.client import (
-    V1Service, V1ObjectMeta, V1ServiceSpec, V1ServicePort, V1Deployment,
-    V1DeploymentSpec, V1PodTemplateSpec, V1PodSpec, V1Container, V1ResourceRequirements, V1ContainerPort,
-    V1Probe, V1TCPSocketAction, V1VolumeMount, V1Volume, V1SecretVolumeSource, V1LabelSelector,
-    V1beta1Ingress, V1beta1IngressSpec, V1beta1IngressRule, V1beta1HTTPIngressRuleValue, V1beta1HTTPIngressPath,
-    V1beta1IngressBackend, V1beta1IngressTLS, V1EnvVar,
+    V1Service,
+    V1ObjectMeta,
+    V1ServiceSpec,
+    V1ServicePort,
+    V1Deployment,
+    V1DeploymentSpec,
+    V1PodTemplateSpec,
+    V1PodSpec,
+    V1Container,
+    V1ResourceRequirements,
+    V1ContainerPort,
+    V1Probe,
+    V1TCPSocketAction,
+    V1VolumeMount,
+    V1Volume,
+    V1SecretVolumeSource,
+    V1LabelSelector,
+    V1beta1Ingress,
+    V1beta1IngressSpec,
+    V1beta1IngressRule,
+    V1beta1HTTPIngressRuleValue,
+    V1beta1HTTPIngressPath,
+    V1beta1IngressBackend,
+    V1beta1IngressTLS,
+    V1EnvVar,
 )
 
 @ensure_annotations
@@ -227,7 +247,8 @@ def deploy_concourse_landscape(
         )
 
     info('Deploying Concourse ...')
-    # Concourse is deployed last since Helm will lose connection if deployment takes more than ~60 seconds.
+    # Concourse is deployed last since Helm will lose connection if deployment takes more
+    # than ~60 seconds.
     # Helm will still continue deploying server-side, but the client will report an error.
     deploy_or_upgrade_concourse(
         default_helm_values=default_helm_values,
@@ -315,7 +336,8 @@ def ensure_cluster_version(kubernetes_config: KubernetesConfig):
         cluster_version_info.minor != configured_version_info['minor']
     ):
         fail(
-            'Incompatible k8s-cluster-version "Major: {a_major} Minor: {a_minor}". Expected "Major: {e_major} Minor: {e_minor}".'.format(
+            'cluster version mismatch "Major: {a_major} Minor: '
+            '{a_minor}". Expected "Major: {e_major} Minor: {e_minor}".'.format(
                 a_major=cluster_version_info.major,
                 a_minor=cluster_version_info.minor,
                 e_major=configured_version_info['major'],
@@ -326,7 +348,7 @@ def ensure_cluster_version(kubernetes_config: KubernetesConfig):
 
 
 def ensure_helm_setup():
-    """Ensure that Helm is installed and its repo-list is up-to-date. Return the path to the found Helm executable"""
+    """Ensure up-to-date helm installation. Return the path to the found Helm executable"""
     helm_executable = util.which('helm')
     with open(os.devnull) as devnull:
         subprocess.run([helm_executable, 'repo', 'update'], check=True, stdout=devnull)
@@ -533,13 +555,13 @@ def generate_secrets_server_deployment(
                             args=[
                                 '-c',
                                 '''
-                                # switch to secrets serving directory (create it if missing, i.e. if no other secrets are mounted there)
+                                # chdir to secrets dir; create if absent
                                 mkdir -p /secrets && cd /secrets
                                 # make Kubernetes serviceaccount secrets available by default
                                 cp -r /var/run/secrets/kubernetes.io/serviceaccount serviceaccount
                                 # store Kubernetes service endpoint env as file for consumer
                                 env | grep KUBERNETES_SERVICE > serviceaccount/env
-                                # launch minimalistic python server in that directory serving requests across all network interfaces
+                                # launch secrets server serving secrets dir contents on all IFs
                                 python3 -m http.server 8080
                                 '''
                             ],
