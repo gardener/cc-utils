@@ -148,7 +148,7 @@ def is_yaml_file(path: CliHints.existing_file()):
         try:
             if yaml.load(f):
                 return True
-        except Exception as e:
+        except Exception:
             warning('an error occurred whilst trying to parse {f}'.format(f=path))
             raise
     return False
