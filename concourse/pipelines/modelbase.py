@@ -43,10 +43,17 @@ class ModelDefaultsMixin(object):
 
 class ModelValidationMixin(object):
     def _required_attributes(self):
-        return {}
+        return ()
+
+    def _optional_attributes(self):
+        return ()
+
+    def _known_attributes(self):
+        return set(self._required_attributes()) | set(self._optional_attributes())
 
     def validate(self):
         self._validate_required_attributes()
+        self._validate_known_attributes()
 
     def _validate_required_attributes(self):
         missing_attributes = [a for a in self._required_attributes() if a not in self.raw]
@@ -54,6 +61,15 @@ class ModelValidationMixin(object):
             raise ModelValidationError(
                 'the following required attributes are absent: {m}'.format(
                     m=', '.join(missing_attributes),
+                )
+            )
+
+    def _validate_known_attributes(self):
+        unknown_attributes = [a for a in self.raw if a not in self._known_attributes()]
+        if unknown_attributes:
+            raise ModelValidationError(
+                'the following attributes are unknown: {m}'.format(
+                    m=', '.join(unknown_attributes)
                 )
             )
 

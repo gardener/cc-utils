@@ -30,6 +30,14 @@ class JobVariant(ModelBase):
         self.variant_name = name
         super().__init__(raw_dict=raw_dict, *args, **kwargs)
 
+    def _known_attributes(self):
+        return {
+            'steps',
+            'traits',
+            'repo',
+            'repos',
+        }
+
     def _children(self):
         yield from self.steps()
         yield from self.traits().values()
