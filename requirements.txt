@@ -12,6 +12,7 @@ pyflakes
 pycodestyle
 requests==2.18.4
 semver==2.8.0
+slackclient==1.2.1
 sseclient-py==1.7
 toposort==1.5
 urllib3==1.22
