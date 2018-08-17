@@ -195,7 +195,7 @@ def reachable_release_tags_from_commit(
         if commit.hexsha in tags:
             reachable_tags.append(tags[commit.hexsha])
         not_visited_parents = _.filter(commit.parents,
-            lambda parent_commit: not parent_commit.hexsha in visited
+            lambda parent_commit: parent_commit.hexsha not in visited
         )
         if not_visited_parents:
             queue.extend(not_visited_parents)

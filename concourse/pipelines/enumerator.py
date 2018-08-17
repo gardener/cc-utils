@@ -231,9 +231,10 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
             # fallback for components w/o branch_cfg: use default branch
             try:
                 default_branch = repository.default_branch
-            except:
+            except Exception:
                 default_branch = 'master'
-            yield (default_branch, None); return
+            yield (default_branch, None)
+            return
 
         for branch in repository.branches():
             cfg_entry = branch_cfg.cfg_entry_for_branch(branch.name)

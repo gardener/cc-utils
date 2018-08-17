@@ -68,7 +68,7 @@ class Product(ProductModelBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not 'components' in self.raw:
+        if 'components' not in self.raw:
             self.raw['components'] = []
 
     def components(self):
@@ -245,7 +245,7 @@ class ComponentDependencies(ModelBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for attrib_name in ('container_images', 'components', 'web', 'generic'):
-            if not attrib_name in self.raw:
+            if attrib_name not in self.raw:
                 self.raw[attrib_name] = []
 
     def container_images(self):
@@ -261,19 +261,19 @@ class ComponentDependencies(ModelBase):
         return (GenericDependency(raw_dict=raw_dict) for raw_dict in self.raw.get('generic'))
 
     def add_container_image_dependency(self, container_image):
-        if not container_image in self.container_images():
+        if container_image not in self.container_images():
             self.raw['container_images'].append(container_image.raw)
 
     def add_component_dependency(self, component_reference):
-        if not component_reference in self.components():
+        if component_reference not in self.components():
             self.raw['components'].append(component_reference.raw)
 
     def add_web_dependency(self, web_dependency):
-        if not web_dependency in self.web_dependencies():
+        if web_dependency not in self.web_dependencies():
             self.raw['web'].append(web_dependency.raw)
 
     def add_generic_dependency(self, generic_dependency):
-        if not generic_dependency in self.generic_dependencies():
+        if generic_dependency not in self.generic_dependencies():
             self.raw['generic'].append(generic_dependency.raw)
 
 

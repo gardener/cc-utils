@@ -92,7 +92,7 @@ class ConfigFactory(object):
 
     def __init__(self, raw_dict: dict):
         self.raw = not_none(raw_dict)
-        if not self.CFG_TYPES in self.raw:
+        if self.CFG_TYPES not in self.raw:
             raise ValueError('missing required attribute: {ct}'.format(ct=self.CFG_TYPES))
 
     def _configs(self, cfg_name: str):
@@ -114,7 +114,7 @@ class ConfigFactory(object):
         '''
         configs_dict = self._configs('cfg_set')
 
-        if not cfg_name in configs_dict:
+        if cfg_name not in configs_dict:
             raise ValueError('no cfg named {c} in {cs}'.format(
                 c=cfg_name,
                 cs=', '.join(configs_dict.keys())
@@ -140,7 +140,7 @@ class ConfigFactory(object):
         # for now, let's assume all of our model element types are subtypes of NamedModelElement
         # (with the exception of ConfigurationSet)
         configs = self._configs(cfg_type.cfg_type_name())
-        if not cfg_name in configs:
+        if cfg_name not in configs:
             raise ConfigElementNotFoundError('no such cfg element: {cn}. Known: {es}'.format(
                 cn=cfg_name,
                 es=', '.join(configs.keys())
@@ -200,7 +200,7 @@ class ConfigFactory(object):
         not_empty(cfg_type_name)
 
         known_types = self._cfg_types()
-        if not cfg_type_name in known_types:
+        if cfg_type_name not in known_types:
             raise ValueError("Unknown config type '{c}'. Known types: {k}".format(
                 c = cfg_type_name,
                 k = ', '.join(known_types.keys()),

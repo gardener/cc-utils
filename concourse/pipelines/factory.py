@@ -171,7 +171,7 @@ class DefinitionFactory(object):
 
     def _create_build_steps(self, raw_dict):
         steps_dict = {}
-        if not 'steps' in raw_dict:
+        if 'steps' not in raw_dict:
             return steps_dict
         elif not raw_dict['steps']:
             return {}
@@ -188,7 +188,7 @@ class DefinitionFactory(object):
         if 'repo' in raw_dict:
             # special case: repo singleton (will vanish once we mv definitions into component-repos)
             repo_dict = raw_dict['repo']
-            name = 'source' if not 'name' in repo_dict else repo_dict['name']
+            name = 'source' if 'name' not in repo_dict else repo_dict['name']
             pipeline_def._repos_dict[name] =  RepositoryConfig(
                 raw_dict=repo_dict,
                 logical_name=name,

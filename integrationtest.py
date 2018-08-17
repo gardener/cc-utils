@@ -45,7 +45,8 @@ def deploy_and_run_smoketest_pipeline(
 
     # as this is an integration test, hard-code assumptions about the layout of
     # our pipelines repository
-    calcdir = lambda path: os.path.join(cc_pipelines_repo_dir, path)
+    def calcdir(path):
+        return os.path.join(cc_pipelines_repo_dir, path)
 
     template_path = calcdir('templates')
     template_include_dir = cc_pipelines_repo_dir

@@ -28,9 +28,11 @@ def _set_cli(is_cli: bool):
     ctx().args._cli = is_cli
     global Failure
     if is_cli:
-        class Failure(SystemExit): pass
+        class Failure(SystemExit):
+            pass
     else:
-        class Failure(RuntimeError): pass
+        class Failure(RuntimeError):
+            pass
 
 
 def existing_file(path):
@@ -146,7 +148,7 @@ def is_yaml_file(path: CliHints.existing_file()):
         try:
             if yaml.load(f):
                 return True
-        except:
+        except Exception as e:
             warning('an error occurred whilst trying to parse {f}'.format(f=path))
             raise
     return False
@@ -222,7 +224,7 @@ def merge_dicts(base: dict, other: dict, list_semantics='merge'):
         # monkey-patch merge-strategy for lists
         list_merge_strategy = Merger.PROVIDED_TYPE_STRATEGIES[list]
         list_merge_strategy.strategy_merge = lambda c, p, base, other: \
-            list(base) + [e for e in other if not e in base]
+            list(base) + [e for e in other if e not in base]
 
         strategy_cfg = [(list, ['merge']), (dict, ['merge'])]
         merger = Merger(strategy_cfg, ['override'], ['override'])

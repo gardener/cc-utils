@@ -106,14 +106,14 @@ def _parse_dependency_str_func(
             parsed = json.loads(token)
         except json.decoder.JSONDecodeError as jde:
             raise argparse.ArgumentTypeError('Invalid JSON document: ' + '\n'.join(jde.args))
-        missing_attribs = [attrib for attrib in required_attributes if not attrib in parsed]
+        missing_attribs = [attrib for attrib in required_attributes if attrib not in parsed]
         if missing_attribs:
             raise argparse.ArgumentTypeError('missing required attributes: {ma}'.format(
                 ma=', '.join(missing_attribs))
             )
         if forbid_extra_attribs:
             extra_attribs = [
-                    attrib for attrib in parsed.keys() if not attrib in required_attributes
+                    attrib for attrib in parsed.keys() if attrib not in required_attributes
             ]
             if extra_attribs:
                 raise argparse.ArgumentTypeError('unknown attributes: {ua}'.format(
@@ -167,7 +167,9 @@ def merge_descriptors(descriptors: [str]):
     if len(descriptors) < 2:
         fail('at least two descriptors are required for merging')
 
-    parse_product_file = lambda f: Product.from_dict(parse_yaml_file(f))
+    def parse_product_file(f):
+        return Product.from_dict(parse_yaml_file(f))
+
     merged = parse_product_file(descriptors[0])
 
     for descriptor in map(parse_product_file, descriptors[1:]):

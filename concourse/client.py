@@ -429,8 +429,6 @@ class Resource(object):
         self.concourse_api = pipeline.concourse_api
         self.raw = raw_dict
         self.type = raw_dict['type']
-        if not 'source' in raw_dict:
-            print(raw_dict)
         self.source = raw_dict['source']
         self.name = raw_dict['name']
 

@@ -339,7 +339,7 @@ class ReplicationResultProcessor(object):
         for result in results:
             definition_descriptor = result.definition_descriptor
             concourse_target_key = definition_descriptor.concourse_target_key()
-            if not concourse_target_key in concourse_target_results:
+            if concourse_target_key not in concourse_target_results:
                 concourse_target_results[concourse_target_key] = set()
             concourse_target_results[concourse_target_key].add(result)
 

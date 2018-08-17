@@ -191,7 +191,7 @@ class RepositoryConfig(Resource):
             self._trigger = self._is_main_repo
 
         self._disable_ci_skip = raw_dict.get('disable_ci_skip', False)
-        if not 'disable_ci_skip' in raw_dict:
+        if 'disable_ci_skip' not in raw_dict:
             self._disable_ci_skip = not self._is_main_repo
 
     def cfg_name(self):

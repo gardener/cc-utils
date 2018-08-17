@@ -30,7 +30,8 @@ class UtilTest(unittest.TestCase):
         self.assertTrue(len(stderr.getvalue()) == 0)
 
     def test_info_with_quiet(self):
-        class Args(object): pass
+        class Args(object):
+            pass
         args = Args()
         args.quiet = True
         import ctx

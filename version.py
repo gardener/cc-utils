@@ -99,7 +99,9 @@ def find_latest_version(versions):
     latest_candidate = None
 
     for candidate in versions:
-        if not latest_candidate: latest_candidate = candidate; continue
+        if not latest_candidate:
+            latest_candidate = candidate
+            continue
         if candidate > latest_candidate:
             latest_candidate = candidate
     return latest_candidate
@@ -109,7 +111,8 @@ def find_latest_version_with_matching_major(reference_version: semver.VersionInf
     latest_candidate = None
     for candidate in versions:
         # skip if major version does not match
-        if candidate.major != reference_version.major: continue
+        if candidate.major != reference_version.major:
+            continue
         if candidate > reference_version:
             if not latest_candidate or latest_candidate < candidate:
                 latest_candidate = candidate

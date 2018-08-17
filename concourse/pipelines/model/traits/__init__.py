@@ -45,7 +45,7 @@ TRAITS = {
 class TraitsFactory(object):
     @staticmethod
     def create(name: str, variant_name: str, args_dict: dict):
-        if not name in TRAITS:
+        if name not in TRAITS:
             raise ModelValidationError('no such trait: ' + str(name))
         not_none(args_dict)
 

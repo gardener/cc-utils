@@ -61,7 +61,7 @@ def send_mail(
         mail_template = f.read()
 
     # validate template-tokens
-    invalid_tokens = filter(lambda t: not isinstance(t, str) or not '=' in t, replace_token)
+    invalid_tokens = filter(lambda t: not isinstance(t, str) or '=' not in t, replace_token)
     if len(list(invalid_tokens)) > 0:
         fail('all replace-tokens must be of form <key>=<value>: ' + ' '.join(
             invalid_tokens

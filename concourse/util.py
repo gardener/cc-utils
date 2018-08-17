@@ -69,7 +69,7 @@ def sync_webhooks(
     path_to_resources = {}
     for gh_res in github_resources:
         repo_path = gh_res.github_source().repo_path()
-        if not repo_path in path_to_resources:
+        if repo_path not in path_to_resources:
             path_to_resources[repo_path] = [gh_res]
         else:
             path_to_resources[repo_path].append(gh_res)

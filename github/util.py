@@ -287,7 +287,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         name: str
     )->Release:
         releases = list(self.repository.releases())
-        release = _.find(releases, lambda rls: rls.draft == True and rls.name == name)
+        release = _.find(releases, lambda rls: rls.draft and rls.name == name)
         return release
 
     def tag_exists(
@@ -312,7 +312,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         else:
             response = requests.Response()
             response.status_code = 404
-            response.json = lambda: {'message':'no asset with label {l} found'.format(l=asset_label)}
+            response.json = lambda: {'message':'no asset with label {} found'.format(asset_label)}
             raise NotFoundError(resp=response)
 
         buffer = io.BytesIO()
@@ -323,7 +323,8 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         for tag_name in self.release_tags():
             try:
                 yield semver.parse_version_info(tag_name)
-            except ValueError: pass # ignore
+            except ValueError:
+                pass # ignore
 
     def release_tags(self):
         return _ \
@@ -451,7 +452,7 @@ def replicate_pipeline_definitions(
                     file_contents=definition_contents,
                     commit_message="Import cc-pipeline definition"
                 )
-            except:
+            except: # noqa
                 pass # keep going
 
 

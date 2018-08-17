@@ -42,7 +42,7 @@ class CronTraitTransformer(TraitTransformer):
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         main_repo = pipeline_args.main_repository()
         if main_repo:
-            if not 'trigger' in pipeline_args.raw['repo']:
+            if 'trigger' not in pipeline_args.raw['repo']:
                 main_repo._trigger = False
         # todo: inject cron-resource
 

@@ -37,7 +37,7 @@ class SecretsServerClient(object):
         concourse_secret_env_var='SECRETS_SERVER_CONCOURSE_CFG_NAME',
         cache_file='SECRETS_SERVER_CACHE'
     ):
-        if not cache_file in os.environ:
+        if cache_file not in os.environ:
             if not all(map(
                         lambda e: e in os.environ,
                         (endpoint_env_var, concourse_secret_env_var)

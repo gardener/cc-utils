@@ -152,7 +152,7 @@ def add_module(module_name, parser):
 
             # add_argument does not allow 'type' as a parameter in some cases;
             # workaround this by omitting it in all cases where it is None anyway
-            if argtype is not None and not 'type' in kwargs:
+            if argtype is not None and 'type' not in kwargs:
                 kwargs['type'] = argtype
 
             if action:

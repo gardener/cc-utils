@@ -77,7 +77,7 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
             release_step.add_input(*COMPONENT_DESCRIPTOR_DIR_INPUT)
 
         # inject component_name if not configured
-        if not 'component_name' in self.trait.raw:
+        if 'component_name' not in self.trait.raw:
             main_repo = pipeline_args.main_repository()
             component_name = '/'.join((
                 main_repo.repo_hostname(),

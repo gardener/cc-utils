@@ -52,7 +52,7 @@ class ReleaseTraitTransformer(TraitTransformer):
         # a 'release job' should only be triggered automatically if explicitly configured
         main_repo = pipeline_args.main_repository()
         if main_repo:
-            if not 'trigger' in pipeline_args.raw['repo']:
+            if 'trigger' not in pipeline_args.raw['repo']:
                 main_repo._trigger = False
 
     def dependencies(self):

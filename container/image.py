@@ -19,7 +19,7 @@ from util import not_empty
 
 
 def retrieve_container_image(image_reference):
-    if not ':' in not_empty(image_reference):
+    if ':' not in not_empty(image_reference):
         # client.pull with not tag specified would pull _all_ images
         raise ValueError('image reference must specify a single image (tag missing)')
 
