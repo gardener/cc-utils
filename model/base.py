@@ -68,5 +68,3 @@ class NamedModelElement(ModelBase):
 
     def __str__(self):
         return '{n}: {d}'.format(n=self.name(), d=self.raw)
-
-

@@ -61,4 +61,3 @@ class PipelineStepTest(unittest.TestCase):
         # whitespace must be quoted
         examinee = self._examinee(execute=['e x', 'a r g'])
         self.assertEqual(examinee.execute(), ' '.join(map(shlex.quote, ('e x', 'a r g'))))
-

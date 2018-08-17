@@ -91,4 +91,3 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
     def order_dependencies(self):
         # dependency is required, as we need to patch the 'release' step
         return super().dependencies() | {'release'}
-

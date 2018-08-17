@@ -463,4 +463,3 @@ class PipelineReplicator(object):
 
         if self.result_processor:
             return self.result_processor.process_results(results)
-

@@ -73,5 +73,3 @@ class PullRequestTraitTransformer(TraitTransformer):
 
         # patch-in the updated repository
         pipeline_args._repos_dict[repo_name] = pr_repo
-
-

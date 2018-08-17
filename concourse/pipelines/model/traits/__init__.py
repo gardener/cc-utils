@@ -52,5 +52,3 @@ class TraitsFactory(object):
         ctor = TRAITS[name]
 
         return ctor(name=name, variant_name=variant_name, raw_dict=args_dict)
-
-

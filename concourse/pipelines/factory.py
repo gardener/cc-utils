@@ -218,4 +218,3 @@ class DefinitionFactory(object):
                     qualifier='output',
                 )
                 pipeline_def._publish_repos_dict[repo_name] = publish_repo
-

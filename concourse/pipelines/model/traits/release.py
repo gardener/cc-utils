@@ -60,4 +60,3 @@ class ReleaseTraitTransformer(TraitTransformer):
 
     def order_dependencies(self):
         return super().dependencies() | {'publish'}
-

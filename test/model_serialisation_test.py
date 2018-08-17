@@ -120,4 +120,3 @@ class ConfigSetSerialiserTest(unittest.TestCase):
         # ensure the same value is also returned from the cfg_set
         first_value_from_cfg_set = two_of_a_kind_set._cfg_element('a_type', 'first_value_of_a')
         self.assertEqual(first_value.raw, first_value_from_cfg_set.raw)
-

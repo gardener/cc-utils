@@ -60,4 +60,3 @@ class UpdateComponentDependenciesTraitTransformer(TraitTransformer):
         # our step depends on dependendency descriptor step
         component_descriptor_step = pipeline_args.step('component_descriptor')
         self.update_component_deps_step._add_dependency(component_descriptor_step)
-

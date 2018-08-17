@@ -45,4 +45,3 @@ class CronTraitTransformer(TraitTransformer):
             if 'trigger' not in pipeline_args.raw['repo']:
                 main_repo._trigger = False
         # todo: inject cron-resource
-

@@ -345,4 +345,3 @@ class TemplateRetriever(object):
     def template_contents(self, template_name):
         with open(self.template_file(template_name=template_name)) as f:
             return f.read()
-

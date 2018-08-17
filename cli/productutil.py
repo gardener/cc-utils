@@ -257,4 +257,3 @@ def resolve_component_descriptor(
     resolved_descriptor = resolver.resolve_component_references(product=component_descriptor)
 
     print(yaml.dump(resolved_descriptor.raw))
-

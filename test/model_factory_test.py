@@ -259,5 +259,3 @@ class ConfigFactoryDictDeserialisationTest(unittest.TestCase, ConfigFactorySmoke
     def test_from_dict_fails_on_missing_cfg_types(self):
         with self.assertRaises(ValueError):
             ConfigFactory.from_dict({})
-
-

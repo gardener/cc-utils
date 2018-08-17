@@ -131,4 +131,3 @@ class JobVariant(ModelBase):
 
     def has_publish_repository(self, name):
         return name in self._publish_repos_dict
-

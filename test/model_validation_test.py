@@ -217,4 +217,3 @@ class BasicCredentialsTest(unittest.TestCase):
                 test_dict.pop(key)
                 with self.assertRaises(ModelValidationError):
                     examinee.BasicCredentials(test_dict)
-

@@ -308,4 +308,3 @@ class UploadResult(object):
             ir=self.container_image.image_reference(),
             s=self.status
         )
-

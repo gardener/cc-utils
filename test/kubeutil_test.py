@@ -57,5 +57,3 @@ class CtxTest(unittest.TestCase):
         with capture_out() as (stdout, stderr):
             with self.assertRaises(Failure):
                 self.examinee.get_kubecfg()
-
-

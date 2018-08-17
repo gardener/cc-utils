@@ -143,4 +143,3 @@ def attribute(cfg_type: str, cfg_name: str, key: str):
         raw = attrib
 
     print(str(attrib))
-

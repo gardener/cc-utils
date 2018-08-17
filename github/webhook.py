@@ -283,4 +283,3 @@ class GithubWebHookSyncer(object):
                 removed +=1
 
         return (processed, removed)
-

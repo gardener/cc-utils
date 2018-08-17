@@ -72,4 +72,3 @@ class VersionTraitTransformer(TraitTransformer):
                 continue
             step._add_dependency(self.version_step)
             step.add_input(name='version_path', variable_name='managed-version')
-

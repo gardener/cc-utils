@@ -45,4 +45,3 @@ class DraftReleaseTraitTransformer(TraitTransformer):
 
     def dependencies(self):
         return super().dependencies() | {'version'}
-

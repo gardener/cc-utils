@@ -43,5 +43,3 @@ class ResourceIdentifierTest(unittest.TestCase):
         self.assertNotEqual(left, examinee(type_name='type1', base_name='base2', qualifier='qual1'))
         self.assertNotEqual(left, examinee(type_name='type1', base_name='base1', qualifier='qual2'))
         self.assertNotEqual(left, examinee(type_name='type1', base_name='base1'))
-
-

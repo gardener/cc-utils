@@ -27,4 +27,3 @@ class PipelineDefinition(object):
 
     def variant(self, name: str):
         return self._variants_dict[name]
-

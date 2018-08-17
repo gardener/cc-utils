@@ -276,4 +276,3 @@ class RepositoryConfig(Resource):
             rp=self.repo_path(),
             b=self.branch()
         )
-

@@ -106,4 +106,3 @@ class DefinitionFactoryTest(unittest.TestCase):
         main_repo_from_registry = registry.resource(main_repo.resource_identifier())
 
         self.assertTrue(main_repo_from_registry.should_trigger())
-

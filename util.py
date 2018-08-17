@@ -278,4 +278,3 @@ class FluentIterable(object):
 
     def as_list(self):
         return list(self.as_generator())
-

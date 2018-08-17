@@ -23,4 +23,3 @@ class ModelBaseTest(unittest.TestCase):
         examinee = ModelBase(raw_dict={'foo': 'bar'})
 
         self.assertEqual(examinee.raw, {'foo': 'bar'})
-

@@ -269,4 +269,3 @@ class DependenciesModelTest(unittest.TestCase, AssertMixin):
         self.assertEqual(redundant_dep, gen_dep)
         examinee.add_generic_dependency(redundant_dep)
         self.assertEqual((gen_dep,), tuple(examinee.generic_dependencies()))
-

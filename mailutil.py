@@ -176,5 +176,3 @@ def notify(
         subject=subject
     )
     info('sent email to: {r}'.format(r=recipients))
-
-

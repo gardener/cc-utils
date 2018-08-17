@@ -123,4 +123,3 @@ class UtilTest(unittest.TestCase):
             merged,
             {1: [3, 1, 0, 2, 4]},
         )
-

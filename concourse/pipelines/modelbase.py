@@ -129,4 +129,3 @@ def fail(msg):
 
 def select_attr(name):
     return lambda o: o.name
-

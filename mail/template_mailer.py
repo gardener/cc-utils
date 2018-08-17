@@ -42,4 +42,3 @@ def create_mail(
     msg['Cc'] = ';'.join(cc_recipients)
 
     return msg
-

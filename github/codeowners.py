@@ -121,4 +121,3 @@ class CodeOwnerEntryResolver(object):
                     continue
             else:
                 yield from self._resolve_team_members(codeowner_entry[1:])
-

@@ -118,4 +118,3 @@ class ProtecodeUtil(object):
             status=upload_status,
             result=result
         )
-

@@ -131,5 +131,3 @@ class ConcourseApiRoutesTest(unittest.TestCase):
             self.examinee.build_plan(build_id=252525),
             'https://made-up-concourse.com/api/v1/builds/252525/plan',
         )
-
-

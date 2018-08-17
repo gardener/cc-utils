@@ -41,5 +41,3 @@ class CliTest(unittest.TestCase):
         self.assertEqual(result.stdout.strip(), 'INFO: foobar')
         self.assertEqual(result.stderr.strip(), '')
         self.assertEqual(result.returncode, 0)
-
-

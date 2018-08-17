@@ -145,4 +145,3 @@ class PublishTraitTransformer(TraitTransformer):
             if step.name in ['publish', 'release']:
                 continue
             prepare_step._add_dependency(step)
-

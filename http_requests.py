@@ -153,4 +153,3 @@ class AuthenticatedRequestBuilder(object):
                 return_type=None,
                 **kwargs
         )
-
