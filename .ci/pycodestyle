@@ -9,9 +9,7 @@ pushd "${src_dir}"
 
 echo 'running pycodestyle..'
 
-# line lengths
-echo 'checking line lengths'
-if pycodestyle --select=E5; then
+if pycodestyle; then
     echo 'pycodestyle succeeded'
     popd
     exit 0
