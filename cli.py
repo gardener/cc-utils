@@ -33,7 +33,7 @@ def print_import_errs():
         util.verbose(ie)
 
 if 'COLUMNS' not in os.environ:
-    # Create a custom width formatter by fixing two arguments for the default formatter class, namely
+    # Use custom width formatter by fixing two arguments for the default formatter class, namely
     # 'width' (defaults to 80 - 2) and 'max_help_position' (defaults to 24)
     FORMATTER_CLASS = functools.partial(argparse.HelpFormatter, max_help_position=40, width=100)
 else:

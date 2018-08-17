@@ -116,8 +116,8 @@ def update_submodule(
     repo_path : str
         Path to a directory containing an intialised git-repo with a submodule to update.
     tree_ish : str
-        Valid tree-ish to use as base for creating the new commit. This will be used as parent for the
-        commit created by this function.
+        Valid tree-ish to use as base for creating the new commit. Used as parent for the
+        commit to be created
         Example: 'master' for the head of the master-branch.
     submodule_path : str
         Path (relative to the repository root) to the submodule. Must be immediately below the root
@@ -196,8 +196,7 @@ def _serialise_and_update_submodule(
         str
             An updated serialised git-tree with the updated submodule entry
     '''
-    # Since there is no direct way to get the ls-tree representation from GitPython we need to gather
-    # the necessary information for each element of the given tree ourselves.
+    # GitPython offers no API to retrieve ls-tree representation
     return '\n'.join([
         _serialise_object_replace_submodule(
             tree_element=tree_element,
@@ -211,7 +210,8 @@ def _serialise_object_replace_submodule(tree_element, submodule_path, commit_has
     # GitPython uses the special type 'submodule' for submodules whereas git uses 'commit'.
     if tree_element.type == 'submodule':
         element_type = 'commit'
-        # Replace the hash the of the 'commit'-tree with the passed value if the submodule is at the specified path
+        # Replace the hash the of the 'commit'-tree with the passed value if the submodule
+        # is at the specified path
         if tree_element.path == submodule_path:
             element_sha = commit_hash
     else:

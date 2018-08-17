@@ -38,7 +38,7 @@ def send_mail(
     mail_template_file: CliHints.existing_file(),
     subject: CliHint(help="email subject"),
     cc_recipients: CliHint(typehint=[str], help="Carbon copy email address")=[],
-    replace_token: CliHint(typehint=[str], help="<key>=<value> will replace all occurrences in the mail body.")=[],
+    replace_token: CliHint(typehint=[str], help="<key>=<value> (replace <key> in body)")=[],
 ):
     '''
     Sends an email using the specified email_cfg (retrieved from a cfg_factory) to the specified

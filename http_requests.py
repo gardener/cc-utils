@@ -76,9 +76,7 @@ class AuthenticatedRequestBuilder(object):
         if basic_auth_username and basic_auth_passwd:
             self.auth = HTTPBasicAuth(basic_auth_username, basic_auth_passwd)
 
-        # Create the session to use for requests and mount our adapter. The requests library sorts these adapters by
-        # prefix length, descending, and auto-inserts adapters for http and https. Therefore we have to mount
-        # our default adapter explicitly to both.
+        # create session and mount our default adapter (for retry-semantics)
         session = requests.Session()
         session.mount('http://', default_http_adapter)
         session.mount('https://', default_http_adapter)

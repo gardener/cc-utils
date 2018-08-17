@@ -37,7 +37,10 @@ class SecretsServerClient(object):
         cache_file='SECRETS_SERVER_CACHE'
     ):
         if not cache_file in os.environ:
-            if not all(map(lambda e: e in os.environ, (endpoint_env_var, concourse_secret_env_var))):
+            if not all(map(
+                        lambda e: e in os.environ,
+                        (endpoint_env_var, concourse_secret_env_var)
+                        )):
                 raise ValueError('the following environment variables must be defined: {v}'.format(
                     v=', '.join((endpoint_env_var, concourse_secret_env_var))
                 ))
@@ -86,7 +89,9 @@ def _client():
     args = ctx().args
     try:
         if bool(args.server_endpoint) ^ bool(args.concourse_cfg_name):
-            raise ValueError('either all or none of server-endpoint and concourse-cfg-name must be set')
+            raise ValueError(
+                    'either all or none of server-endpoint and concourse-cfg-name must be set'
+            )
         if args.server_endpoint or args.cache_file:
             return SecretsServerClient(
                 endpoint_url=args.server_endpoint,
