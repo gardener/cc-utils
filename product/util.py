@@ -25,6 +25,7 @@ from github.util import GitHubRepositoryHelper, github_api_ctor
 from util import not_none, FluentIterable
 from .model import Product, ComponentReference, COMPONENT_DESCRIPTOR_ASSET_NAME
 
+
 class ComponentResolutionException(Exception):
     def __init__(self, msg, component_reference):
         self.msg = msg
@@ -35,6 +36,7 @@ class ComponentResolutionException(Exception):
             cr=self.component_reference,
             msg=self.msg,
         )
+
 
 class ResolverBase(object):
     def __init__(
@@ -58,7 +60,6 @@ class ResolverBase(object):
         url = 'https://' + host_name
         ctor = github_api_ctor(github_url=url)
         return ctor()
-
 
     def _repository_helper(self, component_reference):
         if isinstance(component_reference, tuple):
@@ -188,7 +189,6 @@ def diff_products(left_product, right_product, ignore_component_names=()):
             if c.name() == changed_component.name():
                 return (changed_component, c)
         return (changed_component, None) # no pair component found
-
 
     components_with_changed_versions = FluentIterable(items=components_only_left) \
         .map(functools.partial(find_changed_component, components=right_components)) \

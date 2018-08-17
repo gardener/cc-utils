@@ -20,6 +20,7 @@ from concourse.pipelines.modelbase import Trait, TraitTransformer, ModelBase, Sc
 
 from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
 
+
 class UpdateComponentDependenciesTrait(Trait):
     def _defaults_dict(self):
         return {

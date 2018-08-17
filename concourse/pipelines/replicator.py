@@ -264,6 +264,7 @@ class FilesystemDeployer(DefinitionDeployer):
                 deploy_status=DeployStatus.FAILED,
             )
 
+
 @functools.lru_cache()
 def _concourse_api(concourse_cfg, team_name: str):
     team_credentials = concourse_cfg.team_credentials(team_name)
@@ -329,6 +330,7 @@ class ConcourseDeployer(DefinitionDeployer):
                 definition_descriptor=definition_descriptor,
                 deploy_status=DeployStatus.FAILED,
             )
+
 
 class ReplicationResultProcessor(object):
     def process_results(self, results):
@@ -411,6 +413,7 @@ class ReplicationResultProcessor(object):
             .filter(lambda resource: resource.has_webhook_token()) \
             .map(lambda resource: trigger_pipeline_resource_check(resource_name=resource.name)) \
             .as_list()
+
 
 class PipelineReplicator(object):
     def __init__(

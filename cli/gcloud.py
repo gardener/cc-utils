@@ -17,6 +17,7 @@ from subprocess import run, STDOUT, PIPE, CalledProcessError
 
 from util import existing_file, not_empty, fail
 
+
 def authenticate_service_account(credentials_file):
     existing_file(credentials_file)
     run([
@@ -25,6 +26,7 @@ def authenticate_service_account(credentials_file):
       ],
       stdout=PIPE, stderr=STDOUT, check=True
     )
+
 
 def determine_image_digest(image_reference):
     not_empty(image_reference)
@@ -36,6 +38,7 @@ def determine_image_digest(image_reference):
     )
     return result.stdout.strip()
 
+
 def image_exists(image_reference):
     not_empty(image_reference)
     try:
@@ -44,6 +47,7 @@ def image_exists(image_reference):
     except(CalledProcessError):
         return False
 
+
 def untag_image(image_reference):
     not_empty(image_reference)
     run([
@@ -51,6 +55,7 @@ def untag_image(image_reference):
       ],
       stdout=PIPE, stderr=STDOUT, check=True
     )
+
 
 def untag_and_delete_image_if_no_longer_tagged(image_reference):
     not_empty(image_reference)
@@ -65,6 +70,7 @@ def untag_and_delete_image_if_no_longer_tagged(image_reference):
       stdout=PIPE, stderr=STDOUT, check=False
     )
     return result.returncode == 0
+
 
 def deploy_image(image_reference):
     not_empty(image_reference)

@@ -24,6 +24,7 @@ DEFAULT_HOOK_EVENTS = ['create', 'pull_request', 'push']
 DEFAULT_HOOK_NAME = 'web' # see https://developer.github.com/v3/repos/hooks/
 DEFAULT_HOOK_CONTENT_TYPE = 'json'
 
+
 class WebhookQueryAttributes(object):
     WEBHOOK_TOKEN_ATTRIBUTE_NAME = 'webhook_token'
     CONCOURSE_ID_ATTRIBUTE_NAME = 'concourse_id'

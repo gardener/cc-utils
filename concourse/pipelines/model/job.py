@@ -22,6 +22,7 @@ from concourse.pipelines.modelbase import (
 )
 from concourse.pipelines.model.resources import RepositoryConfig
 
+
 class JobVariant(ModelBase):
     def __init__(self, name: str, raw_dict: dict, resource_registry, *args, **kwargs):
         self._main_repository_name = None

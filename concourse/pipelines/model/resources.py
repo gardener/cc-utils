@@ -17,9 +17,11 @@ import os
 
 from concourse.pipelines.modelbase import ModelBase, not_none
 
+
 def sane_env_var_name(name):
     not_none(name)
     return name.replace('-', '_').upper()
+
 
 class ResourceIdentifier(object):
     def __init__(
@@ -154,7 +156,6 @@ class RepositoryConfig(Resource):
         ):
         self._is_pull_request = is_pull_request
         self._is_main_repo = is_main_repo
-
 
         # todo: handle "qualifier"
         if is_pull_request:

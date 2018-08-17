@@ -25,6 +25,7 @@ from concourse.pipelines.modelbase import (
   normalise_to_dict,
 )
 
+
 class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -137,7 +138,6 @@ class PublishTraitTransformer(TraitTransformer):
             input_step = pipeline_args.step(input_step_name)
             input_name = input_step.output_dir()
             prepare_step.add_input(input_name, input_name)
-
 
         # prepare-step depdends on every other step, except publish and release
         # TODO: do not hard-code knowledge about 'release' step

@@ -44,6 +44,7 @@ Commit = namedtuple('Commit', [
     "message"
 ])
 
+
 def generate_release_notes(
     repo_dir: str,
     helper: GitHubRepositoryHelper,
@@ -63,6 +64,7 @@ def generate_release_notes(
     ))
     return release_notes_str
 
+
 def get_release_note_blocks(
     repo_dir: str,
     helper: GitHubRepositoryHelper,
@@ -81,6 +83,7 @@ def get_release_note_blocks(
     info(release_notes_str)
     return release_notes_str
 
+
 def release_note_objs_to_block_str(
     release_note_objs: list
 )->str:
@@ -91,6 +94,7 @@ def release_note_objs_to_block_str(
     else:
         release_notes_str = ''
     return release_notes_str
+
 
 def _get_rls_note_objs(
     repo_dir: str,
@@ -118,6 +122,7 @@ def _get_rls_note_objs(
 
     return release_note_objs
 
+
 def calculate_range(
     repository_branch: str,
     repo: git.Repo,
@@ -140,6 +145,7 @@ def calculate_range(
 
     commit_range = "{start}..{end}".format(start=range_start, end=range_end)
     return commit_range
+
 
 def release_tags(
     helper: GitHubRepositoryHelper,
@@ -168,6 +174,7 @@ def release_tags(
         .value()
     # pylint: enable=undefined-variable
     return tags
+
 
 def reachable_release_tags_from_commit(
     helper: GitHubRepositoryHelper,
@@ -211,6 +218,7 @@ def reachable_release_tags_from_commit(
 
     return reachable_tags
 
+
 def get_commits_in_range(
     repo: git.Repo,
     commit_range: str,
@@ -233,6 +241,7 @@ def get_commits_in_range(
 
     return commits_from_logs(git_logs)
 
+
 def commits_from_logs(
     git_logs: list
 ):
@@ -254,6 +263,7 @@ def commits_from_logs(
         .value()
     return commits
 
+
 def fetch_pr_numbers_from_commits(
     commits: list
 ) -> set:
@@ -266,11 +276,13 @@ def fetch_pr_numbers_from_commits(
 
     return pr_numbers
 
+
 def pr_number_from_subject(commit_subject: str):
     pr_number = _.head(re.findall(r"Merge pull request #(\d+|$)", commit_subject))
     if not pr_number: # Squash commit
         pr_number = _.head(re.findall(r" \(#(\d+)\)", commit_subject))
     return pr_number
+
 
 def fetch_release_notes_from_prs(
     helper: GitHubRepositoryHelper,
@@ -301,6 +313,7 @@ def fetch_release_notes_from_prs(
 
         release_notes.extend(release_notes_pr)
     return release_notes
+
 
 def fetch_release_notes_from_commits(
     commits: list,
@@ -375,12 +388,14 @@ def extract_release_notes(
             continue
     return release_notes
 
+
 def get_or_call(obj, path):
     value = _.get(obj, path)
     if callable(value):
         return value()
     else:
         return value
+
 
 class Renderer(object):
     Node = namedtuple("Node", ["identifier", "title", "nodes", "matches_rn_field_path"])
@@ -447,6 +462,7 @@ class Renderer(object):
         release_note_objs: list
     )->list:
         pass
+
 
 class MarkdownRenderer(Renderer):
 
@@ -547,6 +563,7 @@ class MarkdownRenderer(Renderer):
                     rls_note_line=line,
                     header_suffix=header_suffix
                 )
+
     @staticmethod
     def _to_md_bullet_points(
         tag: str,
@@ -607,6 +624,7 @@ class MarkdownRenderer(Renderer):
                     ))
                 md_lines.extend(tmp_md_lines)
         return md_lines
+
 
 class ReleaseNoteBlock(ReleaseNote):
 

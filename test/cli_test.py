@@ -26,6 +26,7 @@ SRC_DIR = os.path.abspath(
 )
 CLI_PY = os.path.join(SRC_DIR, 'cli.py')
 
+
 class CliTest(unittest.TestCase):
     def test_smoke(self):
         # perform a very weak smoke-test:

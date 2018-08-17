@@ -6,6 +6,7 @@ from concourse.pipelines.factory import (
     DefinitionFactory
 )
 
+
 class RawPipelineDefinitionDescriptorTest(unittest.TestCase):
     def test_basic_validation(self):
         # "OK case"

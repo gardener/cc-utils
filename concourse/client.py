@@ -69,6 +69,7 @@ def from_cfg(concourse_cfg, team_name: str):
 def select_attr(name: str):
     return lambda o: o.get(name)
 
+
 class SetPipelineResult(Enum):
     UPDATED = 0
     CREATED = 1
@@ -76,6 +77,7 @@ class SetPipelineResult(Enum):
 
 # GLOBAL DEFINES
 CONCOURSE_API_SUFFIX = 'api/v1'
+
 
 class ConcourseApiRoutes(object):
     '''
@@ -386,6 +388,7 @@ class ModelBase(object):
 
     Not intended to be instantiated by users of this module
     '''
+
     def __init__(self, raw_dict: dict, concourse_api:ConcourseApi):
         self.api = concourse_api
         self.raw_dict = raw_dict
@@ -488,6 +491,7 @@ class Build(ModelBase):
 
     Not intended to be instantiated by users of this module
     '''
+
     def id(self):
         return int(self.raw_dict.get('id'))
 
@@ -516,6 +520,7 @@ class BuildPlan(ModelBase):
         If no task with the given name is found, `None` is returned.
         '''
         plan = self.raw_dict.get('plan')
+
         def find_tid(p):
             if 'task' in p:
                 task = p.get('task')
@@ -544,6 +549,7 @@ class BuildEvents(object):
 
     Not intended to be instantiated by users of this module
     '''
+
     def __init__(self, response, concourse_api):
         '''
         @param response: the unprocessed reponse object as returned from the request.
@@ -552,7 +558,6 @@ class BuildEvents(object):
         '''
         self.api = concourse_api
         self.response = response
-
 
     def process_events(self, callback=None, filter_for_task_id=None, yield_cb=False):
         '''

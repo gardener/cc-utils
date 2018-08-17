@@ -2,6 +2,7 @@ import unittest
 
 from concourse.pipelines.model.resources import ResourceIdentifier
 
+
 class ResourceIdentifierTest(unittest.TestCase):
     def test_ctor_arg_validation(self):
         examinee = ResourceIdentifier

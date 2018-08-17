@@ -14,6 +14,7 @@ from concourse.pipelines.model.pipeline import PipelineDefinition
 from concourse.pipelines.model.resources import RepositoryConfig, ResourceRegistry
 from concourse.pipelines.model.traits import TraitsFactory
 
+
 def ensure_dict(d, allow_empty=True):
     if allow_empty and d is None:
         return {}
@@ -23,11 +24,13 @@ def ensure_dict(d, allow_empty=True):
         raise ModelValidationError('a dict is required')
     return d
 
+
 class RawPipelineDefinitionDescriptor(object):
     '''
     Container type holding a single (raw) pipeline definition and metadata.
     Basic value validation is done in the c'tor.
     '''
+
     def __init__(self, name, base_definition, variants, template='default'):
         self.name = not_none(name)
         self.base_definition = ensure_dict(base_definition, allow_empty=True)
@@ -47,6 +50,7 @@ class DefinitionFactory(object):
     single job definitions. Attributes defined in a base definition are inherited into each
     variant. Variants may overwrite inherited attributes.
     '''
+
     def __init__(self, raw_definition_descriptor: RawPipelineDefinitionDescriptor):
         self.raw_definition_descriptor = not_none(raw_definition_descriptor)
 
@@ -84,7 +88,6 @@ class DefinitionFactory(object):
 
         return pipeline_definition
 
-
     def _create_variants_dict(self, raw_definition_descriptor):
         variants_dict = normalise_to_dict(deepcopy(raw_definition_descriptor.variants))
 
@@ -99,7 +102,6 @@ class DefinitionFactory(object):
                 merged_variants[variant_name] = deepcopy(base_dict)
 
         return merged_variants
-
 
     def _create_variant(self, raw_dict, variant_name, resource_registry) -> JobVariant:
         variant = JobVariant(
@@ -139,7 +141,6 @@ class DefinitionFactory(object):
         ordered_transformers = []
         for name in toposort.toposort_flatten(transformer_dependencies):
             ordered_transformers.append(transformers_dict[name])
-
 
         # inject new steps
         for transformer in ordered_transformers:

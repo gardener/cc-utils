@@ -26,6 +26,7 @@ from concourse.pipelines.modelbase import (
     normalise_to_dict,
 )
 
+
 class PipelineStep(ModelBase):
     def __init__(
         self,

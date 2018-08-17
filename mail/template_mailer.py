@@ -15,6 +15,7 @@
 
 from email.mime.text import MIMEText
 
+
 def create_body(mail_template: str, replace_tokens: dict):
     for key, value in replace_tokens.items():
         mail_template = mail_template.replace(key, value)

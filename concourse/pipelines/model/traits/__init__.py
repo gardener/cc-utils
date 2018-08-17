@@ -41,6 +41,7 @@ TRAITS = {
     'draft_release': DraftReleaseTrait,
 }
 
+
 class TraitsFactory(object):
     @staticmethod
     def create(name: str, variant_name: str, args_dict: dict):

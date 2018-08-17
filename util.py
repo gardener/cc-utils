@@ -246,6 +246,7 @@ class FluentIterable(object):
             .as_generator()
 
     '''
+
     def __init__(self, items):
         def starter():
             yield from items

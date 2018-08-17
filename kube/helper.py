@@ -29,6 +29,7 @@ from ensure import ensure_annotations
 
 from util import info, not_empty, not_none
 
+
 class KubernetesSecretHelper(object):
     '''Helper class for handling kubernetes secret objects'''
     @ensure_annotations
@@ -118,6 +119,7 @@ class KubernetesSecretHelper(object):
 
 class KubernetesServiceAccountHelper(object):
     '''Helper class for kubernetes service-account objects'''
+
     def __init__(self, core_api: CoreV1Api):
         self.core_api = core_api
 
@@ -174,6 +176,7 @@ class KubernetesNamespaceHelper(object):
                 continue
             return ns
         return None
+
 
 class KubernetesServiceHelper(object):
     def __init__(self, core_api: CoreV1Api):

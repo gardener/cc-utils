@@ -21,6 +21,7 @@ from test._test_utils import capture_out
 from util import Failure
 import util as examinee
 
+
 class UtilTest(unittest.TestCase):
     def test_info(self):
         with capture_out() as (stdout, stderr):

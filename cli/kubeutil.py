@@ -36,13 +36,16 @@ def __add_module_command_args(parser):
 
 ctx = Ctx()
 
+
 def create_namespace(namespace: str):
     namespace_helper = ctx.namespace_helper()
     return namespace_helper.create_namespace(namespace)
 
+
 def delete_namespace(namespace):
     namespace_helper = ctx.namespace_helper()
     namespace_helper.delete_namespace(namespace)
+
 
 def delete_namespace_unless_shoots_present(namespace):
     not_empty(namespace)
@@ -58,6 +61,7 @@ def delete_namespace_unless_shoots_present(namespace):
         fail('namespace contained {} shoot(s) - not removing'.format(len(result)))
 
     delete_namespace(namespace)
+
 
 def copy_secrets(from_ns: str, to_ns: str, secret_names: [str]):
     for arg in [from_ns, to_ns, secret_names]:
@@ -75,6 +79,7 @@ def copy_secrets(from_ns: str, to_ns: str, secret_names: [str]):
         secret.metadata = metadata
         core_api.create_namespaced_secret(namespace=to_ns, body=secret)
 
+
 def wait_for_ns(namespace):
     not_empty(namespace)
 
@@ -89,6 +94,7 @@ def wait_for_ns(namespace):
         if not e['type'] == 'ADDED':
             continue # ignore
         w.stop()
+
 
 def wait_for_shoot_cluster_operation_success(
     namespace:str,
@@ -147,6 +153,7 @@ def wait_for_shoot_cluster_operation_success(
             )
         )
 
+
 def wait_for_shoot_cluster_to_become_healthy(
     namespace:str,
     shoot_name:str,
@@ -159,6 +166,7 @@ def wait_for_shoot_cluster_to_become_healthy(
       shoot_name
       )
     )
+
     def on_event(event)->(bool,str):
         # TODO: this is copy-pasta from wait_for_shoot_cluster_operation_success
         #   --> remove redundancy
@@ -287,6 +295,7 @@ def retrieve_controller_manager_log_entries(
     # filter our helm logs (format: yyyy/mm/dd ...)
     helm_log_re = re.compile(r'^\d{4}/\d{2}/\d{2}')
     lines = filter(lambda l: not helm_log_re.match(l), lines)
+
     def parse_line(line):
         parts = shlex.split(line)
         parts = filter(lambda s: '=' in s, parts)
@@ -324,6 +333,7 @@ def create_gcr_secret(
           user_name=user_name,
           server_url=server_url
         )
+
 
 def get_cluster_version_info():
     api = ctx.create_version_api()

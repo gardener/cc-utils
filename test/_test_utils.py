@@ -18,6 +18,7 @@ from io import StringIO
 import sys
 import typing
 
+
 @contextmanager
 def capture_out():
     new_stdout, new_stderr = StringIO(), StringIO()
@@ -27,6 +28,7 @@ def capture_out():
         yield sys.stdout, sys.stderr
     finally:
         sys.stdout, sys.stderr = old_stdout, old_stderr
+
 
 class AssertMixin(object):
     def assertEmpty(self, iterable, msg=None):

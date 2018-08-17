@@ -14,6 +14,7 @@
 # limitations under the License.
 from util import not_none
 
+
 class ModelValidationError(ValueError):
     '''
     exception to be raised upon model validation errors
@@ -34,6 +35,7 @@ class ModelBase(object):
     identifiers. If such an iterable is returned, the ctor ensures that all specified attributes be
     contained in the given dictionary (ModelValidationError is raised on absent attribs).
     '''
+
     def __init__(self, raw_dict):
         self.raw = not_none(raw_dict)
         self._validate_dict()

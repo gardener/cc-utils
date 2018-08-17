@@ -18,6 +18,7 @@ from typing import Iterable
 
 from model.base import ModelBase
 
+
 class ProcessingStatus(Enum):
     BUSY = 'B'
     READY = 'R'

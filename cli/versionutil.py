@@ -21,6 +21,7 @@ import util
 from util import CliHint
 import version
 
+
 def process_version(
     input_file: CliHint(help="path to read input semver from")=None,
     version_string: CliHint(help="semver string to use as input")=None,

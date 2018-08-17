@@ -29,12 +29,14 @@ from kube.helper import (
     KubernetesIngressHelper,
 )
 
+
 class Ctx(object):
     '''
     handles the execution context of kubernetes-api calls.
     Most prominently the retrieval of the 'kubeconfig' to use, which is
     either passed via CLI (--kubeconfig) or via env var KUBECONFIG.
     '''
+
     def __init__(self, kubeconfig_dict: dict=None):
         if not kubeconfig_dict:
             self.kubeconfig = None

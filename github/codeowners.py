@@ -18,6 +18,8 @@ from github3 import GitHub
 from util import existing_dir, not_none, warning
 
 # pylint: disable=no-member
+
+
 class CodeownersParser(object):
     '''
     Parses GitHub CODEOWNSERS files [0] from the documented default locations for a given
@@ -25,6 +27,7 @@ class CodeownersParser(object):
 
     [0] https://help.github.com/articles/about-codeowners/
     '''
+
     def __init__(self, repo_dir):
         self.repo_dir = existing_dir(Path(repo_dir).absolute())
 
@@ -77,6 +80,7 @@ class CodeOwnerEntryResolver(object):
 
     [0] https://help.github.com/articles/about-codeowners/
     '''
+
     def __init__(self, github_api: GitHub):
         self.github_api = not_none(github_api)
 

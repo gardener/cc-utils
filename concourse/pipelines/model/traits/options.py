@@ -16,6 +16,7 @@
 from util import not_none
 from concourse.pipelines.modelbase import Trait, TraitTransformer
 
+
 class OptionsTrait(Trait):
     def _defaults_dict(self):
         return {

@@ -18,6 +18,7 @@ import unittest
 import model as examinee
 from model.base import ModelValidationError
 
+
 class TeamCredentialTest(unittest.TestCase):
     def setUp(self):
         self.raw_dict = TeamCredentialTest.create_valid_test_dictionary()

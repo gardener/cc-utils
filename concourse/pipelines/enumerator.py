@@ -40,6 +40,7 @@ from model import JobMapping
 from model.base import ModelBase, NamedModelElement
 from concourse.pipelines.factory import RawPipelineDefinitionDescriptor
 
+
 class DefinitionDescriptorPreprocessor(object):
     def process_definition_descriptor(self, descriptor):
         self._add_branch_to_pipeline_name(descriptor)
@@ -61,6 +62,7 @@ class DefinitionDescriptorPreprocessor(object):
         })
 
         return descriptor
+
 
 class DefinitionEnumerator(object):
     def enumerate_definition_descriptors(self):
@@ -84,7 +86,6 @@ class DefinitionEnumerator(object):
                 concourse_target_team=self.job_mapping.team_name(),
                 override_definitions=[override_definitions.get(name,{}),],
             )
-
 
 
 class MappingfileDefinitionEnumerator(DefinitionEnumerator):
@@ -317,6 +318,7 @@ class TemplateRetriever(object):
     '''
     Provides mako templates by name. Templates are cached.
     '''
+
     def __init__(self, template_path):
         if type(template_path) == str:
             self.template_path = (template_path,)

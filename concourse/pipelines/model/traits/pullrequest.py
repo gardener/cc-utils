@@ -23,6 +23,7 @@ from concourse.pipelines.modelbase import (
     ScriptType,
 )
 
+
 class PullRequestPolicies(ModelBase):
     def require_label(self):
         return self.raw.get('require-label')

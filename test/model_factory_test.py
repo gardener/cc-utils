@@ -23,11 +23,13 @@ import model
 from util import Failure
 from model import ConfigFactory
 
+
 class ConfigFactorySmokeTestsMixin(object):
     '''
     smoke-tests shared by different factory creator methods (from_dict, from_cfg_dir) intended
     to ensure both deserialisation methods result in the same cfg factory.
     '''
+
     def test_cfg_types_parsing(self):
         types = self.examinee._cfg_types()
         self.assertEqual(types.keys(), {'a_type', 'defined_but_unused_type', 'cfg_set'})
@@ -83,7 +85,6 @@ class ConfigFactorySmokeTestsMixin(object):
         for name in cfg_names_set:
             self.fail('Expected empty Iterable')
 
-
     def test_cfg_element_names_in_config_set_works_with_single_entry(self):
         # We specifically test the single-entry-case here because they are normalised
         # internally the ConfigSet
@@ -123,6 +124,7 @@ class ConfigFactoryCfgDirDeserialisationTest(unittest.TestCase, ConfigFactorySmo
     from a given configuration directory (this is the case when consuming a copy of
     "kubernetes/cc-config" as input)
     '''
+
     def setUp(self):
         self.tmpdir = TemporaryDirectory()
 
@@ -212,6 +214,7 @@ class ConfigFactoryDictDeserialisationTest(unittest.TestCase, ConfigFactorySmoke
     from a dictionary (this is the case when consuming a previously serialised copy of a
     configuration that was previously serialised using model.ConfigSetSerialiser).
     '''
+
     def setUp(self):
         # type definitions
         types = {

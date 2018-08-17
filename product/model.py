@@ -33,6 +33,7 @@ class ProductModelBase(ModelBase):
 
     Not intended to be instantiated.
     '''
+
     def __init__(self, **kwargs):
         raw_dict = {**kwargs}
         super().__init__(raw_dict=raw_dict)
@@ -44,6 +45,7 @@ class DependencyBase(ModelBase):
 
     Not intended to be instantiated.
     '''
+
     def name(self):
         return self.raw.get('name')
 
@@ -157,6 +159,7 @@ class ComponentName(object):
 
     def __hash__(self):
         return hash((self.name()))
+
 
 class ComponentReference(DependencyBase):
     @staticmethod
@@ -281,6 +284,7 @@ class UploadStatus(Enum):
     SKIPPED_ALREADY_EXISTED = 1
     UPLOADED_PENDING = 2
     UPLOADED_DONE = 4
+
 
 class UploadResult(object):
     def __init__(

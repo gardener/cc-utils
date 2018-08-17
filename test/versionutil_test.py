@@ -27,6 +27,7 @@ from test._test_utils import capture_out
 from util import Failure
 import versionutil as examinee
 
+
 class VersionutilTest(unittest.TestCase):
     def test_process_version_with_input_string(self):
         with tempfile.NamedTemporaryFile(mode='w+') as tmp_output_file:

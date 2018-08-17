@@ -30,7 +30,6 @@ import product.model
 from github.release_notes import generate_release_notes, get_release_note_blocks
 
 
-
 def assign_github_team_to_repo(
     github_cfg_name: str,
     github_org_name: str,
@@ -75,6 +74,7 @@ def assign_github_team_to_repo(
         team_name=team_name
     )
 
+
 def generate_release_notes_cli(
     repo_dir: str,
     github_cfg_name: str,
@@ -96,6 +96,7 @@ def generate_release_notes_cli(
         repository_branch=repository_branch,
         commit_range=commit_range
     )
+
 
 def release_and_prepare_next_dev_cycle(
     github_cfg_name: str,
@@ -193,8 +194,10 @@ def release_and_prepare_next_dev_cycle(
         commit_message="Prepare next dev cycle " + next_version_dev
     )
 
+
 def draft_release_name_for_version(release_version: str):
     return "{v}-draft".format(v=release_version)
+
 
 def create_or_update_draft_release(
     github_cfg_name: str,
@@ -235,6 +238,7 @@ def create_or_update_draft_release(
         else:
             info('draft release notes are already up to date')
 
+
 def get_release_note_blocks_cli(
     repo_dir: str,
     github_cfg_name: str,
@@ -258,6 +262,7 @@ def get_release_note_blocks_cli(
         repository_branch=repository_branch,
         commit_range=commit_range
     )
+
 
 def remove_webhooks(
     github_org_name: CliHints.non_empty_string(

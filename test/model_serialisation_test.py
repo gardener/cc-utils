@@ -19,6 +19,7 @@ import json
 from model import ConfigSetSerialiser as CSS, ConfigFactory
 from model.base import ConfigElementNotFoundError
 
+
 def simple_cfg_dict():
     types = {
         'a_type':

@@ -20,6 +20,7 @@ from urllib.parse import parse_qs, urlparse
 from concourse import client
 from github.webhook import WebhookQueryAttributes
 
+
 class ConcourseApiRoutesTest(unittest.TestCase):
     def setUp(self):
         self.examinee = client.ConcourseApiRoutes(

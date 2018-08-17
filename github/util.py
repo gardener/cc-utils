@@ -38,6 +38,7 @@ from http_requests import default_http_adapter
 from product.model import ComponentReference
 from model import ConfigFactory, GithubConfig
 
+
 class RepoPermission(enum.Enum):
     PULL = "pull"
     PUSH = "push"
@@ -460,6 +461,7 @@ def retrieve_email_addresses(
     out_file: str=None
 ):
     github = _create_github_api_object(github_cfg=github_cfg)
+
     def retrieve_email(username: str):
         user = github.user(username)
         return user.email

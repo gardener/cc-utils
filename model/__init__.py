@@ -40,6 +40,7 @@ instances should not be altered by users. Configuration objects should usually n
 instantiated by users of this module.
 '''
 
+
 class ConfigFactory(object):
     '''Creates configuration model element instances from the underlying configuration source
 
@@ -80,7 +81,6 @@ class ConfigFactory(object):
         for cfg_type in map(ConfigType, cfg_types_dict.values()):
             cfg_name = cfg_type.cfg_type_name()
             raw[cfg_name] = parse_cfg(cfg_type)
-
 
         return ConfigFactory(raw_dict=raw)
 
@@ -224,6 +224,7 @@ class ConfigType(ModelBase):
     '''
     represents a configuration type (used for serialisation and deserialisation)
     '''
+
     def sources(self):
         return map(ConfigTypeSource, self.raw.get('src'))
 
@@ -293,6 +294,7 @@ class ConfigurationSet(NamedModelElement):
 
     Not intended to be instantiated by users of this module
     '''
+
     def __init__(self, cfg_factory, cfg_name, *args, **kwargs):
         self.cfg_factory = not_none(cfg_factory)
         super().__init__(name=cfg_name, *args, **kwargs)
@@ -381,6 +383,7 @@ class BasicCredentials(ModelBase):
 
     Not intended to be instantiated
     '''
+
     def username(self):
         return self.raw.get('username')
 
@@ -395,6 +398,7 @@ class GithubConfig(NamedModelElement):
     '''
     Not intended to be instantiated by users of this module
     '''
+
     def ssh_url(self):
         return self.raw.get('sshUrl')
 
@@ -436,6 +440,7 @@ class GithubCredentials(BasicCredentials):
     '''
     Not intended to be instantiated by users of this module
     '''
+
     def auth_token(self):
         return self.raw.get('authToken')
 
@@ -457,6 +462,7 @@ class ContainerRegistryConfig(NamedModelElement):
     '''
     Not intended to be instantiated by users of this module
     '''
+
     def credentials(self):
         # this cfg currently only contains credentials
         return GcrCredentials(self.raw)
@@ -466,6 +472,7 @@ class GcrCredentials(BasicCredentials):
     '''
     Not intended to be instantiated by users of this module
     '''
+
     def host(self):
         return self.raw.get('host')
 
@@ -477,6 +484,7 @@ class ProtecodeConfig(NamedModelElement):
     '''
     Not intended to be instantiated by users of this module
     '''
+
     def credentials(self):
         return ProtecodeCredentials(self.raw.get('credentials'))
 
@@ -509,6 +517,7 @@ class ConcourseConfig(NamedModelElement):
     '''
     Not intended to be instantiated by users of this module
     '''
+
     def all_team_credentials(self):
         return [ConcourseTeamCredentials(team_dict) for team_dict in self.raw.get('teams').values()]
 
@@ -588,6 +597,7 @@ class ConcourseTeamCredentials(BasicCredentials):
     '''
     Not intended to be instantiated by users of this module
     '''
+
     def teamname(self):
         return self.raw.get('teamname')
 
@@ -673,6 +683,7 @@ class EmailConfig(NamedModelElement):
     '''
     Not intended to be instantiated by users of this module
     '''
+
     def smtp_host(self):
         return self.raw.get('host')
 

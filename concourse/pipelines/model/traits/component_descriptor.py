@@ -27,6 +27,7 @@ from concourse.pipelines.modelbase import (
 
 COMPONENT_DESCRIPTOR_DIR_INPUT = ('component_descriptor_dir', 'component_descriptor_dir')
 
+
 class ComponentDescriptorTrait(Trait):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

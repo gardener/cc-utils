@@ -31,6 +31,7 @@ from github.release_notes import (
 from model.base import ModelValidationError
 from product.model import ComponentName
 
+
 class ReleaseNotesTest(unittest.TestCase):
     def setUp(self):
         self.cn_current_repo = ComponentName('github.com/gardener/current-repo')
@@ -104,7 +105,6 @@ class ReleaseNotesTest(unittest.TestCase):
             'rlstext\n'\
             '```'
         verify_noise_ignored(text)
-
 
     def test_rls_note_extraction_noteworthy(self):
         text = \
@@ -240,7 +240,6 @@ source_repo only - with noise
             exp_usr=None,
             exp_text='source_repo only - with noise'
         )
-
 
     def test_multiple_rls_note_extraction(self):
         text = \
@@ -639,7 +638,6 @@ source_repo only - with noise
             )
         except RuntimeError:
             pass
-
 
         rn_block = ReleaseNoteBlock(
             category_id='noteworthy',

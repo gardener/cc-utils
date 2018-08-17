@@ -31,6 +31,7 @@ from product.util import merge_products, ComponentDescriptorResolver
 from product.scanning import ProtecodeUtil
 import protecode.client
 
+
 def upload_product_images(
     protecode_cfg_name: str,
     product_cfg_file: CliHints.existing_file(),
@@ -176,6 +177,7 @@ def merge_descriptors(descriptors: [str]):
     cleansed_dict = json.loads(json.dumps(merged.raw))
 
     print(yaml.dump(cleansed_dict, indent=2))
+
 
 def add_dependencies(
     descriptor_src_file: CliHints.existing_file(),

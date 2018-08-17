@@ -32,6 +32,7 @@ class ProtecodeApiRoutes(object):
 
     Not intended to be instantiated by users of this module
     '''
+
     def __init__(self, base_url):
         self._base_url = not_empty(base_url)
         self._api_url = partial(self._url, 'api')

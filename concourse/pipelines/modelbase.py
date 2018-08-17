@@ -20,6 +20,7 @@ from enum import Enum
 import util
 from model.base import ModelValidationError
 
+
 def not_none(value):
     if value is None:
         raise ValueError('must not be none')
@@ -124,6 +125,7 @@ def normalise_to_dict(dictish):
 
 def fail(msg):
     raise ModelValidationError(msg)
+
 
 def select_attr(name):
     return lambda o: o.name

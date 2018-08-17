@@ -19,6 +19,7 @@ import shlex
 
 from concourse.pipelines.model.step import PipelineStep
 
+
 class PipelineStepTest(unittest.TestCase):
     def _examinee(self, name='dontcare',  **kwargs):
         return PipelineStep(name=name, raw_dict=kwargs)

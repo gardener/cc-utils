@@ -17,6 +17,7 @@ import unittest
 
 import version as examinee
 
+
 class Version_find_latest_version(unittest.TestCase):
     def test_find_latest_version(self):
         versions = (semver.parse_version_info(v) for v in (

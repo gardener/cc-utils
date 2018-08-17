@@ -17,6 +17,7 @@ import unittest
 
 from model.base import ModelBase
 
+
 class ModelBaseTest(unittest.TestCase):
     def test_raw_dict_values_are_stored(self):
         examinee = ModelBase(raw_dict={'foo': 'bar'})

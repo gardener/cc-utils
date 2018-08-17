@@ -22,6 +22,7 @@ import model.base
 import product.model
 import product.util
 
+
 class ProductModelTest(unittest.TestCase):
     def setUp(self):
         self.raw_dict = {

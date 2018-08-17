@@ -62,6 +62,7 @@ class AuthenticatedRequestBuilder(object):
 
     Not intended to be used outside of this module.
     '''
+
     def __init__(
             self,
             auth_token: str=None,
