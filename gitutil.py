@@ -21,6 +21,7 @@ import git
 
 from util import not_empty, not_none, existing_dir, fail, random_str
 
+
 class GitHelper(object):
     def __init__(self, repo, github_cfg, github_repo_path):
         not_none(repo)
@@ -74,6 +75,7 @@ class GitHelper(object):
         )
         self.repo.delete_remote(remote)
 
+
 def clone_repository(
         to_path: str,
         github_cfg,
@@ -81,6 +83,7 @@ def clone_repository(
     ):
         url = url_with_credentials(github_cfg, github_repo_path)
         git.Git(to_path).clone(url)
+
 
 def url_with_credentials(github_cfg, github_repo_path):
     base_url = urllib.parse.urlparse(github_cfg.http_url())
@@ -95,6 +98,7 @@ def url_with_credentials(github_cfg, github_repo_path):
         ''
     ))
     return url
+
 
 def update_submodule(
     repo_path: str,

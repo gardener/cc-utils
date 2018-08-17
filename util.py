@@ -19,8 +19,10 @@ import shutil
 import sys
 import yaml
 
+
 class Failure(RuntimeError):
     pass
+
 
 def _set_cli(is_cli: bool):
     ctx().args._cli = is_cli
@@ -84,17 +86,17 @@ def ctx():
     import ctx
     return ctx
 
+
 def _quiet():
     return ctx().args and ctx().args.quiet
 
 
-# pylint: disable=no-member
 def _verbose():
     return ctx().args and ctx().args.verbose
 
+
 def _cli():
     return bool(ctx().args and hasattr(ctx().args, '._cli') and ctx().args._cli)
-# pylint: enable=no-member
 
 
 def fail(msg=None):
@@ -251,15 +253,19 @@ class FluentIterable(object):
 
     def filter(self, filter_func):
         last_op = self.ops[-1]
+
         def f():
             yield from filter(filter_func, last_op())
+
         self.ops.append(f)
         return self
 
     def map(self, map_func):
         last_op = self.ops[-1]
+
         def m():
             yield from map(map_func, last_op())
+
         self.ops.append(m)
         return self
 

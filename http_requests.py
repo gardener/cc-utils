@@ -34,6 +34,7 @@ default_http_adapter = HTTPAdapter(
     )
 )
 
+
 def check_http_code(function):
     '''
     a decorator that will check on `requests.Response` instances returned by HTTP requests

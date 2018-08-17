@@ -31,6 +31,7 @@ from concourse.pipelines.enumerator import (
 Integration tests for concourse pipeline generator
 '''
 
+
 def deploy_and_run_smoketest_pipeline(
     config_dir: str,
     config_name: str,

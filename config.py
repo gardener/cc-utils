@@ -21,6 +21,7 @@ from util import urljoin
 from util import ctx, CliHints
 from model import ConfigFactory, ConfigSetSerialiser as CSS
 
+
 def serialise_cfg(cfg_dir: CliHints.existing_dir(), cfg_sets: [str], out_file: str):
     factory = ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)
     cfg_sets = [factory.cfg_set(cfg_set) for cfg_set in cfg_sets]

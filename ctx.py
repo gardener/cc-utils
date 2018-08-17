@@ -21,6 +21,7 @@ Execution context. Filled upon invocation of cli.py, read by submodules
 
 args=None # the parsed command line arguments
 
+
 def _cfg_factory_from_dir():
     # XXX: args does always have a cfg_dir attribute, but pylint does not always understand this
     if not args or not hasattr(args, 'cfg_dir') or not getattr(args, 'cfg_dir'):

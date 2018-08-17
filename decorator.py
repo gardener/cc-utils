@@ -15,6 +15,7 @@
 
 from functools import wraps
 
+
 def args_not_none(*arg_names):
     def not_none_decorator(function):
         @wraps(function)

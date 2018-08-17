@@ -32,6 +32,7 @@ from mail import template_mailer as mailer
 import github.util
 from github.codeowners import CodeownersParser, CodeOwnerEntryResolver
 
+
 def send_mail(
     email_cfg_name: CliHint(help="reference to an email cfg (see repo cc-config / secrets-server)"),
     recipients: CliHint(typehint=[str], help="Recipient email address"),

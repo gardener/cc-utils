@@ -28,9 +28,11 @@ import util
 
 import_errs = []
 
+
 def print_import_errs():
     for ie in import_errs:
         util.verbose(ie)
+
 
 if 'COLUMNS' not in os.environ:
     # Use custom width formatter by fixing two arguments for the default formatter class, namely
@@ -38,6 +40,7 @@ if 'COLUMNS' not in os.environ:
     FORMATTER_CLASS = functools.partial(argparse.HelpFormatter, max_help_position=40, width=100)
 else:
     FORMATTER_CLASS = argparse.HelpFormatter
+
 
 def main():
     '''
@@ -74,10 +77,12 @@ def main():
         parsed.func(parsed)
     print_import_errs()
 
+
 def add_global_args(parser):
     parser.add_argument('--quiet', action='store_true')
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--cfg-dir', default=None)
+
 
 def add_module(module_name, parser):
     module = __import__(module_name)
@@ -176,6 +181,7 @@ def add_module(module_name, parser):
                   **kwargs
                 )
 
+
 def run_function(function):
     def function_runner(args):
         fspec = inspect.getfullargspec(function)
@@ -185,10 +191,12 @@ def run_function(function):
         function(*function_args)
     return function_runner
 
+
 def display_usage_function(parser):
     def display_usage(_):
         parser.print_usage()
     return display_usage
+
 
 if __name__ == '__main__':
     main()
