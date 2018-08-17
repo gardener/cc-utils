@@ -31,8 +31,8 @@ class ModelBase(object):
     from a dict through a set of 'getter' methods.
 
     Extenders _may_ overwrite `_required_attributes(self)` and return an iterable of attribute
-    identifiers. If such an iterable is returned, the constructor will ensure that all specified
-    attributes be contained in the given dictionary (ModelValidationError is raised on absent attribs).
+    identifiers. If such an iterable is returned, the ctor ensures that all specified attributes be
+    contained in the given dictionary (ModelValidationError is raised on absent attribs).
     '''
     def __init__(self, raw_dict):
         self.raw = not_none(raw_dict)
