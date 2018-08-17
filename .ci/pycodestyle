@@ -6,12 +6,12 @@ set -e
 
 src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
 
-echo 'Running pylint for all python modules..'
+echo 'running pycodestyle..'
 
-if python3 $(which pylint3) -j 4 --errors-only \
-  ${src_dir}/**/*.py \
-  ${src_dir}/*.py; then
-    echo 'Linting succeeded'
+# line lengths
+echo 'checking line lengths'
+if pycodestyle --select=E5 "${src_dir}"; then
+    echo 'pycodestyle succeeded'
     exit 0
 else
     echo 'Linting found errors (see above)'
