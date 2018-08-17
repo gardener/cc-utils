@@ -99,7 +99,10 @@ class ConfigFactory(object):
         return self.raw[cfg_name]
 
     def _cfg_types(self):
-        return {cfg.cfg_type_name(): cfg for cfg in map(ConfigType, self.raw[self.CFG_TYPES].values())}
+        return {
+            cfg.cfg_type_name(): cfg for
+            cfg in map(ConfigType, self.raw[self.CFG_TYPES].values())
+        }
 
     def _cfg_types_raw(self):
         return self.raw[self.CFG_TYPES]
@@ -138,7 +141,7 @@ class ConfigFactory(object):
         # (with the exception of ConfigurationSet)
         configs = self._configs(cfg_type.cfg_type_name())
         if not cfg_name in configs:
-            raise ConfigElementNotFoundError('no such cfg element: {cn}. Known elements: {es}'.format(
+            raise ConfigElementNotFoundError('no such cfg element: {cn}. Known: {es}'.format(
                 cn=cfg_name,
                 es=', '.join(configs.keys())
                 )
@@ -154,12 +157,12 @@ class ConfigFactory(object):
         return element_instance
 
     def _cfg_elements(self, cfg_type_name: str):
-        '''Returns an iterable yielding all cfg_elements for a given type known to this ConfigFactory.
+        '''Returns all cfg_elements for the given cfg_type.
 
         Parameters
         ----------
         cfg_type_name: str
-            The name of the cfg_type (as defined in the config-repository) whose instances should be retrieved.
+            The name of the cfg_type whose instances should be retrieved.
 
         Yields
         -------
@@ -177,12 +180,12 @@ class ConfigFactory(object):
             yield self._cfg_element(cfg_type_name, element_name)
 
     def _cfg_element_names(self, cfg_type_name: str):
-        '''Returns an iterable containing the names of all cfg-elements for a given cfg_type known to this ConfigFactory.
+        '''Returns cfg-elements of the given cfg_type
 
         Parameters
         ----------
         cfg_type_name: str
-            The name of the cfg_type (as defined in the config-repository) whose names should be retrieved.
+            The cfg type name
 
         Returns
         -------
@@ -319,17 +322,7 @@ class ConfigurationSet(NamedModelElement):
         )
 
     def _cfg_elements(self, cfg_type_name: str):
-        '''Returns an iterable yielding all cfg_elements for a given type in this ConfigurationSet.
-
-        Parameters
-        ----------
-        cfg_type_name: str
-            The name of the cfg_type (as defined in the config-repository) whose instances should be retrieved.
-
-        Yields
-        -------
-        NamedModelElement
-            Instance of the given cfg_type.
+        '''Returns all container cfg elements of the given cfg_type
 
         Raises
         ------
@@ -342,18 +335,7 @@ class ConfigurationSet(NamedModelElement):
             yield self._cfg_element(cfg_type_name, element_name)
 
     def _cfg_element_names(self, cfg_type_name: str):
-        '''Returns an iterable containing the names of all cfg-elements for a given cfg_type
-        in this ConfigurationSet.
-
-        Parameters
-        ----------
-        cfg_type_name: str
-            The name of the cfg_type (as defined in the config-repository) whose names should be retrieved.
-
-        Returns
-        -------
-        Iterable[str]
-            Contains the names of all cfg-elements of the given cfg_type in this ConfigSet.
+        '''Returns all container cfg element names
 
         Raises
         ------
@@ -435,7 +417,14 @@ class GithubConfig(NamedModelElement):
         return host_name.lower() == urlparse(self.http_url()).hostname.lower()
 
     def _required_attributes(self):
-        return ['sshUrl', 'httpUrl', 'apiUrl', 'disable_tls_validation', 'webhook_token', 'technicalUser']
+        return [
+            'sshUrl',
+            'httpUrl',
+            'apiUrl',
+            'disable_tls_validation',
+            'webhook_token',
+            'technicalUser'
+        ]
 
     def _validate_dict(self):
         super()._validate_dict()
@@ -576,7 +565,12 @@ class ConcourseConfig(NamedModelElement):
         return self.raw.get('helm_chart_version')
 
     def _required_attributes(self):
-        return ['externalUrl', 'teams', 'helm_chart_default_values_config', 'kubernetes_cluster_config']
+        return [
+            'externalUrl',
+            'teams',
+            'helm_chart_default_values_config',
+            'kubernetes_cluster_config'
+        ]
 
     def _validate_dict(self):
         super()._validate_dict()
@@ -585,7 +579,7 @@ class ConcourseConfig(NamedModelElement):
         if not self.raw.get('teams').get('main'):
             raise ModelValidationError('No team "main" defined.')
         if self.deploy_delaying_proxy() and self.proxy_url() is None:
-            raise ModelValidationError('Delaying proxy deployment is configured but no proxy-URL is defined.')
+            raise ModelValidationError('must specify no proxy-url')
         # implicitly validate main team
         self.team_credentials('main')
 
@@ -599,11 +593,9 @@ class ConcourseTeamCredentials(BasicCredentials):
 
     def github_auth_team(self, split: bool=False):
         '''
-        Returns a string in the form `organisation/team` representing the github-team whose members are able
-        to login to this team using github-oauth.
+        returns the github auth team (org/name)
 
-        @param split: if `true` the function will return the organisation and team as a list with two elements,
-        i.e. `(organization, team)`
+        @param split: if `true` return [org, name]
         '''
         if split and self.raw.get('gitAuthTeam'):
             return self.raw.get('gitAuthTeam').split('/')
@@ -652,9 +644,13 @@ class ConcourseTeamCredentials(BasicCredentials):
         if self.has_basic_auth_credentials():
             _required_attributes.extend(['username', 'password'])
         if self.has_github_oauth_credentials():
-            _required_attributes.extend(['gitAuthTeam', 'githubAuthClientId', 'githubAuthClientSecret'])
+            _required_attributes.extend(
+                ['gitAuthTeam', 'githubAuthClientId', 'githubAuthClientSecret']
+            )
         if self.has_custom_github_auth_urls():
-            _required_attributes.extend(['githubAuthAuthUrl', 'githubAuthTokenUrl', 'githubAuthApiUrl'])
+            _required_attributes.extend(
+                ['githubAuthAuthUrl', 'githubAuthTokenUrl', 'githubAuthApiUrl']
+            )
         return _required_attributes
 
     def _validate_dict(self):
@@ -666,7 +662,11 @@ class ConcourseTeamCredentials(BasicCredentials):
                 github_org, github_team = github_org_and_team
                 if github_org and github_team:
                     return
-            raise ModelValidationError('Invalid github-oauth team. Expected <org>/<team>, got {t}'.format(t=github_org_and_team))
+            raise ModelValidationError(
+                'Invalid github-oauth team. Expected <org>/<team>, got {t}'.format(
+                    t=github_org_and_team
+                )
+            )
 
 
 class EmailConfig(NamedModelElement):
@@ -717,7 +717,10 @@ class JobMapping(NamedModelElement):
         return self.raw['definition_dirs']
 
     def github_organisations(self):
-        return [GithubOrganisationConfig(name, raw) for name, raw in self.raw.get('github_orgs').items()]
+        return [
+            GithubOrganisationConfig(name, raw)
+            for name, raw in self.raw.get('github_orgs').items()
+        ]
 
     def _required_attributes(self):
         return ['concourse_target_team']
