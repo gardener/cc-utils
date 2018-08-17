@@ -3,6 +3,7 @@ cc-utils:
   base_definition:
     steps:
       pyflakes-lint: ~
+      pycodestyle: ~
       test: ~
   variants:
     failing:
