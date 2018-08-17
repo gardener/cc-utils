@@ -13,13 +13,105 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import enum
 import functools
+import os
 
+from pathlib import Path
+
+import util
+
+from concourse.pipelines.modelbase import ModelBase
 '''
 Execution context. Filled upon invocation of cli.py, read by submodules
 '''
 
 args=None # the parsed command line arguments
+
+
+class ConfigBase(ModelBase):
+
+    def __init__(self):
+        super().__init__(raw_dict={})
+
+    def _add_config_source(self, config: dict):
+        self.raw = util.merge_dicts(self.raw, config)
+
+
+class ContextConfig(ConfigBase):
+
+    def config_dir(self):
+        return self.raw.get('cfg-dir')
+
+
+class TerminalConfig(ConfigBase):
+
+    def output_columns(self):
+        return self.raw.get('output-columns')
+
+    def terminal_type(self):
+        return self.raw.get('terminal-type')
+
+
+class Config(enum.Enum):
+    CONTEXT = ContextConfig()
+    TERMINAL = TerminalConfig()
+
+
+def load_config_from_env():
+    env = os.environ
+
+    terminal_config = {}
+    if 'COLUMNS' in env:
+        terminal_config['output-columns'] = env['COLUMNS']
+    if 'TERM' in env:
+        terminal_config['terminal-type'] = env['TERM']
+
+    context_config = {}
+    if 'CC_CONFIG_DIR' in env:
+        context_config['cfg-dir'] = env['CC_CONFIG_DIR']
+
+    return {
+        'ctx': context_config,
+        'terminal': terminal_config,
+    }
+
+
+def load_config_from_user_home():
+    config_file = Path.home() / '.cc-utils.cfg'
+    if config_file.is_file():
+        return util.parse_yaml_file(config_file)
+    return {}
+
+
+def add_config_source(config_source: dict):
+    if config_source.get('ctx') is not None:
+        Config.CONTEXT.value._add_config_source(
+            config=config_source.get('ctx')
+        )
+    if config_source.get('terminal') is not None:
+        Config.TERMINAL.value._add_config_source(
+            config=config_source.get('terminal')
+        )
+
+
+def load_config():
+    home_config = load_config_from_user_home()
+    env_config = load_config_from_env()
+    merged = util.merge_dicts(home_config, env_config)
+    add_config_source(merged)
+
+
+load_config()
+
+
+def load_config_from_args():
+    if args is None or not hasattr(args, 'cfg_dir') or args.cfg_dir is None:
+        return {}
+    context_config = {'cfg-dir': args.cfg_dir}
+    return {
+        'ctx': context_config,
+    }
 
 
 def _cfg_factory_from_dir():

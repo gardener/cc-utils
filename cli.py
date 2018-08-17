@@ -70,6 +70,10 @@ def main():
     # write parsed args to global ctx module so called module functions may
     # retrieve if (see util.ctx)
     ctx.args = parsed
+
+    config_from_args = ctx.load_config_from_args()
+    ctx.add_config_source(config_from_args)
+
     # mark 'cli' mode
     util._set_cli(True)
     if hasattr(parsed, 'module'):
