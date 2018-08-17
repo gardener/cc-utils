@@ -41,8 +41,9 @@ def assign_github_team_to_repo(
     Assign team 'team_name' to all repositories in organization 'github_org_name' and
     give the team admin rights on those repositories. The team will be created if it does not exist
     and the technical github user (from github_cfg_name) will be assigned to the team.
-    The token of the technical github user must have the privilege to create webhooks (scope admin:repo_hook)
-    The 'auth_token' parameter must belong to an org admin. The token must have 'admin:org' privileges.
+    The token of the technical github user must have the privilege to create webhooks
+    (scope admin:repo_hook)
+    'auth_token'  must grant 'admin:org' privileges.
     '''
     cfg_factory = ctx().cfg_factory()
     github_cfg = cfg_factory.github(github_cfg_name)
@@ -89,7 +90,12 @@ def generate_release_notes_cli(
         name=github_repository_name,
         default_branch=repository_branch,
     )
-    generate_release_notes(repo_dir=repo_dir, helper=helper, repository_branch=repository_branch, commit_range=commit_range)
+    generate_release_notes(
+        repo_dir=repo_dir,
+        helper=helper,
+        repository_branch=repository_branch,
+        commit_range=commit_range
+    )
 
 def release_and_prepare_next_dev_cycle(
     github_cfg_name: str,
@@ -117,7 +123,7 @@ def release_and_prepare_next_dev_cycle(
 
     if helper.tag_exists(tag_name=release_version):
         fail(
-            "Cannot create tag '{t}' in preparation for release: Tag already exists in the repository.".format(
+            "Cannot create tag '{t}' in preparation for release: Tag already exists".format(
                 t=release_version,
             )
         )
@@ -263,11 +269,11 @@ def remove_webhooks(
     concourse_cfg_name: CliHints.non_empty_string(
         help='the concourse_cfg name for which webhooks are to be removed'
     ),
-    job_mapping_name: CliHint(help='the name of the job mapping whose webhooks are to be removed') = None,
+    job_mapping_name: CliHint(help='job mapping to remove webhooks from') = None,
 ):
     '''
-    Remove all webhooks which belong to the given Concourse-config name. If a job-mapping id is given as well,
-    only webhooks tagged with both Concourse-config name and job-mapping id will be deleted.
+    Remove all webhooks which belong to the given Concourse-config name.
+    Optionally also filter by given job_mapping_name.
     '''
     cfg_factory = ctx().cfg_factory()
     github_cfg = cfg_factory.github(github_cfg_name)
@@ -303,6 +309,8 @@ def remove_webhooks(
             continue
 
         if removed > 0:
-            info("Removed {num} webhook from repository {repo}".format(num=removed, repo=repository.name))
+            info("Removed {num} webhook(s) from repository {repo}".format(
+                num=removed, repo=repository.name)
+            )
         else:
             verbose("Nothing to do for repository {repo}".format(repo=repository.name))

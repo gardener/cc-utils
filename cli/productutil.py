@@ -111,7 +111,9 @@ def _parse_dependency_str_func(
                 ma=', '.join(missing_attribs))
             )
         if forbid_extra_attribs:
-            extra_attribs = [attrib for attrib in parsed.keys() if not attrib in required_attributes]
+            extra_attribs = [
+                    attrib for attrib in parsed.keys() if not attrib in required_attributes
+            ]
             if extra_attribs:
                 raise argparse.ArgumentTypeError('unknown attributes: {ua}'.format(
                     ua=', '.join(extra_attribs))

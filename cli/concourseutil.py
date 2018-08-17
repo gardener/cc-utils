@@ -50,8 +50,8 @@ def __add_module_command_args(parser):
 
 def deploy_or_upgrade_concourse(
     config_name: CliHint(typehint=str, help="the cfg_set to use"),
-    deployment_name: CliHint(typehint=str, help="Name under which Concourse will be deployed. Will also be the identifier of the namespace into which it is deployed.")='concourse',
-    timeout_seconds: CliHint(typehint=int, help="Maximum time (in seconds) to wait after deploying for the Concourse-webserver to become available.")=180,
+    deployment_name: CliHint(typehint=str, help="namespace and deployment name")='concourse',
+    timeout_seconds: CliHint(typehint=int, help="how long to wait for concourse startup")=180,
     dry_run: bool=True,
 ):
     '''Deploys a new concourse-instance using the given deployment name and config-directory.'''
@@ -75,7 +75,7 @@ def deploy_or_upgrade_concourse(
 
 def destroy_concourse(
     config_name: CliHint(typehint=str, help="The config set to use"),
-    release_name: CliHint(typehint=str, help="Name of the Concourse helm release. Will also be the identifier of the namespace into which Concourse is deployed")='concourse',
+    release_name: CliHint(typehint=str, help="namespace and deployment name")='concourse',
     dry_run: bool = True
 ):
     '''Destroys a concourse-instance using the given helm release name'''
@@ -96,7 +96,7 @@ def destroy_concourse(
 
 
 def set_teams(
-    config_name: CliHint(typehint=str, help='Which of the configuration sets contained in "--cfg-dir" to use.'),
+    config_name: CliHint(typehint=str, help='the cfg_set name to use'),
 ):
     config_factory = ctx().cfg_factory()
     config_set = config_factory.cfg_set(cfg_name=config_name)
@@ -117,10 +117,10 @@ def _display_info(dry_run: bool, operation: str, **kwargs):
 
 
 def update_certificate(
-    tls_config_name: CliHint(typehint=str, help="TLS config element name which should be updated"),
-    certificate_file: CliHints.existing_file(help="Path to the certificate file to use"),
-    key_file: CliHints.existing_file(help="Path to the private key file to use"),
-    output_path: CliHints.existing_dir(help="Path where the updated TLS config file should be created")
+    tls_config_name: CliHint(typehint=str, help="TLS config element name to update"),
+    certificate_file: CliHints.existing_file(help="certificate file path"),
+    key_file: CliHints.existing_file(help="private key file path"),
+    output_path: CliHints.existing_dir(help="TLS config file output path")
 ):
     # Stuff used for yaml formatting, when dumping a dictionary
     class LiteralStr(str):
@@ -291,12 +291,12 @@ def diff_pipelines(left_file: CliHints.yaml_file(), right_file: CliHints.yaml_fi
 
 
 def trigger_resource_check(
-    cfg_name: CliHints.non_empty_string(help="The config set to use"),
-    team_name: CliHints.non_empty_string(help="Name of the concourse team to which the pipeline belongs"),
-    pipeline_name: CliHints.non_empty_string(help="Name of the pipeline which contains the resource"),
-    resource_name: CliHints.non_empty_string(help="Name of the resource to check"),
+    cfg_name: CliHints.non_empty_string(help="cfg_set to use"),
+    team_name: CliHints.non_empty_string(help="pipeline's team name"),
+    pipeline_name: CliHints.non_empty_string(help="pipeline name"),
+    resource_name: CliHints.non_empty_string(help="resource to check"),
 ):
-    '''Triggers a check of the specified Concourse resource, identical to Fly's check-resource command.
+    '''Triggers a check of the specified Concourse resource
     '''
     cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(cfg_name)

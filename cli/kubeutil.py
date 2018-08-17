@@ -90,7 +90,12 @@ def wait_for_ns(namespace):
             continue # ignore
         w.stop()
 
-def wait_for_shoot_cluster_operation_success(namespace:str, shoot_name:str, optype:str, timeout_seconds:int=120):
+def wait_for_shoot_cluster_operation_success(
+    namespace:str,
+    shoot_name:str,
+    optype:str,
+    timeout_seconds:int=120
+    ):
     not_empty(namespace)
     not_empty(shoot_name)
     optype = not_empty(optype).lower()
@@ -118,18 +123,35 @@ def wait_for_shoot_cluster_operation_success(namespace:str, shoot_name:str, opty
         # we reached the right operation type
         if operation_state == 'succeeded':
             return True,operation_state
-        info('operation {} is {} - progress: {}%'.format(optype, operation_state, operation_progress))
+        info('operation {} is {} - progress: {}%'.format(
+            optype,
+            operation_state,
+            operation_progress)
+        )
         return False,operation_state
 
     try:
-        _wait_for_shoot(namespace, on_event=on_event, expected_result='succeeded', timeout_seconds=timeout_seconds)
+        _wait_for_shoot(
+            namespace,
+            on_event=on_event,
+            expected_result='succeeded',
+            timeout_seconds=timeout_seconds
+        )
         info('Shoot cluster successfully reached state {}d'.format(optype))
     except RuntimeError as rte:
         fail('Shoot cluster reached a final error state: ' + str(rte))
     except ReadTimeoutError:
-        fail('Shoot cluster did not reach state {}d within {} minute(s)'.format(optype, math.ceil(timeout_seconds/60)))
+        fail('Shoot cluster did not reach state {}d within {} minute(s)'.format(
+            optype,
+            math.ceil(timeout_seconds/60)
+            )
+        )
 
-def wait_for_shoot_cluster_to_become_healthy(namespace:str, shoot_name:str, timeout_seconds:int=120):
+def wait_for_shoot_cluster_to_become_healthy(
+    namespace:str,
+    shoot_name:str,
+    timeout_seconds:int=120
+    ):
     not_empty(namespace)
     not_empty(shoot_name)
     info('will wait for a maximum of {} minute(s) for cluster {} to become healthy'.format(
@@ -158,16 +180,27 @@ def wait_for_shoot_cluster_to_become_healthy(namespace:str, shoot_name:str, time
             return True,'healthy'
 
         unhealthy_components = [c for c,s in health_status if not s]
-        info('the following components are still unhealthy: {}'.format(' '.join(unhealthy_components)))
+        info('the following components are still unhealthy: {}'.format(
+            ' '.join(unhealthy_components)
+            )
+        )
         return False,'unhealthy'
 
     try:
-        _wait_for_shoot(namespace, on_event=on_event, expected_result='healthy', timeout_seconds=timeout_seconds)
+        _wait_for_shoot(
+            namespace,
+            on_event=on_event,
+            expected_result='healthy',
+            timeout_seconds=timeout_seconds
+        )
         info('Shoot cluster became healthy')
     except RuntimeError as rte:
         fail('cluster did not become healthy: ' + str(rte))
     except ReadTimeoutError:
-        fail('cluster did not become healthy within {} minute(s)'.format(math.ceil(timeout_seconds/60)))
+        fail('cluster did not become healthy within {} minute(s)'.format(
+            math.ceil(timeout_seconds/60)
+            )
+        )
 
 
 def _wait_for_shoot(namespace, on_event, expected_result, timeout_seconds:int=120):
