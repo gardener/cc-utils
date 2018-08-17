@@ -24,11 +24,11 @@ def simple_cfg_dict():
     types = {
         'a_type':
         {
-            'model': { 'cfg_type_name': 'a_type', 'type': 'NamedModelElement' }
+            'model': {'cfg_type_name': 'a_type', 'type': 'NamedModelElement'}
         },
         'cfg_set':
         {
-            'model': { 'cfg_type_name': 'cfg_set', 'type': 'ConfigurationSet' }
+            'model': {'cfg_type_name': 'cfg_set', 'type': 'ConfigurationSet'}
         }
     }
     # config sets

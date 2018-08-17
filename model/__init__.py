@@ -278,7 +278,7 @@ class ConfigSetSerialiser(object):
         serialised_elements = dict([serialise_element(t, n) for t, n in cfg_mappings.items()])
 
         # store cfg_set
-        serialised_elements['cfg_set'] = {cfg.name() : cfg.raw for cfg in self.cfg_sets}
+        serialised_elements['cfg_set'] = {cfg.name(): cfg.raw for cfg in self.cfg_sets}
 
         # store cfg_types metadata (TODO: patch source attributes)
         serialised_elements[ConfigFactory.CFG_TYPES] = self.cfg_factory._cfg_types_raw()

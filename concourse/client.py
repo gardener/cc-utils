@@ -363,9 +363,9 @@ class ConcourseApi(object):
                     'api_url': team_credentials.github_auth_api_url(),
                 })
             if 'auth' in body:
-                body['auth'].update({'github' : github_cfg})
+                body['auth'].update({'github': github_cfg})
             else:
-                body['auth'] = {'github' : github_cfg}
+                body['auth'] = {'github': github_cfg}
 
         team_url = self.routes.team_url(team_credentials.teamname())
 

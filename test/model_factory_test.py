@@ -220,15 +220,15 @@ class ConfigFactoryDictDeserialisationTest(unittest.TestCase, ConfigFactorySmoke
         types = {
             'a_type':
             {
-                'model': { 'cfg_type_name': 'a_type', 'type': 'NamedModelElement' }
+                'model': {'cfg_type_name': 'a_type', 'type': 'NamedModelElement'}
             },
             'defined_but_unused_type':
             {
-                'model': { 'cfg_type_name': 'defined_but_unused_type', 'type': 'NamedModelElement' }
+                'model': {'cfg_type_name': 'defined_but_unused_type', 'type': 'NamedModelElement'}
             },
             'cfg_set':
             {
-                'model': { 'cfg_type_name': 'cfg_set', 'type': 'ConfigurationSet' }
+                'model': {'cfg_type_name': 'cfg_set', 'type': 'ConfigurationSet'}
             },
         }
         # config sets
