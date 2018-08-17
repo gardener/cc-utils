@@ -125,7 +125,9 @@ class ComponentDescriptorResolver(ResolverBase):
 
         merged = Product.from_dict(raw_dict=deepcopy(dict(product.raw.items())))
 
-        for component_reference in itertools.chain(*map(unresolved_references, product.components())):
+        for component_reference in itertools.chain(
+                *map(unresolved_references, product.components())
+        ):
             resolved_descriptor = self.retrieve_descriptor(component_reference)
             merged = merge_products(merged, resolved_descriptor)
 
@@ -168,8 +170,12 @@ def merge_products(left_product, right_product):
 def diff_products(left_product, right_product, ignore_component_names=()):
     # only take component references into account for now and assume
     # that component versions are always identical content-wise
-    left_components = {c for c in left_product.components() if c.name() not in ignore_component_names}
-    right_components = {c for c in right_product.components() if c.name() not in ignore_component_names}
+    left_components = {
+        c for c in left_product.components() if c.name() not in ignore_component_names
+    }
+    right_components = {
+        c for c in right_product.components() if c.name() not in ignore_component_names
+    }
 
     if left_components == right_components:
         return None # no diff
