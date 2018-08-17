@@ -152,7 +152,7 @@ class PipelineStep(ModelBase):
             image_reference = self.image()
             # image must be a valid docker image reference
             allowed_characters = string.ascii_letters + string.digits +'.-_/:'
-            if any(map(lambda c: c in allowed_characters, image_reference)):
+            if any(map(lambda c: c not in allowed_characters, image_reference)):
                 raise ModelValidationError(
                     'forbidden character in image reference: ' + str(image_reference)
                 )
