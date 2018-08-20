@@ -106,21 +106,21 @@ load_config()
 
 
 def load_config_from_args():
-    if args is None or not hasattr(args, 'cfg_dir') or args.cfg_dir is None:
-        return {}
-    context_config = {'cfg-dir': args.cfg_dir}
+    context_config = {}
+    if args.cfg_dir is not None:
+        context_config['cfg-dir'] = args.cfg_dir
+
     return {
         'ctx': context_config,
     }
 
 
 def _cfg_factory_from_dir():
-    # XXX: args does always have a cfg_dir attribute, but pylint does not always understand this
-    if not args or not hasattr(args, 'cfg_dir') or not getattr(args, 'cfg_dir'):
+    if Config.CONTEXT.value.config_dir() is None:
         return None
 
     from util import existing_dir
-    cfg_dir = existing_dir(getattr(args, 'cfg_dir'))
+    cfg_dir = existing_dir(Config.CONTEXT.value.config_dir())
 
     from model import ConfigFactory
     factory = ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)
