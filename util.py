@@ -55,6 +55,12 @@ def existing_dir(path: str):
     return path
 
 
+def check_type(instance, type):
+    if not isinstance(instance, type):
+        fail('{i} is not an instance of {t}'.format(i=instance, t=type))
+    return instance
+
+
 class CliHint(object):
     def __init__(self, typehint=str, *args, **kwargs):
         self.argparse_args = dict(*args, **kwargs)
