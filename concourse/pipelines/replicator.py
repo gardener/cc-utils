@@ -52,31 +52,6 @@ from concourse import client
 from model import ConcourseTeamCredentials, ConcourseConfig
 
 
-def generate_pipelines(
-        definitions_root_dir,
-        job_mapping,
-        template_path,
-        template_include_dir,
-        config_set: 'ConfigurationSet'
-    ):
-    enumerator = PipelineEnumerator(
-        base_dir=definitions_root_dir,
-        cfg_set=config_set,
-    )
-
-    pipeline_definitions = enumerator.enumerate_pipeline_definitions(job_mapping)
-
-    for pipeline_definition in pipeline_definitions:
-        rendering_results = render_pipelines(
-            pipeline_definition=pipeline_definition,
-            config_set=config_set,
-            template_path=template_path,
-            template_include_dir=template_include_dir
-        )
-        for rendered_pipeline, instance_definition, pipeline_args in rendering_results:
-            yield (rendered_pipeline, instance_definition, pipeline_args)
-
-
 def replicate_pipelines(
     cfg_set,
     concourse_cfg,
