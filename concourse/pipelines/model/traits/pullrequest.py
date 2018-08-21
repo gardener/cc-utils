@@ -28,8 +28,8 @@ class PullRequestPolicies(ModelBase):
     def require_label(self):
         return self.raw.get('require-label')
 
-    def replacement_labels(self):
-        return self.raw.get('replacement-labels')
+    def replacement_label(self):
+        return self.raw.get('replacement-label')
 
 
 class PullRequestTrait(Trait):
@@ -37,7 +37,7 @@ class PullRequestTrait(Trait):
         return {
             'policies': {
                 'require-label': 'reviewed/ok-to-test',
-                'replacement-labels': ['needs/ok-to-test'],
+                'replacement-label': 'needs/ok-to-test',
             }
         }
 
