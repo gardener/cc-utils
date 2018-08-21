@@ -35,6 +35,12 @@ default_http_adapter = HTTPAdapter(
 )
 
 
+def mount_default_adapter(session: requests.Session):
+    session.mount('http://', default_http_adapter)
+    session.mount('https://', default_http_adapter)
+    return session
+
+
 def check_http_code(function):
     '''
     a decorator that will check on `requests.Response` instances returned by HTTP requests
@@ -79,10 +85,7 @@ class AuthenticatedRequestBuilder(object):
             self.auth = HTTPBasicAuth(basic_auth_username, basic_auth_passwd)
 
         # create session and mount our default adapter (for retry-semantics)
-        session = requests.Session()
-        session.mount('http://', default_http_adapter)
-        session.mount('https://', default_http_adapter)
-        self.session = session
+        self.session = mount_default_adapter(requests.Session())
 
         self.verify_ssl = verify_ssl
 

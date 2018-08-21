@@ -34,7 +34,7 @@ from github3.orgs import Team
 
 import util
 
-from http_requests import default_http_adapter
+from http_requests import mount_default_adapter
 from product.model import ComponentReference
 from model import ConfigFactory, GithubConfig
 
@@ -389,9 +389,7 @@ def _create_github_api_object(
     if not github_api:
         util.fail("Could not connect to GitHub-instance {url}".format(url=github_url))
 
-    session = github_api.session
-    session.mount('http://', default_http_adapter)
-    session.mount('https://', default_http_adapter)
+    mount_default_adapter(github_api.session)
 
     return github_api
 
