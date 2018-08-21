@@ -93,7 +93,9 @@ def replicate_pipelines(
         expose_pipelines=expose_pipelines,
     )
 
-    result_processor = ReplicationResultProcessor()
+    result_processor = ReplicationResultProcessor(
+        cfg_set=cfg_set,
+    )
 
     replicator = PipelineReplicator(
         definition_enumerators=definition_enumerators,
@@ -304,10 +306,14 @@ class ConcourseDeployer(DefinitionDeployer):
             return DeployResult(
                 definition_descriptor=definition_descriptor,
                 deploy_status=DeployStatus.FAILED,
+                error_details=traceback.format_exc(),
             )
 
 
 class ReplicationResultProcessor(object):
+    def __init__(self, cfg_set):
+        self._cfg_set = cfg_set
+
     def process_results(self, results):
         # collect pipelines by concourse target (concourse_cfg, team_name) as key
         concourse_target_results = {}
