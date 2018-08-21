@@ -38,7 +38,14 @@ from util import (
     merge_dicts,
     FluentIterable
 )
-from github.util import branches
+from mailutil import _send_mail
+from github.util import (
+    branches,
+    github_cfg_for_hostname,
+    GitHubRepositoryHelper,
+    _create_github_api_object,
+)
+from github.codeowners import CodeownersParser, CodeOwnerEntryResolver
 
 from concourse.pipelines.factory import DefinitionFactory, RawPipelineDefinitionDescriptor
 from concourse.pipelines.enumerator import (
@@ -134,7 +141,8 @@ class Renderer(object):
             traceback.print_exc()
             return RenderResult(
                 definition_descriptor,
-                render_status=RenderStatus.FAILED
+                render_status=RenderStatus.FAILED,
+                error_details=traceback.format_exc(),
             )
 
     def _render(self, definition_descriptor):
@@ -173,13 +181,14 @@ class Renderer(object):
         else:
             # fallback in case no main_repository was found
             pipeline_metadata['pipeline_name'] = pipeline_definition.name
+            main_repo = None
 
         t = mako.template.Template(template_contents, lookup=self.lookup)
 
         definition_descriptor.pipeline = t.render(
                 instance_args=generated_model,
                 config_set=self.cfg_set,
-                pipeline=pipeline_metadata
+                pipeline=pipeline_metadata,
         )
 
         return definition_descriptor
@@ -194,10 +203,12 @@ class RenderResult(object):
     def __init__(
         self,
         definition_descriptor,
-        render_status
+        render_status,
+        error_details=None,
     ):
         self.definition_descriptor = not_none(definition_descriptor)
         self.render_status = not_none(render_status)
+        self.error_details = error_details
 
 
 class DeployStatus(IntEnum):
@@ -211,10 +222,12 @@ class DeployResult(object):
     def __init__(
         self,
         definition_descriptor,
-        deploy_status
+        deploy_status,
+        error_details=None,
     ):
         self.definition_descriptor = not_none(definition_descriptor)
         self.deploy_status = not_none(deploy_status)
+        self.error_details = error_details
 
 
 class DefinitionDeployer(object):
@@ -369,9 +382,48 @@ class ReplicationResultProcessor(object):
             d=failed_count,
         )
         )
+
+        all_notifications_succeeded = True
         for failed_descriptor in failed_descriptors:
             warning(failed_descriptor.definition_descriptor.pipeline_name)
-        return False
+            try:
+                self._notify_broken_definition_owners(failed_descriptor)
+            except Exception:
+                warning('an error occurred whilst trying to send error notifications')
+                traceback.print_exc()
+                all_notifications_succeeded = False
+
+        # signall error only if error notifications failed
+        return all_notifications_succeeded
+
+    def _notify_broken_definition_owners(self, failed_descriptor):
+        definition_descriptor = failed_descriptor.definition_descriptor
+        main_repo = definition_descriptor.main_repo
+        github_cfg = github_cfg_for_hostname(self._cfg_set, main_repo['hostname'])
+        github_api = _create_github_api_object(github_cfg)
+        repo_owner, repo_name = main_repo['path'].split('/')
+
+        repo_helper = GitHubRepositoryHelper(
+            owner=repo_owner,
+            name=repo_name,
+            default_branch=main_repo['branch'],
+            github_api=github_api,
+        )
+        codeowners_parser = CodeownersParser(github_repo_helper=repo_helper)
+        codeowners_resolver = CodeOwnerEntryResolver(github_api=github_api)
+        recipients = set(codeowners_resolver.resolve_email_addresses(
+            codeowners_parser.parse_codeowners_entries()
+        ))
+
+        email_cfg = self._cfg_set.email()
+        _send_mail(
+            email_cfg=email_cfg,
+            recipients=recipients,
+            subject='Your pipeline definition in {repo} is erroneous'.format(
+                repo=main_repo['path'],
+            ),
+            mail_template='Error details:\n' + str(failed_descriptor.error_details),
+        )
 
     def _initialise_new_pipeline_resources(self, concourse_api, results):
         newly_deployed_pipeline_names = map(
@@ -427,6 +479,7 @@ class PipelineReplicator(object):
                 deploy_result = DeployResult(
                     definition_descriptor=definition_descriptor,
                     deploy_status=DeployStatus.SKIPPED,
+                    error_details=result.error_details,
                 )
             return deploy_result
 
