@@ -19,7 +19,7 @@ import urllib.parse
 
 import git
 
-from util import not_empty, not_none, existing_dir, fail, random_str
+from util import not_empty, not_none, existing_dir, fail, random_str, urljoin
 
 
 class GitHelper(object):
@@ -37,8 +37,12 @@ class GitHelper(object):
         # output of git status --porcelain=1 and -z is guaranteed to not change in the future
         return [line[3:] for line in lines if line]
 
-    def _authenticated_remote(self):
-        url = url_with_credentials(self.github_cfg, self.github_repo_path)
+    def _authenticated_remote(self, use_ssh=False):
+        if use_ssh:
+            url = urljoin(self.github_cfg.ssh_url(), self.github_repo_path)
+        else:
+            url = url_with_credentials(self.github_cfg, self.github_repo_path)
+
         remote = git.remote.Remote.add(
             repo=self.repo,
             name=random_str(),
@@ -66,14 +70,26 @@ class GitHelper(object):
         self.repo.index.reset()
         return commit
 
-    def push(self, from_ref, to_ref):
-        remote = self._authenticated_remote()
-        remote.push(':'.join((
-            from_ref,
-            to_ref,
-        ))
-        )
-        self.repo.delete_remote(remote)
+    def push(self, from_ref, to_ref, use_ssh=False):
+        if use_ssh:
+            tmp_id = os.path.abspath('tmp.id_rsa')
+            with open(tmp_id, 'w') as f:
+                f.write(self.github_cfg.credentials().private_key())
+            os.chmod(tmp_id, 0o400)
+            os.environ['GIT_SSH_CMD'] = 'ssh -i {id_file}'.format(id_file=tmp_id)
+
+        remote = self._authenticated_remote(use_ssh=use_ssh)
+        try:
+            remote.push(':'.join((
+                from_ref,
+                to_ref,
+            ))
+            )
+            self.repo.delete_remote(remote)
+        finally:
+            if use_ssh:
+                os.unlink(tmp_id)
+                del os.environ['GIT_SSH_CMD']
 
 
 def clone_repository(
