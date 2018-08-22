@@ -21,6 +21,7 @@ from github.util import GitHubRepositoryHelper
 from pydash import _
 import re
 from semver import parse_version_info
+import traceback
 
 from util import info, warning, fail, verbose, existing_dir
 from product.model import ComponentName
@@ -46,6 +47,25 @@ Commit = namedtuple('Commit', [
 
 
 def generate_release_notes(
+    repo_dir: str,
+    helper: GitHubRepositoryHelper,
+    repository_branch: str=None,
+    commit_range: str=None
+):
+    try:
+        return _generate_release_notes(
+            repo_dir,
+            helper,
+            repository_branch,
+            commit_range,
+        )
+    except Exception:
+        stacktrace = traceback.format_exc()
+        warning('release note generation failed: ' + str(stacktrace))
+        return str(stacktrace)
+
+
+def _generate_release_notes(
     repo_dir: str,
     helper: GitHubRepositoryHelper,
     repository_branch: str=None,
