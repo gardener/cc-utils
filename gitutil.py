@@ -92,7 +92,7 @@ class GitHelper(object):
         finally:
             if use_ssh:
                 os.unlink(tmp_id)
-                del os.environ['GIT_SSH_CMD']
+                del os.environ['GIT_SSH_COMMAND']
 
 
 def clone_repository(
