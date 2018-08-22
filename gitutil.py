@@ -76,7 +76,10 @@ class GitHelper(object):
             with open(tmp_id, 'w') as f:
                 f.write(self.github_cfg.credentials().private_key())
             os.chmod(tmp_id, 0o400)
-            os.environ['GIT_SSH_CMD'] = 'ssh -i {id_file}'.format(id_file=tmp_id)
+            os.environ['GIT_SSH_CMD'] = 'ssh -i {id_file} {suppress_hostcheck}'.format(
+                id_file=tmp_id,
+                suppress_hostcheck='-o "StrictHostKeyChecking no"',
+            )
 
         remote = self._authenticated_remote(use_ssh=use_ssh)
         try:
