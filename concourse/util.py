@@ -50,7 +50,7 @@ def sync_webhooks(
     job_mapping: JobMapping,
     concourse_team_credentials: ConcourseTeamCredentials,
     concourse_pipelines: [str]=None,
-    concourse_verify_ssl: bool=False,
+    concourse_verify_ssl: bool=True,
 ):
     concourse_url = concourse_cfg.external_url()
     concourse_team = concourse_team_credentials.teamname()
