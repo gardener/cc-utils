@@ -100,6 +100,9 @@ def _send_mail(
         replace_tokens=replace_tokens,
     )
 
+    recipients = set(map(str.lower, recipients))
+    cc_recipients = set(map(str.lower, cc_recipients))
+
     # create mail envelope
     mail = mailer.create_mail(
         subject=subject,
@@ -117,7 +120,6 @@ def _send_mail(
     credentials = email_cfg.credentials()
     smtp_server.login(user=credentials.username(), password=credentials.passwd())
 
-    recipients = set(recipients)
     recipients.update(cc_recipients)
 
     mailer.send_mail(
