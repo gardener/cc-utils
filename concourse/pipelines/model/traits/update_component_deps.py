@@ -27,8 +27,16 @@ class UpdateComponentDependenciesTrait(Trait):
             'set_dependency_version_script': '.ci/set_dependency_version',
         }
 
+    def _optional_attributes(self):
+        return {
+            'upstream_component_name',
+        }
+
     def set_dependency_version_script_path(self):
         return self.raw['set_dependency_version_script']
+
+    def upstream_component_name(self):
+        return self.raw.get('upstream_component_name')
 
     def transformer(self):
         return UpdateComponentDependenciesTraitTransformer(trait=self, name=self.name)
@@ -60,3 +68,9 @@ class UpdateComponentDependenciesTraitTransformer(TraitTransformer):
         # our step depends on dependendency descriptor step
         component_descriptor_step = pipeline_args.step('component_descriptor')
         self.update_component_deps_step._add_dependency(component_descriptor_step)
+
+        upstream_component_name = self.trait.upstream_component_name()
+        if upstream_component_name:
+            self.update_component_deps_step.variables()['UPSTREAM_COMPONENT_NAME'] = '"{cn}"'.format(
+                cn=upstream_component_name,
+            )
