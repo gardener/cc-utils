@@ -18,7 +18,8 @@ from util import not_none
 from concourse.pipelines.model.step import PipelineStep
 from concourse.pipelines.modelbase import (
   Trait,
-  TraitTransformer
+  TraitTransformer,
+  ScriptType,
 )
 
 
@@ -64,7 +65,12 @@ class VersionTrait(Trait):
 
 class VersionTraitTransformer(TraitTransformer):
     def inject_steps(self):
-        self.version_step = PipelineStep(name='version', raw_dict={}, is_synthetic=True)
+        self.version_step = PipelineStep(
+            name='version',
+            raw_dict={},
+            is_synthetic=True,
+            script_type=ScriptType.PYTHON3,
+            )
         self.version_step.add_output(name='version_path', variable_name='managed-version')
 
         yield self.version_step
