@@ -161,7 +161,7 @@ def is_yaml_file(path: CliHints.existing_file()):
 
 
 def parse_yaml_file(path: CliHints.existing_file()):
-    with open(str(path)) as f:
+    with open(path) as f:
             return yaml.load(f)
 
 
