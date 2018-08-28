@@ -4,9 +4,9 @@ Mako==1.0.7
 deepdiff==3.3.0
 deepmerge==0.0.4
 docker-py==1.10.6
-ensure==0.6.2
+ensure
 github3.py==1.1.0
-kubernetes==5.0.0
+kubernetes
 pydash==4.6.0
 pyflakes
 pycodestyle
