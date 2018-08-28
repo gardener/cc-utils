@@ -62,7 +62,7 @@ def generate_release_notes(
     except Exception:
         stacktrace = traceback.format_exc()
         warning('release note generation failed: ' + str(stacktrace))
-        return str(stacktrace)
+        return 'an error occurred whilst trying to fetch release notes'
 
 
 def _generate_release_notes(
