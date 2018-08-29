@@ -16,7 +16,6 @@
 from enum import Enum
 from typing import Iterable
 
-from product.model import Component
 from model.base import ModelBase
 
 
@@ -33,7 +32,7 @@ class AnalysisResult(ModelBase):
     def status(self) -> ProcessingStatus:
         return ProcessingStatus(self.raw.get('status'))
 
-    def components(self) -> Iterable[Component]:
+    def components(self) -> 'Iterable[Component]':
         return (Component(raw_dict=raw) for raw in self.raw.get('components'))
 
 
@@ -41,7 +40,7 @@ class Component(ModelBase):
     def name(self):
         return self.raw.get('lib')
 
-    def vulnerabilities(self) -> Iterable[Vulnerability]:
+    def vulnerabilities(self) -> 'Iterable[Vulnerability]':
         return (Vulnerability(raw_dict=raw) for raw in self.raw.get('vulns'))
 
     def highest_major_cve_severity(self) -> int:
