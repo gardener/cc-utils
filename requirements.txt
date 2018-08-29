@@ -11,7 +11,7 @@ pydash==4.6.0
 pyflakes
 pycodestyle
 requests==2.18.4
-semver==2.8.0
+semver==2.8.1
 slackclient==1.2.1
 sseclient-py==1.7
 toposort==1.5

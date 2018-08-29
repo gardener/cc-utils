@@ -81,15 +81,15 @@ def process_version(
     elif operation == SET_VERBATIM:
         processed_version = str(verbatim_version)
     elif operation == APPEND_PRERELEASE:
-        prerelease = '-'.join((parsed_version.prerelease, prerelease))
-        processed_version = str(parsed_version._replace(prerelease = prerelease))
+        parsed_version._prerelease = '-'.join((parsed_version.prerelease, prerelease))
+        processed_version = str(parsed_version)
     else:
-        parsed_version = parsed_version._replace(prerelease=None)
-        parsed_version = parsed_version._replace(build=None)
+        parsed_version._prerelease = None
+        parsed_version._build = None
         if operation in [SET_PRERELEASE, SET_PRERELEASE_AND_BUILD]:
-            parsed_version = parsed_version._replace(prerelease=prerelease)
+            parsed_version._prerelease = prerelease
         if operation in [SET_BUILD_METADATA, SET_PRERELEASE_AND_BUILD]:
-            parsed_version = parsed_version._replace(build=build_metadata[:build_metadata_length])
+            parsed_version._build = build_metadata[:build_metadata_length]
         processed_version = str(parsed_version)
 
     return processed_version
