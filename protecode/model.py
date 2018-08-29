@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import Iterable
 
 from model.base import ModelBase
 

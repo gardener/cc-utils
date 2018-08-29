@@ -17,7 +17,7 @@ from functools import partial
 from protecode.client import ProtecodeApi
 from protecode.model import ProcessingStatus
 from util import not_none, warning
-from container.image import retrieve_container_image
+from container.registry import retrieve_container_image
 from .model import ContainerImage, Component, UploadResult, UploadStatus
 
 
@@ -98,13 +98,20 @@ class ProtecodeUtil(object):
             )
 
         # image was not yet uploaded - do this now
-        image_data = retrieve_container_image(container_image.image_reference())
-        result = self._api.upload(
-            application_name=self._upload_name(container_image=container_image, component=component),
-            group_id=self._group_id,
-            data=image_data.stream(),
-            custom_attribs=metadata,
-        )
+        image_data_fh = retrieve_container_image(container_image.image_reference())
+
+        try:
+            result = self._api.upload(
+                application_name=self._upload_name(
+                    container_image=container_image,
+                    component=component
+                ),
+                group_id=self._group_id,
+                data=image_data_fh,
+                custom_attribs=metadata,
+            )
+        finally:
+            image_data_fh.close()
 
         if wait_for_result:
             result = self._api.wait_for_scan_result(product_id=result.product_id())
