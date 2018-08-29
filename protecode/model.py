@@ -16,6 +16,7 @@
 from enum import Enum
 from typing import Iterable
 
+from product.model import Component
 from model.base import ModelBase
 
 
