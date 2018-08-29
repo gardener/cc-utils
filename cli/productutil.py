@@ -13,12 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import argparse
-from concurrent.futures import ThreadPoolExecutor
 import github3.exceptions
 import yaml
 import json
 
-from util import CliHints, CliHint, parse_yaml_file, ctx, info, fail
+from util import CliHints, CliHint, parse_yaml_file, ctx, fail
 from product.model import (
     Component,
     ComponentReference,
@@ -28,8 +27,7 @@ from product.model import (
     WebDependency,
 )
 from product.util import merge_products, ComponentDescriptorResolver
-from product.scanning import ProtecodeUtil
-import protecode.client
+from protecode.util import upload_images
 
 
 def upload_product_images(
@@ -41,59 +39,18 @@ def upload_product_images(
 ):
     cfg_factory = ctx().cfg_factory()
     protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
-    protecode_api = protecode.client.from_cfg(protecode_cfg)
-    protecode_util = ProtecodeUtil(protecode_api=protecode_api, group_id=protecode_group_id)
 
-    product_model = Product.from_dict(
+    product_descriptor = Product.from_dict(
         raw_dict=parse_yaml_file(product_cfg_file)
     )
 
-    executor = ThreadPoolExecutor(max_workers=parallel_jobs)
-    tasks = _create_tasks(product_model, protecode_util)
-    results = executor.map(lambda task: task(), tasks)
-
-    for result in results:
-        info('result: {r}'.format(r=result))
-        analysis_result = result.result
-
-        vulnerable_components = list(filter(
-            lambda c: c.highest_major_cve_severity() >= cve_threshold, analysis_result.components()
-        ))
-
-        if vulnerable_components:
-            highest_cve = max(map(lambda c: c.highest_major_cve_severity(), vulnerable_components))
-            if highest_cve >= cve_threshold:
-                info('Highest found CVE Severity: {cve} - Action required'.format(cve=highest_cve))
-        else:
-            info('CVE below configured threshold - clean')
-
-
-def _create_task(protecode_util, container_image, component, wait_for_result):
-    def task_function():
-        return protecode_util.upload_image(
-            container_image=container_image,
-            component=component,
-            wait_for_result=True,
-        )
-    return task_function
-
-
-def _create_tasks(product_model, protecode_util):
-    for component in product_model.components():
-        info('processing component: {c}:{v}'.format(c=component.name(), v=component.version()))
-        component_dependencies = component.dependencies()
-        for container_image in component_dependencies.container_images():
-            info('processing container image: {c}:{cir}'.format(
-                c=component.name(),
-                cir=container_image.image_reference(),
-            )
-            )
-            yield _create_task(
-                    protecode_util=protecode_util,
-                    container_image=container_image,
-                    component=component,
-                    wait_for_result=True,
-                    )
+    upload_images(
+        protecode_cfg=protecode_cfg,
+        product_descriptor=product_descriptor,
+        protecode_group_id=protecode_group_id,
+        parallel_jobs=parallel_jobs,
+        cve_threshold=cve_threshold,
+    )
 
 
 def _parse_dependency_str_func(
