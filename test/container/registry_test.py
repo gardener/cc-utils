@@ -35,7 +35,6 @@ class RegistryTest(unittest.TestCase):
             'registry-1.docker.io/' + reference,
         )
 
-
         # insert 'library' if no "owner" is given
         reference = 'alpine:1.2.3'
         self.assertEqual(
