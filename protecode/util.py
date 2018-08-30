@@ -24,7 +24,7 @@ def upload_images(
     protecode_cfg,
     product_descriptor,
     protecode_group_id=5,
-    parallel_jobs=4,
+    parallel_jobs=8,
     cve_threshold=7,
 ):
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
