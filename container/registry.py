@@ -59,6 +59,26 @@ def _make_tag_if_digest(
       repo=str(name.as_repository()), tag=_DEFAULT_TAG))
 
 
+def normalise_image_reference(image_reference):
+  util.check_type(image_reference, str)
+  if '@' in image_reference:
+    return image_reference
+
+  parts = image_reference.split('/')
+
+  left_part = parts[0]
+  # heuristically check if we have a (potentially) valid hostname
+  if '.' not in left_part.split(':')[0]:
+    # insert 'library' if only image name was given
+    if len(parts) == 1:
+      parts.insert(0, 'library')
+
+    # probably, the first part is not a hostname; inject default registry host
+    parts.insert(0, 'registry-1.docker.io')
+
+  return '/'.join(parts)
+
+
 def _parse_image_reference(image_reference):
   util.check_type(image_reference, str)
 
@@ -83,6 +103,7 @@ def _pull_image(image_reference: str):
   retry_factory = retry_factory.WithSourceTransportCallable(httplib2.Http)
   transport = transport_pool.Http(retry_factory.Build, size=8)
 
+  image_reference = normalise_image_reference(image_reference)
   name = _parse_image_reference(image_reference)
 
   # OCI Image Manifest is compatible with Docker Image Manifest Version 2,
