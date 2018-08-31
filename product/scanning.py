@@ -39,12 +39,7 @@ class ProtecodeUtil(object):
         image_reference = container_image.image_reference()
         image_path, image_tag = image_reference.split(':')
         image_name = image_path.split('/')[-1]
-        print('{c}_{i}_{v}'.format(
-            c=component.name(),
-            i=image_name,
-            v=image_tag,
-        ))
-        return '{c}_{i}_{v}'.format(
+        return '{c}_{i}'.format(
             c=component.name(),
             i=image_name,
             v=image_tag,
