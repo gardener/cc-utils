@@ -376,6 +376,8 @@ def extract_release_notes(
     cn_current_repo -- component name of the current repository
     """
     release_notes = list()
+    if not text:
+        return release_notes
 
     r = re.compile(
         r"``` *(?P<category>improvement|noteworthy) (?P<target_group>user|operator)"
