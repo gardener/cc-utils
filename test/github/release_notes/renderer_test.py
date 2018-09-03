@@ -280,6 +280,64 @@ class RendererTest(unittest.TestCase):
             '  * second line2'
         self.assertEqual(expected_md_str, actual_md_str)
 
+    def test_render_remove_bullet_points(self):
+        release_note_objs = [
+            ReleaseNoteBlock(
+                category_id='noteworthy',
+                target_group_id='operator',
+                text='first line1\n* second line1', #contains bullet point (*)
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+                source_repo='github.com/gardener/a-foo-bar',
+                cn_current_repo=self.cn_current_repo
+            ),
+            ReleaseNoteBlock(
+                category_id='noteworthy',
+                target_group_id='operator',
+                text='first line2\n  * second line2',  # contains bullet point with extra spaces
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+                source_repo='github.com/gardener/a-foo-bar',
+                cn_current_repo=self.cn_current_repo
+            ),
+            ReleaseNoteBlock(
+                category_id='noteworthy',
+                target_group_id='operator',
+                text='- first line3\n  - second line3',  # contains bullet point (-)
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+                source_repo='github.com/gardener/a-foo-bar',
+                cn_current_repo=self.cn_current_repo
+            ),
+            ReleaseNoteBlock(
+                category_id='noteworthy',
+                target_group_id='operator',
+                text='first line4\n*italic*',  # no bullet point, just italic
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+                source_repo='github.com/gardener/a-foo-bar',
+                cn_current_repo=self.cn_current_repo
+            )
+        ]
+
+        actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
+        expected_md_str = \
+            '# [a-foo-bar]\n'\
+            '## Most notable changes\n'\
+            '* *[OPERATOR]* first line1\n'\
+            '  * second line1\n'\
+            '* *[OPERATOR]* first line2\n'\
+            '  * second line2\n'\
+            '* *[OPERATOR]* first line3\n'\
+            '  * second line3\n'\
+            '* *[OPERATOR]* first line4\n'\
+            '  * *italic*'
+        self.assertEqual(expected_md_str, actual_md_str)
+
     def test_get_or_call(self):
         def call_me():
             return 'value'
