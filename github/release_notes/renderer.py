@@ -210,7 +210,15 @@ class Renderer(object):
         bullet_points = list()
         for rls_note_obj in rls_note_objs:
             for i, rls_note_line in enumerate(rls_note_obj.text.splitlines()):
-                rls_note_line = _.trim(rls_note_line)
+                # trim '*' or '-' bullet points
+                rls_note_line = _\
+                    .chain(rls_note_line)\
+                    .trim()\
+                    .reg_exp_replace(r'^\* ', '')\
+                    .reg_exp_replace(r'^- ', '')\
+                    .trim()\
+                    .value()
+
                 if not rls_note_line:
                     continue
                 if i == 0:
