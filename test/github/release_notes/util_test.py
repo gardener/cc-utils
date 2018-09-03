@@ -38,6 +38,27 @@ class ReleaseNotesTest(unittest.TestCase):
     def setUp(self):
         self.cn_current_repo = ComponentName('github.com/gardener/current-repo')
 
+    def test_rls_note_extraction_no_text(self):
+        text = None
+        release_notes = extract_release_notes(
+            reference_id='42',
+            reference_type=ref_type_pull_request,
+            text=text,
+            user_login='foo',
+            cn_current_repo=self.cn_current_repo
+        )
+        self.assertEqual(0, len(release_notes))
+
+        text = ''
+        release_notes = extract_release_notes(
+            reference_id='42',
+            reference_type=ref_type_pull_request,
+            text=text,
+            user_login='foo',
+            cn_current_repo=self.cn_current_repo
+        )
+        self.assertEqual(0, len(release_notes))
+
     def test_rls_note_extraction_improvement(self):
         text = \
             '``` improvement user\n'\
