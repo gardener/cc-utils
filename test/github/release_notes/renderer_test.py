@@ -246,6 +246,40 @@ class RendererTest(unittest.TestCase):
             MarkdownRenderer(release_note_objs=release_note_objs).render()
         )
 
+    def test_render_no_skip_empty_lines(self):
+        release_note_objs = [
+            ReleaseNoteBlock(
+                category_id='noteworthy',
+                target_group_id='operator',
+                text='first line1\n\n second line1', #empty line
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+                source_repo='github.com/gardener/a-foo-bar',
+                cn_current_repo=self.cn_current_repo
+            ),
+            ReleaseNoteBlock(
+                category_id='noteworthy',
+                target_group_id='operator',
+                text='first line2\n \nsecond line2', #empty line with space
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+                source_repo='github.com/gardener/a-foo-bar',
+                cn_current_repo=self.cn_current_repo
+            )
+        ]
+
+        actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
+        expected_md_str = \
+            '# [a-foo-bar]\n'\
+            '## Most notable changes\n'\
+            '* *[OPERATOR]* first line1\n'\
+            '  * second line1\n'\
+            '* *[OPERATOR]* first line2\n'\
+            '  * second line2'
+        self.assertEqual(expected_md_str, actual_md_str)
+
     def test_get_or_call(self):
         def call_me():
             return 'value'
