@@ -20,6 +20,7 @@ from github.util import GitHubRepositoryHelper
 from pydash import _
 import re
 from semver import parse_version_info
+import typing
 
 from github.release_notes.model import (
     ReleaseNote,
@@ -31,17 +32,54 @@ from github.release_notes.model import (
     ref_type_pull_request,
     ref_type_commit
 )
-from github.release_notes.renderer import Renderer
+from github.release_notes.renderer import MarkdownRenderer
 from gitutil import GitHelper
-from util import info, warning, fail, verbose, existing_dir
+from util import info, warning, fail, verbose, existing_dir, ctx
 from product.model import ComponentName
 from model.base import ModelValidationError
+from slack.util import SlackHelper
+
+
+def rls_notes_as_markdown_and_post_to_slack(
+    github_repository_owner: str,
+    github_repository_name: str,
+    github_cfg: str,
+    repo_dir: str,
+    github_helper: GitHubRepositoryHelper,
+    repository_branch: str,
+    slack_cfg_name: str,
+    slack_channel: str,
+    release_version: str
+) -> str:
+    repo_path = github_repo_path(owner=github_repository_owner, name=github_repository_name)
+    git_helper = GitHelper(repo=repo_dir, github_cfg=github_cfg, github_repo_path=repo_path)
+    release_notes = ReleaseNotes.create(
+        github_helper=github_helper,
+        git_helper=git_helper,
+        repository_branch=repository_branch
+    )
+    release_notes_md =  release_notes.to_markdown()
+
+    post_to_slack = slack_cfg_name and slack_channel
+    if post_to_slack:
+        title = '[{n}] {v} released'.format(n=github_repository_name, v=release_version)
+        slack_cfg = ctx().cfg_factory().slack(slack_cfg_name)
+        SlackHelper(slack_cfg).post_to_slack(
+            channel=slack_channel,
+            title=title,
+            message=release_notes_md
+        )
+    return release_notes_md
+
+
+def github_repo_path(owner, name):
+    return owner + '/' + name
 
 
 class ReleaseNotes(object):
     def __init__(
         self,
-        release_note_objs: list
+        release_note_objs: [str]
     ):
         self.release_note_objs = release_note_objs
 
@@ -60,13 +98,10 @@ class ReleaseNotes(object):
         )
         return ReleaseNotes(release_note_objs)
 
-    def render_with(self, RendererCls: Renderer):
-        release_notes_str = RendererCls(self.release_note_objs).render()
+    def to_markdown(self) -> str:
+        release_notes_str = MarkdownRenderer(self.release_note_objs).render()
 
-        info('[{renderer}] Release notes:\n{rn}'.format(
-            renderer=RendererCls.__name__,
-            rn=release_notes_str
-        ))
+        info('Release notes:\n{rn}'.format(rn=release_notes_str))
         return release_notes_str
 
     def release_note_blocks(self):
@@ -89,7 +124,7 @@ def _rls_note_objs(
     git_helper: GitHelper,
     repository_branch: str=None,
     commit_range: str=None
-)->list:
+) -> [ReleaseNote]:
     cn_current_repo = ComponentName.from_github_repo_url(github_helper.repository.html_url)
 
     if not commit_range:
@@ -139,7 +174,7 @@ def calculate_range(
 def release_tags(
     github_helper: GitHubRepositoryHelper,
     repo: git.Repo
-) -> list:
+) -> [str]:
     def is_valid_semver(tag_name):
         try:
             parse_version_info(tag_name)
@@ -169,7 +204,7 @@ def reachable_release_tags_from_commit(
     github_helper: GitHubRepositoryHelper,
     repo: git.Repo,
     commit: git.objects.Commit
-) -> list:
+) -> [str]:
     tags = release_tags(github_helper, repo)
 
     visited = set()
@@ -232,8 +267,8 @@ def commits_in_range(
 
 
 def commits_from_logs(
-    git_logs: list
-):
+    git_logs: [str]
+) -> [Commit]:
     r = re.compile(
         r"(?P<commit_hash>\S+?)\x00(?P<commit_subject>.*)\x00(?P<commit_message>.*)",
         re.MULTILINE | re.DOTALL
@@ -254,8 +289,8 @@ def commits_from_logs(
 
 
 def fetch_pr_numbers_from_commits(
-    commits: list
-) -> set:
+    commits: [Commit]
+) -> typing.Set[str]:
     pr_numbers = set()
     for commit in commits:
         pr_number = pr_number_from_subject(commit.subject)
@@ -275,9 +310,9 @@ def pr_number_from_subject(commit_subject: str):
 
 def fetch_release_notes_from_prs(
     github_helper: GitHubRepositoryHelper,
-    pr_numbers_in_range: set,
+    pr_numbers_in_range: typing.Set[str],
     cn_current_repo: ComponentName
-) -> list:
+) -> [ReleaseNote]:
     # we should consider adding a release-note label to the PRs
     # to reduce the number of search results
     prs_iter = github_helper.search_issues_in_repo('type:pull is:closed')
@@ -286,8 +321,8 @@ def fetch_release_notes_from_prs(
     for pr_iter in prs_iter:
         pr_dict = pr_iter.as_dict()
 
-        pr_number = pr_dict['number']
-        if not str(pr_number) in pr_numbers_in_range:
+        pr_number = str(pr_dict['number'])
+        if pr_number not in pr_numbers_in_range:
             continue
 
         release_notes_pr = extract_release_notes(
@@ -305,7 +340,7 @@ def fetch_release_notes_from_prs(
 
 
 def fetch_release_notes_from_commits(
-    commits: list,
+    commits: [Commit],
     cn_current_repo: ComponentName
 ):
     release_notes = list()
@@ -330,7 +365,7 @@ def extract_release_notes(
     user_login: str,
     cn_current_repo: ComponentName,
     reference_id: str=None
-) -> list:
+) -> [ReleaseNote]:
     """
     Keyword arguments:
     reference_type -- type of reference_id, either pull request or commit

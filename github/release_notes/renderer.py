@@ -29,37 +29,37 @@ def get_or_call(obj, path):
 
 
 Node = namedtuple("Node", ["identifier", "title", "nodes", "matches_rls_note_field_path"])
-target_group_user = Node(
+TARGET_GROUP_USER = Node(
     identifier='user',
     title='USER',
     nodes=None,
     matches_rls_note_field_path='target_group_id'
 )
-target_group_operator = Node(
+TARGET_GROUP_OPERATOR = Node(
     identifier='operator',
     title='OPERATOR',
     nodes=None,
     matches_rls_note_field_path='target_group_id'
 )
-target_groups = [target_group_user, target_group_operator]
+TARGET_GROUPS = [TARGET_GROUP_USER, TARGET_GROUP_OPERATOR]
 
-category_noteworthy = Node(
+CATEGORY_NOTEWORTHY = Node(
     identifier='noteworthy',
     title='Most notable changes',
-    nodes=target_groups,
+    nodes=TARGET_GROUPS,
     matches_rls_note_field_path='category_id'
 )
-category_improvement = Node(
+CATEGORY_IMPROVEMENT = Node(
     identifier='improvement',
     title='Improvements',
-    nodes=target_groups,
+    nodes=TARGET_GROUPS,
     matches_rls_note_field_path='category_id'
 )
-categories = [category_noteworthy, category_improvement]
+CATEGORIES = [CATEGORY_NOTEWORTHY, CATEGORY_IMPROVEMENT]
 
 
 class Renderer(object):
-    def __init__(self, release_note_objs: list):
+    def __init__(self, release_note_objs: [ReleaseNote]):
         self.rls_note_objs = release_note_objs
 
     def render(self)->str:
@@ -72,7 +72,7 @@ class Renderer(object):
                 title='[{origin_name}]'.format(
                     origin_name=rls_note_obj.cn_source_repo.github_repo()
                 ),
-                nodes=categories,
+                nodes=CATEGORIES,
                 matches_rls_note_field_path='cn_source_repo.name' # path points to a function
             ))\
             .value()
@@ -90,10 +90,10 @@ class Renderer(object):
 
     def _nodes_to_lines(
         self,
-        nodes: list,
+        nodes: [Node],
         level: int,
-        rls_note_objs: list
-    )->list:
+        rls_note_objs: [ReleaseNote]
+    ) -> [str]:
         lines = list()
         for node in nodes:
             filtered_rls_note_objects = _.filter(
@@ -205,7 +205,7 @@ class Renderer(object):
     def _to_bullet_points(
         self,
         tag: str,
-        rls_note_objs: list,
+        rls_note_objs: [ReleaseNote],
     ):
         bullet_points = list()
         for rls_note_obj in rls_note_objs:

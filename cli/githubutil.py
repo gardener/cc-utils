@@ -28,9 +28,11 @@ from github.util import (
     _add_all_repos_to_team
 )
 import product.model
-from github.release_notes.util import ReleaseNotes
-from github.release_notes.renderer import MarkdownRenderer
-from slack.util import SlackHelper
+from github.release_notes.util import (
+    ReleaseNotes,
+    rls_notes_as_markdown_and_post_to_slack,
+    github_repo_path
+)
 
 
 def assign_github_team_to_repo(
@@ -101,7 +103,7 @@ def generate_release_notes_cli(
         git_helper=git_helper,
         repository_branch=repository_branch,
         commit_range=commit_range
-    ).render_with(MarkdownRenderer)
+    ).to_markdown()
 
 
 def release_and_prepare_next_dev_cycle(
@@ -138,23 +140,17 @@ def release_and_prepare_next_dev_cycle(
         )
 
     if should_generate_release_notes:
-        repo_path = github_repo_path(owner=github_repository_owner, name=github_repository_name)
-        git_helper = GitHelper(repo=repo_dir, github_cfg=github_cfg, github_repo_path=repo_path)
-        release_notes = ReleaseNotes.create(
+        release_notes_md = rls_notes_as_markdown_and_post_to_slack(
+            github_repository_owner=github_repository_owner,
+            github_repository_name=github_repository_name,
+            github_cfg=github_cfg,
+            repo_dir=repo_dir,
             github_helper=helper,
-            git_helper=git_helper,
-            repository_branch=repository_branch
+            repository_branch=repository_branch,
+            slack_cfg_name=slack_cfg_name,
+            slack_channel=slack_channel,
+            release_version=release_version
         )
-        release_notes_md = release_notes.render_with(MarkdownRenderer)
-
-        if slack_cfg_name and slack_channel:
-            title = '[{n}] {v} released'.format(n=github_repository_name, v=release_version)
-            slack_cfg = ctx().cfg_factory().slack(slack_cfg_name)
-            SlackHelper(slack_cfg).post_to_slack(
-                channel=slack_channel,
-                title=title,
-                message=release_notes_md
-            )
     else:
         release_notes_md = 'release notes'
 
@@ -242,7 +238,7 @@ def create_or_update_draft_release(
         github_helper=helper,
         git_helper=git_helper,
         repository_branch=repository_branch
-    ).render_with(MarkdownRenderer)
+    ).to_markdown()
 
     draft_name = draft_release_name_for_version(release_version)
     draft_release = helper.draft_release_with_name(draft_name)
@@ -343,7 +339,3 @@ def remove_webhooks(
             )
         else:
             verbose("Nothing to do for repository {repo}".format(repo=repository.name))
-
-
-def github_repo_path(owner, name):
-    return owner + '/' + name

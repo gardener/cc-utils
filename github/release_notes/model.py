@@ -18,7 +18,7 @@ from enum import Enum
 from pydash import _
 
 from product.model import ComponentName
-from util import fail
+from util import fail, check_type
 
 ReleaseNote = namedtuple('ReleaseNote', [
     "category_id",
@@ -81,7 +81,7 @@ class ReleaseNoteBlock(ReleaseNote):
         cn_current_repo: ComponentName,
     ):
         if reference_id:
-            reference_id=str(reference_id)
+            check_type(reference_id, str)
 
         reference = Reference(type=reference_type, identifier=reference_id)
 
