@@ -172,7 +172,7 @@ class ReleaseNotesTest(unittest.TestCase):
             '```'
         source_repo_test(
             code_block,
-            exp_ref_id=1,
+            exp_ref_id='1',
             exp_usr='original-user-foo',
             exp_text='source repo, pr refid and user'
         )
@@ -195,7 +195,7 @@ noise test
 ```'''
         source_repo_test(
             code_block,
-            exp_ref_id=1,
+            exp_ref_id='1',
             exp_usr='original-user-foo',
             exp_text='noise test'
         )
@@ -204,7 +204,7 @@ noise test
 '''``` improvement user github.com/gardener/source-component #1 some random noise
 no user specified
 ```'''
-        source_repo_test(code_block, exp_ref_id=1, exp_usr=None, exp_text='no user specified')
+        source_repo_test(code_block, exp_ref_id='1', exp_usr=None, exp_text='no user specified')
 
         code_block = \
             '``` improvement user github.com/gardener/source-component @user some random noise\n'\
@@ -491,15 +491,15 @@ source_repo only - with noise
         self.assertEqual(expected, rn_block.to_block_str())
 
     def test_release_note_objs_to_block_str(self):
-        rn_objs = []
+        rls_note_objs = []
         expected = ''
-        self.assertEqual(expected, ReleaseNotes(rn_objs).release_note_blocks())
+        self.assertEqual(expected, ReleaseNotes(rls_note_objs).release_note_blocks())
 
-        rn_objs = None
+        rls_note_objs = None
         expected = ''
-        self.assertEqual(expected, ReleaseNotes(rn_objs).release_note_blocks())
+        self.assertEqual(expected, ReleaseNotes(rls_note_objs).release_note_blocks())
 
-        rn_objs = [
+        rls_note_objs = [
             ReleaseNoteBlock(
                 category_id='noteworthy',
                 target_group_id='operator',
@@ -515,9 +515,9 @@ source_repo only - with noise
         '``` noteworthy operator github.com/gardener/a-foo-bar $commit-id @foo\n'\
         'test with one release note object'\
         '\n```'
-        self.assertEqual(expected, ReleaseNotes(rn_objs).release_note_blocks())
+        self.assertEqual(expected, ReleaseNotes(rls_note_objs).release_note_blocks())
 
-        rn_objs = [
+        rls_note_objs = [
             ReleaseNoteBlock(
                 category_id='noteworthy',
                 target_group_id='operator',
@@ -548,7 +548,7 @@ source_repo only - with noise
         '``` noteworthy operator github.com/s/repo $commit-id @foo\n'\
         'another one'\
         '\n```'
-        self.assertEqual(expected, ReleaseNotes(rn_objs).release_note_blocks())
+        self.assertEqual(expected, ReleaseNotes(rls_note_objs).release_note_blocks())
 
     def test_pr_number_from_subject(self):
         self.assertEqual('42', pr_number_from_subject('Merge pull request #42'))
@@ -594,8 +594,8 @@ source_repo only - with noise
                 message='foo\n```improvement user\nrelease note text in commit 2\n```\nbar'
             )
         ]
-        actual_rn_objs = fetch_release_notes_from_commits(commits, self.cn_current_repo)
-        expected_rn_objs = [
+        actual_rls_note_objs = fetch_release_notes_from_commits(commits, self.cn_current_repo)
+        expected_rls_note_objs = [
             ReleaseNoteBlock(
                 category_id='improvement',
                 target_group_id='user',
@@ -616,4 +616,4 @@ source_repo only - with noise
                 cn_current_repo=self.cn_current_repo),
         ]
 
-        self.assertEqual(expected_rn_objs, actual_rn_objs)
+        self.assertEqual(expected_rls_note_objs, actual_rls_note_objs)

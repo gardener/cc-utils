@@ -100,7 +100,7 @@ class RendererTest(unittest.TestCase):
                 target_group_id='operator',
                 text='other component rls note',
                 reference_type=ref_type_pull_request,
-                reference_id=1,
+                reference_id='1',
                 user_login='bar',
                 source_repo='github.com/gardener/a-foo-bar',
                 cn_current_repo=self.cn_current_repo
