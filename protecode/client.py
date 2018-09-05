@@ -198,6 +198,14 @@ class ProtecodeApi(object):
         if not self._session_id:
             raise RuntimeError('authentication failed: ' + str(relevant_response.text))
 
+    def scan_result_short(self, product_id: int):
+        url = self._routes.scans(product_id)
+
+        result = self._get(
+            url=url,
+        )
+        return result.json()
+
 
 def from_cfg(protecode_cfg):
     not_none(protecode_cfg)
