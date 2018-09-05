@@ -91,7 +91,10 @@ class ProtecodeApi(object):
         else:
             headers = {}
 
-        url = kwargs.get('url', args[0])
+        if 'url' in kwargs:
+            url = kwargs.get('url')
+        else:
+            url = args[0]
 
         if self._session_id:
             cookies = {
