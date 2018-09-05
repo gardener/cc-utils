@@ -94,7 +94,13 @@ def add_global_args(parser):
 
 
 def add_module(module_name, parser):
-    module = __import__(module_name)
+    try:
+        module = __import__(module_name)
+    except ImportError as ie:
+        if ie.name == 'containerregistry':
+            return # XXX HACK: ignore this particular import error for now
+        raise ie
+
     # skip if module defines a symbol 'main'
     if hasattr(module, 'main'):
         return
