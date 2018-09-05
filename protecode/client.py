@@ -80,11 +80,15 @@ class ProtecodeApi(object):
         self._auth = (basic_credentials.username(), basic_credentials.passwd())
         self._tls_verify = tls_verify
         self._session_id = None
+        self._csrf_token = None
 
     @check_http_code
     def _request(self, method, *args, **kwargs):
         if self._session_id:
-            cookies = {'sessionid': self._session_id}
+            cookies = {
+                'sessionid': self._session_id,
+                'csrftoken': self._csrf_token,
+            }
             auth = None
         else:
             cookies = None
@@ -194,6 +198,7 @@ class ProtecodeApi(object):
         relevant_response = result.history[0]
 
         self._session_id = relevant_response.cookies.get('sessionid')
+        self._csrf_token = relevant_response.cookies.get('csrftoken')
         if not self._session_id:
             raise RuntimeError('authentication failed: ' + str(relevant_response.text))
 
@@ -204,6 +209,14 @@ class ProtecodeApi(object):
             url=url,
         )
         return result.json()
+
+    def set_product_name(self, product_id, int, name: str):
+        url = self._routes.scans(product_id)
+
+        self._patch(
+            url=url,
+            data=json.dumps({'name': name,}),
+        )
 
 
 def from_cfg(protecode_cfg):
