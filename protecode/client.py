@@ -177,9 +177,6 @@ class ProtecodeApi(object):
 
     def login(self):
         url = self._routes.login()
-        headers = {
-            'Content-Type': 'x-www-form-urlencoded',
-        }
 
         result = self._post(
             url=url,
