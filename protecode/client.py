@@ -191,9 +191,15 @@ class ProtecodeApi(object):
             auth=None,
         )
 
-        self._session_id = result.cookies.get('sessionid')
+        # session-id is returned in first response
+        if not result.history:
+            raise RuntimeError('authentication failed:' + str(result.text))
+
+        relevant_response = result.history[0]
+
+        self._session_id = relevant_response.cookies.get('sessionid')
         if not self._session_id:
-            raise RuntimeError('authentication failed: ' + str(result.text))
+            raise RuntimeError('authentication failed: ' + str(relevant_response.text))
 
 
 def from_cfg(protecode_cfg):
