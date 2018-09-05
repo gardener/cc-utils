@@ -219,7 +219,7 @@ class ProtecodeApi(object):
         )
         return result.json()
 
-    def set_product_name(self, product_id, int, name: str):
+    def set_product_name(self, product_id: int, name: str):
         url = self._routes.scans(product_id)
 
         self._patch(
