@@ -231,6 +231,7 @@ class ProtecodeApi(object):
         self._patch(
             url=url,
             data=json.dumps({'name': name,}),
+            headers={'Content-Type': 'application/json'},
         )
 
 
