@@ -564,11 +564,11 @@ class ConcourseConfig(NamedModelElement):
         '''
         return self.raw.get('disable_webhook_for_pr', False)
 
-    def cname_record(self):
+    def ingress_host(self):
         '''
-        Returns the CNAME which resolves to the current active Concourse instance.
+        Returns the hostname added as additional ingress.
         '''
-        return self.raw.get('cname_record')
+        return self.raw.get('ingress_host')
 
     def helm_chart_version(self):
         return self.raw.get('helm_chart_version')
