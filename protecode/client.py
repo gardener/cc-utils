@@ -173,6 +173,28 @@ class ProtecodeApi(object):
         )
         return result.json().get('custom_data', {})
 
+    # --- "rest" routes (undocumented API)
+
+    def login(self):
+        url = self._routes.login()
+        headers = {
+            'Content-Type': 'x-www-form-urlencoded',
+        }
+
+        result = self._post(
+            url=url,
+            headers=headers,
+            data={
+                'username': self._credentials.username(),
+                'password': self._credentials.passwd(),
+            },
+            auth=None,
+        )
+
+        self._session_id = result.cookies.get('sessionid')
+        if not self._session_id:
+            raise RuntimeError('authentication failed: ' + str(result.text))
+
 
 def from_cfg(protecode_cfg):
     not_none(protecode_cfg)
