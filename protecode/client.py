@@ -85,11 +85,18 @@ class ProtecodeApi(object):
 
     @check_http_code
     def _request(self, method, *args, **kwargs):
+        if 'headers' in kwargs:
+            headers = kwargs['headers']
+            del kwargs['headers']
+        else:
+            headers = {}
+
         if self._session_id:
             cookies = {
                 'sessionid': self._session_id,
                 'csrftoken': self._csrf_token,
             }
+            headers['X-CSRFTOKEN'] = self._csrf_token
             auth = None
         else:
             cookies = None
@@ -99,6 +106,7 @@ class ProtecodeApi(object):
             method,
             verify=self._tls_verify,
             auth=auth,
+            headers=headers,
             cookies=cookies,
         )(*args, **kwargs)
 
