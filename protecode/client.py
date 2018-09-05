@@ -180,7 +180,6 @@ class ProtecodeApi(object):
 
         result = self._post(
             url=url,
-            headers=headers,
             data={
                 'username': self._credentials.username(),
                 'password': self._credentials.passwd(),
