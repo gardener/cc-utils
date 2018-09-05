@@ -36,6 +36,7 @@ class ProtecodeApiRoutes(object):
     def __init__(self, base_url):
         self._base_url = not_empty(base_url)
         self._api_url = partial(self._url, 'api')
+        self._rest_url = partial(self._url, 'rest')
 
     def _url(self, *parts):
         return urljoin(self._base_url, *parts)
@@ -51,6 +52,9 @@ class ProtecodeApiRoutes(object):
 
         return url
 
+    def login(self):
+        return self._url('login') + '/'
+
     def groups(self):
         return self._api_url('groups')
 
@@ -62,6 +66,11 @@ class ProtecodeApiRoutes(object):
 
     def product_custom_data(self, product_id: int):
         return self._api_url('product', str(product_id), 'custom-data')
+
+    # ---- "rest" routes (undocumented API)
+
+    def scans(self, product_id: int):
+        return self._rest_url('scans', str(product_id)) + '/'
 
 
 class ProtecodeApi(object):
@@ -87,6 +96,10 @@ class ProtecodeApi(object):
     @check_http_code
     def _put(self, *args, **kwargs):
         return partial(requests.put, verify=self._tls_verify, auth=self._auth)(*args, **kwargs)
+
+    @check_http_code
+    def _patch(self, *args, **kwargs):
+        return partial(requests.patch, verify=self._tls_verify, auth=self._auth)(*args, **kwargs)
 
     def upload(self, application_name, group_id, data, custom_attribs={}) -> AnalysisResult:
         url = self._routes.upload(file_name=application_name)
