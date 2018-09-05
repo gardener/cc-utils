@@ -39,7 +39,7 @@ class ProtecodeUtil(object):
         image_reference = container_image.image_reference()
         image_path, image_tag = image_reference.split(':')
         image_name = image_path.split('/')[-1]
-        return '{c}_{i}'.format(
+        return '{c}_{i}_{v}'.format(
             c=component.name(),
             i=image_name,
             v=image_tag,
@@ -75,9 +75,11 @@ class ProtecodeUtil(object):
                 warning('found more than one product for image {i}'.format(i=container_image))
             # use first (or only) match (we already printed a warning if we found more than one)
             product =  existing_products[0]
+            product_id = product.product_id()
+
             if not full_result:
                 return product
-            return self._api.scan_result(product_id=product.product_id())
+            return self._api.scan_result(product_id=product_id)
 
     def upload_image(
             self,
