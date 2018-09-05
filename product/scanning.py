@@ -29,11 +29,12 @@ class ProtecodeUtil(object):
     def _image_ref_metadata(self, container_image):
         return {'image-reference': container_image.image_reference()}
 
-    def _component_metadata(self, component):
-        return {
-            'component-name': component.name(),
-            'component-version': component.version(),
-        }
+    def _component_metadata(self, component, omit_version=True):
+        metadata = {'component-name': component.name()}
+        if not omit_version:
+            metadata['component-version'] = component.version()
+
+        return metadata
 
     def _upload_name(self, container_image, component):
         image_reference = container_image.image_reference()
@@ -54,32 +55,43 @@ class ProtecodeUtil(object):
 
         self._api.set_product_name(product_id=product_id, name=upload_name)
 
-    def _metadata(self, container_image: ContainerImage, component: Component):
+    def _metadata(
+            self,
+            container_image: ContainerImage,
+            component: Component,
+            omit_version=True,
+        ):
         metadata = self._image_ref_metadata(container_image)
-        metadata.update(self._component_metadata(component))
+        metadata.update(self._component_metadata(component=component, omit_version=omit_version))
         return metadata
 
     def retrieve_scan_result(
             self,
             container_image: ContainerImage,
             component: Component,
-            full_result: bool=True,
         ):
         metadata = self._metadata(container_image=container_image, component=component)
         existing_products = self._api.list_apps(
             group_id=self._group_id,
             custom_attribs=metadata
         )
-        if len(existing_products) > 0:
-            if len(existing_products) > 1:
-                warning('found more than one product for image {i}'.format(i=container_image))
-            # use first (or only) match (we already printed a warning if we found more than one)
-            product =  existing_products[0]
-            product_id = product.product_id()
+        if len(existing_products) == 0:
+            return None # no result existed yet
 
-            if not full_result:
-                return product
-            return self._api.scan_result(product_id=product_id)
+        if len(existing_products) > 1:
+            warning('found more than one product for image {i}'.format(i=container_image))
+
+        # use first (or only) match (we already printed a warning if we found more than one)
+        product =  existing_products[0]
+        product_id = product.product_id()
+
+        # update upload name to reflect new component version (if changed)
+        upload_name = self._upload_name(container_image, component)
+        self._update_product_name(product_id, upload_name)
+
+        # retrieve existing product's details (list of products contained only subset of data)
+        product = self._api.scan_result(product_id=product_id)
+        return product
 
     def upload_image(
             self,
@@ -98,10 +110,21 @@ class ProtecodeUtil(object):
         )
 
         if scan_result:
-            return upload_result(
-                status=UploadStatus.SKIPPED_ALREADY_EXISTED,
-                result=scan_result,
-            )
+            # check if image version changed
+
+            metadata = scan_result.custom_data()
+            image_reference = metadata.get('image-reference')
+            image_changed = image_reference == container_image.image_reference()
+
+            if not image_changed:
+                # image reference did not change - early exit
+                return upload_result(
+                    status=UploadStatus.SKIPPED_ALREADY_EXISTED,
+                    result=scan_result,
+                )
+            else:
+                pass # continue with regular image upload; overwrite should take place
+                # due to identical name (hopefully)
 
         # image was not yet uploaded - do this now
         image_data_fh = retrieve_container_image(container_image.image_reference())
