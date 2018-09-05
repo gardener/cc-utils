@@ -130,7 +130,7 @@ class ProtecodeApi(object):
 
     @check_http_code
     def _patch(self, *args, **kwargs):
-        return self._request(requests.put, *args, **kwargs)
+        return self._request(requests.patch, *args, **kwargs)
 
     def upload(self, application_name, group_id, data, custom_attribs={}) -> AnalysisResult:
         url = self._routes.upload(file_name=application_name)
