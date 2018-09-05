@@ -23,6 +23,7 @@ from .model import ContainerImage, Component, UploadResult, UploadStatus
 
 class ProtecodeUtil(object):
     def __init__(self, protecode_api: ProtecodeApi, group_id=None):
+        protecode_api.login()
         self._api = not_none(protecode_api)
         self._group_id = group_id
 
