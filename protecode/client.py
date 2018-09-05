@@ -79,27 +79,39 @@ class ProtecodeApi(object):
         self._credentials = not_none(basic_credentials)
         self._auth = (basic_credentials.username(), basic_credentials.passwd())
         self._tls_verify = tls_verify
-        self._request_builder = AuthenticatedRequestBuilder(
-            basic_auth_username=basic_credentials.username(),
-            basic_auth_passwd=basic_credentials.passwd(),
-            verify_ssl=tls_verify
-        )
+        self._session_id = None
+
+    @check_http_code
+    def _request(self, method, *args, **kwargs):
+        if self._session_id:
+            cookies = {'sessionid': self._session_id}
+            auth = None
+        else:
+            cookies = None
+            auth = self._auth
+
+        return partial(
+            method,
+            verify=self._tls_verify,
+            auth=self._auth,
+            cookies=cookies,
+        )(*args, **kwargs)
 
     @check_http_code
     def _get(self, *args, **kwargs):
-        return partial(requests.get, verify=self._tls_verify, auth=self._auth)(*args, **kwargs)
+        return self._request(requests.get, *args, **kwargs)
 
     @check_http_code
     def _post(self, *args, **kwargs):
-        return partial(requests.post, verify=self._tls_verify, auth=self._auth)(*args, **kwargs)
+        return self._request(requests.post, *args, **kwargs)
 
     @check_http_code
     def _put(self, *args, **kwargs):
-        return partial(requests.put, verify=self._tls_verify, auth=self._auth)(*args, **kwargs)
+        return self._request(requests.put, *args, **kwargs)
 
     @check_http_code
     def _patch(self, *args, **kwargs):
-        return partial(requests.patch, verify=self._tls_verify, auth=self._auth)(*args, **kwargs)
+        return self._request(requests.put, *args, **kwargs)
 
     def upload(self, application_name, group_id, data, custom_attribs={}) -> AnalysisResult:
         url = self._routes.upload(file_name=application_name)
