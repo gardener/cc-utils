@@ -74,7 +74,9 @@ class Vulnerability(ModelBase):
         else:
             return -1
 
-# wrappers for inofficial protecode API responses
+
+# --- wrappers for inofficial protecode API responses
+
 
 class ScanResult(ModelBase):
     def name(self):
