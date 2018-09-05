@@ -23,7 +23,7 @@ import requests
 
 from util import not_empty, not_none, urljoin
 from http_requests import check_http_code
-from .model import AnalysisResult, ProcessingStatus
+from .model import AnalysisResult, ProcessingStatus, ScanResult
 
 
 class ProtecodeApiRoutes(object):
@@ -223,7 +223,7 @@ class ProtecodeApi(object):
         result = self._get(
             url=url,
         )
-        return result.json()
+        return ScanResult(raw_dict=result.json())
 
     def set_product_name(self, product_id: int, name: str):
         url = self._routes.scans(product_id)

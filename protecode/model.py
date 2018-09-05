@@ -73,3 +73,9 @@ class Vulnerability(ModelBase):
             return int(self.cve_severity_str().split('.')[0])
         else:
             return -1
+
+# wrappers for inofficial protecode API responses
+
+class ScanResult(ModelBase):
+    def name(self):
+        return self.raw.get('name')
