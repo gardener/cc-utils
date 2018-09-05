@@ -91,12 +91,15 @@ class ProtecodeApi(object):
         else:
             headers = {}
 
+        url = kwargs.get('url', args[0])
+
         if self._session_id:
             cookies = {
                 'sessionid': self._session_id,
                 'csrftoken': self._csrf_token,
             }
             headers['X-CSRFTOKEN'] = self._csrf_token
+            headers['referer'] = url
             auth = None
         else:
             cookies = None
