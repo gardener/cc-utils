@@ -21,7 +21,7 @@ from typing import List
 import requests
 
 from util import not_empty, not_none, urljoin
-from http_requests import AuthenticatedRequestBuilder, check_http_code
+from http_requests import check_http_code
 from .model import AnalysisResult, ProcessingStatus
 
 
@@ -93,7 +93,7 @@ class ProtecodeApi(object):
         return partial(
             method,
             verify=self._tls_verify,
-            auth=self._auth,
+            auth=auth,
             cookies=cookies,
         )(*args, **kwargs)
 
