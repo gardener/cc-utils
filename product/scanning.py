@@ -45,6 +45,15 @@ class ProtecodeUtil(object):
             v=image_tag,
         )
 
+    def _update_product_name(self, product_id: int, upload_name: str):
+        scan_result = self._api.scan_result_short(product_id=product_id)
+        current_name = scan_result.name()
+
+        if current_name == upload_name:
+            return # nothing to do
+
+        self._api.set_product_name(product_id=product_id, name=upload_name)
+
     def _metadata(self, container_image: ContainerImage, component: Component):
         metadata = self._image_ref_metadata(container_image)
         metadata.update(self._component_metadata(component))
