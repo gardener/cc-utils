@@ -27,6 +27,7 @@ from .version import VersionTrait
 from .options import OptionsTrait
 from .draft_release import DraftReleaseTrait
 from .update_component_deps import UpdateComponentDependenciesTrait
+from .image_scan import ImageScanTrait
 
 TRAITS = {
     'version': VersionTrait,
@@ -39,6 +40,7 @@ TRAITS = {
     'options': OptionsTrait,
     'update_component_deps': UpdateComponentDependenciesTrait,
     'draft_release': DraftReleaseTrait,
+    'image_scan': ImageScanTrait,
 }
 
 
