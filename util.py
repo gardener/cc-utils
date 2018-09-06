@@ -19,6 +19,8 @@ import shutil
 import sys
 import yaml
 
+from urllib.parse import urlunparse
+
 
 class Failure(RuntimeError):
     pass
@@ -173,6 +175,17 @@ def random_str(prefix=None, length=12):
     else:
         prefix = ''
     return prefix + ''.join(random.choice(string.ascii_lowercase) for _ in range(length))
+
+
+def create_url_from_attributes(
+    netloc: str,
+    scheme='https',
+    path='',
+    params='',
+    query='',
+    fragment=''
+):
+    return urlunparse((scheme, netloc, path, params, query, fragment))
 
 
 def check_env(name: str):

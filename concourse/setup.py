@@ -20,7 +20,7 @@ import time
 
 from ensure import ensure_annotations
 from textwrap import dedent
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse
 from subprocess import CalledProcessError
 
 import yaml
@@ -46,6 +46,7 @@ from util import (
     warning,
     fail,
     which,
+    create_url_from_attributes,
 )
 
 from kubernetes.client import (
@@ -479,7 +480,7 @@ def set_teams(config: ConcourseConfig):
     main_team_credentials = config.main_team_credentials()
 
     # use ingress_host instead of external_url which points to a possibly not yet switched CNAME
-    base_url = urlunparse(('https', config.ingress_host(), '', '', '', ''))
+    base_url = create_url_from_attributes(config.ingress_host())
 
     concourse_api = client.ConcourseApi(
         base_url=base_url,
