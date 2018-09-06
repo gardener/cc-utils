@@ -14,6 +14,7 @@
 """This package pulls images from a Docker Registry."""
 
 
+import functools
 import tarfile
 import tempfile
 
@@ -90,6 +91,27 @@ def _parse_image_reference(image_reference):
   return name
 
 
+@functools.lru_cache()
+def _credentials(image_reference: str):
+    util.check_type(image_reference, str)
+
+    cfg_factory = util.ctx().cfg_factory()
+
+    matching_cfgs = [
+        cfg for cfg in
+        cfg_factory._cfg_elements('container_registry')
+        if cfg.image_ref_matches(image_reference)
+    ]
+
+    if not matching_cfgs:
+        return None
+
+    # use first match
+    credentials = matching_cfgs[0].credentials()
+
+    return docker_creds.Basic(username=credentials.username(), password=credentials.passwd())
+
+
 def retrieve_container_image(image_reference: str):
   tmp_file = _pull_image(image_reference=image_reference)
   tmp_file.seek(0)
@@ -97,6 +119,7 @@ def retrieve_container_image(image_reference: str):
 
 
 def _pull_image(image_reference: str):
+  import util
   util.not_none(image_reference)
 
   retry_factory = retry.Factory()
@@ -118,7 +141,11 @@ def _pull_image(image_reference: str):
   # Resolve the appropriate credential to use based on the standard Docker
   # client logic.
   try:
-    creds = docker_creds.DefaultKeychain.Resolve(name)
+    # first try container_registry cfgs from available cfg
+    creds = _credentials(image_reference=image_reference)
+    if not creds:
+      # fall-back to default docker lookup
+      creds = docker_creds.DefaultKeychain.Resolve(name)
   except Exception as e:
     util.fail('Error resolving credentials for {name}: {e}'.format(name=name, e=e))
 
