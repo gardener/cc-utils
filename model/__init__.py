@@ -26,6 +26,7 @@ from util import (
     existing_dir,
     not_none,
     not_empty,
+    check_type,
 )
 
 '''
@@ -466,6 +467,28 @@ class ContainerRegistryConfig(NamedModelElement):
     def credentials(self):
         # this cfg currently only contains credentials
         return GcrCredentials(self.raw)
+
+    def image_reference_prefixes(self):
+        return self.raw.get('image_reference_prefixes', ())
+
+    def image_ref_matches(self, image_reference: str):
+        '''
+        returns a boolean indicating whether a given container image reference matches any
+        configured image reference prefixes (thus indicating this cfg might be adequate for
+        retrieving or deploying the given container image using this cfg).
+
+        If no image reference prefixes are configured, `False` is returned.
+        '''
+        check_type(image_reference, str)
+
+        prefixes = self.image_reference_prefixes()
+        if not prefixes:
+            return False
+
+        for prefix in prefixes:
+            if image_reference.startswith(prefix):
+                return True
+        return False
 
 
 class GcrCredentials(BasicCredentials):
