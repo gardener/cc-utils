@@ -13,6 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+try:
+    import slackclient
+except ModuleNotFoundError:
+    # monkey-patch module to please his holy slackclient-ness
+    import requests.packages.urllib3.util
+    import sys
+    sys.modules['requests.packages.urllib3.util.url'] = requests.packages.urllib3.util
+
 from slackclient import SlackClient
 from pydash import _
 
