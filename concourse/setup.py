@@ -20,7 +20,7 @@ import time
 
 from ensure import ensure_annotations
 from textwrap import dedent
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 from subprocess import CalledProcessError
 
 import yaml
@@ -478,8 +478,11 @@ def set_teams(config: ConcourseConfig):
     # Use main-team, i.e. the team that can change the other teams' credentials
     main_team_credentials = config.main_team_credentials()
 
+    # use ingress_host instead of external_url which points to a possibly not yet switched CNAME
+    base_url = urlunparse(('https', config.ingress_host(), '', '', '', ''))
+
     concourse_api = client.ConcourseApi(
-        base_url=config.external_url(),
+        base_url=base_url,
         team_name=main_team_credentials.teamname(),
     )
     concourse_api.login(
