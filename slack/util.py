@@ -15,6 +15,7 @@
 
 try:
     import slackclient
+    assert slackclient # silence pyflakes
 except ModuleNotFoundError:
     # monkey-patch module to please his holy slackclient-ness
     import requests.packages.urllib3.util
