@@ -103,10 +103,10 @@ class ProtecodeApi(object):
             }
             headers['X-CSRFTOKEN'] = self._csrf_token
             headers['referer'] = url
-            auth = None
         else:
             cookies = None
-            auth = self._auth
+
+        auth = self._auth
 
         return partial(
             method,
