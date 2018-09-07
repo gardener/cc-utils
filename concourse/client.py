@@ -114,7 +114,12 @@ class ConcourseApiRoutes(object):
         return self._api_url('teams', team, prefix_team=False)
 
     def login(self):
-        return self._api_url('teams', self.team, 'auth', 'token', prefix_team=False)
+        return util.urljoin(
+            self.base_url,
+            'auth',
+            'basic',
+            'token' + '?' + urlencode({'team_name': self.team})
+        )
 
     def pipelines(self):
         return self._api_url('pipelines')
