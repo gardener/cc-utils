@@ -260,7 +260,7 @@ class FilesystemDeployer(DefinitionDeployer):
 def _concourse_api(concourse_cfg, team_name: str):
     team_credentials = concourse_cfg.team_credentials(team_name)
     api = client.ConcourseApi(
-        base_url=concourse_cfg.external_url(),
+        base_url=concourse_cfg.ingress_url(),
         team_name=team_credentials.teamname(),
     )
     api.login(
