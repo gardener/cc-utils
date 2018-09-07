@@ -38,7 +38,7 @@ class ConcourseApiRoutesTest(unittest.TestCase):
     def test_login_route(self):
         self.assertEqual(
             self.examinee.login(),
-            'https://made-up-concourse.com/api/v1/teams/foo/auth/token'
+            'https://made-up-concourse.com/auth/basic/token?team_name=foo'
         )
 
     def test_pipelines_route(self):
