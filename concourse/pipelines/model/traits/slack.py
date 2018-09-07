@@ -22,45 +22,31 @@ from concourse.pipelines.modelbase import (
 )
 
 
-class ReleaseTrait(Trait):
+class SlackTrait(Trait):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def _defaults_dict(self):
         return {
-            'nextversion': 'bump_minor',
         }
 
     def _optional_attributes(self):
         return {
+            'slack_channel',
+            'slack_cfg_name',
         }
 
-    def nextversion(self):
-        return self.raw['nextversion']
+    def slack_channel(self):
+        return self.raw.get('slack_channel')
+
+    def slack_cfg_name(self):
+        return self.raw.get('slack_cfg_name')
 
     def transformer(self):
-        return ReleaseTraitTransformer(name=self.name)
+        return SlackTraitTransformer(name=self.name)
 
 
-class ReleaseTraitTransformer(TraitTransformer):
-    def inject_steps(self):
-        # inject 'release' step
-        self.release_step = PipelineStep(name='release', raw_dict={}, is_synthetic=True)
-        yield self.release_step
-
+class SlackTraitTransformer(TraitTransformer):
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):
-        # we depend on all other steps
-        for step in pipeline_args.steps():
-            self.release_step._add_dependency(step)
+        pass
 
-        # a 'release job' should only be triggered automatically if explicitly configured
-        main_repo = pipeline_args.main_repository()
-        if main_repo:
-            if 'trigger' not in pipeline_args.raw['repo']:
-                main_repo._trigger = False
-
-    def dependencies(self):
-        return super().dependencies() | {'version'}
-
-    def order_dependencies(self):
-        return super().dependencies() | {'publish'}
