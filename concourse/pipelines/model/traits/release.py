@@ -31,20 +31,14 @@ class ReleaseTrait(Trait):
             'nextversion': 'bump_minor',
         }
 
-    def _optional_attributes(self):
-        return {
-            'slack_channel',
-            'slack_cfg_name',
-        }
-
     def nextversion(self):
         return self.raw['nextversion']
 
-    def slack_channel(self):
-        return self.raw.get('slack_channel')
+    def slackchannel(self):
+        return self.raw.get('slackchannel')
 
     def slack_cfg_name(self):
-        return self.raw.get('slack_cfg_name')
+        return self.raw.get('slackcfgname')
 
     def transformer(self):
         return ReleaseTraitTransformer(name=self.name)
