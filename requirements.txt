@@ -16,3 +16,4 @@ slackclient==1.2.1
 sseclient-py==1.7
 toposort==1.5
 urllib3==1.22
+containerregistry-ccwienk=0.2.0
