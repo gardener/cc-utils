@@ -18,7 +18,7 @@ import os
 import yaml
 
 from github.util import GitHubRepositoryHelper
-from util import fail
+from util import fail, info
 from model import ConfigFactory
 from concourse.pipelines.replicator import Renderer, ConcourseDeployer, DeployStatus
 from concourse.pipelines.enumerator import (
@@ -88,6 +88,7 @@ def deploy_and_run_smoketest_pipeline(
     definition_descriptor = preprocessor.process_definition_descriptor(definition_descriptor)
     rendering_result = renderer.render(definition_descriptor)
 
+    info('deploying pipeline')
     deployment_result = deployer.deploy(rendering_result.definition_descriptor)
 
     if not deployment_result.deploy_status & DeployStatus.SUCCEEDED:
