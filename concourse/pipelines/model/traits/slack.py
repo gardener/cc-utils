@@ -49,4 +49,3 @@ class SlackTrait(Trait):
 class SlackTraitTransformer(TraitTransformer):
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         pass
-
