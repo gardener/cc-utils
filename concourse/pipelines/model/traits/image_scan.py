@@ -29,6 +29,8 @@ from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
 class ImageScanTrait(Trait):
     def _defaults_dict(self):
         return {
+            'parallel_jobs': 12,
+            'cve_threshold': 7,
         }
 
     def _required_attributes(self):
@@ -42,6 +44,12 @@ class ImageScanTrait(Trait):
 
     def protecode_cfg_name(self):
         return self.raw.get('protecode_cfg_name')
+
+    def parallel_jobs(self):
+        return self.raw.get('parallel_jobs')
+
+    def cve_threshold(self):
+        return self.raw.get('cve_threshold')
 
     def transformer(self):
         return ImageScanTraitTransformer(trait=self, name=self.name)
