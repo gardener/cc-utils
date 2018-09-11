@@ -14,12 +14,30 @@
 # limitations under the License.
 
 from util import not_none
+from model import ModelBase
 
 from concourse.pipelines.model.step import PipelineStep
 from concourse.pipelines.modelbase import (
   Trait,
-  TraitTransformer
+  TraitTransformer,
+  ModelDefaultsMixin,
+  ModelValidationMixin,
+  ModelValidationError,
 )
+
+
+class ChannelConfig(ModelBase, ModelDefaultsMixin, ModelValidationMixin):
+    def channel_name(self):
+        return self.raw.get('channel_name')
+
+    def slack_cfg_name(self):
+        return self.raw.get('slack_cfg_name')
+
+    def _required_attributes(self):
+        return {
+            'channel_name',
+            'slack_cfg_name',
+        }
 
 
 class SlackTrait(Trait):
@@ -30,20 +48,36 @@ class SlackTrait(Trait):
         return {
         }
 
-    def _optional_attributes(self):
+    def _required_attributes(self):
         return {
-            'slack_channel',
-            'slack_cfg_name',
+            'channel_cfgs',
+            'default_channel',
         }
 
-    def slack_channel(self):
-        return self.raw.get('slack_channel')
+    def _children(self):
+       return self.channel_cfgs().values()
 
-    def slack_cfg_name(self):
-        return self.raw.get('slack_cfg_name')
+    def channel_cfgs(self):
+        return {
+            name: ChannelConfig(raw_dict=v)
+            for name, v in self.raw.get('channel_cfgs').items()
+        }
+
+    def default_channel(self):
+        return self.raw.get('default_channel')
 
     def transformer(self):
         return SlackTraitTransformer()
+
+    def validate(self):
+        super().validate()
+        default_channel = self.default_channel()
+        if default_channel not in self.channel_cfgs():
+            raise ModelValidationError(
+                'there is no element in channel_cfgs with name {name}'.format(
+                    name=default_channel,
+                )
+            )
 
 
 class SlackTraitTransformer(TraitTransformer):
