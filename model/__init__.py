@@ -594,7 +594,7 @@ class ConcourseConfig(NamedModelElement):
         return self.raw.get('ingress_host')
 
     def ingress_url(self):
-        return f'https://{self.ingress_host()}'
+        return 'https://' + self.ingress_host()
 
     def helm_chart_version(self):
         return self.raw.get('helm_chart_version')
