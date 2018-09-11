@@ -1,6 +1,6 @@
 # add requirements for local tests. Install with: pip3 install -r requirements.txt
 GitPython==2.1.9
-Mako==1.0.7
+Mako
 deepdiff==3.3.0
 deepmerge==0.0.4
 docker-py==1.10.6
