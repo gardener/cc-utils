@@ -559,6 +559,7 @@ class ConcourseConfig(NamedModelElement):
             raise ValueError('unknown team {t}; known: {kt}'.format(
                 t=teamname,
                 kt=', '.join(self.raw.get('teams').keys()),
+                )
             )
         return ConcourseTeamCredentials(raw_credentials)
 
