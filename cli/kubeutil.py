@@ -252,6 +252,9 @@ def _wait_for_shoot(namespace, on_event, expected_result, timeout_seconds:int=12
         # close the watch in case it exited due to the bug referenced above
         # to prevent resource leakage (watch might stay open otherwise)
         w.stop()
+        if not should_exit:
+            # add a short sleep to avoid re-creating watches too quickly
+            time.sleep(5)
     # handle case where timeout was exceeded, but w.stream returned erroneously (see bug
     # description above)
     raise RuntimeError(result)
