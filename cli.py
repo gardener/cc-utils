@@ -97,7 +97,7 @@ def add_module(module_name, parser):
     try:
         module = __import__(module_name)
     except ImportError as ie:
-        if ie.name == 'containerregistry':
+        if ie.name in ('containerregistry', 'kubernetes'):
             return # XXX HACK: ignore this particular import error for now
         raise ie
 
