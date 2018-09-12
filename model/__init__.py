@@ -554,7 +554,13 @@ class ConcourseConfig(NamedModelElement):
         return self.raw.get('job_mapping')
 
     def team_credentials(self, teamname):
-        return ConcourseTeamCredentials(self.raw.get('teams').get(teamname))
+        raw_credentials = self.raw.get('teams').get(teamname)
+        if not raw_credentials:
+            raise ValueError('unknown team {t}; known: {kt}'.format(
+                t=teamname,
+                kt=', '.join(self.raw.get('teams').keys()),
+            )
+        return ConcourseTeamCredentials(raw_credentials)
 
     def main_team_credentials(self):
         return self.team_credentials('main')
