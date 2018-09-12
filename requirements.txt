@@ -10,6 +10,7 @@ kubernetes
 pydash==4.6.0
 pyflakes
 pycodestyle
+pyyaml
 requests==2.18.4
 semver==2.8.1
 slackclient==1.2.1
