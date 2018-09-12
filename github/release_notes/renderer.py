@@ -265,6 +265,14 @@ class Renderer(object):
 
 
 class MarkdownRenderer(Renderer):
+    def __init__(
+        self,
+        release_note_objs: [ReleaseNote],
+        force_link_generation:bool=False
+    ):
+        super().__init__(release_note_objs)
+        self.force_link_generation = force_link_generation
+
     def _title(
         self,
         node: Node,
@@ -273,7 +281,7 @@ class MarkdownRenderer(Renderer):
         return '{hashtags} {title}'.format(hashtags=_.repeat('#', level),title=node.title)
 
     def _generate_link(self, rls_note_obj: ReleaseNote)->bool:
-        return not rls_note_obj.from_same_github_instance
+        return self.force_link_generation or not rls_note_obj.from_same_github_instance
 
     def _build_bullet_point_head(
         self,
