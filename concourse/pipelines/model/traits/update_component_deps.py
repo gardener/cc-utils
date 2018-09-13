@@ -51,11 +51,11 @@ class UpdateComponentDependenciesTraitTransformer(TraitTransformer):
 
     @classmethod
     def order_dependencies(cls):
-        return super().dependencies() | {'component_descriptor'}
+        return {'component_descriptor'}
 
     @classmethod
     def dependencies(cls):
-        return super().dependencies() | {'component_descriptor'}
+        return {'component_descriptor'}
 
     def inject_steps(self):
         # declare no dependencies --> run asap, but do not block other steps

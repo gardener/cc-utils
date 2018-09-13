@@ -79,4 +79,4 @@ class ImageScanTraitTransformer(TraitTransformer):
 
     @classmethod
     def dependencies(cls):
-        return super().dependencies() | {'component_descriptor'}
+        return {'component_descriptor'}

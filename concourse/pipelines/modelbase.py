@@ -116,11 +116,11 @@ class TraitTransformer(object):
 
     @classmethod
     def order_dependencies(cls):
-        return {cls.name}
+        return set()
 
     @classmethod
     def dependencies(cls):
-        return {cls.name}
+        return set()
 
     @abstractmethod
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):

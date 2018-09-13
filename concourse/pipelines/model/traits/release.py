@@ -63,8 +63,8 @@ class ReleaseTraitTransformer(TraitTransformer):
 
     @classmethod
     def dependencies(cls):
-        return super().dependencies() | {'version'}
+        return {'version'}
 
     @classmethod
     def order_dependencies(cls):
-        return super().dependencies() | {'publish'}
+        return {'publish'}

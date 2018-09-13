@@ -93,10 +93,10 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
             self.trait.raw['component_name'] = component_name
 
     @classmethod
-    def dependencies(self):
-        return super().dependencies() | {'version'}
+    def dependencies(cls):
+        return {'version'}
 
     @classmethod
-    def order_dependencies(self):
+    def order_dependencies(cls):
         # dependency is required, as we need to patch the 'release' step
-        return super().dependencies() | {'release'}
+        return {'release'}
