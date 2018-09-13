@@ -212,48 +212,6 @@ def release_and_prepare_next_dev_cycle(
     )
 
 
-def create_or_update_draft_release(
-    github_cfg_name: str,
-    github_repository_owner: str,
-    github_repository_name: str,
-    repository_branch: str,
-    release_version: str,
-    repo_dir: str=None
-):
-    github_cfg = ctx().cfg_factory().github(github_cfg_name)
-
-    helper = GitHubRepositoryHelper(
-        github_cfg=github_cfg,
-        owner=github_repository_owner,
-        name=github_repository_name,
-        default_branch=repository_branch,
-    )
-    repo_path = github_repo_path(owner=github_repository_owner, name=github_repository_name)
-    git_helper = GitHelper(repo=repo_dir, github_cfg=github_cfg, github_repo_path=repo_path)
-
-    release_notes_md = ReleaseNotes.create(
-        github_helper=helper,
-        git_helper=git_helper,
-        repository_branch=repository_branch
-    ).to_markdown()
-
-    draft_name = draft_release_name_for_version(release_version)
-    draft_release = helper.draft_release_with_name(draft_name)
-    if not draft_release:
-        helper.create_release(
-            tag_name='',
-            name=draft_name,
-            body=release_notes_md,
-            draft=True,
-            prerelease=False
-        )
-    else:
-        if not draft_release.body == release_notes_md:
-            draft_release.edit(body=release_notes_md)
-        else:
-            info('draft release notes are already up to date')
-
-
 def release_note_blocks_cli(
     repo_dir: str,
     github_cfg_name: str,
