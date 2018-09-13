@@ -189,6 +189,10 @@ def create_url_from_attributes(
 
 
 def check_env(name: str):
+    '''
+    returns: the specified environment variable's value.
+    raises: util.Failure if no environment variable with the given name is defined
+    '''
     not_none(name)
     if name in os.environ:
         return os.environ[name]
