@@ -17,6 +17,7 @@ from util import not_none
 
 from concourse.pipelines.model.step import PipelineStep
 from concourse.pipelines.modelbase import (
+  ScriptType,
   Trait,
   TraitTransformer
 )
@@ -38,7 +39,8 @@ class DraftReleaseTraitTransformer(TraitTransformer):
         self.release_step = PipelineStep(
             name='create_draft_release_notes',
             raw_dict={},
-            is_synthetic=True
+            is_synthetic=True,
+            script_type=ScriptType.PYTHON3,
         )
         yield self.release_step
 
