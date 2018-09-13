@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 from util import not_none
 
 from concourse.pipelines.model.step import PipelineStep
@@ -32,7 +33,6 @@ class VersionTrait(Trait):
         'noop',
         'use-branch-name',
 }
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -59,11 +59,14 @@ class VersionTrait(Trait):
     def inject_effective_version(self):
         return self.raw['inject_effective_version']
 
+    @classmethod
     def transformer(self):
-        return VersionTraitTransformer(name=self.name)
+        return VersionTraitTransformer()
 
 
 class VersionTraitTransformer(TraitTransformer):
+    name = 'version'
+
     def inject_steps(self):
         self.version_step = PipelineStep(
             name='version',

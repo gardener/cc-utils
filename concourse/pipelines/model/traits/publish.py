@@ -95,10 +95,12 @@ class PublishTrait(Trait):
         ]
 
     def transformer(self):
-        return PublishTraitTransformer(trait=self, name=self.name)
+        return PublishTraitTransformer(trait=self)
 
 
 class PublishTraitTransformer(TraitTransformer):
+    name = 'publish'
+
     def __init__(self, trait: PublishTrait, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.trait = not_none(trait)

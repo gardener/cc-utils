@@ -43,9 +43,11 @@ class SlackTrait(Trait):
         return self.raw.get('slack_cfg_name')
 
     def transformer(self):
-        return SlackTraitTransformer(name=self.name)
+        return SlackTraitTransformer()
 
 
 class SlackTraitTransformer(TraitTransformer):
+    name = 'slack'
+
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         pass

@@ -31,10 +31,12 @@ class OptionsTrait(Trait):
         return self.raw['public_build_logs']
 
     def transformer(self):
-        return OptionsTraitTransformer(trait=self, name=self.name)
+        return OptionsTraitTransformer(trait=self)
 
 
 class OptionsTraitTransformer(TraitTransformer):
+    name = 'options'
+
     def __init__(self, trait: OptionsTrait, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.trait = not_none(trait)

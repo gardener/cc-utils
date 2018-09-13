@@ -35,10 +35,12 @@ class CronTrait(Trait):
         return self.variant_name + '-' + self.interval() + '-cron'
 
     def transformer(self):
-        return CronTraitTransformer(name=self.name)
+        return CronTraitTransformer()
 
 
 class CronTraitTransformer(TraitTransformer):
+    name = 'cronjob'
+
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         main_repo = pipeline_args.main_repository()
         if main_repo:

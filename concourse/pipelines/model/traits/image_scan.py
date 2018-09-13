@@ -52,10 +52,12 @@ class ImageScanTrait(Trait):
         return self.raw.get('cve_threshold')
 
     def transformer(self):
-        return ImageScanTraitTransformer(trait=self, name=self.name)
+        return ImageScanTraitTransformer(trait=self)
 
 
 class ImageScanTraitTransformer(TraitTransformer):
+    name = 'image_scan'
+
     def __init__(self, trait, *args, **kwargs):
         self.trait = trait
         super().__init__(*args, **kwargs)
@@ -75,5 +77,6 @@ class ImageScanTraitTransformer(TraitTransformer):
         component_descriptor_step = pipeline_args.step('component_descriptor')
         self.image_scan_step._add_dependency(component_descriptor_step)
 
-    def dependencies(self):
+    @classmethod
+    def dependencies(cls):
         return super().dependencies() | {'component_descriptor'}

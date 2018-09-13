@@ -58,10 +58,12 @@ class ComponentDescriptorTrait(Trait):
         return self.raw['resolve_dependencies']
 
     def transformer(self):
-        return ComponentDescriptorTraitTransformer(trait=self, name=self.name)
+        return ComponentDescriptorTraitTransformer(trait=self)
 
 
 class ComponentDescriptorTraitTransformer(TraitTransformer):
+    name = 'component_descriptor'
+
     def __init__(self, trait: ComponentDescriptorTrait, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.trait = not_none(trait)
@@ -90,9 +92,11 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
             ))
             self.trait.raw['component_name'] = component_name
 
+    @classmethod
     def dependencies(self):
         return super().dependencies() | {'version'}
 
+    @classmethod
     def order_dependencies(self):
         # dependency is required, as we need to patch the 'release' step
         return super().dependencies() | {'release'}

@@ -27,10 +27,12 @@ class DraftReleaseTrait(Trait):
         super().__init__(*args, **kwargs)
 
     def transformer(self):
-        return DraftReleaseTraitTransformer(name=self.name)
+        return DraftReleaseTraitTransformer()
 
 
 class DraftReleaseTraitTransformer(TraitTransformer):
+    name = 'draft_release'
+
     def inject_steps(self):
         # inject 'release' step
         self.release_step = PipelineStep(
@@ -43,5 +45,6 @@ class DraftReleaseTraitTransformer(TraitTransformer):
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         pass
 
-    def dependencies(self):
+    @classmethod
+    def dependencies(cls):
         return super().dependencies() | {'version'}

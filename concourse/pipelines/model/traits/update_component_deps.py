@@ -39,18 +39,22 @@ class UpdateComponentDependenciesTrait(Trait):
         return self.raw.get('upstream_component_name')
 
     def transformer(self):
-        return UpdateComponentDependenciesTraitTransformer(trait=self, name=self.name)
+        return UpdateComponentDependenciesTraitTransformer(trait=self)
 
 
 class UpdateComponentDependenciesTraitTransformer(TraitTransformer):
+    name = 'update_component_deps'
+
     def __init__(self, trait, *args, **kwargs):
         self.trait = trait
         super().__init__(*args, **kwargs)
 
-    def order_dependencies(self):
+    @classmethod
+    def order_dependencies(cls):
         return super().dependencies() | {'component_descriptor'}
 
-    def dependencies(self):
+    @classmethod
+    def dependencies(cls):
         return super().dependencies() | {'component_descriptor'}
 
     def inject_steps(self):

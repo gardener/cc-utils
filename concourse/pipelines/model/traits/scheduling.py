@@ -29,13 +29,15 @@ class SchedulingTrait(Trait):
 
     # XXX: merge this with cron-trait
     def transformer(self):
-        return SchedulingTraitTransformer(name=self.name)
+        return SchedulingTraitTransformer()
 
     def suppress_parallel_execution(self):
         return self.raw.get('suppress_parallel_execution', None)
 
 
 class SchedulingTraitTransformer(TraitTransformer):
+    name = 'scheduling'
+
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         # no-op
         pass

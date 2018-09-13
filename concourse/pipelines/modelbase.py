@@ -106,17 +106,21 @@ class Trait(ModelBase):
 
 
 class TraitTransformer(object):
-    def __init__(self, name: str):
-        self.name = not_none(name)
+    name = None # subclasses must overwrite
+
+    def __init__(self):
+        not_none(self.name)
 
     def inject_steps(self):
         return []
 
-    def order_dependencies(self):
-        return {self.name}
+    @classmethod
+    def order_dependencies(cls):
+        return {cls.name}
 
-    def dependencies(self):
-        return {self.name}
+    @classmethod
+    def dependencies(cls):
+        return {cls.name}
 
     @abstractmethod
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):

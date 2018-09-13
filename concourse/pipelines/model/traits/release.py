@@ -39,10 +39,12 @@ class ReleaseTrait(Trait):
         return self.raw['nextversion']
 
     def transformer(self):
-        return ReleaseTraitTransformer(name=self.name)
+        return ReleaseTraitTransformer()
 
 
 class ReleaseTraitTransformer(TraitTransformer):
+    name = 'release'
+
     def inject_steps(self):
         # inject 'release' step
         self.release_step = PipelineStep(name='release', raw_dict={}, is_synthetic=True)
@@ -59,8 +61,10 @@ class ReleaseTraitTransformer(TraitTransformer):
             if 'trigger' not in pipeline_args.raw['repo']:
                 main_repo._trigger = False
 
-    def dependencies(self):
+    @classmethod
+    def dependencies(cls):
         return super().dependencies() | {'version'}
 
-    def order_dependencies(self):
+    @classmethod
+    def order_dependencies(cls):
         return super().dependencies() | {'publish'}

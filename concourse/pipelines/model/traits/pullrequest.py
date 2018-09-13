@@ -46,10 +46,12 @@ class PullRequestTrait(Trait):
         return PullRequestPolicies(raw_dict=policies_dict)
 
     def transformer(self):
-        return PullRequestTraitTransformer(trait=self, name=self.name)
+        return PullRequestTraitTransformer(trait=self)
 
 
 class PullRequestTraitTransformer(TraitTransformer):
+    name = 'pull-request'
+
     def __init__(self, trait, *args, **kwargs):
         self.trait = trait
         super().__init__(*args, **kwargs)
