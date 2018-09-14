@@ -15,7 +15,7 @@
 
 import unittest
 
-import model as examinee
+import model.concourse as examinee
 from model.base import ModelValidationError
 
 
@@ -96,111 +96,6 @@ class TeamCredentialTest(unittest.TestCase):
                 test_dict['gitAuthTeam'] = value
                 with self.assertRaises(ModelValidationError):
                     examinee.ConcourseTeamCredentials(test_dict)
-
-
-class EmailConfigTest(unittest.TestCase):
-    def setUp(self):
-        self.raw_dict = EmailConfigTest.create_valid_test_dictionary()
-
-    @staticmethod
-    def create_valid_test_dictionary():
-        return {
-            'host': 'mail.foo.bar',
-            'port': 666,
-            'technicalUser': {'username': 'u', 'password': 'p'}
-        }
-
-    def test_validation_fails_on_missing_key(self):
-        for key in ('host', 'port', 'technicalUser'):
-            with self.subTest(key=key):
-                test_dict = EmailConfigTest.create_valid_test_dictionary()
-                test_dict.pop(key)
-                with self.assertRaises(ModelValidationError):
-                    examinee.EmailConfig(name='foo', raw_dict=test_dict)
-
-    def test_validation_fails_on_invalid_credentials(self):
-        for key in ('username', 'password'):
-            with self.subTest(key=key):
-                test_dict = EmailConfigTest.create_valid_test_dictionary()
-                test_dict['technicalUser'].pop(key)
-                with self.assertRaises(ModelValidationError):
-                    examinee.EmailConfig(name='bar', raw_dict=test_dict)
-
-
-class GithubConfigTest(unittest.TestCase):
-    def setUp(self):
-        self.raw_dict = GithubConfigTest.create_valid_test_dictionary()
-
-    @staticmethod
-    def create_valid_test_dictionary():
-        return {
-            'sshUrl': 'ssh://foo@bar.baz',
-            'httpUrl': 'https://foo.bar',
-            'apiUrl': 'https://api.foo.bar',
-            'disable_tls_validation': True,
-            'webhook_token': 'foobarbaz',
-            'technicalUser': {
-                'username': 'foo',
-                'password': 'bar',
-                'authToken': 'foobar',
-                'privateKey': 'barfoobaz',
-            },
-        }
-
-    def test_validation_fails_on_invalid_technicalUser(self):
-        for key in ('username', 'password', 'authToken', 'privateKey'):
-            with self.subTest(key=key):
-                test_dict = GithubConfigTest.create_valid_test_dictionary()
-                test_dict['technicalUser'].pop(key)
-                with self.assertRaises(ModelValidationError):
-                    examinee.GithubConfig(name='anothergit', raw_dict=test_dict)
-
-
-class ConcourseConfigTest(unittest.TestCase):
-    def setUp(self):
-        self.raw_dict = ConcourseConfigTest.create_valid_test_dictionary()
-
-    @staticmethod
-    def create_valid_test_dictionary():
-        return {
-            'externalUrl': 'foo://bar.baz',
-            'proxyUrl': 'bar://foo.baz',
-            'teams': {
-                'main': TeamCredentialTest.create_valid_test_dictionary(),
-            },
-            'helm_chart_default_values_config':'foo',
-            'deploy_delaying_proxy':True,
-            'kubernetes_cluster_config': 'bar'
-        }
-
-    def test_validation_fails_on_missing_key(self):
-        for key in ('externalUrl', 'teams', 'helm_chart_default_values_config'):
-            with self.subTest(key=key):
-                test_dict = ConcourseConfigTest.create_valid_test_dictionary()
-                test_dict.pop(key)
-                with self.assertRaises(ModelValidationError):
-                    examinee.ConcourseConfig(name='x', raw_dict=test_dict)
-
-    def test_validation_fails_on_empty_teams(self):
-        self.raw_dict['teams'].pop('main')
-        with self.assertRaises(ModelValidationError):
-            examinee.ConcourseConfig(name='ateam', raw_dict=self.raw_dict)
-
-    def test_validation_fails_on_absent_main_team(self):
-        self.raw_dict['teams'].pop('main')
-        self.raw_dict['teams']['foo'] = TeamCredentialTest.create_valid_test_dictionary()
-        with self.assertRaises(ModelValidationError):
-            examinee.ConcourseConfig(name='bteam', raw_dict=self.raw_dict)
-
-    def test_validation_fails_on_invalid_team(self):
-        self.raw_dict['teams']['main'].pop('teamname')
-        with self.assertRaises(ModelValidationError):
-            examinee.ConcourseConfig(name='cteam', raw_dict=self.raw_dict)
-
-    def test_validation_fails_on_absent_proxy_url_when_proxy_is_configured(self):
-        self.raw_dict.pop('proxyUrl')
-        with self.assertRaises(ModelValidationError):
-            examinee.ConcourseConfig(name='dteam', raw_dict=self.raw_dict)
 
 
 class BasicCredentialsTest(unittest.TestCase):
