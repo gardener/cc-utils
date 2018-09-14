@@ -31,12 +31,14 @@ import kubeutil
 import concourse.client as client
 
 from model import (
-    ConcourseConfig,
     SecretsServerConfig,
     TlsConfig,
     GcrCredentials,
     KubernetesConfig,
     NamedModelElement,
+)
+from model.concourse import (
+    ConcourseConfig,
 )
 from util import (
     ctx as global_ctx,

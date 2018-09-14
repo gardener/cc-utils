@@ -68,3 +68,21 @@ class NamedModelElement(ModelBase):
 
     def __str__(self):
         return '{n}: {d}'.format(n=self.name(), d=self.raw)
+
+
+class BasicCredentials(ModelBase):
+    '''
+    Base class for configuration objects that contain basic authentication credentials
+    (i.e. a username and a password)
+
+    Not intended to be instantiated
+    '''
+
+    def username(self):
+        return self.raw.get('username')
+
+    def passwd(self):
+        return self.raw.get('password')
+
+    def _required_attributes(self):
+        return ['username', 'password']

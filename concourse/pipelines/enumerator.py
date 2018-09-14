@@ -36,7 +36,7 @@ from util import (
     not_none,
 )
 from github.util import _create_github_api_object
-from model import JobMapping
+from model.concourse import JobMapping
 from model.base import ModelBase, NamedModelElement
 from concourse.pipelines.factory import RawPipelineDefinitionDescriptor
 

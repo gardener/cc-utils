@@ -56,7 +56,7 @@ from concourse.pipelines.enumerator import (
 )
 
 from concourse import client
-from model import ConcourseTeamCredentials, ConcourseConfig
+from model.concourse import ConcourseTeamCredentials, ConcourseConfig
 
 
 def replicate_pipelines(

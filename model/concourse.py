@@ -1,0 +1,227 @@
+# Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed
+# under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+from model.base import (
+    BasicCredentials,
+    NamedModelElement,
+    ModelValidationError,
+)
+
+
+class ConcourseConfig(NamedModelElement):
+    '''
+    Not intended to be instantiated by users of this module
+    '''
+
+    def all_team_credentials(self):
+        return [ConcourseTeamCredentials(team_dict) for team_dict in self.raw.get('teams').values()]
+
+    def external_url(self):
+        return self.raw.get('externalUrl')
+
+    def proxy_url(self):
+        return self.raw.get('proxyUrl')
+
+    def job_mapping_cfg_name(self):
+        return self.raw.get('job_mapping')
+
+    def team_credentials(self, teamname):
+        raw_credentials = self.raw.get('teams').get(teamname)
+        if not raw_credentials:
+            raise ValueError('unknown team {t}; known: {kt}'.format(
+                t=teamname,
+                kt=', '.join(self.raw.get('teams').keys()),
+                )
+            )
+        return ConcourseTeamCredentials(raw_credentials)
+
+    def main_team_credentials(self):
+        return self.team_credentials('main')
+
+    def helm_chart_default_values_config(self):
+        return self.raw.get('helm_chart_default_values_config')
+
+    def helm_chart_values(self):
+        return self.raw.get('helm_chart_values', None)
+
+    def image_pull_secret(self):
+        return self.raw.get('imagePullSecret')
+
+    def tls_secret_name(self):
+        return self.raw.get('tls_secret_name')
+
+    def tls_config(self):
+        return self.raw.get('tls_config')
+
+    def deploy_delaying_proxy(self):
+        return self.raw.get('deploy_delaying_proxy')
+
+    def kubernetes_cluster_config(self):
+        return self.raw.get('kubernetes_cluster_config')
+
+    def disable_github_pr_webhooks(self):
+        '''
+        If set to True, the rendered concourse pull-request resources don't have webhooks configured.
+        This is because of problems using webhooks on our internal Github.
+        '''
+        return self.raw.get('disable_webhook_for_pr', False)
+
+    def ingress_host(self):
+        '''
+        Returns the hostname added as additional ingress.
+        '''
+        return self.raw.get('ingress_host')
+
+    def ingress_url(self):
+        return 'https://' + self.ingress_host()
+
+    def helm_chart_version(self):
+        return self.raw.get('helm_chart_version')
+
+    def _required_attributes(self):
+        return [
+            'externalUrl',
+            'teams',
+            'helm_chart_default_values_config',
+            'kubernetes_cluster_config'
+        ]
+
+    def _validate_dict(self):
+        super()._validate_dict()
+        # We check for the existence of the 'main'-team as it is the only team that is *required* to
+        # exist for any concourse server.
+        if not self.raw.get('teams').get('main'):
+            raise ModelValidationError('No team "main" defined.')
+        if self.deploy_delaying_proxy() and self.proxy_url() is None:
+            raise ModelValidationError('must specify no proxy-url')
+        # implicitly validate main team
+        self.team_credentials('main')
+
+
+class ConcourseTeamCredentials(BasicCredentials):
+    '''
+    Not intended to be instantiated by users of this module
+    '''
+
+    def teamname(self):
+        return self.raw.get('teamname')
+
+    def github_auth_team(self, split: bool=False):
+        '''
+        returns the github auth team (org/name)
+
+        @param split: if `true` return [org, name]
+        '''
+        if split and self.raw.get('gitAuthTeam'):
+            return self.raw.get('gitAuthTeam').split('/')
+        return self.raw.get('gitAuthTeam')
+
+    def github_auth_client_id(self):
+        return self.raw.get('githubAuthClientId')
+
+    def github_auth_client_secret(self):
+        return self.raw.get('githubAuthClientSecret')
+
+    def github_auth_auth_url(self):
+        return self.raw.get('githubAuthAuthUrl')
+
+    def github_auth_token_url(self):
+        return self.raw.get('githubAuthTokenUrl')
+
+    def github_auth_api_url(self):
+        return self.raw.get('githubAuthApiUrl')
+
+    def has_basic_auth_credentials(self):
+        if self.raw.get('username') or self.raw.get('password'):
+            return True
+        return False
+
+    def has_github_oauth_credentials(self):
+        if (
+            self.raw.get('gitAuthTeam') or
+            self.raw.get('githubAuthClientId') or
+            self.raw.get('githubAuthClientSecret')
+        ):
+            return True
+        return False
+
+    def has_custom_github_auth_urls(self):
+        if (
+          self.raw.get('githubAuthAuthUrl') or
+          self.raw.get('githubAuthTokenUrl') or
+          self.raw.get('githubAuthApiUrl')
+        ):
+            return True
+        return False
+
+    def _required_attributes(self):
+        _required_attributes = ['teamname']
+        if self.has_basic_auth_credentials():
+            _required_attributes.extend(['username', 'password'])
+        if self.has_github_oauth_credentials():
+            _required_attributes.extend(
+                ['gitAuthTeam', 'githubAuthClientId', 'githubAuthClientSecret']
+            )
+        if self.has_custom_github_auth_urls():
+            _required_attributes.extend(
+                ['githubAuthAuthUrl', 'githubAuthTokenUrl', 'githubAuthApiUrl']
+            )
+        return _required_attributes
+
+    def _validate_dict(self):
+        super()._validate_dict()
+        if self.has_github_oauth_credentials():
+            github_org_and_team = self.github_auth_team(split=True)
+            # explicitly check for expected structure, raise error if not found
+            if github_org_and_team and len(github_org_and_team) == 2:
+                github_org, github_team = github_org_and_team
+                if github_org and github_team:
+                    return
+            raise ModelValidationError(
+                'Invalid github-oauth team. Expected <org>/<team>, got {t}'.format(
+                    t=github_org_and_team
+                )
+            )
+
+
+class JobMappingSet(NamedModelElement):
+    def job_mappings(self):
+        return {name: JobMapping(name=name, raw_dict=raw) for name, raw in self.raw.items()}
+
+
+class JobMapping(NamedModelElement):
+    def team_name(self)->str:
+        return self.raw.get('concourse_target_team')
+
+    def definition_dirs(self):
+        return self.raw['definition_dirs']
+
+    def github_organisations(self):
+        return [
+            GithubOrganisationConfig(name, raw)
+            for name, raw in self.raw.get('github_orgs').items()
+        ]
+
+    def _required_attributes(self):
+        return ['concourse_target_team']
+
+
+class GithubOrganisationConfig(NamedModelElement):
+    def github_cfg_name(self):
+        return self.raw.get('github_cfg')
+
+    def org_name(self):
+        return self.raw.get('github_org')

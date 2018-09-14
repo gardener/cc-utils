@@ -19,7 +19,14 @@ from copy import copy
 import github.webhook
 from github.util import _create_github_api_object
 import concourse.client as concourse
-from model import ConcourseTeamCredentials, ConcourseConfig, GithubConfig, JobMapping
+from model import (
+    GithubConfig,
+)
+from model.concourse import (
+    ConcourseTeamCredentials,
+    ConcourseConfig,
+    JobMapping,
+)
 from util import info, fail
 
 

@@ -25,7 +25,7 @@ import sseclient
 import util
 
 from github.webhook import WebhookQueryAttributes
-from model import ConcourseTeamCredentials
+from model.concourse import ConcourseTeamCredentials
 from http_requests import AuthenticatedRequestBuilder
 from util import warning, not_empty
 
