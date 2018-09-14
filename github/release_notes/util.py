@@ -29,8 +29,8 @@ from github.release_notes.model import (
     ReferenceType,
     Reference,
     reference_type_for_type_identifier,
-    ref_type_pull_request,
-    ref_type_commit
+    REF_TYPE_PULL_REQUEST,
+    REF_TYPE_COMMIT
 )
 from github.release_notes.renderer import MarkdownRenderer
 from gitutil import GitHelper
@@ -361,7 +361,7 @@ def fetch_release_notes_from_commits(
             text=commit.message,
             user_login=None, # we do not have the gitHub user at hand
             cn_current_repo=cn_current_repo,
-            reference_type=ref_type_commit
+            reference_type=REF_TYPE_COMMIT
         )
         if not release_notes_commit:
             continue

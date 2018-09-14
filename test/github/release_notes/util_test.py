@@ -15,114 +15,88 @@
 
 import unittest
 
-from pydash import _
-
 from github.release_notes.model import (
-    ReleaseNoteBlock,
     Commit,
-    ref_type_pull_request,
-    ref_type_commit
+    REF_TYPE_PULL_REQUEST,
+    REF_TYPE_COMMIT
 )
 from github.release_notes.util import (
     ReleaseNotes,
-    extract_release_notes,
     pr_number_from_subject,
     commits_from_logs,
     fetch_release_notes_from_commits
 )
+from github.release_notes.renderer import (
+    CATEGORY_NOTEWORTHY_ID,
+    CATEGORY_IMPROVEMENT_ID,
+    TARGET_GROUP_USER_ID,
+    TARGET_GROUP_OPERATOR_ID,
+)
 from model.base import ModelValidationError
 from product.model import ComponentName
+from test.github.release_notes.default_util import (
+    release_note_block_with_defaults,
+    extract_release_notes_with_defaults,
+    CURRENT_REPO_NAME,
+    CURRENT_REPO
+)
 
 
 class ReleaseNotesTest(unittest.TestCase):
-    def setUp(self):
-        self.cn_current_repo = ComponentName('github.com/gardener/current-repo')
 
     def test_rls_note_extraction_no_text(self):
-        text = None
-        release_notes = extract_release_notes(
-            reference_id='42',
-            reference_type=ref_type_pull_request,
-            text=text,
-            user_login='foo',
-            cn_current_repo=self.cn_current_repo
+        actual_release_notes = extract_release_notes_with_defaults(
+            text=None,
         )
-        self.assertEqual(0, len(release_notes))
+        self.assertEqual(0, len(actual_release_notes))
 
-        text = ''
-        release_notes = extract_release_notes(
-            reference_id='42',
-            reference_type=ref_type_pull_request,
-            text=text,
-            user_login='foo',
-            cn_current_repo=self.cn_current_repo
+        actual_release_notes = extract_release_notes_with_defaults(
+            text='',
         )
-        self.assertEqual(0, len(release_notes))
+        self.assertEqual(0, len(actual_release_notes))
 
     def test_rls_note_extraction_improvement(self):
         text = \
             '``` improvement user\n'\
             'this is a release note text\n'\
             '```'
-        release_notes = extract_release_notes(
-            reference_id='42',
-            reference_type=ref_type_pull_request,
+        actual_release_notes = extract_release_notes_with_defaults(
             text=text,
-            user_login='foo',
-            cn_current_repo=self.cn_current_repo
         )
 
-        self.assertEqual(1, len(release_notes))
-        self.assertEqual(
-            ReleaseNoteBlock(
-                category_id='improvement',
-                target_group_id='user',
-                text='this is a release note text',
-                reference_type=ref_type_pull_request,
-                reference_id='42',
-                user_login='foo',
-                source_repo='github.com/gardener/current-repo',
-                cn_current_repo=self.cn_current_repo
-            ),
-            _.nth(release_notes, 0)
+        exp_release_note = release_note_block_with_defaults(
+            category_id=CATEGORY_IMPROVEMENT_ID,
+            target_group_id=TARGET_GROUP_USER_ID,
+            text='this is a release note text',
         )
+        self.assertEqual([exp_release_note], actual_release_notes)
 
     def test_rls_note_extraction_ignore_noise_in_header(self):
         def verify_noise_ignored(text):
-            release_notes = extract_release_notes(
-                reference_id='42',
-                reference_type=ref_type_pull_request,
+            actual_release_notes = extract_release_notes_with_defaults(
                 text=text,
-                user_login='foo',
-                cn_current_repo=self.cn_current_repo
             )
 
-            self.assertEqual(1, len(release_notes))
-            self.assertEqual(
-                ReleaseNoteBlock(
-                    category_id='improvement',
-                    target_group_id='user',
-                    text='rlstext',
-                    reference_type=ref_type_pull_request,
-                    reference_id='42',
-                    user_login='foo',
-                    source_repo='github.com/gardener/current-repo',
-                    cn_current_repo=self.cn_current_repo
-                ),
-                _.nth(release_notes, 0)
+            exp_release_note = release_note_block_with_defaults(
+                text='rlstext',
             )
+            self.assertEqual([exp_release_note], actual_release_notes)
+
+        # space before linebreak
         text = \
             '``` improvement user \n'\
             'rlstext\n'\
             '```'
         verify_noise_ignored(text)
 
+        # multiple spaces before linebreak
         text = \
             '``` improvement user     \n'\
             'rlstext\n'\
             '```'
         verify_noise_ignored(text)
 
+        # random text after category and target group
         text = \
             '``` improvement user this is some noise that should be ignored\n'\
             'rlstext\n'\
@@ -134,133 +108,103 @@ class ReleaseNotesTest(unittest.TestCase):
             '``` noteworthy operator\n'\
             'notew-text\n'\
             '```'
-        release_notes = extract_release_notes(
-            reference_id='42',
-            reference_type=ref_type_pull_request,
+        actual_release_notes = extract_release_notes_with_defaults(
             text=text,
-            user_login='foo',
-            cn_current_repo=self.cn_current_repo
         )
 
-        self.assertEqual(1, len(release_notes))
-        self.assertEqual(
-            ReleaseNoteBlock(
-                category_id='noteworthy',
-                target_group_id='operator',
-                text='notew-text',
-                reference_type=ref_type_pull_request,
-                reference_id='42',
-                user_login='foo',
-                source_repo='github.com/gardener/current-repo',
-                cn_current_repo=self.cn_current_repo
-            ),
-            _.nth(release_notes, 0)
+        exp_release_note = release_note_block_with_defaults(
+            category_id=CATEGORY_NOTEWORTHY_ID,
+            target_group_id=TARGET_GROUP_OPERATOR_ID,
+            text='notew-text',
         )
+        self.assertEqual([exp_release_note], actual_release_notes)
 
     def test_rls_note_extraction_src_repo(self):
         def source_repo_test(
             code_block,
-            exp_ref_id,
+            exp_reference_id,
             exp_usr,
-            exp_text,
-            exp_ref_type=ref_type_pull_request
+            exp_ref_type=REF_TYPE_PULL_REQUEST
         ):
-            release_notes = extract_release_notes(
-                reference_id='42',
-                reference_type=ref_type_pull_request,
+            actual_release_notes = extract_release_notes_with_defaults(
                 text=code_block,
-                user_login='pr-transport-user',
-                cn_current_repo=self.cn_current_repo
             )
-            self.assertEqual(1, len(release_notes))
-            self.assertEqual(
-                ReleaseNoteBlock(
-                    category_id='improvement',
-                    target_group_id='user',
-                    text=exp_text,
-                    reference_type=exp_ref_type,
-                    reference_id=exp_ref_id,
-                    user_login=exp_usr,
-                    source_repo='github.com/gardener/source-component',
-                    cn_current_repo=self.cn_current_repo
-                ),
-                _.nth(release_notes, 0)
+            exp_release_note = release_note_block_with_defaults(
+                reference_type=exp_ref_type,
+                reference_id=exp_reference_id,
+                user_login=exp_usr,
+                source_repo='github.com/madeup/source-component',
             )
+            self.assertEqual([exp_release_note], actual_release_notes)
 
         code_block = \
-            '``` improvement user github.com/gardener/source-component #1 @original-user-foo\n'\
-            'source repo, pr refid and user\n'\
+            '``` improvement user github.com/madeup/source-component #1 @source-user-foo\n'\
+            'default release note text\n'\
             '```'
         source_repo_test(
             code_block,
-            exp_ref_id='1',
-            exp_usr='original-user-foo',
-            exp_text='source repo, pr refid and user'
+            exp_reference_id='1',
+            exp_usr='source-user-foo',
         )
 
         code_block = \
-'''``` improvement user github.com/gardener/source-component $commit-id @original-user-foo
-source repo, commit refid and user
+'''``` improvement user github.com/madeup/source-component $commit-id @source-user-foo
+default release note text
 ```'''
         source_repo_test(
             code_block,
-            exp_ref_id='commit-id',
-            exp_ref_type=ref_type_commit,
-            exp_usr='original-user-foo',
-            exp_text='source repo, commit refid and user'
+            exp_reference_id='commit-id',
+            exp_ref_type=REF_TYPE_COMMIT,
+            exp_usr='source-user-foo',
         )
 
         code_block = \
-'''``` improvement user github.com/gardener/source-component #1 @original-user-foo some random noise
-noise test
+'''``` improvement user github.com/madeup/source-component #1 @source-user-foo some random noise
+default release note text
 ```'''
         source_repo_test(
             code_block,
-            exp_ref_id='1',
-            exp_usr='original-user-foo',
-            exp_text='noise test'
+            exp_reference_id='1',
+            exp_usr='source-user-foo',
         )
 
         code_block = \
-'''``` improvement user github.com/gardener/source-component #1 some random noise
-no user specified
+'''``` improvement user github.com/madeup/source-component #1 some random noise
+default release note text
 ```'''
-        source_repo_test(code_block, exp_ref_id='1', exp_usr=None, exp_text='no user specified')
+        source_repo_test(code_block, exp_reference_id='1', exp_usr=None)
 
         code_block = \
-            '``` improvement user github.com/gardener/source-component @user some random noise\n'\
-            'no pull request ref_id specified\n'\
-            '```'
+'''``` improvement user github.com/madeup/source-component @source-user-foo some random noise
+default release note text
+```'''
         source_repo_test(
             code_block,
-            exp_ref_id=None,
+            exp_reference_id=None,
             exp_ref_type=None,
-            exp_usr='user',
-            exp_text='no pull request ref_id specified'
+            exp_usr='source-user-foo',
         )
 
         code_block = \
-'''``` improvement user github.com/gardener/source-component
-source_repo only
+'''``` improvement user github.com/madeup/source-component
+default release note text
 ```'''
         source_repo_test(
             code_block,
-            exp_ref_id=None,
+            exp_reference_id=None,
             exp_ref_type=None,
             exp_usr=None,
-            exp_text='source_repo only'
         )
 
         code_block = \
-'''``` improvement user github.com/gardener/source-component some random noise
-source_repo only - with noise
+'''``` improvement user github.com/madeup/source-component some random noise
+default release note text
 ```'''
         source_repo_test(
             code_block,
-            exp_ref_id=None,
+            exp_reference_id=None,
             exp_ref_type=None,
             exp_usr=None,
-            exp_text='source_repo only - with noise'
         )
 
     def test_multiple_rls_note_extraction(self):
@@ -275,54 +219,24 @@ source_repo only - with noise
             '``` noteworthy operator\n'\
             'notew-text\n'\
             '```'
-        release_notes = extract_release_notes(
-            reference_id='42',
-            reference_type=ref_type_pull_request,
+        actual_release_notes = extract_release_notes_with_defaults(
             text=text,
-            user_login='foo',
-            cn_current_repo=self.cn_current_repo
         )
 
-        self.assertEqual(3, len(release_notes))
-        self.assertEqual(
-            ReleaseNoteBlock(
-                category_id='improvement',
-                target_group_id='user',
-                text='imp-user-text',
-                reference_type=ref_type_pull_request,
-                reference_id='42',
-                user_login='foo',
-                source_repo='github.com/gardener/current-repo',
-                cn_current_repo=self.cn_current_repo
-            ),
-            _.nth(release_notes, 0)
+        exp_release_note1 = release_note_block_with_defaults(
+            text='imp-user-text',
         )
-        self.assertEqual(
-            ReleaseNoteBlock(
-                category_id='improvement',
-                target_group_id='operator',
-                text='imp-op-text with carriage return and newline feed',
-                reference_type=ref_type_pull_request,
-                reference_id='42',
-                user_login='foo',
-                source_repo='github.com/gardener/current-repo',
-                cn_current_repo=self.cn_current_repo
-            ),
-            _.nth(release_notes, 1)
+        exp_release_note_2 = release_note_block_with_defaults(
+            target_group_id=TARGET_GROUP_OPERATOR_ID,
+            text='imp-op-text with carriage return and newline feed',
         )
-        self.assertEqual(
-            ReleaseNoteBlock(
-                category_id='noteworthy',
-                target_group_id='operator',
-                text='notew-text',
-                reference_type=ref_type_pull_request,
-                reference_id='42',
-                user_login='foo',
-                source_repo='github.com/gardener/current-repo',
-                cn_current_repo=self.cn_current_repo
-            ),
-            _.nth(release_notes, 2)
+        exp_release_note_3 = release_note_block_with_defaults(
+            category_id=CATEGORY_NOTEWORTHY_ID,
+            target_group_id=TARGET_GROUP_OPERATOR_ID,
+            text='notew-text',
         )
+        expected_release_notes = [exp_release_note1, exp_release_note_2, exp_release_note_3]
+        self.assertEqual(expected_release_notes, actual_release_notes)
 
     def test_rls_note_extraction_multiple_lines(self):
         text = \
@@ -331,28 +245,14 @@ source_repo only - with noise
             'second line\r\n'\
             'third line\n'\
             '```'
-        release_notes = extract_release_notes(
-            reference_id='42',
-            reference_type=ref_type_pull_request,
+        actual_release_notes = extract_release_notes_with_defaults(
             text=text,
-            user_login='foo',
-            cn_current_repo=self.cn_current_repo
         )
 
-        self.assertEqual(1, len(release_notes))
-        self.assertEqual(
-            ReleaseNoteBlock(
-                category_id='improvement',
-                target_group_id='user',
-                text='first line\nsecond line\r\nthird line',
-                reference_type=ref_type_pull_request,
-                reference_id='42',
-                user_login='foo',
-                source_repo='github.com/gardener/current-repo',
-                cn_current_repo=self.cn_current_repo
-            ),
-            _.nth(release_notes, 0)
+        exp_release_note = release_note_block_with_defaults(
+            text='first line\nsecond line\r\nthird line',
         )
+        self.assertEqual([exp_release_note], actual_release_notes)
 
     def test_rls_note_extraction_trim_text(self):
         text = \
@@ -362,39 +262,21 @@ source_repo only - with noise
             '\n'\
             '\n'\
             '```'
-        release_notes = extract_release_notes(
-            reference_id='42',
-            reference_type=ref_type_pull_request,
+        actual_release_notes = extract_release_notes_with_defaults(
             text=text,
-            user_login='foo',
-            cn_current_repo=self.cn_current_repo
         )
 
-        self.assertEqual(1, len(release_notes))
-        self.assertEqual(
-            ReleaseNoteBlock(
-                category_id='improvement',
-                target_group_id='user',
-                text='text with spaces',
-                reference_type=ref_type_pull_request,
-                reference_id='42',
-                user_login='foo',
-                source_repo='github.com/gardener/current-repo',
-                cn_current_repo=self.cn_current_repo
-            ),
-            _.nth(release_notes, 0)
+        exp_release_note = release_note_block_with_defaults(
+            text='text with spaces',
         )
+        self.assertEqual([exp_release_note], actual_release_notes)
 
     def test_rls_note_extraction_no_release_notes(self):
         def verify_no_release_note(text: str):
-            release_notes = extract_release_notes(
-                reference_id='42',
-                reference_type=ref_type_pull_request,
+            actual_release_notes = extract_release_notes_with_defaults(
                 text=text,
-                user_login='foo',
-                cn_current_repo=self.cn_current_repo
             )
-            self.assertEqual(0, len(release_notes))
+            self.assertEqual(0, len(actual_release_notes))
 
         text = \
             '``` improvement user\n'\
@@ -430,15 +312,8 @@ source_repo only - with noise
 
     def test_rls_note_obj_to_block(self):
         try:
-            rn_block = ReleaseNoteBlock(
-                category_id='noteworthy',
-                target_group_id='operator',
-                text='no source repo, no reference, no user',
-                reference_type=ref_type_commit,
-                reference_id='commit-id',
-                user_login='foo',
+            rn_block = release_note_block_with_defaults(
                 source_repo=None,
-                cn_current_repo=self.cn_current_repo
             )
             self.fail(
                 'a ReleaseNoteBlock always has a source repository, '
@@ -447,129 +322,108 @@ source_repo only - with noise
         except RuntimeError:
             pass
 
-        rn_block = ReleaseNoteBlock(
-            category_id='noteworthy',
-            target_group_id='operator',
-            text='no reference, no user',
-            reference_type=ref_type_commit,
+        rn_block = release_note_block_with_defaults(
+            reference_type=None,
             reference_id=None,
             user_login=None,
-            source_repo='github.com/gardener/a-foo-bar',
-            cn_current_repo=self.cn_current_repo
+            source_repo='github.com/madeup/a-foo-bar',
         )
-        expected = \
-        '``` noteworthy operator github.com/gardener/a-foo-bar\n'\
-        'no reference, no user'\
+        exp_release_note_block = \
+        '``` improvement user github.com/madeup/a-foo-bar\n'\
+        'default release note text'\
         '\n```'
-        self.assertEqual(expected, rn_block.to_block_str())
+        self.assertEqual(exp_release_note_block, rn_block.to_block_str())
 
-        rn_block = ReleaseNoteBlock(
-            category_id='noteworthy',
-            target_group_id='operator',
-            text='no reference',
-            reference_type=ref_type_commit,
+        rn_block = release_note_block_with_defaults(
+            reference_type=None,
             reference_id=None,
-            user_login='foo',
-            source_repo='github.com/gardener/a-foo-bar',
-            cn_current_repo=self.cn_current_repo
+            user_login='a-user',
+            source_repo='github.com/madeup/a-foo-bar',
         )
-        expected = \
-        '``` noteworthy operator github.com/gardener/a-foo-bar @foo\n'\
-        'no reference'\
+        exp_release_note_block = \
+        '``` improvement user github.com/madeup/a-foo-bar @a-user\n'\
+        'default release note text'\
         '\n```'
-        self.assertEqual(expected, rn_block.to_block_str())
+        self.assertEqual(exp_release_note_block, rn_block.to_block_str())
 
-        rn_block = ReleaseNoteBlock(
-            category_id='noteworthy',
-            target_group_id='operator',
-            text='no user; reference is PR',
-            reference_type=ref_type_pull_request,
-            reference_id='42',
+        rn_block = release_note_block_with_defaults(
+            reference_type=REF_TYPE_PULL_REQUEST,
+            reference_id='123456',
             user_login=None,
-            source_repo='github.com/gardener/a-foo-bar',
-            cn_current_repo=self.cn_current_repo
+            source_repo='github.com/madeup/a-foo-bar',
         )
-        expected = \
-        '``` noteworthy operator github.com/gardener/a-foo-bar #42\n'\
-        'no user; reference is PR'\
+        exp_release_note_block = \
+        '``` improvement user github.com/madeup/a-foo-bar #123456\n'\
+        'default release note text'\
         '\n```'
-        self.assertEqual(expected, rn_block.to_block_str())
+        self.assertEqual(exp_release_note_block, rn_block.to_block_str())
 
-        rn_block = ReleaseNoteBlock(
-            category_id='noteworthy',
-            target_group_id='operator',
-            text='reference is commit',
-            reference_type=ref_type_commit,
+        rn_block = release_note_block_with_defaults(
+            reference_type=REF_TYPE_COMMIT,
             reference_id='commit-id',
             user_login='foo',
-            source_repo='github.com/gardener/a-foo-bar',
-            cn_current_repo=self.cn_current_repo
+            source_repo='github.com/madeup/a-foo-bar',
+            cn_current_repo=CURRENT_REPO
         )
-        expected = \
-        '``` noteworthy operator github.com/gardener/a-foo-bar $commit-id @foo\n'\
-        'reference is commit'\
+        exp_release_note_block = \
+        '``` improvement user github.com/madeup/a-foo-bar $commit-id @foo\n'\
+        'default release note text'\
         '\n```'
-        self.assertEqual(expected, rn_block.to_block_str())
+        self.assertEqual(exp_release_note_block, rn_block.to_block_str())
 
-    def test_release_note_objs_to_block_str(self):
+        rn_block = release_note_block_with_defaults(
+            category_id=CATEGORY_NOTEWORTHY_ID,
+            target_group_id=TARGET_GROUP_OPERATOR_ID,
+            reference_type=None,
+            reference_id=None,
+            user_login=None,
+            source_repo='github.com/madeup/a-foo-bar',
+        )
+        exp_release_note_block = \
+        '``` noteworthy operator github.com/madeup/a-foo-bar\n'\
+        'default release note text'\
+        '\n```'
+        self.assertEqual(exp_release_note_block, rn_block.to_block_str())
+
+    def test_no_release_note_obj_to_block_str(self):
         rls_note_objs = []
-        expected = ''
-        self.assertEqual(expected, ReleaseNotes(rls_note_objs).release_note_blocks())
+        exp_release_note_block = ''
+        self.assertEqual(exp_release_note_block, ReleaseNotes(rls_note_objs).release_note_blocks())
 
         rls_note_objs = None
-        expected = ''
-        self.assertEqual(expected, ReleaseNotes(rls_note_objs).release_note_blocks())
+        exp_release_note_block = ''
+        self.assertEqual(exp_release_note_block, ReleaseNotes(rls_note_objs).release_note_blocks())
 
+    def test_single_release_note_obj_to_block_str(self):
         rls_note_objs = [
-            ReleaseNoteBlock(
-                category_id='noteworthy',
-                target_group_id='operator',
-                text='test with one release note object',
-                reference_type=ref_type_commit,
-                reference_id='commit-id',
-                user_login='foo',
-                source_repo='github.com/gardener/a-foo-bar',
-                cn_current_repo=self.cn_current_repo
-            )
+            release_note_block_with_defaults()
         ]
-        expected = \
-        '``` noteworthy operator github.com/gardener/a-foo-bar $commit-id @foo\n'\
-        'test with one release note object'\
+        exp_release_note_block = \
+        '``` improvement user github.com/madeup/current-repo #42 @foo\n'\
+        'default release note text'\
         '\n```'
-        self.assertEqual(expected, ReleaseNotes(rls_note_objs).release_note_blocks())
+        self.assertEqual(exp_release_note_block, ReleaseNotes(rls_note_objs).release_note_blocks())
 
+    def test_multiple_release_note_objs_to_block_str(self):
         rls_note_objs = [
-            ReleaseNoteBlock(
-                category_id='noteworthy',
-                target_group_id='operator',
-                text='test with multiple release note objects',
-                reference_type=ref_type_commit,
+            release_note_block_with_defaults(),
+            release_note_block_with_defaults(
+                reference_type=REF_TYPE_COMMIT,
                 reference_id='commit-id',
-                user_login='foo',
-                source_repo='github.com/gardener/a-foo-bar',
-                cn_current_repo=self.cn_current_repo
-            ),
-            ReleaseNoteBlock(
-                category_id='noteworthy',
-                target_group_id='operator',
                 text='another one',
-                reference_type=ref_type_commit,
-                reference_id='commit-id',
-                user_login='foo',
                 source_repo='github.com/s/repo',
-                cn_current_repo=self.cn_current_repo
             ),
         ]
-        expected = \
-        '``` noteworthy operator github.com/gardener/a-foo-bar $commit-id @foo\n'\
-        'test with multiple release note objects'\
+        exp_release_note_block = \
+        '``` improvement user github.com/madeup/current-repo #42 @foo\n'\
+        'default release note text'\
         '\n```'\
         '\n'\
         '\n'\
-        '``` noteworthy operator github.com/s/repo $commit-id @foo\n'\
+        '``` improvement user github.com/s/repo $commit-id @foo\n'\
         'another one'\
         '\n```'
-        self.assertEqual(expected, ReleaseNotes(rls_note_objs).release_note_blocks())
+        self.assertEqual(exp_release_note_block, ReleaseNotes(rls_note_objs).release_note_blocks())
 
     def test_pr_number_from_subject(self):
         self.assertEqual('42', pr_number_from_subject('Merge pull request #42'))
@@ -615,26 +469,26 @@ source_repo only - with noise
                 message='foo\n```improvement user\nrelease note text in commit 2\n```\nbar'
             )
         ]
-        actual_rls_note_objs = fetch_release_notes_from_commits(commits, self.cn_current_repo)
+        actual_rls_note_objs = fetch_release_notes_from_commits(commits, CURRENT_REPO)
         expected_rls_note_objs = [
-            ReleaseNoteBlock(
-                category_id='improvement',
-                target_group_id='user',
+            release_note_block_with_defaults(
+                category_id=CATEGORY_IMPROVEMENT_ID,
+                target_group_id=TARGET_GROUP_USER_ID,
                 text='release note text in commit',
-                reference_type=ref_type_commit,
+                reference_type=REF_TYPE_COMMIT,
                 reference_id='commit-id2',
                 user_login=None,
-                source_repo=self.cn_current_repo.name(),
-                cn_current_repo=self.cn_current_repo),
-            ReleaseNoteBlock(
-                category_id='improvement',
-                target_group_id='user',
+                source_repo=CURRENT_REPO.name(),
+                cn_current_repo=CURRENT_REPO),
+            release_note_block_with_defaults(
+                category_id=CATEGORY_IMPROVEMENT_ID,
+                target_group_id=TARGET_GROUP_USER_ID,
                 text='release note text in commit 2',
-                reference_type=ref_type_commit,
+                reference_type=REF_TYPE_COMMIT,
                 reference_id='commit-id3',
                 user_login=None,
-                source_repo=self.cn_current_repo.name(),
-                cn_current_repo=self.cn_current_repo),
+                source_repo=CURRENT_REPO.name(),
+                cn_current_repo=CURRENT_REPO),
         ]
 
         self.assertEqual(expected_rls_note_objs, actual_rls_note_objs)
