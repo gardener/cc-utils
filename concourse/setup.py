@@ -33,12 +33,14 @@ import concourse.client as client
 from model import (
     SecretsServerConfig,
     TlsConfig,
-    GcrCredentials,
     KubernetesConfig,
     NamedModelElement,
 )
 from model.concourse import (
     ConcourseConfig,
+)
+from model.container_registry import (
+    GcrCredentials,
 )
 from util import (
     ctx as global_ctx,
