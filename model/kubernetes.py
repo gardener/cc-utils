@@ -24,5 +24,3 @@ class KubernetesConfig(NamedModelElement):
 
     def cluster_version(self):
         return self.raw.get('version')
-
-

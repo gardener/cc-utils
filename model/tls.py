@@ -33,5 +33,3 @@ class TlsConfig(NamedModelElement):
 
     def _required_attributes(self):
         return ['private_key', 'certificate']
-
-
