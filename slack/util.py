@@ -40,6 +40,7 @@ class SlackHelper(object):
       channel: str,
       title: str,
       message: str,
+      filtetype: str='post'
   ):
       api_token = self.slack_cfg.api_token()
 
@@ -57,10 +58,10 @@ class SlackHelper(object):
               channels=channel,
               file=(title, message),
               title=title,
-              filetype='post'
+              filetype=filtetype
           )
           if not _.get(result, 'ok', False):
-              warning('failed to post to slack channel {c}: {err}'.format(
-                  c=channel,
-                  err=_.get(result, 'error')
-              ))
+            raise RuntimeError('failed to post to slack channel {c}: {err}'.format(
+                c=channel,
+                err=_.get(result, 'error')
+            ))
