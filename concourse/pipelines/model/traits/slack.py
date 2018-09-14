@@ -14,19 +14,17 @@
 # limitations under the License.
 
 from util import not_none
-from model import ModelBase
 
 from concourse.pipelines.model.step import PipelineStep
 from concourse.pipelines.modelbase import (
   Trait,
   TraitTransformer,
-  ModelDefaultsMixin,
-  ModelValidationMixin,
+  ModelBase,
   ModelValidationError,
 )
 
 
-class ChannelConfig(ModelBase, ModelDefaultsMixin, ModelValidationMixin):
+class ChannelConfig(ModelBase):
     def channel_name(self):
         return self.raw.get('channel_name')
 
