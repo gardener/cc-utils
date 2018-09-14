@@ -17,40 +17,43 @@ from abc import abstractmethod
 from collections import namedtuple
 from pydash import _
 
-from github.release_notes.model import ReleaseNote, ref_type_commit, ref_type_pull_request
+from github.release_notes.model import ReleaseNote, REF_TYPE_COMMIT, REF_TYPE_PULL_REQUEST
 
 
 def get_or_call(obj, path):
     value = _.get(obj, path)
     if callable(value):
         return value()
-    else:
-        return value
+    return value
 
 
-Node = namedtuple("Node", ["identifier", "title", "nodes", "matches_rls_note_field_path"])
-TARGET_GROUP_USER = Node(
-    identifier='user',
+TitleNode = namedtuple("TitleNode", ["identifier", "title", "nodes", "matches_rls_note_field_path"])
+TARGET_GROUP_USER_ID = 'user'
+TARGET_GROUP_USER = TitleNode(
+    identifier=TARGET_GROUP_USER_ID,
     title='USER',
     nodes=None,
     matches_rls_note_field_path='target_group_id'
 )
-TARGET_GROUP_OPERATOR = Node(
-    identifier='operator',
+TARGET_GROUP_OPERATOR_ID = 'operator'
+TARGET_GROUP_OPERATOR = TitleNode(
+    identifier=TARGET_GROUP_OPERATOR_ID,
     title='OPERATOR',
     nodes=None,
     matches_rls_note_field_path='target_group_id'
 )
 TARGET_GROUPS = [TARGET_GROUP_USER, TARGET_GROUP_OPERATOR]
 
-CATEGORY_NOTEWORTHY = Node(
-    identifier='noteworthy',
+CATEGORY_NOTEWORTHY_ID = 'noteworthy'
+CATEGORY_NOTEWORTHY = TitleNode(
+    identifier=CATEGORY_NOTEWORTHY_ID,
     title='Most notable changes',
     nodes=TARGET_GROUPS,
     matches_rls_note_field_path='category_id'
 )
-CATEGORY_IMPROVEMENT = Node(
-    identifier='improvement',
+CATEGORY_IMPROVEMENT_ID = 'improvement'
+CATEGORY_IMPROVEMENT = TitleNode(
+    identifier=CATEGORY_IMPROVEMENT_ID,
     title='Improvements',
     nodes=TARGET_GROUPS,
     matches_rls_note_field_path='category_id'
@@ -67,7 +70,7 @@ class Renderer(object):
             .chain(self.rls_note_objs)\
             .sort_by(lambda rls_note_obj: rls_note_obj.cn_source_repo.github_repo())\
             .uniq_by(lambda rls_note_obj: rls_note_obj.cn_source_repo.name())\
-            .map(lambda rls_note_obj: Node(
+            .map(lambda rls_note_obj: TitleNode(
                 identifier=rls_note_obj.cn_source_repo.name(),
                 title='[{origin_name}]'.format(
                     origin_name=rls_note_obj.cn_source_repo.github_repo()
@@ -77,20 +80,19 @@ class Renderer(object):
             ))\
             .value()
 
-        markdown_lines = self._nodes_to_lines(
+        release_note_lines = self._to_release_note_lines(
             nodes=origin_nodes,
             level=1,
             rls_note_objs=self.rls_note_objs
         )
 
-        if markdown_lines:
-            return '\n'.join(markdown_lines)
-        else: # fallback
+        if not release_note_lines:
             return 'no release notes available'
+        return '\n'.join(release_note_lines)
 
-    def _nodes_to_lines(
+    def _to_release_note_lines(
         self,
-        nodes: [Node],
+        nodes: [TitleNode],
         level: int,
         rls_note_objs: [ReleaseNote]
     ) -> [str]:
@@ -104,25 +106,21 @@ class Renderer(object):
             if not filtered_rls_note_objects:
                 continue
             if node.nodes:
-                tmp_lines = self._nodes_to_lines(
+                release_note_lines = self._to_release_note_lines(
                     nodes=node.nodes,
                     level=level + 1,
                     rls_note_objs=filtered_rls_note_objects
                 )
-                skip_title = False
+                lines.append(self._title(node, level))
+                lines.extend(release_note_lines)
             else:
-                tmp_lines = self._to_bullet_points(
+                bullet_points = self._to_bullet_points(
                     tag=node.title,
                     rls_note_objs=filtered_rls_note_objects
                 )
                 # title is used as bullet point tag -> no need for additional title
-                skip_title = True
+                lines.extend(bullet_points)
 
-            # only add title if there are lines below the title
-            if tmp_lines:
-                if not skip_title:
-                    lines.append(self._title(node, level))
-                lines.extend(tmp_lines)
         return lines
 
     def _header_suffix(
@@ -147,16 +145,18 @@ class Renderer(object):
         self,
         rls_note_obj: ReleaseNote
     ):
-        cn_source_repo = rls_note_obj.cn_source_repo
         reference_id_text = rls_note_obj.reference.identifier
-
         reference_prefix = rls_note_obj.reference.type.prefix
-        if rls_note_obj.reference.type == ref_type_commit:
-            if rls_note_obj.is_current_repo and not self._generate_link(rls_note_obj):
+
+        should_generate_link = self._generate_link(rls_note_obj)
+
+        is_reference_auto_linked = rls_note_obj.is_current_repo and not should_generate_link
+        if rls_note_obj.reference.type == REF_TYPE_COMMIT:
+            if is_reference_auto_linked:
                 # for the current repo we use gitHub's feature to auto-link to references,
                 # hence in case of commits we don't need a prefix
                 reference_prefix = ''
-            if self._generate_link(rls_note_obj):
+            if should_generate_link:
                 reference_id_text = rls_note_obj.reference.identifier[0:12] # short commit hash
 
         reference = '{reference_prefix}{ref_id}'.format(
@@ -164,43 +164,64 @@ class Renderer(object):
             ref_id=reference_id_text,
         )
 
-        if rls_note_obj.is_current_repo and not self._generate_link(rls_note_obj):
+        if is_reference_auto_linked:
             return reference
 
-        if not self._generate_link(rls_note_obj):
+        if not should_generate_link:
+            # returns e.g. gardener/cc-utils#42 or g. gardener/cc-utils@commit-hash
             return '{repo_path}{reference}'.format(
-                    repo_path=cn_source_repo.github_repo_path(),
+                    repo_path=rls_note_obj.cn_source_repo.github_repo_path(),
                     reference=reference
                 )
-        else:
-            reference_link = '{source_repo_url}/{github_api_resource_type}/{ref_id}'.format(
-                source_repo_url=cn_source_repo.github_repo_url(),
-                ref_id=rls_note_obj.reference.identifier,
-                github_api_resource_type=rls_note_obj.reference.type.github_api_resource_type
-            )
 
-            link_text = '{repo_path}{reference}'.format(
-                repo_path=cn_source_repo.github_repo_path(),
-                reference=reference
-            )
-            return self._build_link(url=reference_link, text=link_text)
+        return self._github_reference_link(
+            rls_note_obj=rls_note_obj,
+            reference=reference
+        )
 
     def _header_suffix_user(
         self,
         rls_note_obj: ReleaseNote
     ):
-        if not self._generate_link(rls_note_obj):
-            header_suffix_user = '@{u}'.format(
+        is_user_auto_linked = not self._generate_link(rls_note_obj)
+        if is_user_auto_linked:
+            return '@{u}'.format(
                 u=rls_note_obj.user_login
             )
-        else:
-            user_link_text = '@{u}'.format(u=rls_note_obj.user_login)
-            user_url = '{github_url}/{u}'.format(
-                    u=rls_note_obj.user_login,
-                github_url=rls_note_obj.cn_source_repo.github_url()
-            )
-            header_suffix_user = self._build_link(url=user_url, text=user_link_text)
-        return header_suffix_user
+
+        return self._github_user_profile_link(
+            user=rls_note_obj.user_login,
+            github_url=rls_note_obj.cn_source_repo.github_url()
+        )
+
+    def _github_reference_link(
+        self,
+        rls_note_obj: ReleaseNote,
+        reference: str
+    ) -> str:
+        reference_link = '{source_repo_url}/{github_api_resource_type}/{ref_id}'.format(
+            source_repo_url=rls_note_obj.cn_source_repo.github_repo_url(),
+            ref_id=rls_note_obj.reference.identifier,
+            github_api_resource_type=rls_note_obj.reference.type.github_api_resource_type
+        )
+
+        link_text = '{repo_path}{reference}'.format(
+            repo_path=rls_note_obj.cn_source_repo.github_repo_path(),
+            reference=reference
+        )
+        return self._build_link(url=reference_link, text=link_text)
+
+    def _github_user_profile_link(
+        self,
+        user: str,
+        github_url: str
+    ) -> str:
+        user_link_text = '@{u}'.format(u=user)
+        user_url = '{github_url}/{u}'.format(
+            u=user,
+            github_url=github_url
+        )
+        return self._build_link(url=user_url, text=user_link_text)
 
     def _to_bullet_points(
         self,
@@ -250,7 +271,7 @@ class Renderer(object):
     @abstractmethod
     def _title(
         self,
-        node: Node,
+        node: TitleNode,
         level: int
     )->str:
         pass
@@ -275,7 +296,7 @@ class MarkdownRenderer(Renderer):
 
     def _title(
         self,
-        node: Node,
+        node: TitleNode,
         level: int
     )->str:
         return '{hashtags} {title}'.format(hashtags=_.repeat('#', level),title=node.title)

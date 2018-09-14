@@ -42,17 +42,19 @@ ReferenceType = namedtuple('ReferenceType', [
     'prefix', # reference prefix that is used for the rendered text
     'github_api_resource_type'
 ])
-ref_type_pull_request = ReferenceType(
+
+REF_TYPE_PULL_REQUEST = ReferenceType(
     identifier='#',
     prefix='#',
     github_api_resource_type = 'pull'
 )
-ref_type_commit = ReferenceType(
+
+REF_TYPE_COMMIT = ReferenceType(
     identifier='$',
     prefix='@',
     github_api_resource_type = 'commit'
 )
-reference_types = [ref_type_pull_request, ref_type_commit]
+REFERENCE_TYPES = [REF_TYPE_PULL_REQUEST, REF_TYPE_COMMIT]
 
 Reference = namedtuple('Reference', [
     'type',
@@ -63,7 +65,7 @@ Reference = namedtuple('Reference', [
 def reference_type_for_type_identifier(
     reference_type_identifier: str
 ):
-    return _.find(reference_types,
+    return _.find(REFERENCE_TYPES,
         lambda ref_type: ref_type.identifier == reference_type_identifier
     )
 
@@ -102,21 +104,17 @@ class ReleaseNoteBlock(ReleaseNote):
         return self
 
     def ref(self):
-        ref = ''
-        if self.reference.identifier:
-            ref = ' {ref_type}{ref_id}'.format(
-                ref_type=self.reference.type.identifier,
-                ref_id=self.reference.identifier
-            )
-        return ref
+        if not self.reference.identifier:
+            return ''
+        return ' {ref_type}{ref_id}'.format(
+            ref_type=self.reference.type.identifier,
+            ref_id=self.reference.identifier
+        )
 
     def user(self):
-        user = ''
-        if self.user_login:
-            user = ' @{user}'.format(
-                user=self.user_login
-            )
-        return user
+        if not self.user_login:
+            return ''
+        return ' @{user}'.format(user=self.user_login)
 
     def to_block_str(self):
         return ('``` {cat} {t_grp} {src_repo}{ref}{user}\n'

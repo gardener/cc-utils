@@ -17,36 +17,36 @@ import unittest
 from pydash import _
 
 from github.release_notes.model import (
-    ReleaseNoteBlock,
-    ref_type_pull_request,
-    ref_type_commit
+    ReferenceType,
+    REF_TYPE_PULL_REQUEST,
+    REF_TYPE_COMMIT,
 )
 from github.release_notes.renderer import (
     MarkdownRenderer,
-    get_or_call
+    get_or_call,
+    CATEGORY_NOTEWORTHY_ID,
+    CATEGORY_IMPROVEMENT_ID,
+    TARGET_GROUP_USER_ID,
+    TARGET_GROUP_OPERATOR_ID,
 )
 from product.model import ComponentName
+from test.github.release_notes.default_util import (
+    release_note_block_with_defaults,
+    CURRENT_REPO_NAME,
+    CURRENT_REPO
+)
 
 
 class RendererTest(unittest.TestCase):
-    def setUp(self):
-        self.cn_current_repo = ComponentName('github.com/gardener/current-repo')
 
-    def test_render_multiline_rls_note(self):
+    def test_render_multiline_rls_note_should_have_2nd_level_bullet_points(self):
         multiline_text = \
         'first line with header\n'\
         'second line\n'\
         'third line\n'
         release_note_objs = [
-            ReleaseNoteBlock(
-                category_id='improvement',
-                target_group_id='user',
+            release_note_block_with_defaults(
                 text=multiline_text,
-                reference_type=ref_type_pull_request,
-                reference_id='42',
-                user_login='foo',
-                source_repo='github.com/gardener/current-repo',
-                cn_current_repo=self.cn_current_repo
             )
         ]
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
@@ -58,17 +58,10 @@ class RendererTest(unittest.TestCase):
             '  * third line'
         self.assertEqual(expected_md_str, actual_md_str)
 
-    def test_render_from_other_github(self):
+    def test_render_from_other_github_should_auto_link(self):
         release_note_objs = [
-            ReleaseNoteBlock(
-                category_id='improvement',
-                target_group_id='user',
-                text='from other github instance',
-                reference_type=ref_type_pull_request,
-                reference_id='42',
-                user_login='foo',
+            release_note_block_with_defaults(
                 source_repo='madeup.enterprise.github.corp/o/s',
-                cn_current_repo=self.cn_current_repo
             )
         ]
 
@@ -77,7 +70,7 @@ class RendererTest(unittest.TestCase):
             '\n'.join((
                 '# [s]',
                 '## Improvements',
-                '* *[USER]* from other github instance '
+                '* *[USER]* default release note text '
                 '([o/s#42](https://madeup.enterprise.github.corp/o/s/pull/42), '
                 '[@foo](https://madeup.enterprise.github.corp/foo))'
             ))
@@ -85,85 +78,71 @@ class RendererTest(unittest.TestCase):
 
     def test_render_reference_pr(self):
         release_note_objs = [
-            ReleaseNoteBlock(
-                category_id='improvement',
-                target_group_id='user',
-                text='rls note 1',
-                reference_type=ref_type_pull_request,
+            release_note_block_with_defaults(
+                reference_type=REF_TYPE_PULL_REQUEST,
                 reference_id='42',
-                user_login='foo',
-                source_repo='github.com/gardener/current-repo',
-                cn_current_repo=self.cn_current_repo
+                source_repo=CURRENT_REPO_NAME,
             ),
-            ReleaseNoteBlock(
-                category_id='noteworthy',
-                target_group_id='operator',
-                text='other component rls note',
-                reference_type=ref_type_pull_request,
+            release_note_block_with_defaults(
+                reference_type=REF_TYPE_PULL_REQUEST,
                 reference_id='1',
-                user_login='bar',
-                source_repo='github.com/gardener/a-foo-bar',
-                cn_current_repo=self.cn_current_repo
+                text='other component, same github instance rls note',
+                source_repo='github.com/madeup/a-foo-bar',
             )
         ]
 
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
             '# [a-foo-bar]\n'\
-            '## Most notable changes\n'\
-            '* *[OPERATOR]* other component rls note (gardener/a-foo-bar#1, @bar)\n'\
+            '## Improvements\n'\
+            '* *[USER]* other component, same github instance rls note (madeup/a-foo-bar#1, @foo)\n'\
             '# [current-repo]\n'\
             '## Improvements\n'\
-            '* *[USER]* rls note 1 (#42, @foo)'
+            '* *[USER]* default release note text (#42, @foo)'
         self.assertEqual(expected_md_str, actual_md_str)
 
     def test_render_reference_commit(self):
         release_note_objs = [
-            ReleaseNoteBlock(
-                category_id='improvement',
-                target_group_id='user',
+            release_note_block_with_defaults(
                 text='rls note 1',
-                reference_type=ref_type_commit,
+                reference_type=REF_TYPE_COMMIT,
                 reference_id='commit-id-1',
-                user_login='foo',
-                source_repo='github.com/gardener/current-repo',
-                cn_current_repo=self.cn_current_repo
+                source_repo=CURRENT_REPO_NAME,
             ),
-            ReleaseNoteBlock(
-                category_id='noteworthy',
-                target_group_id='operator',
+            # As the source repository is on the same github instance as the current repository
+            # it can be auto linked by github, hence we do not need to build a link to the commit
+            # with the cut off commit id as link text
+            release_note_block_with_defaults(
                 text='other component rls note',
-                reference_type=ref_type_commit,
-                reference_id='very-long-commit-id-that-will-not-be-shortened-in-md',
+                reference_type=REF_TYPE_COMMIT,
+                reference_id='very-long-commit-id-that-will-not-be-shortened',
                 user_login='bar',
-                source_repo='github.com/gardener/a-foo-bar',
-                cn_current_repo=self.cn_current_repo
+                source_repo='github.com/madeup/a-foo-bar',
             ),
-            ReleaseNoteBlock(
-                category_id='noteworthy',
-                target_group_id='operator',
+            # the source repository is on a different github instance as the current repository.
+            # It can not be auto linked by github, hence we need to build a link to the commit
+            # with the cut off commit id as link text
+            release_note_block_with_defaults(
                 text='release note from different github instance',
-                reference_type=ref_type_commit,
+                reference_type=REF_TYPE_COMMIT,
                 reference_id='very-long-commit-id-that-will-be-shortened',
                 user_login='bar',
                 source_repo='madeup.enterprise.github.corp/o/s',
-                cn_current_repo=self.cn_current_repo
             )
         ]
 
-        self.maxDiff = None
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = ''\
             '# [a-foo-bar]\n'\
-            '## Most notable changes\n'\
-            '* *[OPERATOR]* other component rls note ' \
-            '(gardener/a-foo-bar@very-long-commit-id-that-will-not-be-shortened-in-md, @bar)\n'\
+            '## Improvements\n'\
+            '* *[USER]* other component rls note ' \
+            '(madeup/a-foo-bar@very-long-commit-id-that-will-not-be-shortened, @bar)\n'\
             '# [current-repo]\n'\
             '## Improvements\n'\
             '* *[USER]* rls note 1 (commit-id-1, @foo)\n'\
             '# [s]\n'\
-            '## Most notable changes\n'\
-            '* *[OPERATOR]* release note from different github instance ' \
+            '## Improvements\n'\
+            '* *[USER]* release note from different github instance ' \
             '([o/s@very-long-co](https://madeup.enterprise.github.corp/o/s/commit/'\
             'very-long-commit-id-that-will-be-shortened), '\
             '[@bar](https://madeup.enterprise.github.corp/bar))'
@@ -171,70 +150,54 @@ class RendererTest(unittest.TestCase):
 
     def test_render_user(self):
         release_note_objs = [
-            ReleaseNoteBlock(
-                category_id='noteworthy',
-                target_group_id='operator',
-                text='no source repo reference',
+            release_note_block_with_defaults(
                 reference_type=None,
                 reference_id=None,
                 user_login='bar',
-                source_repo='github.com/gardener/a-foo-bar',
-                cn_current_repo=self.cn_current_repo
+                source_repo='github.com/madeup/a-foo-bar',
             ),
-            ReleaseNoteBlock(
-                category_id='improvement',
-                target_group_id='user',
-                text='no reference',
+            release_note_block_with_defaults(
                 reference_type=None,
                 reference_id=None,
                 user_login='foo',
-                source_repo='github.com/gardener/current-repo',
-                cn_current_repo=self.cn_current_repo
+                source_repo=CURRENT_REPO_NAME,
             )
         ]
 
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
             '# [a-foo-bar]\n'\
-            '## Most notable changes\n'\
-            '* *[OPERATOR]* no source repo reference (@bar)\n'\
+            '## Improvements\n'\
+            '* *[USER]* default release note text (@bar)\n'\
             '# [current-repo]\n'\
             '## Improvements\n'\
-            '* *[USER]* no reference (@foo)'
+            '* *[USER]* default release note text (@foo)'
         self.assertEqual(expected_md_str, actual_md_str)
 
     def test_render_no_reference_no_user(self):
         release_note_objs = [
-            ReleaseNoteBlock(
-                category_id='noteworthy',
-                target_group_id='operator',
-                text='no source repo reference no user',
+            release_note_block_with_defaults(
                 reference_type=None,
                 reference_id=None,
                 user_login=None,
-                source_repo='github.com/gardener/a-foo-bar',
-                cn_current_repo=self.cn_current_repo
+                source_repo='github.com/madeup/a-foo-bar',
             ),
-            ReleaseNoteBlock(
-                category_id='improvement',
-                target_group_id='user',
-                text='no reference no user',
+            release_note_block_with_defaults(
                 reference_type=None,
                 reference_id=None,
                 user_login=None,
-                source_repo='github.com/gardener/current-repo',
-                cn_current_repo=self.cn_current_repo
+                source_repo=CURRENT_REPO_NAME,
             )
         ]
 
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
             '# [a-foo-bar]\n'\
-            '## Most notable changes\n'\
-            '* *[OPERATOR]* no source repo reference no user\n'\
+            '## Improvements\n'\
+            '* *[USER]* default release note text\n'\
             '# [current-repo]\n'\
             '## Improvements\n'\
-            '* *[USER]* no reference no user'
+            '* *[USER]* default release note text'
         self.assertEqual(expected_md_str, actual_md_str)
 
     def test_render_no_release_notes(self):
@@ -246,96 +209,125 @@ class RendererTest(unittest.TestCase):
             MarkdownRenderer(release_note_objs=release_note_objs).render()
         )
 
-    def test_render_no_skip_empty_lines(self):
+    def test_render_skip_empty_lines(self):
         release_note_objs = [
-            ReleaseNoteBlock(
-                category_id='noteworthy',
-                target_group_id='operator',
+            release_note_block_with_defaults(
                 text='first line1\n\n second line1', #empty line
                 reference_type=None,
                 reference_id=None,
                 user_login=None,
-                source_repo='github.com/gardener/a-foo-bar',
-                cn_current_repo=self.cn_current_repo
             ),
-            ReleaseNoteBlock(
-                category_id='noteworthy',
-                target_group_id='operator',
+            release_note_block_with_defaults(
                 text='first line2\n \nsecond line2', #empty line with space
                 reference_type=None,
                 reference_id=None,
                 user_login=None,
-                source_repo='github.com/gardener/a-foo-bar',
-                cn_current_repo=self.cn_current_repo
             )
         ]
 
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
-            '# [a-foo-bar]\n'\
-            '## Most notable changes\n'\
-            '* *[OPERATOR]* first line1\n'\
+            '# [current-repo]\n'\
+            '## Improvements\n'\
+            '* *[USER]* first line1\n'\
             '  * second line1\n'\
-            '* *[OPERATOR]* first line2\n'\
+            '* *[USER]* first line2\n'\
             '  * second line2'
         self.assertEqual(expected_md_str, actual_md_str)
 
     def test_render_remove_bullet_points(self):
         release_note_objs = [
-            ReleaseNoteBlock(
-                category_id='noteworthy',
-                target_group_id='operator',
+            release_note_block_with_defaults(
                 text='first line1\n* second line1', #contains bullet point (*)
                 reference_type=None,
                 reference_id=None,
                 user_login=None,
-                source_repo='github.com/gardener/a-foo-bar',
-                cn_current_repo=self.cn_current_repo
             ),
-            ReleaseNoteBlock(
-                category_id='noteworthy',
-                target_group_id='operator',
+            release_note_block_with_defaults(
                 text='first line2\n  * second line2',  # contains bullet point with extra spaces
                 reference_type=None,
                 reference_id=None,
                 user_login=None,
-                source_repo='github.com/gardener/a-foo-bar',
-                cn_current_repo=self.cn_current_repo
             ),
-            ReleaseNoteBlock(
-                category_id='noteworthy',
-                target_group_id='operator',
+            release_note_block_with_defaults(
                 text='- first line3\n  - second line3',  # contains bullet point (-)
                 reference_type=None,
                 reference_id=None,
                 user_login=None,
-                source_repo='github.com/gardener/a-foo-bar',
-                cn_current_repo=self.cn_current_repo
             ),
-            ReleaseNoteBlock(
-                category_id='noteworthy',
-                target_group_id='operator',
+            release_note_block_with_defaults(
                 text='first line4\n*italic*',  # no bullet point, just italic
                 reference_type=None,
                 reference_id=None,
                 user_login=None,
-                source_repo='github.com/gardener/a-foo-bar',
-                cn_current_repo=self.cn_current_repo
             )
         ]
 
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
-            '# [a-foo-bar]\n'\
-            '## Most notable changes\n'\
-            '* *[OPERATOR]* first line1\n'\
+            '# [current-repo]\n'\
+            '## Improvements\n'\
+            '* *[USER]* first line1\n'\
             '  * second line1\n'\
-            '* *[OPERATOR]* first line2\n'\
+            '* *[USER]* first line2\n'\
             '  * second line2\n'\
-            '* *[OPERATOR]* first line3\n'\
+            '* *[USER]* first line3\n'\
             '  * second line3\n'\
-            '* *[OPERATOR]* first line4\n'\
+            '* *[USER]* first line4\n'\
             '  * *italic*'
+        self.assertEqual(expected_md_str, actual_md_str)
+
+    def test_render_categories(self):
+        release_note_objs = [
+            release_note_block_with_defaults(
+                category_id=CATEGORY_IMPROVEMENT_ID,
+                text='improvement release note',
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+            ),
+            release_note_block_with_defaults(
+                category_id=CATEGORY_NOTEWORTHY_ID,
+                text='noteworthy release note',
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+            ),
+        ]
+
+        actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
+        expected_md_str = \
+            '# [current-repo]\n'\
+            '## Most notable changes\n'\
+            '* *[USER]* noteworthy release note\n'\
+            '## Improvements\n'\
+            '* *[USER]* improvement release note'
+        self.assertEqual(expected_md_str, actual_md_str)
+
+    def test_render_target_group(self):
+        release_note_objs = [
+            release_note_block_with_defaults(
+                target_group_id=TARGET_GROUP_USER_ID,
+                text='user release note',
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+            ),
+            release_note_block_with_defaults(
+                target_group_id=TARGET_GROUP_OPERATOR_ID,
+                text='operator release note',
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+            ),
+        ]
+
+        actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
+        expected_md_str = \
+            '# [current-repo]\n'\
+            '## Improvements\n'\
+            '* *[USER]* user release note\n'\
+            '* *[OPERATOR]* operator release note'
         self.assertEqual(expected_md_str, actual_md_str)
 
     def test_get_or_call(self):
