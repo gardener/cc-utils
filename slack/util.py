@@ -24,43 +24,43 @@ except ModuleNotFoundError:
 from slackclient import SlackClient
 from pydash import _
 
-from util import warning, info
+from util import info
 from model.slack import SlackConfig
 
 
 class SlackHelper(object):
-  def __init__(
-          self,
-          slack_cfg: SlackConfig
-      ):
-      self.slack_cfg = slack_cfg
+    def __init__(
+            self,
+            slack_cfg: SlackConfig
+    ):
+        self.slack_cfg = slack_cfg
 
-  def post_to_slack(
-      self,
-      channel: str,
-      title: str,
-      message: str,
-      filtetype: str='post'
-  ):
-      api_token = self.slack_cfg.api_token()
+    def post_to_slack(
+        self,
+        channel: str,
+        title: str,
+        message: str,
+        filtetype: str='post'
+    ):
+        api_token = self.slack_cfg.api_token()
 
-      if not api_token:
-          warning("can't post to slack as there is no slack api token in config")
-      else:
-          info('posting message "{title}" to slack channel {c}'.format(title=title, c=channel))
-          client = SlackClient(token=api_token)
-          # We expect rather long messages, so we do not use incoming webhooks etc. to post
-          # messages as those get truncated, see
-          # https://api.slack.com/changelog/2018-04-truncating-really-long-messages
-          # Instead we use the file upload mechanism so that this limit does not apply.
-          result = client.api_call(
-              "files.upload",
-              channels=channel,
-              file=(title, message),
-              title=title,
-              filetype=filtetype
-          )
-          if not _.get(result, 'ok', False):
+        if not api_token:
+            raise RuntimeError("can't post to slack as there is no slack api token in config")
+
+        info('posting message "{title}" to slack channel {c}'.format(title=title, c=channel))
+        client = SlackClient(token=api_token)
+        # We expect rather long messages, so we do not use incoming webhooks etc. to post
+        # messages as those get truncated, see
+        # https://api.slack.com/changelog/2018-04-truncating-really-long-messages
+        # Instead we use the file upload mechanism so that this limit does not apply.
+        result = client.api_call(
+            "files.upload",
+            channels=channel,
+            file=(title, message),
+            title=title,
+            filetype=filtetype
+        )
+        if not _.get(result, 'ok', False):
             raise RuntimeError('failed to post to slack channel {c}: {err}'.format(
                 c=channel,
                 err=_.get(result, 'error')
