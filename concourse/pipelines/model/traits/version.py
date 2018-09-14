@@ -32,7 +32,8 @@ class VersionTrait(Trait):
         'inject-commit-hash',
         'noop',
         'use-branch-name',
-}
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
