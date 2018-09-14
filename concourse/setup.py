@@ -31,9 +31,6 @@ import kubeutil
 import concourse.client as client
 
 from model import (
-    SecretsServerConfig,
-    TlsConfig,
-    KubernetesConfig,
     NamedModelElement,
 )
 from model.concourse import (
@@ -41,6 +38,15 @@ from model.concourse import (
 )
 from model.container_registry import (
     GcrCredentials,
+)
+from model.tls import (
+    TlsConfig,
+)
+from model.kubernetes import (
+    KubernetesConfig,
+)
+from model.secrets_server import (
+    SecretsServerConfig,
 )
 from util import (
     ctx as global_ctx,

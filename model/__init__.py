@@ -144,7 +144,12 @@ class ConfigFactory(object):
             for m in pkgutil.iter_modules(own_module.__path__)
         ]
         for module_name in [__name__] + submodule_names:
-            module = sys.modules[module_name]
+            submodule_name = module_name.split('.')[-1]
+            if module_name != __name__:
+                module = getattr(__import__(module_name), submodule_name)
+            else:
+                module = sys.modules[submodule_name]
+
             # skip if module does not define our type
             if not hasattr(module, cfg_type.cfg_type()):
                 continue
@@ -395,133 +400,3 @@ class ConfigurationSet(NamedModelElement):
 
             return factory_method(cfg_name=cfg_name)
         return get_default_element
-
-
-class ProtecodeConfig(NamedModelElement):
-    '''
-    Not intended to be instantiated by users of this module
-    '''
-
-    def credentials(self):
-        return ProtecodeCredentials(self.raw.get('credentials'))
-
-    def api_url(self):
-        return self.raw.get('api_url')
-
-    def tls_verify(self):
-        return self.raw.get('tls_verify', True)
-
-
-class ProtecodeCredentials(BasicCredentials):
-    pass
-
-
-class AwsProfile(NamedModelElement):
-    def region(self):
-        return self.raw.get('region')
-
-    def access_key_id(self):
-        return self.raw.get('aws_access_key_id')
-
-    def secret_access_key(self):
-        return self.raw.get('aws_secret_access_key')
-
-    def _required_attributes(self):
-        return ['region','access_key_id','secret_access_key']
-
-
-class EmailConfig(NamedModelElement):
-    '''
-    Not intended to be instantiated by users of this module
-    '''
-
-    def smtp_host(self):
-        return self.raw.get('host')
-
-    def smtp_port(self):
-        return self.raw.get('port')
-
-    def use_tls(self):
-        return self.raw.get('use_tls')
-
-    def sender_name(self):
-        return self.raw.get('sender_name')
-
-    def credentials(self):
-        return EmailCredentials(self.raw.get('credentials'))
-
-    def _required_attributes(self):
-        return ['host', 'port', 'credentials']
-
-    def _validate_dict(self):
-        super()._validate_dict()
-        # ensure credentials are valid - validation implicitly happens in the constructor.
-        self.credentials()
-
-
-class EmailCredentials(BasicCredentials):
-    '''
-    Not intended to be instantiated by users of this module
-    '''
-    pass
-
-
-class KubernetesConfig(NamedModelElement):
-    def kubeconfig(self):
-        return self.raw.get('kubeconfig')
-
-    def cluster_version(self):
-        return self.raw.get('version')
-
-
-class SecretsServerConfig(NamedModelElement):
-    def namespace(self):
-        return self.raw.get('namespace')
-
-    def service_name(self):
-        return self.raw.get('service_name')
-
-    def endpoint_url(self):
-        return 'http://{sn}.{ns}.svc.cluster.local'.format(
-            sn=self.service_name(),
-            ns=self.namespace(),
-        )
-
-    def secrets(self):
-        return SecretsServerSecrets(raw_dict=self.raw['secrets'])
-
-
-class SecretsServerSecrets(ModelBase):
-    def concourse_secret_name(self):
-        return self.raw.get('concourse_config').get('name')
-
-    def concourse_attribute(self):
-        return self.raw.get('concourse_config').get('attribute')
-
-    def cfg_set_names(self):
-        return self.raw['cfg_sets']
-
-
-class TlsConfig(NamedModelElement):
-    def private_key(self):
-        return self.raw.get('private_key')
-
-    def certificate(self):
-        return self.raw.get('certificate')
-
-    def set_private_key(self, private_key: str):
-        self.raw['private_key'] = private_key
-
-    def set_certificate(self, certificate: str):
-        self.raw['certificate'] = certificate
-
-    def _required_attributes(self):
-        return ['private_key', 'certificate']
-
-
-class SlackConfig(NamedModelElement):
-    def api_token(self):
-        return self.raw.get('api_token')
-
-    def _required_attributes(self):
-        return ['api_token']

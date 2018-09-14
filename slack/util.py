@@ -25,7 +25,7 @@ from slackclient import SlackClient
 from pydash import _
 
 from util import warning, info
-from model import SlackConfig
+from model.slack import SlackConfig
 
 
 class SlackHelper(object):

@@ -17,7 +17,7 @@ import git
 import smtplib
 import typing
 
-from model import EmailConfig
+from model.email import EmailConfig
 from util import (
     existing_dir,
     not_empty,
