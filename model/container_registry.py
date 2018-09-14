@@ -18,6 +18,8 @@ from model.base import (
     NamedModelElement,
 )
 
+from util import check_type
+
 
 class ContainerRegistryConfig(NamedModelElement):
     '''

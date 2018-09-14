@@ -20,7 +20,6 @@ import json
 import pkgutil
 
 from model.base import (
-    BasicCredentials,
     ConfigElementNotFoundError,
     ModelBase,
     NamedModelElement,
@@ -30,7 +29,6 @@ from util import (
     existing_dir,
     not_none,
     not_empty,
-    check_type,
 )
 
 '''
