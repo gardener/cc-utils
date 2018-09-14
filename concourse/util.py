@@ -19,7 +19,7 @@ from copy import copy
 import github.webhook
 from github.util import _create_github_api_object
 import concourse.client as concourse
-from model import (
+from model.github import (
     GithubConfig,
 )
 from model.concourse import (

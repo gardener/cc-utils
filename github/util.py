@@ -36,7 +36,8 @@ import util
 
 from http_requests import mount_default_adapter
 from product.model import ComponentReference
-from model import ConfigFactory, GithubConfig
+from model import ConfigFactory
+from model.github import GithubConfig
 
 
 class RepoPermission(enum.Enum):

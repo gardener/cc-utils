@@ -19,8 +19,6 @@ import sys
 import json
 import pkgutil
 
-from urllib.parse import urlparse
-
 from model.base import (
     BasicCredentials,
     ConfigElementNotFoundError,
@@ -397,70 +395,6 @@ class ConfigurationSet(NamedModelElement):
 
             return factory_method(cfg_name=cfg_name)
         return get_default_element
-
-
-class GithubConfig(NamedModelElement):
-    '''
-    Not intended to be instantiated by users of this module
-    '''
-
-    def ssh_url(self):
-        return self.raw.get('sshUrl')
-
-    def http_url(self):
-        return self.raw.get('httpUrl')
-
-    def api_url(self):
-        return self.raw.get('apiUrl')
-
-    def tls_validation(self):
-        return not self.raw.get('disable_tls_validation')
-
-    def webhook_secret(self):
-        return self.raw.get('webhook_token')
-
-    def credentials(self):
-        return GithubCredentials(self.raw.get('technicalUser'))
-
-    def matches_hostname(self, host_name):
-        return host_name.lower() == urlparse(self.http_url()).hostname.lower()
-
-    def _required_attributes(self):
-        return [
-            'sshUrl',
-            'httpUrl',
-            'apiUrl',
-            'disable_tls_validation',
-            'webhook_token',
-            'technicalUser'
-        ]
-
-    def _validate_dict(self):
-        super()._validate_dict()
-        # validation of credentials implicitly happens in the constructor
-        self.credentials()
-
-
-class GithubCredentials(BasicCredentials):
-    '''
-    Not intended to be instantiated by users of this module
-    '''
-
-    def auth_token(self):
-        return self.raw.get('authToken')
-
-    def set_auth_token(self, auth_token):
-        self.raw['authToken'] = auth_token
-
-    def private_key(self):
-        return self.raw.get('privateKey')
-
-    def email_address(self):
-        return self.raw.get('emailAddress')
-
-    def _required_attributes(self):
-        required_attribs = set(super()._required_attributes())
-        return required_attribs | set(('authToken','privateKey'))
 
 
 class ContainerRegistryConfig(NamedModelElement):
