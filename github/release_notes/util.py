@@ -63,16 +63,19 @@ def rls_notes_as_markdown_and_post_to_slack(
     if post_to_slack:
         # slack can't auto link pull requests, commits or users
         # hence we force the link generation when building the markdown string
-        release_notes_md_links =  release_notes.to_markdown(
+        release_notes_md_links = release_notes.to_markdown(
             force_link_generation=True
         )
         title = '[{n}] {v} released'.format(n=github_repository_name, v=release_version)
         slack_cfg = ctx().cfg_factory().slack(slack_cfg_name)
-        SlackHelper(slack_cfg).post_to_slack(
-            channel=slack_channel,
-            title=title,
-            message=release_notes_md_links
-        )
+        try:
+            SlackHelper(slack_cfg).post_to_slack(
+                channel=slack_channel,
+                title=title,
+                message=release_notes_md_links
+            )
+        except RuntimeError as e:
+            warning(e)
 
     release_notes_md =  release_notes.to_markdown()
     return release_notes_md
