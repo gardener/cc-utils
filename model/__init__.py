@@ -137,9 +137,21 @@ class ConfigFactory(object):
         # retrieve model class c'tor - search module and sub-modules
         # TODO: switch to fully-qualified type names
         own_module = sys.modules[__name__]
+
+        # python3.5 returns a three-tuple; python3.6+ returns a ModuleInfo
+        if sys.version_info.minor <= 5:
+            class ModuleInfo(object):
+                def __init__(self, module_tuple):
+                    self.path, self.name, _ = module_tuple
+            def to_module_info(mi):
+                return ModuleInfo(mi)
+        else:
+            def to_module_info(mi):
+                return mi
+
         submodule_names = [
             own_module.__name__ + '.' + m.name
-            for m in pkgutil.iter_modules(own_module.__path__)
+            for m in map(to_module_info, pkgutil.iter_modules(own_module.__path__))
         ]
         for module_name in [__name__] + submodule_names:
             submodule_name = module_name.split('.')[-1]
