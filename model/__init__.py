@@ -143,6 +143,7 @@ class ConfigFactory(object):
             class ModuleInfo(object):
                 def __init__(self, module_tuple):
                     self.path, self.name, _ = module_tuple
+
             def to_module_info(mi):
                 return ModuleInfo(mi)
         else:
