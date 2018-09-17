@@ -74,8 +74,13 @@ def sync_webhooks(
     )
     # group by repositories
     path_to_resources = {}
+    allowed_github_orgs = [
+        github_org.org_name() for github_org in job_mapping.github_organisations()
+    ]
     for gh_res in github_resources:
         repo_path = gh_res.github_source().repo_path()
+        if gh_res.github_source().parse_organisation() not in allowed_github_orgs:
+            continue
         if repo_path not in path_to_resources:
             path_to_resources[repo_path] = [gh_res]
         else:
