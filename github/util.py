@@ -86,11 +86,20 @@ class RepositoryHelperBase(object):
         self.default_branch = default_branch
 
     def _create_repository(self, owner: str, name: str):
-        repository = self.github.repository(
-                owner=owner,
-                repository=name
-        )
-        return repository
+        try:
+            repository = self.github.repository(
+                    owner=owner,
+                    repository=name
+            )
+            return repository
+        except NotFoundError as nfe:
+            raise RuntimeError(
+                'failed to retrieve repository {o}/{r}'.format(
+                    o=owner,
+                    r=name,
+                ),
+                nfe
+            )
 
 
 class UpgradePullRequest(object):
