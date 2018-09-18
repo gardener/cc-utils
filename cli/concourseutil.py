@@ -245,7 +245,7 @@ def render_pipelines(
 
     deployer = FilesystemDeployer(base_dir=out_dir)
 
-    result_processor = ReplicationResultProcessor(cfg_set=config_set)
+    result_processor = ReplicationResultProcessor(cfg_set=config_set, notify_owners=False)
 
     replicator = PipelineReplicator(
         definition_enumerators=def_enumerators,

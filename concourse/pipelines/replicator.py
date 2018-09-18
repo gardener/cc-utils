@@ -325,8 +325,9 @@ class ConcourseDeployer(DefinitionDeployer):
 
 
 class ReplicationResultProcessor(object):
-    def __init__(self, cfg_set):
+    def __init__(self, cfg_set, notify_owners=True):
         self._cfg_set = cfg_set
+        self._notify_owners = notify_owners
 
     def process_results(self, results):
         # collect pipelines by concourse target (concourse_cfg, team_name) as key
@@ -385,16 +386,19 @@ class ReplicationResultProcessor(object):
         )
 
         all_notifications_succeeded = True
-        for failed_descriptor in failed_descriptors:
-            warning(failed_descriptor.definition_descriptor.pipeline_name)
-            try:
-                self._notify_broken_definition_owners(failed_descriptor)
-            except Exception:
-                warning('an error occurred whilst trying to send error notifications')
-                traceback.print_exc()
-                all_notifications_succeeded = False
+        if self._notify_owners:
+            # signall error only if error notifications failed
+            for failed_descriptor in failed_descriptors:
+                warning(failed_descriptor.definition_descriptor.pipeline_name)
+                try:
+                    self._notify_broken_definition_owners(failed_descriptor)
+                except Exception:
+                    warning('an error occurred whilst trying to send error notifications')
+                    traceback.print_exc()
+                    all_notifications_succeeded = False
+        else:
+            all_notifications_succeeded = False
 
-        # signall error only if error notifications failed
         return all_notifications_succeeded
 
     def _notify_broken_definition_owners(self, failed_descriptor):
