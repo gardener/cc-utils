@@ -30,6 +30,21 @@ class DraftReleaseTrait(Trait):
     def transformer(self):
         return DraftReleaseTraitTransformer()
 
+    def _defaults_dict(self):
+        return {
+            'preprocess': 'finalize',
+        }
+
+    def _preprocess(self):
+        return self.raw['preprocess']
+
+    def validate(self):
+        super().validate()
+        if self._preprocess() != 'finalize':
+            raise ModelValidationError(
+                "Only 'finalize' is supported as value for 'preprocess' in draft_release trait"
+            )
+
 
 class DraftReleaseTraitTransformer(TraitTransformer):
     name = 'draft_release'
