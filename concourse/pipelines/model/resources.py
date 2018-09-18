@@ -183,7 +183,7 @@ class RepositoryConfig(Resource):
             'force_push': False,
             'trigger_paths': {
                 'include': [],
-                'exclude': ['.ci/pipeline_definitions'],
+                'exclude': [],
             },
             'name': 'source',
 
