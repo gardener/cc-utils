@@ -31,7 +31,8 @@ import product.model
 from github.release_notes.util import (
     ReleaseNotes,
     rls_notes_as_markdown_and_post_to_slack,
-    github_repo_path
+    github_repo_path,
+    draft_release_name_for_version,
 )
 
 
@@ -209,10 +210,6 @@ def release_and_prepare_next_dev_cycle(
         file_contents=next_version_dev,
         commit_message="Prepare next dev cycle " + next_version_dev
     )
-
-
-def draft_release_name_for_version(release_version: str):
-    return "{v}-draft".format(v=release_version)
 
 
 def create_or_update_draft_release(

@@ -450,3 +450,7 @@ def release_note_block(
             source_repo=source_repo,
             cn_current_repo=cn_current_repo
         )
+
+
+def draft_release_name_for_version(release_version: str):
+    return "{v}-draft".format(v=release_version)
