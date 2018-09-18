@@ -344,7 +344,7 @@ def fetch_release_notes_from_prs(
             text=pr_dict['body'],
             user_login=_.get(pr_dict, 'user.login'),
             cn_current_repo=cn_current_repo,
-            reference_type=ref_type_pull_request
+            reference_type=REF_TYPE_PULL_REQUEST
         )
         if not release_notes_pr:
             continue
