@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from functools import partial
-from urllib.parse import urlencode, quote
+from urllib.parse import urlencode, quote_plus
 import json
 import time
 from typing import List
@@ -60,7 +60,7 @@ class ProtecodeApiRoutes(object):
         return self._api_url('groups')
 
     def upload(self, file_name):
-        return self._api_url('upload', quote(file_name))
+        return self._api_url('upload', quote_plus(file_name))
 
     def product(self, product_id: int):
         return self._api_url('product', str(product_id))
