@@ -135,7 +135,7 @@ class ProtecodeUtil(object):
                 application_name=self._upload_name(
                     container_image=container_image,
                     component=component
-                ),
+                ).replace('/', '_'),
                 group_id=self._group_id,
                 data=image_data_fh,
                 custom_attribs=metadata,
