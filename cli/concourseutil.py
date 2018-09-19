@@ -163,9 +163,9 @@ def update_certificate(
 def render_pipeline(
     definition_file: CliHints.existing_file(),
     template_path: CliHints.existing_dir(),
-    template_include_dir: CliHints.existing_dir(),
     cfg_name: str,
     out_dir: CliHints.existing_dir(),
+    template_include_dir: str=None,
 ):
     cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(cfg_name=cfg_name)
@@ -181,6 +181,9 @@ def render_pipeline(
     ]
 
     preprocessor = DefinitionDescriptorPreprocessor()
+
+    if not template_include_dir:
+        template_include_dir = template_path
 
     template_retriever = TemplateRetriever(template_path=template_path)
     renderer = Renderer(
