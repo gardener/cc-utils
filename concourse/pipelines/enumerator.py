@@ -135,7 +135,7 @@ class SimpleFileDefinitionEnumerator(DefinitionEnumerator):
         self.repo_host = repo_host
         self.cfg_set = cfg_set
         import model
-        self.job_mapping = model.JobMapping(
+        self.job_mapping = model.concourse.JobMapping(
             name='dummy',
             raw_dict={'concourse_target_team': 'dummy'},
         )
