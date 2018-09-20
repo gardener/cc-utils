@@ -68,6 +68,9 @@ class ProtecodeApiRoutes(object):
     def product_custom_data(self, product_id: int):
         return self._api_url('product', str(product_id), 'custom-data')
 
+    def rescan(self, product_id):
+        return self._api_url('product', str(product_id), 'rescan')
+
     # ---- "rest" routes (undocumented API)
 
     def scans(self, product_id: int):
