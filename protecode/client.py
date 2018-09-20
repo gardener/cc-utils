@@ -237,6 +237,12 @@ class ProtecodeApi(object):
             headers={'Content-Type': 'application/json'},
         )
 
+    def rescan(self, product_id: int):
+        url = self._routes.rescan(product_id)
+        self._post(
+            url=url,
+        )
+
 
 def from_cfg(protecode_cfg):
     not_none(protecode_cfg)
