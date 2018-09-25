@@ -114,13 +114,13 @@ def release_and_prepare_next_dev_cycle(
     repository_branch: str,
     repository_version_file_path: str,
     release_version: str,
+    repo_dir: CliHints.existing_dir(),
     version_operation: str="bump_minor",
     prerelease_suffix: str="dev",
     author_name: str="gardener-ci",
     author_email: str="gardener.ci.user@gmail.com",
     component_descriptor_file_path: str=None,
     should_generate_release_notes: bool=True,
-    repo_dir: str=None,
     slack_cfg_name: str=None,
     slack_channel: str=None
 ):
