@@ -168,11 +168,6 @@ def release_and_prepare_next_dev_cycle(
         prerelease=prerelease_suffix
     )
 
-    draft_name = draft_release_name_for_version(release_version)
-    draft_release = helper.draft_release_with_name(draft_name)
-    if draft_release:
-        verbose('cleaning up draft release {name}'.format(name=draft_release.name))
-        draft_release.delete()
 
     github_repo_path = f'{github_repository_owner}/{github_repository_name}'
 
@@ -217,6 +212,12 @@ def release_and_prepare_next_dev_cycle(
         file_contents=next_version_dev,
         commit_message="Prepare next dev cycle " + next_version_dev
     )
+
+    draft_name = draft_release_name_for_version(release_version)
+    draft_release = helper.draft_release_with_name(draft_name)
+    if draft_release:
+        verbose('cleaning up draft release {name}'.format(name=draft_release.name))
+        draft_release.delete()
 
 def _create_and_push_release_commit(
         github_cfg,
