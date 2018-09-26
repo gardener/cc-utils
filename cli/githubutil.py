@@ -14,10 +14,11 @@
 # limitations under the License.
 
 import version
+import pathlib
 from urllib.parse import urlparse, parse_qs
 from github3.exceptions import NotFoundError
 
-from util import ctx, info, warning, fail, verbose, CliHint, CliHints
+from util import ctx, info, warning, fail, not_none, verbose, CliHint, CliHints
 from gitutil import GitHelper
 from github.webhook import GithubWebHookSyncer, WebhookQueryAttributes
 from github.util import (
@@ -173,12 +174,18 @@ def release_and_prepare_next_dev_cycle(
         verbose('cleaning up draft release {name}'.format(name=draft_release.name))
         draft_release.delete()
 
-    # Persist version change, create release commit
-    release_commit_sha = helper.create_or_update_file(
-        file_path=repository_version_file_path,
-        file_contents=release_version,
-        commit_message="Release " + release_version
+    github_repo_path = f'{github_repository_owner}/{github_repository_name}'
+
+    release_commit_sha = _create_and_push_release_commit(
+        github_cfg=github_cfg,
+        github_repo_path=github_repo_path,
+        repo_dir=repo_dir,
+        version_file_path=repository_version_file_path,
+        release_version=release_version,
+        target_ref=repository_branch,
+        commit_msg=f'Release {release_version}',
     )
+
     helper.create_tag(
         tag_name=release_version,
         tag_message="Release " + release_version,
@@ -210,6 +217,50 @@ def release_and_prepare_next_dev_cycle(
         file_contents=next_version_dev,
         commit_message="Prepare next dev cycle " + next_version_dev
     )
+
+def _create_and_push_release_commit(
+        github_cfg,
+        github_repo_path: str,
+        repo_dir: str,
+        version_file_path: str,
+        release_version: str,
+        target_ref: str,
+        commit_msg: str,
+    ):
+    not_none(github_cfg)
+
+    git_helper = GitHelper(
+        repo=repo_dir,
+        github_cfg=github_cfg,
+        github_repo_path=github_repo_path,
+    )
+
+
+    try:
+        # clean repository if required
+        worktree_dirty = bool(git_helper._changed_file_paths())
+        if worktree_dirty:
+            git_helper._stash_changes()
+
+        # update version file
+        version_file = pathlib.Path(version_file_path)
+        version_file.write_text(release_version)
+
+        release_commit = git_helper.index_to_commit(message=commit_msg)
+
+        # forward head to new commit
+        git_helper.repo.head.set_commit(release_commit.hexsha)
+
+        git_helper.push(
+            from_ref=release_commit.hexsha,
+            to_ref=target_ref,
+            use_ssh=True,
+        )
+    finally:
+        if worktree_dirty:
+            git_helper._pop_stash()
+
+    return release_commit.hexsha
 
 
 def release_note_blocks_cli(
