@@ -261,6 +261,7 @@ def _create_and_push_release_commit(
 
         callback_env = os.environ.copy()
         callback_env['REPO_DIR'] = repo_dir
+        callback_env['EFFECTIVE_VERSION'] = release_version
 
         subprocess.run(
             [release_commit_callback],
