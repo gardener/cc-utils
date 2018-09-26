@@ -243,7 +243,7 @@ def _create_and_push_release_commit(
             git_helper._stash_changes()
 
         # update version file
-        version_file = pathlib.Path(version_file_path)
+        version_file = pathlib.Path(repo_dir, version_file_path)
         version_file.write_text(release_version)
 
         release_commit = git_helper.index_to_commit(message=commit_msg)
