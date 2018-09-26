@@ -99,13 +99,15 @@ def load_config():
     home_config = load_config_from_user_home()
     env_config = load_config_from_env()
     merged = util.merge_dicts(home_config, env_config)
+    cli_cfg = load_config_from_args()
+    merged = util.merge_dicts(merged, cli_cfg)
     add_config_source(merged)
 
 
-load_config()
-
-
 def load_config_from_args():
+    if not args:
+        return {}
+
     context_config = {}
     if args.cfg_dir is not None:
         context_config['cfg-dir'] = args.cfg_dir
@@ -113,6 +115,9 @@ def load_config_from_args():
     return {
         'ctx': context_config,
     }
+
+
+load_config()
 
 
 def _cfg_factory_from_dir():
