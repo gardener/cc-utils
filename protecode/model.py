@@ -81,3 +81,19 @@ class Vulnerability(ModelBase):
 class ScanResult(ModelBase):
     def name(self):
         return self.raw.get('name')
+
+    def is_stale(self) -> bool:
+        '''
+        Returns a boolean value indicating whether or not the stored scan result
+        has become "stale" (meaning that a rescan would potentially return different
+        results).
+        '''
+        return self.raw.get('is_stale')
+
+    def has_binary(self) -> bool:
+        '''
+        Returns a boolean value indicating whether or not the uploaded file is still present.
+        In case the uploaded file is no longer present, it needs to be re-uploaded prior to
+        rescanning.
+        '''
+        return self.raw.get('has_binary')
