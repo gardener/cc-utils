@@ -13,12 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import version
 import pathlib
+import subprocess
+
 from urllib.parse import urlparse, parse_qs
 from github3.exceptions import NotFoundError
 
-from util import ctx, info, warning, fail, not_none, verbose, CliHint, CliHints
+from util import (
+    CliHint,
+    CliHints,
+    ctx,
+    existing_file,
+    fail,
+    info,
+    not_none,
+    verbose,
+    warning,
+)
 from gitutil import GitHelper
 from github.webhook import GithubWebHookSyncer, WebhookQueryAttributes
 from github.util import (
@@ -116,6 +129,7 @@ def release_and_prepare_next_dev_cycle(
     repository_version_file_path: str,
     release_version: str,
     repo_dir: CliHints.existing_dir(),
+    release_commit_callback: str=None,
     version_operation: str="bump_minor",
     prerelease_suffix: str="dev",
     author_name: str="gardener-ci",
@@ -178,6 +192,7 @@ def release_and_prepare_next_dev_cycle(
         release_version=release_version,
         target_ref=repository_branch,
         commit_msg=f'Release {release_version}',
+        release_commit_callback=release_commit_callback,
     )
 
     helper.create_tag(
@@ -227,14 +242,32 @@ def _create_and_push_release_commit(
         release_version: str,
         target_ref: str,
         commit_msg: str,
+        release_commit_callback: str=None,
     ):
     not_none(github_cfg)
+    if release_commit_callback:
+        existing_file(release_commit_callback)
 
     git_helper = GitHelper(
         repo=repo_dir,
         github_cfg=github_cfg,
         github_repo_path=github_repo_path,
     )
+
+
+    def invoke_release_callback():
+        if not release_commit_callback:
+            return # early exit if optional callback is absent
+
+        callback_env = os.environ.copy()
+        callback_env['REPO_DIR'] = repo_dir
+
+        subprocess.run(
+            [release_commit_callback],
+            check=True,
+            env=callback_env,
+        )
+
 
     try:
         # clean repository if required
@@ -245,6 +278,9 @@ def _create_and_push_release_commit(
         # update version file
         version_file = pathlib.Path(repo_dir, version_file_path)
         version_file.write_text(release_version)
+
+        # call optional release commit callback
+        invoke_release_callback()
 
         release_commit = git_helper.index_to_commit(message=commit_msg)
 
