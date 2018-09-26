@@ -13,12 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import functools
 import os
 import subprocess
 import urllib.parse
 from pydash import _
 
 import git
+import git.objects.util
 
 from util import not_empty, not_none, existing_dir, fail, random_str, urljoin
 
@@ -62,7 +64,21 @@ class GitHelper(object):
         # add all changes
         git.cmd.Git(self.repo.working_tree_dir).add('.')
         tree = self.repo.index.write_tree()
-        commit = git.Commit.create_from_tree(
+
+        if self.github_cfg:
+            credentials = self.github_cfg.credentials()
+            author = git.objects.util.Actor(credentials.username(), credentials.email_address())
+            committer = git.objects.util.Actor(credentials.username(), credentials.email_address())
+
+            create_commit = functools.partial(
+                git.Commit.create_from_tree,
+                author=author,
+                committer=committer,
+            )
+        else:
+            create_commit = git.Commit.create_from_tree
+
+        commit = create_commit(
             repo=self.repo,
             tree=tree,
             parent_commits=parent_commits,
