@@ -246,6 +246,7 @@ def _create_and_push_release_commit(
     ):
     not_none(github_cfg)
     if release_commit_callback:
+        release_commit_callback = os.path.join(repo_dir, release_commit_callback)
         existing_file(release_commit_callback)
 
     git_helper = GitHelper(
