@@ -31,6 +31,7 @@ default_http_adapter = HTTPAdapter(
         status_forcelist=[500, 502, 503],
         raise_on_status=False,
         respect_retry_after_header=True,
+        backoff_factor=1.0,
     )
 )
 
