@@ -71,6 +71,12 @@ class GitHelper(object):
         self.repo.index.reset()
         return commit
 
+    def _stash_changes(self):
+        self.repo.git.stash('--include-untracked', '--quiet')
+
+    def _pop_stash(self):
+        self.repo.git.stash('pop', '--quiet')
+
     def push(self, from_ref, to_ref, use_ssh=False):
         if use_ssh:
             tmp_id = os.path.abspath('tmp.id_rsa')
