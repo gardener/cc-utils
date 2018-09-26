@@ -281,9 +281,9 @@ class ComponentDependencies(ModelBase):
 ## upload result model
 
 class UploadStatus(Enum):
-    SKIPPED_ALREADY_EXISTED = 1
-    UPLOADED_PENDING = 2
-    UPLOADED_DONE = 4
+    SKIPPED = 1
+    PENDING = 2
+    DONE = 4
 
 
 class UploadResult(object):

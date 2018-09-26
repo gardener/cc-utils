@@ -120,7 +120,7 @@ class ProtecodeUtil(object):
             if not image_changed:
                 # image reference did not change - early exit
                 return upload_result(
-                    status=UploadStatus.SKIPPED_ALREADY_EXISTED,
+                    status=UploadStatus.SKIPPED,
                     result=scan_result,
                 )
             else:
@@ -147,9 +147,9 @@ class ProtecodeUtil(object):
             result = self._api.wait_for_scan_result(product_id=result.product_id())
 
         if result.status() == ProcessingStatus.BUSY:
-            upload_status = UploadStatus.UPLOADED_PENDING
+            upload_status = UploadStatus.PENDING
         else:
-            upload_status = UploadStatus.UPLOADED_DONE
+            upload_status = UploadStatus.DONE
 
         return upload_result(
             status=upload_status,
