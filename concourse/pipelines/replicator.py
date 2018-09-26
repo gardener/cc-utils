@@ -435,6 +435,9 @@ class ReplicationResultProcessor(object):
             )
         )
         for pipeline_name in newly_deployed_pipeline_names:
+            info('unpausing new pipeline {p}'.format(p=pipeline_name))
+            concourse_api.unpause_pipeline(pipeline_name)
+
             info('triggering initial resource check for pipeline {p}'.format(p=pipeline_name))
             config = concourse_api.pipeline_cfg(pipeline_name=pipeline_name)
 
