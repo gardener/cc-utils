@@ -254,7 +254,6 @@ def _create_and_push_release_commit(
         github_repo_path=github_repo_path,
     )
 
-
     def invoke_release_callback():
         if not release_commit_callback:
             return # early exit if optional callback is absent
@@ -267,7 +266,6 @@ def _create_and_push_release_commit(
             check=True,
             env=callback_env,
         )
-
 
     try:
         # clean repository if required
