@@ -168,7 +168,6 @@ def release_and_prepare_next_dev_cycle(
         prerelease=prerelease_suffix
     )
 
-
     github_repo_path = f'{github_repository_owner}/{github_repository_name}'
 
     release_commit_sha = _create_and_push_release_commit(
@@ -219,6 +218,7 @@ def release_and_prepare_next_dev_cycle(
         verbose('cleaning up draft release {name}'.format(name=draft_release.name))
         draft_release.delete()
 
+
 def _create_and_push_release_commit(
         github_cfg,
         github_repo_path: str,
@@ -235,7 +235,6 @@ def _create_and_push_release_commit(
         github_cfg=github_cfg,
         github_repo_path=github_repo_path,
     )
-
 
     try:
         # clean repository if required
