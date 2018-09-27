@@ -20,8 +20,8 @@ import yaml
 from github.util import GitHubRepositoryHelper
 from util import fail, info
 from model import ConfigFactory
-from concourse.pipelines.replicator import Renderer, ConcourseDeployer, DeployStatus
-from concourse.pipelines.enumerator import (
+from concourse.replicator import Renderer, ConcourseDeployer, DeployStatus
+from concourse.enumerator import (
     DefinitionDescriptorPreprocessor,
     DefinitionDescriptor,
     TemplateRetriever,

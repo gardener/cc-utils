@@ -9,7 +9,7 @@ from concourse.pipelines.modelbase import (
         normalise_to_dict,
         not_none,
 )
-from concourse.pipelines.validator import PipelineDefinitionValidator
+from concourse.validator import PipelineDefinitionValidator
 from concourse.pipelines.model.job import JobVariant
 from concourse.pipelines.model.pipeline import PipelineDefinition
 from concourse.pipelines.model.resources import RepositoryConfig, ResourceRegistry

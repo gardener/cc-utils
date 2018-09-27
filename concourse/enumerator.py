@@ -38,7 +38,7 @@ from util import (
 from github.util import _create_github_api_object
 from model.concourse import JobMapping
 from model.base import ModelBase, NamedModelElement
-from concourse.pipelines.factory import RawPipelineDefinitionDescriptor
+from concourse.factory import RawPipelineDefinitionDescriptor
 
 
 class DefinitionDescriptorPreprocessor(object):

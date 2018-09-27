@@ -1,7 +1,7 @@
 import unittest
 
 from model.base import ModelValidationError
-from concourse.pipelines.factory import (
+from concourse.factory import (
     RawPipelineDefinitionDescriptor as DefDescriptor,
     DefinitionFactory
 )

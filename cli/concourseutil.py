@@ -29,14 +29,14 @@ import concourse.setup as setup
 
 from concourse import client
 from concourse.util import sync_webhooks
-from concourse.pipelines.enumerator import (
+from concourse.enumerator import (
     DefinitionDescriptorPreprocessor,
     GithubOrganisationDefinitionEnumerator,
     MappingfileDefinitionEnumerator,
     SimpleFileDefinitionEnumerator,
     TemplateRetriever,
 )
-from concourse.pipelines.replicator import (
+from concourse.replicator import (
     FilesystemDeployer,
     PipelineReplicator,
     Renderer,

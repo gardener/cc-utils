@@ -47,8 +47,8 @@ from github.util import (
 )
 from github.codeowners import CodeownersParser, CodeOwnerEntryResolver
 
-from concourse.pipelines.factory import DefinitionFactory, RawPipelineDefinitionDescriptor
-from concourse.pipelines.enumerator import (
+from concourse.factory import DefinitionFactory, RawPipelineDefinitionDescriptor
+from concourse.enumerator import (
     DefinitionDescriptorPreprocessor,
     TemplateRetriever,
     MappingfileDefinitionEnumerator,
