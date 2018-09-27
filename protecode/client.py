@@ -136,6 +136,11 @@ class ProtecodeApi(object):
         return self._request(requests.patch, *args, **kwargs)
 
     def _metadata_dict(self, custom_attributes):
+        '''
+        replaces "invalid" underscore characters (setting metadata fails silently if
+        those are present). Note: dash characters are implcitly converted to underscore
+        by protecode.
+        '''
         return {
             'META-' + str(k).replace('_', '-'): v
             for k,v in custom_attributes.items()
