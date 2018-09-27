@@ -28,12 +28,12 @@ class ProtecodeUtil(object):
         self._group_id = group_id
 
     def _image_ref_metadata(self, container_image):
-        return {'IMAGE_REFERENCE': container_image.image_reference()}
+        return {'image-reference': container_image.image_reference()}
 
     def _component_metadata(self, component, omit_version=True):
-        metadata = {'COMPONENT_NAME': component.name()}
+        metadata = {'component-name': component.name()}
         if not omit_version:
-            metadata['COMPONENT_VERSION'] = component.version()
+            metadata['component-version'] = component.version()
 
         return metadata
 
@@ -114,7 +114,7 @@ class ProtecodeUtil(object):
             # check if image version changed
 
             metadata = scan_result.custom_data()
-            image_reference = metadata.get('IMAGE_REFERENCE')
+            image_reference = metadata.get('image-reference')
             image_changed = image_reference != container_image.image_reference()
 
             if not image_changed:
