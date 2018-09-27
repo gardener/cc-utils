@@ -18,8 +18,8 @@ import toposort
 from concourse.pipelines.modelbase import (
     ModelBase,
     select_attr,
-    not_none,
 )
+from util import not_none
 from concourse.pipelines.model.resources import RepositoryConfig
 
 

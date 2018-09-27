@@ -22,7 +22,7 @@ import yaml
 from urllib.parse import urlunparse
 
 
-class Failure(RuntimeError):
+class Failure(RuntimeError, ValueError):
     pass
 
 

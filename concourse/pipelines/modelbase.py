@@ -21,12 +21,6 @@ import util
 from model.base import ModelValidationError
 
 
-def not_none(value):
-    if value is None:
-        raise ValueError('must not be none')
-    return value
-
-
 class ModelDefaultsMixin(object):
     def _defaults_dict(self):
         return {}
@@ -79,7 +73,7 @@ class ModelValidationMixin(object):
 
 class ModelBase(ModelDefaultsMixin, ModelValidationMixin):
     def __init__(self, raw_dict: dict):
-        not_none(raw_dict)
+        util.not_none(raw_dict)
 
         self._apply_defaults(raw_dict=raw_dict)
         self.custom_init(self.raw)
@@ -93,8 +87,8 @@ class ModelBase(ModelDefaultsMixin, ModelValidationMixin):
 
 class Trait(ModelBase):
     def __init__(self, name: str, variant_name: str, raw_dict: dict):
-        self.name = not_none(name)
-        self.variant_name = not_none(variant_name)
+        self.name = util.not_none(name)
+        self.variant_name = util.not_none(variant_name)
         super().__init__(raw_dict=raw_dict)
 
     @abstractmethod
@@ -109,7 +103,7 @@ class TraitTransformer(object):
     name = None # subclasses must overwrite
 
     def __init__(self):
-        not_none(self.name)
+        util.not_none(self.name)
 
     def inject_steps(self):
         return []

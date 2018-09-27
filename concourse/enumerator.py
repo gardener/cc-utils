@@ -15,10 +15,9 @@
 
 import os
 import re
-import concurrent.futures
+
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
-from itertools import chain
 from urllib.parse import urlparse
 import functools
 import yaml
@@ -27,7 +26,6 @@ from github3.exceptions import NotFoundError
 
 from util import (
     parse_yaml_file,
-    merge_dicts,
     info,
     fail,
     verbose,
@@ -36,7 +34,6 @@ from util import (
     not_none,
 )
 from github.util import _create_github_api_object
-from model.concourse import JobMapping
 from model.base import ModelBase, NamedModelElement
 from concourse.factory import RawPipelineDefinitionDescriptor
 

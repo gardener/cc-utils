@@ -2,12 +2,11 @@ from copy import deepcopy
 from itertools import chain
 import toposort
 
-from util import merge_dicts
+from util import merge_dicts, not_none
 from model.base import ModelValidationError
 from concourse.pipelines.model.step import PipelineStep
 from concourse.pipelines.modelbase import (
         normalise_to_dict,
-        not_none,
 )
 from concourse.validator import PipelineDefinitionValidator
 from concourse.pipelines.model.job import JobVariant

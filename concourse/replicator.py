@@ -13,34 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import sys
 
 from enum import Enum, IntEnum
-from copy import deepcopy
-import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
-import itertools
 import functools
 import traceback
 
-import argparse
 import mako.template
 
 from util import (
-    fail,
     warning,
     existing_dir,
-    existing_file,
-    not_empty,
     not_none,
     info,
-    is_yaml_file,
     merge_dicts,
     FluentIterable
 )
 from mailutil import _send_mail
 from github.util import (
-    branches,
     github_cfg_for_hostname,
     GitHubRepositoryHelper,
     _create_github_api_object,
@@ -56,7 +46,6 @@ from concourse.enumerator import (
 )
 
 from concourse import client
-from model.concourse import ConcourseTeamCredentials, ConcourseConfig
 
 
 def replicate_pipelines(
@@ -69,9 +58,6 @@ def replicate_pipelines(
     unpause_pipelines: bool=True,
     expose_pipelines: bool=True,
 ):
-    team_name = job_mapping.team_name()
-    team_credentials = concourse_cfg.team_credentials(team_name)
-
     definition_enumerators = [
         GithubOrganisationDefinitionEnumerator(
             job_mapping=job_mapping,
@@ -136,7 +122,7 @@ class Renderer(object):
                 definition_descriptor,
                 render_status=RenderStatus.SUCCEEDED,
             )
-        except Exception as e:
+        except Exception:
             warning('erroneous pipeline definition: ' + definition_descriptor.pipeline_name)
             traceback.print_exc()
             return RenderResult(
@@ -439,7 +425,6 @@ class ReplicationResultProcessor(object):
             concourse_api.unpause_pipeline(pipeline_name)
 
             info('triggering initial resource check for pipeline {p}'.format(p=pipeline_name))
-            config = concourse_api.pipeline_cfg(pipeline_name=pipeline_name)
 
             trigger_pipeline_resource_check = functools.partial(
                 concourse_api.trigger_resource_check,
