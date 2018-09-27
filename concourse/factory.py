@@ -5,7 +5,7 @@ import toposort
 from util import merge_dicts, not_none
 from model.base import ModelValidationError
 from concourse.pipelines.model.step import PipelineStep
-from concourse.pipelines.modelbase import (
+from concourse.pipelines.model.base import (
         normalise_to_dict,
 )
 from concourse.validator import PipelineDefinitionValidator

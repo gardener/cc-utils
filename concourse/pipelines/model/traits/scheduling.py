@@ -15,7 +15,7 @@
 
 from util import not_none
 
-from concourse.pipelines.modelbase import (
+from concourse.pipelines.model.base import (
   Trait,
   TraitTransformer,
 )

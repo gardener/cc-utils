@@ -15,7 +15,7 @@
 
 import os
 
-from concourse.pipelines.modelbase import ModelBase
+from concourse.pipelines.model.base import ModelBase
 from util import not_none
 
 

@@ -15,7 +15,7 @@
 
 from util import not_none
 
-from concourse.pipelines.modelbase import ModelValidationError
+from concourse.pipelines.model.base import ModelValidationError
 
 from .component_descriptor import ComponentDescriptorTrait
 from .cron import CronTrait

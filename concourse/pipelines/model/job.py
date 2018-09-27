@@ -15,7 +15,7 @@
 
 import toposort
 
-from concourse.pipelines.modelbase import (
+from concourse.pipelines.model.base import (
     ModelBase,
     select_attr,
 )
