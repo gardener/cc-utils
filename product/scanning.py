@@ -115,7 +115,7 @@ class ProtecodeUtil(object):
 
             metadata = scan_result.custom_data()
             image_reference = metadata.get('image-reference')
-            image_changed = image_reference != container_image.image_reference()
+            image_changed = image_reference == container_image.image_reference()
 
             if not image_changed:
                 # image reference did not change - early exit
