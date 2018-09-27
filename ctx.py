@@ -21,7 +21,7 @@ from pathlib import Path
 
 import util
 
-from concourse.pipelines.modelbase import ModelBase
+from model.base import ModelBase
 '''
 Execution context. Filled upon invocation of cli.py, read by submodules
 '''
