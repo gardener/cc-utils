@@ -135,10 +135,16 @@ class ProtecodeApi(object):
     def _patch(self, *args, **kwargs):
         return self._request(requests.patch, *args, **kwargs)
 
+    def _metadata_dict(self, custom_attributes):
+        return {
+            'META-' + str(k).replace('_', '-'): v
+            for k,v in custom_attributes.items()
+        }
+
     def upload(self, application_name, group_id, data, custom_attribs={}) -> AnalysisResult:
         url = self._routes.upload(file_name=application_name)
         headers = {'Group': str(group_id)}
-        headers.update({'META-' + k: v for k,v in custom_attribs.items()})
+        headers.update(self._metadata_dict(custom_attribs))
 
         result = self._put(
             url=url,
@@ -178,7 +184,7 @@ class ProtecodeApi(object):
 
     def set_metadata(self, product_id: int, custom_attribs: dict):
         url = self._routes.product_custom_data(product_id=product_id)
-        headers = {'META-' + str(key): str(value) for key, value in custom_attribs.items()}
+        headers = self._metadata_dict(custom_attribs)
 
         result = self._post(
             url=url,
