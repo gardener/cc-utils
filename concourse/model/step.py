@@ -19,7 +19,7 @@ import shlex
 
 import util
 
-from concourse.pipelines.model.base import (
+from concourse.model.base import (
     ModelBase,
     ModelValidationError,
     ScriptType,

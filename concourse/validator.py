@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from concourse.pipelines.model.pipeline import PipelineDefinition
-from concourse.pipelines.model.job import JobVariant
+from concourse.model.pipeline import PipelineDefinition
+from concourse.model.job import JobVariant
 
 
 class PipelineDefinitionValidator(object):

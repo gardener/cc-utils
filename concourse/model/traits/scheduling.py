@@ -12,3 +12,32 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from util import not_none
+
+from concourse.model.base import (
+  Trait,
+  TraitTransformer,
+)
+
+
+class SchedulingTrait(Trait):
+    def _defaults_dict(self):
+        return {
+            'suppress_parallel_execution': None,
+        }
+
+    # XXX: merge this with cron-trait
+    def transformer(self):
+        return SchedulingTraitTransformer()
+
+    def suppress_parallel_execution(self):
+        return self.raw.get('suppress_parallel_execution', None)
+
+
+class SchedulingTraitTransformer(TraitTransformer):
+    name = 'scheduling'
+
+    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
+        # no-op
+        pass

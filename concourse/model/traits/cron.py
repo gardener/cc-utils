@@ -15,7 +15,7 @@
 
 from util import not_none
 
-from concourse.pipelines.model.base import Trait, TraitTransformer
+from concourse.model.base import Trait, TraitTransformer
 
 
 class CronTrait(Trait):

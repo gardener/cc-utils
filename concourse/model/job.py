@@ -15,12 +15,12 @@
 
 import toposort
 
-from concourse.pipelines.model.base import (
+from concourse.model.base import (
     ModelBase,
     select_attr,
 )
 from util import not_none
-from concourse.pipelines.model.resources import RepositoryConfig
+from concourse.model.resources import RepositoryConfig
 
 
 class JobVariant(ModelBase):

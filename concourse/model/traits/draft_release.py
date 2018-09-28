@@ -15,8 +15,8 @@
 
 from util import not_none
 
-from concourse.pipelines.model.step import PipelineStep
-from concourse.pipelines.model.base import (
+from concourse.model.step import PipelineStep
+from concourse.model.base import (
   ScriptType,
   Trait,
   TraitTransformer

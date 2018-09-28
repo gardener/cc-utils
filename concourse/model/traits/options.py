@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from util import not_none
-from concourse.pipelines.model.base import Trait, TraitTransformer
+from concourse.model.base import Trait, TraitTransformer
 
 
 class OptionsTrait(Trait):

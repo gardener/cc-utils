@@ -4,15 +4,15 @@ import toposort
 
 from util import merge_dicts, not_none
 from model.base import ModelValidationError
-from concourse.pipelines.model.step import PipelineStep
-from concourse.pipelines.model.base import (
+from concourse.model.step import PipelineStep
+from concourse.model.base import (
         normalise_to_dict,
 )
 from concourse.validator import PipelineDefinitionValidator
-from concourse.pipelines.model.job import JobVariant
-from concourse.pipelines.model.pipeline import PipelineDefinition
-from concourse.pipelines.model.resources import RepositoryConfig, ResourceRegistry
-from concourse.pipelines.model.traits import TraitsFactory
+from concourse.model.job import JobVariant
+from concourse.model.pipeline import PipelineDefinition
+from concourse.model.resources import RepositoryConfig, ResourceRegistry
+from concourse.model.traits import TraitsFactory
 
 
 def ensure_dict(d, allow_empty=True):

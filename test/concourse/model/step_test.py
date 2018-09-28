@@ -17,7 +17,7 @@ import unittest
 
 import shlex
 
-from concourse.pipelines.model.step import PipelineStep
+from concourse.model.step import PipelineStep
 
 
 class PipelineStepTest(unittest.TestCase):

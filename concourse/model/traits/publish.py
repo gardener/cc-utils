@@ -16,8 +16,8 @@
 from util import not_none
 from model import NamedModelElement
 
-from concourse.pipelines.model.step import PipelineStep
-from concourse.pipelines.model.base import (
+from concourse.model.step import PipelineStep
+from concourse.model.base import (
   Trait,
   TraitTransformer,
   ModelValidationError,

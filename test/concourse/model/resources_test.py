@@ -1,6 +1,6 @@
 import unittest
 
-from concourse.pipelines.model.resources import ResourceIdentifier
+from concourse.model.resources import ResourceIdentifier
 
 
 class ResourceIdentifierTest(unittest.TestCase):

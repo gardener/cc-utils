@@ -16,7 +16,7 @@
 import unittest
 
 from model.base import ModelValidationError
-from concourse.pipelines.model.traits.slack import SlackTrait, ChannelConfig
+from concourse.model.traits.slack import SlackTrait, ChannelConfig
 
 
 class SlackTraitTest(unittest.TestCase):
