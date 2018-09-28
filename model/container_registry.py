@@ -26,7 +26,7 @@ class ContainerRegistryConfig(NamedModelElement):
     Not intended to be instantiated by users of this module
     '''
     def _optional_attributes(self):
-        return {'image_reference_prefixes', 'username', 'password'}
+        return {'image_reference_prefixes', 'username', 'password', 'host', 'email'}
 
     def credentials(self):
         # this cfg currently only contains credentials
