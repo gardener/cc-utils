@@ -60,7 +60,7 @@ class GcrCredentials(BasicCredentials):
     Not intended to be instantiated by users of this module
     '''
     def _optional_attributes(self):
-        return {'image_reference_prefixes'}
+        return {'image_reference_prefixes', 'host', 'email'}
 
     def host(self):
         return self.raw.get('host')
