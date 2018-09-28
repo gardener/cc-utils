@@ -311,8 +311,9 @@ class ConcourseDeployer(DefinitionDeployer):
 
 
 class ReplicationResultProcessor(object):
-    def __init__(self, cfg_set):
+    def __init__(self, cfg_set, notify_owners=True):
         self._cfg_set = cfg_set
+        self._notify_owners = notify_owners
 
     def process_results(self, results):
         # collect pipelines by concourse target (concourse_cfg, team_name) as key
@@ -370,47 +371,57 @@ class ReplicationResultProcessor(object):
         )
         )
 
-        all_notifications_succeeded = True
-        for failed_descriptor in failed_descriptors:
-            warning(failed_descriptor.definition_descriptor.pipeline_name)
-            try:
-                self._notify_broken_definition_owners(failed_descriptor)
-            except Exception:
-                warning('an error occurred whilst trying to send error notifications')
-                traceback.print_exc()
-                all_notifications_succeeded = False
+        if self._notify_owners:
+            # signal error only if notifications failed
+            all_notifications_succeeded = all(
+                map(self._notify_broken_definition_owners, failed_descriptors)
+            )
+        else:
+            all_notifications_succeeded = True
 
-        # signall error only if error notifications failed
         return all_notifications_succeeded
 
     def _notify_broken_definition_owners(self, failed_descriptor):
-        definition_descriptor = failed_descriptor.definition_descriptor
-        main_repo = definition_descriptor.main_repo
-        github_cfg = github_cfg_for_hostname(self._cfg_set, main_repo['hostname'])
-        github_api = _create_github_api_object(github_cfg)
-        repo_owner, repo_name = main_repo['path'].split('/')
+        '''Attempt to send an email to the owner of the pipeline corresponding to the failed
+        descriptor. Return 'True' if successful, 'False' otherwise.
+        '''
+        #TODO: Handle exceptions a tad more specific
+        try:
+            definition_descriptor = failed_descriptor.definition_descriptor
+            info(f'sending error notification for pipeline {definition_descriptor.pipeline_name}')
+            main_repo = definition_descriptor.main_repo
+            github_cfg = github_cfg_for_hostname(self._cfg_set, main_repo['hostname'])
+            github_api = _create_github_api_object(github_cfg)
+            repo_owner, repo_name = main_repo['path'].split('/')
 
-        repo_helper = GitHubRepositoryHelper(
-            owner=repo_owner,
-            name=repo_name,
-            default_branch=main_repo['branch'],
-            github_api=github_api,
-        )
-        codeowners_parser = CodeownersParser(github_repo_helper=repo_helper)
-        codeowners_resolver = CodeOwnerEntryResolver(github_api=github_api)
-        recipients = set(codeowners_resolver.resolve_email_addresses(
-            codeowners_parser.parse_codeowners_entries()
-        ))
+            repo_helper = GitHubRepositoryHelper(
+                owner=repo_owner,
+                name=repo_name,
+                default_branch=main_repo['branch'],
+                github_api=github_api,
+            )
+            codeowners_parser = CodeownersParser(github_repo_helper=repo_helper)
+            codeowners_resolver = CodeOwnerEntryResolver(github_api=github_api)
+            recipients = set(codeowners_resolver.resolve_email_addresses(
+                codeowners_parser.parse_codeowners_entries()
+            ))
 
-        email_cfg = self._cfg_set.email()
-        _send_mail(
-            email_cfg=email_cfg,
-            recipients=recipients,
-            subject='Your pipeline definition in {repo} is erroneous'.format(
-                repo=main_repo['path'],
-            ),
-            mail_template='Error details:\n' + str(failed_descriptor.error_details),
-        )
+            email_cfg = self._cfg_set.email()
+            _send_mail(
+                email_cfg=email_cfg,
+                recipients=recipients,
+                subject='Your pipeline definition in {repo} is erroneous'.format(
+                    repo=main_repo['path'],
+                ),
+                mail_template='Error details:\n' + str(failed_descriptor.error_details),
+            )
+
+            return True
+
+        except Exception:
+            warning('an error occurred whilst trying to send notifications')
+            traceback.print_exc()
+            return False
 
     def _initialise_new_pipeline_resources(self, concourse_api, results):
         newly_deployed_pipeline_names = map(
