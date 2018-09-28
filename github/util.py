@@ -379,7 +379,7 @@ def github_cfg_for_hostname(cfg_factory, host_name):
     for github_cfg in cfg_factory._cfg_elements(cfg_type_name='github'):
         if github_cfg.matches_hostname(host_name=host_name):
             return github_cfg
-    raise RuntimeError('no github_cfg for {h}'.format(host_name))
+    raise RuntimeError('no github_cfg for {h}'.format(h=host_name))
 
 
 @functools.lru_cache()
