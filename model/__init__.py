@@ -262,6 +262,12 @@ class ConfigType(ModelBase):
     represents a configuration type (used for serialisation and deserialisation)
     '''
 
+    def _required_attributes(self):
+        return {'model'}
+
+    def _optional_attributes(self):
+        return {'src'}
+
     def sources(self):
         return map(ConfigTypeSource, self.raw.get('src'))
 
@@ -276,6 +282,9 @@ class ConfigType(ModelBase):
 
 
 class ConfigTypeSource(ModelBase):
+    def _optional_attributes(self):
+        return {'file'}
+
     def file(self):
         return self.raw.get('file')
 
@@ -347,6 +356,11 @@ class ConfigurationSet(NamedModelElement):
                 entry = {'config_names': [entry], 'default': entry}
 
             self.raw[cfg_type_name] = entry
+
+    def _optional_attributes(self):
+        return {
+            cfg_type_name for cfg_type_name in self.cfg_factory._cfg_types_raw()
+        }
 
     def _cfg_mappings(self):
         return self.raw.items()

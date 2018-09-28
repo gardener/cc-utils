@@ -45,6 +45,8 @@ class DependencyBase(ModelBase):
 
     Not intended to be instantiated.
     '''
+    def _required_attributes(self):
+        return {'name', 'version'}
 
     def name(self):
         return self.raw.get('name')
@@ -70,6 +72,9 @@ class Product(ProductModelBase):
         super().__init__(*args, **kwargs)
         if 'components' not in self.raw:
             self.raw['components'] = []
+
+    def _optional_attributes(self):
+        return {'components'}
 
     def components(self):
         return (Component(raw_dict=raw_dict) for raw_dict in self.raw['components'])
@@ -187,8 +192,9 @@ class ComponentReference(DependencyBase):
     def config_name(self):
         return self._componentName.config_name()
 
-    def _validate_dict(self):
+    def validate(self):
         ComponentName.validate_component_name(self.raw.get('name'))
+        super().validate()
 
     def __eq__(self, other):
         if not isinstance(other, ComponentReference):
@@ -206,6 +212,9 @@ class ContainerImage(DependencyBase):
             raw_dict={'name':name, 'version':version, 'image_reference':image_reference}
         )
 
+    def _required_attributes(self):
+        return super()._required_attributes() | {'image_reference'}
+
     def image_reference(self):
         return self.raw.get('image_reference')
 
@@ -216,6 +225,9 @@ class WebDependency(DependencyBase):
         return WebDependency(
             raw_dict={'name':name, 'version':version, 'url':url}
         )
+
+    def _required_attributes(self):
+        return super()._required_attributes() | {'url'}
 
     def url(self):
         return self.raw.get('url')
@@ -237,6 +249,9 @@ class Component(ComponentReference):
         if not self.raw.get('dependencies'):
             self.raw['dependencies'] = {}
 
+    def _optional_attributes(self):
+        return {'dependencies'}
+
     def dependencies(self):
         return ComponentDependencies(raw_dict=self.raw['dependencies'])
 
@@ -247,6 +262,9 @@ class ComponentDependencies(ModelBase):
         for attrib_name in ('container_images', 'components', 'web', 'generic'):
             if attrib_name not in self.raw:
                 self.raw[attrib_name] = []
+
+    def _optional_attributes(self):
+        return {'container_images', 'components', 'web', 'generic'}
 
     def container_images(self):
         return (ContainerImage(raw_dict=raw_dict) for raw_dict in self.raw.get('container_images'))

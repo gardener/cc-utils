@@ -20,6 +20,13 @@ from model.base import (
 
 
 class SecretsServerConfig(NamedModelElement):
+    def _required_attributes(self):
+        return {
+            'namespace',
+            'service_name',
+            'secrets',
+        }
+
     def namespace(self):
         return self.raw.get('namespace')
 
@@ -37,6 +44,12 @@ class SecretsServerConfig(NamedModelElement):
 
 
 class SecretsServerSecrets(ModelBase):
+    def _required_attributes(self):
+        return {
+            'concourse_config',
+            'cfg_sets',
+        }
+
     def concourse_secret_name(self):
         return self.raw.get('concourse_config').get('name')
 

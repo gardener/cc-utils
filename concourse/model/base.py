@@ -18,57 +18,11 @@ from abc import abstractmethod
 from enum import Enum
 
 import util
-from model.base import ModelValidationError
-
-
-class ModelDefaultsMixin(object):
-    def _defaults_dict(self):
-        return {}
-
-    def _apply_defaults(self, raw_dict):
-        self.raw = util.merge_dicts(
-            self._defaults_dict(),
-            raw_dict,
-        )
-
-    def _defaults_dict(self):
-        return {}
-
-
-class ModelValidationMixin(object):
-    def _required_attributes(self):
-        return ()
-
-    def _optional_attributes(self):
-        return ()
-
-    def _known_attributes(self):
-        return set(self._required_attributes()) | \
-                set(self._optional_attributes()) | \
-                set(self._defaults_dict().keys())
-
-    def validate(self):
-        self._validate_required_attributes()
-        self._validate_known_attributes()
-
-    def _validate_required_attributes(self):
-        missing_attributes = [a for a in self._required_attributes() if a not in self.raw]
-        if missing_attributes:
-            raise ModelValidationError(
-                'the following required attributes are absent: {m}'.format(
-                    m=', '.join(missing_attributes),
-                )
-            )
-
-    def _validate_known_attributes(self):
-        unknown_attributes = [a for a in self.raw if a not in self._known_attributes()]
-        if unknown_attributes:
-            raise ModelValidationError(
-                '{e}: the following attributes are unknown: {m}'.format(
-                    e=str(self),
-                    m=', '.join(unknown_attributes)
-                )
-            )
+from model.base import(
+    ModelDefaultsMixin,
+    ModelValidationError,
+    ModelValidationMixin,
+)
 
 
 class ModelBase(ModelDefaultsMixin, ModelValidationMixin):

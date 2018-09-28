@@ -57,8 +57,8 @@ class GithubConfig(NamedModelElement):
             'technicalUser'
         ]
 
-    def _validate_dict(self):
-        super()._validate_dict()
+    def validate(self):
+        super().validate()
         # validation of credentials implicitly happens in the constructor
         self.credentials()
 
@@ -82,4 +82,4 @@ class GithubCredentials(BasicCredentials):
 
     def _required_attributes(self):
         required_attribs = set(super()._required_attributes())
-        return required_attribs | set(('authToken','privateKey'))
+        return required_attribs | set(('authToken','privateKey', 'emailAddress'))

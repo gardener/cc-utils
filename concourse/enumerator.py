@@ -149,6 +149,9 @@ class SimpleFileDefinitionEnumerator(DefinitionEnumerator):
 
 
 class BranchCfg(ModelBase):
+    def _required_attributes(self):
+        return {'cfgs'}
+
     def cfg_entries(self):
         return (
             BranchCfgEntry(name=name, raw_dict=raw_dict)

@@ -12,7 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from util import not_none
+
+
+import util
 
 
 class ModelValidationError(ValueError):
@@ -26,7 +28,55 @@ class ConfigElementNotFoundError(ValueError):
     pass
 
 
-class ModelBase(object):
+class ModelValidationMixin(object):
+    def _required_attributes(self):
+        return ()
+
+    def _optional_attributes(self):
+        return ()
+
+    def _known_attributes(self):
+        return set(self._required_attributes()) | \
+                set(self._optional_attributes()) | \
+                set(self._defaults_dict().keys())
+
+    def validate(self):
+        self._validate_required_attributes()
+        self._validate_known_attributes()
+
+    def _validate_required_attributes(self):
+        missing_attributes = [a for a in self._required_attributes() if a not in self.raw]
+        if missing_attributes:
+            raise ModelValidationError(
+                'the following required attributes are absent: {m}'.format(
+                    m=', '.join(missing_attributes),
+                )
+            )
+
+    def _validate_known_attributes(self):
+        unknown_attributes = [a for a in self.raw if a not in self._known_attributes()]
+        if unknown_attributes:
+            raise ModelValidationError(
+                '{c}:{e}: the following attributes are unknown: {m}'.format(
+                    c=type(self).__name__,
+                    e=str(self),
+                    m=', '.join(unknown_attributes)
+                )
+            )
+
+
+class ModelDefaultsMixin(object):
+    def _defaults_dict(self):
+        return {}
+
+    def _apply_defaults(self, raw_dict):
+        self.raw = util.merge_dicts(
+            self._defaults_dict(),
+            raw_dict,
+        )
+
+
+class ModelBase(ModelValidationMixin, ModelDefaultsMixin):
     '''
     Base class for 'dict-based' configuration classes (i.e. classes that expose contents
     from a dict through a set of 'getter' methods.
@@ -37,19 +87,8 @@ class ModelBase(object):
     '''
 
     def __init__(self, raw_dict):
-        self.raw = not_none(raw_dict)
-        self._validate_dict()
-
-    def _required_attributes(self):
-        return []
-
-    def _validate_dict(self):
-        required_attribs = self._required_attributes()
-        missing_keys = [k for k in required_attribs if k not in self.raw]
-        if len(list(missing_keys)) > 0:
-            raise ModelValidationError('missing required attribute(s): {a}'.format(
-                a=', '.join(missing_keys))
-            )
+        self.raw = util.not_none(raw_dict)
+        self.validate()
 
     def __str__(self):
         return '{c} {a}'.format(
@@ -60,8 +99,14 @@ class ModelBase(object):
 
 class NamedModelElement(ModelBase):
     def __init__(self, name, raw_dict, *args, **kwargs):
-        self._name = not_none(name)
+        self._name = util.not_none(name)
         super().__init__(raw_dict=raw_dict, *args, **kwargs)
+
+    def _optional_attributes(self):
+        # workaround: NamedModelElement allows any attribute; it would
+        # obviously be a better way to disable this check (e.g. split into
+        # separate mixin and not add it to NME
+        return set(self.raw.keys())
 
     def name(self):
         return self._name

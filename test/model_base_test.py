@@ -20,6 +20,7 @@ from model.base import ModelBase
 
 class ModelBaseTest(unittest.TestCase):
     def test_raw_dict_values_are_stored(self):
-        examinee = ModelBase(raw_dict={'foo': 'bar'})
+        empty_dict = dict()
+        examinee = ModelBase(raw_dict=empty_dict)
 
-        self.assertEqual(examinee.raw, {'foo': 'bar'})
+        self.assertIs(examinee.raw, empty_dict)

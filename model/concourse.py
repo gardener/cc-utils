@@ -99,8 +99,8 @@ class ConcourseConfig(NamedModelElement):
             'kubernetes_cluster_config'
         ]
 
-    def _validate_dict(self):
-        super()._validate_dict()
+    def validate(self):
+        super().validate()
         # We check for the existence of the 'main'-team as it is the only team that is *required* to
         # exist for any concourse server.
         if not self.raw.get('teams').get('main'):
@@ -181,8 +181,8 @@ class ConcourseTeamCredentials(BasicCredentials):
             )
         return _required_attributes
 
-    def _validate_dict(self):
-        super()._validate_dict()
+    def validate(self):
+        super().validate()
         if self.has_github_oauth_credentials():
             github_org_and_team = self.github_auth_team(split=True)
             # explicitly check for expected structure, raise error if not found

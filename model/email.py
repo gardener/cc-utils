@@ -42,8 +42,8 @@ class EmailConfig(NamedModelElement):
     def _required_attributes(self):
         return ['host', 'port', 'credentials']
 
-    def _validate_dict(self):
-        super()._validate_dict()
+    def validate(self):
+        super().validate()
         # ensure credentials are valid - validation implicitly happens in the constructor.
         self.credentials()
 
