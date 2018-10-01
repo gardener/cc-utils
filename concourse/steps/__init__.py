@@ -34,4 +34,3 @@ def step_def(name):
     template = step_template(name)
 
     return template.get_def(name + '_step').render
-
