@@ -22,10 +22,12 @@ import util
 
 import mako.template
 
+
 def step_template(name):
     step_file = util.existing_file(os.path.join(steps_dir, name + '.mako'))
 
     return mako.template.Template(filename=step_file)
+
 
 def step_def(name):
     template = step_template(name)
