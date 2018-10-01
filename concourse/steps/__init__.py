@@ -23,6 +23,7 @@ import util
 
 steps_dir = os.path.abspath(os.path.dirname(__file__))
 
+
 def step_template(name):
     step_file = util.existing_file(os.path.join(steps_dir, name + '.mako'))
 
