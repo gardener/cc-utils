@@ -109,9 +109,6 @@ class Renderer(object):
             self.template_include_dir = os.path.abspath(template_include_dir)
             from mako.lookup import TemplateLookup
             self.lookup = TemplateLookup([template_include_dir])
-            # hacky: add (hard-coded) lib directory (in cc-pipelines) to sys.path
-            import sys
-            sys.path.append(os.path.join(template_include_dir, 'lib'))
             self.cfg_set = cfg_set
 
     def render(self, definition_descriptor):
