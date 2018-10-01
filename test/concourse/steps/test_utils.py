@@ -20,6 +20,7 @@ import concourse.model.resources
 
 # helper functions to create dummy pipeline definition objects
 
+
 def pipeline_step(name):
     return concourse.model.step.PipelineStep(
         name=name,
@@ -27,6 +28,7 @@ def pipeline_step(name):
         script_type=concourse.model.base.ScriptType.PYTHON3,
         raw_dict={}
     )
+
 
 def repository():
     return concourse.model.resources.RepositoryConfig(
@@ -37,10 +39,12 @@ def repository():
         }
     )
 
+
 def resource_registry():
     registry = concourse.model.resources.ResourceRegistry()
     # add dummy "main repository"
     return registry
+
 
 def job(main_repo):
     job_variant = concourse.model.job.JobVariant(
@@ -54,5 +58,3 @@ def job(main_repo):
     job_variant._steps_dict = {}
 
     return job_variant
-
-
