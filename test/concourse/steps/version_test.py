@@ -8,6 +8,7 @@ import test_utils
 from concourse.steps import step_def
 import concourse.model.traits.version as version_trait
 
+
 class VersionStepTest(unittest.TestCase):
     def setUp(self):
         self.tmp_dir = tempfile.TemporaryDirectory()
@@ -66,4 +67,4 @@ class VersionStepTest(unittest.TestCase):
         os.chdir(self.tmp_dir.name)
 
         # now try to evaluate it (this requires additional setup pbly)
-        print(eval(compiled))
+        eval(compiled)

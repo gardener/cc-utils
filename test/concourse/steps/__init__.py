@@ -30,5 +30,3 @@ sys.path.extend(
         os.path.realpath(os.path.dirname(__file__))
     )
 )
-for p in sys.path:
-    print(os.path.abspath(p))
