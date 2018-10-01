@@ -40,7 +40,6 @@ from concourse.replicator import (
     FilesystemDeployer,
     PipelineReplicator,
     Renderer,
-    ReplicationResultProcessor,
 )
 
 
@@ -248,14 +247,11 @@ def render_pipelines(
 
     deployer = FilesystemDeployer(base_dir=out_dir)
 
-    result_processor = ReplicationResultProcessor(cfg_set=config_set)
-
     replicator = PipelineReplicator(
         definition_enumerators=def_enumerators,
         descriptor_preprocessor=preprocessor,
         definition_renderer=renderer,
         definition_deployer=deployer,
-        result_processor=result_processor,
     )
 
     replicator.replicate()
