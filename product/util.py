@@ -148,7 +148,7 @@ def merge_products(left_product, right_product):
     not_none(right_product)
 
     # start with a copy of left_product
-    merged = Product.from_dict(raw_dict=deepcopy(dict(left_product.raw.items())))
+    merged = Product.from_dict(deepcopy(dict(left_product.raw.items())))
     for component in right_product.components():
         existing_component = merged.component(component)
         if existing_component:
