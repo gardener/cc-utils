@@ -6,12 +6,6 @@ cc-utils:
       pycodestyle: ~
       test: ~
   variants:
-    failing:
-      repo:
-        trigger: false
-      steps:
-        failing:
-          publish_to: ['source']
     head_update: ~
     pull_request:
       traits:
