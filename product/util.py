@@ -98,7 +98,10 @@ class ComponentDescriptorResolver(ResolverBase):
                 asset_label=COMPONENT_DESCRIPTOR_ASSET_NAME,
         )
         if as_dict:
-            return yaml.load(dependency_descriptor)
+            dependency_descriptor_dict =  yaml.load(dependency_descriptor)
+            if 'raw_dict' in dependency_descriptor_dict:
+                del dependency_descriptor_dict['raw_dict']
+            return dependency_descriptor_dict
         else:
             return dependency_descriptor
 
