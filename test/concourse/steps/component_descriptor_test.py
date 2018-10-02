@@ -52,11 +52,35 @@ class ComponentDescriptorStepTest(unittest.TestCase):
             output_image_descriptors={},
             indent=0
         )
+        with open('/home/d051236/src/cc-utils/component_descriptor.py', 'w') as f:
+            f.write(step_snippet)
 
         # try to compile (-> basic syntax check)
-        return compile(step_snippet, 'version', 'exec')
+        return compile(step_snippet, 'component_descriptor.mako', 'exec')
 
     def test_smoke(self):
-        # TODO: implement smoke-test executing the code (this will pbly require some
-        # additional work to mock aways access to github api)
-        return
+        os.chdir(self.tmp_dir.name)
+
+        # fulfill runtime requirements
+
+        # version file
+        version_file_dir = pathlib.Path(self.tmp_dir.name, 'version_path')
+        version_file_dir.mkdir()
+        version_file = version_file_dir.joinpath('version')
+        version_file.write_text('1.2.3')
+
+        # component descriptor output directory
+        component_descriptor_dir = pathlib.Path(self.tmp_dir.name, 'component_descriptor_dir')
+        component_descriptor_dir.mkdir()
+
+        compiled_step = self.test_render_and_compile()
+        try:
+            eval(compiled_step)
+        except SystemExit:
+            pass
+
+        generated_component_descriptor = component_descriptor_dir.joinpath(
+            'component_descriptor'
+        )
+        self.assertTrue(generated_component_descriptor.is_file())
+        # todo: parse and validate contents

@@ -29,7 +29,7 @@ with open(version_file_path) as f:
   effective_version = f.read().strip()
 
 # create base descriptor filled with default values
-base_descriptor = Product(raw_dict={})
+base_descriptor = Product()
 component = Component.create(
   name='${descriptor_trait.component_name()}',
   version=effective_version,
