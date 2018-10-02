@@ -204,11 +204,11 @@ def render_pipeline(
 
 
 def render_pipelines(
-        definitions_root_dir: str,
-        template_path: [str],
+        template_path: str,
         config_name: str,
-        template_include_dir: str,
-        out_dir: str
+        out_dir: str,
+        template_include_dir: str = None,
+        definitions_root_dir: str = None,
     ):
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
@@ -218,6 +218,9 @@ def render_pipelines(
 
     concourse_cfg = config_set.concourse()
     job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
+
+    if not template_include_dir:
+        template_include_dir = template_path
 
     def_enumerators = []
     for job_mapping in job_mapping_set.job_mappings().values():
@@ -238,7 +241,7 @@ def render_pipelines(
 
     preprocessor = DefinitionDescriptorPreprocessor()
 
-    template_retriever = TemplateRetriever(template_path=template_path)
+    template_retriever = TemplateRetriever(template_path=[template_path])
     renderer = Renderer(
         template_retriever=template_retriever,
         template_include_dir=template_include_dir,
