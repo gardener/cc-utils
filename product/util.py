@@ -124,7 +124,7 @@ class ComponentDescriptorResolver(ResolverBase):
             component_references = component.dependencies().components()
             yield from filter(lambda cr: not product.component(cr), component_references)
 
-        merged = Product.from_dict(raw_dict=deepcopy(dict(product.raw.items())))
+        merged = Product.from_dict(deepcopy(dict(product.raw.items())))
 
         for component_reference in itertools.chain(
                 *map(unresolved_references, product.components())
