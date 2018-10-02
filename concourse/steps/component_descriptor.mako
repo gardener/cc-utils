@@ -64,11 +64,13 @@ if not os.path.isfile(descriptor_script):
   )
   with open(descriptor_path, 'w') as f:
     yaml.dump(base_descriptor.raw, f, indent=2)
+  info('wrote component descriptor: ' + descriptor_path)
   sys.exit(0)
 else:
   is_executable = bool(os.stat(descriptor_script)[stat.ST_MODE] & stat.S_IEXEC)
   if not is_executable:
     fail('descriptor script file exists but is not executable: ' + descriptor_script)
+
 
 # dump base_descriptor and pass it to descriptor script via env var
 base_descriptor_file = os.path.join(descriptor_out_dir, 'base_component_descriptor')
