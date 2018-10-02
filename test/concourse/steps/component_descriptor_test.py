@@ -52,8 +52,6 @@ class ComponentDescriptorStepTest(unittest.TestCase):
             output_image_descriptors={},
             indent=0
         )
-        with open('/home/d051236/src/cc-utils/component_descriptor.py', 'w') as f:
-            f.write(step_snippet)
 
         # try to compile (-> basic syntax check)
         return compile(step_snippet, 'component_descriptor.mako', 'exec')
