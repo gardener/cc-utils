@@ -20,6 +20,7 @@ class VersionStepTest(unittest.TestCase):
             variant_name='don\'t_care',
             raw_dict={
                 'versionfile': 'version',
+                'preprocess': 'finalize',
             },
         )
         self.version_trait_transformer = self.version_trait.transformer()
@@ -35,7 +36,7 @@ class VersionStepTest(unittest.TestCase):
         repo_dir.joinpath('.git', 'HEAD').touch()
 
         self.version_file = repo_dir.joinpath('version')
-        self.version_file.write_text('1.2.3')
+        self.version_file.write_text('1.2.3-xxx')
 
         self.job_variant = test_utils.job(self.main_repo)
 
@@ -66,5 +67,8 @@ class VersionStepTest(unittest.TestCase):
 
         os.chdir(self.tmp_dir.name)
 
-        # now try to evaluate it (this requires additional setup pbly)
         eval(compiled)
+
+        # check that version preprocessing was actually done
+        effective_version = pathlib.Path(self.tmp_dir.name, 'managed-version', 'version')
+        self.assertEqual(effective_version.read_text(), '1.2.3')
