@@ -18,13 +18,19 @@ import github3.exceptions
 import functools
 import itertools
 import semver
+import typing
 import yaml
 
 import decorator
 import version
 from github.util import GitHubRepositoryHelper, github_api_ctor
 from util import not_none, check_type, FluentIterable
-from .model import Product, ComponentReference, COMPONENT_DESCRIPTOR_ASSET_NAME
+from .model import (
+    COMPONENT_DESCRIPTOR_ASSET_NAME,
+    ComponentReference,
+    DependencyBase,
+    Product,
+)
 
 
 class ComponentResolutionException(Exception):
@@ -206,29 +212,32 @@ def diff_products(left_product, right_product, ignore_component_names=()):
     }
 
 
-def greatest_component_references(component_references):
+def greatest_references(references: typing.Iterable[DependencyBase]):
     '''
     yields the component references from the specified iterable of ComponentReference that
     have the greates version (grouped by component name).
     Id est: if the sequence contains exactly one version of each contained component name,
     the sequence is returned unchanged.
     '''
-    not_none(component_references)
-    component_references = list(component_references)
-    for cref in component_references:
-        check_type(cref, ComponentReference)
+    not_none(references)
+    references = list(references)
+    for ref in references:
+        check_type(ref, DependencyBase)
 
     names = [
-        cref.name() for cref
-        in component_references
+        ref.name() for ref
+        in references
     ]
 
     # there might be multiple component versions of the same name
     # --> use the greatest version in that case
     for name in names:
-        matching_crefs = sorted(
-            [c for c in component_references if c.name() == name],
-            key=lambda c: semver.parse_version_info(c.version()),
+        matching_refs = sorted(
+            [r for r in references if r.name() == name],
+            key=lambda r: semver.parse_version_info(r.version()),
         )
         # greates version comes last
-        yield matching_crefs[-1]
+        yield matching_refs[-1]
+
+# keep for backwards compatiblity; todo: remove
+greatest_component_references = greatest_references
