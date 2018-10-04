@@ -33,9 +33,10 @@ from github3.exceptions import NotFoundError, ForbiddenError
 from github3.orgs import Team
 
 import util
+import product.model
 
 from http_requests import mount_default_adapter
-from product.model import ComponentReference
+from product.model import DependencyBase
 from model import ConfigFactory
 from model.github import GithubConfig
 
@@ -103,16 +104,25 @@ class RepositoryHelperBase(object):
 
 
 class UpgradePullRequest(object):
-    def __init__(self, pull_request, from_component, to_component):
+    def __init__(self,
+            pull_request,
+            from_ref: DependencyBase,
+            to_ref: DependencyBase,
+        ):
         self.pull_request = util.not_none(pull_request)
-        if from_component.name() != to_component.name():
-            raise ValueError('component names do not match')
-        self.component_name = from_component.name()
 
-        self.from_component = from_component
-        self.to_component = to_component
+        if from_ref.name() != to_ref.name():
+            raise ValueError('reference names do not match')
+        if from_ref.type_name() != to_ref.type_name():
+            raise ValueError('reference type names do not match')
 
-    def is_obsolete(self, reference_product):
+        self.ref_name = from_ref.name()
+
+        self.from_ref = from_ref
+        self.to_ref = to_ref
+        self.reference_type_name = from_ref.type_name()
+
+    def is_obsolete(self, reference_component):
         '''returns a boolean indicating whether or not this Upgrade PR is "obsolete"
 
         A Upgrade is considered to be obsolete, iff the following conditions hold true:
@@ -120,22 +130,34 @@ class UpgradePullRequest(object):
         - the destination version is greater than the greatest reference component version
         '''
         # find matching component versions
-        reference_components = sorted(
-            [rc for rc in reference_product.components() if rc.name() == self.component_name],
-            key=lambda c: semver.parse_version_info(c.version())
+        reference_refs = sorted(
+            [
+                rc for rc in
+                reference_component.dependencies().references(type_name=self.reference_type_name)
+                if rc.name() == self.ref_name
+            ],
+            key=lambda r: semver.parse_version_info(r.version())
         )
-        if not reference_components:
-            return False # special case: we have a new component
+        if not reference_refs:
+            return False # special case: we have a new reference
 
         # sorted will return the greatest version last
-        greatest_component_version = semver.parse_version_info(reference_components[-1].version())
+        greatest_reference_version = semver.parse_version_info(reference_refs[-1].version())
 
         # PR is obsolete if same or newer component version is already configured in reference
-        return greatest_component_version >= semver.parse_version_info(self.to_component.version())
+        return greatest_reference_version >= semver.parse_version_info(self.to_ref.version())
 
-    def target_matches(self, component_reference):
-        return component_reference.name() == self.component_name and \
-            component_reference.version() == self.to_component.version()
+    def target_matches(self, reference: DependencyBase):
+        util.check_type(reference, DependencyBase)
+
+        if reference.type_name() != self.reference_type_name:
+            return False
+        if reference.name() != self.ref_name:
+            return False
+        if reference.version() != self.to_ref.version():
+            return False
+
+        return True
 
     def purge(self):
         self.pull_request.close()
@@ -144,16 +166,17 @@ class UpgradePullRequest(object):
 
 
 class PullRequestUtil(RepositoryHelperBase):
-    PR_TITLE_PATTERN = re.compile(r'^\[ci::(.*):(.*)->(.*)\]$')
+    PR_TITLE_PATTERN = re.compile(r'^\[ci:(.*):(.*):(.*)->(.*)\]$')
 
     @staticmethod
     def calculate_pr_title(
-            component_name: str,
+            reference: DependencyBase,
             from_version: str,
             to_version: str,
     ) -> str:
-        return '[ci::{cn}:{fv}->{tv}]'.format(
-            cn=component_name,
+        return '[ci:{tn}:{rn}:{fv}->{tv}]'.format(
+            tn=reference.type_name(),
+            rn=reference.name(),
             fv=from_version,
             tv=to_version,
         )
@@ -170,17 +193,25 @@ class PullRequestUtil(RepositoryHelperBase):
                 t=pull_request.title)
             )
 
-        component_name = match.group(1)
-        from_version = match.group(2)
-        to_version = match.group(3)
+        reference_type_name = match.group(1)
+        if not reference_type_name:
+            # backwards compatibility hack
+            reference_type_name = 'component'
 
-        from_component_ref = ComponentReference.create(name=component_name, version=from_version)
-        to_component_ref = ComponentReference.create(name=component_name, version=to_version)
+        reference_type = product.model.reference_type(reference_type_name)
+
+        ref_name = match.group(2)
+        from_version = match.group(3)
+        to_version = match.group(4)
+
+        from_ref = reference_type.create(name=ref_name, version=from_version)
+        to_ref = reference_type.create(name=ref_name, version=to_version)
 
         return UpgradePullRequest(
             pull_request=pull_request,
-            from_component=from_component_ref,
-            to_component=to_component_ref,
+            from_ref=from_ref,
+            to_ref=to_ref,
+            ref_type_name=reference_type_name,
         )
 
     def enumerate_upgrade_pull_requests(self):

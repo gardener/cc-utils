@@ -100,10 +100,10 @@ def upstream_reference_component():
     return reference_component
 
 
-def close_obsolete_pull_requests(upgrade_pull_requests, reference_product):
+def close_obsolete_pull_requests(upgrade_pull_requests, reference_component):
     obsolete_upgrade_requests = [
         pr for pr in
-        upgrade_pull_requests if pr.is_obsolete(reference_product=reference_product)
+        upgrade_pull_requests if pr.is_obsolete(reference_component=reference_component)
     ]
 
     for obsolete_request in obsolete_upgrade_requests:
@@ -117,9 +117,9 @@ def component_dir(component_reference):
     )
 
 
-def upgrade_pr_exists(component_reference, upgrade_requests):
+def upgrade_pr_exists(reference, upgrade_requests):
     return any(
-        [upgrade_rq.target_matches(component_reference) for upgrade_rq in upgrade_requests]
+        [upgrade_rq.target_matches(reference=reference) for upgrade_rq in upgrade_requests]
     )
 
 
@@ -221,7 +221,7 @@ upgrade_pull_requests = pull_request_util.enumerate_upgrade_pull_requests()
 
 close_obsolete_pull_requests(
     upgrade_pull_requests=upgrade_pull_requests,
-    reference_product=reference_product,
+    reference_component=current_component(),
 )
 
 
@@ -252,7 +252,7 @@ for component_ref in product.util.greatest_references(immediate_dependencies.com
           )
         )
         continue
-    elif upgrade_pr_exists(latest_cref, upgrade_pull_requests):
+    elif upgrade_pr_exists(reference=latest_cref, upgrade_requests=upgrade_pull_requests):
         util.info('skipping upgrade (PR already exists): ' + component_ref.name())
         continue
     else:

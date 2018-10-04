@@ -248,6 +248,9 @@ class WebDependencyReference(DependencyBase):
             raw_dict={'name': name, 'version': version}
         )
 
+    def type_name(self):
+        return 'web'
+
 
 class WebDependency(WebDependencyReference):
     @staticmethod
@@ -271,14 +274,14 @@ class GenericDependencyReference(DependencyBase):
     def create(name, version):
         return GenericDependencyReference(raw_dict={'name':name, 'version':version})
 
+    def type_name(self):
+        return 'generic'
+
 
 class GenericDependency(GenericDependencyReference):
     @staticmethod
     def create(name, version):
         return GenericDependency(raw_dict={'name':name, 'version':version})
-
-    def type_name(self):
-        return 'generic'
 
 
 class Component(ComponentReference):
@@ -321,21 +324,20 @@ class ComponentDependencies(ModelBase):
         return (GenericDependency(raw_dict=raw_dict) for raw_dict in self.raw.get('generic'))
 
     def references(self, type_name: str):
-        reference_ctor = reference_type(type_name)
+        reference_ctor = reference_type(type_name).create
         if type_name == 'container_image':
             attrib = 'container_images'
-        if type_name == 'component':
+        elif type_name == 'component':
             attrib = 'components'
-        if type_name == 'web':
+        elif type_name == 'web':
             attrib = 'web'
-        if type_name == 'generic':
+        elif type_name == 'generic':
             attrib = 'generic'
         else:
             raise ValueError('unknown refererence type: ' + str(type_name))
 
-        for ref_dict in self.raw.get(attrib).values():
+        for ref_dict in self.raw.get(attrib):
             yield reference_ctor(name=ref_dict['name'], version=ref_dict['version'])
-
 
     def add_container_image_dependency(self, container_image):
         if container_image not in self.container_images():
