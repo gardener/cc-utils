@@ -9,9 +9,9 @@ repo_name = main_repo.logical_name().upper()
 %>
 
 import os
+import pathlib
 import subprocess
 import sys
-import pathlib
 from tempfile import TemporaryDirectory
 
 import semver
@@ -19,9 +19,9 @@ import semver
 import ctx
 import github.util
 import gitutil
-import util
 import product.model
 import product.util
+import util
 
 from github.release_notes.util import ReleaseNotes
 from github.util import GitHubRepositoryHelper
