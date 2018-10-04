@@ -238,7 +238,7 @@ else:
 
 
 # find components that need to be upgraded
-for component_ref in product.util.greatest_component_references(immediate_dependencies.components()):
+for component_ref in product.util.greatest_references(immediate_dependencies.components()):
     latest_version = determine_reference_version(component_ref.name())
     latest_cref = product.model.ComponentReference.create(
       name=component_ref.name(),

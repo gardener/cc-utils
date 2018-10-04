@@ -19,7 +19,7 @@ import product.util as util
 import product.model as model
 
 # functions under test
-greatest_crefs = util.greatest_component_references
+greatest_crefs = util.greatest_references
 
 
 class ProductUtilTest(unittest.TestCase):
@@ -27,7 +27,7 @@ class ProductUtilTest(unittest.TestCase):
         self.cref1 = model.ComponentReference.create(name='gh.com/o/c1', version='1.2.3')
         self.cref2 = model.ComponentReference.create(name='gh.com/o/c2', version='2.2.3')
 
-    def test_greatest_component_references(self):
+    def test_greatest_references(self):
         # trivial case: single cref
         result = list(greatest_crefs((self.cref1,)))
         self.assertSequenceEqual(result, (self.cref1,))
@@ -43,7 +43,7 @@ class ProductUtilTest(unittest.TestCase):
         result = set(greatest_crefs((self.cref1, self.cref2, cref1_greater, cref1_lesser)))
         self.assertSetEqual({cref1_greater, self.cref2}, result)
 
-    def test_greatest_component_references_argument_validation(self):
+    def test_greatest_references_argument_validation(self):
         # None-check
         with self.assertRaises(ValueError):
             next(greatest_crefs(None))

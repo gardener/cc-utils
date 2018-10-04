@@ -238,7 +238,3 @@ def greatest_references(references: typing.Iterable[DependencyBase]):
         )
         # greates version comes last
         yield matching_refs[-1]
-
-
-# keep for backwards compatiblity; todo: remove
-greatest_component_references = greatest_references
