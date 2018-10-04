@@ -13,12 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import abc
 import urllib.parse
 from enum import Enum
 
 from model.base import ModelBase, ModelValidationError
 from protecode.model import AnalysisResult
-from util import not_none, urljoin
+from util import not_none, urljoin, check_type
 
 #############################################################################
 ## product descriptor model
@@ -53,6 +54,13 @@ class DependencyBase(ModelBase):
 
     def version(self):
         return self.raw.get('version')
+
+    @abc.abstractmethod
+    def type_name(self):
+        '''
+        returns the dependency type name (component, generic, ..)
+        '''
+        raise NotImplementedError
 
     def __eq__(self, other):
         if not isinstance(other, DependencyBase):
@@ -177,6 +185,9 @@ class ComponentReference(DependencyBase):
         super().__init__(*args, **kwargs)
         self._componentName = ComponentName(kwargs['raw_dict']['name'])
 
+    def type_name(self):
+        return 'component'
+
     def github_host(self):
         return self._componentName.github_host()
 
@@ -205,7 +216,18 @@ class ComponentReference(DependencyBase):
         return hash((self.name(), self.version()))
 
 
-class ContainerImage(DependencyBase):
+class ContainerImageReference(DependencyBase):
+    @staticmethod
+    def create(name, version):
+        return ContainerImageReference(
+            raw_dict={'name': name, 'version': version}
+        )
+
+    def type_name(self):
+        return 'container_image'
+
+
+class ContainerImage(ContainerImageReference):
     @staticmethod
     def create(name, version, image_reference):
         return ContainerImage(
@@ -219,12 +241,23 @@ class ContainerImage(DependencyBase):
         return self.raw.get('image_reference')
 
 
-class WebDependency(DependencyBase):
+class WebDependencyReference(DependencyBase):
+    @staticmethod
+    def create(name, version):
+        return WebDependencyReference(
+            raw_dict={'name': name, 'version': version}
+        )
+
+
+class WebDependency(WebDependencyReference):
     @staticmethod
     def create(name, version, url):
         return WebDependency(
             raw_dict={'name':name, 'version':version, 'url':url}
         )
+
+    def type_name(self):
+        return 'web'
 
     def _required_attributes(self):
         return super()._required_attributes() | {'url'}
@@ -233,10 +266,19 @@ class WebDependency(DependencyBase):
         return self.raw.get('url')
 
 
-class GenericDependency(DependencyBase):
+class GenericDependencyReference(DependencyBase):
+    @staticmethod
+    def create(name, version):
+        return GenericDependencyReference(raw_dict={'name':name, 'version':version})
+
+
+class GenericDependency(GenericDependencyReference):
     @staticmethod
     def create(name, version):
         return GenericDependency(raw_dict={'name':name, 'version':version})
+
+    def type_name(self):
+        return 'generic'
 
 
 class Component(ComponentReference):
@@ -278,6 +320,23 @@ class ComponentDependencies(ModelBase):
     def generic_dependencies(self):
         return (GenericDependency(raw_dict=raw_dict) for raw_dict in self.raw.get('generic'))
 
+    def references(self, type_name: str):
+        reference_ctor = reference_type(type_name)
+        if type_name == 'container_image':
+            attrib = 'container_images'
+        if type_name == 'component':
+            attrib = 'components'
+        if type_name == 'web':
+            attrib = 'web'
+        if type_name == 'generic':
+            attrib = 'generic'
+        else:
+            raise ValueError('unknown refererence type: ' + str(type_name))
+
+        for ref_dict in self.raw.get(attrib).values():
+            yield reference_ctor(name=ref_dict['name'], version=ref_dict['version'])
+
+
     def add_container_image_dependency(self, container_image):
         if container_image not in self.container_images():
             self.raw['container_images'].append(container_image.raw)
@@ -293,6 +352,19 @@ class ComponentDependencies(ModelBase):
     def add_generic_dependency(self, generic_dependency):
         if generic_dependency not in self.generic_dependencies():
             self.raw['generic'].append(generic_dependency.raw)
+
+
+def reference_type(name: str):
+    check_type(name, str)
+    if name == 'component':
+        return ComponentReference
+    if name == 'container_image':
+        return ContainerImageReference
+    if name == 'generic':
+        return GenericDependencyReference
+    if name == 'web':
+        return WebDependencyReference
+    raise ValueError('unknown dependency type name: ' + str(name))
 
 
 #############################################################################
