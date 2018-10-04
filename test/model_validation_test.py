@@ -48,7 +48,7 @@ class TeamCredentialTest(unittest.TestCase):
     def test_validation_fails_on_empty_dict(self):
         raw_dict = {}
         with self.assertRaises(ModelValidationError):
-            examinee.ConcourseTeamCredentials(raw_dict)
+            examinee.ConcourseTeamCredentials(raw_dict).validate()
 
     def test_git_auth_team_getter(self):
         test_object = examinee.ConcourseTeamCredentials(self.raw_dict)
@@ -62,40 +62,45 @@ class TeamCredentialTest(unittest.TestCase):
 
     def test_validation_fails_on_missing_teamname(self):
         self.raw_dict.pop('teamname')
+        element = examinee.ConcourseTeamCredentials(self.raw_dict)
         with self.assertRaises(ModelValidationError):
-            examinee.ConcourseTeamCredentials(self.raw_dict)
+            element.validate()
 
     def test_validation_fails_on_missing_basic_auth_value(self):
         for key in ('username', 'password'):
             with self.subTest(value=key):
                 test_dict = TeamCredentialTest.create_valid_test_dictionary()
                 test_dict.pop(key)
+                element = examinee.ConcourseTeamCredentials(test_dict)
                 with self.assertRaises(ModelValidationError):
-                    examinee.ConcourseTeamCredentials(test_dict)
+                    element.validate()
 
     def test_validation_fails_on_missing_github_oauth_value(self):
         for key in ('gitAuthTeam', 'githubAuthClientId', 'githubAuthClientSecret'):
             with self.subTest(value=key):
                 test_dict = TeamCredentialTest.create_valid_test_dictionary()
                 test_dict.pop(key)
+                element = examinee.ConcourseTeamCredentials(test_dict)
                 with self.assertRaises(ModelValidationError):
-                    examinee.ConcourseTeamCredentials(test_dict)
+                    element.validate()
 
     def test_validation_fails_on_missing_github_oauth_urls(self):
         for key in ('githubAuthAuthUrl', 'githubAuthApiUrl', 'githubAuthTokenUrl'):
             with self.subTest(url=key):
                 test_dict = TeamCredentialTest.create_valid_test_dictionary()
                 test_dict.pop(key)
+                element = examinee.ConcourseTeamCredentials(test_dict)
                 with self.assertRaises(ModelValidationError):
-                    examinee.ConcourseTeamCredentials(test_dict)
+                    element.validate()
 
     def test_validation_fails_on_invalid_github_oauth_teamname(self):
         for value in ('foo/bar/baz', '/foo', 'bar/', 'baz'):
             with self.subTest(value=value):
                 test_dict = TeamCredentialTest.create_valid_test_dictionary()
                 test_dict['gitAuthTeam'] = value
+                element = examinee.ConcourseTeamCredentials(test_dict)
                 with self.assertRaises(ModelValidationError):
-                    examinee.ConcourseTeamCredentials(test_dict)
+                    element.validate()
 
 
 class BasicCredentialsTest(unittest.TestCase):
@@ -110,5 +115,6 @@ class BasicCredentialsTest(unittest.TestCase):
             with self.subTest(key=key):
                 test_dict = self.raw_dict.copy()
                 test_dict.pop(key)
+                element = examinee.BasicCredentials(test_dict)
                 with self.assertRaises(ModelValidationError):
-                    examinee.BasicCredentials(test_dict)
+                    element.validate()
