@@ -37,9 +37,6 @@ REPO_OWNER, REPO_NAME = check_env('${repo_name}_GITHUB_REPO_OWNER_AND_NAME').spl
 COMPONENT_DESCRIPTOR_DIR = pathlib.Path(check_env('COMPONENT_DESCRIPTOR_DIR')).absolute()
 COMPONENT_DESCRIPTOR = COMPONENT_DESCRIPTOR_DIR.joinpath('component_descriptor')
 
-# todo: remove this (including sources)
-PYTHON_LIBS_DIR=REPO_ROOT.joinpath('scripts/lib/python')
-sys.path.insert(1, PYTHON_LIBS_DIR)
 
 cfg_factory = util.ctx().cfg_factory()
 github_cfg=cfg_factory.github('${github_cfg_name}')
