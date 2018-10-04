@@ -8,6 +8,7 @@ cc-utils:
   variants:
     head_update:
       traits:
+        version: ~
         component_descriptor: ~
     pull_request:
       traits:
