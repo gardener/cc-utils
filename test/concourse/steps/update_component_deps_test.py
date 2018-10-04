@@ -36,8 +36,6 @@ class ComponentDescriptorStepTest(unittest.TestCase):
             github_cfg_name=None,
             indent=0
         )
-        with open('/home/dr1fter/src/sap/cc-utils/update_component_deps.py', 'w') as f:
-            f.write(step_snippet)
 
         # try to compile (-> basic syntax check)
         return compile(step_snippet, 'component_descriptor.mako', 'exec')
