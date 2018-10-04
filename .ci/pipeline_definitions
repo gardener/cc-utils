@@ -6,10 +6,7 @@ cc-utils:
       pycodestyle: ~
       test: ~
   variants:
-    head_update:
-      traits:
-        version: ~
-        component_descriptor: ~
+    head_update: ~
     pull_request:
       traits:
         pull-request:
