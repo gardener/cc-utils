@@ -25,11 +25,8 @@ import util
 
 from github.release_notes.util import ReleaseNotes
 from github.util import GitHubRepositoryHelper
+from util import check_env
 
-def check_env(name):
-    if not name in os.environ:
-        util.fail('env var {n} must be set'.format(n=name))
-    return os.environ[name]
 
 # must point to this repository's root directory
 REPO_ROOT = pathlib.Path(check_env('${repo_name}_PATH')).absolute()
