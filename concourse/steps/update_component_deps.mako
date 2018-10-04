@@ -52,6 +52,7 @@ os.environ['GIT_AUTHOR_EMAIL'] = email
 component_resolver = product.util.ComponentResolver(cfg_factory=cfg_factory)
 component_descriptor_resolver = product.util.ComponentDescriptorResolver(cfg_factory=cfg_factory)
 
+# indicates whether or not an upstream component was defined as a reference
 UPGRADE_TO_UPSTREAM = 'UPSTREAM_COMPONENT_NAME' in os.environ
 
 def current_product_descriptor():
@@ -114,22 +115,6 @@ def component_dir(component_reference):
         'components',
         component_reference.github_repo(),
     )
-
-
-def greatest_component_references(landscape_dependencies):
-    names = [
-        cref.name() for cref
-        in landscape_dependencies.components()
-    ]
-    # there might be multiple component versions of the same name
-    # --> use the greatest version in that case
-    for name in names:
-        matching_crefs = sorted(
-            [c for c in landscape_dependencies.components() if c.name() == name],
-            key=lambda c:semver.parse_version_info(c.version()),
-        )
-        # greatest version comes last
-        yield matching_crefs[-1]
 
 
 def upgrade_pr_exists(component_reference, upgrade_requests):
@@ -253,7 +238,7 @@ else:
 
 
 # find components that need to be upgraded
-for component_ref in greatest_component_references(immediate_dependencies):
+for component_ref in product.util.greatest_component_references(immediate_dependencies.components()):
     latest_version = determine_reference_version(component_ref.name())
     latest_cref = product.model.ComponentReference.create(
       name=component_ref.name(),
