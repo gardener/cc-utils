@@ -110,13 +110,6 @@ def close_obsolete_pull_requests(upgrade_pull_requests, reference_component):
         obsolete_request.purge()
 
 
-def component_dir(component_reference):
-    return REPO_ROOT.joinpath(
-        'components',
-        component_reference.github_repo(),
-    )
-
-
 def upgrade_pr_exists(reference, upgrade_requests):
     return any(
         [upgrade_rq.target_matches(reference=reference) for upgrade_rq in upgrade_requests]
