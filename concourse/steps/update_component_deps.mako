@@ -7,12 +7,6 @@ from makoutil import indent_func
 main_repo = job_variant.main_repository()
 repo_name = main_repo.logical_name().upper()
 %>
-try:
-    import ctx
-except ImportError:
-    print('cc-utils repository must be available in PYTHONPATH')
-    import sys
-    sys.exit(1)
 
 import os
 import subprocess
@@ -22,6 +16,7 @@ from tempfile import TemporaryDirectory
 
 import semver
 
+import ctx
 import github.util
 import gitutil
 import util
