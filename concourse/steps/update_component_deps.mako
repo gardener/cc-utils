@@ -189,7 +189,7 @@ def create_upgrade_pr(from_ref, to_ref, ls_repo):
 
     ls_repo.create_pull(
             title=github.util.PullRequestUtil.calculate_pr_title(
-                component_name=to_ref.name(),
+                reference=to_ref,
                 from_version=from_ref.version(),
                 to_version=to_ref.version()
             ),
