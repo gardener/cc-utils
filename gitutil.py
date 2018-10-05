@@ -30,7 +30,7 @@ class GitHelper(object):
         not_none(repo)
         if not isinstance(repo, git.Repo):
             # assume it's a file path if it's not already a git.Repo
-            repo = git.Repo(repo)
+            repo = git.Repo(str(repo))
         self.repo = repo
         self.github_cfg = github_cfg
         self.github_repo_path = github_repo_path
