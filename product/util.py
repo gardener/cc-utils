@@ -229,11 +229,18 @@ def greatest_references(references: typing.Iterable[DependencyBase]):
         in references
     ]
 
-    # there might be multiple component versions of the same name
-    # --> use the greatest version in that case
     for name in names:
+        matching_refs = [r for r in references if r.name() == name]
+        if len(matching_refs) == 1:
+            # in case reference name was unique, do not bother sorting
+            # (this also works around issues from non-semver versions)
+            yield matching_refs[0]
+            continue
+
+        # there might be multiple component versions of the same name
+        # --> use the greatest version in that case
         matching_refs = sorted(
-            [r for r in references if r.name() == name],
+            matching_refs,
             key=lambda r: semver.parse_version_info(r.version()),
         )
         # greates version comes last
