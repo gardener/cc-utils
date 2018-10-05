@@ -77,13 +77,13 @@ def upstream_reference_component():
     component_name = check_env('UPSTREAM_COMPONENT_NAME')
     latest_version = component_resolver.latest_component_version(component_name)
 
-    component_reference = product.model.ComponentReference.create(
+    referenceerence = product.model.ComponentReference.create(
         name=component_name,
         version=latest_version,
     )
 
     reference_product = component_descriptor_resolver.retrieve_descriptor(
-        component_reference=component_reference,
+        referenceerence=referenceerence,
     )
 
     reference_component = _component(
@@ -225,32 +225,32 @@ else:
 
 
 # find components that need to be upgraded
-for component_ref in product.util.greatest_references(immediate_dependencies.components()):
-    latest_version = determine_reference_version(component_ref.name())
+for reference in product.util.greatest_references(immediate_dependencies.components()):
+    latest_version = determine_reference_version(reference.name())
     latest_cref = product.model.ComponentReference.create(
-      name=component_ref.name(),
+      name=reference.name(),
       version=str(latest_version),
     )
-    if latest_version <= semver.parse_version_info(component_ref.version()):
+    if latest_version <= semver.parse_version_info(reference.version()):
         util.info('skipping outdated component upgrade: {n}; our version: {ov}, found: {fv}'.format(
-          n=component_ref.name(),
-          ov=str(component_ref.version()),
+          n=reference.name(),
+          ov=str(reference.version()),
           fv=str(latest_version),
           )
         )
         continue
     elif upgrade_pr_exists(reference=latest_cref, upgrade_requests=upgrade_pull_requests):
-        util.info('skipping upgrade (PR already exists): ' + component_ref.name())
+        util.info('skipping upgrade (PR already exists): ' + reference.name())
         continue
     else:
         util.info('creating upgrade PR: {n}->{v}'.format(
-          n=component_ref.name(),
+          n=reference.name(),
           v=str(latest_version),
           )
         )
         to_ref = product.model.ComponentReference.create(
-            name=component_ref.name(),
+            name=reference.name(),
             version=str(latest_version),
         )
-        create_upgrade_pr(from_ref=component_ref, to_ref=to_ref, ls_repo=ls_repository)
+        create_upgrade_pr(from_ref=reference, to_ref=to_ref, ls_repo=ls_repository)
 </%def>
