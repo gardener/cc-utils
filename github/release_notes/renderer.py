@@ -44,6 +44,13 @@ TARGET_GROUP_OPERATOR = TitleNode(
 )
 TARGET_GROUPS = [TARGET_GROUP_USER, TARGET_GROUP_OPERATOR]
 
+CATEGORY_ACTION_ID = 'action'
+CATEGORY_ACTION = TitleNode(
+    identifier=CATEGORY_ACTION_ID,
+    title='Action Required',
+    nodes=TARGET_GROUPS,
+    matches_rls_note_field_path='category_id'
+)
 CATEGORY_NOTEWORTHY_ID = 'noteworthy'
 CATEGORY_NOTEWORTHY = TitleNode(
     identifier=CATEGORY_NOTEWORTHY_ID,
@@ -58,7 +65,7 @@ CATEGORY_IMPROVEMENT = TitleNode(
     nodes=TARGET_GROUPS,
     matches_rls_note_field_path='category_id'
 )
-CATEGORIES = [CATEGORY_NOTEWORTHY, CATEGORY_IMPROVEMENT]
+CATEGORIES = [CATEGORY_ACTION, CATEGORY_NOTEWORTHY, CATEGORY_IMPROVEMENT]
 
 
 class Renderer(object):

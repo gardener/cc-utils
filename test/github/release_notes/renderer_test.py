@@ -24,6 +24,7 @@ from github.release_notes.model import (
 from github.release_notes.renderer import (
     MarkdownRenderer,
     get_or_call,
+    CATEGORY_ACTION_ID,
     CATEGORY_NOTEWORTHY_ID,
     CATEGORY_IMPROVEMENT_ID,
     TARGET_GROUP_USER_ID,
@@ -293,11 +294,20 @@ class RendererTest(unittest.TestCase):
                 reference_id=None,
                 user_login=None,
             ),
+            release_note_block_with_defaults(
+                category_id=CATEGORY_ACTION_ID,
+                text='action required release note',
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+            ),
         ]
 
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
             '# [current-repo]\n'\
+            '## Action Required\n'\
+            '* *[USER]* action required release note\n'\
             '## Most notable changes\n'\
             '* *[USER]* noteworthy release note\n'\
             '## Improvements\n'\
