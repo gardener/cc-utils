@@ -222,19 +222,51 @@ close_obsolete_pull_requests(
 immediate_dependencies = current_component().dependencies()
 
 if UPGRADE_TO_UPSTREAM:
-  def determine_reference_version(component_name):
-    return semver.parse_version_info(
-      _component(upstream_reference_component().dependencies(), component_name).version()
-    )
+  def determine_reference_version(reference):
+    upstream_deps = upstream_reference_component().dependencies()
+    upstream_refs = upstream_deps.references(type_name=reference.type_name())
+    # filter for our name
+    upstream_refs = [
+        ref for ref in upstream_refs
+        if ref.name() == reference.name()
+    ]
+    # filter for greatest
+    upstream_refs = list(product.util.greatest_references(upstream_refs))
+    if not upstream_refs:
+      return None # upstream component does not declare our ref
+    if len(upstream_refs) > 1:
+      raise ValueError('found more than one matching reference (this is a BUG)')
+
+    upstream_ref = upstream_refs[0]
+    return semver.parse_version_info(upstream_ref.version())
+
+  def enumerate_dependencies():
+    for type_name in ('component', 'web', 'generic', 'container_image'):
+      yield from product.util.greatest_references(
+        immediate_dependencies.references(type_name=type_name)
+      )
 else:
-  def determine_reference_version(component_name):
-    return component_resolver.latest_component_version(component_name)
+  # no upstream component
+  def determine_reference_version(reference):
+    if not reference.type_name() == 'component':
+      raise ValueError('only component dependencies supported')
+    return component_resolver.latest_component_version(reference.name())
+
+  def enumerate_dependencies():
+    yield from product.util.greatest_references(immediate_dependencies.components())
 
 
 # find components that need to be upgraded
-for reference in product.util.greatest_references(immediate_dependencies.components()):
-    latest_version = determine_reference_version(reference.name())
-    latest_cref = product.model.ComponentReference.create(
+for reference in enumerate_dependencies():
+    ref_ctor = product.model.reference_type(reference.type_name()).create
+    latest_version = determine_reference_version(reference)
+    if not latest_version:
+      util.info('could not find reference version for {n} - skipping'.format(
+        n=reference.name()
+        )
+      )
+      continue
+    latest_ref = ref_ctor(
       name=reference.name(),
       version=str(latest_version),
     )
@@ -246,7 +278,7 @@ for reference in product.util.greatest_references(immediate_dependencies.compone
           )
         )
         continue
-    elif upgrade_pr_exists(reference=latest_cref, upgrade_requests=upgrade_pull_requests):
+    elif upgrade_pr_exists(reference=latest_ref, upgrade_requests=upgrade_pull_requests):
         util.info('skipping upgrade (PR already exists): ' + reference.name())
         continue
     else:
@@ -255,7 +287,7 @@ for reference in product.util.greatest_references(immediate_dependencies.compone
           v=str(latest_version),
           )
         )
-        to_ref = product.model.ComponentReference.create(
+        to_ref = ref_ctor(
             name=reference.name(),
             version=str(latest_version),
         )
