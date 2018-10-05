@@ -211,7 +211,6 @@ class PullRequestUtil(RepositoryHelperBase):
             pull_request=pull_request,
             from_ref=from_ref,
             to_ref=to_ref,
-            ref_type_name=reference_type_name,
         )
 
     def enumerate_upgrade_pull_requests(self):
