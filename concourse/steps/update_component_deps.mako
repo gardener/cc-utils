@@ -152,6 +152,25 @@ def create_upgrade_pr(from_ref, to_ref, ls_repo):
     helper.push(from_ref=commit.hexsha, to_ref='refs/heads/' + new_branch_name, use_ssh=True)
     helper.repo.git.checkout('.')
 
+    if from_ref.type_name() == 'component':
+        pr_text = determine_release_notes(from_ref)
+        if not pr_text:
+         pr_text = ''
+    else:
+        pr_text = ''
+
+    ls_repo.create_pull(
+            title=github.util.PullRequestUtil.calculate_pr_title(
+                reference=to_ref,
+                from_version=from_ref.version(),
+                to_version=to_ref.version()
+            ),
+            base=REPO_BRANCH,
+            head=new_branch_name,
+            body=pr_text,
+    )
+
+def determine_release_notes(from_ref):
     with TemporaryDirectory() as temp_dir:
         from_github_cfg = cfg_factory.github(from_ref.config_name())
 
@@ -181,24 +200,12 @@ def create_upgrade_pr(from_ref, to_ref, ls_repo):
             git_helper=from_git_helper,
             commit_range=commit_range
         ).release_note_blocks()
-        if release_note_blocks:
-            text = '*Release Notes*:\n{blocks}'.format(
-                blocks=release_note_blocks
-            )
-        else:
-            text = None
 
-    ls_repo.create_pull(
-            title=github.util.PullRequestUtil.calculate_pr_title(
-                reference=to_ref,
-                from_version=from_ref.version(),
-                to_version=to_ref.version()
-            ),
-            base=REPO_BRANCH,
-            head=new_branch_name,
-            body=text,
-    )
-
+        if not release_note_blocks:
+            return None
+        return '*Release Notes*:\n{blocks}'.format(
+            blocks=release_note_blocks
+        )
 
 reference_product = current_product_descriptor()
 
