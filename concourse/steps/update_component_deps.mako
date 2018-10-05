@@ -39,7 +39,8 @@ COMPONENT_DESCRIPTOR = COMPONENT_DESCRIPTOR_DIR.joinpath('component_descriptor')
 
 
 cfg_factory = util.ctx().cfg_factory()
-github_cfg=cfg_factory.github('${github_cfg_name}')
+github_cfg_name = '${github_cfg_name}'
+github_cfg=cfg_factory.github(github_cfg_name)
 
 
 component_resolver = product.util.ComponentResolver(cfg_factory=cfg_factory)
@@ -124,6 +125,7 @@ def create_upgrade_pr(from_ref, to_ref, ls_repo):
     cmd_env['DEPENDENCY_NAME'] = to_ref.name()
     cmd_env['DEPENDENCY_VERSION'] = to_ref.version()
     cmd_env['REPO_DIR'] = repo_dir
+    cmd_env['GITHUB_CFG_NAME'] = github_cfg_name
     subprocess.run(
         [str(upgrade_script_path)],
         check=True,
