@@ -78,13 +78,13 @@ def upstream_reference_component():
     component_name = check_env('UPSTREAM_COMPONENT_NAME')
     latest_version = component_resolver.latest_component_version(component_name)
 
-    referenceerence = product.model.ComponentReference.create(
+    component_reference = product.model.ComponentReference.create(
         name=component_name,
         version=latest_version,
     )
 
     reference_product = component_descriptor_resolver.retrieve_descriptor(
-        referenceerence=referenceerence,
+        component_reference=component_reference,
     )
 
     reference_component = _component(
