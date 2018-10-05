@@ -41,19 +41,13 @@ COMPONENT_DESCRIPTOR = COMPONENT_DESCRIPTOR_DIR.joinpath('component_descriptor')
 cfg_factory = util.ctx().cfg_factory()
 github_cfg=cfg_factory.github('${github_cfg_name}')
 
-# set git author and committer from config
-user_name = github_cfg.credentials().username()
-email = github_cfg.credentials().email_address()
-os.environ['GIT_COMMITTER_NAME'] = user_name
-os.environ['GIT_COMMITTER_EMAIL'] = email
-os.environ['GIT_AUTHOR_NAME'] = user_name
-os.environ['GIT_AUTHOR_EMAIL'] = email
 
 component_resolver = product.util.ComponentResolver(cfg_factory=cfg_factory)
 component_descriptor_resolver = product.util.ComponentDescriptorResolver(cfg_factory=cfg_factory)
 
 # indicates whether or not an upstream component was defined as a reference
 UPGRADE_TO_UPSTREAM = 'UPSTREAM_COMPONENT_NAME' in os.environ
+
 
 def current_product_descriptor():
     raw = util.parse_yaml_file(COMPONENT_DESCRIPTOR)
