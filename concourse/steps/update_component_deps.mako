@@ -126,6 +126,11 @@ def create_upgrade_pr(from_ref, to_ref, ls_repo):
     cmd_env['DEPENDENCY_VERSION'] = to_ref.version()
     cmd_env['REPO_DIR'] = repo_dir
     cmd_env['GITHUB_CFG_NAME'] = github_cfg_name
+
+    # pass type-specific attributes
+    if to_ref.type_name() == 'container_image':
+      cmd_env['DEPENDENCY_IMAGE_REFERENCE'] = to_ref.image_reference()
+
     subprocess.run(
         [str(upgrade_script_path)],
         check=True,
