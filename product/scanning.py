@@ -12,6 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from enum import (
+    Flag,
+    auto
+)
 from functools import partial
 
 from protecode.client import ProtecodeApi
@@ -19,6 +23,13 @@ from protecode.model import ProcessingStatus
 from util import not_none, warning
 from container.registry import retrieve_container_image
 from .model import ContainerImage, Component, UploadResult, UploadStatus
+
+import util
+
+
+class UploadAction(Flag):
+    SKIP = auto()
+    UPLOAD = auto()
 
 
 class ProtecodeUtil(object):
@@ -94,6 +105,24 @@ class ProtecodeUtil(object):
         product = self._api.scan_result(product_id=product_id)
         return product
 
+    def _determine_upload_action(
+            self,
+            container_image: ContainerImage,
+            scan_result, # todo: add type hint
+    ):
+        if not scan_result:
+            return UploadAction.UPLOAD
+        util.check_type(container_image, ContainerImage)
+
+        metadata = scan_result.custom_data()
+        image_reference = metadata.get('IMAGE_REFERENCE')
+        image_changed = image_reference != container_image.image_reference()
+
+        if image_changed:
+            return UploadAction.UPLOAD
+        else:
+            return UploadAction.SKIP
+
     def upload_image(
             self,
             container_image: ContainerImage,
@@ -109,24 +138,25 @@ class ProtecodeUtil(object):
             component=component,
         )
 
-        if scan_result:
-            # check if image version changed
+        upload_action = self._determine_upload_action(
+            container_image=container_image,
+            scan_result=scan_result
+        )
 
-            metadata = scan_result.custom_data()
-            image_reference = metadata.get('IMAGE_REFERENCE')
-            image_changed = image_reference != container_image.image_reference()
+        if upload_action is UploadAction.SKIP:
+            do_upload = False
+        elif upload_action is UploadAction.UPLOAD:
+            do_upload = True
+        else:
+            raise NotImplementedError
 
-            if not image_changed:
-                # image reference did not change - early exit
-                return upload_result(
-                    status=UploadStatus.SKIPPED,
-                    result=scan_result,
-                )
-            else:
-                pass # continue with regular image upload; overwrite should take place
-                # due to identical name (hopefully)
+        if not do_upload:
+            # early exit (nothing to do)
+            return upload_result(
+                status=UploadStatus.SKIPPED,
+                result=scan_result,
+            )
 
-        # image was not yet uploaded - do this now
         image_data_fh = retrieve_container_image(container_image.image_reference())
 
         try:
