@@ -24,11 +24,9 @@ from protecode.model import (
     ProcessingStatus,
     AnalysisResult,
 )
-from util import not_none, warning
+from util import not_none, warning, check_type
 from container.registry import retrieve_container_image
 from .model import ContainerImage, Component, UploadResult, UploadStatus
-
-import util
 
 
 class ProcessingMode(Enum):
@@ -48,7 +46,7 @@ class ProtecodeUtil(object):
             group_id: int=None,
     ):
         protecode_api.login()
-        self._processing_mode = util.check_type(processing_mode, ProcessingMode)
+        self._processing_mode = check_type(processing_mode, ProcessingMode)
         self._api = not_none(protecode_api)
         self._group_id = group_id
 
@@ -129,7 +127,7 @@ class ProtecodeUtil(object):
 
         if not scan_result:
             return UploadAction.UPLOAD
-        util.check_type(container_image, ContainerImage)
+        check_type(container_image, ContainerImage)
 
         metadata = scan_result.custom_data()
         image_reference = metadata.get('IMAGE_REFERENCE')
