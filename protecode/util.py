@@ -16,7 +16,7 @@
 from concurrent.futures import ThreadPoolExecutor
 
 import protecode.client
-from product.scanning import ProtecodeUtil
+from product.scanning import ProtecodeUtil, ProcessingMode
 from util import info
 
 
@@ -29,7 +29,11 @@ def upload_images(
 ):
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
     protecode_api = protecode.client.from_cfg(protecode_cfg)
-    protecode_util = ProtecodeUtil(protecode_api=protecode_api, group_id=protecode_group_id)
+    protecode_util = ProtecodeUtil(
+        protecode_api=protecode_api,
+        processing_mode=ProcessingMode.UPLOAD_IF_CHANGED,
+        group_id=protecode_group_id,
+    )
     tasks = _create_tasks(product_descriptor, protecode_util)
     results = executor.map(lambda task: task(), tasks)
 

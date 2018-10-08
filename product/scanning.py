@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from enum import (
+    Enum,
     Flag,
     auto
 )
@@ -27,14 +28,24 @@ from .model import ContainerImage, Component, UploadResult, UploadStatus
 import util
 
 
+class ProcessingMode(Enum):
+    UPLOAD_IF_CHANGED = auto()
+
+
 class UploadAction(Flag):
     SKIP = auto()
     UPLOAD = auto()
 
 
 class ProtecodeUtil(object):
-    def __init__(self, protecode_api: ProtecodeApi, group_id=None):
+    def __init__(
+            self,
+            protecode_api: ProtecodeApi,
+            processing_mode: ProcessingMode=ProcessingMode.UPLOAD_IF_CHANGED,
+            group_id: int=None,
+    ):
         protecode_api.login()
+        self._processing_mode = util.check_type(processing_mode, ProcessingMode)
         self._api = not_none(protecode_api)
         self._group_id = group_id
 
@@ -110,6 +121,9 @@ class ProtecodeUtil(object):
             container_image: ContainerImage,
             scan_result, # todo: add type hint
     ):
+        if self._processing_mode is not ProcessingMode.UPLOAD_IF_CHANGED:
+            raise NotImplementedError
+
         if not scan_result:
             return UploadAction.UPLOAD
         util.check_type(container_image, ContainerImage)
