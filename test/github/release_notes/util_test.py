@@ -27,6 +27,7 @@ from github.release_notes.util import (
     fetch_release_notes_from_commits
 )
 from github.release_notes.renderer import (
+    CATEGORY_ACTION_ID,
     CATEGORY_NOTEWORTHY_ID,
     CATEGORY_IMPROVEMENT_ID,
     TARGET_GROUP_USER_ID,
@@ -116,6 +117,22 @@ class ReleaseNotesTest(unittest.TestCase):
             category_id=CATEGORY_NOTEWORTHY_ID,
             target_group_id=TARGET_GROUP_OPERATOR_ID,
             text='notew-text',
+        )
+        self.assertEqual([exp_release_note], actual_release_notes)
+
+    def test_rls_note_extraction_action(self):
+        text = \
+            '``` action operator\n'\
+            'action-text\n'\
+            '```'
+        actual_release_notes = extract_release_notes_with_defaults(
+            text=text,
+        )
+
+        exp_release_note = release_note_block_with_defaults(
+            category_id=CATEGORY_ACTION_ID,
+            target_group_id=TARGET_GROUP_OPERATOR_ID,
+            text='action-text',
         )
         self.assertEqual([exp_release_note], actual_release_notes)
 
