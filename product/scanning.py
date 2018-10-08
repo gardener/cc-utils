@@ -20,7 +20,10 @@ from enum import (
 from functools import partial
 
 from protecode.client import ProtecodeApi
-from protecode.model import ProcessingStatus
+from protecode.model import (
+    ProcessingStatus,
+    AnalysisResult,
+)
 from util import not_none, warning
 from container.registry import retrieve_container_image
 from .model import ContainerImage, Component, UploadResult, UploadStatus
@@ -119,7 +122,7 @@ class ProtecodeUtil(object):
     def _determine_upload_action(
             self,
             container_image: ContainerImage,
-            scan_result, # todo: add type hint
+            scan_result: AnalysisResult,
     ):
         if self._processing_mode is not ProcessingMode.UPLOAD_IF_CHANGED:
             raise NotImplementedError
