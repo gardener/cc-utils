@@ -49,12 +49,11 @@ def upload_images(
             info('CVE below configured threshold - clean')
 
 
-def _create_task(protecode_util, container_image, component, wait_for_result):
+def _create_task(protecode_util, container_image, component):
     def task_function():
         return protecode_util.upload_image(
             container_image=container_image,
             component=component,
-            wait_for_result=True,
         )
     return task_function
 
@@ -73,5 +72,4 @@ def _create_tasks(product_model, protecode_util):
                     protecode_util=protecode_util,
                     container_image=container_image,
                     component=component,
-                    wait_for_result=True,
-                    )
+            )

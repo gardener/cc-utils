@@ -98,7 +98,6 @@ class ProtecodeUtil(object):
             self,
             container_image: ContainerImage,
             component: Component,
-            wait_for_result: bool=False
         ):
         metadata = self._metadata(container_image=container_image, component=component)
 
@@ -143,8 +142,7 @@ class ProtecodeUtil(object):
         finally:
             image_data_fh.close()
 
-        if wait_for_result:
-            result = self._api.wait_for_scan_result(product_id=result.product_id())
+        result = self._api.wait_for_scan_result(product_id=result.product_id())
 
         if result.status() == ProcessingStatus.BUSY:
             upload_status = UploadStatus.PENDING
