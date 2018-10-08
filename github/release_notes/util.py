@@ -394,7 +394,7 @@ def extract_release_notes(
         return release_notes
 
     r = re.compile(
-        r"``` *(?P<category>improvement|noteworthy) (?P<target_group>user|operator)"
+        r"``` *(?P<category>improvement|noteworthy|action) (?P<target_group>user|operator)"
         r"( (?P<source_repo>\S+/\S+/\S+)(( (?P<reference_type>#|\$)(?P<reference_id>\S+))?"
         r"( @(?P<user>\S+))?)( .*?)?|( .*?)?)\r?\n(?P<text>.*?)\n```",
         re.MULTILINE | re.DOTALL
