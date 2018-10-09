@@ -22,6 +22,7 @@ from concourse.model.base import (
     ModelBase,
     ScriptType,
 )
+from product.scanning import ProcessingMode
 
 from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
 
@@ -31,6 +32,7 @@ class ImageScanTrait(Trait):
         return {
             'parallel_jobs': 12,
             'cve_threshold': 7,
+            'processing_mode': 'upload_if_changed'
         }
 
     def _required_attributes(self):
@@ -50,6 +52,14 @@ class ImageScanTrait(Trait):
 
     def cve_threshold(self):
         return self.raw.get('cve_threshold')
+
+    def processing_mode(self):
+        return self.raw.get('processing_mode')
+
+    def validate(self):
+        super().validate()
+        # Use enum.Enum's validation to validate configured processing mode.
+        ProcessingMode(self.processing_mode())
 
     def transformer(self):
         return ImageScanTraitTransformer(trait=self)
