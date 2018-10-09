@@ -40,45 +40,45 @@ from model.base import ModelValidationError
 from slack.util import SlackHelper
 
 
-def rls_notes_as_markdown_and_post_to_slack(
+def fetch_release_notes(
     github_repository_owner: str,
     github_repository_name: str,
     github_cfg: str,
     repo_dir: str,
     github_helper: GitHubRepositoryHelper,
     repository_branch: str,
-    slack_cfg_name: str,
-    slack_channel: str,
-    release_version: str
-) -> str:
+):
     repo_path = github_repo_path(owner=github_repository_owner, name=github_repository_name)
     git_helper = GitHelper(repo=repo_dir, github_cfg=github_cfg, github_repo_path=repo_path)
-    release_notes = ReleaseNotes.create(
+    return ReleaseNotes.create(
         github_helper=github_helper,
         git_helper=git_helper,
         repository_branch=repository_branch
     )
 
-    post_to_slack = slack_cfg_name and slack_channel
-    if post_to_slack:
-        # slack can't auto link pull requests, commits or users
-        # hence we force the link generation when building the markdown string
-        release_notes_md_links = release_notes.to_markdown(
-            force_link_generation=True
-        )
-        title = '[{n}] {v} released'.format(n=github_repository_name, v=release_version)
-        slack_cfg = ctx().cfg_factory().slack(slack_cfg_name)
-        try:
-            SlackHelper(slack_cfg).post_to_slack(
-                channel=slack_channel,
-                title=title,
-                message=release_notes_md_links
-            )
-        except RuntimeError as e:
-            warning(e)
 
-    release_notes_md =  release_notes.to_markdown()
-    return release_notes_md
+def post_to_slack(
+    release_notes: ReleaseNote,
+    github_repository_name: str,
+    slack_cfg_name: str,
+    slack_channel: str,
+    release_version: str
+):
+    # slack can't auto link pull requests, commits or users
+    # hence we force the link generation when building the markdown string
+    release_notes_md_links = release_notes.to_markdown(
+        force_link_generation=True
+    )
+    title = '[{n}] {v} released'.format(n=github_repository_name, v=release_version)
+    slack_cfg = ctx().cfg_factory().slack(slack_cfg_name)
+    try:
+        SlackHelper(slack_cfg).post_to_slack(
+            channel=slack_channel,
+            title=title,
+            message=release_notes_md_links
+        )
+    except RuntimeError as e:
+        warning(e)
 
 
 def github_repo_path(owner, name):
