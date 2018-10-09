@@ -16,6 +16,8 @@ import product.model
 import protecode.util
 import util
 
+from product.scanning import ProcessingMode
+
 # XXX suppress warnings for sap-ca
 # (is installed in truststore in cc-job-image, but apparently not honoured by httlib2)
 import urllib3
@@ -33,9 +35,12 @@ component_descriptor = product.model.Product.from_dict(
   raw_dict=util.parse_yaml_file(component_descriptor_file)
 )
 
+processing_mode = ProcessingMode('${image_scan_trait.processing_mode()}')
+
 protecode.util.upload_images(
   protecode_cfg=protecode_cfg,
   product_descriptor=component_descriptor,
+  processing_mode=processing_mode,
   protecode_group_id=int(${image_scan_trait.protecode_group_id()}),
   parallel_jobs=${image_scan_trait.parallel_jobs()},
   cve_threshold=${image_scan_trait.cve_threshold()},
