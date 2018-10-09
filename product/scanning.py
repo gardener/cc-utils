@@ -30,7 +30,7 @@ from .model import ContainerImage, Component, UploadResult, UploadStatus
 
 
 class ProcessingMode(Enum):
-    UPLOAD_IF_CHANGED = auto()
+    UPLOAD_IF_CHANGED = 'upload_if_changed'
 
 
 class UploadAction(Flag):

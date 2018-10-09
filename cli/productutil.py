@@ -27,12 +27,19 @@ from product.model import (
     WebDependency,
 )
 from product.util import merge_products, ComponentDescriptorResolver
-from protecode.util import upload_images
+from protecode.util import (
+    upload_images,
+    ProcessingMode
+)
 
 
 def upload_product_images(
     protecode_cfg_name: str,
     product_cfg_file: CliHints.existing_file(),
+    processing_mode: CliHint(
+        choices=list(ProcessingMode),
+        type=ProcessingMode,
+    )=ProcessingMode.UPLOAD_IF_CHANGED,
     protecode_group_id: int=5,
     parallel_jobs: int=4,
     cve_threshold: int=7,
@@ -50,6 +57,7 @@ def upload_product_images(
         protecode_group_id=protecode_group_id,
         parallel_jobs=parallel_jobs,
         cve_threshold=cve_threshold,
+        processing_mode=processing_mode,
     )
 
 

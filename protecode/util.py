@@ -26,12 +26,13 @@ def upload_images(
     protecode_group_id=5,
     parallel_jobs=8,
     cve_threshold=7,
+    processing_mode=ProcessingMode.UPLOAD_IF_CHANGED,
 ):
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
     protecode_api = protecode.client.from_cfg(protecode_cfg)
     protecode_util = ProtecodeUtil(
         protecode_api=protecode_api,
-        processing_mode=ProcessingMode.UPLOAD_IF_CHANGED,
+        processing_mode=processing_mode,
         group_id=protecode_group_id,
     )
     tasks = _create_tasks(product_descriptor, protecode_util)
