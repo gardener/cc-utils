@@ -28,6 +28,7 @@ from .model import ContainerImage, Component, UploadResult, UploadStatus
 class ProcessingMode(Enum):
     UPLOAD_IF_CHANGED = 'upload_if_changed'
     RESCAN = 'rescan'
+    FORCE_UPLOAD = 'force_upload'
 
 
 class UploadAction(Enum):
@@ -126,7 +127,11 @@ class ProtecodeUtil(object):
     ):
         check_type(container_image, ContainerImage)
 
-        if self._processing_mode in (ProcessingMode.UPLOAD_IF_CHANGED, ProcessingMode.RESCAN):
+        if self._processing_mode in (
+            ProcessingMode.UPLOAD_IF_CHANGED,
+            ProcessingMode.RESCAN,
+            ProcessingMode.FORCE_UPLOAD,
+        ):
             # if no scan_result is available, we have to upload in all cases
             if not scan_result:
                 return UploadAction.UPLOAD
@@ -150,6 +155,8 @@ class ProtecodeUtil(object):
                 return UploadAction.RESCAN
             else:
                 return UploadAction.SKIP
+        elif self._processing_mode is ProcessingMode.FORCE_UPLOAD:
+            return UploadAction.UPLOAD
         else:
             raise NotImplementedError
 
