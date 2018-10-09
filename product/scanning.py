@@ -33,9 +33,12 @@ class ProcessingMode(Enum):
     UPLOAD_IF_CHANGED = 'upload_if_changed'
 
 
-class UploadAction(Flag):
-    SKIP = auto()
-    UPLOAD = auto()
+class UploadAction(Enum):
+    def __init__(self, upload):
+        self.upload = upload
+
+    SKIP = (False,)
+    UPLOAD = (True,)
 
 
 class ProtecodeUtil(object):
@@ -158,14 +161,7 @@ class ProtecodeUtil(object):
             scan_result=scan_result
         )
 
-        if upload_action is UploadAction.SKIP:
-            do_upload = False
-        elif upload_action is UploadAction.UPLOAD:
-            do_upload = True
-        else:
-            raise NotImplementedError
-
-        if not do_upload:
+        if not upload_action.upload:
             # early exit (nothing to do)
             return upload_result(
                 status=UploadStatus.SKIPPED,
