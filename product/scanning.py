@@ -184,7 +184,9 @@ class ProtecodeUtil(object):
             image_data_fh = retrieve_container_image(container_image.image_reference())
 
             try:
-                result = self._api.upload(
+                # Upload image and update outdated analysis result with the one triggered
+                # by the upload.
+                scan_result = self._api.upload(
                     application_name=self._upload_name(
                         container_image=container_image,
                         component=component
