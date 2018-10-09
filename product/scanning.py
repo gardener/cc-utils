@@ -204,7 +204,13 @@ class ProtecodeUtil(object):
         result = self._api.wait_for_scan_result(product_id=scan_result.product_id())
 
         if result.status() == ProcessingStatus.BUSY:
-            upload_status = UploadStatus.PENDING
+            # Should not happen since we waited until the scan result is ready.
+            raise RuntimeError(
+                'Analysis of container-image {c} was reported as completed, '
+                'but is still pending'.format(
+                    c=container_image.name(),
+                )
+            )
         else:
             upload_status = UploadStatus.DONE
 
