@@ -12,11 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from enum import (
-    Enum,
-    Flag,
-    auto
-)
+from enum import Enum
 from functools import partial
 
 from protecode.client import ProtecodeApi
@@ -31,14 +27,17 @@ from .model import ContainerImage, Component, UploadResult, UploadStatus
 
 class ProcessingMode(Enum):
     UPLOAD_IF_CHANGED = 'upload_if_changed'
+    RESCAN = 'rescan'
 
 
 class UploadAction(Enum):
-    def __init__(self, upload):
+    def __init__(self, upload, rescan):
         self.upload = upload
+        self.rescan = rescan
 
-    SKIP = (False,)
-    UPLOAD = (True,)
+    SKIP = (False, False)
+    UPLOAD = (True, False)
+    RESCAN = (False, True)
 
 
 class ProtecodeUtil(object):
@@ -125,21 +124,34 @@ class ProtecodeUtil(object):
             container_image: ContainerImage,
             scan_result: AnalysisResult,
     ):
-        if self._processing_mode is not ProcessingMode.UPLOAD_IF_CHANGED:
-            raise NotImplementedError
-
-        if not scan_result:
-            return UploadAction.UPLOAD
         check_type(container_image, ContainerImage)
 
+        if self._processing_mode in (ProcessingMode.UPLOAD_IF_CHANGED, ProcessingMode.RESCAN):
+            # if no scan_result is available, we have to upload in all cases
+            if not scan_result:
+                return UploadAction.UPLOAD
+
+        # determine if image to be uploaded is already present in protecode
         metadata = scan_result.custom_data()
         image_reference = metadata.get('IMAGE_REFERENCE')
         image_changed = image_reference != container_image.image_reference()
 
         if image_changed:
             return UploadAction.UPLOAD
-        else:
+
+        if self._processing_mode is ProcessingMode.UPLOAD_IF_CHANGED:
             return UploadAction.SKIP
+        elif self._processing_mode is ProcessingMode.RESCAN:
+            short_scan_result = self._api.scan_result_short(scan_result.product_id())
+
+            if not short_scan_result.has_binary():
+                return UploadAction.UPLOAD
+            elif short_scan_result.is_stale():
+                return UploadAction.RESCAN
+            else:
+                return UploadAction.SKIP
+        else:
+            raise NotImplementedError
 
     def upload_image(
             self,
@@ -161,29 +173,33 @@ class ProtecodeUtil(object):
             scan_result=scan_result
         )
 
-        if not upload_action.upload:
+        if not upload_action.upload and not upload_action.rescan:
             # early exit (nothing to do)
             return upload_result(
                 status=UploadStatus.SKIPPED,
                 result=scan_result,
             )
 
-        image_data_fh = retrieve_container_image(container_image.image_reference())
+        if upload_action.upload:
+            image_data_fh = retrieve_container_image(container_image.image_reference())
 
-        try:
-            result = self._api.upload(
-                application_name=self._upload_name(
-                    container_image=container_image,
-                    component=component
-                ).replace('/', '_'),
-                group_id=self._group_id,
-                data=image_data_fh,
-                custom_attribs=metadata,
-            )
-        finally:
-            image_data_fh.close()
+            try:
+                result = self._api.upload(
+                    application_name=self._upload_name(
+                        container_image=container_image,
+                        component=component
+                    ).replace('/', '_'),
+                    group_id=self._group_id,
+                    data=image_data_fh,
+                    custom_attribs=metadata,
+                )
+            finally:
+                image_data_fh.close()
 
-        result = self._api.wait_for_scan_result(product_id=result.product_id())
+        if upload_action.rescan:
+            self._api.rescan(scan_result.product_id())
+
+        result = self._api.wait_for_scan_result(product_id=scan_result.product_id())
 
         if result.status() == ProcessingStatus.BUSY:
             upload_status = UploadStatus.PENDING
