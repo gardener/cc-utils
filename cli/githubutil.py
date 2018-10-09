@@ -43,7 +43,8 @@ from github.util import (
 import product.model
 from github.release_notes.util import (
     ReleaseNotes,
-    rls_notes_as_markdown_and_post_to_slack,
+    fetch_release_notes,
+    post_to_slack,
     github_repo_path,
     draft_release_name_for_version,
 )
@@ -142,7 +143,6 @@ def release_and_prepare_next_dev_cycle(
     author_name: str="gardener-ci",
     author_email: str="gardener.ci.user@gmail.com",
     component_descriptor_file_path: str=None,
-    should_generate_release_notes: bool=True,
     slack_cfg_name: str=None,
     slack_channel: str=None,
     rebase_before_release: bool=False,
@@ -172,20 +172,16 @@ def release_and_prepare_next_dev_cycle(
     if rebase_before_release:
         rebase(git_helper=git_helper, upstream_ref=f'refs/heads/{repository_branch}')
 
-    if should_generate_release_notes:
-        release_notes_md = rls_notes_as_markdown_and_post_to_slack(
-            github_repository_owner=github_repository_owner,
-            github_repository_name=github_repository_name,
-            github_cfg=github_cfg,
-            repo_dir=repo_dir,
-            github_helper=helper,
-            repository_branch=repository_branch,
-            slack_cfg_name=slack_cfg_name,
-            slack_channel=slack_channel,
-            release_version=release_version
-        )
-    else:
-        release_notes_md = 'release notes'
+    # Fetch release notes and generate markdown to catch errors early
+    release_notes = fetch_release_notes(
+        github_repository_owner=github_repository_owner,
+        github_repository_name=github_repository_name,
+        github_cfg=github_cfg,
+        repo_dir=repo_dir,
+        github_helper=helper,
+        repository_branch=repository_branch,
+    )
+    release_notes_md = release_notes.to_markdown()
 
     # Do all the version handling upfront to catch errors early
     # Bump release version and add suffix
@@ -246,6 +242,15 @@ def release_and_prepare_next_dev_cycle(
     if draft_release:
         verbose('cleaning up draft release {name}'.format(name=draft_release.name))
         draft_release.delete()
+
+    if slack_cfg_name and slack_channel:
+        post_to_slack(
+            release_notes=release_notes,
+            github_repository_name=github_repository_name,
+            slack_cfg_name=slack_cfg_name,
+            slack_channel=slack_channel,
+            release_version=release_version,
+        )
 
 
 def _create_and_push_release_commit(
