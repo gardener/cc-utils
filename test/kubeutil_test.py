@@ -25,6 +25,7 @@ from util import Failure
 
 kube_ctx = kube.ctx.Ctx()
 
+
 class CtxTest(unittest.TestCase):
     def setUp(self):
         self.examinee = kube_ctx
