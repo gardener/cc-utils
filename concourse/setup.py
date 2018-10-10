@@ -27,6 +27,7 @@ import yaml
 
 import util
 import kubeutil
+import kube.ctx
 
 import concourse.client as client
 
@@ -88,6 +89,9 @@ from kubernetes.client import (
 )
 
 
+kube_ctx = kube.ctx.Ctx()
+
+
 @ensure_annotations
 def create_image_pull_secret(
     credentials: GcrCredentials,
@@ -99,7 +103,7 @@ def create_image_pull_secret(
     not_empty(image_pull_secret_name)
     not_empty(namespace)
 
-    ctx = kubeutil.ctx
+    ctx = kube_ctx
     namespace_helper = ctx.namespace_helper()
     namespace_helper.create_if_absent(namespace)
 
@@ -133,7 +137,7 @@ def create_tls_secret(
     not_empty(tls_secret_name)
     not_empty(namespace)
 
-    ctx = kubeutil.ctx
+    ctx = kube_ctx
     namespace_helper = ctx.namespace_helper()
     namespace_helper.create_if_absent(namespace)
 
@@ -209,7 +213,7 @@ def deploy_concourse_landscape(
     # Set the global context to the cluster specified in the ConcourseConfig
     kubernetes_config_name = concourse_cfg.kubernetes_cluster_config()
     kubernetes_config = config_factory.kubernetes(kubernetes_config_name)
-    kubeutil.ctx.set_kubecfg(kubernetes_config.kubeconfig())
+    kube_ctx.set_kubecfg(kubernetes_config.kubeconfig())
 
     ensure_cluster_version(kubernetes_config)
 
@@ -271,7 +275,7 @@ def deploy_concourse_landscape(
     )
 
     info('Waiting until the webserver can be reached ...')
-    deployment_helper = kubeutil.ctx.deployment_helper()
+    deployment_helper = kube_ctx.deployment_helper()
     is_web_deployment_available = deployment_helper.wait_until_deployment_available(
         namespace=deployment_name,
         name='concourse-web',
@@ -305,7 +309,7 @@ def destroy_concourse_landscape(config_name: str, release_name: str):
 
     kubernetes_config_name = concourse_cfg.kubernetes_cluster_config()
     kubernetes_config = config_factory.kubernetes(kubernetes_config_name)
-    context = kubeutil.ctx
+    context = kube_ctx
     context.set_kubecfg(kubernetes_config.kubeconfig())
 
     # Delete helm release
@@ -336,7 +340,6 @@ def destroy_concourse_landscape(config_name: str, release_name: str):
     namespace_helper.delete_namespace(namespace=release_name)
 
 
-# pylint: disable=no-member
 def ensure_cluster_version(kubernetes_config: KubernetesConfig):
     not_none(kubernetes_config)
 
@@ -385,7 +388,7 @@ def deploy_or_upgrade_concourse(
     namespace = deployment_name
 
     # create namespace if absent
-    namespace_helper = kubeutil.ctx.namespace_helper()
+    namespace_helper = kube_ctx.namespace_helper()
     if not namespace_helper.get_namespace(namespace):
         namespace_helper.create_namespace(namespace)
 
@@ -432,7 +435,7 @@ def deploy_or_upgrade_concourse(
 def deploy_secrets_server(secrets_server_config: SecretsServerConfig):
     not_none(secrets_server_config)
 
-    ctx = kubeutil.ctx
+    ctx = kube_ctx
     service_helper = ctx.service_helper()
     deployment_helper = ctx.deployment_helper()
     secrets_helper = ctx.secret_helper()
@@ -465,7 +468,7 @@ def deploy_delaying_proxy(
     not_none(concourse_cfg)
     not_empty(deployment_name)
 
-    ctx = kubeutil.ctx
+    ctx = kube_ctx
     service_helper = ctx.service_helper()
     deployment_helper = ctx.deployment_helper()
     namespace_helper = ctx.namespace_helper()
