@@ -149,6 +149,7 @@ def release_and_prepare_next_dev_cycle(
     rebase_before_release: bool=False,
 ):
     github_cfg = ctx().cfg_factory().github(github_cfg_name)
+    github_repo_path = f'{github_repository_owner}/{github_repository_name}'
 
     helper = GitHubRepositoryHelper(
         github_cfg=github_cfg,
@@ -198,8 +199,6 @@ def release_and_prepare_next_dev_cycle(
         operation='set_prerelease',
         prerelease=prerelease_suffix
     )
-
-    github_repo_path = f'{github_repository_owner}/{github_repository_name}'
 
     release_commit_sha = _create_and_push_release_commit(
         repo_dir=repo_dir,
