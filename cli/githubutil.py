@@ -28,7 +28,6 @@ from util import (
     existing_file,
     fail,
     info,
-    not_none,
     verbose,
     warning,
 )
