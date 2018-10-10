@@ -42,7 +42,7 @@ release_callback_path = release_trait.release_callback_path()
   --release-commit-callback "${release_callback_path}" \
   % endif
   % if release_trait.rebase_before_release():
-   --rebase-before-release
+   --rebase-before-release \
   % endif
    --github-cfg-name ${github_cfg.name()} \
    --github-repository-name ${repo.repo_name()} \
