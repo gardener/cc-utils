@@ -121,6 +121,14 @@ def generate_release_notes_cli(
     ).to_markdown()
 
 
+def rebase(
+    git_helper,
+    upstream_ref,
+):
+    upstream_commit_sha = git_helper.fetch_head(upstream_ref).hexsha
+    git_helper.rebase(commit_ish=upstream_commit_sha)
+
+
 def release_and_prepare_next_dev_cycle(
     github_cfg_name: str,
     github_repository_owner: str,
@@ -137,7 +145,8 @@ def release_and_prepare_next_dev_cycle(
     component_descriptor_file_path: str=None,
     should_generate_release_notes: bool=True,
     slack_cfg_name: str=None,
-    slack_channel: str=None
+    slack_channel: str=None,
+    rebase_before_release: bool=False,
 ):
     github_cfg = ctx().cfg_factory().github(github_cfg_name)
 
@@ -147,6 +156,11 @@ def release_and_prepare_next_dev_cycle(
         name=github_repository_name,
         default_branch=repository_branch,
     )
+    git_helper = GitHelper(
+        repo=repo_dir,
+        github_cfg=github_cfg,
+        github_repo_path=github_repo_path,
+    )
 
     if helper.tag_exists(tag_name=release_version):
         fail(
@@ -154,6 +168,9 @@ def release_and_prepare_next_dev_cycle(
                 t=release_version,
             )
         )
+
+    if rebase_before_release:
+        rebase(git_helper=git_helper, upstream_ref=f'refs/heads/{repository_branch}')
 
     if should_generate_release_notes:
         release_notes_md = rls_notes_as_markdown_and_post_to_slack(
@@ -185,9 +202,8 @@ def release_and_prepare_next_dev_cycle(
     github_repo_path = f'{github_repository_owner}/{github_repository_name}'
 
     release_commit_sha = _create_and_push_release_commit(
-        github_cfg=github_cfg,
-        github_repo_path=github_repo_path,
         repo_dir=repo_dir,
+        git_helper=git_helper,
         version_file_path=repository_version_file_path,
         release_version=release_version,
         target_ref=repository_branch,
@@ -235,25 +251,17 @@ def release_and_prepare_next_dev_cycle(
 
 
 def _create_and_push_release_commit(
-        github_cfg,
-        github_repo_path: str,
         repo_dir: str,
+        git_helper,
         version_file_path: str,
         release_version: str,
         target_ref: str,
         commit_msg: str,
         release_commit_callback: str=None,
     ):
-    not_none(github_cfg)
     if release_commit_callback:
         release_commit_callback = os.path.join(repo_dir, release_commit_callback)
         existing_file(release_commit_callback)
-
-    git_helper = GitHelper(
-        repo=repo_dir,
-        github_cfg=github_cfg,
-        github_repo_path=github_repo_path,
-    )
 
     def invoke_release_callback():
         if not release_commit_callback:
