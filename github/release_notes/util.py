@@ -164,7 +164,7 @@ def calculate_range(
     github_helper: GitHubRepositoryHelper,
 ) -> str:
     repo = git_helper.repo
-    branch_head = git_helper.branch_head(branch_name=repository_branch)
+    branch_head = git_helper.fetch_head(ref=repository_branch)
     if not branch_head:
         fail('could not determine branch head of {branch} branch'.format(
             branch=repository_branch

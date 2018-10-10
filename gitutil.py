@@ -121,9 +121,9 @@ class GitHelper(object):
     def rebase(self, commit_ish: str):
         self.repo.git.rebase('--quiet', commit_ish)
 
-    def branch_head(self, branch_name: str):
+    def fetch_head(self, ref: str):
         with self._authenticated_remote() as remote:
-            fetch_result = remote.fetch(branch_name)[0]
+            fetch_result = remote.fetch(ref)[0]
             return fetch_result.commit
 
 
