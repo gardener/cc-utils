@@ -118,6 +118,9 @@ class GitHelper(object):
                     os.unlink(tmp_id)
                     del os.environ['GIT_SSH_COMMAND']
 
+    def rebase(self, commit_ish: str):
+        self.repo.git.rebase('--quiet', commit_ish)
+
     def branch_head(self, branch_name: str):
         with self._authenticated_remote() as remote:
             fetch_result = remote.fetch(branch_name)[0]
