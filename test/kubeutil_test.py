@@ -20,14 +20,14 @@ import sys
 import os
 
 from test._test_utils import capture_out
-import kubeutil
 import kube.ctx
 from util import Failure
 
+kube_ctx = kube.ctx.Ctx()
 
 class CtxTest(unittest.TestCase):
     def setUp(self):
-        self.examinee = kubeutil.ctx
+        self.examinee = kube_ctx
         self.fixture_ctx = types.SimpleNamespace()
         self.fixture_args = types.SimpleNamespace()
         self.fixture_ctx.args = self.fixture_args
