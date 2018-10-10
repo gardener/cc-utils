@@ -13,12 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
 
 from model.base import (
     BasicCredentials,
     NamedModelElement,
     ModelValidationError,
 )
+
+
+class ConcourseApiVersion(Enum):
+    '''Enum to define different Concourse versions'''
+    V3 = '3'
+    V4 = '4'
 
 
 class ConcourseConfig(NamedModelElement):
@@ -91,13 +98,25 @@ class ConcourseConfig(NamedModelElement):
     def helm_chart_version(self):
         return self.raw.get('helm_chart_version')
 
+    def concourse_version(self) -> ConcourseApiVersion:
+        return ConcourseApiVersion(self.raw.get('concourse_version'))
+
+    def github_enterprise_host(self):
+        return self.raw.get('github_enterprise_host')
+
     def _required_attributes(self):
         return [
             'externalUrl',
             'teams',
             'helm_chart_default_values_config',
-            'kubernetes_cluster_config'
+            'kubernetes_cluster_config',
+            'concourse_version'
         ]
+
+    def _optional_attributes(self):
+        return {
+            'github_enterprise_host'
+        }
 
     def validate(self):
         super().validate()
@@ -109,6 +128,11 @@ class ConcourseConfig(NamedModelElement):
             raise ModelValidationError('must specify no proxy-url')
         # implicitly validate main team
         self.team_credentials('main')
+        # Check for valid versions
+        if self.concourse_version() not in ConcourseApiVersion:
+            raise ModelValidationError(
+                'Concourse version {v} not supported'.format(v=self.concourse_version())
+            )
 
 
 class ConcourseTeamCredentials(BasicCredentials):
