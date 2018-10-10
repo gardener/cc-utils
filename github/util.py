@@ -213,12 +213,12 @@ class PullRequestUtil(RepositoryHelperBase):
             to_ref=to_ref,
         )
 
-    def enumerate_upgrade_pull_requests(self):
+    def enumerate_upgrade_pull_requests(self, state_filter: str='open'):
         '''returns a dictionary containing all (open) component ugprade pull requests
 
         {pull_request: ComponentUpgradeVector}
         '''
-        parsed_prs = util.FluentIterable(self.repository.pull_requests()) \
+        parsed_prs = util.FluentIterable(self.repository.pull_requests(state=state_filter)) \
             .filter(self._has_upgrade_pr_title) \
             .map(self._parse_pr_title) \
             .as_list()
