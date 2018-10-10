@@ -30,6 +30,7 @@ class ReleaseTrait(Trait):
         return {
             'nextversion': 'bump_minor',
             'release_callback': None,
+            'rebase_before_release': False,
         }
 
     def _optional_attributes(self):
@@ -41,6 +42,9 @@ class ReleaseTrait(Trait):
 
     def release_callback_path(self):
         return self.raw['release_callback']
+
+    def rebase_before_release(self):
+        return self.raw['rebase_before_release']
 
     def transformer(self):
         return ReleaseTraitTransformer()
