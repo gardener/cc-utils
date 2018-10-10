@@ -26,7 +26,6 @@ from subprocess import CalledProcessError
 import yaml
 
 import util
-import kubeutil
 import kube.ctx
 
 import concourse.client as client
@@ -340,10 +339,15 @@ def destroy_concourse_landscape(config_name: str, release_name: str):
     namespace_helper.delete_namespace(namespace=release_name)
 
 
+def get_cluster_version_info():
+    api = kube_ctx.create_version_api()
+    return api.get_code()
+
+
 def ensure_cluster_version(kubernetes_config: KubernetesConfig):
     not_none(kubernetes_config)
 
-    cluster_version_info = kubeutil.get_cluster_version_info()
+    cluster_version_info = get_cluster_version_info(kube_ctx)
     configured_version_info = kubernetes_config.cluster_version()
 
     if (

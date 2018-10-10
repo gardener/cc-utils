@@ -338,6 +338,3 @@ def create_gcr_secret(
         )
 
 
-def get_cluster_version_info():
-    api = ctx.create_version_api()
-    return api.get_code()
