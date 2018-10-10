@@ -149,10 +149,11 @@ class ProtecodeUtil(object):
         elif self._processing_mode is ProcessingMode.RESCAN:
             short_scan_result = self._api.scan_result_short(scan_result.product_id())
 
-            if not short_scan_result.has_binary():
-                return UploadAction.UPLOAD
-            elif short_scan_result.is_stale():
-                return UploadAction.RESCAN
+            if short_scan_result.is_stale():
+                if not short_scan_result.has_binary():
+                    return UploadAction.UPLOAD
+                else:
+                    return UploadAction.RESCAN
             else:
                 return UploadAction.SKIP
         elif self._processing_mode is ProcessingMode.FORCE_UPLOAD:
