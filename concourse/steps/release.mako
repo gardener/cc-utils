@@ -47,7 +47,6 @@ release_callback_path = release_trait.release_callback_path()
    --repository-version-file-path ${version_trait.versionfile_relpath()} \
    --repository-branch ${repo.branch()} \
    --release-version $(cat "${version_file}") \
-   --should-generate-release-notes \
    --repo-dir ${repo.resource_name()} \
    --version-operation "${version_op}"
 </%def>
