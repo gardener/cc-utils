@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextlib
 import functools
 import os
 import subprocess
@@ -39,6 +40,7 @@ class GitHelper(object):
         # output of git status --porcelain=1 and -z is guaranteed to not change in the future
         return [line[3:] for line in lines if line]
 
+    @contextlib.contextmanager
     def _authenticated_remote(self, use_ssh=False):
         if use_ssh:
             url = urljoin(self.github_cfg.ssh_url(), self.github_repo_path)
@@ -50,7 +52,11 @@ class GitHelper(object):
             name=random_str(),
             url=url,
         )
-        return remote
+
+        try:
+            yield remote
+        finally:
+            self.repo.delete_remote(remote)
 
     def index_to_commit(self, message, parent_commits=None):
         '''moves all diffs from worktree to a new commit without modifying branches
@@ -104,22 +110,18 @@ class GitHelper(object):
                 id_only='-o "IdentitiesOnly yes"',
             )
 
-        remote = self._authenticated_remote(use_ssh=use_ssh)
-        try:
-            remote.push(':'.join((
-                from_ref,
-                to_ref,
-            ))
-            )
-            self.repo.delete_remote(remote)
-        finally:
-            if use_ssh:
-                os.unlink(tmp_id)
-                del os.environ['GIT_SSH_COMMAND']
+        with self._authenticated_remote(use_ssh=use_ssh) as remote:
+            try:
+                remote.push(':'.join((from_ref, to_ref)))
+            finally:
+                if use_ssh:
+                    os.unlink(tmp_id)
+                    del os.environ['GIT_SSH_COMMAND']
 
     def branch_head(self, branch_name: str):
-        fetch_result = self._authenticated_remote().fetch(branch_name)[0]
-        return fetch_result.commit
+        with self._authenticated_remote() as remote:
+            fetch_result = remote.fetch(branch_name)[0]
+            return fetch_result.commit
 
 
 def clone_repository(
