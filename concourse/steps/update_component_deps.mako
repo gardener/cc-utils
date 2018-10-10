@@ -96,9 +96,13 @@ def upstream_reference_component():
 
 
 def close_obsolete_pull_requests(upgrade_pull_requests, reference_component):
+    open_pull_requests = [
+        pr for pr in upgrade_pull_requests
+        if pr.pull_request.state == 'open'
+    ]
     obsolete_upgrade_requests = [
-        pr for pr in
-        upgrade_pull_requests if pr.is_obsolete(reference_component=reference_component)
+        pr for pr in open_pull_requests
+        if pr.is_obsolete(reference_component=reference_component)
     ]
 
     for obsolete_request in obsolete_upgrade_requests:
@@ -211,7 +215,7 @@ pull_request_util = github.util.PullRequestUtil(
 
 ls_repository = pull_request_util.repository
 
-upgrade_pull_requests = pull_request_util.enumerate_upgrade_pull_requests()
+upgrade_pull_requests = pull_request_util.enumerate_upgrade_pull_requests(state_filter='all')
 
 close_obsolete_pull_requests(
     upgrade_pull_requests=upgrade_pull_requests,
