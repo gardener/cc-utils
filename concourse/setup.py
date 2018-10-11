@@ -17,6 +17,7 @@ import os
 import subprocess
 import tempfile
 import time
+import bcrypt
 
 from ensure import ensure_annotations
 from textwrap import dedent
@@ -35,6 +36,7 @@ from model import (
 )
 from model.concourse import (
     ConcourseConfig,
+    ConcourseApiVersion,
 )
 from model.container_registry import (
     GcrCredentials,
@@ -167,32 +169,77 @@ def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
     concourse_tls_secret_name = concourse_cfg.tls_secret_name()
     ingress_host = concourse_cfg.ingress_host()
 
-    instance_specific_values = {
-        'concourse': {
-            'externalURL': external_url,
-            'githubAuth': {
-                'team': creds.github_auth_team(),
-                'authUrl': creds.github_auth_auth_url(),
-                'tokenUrl': creds.github_auth_token_url(),
-                'apiUrl': creds.github_auth_api_url(),
-            }
-        },
-        'secrets': {
-            'basicAuthUsername': creds.username(),
-            'basicAuthPassword': creds.passwd(),
-            'githubAuthClientId': creds.github_auth_client_id(),
-            'githubAuthClientSecret': creds.github_auth_client_secret(),
-        },
-        'web': {
-            'ingress': {
-                'hosts': [external_host, ingress_host],
-                'tls': [{
-                      'secretName': concourse_tls_secret_name,
-                      'hosts': [external_host, ingress_host],
-                      }],
+    concourse_version = concourse_cfg.concourse_version()
+    # helm chart values.yaml structurally differs from concourse 3.x to 4.x
+    if concourse_version is ConcourseApiVersion.V3:
+        instance_specific_values = {
+            'concourse': {
+                'externalURL': external_url,
+                'githubAuth': {
+                    'team': creds.github_auth_team(),
+                    'authUrl': creds.github_auth_auth_url(),
+                    'tokenUrl': creds.github_auth_token_url(),
+                    'apiUrl': creds.github_auth_api_url(),
+                }
+            },
+            'secrets': {
+                'basicAuthUsername': creds.username(),
+                'basicAuthPassword': creds.passwd(),
+                'githubAuthClientId': creds.github_auth_client_id(),
+                'githubAuthClientSecret': creds.github_auth_client_secret(),
+            },
+            'web': {
+                'ingress': {
+                    'hosts': [external_host, ingress_host],
+                    'tls': [{
+                        'secretName': concourse_tls_secret_name,
+                        'hosts': [external_host, ingress_host],
+                        }],
+                }
             }
         }
-    }
+    elif concourse_version is ConcourseApiVersion.V4:
+        bcrypted_pwd = bcrypt.hashpw(
+            creds.passwd().encode('utf-8'),
+            bcrypt.gensalt()
+        ).decode('utf-8')
+
+        instance_specific_values = {
+            'concourse': {
+                'web': {
+                    'externalUrl': external_url,
+                    'auth': {
+                        'mainTeam': {
+                            'localUser': creds.username(),
+                            'github': {
+                                'team': creds.github_auth_team()
+                            }
+                        },
+                        'github': {
+                            'host': concourse_cfg.github_enterprise_host()
+                        }
+                    }
+                }
+            },
+            'secrets': {
+                'localUsers': creds.username() + ':' + bcrypted_pwd,
+                'githubClientId': creds.github_auth_client_id(),
+                'githubClientSecret': creds.github_auth_client_secret()
+            },
+            'web': {
+                'ingress': {
+                    'hosts': [external_host, ingress_host],
+                    'tls': [{
+                        'secretName': concourse_cfg.tls_secret_name(),
+                        'hosts': [external_host, ingress_host],
+                    }],
+                }
+            }
+        }
+    else:
+        raise NotImplementedError(
+            "Concourse version {v} not supported".format(v=concourse_version)
+        )
     return instance_specific_values
 
 
@@ -499,18 +546,13 @@ def set_teams(config: ConcourseConfig):
     # use ingress_host instead of external_url which points to a possibly not yet switched CNAME
     base_url = create_url_from_attributes(config.ingress_host())
 
-    concourse_api = client.ConcourseApi(
-        base_url=base_url,
+    concourse_api = client.from_cfg(
+        concourse_cfg=config,
         team_name=main_team_credentials.teamname(),
-    )
-    concourse_api.login(
-        team=main_team_credentials.teamname(),
-        username=main_team_credentials.username(),
-        passwd=main_team_credentials.passwd(),
     )
     for team in config.all_team_credentials():
         # We skip the main team here since we cannot update all its credentials at this time.
-        if team.teamname == "main":
+        if team.teamname() == "main":
             continue
         concourse_api.set_team(team)
 
