@@ -215,7 +215,7 @@ pull_request_util = github.util.PullRequestUtil(
 
 ls_repository = pull_request_util.repository
 
-upgrade_pull_requests = pull_request_util.enumerate_upgrade_pull_requests(state_filter='open')
+upgrade_pull_requests = pull_request_util.enumerate_upgrade_pull_requests(state_filter='all')
 
 close_obsolete_pull_requests(
     upgrade_pull_requests=upgrade_pull_requests,
