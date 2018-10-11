@@ -241,17 +241,10 @@ class FilesystemDeployer(DefinitionDeployer):
 
 @functools.lru_cache()
 def _concourse_api(concourse_cfg, team_name: str):
-    team_credentials = concourse_cfg.team_credentials(team_name)
-    api = client.ConcourseApi(
-        base_url=concourse_cfg.ingress_url(),
-        team_name=team_credentials.teamname(),
+    return client.from_cfg(
+        concourse_cfg=concourse_cfg,
+        team_name=team_name,
     )
-    api.login(
-        team_credentials.teamname(),
-        team_credentials.username(),
-        team_credentials.passwd(),
-    )
-    return api
 
 
 class ConcourseDeployer(DefinitionDeployer):

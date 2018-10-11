@@ -106,7 +106,8 @@ class AuthenticatedRequestBuilder(object):
             headers.update(kwargs['headers'])
             del kwargs['headers']
         if 'data' in kwargs:
-            headers['content-type'] = 'application/x-yaml'
+            if 'content-type' not in headers:
+                headers['content-type'] = 'application/x-yaml'
 
         result = method(
             url,
