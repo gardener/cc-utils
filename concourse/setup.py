@@ -549,6 +549,7 @@ def set_teams(config: ConcourseConfig):
     concourse_api = client.from_cfg(
         concourse_cfg=config,
         team_name=main_team_credentials.teamname(),
+        base_url=base_url,
     )
     for team in config.all_team_credentials():
         # We skip the main team here since we cannot update all its credentials at this time.

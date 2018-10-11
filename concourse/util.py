@@ -18,7 +18,7 @@ from copy import copy
 
 import github.webhook
 from github.util import _create_github_api_object
-import concourse.client as concourse
+import concourse.client as client
 from model.github import (
     GithubConfig,
 )
@@ -31,19 +31,10 @@ from util import info, fail
 
 
 def list_github_resources(
-    concourse_url: str,
-    concourse_user: str='kubernetes',
-    concourse_passwd: str='kubernetes',
-    concourse_team: str='kubernetes',
+    concourse_api: client.ConcourseApiBase,
     concourse_pipelines=None,
     github_url: str=None,
 ):
-    concourse_api = concourse.ConcourseApi(base_url=concourse_url, team_name=concourse_team)
-    concourse_api.login(
-        team=concourse_team,
-        username=concourse_user,
-        passwd=concourse_passwd
-    )
     pipeline_names = concourse_pipelines if concourse_pipelines else concourse_api.pipelines()
     yield from filter(
       lambda r: r.has_webhook_token(),
@@ -59,16 +50,12 @@ def sync_webhooks(
     concourse_pipelines: [str]=None,
     concourse_verify_ssl: bool=True,
 ):
-    concourse_url = concourse_cfg.external_url()
-    concourse_team = concourse_team_credentials.teamname()
-    concourse_user = concourse_team_credentials.username()
-    concourse_passwd = concourse_team_credentials.passwd()
-
+    concourse_api = client.from_cfg(
+        concourse_cfg=concourse_cfg,
+        team_name=concourse_team_credentials.teamname(),
+    )
     github_resources = list_github_resources(
-        concourse_url=concourse_url,
-        concourse_user=concourse_user,
-        concourse_passwd=concourse_passwd,
-        concourse_team=concourse_team,
+        concourse_api=concourse_api,
         concourse_pipelines=concourse_pipelines,
         github_url=github_cfg.http_url(),
     )
@@ -109,7 +96,7 @@ def sync_webhooks(
 
 
 def _sync_webhook(
-    resources: [concourse.Resource],
+    resources: [client.Resource],
     webhook_syncer: github.webhook.GithubWebHookSyncer,
     job_mapping_name: str,
     concourse_cfg: 'ConcourseConfig',
