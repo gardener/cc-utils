@@ -231,6 +231,7 @@ class PullRequestUtil(RepositoryHelperBase):
         parsed_prs = util.FluentIterable(self.repository.pull_requests(state=state_filter)) \
             .filter(self._has_upgrade_pr_title) \
             .map(pr_to_upgrade_pr) \
+            .filter(lambda e: e) \
             .as_list()
         return parsed_prs
 
