@@ -214,7 +214,7 @@ class ComponentNameModelTest(unittest.TestCase):
         )
 
         for component_name in invalid_component_names:
-            with self.assertRaises(model.base.ModelValidationError):
+            with self.assertRaises(product.model.InvalidComponentReferenceError):
                 examinee(component_name)
 
         # test valid names

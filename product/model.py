@@ -28,6 +28,10 @@ from util import not_none, urljoin, check_type
 COMPONENT_DESCRIPTOR_ASSET_NAME = 'component_descriptor.yaml'
 
 
+class InvalidComponentReferenceError(ModelValidationError):
+    pass
+
+
 class ProductModelBase(ModelBase):
     '''
     Base class for product model classes.
@@ -107,22 +111,24 @@ class ComponentName(object):
         not_none(name)
 
         if len(name) == 0:
-            raise ModelValidationError('Component name must not be empty')
+            raise InvalidComponentReferenceError('Component name must not be empty')
 
         # valid component names are fully qualified github repository URLs without a schema
         # (e.g. github.com/example_org/example_name)
         if urllib.parse.urlparse(name).scheme:
-            raise ModelValidationError('Component name must not contain schema')
+            raise InvalidComponentReferenceError('Component name must not contain schema')
 
         # prepend dummy schema so that urlparse will parse away the hostname
         parsed = urllib.parse.urlparse('dummy://' + name)
 
         if not parsed.hostname:
-            raise ModelValidationError(name)
+            raise InvalidComponentReferenceError(name)
 
         path_parts = parsed.path.strip('/').split('/')
         if not len(path_parts) == 2:
-            raise ModelValidationError('Component name must end with github repository path')
+            raise InvalidComponentReferenceError(
+                'Component name must end with github repository path'
+            )
 
         return name
 
