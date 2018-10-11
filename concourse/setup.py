@@ -347,7 +347,7 @@ def get_cluster_version_info():
 def ensure_cluster_version(kubernetes_config: KubernetesConfig):
     not_none(kubernetes_config)
 
-    cluster_version_info = get_cluster_version_info(kube_ctx)
+    cluster_version_info = get_cluster_version_info()
     configured_version_info = kubernetes_config.cluster_version()
 
     if (
