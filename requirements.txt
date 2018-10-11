@@ -3,6 +3,7 @@ GitPython==2.1.9
 Mako
 deepdiff==3.3.0
 deepmerge==0.0.4
+deprecated
 docker-py==1.10.6
 ensure
 github3.py==1.1.0
