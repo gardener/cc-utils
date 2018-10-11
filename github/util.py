@@ -184,7 +184,7 @@ class PullRequestUtil(RepositoryHelperBase):
     def _has_upgrade_pr_title(self, pull_request)-> bool:
         return bool(self.PR_TITLE_PATTERN.fullmatch(pull_request.title))
 
-    def _parse_pr_title(self, pull_request):
+    def _pr_to_upgrade_pull_request(self, pull_request):
         util.not_none(pull_request)
 
         match = self.PR_TITLE_PATTERN.fullmatch(pull_request.title)
@@ -214,13 +214,13 @@ class PullRequestUtil(RepositoryHelperBase):
         )
 
     def enumerate_upgrade_pull_requests(self, state_filter: str='open'):
-        '''returns a dictionary containing all (open) component ugprade pull requests
+        '''returns a sequence of `UpgradePullRequest` for all found pull-requests
 
-        {pull_request: ComponentUpgradeVector}
+        @param state_filter: all|open|closed (as defined by github api)
         '''
         parsed_prs = util.FluentIterable(self.repository.pull_requests(state=state_filter)) \
             .filter(self._has_upgrade_pr_title) \
-            .map(self._parse_pr_title) \
+            .map(self._pr_to_upgrade_pull_request) \
             .as_list()
         return parsed_prs
 
