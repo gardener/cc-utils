@@ -218,9 +218,19 @@ class PullRequestUtil(RepositoryHelperBase):
 
         @param state_filter: all|open|closed (as defined by github api)
         '''
+        def pr_to_upgrade_pr(pull_request):
+            try:
+                return self._pr_to_upgrade_pull_request(pull_request=pull_request)
+            except product.model.InvalidComponentReferenceError:
+                if pull_request.state == 'closed':
+                    # silently ignore invalid component names in "old" PRs
+                    pass
+                else:
+                    raise
+
         parsed_prs = util.FluentIterable(self.repository.pull_requests(state=state_filter)) \
             .filter(self._has_upgrade_pr_title) \
-            .map(self._pr_to_upgrade_pull_request) \
+            .map(pr_to_upgrade_pr) \
             .as_list()
         return parsed_prs
 
