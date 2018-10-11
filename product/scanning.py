@@ -86,7 +86,7 @@ class ProtecodeUtil(object):
             self,
             container_image: ContainerImage,
             component: Component,
-            omit_version=True,
+            omit_version,
         ):
         metadata = self._image_ref_metadata(container_image)
         metadata.update(self._component_metadata(component=component, omit_version=omit_version))
@@ -97,7 +97,12 @@ class ProtecodeUtil(object):
             container_image: ContainerImage,
             component: Component,
         ):
-        metadata = self._metadata(container_image=container_image, component=component)
+        metadata = self._metadata(
+            container_image=container_image,
+            component=component,
+            omit_version=True, # omit version when searching for existing app
+            # (only one component version must exist per group by our chosen definition)
+        )
         existing_products = self._api.list_apps(
             group_id=self._group_id,
             custom_attribs=metadata
@@ -166,7 +171,11 @@ class ProtecodeUtil(object):
             container_image: ContainerImage,
             component: Component,
         ):
-        metadata = self._metadata(container_image=container_image, component=component)
+        metadata = self._metadata(
+            container_image=container_image,
+            component=component,
+            omit_version=False,
+        )
 
         upload_result = partial(UploadResult, container_image=container_image, component=component)
 
