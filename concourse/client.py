@@ -25,7 +25,11 @@ import sseclient
 import util
 
 from github.webhook import WebhookQueryAttributes
-from model.concourse import ConcourseTeamCredentials
+from model.concourse import (
+    ConcourseTeamCredentials,
+    ConcourseApiVersion,
+    ConcourseConfig,
+)
 from http_requests import AuthenticatedRequestBuilder
 from util import warning, not_empty
 
@@ -51,18 +55,45 @@ Other types defined in this module are not intended to be instantiated by users.
 '''
 
 
-def from_cfg(concourse_cfg, team_name: str):
-    concourse_api = ConcourseApi(
-        base_url=concourse_cfg.external_url(),
-        team_name=team_name,
-    )
-    # prepare api (perform a login)
+def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
+    '''
+    Factory method to get Concourse API object
+    '''
+    base_url = concourse_cfg.external_url()
     team_credentials = concourse_cfg.team_credentials(team_name)
-    concourse_api.login(
-        team=team_name,
-        username=team_credentials.username(),
-        passwd=team_credentials.passwd(),
-    )
+    team_name = team_credentials.teamname()
+    username = team_credentials.username()
+    password = team_credentials.passwd()
+    concourse_version = concourse_cfg.concourse_version()
+
+    if concourse_version is ConcourseApiVersion.V3:
+        routes = ConcourseApiRoutesV3(base_url=base_url, team=team_name)
+        concourse_api = ConcourseApiV3(
+            base_url=base_url,
+            team_name=team_name,
+            team_credentials=team_credentials,
+            username=username,
+            password=password,
+            routes=routes,
+            verify_ssl=verify_ssl,
+        )
+    elif concourse_version is ConcourseApiVersion.V4:
+        routes = ConcourseApiRoutesV4(base_url=base_url, team=team_name)
+        concourse_api = ConcourseApiV4(
+            base_url=base_url,
+            team_name=team_name,
+            team_credentials=team_credentials,
+            username=AUTH_TOKEN_REQUEST_USER,
+            password=AUTH_TOKEN_REQUEST_PWD,
+            routes=routes,
+            verify_ssl=verify_ssl,
+        )
+    else:
+        raise NotImplementedError(
+            "Concourse version {v} not supported".format(v=concourse_version.value)
+        )
+
+    concourse_api.login()
     return concourse_api
 
 
@@ -77,9 +108,13 @@ class SetPipelineResult(Enum):
 
 # GLOBAL DEFINES
 CONCOURSE_API_SUFFIX = 'api/v1'
+# Hard coded oauth user and password
+# https://github.com/concourse/fly/blob/f4592bb32fe38f54018c2f9b1f30266713882c54/commands/login.go#L143
+AUTH_TOKEN_REQUEST_USER = 'fly'
+AUTH_TOKEN_REQUEST_PWD = 'Zmx5'
 
 
-class ConcourseApiRoutes(object):
+class ConcourseApiRoutesBase(object):
     '''
     Constructs concourse REST API endpoint URLs for the given concourse base URL and
     team name.
@@ -103,7 +138,7 @@ class ConcourseApiRoutes(object):
         base_url = self.team_url(team_name) if prefix_team else \
                     urljoin(self.base_url, self.api_suffix)
         # preserve all parts of base url
-        base_url +='/'
+        base_url += '/'
 
         return urljoin(base_url, '/'.join(parts))
 
@@ -112,14 +147,6 @@ class ConcourseApiRoutes(object):
         if not team:
             team = self.team
         return self._api_url('teams', team, prefix_team=False)
-
-    def login(self):
-        return util.urljoin(
-            self.base_url,
-            'auth',
-            'basic',
-            'token' + '?' + urlencode({'team_name': self.team})
-        )
 
     def pipelines(self):
         return self._api_url('pipelines')
@@ -179,23 +206,70 @@ class ConcourseApiRoutes(object):
         return self._api_url('builds', str(build_id), 'plan', prefix_team=False)
 
 
-class ConcourseApi(object):
+class ConcourseApiRoutesV3(ConcourseApiRoutesBase):
+    '''
+    Implements Concourse version 3 specific api route methods
+
+    Not intended to be used outside of this module. Instantiated by factory method 'from_cfg'
+    '''
+    def login(self):
+        return util.urljoin(
+            self.base_url,
+            'auth',
+            'basic',
+            'token' + '?' + urlencode({'team_name': self.team})
+        )
+
+
+class ConcourseApiRoutesV4(ConcourseApiRoutesBase):
+    '''
+    Implements Concourse version 4 specific api route methods
+
+    Not intended to be used outside of this module. Instantiated by factory method 'from_cfg'
+    '''
+    def login(self):
+        return util.urljoin(
+            self.base_url,
+            'sky',
+            'token'
+        )
+
+
+class ConcourseApiBase(object):
     '''
     Implements a subset of concourse REST API functionality.
 
-    After creation, `login` ought to be invoked at least once to allow for the
-    execution of requests that required autorization.
+    Not intended to be used outside of this module. Instantiated by factory method 'from_cfg'
 
     @param base_url: concourse endpoint (e.g. https://ci.concourse.ci)
     @param team_name: the team name used for authentication
+    @param username: username used for basic authentication
+    @param password: password used for basic authentication
     @param verify_ssl: whether or not certificate validation is to be done
     '''
     @ensure_annotations
-    def __init__(self, base_url: str, team_name: str, verify_ssl=False):
+    def __init__(
+        self,
+        base_url: str,
+        team_name: str,
+        team_credentials: ConcourseTeamCredentials,
+        username: str,
+        password: str,
+        routes: ConcourseApiRoutesBase,
+        verify_ssl: bool
+    ):
         self.base_url = base_url
         self.team = team_name
-        self.routes = ConcourseApiRoutes(base_url=base_url, team=team_name)
+        self.team_credentials = team_credentials
+        self.username = username
+        self.password = password
+        self.routes = routes
         self.verify_ssl = verify_ssl
+        self.request_builder = AuthenticatedRequestBuilder(
+            basic_auth_username=username,
+            basic_auth_passwd=password,
+            verify_ssl=verify_ssl
+        )
 
     @ensure_annotations
     def _get(self, url: str):
@@ -212,23 +286,6 @@ class ConcourseApi(object):
     @ensure_annotations
     def _delete(self, url: str):
         return self.request_builder.delete(url)
-
-    @ensure_annotations
-    def login(self, team: str, username: str, passwd: str):
-        login_url = self.routes.login()
-        request_builder = AuthenticatedRequestBuilder(
-                basic_auth_username=username,
-                basic_auth_passwd=passwd,
-                verify_ssl=self.verify_ssl
-        )
-        response = request_builder.get(login_url, return_type='json')
-        self.auth_token = response['value']
-        self.team = team
-        self.request_builder = AuthenticatedRequestBuilder(
-            auth_token=self.auth_token,
-            verify_ssl=self.verify_ssl
-        )
-        return self.auth_token
 
     @ensure_annotations
     def set_pipeline(self, name: str, pipeline_definition):
@@ -342,6 +399,30 @@ class ConcourseApi(object):
         )
         return BuildEvents(response, self)
 
+    @ensure_annotations
+    def trigger_resource_check(self, pipeline_name: str, resource_name: str):
+        url = self.routes.resource_check(pipeline_name=pipeline_name, resource_name=resource_name)
+        # Resource checks are triggered by a POST with an empty JSON-document as body against
+        # the resource's check-url
+        self._post(url, body='{}')
+
+
+class ConcourseApiV3(ConcourseApiBase):
+    '''
+    Implements Concourse version 3 specific REST api methods
+
+    Not intended to be used outside of this module. Instantiated by factory method 'from_cfg'
+    '''
+    def login(self):
+        login_url = self.routes.login()
+        response = self._get(login_url)
+        auth_token = response['value']
+        self.request_builder = AuthenticatedRequestBuilder(
+            auth_token=auth_token,
+            verify_ssl=self.verify_ssl
+        )
+        return auth_token
+
     def set_team(self, team_credentials: ConcourseTeamCredentials):
         body = {}
         if team_credentials.has_basic_auth_credentials():
@@ -373,18 +454,48 @@ class ConcourseApi(object):
                 body['auth'] = {'github': github_cfg}
 
         team_url = self.routes.team_url(team_credentials.teamname())
+        self._put(team_url, json.dumps(body))
 
-        self._put(
-          team_url,
-          json.dumps(body)
+
+class ConcourseApiV4(ConcourseApiBase):
+    '''
+    Implements Concourse version 4 specific REST api methods
+
+    Not intended to be used outside of this module. Instantiated by factory method 'from_cfg'
+    '''
+    def login(self):
+        login_url = self.routes.login()
+        form_data = "grant_type=password&password=" + self.team_credentials.passwd() + \
+                    "&scope=openid+profile+email+federated%3Aid+groups&username=" + \
+                    self.team_credentials.username()
+        response = self._post(
+            url=login_url,
+            body=form_data,
+            headers={"content-type": "application/x-www-form-urlencoded"}
         )
+        auth_token = response.json()['access_token']
+        self.request_builder = AuthenticatedRequestBuilder(
+            auth_token=auth_token,
+            verify_ssl=self.verify_ssl
+        )
+        return auth_token
 
-    @ensure_annotations
-    def trigger_resource_check(self, pipeline_name: str, resource_name: str):
-        url = self.routes.resource_check(pipeline_name=pipeline_name, resource_name=resource_name)
-        # Resource checks are triggered by a POST with an empty JSON-document as body against
-        # the resource's check-url
-        self._post(url, body='{}')
+    def set_team(self, team_credentials: ConcourseTeamCredentials):
+        body = {}
+        body['auth'] = {
+            "users": [
+                "local:" + team_credentials.username()
+            ]
+        }
+        if team_credentials.has_github_oauth_credentials():
+            body['auth'].update({
+                "groups": [
+                    "github:" + team_credentials.github_auth_team()
+                ]
+            })
+
+        team_url = self.routes.team_url(team_credentials.teamname())
+        self._put(team_url, json.dumps(body))
 
 
 class ModelBase(object):
@@ -394,7 +505,8 @@ class ModelBase(object):
     Not intended to be instantiated by users of this module
     '''
 
-    def __init__(self, raw_dict: dict, concourse_api:ConcourseApi):
+    @ensure_annotations
+    def __init__(self, raw_dict: dict, concourse_api: ConcourseApiBase):
         self.api = concourse_api
         self.raw_dict = raw_dict
 
@@ -407,7 +519,7 @@ class PipelineConfig(object):
     Not intended to be instantiated by users of this module
     '''
     @ensure_annotations
-    def __init__(self, raw_dict: dict, concourse_api: ConcourseApi, name: str):
+    def __init__(self, raw_dict: dict, concourse_api: ConcourseApiBase, name: str):
         self.concourse_api = concourse_api
         self.name = name
         self.raw_dict = raw_dict['config']
@@ -463,7 +575,7 @@ class GithubSource(object):
     Not intended to be instantiated by users of this module
     '''
     @ensure_annotations
-    def __init__(self, raw_dict:dict, concourse_api:ConcourseApi):
+    def __init__(self, raw_dict:dict, concourse_api: ConcourseApiBase):
         self.concourse_api = concourse_api
         self.raw = raw_dict
         self.uri = raw_dict['uri']
