@@ -55,7 +55,7 @@ class SphinxUtilsMixin(object):
         section_node = nodes.section(ids=[ids])
 
         par_node, messages = self.create_paragraph(content)
-        title_node = self._get_subtitle_node(title)
+        title_node = self.create_subtitle(title)
         section_node += title_node
         section_node += par_node
         return section_node, messages
