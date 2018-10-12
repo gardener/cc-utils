@@ -37,9 +37,14 @@ class SphinxUtilsMixin(object):
         subtitle_node = nodes.subtitle(text=text)
         return subtitle_node
 
-    def create_paragraph(self, content: str):
+    def add_paragraph(self, contents: str):
+        paragraph_node, messages = self.create_paragraph(contents=contents)
+        self._node += paragraph_node
+        self._parse_msgs += messages
+
+    def create_paragraph(self, contents: str):
         # Parse text.
-        text_nodes, messages = self.state.inline_text(content, self.lineno + self.content_offset)
+        text_nodes, messages = self.state.inline_text(contents, self.lineno + self.content_offset)
         paragraph_node = nodes.paragraph('', *text_nodes)
         return paragraph_node, messages
 
