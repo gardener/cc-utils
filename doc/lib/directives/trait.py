@@ -97,5 +97,9 @@ class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
         self.add_subtitle('Dependencies')
 
         trait_deps = self._trait_instance.transformer().dependencies()
+
         if not trait_deps:
             return self.add_paragraph('This trait has *no* dependencies')
+
+        self.add_paragraph('This trait requires the following traits to be declared:')
+        self.add_bullet_list(trait_deps)
