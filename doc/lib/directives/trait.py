@@ -84,8 +84,6 @@ class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
 
         self._init(trait_name=trait_name)
 
-        title_text = f'{trait_name} trait'
-
-        self._node += self.create_title(title_text)
+        self.add_title(f'{trait_name} trait')
 
         return [self._indexnode, self._target, self._node] + self._parse_msgs
