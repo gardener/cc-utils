@@ -88,9 +88,8 @@ class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
         self._init(trait_name=trait_name)
 
         self.add_title(f'{trait_name} trait')
-
         self.summary()
-
+        self.required_attributes()
         self.dependencies()
 
         return [self._indexnode, self._target, self._node] + self._parse_msgs
@@ -109,6 +108,15 @@ class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
         # emit last line
         self.add_paragraph(paragraph)
 
+    def required_attributes(self):
+        self.add_subtitle('Required Attributes')
+
+        req_attrs = self._trait_instance._required_attributes()
+
+        if not req_attrs:
+            return self.add_paragraph('This trait does not require any attributes')
+        self.add_paragraph('This trait requires the following traits to be defined:')
+        self.add_bullet_list(req_attrs)
 
     def dependencies(self):
         self.add_subtitle('Dependencies')
