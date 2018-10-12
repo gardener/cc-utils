@@ -4,7 +4,6 @@ CC-Utils - Build Pipeline Reference Manual
     :titlesonly:
     :maxdepth: 2
 
-.. include:: traits/version.rst
 
 Traits
 ======
