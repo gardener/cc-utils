@@ -85,6 +85,10 @@ class SphinxUtilsMixin(object):
         '''
         return TableBuilder(self.state, self.state_machine, table_classes)
 
+    def add_table(self, table:'TableBuilder'):
+        table_node = table.create_table()
+        self._node += table_node
+
 
 class TableBuilder(object):
     def __init__(
