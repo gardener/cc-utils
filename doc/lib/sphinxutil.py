@@ -80,6 +80,11 @@ class SphinxUtilsMixin(object):
 
         return bullet_list, parse_msgs
 
+    def create_table_builder(self, table_classes:typing.List[str] = ['colwidths-auto']):
+        '''Helper method to obtain an instance of TableBuilder for the given table_classes
+        '''
+        return TableBuilder(self.state, self.state_machine, table_classes)
+
 
 class TableBuilder(object):
     def __init__(
