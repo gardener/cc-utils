@@ -44,4 +44,3 @@ class SphinxUtilsMixin(object):
             bullet_list += list_item
 
         return bullet_list, parse_msgs
-
