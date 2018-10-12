@@ -30,7 +30,11 @@
 #
 import os
 import sys
+
+# add current directory, so our trait directory module is found
 sys.path.insert(0, os.path.abspath('.'))
+# add repository root, so cc-utils is available from PYTHONPATH
+sys.path.append(os.path.abspath('../../'))
 
 
 # -- Project information -----------------------------------------------------
@@ -55,7 +59,7 @@ release = ''
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'trait',
+    'trait_directive',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
