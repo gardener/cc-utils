@@ -89,6 +89,8 @@ class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
 
         self.add_title(f'{trait_name} trait')
         self.summary()
+        self.attribute_defaults()
+        self.optional_attributes()
         self.required_attributes()
         self.dependencies()
 
@@ -108,6 +110,21 @@ class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
         # emit last line
         self.add_paragraph(paragraph)
 
+    def attribute_defaults(self):
+        self.add_subtitle('Attribute defaults')
+
+        defaults_dict = self._trait_instance._defaults_dict()
+
+        if not defaults_dict:
+            return self.add_paragraph('This trait does not have any default values')
+
+        table_builder = self.create_table_builder()
+        table_builder.add_table_header(['name', 'default value'])
+        for name, default_value in defaults_dict.items():
+            table_builder.add_table_row([str(name), str(default_value)])
+
+        self.add_table(table_builder)
+
     def required_attributes(self):
         self.add_subtitle('Required Attributes')
 
@@ -117,6 +134,16 @@ class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
             return self.add_paragraph('This trait does not require any attributes')
         self.add_paragraph('This trait requires the following traits to be defined:')
         self.add_bullet_list(req_attrs)
+
+    def optional_attributes(self):
+        self.add_subtitle('Optional Attributes')
+
+        opt_attrs = self._trait_instance._optional_attributes()
+
+        if not opt_attrs:
+            return self.add_paragraph('This trait does not have any optional attributes')
+        self.add_paragraph('This trait offers the following optional attributes:')
+        self.add_bullet_list(opt_attrs)
 
     def dependencies(self):
         self.add_subtitle('Dependencies')
