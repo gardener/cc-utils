@@ -16,6 +16,8 @@
 import typing
 
 from docutils import nodes
+from docutils.statemachine import ViewList
+from sphinx.util.docutils import switch_source_input
 
 
 class SphinxUtilsMixin(object):
@@ -77,3 +79,77 @@ class SphinxUtilsMixin(object):
             bullet_list += list_item
 
         return bullet_list, parse_msgs
+
+
+class TableBuilder(object):
+    def __init__(
+        self,
+        state,
+        state_machine,
+        table_classes: typing.List[str]=['colwidths-auto'],
+    ):
+        self.table_node = nodes.table('', classes = table_classes)
+
+        # state and state_machine are required by the _create_row method taken from sphinx
+        self.state_machine = state_machine
+        self.state = state
+
+        self.head = nodes.thead('')
+        self.body = nodes.tbody('')
+        self.groups = None
+
+    # taken and adjusted from sphinx.ext.Autosummary.get_table()
+    def _create_row(self, *column_texts):
+        # type: (unicode) -> None
+        row = nodes.row('')
+        source, line = self.state_machine.get_source_and_line()
+        for text in column_texts:
+            node = nodes.paragraph('')
+            vl = ViewList()
+            vl.append(text, '%s:%d' % (source, line))
+            with switch_source_input(self.state, vl):
+                self.state.nested_parse(vl, 0, node)
+                try:
+                    if isinstance(node[0], nodes.paragraph):
+                        node = node[0]
+                except IndexError:
+                    pass
+                row.append(nodes.entry('', node))
+        return row
+
+    def _setup_column_groups(self, column_count: int):
+        self.column_count = column_count
+        self.group = nodes.tgroup('', cols=column_count)
+        for _ in range(column_count):
+            self.group.append(nodes.colspec(''))
+
+    def add_table_header(self, row_content: typing.List[str]):
+        if self.groups is None:
+            self._setup_column_groups(column_count = len(row_content))
+        else:
+            raise ValueError('A table may only have one table head which must be added first.')
+        self.head.append(self._create_row(*row_content))
+        return self
+
+    def add_table_row(self, row_content: typing.List[str]):
+        if self.groups is None:
+            self._setup_column_groups(column_count = len(row_content))
+
+        # adding rows with less than column_count columns automatically inserts empty columns
+        if len(row_content) > self.column_count:
+            raise ValueError('Can only add rows with at most {c} columns to this table.'.format(
+                c=self.column_count
+            ))
+
+        self.body.append(self._create_row(*row_content))
+        return self
+
+    def create_table(self):
+        if len(self.head.children) > 0:
+            self.group.append(self.head)
+
+        if len(self.body.children) > 0:
+            self.group.append(self.body)
+
+        self.table_node.append(self.group)
+        return self.table_node
