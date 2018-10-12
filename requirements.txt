@@ -1,13 +1,15 @@
 # add requirements for local tests. Install with: pip3 install -r requirements.txt
-GitPython==2.1.9
-Mako
+bcrypt==3.1.4
+containerregistry-ccwienk==0.2.1
 deepdiff==3.3.0
 deepmerge==0.0.4
 deprecated
 docker-py==1.10.6
 ensure
 github3.py==1.1.0
+GitPython==2.1.9
 kubernetes
+Mako
 pydash==4.6.0
 pyflakes
 pycodestyle
@@ -18,4 +20,3 @@ slackclient==1.2.1
 sseclient-py==1.7
 toposort==1.5
 urllib3==1.22
-containerregistry-ccwienk==0.2.1
