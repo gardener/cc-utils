@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
+
 from docutils import nodes
 
 
@@ -58,7 +60,12 @@ class SphinxUtilsMixin(object):
         section_node += par_node
         return section_node, messages
 
-    def create_bullet_list(self, lines: [str]):
+    def add_bullet_list(self, lines: typing.Iterable[str]):
+        list_node, messages = self.create_bullet_list(lines=lines)
+        self._node += list_node
+        self._parse_msgs += messages
+
+    def create_bullet_list(self, lines: typing.Iterable[str]):
         bullet_list = nodes.bullet_list()
         parse_msgs = []
         for line in lines:
