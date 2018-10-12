@@ -22,9 +22,15 @@ class SphinxUtilsMixin(object):
 
     Must be added as a mixin to a class inheriting from `Directive`
     '''
+    def add_title(self, text: str):
+        self._node += self.create_title(text=text)
+
     def create_title(self, text: str):
         # title nodes may only be inserted as children of section nodes
         return nodes.title(text=text)
+
+    def add_subtitle(self, text: str):
+        self._node += self.create_subtitle(text=text)
 
     def create_subtitle(self, text: str):
         # seems to be no difference between subtitle and title in html
