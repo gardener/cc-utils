@@ -32,9 +32,9 @@ import os
 import sys
 
 # add current directory, so our trait directory module is found
-sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('./lib'))
 # add repository root, so cc-utils is available from PYTHONPATH
-sys.path.append(os.path.abspath('../../'))
+sys.path.append(os.path.abspath('..'))
 
 
 # -- Project information -----------------------------------------------------
