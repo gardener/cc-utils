@@ -20,6 +20,7 @@ from sphinx import addnodes
 from sphinx.util.nodes import set_source_info, process_index_entry
 
 import sphinxutil
+import reflectionutil
 
 __EXTENSION_VERSION__ = '0.0.1'
 
@@ -55,7 +56,7 @@ class TraitNode(nodes.section):
 
 class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
     required_arguments = 0
-    optional_arguments = 3
+    optional_arguments = 1
     final_argument_whitespace = True
     option_spec = {
         'name': directives.unchanged,
@@ -78,6 +79,8 @@ class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
         set_source_info(self, self._indexnode)
         ne.extend(process_index_entry(name_in_index, target_anchor))
 
+        self._trait_instance = reflectionutil.trait_instance(trait_name)
+
     def run(self):
         options = self.options
         trait_name = self.options['name']
@@ -86,4 +89,13 @@ class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
 
         self.add_title(f'{trait_name} trait')
 
+        self.dependencies()
+
         return [self._indexnode, self._target, self._node] + self._parse_msgs
+
+    def dependencies(self):
+        self.add_subtitle('Dependencies')
+
+        trait_deps = self._trait_instance.transformer().dependencies()
+        if not trait_deps:
+            return self.add_paragraph('This trait has *no* dependencies')
