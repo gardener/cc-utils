@@ -57,7 +57,7 @@ class TraitNode(nodes.section):
 class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
     required_arguments = 0
     optional_arguments = 1
-    final_argument_whitespace = True
+    has_content = True
     option_spec = {
         'name': directives.unchanged,
     }
@@ -89,9 +89,26 @@ class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
 
         self.add_title(f'{trait_name} trait')
 
+        self.summary()
+
         self.dependencies()
 
         return [self._indexnode, self._target, self._node] + self._parse_msgs
+
+    def summary(self):
+        if not self.content:
+            return
+
+        paragraph = ''
+        for line in self.content:
+            if line:
+                paragraph += line
+            else:
+                self.add_paragraph(paragraph)
+                paragraph = ''
+        # emit last line
+        self.add_paragraph(paragraph)
+
 
     def dependencies(self):
         self.add_subtitle('Dependencies')
