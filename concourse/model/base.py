@@ -16,6 +16,7 @@
 
 from abc import abstractmethod
 from enum import Enum
+import typing
 
 import util
 from model.base import(
@@ -39,6 +40,101 @@ class ModelBase(ModelDefaultsMixin, ModelValidationMixin):
         return ()
 
 
+class RequiredPolicy(Enum):
+    OPTIONAL = 'optional'
+    REQUIRED = 'required'
+
+
+class AttributeSpec(object):
+    @staticmethod
+    def optional(name, doc, default, *args, **kwargs):
+        return AttributeSpec(
+            name=name,
+            doc=doc,
+            default=default,
+            required=RequiredPolicy.OPTIONAL,
+            *args,
+            **kwargs,
+        )
+
+    @staticmethod
+    def required(name, doc, *args, **kwargs):
+        return AttributeSpec(
+            name=name,
+            doc=doc,
+            required=RequiredPolicy.REQUIRED,
+        )
+
+    @staticmethod
+    def filter_attrs(attrs: 'typing.Iterable[AttributeSpec]', required: RequiredPolicy):
+        if required:
+            util.check_type(required, RequiredPolicy)
+        else:
+            # no filtering
+            yield from attrs
+
+        for attr in attrs:
+            util.check_type(attr, AttributeSpec)
+            if attr.required_policy() is required:
+                yield attr
+
+    @staticmethod
+    def select_name(attr):
+        util.check_type(attr, AttributeSpec)
+        return attr.name()
+
+    def select_name_and_default(attr):
+        util.check_type(attr, AttributeSpec)
+        return attr.name(), attr.default_value()
+
+    @staticmethod
+    def optional_attr_names(attrs: 'typing.Iterable[AttributeSpec]'):
+        yield from map(
+            AttributeSpec.select_name,
+            AttributeSpec.filter_attrs(attrs=attrs, required=RequiredPolicy.OPTIONAL)
+        )
+
+    @staticmethod
+    def defaults_dict(attrs: 'typing.Iterable[AttributeSpec]'):
+        return {
+            name: value for name, value in map(
+                AttributeSpec.select_name_and_default,
+                AttributeSpec.filter_attrs(attrs, required=RequiredPolicy.OPTIONAL,
+                )
+            )
+        }
+
+    def __init__(
+        self,
+        name: str,
+        doc: str,
+        default=None,
+        required=None,
+    ):
+        self._name = util.check_type(name, str)
+        self._doc = util.check_type(doc, str)
+
+        # validate
+        if default:
+            if required and required != RequiredPolicy.OPTIONAL:
+                raise ValueError()
+
+        self._required_policy = required
+        self._default_value = default
+
+    def name(self) ->str:
+        return self._name
+
+    def doc(self) ->str:
+        return self._doc
+
+    def default_value(self):
+        return self._default_value
+
+    def required_policy(self):
+        return self._required_policy
+
+
 class Trait(ModelBase):
     def __init__(self, name: str, variant_name: str, raw_dict: dict):
         self.name = util.not_none(name)
@@ -47,7 +143,11 @@ class Trait(ModelBase):
 
     @abstractmethod
     def transformer(self):
-        raise NotImplementedError()
+        raise NotImplementedError
+
+    @abstractmethod
+    def _attribute_spec(self):
+        raise NotImplementedError
 
     def __str__(self):
         return 'Trait: {n}'.format(n=self.name)
