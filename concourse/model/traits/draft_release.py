@@ -17,11 +17,19 @@ from util import not_none
 
 from concourse.model.step import PipelineStep
 from concourse.model.base import (
+  AttributeSpec,
   ScriptType,
   Trait,
   TraitTransformer
 )
 
+ATTRIBUTES = (
+    AttributeSpec.optional(
+        name='preprocess',
+        default='finalize',
+        doc='version processing operation to set effective version',
+    ),
+)
 
 class DraftReleaseTrait(Trait):
     def __init__(self, *args, **kwargs):
@@ -30,10 +38,14 @@ class DraftReleaseTrait(Trait):
     def transformer(self):
         return DraftReleaseTraitTransformer()
 
+    def _attribute_specs(self):
+        return ATTRIBUTES
+
     def _defaults_dict(self):
-        return {
-            'preprocess': 'finalize',
-        }
+        return AttributeSpec.defaults_dict(ATTRIBUTES)
+
+    def _optional_attributes(self):
+        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
 
     def _preprocess(self):
         return self.raw['preprocess']
