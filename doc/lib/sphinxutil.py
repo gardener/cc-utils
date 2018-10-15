@@ -73,9 +73,8 @@ class SphinxUtilsMixin(object):
         for line in lines:
             text_nodes, messages = self.state.inline_text(line, self.lineno + self.content_offset)
             parse_msgs += messages
-            line_node = nodes.line('', *text_nodes)
-            list_item = nodes.list_item()
-            list_item += line_node
+            par_node = nodes.paragraph('', *text_nodes)
+            list_item = nodes.list_item('', par_node)
             bullet_list += list_item
 
         return bullet_list, parse_msgs
