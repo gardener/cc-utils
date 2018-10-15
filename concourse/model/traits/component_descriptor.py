@@ -18,6 +18,7 @@ from model import NamedModelElement
 
 from concourse.model.step import PipelineStep
 from concourse.model.base import (
+  AttributeSpec,
   Trait,
   TraitTransformer,
   ModelValidationError,
@@ -27,6 +28,23 @@ from concourse.model.base import (
 
 COMPONENT_DESCRIPTOR_DIR_INPUT = ('component_descriptor_dir', 'component_descriptor_dir')
 
+ATTRIBUTES = (
+    AttributeSpec.optional(
+        name='step',
+        default={'name': 'component_descriptor'},
+        doc='The build step name injected by this trait',
+    ),
+    AttributeSpec.optional(
+        name='resolve_dependencies',
+        default=True,
+        doc='Indicates whether or not unresolved component dependencies should be resolved',
+    ),
+    AttributeSpec.optional(
+        name='component_name',
+        default=None, # actually, it is determined at runtime
+        doc='Manually overwrites the component name (which defaults to github repository path)',
+    ),
+)
 
 class ComponentDescriptorTrait(Trait):
     def __init__(self, *args, **kwargs):
@@ -37,16 +55,14 @@ class ComponentDescriptorTrait(Trait):
         if not self.step_name() == 'component_descriptor':
             raise ModelValidationError('component_descriptor step name must be component_descriptor')
 
+    def _attribute_specs(self):
+        return ATTRIBUTES
+
     def _defaults_dict(self):
-        return {
-            'step': {'name': 'component_descriptor'},
-            'resolve_dependencies': True,
-        }
+        return AttributeSpec.defaults_dict(ATTRIBUTES)
 
     def _optional_attributes(self):
-        return  {
-            'component_name',
-        }
+        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
 
     def component_name(self):
         return self.raw['component_name']
