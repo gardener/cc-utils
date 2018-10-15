@@ -17,6 +17,7 @@ from util import not_none
 
 from concourse.model.step import PipelineStep
 from concourse.model.base import (
+    AttributeSpec,
     Trait,
     TraitTransformer,
     ModelBase,
@@ -27,19 +28,45 @@ from product.scanning import ProcessingMode
 from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
 
 
+ATTRIBUTES = (
+    AttributeSpec.optional(
+        name='parallel_jobs',
+        default=12,
+        doc='amount of parallel scanning threads',
+    ),
+    AttributeSpec.optional(
+        name='cve_threshold',
+        default=7,
+        doc='CVE threshold to interpret as an error',
+    ),
+    AttributeSpec.optional(
+        name='processing_mode',
+        default='upload_if_changed',
+        doc='Protecode processing mode', # todo: document allowed values
+    ),
+    AttributeSpec.required(
+        name='protecode_group_id',
+        doc='technical protecode group id to upload to',
+    ),
+    AttributeSpec.required(
+        name='protecode_cfg_name',
+        doc='protecode cfg name to use (see cc-utils)',
+    ),
+)
+
+
 class ImageScanTrait(Trait):
+    def _attribute_specs(self):
+        return ATTRIBUTES
+
     def _defaults_dict(self):
-        return {
-            'parallel_jobs': 12,
-            'cve_threshold': 7,
-            'processing_mode': 'upload_if_changed'
-        }
+        return AttributeSpec.defaults_dict(ATTRIBUTES)
+
+    def _optional_attributes(self):
+        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
 
     def _required_attributes(self):
-        return (
-            'protecode_group_id',
-            'protecode_cfg_name',
-        )
+        return set(AttributeSpec.required_attr_names(ATTRIBUTES))
 
     def protecode_group_id(self):
         return self.raw.get('protecode_group_id')
