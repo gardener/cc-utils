@@ -88,6 +88,13 @@ class AttributeSpec(object):
         return attr.name(), attr.default_value()
 
     @staticmethod
+    def required_attr_names(attrs: 'typing.Iterable[AttributeSpec]'):
+        yield from map(
+            AttributeSpec.select_name,
+            AttributeSpec.filter_attrs(attrs=attrs, required=RequiredPolicy.REQUIRED)
+        )
+
+    @staticmethod
     def optional_attr_names(attrs: 'typing.Iterable[AttributeSpec]'):
         yield from map(
             AttributeSpec.select_name,
