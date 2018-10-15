@@ -15,17 +15,28 @@
 
 from util import not_none
 
-from concourse.model.base import Trait, TraitTransformer
+from concourse.model.base import Trait, TraitTransformer, AttributeSpec
 
+ATTRIBUTES = (
+    AttributeSpec.optional(
+        name='interval',
+        default='5m',
+        doc='go-style time interval between job executions',
+    ),
+)
 
 class CronTrait(Trait):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def _attribute_specs(self):
+        return ATTRIBUTES
+
     def _defaults_dict(self):
-        return {
-            'interval': '5m',
-        }
+        return AttributeSpec.defaults_dict(ATTRIBUTES)
+
+    def _optional_attributes(self):
+        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
 
     def interval(self):
         return self.raw['interval']
