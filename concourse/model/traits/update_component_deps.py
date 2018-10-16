@@ -16,21 +16,40 @@
 from util import not_none
 
 from concourse.model.step import PipelineStep
-from concourse.model.base import Trait, TraitTransformer, ModelBase, ScriptType
+from concourse.model.base import (
+    AttributeSpec,
+    Trait,
+    TraitTransformer,
+    ModelBase,
+    ScriptType,
+)
 
 from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
 
 
+ATTRIBUTES = (
+    AttributeSpec.optional(
+        name='set_dependency_version_script',
+        default='.ci/set_dependency_version',
+        doc='configures the path to set_dependency_version script',
+    ),
+    AttributeSpec.optional(
+        name='upstream_component_name',
+        default=None, # defaults to main repository
+        doc='configures the upstream component',
+    ),
+)
+
+
 class UpdateComponentDependenciesTrait(Trait):
+    def _attribute_specs(self):
+        return ATTRIBUTES
+
     def _defaults_dict(self):
-        return {
-            'set_dependency_version_script': '.ci/set_dependency_version',
-        }
+        return AttributeSpec.defaults_dict(ATTRIBUTES)
 
     def _optional_attributes(self):
-        return {
-            'upstream_component_name',
-        }
+        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
 
     def set_dependency_version_script_path(self):
         return self.raw['set_dependency_version_script']

@@ -18,9 +18,31 @@ from util import not_none
 
 from concourse.model.step import PipelineStep
 from concourse.model.base import (
+  AttributeSpec,
   Trait,
   TraitTransformer,
   ScriptType,
+)
+
+
+ATTRIBUTES = (
+    AttributeSpec.optional(
+        name='preprocess',
+        default='inject-commit-hash',
+        doc='sets the semver version operation to calculare the effective version during the build',
+    ),
+    AttributeSpec.optional(
+        name='versionfile',
+        default='VERSION',
+        doc='relative path to the version file',
+    ),
+    AttributeSpec.optional(
+        name='inject_effective_version',
+        default=False,
+        doc='''
+        whether or not the effective version is to be written into the source tree's VERSION file
+        ''',
+    ),
 )
 
 
@@ -40,16 +62,14 @@ class VersionTrait(Trait):
         if not self._preprocess() in self.PREPROCESS_OPS:
             raise ValueError('preprocess must be one of: ' + ', '.join(self.PREPROCESS_OPS))
 
+    def _attribute_specs(self):
+        return ATTRIBUTES
+
     def _defaults_dict(self):
-        return {
-            'preprocess': 'inject-commit-hash',
-            'versionfile': 'VERSION',
-            'inject_effective_version': False,
-        }
+        return AttributeSpec.defaults_dict(ATTRIBUTES)
 
     def _optional_attributes(self):
-        return {
-        }
+        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
 
     def _preprocess(self):
         return self.raw['preprocess']
