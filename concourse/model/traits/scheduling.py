@@ -16,16 +16,30 @@
 from util import not_none
 
 from concourse.model.base import (
+  AttributeSpec,
   Trait,
   TraitTransformer,
 )
 
 
+ATTRIBUTES = (
+    AttributeSpec.optional(
+        name='suppress_parallel_execution',
+        default=None,
+        doc='whether parallel executions of the same job should be prevented',
+    ),
+)
+
+
 class SchedulingTrait(Trait):
+    def _attribute_specs(self):
+        return ATTRIBUTES
+
     def _defaults_dict(self):
-        return {
-            'suppress_parallel_execution': None,
-        }
+        return AttributeSpec.defaults_dict(ATTRIBUTES)
+
+    def _optional_attributes(self):
+        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
 
     # XXX: merge this with cron-trait
     def transformer(self):

@@ -17,8 +17,31 @@ from util import not_none
 
 from concourse.model.step import PipelineStep
 from concourse.model.base import (
+  AttributeSpec,
   Trait,
   TraitTransformer
+)
+
+
+ATTRIBUTES = (
+    AttributeSpec.optional(
+        name='nextversion',
+        default='bump_minor',
+        doc='specifies how the next development version is to be calculated',
+    ),
+    AttributeSpec.optional(
+        name='release_callback',
+        default=None,
+        doc='a callback to invoke when creating a release commit',
+    ),
+    AttributeSpec.optional(
+        name='rebase_before_release',
+        default=False,
+        doc='''
+        whether or not a rebase against latest branch head should be done before publishing
+        release commits.
+        ''' ,
+    ),
 )
 
 
@@ -26,16 +49,14 @@ class ReleaseTrait(Trait):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def _attribute_specs(self):
+        return ATTRIBUTES
+
     def _defaults_dict(self):
-        return {
-            'nextversion': 'bump_minor',
-            'release_callback': None,
-            'rebase_before_release': False,
-        }
+        return AttributeSpec.defaults_dict(ATTRIBUTES)
 
     def _optional_attributes(self):
-        return {
-        }
+        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
 
     def nextversion(self):
         return self.raw['nextversion']

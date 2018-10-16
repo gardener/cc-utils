@@ -14,15 +14,36 @@
 # limitations under the License.
 
 from util import not_none
-from concourse.model.base import Trait, TraitTransformer
+from concourse.model.base import (
+    AttributeSpec,
+    Trait,
+    TraitTransformer
+)
+
+
+ATTRIBUTES = (
+    AttributeSpec.optional(
+        name='build_logs_to_retain',
+        default=1000,
+        doc='the amount of build logs to retain before log rotation occurs',
+    ),
+    AttributeSpec.optional(
+        name='public_build_logs',
+        default=False,
+        doc='whether or not build logs are accessible to unauthenticated users',
+    ),
+)
 
 
 class OptionsTrait(Trait):
+    def _attribute_specs(self):
+        return ATTRIBUTES
+
     def _defaults_dict(self):
-        return {
-            'build_logs_to_retain': 1000,
-            'public_build_logs': False,
-        }
+        return AttributeSpec.defaults_dict(ATTRIBUTES)
+
+    def _optional_attributes(self):
+        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
 
     def build_logs_to_retain(self):
         return self.raw['build_logs_to_retain']

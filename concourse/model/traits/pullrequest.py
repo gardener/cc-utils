@@ -17,10 +17,23 @@ from util import not_none
 
 from concourse.model.step import PipelineStep
 from concourse.model.base import (
+    AttributeSpec,
     Trait,
     TraitTransformer,
     ModelBase,
     ScriptType,
+)
+
+
+ATTRIBUTES = (
+    AttributeSpec.optional(
+        name='policies',
+        default={
+            'require-label': 'reviewed/ok-to-test',
+            'replacement-label': 'needs/ok-to-test',
+        },
+        doc='configures the policies to apply to pull-requests',
+    ),
 )
 
 
@@ -33,13 +46,14 @@ class PullRequestPolicies(ModelBase):
 
 
 class PullRequestTrait(Trait):
+    def _attribute_specs(self):
+        return ATTRIBUTES
+
     def _defaults_dict(self):
-        return {
-            'policies': {
-                'require-label': 'reviewed/ok-to-test',
-                'replacement-label': 'needs/ok-to-test',
-            }
-        }
+        return AttributeSpec.defaults_dict(ATTRIBUTES)
+
+    def _optional_attributes(self):
+        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
 
     def policies(self):
         policies_dict = self.raw['policies']

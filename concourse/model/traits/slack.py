@@ -17,10 +17,23 @@ from util import not_none
 
 from concourse.model.step import PipelineStep
 from concourse.model.base import (
+  AttributeSpec,
   Trait,
   TraitTransformer,
   ModelBase,
   ModelValidationError,
+)
+
+
+ATTRIBUTES = (
+    AttributeSpec.required(
+        name='channel_cfgs',
+        doc='the slack channel configuration to use',
+    ),
+    AttributeSpec.required(
+        name='default_channel',
+        doc='the default channel config',
+    ),
 )
 
 
@@ -42,15 +55,14 @@ class SlackTrait(Trait):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def _attribute_specs(self):
+        return ATTRIBUTES
+
     def _defaults_dict(self):
-        return {
-        }
+        return AttributeSpec.defaults_dict(ATTRIBUTES)
 
     def _required_attributes(self):
-        return {
-            'channel_cfgs',
-            'default_channel',
-        }
+        return set(AttributeSpec.required_attr_names(ATTRIBUTES))
 
     def _children(self):
        return self.channel_cfgs().values()

@@ -18,6 +18,8 @@ from model import NamedModelElement
 
 from concourse.model.step import PipelineStep
 from concourse.model.base import (
+  AttributeSpec,
+  TraitTransformer,
   Trait,
   TraitTransformer,
   ModelValidationError,
@@ -26,21 +28,46 @@ from concourse.model.base import (
 )
 
 
+ATTRIBUTES = (
+    AttributeSpec.optional(
+        name='inputs',
+        default={
+            'repos': None, # None -> default to main repository
+            'steps': {},
+        },
+        doc='configures the inputs that are made available to image build',
+    ),
+    AttributeSpec.optional(
+        name='tag_as_latest',
+        default=False,
+        doc='whether or not published container images should _also_ be labelled as latest',
+    ),
+    AttributeSpec.optional(
+        name='dockerfile',
+        default='Dockerfile',
+        doc='the file to use for building the container image',
+    ),
+    AttributeSpec.optional(
+        name='dir',
+        default=None,
+        doc='the relative path to the container image build file',
+    ),
+)
+
+
 class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._apply_defaults(raw_dict=self.raw)
 
+    def _attribute_specs(self):
+        return ATTRIBUTES
+
     def _defaults_dict(self):
-        return {
-            'inputs': {
-                'repos': None, # None -> default to main repository
-                'steps': {},
-            },
-            'tag_as_latest': False,
-            'dockerfile': 'Dockerfile',
-            'dir': None,
-        }
+        return AttributeSpec.defaults_dict(ATTRIBUTES)
+
+    def _optional_attributes(self):
+        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
 
     def _inputs(self):
         return self.raw['inputs']
