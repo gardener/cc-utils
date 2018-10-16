@@ -28,7 +28,7 @@ from concourse.model.base import (
 )
 
 
-ATTRIBUTES = (
+IMG_DESCRIPTOR_ATTRIBS = (
     AttributeSpec.optional(
         name='inputs',
         default={
@@ -61,13 +61,13 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin):
         self._apply_defaults(raw_dict=self.raw)
 
     def _attribute_specs(self):
-        return ATTRIBUTES
+        return IMG_DESCRIPTOR_ATTRIBS
 
     def _defaults_dict(self):
-        return AttributeSpec.defaults_dict(ATTRIBUTES)
+        return AttributeSpec.defaults_dict(IMG_DESCRIPTOR_ATTRIBS)
 
     def _optional_attributes(self):
-        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
+        return set(AttributeSpec.optional_attr_names(IMG_DESCRIPTOR_ATTRIBS))
 
     def _inputs(self):
         return self.raw['inputs']
@@ -105,14 +105,26 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin):
         return '_'.join([domain, image_name])
 
 
+ATTRIBUTES = (
+    AttributeSpec.required(
+        name='dockerimages',
+        doc='specifies the container images to be built',
+    ),
+)
+
+
 class PublishTrait(Trait):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def _attribute_specs(self):
+        return ATTRIBUTES
+
+    def _defaults_dict(self):
+        return AttributeSpec.defaults_dict(ATTRIBUTES)
+
     def _required_attributes(self):
-        return {
-            'dockerimages'
-        }
+        return set(AttributeSpec.required_attr_names(ATTRIBUTES))
 
     def dockerimages(self):
         return [
