@@ -21,6 +21,7 @@ from sphinx.util.nodes import set_source_info, process_index_entry
 
 import sphinxutil
 import reflectionutil
+import concourse.model.base as base_model
 
 __EXTENSION_VERSION__ = '0.0.1'
 
@@ -89,9 +90,7 @@ class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
 
         self.add_title(f'{trait_name} trait')
         self.summary()
-        self.attribute_defaults()
-        self.optional_attributes()
-        self.required_attributes()
+        self.attributes()
         self.dependencies()
 
         return [self._indexnode, self._target, self._node] + self._parse_msgs
@@ -110,40 +109,25 @@ class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
         # emit last line
         self.add_paragraph(paragraph)
 
-    def attribute_defaults(self):
-        self.add_subtitle('Attribute defaults')
+    def attributes(self):
+        self.add_subtitle('Attributes')
 
-        defaults_dict = self._trait_instance._defaults_dict()
-
-        if not defaults_dict:
-            return self.add_paragraph('This trait does not have any default values')
+        attr_specs = self._trait_instance._attribute_specs()
+        if not attr_specs:
+            return self.add_paragraph('This trait has no attributes')
 
         table_builder = self.create_table_builder()
-        table_builder.add_table_header(['name', 'default value'])
-        for name, default_value in defaults_dict.items():
-            table_builder.add_table_row([str(name), str(default_value)])
+        table_builder.add_table_header(['name', 'required?', 'default', 'explanation'])
+
+        for attr_spec in attr_specs:
+            name = attr_spec.name()
+            required = 'yes' if attr_spec.is_required() else 'no'
+            default_value = str(attr_spec.default_value())
+            doc = attr_spec.doc()
+
+            table_builder.add_table_row((name, required, default_value, doc))
 
         self.add_table(table_builder)
-
-    def required_attributes(self):
-        self.add_subtitle('Required Attributes')
-
-        req_attrs = self._trait_instance._required_attributes()
-
-        if not req_attrs:
-            return self.add_paragraph('This trait does not require any attributes')
-        self.add_paragraph('This trait requires the following traits to be defined:')
-        self.add_bullet_list(req_attrs)
-
-    def optional_attributes(self):
-        self.add_subtitle('Optional Attributes')
-
-        opt_attrs = self._trait_instance._optional_attributes()
-
-        if not opt_attrs:
-            return self.add_paragraph('This trait does not have any optional attributes')
-        self.add_paragraph('This trait offers the following optional attributes:')
-        self.add_bullet_list(opt_attrs)
 
     def dependencies(self):
         self.add_subtitle('Dependencies')
