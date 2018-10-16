@@ -141,6 +141,13 @@ class AttributeSpec(object):
     def required_policy(self):
         return self._required_policy
 
+    def is_required(self):
+        if self.required_policy() == RequiredPolicy.REQUIRED:
+            return True
+        elif self.required_policy() == RequiredPolicy.OPTIONAL:
+            return False
+        raise NotImplementedError
+
 
 class Trait(ModelBase):
     def __init__(self, name: str, variant_name: str, raw_dict: dict):
