@@ -109,6 +109,7 @@ ATTRIBUTES = (
     AttributeSpec.required(
         name='dockerimages',
         doc='specifies the container images to be built',
+        type=PublishDockerImageDescriptor,
     ),
 )
 
