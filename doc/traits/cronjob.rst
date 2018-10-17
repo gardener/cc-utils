@@ -1,2 +1,2 @@
 .. trait::
-    :name: cron
+    :name: cronjob
