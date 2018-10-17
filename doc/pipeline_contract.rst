@@ -35,17 +35,19 @@ Terms and definitions
 Although using `Concourse <https://concourse-ci.org>`_ as underlying build scheduler, we
 use some terms differently as done in the context of concourse.
 
-+----------+-----------------------------------------------------------------------+
-| term     | in Gardener CI/CD                                                     |
-+==========+=======================================================================+
-| Pipeline | a set of jobs (also: variants) defined in `.ci/pipeline_definitions`  |
-+----------+-----------------------------------------------------------------------+
-| Job      | a graph of build steps                                                |
-+----------+-----------------------------------------------------------------------+
-| Step     | an executable with a container image as environment                   |
-+----------+-----------------------------------------------------------------------+
-| Trait    | adds certain semantics to a build job (does not exist in concourse)   |
-+----------+-----------------------------------------------------------------------+
++------------------------------+-----------------------------------------------------+
+| term                         |  in Gardener CI/CD                                  |
++==============================+=====================================================+
+| Pipeline                     | a set of jobs (also: variants) defined in           |
+|                              | `.ci/pipeline_definitions`                          |
++------------------------------+-----------------------------------------------------+
+| Job                          |  a graph of build steps                             |
++------------------------------+-----------------------------------------------------+
+| :doc:`Step <pipeline_steps>` | an executable with a container image as environment |
++------------------------------+-----------------------------------------------------+
+| Trait                        | adds certain semantics to a build job (does not     |
+|                              | exist in concourse)                                 |
++------------------------------+-----------------------------------------------------+
 
 
 Pipeline Definition
@@ -75,8 +77,24 @@ attribute) are optionally applied.
 
 A common usage scenario may be the declaration of hotfix release jobs for release branches
 
-Example
--------
+Attributes
+----------
+
++------------+---------------------------------------------------------------------------+
+| attribute  | explanation                                                               |
++============+===========================================================================+
+| cfgs       | mandatory root attribute                                                  |
++------------+---------------------------------------------------------------------------+
+| <cfg_name> | user-chosen configuration element name (ASCII-alphanumeric)               |
++------------+---------------------------------------------------------------------------+
+| branches   | list of regular expcessions used to match branche names (at least one)    |
++------------+---------------------------------------------------------------------------+
+| inherit    | optional pipeline definition fragment; inherited into pipeline definition |
++------------+---------------------------------------------------------------------------+
+
+
+Example (schematic)
+------------------
 
 .. code-block:: yaml
 
@@ -85,6 +103,29 @@ Example
 		branches: # branch filter
 		   <list of branch names>
 		inherit: ~ # optional branch-specific pipeline definition
+
+Example (hotfix-branch release jobs)
+------------------------------------
+
+.. code-block:: yaml
+
+  cfgs:
+      default:
+          branches: ['master']
+          inherit:
+              example-pipeline:
+                  variants:
+                      release-job:
+                          traits:
+                              release:
+                                  nextversion: 'bump_minor'
+      hotfix:
+          branches: ['rel-.*']
+          inherit:
+              example-pipeline:
+                  variants:
+                      release-job:
+                          traits:
 
 
 Traits
