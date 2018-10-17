@@ -234,7 +234,10 @@ class RepositoryConfig(Resource):
         return self.repo_path().split('/')[0]
 
     def repo_hostname(self):
-        return self.raw.get('hostname').lower()
+        hostname = self.raw.get('hostname')
+        if hostname is not None:
+            return hostname.lower()
+        return None
 
     def branch(self):
         return self.raw['branch']
