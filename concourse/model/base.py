@@ -123,9 +123,11 @@ class AttributeSpec(object):
         doc: str,
         default=None,
         required=None,
+        type=str,
     ):
         self._name = util.check_type(name, str)
         self._doc = util.check_type(doc, str)
+        self._type = util.check_type(type, globals()['__builtins__']['type'])
 
         # validate
         if default:
