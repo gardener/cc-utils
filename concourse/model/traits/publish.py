@@ -19,6 +19,7 @@ from model import NamedModelElement
 from concourse.model.step import PipelineStep
 from concourse.model.base import (
   AttributeSpec,
+  AttribSpecMixin,
   TraitTransformer,
   Trait,
   TraitTransformer,
@@ -55,7 +56,7 @@ IMG_DESCRIPTOR_ATTRIBS = (
 )
 
 
-class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin):
+class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, AttribSpecMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._apply_defaults(raw_dict=self.raw)

@@ -26,7 +26,13 @@ from model.base import(
 )
 
 
-class ModelBase(ModelDefaultsMixin, ModelValidationMixin):
+class AttribSpecMixin(object):
+    @abstractmethod
+    def _attribute_spec(self):
+        raise NotImplementedError
+
+
+class ModelBase(ModelDefaultsMixin, ModelValidationMixin, AttribSpecMixin):
     def __init__(self, raw_dict: dict):
         util.not_none(raw_dict)
 
@@ -38,10 +44,6 @@ class ModelBase(ModelDefaultsMixin, ModelValidationMixin):
 
     def _children(self):
         return ()
-
-    @abstractmethod
-    def _attribute_spec(self):
-        raise NotImplementedError
 
 
 class RequiredPolicy(Enum):
