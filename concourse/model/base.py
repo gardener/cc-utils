@@ -148,6 +148,9 @@ class AttributeSpec(object):
     def default_value(self):
         return self._default_value
 
+    def type(self) ->type:
+        return self._type
+
     def required_policy(self):
         return self._required_policy
 

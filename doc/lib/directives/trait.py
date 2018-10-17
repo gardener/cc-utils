@@ -117,15 +117,24 @@ class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
             return self.add_paragraph('This trait has no attributes')
 
         table_builder = self.create_table_builder()
-        table_builder.add_table_header(['name', 'required?', 'default', 'explanation'])
+        table_builder.add_table_header(['name', 'required?', 'default', 'type', 'explanation'])
 
-        for attr_spec in attr_specs:
+        def attr_to_table_row(attr_spec, prefix=None):
             name = attr_spec.name()
             required = 'yes' if attr_spec.is_required() else 'no'
             default_value = str(attr_spec.default_value())
             doc = attr_spec.doc()
 
-            table_builder.add_table_row((name, required, default_value, doc))
+            type_ = attr_spec.type()
+            if issubclass(type_, base_model.AttribSpecMixin):
+                type_str = type_.__name__
+            else:
+                type_str = str(type_)
+
+            table_builder.add_table_row((name, required, default_value, type_str, doc))
+
+        for attr_spec in attr_specs:
+            attr_to_table_row(attr_spec)
 
         self.add_table(table_builder)
 
