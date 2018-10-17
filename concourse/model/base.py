@@ -63,6 +63,8 @@ class AttributeSpec(object):
             name=name,
             doc=doc,
             required=RequiredPolicy.REQUIRED,
+            *args,
+            **kwargs,
         )
 
     @staticmethod
