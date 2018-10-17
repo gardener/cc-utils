@@ -56,7 +56,7 @@ for `.ci/pipeline_definitions` files within their default branch's source tree. 
 definition is found, all contained pipeline definitions are generated into concourse build
 pipelines.
 
-Pipeline definitions are valid `YAML <https://yaml.org`_ files adhering to the schema defined
+Pipeline definitions are valid `YAML <https://yaml.org>`_ files adhering to the schema defined
 in this reference documentation.
 
 Branch-specific configuration
