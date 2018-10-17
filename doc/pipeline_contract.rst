@@ -91,7 +91,7 @@ Traits
 ######
 
 * :doc:`traits/component_descriptor`
-* :doc:`traits/cron`
+* :doc:`traits/cronjob`
 * :doc:`traits/draft_release`
 * :doc:`traits/image_scan`
 * :doc:`traits/options`

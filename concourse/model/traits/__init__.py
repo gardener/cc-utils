@@ -18,7 +18,7 @@ from util import not_none
 from concourse.model.base import ModelValidationError
 
 from .component_descriptor import ComponentDescriptorTrait
-from .cron import CronTrait
+from .cronjob import CronTrait
 from .publish import PublishTrait
 from .pullrequest import PullRequestTrait
 from .release import ReleaseTrait
