@@ -39,6 +39,10 @@ class ModelBase(ModelDefaultsMixin, ModelValidationMixin):
     def _children(self):
         return ()
 
+    @abstractmethod
+    def _attribute_spec(self):
+        raise NotImplementedError
+
 
 class RequiredPolicy(Enum):
     OPTIONAL = 'optional'
@@ -159,10 +163,6 @@ class Trait(ModelBase):
 
     @abstractmethod
     def transformer(self):
-        raise NotImplementedError
-
-    @abstractmethod
-    def _attribute_spec(self):
         raise NotImplementedError
 
     def __str__(self):
