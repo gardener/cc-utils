@@ -23,6 +23,7 @@ import sphinxutil
 import reflectionutil
 import attributes
 import concourse.model.base as base_model
+import cc_directives.base
 
 __EXTENSION_VERSION__ = '0.0.1'
 
@@ -56,7 +57,7 @@ class TraitNode(nodes.section):
     pass
 
 
-class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
+class TraitDirective(Directive, cc_directives.base.AttributesDocMixin, sphinxutil.SphinxUtilsMixin):
     required_arguments = 0
     optional_arguments = 1
     has_content = True
@@ -91,7 +92,7 @@ class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
 
         self.add_title(f'{trait_name} trait')
         self.summary()
-        self.attributes()
+        self.attributes(self._trait_instance)
         self.dependencies()
 
         return [self._indexnode, self._target, self._node] + self._parse_msgs
@@ -109,29 +110,6 @@ class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
                 paragraph = ''
         # emit last line
         self.add_paragraph(paragraph)
-
-    def attributes(self):
-        attributes_doc = attributes.AttributesDocumentation(
-            self._trait_instance,
-            prefix='',
-        )
-
-        def render_element_attribs(prefix: str, attributes_doc):
-            if prefix:
-                subtitle = f'{prefix} Attributes'
-            else:
-                subtitle = 'Attributes'
-
-            self.add_subtitle(subtitle)
-
-            table_builder = self.create_table_builder()
-            attributes_doc.fill_table(table_builder)
-            self.add_table(table_builder)
-
-            for child_element in attributes_doc.children():
-                render_element_attribs(child_element._prefix, child_element)
-
-        render_element_attribs('', attributes_doc)
 
     def dependencies(self):
         self.add_subtitle('Dependencies')
