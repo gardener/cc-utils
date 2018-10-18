@@ -21,6 +21,7 @@ from sphinx.util.nodes import set_source_info, process_index_entry
 
 import sphinxutil
 import reflectionutil
+import attributes
 import concourse.model.base as base_model
 
 __EXTENSION_VERSION__ = '0.0.1'
@@ -110,33 +111,27 @@ class TraitDirective(Directive, sphinxutil.SphinxUtilsMixin):
         self.add_paragraph(paragraph)
 
     def attributes(self):
-        self.add_subtitle('Attributes')
+        attributes_doc = attributes.AttributesDocumentation(
+            self._trait_instance,
+            prefix='',
+        )
 
-        attr_specs = self._trait_instance._attribute_specs()
-        if not attr_specs:
-            return self.add_paragraph('This trait has no attributes')
-
-        table_builder = self.create_table_builder()
-        table_builder.add_table_header(['name', 'required?', 'default', 'type', 'explanation'])
-
-        def attr_to_table_row(attr_spec, prefix=None):
-            name = attr_spec.name()
-            required = 'yes' if attr_spec.is_required() else 'no'
-            default_value = str(attr_spec.default_value())
-            doc = attr_spec.doc()
-
-            type_ = attr_spec.type()
-            if issubclass(type_, base_model.AttribSpecMixin):
-                type_str = type_.__name__
+        def render_element_attribs(prefix: str, attributes_doc):
+            if prefix:
+                subtitle = f'{prefix} Attributes'
             else:
-                type_str = str(type_)
+                subtitle = 'Attributes'
 
-            table_builder.add_table_row((name, required, default_value, type_str, doc))
+            self.add_subtitle(subtitle)
 
-        for attr_spec in attr_specs:
-            attr_to_table_row(attr_spec)
+            table_builder = self.create_table_builder()
+            attributes_doc.fill_table(table_builder)
+            self.add_table(table_builder)
 
-        self.add_table(table_builder)
+            for child_element in attributes_doc.children():
+                render_element_attribs(child_element._prefix, child_element)
+
+        render_element_attribs('', attributes_doc)
 
     def dependencies(self):
         self.add_subtitle('Dependencies')
