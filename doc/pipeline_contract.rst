@@ -43,7 +43,7 @@ use some terms differently as done in the context of concourse.
 +------------------------------+-----------------------------------------------------+
 | :doc:`Job <pipeline_job>`    |  a graph of build steps                             |
 +------------------------------+-----------------------------------------------------+
-| :doc:`Step <pipeline_steps>` | an executable with a container image as environment |
+| :doc:`Step <pipeline_step>`  | an executable with a container image as environment |
 +------------------------------+-----------------------------------------------------+
 | :doc:`Trait <traits>`        | adds certain semantics to a build job (does not     |
 |                              | exist in concourse)                                 |

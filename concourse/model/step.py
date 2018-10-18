@@ -42,6 +42,7 @@ def attrs(pipeline_step):
             doc='''
             The executable (with optional additional arguments) to run. The executable path
             is calculated relative to `<main_repo>/.ci`.
+
             Has two forms:
             - scalar value (str in most cases) --> no shell-escaping is done
             - list of scalar values -> used verbatim as ARGV
