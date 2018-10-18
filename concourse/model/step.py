@@ -27,6 +27,7 @@ from concourse.model.base import (
     normalise_to_dict,
 )
 
+
 def attrs(pipeline_step):
     return (
         AttributeSpec.optional(
