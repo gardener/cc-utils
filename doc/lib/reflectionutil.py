@@ -20,17 +20,22 @@ import inspect
 
 import concourse.model.base as model_base
 import concourse.model.traits as traits
+import model
 
 # add repository root to pythonpath
 sys.path.append(os.path.abspath('../..'))
 
 
-def trait_module(trait_name: str):
-    qualified_module_name = f'{traits.__name__}.{trait_name}'
+def module(qualified_module_name: str):
     module = __import__(qualified_module_name)
     for submodule_name in qualified_module_name.split('.')[1:]:
         module = getattr(module, submodule_name)
     return module
+
+
+def trait_module(trait_name: str):
+    qualified_module_name = f'{traits.__name__}.{trait_name}'
+    return module(qualified_module_name)
 
 
 def trait_class(trait_name: str):
@@ -46,3 +51,20 @@ def trait_class(trait_name: str):
 def trait_instance(trait_name: str):
     ctor = trait_class(trait_name=trait_name)
     return ctor(name=trait_name, variant_name='dummy', raw_dict={})
+
+
+def model_element_type(qualified_type_name: str):
+    module_name, class_name = qualified_type_name.rsplit('.', 1)
+
+    mod = module(module_name)
+    return getattr(mod, class_name)
+
+
+def model_element_instance(qualified_type_name: str):
+    ctor = model_element_type(qualified_type_name)
+
+    # apply some hard-coded heuristics to create an instance
+    try:
+        return ctor(raw_dict={})
+    except TypeError:
+        return ctor(name='<name>', raw_dict={})
