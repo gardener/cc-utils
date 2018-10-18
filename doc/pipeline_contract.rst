@@ -41,7 +41,7 @@ use some terms differently as done in the context of concourse.
 | :doc:`Pipeline <pipeline>`   | a set of jobs (also: variants) defined in           |
 |                              | `.ci/pipeline_definitions`                          |
 +------------------------------+-----------------------------------------------------+
-| Job                          |  a graph of build steps                             |
+| :doc:`Job <pipeline_job>`    |  a graph of build steps                             |
 +------------------------------+-----------------------------------------------------+
 | :doc:`Step <pipeline_steps>` | an executable with a container image as environment |
 +------------------------------+-----------------------------------------------------+

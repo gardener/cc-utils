@@ -11,8 +11,33 @@ pipelines.
 Pipeline definitions are valid `YAML <https://yaml.org>`_ files adhering to the schema defined
 in this reference documentation.
 
+Pipeline Definition Schema
+##########################
+
+Pipeline definition documents may contain an arbitrary amount of pipelines. Each top-level
+attribute in a `.ci/pipeline_definitions` file declares a pipeline. The attribute name being
+the pipeline name.
+
+.. danger::
+  All pipeline names share a global namespace. So be sure not to re-use an existing name
+  already in use be another component.
+
+Attributes
+----------
+
++-------------------+---------------------------------------------------------------------------+
+| attribute         | explanation                                                               |
++===================+===========================================================================+
+| <name>            | the user-chosen pipeline name. Top-level attribute                        |
++-------------------+---------------------------------------------------------------------------+
+| template          | pipeline template to use. Defaults to 'default' (for future extensions)   |
++-------------------+---------------------------------------------------------------------------+
+| base_definition   | inherited from all :doc:`Jobs </pipeline_job>`                            |
++-------------------+---------------------------------------------------------------------------+
+
+
 Branch-specific configuration
-*****************************
+#############################
 
 By default, only the default branch is considered. An optional `branch.cfg` YAML file *may* be
 placed in a repository's special ref `refs/meta/ci`.o
