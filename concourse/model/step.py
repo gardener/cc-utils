@@ -46,7 +46,7 @@ class PipelineStep(ModelBase):
 
     def _defaults_dict(self):
         return {
-            'depends': {self.name}, # toposort lib requires non-empty dependency sets
+            'depends': set(),
             'execute': self.name,
             'image': None,
             'inputs': {},
