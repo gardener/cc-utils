@@ -15,7 +15,10 @@
 
 import os
 
-from concourse.model.base import ModelBase
+from concourse.model.base import (
+    AttributeSpec,
+    ModelBase
+)
 from util import not_none
 
 
@@ -146,6 +149,67 @@ class ResourceRegistry(object):
         return self[resource_identifier]
 
 
+REPO_ATTRS = (
+    AttributeSpec.optional(
+        name='name',
+        default='source',
+        doc='''
+        the logical repository name. affects environment variable names and is used to reference
+        from traits.
+        ''',
+    ),
+    AttributeSpec.optional(
+        name='cfg_name',
+        default=None,
+        doc='''
+        the github_cfg to use for authentication. Defaults to concourse-specific default
+        ''',
+    ),
+    AttributeSpec.optional(
+        name='force_push',
+        default=False,
+        doc='whether or not force-pushes ought to be done',
+        type=bool,
+    ),
+    AttributeSpec.optional(
+        name='trigger_paths',
+        default={
+            'include': [],
+            'exclude': [],
+        },
+        doc='repository paths to either ignore or to restrict triggering to',
+        type=dict,
+    ),
+    AttributeSpec.optional(
+        name='trigger',
+        default=None,
+        doc='overwrites the defaults for triggering behaviour',
+        type=bool,
+    ),
+    AttributeSpec.optional(
+        name='disable_ci_skip',
+        default=False,
+        doc='whether to disable the ignoring of commits with [ci skip] in commit msg',
+        type=bool,
+    ),
+    AttributeSpec.optional(
+        name='branch',
+        default=None,
+        doc='only for non-main repository: specify branch to work with',
+    ),
+    AttributeSpec.optional(
+        name='path',
+        default=None,
+        doc='github repository path (e.g. gardener/gardener)',
+    ),
+    AttributeSpec.optional(
+        name='hostname',
+        default=None,
+        doc='do not use',
+    ),
+)
+
+
 class RepositoryConfig(Resource):
     def __init__(
             self,
@@ -175,32 +239,17 @@ class RepositoryConfig(Resource):
 
         super().__init__(resource_identifier=resource_identifier, *args, **kwargs)
 
-    def _defaults_dict(self):
-        return {
-            'cfg_name': None,
-            # 'disable_ci_skip', False # TODO: adding it as a default will make it
-            # impossible to find out whether or not the user specified the default
-            # value explicitly
-            'force_push': False,
-            'trigger_paths': {
-                'include': [],
-                'exclude': [],
-            },
-            'name': 'source',
+    def _attribute_specs(self):
+        return REPO_ATTRS
 
-        }
+    def _defaults_dict(self):
+        return AttributeSpec.defaults_dict(REPO_ATTRS)
 
     def _optional_attributes(self):
-        return {
-            'branch',
-            'hostname',
-            'path',
-            'trigger',
-            'disable_ci_skip',
-        }
+        return AttributeSpec.optional_attr_names(REPO_ATTRS)
 
     def custom_init(self, raw_dict):
-        if 'trigger' in raw_dict:
+        if raw_dict.get('trigger') is not None:
             self._trigger = raw_dict['trigger']
         else:
             self._trigger = self._is_main_repo
