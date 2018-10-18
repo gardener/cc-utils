@@ -279,14 +279,16 @@ class RepositoryConfig(Resource):
 
     def env_var_value_dict(self):
         name = self.logical_name()
-        return dict([
-            (self.path_env_var_name(), self.resource_name()),
+        env_var_dict = dict([
+            (sane_env_var_name(name) + '_PATH', self.resource_name()),
             (sane_env_var_name(name) + '_BRANCH', self.branch()),
             (sane_env_var_name(name) + '_GITHUB_REPO_OWNER_AND_NAME', self.repo_path()),
-      ])
-
-    def path_env_var_name(self):
-        return sane_env_var_name(self.logical_name() + '_PATH')
+        ])
+        if self.is_main_repo():
+            env_var_dict.update(dict([
+                ('MAIN_REPO_DIR', self.resource_name()),
+            ]))
+        return env_var_dict
 
     def __str__(self):
         return 'RepositoryConfig ({cfg}:{rp}:{b})'.format(
