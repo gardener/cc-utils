@@ -19,6 +19,7 @@ import os
 import inspect
 
 import concourse.model.base as model_base
+import concourse.model.resources as resources
 import concourse.model.traits as traits
 import model
 
@@ -62,6 +63,9 @@ def model_element_type(qualified_type_name: str):
 
 def model_element_instance(qualified_type_name: str):
     ctor = model_element_type(qualified_type_name)
+
+    if issubclass(ctor, resources.RepositoryConfig):
+        return ctor(raw_dict={'path': ''})
 
     # apply some hard-coded heuristics to create an instance
     try:
