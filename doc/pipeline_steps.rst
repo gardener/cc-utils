@@ -14,4 +14,6 @@ The resulting exit code is used to determine whether or not the step execution h
 A zero exit code is interpreted as success, wheras non-zero exit codes are interpreted as
 failures.
 
-TODO: document attributes
+.. model_element::
+    :name: Pipeline Step
+    :qualified_type_name: concourse.model.step.PipelineStep

@@ -60,6 +60,7 @@ release = ''
 # ones.
 extensions = [
     'cc_directives.trait',
+    'cc_directives.model_element',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
