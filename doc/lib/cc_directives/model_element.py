@@ -97,7 +97,6 @@ class ModelElementDirective(
 
         self._init(name=name, qualified_type_name=qualified_type_name)
 
-        self.add_title(f'{name}')
         self.attributes(self._model_element_instance)
 
         return [self._indexnode, self._target, self._node] + self._parse_msgs
