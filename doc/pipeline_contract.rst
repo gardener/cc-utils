@@ -45,7 +45,7 @@ use some terms differently as done in the context of concourse.
 +------------------------------+-----------------------------------------------------+
 | :doc:`Step <pipeline_steps>` | an executable with a container image as environment |
 +------------------------------+-----------------------------------------------------+
-| Trait                        | adds certain semantics to a build job (does not     |
+| :doc:`Trait <traits>`        | adds certain semantics to a build job (does not     |
 |                              | exist in concourse)                                 |
 +------------------------------+-----------------------------------------------------+
 
@@ -128,21 +128,6 @@ Example (hotfix-branch release jobs)
                           traits:
 
 
-Traits
-######
-
-* :doc:`traits/component_descriptor`
-* :doc:`traits/cronjob`
-* :doc:`traits/draft_release`
-* :doc:`traits/image_scan`
-* :doc:`traits/options`
-* :doc:`traits/publish`
-* :doc:`traits/pullrequest`
-* :doc:`traits/release`
-* :doc:`traits/scheduling`
-* :doc:`traits/slack`
-* :doc:`traits/update_component_deps`
-* :doc:`traits/version`
 
 Indices and tables
 ##################
