@@ -24,6 +24,30 @@ from concourse.model.base import (
     ScriptType,
 )
 
+POLICIES_ATTRIBS = (
+    AttributeSpec.optional(
+        name='require-label',
+        default='reviewed/ok-to-test',
+        doc='the label required for PR build to start',
+    ),
+    AttributeSpec.optional(
+        name='replacement-label',
+        default='needs/ok-to-test',
+        doc='the label set after require-label was removed by PR build',
+    ),
+)
+
+
+class PullRequestPolicies(ModelBase):
+    def _attribute_specs(self):
+        return POLICIES_ATTRIBS
+
+    def require_label(self):
+        return self.raw.get('require-label')
+
+    def replacement_label(self):
+        return self.raw.get('replacement-label')
+
 
 ATTRIBUTES = (
     AttributeSpec.optional(
@@ -33,16 +57,9 @@ ATTRIBUTES = (
             'replacement-label': 'needs/ok-to-test',
         },
         doc='configures the policies to apply to pull-requests',
+        type=PullRequestPolicies,
     ),
 )
-
-
-class PullRequestPolicies(ModelBase):
-    def require_label(self):
-        return self.raw.get('require-label')
-
-    def replacement_label(self):
-        return self.raw.get('replacement-label')
 
 
 class PullRequestTrait(Trait):

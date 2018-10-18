@@ -26,11 +26,13 @@ ATTRIBUTES = (
         name='build_logs_to_retain',
         default=1000,
         doc='the amount of build logs to retain before log rotation occurs',
+        type=int,
     ),
     AttributeSpec.optional(
         name='public_build_logs',
         default=False,
         doc='whether or not build logs are accessible to unauthenticated users',
+        type=bool,
     ),
 )
 

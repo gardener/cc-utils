@@ -27,6 +27,7 @@ ATTRIBUTES = (
         name='suppress_parallel_execution',
         default=None,
         doc='whether parallel executions of the same job should be prevented',
+        type=bool,
     ),
 )
 

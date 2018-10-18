@@ -33,11 +33,13 @@ ATTRIBUTES = (
         name='parallel_jobs',
         default=12,
         doc='amount of parallel scanning threads',
+        type=int,
     ),
     AttributeSpec.optional(
         name='cve_threshold',
         default=7,
         doc='CVE threshold to interpret as an error',
+        type=int,
     ),
     AttributeSpec.optional(
         name='processing_mode',
@@ -47,6 +49,7 @@ ATTRIBUTES = (
     AttributeSpec.required(
         name='protecode_group_id',
         doc='technical protecode group id to upload to',
+        type=int,
     ),
     AttributeSpec.required(
         name='protecode_cfg_name',

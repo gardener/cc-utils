@@ -42,6 +42,7 @@ ATTRIBUTES = (
         doc='''
         whether or not the effective version is to be written into the source tree's VERSION file
         ''',
+        type=bool,
     ),
 )
 

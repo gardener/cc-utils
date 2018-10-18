@@ -41,6 +41,7 @@ ATTRIBUTES = (
         whether or not a rebase against latest branch head should be done before publishing
         release commits.
         ''',
+        type=bool,
     ),
 )
 

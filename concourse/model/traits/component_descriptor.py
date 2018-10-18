@@ -33,11 +33,13 @@ ATTRIBUTES = (
         name='step',
         default={'name': 'component_descriptor'},
         doc='The build step name injected by this trait',
+        type=dict,
     ),
     AttributeSpec.optional(
         name='resolve_dependencies',
         default=True,
         doc='Indicates whether or not unresolved component dependencies should be resolved',
+        type=bool,
     ),
     AttributeSpec.optional(
         name='component_name',
