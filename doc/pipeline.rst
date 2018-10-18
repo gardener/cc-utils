@@ -34,6 +34,31 @@ Attributes
 +-------------------+---------------------------------------------------------------------------+
 | base_definition   | inherited from all :doc:`Jobs </pipeline_job>`                            |
 +-------------------+---------------------------------------------------------------------------+
+| variants          | defines :doc:`Jobs </pipeline_job>`                                       |
++-------------------+---------------------------------------------------------------------------+
+
+
+.. note::
+  Each pipeline should at least define one job. Otherwise it would be empty.
+
+
+Example `.ci/pipeline_definitions`
+----------------------------------
+
+* define a build pipeline named `my_pipeline`
+* define two :doc:`Build Jobs </pipeline_job>` `job_A`, `job_B`
+
+.. code-block:: yaml
+
+  my_pipeline:
+    template: 'default'   # default value - may be omitted
+    base_definition:
+      ... # same schema as for jobs applies
+    variants:
+      job_A:
+        ... # see pipeline jobs definition for schema
+      job_B: ~
+
 
 
 Branch-specific configuration
