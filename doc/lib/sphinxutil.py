@@ -111,14 +111,15 @@ class TableBuilder(object):
         # type: (unicode) -> None
         row = nodes.row('')
         source, line = self.state_machine.get_source_and_line()
-        for text in column_texts:
+        for text_line in column_texts:
             node = nodes.paragraph('')
             vl = ViewList()
-            vl.append(text, '%s:%d' % (source, line))
+            for text in text_line.split('\n'):
+                vl.append(text, '%s:%d' % (source, line))
             with switch_source_input(self.state, vl):
                 self.state.nested_parse(vl, 0, node)
                 try:
-                    if isinstance(node[0], nodes.paragraph):
+                    if isinstance(node[0], nodes.paragraph) and len(node.children) == 1:
                         node = node[0]
                 except IndexError:
                     pass
