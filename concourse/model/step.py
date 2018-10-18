@@ -20,11 +20,88 @@ import shlex
 import util
 
 from concourse.model.base import (
+    AttributeSpec,
     ModelBase,
     ModelValidationError,
     ScriptType,
     normalise_to_dict,
 )
+
+def attrs(pipeline_step):
+    return (
+        AttributeSpec.optional(
+            name='depends',
+            default=set(),
+            doc='step names this step declares a dependency towards',
+            type=set,
+        ),
+        AttributeSpec.optional(
+            name='execute',
+            default=pipeline_step.name,
+            doc='''
+            The executable (with optional additional arguments) to run. The executable path
+            is calculated relative to `<main_repo>/.ci`.
+            Has two forms:
+            - scalar value (str in most cases) --> no shell-escaping is done
+            - list of scalar values -> used verbatim as ARGV
+            ''',
+        ),
+        AttributeSpec.optional(
+            name='image',
+            default=None,
+            doc='''
+            the container image reference to use for the executing container.
+            If not set, the default image will be used.
+            ''',
+        ),
+        AttributeSpec.optional(
+            name='registry',
+            default=None,
+            doc='''
+            The container image registry cfg_name. Required when retrieving container images
+            from a non-default image registry that requires authentication.
+            ''',
+        ),
+        AttributeSpec.optional(
+            name='inputs',
+            default={},
+            doc='''
+            a mapping of inputs produced by other build steps:
+            { input_name: output_name }
+            `input_name` is converted to UPPER_CASE and exposed to the step as an environment
+            variable containing the relative path to the output.
+            ''',
+            type=dict,
+        ),
+        AttributeSpec.optional(
+            name='output_dir',
+            default=None,
+            doc='''
+            TODO
+            ''',
+        ),
+        AttributeSpec.optional(
+            name='publish_to',
+            default={},
+            doc='''
+            list of logical repository names to which commits created by this step should be
+            published.
+            ''',
+            type=list,
+        ),
+        AttributeSpec.optional(
+            name='vars',
+            default={},
+            doc='''
+            pairs of {env_var_name: <python expression>}
+            the specified python expressions are evaluated during pipeline replication.
+            An instance of the current pipeline_model is accessible through the
+            `pipeline_descriptor` symbol.
+            The evaluation result is exposed to this build step via the specified environment
+            variable.
+            ''',
+        ),
+    )
 
 
 class PipelineStep(ModelBase):
@@ -44,28 +121,14 @@ class PipelineStep(ModelBase):
         self._publish_to_dict = {}
         super().__init__(*args, **kwargs)
 
+    def _attribute_specs(self):
+        return attrs(self)
+
     def _defaults_dict(self):
-        return {
-            'depends': set(),
-            'execute': self.name,
-            'image': None,
-            'inputs': {},
-            'output_dir': None,
-            'publish_to': {},
-            'vars': {},
-        }
+        return AttributeSpec.defaults_dict(attrs(self))
 
     def _optional_attributes(self):
-        return {
-            'output_dir',
-            'vars',
-            'publish_to',
-            'execute',
-            'inputs',
-            'image',
-            'depends',
-            'registry',
-        }
+        return set(AttributeSpec.optional_attr_names(attrs(self)))
 
     def custom_init(self, raw_dict: dict):
         raw_dict['depends'] = set(raw_dict['depends'])
