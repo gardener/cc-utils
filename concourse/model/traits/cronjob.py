@@ -21,7 +21,9 @@ ATTRIBUTES = (
     AttributeSpec.optional(
         name='interval',
         default='5m',
-        doc='go-style time interval between job executions',
+        doc='''
+        go-style time interval between job executions. supported suffices are: s,m,h
+        ''',
     ),
 )
 
