@@ -2,9 +2,9 @@
     :name: component_descriptor
 
 
-If declared, a `Component Descriptor` is created during job execution. If the :doc:`<release>`
-trait is also declared, the created component descriptor is added to the component's release
-artifacts (as GitHub release asset).
+If declared, a `Component Descriptor` is created during job execution. If their
+:doc:`/traits/release` trait is also declared, the created component descriptor is added to the
+component's release artifacts (as GitHub release asset).
 
 
 Example

@@ -7,7 +7,7 @@ This trait add release job semantics to the declaring build job.
 .. note::
 
   while not enforced, it is strongly recommended to configure the effective version operation
-  to `finalize` (see :doc:`<version>`)
+  to `finalize` (see :doc:`version`)
 
 
 The following operations are performed:
