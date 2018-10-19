@@ -23,6 +23,7 @@ failures.
   :name: Pipeline Step
   :qualified_type_name: concourse.model.step.PipelineStep
 
+
 Examples
 ########
 
@@ -59,6 +60,6 @@ Examples
           force_push: true # use with caution!
 
     define_env_vars:
-      args:
+      vars:
         AN_ENV_VAR: '"my_important_value"'         # assign my_important_value to AN_ENV_VAR
         ANOTHER: 'pipeline_descriptor.get("name")' # assign pipeline name to ANOTHER
