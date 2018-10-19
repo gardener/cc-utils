@@ -42,6 +42,11 @@ Attributes
   Each pipeline should at least define one job. Otherwise it would be empty.
 
 
+.. note::
+  Pipeline names are displayed in the concourse UI. Try to keep names reasonably short (< 20 chars)
+  and refrain from using whitespace of non-ASCII charaters.
+
+
 Example `.ci/pipeline_definitions`
 ----------------------------------
 
