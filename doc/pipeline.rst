@@ -60,6 +60,31 @@ Example `.ci/pipeline_definitions`
       job_B: ~
 
 
+Example - Inheritance / "base_definition"
+-----------------------------------------
+
+* define a common build step "inherit_me"
+* define two jobs inheriting it
+
+.. code-block:: yaml
+
+  another_pipeline:
+    base_definition:
+      steps:
+        inherit_me: ~
+
+    variants:
+      job_a:
+        steps:
+          another_step:
+            depends: ['inherit_me']
+      job_b: ~
+
+
+*Result*
+
+* job_a has two steps: `inherit_me` (from base_definition) and `another_step`
+* job_b has one step: `inherit_me`
 
 Branch-specific configuration
 #############################
