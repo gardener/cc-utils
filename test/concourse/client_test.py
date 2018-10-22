@@ -23,7 +23,7 @@ from github.webhook import WebhookQueryAttributes
 
 class ConcourseApiRoutesTest(unittest.TestCase):
     def setUp(self):
-        self.examinee = client.ConcourseApiRoutes(
+        self.examinee = client.ConcourseApiRoutesBase(
             base_url='https://made-up-concourse.com',
             team='foo'
         )
@@ -33,12 +33,6 @@ class ConcourseApiRoutesTest(unittest.TestCase):
         self.assertEqual(
             self.examinee.team_url(team='bar'),
             'https://made-up-concourse.com/api/v1/teams/bar'
-        )
-
-    def test_login_route(self):
-        self.assertEqual(
-            self.examinee.login(),
-            'https://made-up-concourse.com/auth/basic/token?team_name=foo'
         )
 
     def test_pipelines_route(self):
@@ -130,4 +124,32 @@ class ConcourseApiRoutesTest(unittest.TestCase):
         self.assertEqual(
             self.examinee.build_plan(build_id=252525),
             'https://made-up-concourse.com/api/v1/builds/252525/plan',
+        )
+
+
+class ConcourseApiRoutesV3Test(unittest.TestCase):
+    def setUp(self):
+        self.examinee = client.ConcourseApiRoutesV3(
+            base_url='https://made-up-concourse.com',
+            team='foo'
+        )
+
+    def test_login_route(self):
+        self.assertEqual(
+            self.examinee.login(),
+            'https://made-up-concourse.com/auth/basic/token?team_name=foo'
+        )
+
+
+class ConcourseApiRoutesV4Test(unittest.TestCase):
+    def setUp(self):
+        self.examinee = client.ConcourseApiRoutesV4(
+            base_url='https://made-up-concourse.com',
+            team='foo'
+        )
+
+    def test_login_route(self):
+        self.assertEqual(
+            self.examinee.login(),
+            'https://made-up-concourse.com/sky/token'
         )
