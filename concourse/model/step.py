@@ -79,15 +79,33 @@ def attrs(pipeline_step):
             name='output_dir',
             default=None,
             doc='''
-            TODO
+            exposes a writable directory to the job. The directory is specified via environment
+            variable named as the given value + _PATH (converted to UPPER-case and snake_case).
+            Any files placed into this directory are passed to subsequent steps declaring the output
+            as input. The unchanged value configured is used as input name.
+            e.g.: `output_dir: out` results in env var `OUT_PATH`.
             ''',
         ),
         AttributeSpec.optional(
             name='publish_to',
             default={},
             doc='''
-            list of logical repository names to which commits created by this step should be
+            has two forms:
+
+            * list of logical repository names to which commits created by this step should be
             published.
+            * a dictionary: <name: options>
+
+            The second form currently accepts exactly one argument: `force_push` (bool) and is used
+            to specify that a force-push should be done.
+
+            Example:
+            .. code-block:: yaml
+                steps:
+                    foo:
+                        publish_to:
+                            my_repo:
+                                force_push: true
             ''',
             type=list,
         ),
