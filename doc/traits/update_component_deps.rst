@@ -19,7 +19,7 @@ the greates discovered component version. Outdated Upgrade Pull Requests are rem
 
 
 Component Upgrade Contract
-##########################
+--------------------------
 
 Declaring components *must* offer an executable at `.ci/set_dependency_version` in their
 repositories. It is called by the update component dependencies job for each discovered dependency

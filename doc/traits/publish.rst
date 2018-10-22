@@ -15,7 +15,7 @@ Each container image build is run in a directory with definable contents (see `i
 using the specified `Dockerfile`.
 
 `inputs` attribute
-##################
+------------------
 
 By default, the main repository's work tree is copied into the build directory. This behaviour
 may be changed by defining different logical repository names for `inputs.repos`.

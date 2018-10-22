@@ -20,7 +20,7 @@ Example
 
 
 Default component descriptor
-############################
+----------------------------
 
 If no additional customisation is done, a _default_ component descriptor is created with the
 following data:
@@ -33,7 +33,7 @@ dependencies.
 
 
 Declaring additional dependencies
-#################################
+---------------------------------
 
 Component descriptor should contain the full "bill-of-materials" that makes up a component.
 For many components, this will simply be the set of container images built and released by the
