@@ -55,12 +55,11 @@ Other types defined in this module are not intended to be instantiated by users.
 '''
 
 
-def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False, base_url=None):
+def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
     '''
     Factory method to get Concourse API object
     '''
-    if not base_url:
-        base_url = concourse_cfg.external_url()
+    base_url = concourse_cfg.ingress_url()
     team_credentials = concourse_cfg.team_credentials(team_name)
     team_name = team_credentials.teamname()
     username = team_credentials.username()
