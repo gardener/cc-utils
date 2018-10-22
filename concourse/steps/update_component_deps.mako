@@ -158,21 +158,13 @@ def create_upgrade_pr(from_ref, to_ref, ls_repo):
 
     with TemporaryDirectory() as temp_dir:
         from_github_cfg = cfg_factory.github(from_ref.config_name())
-
-        gitutil.clone_repository(
-            to_path=temp_dir,
-            github_cfg=from_github_cfg,
-            github_repo_path=from_ref.github_repo_path(),
-        )
-        temp_dir_repo = os.path.join(temp_dir, from_ref.github_repo())
-
         from_github_helper = GitHubRepositoryHelper(
             github_cfg=from_github_cfg,
             owner=from_ref.github_organisation(),
             name=from_ref.github_repo(),
         )
-        from_git_helper = gitutil.GitHelper(
-            repo=temp_dir_repo,
+        from_git_helper = gitutil.GitHelper.clone_into(
+            target_directory=temp_dir,
             github_cfg=from_github_cfg,
             github_repo_path=from_ref.github_repo_path()
         )
