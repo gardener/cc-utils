@@ -38,6 +38,9 @@ from model.concourse import (
     ConcourseConfig,
     ConcourseApiVersion,
 )
+from model.github import (
+    GithubConfig,
+)
 from model.container_registry import (
     GcrCredentials,
 )
@@ -154,7 +157,10 @@ def create_tls_secret(
         )
 
 
-def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
+def create_instance_specific_helm_values(
+    concourse_cfg: ConcourseConfig,
+    github_config: GithubConfig
+):
     '''
     Creates a dict containing instance specific helm values not explicitly stated in
     the `ConcourseConfig`'s helm_chart_values.
@@ -198,6 +204,8 @@ def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
             }
         }
     elif concourse_version is ConcourseApiVersion.V4:
+        github_http_url = github_config.http_url()
+        github_host = urlparse(github_http_url).netloc
         bcrypted_pwd = bcrypt.hashpw(
             creds.passwd().encode('utf-8'),
             bcrypt.gensalt()
@@ -215,7 +223,7 @@ def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
                             }
                         },
                         'github': {
-                            'host': concourse_cfg.github_enterprise_host()
+                            'host': github_host
                         }
                     }
                 }
@@ -267,6 +275,10 @@ def deploy_concourse_landscape(
     container_registry = config_factory.container_registry(image_pull_secret_name)
     cr_credentials = container_registry.credentials()
 
+    # Github config
+    github_config_name = concourse_cfg.github_auth_enterprise_host()
+    github_config = config_factory.github(github_config_name)
+
     # TLS config
     tls_config_name = concourse_cfg.tls_config()
     tls_config = config_factory.tls_config(tls_config_name)
@@ -315,6 +327,7 @@ def deploy_concourse_landscape(
         default_helm_values=default_helm_values,
         custom_helm_values=custom_helm_values,
         concourse_cfg=concourse_cfg,
+        github_config=github_config,
         kubernetes_config=kubernetes_config,
         deployment_name=deployment_name,
     )
@@ -424,6 +437,7 @@ def deploy_or_upgrade_concourse(
         default_helm_values: NamedModelElement,
         custom_helm_values: NamedModelElement,
         concourse_cfg: ConcourseConfig,
+        github_config: GithubConfig,
         kubernetes_config: KubernetesConfig,
         deployment_name: str='concourse',
 ):
@@ -474,7 +488,10 @@ def deploy_or_upgrade_concourse(
         with open(os.path.join(temp_dir, CUSTOM_HELM_VALUES_FILE_NAME), 'w') as f:
             yaml.dump(custom_helm_values, f)
         with open(os.path.join(temp_dir, INSTANCE_SPECIFIC_HELM_VALUES_FILE_NAME), 'w') as f:
-            yaml.dump(create_instance_specific_helm_values(concourse_cfg=concourse_cfg), f)
+            yaml.dump(create_instance_specific_helm_values(
+                concourse_cfg=concourse_cfg,
+                github_config=github_config,), f
+            )
         with open(os.path.join(temp_dir, KUBECONFIG_FILE_NAME), 'w') as f:
             yaml.dump(kubernetes_config.kubeconfig(), f)
 
