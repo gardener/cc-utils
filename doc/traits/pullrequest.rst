@@ -1,3 +1,6 @@
+`pull_request` Trait
+====================
+
 .. trait::
     :name: pullrequest
 
@@ -8,7 +11,7 @@ post executions results to the corresponding PRs.
 
 
 Policies / Pull-Request label handling
-######################################
+--------------------------------------
 
 For security reasons, Pull-Requests are by default only reacted upon if a label is added to them.
 To mitigate the risk of subsequent updates with malicious changes, said labels are removed at the

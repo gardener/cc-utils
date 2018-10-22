@@ -1,3 +1,6 @@
+`slack` Trait
+=============
+
 .. trait::
     :name: slack
 

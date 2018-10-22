@@ -1,3 +1,6 @@
+`version` Trait
+===============
+
 .. trait::
     :name: version
 

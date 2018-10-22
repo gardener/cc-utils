@@ -1,3 +1,6 @@
+`update_component_deps` Trait
+=============================
+
 .. trait::
     :name: update_component_deps
 

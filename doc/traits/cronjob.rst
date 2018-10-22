@@ -1,3 +1,6 @@
+`cronjob` Trait
+===============
+
 .. trait::
     :name: cronjob
 

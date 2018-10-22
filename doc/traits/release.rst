@@ -1,3 +1,6 @@
+`release` Trait
+===============
+
 .. trait::
     :name: release
 

@@ -90,7 +90,6 @@ class TraitDirective(Directive, cc_directives.base.AttributesDocMixin, sphinxuti
 
         self._init(trait_name=trait_name)
 
-        self.add_title(f'{trait_name} trait')
         self.summary()
         self.attributes(self._trait_instance)
         self.dependencies()

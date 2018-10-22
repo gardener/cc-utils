@@ -1,3 +1,6 @@
+`scheduling` Trait
+==================
+
 .. trait::
     :name: scheduling
 

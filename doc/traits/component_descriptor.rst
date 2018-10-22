@@ -1,3 +1,6 @@
+`component_descriptor` Trait
+============================
+
 .. trait::
     :name: component_descriptor
 

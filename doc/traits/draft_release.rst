@@ -1,3 +1,6 @@
+`draft_release` Trait
+=====================
+
 .. trait::
     :name: draft_release
 

@@ -1,3 +1,6 @@
+`publish` Trait
+===============
+
 .. trait::
     :name: publish
 
