@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import os
+import sys
+import textwrap
 
 
 import concourse.model.base as model_base
@@ -65,7 +66,7 @@ class AttributesDocumentation(object):
             name = attr_spec.name()
             required = 'yes' if attr_spec.is_required() else 'no'
             default_value = str(attr_spec.default_value())
-            doc = attr_spec.doc()
+            doc = textwrap.dedent(attr_spec.doc())
 
             type_ = attr_spec.type()
             if issubclass(type_, model_base.AttribSpecMixin):
