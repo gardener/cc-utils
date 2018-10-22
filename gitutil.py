@@ -35,6 +35,25 @@ class GitHelper(object):
         self.github_cfg = github_cfg
         self.github_repo_path = github_repo_path
 
+    @staticmethod
+    def clone_into(
+        target_directory: str,
+        github_cfg,
+        github_repo_path: str,
+        checkout_branch: str = None,
+    ) -> 'GitHelper':
+        url = url_with_credentials(github_cfg, github_repo_path)
+        args = ['--quiet']
+        if checkout_branch is not None:
+            args += ['--branch', checkout_branch, '--single-branch']
+        args += [url, target_directory]
+        git.Git().clone(*args)
+        return GitHelper(
+            repo = target_directory,
+            github_cfg = github_cfg,
+            github_repo_path = github_repo_path,
+            )
+
     def _changed_file_paths(self):
         lines = git.cmd.Git(self.repo.working_tree_dir).status('--porcelain=1', '-z').split('\x00')
         # output of git status --porcelain=1 and -z is guaranteed to not change in the future
