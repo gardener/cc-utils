@@ -124,7 +124,7 @@ Attributes
 
 
 Example (schematic)
-------------------
+-------------------
 
 .. code-block:: yaml
 

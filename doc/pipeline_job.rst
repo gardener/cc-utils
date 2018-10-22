@@ -131,7 +131,7 @@ any occurrence of dash `-` characters are converted to underscore `_` characters
 
 
 Environment Variables from repositories
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------------------
 
 For each repository, the following environment variable set is defined:
 
@@ -140,7 +140,7 @@ For each repository, the following environment variable set is defined:
 * <NAME>_GITHUB_REPO_OWNER_AND_NAME -> github_path (e.g. gardener/gardener)
 
 Example
-~~~~~~~
+-------
 
 In case the main repository has not been explicitly configured with a name, its default logical
 name is `source`. Thereforce, the following environemnt variables will then be defined:
