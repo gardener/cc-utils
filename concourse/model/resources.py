@@ -263,7 +263,7 @@ class RepositoryConfig(Resource):
 
     def resource_name(self):
         # TODO: replace usages with access to resource_id
-        return self._resource_identifier.name() + '_' + self.branch()
+        return self._resource_identifier.name()
 
     def name(self):
         # TODO: replace usages with access to resource_id
