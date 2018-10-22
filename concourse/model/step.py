@@ -93,7 +93,7 @@ def attrs(pipeline_step):
             has two forms:
 
             * list of logical repository names to which commits created by this step should be
-            published.
+              published.
             * a dictionary: <name: options>
 
             The second form currently accepts exactly one argument: `force_push` (bool) and is used
