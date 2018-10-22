@@ -2,6 +2,11 @@
 CC-Utils - Build Pipeline Reference Manual: Traits
 **************************************************
 
+.. toctree::
+    :glob:
+    :hidden:
+
+    traits/*
 
 Traits
 ######
