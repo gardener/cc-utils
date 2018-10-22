@@ -18,6 +18,7 @@ pyyaml
 requests==2.18.4
 semver==2.8.1
 slackclient==1.2.1
+sphinx_rtd_theme
 sseclient-py==1.7
 toposort==1.5
 urllib3==1.22
