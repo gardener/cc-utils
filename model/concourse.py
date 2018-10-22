@@ -101,8 +101,8 @@ class ConcourseConfig(NamedModelElement):
     def concourse_version(self) -> ConcourseApiVersion:
         return ConcourseApiVersion(self.raw.get('concourse_version'))
 
-    def github_enterprise_host(self):
-        return self.raw.get('github_enterprise_host')
+    def github_auth_enterprise_host(self):
+        return self.raw.get('github_auth_enterprise_host')
 
     def _required_attributes(self):
         return [
@@ -115,7 +115,7 @@ class ConcourseConfig(NamedModelElement):
 
     def _optional_attributes(self):
         return {
-            'github_enterprise_host'
+            'github_auth_enterprise_host'
         }
 
     def validate(self):
