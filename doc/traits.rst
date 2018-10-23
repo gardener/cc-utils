@@ -1,15 +1,12 @@
-**************************************************
-CC-Utils - Build Pipeline Reference Manual: Traits
-**************************************************
+**************************
+Pipeline Definition Traits
+**************************
 
 .. toctree::
     :glob:
     :hidden:
 
     traits/*
-
-Traits
-######
 
 * :doc:`traits/component_descriptor`
 * :doc:`traits/cronjob`

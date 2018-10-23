@@ -3,9 +3,15 @@ CC-Utils - Build Pipeline Reference Manual
 ******************************************
 
 .. toctree::
+    :hidden:
     :titlesonly:
     :maxdepth: 2
-    :glob:
+
+    pipeline
+    pipeline_job
+    pipeline_step
+    traits
+
 
 Introduction
 ############
