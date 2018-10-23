@@ -12,7 +12,7 @@ cc-utils:
       repos:
       - name: 'gh_pages'
         path: 'gardener/cc-utils'
-        branch: 'gh_pages'
+        branch: 'gh-pages'
       steps:
         generate_documentation:
           publish_to: ['gh_pages']
