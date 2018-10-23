@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+set -e
+
+parent_dir="$(readlink -f "$(dirname $0)/../..")"
+cc_utils_dir="${parent_dir}/${CC_UTILS_PATH}"
+out_dir="${parent_dir}/${GH_PAGES_PATH}"
+
+if [ -z "$CC_UTILS_PATH" ]; then
+  echo "CC_UTILS_PATH must be set"
+  exit 1
+fi
+
+if [ -z "$GH_PAGES_PATH" ]; then
+  echo "GH_PAGES_PATH must be set"
+  exit 1
+fi
+
+if [ ! -d ${cc_utils_dir} ]; then
+  echo "not a directory: ${cc_utils_dir}"
+  exit 1
+fi
+
+if [ ! -d ${out_dir} ]; then
+  echo "not a directory: ${cc_utils_dir}"
+  exit 1
+fi
+
+echo "cc-utils from: ${cc_utils_dir}"
+echo "out-dir: ${out_dir}"
+
+export SOURCE_DIR="${cc_utils_dir}/doc"
+export OUT_DIR="${out_dir}"
+sphinx-build -E -a "${SOURCE_DIR}" "${OUT_DIR}"
+
+# disable github's theme
+touch "${out_dir}/.nojekyll"
+
+export GIT_DIR="${OUT_DIR}/.git"
+export GIT_WORK_TREE="${OUT_DIR}"
+
+if [ -z "$(git status --porcelain=v1)" ]; then
+  echo "nothing has changed - won't create a commit"
+  exit 0
+fi
+
+git add .
+git commit -m "update documentation"

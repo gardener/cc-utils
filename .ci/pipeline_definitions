@@ -5,8 +5,17 @@ cc-utils:
       pyflakes-lint: ~
       pycodestyle: ~
       test: ~
+  repo:
+    name: 'cc_utils'
   variants:
-    head_update: ~
+    head_update:
+      repos:
+      - name: 'gh_pages'
+        path: 'gardener/cc-utils'
+        branch: 'gh_pages'
+      steps:
+        generate_documentation:
+          publish_to: ['gh_pages']
     pull_request:
       traits:
         pull-request:
