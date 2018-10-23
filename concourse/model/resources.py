@@ -230,6 +230,11 @@ class RepositoryConfig(Resource):
 
         base_name = kwargs['raw_dict']['path'].replace('/', '_')
 
+        # hack: use branch name as qualifier to support referencing the same repo
+        #       multiple times (if branch differs)
+        if not qualifier:
+            qualifier = kwargs['raw_dict'].get('branch')
+
         resource_identifier = ResourceIdentifier(
             type_name=type_name,
             base_name=base_name,
