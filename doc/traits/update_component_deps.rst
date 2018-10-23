@@ -12,7 +12,7 @@ for greater versions is done using `semver <https://semver.org>`_ semantics.
 For each discovered component with a later release version, a `Upgrade Pull Request` is created to
 the greates discovered component version. Outdated Upgrade Pull Requests are removed.
 
-.. info::
+.. note::
   automatically created Upgrade PRs are identified using the following naming convention:
 
   `[ci:<dependency-type>:<dependency-name>:<current-version>-><target-version>]`
