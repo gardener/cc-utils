@@ -2,14 +2,11 @@ Gardener CI/CD Documentation
 ============================
 .. toctree::
     :includehidden:
+    :hidden:
     :titlesonly:
     :maxdepth: 2
 
     pipeline_contract
-    pipeline
-    pipeline_job
-    pipeline_step
-    traits
 
 Build Pipelines
 ===============

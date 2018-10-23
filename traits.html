@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>CC-Utils - Build Pipeline Reference Manual: Traits &mdash; cc-utils  documentation</title>
+  <title>Pipeline Definition Traits &mdash; cc-utils  documentation</title>
   
 
   
@@ -79,23 +79,25 @@
             
             
               <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="pipeline_contract.html">CC-Utils - Build Pipeline Reference Manual</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipeline.html">Pipeline Definition</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipeline_job.html">Pipeline Job</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipeline_step.html">Pipeline Steps</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">CC-Utils - Build Pipeline Reference Manual: Traits</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="traits/component_descriptor.html"><cite>component_descriptor</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/cronjob.html"><cite>cronjob</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/draft_release.html"><cite>draft_release</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/image_scan.html"><cite>image_scan</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/options.html"><cite>options</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/publish.html"><cite>publish</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/pullrequest.html"><cite>pull_request</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/release.html"><cite>release</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/scheduling.html"><cite>scheduling</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/slack.html"><cite>slack</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/update_component_deps.html"><cite>update_component_deps</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/version.html"><cite>version</cite> Trait</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="pipeline_contract.html">CC-Utils - Build Pipeline Reference Manual</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="pipeline.html">Pipeline Definition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pipeline_job.html">Pipeline Job</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pipeline_step.html">Pipeline Steps</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Pipeline Definition Traits</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="traits/component_descriptor.html"><cite>component_descriptor</cite> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="traits/cronjob.html"><cite>cronjob</cite> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="traits/draft_release.html"><cite>draft_release</cite> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="traits/image_scan.html"><cite>image_scan</cite> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="traits/options.html"><cite>options</cite> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="traits/publish.html"><cite>publish</cite> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="traits/pullrequest.html"><cite>pull_request</cite> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="traits/release.html"><cite>release</cite> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="traits/scheduling.html"><cite>scheduling</cite> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="traits/slack.html"><cite>slack</cite> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="traits/update_component_deps.html"><cite>update_component_deps</cite> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="traits/version.html"><cite>version</cite> Trait</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -143,7 +145,9 @@
     
       <li><a href="index.html">Docs</a> &raquo;</li>
         
-      <li>CC-Utils - Build Pipeline Reference Manual: Traits</li>
+          <li><a href="pipeline_contract.html">CC-Utils - Build Pipeline Reference Manual</a> &raquo;</li>
+        
+      <li>Pipeline Definition Traits</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -162,12 +166,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="cc-utils-build-pipeline-reference-manual-traits">
-<h1>CC-Utils - Build Pipeline Reference Manual: Traits<a class="headerlink" href="#cc-utils-build-pipeline-reference-manual-traits" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="pipeline-definition-traits">
+<h1>Pipeline Definition Traits<a class="headerlink" href="#pipeline-definition-traits" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 </div>
-<div class="section" id="traits">
-<h2>Traits<a class="headerlink" href="#traits" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li><a class="reference internal" href="traits/component_descriptor.html"><span class="doc">component_descriptor Trait</span></a></li>
 <li><a class="reference internal" href="traits/cronjob.html"><span class="doc">cronjob Trait</span></a></li>
@@ -182,7 +184,6 @@
 <li><a class="reference internal" href="traits/update_component_deps.html"><span class="doc">update_component_deps Trait</span></a></li>
 <li><a class="reference internal" href="traits/version.html"><span class="doc">version Trait</span></a></li>
 </ul>
-</div>
 <div class="section" id="indices-and-tables">
 <h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
