@@ -3,11 +3,11 @@
 set -e
 
 parent_dir="$(readlink -f "$(dirname $0)/../..")"
-cc_utils_dir="${parent_dir}/${CC_UTILS_PATH}"
+cc_utils_dir="${parent_dir}/${SOURCE_PATH}"
 out_dir="${parent_dir}/${GH_PAGES_PATH}"
 
-if [ -z "$CC_UTILS_PATH" ]; then
-  echo "CC_UTILS_PATH must be set"
+if [ -z "$SOURCE_PATH" ]; then
+  echo "SOURCE_PATH must be set"
   exit 1
 fi
 
