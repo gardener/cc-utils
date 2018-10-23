@@ -1,0 +1,356 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>component_descriptor Trait &mdash; cc-utils  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="cronjob Trait" href="cronjob.html" />
+    <link rel="prev" title="CC-Utils - Build Pipeline Reference Manual: Traits" href="../traits.html" /> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> cc-utils
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../pipeline_contract.html">CC-Utils - Build Pipeline Reference Manual</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pipeline.html">Pipeline Definition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pipeline_job.html">Pipeline Job</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pipeline_step.html">Pipeline Steps</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../traits.html">CC-Utils - Build Pipeline Reference Manual: Traits</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#"><cite>component_descriptor</cite> Trait</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cronjob.html"><cite>cronjob</cite> Trait</a></li>
+<li class="toctree-l2"><a class="reference internal" href="draft_release.html"><cite>draft_release</cite> Trait</a></li>
+<li class="toctree-l2"><a class="reference internal" href="image_scan.html"><cite>image_scan</cite> Trait</a></li>
+<li class="toctree-l2"><a class="reference internal" href="options.html"><cite>options</cite> Trait</a></li>
+<li class="toctree-l2"><a class="reference internal" href="publish.html"><cite>publish</cite> Trait</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pullrequest.html"><cite>pull_request</cite> Trait</a></li>
+<li class="toctree-l2"><a class="reference internal" href="release.html"><cite>release</cite> Trait</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scheduling.html"><cite>scheduling</cite> Trait</a></li>
+<li class="toctree-l2"><a class="reference internal" href="slack.html"><cite>slack</cite> Trait</a></li>
+<li class="toctree-l2"><a class="reference internal" href="update_component_deps.html"><cite>update_component_deps</cite> Trait</a></li>
+<li class="toctree-l2"><a class="reference internal" href="version.html"><cite>version</cite> Trait</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">cc-utils</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../traits.html">CC-Utils - Build Pipeline Reference Manual: Traits</a> &raquo;</li>
+        
+      <li><cite>component_descriptor</cite> Trait</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/traits/component_descriptor.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="component-descriptor-trait">
+<h1><cite>component_descriptor</cite> Trait<a class="headerlink" href="#component-descriptor-trait" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="trait-component-descriptor">
+<span id="trait-component-descriptor"></span><h2 class="section-subtitle"><span class="section-subtitle">Attributes</span></h2>
+<table border="1" class="colwidths-auto docutils">
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">name</th>
+<th class="head">required?</th>
+<th class="head">default</th>
+<th class="head">type</th>
+<th class="head">explanation</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>step</td>
+<td>no</td>
+<td>{‘name’: ‘component_descriptor’}</td>
+<td>dict</td>
+<td>The build step name injected by this trait</td>
+</tr>
+<tr class="row-odd"><td>resolve_dependencies</td>
+<td>no</td>
+<td>True</td>
+<td>bool</td>
+<td>Indicates whether or not unresolved component dependencies should be resolved</td>
+</tr>
+<tr class="row-even"><td>component_name</td>
+<td>no</td>
+<td>None</td>
+<td>str</td>
+<td>Manually overwrites the component name (which defaults to github repository path)</td>
+</tr>
+</tbody>
+</table>
+<h2 class="section-subtitle"><span class="section-subtitle">Dependencies</span></h2>
+<p>This trait requires the following traits to be declared:</p>
+<ul class="simple">
+<li>version</li>
+</ul>
+</div>
+<p>If declared, a <cite>Component Descriptor</cite> is created during job execution. If their
+<a class="reference internal" href="release.html"><span class="doc">release Trait</span></a> trait is also declared, the created component descriptor is added to the
+component’s release artifacts (as GitHub release asset).</p>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">traits</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">component_descriptor</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="default-component-descriptor">
+<h2>Default component descriptor<a class="headerlink" href="#default-component-descriptor" title="Permalink to this headline">¶</a></h2>
+<p>If no additional customisation is done, a _default_ component descriptor is created with the
+following data:</p>
+<ul class="simple">
+<li>component_name (the github repository path, e.g. <cite>github.com/gardener/gardener</cite>)</li>
+<li>component_version (the <cite>effective version</cite>)</li>
+</ul>
+<p>In addition, any container image that is built by the component are added as container image
+dependencies.</p>
+</div>
+<div class="section" id="declaring-additional-dependencies">
+<h2>Declaring additional dependencies<a class="headerlink" href="#declaring-additional-dependencies" title="Permalink to this headline">¶</a></h2>
+<p>Component descriptor should contain the full “bill-of-materials” that makes up a component.
+For many components, this will simply be the set of container images built and released by the
+component (those are added automatically).</p>
+<p>To declare additional dependencies, an executable _may_ be placed at <cite>.ci/component_descriptor</cite>
+at the component repository. If such an executable is present, it is called with a defined set
+of environment variables and file system layout.</p>
+<p>Before calling the <cite>.ci/component_descriptor</cite> callback, the default (or base) component descriptor
+is generated and offered to the component_descriptor script.</p>
+<p>After termination, the component_descriptor script is expected to leave a valid “final”
+component_descriptor at a defined file system path. Unresolved <cite>component references</cite> are
+automatically resolved before uploading as release artifact.</p>
+</div>
+<div class="section" id="environment-variables-passed-to-component-descriptor">
+<h2>Environment Variables passed to component_descriptor<a class="headerlink" href="#environment-variables-passed-to-component-descriptor" title="Permalink to this headline">¶</a></h2>
+<table border="1" class="docutils">
+<colgroup>
+<col width="33%" />
+<col width="67%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">name</th>
+<th class="head">explanation</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>BASE_DEFINITION_PATH</td>
+<td>absolute file path to base component descriptor</td>
+</tr>
+<tr class="row-odd"><td>COMPONENT_DESCRIPTOR_PATH</td>
+<td>absolute file path to output final descriptor to</td>
+</tr>
+<tr class="row-even"><td>ADD_DEPENDENCIES_CMD</td>
+<td>CLI cmd args to add dependency to base descriptor (see
+<cite>cc-utils/cli.py productutils add_dependencies -h</cite>)</td>
+</tr>
+<tr class="row-odd"><td>COMPONENT_NAME</td>
+<td>own component name (e.g. github.com/gardener/vpn)</td>
+</tr>
+<tr class="row-even"><td>COMPONENT_VERSION</td>
+<td>the effective version</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="id1">
+<h2>Example<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p>How to declare dependencies towars:</p>
+<ul class="simple">
+<li>component <cite>github.com/gardener/vpn</cite> in version 1.2.3</li>
+<li>component <cite>github.com/gardener/dashboard</cite> in version 4.5.6</li>
+<li>container image <cite>alpine:3.6</cite></li>
+</ul>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># inside .ci/component_descriptor, assuming it is a shell script</span>
+<span class="si">${</span><span class="nv">ADD_DEPENDENCIES_CMD</span><span class="si">}</span> <span class="se">\</span>
+    --component-dependencies <span class="se">\</span>
+    <span class="s1">&#39;{&quot;name&quot;: &quot;github.com/gardener/vpn&quot;, &quot;version&quot;: &quot;1.2.3&quot;}&#39;</span> <span class="se">\</span>
+    --component-dependencies <span class="se">\</span>
+    <span class="s1">&#39;{&quot;name&quot;: &quot;github.com/gardener/dashboard&quot;, &quot;version&quot;: &quot;4.5.6&quot;}&#39;</span> <span class="se">\</span>
+    --container-image-dependencies <span class="se">\</span>
+    <span class="s1">&#39;{&quot;image_reference&quot;: &quot;alpine:3.6&quot;, &quot;version&quot;: &quot;3.6&quot;, &quot;name&quot;: &quot;alpine&quot;}&#39;</span>
+<span class="c1"># don&#39;t forget to expose the image</span>
+cp <span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASE_DEFINITION_PATH</span><span class="si">}</span><span class="s2">&quot;</span> <span class="s2">&quot;</span><span class="si">${</span><span class="nv">COMPONENT_DESCRIPTOR_PATH</span><span class="si">}</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="cronjob.html" class="btn btn-neutral float-right" title="cronjob Trait" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../traits.html" class="btn btn-neutral" title="CC-Utils - Build Pipeline Reference Manual: Traits" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, SAP SE or an SAP affiliate company.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,425 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Pipeline Job &mdash; cc-utils  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Pipeline Steps" href="pipeline_step.html" />
+    <link rel="prev" title="Pipeline Definition" href="pipeline.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> cc-utils
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="pipeline_contract.html">CC-Utils - Build Pipeline Reference Manual</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipeline.html">Pipeline Definition</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Pipeline Job</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipeline_step.html">Pipeline Steps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="traits.html">CC-Utils - Build Pipeline Reference Manual: Traits</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">cc-utils</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Pipeline Job</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/pipeline_job.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="pipeline-job">
+<h1>Pipeline Job<a class="headerlink" href="#pipeline-job" title="Permalink to this headline">¶</a></h1>
+<p>Each <a class="reference internal" href="pipeline.html"><span class="doc">Build Pipeline</span></a> may define an arbitrary amount of build jobs. Job definitions
+reside below a pipeline’s <cite>variants</cite> attribute. Each job defines their name as root element.</p>
+<div class="section" id="attributes">
+<h2>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline">¶</a></h2>
+<table border="1" class="docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">attribute</th>
+<th class="head">explanation</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>&lt;name&gt;</td>
+<td>the user-chosen job name.</td>
+</tr>
+<tr class="row-odd"><td>repo</td>
+<td>main repository configuration</td>
+</tr>
+<tr class="row-even"><td>repos</td>
+<td>optionally defines additional repositories</td>
+</tr>
+<tr class="row-odd"><td>steps</td>
+<td>defines <a class="reference internal" href="pipeline_step.html"><span class="doc">Build Steps</span></a></td>
+</tr>
+<tr class="row-even"><td>traits</td>
+<td>defines <a class="reference internal" href="traits.html"><span class="doc">Traits</span></a></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="github-repositories">
+<h2>(GitHub) Repositories<a class="headerlink" href="#github-repositories" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="main-repository">
+<h3>Main repository<a class="headerlink" href="#main-repository" title="Permalink to this headline">¶</a></h3>
+<p>Each pipeline has a main repository. It is implied by the GitHub repository from which the
+pipeline definition was read.</p>
+<ul class="simple">
+<li>logical repository name defaults to <cite>source</cite></li>
+<li>branch an repo_path are determined by repository</li>
+<li>repository path is implied by repository</li>
+</ul>
+</div>
+<div class="section" id="additional-repositories">
+<h3>Additional repositories<a class="headerlink" href="#additional-repositories" title="Permalink to this headline">¶</a></h3>
+<p>Additional repositories may be referenced. Different from the main repository, all of the
+following attributes must be specified:</p>
+<ul class="simple">
+<li>logical repository name</li>
+<li>branch name</li>
+<li>repository path</li>
+</ul>
+</div>
+<div class="section" id="repository-attributes">
+<h3>Repository Attributes<a class="headerlink" href="#repository-attributes" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="repository-config">
+<span id="repository-config"></span><h4 class="section-subtitle"><span class="section-subtitle">Attributes</span></h4>
+<table border="1" class="colwidths-auto docutils">
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">name</th>
+<th class="head">required?</th>
+<th class="head">default</th>
+<th class="head">type</th>
+<th class="head">explanation</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>name</td>
+<td>no</td>
+<td>source</td>
+<td>str</td>
+<td>the logical repository name. affects environment variable names and is used to reference
+from traits.</td>
+</tr>
+<tr class="row-odd"><td>cfg_name</td>
+<td>no</td>
+<td>None</td>
+<td>str</td>
+<td>the github_cfg to use for authentication. Defaults to concourse-specific default</td>
+</tr>
+<tr class="row-even"><td>force_push</td>
+<td>no</td>
+<td>False</td>
+<td>bool</td>
+<td>whether or not force-pushes ought to be done</td>
+</tr>
+<tr class="row-odd"><td>trigger_paths</td>
+<td>no</td>
+<td>{‘include’: [], ‘exclude’: []}</td>
+<td>dict</td>
+<td>repository paths to either ignore or to restrict triggering to</td>
+</tr>
+<tr class="row-even"><td>trigger</td>
+<td>no</td>
+<td>None</td>
+<td>bool</td>
+<td>overwrites the defaults for triggering behaviour</td>
+</tr>
+<tr class="row-odd"><td>disable_ci_skip</td>
+<td>no</td>
+<td>False</td>
+<td>bool</td>
+<td>whether to disable the ignoring of commits with [ci skip] in commit msg</td>
+</tr>
+<tr class="row-even"><td>branch</td>
+<td>no</td>
+<td>None</td>
+<td>str</td>
+<td>only for non-main repository: specify branch to work with</td>
+</tr>
+<tr class="row-odd"><td>path</td>
+<td>no</td>
+<td>None</td>
+<td>str</td>
+<td>github repository path (e.g. gardener/gardener)</td>
+</tr>
+<tr class="row-even"><td>hostname</td>
+<td>no</td>
+<td>None</td>
+<td>str</td>
+<td>do not use</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="default-behaviour-for-trigger-attribute">
+<h4>Default behaviour for <cite>trigger</cite> attribute<a class="headerlink" href="#default-behaviour-for-trigger-attribute" title="Permalink to this headline">¶</a></h4>
+<p>The <cite>trigger</cite> attribute specifies whether or not head updates should trigger a job execution.</p>
+<p>If it is not explicitly configured, the default behaviour is defined as follows:</p>
+<ul class="simple">
+<li>additional repositories default to <cite>false</cite></li>
+<li>main repository:
+* presence of <cite>release</cite> or <cite>cronjob</cite> trait –&gt; <cite>false</cite>
+* presence of <cite>pull-request</cite> trait –&gt; <cite>true</cite>
+* if none of the above traits are present –&gt; <cite>true</cite></li>
+</ul>
+</div>
+<div class="section" id="trigger-paths-attribute">
+<h4><cite>trigger_paths</cite> attribute<a class="headerlink" href="#trigger-paths-attribute" title="Permalink to this headline">¶</a></h4>
+<p>Allows to restrict build triggering by repository changes. If <cite>trigger</cite> attribute evaluates to
+<cite>false</cite>, this attribute has no effect.</p>
+<p>Using <cite>trigger_paths</cite>, it is possible to ignore updates in case they touch (or do not touch)
+certain repository paths (globbing syntax supported).</p>
+<ul class="simple">
+<li>include: only react on specified paths - ignore all others</li>
+<li>exclude: ignore changes to specified paths (inverse of include)</li>
+</ul>
+</div>
+<div class="section" id="cfg-names-attribute">
+<h4><cite>cfg_names</cite> attribute<a class="headerlink" href="#cfg-names-attribute" title="Permalink to this headline">¶</a></h4>
+<p>Specifies the GitHub instance hosting the repository. For each concourse instance, there is a
+default GitHub instance that is used in case no <cite>cfg_name</cite> is specified.</p>
+<p>Available configurations are stored in a private configuration repository (<cite>kubernetes/cc-config</cite>).</p>
+<p>Valid cfg_names are:
+- github_com
+- github_wdf_sap_corp</p>
+</div>
+</div>
+<div class="section" id="examples">
+<h3>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>reference an additional repository <cite>github.com/foo/bar</cite>, name it <cite>my_repo</cite></li>
+<li>the repository will be made available to builds at <cite>${MY_REPO_PATH}</cite></li>
+</ul>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">repos</span><span class="p p-Indicator">:</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="s">&#39;my_repo&#39;</span>
+  <span class="l l-Scalar l-Scalar-Plain">path</span><span class="p p-Indicator">:</span> <span class="s">&#39;foo/bar&#39;</span>
+  <span class="l l-Scalar l-Scalar-Plain">branch</span><span class="p p-Indicator">:</span> <span class="s">&#39;master&#39;</span>    <span class="c1"># must be specified - does not default to master</span>
+  <span class="l l-Scalar l-Scalar-Plain">cfg_name</span><span class="p p-Indicator">:</span> <span class="s">&#39;github_com&#39;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="environment-variables">
+<h2>Environment Variables<a class="headerlink" href="#environment-variables" title="Permalink to this headline">¶</a></h2>
+<p>Depending on pipeline definition, build jobs are run with a set of environment variables.
+The variables that are defined depend on:</p>
+<ul class="simple">
+<li>which repositories are defined (and their logical names)</li>
+<li>which traits are defined</li>
+</ul>
+<p>In case user-specified identifiers are used as input to construct environment variable names,
+those are converted to UPPER-case. Kebap-case is converted into snake-case (or in other words:
+any occurrence of dash <cite>-</cite> characters are converted to underscore <cite>_</cite> characters).</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">For non-ASCII or non-alphanumeric characters, the behaviour is undefined. Usage of those
+characters is forbidden for used-defined identifiers.</p>
+</div>
+<div class="section" id="environment-variables-from-repositories">
+<h3>Environment Variables from repositories<a class="headerlink" href="#environment-variables-from-repositories" title="Permalink to this headline">¶</a></h3>
+<p>For each repository, the following environment variable set is defined:</p>
+<ul class="simple">
+<li>&lt;NAME&gt;_PATH -&gt; relative path to repository’s work tree</li>
+<li>&lt;NAME&gt;_BRANCH -&gt; the configured branch</li>
+<li>&lt;NAME&gt;_GITHUB_REPO_OWNER_AND_NAME -&gt; github_path (e.g. gardener/gardener)</li>
+</ul>
+</div>
+<div class="section" id="example">
+<h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
+<p>In case the main repository has not been explicitly configured with a name, its default logical
+name is <cite>source</cite>. Thereforce, the following environemnt variables will then be defined:</p>
+<ul class="simple">
+<li>SOURCE_PATH</li>
+<li>SOURCE_BRANCH</li>
+<li>SOURCE_GITHUB_REPO_OWNER_AND_NAME</li>
+</ul>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="pipeline_step.html" class="btn btn-neutral float-right" title="Pipeline Steps" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="pipeline.html" class="btn btn-neutral" title="Pipeline Definition" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, SAP SE or an SAP affiliate company.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

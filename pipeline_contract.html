@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Gardener CI/CD Documentation &mdash; cc-utils  documentation</title>
+  <title>CC-Utils - Build Pipeline Reference Manual &mdash; cc-utils  documentation</title>
   
 
   
@@ -28,7 +28,8 @@
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="CC-Utils - Build Pipeline Reference Manual" href="pipeline_contract.html" /> 
+    <link rel="next" title="Pipeline Definition" href="pipeline.html" />
+    <link rel="prev" title="Gardener CI/CD Documentation" href="index.html" /> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -47,7 +48,7 @@
           
 
           
-            <a href="#" class="icon icon-home"> cc-utils
+            <a href="index.html" class="icon icon-home"> cc-utils
           
 
           
@@ -77,8 +78,10 @@
               
             
             
-              <ul>
-<li class="toctree-l1"><a class="reference internal" href="pipeline_contract.html">CC-Utils - Build Pipeline Reference Manual</a></li>
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">CC-Utils - Build Pipeline Reference Manual</a><ul class="simple">
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="pipeline.html">Pipeline Definition</a></li>
 <li class="toctree-l1"><a class="reference internal" href="pipeline_job.html">Pipeline Job</a></li>
 <li class="toctree-l1"><a class="reference internal" href="pipeline_step.html">Pipeline Steps</a></li>
@@ -97,7 +100,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="#">cc-utils</a>
+          <a href="index.html">cc-utils</a>
         
       </nav>
 
@@ -126,15 +129,15 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="#">Docs</a> &raquo;</li>
+      <li><a href="index.html">Docs</a> &raquo;</li>
         
-      <li>Gardener CI/CD Documentation</li>
+      <li>CC-Utils - Build Pipeline Reference Manual</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/pipeline_contract.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -147,45 +150,67 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="gardener-ci-cd-documentation">
-<h1>Gardener CI/CD Documentation<a class="headerlink" href="#gardener-ci-cd-documentation" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="cc-utils-build-pipeline-reference-manual">
+<h1>CC-Utils - Build Pipeline Reference Manual<a class="headerlink" href="#cc-utils-build-pipeline-reference-manual" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="pipeline_contract.html">CC-Utils - Build Pipeline Reference Manual</a><ul class="simple">
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="pipeline.html">Pipeline Definition</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipeline_job.html">Pipeline Job</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pipeline_step.html">Pipeline Steps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="traits.html">CC-Utils - Build Pipeline Reference Manual: Traits</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="traits/component_descriptor.html"><cite>component_descriptor</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/cronjob.html"><cite>cronjob</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/draft_release.html"><cite>draft_release</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/image_scan.html"><cite>image_scan</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/options.html"><cite>options</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/publish.html"><cite>publish</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/pullrequest.html"><cite>pull_request</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/release.html"><cite>release</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/scheduling.html"><cite>scheduling</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/slack.html"><cite>slack</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/update_component_deps.html"><cite>update_component_deps</cite> Trait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="traits/version.html"><cite>version</cite> Trait</a></li>
-</ul>
-</li>
-</ul>
 </div>
-</div>
-<div class="section" id="build-pipelines">
-<h1>Build Pipelines<a class="headerlink" href="#build-pipelines" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>In order to run continuous delivery workloads for all components contributing to the
+<a class="reference external" href="https://github.com/gardener">Gardener</a> project, we operate a central service.</p>
+<p>Typical workloads encompass the execution of tests and builds of a variety of technologies,
+as well as building and publishing container images, typically containing build results.</p>
+<p>We are building our CI/CD offering around some principles:</p>
 <ul class="simple">
-<li><a class="reference internal" href="pipeline_contract.html"><span class="doc">CC-Utils - Build Pipeline Reference Manual</span></a></li>
+<li><em>container-native</em> - each workload is executed within a container
+environment. Components may customise used container images</li>
+<li><em>automation</em> - pipelines are generated without manual interaction</li>
+<li><em>self-service</em> - components customise their pipelines by changing their sources</li>
+<li><em>standardisation</em></li>
 </ul>
+<p>As a execution environment for CI/CD workloads, we use <a class="reference external" href="https://concourse-ci.org">Concourse</a>.
+We however abstract from the underlying “build build executor” and instead offer a
+<cite>Pipeline Definition Contract</cite>, through which components declare their build pipelines as
+required.</p>
+</div>
+<div class="section" id="terms-definitions-and-concepts">
+<h2>Terms, definitions and concepts<a class="headerlink" href="#terms-definitions-and-concepts" title="Permalink to this headline">¶</a></h2>
+<p>Although using <a class="reference external" href="https://concourse-ci.org">Concourse</a> as underlying build scheduler, we
+use some terms differently as done in the context of concourse.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="36%" />
+<col width="64%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">term</th>
+<th class="head">in Gardener CI/CD</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><a class="reference internal" href="pipeline.html"><span class="doc">Pipeline</span></a></td>
+<td>a set of jobs (also: variants) defined in
+<cite>.ci/pipeline_definitions</cite></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="pipeline_job.html"><span class="doc">Job</span></a></td>
+<td>a graph of build steps</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="pipeline_step.html"><span class="doc">Step</span></a></td>
+<td>an executable with a container image as environment</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="traits.html"><span class="doc">Trait</span></a></td>
+<td>adds certain semantics to a build job (does not
+exist in concourse)</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section" id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
 </ul>
+</div>
 </div>
 
 
@@ -196,8 +221,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="pipeline_contract.html" class="btn btn-neutral float-right" title="CC-Utils - Build Pipeline Reference Manual" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="pipeline.html" class="btn btn-neutral float-right" title="Pipeline Definition" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
+      
+        <a href="index.html" class="btn btn-neutral" title="Gardener CI/CD Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

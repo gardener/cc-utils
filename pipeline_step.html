@@ -1,0 +1,377 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Pipeline Steps &mdash; cc-utils  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="CC-Utils - Build Pipeline Reference Manual: Traits" href="traits.html" />
+    <link rel="prev" title="Pipeline Job" href="pipeline_job.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> cc-utils
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="pipeline_contract.html">CC-Utils - Build Pipeline Reference Manual</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipeline.html">Pipeline Definition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipeline_job.html">Pipeline Job</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Pipeline Steps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="traits.html">CC-Utils - Build Pipeline Reference Manual: Traits</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">cc-utils</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Pipeline Steps</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/pipeline_step.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="pipeline-steps">
+<h1>Pipeline Steps<a class="headerlink" href="#pipeline-steps" title="Permalink to this headline">¶</a></h1>
+<p>Pipeline steps define the actual payloads that are run during job executions. Each pipeline
+step is run in a defined container image. Components may specify an arbitrary graph of steps.
+Some traits add steps to build jobs as well (see traits documentation).</p>
+<p>Each build step <em>must</em> be given a unique name (per job). By default, an executable named
+<cite>.ci/&lt;step_name&gt;</cite> is expected in the main repository’s work tree. It is run inside a container
+with a specifiable container image with a defined set of environment variables.</p>
+<p>The resulting exit code is used to determine whether or not the step execution has succeeded.
+A zero exit code is interpreted as success, wheras non-zero exit codes are interpreted as
+failures.</p>
+<ul class="simple">
+<li>all job steps are executed in parallel by default</li>
+<li>dependendencies between steps may be declared</li>
+<li>job steps may publish changes to repositories</li>
+</ul>
+<div class="section" id="pipeline-step">
+<span id="pipeline-step"></span><h2 class="section-subtitle"><span class="section-subtitle">Attributes</span></h2>
+<table border="1" class="colwidths-auto docutils">
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">name</th>
+<th class="head">required?</th>
+<th class="head">default</th>
+<th class="head">type</th>
+<th class="head">explanation</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>depends</td>
+<td>no</td>
+<td>set()</td>
+<td>set</td>
+<td>step names this step declares a dependency towards</td>
+</tr>
+<tr class="row-odd"><td>execute</td>
+<td>no</td>
+<td>&lt;name&gt;</td>
+<td>str</td>
+<td><p>The executable (with optional additional arguments) to run. The executable path
+is calculated relative to <cite>&lt;main_repo&gt;/.ci</cite>.</p>
+<p>Has two forms:
+- scalar value (str in most cases) –&gt; no shell-escaping is done
+- list of scalar values -&gt; used verbatim as ARGV</p>
+</td>
+</tr>
+<tr class="row-even"><td>image</td>
+<td>no</td>
+<td>None</td>
+<td>str</td>
+<td>the container image reference to use for the executing container.
+If not set, the default image will be used.</td>
+</tr>
+<tr class="row-odd"><td>registry</td>
+<td>no</td>
+<td>None</td>
+<td>str</td>
+<td>The container image registry cfg_name. Required when retrieving container images
+from a non-default image registry that requires authentication.</td>
+</tr>
+<tr class="row-even"><td>inputs</td>
+<td>no</td>
+<td>{}</td>
+<td>dict</td>
+<td>a mapping of inputs produced by other build steps:
+{ input_name: output_name }
+<cite>input_name</cite> is converted to UPPER_CASE and exposed to the step as an environment
+variable containing the relative path to the output.</td>
+</tr>
+<tr class="row-odd"><td>output_dir</td>
+<td>no</td>
+<td>None</td>
+<td>str</td>
+<td>exposes a writable directory to the job. The directory is specified via environment
+variable named as the given value + _PATH (converted to UPPER-case and snake_case).
+Any files placed into this directory are passed to subsequent steps declaring the output
+as input. The unchanged value configured is used as input name.
+e.g.: <cite>output_dir: out</cite> results in env var <cite>OUT_PATH</cite>.</td>
+</tr>
+<tr class="row-even"><td>publish_to</td>
+<td>no</td>
+<td>{}</td>
+<td>list</td>
+<td><p>has two forms:</p>
+<ul class="simple">
+<li>list of logical repository names to which commits created by this step should be
+published.</li>
+<li>a dictionary: &lt;name: options&gt;</li>
+</ul>
+<p>The second form currently accepts exactly one argument: <cite>force_push</cite> (bool) and is used
+to specify that a force-push should be done.</p>
+<p>Example:
+.. code-block:: yaml</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>steps:</dt>
+<dd><dl class="first last docutils">
+<dt>foo:</dt>
+<dd><dl class="first last docutils">
+<dt>publish_to:</dt>
+<dd><dl class="first last docutils">
+<dt>my_repo:</dt>
+<dd>force_push: true</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td>vars</td>
+<td>no</td>
+<td>{}</td>
+<td>str</td>
+<td>pairs of {env_var_name: &lt;python expression&gt;}
+the specified python expressions are evaluated during pipeline replication.
+An instance of the current pipeline_model is accessible through the
+<cite>pipeline_descriptor</cite> symbol.
+The evaluation result is exposed to this build step via the specified environment
+variable.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">steps</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">first_step</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>     <span class="c1"># execute .ci/first_step</span>
+
+  <span class="l l-Scalar l-Scalar-Plain">custom_executable</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">execute</span><span class="p p-Indicator">:</span>
+      <span class="s">&quot;my_script&quot;</span>   <span class="c1"># execute .ci/my_script</span>
+
+  <span class="l l-Scalar l-Scalar-Plain">custom_image</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">image</span><span class="p p-Indicator">:</span> <span class="s">&#39;alpine:3.6&#39;</span>
+
+  <span class="l l-Scalar l-Scalar-Plain">executable_with_args</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">execute</span><span class="p p-Indicator">:</span>
+    <span class="p p-Indicator">-</span> <span class="s">&quot;another_executable&quot;</span>  <span class="c1"># .ci/another_executable</span>
+    <span class="p p-Indicator">-</span> <span class="s">&quot;--with-an-option&quot;</span>
+    <span class="p p-Indicator">-</span> <span class="s">&quot;args</span><span class="nv"> </span><span class="s">may</span><span class="nv"> </span><span class="s">contain</span><span class="nv"> </span><span class="s">whitespace</span><span class="nv"> </span><span class="s">characters&quot;</span>
+
+  <span class="l l-Scalar l-Scalar-Plain">build_and_expose_output</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">output_dir</span><span class="p p-Indicator">:</span> <span class="s">&#39;build_result_dir&#39;</span> <span class="c1"># may be used e.g. by publish trait</span>
+
+  <span class="l l-Scalar l-Scalar-Plain">publish_commits</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">depends</span><span class="p p-Indicator">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">build_and_expose_output</span>  <span class="c1"># run only after build_and_expose_output finished</span>
+    <span class="l l-Scalar l-Scalar-Plain">publish_to</span><span class="p p-Indicator">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">source</span>    <span class="c1"># &#39;source&#39; is the default name for the main repository</span>
+
+  <span class="l l-Scalar l-Scalar-Plain">force_push</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">publish_to</span><span class="p p-Indicator">:</span>
+      <span class="l l-Scalar l-Scalar-Plain">another_repo</span><span class="p p-Indicator">:</span>
+        <span class="l l-Scalar l-Scalar-Plain">force_push</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span> <span class="c1"># use with caution!</span>
+
+  <span class="l l-Scalar l-Scalar-Plain">define_env_vars</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">vars</span><span class="p p-Indicator">:</span>
+      <span class="l l-Scalar l-Scalar-Plain">AN_ENV_VAR</span><span class="p p-Indicator">:</span> <span class="s">&#39;&quot;my_important_value&quot;&#39;</span>         <span class="c1"># assign my_important_value to AN_ENV_VAR</span>
+      <span class="l l-Scalar l-Scalar-Plain">ANOTHER</span><span class="p p-Indicator">:</span> <span class="s">&#39;pipeline_descriptor.get(&quot;name&quot;)&#39;</span> <span class="c1"># assign pipeline name to ANOTHER</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="traits.html" class="btn btn-neutral float-right" title="CC-Utils - Build Pipeline Reference Manual: Traits" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="pipeline_job.html" class="btn btn-neutral" title="Pipeline Job" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, SAP SE or an SAP affiliate company.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

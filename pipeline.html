@@ -1,0 +1,382 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Pipeline Definition &mdash; cc-utils  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Pipeline Job" href="pipeline_job.html" />
+    <link rel="prev" title="CC-Utils - Build Pipeline Reference Manual" href="pipeline_contract.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> cc-utils
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="pipeline_contract.html">CC-Utils - Build Pipeline Reference Manual</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Pipeline Definition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipeline_job.html">Pipeline Job</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipeline_step.html">Pipeline Steps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="traits.html">CC-Utils - Build Pipeline Reference Manual: Traits</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">cc-utils</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Pipeline Definition</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/pipeline.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="pipeline-definition">
+<h1>Pipeline Definition<a class="headerlink" href="#pipeline-definition" title="Permalink to this headline">¶</a></h1>
+<p>Any GitHub repository residing below an organisation owned by the Gardener team is scanned
+for <cite>.ci/pipeline_definitions</cite> files within their default branch’s source tree. If a valid pipeline
+definition is found, all contained pipeline definitions are generated into concourse build
+pipelines.</p>
+<p>Pipeline definitions are valid <a class="reference external" href="https://yaml.org">YAML</a> files adhering to the schema defined
+in this reference documentation.</p>
+<div class="section" id="pipeline-definition-schema">
+<h2>Pipeline Definition Schema<a class="headerlink" href="#pipeline-definition-schema" title="Permalink to this headline">¶</a></h2>
+<p>Pipeline definition documents may contain an arbitrary amount of pipelines. Each top-level
+attribute in a <cite>.ci/pipeline_definitions</cite> file declares a pipeline. The attribute name being
+the pipeline name.</p>
+<div class="admonition danger">
+<p class="first admonition-title">Danger</p>
+<p class="last">All pipeline names share a global namespace. So be sure not to re-use an existing name
+already in use be another component.</p>
+</div>
+<div class="section" id="attributes">
+<h3>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">attribute</th>
+<th class="head">explanation</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>&lt;name&gt;</td>
+<td>the user-chosen pipeline name. Top-level attribute</td>
+</tr>
+<tr class="row-odd"><td>template</td>
+<td>pipeline template to use. Defaults to ‘default’ (for future extensions)</td>
+</tr>
+<tr class="row-even"><td>base_definition</td>
+<td>inherited from all <a class="reference internal" href="pipeline_job.html"><span class="doc">Jobs</span></a></td>
+</tr>
+<tr class="row-odd"><td>variants</td>
+<td>defines <a class="reference internal" href="pipeline_job.html"><span class="doc">Jobs</span></a></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Each pipeline should at least define one job. Otherwise it would be empty.</p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Pipeline names are displayed in the concourse UI. Try to keep names reasonably short (&lt; 20 chars)
+and refrain from using whitespace of non-ASCII charaters.</p>
+</div>
+</div>
+<div class="section" id="example-ci-pipeline-definitions">
+<h3>Example <cite>.ci/pipeline_definitions</cite><a class="headerlink" href="#example-ci-pipeline-definitions" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>define a build pipeline named <cite>my_pipeline</cite></li>
+<li>define two <a class="reference internal" href="pipeline_job.html"><span class="doc">Build Jobs</span></a> <cite>job_A</cite>, <cite>job_B</cite></li>
+</ul>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">my_pipeline</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">template</span><span class="p p-Indicator">:</span> <span class="s">&#39;default&#39;</span>   <span class="c1"># default value - may be omitted</span>
+  <span class="l l-Scalar l-Scalar-Plain">base_definition</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">...</span> <span class="c1"># same schema as for jobs applies</span>
+  <span class="l l-Scalar l-Scalar-Plain">variants</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">job_A</span><span class="p p-Indicator">:</span>
+      <span class="l l-Scalar l-Scalar-Plain">...</span> <span class="c1"># see pipeline jobs definition for schema</span>
+    <span class="l l-Scalar l-Scalar-Plain">job_B</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="example-inheritance-base-definition">
+<h3>Example - Inheritance / “base_definition”<a class="headerlink" href="#example-inheritance-base-definition" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>define a common build step “inherit_me”</li>
+<li>define two jobs inheriting it</li>
+</ul>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">another_pipeline</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">base_definition</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">steps</span><span class="p p-Indicator">:</span>
+      <span class="l l-Scalar l-Scalar-Plain">inherit_me</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>
+
+  <span class="l l-Scalar l-Scalar-Plain">variants</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">job_a</span><span class="p p-Indicator">:</span>
+      <span class="l l-Scalar l-Scalar-Plain">steps</span><span class="p p-Indicator">:</span>
+        <span class="l l-Scalar l-Scalar-Plain">another_step</span><span class="p p-Indicator">:</span>
+          <span class="l l-Scalar l-Scalar-Plain">depends</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;inherit_me&#39;</span><span class="p p-Indicator">]</span>
+    <span class="l l-Scalar l-Scalar-Plain">job_b</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>
+</pre></div>
+</div>
+<p><em>Result</em></p>
+<ul class="simple">
+<li>job_a has two steps: <cite>inherit_me</cite> (from base_definition) and <cite>another_step</cite></li>
+<li>job_b has one step: <cite>inherit_me</cite></li>
+</ul>
+</div>
+</div>
+<div class="section" id="branch-specific-configuration">
+<h2>Branch-specific configuration<a class="headerlink" href="#branch-specific-configuration" title="Permalink to this headline">¶</a></h2>
+<p>By default, only the default branch is considered. An optional <cite>branch.cfg</cite> YAML file <em>may</em> be
+placed in a repository’s special ref <cite>refs/meta/ci</cite>.o</p>
+<p>If a branch configuration is present in a repository, then different semantics is applied when
+searching the repository for pipeline definitions:</p>
+<p>For each branch, a matching branch configuration element is looked up. Iff a matching element is
+found, the pipeline definition file (if present) from that branch’s head’s worktree is used to
+instantiate the defined pipelines. Branch-specific pipeline definition fragments (see <cite>inherit</cite>
+attribute) are optionally applied.</p>
+<p>A common usage scenario may be the declaration of hotfix release jobs for release branches</p>
+<div class="section" id="id1">
+<h3>Attributes<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="14%" />
+<col width="86%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">attribute</th>
+<th class="head">explanation</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>cfgs</td>
+<td>mandatory root attribute</td>
+</tr>
+<tr class="row-odd"><td>&lt;cfg_name&gt;</td>
+<td>user-chosen configuration element name (ASCII-alphanumeric)</td>
+</tr>
+<tr class="row-even"><td>branches</td>
+<td>list of regular expcessions used to match branche names (at least one)</td>
+</tr>
+<tr class="row-odd"><td>inherit</td>
+<td>optional pipeline definition fragment; inherited into pipeline definition</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="example-schematic">
+<h3>Example (schematic)<a class="headerlink" href="#example-schematic" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">cfgs</span><span class="p p-Indicator">:</span>         <span class="c1"># root attribute, required</span>
+   <span class="l l-Scalar l-Scalar-Plain">&lt;cfg_name&gt;</span><span class="p p-Indicator">:</span>
+        <span class="l l-Scalar l-Scalar-Plain">branches</span><span class="p p-Indicator">:</span> <span class="c1"># branch filter</span>
+           <span class="l l-Scalar l-Scalar-Plain">&lt;list of branch names&gt;</span>
+        <span class="l l-Scalar l-Scalar-Plain">inherit</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span> <span class="c1"># optional branch-specific pipeline definition</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="example-hotfix-branch-release-jobs">
+<h3>Example (hotfix-branch release jobs)<a class="headerlink" href="#example-hotfix-branch-release-jobs" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">cfgs</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">default</span><span class="p p-Indicator">:</span>
+        <span class="l l-Scalar l-Scalar-Plain">branches</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;master&#39;</span><span class="p p-Indicator">]</span>
+        <span class="l l-Scalar l-Scalar-Plain">inherit</span><span class="p p-Indicator">:</span>
+            <span class="l l-Scalar l-Scalar-Plain">example-pipeline</span><span class="p p-Indicator">:</span>
+                <span class="l l-Scalar l-Scalar-Plain">variants</span><span class="p p-Indicator">:</span>
+                    <span class="l l-Scalar l-Scalar-Plain">release-job</span><span class="p p-Indicator">:</span>
+                        <span class="l l-Scalar l-Scalar-Plain">traits</span><span class="p p-Indicator">:</span>
+                            <span class="l l-Scalar l-Scalar-Plain">release</span><span class="p p-Indicator">:</span>
+                                <span class="l l-Scalar l-Scalar-Plain">nextversion</span><span class="p p-Indicator">:</span> <span class="s">&#39;bump_minor&#39;</span>
+    <span class="l l-Scalar l-Scalar-Plain">hotfix</span><span class="p p-Indicator">:</span>
+        <span class="l l-Scalar l-Scalar-Plain">branches</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;rel-.*&#39;</span><span class="p p-Indicator">]</span>
+        <span class="l l-Scalar l-Scalar-Plain">inherit</span><span class="p p-Indicator">:</span>
+            <span class="l l-Scalar l-Scalar-Plain">example-pipeline</span><span class="p p-Indicator">:</span>
+                <span class="l l-Scalar l-Scalar-Plain">variants</span><span class="p p-Indicator">:</span>
+                    <span class="l l-Scalar l-Scalar-Plain">release-job</span><span class="p p-Indicator">:</span>
+                        <span class="l l-Scalar l-Scalar-Plain">traits</span><span class="p p-Indicator">:</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="pipeline_job.html" class="btn btn-neutral float-right" title="Pipeline Job" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="pipeline_contract.html" class="btn btn-neutral" title="CC-Utils - Build Pipeline Reference Manual" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, SAP SE or an SAP affiliate company.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
