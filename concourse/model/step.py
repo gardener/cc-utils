@@ -100,7 +100,9 @@ def attrs(pipeline_step):
             to specify that a force-push should be done.
 
             Example:
+
             .. code-block:: yaml
+
                 steps:
                     foo:
                         publish_to:
