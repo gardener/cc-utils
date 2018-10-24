@@ -71,8 +71,14 @@ def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
 
     if concourse_version is ConcourseApiVersion.V3:
         routes = ConcourseApiRoutesV3(base_url=base_url, team=team_name)
+        request_builder = AuthenticatedRequestBuilder(
+                basic_auth_username=username,
+                basic_auth_passwd=password,
+                verify_ssl=verify_ssl
+        )
         concourse_api = ConcourseApiV3(
             routes=routes,
+            request_builder=request_builder,
             verify_ssl=verify_ssl,
         )
     else:
@@ -222,9 +228,11 @@ class ConcourseApiBase(object):
     def __init__(
         self,
         routes: ConcourseApiRoutesBase,
+        request_builder: AuthenticatedRequestBuilder,
         verify_ssl=False,
     ):
         self.routes = routes
+        self.request_builder = request_builder
         self.verify_ssl = verify_ssl
 
     @ensure_annotations
@@ -408,12 +416,7 @@ class ConcourseApiV3(ConcourseApiBase):
     @ensure_annotations
     def login(self, team: str, username: str, passwd: str):
         login_url = self.routes.login()
-        request_builder = AuthenticatedRequestBuilder(
-                basic_auth_username=username,
-                basic_auth_passwd=passwd,
-                verify_ssl=self.verify_ssl
-        )
-        response = request_builder.get(login_url, return_type='json')
+        response = self.request_builder.get(login_url, return_type='json')
         self.auth_token = response['value']
         self.team = team
         self.request_builder = AuthenticatedRequestBuilder(
