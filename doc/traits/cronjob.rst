@@ -8,7 +8,7 @@ Declaring :doc:`Build Jobs </pipeline_job>` will be triggered (executed) periodi
 
 .. note::
 
-  The presence of this trait affects the default triggering beviour for head updates in the
+  The presence of this trait affects the default triggering behaviour for head updates in the
   main repository (changing it to `false`; i.e.: head-updates will be ignored).
 
 

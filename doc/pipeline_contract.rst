@@ -30,15 +30,15 @@ We are building our CI/CD offering around some principles:
 * *self-service* - components customise their pipelines by changing their sources
 * *standardisation*
 
-As a execution environment for CI/CD workloads, we use `Concourse <https://concourse-ci.org>`_.
-We however abstract from the underlying "build build executor" and instead offer a
+As an execution environment for CI/CD workloads, we use `Concourse <https://concourse-ci.org>`_.
+We however abstract from the underlying "build executor" and instead offer a
 `Pipeline Definition Contract`, through which components declare their build pipelines as
 required.
 
-Terms, definitions and concepts
+Terms, Definitions and Concepts
 ###############################
 
-Although using `Concourse <https://concourse-ci.org>`_ as underlying build scheduler, we
+Although we are using `Concourse <https://concourse-ci.org>`_ as underlying build scheduler, we
 use some terms differently as done in the context of concourse.
 
 +------------------------------+-----------------------------------------------------+
