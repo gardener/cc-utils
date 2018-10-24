@@ -1,4 +1,4 @@
-`options` Trait
+*options* Trait
 ===============
 
 .. trait::

@@ -1,4 +1,4 @@
-`cronjob` Trait
+*cronjob* Trait
 ===============
 
 .. trait::

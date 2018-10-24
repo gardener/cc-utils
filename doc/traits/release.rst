@@ -1,4 +1,4 @@
-`release` Trait
+*release* Trait
 ===============
 
 .. trait::

@@ -1,4 +1,4 @@
-`pull_request` Trait
+*pull_request* Trait
 ====================
 
 .. trait::

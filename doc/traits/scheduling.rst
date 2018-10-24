@@ -1,4 +1,4 @@
-`scheduling` Trait
+*scheduling* Trait
 ==================
 
 .. trait::
