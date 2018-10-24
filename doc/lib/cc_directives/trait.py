@@ -122,5 +122,13 @@ class TraitDirective(Directive, cc_directives.base.AttributesDocMixin, sphinxuti
         if not trait_deps:
             return self.add_paragraph('This trait has *no* dependencies')
 
+        # transform dependency names to sphinx-refs and let the parser handle them
+        # when parsing the list-entries
+        ref_list = list()
+        for dependency_name in trait_deps:
+            link_target = trait_node_id_from_trait_name(dependency_name)
+            link_text = f'{dependency_name} trait'
+            ref_list.append(f':ref:`{link_text} <{link_target}>`')
+
         self.add_paragraph('This trait requires the following traits to be declared:')
-        self.add_bullet_list(trait_deps)
+        self.add_bullet_list(ref_list)
