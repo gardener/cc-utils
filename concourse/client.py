@@ -391,6 +391,26 @@ class ConcourseApiBase(object):
         )
         return BuildEvents(response, self)
 
+    @ensure_annotations
+    def trigger_resource_check(self, pipeline_name: str, resource_name: str):
+        url = self.routes.resource_check(pipeline_name=pipeline_name, resource_name=resource_name)
+        # Resource checks are triggered by a POST with an empty JSON-document as body against
+        # the resource's check-url
+        self._post(url, body='{}')
+
+
+class ConcourseApiV3(ConcourseApiBase):
+    @ensure_annotations
+    def login(self, username: str, passwd: str):
+        login_url = self.routes.login()
+        response = self.request_builder.get(login_url, return_type='json')
+        auth_token = response['value']
+        self.request_builder = AuthenticatedRequestBuilder(
+            auth_token=auth_token,
+            verify_ssl=self.verify_ssl
+        )
+        return auth_token
+
     def set_team(self, team_credentials: ConcourseTeamCredentials):
         body = {}
         if team_credentials.has_basic_auth_credentials():
@@ -428,26 +448,6 @@ class ConcourseApiBase(object):
           json.dumps(body)
         )
 
-    @ensure_annotations
-    def trigger_resource_check(self, pipeline_name: str, resource_name: str):
-        url = self.routes.resource_check(pipeline_name=pipeline_name, resource_name=resource_name)
-        # Resource checks are triggered by a POST with an empty JSON-document as body against
-        # the resource's check-url
-        self._post(url, body='{}')
-
-
-class ConcourseApiV3(ConcourseApiBase):
-    @ensure_annotations
-    def login(self, username: str, passwd: str):
-        login_url = self.routes.login()
-        response = self.request_builder.get(login_url, return_type='json')
-        auth_token = response['value']
-        self.request_builder = AuthenticatedRequestBuilder(
-            auth_token=auth_token,
-            verify_ssl=self.verify_ssl
-        )
-        return auth_token
-
 
 class ConcourseApiV4(ConcourseApiBase):
     def login(self, username: str, passwd: str):
@@ -465,6 +465,23 @@ class ConcourseApiV4(ConcourseApiBase):
             verify_ssl=self.verify_ssl
         )
         return auth_token
+
+    def set_team(self, team_credentials: ConcourseTeamCredentials):
+        body = {}
+        body['auth'] = {
+            "users": [
+                "local:" + team_credentials.username()
+            ]
+        }
+        if team_credentials.has_github_oauth_credentials():
+            body['auth'].update({
+                "groups": [
+                    "github:" + team_credentials.github_auth_team()
+                ]
+            })
+
+        team_url = self.routes.team_url(team_credentials.teamname())
+        self._put(team_url, json.dumps(body))
 
 
 class ModelBase(object):
