@@ -81,13 +81,24 @@ def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
             request_builder=request_builder,
             verify_ssl=verify_ssl,
         )
+    elif concourse_version is ConcourseApiVersion.V4:
+        routes = ConcourseApiRoutesV4(base_url=base_url, team=team_name)
+        request_builder = AuthenticatedRequestBuilder(
+                basic_auth_username=AUTH_TOKEN_REQUEST_USER,
+                basic_auth_passwd=AUTH_TOKEN_REQUEST_PWD,
+                verify_ssl=verify_ssl
+        )
+        concourse_api = ConcourseApiV4(
+            routes=routes,
+            request_builder=request_builder,
+            verify_ssl=verify_ssl,
+        )
     else:
         raise NotImplementedError(
             "Concourse version {v} not supported".format(v=concourse_version.value)
         )
 
     concourse_api.login(
-        team=team_name,
         username=username,
         passwd=password,
     )
@@ -105,6 +116,10 @@ class SetPipelineResult(Enum):
 
 # GLOBAL DEFINES
 CONCOURSE_API_SUFFIX = 'api/v1'
+# Hard coded oauth user and password
+# https://github.com/concourse/fly/blob/f4592bb32fe38f54018c2f9b1f30266713882c54/commands/login.go#L143
+AUTH_TOKEN_REQUEST_USER = 'fly'
+AUTH_TOKEN_REQUEST_PWD = 'Zmx5'
 
 
 class ConcourseApiRoutesBase(object):
@@ -210,6 +225,15 @@ class ConcourseApiRoutesV3(ConcourseApiRoutesBase):
             'auth',
             'basic',
             'token' + '?' + urlencode({'team_name': self.team})
+        )
+
+
+class ConcourseApiRoutesV4(ConcourseApiRoutesBase):
+    def login(self):
+        return util.urljoin(
+            self.base_url,
+            'sky',
+            'token'
         )
 
 
@@ -414,16 +438,33 @@ class ConcourseApiBase(object):
 
 class ConcourseApiV3(ConcourseApiBase):
     @ensure_annotations
-    def login(self, team: str, username: str, passwd: str):
+    def login(self, username: str, passwd: str):
         login_url = self.routes.login()
         response = self.request_builder.get(login_url, return_type='json')
-        self.auth_token = response['value']
-        self.team = team
+        auth_token = response['value']
         self.request_builder = AuthenticatedRequestBuilder(
-            auth_token=self.auth_token,
+            auth_token=auth_token,
             verify_ssl=self.verify_ssl
         )
-        return self.auth_token
+        return auth_token
+
+
+class ConcourseApiV4(ConcourseApiBase):
+    def login(self, username: str, passwd: str):
+        login_url = self.routes.login()
+        form_data = "grant_type=password&password=" + passwd + \
+                    "&scope=openid+profile+email+federated%3Aid+groups&username=" + username
+        response = self._post(
+            url=login_url,
+            body=form_data,
+            headers={"content-type": "application/x-www-form-urlencoded"}
+        )
+        auth_token = response.json()['access_token']
+        self.request_builder = AuthenticatedRequestBuilder(
+            auth_token=auth_token,
+            verify_ssl=self.verify_ssl
+        )
+        return auth_token
 
 
 class ModelBase(object):
