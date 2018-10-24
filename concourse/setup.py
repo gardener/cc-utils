@@ -501,7 +501,7 @@ def set_teams(config: ConcourseConfig):
     )
     for team in config.all_team_credentials():
         # We skip the main team here since we cannot update all its credentials at this time.
-        if team.teamname == "main":
+        if team.teamname() == "main":
             continue
         concourse_api.set_team(team)
 
