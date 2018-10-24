@@ -14,7 +14,7 @@ Build Pipelines
 * :doc:`pipeline_contract`
 
 
-Indices and tables
+Indices and Tables
 ==================
 
 * :ref:`genindex`

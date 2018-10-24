@@ -6,14 +6,14 @@
 
 
 Adds version handling for the pipeline's `main repository`. Implies that the
-`main repository` host a `gardener component`.
+`main repository` hosts a `gardener component`.
 
 During job execution, an `effective version` is calculated and made available
 via regular file `${VERSION_PATH}/version`.
 
-Component versions must be valid [semver](https://semver.org) versions.
+Component versions must be valid `SemVer <https://semver.org>`_ versions.
 
-`preprocess` attribute
+`preprocess` Attribute
 ----------------------
 
 +--------------------+------------------------------------------------------+

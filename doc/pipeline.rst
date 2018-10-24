@@ -43,7 +43,7 @@ Attributes
 
 
 .. note::
-  Pipeline names are displayed in the concourse UI. Try to keep names reasonably short (< 20 chars)
+  Pipeline names are displayed in the Concourse UI. Try to keep names reasonably short (< 20 chars)
   and refrain from using whitespace of non-ASCII charaters.
 
 
@@ -95,7 +95,7 @@ Branch-specific configuration
 #############################
 
 By default, only the default branch is considered. An optional `branch.cfg` YAML file *may* be
-placed in a repository's special ref `refs/meta/ci`.o
+placed in a repository's special ref `refs/meta/ci`.
 
 If a branch configuration is present in a repository, then different semantics is applied when
 searching the repository for pipeline definitions:
@@ -105,7 +105,7 @@ found, the pipeline definition file (if present) from that branch's head's workt
 instantiate the defined pipelines. Branch-specific pipeline definition fragments (see `inherit`
 attribute) are optionally applied.
 
-A common usage scenario may be the declaration of hotfix release jobs for release branches
+A common usage scenario may be the declaration of hotfix release jobs for release branches.
 
 Attributes
 ----------

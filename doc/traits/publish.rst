@@ -14,7 +14,7 @@ The effective version is used as image tag. Optionally, created images may be ta
 Each container image build is run in a directory with definable contents (see `inputs` attribute)
 using the specified `Dockerfile`.
 
-`inputs` attribute
+`inputs` Attribute
 ------------------
 
 By default, the main repository's work tree is copied into the build directory. This behaviour
