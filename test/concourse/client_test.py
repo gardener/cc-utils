@@ -36,10 +36,8 @@ class ConcourseApiRoutesBaseTest(unittest.TestCase):
         )
 
     def test_login_route(self):
-        self.assertEqual(
+        with self.assertRaises(NotImplementedError):
             self.examinee.login(),
-            'https://made-up-concourse.com/auth/basic/token?team_name=foo'
-        )
 
     def test_pipelines_route(self):
         self.assertEqual(
@@ -130,4 +128,18 @@ class ConcourseApiRoutesBaseTest(unittest.TestCase):
         self.assertEqual(
             self.examinee.build_plan(build_id=252525),
             'https://made-up-concourse.com/api/v1/builds/252525/plan',
+        )
+
+
+class ConcourseApiRoutesV3Test(unittest.TestCase):
+    def setUp(self):
+        self.examinee = client.ConcourseApiRoutesV3(
+            base_url='https://cc.v3',
+            team='foo'
+        )
+
+    def test_login_route(self):
+        self.assertEqual(
+            self.examinee.login(),
+            'https://cc.v3/auth/basic/token?team_name=foo'
         )
