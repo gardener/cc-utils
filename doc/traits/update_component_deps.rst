@@ -21,7 +21,7 @@ the greates discovered component version. Outdated Upgrade Pull Requests are rem
 Component Upgrade Contract
 --------------------------
 
-Declaring components *must* offer an executable at `.ci/set_dependency_version` in their
+Declaring components **must** offer an executable at `.ci/set_dependency_version` in their
 repositories. It is called by the update component dependencies job for each discovered dependency
 upon pull request creation.
 
@@ -51,10 +51,10 @@ Behavioural Contract
 --------------------
 
 The executable must return an exit code equal to zero iff all environment variables as described
-above were set to sane values. I.e. an unknown dependency type or name *must* be signalled as an
+above were set to sane values. I.e. an unknown dependency type or name **must** be signalled as an
 error (exit code != zero).
 
-The executable *should* output reasonable error descriptions in case of invalid or insane arguments.
+The executable **should** output reasonable error descriptions in case of invalid or insane arguments.
 
 The work tree specified via `REPO_DIR` may be assumed to be "clean" and writeable.
 

@@ -86,7 +86,7 @@ Example - Inheritance / "base_definition"
       job_b: ~
 
 
-*Result*
+**Result**
 
 * job_a has two steps: `inherit_me` (from base_definition) and `another_step`
 * job_b has one step: `inherit_me`
@@ -94,7 +94,7 @@ Example - Inheritance / "base_definition"
 Branch-specific configuration
 #############################
 
-By default, only the default branch is considered. An optional `branch.cfg` YAML file *may* be
+By default, only the default branch is considered. An optional `branch.cfg` YAML file **may** be
 placed in a repository's special ref `refs/meta/ci`.
 
 If a branch configuration is present in a repository, then different semantics is applied when
