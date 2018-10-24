@@ -16,6 +16,7 @@
 import json
 import warnings
 
+from abc import abstractmethod
 from ensure import ensure_annotations
 from enum import Enum
 from urllib.parse import urljoin, urlparse, urlencode
@@ -134,13 +135,9 @@ class ConcourseApiRoutesBase(object):
             team = self.team
         return self._api_url('teams', team, prefix_team=False)
 
+    @abstractmethod
     def login(self):
-        return util.urljoin(
-            self.base_url,
-            'auth',
-            'basic',
-            'token' + '?' + urlencode({'team_name': self.team})
-        )
+        raise NotImplementedError
 
     def pipelines(self):
         return self._api_url('pipelines')
@@ -201,7 +198,13 @@ class ConcourseApiRoutesBase(object):
 
 
 class ConcourseApiRoutesV3(ConcourseApiRoutesBase):
-    pass
+    def login(self):
+        return util.urljoin(
+            self.base_url,
+            'auth',
+            'basic',
+            'token' + '?' + urlencode({'team_name': self.team})
+        )
 
 
 class ConcourseApiBase(object):
@@ -240,22 +243,9 @@ class ConcourseApiBase(object):
     def _delete(self, url: str):
         return self.request_builder.delete(url)
 
-    @ensure_annotations
+    @abstractmethod
     def login(self, team: str, username: str, passwd: str):
-        login_url = self.routes.login()
-        request_builder = AuthenticatedRequestBuilder(
-                basic_auth_username=username,
-                basic_auth_passwd=passwd,
-                verify_ssl=self.verify_ssl
-        )
-        response = request_builder.get(login_url, return_type='json')
-        self.auth_token = response['value']
-        self.team = team
-        self.request_builder = AuthenticatedRequestBuilder(
-            auth_token=self.auth_token,
-            verify_ssl=self.verify_ssl
-        )
-        return self.auth_token
+        raise NotImplementedError
 
     @ensure_annotations
     def set_pipeline(self, name: str, pipeline_definition):
@@ -415,7 +405,22 @@ class ConcourseApiBase(object):
 
 
 class ConcourseApiV3(ConcourseApiBase):
-    pass
+    @ensure_annotations
+    def login(self, team: str, username: str, passwd: str):
+        login_url = self.routes.login()
+        request_builder = AuthenticatedRequestBuilder(
+                basic_auth_username=username,
+                basic_auth_passwd=passwd,
+                verify_ssl=self.verify_ssl
+        )
+        response = request_builder.get(login_url, return_type='json')
+        self.auth_token = response['value']
+        self.team = team
+        self.request_builder = AuthenticatedRequestBuilder(
+            auth_token=self.auth_token,
+            verify_ssl=self.verify_ssl
+        )
+        return self.auth_token
 
 
 class ModelBase(object):
