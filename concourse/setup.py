@@ -17,6 +17,7 @@ import os
 import subprocess
 import tempfile
 import time
+import bcrypt
 
 from ensure import ensure_annotations
 from textwrap import dedent
@@ -32,9 +33,11 @@ import concourse.client as client
 
 from model import (
     NamedModelElement,
+    ConfigFactory,
 )
 from model.concourse import (
     ConcourseConfig,
+    ConcourseApiVersion,
 )
 from model.container_registry import (
     GcrCredentials,
@@ -152,7 +155,10 @@ def create_tls_secret(
         )
 
 
-def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
+def create_instance_specific_helm_values(
+    concourse_cfg: ConcourseConfig,
+    config_factory: ConfigFactory,
+):
     '''
     Creates a dict containing instance specific helm values not explicitly stated in
     the `ConcourseConfig`'s helm_chart_values.
@@ -165,33 +171,89 @@ def create_instance_specific_helm_values(concourse_cfg: ConcourseConfig):
     external_host = urlparse(external_url).netloc
     concourse_tls_secret_name = concourse_cfg.tls_secret_name()
     ingress_host = concourse_cfg.ingress_host()
+    concourse_version = concourse_cfg.concourse_version()
 
-    instance_specific_values = {
-        'concourse': {
-            'externalURL': external_url,
-            'githubAuth': {
-                'team': creds.github_auth_team(),
-                'authUrl': creds.github_auth_auth_url(),
-                'tokenUrl': creds.github_auth_token_url(),
-                'apiUrl': creds.github_auth_api_url(),
-            }
-        },
-        'secrets': {
-            'basicAuthUsername': creds.username(),
-            'basicAuthPassword': creds.passwd(),
-            'githubAuthClientId': creds.github_auth_client_id(),
-            'githubAuthClientSecret': creds.github_auth_client_secret(),
-        },
-        'web': {
-            'ingress': {
-                'hosts': [external_host, ingress_host],
-                'tls': [{
-                      'secretName': concourse_tls_secret_name,
-                      'hosts': [external_host, ingress_host],
-                      }],
+    # helm chart values.yaml structurally differs from concourse 3.x to 4.x
+    if concourse_version is ConcourseApiVersion.V3:
+        instance_specific_values = {
+            'concourse': {
+                'externalURL': external_url,
+                'githubAuth': {
+                    'team': creds.github_auth_team(),
+                    'authUrl': creds.github_auth_auth_url(),
+                    'tokenUrl': creds.github_auth_token_url(),
+                    'apiUrl': creds.github_auth_api_url(),
+                }
+            },
+            'secrets': {
+                'basicAuthUsername': creds.username(),
+                'basicAuthPassword': creds.passwd(),
+                'githubAuthClientId': creds.github_auth_client_id(),
+                'githubAuthClientSecret': creds.github_auth_client_secret(),
+            },
+            'web': {
+                'ingress': {
+                    'hosts': [external_host, ingress_host],
+                    'tls': [{
+                        'secretName': concourse_tls_secret_name,
+                        'hosts': [external_host, ingress_host],
+                        }],
+                }
             }
         }
-    }
+    elif concourse_version is ConcourseApiVersion.V4:
+        github_config_name = concourse_cfg.github_enterprise_host()
+        # 'github_enterprise_host' only configured in case of internal concourse
+        # using github enterprise
+        if github_config_name:
+            github_config = config_factory.github(github_config_name)
+            github_http_url = github_config.http_url()
+            github_host = urlparse(github_http_url).netloc
+        else:
+            github_host = None
+
+        bcrypted_pwd = bcrypt.hashpw(
+            creds.passwd().encode('utf-8'),
+            bcrypt.gensalt()
+        ).decode('utf-8')
+
+        instance_specific_values = {
+            'concourse': {
+                'web': {
+                    'externalUrl': external_url,
+                    'auth': {
+                        'mainTeam': {
+                            'localUser': creds.username(),
+                            'github': {
+                                'team': creds.github_auth_team()
+                            }
+                        },
+                        'github': {
+                            'host': github_host
+                        }
+                    }
+                }
+            },
+            'secrets': {
+                'localUsers': creds.username() + ':' + bcrypted_pwd,
+                'githubClientId': creds.github_auth_client_id(),
+                'githubClientSecret': creds.github_auth_client_secret()
+            },
+            'web': {
+                'ingress': {
+                    'hosts': [external_host, ingress_host],
+                    'tls': [{
+                        'secretName': concourse_cfg.tls_secret_name(),
+                        'hosts': [external_host, ingress_host],
+                    }],
+                }
+            }
+        }
+    else:
+        raise NotImplementedError(
+            "Concourse version {v} not supported".format(v=concourse_version)
+        )
+
     return instance_specific_values
 
 
@@ -268,6 +330,7 @@ def deploy_concourse_landscape(
         default_helm_values=default_helm_values,
         custom_helm_values=custom_helm_values,
         concourse_cfg=concourse_cfg,
+        config_factory=config_factory,
         kubernetes_config=kubernetes_config,
         deployment_name=deployment_name,
     )
@@ -377,6 +440,7 @@ def deploy_or_upgrade_concourse(
         default_helm_values: NamedModelElement,
         custom_helm_values: NamedModelElement,
         concourse_cfg: ConcourseConfig,
+        config_factory: ConfigFactory,
         kubernetes_config: KubernetesConfig,
         deployment_name: str='concourse',
 ):
@@ -427,7 +491,9 @@ def deploy_or_upgrade_concourse(
         with open(os.path.join(temp_dir, CUSTOM_HELM_VALUES_FILE_NAME), 'w') as f:
             yaml.dump(custom_helm_values, f)
         with open(os.path.join(temp_dir, INSTANCE_SPECIFIC_HELM_VALUES_FILE_NAME), 'w') as f:
-            yaml.dump(create_instance_specific_helm_values(concourse_cfg=concourse_cfg), f)
+            yaml.dump(create_instance_specific_helm_values(
+                concourse_cfg=concourse_cfg, config_factory=config_factory,), f
+            )
         with open(os.path.join(temp_dir, KUBECONFIG_FILE_NAME), 'w') as f:
             yaml.dump(kubernetes_config.kubeconfig(), f)
 
