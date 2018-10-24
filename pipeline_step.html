@@ -242,26 +242,14 @@ published.</li>
 </ul>
 <p>The second form currently accepts exactly one argument: <cite>force_push</cite> (bool) and is used
 to specify that a force-push should be done.</p>
-<p>Example:
-.. code-block:: yaml</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>steps:</dt>
-<dd><dl class="first last docutils">
-<dt>foo:</dt>
-<dd><dl class="first last docutils">
-<dt>publish_to:</dt>
-<dd><dl class="first last docutils">
-<dt>my_repo:</dt>
-<dd>force_push: true</dd>
-</dl>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd>
-</dl>
-</div></blockquote>
+<p>Example:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">steps</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">foo</span><span class="p p-Indicator">:</span>
+        <span class="l l-Scalar l-Scalar-Plain">publish_to</span><span class="p p-Indicator">:</span>
+            <span class="l l-Scalar l-Scalar-Plain">my_repo</span><span class="p p-Indicator">:</span>
+                <span class="l l-Scalar l-Scalar-Plain">force_push</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+</pre></div>
+</div>
 </td>
 </tr>
 <tr class="row-odd"><td>vars</td>
