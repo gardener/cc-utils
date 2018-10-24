@@ -21,9 +21,9 @@ from concourse import client
 from github.webhook import WebhookQueryAttributes
 
 
-class ConcourseApiRoutesTest(unittest.TestCase):
+class ConcourseApiRoutesBaseTest(unittest.TestCase):
     def setUp(self):
-        self.examinee = client.ConcourseApiRoutes(
+        self.examinee = client.ConcourseApiRoutesBase(
             base_url='https://made-up-concourse.com',
             team='foo'
         )

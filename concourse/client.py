@@ -44,8 +44,8 @@ POST-Man [3].
 Usage:
 ------
 
-Users will probably want to create an instance of ConcourseApi, specifying a
-concourse API endpoint and user credentials.
+Users will probably want to create an instance of ConcourseApiVX, passing a
+ConcourseConfig object to the `from_cfg` factory function.
 
 Other types defined in this module are not intended to be instantiated by users.
 
@@ -69,8 +69,8 @@ def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
     concourse_version = concourse_cfg.concourse_version()
 
     if concourse_version is ConcourseApiVersion.V3:
-        routes = ConcourseApiRoutes(base_url=base_url, team=team_name)
-        concourse_api = ConcourseApi(
+        routes = ConcourseApiRoutesV3(base_url=base_url, team=team_name)
+        concourse_api = ConcourseApiV3(
             routes=routes,
             verify_ssl=verify_ssl,
         )
@@ -100,7 +100,7 @@ class SetPipelineResult(Enum):
 CONCOURSE_API_SUFFIX = 'api/v1'
 
 
-class ConcourseApiRoutes(object):
+class ConcourseApiRoutesBase(object):
     '''
     Constructs concourse REST API endpoint URLs for the given concourse base URL and
     team name.
@@ -200,7 +200,11 @@ class ConcourseApiRoutes(object):
         return self._api_url('builds', str(build_id), 'plan', prefix_team=False)
 
 
-class ConcourseApi(object):
+class ConcourseApiRoutesV3(ConcourseApiRoutesBase):
+    pass
+
+
+class ConcourseApiBase(object):
     '''
     Implements a subset of concourse REST API functionality.
 
@@ -214,7 +218,7 @@ class ConcourseApi(object):
     @ensure_annotations
     def __init__(
         self,
-        routes: ConcourseApiRoutes,
+        routes: ConcourseApiRoutesBase,
         verify_ssl=False,
     ):
         self.routes = routes
@@ -410,6 +414,10 @@ class ConcourseApi(object):
         self._post(url, body='{}')
 
 
+class ConcourseApiV3(ConcourseApiBase):
+    pass
+
+
 class ModelBase(object):
     '''
     Base class for Concourse model classes
@@ -417,7 +425,7 @@ class ModelBase(object):
     Not intended to be instantiated by users of this module
     '''
 
-    def __init__(self, raw_dict: dict, concourse_api:ConcourseApi):
+    def __init__(self, raw_dict: dict, concourse_api:ConcourseApiBase):
         self.api = concourse_api
         self.raw_dict = raw_dict
 
@@ -430,7 +438,7 @@ class PipelineConfig(object):
     Not intended to be instantiated by users of this module
     '''
     @ensure_annotations
-    def __init__(self, raw_dict: dict, concourse_api: ConcourseApi, name: str):
+    def __init__(self, raw_dict: dict, concourse_api: ConcourseApiBase, name: str):
         self.concourse_api = concourse_api
         self.name = name
         self.raw_dict = raw_dict['config']
@@ -486,7 +494,7 @@ class GithubSource(object):
     Not intended to be instantiated by users of this module
     '''
     @ensure_annotations
-    def __init__(self, raw_dict:dict, concourse_api:ConcourseApi):
+    def __init__(self, raw_dict:dict, concourse_api:ConcourseApiBase):
         self.concourse_api = concourse_api
         self.raw = raw_dict
         self.uri = raw_dict['uri']
