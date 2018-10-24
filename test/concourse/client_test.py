@@ -143,3 +143,16 @@ class ConcourseApiRoutesV3Test(unittest.TestCase):
             self.examinee.login(),
             'https://cc.v3/auth/basic/token?team_name=foo'
         )
+
+class ConcourseApiRoutesV4Test(unittest.TestCase):
+    def setUp(self):
+        self.examinee = client.ConcourseApiRoutesV4(
+            base_url='https://cc.v4',
+            team='foo'
+        )
+
+    def test_login_route(self):
+        self.assertEqual(
+            self.examinee.login(),
+            'https://cc.v4/sky/token'
+        )
