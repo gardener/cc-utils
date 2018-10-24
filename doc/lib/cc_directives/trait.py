@@ -50,6 +50,10 @@ def depart_trait_node(self, node):
     self.depart_section(node)
 
 
+def trait_node_id_from_trait_name(trait_name:str):
+    return nodes.make_id(nodes.fully_normalize_name(f'trait-{trait_name}'))
+
+
 class TraitNode(nodes.section):
     '''
     represents a "trait" documentation in the resulting sphinx document tree
@@ -66,7 +70,7 @@ class TraitDirective(Directive, cc_directives.base.AttributesDocMixin, sphinxuti
     }
 
     def _init(self, trait_name: str):
-        self._node_id = nodes.make_id(nodes.fully_normalize_name('trait-' + trait_name))
+        self._node_id = trait_node_id_from_trait_name(trait_name)
         self._node = TraitNode(ids=[self._node_id])
         self._parse_msgs = []
         self._target = nodes.target()
