@@ -144,6 +144,7 @@ class ConcourseApiRoutesV3Test(unittest.TestCase):
             'https://cc.v3/auth/basic/token?team_name=foo'
         )
 
+
 class ConcourseApiRoutesV4Test(unittest.TestCase):
     def setUp(self):
         self.examinee = client.ConcourseApiRoutesV4(
