@@ -145,19 +145,6 @@ class GitHelper(object):
             fetch_result = remote.fetch(ref)[0]
             return fetch_result.commit
 
-    def branch_head(self, branch_name):
-        # XXX added for backward compatibility - remove
-        return self.fetch_head(ref=branch_name)
-
-
-def clone_repository(
-        to_path: str,
-        github_cfg,
-        github_repo_path: str
-    ):
-        url = url_with_credentials(github_cfg, github_repo_path)
-        git.Git(to_path).clone('--quiet', url)
-
 
 def url_with_credentials(github_cfg, github_repo_path):
     base_url = urllib.parse.urlparse(github_cfg.http_url())
