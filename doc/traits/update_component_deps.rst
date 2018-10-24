@@ -1,4 +1,4 @@
-`update_component_deps` Trait
+*update_component_deps* Trait
 =============================
 
 .. trait::

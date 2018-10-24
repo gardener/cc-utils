@@ -1,4 +1,4 @@
-`image_scan` Trait
+*image_scan* Trait
 ==================
 
 .. trait::

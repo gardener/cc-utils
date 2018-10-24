@@ -1,4 +1,4 @@
-`draft_release` Trait
+*draft_release* Trait
 =====================
 
 .. trait::

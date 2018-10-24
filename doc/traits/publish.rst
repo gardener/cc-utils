@@ -1,4 +1,4 @@
-`publish` Trait
+*publish* Trait
 ===============
 
 .. trait::

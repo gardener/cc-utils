@@ -63,6 +63,10 @@ extensions = [
     'cc_directives.model_element',
 ]
 
+# Set the default role. This is the role used when not specifying any other role in text-markup,
+# e.g.: `foo` (in contrast to, for instance, :literal:`foo`)
+default_role = 'code'
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 

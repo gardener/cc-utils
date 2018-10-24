@@ -1,4 +1,4 @@
-`component_descriptor` Trait
+*component_descriptor* Trait
 ============================
 
 .. trait::
