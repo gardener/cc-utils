@@ -39,7 +39,7 @@ The component descriptor should contain the full "bill-of-materials" that makes 
 For many components this will simply be the set of container images built and released by the
 component (those are added automatically).
 
-To declare additional dependencies, an executable _may_ be placed at `.ci/component_descriptor`
+To declare additional dependencies, an executable *may* be placed at `.ci/component_descriptor`
 at the component repository. If such an executable is present, it is called with a defined set
 of environment variables and file system layout.
 
