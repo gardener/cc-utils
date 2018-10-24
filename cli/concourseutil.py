@@ -308,14 +308,9 @@ def trigger_resource_check(
     cfg_set = cfg_factory.cfg_set(cfg_name)
     concourse_cfg = cfg_set.concourse()
     team_credentials = concourse_cfg.team_credentials(team_name)
-    api = client.ConcourseApi(
-        base_url=concourse_cfg.external_url(),
+    api = client.from_cfg(
+        concouse_cfg=concourse_cfg,
         team_name=team_credentials.teamname(),
-    )
-    api.login(
-        team_credentials.teamname(),
-        team_credentials.username(),
-        team_credentials.passwd(),
     )
     api.trigger_resource_check(
         pipeline_name=pipeline_name,

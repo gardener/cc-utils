@@ -56,7 +56,6 @@ from util import (
     warning,
     fail,
     which,
-    create_url_from_attributes,
 )
 
 from kubernetes.client import (
@@ -496,17 +495,9 @@ def set_teams(config: ConcourseConfig):
     # Use main-team, i.e. the team that can change the other teams' credentials
     main_team_credentials = config.main_team_credentials()
 
-    # use ingress_host instead of external_url which points to a possibly not yet switched CNAME
-    base_url = create_url_from_attributes(config.ingress_host())
-
-    concourse_api = client.ConcourseApi(
-        base_url=base_url,
+    concourse_api = client.from_cfg(
+        concourse_cfg=config,
         team_name=main_team_credentials.teamname(),
-    )
-    concourse_api.login(
-        team=main_team_credentials.teamname(),
-        username=main_team_credentials.username(),
-        passwd=main_team_credentials.passwd(),
     )
     for team in config.all_team_credentials():
         # We skip the main team here since we cannot update all its credentials at this time.

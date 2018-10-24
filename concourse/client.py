@@ -21,11 +21,16 @@ from enum import Enum
 from urllib.parse import urljoin, urlparse, urlencode
 from urllib3.exceptions import InsecureRequestWarning
 
+import functools
 import sseclient
 import util
 
 from github.webhook import WebhookQueryAttributes
-from model.concourse import ConcourseTeamCredentials
+from model.concourse import (
+    ConcourseTeamCredentials,
+    ConcourseApiVersion,
+    ConcourseConfig,
+)
 from http_requests import AuthenticatedRequestBuilder
 from util import warning, not_empty
 
@@ -51,17 +56,33 @@ Other types defined in this module are not intended to be instantiated by users.
 '''
 
 
-def from_cfg(concourse_cfg, team_name: str):
-    concourse_api = ConcourseApi(
-        base_url=concourse_cfg.external_url(),
-        team_name=team_name,
-    )
-    # prepare api (perform a login)
+@functools.lru_cache()
+def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
+    '''
+    Factory method to get Concourse API object
+    '''
+    base_url = concourse_cfg.ingress_url()
     team_credentials = concourse_cfg.team_credentials(team_name)
+    team_name = team_credentials.teamname()
+    username = team_credentials.username()
+    password = team_credentials.passwd()
+    concourse_version = concourse_cfg.concourse_version()
+
+    if concourse_version is ConcourseApiVersion.V3:
+        routes = ConcourseApiRoutes(base_url=base_url, team=team_name)
+        concourse_api = ConcourseApi(
+            routes=routes,
+            verify_ssl=verify_ssl,
+        )
+    else:
+        raise NotImplementedError(
+            "Concourse version {v} not supported".format(v=concourse_version.value)
+        )
+
     concourse_api.login(
         team=team_name,
-        username=team_credentials.username(),
-        passwd=team_credentials.passwd(),
+        username=username,
+        passwd=password,
     )
     return concourse_api
 
@@ -191,10 +212,12 @@ class ConcourseApi(object):
     @param verify_ssl: whether or not certificate validation is to be done
     '''
     @ensure_annotations
-    def __init__(self, base_url: str, team_name: str, verify_ssl=False):
-        self.base_url = base_url
-        self.team = team_name
-        self.routes = ConcourseApiRoutes(base_url=base_url, team=team_name)
+    def __init__(
+        self,
+        routes: ConcourseApiRoutes,
+        verify_ssl=False,
+    ):
+        self.routes = routes
         self.verify_ssl = verify_ssl
 
     @ensure_annotations

@@ -239,21 +239,6 @@ class FilesystemDeployer(DefinitionDeployer):
             )
 
 
-@functools.lru_cache()
-def _concourse_api(concourse_cfg, team_name: str):
-    team_credentials = concourse_cfg.team_credentials(team_name)
-    api = client.ConcourseApi(
-        base_url=concourse_cfg.ingress_url(),
-        team_name=team_credentials.teamname(),
-    )
-    api.login(
-        team_credentials.teamname(),
-        team_credentials.username(),
-        team_credentials.passwd(),
-    )
-    return api
-
-
 class ConcourseDeployer(DefinitionDeployer):
     def __init__(
         self,
@@ -267,7 +252,7 @@ class ConcourseDeployer(DefinitionDeployer):
         pipeline_definition = definition_descriptor.pipeline
         pipeline_name = definition_descriptor.pipeline_name
         try:
-            api = _concourse_api(
+            api = client.from_cfg(
                 concourse_cfg=definition_descriptor.concourse_target_cfg,
                 team_name=definition_descriptor.concourse_target_team,
             )
@@ -326,7 +311,7 @@ class ReplicationResultProcessor(object):
             concourse_cfg, concourse_team = next(iter(
                 concourse_results)).definition_descriptor.concourse_target()
             concourse_results = concourse_target_results[concourse_target_key]
-            concourse_api = _concourse_api(
+            concourse_api = client.from_cfg(
                 concourse_cfg=concourse_cfg,
                 team_name=concourse_team,
             )

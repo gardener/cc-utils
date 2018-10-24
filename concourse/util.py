@@ -31,19 +31,12 @@ from util import info, fail
 
 
 def list_github_resources(
-    concourse_url: str,
-    concourse_user: str='kubernetes',
-    concourse_passwd: str='kubernetes',
+    concourse_cfg,
     concourse_team: str='kubernetes',
     concourse_pipelines=None,
     github_url: str=None,
 ):
-    concourse_api = concourse.ConcourseApi(base_url=concourse_url, team_name=concourse_team)
-    concourse_api.login(
-        team=concourse_team,
-        username=concourse_user,
-        passwd=concourse_passwd
-    )
+    concourse_api = concourse.from_cfg(concourse_cfg=concourse_cfg, team_name=concourse_team)
     pipeline_names = concourse_pipelines if concourse_pipelines else concourse_api.pipelines()
     yield from filter(
       lambda r: r.has_webhook_token(),
@@ -59,15 +52,10 @@ def sync_webhooks(
     concourse_pipelines: [str]=None,
     concourse_verify_ssl: bool=True,
 ):
-    concourse_url = concourse_cfg.external_url()
     concourse_team = concourse_team_credentials.teamname()
-    concourse_user = concourse_team_credentials.username()
-    concourse_passwd = concourse_team_credentials.passwd()
 
     github_resources = list_github_resources(
-        concourse_url=concourse_url,
-        concourse_user=concourse_user,
-        concourse_passwd=concourse_passwd,
+        concourse_cfg=concourse_cfg,
         concourse_team=concourse_team,
         concourse_pipelines=concourse_pipelines,
         github_url=github_cfg.http_url(),
