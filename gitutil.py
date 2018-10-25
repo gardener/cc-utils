@@ -114,6 +114,9 @@ class GitHelper(object):
     def _stash_changes(self):
         self.repo.git.stash('--include-untracked', '--quiet')
 
+    def _has_stash(self):
+        return bool(self.repo.git.stash('list'))
+
     def _pop_stash(self):
         self.repo.git.stash('pop', '--quiet')
 
