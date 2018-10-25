@@ -27,7 +27,7 @@ from model.concourse import (
     ConcourseConfig,
     JobMapping,
 )
-from util import info, fail
+from util import info, warning, fail
 
 
 def list_github_resources(
@@ -90,7 +90,7 @@ def sync_webhooks(
             )
         except Exception as e:
             failed_hooks += 1
-            info(str(e))
+            warning(f'repo: {repo} - error: {e}')
 
     if failed_hooks is not 0:
         fail('{n} webhooks could not be updated or created!'.format(n=failed_hooks))
