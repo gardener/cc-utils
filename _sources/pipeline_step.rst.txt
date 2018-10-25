@@ -6,7 +6,7 @@ Pipeline steps define the actual payloads that are run during job executions. Ea
 step is run in a defined container image. Components may specify an arbitrary graph of steps.
 Some traits add steps to build jobs as well (see traits documentation).
 
-Each build step *must* be given a unique name (per job). By default, an executable named
+Each build step **must** be given a unique name (per job). By default, an executable named
 `.ci/<step_name>` is expected in the main repository's work tree. It is run inside a container
 with a specifiable container image with a defined set of environment variables.
 

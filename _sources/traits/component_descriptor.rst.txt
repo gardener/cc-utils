@@ -1,4 +1,4 @@
-`component_descriptor` Trait
+*component_descriptor* Trait
 ============================
 
 .. trait::
@@ -19,7 +19,7 @@ Example
     component_descriptor: ~
 
 
-Default component descriptor
+Default Component Descriptor
 ----------------------------
 
 If no additional customisation is done, a _default_ component descriptor is created with the
@@ -28,18 +28,18 @@ following data:
 * component_name (the github repository path, e.g. `github.com/gardener/gardener`)
 * component_version (the `effective version`)
 
-In addition, any container image that is built by the component are added as container image
+In addition, any container image that is built by the component is added as container image
 dependencies.
 
 
-Declaring additional dependencies
+Declaring Additional Dependencies
 ---------------------------------
 
-Component descriptor should contain the full "bill-of-materials" that makes up a component.
-For many components, this will simply be the set of container images built and released by the
+The component descriptor should contain the full "bill-of-materials" that makes up a component.
+For many components this will simply be the set of container images built and released by the
 component (those are added automatically).
 
-To declare additional dependencies, an executable _may_ be placed at `.ci/component_descriptor`
+To declare additional dependencies, an executable *may* be placed at `.ci/component_descriptor`
 at the component repository. If such an executable is present, it is called with a defined set
 of environment variables and file system layout.
 
@@ -50,7 +50,7 @@ After termination, the component_descriptor script is expected to leave a valid 
 component_descriptor at a defined file system path. Unresolved `component references` are
 automatically resolved before uploading as release artifact.
 
-Environment Variables passed to component_descriptor
+Environment Variables Passed to component_descriptor
 ----------------------------------------------------
 
 +-----------------------------+----------------------------------------------------------+
@@ -72,7 +72,7 @@ Environment Variables passed to component_descriptor
 Example
 -------
 
-How to declare dependencies towars:
+How to declare dependencies towards:
 
 * component `github.com/gardener/vpn` in version 1.2.3
 * component `github.com/gardener/dashboard` in version 4.5.6

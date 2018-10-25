@@ -162,20 +162,20 @@
 as well as building and publishing container images, typically containing build results.</p>
 <p>We are building our CI/CD offering around some principles:</p>
 <ul class="simple">
-<li><em>container-native</em> - each workload is executed within a container
+<li><strong>container-native</strong> - each workload is executed within a container
 environment. Components may customise used container images</li>
-<li><em>automation</em> - pipelines are generated without manual interaction</li>
-<li><em>self-service</em> - components customise their pipelines by changing their sources</li>
-<li><em>standardisation</em></li>
+<li><strong>automation</strong> - pipelines are generated without manual interaction</li>
+<li><strong>self-service</strong> - components customise their pipelines by changing their sources</li>
+<li><strong>standardisation</strong></li>
 </ul>
-<p>As a execution environment for CI/CD workloads, we use <a class="reference external" href="https://concourse-ci.org">Concourse</a>.
-We however abstract from the underlying “build build executor” and instead offer a
-<cite>Pipeline Definition Contract</cite>, through which components declare their build pipelines as
+<p>As an execution environment for CI/CD workloads, we use <a class="reference external" href="https://concourse-ci.org">Concourse</a>.
+We however abstract from the underlying “build executor” and instead offer a
+<code class="code docutils literal notranslate"><span class="pre">Pipeline</span> <span class="pre">Definition</span> <span class="pre">Contract</span></code>, through which components declare their build pipelines as
 required.</p>
 </div>
 <div class="section" id="terms-definitions-and-concepts">
-<h2>Terms, definitions and concepts<a class="headerlink" href="#terms-definitions-and-concepts" title="Permalink to this headline">¶</a></h2>
-<p>Although using <a class="reference external" href="https://concourse-ci.org">Concourse</a> as underlying build scheduler, we
+<h2>Terms, Definitions and Concepts<a class="headerlink" href="#terms-definitions-and-concepts" title="Permalink to this headline">¶</a></h2>
+<p>Although we are using <a class="reference external" href="https://concourse-ci.org">Concourse</a> as underlying build scheduler, we
 use some terms differently as done in the context of concourse.</p>
 <table border="1" class="docutils">
 <colgroup>
@@ -190,7 +190,7 @@ use some terms differently as done in the context of concourse.</p>
 <tbody valign="top">
 <tr class="row-even"><td><a class="reference internal" href="pipeline.html"><span class="doc">Pipeline</span></a></td>
 <td>a set of jobs (also: variants) defined in
-<cite>.ci/pipeline_definitions</cite></td>
+<code class="code docutils literal notranslate"><span class="pre">.ci/pipeline_definitions</span></code></td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="pipeline_job.html"><span class="doc">Job</span></a></td>
 <td>a graph of build steps</td>

@@ -155,7 +155,7 @@
   <div class="section" id="pipeline-definition">
 <h1>Pipeline Definition<a class="headerlink" href="#pipeline-definition" title="Permalink to this headline">¶</a></h1>
 <p>Any GitHub repository residing below an organisation owned by the Gardener team is scanned
-for <cite>.ci/pipeline_definitions</cite> files within their default branch’s source tree. If a valid pipeline
+for <code class="code docutils literal notranslate"><span class="pre">.ci/pipeline_definitions</span></code> files within their default branch’s source tree. If a valid pipeline
 definition is found, all contained pipeline definitions are generated into concourse build
 pipelines.</p>
 <p>Pipeline definitions are valid <a class="reference external" href="https://yaml.org">YAML</a> files adhering to the schema defined
@@ -163,7 +163,7 @@ in this reference documentation.</p>
 <div class="section" id="pipeline-definition-schema">
 <h2>Pipeline Definition Schema<a class="headerlink" href="#pipeline-definition-schema" title="Permalink to this headline">¶</a></h2>
 <p>Pipeline definition documents may contain an arbitrary amount of pipelines. Each top-level
-attribute in a <cite>.ci/pipeline_definitions</cite> file declares a pipeline. The attribute name being
+attribute in a <code class="code docutils literal notranslate"><span class="pre">.ci/pipeline_definitions</span></code> file declares a pipeline. The attribute name being
 the pipeline name.</p>
 <div class="admonition danger">
 <p class="first admonition-title">Danger</p>
@@ -203,15 +203,15 @@ already in use be another component.</p>
 </div>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">Pipeline names are displayed in the concourse UI. Try to keep names reasonably short (&lt; 20 chars)
+<p class="last">Pipeline names are displayed in the Concourse UI. Try to keep names reasonably short (&lt; 20 chars)
 and refrain from using whitespace of non-ASCII charaters.</p>
 </div>
 </div>
 <div class="section" id="example-ci-pipeline-definitions">
-<h3>Example <cite>.ci/pipeline_definitions</cite><a class="headerlink" href="#example-ci-pipeline-definitions" title="Permalink to this headline">¶</a></h3>
+<h3>Example <code class="code docutils literal notranslate"><span class="pre">.ci/pipeline_definitions</span></code><a class="headerlink" href="#example-ci-pipeline-definitions" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li>define a build pipeline named <cite>my_pipeline</cite></li>
-<li>define two <a class="reference internal" href="pipeline_job.html"><span class="doc">Build Jobs</span></a> <cite>job_A</cite>, <cite>job_B</cite></li>
+<li>define a build pipeline named <code class="code docutils literal notranslate"><span class="pre">my_pipeline</span></code></li>
+<li>define two <a class="reference internal" href="pipeline_job.html"><span class="doc">Build Jobs</span></a> <code class="code docutils literal notranslate"><span class="pre">job_A</span></code>, <code class="code docutils literal notranslate"><span class="pre">job_B</span></code></li>
 </ul>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">my_pipeline</span><span class="p p-Indicator">:</span>
   <span class="l l-Scalar l-Scalar-Plain">template</span><span class="p p-Indicator">:</span> <span class="s">&#39;default&#39;</span>   <span class="c1"># default value - may be omitted</span>
@@ -243,24 +243,24 @@ and refrain from using whitespace of non-ASCII charaters.</p>
     <span class="l l-Scalar l-Scalar-Plain">job_b</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>
 </pre></div>
 </div>
-<p><em>Result</em></p>
+<p><strong>Result</strong></p>
 <ul class="simple">
-<li>job_a has two steps: <cite>inherit_me</cite> (from base_definition) and <cite>another_step</cite></li>
-<li>job_b has one step: <cite>inherit_me</cite></li>
+<li>job_a has two steps: <code class="code docutils literal notranslate"><span class="pre">inherit_me</span></code> (from base_definition) and <code class="code docutils literal notranslate"><span class="pre">another_step</span></code></li>
+<li>job_b has one step: <code class="code docutils literal notranslate"><span class="pre">inherit_me</span></code></li>
 </ul>
 </div>
 </div>
 <div class="section" id="branch-specific-configuration">
 <h2>Branch-specific configuration<a class="headerlink" href="#branch-specific-configuration" title="Permalink to this headline">¶</a></h2>
-<p>By default, only the default branch is considered. An optional <cite>branch.cfg</cite> YAML file <em>may</em> be
-placed in a repository’s special ref <cite>refs/meta/ci</cite>.o</p>
+<p>By default, only the default branch is considered. An optional <code class="code docutils literal notranslate"><span class="pre">branch.cfg</span></code> YAML file <strong>may</strong> be
+placed in a repository’s special ref <code class="code docutils literal notranslate"><span class="pre">refs/meta/ci</span></code>.</p>
 <p>If a branch configuration is present in a repository, then different semantics is applied when
 searching the repository for pipeline definitions:</p>
 <p>For each branch, a matching branch configuration element is looked up. Iff a matching element is
 found, the pipeline definition file (if present) from that branch’s head’s worktree is used to
-instantiate the defined pipelines. Branch-specific pipeline definition fragments (see <cite>inherit</cite>
+instantiate the defined pipelines. Branch-specific pipeline definition fragments (see <code class="code docutils literal notranslate"><span class="pre">inherit</span></code>
 attribute) are optionally applied.</p>
-<p>A common usage scenario may be the declaration of hotfix release jobs for release branches</p>
+<p>A common usage scenario may be the declaration of hotfix release jobs for release branches.</p>
 <div class="section" id="id1">
 <h3>Attributes<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
 <table border="1" class="docutils">

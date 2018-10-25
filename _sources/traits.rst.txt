@@ -21,7 +21,7 @@ Pipeline Definition Traits
 * :doc:`traits/update_component_deps`
 * :doc:`traits/version`
 
-Indices and tables
+Indices and Tables
 ##################
 
 * :ref:`genindex`

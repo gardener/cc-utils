@@ -1,4 +1,4 @@
-`release` Trait
+*release* Trait
 ===============
 
 .. trait::
@@ -18,7 +18,9 @@ The following operations are performed:
 * create a release commit (persisting effective version + optional changes from callback)
 * push and tag said commit as `refs/tags/<effective_version>`
 * create a GitHub release for said tag
+
   * add :doc:`Component Descriptor <component_descriptor>` if present
+
 * calculate next development version and persist it ("bump commit")
 * post release notes to slack if :doc:`Slack trait <slack>` is declared
 

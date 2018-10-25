@@ -84,18 +84,18 @@
 <li class="toctree-l2"><a class="reference internal" href="../pipeline_job.html">Pipeline Job</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../pipeline_step.html">Pipeline Steps</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="../traits.html">Pipeline Definition Traits</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="component_descriptor.html"><cite>component_descriptor</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="cronjob.html"><cite>cronjob</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="draft_release.html"><cite>draft_release</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="image_scan.html"><cite>image_scan</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="options.html"><cite>options</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="publish.html"><cite>publish</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="pullrequest.html"><cite>pull_request</cite> Trait</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#"><cite>release</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="scheduling.html"><cite>scheduling</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="slack.html"><cite>slack</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="update_component_deps.html"><cite>update_component_deps</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="version.html"><cite>version</cite> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="component_descriptor.html"><em>component_descriptor</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cronjob.html"><em>cronjob</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="draft_release.html"><em>draft_release</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="image_scan.html"><em>image_scan</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="options.html"><em>options</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="publish.html"><em>publish</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pullrequest.html"><em>pull_request</em> Trait</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#"><em>release</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="scheduling.html"><em>scheduling</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="slack.html"><em>slack</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="update_component_deps.html"><em>update_component_deps</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="version.html"><em>version</em> Trait</a></li>
 </ul>
 </li>
 </ul>
@@ -149,7 +149,7 @@
         
           <li><a href="../traits.html">Pipeline Definition Traits</a> &raquo;</li>
         
-      <li><cite>release</cite> Trait</li>
+      <li><em>release</em> Trait</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -169,7 +169,7 @@
            <div itemprop="articleBody">
             
   <div class="section" id="release-trait">
-<h1><cite>release</cite> Trait<a class="headerlink" href="#release-trait" title="Permalink to this headline">¶</a></h1>
+<h1><em>release</em> Trait<a class="headerlink" href="#release-trait" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="trait-release">
 <span id="trait-release"></span><h2 class="section-subtitle"><span class="section-subtitle">Attributes</span></h2>
 <table border="1" class="colwidths-auto docutils">
@@ -213,14 +213,16 @@ release commits.</td>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">while not enforced, it is strongly recommended to configure the effective version operation
-to <cite>finalize</cite> (see <a class="reference internal" href="version.html"><span class="doc">version Trait</span></a>)</p>
+to <code class="code docutils literal notranslate"><span class="pre">finalize</span></code> (see <a class="reference internal" href="version.html"><span class="doc">version Trait</span></a>)</p>
 </div>
 <p>The following operations are performed:</p>
 <ul class="simple">
 <li>create a release commit (persisting effective version + optional changes from callback)</li>
-<li>push and tag said commit as <cite>refs/tags/&lt;effective_version&gt;</cite></li>
-<li>create a GitHub release for said tag
-* add <a class="reference internal" href="component_descriptor.html"><span class="doc">Component Descriptor</span></a> if present</li>
+<li>push and tag said commit as <code class="code docutils literal notranslate"><span class="pre">refs/tags/&lt;effective_version&gt;</span></code></li>
+<li>create a GitHub release for said tag<ul>
+<li>add <a class="reference internal" href="component_descriptor.html"><span class="doc">Component Descriptor</span></a> if present</li>
+</ul>
+</li>
 <li>calculate next development version and persist it (“bump commit”)</li>
 <li>post release notes to slack if <a class="reference internal" href="slack.html"><span class="doc">Slack trait</span></a> is declared</li>
 </ul>

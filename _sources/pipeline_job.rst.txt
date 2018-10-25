@@ -26,18 +26,18 @@ Attributes
 (GitHub) Repositories
 #####################
 
-Main repository
+Main Repository
 ---------------
 
 Each pipeline has a main repository. It is implied by the GitHub repository from which the
 pipeline definition was read.
 
 - logical repository name defaults to `source`
-- branch an repo_path are determined by repository
+- branch and repo_path are determined by repository
 - repository path is implied by repository
 
 
-Additional repositories
+Additional Repositories
 -----------------------
 
 Additional repositories may be referenced. Different from the main repository, all of the
@@ -64,6 +64,7 @@ If it is not explicitly configured, the default behaviour is defined as follows:
 
 * additional repositories default to `false`
 * main repository:
+
   * presence of `release` or `cronjob` trait --> `false`
   * presence of `pull-request` trait --> `true`
   * if none of the above traits are present --> `true`
@@ -86,7 +87,7 @@ certain repository paths (globbing syntax supported).
 `cfg_names` attribute
 ~~~~~~~~~~~~~~~~~~~~~
 
-Specifies the GitHub instance hosting the repository. For each concourse instance, there is a
+Specifies the GitHub instance hosting the repository. For each Concourse instance, there is a
 default GitHub instance that is used in case no `cfg_name` is specified.
 
 Available configurations are stored in a private configuration repository (`kubernetes/cc-config`).
@@ -127,7 +128,7 @@ any occurrence of dash `-` characters are converted to underscore `_` characters
 .. note::
 
   For non-ASCII or non-alphanumeric characters, the behaviour is undefined. Usage of those
-  characters is forbidden for used-defined identifiers.
+  characters is forbidden for user-defined identifiers.
 
 
 Environment Variables from repositories
@@ -143,7 +144,7 @@ Example
 -------
 
 In case the main repository has not been explicitly configured with a name, its default logical
-name is `source`. Thereforce, the following environemnt variables will then be defined:
+name is `source`. Therefore, the following environemnt variables will then be defined:
 
 * SOURCE_PATH
 * SOURCE_BRANCH

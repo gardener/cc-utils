@@ -84,18 +84,18 @@
 <li class="toctree-l2"><a class="reference internal" href="../pipeline_job.html">Pipeline Job</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../pipeline_step.html">Pipeline Steps</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="../traits.html">Pipeline Definition Traits</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="component_descriptor.html"><cite>component_descriptor</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="cronjob.html"><cite>cronjob</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="draft_release.html"><cite>draft_release</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="image_scan.html"><cite>image_scan</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="options.html"><cite>options</cite> Trait</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#"><cite>publish</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="pullrequest.html"><cite>pull_request</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="release.html"><cite>release</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="scheduling.html"><cite>scheduling</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="slack.html"><cite>slack</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="update_component_deps.html"><cite>update_component_deps</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="version.html"><cite>version</cite> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="component_descriptor.html"><em>component_descriptor</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cronjob.html"><em>cronjob</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="draft_release.html"><em>draft_release</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="image_scan.html"><em>image_scan</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="options.html"><em>options</em> Trait</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#"><em>publish</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pullrequest.html"><em>pull_request</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="release.html"><em>release</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="scheduling.html"><em>scheduling</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="slack.html"><em>slack</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="update_component_deps.html"><em>update_component_deps</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="version.html"><em>version</em> Trait</a></li>
 </ul>
 </li>
 </ul>
@@ -149,7 +149,7 @@
         
           <li><a href="../traits.html">Pipeline Definition Traits</a> &raquo;</li>
         
-      <li><cite>publish</cite> Trait</li>
+      <li><em>publish</em> Trait</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -169,7 +169,7 @@
            <div itemprop="articleBody">
             
   <div class="section" id="publish-trait">
-<h1><cite>publish</cite> Trait<a class="headerlink" href="#publish-trait" title="Permalink to this headline">¶</a></h1>
+<h1><em>publish</em> Trait<a class="headerlink" href="#publish-trait" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="trait-publish">
 <span id="trait-publish"></span><h2 class="section-subtitle"><span class="section-subtitle">Attributes</span></h2>
 <table border="1" class="colwidths-auto docutils">
@@ -234,17 +234,17 @@
 container images may be specified (at least one).</p>
 <p>The effective version is used as image tag. Optionally, created images may be tagged as
 ‘latest’.</p>
-<p>Each container image build is run in a directory with definable contents (see <cite>inputs</cite> attribute)
-using the specified <cite>Dockerfile</cite>.</p>
+<p>Each container image build is run in a directory with definable contents (see <code class="code docutils literal notranslate"><span class="pre">inputs</span></code> attribute)
+using the specified <code class="code docutils literal notranslate"><span class="pre">Dockerfile</span></code>.</p>
 <div class="section" id="inputs-attribute">
-<h2><cite>inputs</cite> attribute<a class="headerlink" href="#inputs-attribute" title="Permalink to this headline">¶</a></h2>
+<h2><code class="code docutils literal notranslate"><span class="pre">inputs</span></code> Attribute<a class="headerlink" href="#inputs-attribute" title="Permalink to this headline">¶</a></h2>
 <p>By default, the main repository’s work tree is copied into the build directory. This behaviour
-may be changed by defining different logical repository names for <cite>inputs.repos</cite>.</p>
+may be changed by defining different logical repository names for <code class="code docutils literal notranslate"><span class="pre">inputs.repos</span></code>.</p>
 <p>To consume (build) results created by other build steps, those outputs are specified with the
-<cite>inputs.steps</cite> attribute.</p>
-<p>Build steps that are specified as inputs may declare the optional <cite>output_dir</cite> attribute. They
+<code class="code docutils literal notranslate"><span class="pre">inputs.steps</span></code> attribute.</p>
+<p>Build steps that are specified as inputs may declare the optional <code class="code docutils literal notranslate"><span class="pre">output_dir</span></code> attribute. They
 are expected to place their outputs into a directory indicated by an environment variable named
-<cite>&lt;OUTPUT_DIR&gt;_PATH</cite> (defaults to <cite>BINARY_PATH</cite>).</p>
+<code class="code docutils literal notranslate"><span class="pre">&lt;OUTPUT_DIR&gt;_PATH</span></code> (defaults to <code class="code docutils literal notranslate"><span class="pre">BINARY_PATH</span></code>).</p>
 </div>
 <div class="section" id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>

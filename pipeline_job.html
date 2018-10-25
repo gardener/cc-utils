@@ -155,7 +155,7 @@
   <div class="section" id="pipeline-job">
 <h1>Pipeline Job<a class="headerlink" href="#pipeline-job" title="Permalink to this headline">¶</a></h1>
 <p>Each <a class="reference internal" href="pipeline.html"><span class="doc">Build Pipeline</span></a> may define an arbitrary amount of build jobs. Job definitions
-reside below a pipeline’s <cite>variants</cite> attribute. Each job defines their name as root element.</p>
+reside below a pipeline’s <code class="code docutils literal notranslate"><span class="pre">variants</span></code> attribute. Each job defines their name as root element.</p>
 <div class="section" id="attributes">
 <h2>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline">¶</a></h2>
 <table border="1" class="docutils">
@@ -190,17 +190,17 @@ reside below a pipeline’s <cite>variants</cite> attribute. Each job defines th
 <div class="section" id="github-repositories">
 <h2>(GitHub) Repositories<a class="headerlink" href="#github-repositories" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="main-repository">
-<h3>Main repository<a class="headerlink" href="#main-repository" title="Permalink to this headline">¶</a></h3>
+<h3>Main Repository<a class="headerlink" href="#main-repository" title="Permalink to this headline">¶</a></h3>
 <p>Each pipeline has a main repository. It is implied by the GitHub repository from which the
 pipeline definition was read.</p>
 <ul class="simple">
-<li>logical repository name defaults to <cite>source</cite></li>
-<li>branch an repo_path are determined by repository</li>
+<li>logical repository name defaults to <code class="code docutils literal notranslate"><span class="pre">source</span></code></li>
+<li>branch and repo_path are determined by repository</li>
 <li>repository path is implied by repository</li>
 </ul>
 </div>
 <div class="section" id="additional-repositories">
-<h3>Additional repositories<a class="headerlink" href="#additional-repositories" title="Permalink to this headline">¶</a></h3>
+<h3>Additional Repositories<a class="headerlink" href="#additional-repositories" title="Permalink to this headline">¶</a></h3>
 <p>Additional repositories may be referenced. Different from the main repository, all of the
 following attributes must be specified:</p>
 <ul class="simple">
@@ -282,22 +282,24 @@ from traits.</td>
 </table>
 </div>
 <div class="section" id="default-behaviour-for-trigger-attribute">
-<h4>Default behaviour for <cite>trigger</cite> attribute<a class="headerlink" href="#default-behaviour-for-trigger-attribute" title="Permalink to this headline">¶</a></h4>
-<p>The <cite>trigger</cite> attribute specifies whether or not head updates should trigger a job execution.</p>
+<h4>Default behaviour for <code class="code docutils literal notranslate"><span class="pre">trigger</span></code> attribute<a class="headerlink" href="#default-behaviour-for-trigger-attribute" title="Permalink to this headline">¶</a></h4>
+<p>The <code class="code docutils literal notranslate"><span class="pre">trigger</span></code> attribute specifies whether or not head updates should trigger a job execution.</p>
 <p>If it is not explicitly configured, the default behaviour is defined as follows:</p>
 <ul class="simple">
-<li>additional repositories default to <cite>false</cite></li>
-<li>main repository:
-* presence of <cite>release</cite> or <cite>cronjob</cite> trait –&gt; <cite>false</cite>
-* presence of <cite>pull-request</cite> trait –&gt; <cite>true</cite>
-* if none of the above traits are present –&gt; <cite>true</cite></li>
+<li>additional repositories default to <code class="code docutils literal notranslate"><span class="pre">false</span></code></li>
+<li>main repository:<ul>
+<li>presence of <code class="code docutils literal notranslate"><span class="pre">release</span></code> or <code class="code docutils literal notranslate"><span class="pre">cronjob</span></code> trait –&gt; <code class="code docutils literal notranslate"><span class="pre">false</span></code></li>
+<li>presence of <code class="code docutils literal notranslate"><span class="pre">pull-request</span></code> trait –&gt; <code class="code docutils literal notranslate"><span class="pre">true</span></code></li>
+<li>if none of the above traits are present –&gt; <code class="code docutils literal notranslate"><span class="pre">true</span></code></li>
+</ul>
+</li>
 </ul>
 </div>
 <div class="section" id="trigger-paths-attribute">
-<h4><cite>trigger_paths</cite> attribute<a class="headerlink" href="#trigger-paths-attribute" title="Permalink to this headline">¶</a></h4>
-<p>Allows to restrict build triggering by repository changes. If <cite>trigger</cite> attribute evaluates to
-<cite>false</cite>, this attribute has no effect.</p>
-<p>Using <cite>trigger_paths</cite>, it is possible to ignore updates in case they touch (or do not touch)
+<h4><code class="code docutils literal notranslate"><span class="pre">trigger_paths</span></code> attribute<a class="headerlink" href="#trigger-paths-attribute" title="Permalink to this headline">¶</a></h4>
+<p>Allows to restrict build triggering by repository changes. If <code class="code docutils literal notranslate"><span class="pre">trigger</span></code> attribute evaluates to
+<code class="code docutils literal notranslate"><span class="pre">false</span></code>, this attribute has no effect.</p>
+<p>Using <code class="code docutils literal notranslate"><span class="pre">trigger_paths</span></code>, it is possible to ignore updates in case they touch (or do not touch)
 certain repository paths (globbing syntax supported).</p>
 <ul class="simple">
 <li>include: only react on specified paths - ignore all others</li>
@@ -305,10 +307,10 @@ certain repository paths (globbing syntax supported).</p>
 </ul>
 </div>
 <div class="section" id="cfg-names-attribute">
-<h4><cite>cfg_names</cite> attribute<a class="headerlink" href="#cfg-names-attribute" title="Permalink to this headline">¶</a></h4>
-<p>Specifies the GitHub instance hosting the repository. For each concourse instance, there is a
-default GitHub instance that is used in case no <cite>cfg_name</cite> is specified.</p>
-<p>Available configurations are stored in a private configuration repository (<cite>kubernetes/cc-config</cite>).</p>
+<h4><code class="code docutils literal notranslate"><span class="pre">cfg_names</span></code> attribute<a class="headerlink" href="#cfg-names-attribute" title="Permalink to this headline">¶</a></h4>
+<p>Specifies the GitHub instance hosting the repository. For each Concourse instance, there is a
+default GitHub instance that is used in case no <code class="code docutils literal notranslate"><span class="pre">cfg_name</span></code> is specified.</p>
+<p>Available configurations are stored in a private configuration repository (<code class="code docutils literal notranslate"><span class="pre">kubernetes/cc-config</span></code>).</p>
 <p>Valid cfg_names are:
 - github_com
 - github_wdf_sap_corp</p>
@@ -317,8 +319,8 @@ default GitHub instance that is used in case no <cite>cfg_name</cite> is specifi
 <div class="section" id="examples">
 <h3>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li>reference an additional repository <cite>github.com/foo/bar</cite>, name it <cite>my_repo</cite></li>
-<li>the repository will be made available to builds at <cite>${MY_REPO_PATH}</cite></li>
+<li>reference an additional repository <code class="code docutils literal notranslate"><span class="pre">github.com/foo/bar</span></code>, name it <code class="code docutils literal notranslate"><span class="pre">my_repo</span></code></li>
+<li>the repository will be made available to builds at <code class="code docutils literal notranslate"><span class="pre">${MY_REPO_PATH}</span></code></li>
 </ul>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">repos</span><span class="p p-Indicator">:</span>
 <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="s">&#39;my_repo&#39;</span>
@@ -339,11 +341,11 @@ The variables that are defined depend on:</p>
 </ul>
 <p>In case user-specified identifiers are used as input to construct environment variable names,
 those are converted to UPPER-case. Kebap-case is converted into snake-case (or in other words:
-any occurrence of dash <cite>-</cite> characters are converted to underscore <cite>_</cite> characters).</p>
+any occurrence of dash <code class="code docutils literal notranslate"><span class="pre">-</span></code> characters are converted to underscore <code class="code docutils literal notranslate"><span class="pre">_</span></code> characters).</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">For non-ASCII or non-alphanumeric characters, the behaviour is undefined. Usage of those
-characters is forbidden for used-defined identifiers.</p>
+characters is forbidden for user-defined identifiers.</p>
 </div>
 <div class="section" id="environment-variables-from-repositories">
 <h3>Environment Variables from repositories<a class="headerlink" href="#environment-variables-from-repositories" title="Permalink to this headline">¶</a></h3>
@@ -357,7 +359,7 @@ characters is forbidden for used-defined identifiers.</p>
 <div class="section" id="example">
 <h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
 <p>In case the main repository has not been explicitly configured with a name, its default logical
-name is <cite>source</cite>. Thereforce, the following environemnt variables will then be defined:</p>
+name is <code class="code docutils literal notranslate"><span class="pre">source</span></code>. Therefore, the following environemnt variables will then be defined:</p>
 <ul class="simple">
 <li>SOURCE_PATH</li>
 <li>SOURCE_BRANCH</li>

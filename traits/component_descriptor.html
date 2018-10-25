@@ -84,18 +84,18 @@
 <li class="toctree-l2"><a class="reference internal" href="../pipeline_job.html">Pipeline Job</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../pipeline_step.html">Pipeline Steps</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="../traits.html">Pipeline Definition Traits</a><ul class="current">
-<li class="toctree-l3 current"><a class="current reference internal" href="#"><cite>component_descriptor</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="cronjob.html"><cite>cronjob</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="draft_release.html"><cite>draft_release</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="image_scan.html"><cite>image_scan</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="options.html"><cite>options</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="publish.html"><cite>publish</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="pullrequest.html"><cite>pull_request</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="release.html"><cite>release</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="scheduling.html"><cite>scheduling</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="slack.html"><cite>slack</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="update_component_deps.html"><cite>update_component_deps</cite> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="version.html"><cite>version</cite> Trait</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#"><em>component_descriptor</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cronjob.html"><em>cronjob</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="draft_release.html"><em>draft_release</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="image_scan.html"><em>image_scan</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="options.html"><em>options</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="publish.html"><em>publish</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pullrequest.html"><em>pull_request</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="release.html"><em>release</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="scheduling.html"><em>scheduling</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="slack.html"><em>slack</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="update_component_deps.html"><em>update_component_deps</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="version.html"><em>version</em> Trait</a></li>
 </ul>
 </li>
 </ul>
@@ -149,7 +149,7 @@
         
           <li><a href="../traits.html">Pipeline Definition Traits</a> &raquo;</li>
         
-      <li><cite>component_descriptor</cite> Trait</li>
+      <li><em>component_descriptor</em> Trait</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -169,7 +169,7 @@
            <div itemprop="articleBody">
             
   <div class="section" id="component-descriptor-trait">
-<h1><cite>component_descriptor</cite> Trait<a class="headerlink" href="#component-descriptor-trait" title="Permalink to this headline">¶</a></h1>
+<h1><em>component_descriptor</em> Trait<a class="headerlink" href="#component-descriptor-trait" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="trait-component-descriptor">
 <span id="trait-component-descriptor"></span><h2 class="section-subtitle"><span class="section-subtitle">Attributes</span></h2>
 <table border="1" class="colwidths-auto docutils">
@@ -208,7 +208,7 @@
 <li><a class="reference internal" href="version.html#trait-version"><span class="std std-ref">version trait</span></a></li>
 </ul>
 </div>
-<p>If declared, a <cite>Component Descriptor</cite> is created during job execution. If their
+<p>If declared, a <code class="code docutils literal notranslate"><span class="pre">Component</span> <span class="pre">Descriptor</span></code> is created during job execution. If their
 <a class="reference internal" href="release.html"><span class="doc">release Trait</span></a> trait is also declared, the created component descriptor is added to the
 component’s release artifacts (as GitHub release asset).</p>
 <div class="section" id="example">
@@ -219,32 +219,32 @@ component’s release artifacts (as GitHub release asset).</p>
 </div>
 </div>
 <div class="section" id="default-component-descriptor">
-<h2>Default component descriptor<a class="headerlink" href="#default-component-descriptor" title="Permalink to this headline">¶</a></h2>
+<h2>Default Component Descriptor<a class="headerlink" href="#default-component-descriptor" title="Permalink to this headline">¶</a></h2>
 <p>If no additional customisation is done, a _default_ component descriptor is created with the
 following data:</p>
 <ul class="simple">
-<li>component_name (the github repository path, e.g. <cite>github.com/gardener/gardener</cite>)</li>
-<li>component_version (the <cite>effective version</cite>)</li>
+<li>component_name (the github repository path, e.g. <code class="code docutils literal notranslate"><span class="pre">github.com/gardener/gardener</span></code>)</li>
+<li>component_version (the <code class="code docutils literal notranslate"><span class="pre">effective</span> <span class="pre">version</span></code>)</li>
 </ul>
-<p>In addition, any container image that is built by the component are added as container image
+<p>In addition, any container image that is built by the component is added as container image
 dependencies.</p>
 </div>
 <div class="section" id="declaring-additional-dependencies">
-<h2>Declaring additional dependencies<a class="headerlink" href="#declaring-additional-dependencies" title="Permalink to this headline">¶</a></h2>
-<p>Component descriptor should contain the full “bill-of-materials” that makes up a component.
-For many components, this will simply be the set of container images built and released by the
+<h2>Declaring Additional Dependencies<a class="headerlink" href="#declaring-additional-dependencies" title="Permalink to this headline">¶</a></h2>
+<p>The component descriptor should contain the full “bill-of-materials” that makes up a component.
+For many components this will simply be the set of container images built and released by the
 component (those are added automatically).</p>
-<p>To declare additional dependencies, an executable _may_ be placed at <cite>.ci/component_descriptor</cite>
+<p>To declare additional dependencies, an executable <em>may</em> be placed at <code class="code docutils literal notranslate"><span class="pre">.ci/component_descriptor</span></code>
 at the component repository. If such an executable is present, it is called with a defined set
 of environment variables and file system layout.</p>
-<p>Before calling the <cite>.ci/component_descriptor</cite> callback, the default (or base) component descriptor
+<p>Before calling the <code class="code docutils literal notranslate"><span class="pre">.ci/component_descriptor</span></code> callback, the default (or base) component descriptor
 is generated and offered to the component_descriptor script.</p>
 <p>After termination, the component_descriptor script is expected to leave a valid “final”
-component_descriptor at a defined file system path. Unresolved <cite>component references</cite> are
+component_descriptor at a defined file system path. Unresolved <code class="code docutils literal notranslate"><span class="pre">component</span> <span class="pre">references</span></code> are
 automatically resolved before uploading as release artifact.</p>
 </div>
 <div class="section" id="environment-variables-passed-to-component-descriptor">
-<h2>Environment Variables passed to component_descriptor<a class="headerlink" href="#environment-variables-passed-to-component-descriptor" title="Permalink to this headline">¶</a></h2>
+<h2>Environment Variables Passed to component_descriptor<a class="headerlink" href="#environment-variables-passed-to-component-descriptor" title="Permalink to this headline">¶</a></h2>
 <table border="1" class="docutils">
 <colgroup>
 <col width="33%" />
@@ -264,7 +264,7 @@ automatically resolved before uploading as release artifact.</p>
 </tr>
 <tr class="row-even"><td>ADD_DEPENDENCIES_CMD</td>
 <td>CLI cmd args to add dependency to base descriptor (see
-<cite>cc-utils/cli.py productutils add_dependencies -h</cite>)</td>
+<code class="code docutils literal notranslate"><span class="pre">cc-utils/cli.py</span> <span class="pre">productutils</span> <span class="pre">add_dependencies</span> <span class="pre">-h</span></code>)</td>
 </tr>
 <tr class="row-odd"><td>COMPONENT_NAME</td>
 <td>own component name (e.g. github.com/gardener/vpn)</td>
@@ -277,11 +277,11 @@ automatically resolved before uploading as release artifact.</p>
 </div>
 <div class="section" id="id1">
 <h2>Example<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
-<p>How to declare dependencies towars:</p>
+<p>How to declare dependencies towards:</p>
 <ul class="simple">
-<li>component <cite>github.com/gardener/vpn</cite> in version 1.2.3</li>
-<li>component <cite>github.com/gardener/dashboard</cite> in version 4.5.6</li>
-<li>container image <cite>alpine:3.6</cite></li>
+<li>component <code class="code docutils literal notranslate"><span class="pre">github.com/gardener/vpn</span></code> in version 1.2.3</li>
+<li>component <code class="code docutils literal notranslate"><span class="pre">github.com/gardener/dashboard</span></code> in version 4.5.6</li>
+<li>container image <code class="code docutils literal notranslate"><span class="pre">alpine:3.6</span></code></li>
 </ul>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># inside .ci/component_descriptor, assuming it is a shell script</span>
 <span class="si">${</span><span class="nv">ADD_DEPENDENCIES_CMD</span><span class="si">}</span> <span class="se">\</span>

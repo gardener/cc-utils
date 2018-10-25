@@ -157,8 +157,8 @@
 <p>Pipeline steps define the actual payloads that are run during job executions. Each pipeline
 step is run in a defined container image. Components may specify an arbitrary graph of steps.
 Some traits add steps to build jobs as well (see traits documentation).</p>
-<p>Each build step <em>must</em> be given a unique name (per job). By default, an executable named
-<cite>.ci/&lt;step_name&gt;</cite> is expected in the main repository’s work tree. It is run inside a container
+<p>Each build step <strong>must</strong> be given a unique name (per job). By default, an executable named
+<code class="code docutils literal notranslate"><span class="pre">.ci/&lt;step_name&gt;</span></code> is expected in the main repository’s work tree. It is run inside a container
 with a specifiable container image with a defined set of environment variables.</p>
 <p>The resulting exit code is used to determine whether or not the step execution has succeeded.
 A zero exit code is interpreted as success, wheras non-zero exit codes are interpreted as
@@ -191,7 +191,7 @@ failures.</p>
 <td>&lt;name&gt;</td>
 <td>str</td>
 <td><p>The executable (with optional additional arguments) to run. The executable path
-is calculated relative to <cite>&lt;main_repo&gt;/.ci</cite>.</p>
+is calculated relative to <code class="code docutils literal notranslate"><span class="pre">&lt;main_repo&gt;/.ci</span></code>.</p>
 <p>Has two forms:
 - scalar value (str in most cases) –&gt; no shell-escaping is done
 - list of scalar values -&gt; used verbatim as ARGV</p>
@@ -217,7 +217,7 @@ from a non-default image registry that requires authentication.</td>
 <td>dict</td>
 <td>a mapping of inputs produced by other build steps:
 { input_name: output_name }
-<cite>input_name</cite> is converted to UPPER_CASE and exposed to the step as an environment
+<code class="code docutils literal notranslate"><span class="pre">input_name</span></code> is converted to UPPER_CASE and exposed to the step as an environment
 variable containing the relative path to the output.</td>
 </tr>
 <tr class="row-odd"><td>output_dir</td>
@@ -228,7 +228,7 @@ variable containing the relative path to the output.</td>
 variable named as the given value + _PATH (converted to UPPER-case and snake_case).
 Any files placed into this directory are passed to subsequent steps declaring the output
 as input. The unchanged value configured is used as input name.
-e.g.: <cite>output_dir: out</cite> results in env var <cite>OUT_PATH</cite>.</td>
+e.g.: <code class="code docutils literal notranslate"><span class="pre">output_dir:</span> <span class="pre">out</span></code> results in env var <code class="code docutils literal notranslate"><span class="pre">OUT_PATH</span></code>.</td>
 </tr>
 <tr class="row-even"><td>publish_to</td>
 <td>no</td>
@@ -240,7 +240,7 @@ e.g.: <cite>output_dir: out</cite> results in env var <cite>OUT_PATH</cite>.</td
 published.</li>
 <li>a dictionary: &lt;name: options&gt;</li>
 </ul>
-<p>The second form currently accepts exactly one argument: <cite>force_push</cite> (bool) and is used
+<p>The second form currently accepts exactly one argument: <code class="code docutils literal notranslate"><span class="pre">force_push</span></code> (bool) and is used
 to specify that a force-push should be done.</p>
 <p>Example:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">steps</span><span class="p p-Indicator">:</span>
@@ -259,7 +259,7 @@ to specify that a force-push should be done.</p>
 <td>pairs of {env_var_name: &lt;python expression&gt;}
 the specified python expressions are evaluated during pipeline replication.
 An instance of the current pipeline_model is accessible through the
-<cite>pipeline_descriptor</cite> symbol.
+<code class="code docutils literal notranslate"><span class="pre">pipeline_descriptor</span></code> symbol.
 The evaluation result is exposed to this build step via the specified environment
 variable.</td>
 </tr>
