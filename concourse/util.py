@@ -88,9 +88,9 @@ def sync_webhooks(
                 concourse_cfg=concourse_cfg,
                 skip_ssl_validation=not concourse_verify_ssl
             )
-        except RuntimeError as rte:
+        except Exception as e:
             failed_hooks += 1
-            info(str(rte))
+            info(str(e))
 
     if failed_hooks is not 0:
         fail('{n} webhooks could not be updated or created!'.format(n=failed_hooks))
