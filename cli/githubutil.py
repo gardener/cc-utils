@@ -304,7 +304,7 @@ def _create_and_push_release_commit(
             use_ssh=True,
         )
     finally:
-        if worktree_dirty:
+        if worktree_dirty and git_helper._has_stash():
             git_helper._pop_stash()
 
     return release_commit.hexsha
