@@ -42,7 +42,7 @@ IMG_DESCRIPTOR_ATTRIBS = (
     AttributeSpec.optional(
         name='tag_as_latest',
         default=False,
-        doc='whether or not published container images should _also_ be labelled as latest',
+        doc='whether or not published container images should **also** be labeled as latest',
         type=bool,
     ),
     AttributeSpec.optional(

@@ -29,7 +29,7 @@ ATTRIBUTES = (
     AttributeSpec.optional(
         name='preprocess',
         default='inject-commit-hash',
-        doc='sets the semver version operation to calculare the effective version during the build',
+        doc='sets the semver version operation to calculate the effective version during the build',
     ),
     AttributeSpec.optional(
         name='versionfile',

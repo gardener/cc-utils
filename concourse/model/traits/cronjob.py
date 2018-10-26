@@ -22,7 +22,7 @@ ATTRIBUTES = (
         name='interval',
         default='5m',
         doc='''
-        go-style time interval between job executions. supported suffices are: s,m,h
+        go-style time interval between job executions. Supported suffixes are: `s`,`m`,`h`
         ''',
     ),
 )
