@@ -193,6 +193,10 @@ class PipelineStep(ModelBase):
             name = raw_dict['output_dir']
             self.add_output(name + '_path', name + '_path')
 
+        # add hard-coded output "on_error" (allows build steps to pass custom
+        # notification cfg for build errors)
+        self.add_output('on_error_dir', 'on_error_dir')
+
         for name, variable_name in raw_dict.get('inputs').items():
             self.add_input(name, variable_name)
 
