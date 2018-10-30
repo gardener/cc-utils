@@ -18,6 +18,7 @@ from concurrent.futures import ThreadPoolExecutor
 import protecode.client
 from product.scanning import ProtecodeUtil, ProcessingMode
 from util import info
+from protecode.model import highest_major_cve_severity
 
 
 def upload_images(
@@ -42,14 +43,20 @@ def upload_images(
         info('result: {r}'.format(r=result))
         analysis_result = result.result
 
-        vulnerable_components = list(filter(
-            lambda c: c.highest_major_cve_severity() >= cve_threshold, analysis_result.components()
-        ))
+        if not analysis_result.components():
+            continue
 
-        if vulnerable_components:
-            highest_cve = max(map(lambda c: c.highest_major_cve_severity(), vulnerable_components))
-            if highest_cve >= cve_threshold:
-                info('Highest found CVE Severity: {cve} - Action required'.format(cve=highest_cve))
+        vulnerability_scores = list()
+
+        for component in analysis_result.components():
+            vulnerabilities = filter(lambda v: not v.historical(), component.vulnerabilities())
+            highest_cve = highest_major_cve_severity(vulnerabilities)
+            vulnerability_scores.append(highest_cve)
+
+        highest_cve = max(vulnerability_scores)
+
+        if highest_cve >= cve_threshold:
+            info('Highest found CVE Severity: {cve} - Action required'.format(cve=highest_cve))
         else:
             info('CVE below configured threshold - clean')
 
