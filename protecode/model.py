@@ -46,17 +46,6 @@ class Component(ModelBase):
     def vulnerabilities(self) -> 'Iterable[Vulnerability]':
         return (Vulnerability(raw_dict=raw) for raw in self.raw.get('vulns'))
 
-    def highest_major_cve_severity(self) -> int:
-        try:
-            return max(
-                map(
-                    lambda v: v.cve_major_severity(),
-                    filter(lambda v: not v.historical(), self.vulnerabilities())
-                )
-            )
-        except ValueError:
-            return -1
-
 
 class Vulnerability(ModelBase):
     def historical(self):
@@ -97,3 +86,12 @@ class ScanResult(ModelBase):
         rescanning.
         '''
         return self.raw.get('has_binary')
+
+
+def highest_major_cve_severity(vulnerabilites: Iterable[Vulnerability]) -> int:
+    try:
+        return max(
+            map(lambda v: v.cve_major_severity(), vulnerabilites)
+        )
+    except ValueError:
+        return -1
