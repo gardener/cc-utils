@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import enum
 import os
 import string
 import shlex
@@ -26,6 +27,34 @@ from concourse.model.base import (
     ScriptType,
     normalise_to_dict,
 )
+
+
+class NotificationPolicy(enum.Enum):
+    DEFAULT = 'default' # send e-mail with default contents
+
+
+NOTIFICATION_ATTRS = (
+    AttributeSpec.optional(
+        name='on_error_policy',
+        default=NotificationPolicy.DEFAULT.value,
+        doc='configures the error notification policy',
+        type=NotificationPolicy,
+    ),
+)
+
+
+class NotifictionCfg(ModelBase):
+    def _attribute_specs(self):
+        return NOTIFICATION_ATTRS
+
+    def _defaults_dict(self):
+        return AttributeSpec.defaults_dict(NOTIFICATION_ATTRS)
+
+    def _optional_attributes(self):
+        return set(AttributeSpec.optional_attr_names(NOTIFICATION_ATTRS))
+
+    def on_error_policy(self):
+        return NotificationPolicy(self.raw['on_error_policy'])
 
 
 def attrs(pipeline_step):
@@ -47,6 +76,12 @@ def attrs(pipeline_step):
             - scalar value (str in most cases) --> no shell-escaping is done
             - list of scalar values -> used verbatim as ARGV
             ''',
+        ),
+        AttributeSpec.optional(
+            name='notify',
+            default={'on_error_policy': 'default'},
+            doc='''Configures build notification policies''',
+            type=NotifictionCfg,
         ),
         AttributeSpec.optional(
             name='image',
@@ -171,6 +206,9 @@ class PipelineStep(ModelBase):
         (script payloads are hard-coded in pipeline templates).
         '''
         return self._script_type
+
+    def notification_cfg(self) -> NotifictionCfg:
+        return NotifictionCfg(raw_dict=self.raw['notify'])
 
     def image(self):
         return self.raw['image']
