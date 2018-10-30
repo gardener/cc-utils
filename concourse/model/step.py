@@ -246,6 +246,9 @@ class PipelineStep(ModelBase):
         return self.raw.get('output_dir') + '_path'
 
     def output(self, name):
+        outputs = self.outputs()
+        if name not in outputs:
+            raise ValueError(f'{name} not found in {list(outputs.keys())}')
         return self.outputs()[name]
 
     def outputs(self):
