@@ -182,8 +182,13 @@ class DefinitionFactory(object):
             if step is None:
                 raw_dict['steps'][stepname] = {}
 
-        steps_dict = {n:PipelineStep(name=n, raw_dict=sd) for n,sd in raw_dict['steps'].items()}
+        steps_dict = {
+            n: self._create_build_step(name=n, step_dict=sd) for n,sd in raw_dict['steps'].items()
+        }
         return steps_dict
+
+    def _create_build_step(self, name: str, step_dict: dict):
+        return PipelineStep(name=name, raw_dict=step_dict)
 
     def _create_repos(self, pipeline_def, raw_dict):
         pipeline_def._repos_dict = {}
