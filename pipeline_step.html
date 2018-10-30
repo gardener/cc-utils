@@ -197,21 +197,27 @@ is calculated relative to <code class="code docutils literal notranslate"><span 
 - list of scalar values -&gt; used verbatim as ARGV</p>
 </td>
 </tr>
-<tr class="row-even"><td>image</td>
+<tr class="row-even"><td>notify</td>
+<td>no</td>
+<td>{‘on_error_policy’: ‘default’}</td>
+<td>NotifictionCfg</td>
+<td>Configures build notification policies</td>
+</tr>
+<tr class="row-odd"><td>image</td>
 <td>no</td>
 <td>None</td>
 <td>str</td>
 <td>the container image reference to use for the executing container.
 If not set, the default image will be used.</td>
 </tr>
-<tr class="row-odd"><td>registry</td>
+<tr class="row-even"><td>registry</td>
 <td>no</td>
 <td>None</td>
 <td>str</td>
 <td>The container image registry cfg_name. Required when retrieving container images
 from a non-default image registry that requires authentication.</td>
 </tr>
-<tr class="row-even"><td>inputs</td>
+<tr class="row-odd"><td>inputs</td>
 <td>no</td>
 <td>{}</td>
 <td>dict</td>
@@ -220,7 +226,7 @@ from a non-default image registry that requires authentication.</td>
 <code class="code docutils literal notranslate"><span class="pre">input_name</span></code> is converted to UPPER_CASE and exposed to the step as an environment
 variable containing the relative path to the output.</td>
 </tr>
-<tr class="row-odd"><td>output_dir</td>
+<tr class="row-even"><td>output_dir</td>
 <td>no</td>
 <td>None</td>
 <td>str</td>
@@ -230,7 +236,7 @@ Any files placed into this directory are passed to subsequent steps declaring th
 as input. The unchanged value configured is used as input name.
 e.g.: <code class="code docutils literal notranslate"><span class="pre">output_dir:</span> <span class="pre">out</span></code> results in env var <code class="code docutils literal notranslate"><span class="pre">OUT_PATH</span></code>.</td>
 </tr>
-<tr class="row-even"><td>publish_to</td>
+<tr class="row-odd"><td>publish_to</td>
 <td>no</td>
 <td>{}</td>
 <td>list</td>
@@ -252,7 +258,7 @@ to specify that a force-push should be done.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td>vars</td>
+<tr class="row-even"><td>vars</td>
 <td>no</td>
 <td>{}</td>
 <td>str</td>
@@ -262,6 +268,25 @@ An instance of the current pipeline_model is accessible through the
 <code class="code docutils literal notranslate"><span class="pre">pipeline_descriptor</span></code> symbol.
 The evaluation result is exposed to this build step via the specified environment
 variable.</td>
+</tr>
+</tbody>
+</table>
+<h2 class="section-subtitle"><span class="section-subtitle">notify Attributes</span></h2>
+<table border="1" class="colwidths-auto docutils">
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">name</th>
+<th class="head">required?</th>
+<th class="head">default</th>
+<th class="head">type</th>
+<th class="head">explanation</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>on_error_policy</td>
+<td>no</td>
+<td>default</td>
+<td>NotificationPolicy</td>
+<td>configures the error notification policy</td>
 </tr>
 </tbody>
 </table>
