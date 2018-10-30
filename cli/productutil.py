@@ -43,6 +43,7 @@ def upload_product_images(
     protecode_group_id: int=5,
     parallel_jobs: int=4,
     cve_threshold: int=7,
+    ignore_if_triaged: bool=True,
 ):
     cfg_factory = ctx().cfg_factory()
     protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
@@ -57,6 +58,7 @@ def upload_product_images(
         protecode_group_id=protecode_group_id,
         parallel_jobs=parallel_jobs,
         cve_threshold=cve_threshold,
+        ignore_if_triaged=ignore_if_triaged,
         processing_mode=processing_mode,
     )
 

@@ -27,6 +27,7 @@ def upload_images(
     protecode_group_id=5,
     parallel_jobs=8,
     cve_threshold=7,
+    ignore_if_triaged=True,
     processing_mode=ProcessingMode.UPLOAD_IF_CHANGED,
 ):
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
@@ -50,6 +51,8 @@ def upload_images(
 
         for component in analysis_result.components():
             vulnerabilities = filter(lambda v: not v.historical(), component.vulnerabilities())
+            if ignore_if_triaged:
+                vulnerabilities = filter(lambda v: not v.has_triage(), vulnerabilities)
             highest_cve = highest_major_cve_severity(vulnerabilities)
             vulnerability_scores.append(highest_cve)
 
