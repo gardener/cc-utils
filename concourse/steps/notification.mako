@@ -38,17 +38,17 @@ for name in [
   with open(os.path.join('meta', name)) as f:
     v[name] = f.read().strip()
 
-        job_url = '/'.join([
-          v['atc-external-url'],
-          'teams',
-          v['build-team-name'],
-          'pipelines',
-          v['build-pipeline-name'],
-          'jobs',
-          v['build-job-name'],
-          'builds',
-          v['build-name']
-        ])
+job_url = '/'.join([
+  v['atc-external-url'],
+  'teams',
+  v['build-team-name'],
+  'pipelines',
+  v['build-pipeline-name'],
+  'jobs',
+  v['build-job-name'],
+  'builds',
+  v['build-name']
+])
 
 from util import ctx
 cfg_factory = ctx().cfg_factory()
