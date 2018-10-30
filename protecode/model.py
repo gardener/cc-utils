@@ -57,6 +57,9 @@ class Vulnerability(ModelBase):
     def cve_severity_str(self):
         return str(self.raw.get('vuln').get('cvss'))
 
+    def has_triage(self):
+        return self.raw.get('triage') is not None
+
     def cve_major_severity(self) -> int:
         if self.cve_severity_str():
             return int(self.cve_severity_str().split('.')[0])
