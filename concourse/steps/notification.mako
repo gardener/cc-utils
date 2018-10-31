@@ -69,6 +69,7 @@ def retrieve_build_log():
       traceback.print_exc() # print_err, but send email notification anyway
       return 'failed to retrieve build log'
 
+
 notify_file = os.path.join('${on_error_dir}', 'notify.cfg')
 if os.path.isfile(notify_file):
   notify_cfg = util.parse_yaml_file(notify_file)
@@ -78,6 +79,7 @@ if os.path.isfile(notify_file):
 else:
   email_cfg = {
     'recipients': None,
+    'component_name_recipients': None,
     'mail_body': None,
   }
   notify_cfg = {'email': email_cfg}
@@ -93,11 +95,25 @@ def default_mail_recipients():
   return recipients
 % endfor
 
+def retrieve_component_name_recipients(email_cfg):
+    component_names = email_cfg.get('component_name_recipients')
+    if not component_names:
+        return # nothing to do
+    component_recipients = mailutil.determine_mail_recipients(
+        github_cfg_name="${default_github_cfg_name}", # todo: actually this is not required here
+        component_names=component_names,
+    )
+    recipients = set(email_cfg.get('recipients', set()))
+    recipients.update(component_recipients)
+    email_cfg['recipients'] = recipients
+
+
 # fill notify_cfg with default values if not configured
 if not email_cfg.get('recipients'):
   email_cfg['recipients'] = default_mail_recipients()
 if not email_cfg.get('mail_body'):
   email_cfg['mail_body'] = retrieve_build_log()
+retrieve_component_name_recipients(email_cfg)
 
 
 # determine mail recipients
