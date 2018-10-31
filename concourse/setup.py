@@ -323,6 +323,11 @@ def deploy_concourse_landscape(
         )
 
     info('Deploying Concourse ...')
+    warning(
+        'Teams will not be set up properly on Concourse if the deployment times out, '
+        'even if Helm eventually succeeds. In this case, run the deployment command again after '
+        'Concourse is available.'
+    )
     # Concourse is deployed last since Helm will lose connection if deployment takes more
     # than ~60 seconds.
     # Helm will still continue deploying server-side, but the client will report an error.
