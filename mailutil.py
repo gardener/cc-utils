@@ -130,7 +130,13 @@ def _send_mail(
     )
 
 
-def determine_mail_recipients(src_dir, github_cfg_name):
+def determine_mail_recipients(
+    github_cfg_name,
+    src_dir=None, # added for temporary backwards compatibility - TODO: remove
+    src_dirs=(),
+    repo_paths=(),
+    branch_name='master',
+):
     '''
     returns a generator yielding all email addresses for the given (git) repository work tree
     Email addresses are looked up:
@@ -141,23 +147,59 @@ def determine_mail_recipients(src_dir, github_cfg_name):
 
     [0] https://help.github.com/articles/about-codeowners/
     '''
+    # backwards compatibility - TODO: remove
+    if src_dir:
+        src_dirs = [sd for sd in src_dirs]
+        src_dirs.append(src_dir)
+    # XXX stop removing here
+
+    if not repo_paths and not src_dirs:
+        return # nothing to do
+
     cfg_factory = ctx().cfg_factory()
 
     github_cfg = cfg_factory.github(github_cfg_name)
     github_api = github.util._create_github_api_object(github_cfg)
-
-    # commiter/author from head commit
-    repo = git.Repo(existing_dir(src_dir))
-    head_commit = repo.commit(repo.head)
-    yield head_commit.author.email.lower()
-    yield head_commit.committer.email.lower()
-
-    # codeowners
-    parser = CodeownersParser(repo_dir=src_dir)
     resolver = CodeOwnerEntryResolver(github_api=github_api)
 
-    codeowner_entries = parser.parse_codeowners_entries()
-    yield from resolver.resolve_email_addresses(codeowner_entries)
+    for src_dir in src_dirs:
+        # commiter/author from head commit
+        repo = git.Repo(existing_dir(src_dir))
+        head_commit = repo.commit(repo.head)
+        yield head_commit.author.email.lower()
+        yield head_commit.committer.email.lower()
+
+    # collect parsers
+    parsers = [
+        _codeowners_parser_from_repo_worktree(src_dir=src_dir)
+        for src_dir in src_dirs
+    ]
+    parsers += [
+        _codeowners_parser_from_github_repo(
+            repo_path=repo_path,
+            github_api=github_api,
+            branch_name=branch_name
+        ) for repo_path in repo_paths
+    ]
+
+    for parser in parsers:
+        codeowner_entries = parser.parse_codeowners_entries()
+        yield from resolver.resolve_email_addresses(codeowner_entries)
+
+
+def _codeowners_parser_from_repo_worktree(src_dir):
+    return CodeownersParser(repo_dir=src_dir)
+
+
+def _codeowners_parser_from_github_repo(repo_path, github_api, branch_name):
+    owner, name = repo_path.split('/')
+    github_repo_helper = github.util.GitHubRepositoryHelper(
+        owner=owner,
+        name=name,
+        default_branch=branch_name,
+        github_api=github_api,
+    )
+    return CodeownersParser(github_repo_helper=github_repo_helper)
 
 
 def notify(

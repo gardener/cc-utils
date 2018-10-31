@@ -106,8 +106,8 @@ def default_mail_recipients():
   recipients = set()
 % for repo_cfg in repo_cfgs:
   recipients.update(mailutil.determine_mail_recipients(
-  src_dir="${repo_cfg.resource_name()}",
-  github_cfg_name="${repo_cfg.cfg_name() if repo_cfg.cfg_name() else default_github_cfg_name}",
+    github_cfg_name="${repo_cfg.cfg_name() if repo_cfg.cfg_name() else default_github_cfg_name}",
+    src_dirs=("${repo_cfg.resource_name()}",),
     )
   )
   return recipients
