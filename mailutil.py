@@ -163,25 +163,25 @@ def determine_mail_recipients(
         yield head_commit.author.email.lower()
         yield head_commit.committer.email.lower()
 
-    # collect parsers
-    parsers = [
+    # collect parsers, with corresponding resolvers
+    parsers_and_resolvers = [
         _codeowners_parser_from_repo_worktree(src_dir=src_dir)
         for src_dir in src_dirs
     ]
-    parsers += [
+    parsers_and_resolvers += [
         _codeowners_parser_from_component_name(
             component_name=component_name,
             branch_name=branch_name
         ) for component_name in component_names
     ]
 
-    for parser in parsers:
+    for parser, resolver in parsers_and_resolvers:
         codeowner_entries = parser.parse_codeowners_entries()
         yield from resolver.resolve_email_addresses(codeowner_entries)
 
 
-def _codeowners_parser_from_repo_worktree(src_dir):
-    return CodeownersParser(repo_dir=src_dir)
+def _codeowners_parser_from_repo_worktree(src_dir, resolver):
+    return CodeownersParser(repo_dir=src_dir), resolver
 
 
 def _codeowners_parser_from_component_name(component_name: str, branch_name='master'):
@@ -198,8 +198,9 @@ def _codeowners_parser_from_component_name(component_name: str, branch_name='mas
         default_branch=branch_name,
         github_api=github_api,
     )
+    resolver = CodeOwnerEntryResolver(github_api=github_api)
 
-    return CodeownersParser(github_repo_helper=github_repo_helper)
+    return CodeownersParser(github_repo_helper=github_repo_helper), resolver
 
 
 def notify(
