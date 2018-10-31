@@ -69,7 +69,7 @@ def populate_meta_dir(directory:str):
         'build-job-name',
         'build-team-name',
         'build-pipeline-name',
-        'atc-externalal-url',
+        'atc-external-url',
     ):
         with open(os.path.join(directory, n), 'w') as f:
             f.write(n)
