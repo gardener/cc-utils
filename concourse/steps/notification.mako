@@ -26,29 +26,9 @@ import traceback
 import util
 import mailutil
 
-v = {}
-for name in [
-  'build-id',
-  'build-name',
-  'build-job-name',
-  'build-team-name',
-  'build-pipeline-name',
-  'atc-external-url'
-  ]:
-  with open(os.path.join('meta', name)) as f:
-    v[name] = f.read().strip()
+${notification_step_lib()}
 
-job_url = '/'.join([
-  v['atc-external-url'],
-  'teams',
-  v['build-team-name'],
-  'pipelines',
-  v['build-pipeline-name'],
-  'jobs',
-  v['build-job-name'],
-  'builds',
-  v['build-name']
-])
+v = meta_vars()
 
 from util import ctx
 cfg_factory = ctx().cfg_factory()
@@ -124,8 +104,39 @@ if not email_cfg.get('mail_body'):
 email_cfg_name = "${email_cfg.name()}"
 mailutil.notify(
   subject="${subject}",
-  body='\n'.join((job_url, email_cfg['mail_body'])),
+  body='\n'.join((job_url(v), email_cfg['mail_body'])),
   email_cfg_name=email_cfg_name,
   recipients=email_cfg['recipients'],
 )
+</%def>
+
+<%def name="notification_step_lib()">
+def meta_vars():
+    v = {}
+    for name in (
+      'build-id',
+      'build-name',
+      'build-job-name',
+      'build-team-name',
+      'build-pipeline-name',
+      'atc-external-url'
+    ):
+      with open(os.path.join('meta', name)) as f:
+        v[name] = f.read().strip()
+
+    return v
+
+def job_url(v):
+    return '/'.join([
+      v['atc-external-url'],
+      'teams',
+      v['build-team-name'],
+      'pipelines',
+      v['build-pipeline-name'],
+      'jobs',
+      v['build-job-name'],
+      'builds',
+      v['build-name']
+    ])
+# test
 </%def>
