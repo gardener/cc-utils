@@ -30,6 +30,24 @@ def capture_out():
         sys.stdout, sys.stderr = old_stdout, old_stderr
 
 
+@contextmanager
+def replace_modules(modules:dict):
+    '''
+    ctx manager that will replace the given modules in sys.modules and restore them
+    afterwards
+    '''
+    original_modules = {
+        name: sys.modules[name] for name in modules.keys()
+    }
+    try:
+        for name, module in modules.items():
+            sys.modules[name] = module
+        yield None
+    finally:
+        for name, module in original_modules.items():
+            sys.modules[name] = module
+
+
 class AssertMixin(object):
     def assertEmpty(self, iterable, msg=None):
         if issubclass(type(iterable), typing.Sequence):
