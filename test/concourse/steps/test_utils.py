@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 import concourse.model.base
 import concourse.model.step
 import concourse.model.job
@@ -58,3 +60,16 @@ def job(main_repo):
     job_variant._steps_dict = {}
 
     return job_variant
+
+
+def populate_meta_dir(directory:str):
+    for n in (
+        'build-id',
+        'build-name',
+        'build-job-name',
+        'build-team-name',
+        'build-pipeline-name',
+        'atc-externalal-url',
+    ):
+        with open(os.path.join(directory, n), 'w') as f:
+            f.write(n)
