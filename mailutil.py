@@ -31,6 +31,7 @@ from util import (
 from mail import template_mailer as mailer
 import github.util
 from github.codeowners import CodeownersParser, CodeOwnerEntryResolver
+import product.model
 
 
 def send_mail(
@@ -133,7 +134,7 @@ def _send_mail(
 def determine_mail_recipients(
     github_cfg_name,
     src_dirs=(),
-    repo_paths=(),
+    component_names=(),
     branch_name='master',
 ):
     '''
@@ -146,7 +147,7 @@ def determine_mail_recipients(
 
     [0] https://help.github.com/articles/about-codeowners/
     '''
-    if not repo_paths and not src_dirs:
+    if not component_names and not src_dirs:
         return # nothing to do
 
     cfg_factory = ctx().cfg_factory()
@@ -168,11 +169,10 @@ def determine_mail_recipients(
         for src_dir in src_dirs
     ]
     parsers += [
-        _codeowners_parser_from_github_repo(
-            repo_path=repo_path,
-            github_api=github_api,
+        _codeowners_parser_from_component_name(
+            component_name=component_name,
             branch_name=branch_name
-        ) for repo_path in repo_paths
+        ) for component_name in component_names
     ]
 
     for parser in parsers:
@@ -184,14 +184,21 @@ def _codeowners_parser_from_repo_worktree(src_dir):
     return CodeownersParser(repo_dir=src_dir)
 
 
-def _codeowners_parser_from_github_repo(repo_path, github_api, branch_name):
-    owner, name = repo_path.split('/')
+def _codeowners_parser_from_component_name(component_name: str, branch_name='master'):
+    component_name = product.model.ComponentName(component_name)
+    github_cfg = github.util.github_cfg_for_hostname(
+        cfg_factory=ctx().cfg_factory(),
+        host_name=component_name.github_host(),
+    )
+    github_api = github.util._create_github_api_object(github_cfg=github_cfg)
+
     github_repo_helper = github.util.GitHubRepositoryHelper(
-        owner=owner,
-        name=name,
+        owner=component_name.github_organisation(),
+        name=component_name.github_repo(),
         default_branch=branch_name,
         github_api=github_api,
     )
+
     return CodeownersParser(github_repo_helper=github_repo_helper)
 
 
