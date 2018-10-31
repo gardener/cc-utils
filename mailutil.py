@@ -132,7 +132,6 @@ def _send_mail(
 
 def determine_mail_recipients(
     github_cfg_name,
-    src_dir=None, # added for temporary backwards compatibility - TODO: remove
     src_dirs=(),
     repo_paths=(),
     branch_name='master',
@@ -147,12 +146,6 @@ def determine_mail_recipients(
 
     [0] https://help.github.com/articles/about-codeowners/
     '''
-    # backwards compatibility - TODO: remove
-    if src_dir:
-        src_dirs = [sd for sd in src_dirs]
-        src_dirs.append(src_dir)
-    # XXX stop removing here
-
     if not repo_paths and not src_dirs:
         return # nothing to do
 
