@@ -35,7 +35,7 @@ from github.util import (
     GitHubRepositoryHelper,
     _create_github_api_object,
 )
-from github.codeowners import CodeownersParser, CodeOwnerEntryResolver
+from github.codeowners import CodeownersEnumerator, CodeOwnerEntryResolver
 
 from concourse.factory import DefinitionFactory, RawPipelineDefinitionDescriptor
 from concourse.enumerator import (
@@ -378,10 +378,10 @@ class ReplicationResultProcessor(object):
             default_branch=main_repo['branch'],
             github_api=github_api,
         )
-        codeowners_parser = CodeownersParser(github_repo_helper=repo_helper)
+        codeowners_enumerator = CodeownersEnumerator()
         codeowners_resolver = CodeOwnerEntryResolver(github_api=github_api)
         recipients = set(codeowners_resolver.resolve_email_addresses(
-            codeowners_parser.parse_codeowners_entries()
+            codeowners_enumerator.enumerate_remote_repo(github_repo_helper=repo_helper)
         ))
 
         email_cfg = self._cfg_set.email()

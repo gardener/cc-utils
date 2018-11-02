@@ -21,50 +21,36 @@ from github.util import GitHubRepositoryHelper
 from util import check_type, existing_dir, not_none, warning
 
 
-class CodeownersParser(object):
+class CodeownersEnumerator(object):
     '''
     Parses GitHub CODEOWNSERS files [0] from the documented default locations for a given
     (git) repository work tree into a stream of codeowners entries.
 
     [0] https://help.github.com/articles/about-codeowners/
     '''
+    CODEOWNERS_PATHS = ('CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS')
 
-    def __init__(self, repo_dir=None, github_repo_helper: GitHubRepositoryHelper=None):
-        if not (repo_dir is None) ^ (github_repo_helper is None):
-            raise ValueError('exaxctly one of repo_dir, git_repo must be None')
+    def enumerate_local_repo(self, repo_dir: str):
+        repo_dir = existing_dir(Path(repo_dir))
+        if not repo_dir.joinpath('.git').is_dir():
+            raise ValueError('not a git root directory: {r}'.format(self.repo_dir))
 
-        if repo_dir:
-            self.repo_dir = existing_dir(Path(repo_dir).absolute())
-            if not self.repo_dir.joinpath('.git').is_dir():
-                raise ValueError('not a git root directory: {r}'.format(self.repo_dir))
-            self._retrieve_filecontents = self._retrieve_filecontents_from_dir
+        for path in self.CODEOWNERS_PATHS:
+            codeowners_file = repo_dir.joinpath(path)
+            if codeowners_file.is_file():
+                with open(codeowners_file) as f:
+                    yield from self._filter_codeowners_entries(f.readlines())
 
-        if github_repo_helper:
-            self._github_repo_helper = check_type(github_repo_helper, GitHubRepositoryHelper)
-            self._retrieve_filecontents = self._retrieve_filecontents_from_repo
+    def enumerate_remote_repo(self, github_repo_helper: GitHubRepositoryHelper):
+        for path in self.CODEOWNERS_PATHS:
+            try:
+                yield from self._filter_codeowners_entries(
+                    github_repo_helper.retrieve_text_file_contents(file_path=path).split('\n')
+                )
+            except NotFoundError:
+                pass # ignore absent files
 
-    def _retrieve_filecontents_from_dir(self, rel_path):
-       path = self.repo_dir.joinpath(rel_path)
-       if path.is_file():
-           yield from path.read_text().split('\n')
-
-    def _retrieve_filecontents_from_repo(self, rel_path):
-        try:
-            yield from self._github_repo_helper.retrieve_text_file_contents(
-                    file_path=rel_path
-            ).split('\n')
-        except NotFoundError:
-            pass # ignore absent files
-
-    def _codeowners_lines(self):
-        root_codeowners = 'CODEOWNERS'
-        dot_gh_codeowners = '.github/CODEOWNERS'
-        docs_codeownsers = 'docs/CODEOWNSERS'
-
-        for codeowners in (root_codeowners, dot_gh_codeowners, docs_codeownsers):
-            yield from self._retrieve_filecontents(codeowners)
-
-    def parse_codeowners_entries(self):
+    def _filter_codeowners_entries(self, lines):
         '''
         returns a generator yielding parsed entries from */CODEOWNERS
         each entry may be one of
@@ -72,7 +58,7 @@ class CodeownersParser(object):
          - a github team name (leading @ character and exactly one / character (org/name))
          - an email address
         '''
-        for line in self._codeowners_lines():
+        for line in lines:
             line = line.strip()
             if line.startswith('#'):
                 continue

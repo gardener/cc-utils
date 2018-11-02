@@ -30,7 +30,7 @@ from util import (
 )
 from mail import template_mailer as mailer
 import github.util
-from github.codeowners import CodeownersParser, CodeOwnerEntryResolver
+from github.codeowners import CodeownersEnumerator, CodeOwnerEntryResolver
 import product.model
 
 
@@ -135,6 +135,7 @@ def determine_mail_recipients(
     github_cfg_name,
     src_dirs=(),
     component_names=(),
+    codeowners_files=(),
     branch_name='master',
 ):
     '''
@@ -147,13 +148,14 @@ def determine_mail_recipients(
 
     [0] https://help.github.com/articles/about-codeowners/
     '''
-    if not component_names and not src_dirs:
+    if not any((component_names, src_dirs, codeowners_files)):
         return # nothing to do
 
     cfg_factory = ctx().cfg_factory()
 
     github_cfg = cfg_factory.github(github_cfg_name)
     github_api = github.util._create_github_api_object(github_cfg)
+    enumerator = CodeownersEnumerator()
     resolver = CodeOwnerEntryResolver(github_api=github_api)
 
     for src_dir in src_dirs:
@@ -164,24 +166,21 @@ def determine_mail_recipients(
         yield head_commit.committer.email.lower()
 
     # collect parsers, with corresponding resolvers
-    parsers_and_resolvers = [
-        _codeowners_parser_from_repo_worktree(src_dir=src_dir)
-        for src_dir in src_dirs
-    ]
-    parsers_and_resolvers += [
+    def enumerate_entries_from_src_dirs(src_dirs):
+        for src_dir in src_dirs:
+            yield from enumerator.enumerate_local_repo(repo_dir=src_dir)
+
+    entries_and_resolvers = [(resolver, enumerate_entries_from_src_dirs(src_dirs))]
+
+    entries_and_resolvers += [
         _codeowners_parser_from_component_name(
             component_name=component_name,
             branch_name=branch_name
         ) for component_name in component_names
     ]
 
-    for parser, resolver in parsers_and_resolvers:
-        codeowner_entries = parser.parse_codeowners_entries()
+    for resolver, codeowner_entries in entries_and_resolvers:
         yield from resolver.resolve_email_addresses(codeowner_entries)
-
-
-def _codeowners_parser_from_repo_worktree(src_dir, resolver):
-    return CodeownersParser(repo_dir=src_dir), resolver
 
 
 def _codeowners_parser_from_component_name(component_name: str, branch_name='master'):
@@ -199,8 +198,9 @@ def _codeowners_parser_from_component_name(component_name: str, branch_name='mas
         github_api=github_api,
     )
     resolver = CodeOwnerEntryResolver(github_api=github_api)
+    enumerator = CodeownersEnumerator()
 
-    return CodeownersParser(github_repo_helper=github_repo_helper), resolver
+    return resolver, enumerator.enumerate_remote_repo(github_repo_helper=github_repo_helper)
 
 
 def notify(
