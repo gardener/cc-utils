@@ -80,6 +80,7 @@ else:
   email_cfg = {
     'recipients': None,
     'component_name_recipients': None,
+    'codeowners_files': None,
     'mail_body': None,
   }
   notify_cfg = {'email': email_cfg}
@@ -96,12 +97,13 @@ def default_mail_recipients():
 % endfor
 
 def retrieve_component_name_recipients(email_cfg):
-    component_names = email_cfg.get('component_name_recipients')
-    if not component_names:
-        return # nothing to do
+    component_names = email_cfg.get('component_name_recipients', ())
+    codeowners_files = email_cfg.get('codeowners_files', ())
+
     component_recipients = mailutil.determine_mail_recipients(
         github_cfg_name="${default_github_cfg_name}", # todo: actually this is not required here
         component_names=component_names,
+        codeowners_files=codeowners_files,
     )
     recipients = set(email_cfg.get('recipients', set()))
     recipients.update(component_recipients)
