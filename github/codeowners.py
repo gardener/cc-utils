@@ -20,8 +20,6 @@ from github.util import GitHubRepositoryHelper
 
 from util import check_type, existing_dir, not_none, warning
 
-# pylint: disable=no-member
-
 
 class CodeownersParser(object):
     '''
@@ -83,7 +81,6 @@ class CodeownersParser(object):
 
             # filter out empty strings (the empty string evaluates to False)
             yield from filter(bool, github_ids)
-# pylint: enable=no-member
 
 
 def _first(iterable):
