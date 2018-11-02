@@ -30,6 +30,11 @@ class CodeownersEnumerator(object):
     '''
     CODEOWNERS_PATHS = ('CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS')
 
+    def enumerate_single_file(self, file_path: str):
+        file_path = existing_file(file_path)
+        with open(file_path) as f:
+            yield from self._filter_codeowners_entries(f.readlines())
+
     def enumerate_local_repo(self, repo_dir: str):
         repo_dir = existing_dir(Path(repo_dir))
         if not repo_dir.joinpath('.git').is_dir():
