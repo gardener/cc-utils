@@ -170,7 +170,13 @@ def determine_mail_recipients(
         for src_dir in src_dirs:
             yield from enumerator.enumerate_local_repo(repo_dir=src_dir)
 
+    def enumerate_entries_from_codeowners_files(codeowners_files):
+        for codeowners_file in codeowners_files:
+            yield from enumerator.enumerate_single_file(codeowners_file)
+
     entries_and_resolvers = [(resolver, enumerate_entries_from_src_dirs(src_dirs))]
+
+    entries_and_resolvers += [(resolver, enumerate_entries_from_codeowners_files(codeowners_files))]
 
     entries_and_resolvers += [
         _codeowners_parser_from_component_name(
