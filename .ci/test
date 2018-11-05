@@ -2,11 +2,16 @@
 
 set -e
 
+if ! which pytest &>/dev/null; then
+  echo "pytest is required (install with pip(3) install pytest)"
+  exit 1
+fi
+
 # usage: $1: <src-dir>
 
 src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
 
-if python3 -m unittest discover --verbose --start-directory "${src_dir}" -p '*_test.py'; then
+if pytest "${src_dir}"; then
     echo 'Unittest executions succeeded'
     exit 0
 else
