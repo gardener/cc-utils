@@ -32,7 +32,7 @@ The following operations are performed:
 Example
 -------
 
-.. code-block::a yaml
+.. code-block:: yaml
 
   traits:
     version:
