@@ -10,7 +10,6 @@
 >
 <%
 from makoutil import indent_func
-from concourse.model.step import NotificationPolicy
 # xxx: for now, assume all repositories are from same github
 default_github_cfg_name = cfg_set.github().name()
 email_cfg = cfg_set.email()
@@ -41,7 +40,7 @@ print('Notification cfg: ${notification_cfg_name}')
 print('Triggering policy: ${triggering_policy}')
 
 if not should_notify(
-    NotificationTriggeringPolicy('${triggering_policy}'),
+    NotificationTriggeringPolicy('${triggering_policy.value}'),
     meta_vars=v,
 ):
     print('will not notify due to policy')
