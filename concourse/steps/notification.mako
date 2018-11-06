@@ -119,6 +119,7 @@ mailutil.notify(
 
 <%def name="notification_step_lib()">
 from concourse.model.traits.notifications import NotificationTriggeringPolicy
+from concourse.client import from_cfg, BuildStatus
 
 def meta_vars():
     v = {}
@@ -149,7 +150,6 @@ def job_url(v):
     ])
 
 def determine_previous_build_status(v):
-    from concourse.client import from_cfg, BuildStatus
     concourse_api = from_cfg(cfg_set.concourse(), team_name=v['build-team-name'])
     try:
       build_number = int(v['build-name'])
