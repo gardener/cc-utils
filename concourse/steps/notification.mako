@@ -36,30 +36,17 @@ from util import ctx
 cfg_factory = ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
-# determine previous build
-from concourse.client import from_cfg, BuildStatus
-concourse_api = from_cfg(cfg_set.concourse(), team_name=v['build-team-name'])
 
 print('Notification cfg: ${notification_cfg_name}')
 print('Triggering policy: ${triggering_policy}')
 
-try:
-  build_number = int(v['build-name'])
-  previous_build = str(build_number - 1)
-  previous_build = concourse_api.job_build(
-    pipeline_name=v['build-pipeline-name'],
-    job_name=v['build-job-name'],
-    build_name=previous_build
-  )
-  # assumption: current job failed
-  if previous_build.status() in (BuildStatus.FAILED, BuildStatus.ERRORED):
-    print('previous build was already broken - will not notify')
+if not should_notify(
+    NotificationTriggeringPolicy('${triggering_policy}'),
+    meta_vars=v,
+):
+    print('will not notify due to policy')
     sys.exit(0)
-except Exception as e:
-  if type(e) == SystemExit:
-    raise e
-  # in doubt, ensure notification is sent
-  traceback.print_exc()
+
 
 def retrieve_build_log():
     try:
@@ -132,6 +119,8 @@ mailutil.notify(
 </%def>
 
 <%def name="notification_step_lib()">
+from concourse.model.traits.notifications import NotificationTriggeringPolicy
+
 def meta_vars():
     v = {}
     for name in (
@@ -159,5 +148,43 @@ def job_url(v):
       'builds',
       v['build-name']
     ])
-# test
+
+def determine_previous_build_status(v):
+    from concourse.client import from_cfg, BuildStatus
+    concourse_api = from_cfg(cfg_set.concourse(), team_name=v['build-team-name'])
+    try:
+      build_number = int(v['build-name'])
+      previous_build = str(build_number - 1)
+      previous_build = concourse_api.job_build(
+        pipeline_name=v['build-pipeline-name'],
+        job_name=v['build-job-name'],
+        build_name=previous_build
+      )
+      return previous_build.status()
+    except Exception as e:
+      if type(e) == SystemExit:
+        raise e
+      # in doubt, ensure notification is sent
+      traceback.print_exc()
+      return None
+
+def should_notify(
+    triggering_policy,
+    meta_vars,
+    determine_previous_build_status=determine_previous_build_status,
+):
+    if triggering_policy == NotificationTriggeringPolicy.ONLY_FIRST:
+        previous_build_status = determine_previous_build_status(meta_vars)
+        if not previous_build_status:
+          print('failed to determine previous build status - will notify')
+          return True
+
+        # assumption: current job failed
+        if previous_build_status in (BuildStatus.FAILED, BuildStatus.ERRORED):
+          print('previous build was already broken - will not notify')
+          return False
+        return True
+    else:
+        raise NotImplementedError
+
 </%def>

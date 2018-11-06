@@ -8,9 +8,13 @@ from unittest.mock import MagicMock
 
 import test_utils
 
+from concourse.client import BuildStatus
 from concourse.steps import step_def, step_lib_def
 from concourse.model.step import PipelineStep
-from concourse.model.traits.notifications import NotificationCfgSet
+from concourse.model.traits.notifications import (
+    NotificationCfgSet,
+    NotificationTriggeringPolicy,
+)
 
 
 class NotificationStepTest(unittest.TestCase):
@@ -98,3 +102,23 @@ class NotificationStepLibTest(unittest.TestCase):
         result = examinee(v)
 
         self.assertEqual(result, 'f://x/teams/team/pipelines/pl/jobs/bjn/builds/bn')
+
+    def test_should_notify(self):
+        exec(self.render_step_lib())
+        examinee = vars()['should_notify']
+
+        # mock away `determine_previous_build_status` (previous build "succeeded"
+        build_status_mock = MagicMock(return_value=BuildStatus.SUCCEEDED)
+
+        assert examinee(
+                NotificationTriggeringPolicy.ONLY_FIRST,
+                meta_vars={},
+                determine_previous_build_status=build_status_mock,
+        )
+
+        build_status_mock = MagicMock(return_value=BuildStatus.FAILED)
+        assert not examinee(
+                NotificationTriggeringPolicy.ONLY_FIRST,
+                meta_vars={},
+                determine_previous_build_status=build_status_mock,
+        )
