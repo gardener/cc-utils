@@ -190,4 +190,26 @@ def should_notify(
     else:
         raise NotImplementedError
 
+def cfg_from_callback(
+    repo_root,
+    callback_path,
+):
+    import subprocess
+    import os
+    import tempfile
+    import util
+
+    tmp_file = tempfile.NamedTemporaryFile()
+    cb_env = os.environ.copy()
+    cb_env['REPO_ROOT'] = repo_root
+    cb_env['NOTIFY_CFG_OUT'] = tmp_file.name
+
+    subprocess.run(
+        [callback_path],
+        check=True,
+        env=cb_env,
+    )
+
+    return util.parse_yaml_file(tmp_file.name)
+
 </%def>

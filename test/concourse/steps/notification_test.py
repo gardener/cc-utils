@@ -1,4 +1,5 @@
 import os
+import stat
 import pathlib
 import sys
 import tempfile
@@ -144,3 +145,14 @@ class NotificationStepLibTest(unittest.TestCase):
                 meta_vars={},
                 determine_previous_build_status=build_status_mock,
         )
+
+    def test_cfg_from_callback(self):
+        exec(self.render_step_lib())
+        examinee = vars()['cfg_from_callback']
+
+        callback_file = os.path.join(self.tmp_dir.name, 'call_me')
+        with open(callback_file, 'w') as f:
+            f.write('#!/usr/bin/env sh\necho "foo: 42">"${NOTIFY_CFG_OUT}"')
+        os.chmod(callback_file, stat.S_IEXEC | stat.S_IREAD)
+
+        assert examinee(repo_root=self.tmp_dir.name, callback_path=callback_file) == {'foo':42}
