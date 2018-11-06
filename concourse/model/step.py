@@ -29,34 +29,6 @@ from concourse.model.base import (
 )
 
 
-class NotificationPolicy(enum.Enum):
-    DEFAULT = 'default' # send e-mail with default contents
-
-
-NOTIFICATION_ATTRS = (
-    AttributeSpec.optional(
-        name='on_error_policy',
-        default=NotificationPolicy.DEFAULT.value,
-        doc='configures the error notification policy',
-        type=NotificationPolicy,
-    ),
-)
-
-
-class NotifictionCfg(ModelBase):
-    def _attribute_specs(self):
-        return NOTIFICATION_ATTRS
-
-    def _defaults_dict(self):
-        return AttributeSpec.defaults_dict(NOTIFICATION_ATTRS)
-
-    def _optional_attributes(self):
-        return set(AttributeSpec.optional_attr_names(NOTIFICATION_ATTRS))
-
-    def on_error_policy(self):
-        return NotificationPolicy(self.raw['on_error_policy'])
-
-
 def attrs(pipeline_step):
     return (
         AttributeSpec.optional(
@@ -220,10 +192,6 @@ class PipelineStep(ModelBase):
     def notifications_cfg(self):
         # injected by notifications trait
         return self._notifications_cfg
-
-    def notification_cfg(self) -> NotifictionCfg:
-        # XXX added for temporary backwards compatibility
-        return self.notifications_cfg()
 
     def image(self):
         return self.raw['image']

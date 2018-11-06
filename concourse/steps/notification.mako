@@ -14,7 +14,7 @@ from makoutil import indent_func
 default_github_cfg_name = cfg_set.github().name()
 email_cfg = cfg_set.email()
 
-notification_cfg = job_step.notification_cfg()
+notification_cfg = job_step.notifications_cfg()
 notification_cfg_name = notification_cfg.name()
 on_error_cfg = notification_cfg.on_error()
 triggering_policy = on_error_cfg.triggering_policy()
