@@ -155,4 +155,8 @@ class NotificationStepLibTest(unittest.TestCase):
             f.write('#!/usr/bin/env sh\necho "foo: 42">"${NOTIFY_CFG_OUT}"')
         os.chmod(callback_file, stat.S_IEXEC | stat.S_IREAD)
 
-        assert examinee(repo_root=self.tmp_dir.name, callback_path=callback_file) == {'foo':42}
+        assert examinee(
+            repo_root=self.tmp_dir.name,
+            callback_path=callback_file,
+            effective_cfg_file='no-file-yet',
+        ) == {'foo':42}

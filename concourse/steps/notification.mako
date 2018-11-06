@@ -193,6 +193,7 @@ def should_notify(
 def cfg_from_callback(
     repo_root,
     callback_path,
+    effective_cfg_file,
 ):
     import subprocess
     import os
@@ -203,6 +204,7 @@ def cfg_from_callback(
     cb_env = os.environ.copy()
     cb_env['REPO_ROOT'] = repo_root
     cb_env['NOTIFY_CFG_OUT'] = tmp_file.name
+    cb_env['EFFECTIVE_CFG'] = effective_cfg_file
 
     subprocess.run(
         [callback_path],
