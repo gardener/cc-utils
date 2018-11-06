@@ -39,3 +39,4 @@ Example
       preprocess: 'finalize' # recommended
     release:
       nextversion: 'bump_minor'
+      release_callback: 'release_callback' # relative to main repository root

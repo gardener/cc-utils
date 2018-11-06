@@ -193,7 +193,9 @@
 <td>no</td>
 <td>None</td>
 <td>str</td>
-<td>a callback to invoke when creating a release commit</td>
+<td>an optional callback that is called during release commit creation. The callback is passed
+the absolute path to the main repository’s work tree via environment variable <code class="code docutils literal notranslate"><span class="pre">REPO_DIR</span></code>.
+Any changes left inside the worktree are added to the resulting release commit.</td>
 </tr>
 <tr class="row-even"><td>rebase_before_release</td>
 <td>no</td>
@@ -238,6 +240,7 @@ to <code class="code docutils literal notranslate"><span class="pre">finalize</s
     <span class="l l-Scalar l-Scalar-Plain">preprocess</span><span class="p p-Indicator">:</span> <span class="s">&#39;finalize&#39;</span> <span class="c1"># recommended</span>
   <span class="l l-Scalar l-Scalar-Plain">release</span><span class="p p-Indicator">:</span>
     <span class="l l-Scalar l-Scalar-Plain">nextversion</span><span class="p p-Indicator">:</span> <span class="s">&#39;bump_minor&#39;</span>
+    <span class="l l-Scalar l-Scalar-Plain">release_callback</span><span class="p p-Indicator">:</span> <span class="s">&#39;release_callback&#39;</span> <span class="c1"># relative to main repository root</span>
 </pre></div>
 </div>
 </div>
