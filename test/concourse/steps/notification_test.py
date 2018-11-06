@@ -10,6 +10,7 @@ import test_utils
 
 from concourse.steps import step_def, step_lib_def
 from concourse.model.step import PipelineStep
+from concourse.model.traits.notifications import NotificationCfgSet
 
 
 class NotificationStepTest(unittest.TestCase):
@@ -22,6 +23,7 @@ class NotificationStepTest(unittest.TestCase):
         os.mkdir(self.on_error_dir)
 
         self.job_step = PipelineStep('step1', raw_dict={})
+        self.job_step._notifications_cfg = NotificationCfgSet('default', {})
         self.cfg_set = MagicMock()
         self.github_cfg = MagicMock()
         self.github_cfg.name = MagicMock(return_value='github_cfg')

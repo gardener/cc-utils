@@ -78,10 +78,13 @@ def attrs(pipeline_step):
             ''',
         ),
         AttributeSpec.optional(
-            name='notify',
-            default={'on_error_policy': 'default'},
-            doc='''Configures build notification policies''',
-            type=NotifictionCfg,
+            name='notifications_cfg',
+            default='default',
+            doc='''
+            Configures build notification policies (see
+            :ref:`notifications trait <trait-notifications>`)
+            ''',
+            type=str,
         ),
         AttributeSpec.optional(
             name='image',
@@ -211,8 +214,16 @@ class PipelineStep(ModelBase):
         '''
         return self._script_type
 
+    def notifications_cfg_name(self):
+        return self.raw['notifications_cfg']
+
+    def notifications_cfg(self):
+        # injected by notifications trait
+        return self._notifications_cfg
+
     def notification_cfg(self) -> NotifictionCfg:
-        return NotifictionCfg(raw_dict=self.raw['notify'])
+        # XXX added for temporary backwards compatibility
+        return self.notifications_cfg()
 
     def image(self):
         return self.raw['image']

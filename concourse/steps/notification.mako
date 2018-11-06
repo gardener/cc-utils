@@ -16,7 +16,9 @@ default_github_cfg_name = cfg_set.github().name()
 email_cfg = cfg_set.email()
 
 notification_cfg = job_step.notification_cfg()
-on_error_policy = notification_cfg.on_error_policy()
+notification_cfg_name = notification_cfg.name()
+on_error_cfg = notification_cfg.on_error()
+triggering_policy = on_error_cfg.triggering_policy()
 on_error_dir = job_step.output('on_error_dir')
 %>
 import sys
@@ -38,7 +40,8 @@ cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 from concourse.client import from_cfg, BuildStatus
 concourse_api = from_cfg(cfg_set.concourse(), team_name=v['build-team-name'])
 
-print('Error notification policy: ${on_error_policy.name}')
+print('Notification cfg: ${notification_cfg_name}')
+print('Triggering policy: ${triggering_policy}')
 
 try:
   build_number = int(v['build-name'])

@@ -159,6 +159,8 @@ class DefinitionFactory(object):
 
         if 'options' not in raw_dict['traits']:
             raw_dict['traits']['options'] = {}
+        if 'notifications' not in raw_dict['traits']:
+            raw_dict['traits']['notifications'] = {}
 
         traits_args = normalise_to_dict(raw_dict['traits'])
         traits_dict = {
