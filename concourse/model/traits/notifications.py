@@ -56,6 +56,18 @@ NOTIFICATION_CFG_ATTRS = (
         doc='whether to send email notifications',
         type=typing.List[str],
     ),
+    AttributeSpec.optional(
+        name='cfg_callback',
+        default=['on_error_dir', 'meta'],
+        doc='''
+        an optional callback (relative to main repository root). Called as subprocess with
+        an environment variables:
+
+        - `REPO_ROOT`: absolute path to main repository
+        - `NOTIFY_CFG_OUT`: absolute path to write notify.cfg to
+        ''',
+        type=str,
+    ),
 )
 
 
@@ -81,6 +93,9 @@ class NotificationCfg(ModelBase):
 
     def inputs(self):
         return self.raw.get('inputs')
+
+    def cfg_callback(self):
+        return self.raw.get('cfg_callback')
 
 
 NOTIFICATION_CFG_SET_ATTRS = (
