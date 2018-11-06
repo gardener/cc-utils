@@ -32,7 +32,11 @@ ATTRIBUTES = (
     AttributeSpec.optional(
         name='release_callback',
         default=None,
-        doc='a callback to invoke when creating a release commit',
+        doc='''
+        an optional callback that is called during release commit creation. The callback is passed
+        the absolute path to the main repository's work tree via environment variable `REPO_DIR`.
+        Any changes left inside the worktree are added to the resulting release commit.
+        ''',
     ),
     AttributeSpec.optional(
         name='rebase_before_release',
