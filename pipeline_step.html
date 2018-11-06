@@ -197,11 +197,12 @@ is calculated relative to <code class="code docutils literal notranslate"><span 
 - list of scalar values -&gt; used verbatim as ARGV</p>
 </td>
 </tr>
-<tr class="row-even"><td>notify</td>
+<tr class="row-even"><td>notifications_cfg</td>
 <td>no</td>
-<td>{‘on_error_policy’: ‘default’}</td>
-<td>NotifictionCfg</td>
-<td>Configures build notification policies</td>
+<td>default</td>
+<td>str</td>
+<td>Configures build notification policies (see
+<a class="reference internal" href="traits/notifications.html#trait-notifications"><span class="std std-ref">notifications trait</span></a>)</td>
 </tr>
 <tr class="row-odd"><td>image</td>
 <td>no</td>
@@ -268,25 +269,6 @@ An instance of the current pipeline_model is accessible through the
 <code class="code docutils literal notranslate"><span class="pre">pipeline_descriptor</span></code> symbol.
 The evaluation result is exposed to this build step via the specified environment
 variable.</td>
-</tr>
-</tbody>
-</table>
-<h2 class="section-subtitle"><span class="section-subtitle">notify Attributes</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">required?</th>
-<th class="head">default</th>
-<th class="head">type</th>
-<th class="head">explanation</th>
-</tr>
-</thead>
-<tbody valign="top">
-<tr class="row-even"><td>on_error_policy</td>
-<td>no</td>
-<td>default</td>
-<td>NotificationPolicy</td>
-<td>configures the error notification policy</td>
 </tr>
 </tbody>
 </table>
