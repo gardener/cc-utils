@@ -172,7 +172,11 @@ def should_notify(
     meta_vars,
     determine_previous_build_status=determine_previous_build_status,
 ):
-    if triggering_policy == NotificationTriggeringPolicy.ONLY_FIRST:
+    if triggering_policy == NotificationTriggeringPolicy.ALWAYS:
+        return True
+    elif triggering_policy == NotificationTriggeringPolicy.NEVER:
+        return False
+    elif triggering_policy == NotificationTriggeringPolicy.ONLY_FIRST:
         previous_build_status = determine_previous_build_status(meta_vars)
         if not previous_build_status:
           print('failed to determine previous build status - will notify')

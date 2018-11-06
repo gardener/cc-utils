@@ -110,15 +110,37 @@ class NotificationStepLibTest(unittest.TestCase):
         # mock away `determine_previous_build_status` (previous build "succeeded"
         build_status_mock = MagicMock(return_value=BuildStatus.SUCCEEDED)
 
+        # test policies in case previous build succeeded
         assert examinee(
                 NotificationTriggeringPolicy.ONLY_FIRST,
                 meta_vars={},
                 determine_previous_build_status=build_status_mock,
         )
+        assert examinee(
+                NotificationTriggeringPolicy.ALWAYS,
+                meta_vars={},
+                determine_previous_build_status=build_status_mock,
+        )
+        assert not examinee(
+                NotificationTriggeringPolicy.NEVER,
+                meta_vars={},
+                determine_previous_build_status=build_status_mock,
+        )
 
+        # test policies in case previous build failed
         build_status_mock = MagicMock(return_value=BuildStatus.FAILED)
         assert not examinee(
                 NotificationTriggeringPolicy.ONLY_FIRST,
+                meta_vars={},
+                determine_previous_build_status=build_status_mock,
+        )
+        assert examinee(
+                NotificationTriggeringPolicy.ALWAYS,
+                meta_vars={},
+                determine_previous_build_status=build_status_mock,
+        )
+        assert not examinee(
+                NotificationTriggeringPolicy.NEVER,
                 meta_vars={},
                 determine_previous_build_status=build_status_mock,
         )
