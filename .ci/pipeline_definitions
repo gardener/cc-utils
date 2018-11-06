@@ -14,6 +14,13 @@ cc-utils:
       steps:
         generate_documentation:
           publish_to: ['gh_pages']
+
+      traits:
+        notifications:
+          default:
+            on_error:
+              triggering_policy: 'only_first'
+
     pull_request:
       traits:
         pull-request:
