@@ -121,7 +121,7 @@ class NotificationsTrait(Trait):
         return AttributeSpec.defaults_dict(ATTRIBUTES)
 
     def _optional_attributes(self):
-        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
+        return set(self.raw.keys())
 
     def _children(self):
         return [NotificationCfgSet(name, raw_dict) for name, raw_dict in self.raw.items()]
