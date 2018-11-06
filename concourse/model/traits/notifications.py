@@ -23,8 +23,8 @@ from concourse.model.base import (
   AttributeSpec,
   Trait,
   TraitTransformer,
-  ModelBase,
   ScriptType,
+  ModelBase,
 )
 from model.base import (
   NamedModelElement,
@@ -50,12 +50,25 @@ NOTIFICATION_CFG_ATTRS = (
         doc='whether to send email notifications',
         type=bool,
     ),
+    AttributeSpec.optional(
+        name='inputs',
+        default=['on_error_dir', 'meta'],
+        doc='whether to send email notifications',
+        type=typing.List[str],
+    ),
 )
 
 
 class NotificationCfg(ModelBase):
+    def __init__(self, raw_dict, *args, **kwargs):
+        super().__init__(raw_dict=raw_dict, *args, **kwargs)
+        self._apply_defaults(raw_dict=raw_dict)
+
     def _attribute_specs(self):
         return NOTIFICATION_CFG_ATTRS
+
+    def _defaults_dict(self):
+        return AttributeSpec.defaults_dict(self._attribute_specs())
 
     def _optional_attributes(self):
         return set(AttributeSpec.optional_attr_names(self._attribute_specs()))
@@ -65,6 +78,9 @@ class NotificationCfg(ModelBase):
 
     def should_send_email(self):
         return bool(self.raw.get('email'))
+
+    def inputs(self):
+        return self.raw.get('inputs')
 
 
 NOTIFICATION_CFG_SET_ATTRS = (
