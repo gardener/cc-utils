@@ -31,7 +31,7 @@ echo "out-dir: ${out_dir}"
 
 export SOURCE_DIR="${cc_utils_dir}/doc"
 export OUT_DIR="${out_dir}"
-export PYTHON_PATH="${cc_utils_dir}"
+export PYTHONPATH="${cc_utils_dir}"
 sphinx-build -E -a "${SOURCE_DIR}" "${OUT_DIR}"
 
 # disable github's theme
