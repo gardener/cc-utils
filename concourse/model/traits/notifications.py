@@ -33,6 +33,8 @@ from model.base import (
 
 class NotificationTriggeringPolicy(enum.Enum):
     ONLY_FIRST = 'only_first'
+    ALWAYS = 'always'
+    NEVER = 'never'
 
 
 NOTIFICATION_CFG_ATTRS = (
