@@ -46,13 +46,13 @@ class UpgradePullRequestTest(unittest.TestCase):
             to_ref=pm.WebDependencyReference.create(name='dep_red', version='2.0.0'),
         )
         # error: mismatch in dependency name
-        with self.assertRaisesRegexp(ValueError, 'names do not match'):
+        with self.assertRaisesRegex(ValueError, 'names do not match'):
             create_upgrade_pr(
                 from_ref=pm.GenericDependencyReference.create(name='foo', version='1.2.3'),
                 to_ref=pm.GenericDependencyReference.create(name='bar', version='1.2.3'),
             )
         # error: mismatch in dependency types
-        with self.assertRaisesRegexp(ValueError, 'type names do not match'):
+        with self.assertRaisesRegex(ValueError, 'type names do not match'):
             create_upgrade_pr(
                 from_ref=pm.GenericDependencyReference.create(name='foo', version='1.2.3'),
                 to_ref=pm.WebDependencyReference.create(name='foo', version='1.2.3'),
