@@ -152,6 +152,18 @@ class ComponentResolver(ResolverBase):
         latest_version = version.find_latest_version(repo_helper.release_versions())
         return latest_version
 
+    def greatest_release_before(self, component_name: str, version: str):
+        component_reference = ComponentReference.create(name=component_name, version=version)
+        repo_helper = self._repository_helper(component_reference)
+        version = semver.parse_version_info(version)
+
+        versions = sorted(repo_helper.release_versions()) # greatest version comes last
+        versions = [v for v in versions if v < version]
+
+        if len(versions) == 0:
+            return None # no release before current was found
+        return versions[-1]
+
 
 def merge_products(left_product, right_product):
     not_none(left_product)
