@@ -14,16 +14,23 @@
 # limitations under the License.
 
 import unittest
+import pytest
 
 import product.util as util
 import product.model as model
 
 # functions under test
 greatest_crefs = util.greatest_references
+diff_components = util.diff_components
 
 
 def component_ref(name, version, prefix='gh.com/o/'):
     return model.ComponentReference.create(name=prefix + name, version=version)
+
+
+@pytest.fixture
+def cref():
+    return component_ref
 
 
 class ProductUtilTest(unittest.TestCase):
@@ -56,3 +63,26 @@ class ProductUtilTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             non_component_element = 42 # int is not of type product.model.ComponentReference
             next(greatest_crefs((self.cref1, non_component_element)))
+
+
+def test_diff_components(cref):
+    left_components = (
+        cref('c1', '1.2.3'),
+        cref('c2', '1.2.3'),
+        cref('c3', '1.2.3'),
+    )
+    right_components = (
+        cref('c1', '2.2.3'), # version changed
+        cref('c2', '1.2.3'), # no change
+        #cref('c3', '1.2.3'), # missing on right
+        cref('c4', '1.2.3'), # added on right
+    )
+
+    result = diff_components(left_components, right_components)
+
+    assert result.crefs_only_left == {cref('c3', '1.2.3'), cref('c1', '1.2.3')}
+    assert result.crefs_only_right == {cref('c4', '1.2.3'), cref('c1', '2.2.3')}
+    assert result.crefpairs_version_changed == {(cref('c1', '1.2.3'), cref('c1', '2.2.3'))}
+    assert result.names_only_left == {'gh.com/o/c3'}
+    assert result.names_only_right == {'gh.com/o/c4'}
+    assert result.names_version_changed == {'gh.com/o/c1'}

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from copy import deepcopy
+import collections
 import github3.exceptions
 import functools
 import itertools
@@ -200,6 +201,30 @@ def diff_products(left_product, right_product, ignore_component_names=()):
         c for c in right_product.components() if c.name() not in ignore_component_names
     }
 
+    return diff_components(
+        left_components=left_components,
+        right_components=right_components,
+        ignore_component_names=ignore_component_names,
+    )
+
+
+ComponentDiff = collections.namedtuple(
+    'ComponentDiff',
+    [
+        'crefs_only_left',
+        'crefs_only_right',
+        'crefpairs_version_changed',
+        'names_only_left',
+        'names_only_right',
+        'names_version_changed',
+    ]
+)
+
+
+def diff_components(left_components, right_components, ignore_component_names=()) -> ComponentDiff:
+    left_components = set(left_components)
+    right_components = set(right_components)
+
     if left_components == right_components:
         return None # no diff
 
@@ -216,12 +241,24 @@ def diff_products(left_product, right_product, ignore_component_names=()):
         .map(functools.partial(find_changed_component, components=right_components)) \
         .filter(lambda cs: cs[1] is not None) \
         .as_list()
+    # pairs of crefs (left-version:right-version)
 
-    return {
-        'components_only_left': components_only_left,
-        'components_only_right': components_only_right,
-        'components_with_version_changes': components_with_changed_versions,
-    }
+    left_names = set(map(lambda c: c.name(), components_only_left))
+    right_names = set(map(lambda c: c.name(), components_only_right))
+    names_version_changed = set(map(lambda cp: cp[0].name(), components_with_changed_versions))
+
+    both_names = left_names & right_names
+    left_names -= both_names
+    right_names -= both_names
+
+    return ComponentDiff(
+        crefs_only_left=components_only_left,
+        crefs_only_right=components_only_right,
+        crefpairs_version_changed=set(components_with_changed_versions),
+        names_only_left=left_names,
+        names_only_right=right_names,
+        names_version_changed=names_version_changed,
+    )
 
 
 def greatest_references(references: typing.Iterable[DependencyBase]):
