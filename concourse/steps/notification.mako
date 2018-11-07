@@ -27,14 +27,15 @@ import traceback
 import util
 import mailutil
 
+from util import ctx
+cfg_factory = ctx().cfg_factory()
+cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
+
 ${notification_step_lib()}
 
 v = meta_vars()
 concourse_api = from_cfg(cfg_set.concourse(), team_name=v['build-team-name'])
 
-from util import ctx
-cfg_factory = ctx().cfg_factory()
-cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
 
 print('Notification cfg: ${notification_cfg_name}')
