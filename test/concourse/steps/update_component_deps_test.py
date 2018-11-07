@@ -2,10 +2,12 @@ import tempfile
 import unittest
 import os
 import pathlib
+import json
 
 import test_utils
 
 from concourse.steps import step_def
+from concourse.steps.update_component_deps import current_product_descriptor
 import concourse.model.traits.component_descriptor as component_descriptor
 
 
@@ -39,3 +41,10 @@ class ComponentDescriptorStepTest(unittest.TestCase):
 
         # try to compile (-> basic syntax check)
         return compile(step_snippet, 'component_descriptor.mako', 'exec')
+
+
+def test_current_product_descriptor(tmpdir):
+    os.environ['COMPONENT_DESCRIPTOR_DIR'] = str(tmpdir)
+    tmpdir.join('component_descriptor').write('{}')
+
+    assert current_product_descriptor().raw == {'components': []}

@@ -3,6 +3,7 @@
   filter="indent_func(indent),trim"
 >
 <%
+from concourse.steps import step_lib
 from makoutil import indent_func
 main_repo = job_variant.main_repository()
 repo_name = main_repo.logical_name().upper()
@@ -27,15 +28,12 @@ from github.release_notes.util import ReleaseNotes
 from github.util import GitHubRepositoryHelper
 from util import check_env
 
+${step_lib('update_component_deps')}
 
 # must point to this repository's root directory
 REPO_ROOT = pathlib.Path(check_env('${repo_name}_PATH')).absolute()
 REPO_BRANCH = check_env('${repo_name}_BRANCH')
 REPO_OWNER, REPO_NAME = check_env('${repo_name}_GITHUB_REPO_OWNER_AND_NAME').split('/')
-
-# must point to component_descriptor directory
-COMPONENT_DESCRIPTOR_DIR = pathlib.Path(check_env('COMPONENT_DESCRIPTOR_DIR')).absolute()
-COMPONENT_DESCRIPTOR = COMPONENT_DESCRIPTOR_DIR.joinpath('component_descriptor')
 
 
 cfg_factory = util.ctx().cfg_factory()
@@ -48,11 +46,6 @@ component_descriptor_resolver = product.util.ComponentDescriptorResolver(cfg_fac
 
 # indicates whether or not an upstream component was defined as a reference
 UPGRADE_TO_UPSTREAM = 'UPSTREAM_COMPONENT_NAME' in os.environ
-
-
-def current_product_descriptor():
-    raw = util.parse_yaml_file(COMPONENT_DESCRIPTOR)
-    return product.model.Product.from_dict(raw)
 
 
 def _component(product_descriptor, component_name):
