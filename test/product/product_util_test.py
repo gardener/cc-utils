@@ -25,6 +25,7 @@ greatest_crefs = util.greatest_references
 def component_ref(name, version, prefix='gh.com/o/'):
     return model.ComponentReference.create(name=prefix + name, version=version)
 
+
 class ProductUtilTest(unittest.TestCase):
     def setUp(self):
         self.cref1 = component_ref(name='c1', version='1.2.3')
