@@ -100,7 +100,7 @@ add_dependencies_cmd = ' '.join((
   '--descriptor-src-file', base_descriptor_file,
   '--descriptor-out-file', base_descriptor_file,
   '--component-version', effective_version,
-  '--component-name', component_name',
+  '--component-name', component_name,
 ))
 subproc_env['ADD_DEPENDENCIES_CMD'] = add_dependencies_cmd
 
