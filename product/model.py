@@ -194,6 +194,9 @@ class ComponentReference(DependencyBase):
     def type_name(self):
         return 'component'
 
+    def version(self):
+        return self.raw['version']
+
     def github_host(self):
         return self._componentName.github_host()
 
@@ -220,6 +223,9 @@ class ComponentReference(DependencyBase):
 
     def __hash__(self):
         return hash((self.name(), self.version()))
+
+    def __repr__(self):
+        return f'ComponentReference: {self.name()}:{self.version()}'
 
 
 class ContainerImageReference(DependencyBase):
