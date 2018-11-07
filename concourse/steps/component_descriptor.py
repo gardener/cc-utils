@@ -20,6 +20,8 @@ from product.util import (
     diff_components,
 )
 
+import yaml
+
 
 def component_diff_since_last_release(
     component_name,
@@ -54,3 +56,13 @@ def component_diff_since_last_release(
         right_components=last_released_component.dependencies().components(),
     )
     return diff
+
+
+def write_component_diff(component_diff, out_path):
+    # let us write only a subset for now, namely component names with changed versions
+    diff_dict = {
+        'component_names_with_version_changes': list(component_diff.names_version_changed),
+    }
+
+    with open(out_path, 'w') as f:
+        yaml.dump(diff_dict, f)

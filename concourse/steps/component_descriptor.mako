@@ -139,4 +139,10 @@ bom_diff = component_diff_since_last_release(
 )
 if not bom_diff:
   info('no differences in referenced components found since last release')
+else:
+  info('component dependencies diff was written to dependencies.diff')
+  write_component_diff(
+    component_diff=bom_diff,
+    out_path=os.path.join(descriptor_out_dir, 'dependencies.diff'),
+  )
 </%def>
