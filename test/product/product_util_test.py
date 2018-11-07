@@ -22,10 +22,13 @@ import product.model as model
 greatest_crefs = util.greatest_references
 
 
+def component_ref(name, version, prefix='gh.com/o/'):
+    return model.ComponentReference.create(name=prefix + name, version=version)
+
 class ProductUtilTest(unittest.TestCase):
     def setUp(self):
-        self.cref1 = model.ComponentReference.create(name='gh.com/o/c1', version='1.2.3')
-        self.cref2 = model.ComponentReference.create(name='gh.com/o/c2', version='2.2.3')
+        self.cref1 = component_ref(name='c1', version='1.2.3')
+        self.cref2 = component_ref(name='c2', version='2.2.3')
 
     def test_greatest_references(self):
         # trivial case: single cref
