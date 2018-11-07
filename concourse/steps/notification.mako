@@ -37,9 +37,9 @@ v = meta_vars()
 concourse_api = from_cfg(cfg_set.concourse(), team_name=v['build-team-name'])
 
 
-
 print('Notification cfg: ${notification_cfg_name}')
 print('Triggering policy: ${triggering_policy}')
+print("Will notify: ${on_error_cfg.recipients()}")
 
 if not should_notify(
     NotificationTriggeringPolicy('${triggering_policy.value}'),
@@ -69,12 +69,22 @@ if os.path.isfile(notify_file):
   print(notify_cfg)
 else:
   email_cfg = {
-    'recipients': None,
-    'component_name_recipients': None,
+    'recipients': set(),
+    'component_name_recipients': set(),
     'codeowners_files': None,
     'mail_body': None,
   }
   notify_cfg = {'email': email_cfg}
+
+if 'component_diff_owners' in ${on_error_cfg.recipients()}:
+  util.info('adding main recipients from component diff since last release')
+  component_diff_path = os.path.join('component_descriptor', 'dependencies.diff')
+  if not os.path.isfile(component_diff_path):
+    util.info('no component_diff found at: ' + str(component_diff_path))
+  else:
+    cdiff = util.parse_yaml_file(component_diff_path)
+    comp_names = cdiff.get('component_names_with_version_changes', set())
+    email_cfg['component_name_recipients'].update(comp_names)
 
 def default_mail_recipients():
   recipients = set()
