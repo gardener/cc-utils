@@ -141,8 +141,11 @@ if not bom_diff:
   info('no differences in referenced components found since last release')
 else:
   info('component dependencies diff was written to dependencies.diff')
+  dependencies_path = os.path.join(descriptor_out_dir, 'dependencies.diff')
   write_component_diff(
     component_diff=bom_diff,
-    out_path=os.path.join(descriptor_out_dir, 'dependencies.diff'),
+    out_path=dependencies_path,
   )
+  with open(dependencies_path) as f:
+    print(f.read())
 </%def>
