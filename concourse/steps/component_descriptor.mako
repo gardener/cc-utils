@@ -130,4 +130,13 @@ print(descriptor_str)
 with open(descriptor_path, 'w') as f:
   f.write(descriptor_str)
 
+# determine "bom-diff" (changed component references)
+bom_diff = component_diff_since_last_release(
+    component_name=component_name,
+    component_version=effective_version,
+    component_descriptor=descriptor,
+    cfg_factory=cfg_factory,
+)
+if not bom_diff:
+  info('no differences in referenced components found since last release')
 </%def>
