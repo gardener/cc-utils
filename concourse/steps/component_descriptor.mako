@@ -28,6 +28,8 @@ version_file_path = os.path.join(
 with open(version_file_path) as f:
   effective_version = f.read().strip()
 
+component_name = '${descriptor_trait.component_name()}'
+
 # create base descriptor filled with default values
 base_descriptor = Product()
 component = Component.create(
@@ -84,7 +86,7 @@ subproc_env = os.environ.copy()
 subproc_env['${main_repo_path_env_var}'] = main_repo_path
 subproc_env['BASE_DEFINITION_PATH'] = base_descriptor_file
 subproc_env['COMPONENT_DESCRIPTOR_PATH'] = descriptor_path
-subproc_env['COMPONENT_NAME'] = '${descriptor_trait.component_name()}'
+subproc_env['COMPONENT_NAME'] = component_name
 subproc_env['COMPONENT_VERSION'] = effective_version
 
 # pass predefined command to add dependencies for convenience purposes
@@ -95,7 +97,7 @@ add_dependencies_cmd = ' '.join((
   '--descriptor-src-file', base_descriptor_file,
   '--descriptor-out-file', base_descriptor_file,
   '--component-version', effective_version,
-  '--component-name', '${descriptor_trait.component_name()}',
+  '--component-name', component_name',
 ))
 subproc_env['ADD_DEPENDENCIES_CMD'] = add_dependencies_cmd
 
