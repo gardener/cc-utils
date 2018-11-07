@@ -77,14 +77,15 @@ else:
   notify_cfg = {'email': email_cfg}
 
 if 'component_diff_owners' in ${on_error_cfg.recipients()}:
-  util.info('adding main recipients from component diff since last release')
+  util.info('adding mail recipients from component diff since last release')
   component_diff_path = os.path.join('component_descriptor_dir', 'dependencies.diff')
   if not os.path.isfile(component_diff_path):
     util.info('no component_diff found at: ' + str(component_diff_path))
   else:
     cdiff = util.parse_yaml_file(component_diff_path)
     comp_names = cdiff.get('component_names_with_version_changes', set())
-    email_cfg['component_name_recipients'].update(comp_names)
+    existing_comp_names = set(email_cfg['component_name_recipients'])
+    email_cfg['component_name_recipients'] = existing_comp_names + comp_names
 
 def default_mail_recipients():
   recipients = set()
