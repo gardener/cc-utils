@@ -19,7 +19,6 @@ notification_cfg_name = notification_cfg.name()
 on_error_cfg = notification_cfg.on_error()
 triggering_policy = on_error_cfg.triggering_policy()
 on_error_dir = job_step.output('on_error_dir')
-print("Will notify: + " +  str(on_error_cfg.recipients()))
 %>
 import sys
 import os
