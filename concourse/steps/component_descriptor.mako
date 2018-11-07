@@ -4,6 +4,7 @@
 >
 <%
 from makoutil import indent_func
+from concourse.steps import step_lib
 descriptor_trait = job_variant.trait('component_descriptor')
 main_repo = job_variant.main_repository()
 main_repo_path_env_var = main_repo.logical_name().replace('-', '_').upper() + '_PATH'
@@ -19,6 +20,8 @@ import yaml
 from product.model import Product, Component, ContainerImage
 from product.util import ComponentDescriptorResolver
 from util import info, fail, parse_yaml_file, ctx
+
+${step_lib('component_descriptor')}
 
 # retrieve effective version
 version_file_path = os.path.join(
