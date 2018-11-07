@@ -40,3 +40,9 @@ def step_lib_def(name):
     template = step_template(name)
 
     return template.get_def(name + '_step_lib').render
+
+
+def step_lib(name):
+    module_file = os.path.join(steps_dir, name + '.py')
+    with open(module_file) as f:
+        return f.read()
