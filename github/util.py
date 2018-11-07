@@ -166,7 +166,7 @@ class UpgradePullRequest(object):
 
 
 class PullRequestUtil(RepositoryHelperBase):
-    PR_TITLE_PATTERN = re.compile(r'^\[ci:(.*):(.*):(.*)->(.*)\]$')
+    PR_TITLE_PATTERN = re.compile(r'^\[ci:(\S*):(\S*):(\S*)->(\S*)\]$')
 
     @staticmethod
     def calculate_pr_title(
