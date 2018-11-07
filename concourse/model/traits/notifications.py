@@ -57,6 +57,12 @@ NOTIFICATION_CFG_ATTRS = (
         type=typing.List[str],
     ),
     AttributeSpec.optional(
+        name='recipients',
+        default=['committers'],
+        doc='whom to notify',
+        type=typing.List[str],
+    ),
+    AttributeSpec.optional(
         name='cfg_callback',
         default=['on_error_dir', 'meta'],
         doc='''
@@ -93,6 +99,9 @@ class NotificationCfg(ModelBase):
 
     def inputs(self):
         return self.raw.get('inputs')
+
+    def recipients(self):
+        return set(self.raw.get('recipients'))
 
     def cfg_callback(self):
         return self.raw.get('cfg_callback')
