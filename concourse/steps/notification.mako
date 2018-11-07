@@ -30,6 +30,7 @@ import mailutil
 ${notification_step_lib()}
 
 v = meta_vars()
+concourse_api = from_cfg(cfg_set.concourse(), team_name=v['build-team-name'])
 
 from util import ctx
 cfg_factory = ctx().cfg_factory()
@@ -47,7 +48,7 @@ if not should_notify(
     sys.exit(0)
 
 
-def retrieve_build_log():
+def retrieve_build_log(concourse_api):
     try:
       build_id = v['build-id']
       task_id = concourse_api.build_plan(build_id=build_id).task_id(task_name='${job_step.name}')
@@ -103,7 +104,7 @@ def retrieve_component_name_recipients(email_cfg):
 if not email_cfg.get('recipients'):
   email_cfg['recipients'] = default_mail_recipients()
 if not email_cfg.get('mail_body'):
-  email_cfg['mail_body'] = retrieve_build_log()
+  email_cfg['mail_body'] = retrieve_build_log(concourse_api=concourse_api)
 retrieve_component_name_recipients(email_cfg)
 
 
