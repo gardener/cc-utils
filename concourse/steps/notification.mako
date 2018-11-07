@@ -85,7 +85,7 @@ if 'component_diff_owners' in ${on_error_cfg.recipients()}:
     cdiff = util.parse_yaml_file(component_diff_path)
     comp_names = cdiff.get('component_names_with_version_changes', set())
     existing_comp_names = set(email_cfg['component_name_recipients'])
-    email_cfg['component_name_recipients'] = existing_comp_names + set(comp_names)
+    email_cfg['component_name_recipients'] = existing_comp_names | set(comp_names)
 
 def default_mail_recipients():
   recipients = set()
