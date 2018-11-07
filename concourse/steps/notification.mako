@@ -19,6 +19,7 @@ notification_cfg_name = notification_cfg.name()
 on_error_cfg = notification_cfg.on_error()
 triggering_policy = on_error_cfg.triggering_policy()
 on_error_dir = job_step.output('on_error_dir')
+print("Will notify: + " +  str(on_error_cfg.recipients()))
 %>
 import sys
 import os
@@ -78,7 +79,7 @@ else:
 
 if 'component_diff_owners' in ${on_error_cfg.recipients()}:
   util.info('adding main recipients from component diff since last release')
-  component_diff_path = os.path.join('component_descriptor', 'dependencies.diff')
+  component_diff_path = os.path.join('component_descriptor_dir', 'dependencies.diff')
   if not os.path.isfile(component_diff_path):
     util.info('no component_diff found at: ' + str(component_diff_path))
   else:
