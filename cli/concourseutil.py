@@ -105,6 +105,28 @@ def set_teams(
     setup.set_teams(config=config)
 
 
+def deploy_webhook_dispatcher(
+    config_name: CliHint(typehint=str, help='the cfg_set name to use'),
+    namespace: CliHint(typehint=str, help="namespace")='concourse',
+):
+    config_factory = ctx().cfg_factory()
+    config_set = config_factory.cfg_set(cfg_name=config_name)
+    concourse_cfg = config_set.concourse()
+
+    kubernetes_config_name = concourse_cfg.kubernetes_cluster_config()
+    kubernetes_config = config_factory.kubernetes(kubernetes_config_name)
+    setup.kube_ctx.set_kubecfg(kubernetes_config.kubeconfig())
+
+    webhook_dispatcher_name = concourse_cfg.webhook_dispatcher()
+    webhook_dispatcher_cfg = config_factory.webhook_dispatcher(webhook_dispatcher_name)
+
+    setup.deploy_webhook_dispatcher(
+        concourse_cfg=concourse_cfg,
+        webhook_dispatcher_cfg=webhook_dispatcher_cfg,
+        namespace=namespace,
+    )
+
+
 def _display_info(dry_run: bool, operation: str, **kwargs):
     info("Concourse will be {o} using helm with the following arguments".format(o=operation))
     max_leng = max(map(len, kwargs.keys()))
