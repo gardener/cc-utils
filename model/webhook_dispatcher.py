@@ -21,5 +21,12 @@ from model.base import (
 class WebhookDispatcher(NamedModelElement):
     def _required_attributes(self):
         return {
-
+            'image_reference',
+            'ingress_host',
         }
+
+    def image_reference(self):
+        return self.raw.get('image_reference')
+
+    def ingress_host(self):
+        return self.raw.get('ingress_host')
