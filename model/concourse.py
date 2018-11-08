@@ -70,6 +70,9 @@ class ConcourseConfig(NamedModelElement):
     def tls_secret_name(self):
         return self.raw.get('tls_secret_name')
 
+    def webhook_dispatcher(self):
+        return self.raw.get('webhook_dispatcher')
+
     def tls_config(self):
         return self.raw.get('tls_config')
 
