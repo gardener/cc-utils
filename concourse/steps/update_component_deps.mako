@@ -109,10 +109,6 @@ def upgrade_pr_exists(reference, upgrade_requests):
 
 
 def create_upgrade_pr(from_ref, to_ref, ls_repo):
-    new_branch_name = util.random_str(prefix='ci-', length=12)
-    head_sha = ls_repo.ref('heads/' + REPO_BRANCH).object.sha
-    ls_repo.create_ref('refs/heads/' + new_branch_name, head_sha)
-
     repo_dir = str(REPO_ROOT)
 
     # have component create upgradation diff
@@ -146,6 +142,11 @@ def create_upgrade_pr(from_ref, to_ref, ls_repo):
         github_repo_path=REPO_OWNER + '/' + REPO_NAME,
     )
     commit = helper.index_to_commit(message=commit_msg)
+
+    new_branch_name = util.random_str(prefix='ci-', length=12)
+    head_sha = ls_repo.ref('heads/' + REPO_BRANCH).object.sha
+    ls_repo.create_ref('refs/heads/' + new_branch_name, head_sha)
+
     helper.push(from_ref=commit.hexsha, to_ref='refs/heads/' + new_branch_name, use_ssh=True)
     helper.repo.git.checkout('.')
 
