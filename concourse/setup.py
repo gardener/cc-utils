@@ -565,11 +565,10 @@ def deploy_delaying_proxy(
 
 
 def deploy_webhook_dispatcher(
-    concourse_cfg: ConcourseConfig,
     webhook_dispatcher_cfg: WebhookDispatcher,
     namespace: str,
 ):
-    not_none(concourse_cfg)
+    not_none(webhook_dispatcher_cfg)
     not_empty(namespace)
 
     ctx = kube_ctx
@@ -583,11 +582,9 @@ def deploy_webhook_dispatcher(
 
     webhook_service = generate_webhook_dispatcher_service()
     webhook_deployment = generate_webhook_dispatcher_deployment(
-        concourse_cfg=concourse_cfg,
         webhook_dispatcher_cfg=webhook_dispatcher_cfg,
     )
     webhook_ingress = generate_webhook_dispatcher_ingress(
-        concourse_cfg=concourse_cfg,
         webhook_dispatcher_cfg=webhook_dispatcher_cfg,
     )
 
@@ -756,13 +753,20 @@ def generate_delaying_proxy_deployment(concourse_cfg: ConcourseConfig):
 
 
 def generate_webhook_dispatcher_deployment(
-    concourse_cfg: ConcourseConfig,
     webhook_dispatcher_cfg: WebhookDispatcher,
 ):
-    not_none(concourse_cfg)
     not_none(webhook_dispatcher_cfg)
 
-    ingress_url = create_url_from_attributes(concourse_cfg.ingress_host())
+    config_factory = global_ctx().cfg_factory()
+    env_vars = []
+    for concourse_cfg_name in webhook_dispatcher_cfg.concourse_cfgs():
+        concourse_cfg = config_factory.concourse(concourse_cfg_name)
+        ingress_url = create_url_from_attributes(concourse_cfg.ingress_host())
+        env_vars.append(
+            V1EnvVar(name=concourse_cfg_name.replace('-', '_').upper(),
+            value=ingress_url)
+        )
+
     image_reference = webhook_dispatcher_cfg.image_reference()
 
     label = {'app':'webhook-dispatcher'}
@@ -789,9 +793,7 @@ def generate_webhook_dispatcher_deployment(
                                 initial_delay_seconds=10,
                                 period_seconds=10,
                             ),
-                            env=[
-                                V1EnvVar(name='CONCOURSE_URL', value=ingress_url),
-                            ],
+                            env=env_vars,
                         ),
                     ],
                 )
@@ -840,10 +842,8 @@ def generate_delaying_proxy_ingress(concourse_cfg: ConcourseConfig):
 
 
 def generate_webhook_dispatcher_ingress(
-    concourse_cfg: ConcourseConfig,
-    webhook_dispatcher_cfg: WebhookDispatcher
+    webhook_dispatcher_cfg: WebhookDispatcher,
 ):
-    not_none(concourse_cfg)
     not_none(webhook_dispatcher_cfg)
 
     host = webhook_dispatcher_cfg.ingress_host()

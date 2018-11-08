@@ -30,3 +30,15 @@ class WebhookDispatcher(NamedModelElement):
 
     def ingress_host(self):
         return self.raw.get('ingress_host')
+
+    def concourse_cfgs(self):
+        return self.raw.get('concourse_cfgs')
+
+    def kubernetes_cfg(self):
+        return self.raw.get('kubernetes_cfg')
+
+    def job_mappings(self):
+        return self.raw.get('job_mappings')
+
+    def github_cfgs(self):
+        return self.raw.get('github_cfgs')
