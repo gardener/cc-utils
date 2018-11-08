@@ -39,6 +39,9 @@ from model.concourse import (
     ConcourseConfig,
     ConcourseApiVersion,
 )
+from model.webhook_dispatcher import (
+    WebhookDispatcher,
+)
 from model.container_registry import (
     GcrCredentials,
 )
@@ -59,6 +62,7 @@ from util import (
     warning,
     fail,
     which,
+    create_url_from_attributes,
 )
 
 from kubernetes.client import (
@@ -560,6 +564,38 @@ def deploy_delaying_proxy(
     ingress_helper.replace_or_create_ingress(namespace, ingress)
 
 
+def deploy_webhook_dispatcher(
+    concourse_cfg: ConcourseConfig,
+    webhook_dispatcher_cfg: WebhookDispatcher,
+    namespace: str,
+):
+    not_none(concourse_cfg)
+    not_empty(namespace)
+
+    ctx = kube_ctx
+
+    service_helper = ctx.service_helper()
+    deployment_helper = ctx.deployment_helper()
+    namespace_helper = ctx.namespace_helper()
+    ingress_helper = ctx.ingress_helper()
+
+    namespace_helper.create_if_absent(namespace)
+
+    webhook_service = generate_webhook_dispatcher_service()
+    webhook_deployment = generate_webhook_dispatcher_deployment(
+        concourse_cfg=concourse_cfg,
+        webhook_dispatcher_cfg=webhook_dispatcher_cfg,
+    )
+    webhook_ingress = generate_webhook_dispatcher_ingress(
+        concourse_cfg=concourse_cfg,
+        webhook_dispatcher_cfg=webhook_dispatcher_cfg,
+    )
+
+    service_helper.replace_or_create_service(namespace, webhook_service)
+    deployment_helper.replace_or_create_deployment(namespace, webhook_deployment)
+    ingress_helper.replace_or_create_ingress(namespace, webhook_ingress)
+
+
 def set_teams(config: ConcourseConfig):
     not_none(config)
 
@@ -719,6 +755,51 @@ def generate_delaying_proxy_deployment(concourse_cfg: ConcourseConfig):
     )
 
 
+def generate_webhook_dispatcher_deployment(
+    concourse_cfg: ConcourseConfig,
+    webhook_dispatcher_cfg: WebhookDispatcher,
+):
+    not_none(concourse_cfg)
+    not_none(webhook_dispatcher_cfg)
+
+    ingress_url = create_url_from_attributes(concourse_cfg.ingress_host())
+    image_reference = webhook_dispatcher_cfg.image_reference()
+
+    label = {'app':'webhook-dispatcher'}
+
+    return V1Deployment(
+        kind='Deployment',
+        metadata=V1ObjectMeta(name='webhook-dispatcher'),
+        spec=V1DeploymentSpec(
+            replicas=1,
+            selector=V1LabelSelector(match_labels=label),
+            template=V1PodTemplateSpec(
+                metadata=V1ObjectMeta(labels=label),
+                spec=V1PodSpec(
+                    containers=[
+                        V1Container(
+                            image=image_reference,
+                            image_pull_policy='IfNotPresent',
+                            name='webhook-dispatcher',
+                            ports=[
+                                V1ContainerPort(container_port=8080),
+                            ],
+                            liveness_probe=V1Probe(
+                                tcp_socket=V1TCPSocketAction(port=8080),
+                                initial_delay_seconds=10,
+                                period_seconds=10,
+                            ),
+                            env=[
+                                V1EnvVar(name='CONCOURSE_URL', value=ingress_url),
+                            ],
+                        ),
+                    ],
+                )
+            )
+        )
+    )
+
+
 def generate_delaying_proxy_ingress(concourse_cfg: ConcourseConfig):
     not_none(concourse_cfg)
 
@@ -758,6 +839,48 @@ def generate_delaying_proxy_ingress(concourse_cfg: ConcourseConfig):
     )
 
 
+def generate_webhook_dispatcher_ingress(
+    concourse_cfg: ConcourseConfig,
+    webhook_dispatcher_cfg: WebhookDispatcher
+):
+    not_none(concourse_cfg)
+    not_none(webhook_dispatcher_cfg)
+
+    host = webhook_dispatcher_cfg.ingress_host()
+    tls_secret_name = concourse_cfg.tls_secret_name()
+
+    return V1beta1Ingress(
+        kind='Ingress',
+        metadata=V1ObjectMeta(
+            name='webhook-dispatcher',
+            annotations={'kubernetes.io/ingress.class':'nginx'},
+        ),
+        spec=V1beta1IngressSpec(
+            rules=[
+                V1beta1IngressRule(
+                    host=host,
+                    http=V1beta1HTTPIngressRuleValue(
+                        paths=[
+                            V1beta1HTTPIngressPath(
+                                backend=V1beta1IngressBackend(
+                                    service_name='webhook-dispatcher-svc',
+                                    service_port=80,
+                                ),
+                            ),
+                        ],
+                    ),
+                ),
+            ],
+            tls=[
+                V1beta1IngressTLS(
+                    hosts=[host],
+                    secret_name=tls_secret_name
+                ),
+            ],
+        ),
+    )
+
+
 def generate_delaying_proxy_service():
     return V1Service(
         kind='Service',
@@ -771,6 +894,24 @@ def generate_delaying_proxy_service():
                 V1ServicePort(name='default', protocol='TCP', port=80, target_port=8080),
             ],
             selector={'app':'delaying-proxy'},
+            session_affinity='None',
+        ),
+    )
+
+
+def generate_webhook_dispatcher_service():
+    return V1Service(
+        kind='Service',
+        metadata=V1ObjectMeta(
+            name='webhook-dispatcher-svc',
+            labels={'app':'webhook-dispatcher-svc'},
+        ),
+        spec=V1ServiceSpec(
+            type='ClusterIP',
+            ports=[
+                V1ServicePort(name='default', protocol='TCP', port=80, target_port=8080),
+            ],
+            selector={'app':'webhook-dispatcher'},
             session_affinity='None',
         ),
     )
