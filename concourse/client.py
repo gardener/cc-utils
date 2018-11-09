@@ -26,6 +26,7 @@ import functools
 import sseclient
 import util
 
+from util import ctx
 from github.webhook import WebhookQueryAttributes
 from model.concourse import (
     ConcourseTeamCredentials,
@@ -62,7 +63,10 @@ def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
     '''
     Factory method to get Concourse API object
     '''
-    base_url = concourse_cfg.ingress_url()
+    cfg_factory = ctx().cfg_factory()
+    kubernetes_cfg_name = concourse_cfg.kubernetes_cluster_config()
+    kubernetes_cfg = cfg_factory.kubernetes(kubernetes_cfg_name)
+    base_url = kubernetes_cfg.ingress_url(concourse_cfg.ingress_host_prefix())
     team_credentials = concourse_cfg.team_credentials(team_name)
     team_name = team_credentials.teamname()
     username = team_credentials.username()
