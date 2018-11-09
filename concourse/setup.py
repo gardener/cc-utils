@@ -170,8 +170,11 @@ def create_instance_specific_helm_values(
     external_url = concourse_cfg.external_url()
     external_host = urlparse(external_url).netloc
     concourse_tls_secret_name = concourse_cfg.tls_secret_name()
-    ingress_host = concourse_cfg.ingress_host()
     concourse_version = concourse_cfg.concourse_version()
+
+    kubernetes_cfg_name = concourse_cfg.kubernetes_cluster_config()
+    kubernetes_cfg = config_factory.kubernetes(kubernetes_cfg_name)
+    ingress_host = kubernetes_cfg.ingress_host(concourse_cfg.ingress_host_prefix())
 
     # helm chart values.yaml structurally differs from concourse 3.x to 4.x
     if concourse_version is ConcourseApiVersion.V3:
