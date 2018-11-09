@@ -195,23 +195,57 @@
 <td>int</td>
 <td>CVE threshold to interpret as an error</td>
 </tr>
-<tr class="row-even"><td>processing_mode</td>
+<tr class="row-even"><td>filters</td>
+<td>no</td>
+<td>{‘include_image_references’: (), ‘exclude_image_references’: ()}</td>
+<td>FilterCfg</td>
+<td>optional filters to restrict container images to process</td>
+</tr>
+<tr class="row-odd"><td>processing_mode</td>
 <td>no</td>
 <td>upload_if_changed</td>
 <td>str</td>
 <td>Protecode processing mode</td>
 </tr>
-<tr class="row-odd"><td>protecode_group_id</td>
+<tr class="row-even"><td>protecode_group_id</td>
 <td>yes</td>
 <td>None</td>
 <td>int</td>
 <td>technical protecode group id to upload to</td>
 </tr>
-<tr class="row-even"><td>protecode_cfg_name</td>
+<tr class="row-odd"><td>protecode_cfg_name</td>
 <td>yes</td>
 <td>None</td>
 <td>str</td>
 <td>protecode cfg name to use (see cc-utils)</td>
+</tr>
+</tbody>
+</table>
+<h2 class="section-subtitle"><span class="section-subtitle">filters Attributes</span></h2>
+<table border="1" class="colwidths-auto docutils">
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">name</th>
+<th class="head">required?</th>
+<th class="head">default</th>
+<th class="head">type</th>
+<th class="head">explanation</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>include_image_references</td>
+<td>no</td>
+<td>()</td>
+<td>str</td>
+<td>a list of regular expressions. If configured, only matching image references are
+processed. By default, all image references are considered.</td>
+</tr>
+<tr class="row-odd"><td>exclude_image_references</td>
+<td>no</td>
+<td>()</td>
+<td>str</td>
+<td>a list of regular expressions. If configured, matching image references are
+exempted from processing. Has precedence over include_image_references.
+By default, no image references are excluded.</td>
 </tr>
 </tbody>
 </table>
