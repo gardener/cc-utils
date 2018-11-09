@@ -22,7 +22,6 @@ import semver
 import typing
 import yaml
 
-import decorator
 import version
 from github.util import GitHubRepositoryHelper, github_api_ctor
 from util import not_none, check_type, FluentIterable
@@ -190,7 +189,6 @@ def merge_products(left_product, right_product):
     return merged
 
 
-@decorator.args_not_none('left_product', 'right_product')
 def diff_products(left_product, right_product, ignore_component_names=()):
     # only take component references into account for now and assume
     # that component versions are always identical content-wise
