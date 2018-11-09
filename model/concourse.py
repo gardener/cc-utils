@@ -39,9 +39,6 @@ class ConcourseConfig(NamedModelElement):
     def external_url(self):
         return self.raw.get('externalUrl')
 
-    def ingress_host_prefix(self):
-        return self.raw.get('ingress_host_prefix')
-
     def proxy_url(self):
         return self.raw.get('proxyUrl')
 
@@ -89,6 +86,15 @@ class ConcourseConfig(NamedModelElement):
         '''
         return self.raw.get('disable_webhook_for_pr', False)
 
+    def ingress_host(self):
+        '''
+        Returns the hostname added as additional ingress.
+        '''
+        return self.raw.get('ingress_host')
+
+    def ingress_url(self):
+        return 'https://' + self.ingress_host()
+
     def helm_chart_version(self):
         return self.raw.get('helm_chart_version')
 
@@ -101,7 +107,6 @@ class ConcourseConfig(NamedModelElement):
     def _required_attributes(self):
         return [
             'externalUrl',
-            'ingress_prefix',
             'teams',
             'helm_chart_default_values_config',
             'kubernetes_cluster_config',
