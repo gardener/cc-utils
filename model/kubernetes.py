@@ -24,3 +24,15 @@ class KubernetesConfig(NamedModelElement):
 
     def cluster_version(self):
         return self.raw.get('version')
+
+    def ingress_host(self, ingress_host_prefix:str = None):
+        ingress_host = self.raw.get('ingress_host')
+        if ingress_host_prefix:
+            return "{ingress_host_prefix}.{ingress_host}".format(
+                ingress_host_prefix=ingress_host_prefix,
+                ingress_host=ingress_host,)
+
+        return ingress_host
+
+    def ingress_url(self, ingress_host_prefix:str = None):
+        return 'https://' + self.ingress_host(ingress_host_prefix)
