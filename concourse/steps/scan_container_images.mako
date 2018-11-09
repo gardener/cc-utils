@@ -4,10 +4,12 @@
 >
 <%
 from makoutil import indent_func
+from concourse.steps import step_lib
 main_repo = job_variant.main_repository()
 repo_name = main_repo.logical_name().upper()
 
 image_scan_trait = job_variant.trait('image_scan')
+filter_cfg = image_scan_trait.filters()
 %>
 
 import pathlib
@@ -17,6 +19,8 @@ import protecode.util
 import util
 
 from product.scanning import ProcessingMode
+
+${step_lib('scan_container_images')}
 
 # XXX suppress warnings for sap-ca
 # (is installed in truststore in cc-job-image, but apparently not honoured by httlib2)
@@ -37,6 +41,11 @@ component_descriptor = product.model.Product.from_dict(
 
 processing_mode = ProcessingMode('${image_scan_trait.processing_mode()}')
 
+image_filter = image_reference_filter(
+  include_regexes=${filter_cfg.include_image_references()},
+  exclude_regexes=${filter_cfg.exclude_image_references()},
+)
+
 protecode.util.upload_images(
   protecode_cfg=protecode_cfg,
   product_descriptor=component_descriptor,
@@ -44,5 +53,6 @@ protecode.util.upload_images(
   protecode_group_id=int(${image_scan_trait.protecode_group_id()}),
   parallel_jobs=${image_scan_trait.parallel_jobs()},
   cve_threshold=${image_scan_trait.cve_threshold()},
+  image_reference_filter=image_filter,
 )
 </%def>
