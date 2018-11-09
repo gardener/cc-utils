@@ -28,6 +28,35 @@ from product.scanning import ProcessingMode
 from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
 
 
+class FilterCfg(ModelBase):
+    def _attribute_specs(self):
+        return (
+            AttributeSpec.optional(
+                name='include_image_references',
+                default=(),
+                doc='''
+                a list of regular expressions. If configured, only matching image references are
+                processed. By default, all image references are considered.
+                ''',
+            ),
+            AttributeSpec.optional(
+                name='exclude_image_references',
+                default=(),
+                doc='''
+                a list of regular expressions. If configured, matching image references are
+                exempted from processing. Has precedence over include_image_references.
+                By default, no image references are excluded.
+                ''',
+            ),
+        )
+
+    def include_image_references(self):
+        return self.raw['include_image_references']
+
+    def exclude_image_references(self):
+        return self.raw['exclude_image_references']
+
+
 ATTRIBUTES = (
     AttributeSpec.optional(
         name='parallel_jobs',
@@ -40,6 +69,12 @@ ATTRIBUTES = (
         default=7,
         doc='CVE threshold to interpret as an error',
         type=int,
+    ),
+    AttributeSpec.optional(
+        name='filters',
+        default={'include_image_references': (), 'exclude_image_references': ()},
+        doc='optional filters to restrict container images to process',
+        type=FilterCfg,
     ),
     AttributeSpec.optional(
         name='processing_mode',
@@ -85,6 +120,9 @@ class ImageScanTrait(Trait):
 
     def processing_mode(self):
         return self.raw.get('processing_mode')
+
+    def filters(self):
+        return FilterCfg(raw_dict=self.raw['filters'])
 
     def validate(self):
         super().validate()
