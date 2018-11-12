@@ -39,6 +39,9 @@ from model.concourse import (
     ConcourseConfig,
     ConcourseApiVersion,
 )
+from model.webhook_dispatcher import (
+    WebhookDispatcherDeploymentConfig
+)
 from model.container_registry import (
     GcrCredentials,
 )
@@ -255,6 +258,43 @@ def create_instance_specific_helm_values(
         )
 
     return instance_specific_values
+
+
+@ensure_annotations
+def create_webhook_dispatcher_helm_values(
+    webhook_dispatcher_deployment_cfg: WebhookDispatcherDeploymentConfig,
+    cfg_factory: ConfigFactory,
+):
+    # calculate secrets server endpoint
+    secrets_server_name = webhook_dispatcher_deployment_cfg.secrets_server_config_name()
+    secrets_server_cfg = cfg_factory.secrets_server(secrets_server_name)
+    secrets_server_endpoint = secrets_server_cfg.endpoint_url()
+    secrets_server_concourse_cfg_name = '/'.join([
+        secrets_server_cfg.secrets().concourse_secret_name(),
+        secrets_server_cfg.secrets().concourse_attribute()])
+
+    env_vars = []
+    env_vars.append({
+        'name': 'SECRETS_SERVER_ENDPOINT', 'value': secrets_server_endpoint
+    })
+    env_vars.append({
+        'name': 'SECRETS_SERVER_CONCOURSE_CFG_NAME', 'value': secrets_server_concourse_cfg_name
+    })
+
+    cmd_args = [
+        '--webhook-dispatcher-cfg-name',
+        webhook_dispatcher_deployment_cfg.webhook_dispatcher_config_name(),
+    ]
+
+    helm_values = {
+        'ingress_host': webhook_dispatcher_deployment_cfg.ingress_host(),
+        'tls_name': webhook_dispatcher_deployment_cfg.tls_config_name(),
+        'image_reference': webhook_dispatcher_deployment_cfg.image_reference(),
+        'cmd_args': cmd_args,
+        'env_vars': env_vars,
+    }
+
+    return helm_values
 
 
 def deploy_concourse_landscape(
