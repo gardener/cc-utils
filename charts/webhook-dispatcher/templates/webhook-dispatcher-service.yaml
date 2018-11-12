@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook-dispatcher-svc
+  labels:
+    app: webhook-dispatcher
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 5000
+    name: default
+  selector:
+    app: webhook-dispatcher

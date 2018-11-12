@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook-dispatcher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webhook-dispatcher
+  template:
+    metadata:
+      labels:
+        app: webhook-dispatcher
+    spec:
+      containers:
+        - image: {{.Values.image_reference}}
+          imagePullPolicy: IfNotPresent
+          name: webhook-dispatcher
+          livelinessProbe:
+            tcpSocket:
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          command:
+            - python3
+            - /cc/utils/cli.py
+            - whdutil
+            - start_whd
+            {{- range $entry := .Values.cmd_args }}
+            - {{$entry}}
+            {{- end}}
+          env:
+          {{- range $entry := .Values.env_vars }}
+          - name: {{ index $entry "name" }}
+            value: {{ index $entry "value" }}
+          {{- end }}
+          ports:
+            - containerPort: 5000
+              name: default
