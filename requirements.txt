@@ -1,4 +1,6 @@
 # add requirements for local tests. Install with: pip3 install -r requirements.txt
+Flask
+Flask-RESTful
 GitPython==2.1.9
 Mako
 Sphinx==1.8.1
