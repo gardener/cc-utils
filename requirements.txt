@@ -17,9 +17,9 @@ pyflakes
 pytest
 pyyaml
 requests
-semver==2.8.1
+semver
 slackclient==1.2.1
 sphinx_rtd_theme
 sseclient-py==1.7
-toposort==1.5
+toposort
 urllib3
