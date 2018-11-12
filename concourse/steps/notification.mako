@@ -71,7 +71,7 @@ else:
   email_cfg = {
     'recipients': set(),
     'component_name_recipients': set(),
-    'codeowners_files': None,
+    'codeowners_files': set(),
     'mail_body': None,
   }
   notify_cfg = {'email': email_cfg}
