@@ -21,29 +21,47 @@ from model.base import (
 class WebhookDispatcherConfig(NamedModelElement):
     def _required_attributes(self):
         return {
-            'concourse_cfgs',
+            'image_reference',
+            'ingress_host',
+            'concourse_configs',
+            'github_configs',
+            'tls_config',
+            'secrets_server_config',
+            'kubernetes_config',
         }
 
-    def concourse_cfgs(self):
-        return [
-            ConcourseJobMapping(name=name, raw_dict=raw_dict) for
-            name, raw_dict in self.raw['concourse_cfgs'].items()
-        ]
+    def concourse_config_names(self):
+        return self.raw.get('concourse_configs')
+
+    def github_config_names(self):
+        return self.raw.get('github_configs')
 
 
-class ConcourseJobMapping(NamedModelElement):
+class WebhookDispatcherDeploymentConfig(NamedModelElement):
     def _required_attributes(self):
         return {
-            'cfg_name',
-            'job_mapping',
+            'image_reference',
+            'ingress_host',
+            'tls_config',
+            'secrets_server_config',
+            'kubernetes_config',
+            'webhook_dispatcher_config',
         }
 
-    def cfg_name(self):
-        return self.raw['cfg_name']
+    def image_reference(self):
+        return self.raw.get('image_reference')
 
-    def job_mapping(self):
-        return self.raw['job_mapping']
+    def ingress_host(self):
+        return self.raw.get('ingress_host')
 
+    def tls_config_name(self):
+        return self.raw.get('tls_config')
 
-# make backwards-compatible - XXX remove asap
-WebhookDispatcher = WebhookDispatcherConfig
+    def secrets_server_config_name(self):
+        return self.raw.get('secrets_server_config')
+
+    def kubernetes_config_name(self):
+        return self.raw.get('kubernetes_config')
+
+    def webhook_dispatcher_config_name(self):
+        return self.raw.get('webhook_dispatcher_config')

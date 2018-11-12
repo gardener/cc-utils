@@ -18,7 +18,7 @@ import util
 
 
 def start_whd(
-    webhook_dispatcher_cfg_name: str='sap_external',
+    webhook_dispatcher_cfg_name: str='internal_dispatcher_1',
     port: int=5000,
     debug: bool=True,
 ):

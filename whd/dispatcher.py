@@ -30,10 +30,9 @@ class GithubWebhookDispatcher(object):
 
     @functools.lru_cache()
     def concourse_clients(self):
-        for concourse_job_mapping in self.whd_cfg.concourse_cfgs():
-            concourse_cfg = self.cfg_factory.concourse(concourse_job_mapping.cfg_name())
-            job_mapping_set = self.cfg_factory.job_mapping(concourse_job_mapping.job_mapping())
-
+        for concourse_config_name in self.whd_cfg.concourse_config_names():
+            concourse_cfg = self.cfg_factory.concourse(concourse_config_name)
+            job_mapping_set = self.cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
             for job_mapping in job_mapping_set.job_mappings().values():
                 yield concourse.client.from_cfg(
                     concourse_cfg=concourse_cfg,
