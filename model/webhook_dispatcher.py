@@ -25,7 +25,24 @@ class WebhookDispatcherConfig(NamedModelElement):
         }
 
     def concourse_cfgs(self):
-        return self.raw['concourse_cfgs']
+        return [
+            ConcourseJobMapping(name=name, raw_dict=raw_dict) for
+            name, raw_dict in self.raw['concourse_cfgs'].items()
+        ]
+
+
+class ConcourseJobMapping(NamedModelElement):
+    def _required_attributes(self):
+        return {
+            'cfg_name',
+            'job_mapping',
+        }
+
+    def cfg_name(self):
+        return self.raw['cfg_name']
+
+    def job_mapping(self):
+        return self.raw['job_mapping']
 
 
 # make backwards-compatible - XXX remove asap
