@@ -39,3 +39,36 @@ class GithubWebhookDispatcher(object):
                     concourse_cfg=concourse_cfg,
                     team_name=job_mapping.team_name(),
                 )
+
+    def dispatch_push_event(self, push_event):
+        for concourse_api in self.concourse_clients():
+            resources = self._matching_resources(
+                concourse_api=concourse_api,
+                push_event=push_event,
+            )
+            self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
+
+    def _trigger_resource_check(self, concourse_api, resources):
+        for resource in resources:
+            util.info('triggering resource check for: ' + resource.name)
+            concourse_api.trigger_resource_check(
+                pipeline_name=resource.pipeline_name(),
+                resource_name=resource.name,
+            )
+
+    def _matching_resources(self, concourse_api, push_event):
+        resources = concourse_api.pipeline_resources(concourse_api.pipelines())
+        for resource in resources:
+            if not resource.has_webhook_token():
+                continue
+            if not resource.type == 'git':
+                continue
+            ghs = resource.github_source()
+            if not ghs.hostname() == push_event.github_host():
+                continue
+            if not ghs.repo_path().lstrip('/') == push_event.repository_path():
+                continue
+            if not push_event.ref().endswith(ghs.branch_name()):
+                continue
+
+            yield resource
