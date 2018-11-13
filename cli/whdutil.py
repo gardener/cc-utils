@@ -14,12 +14,17 @@
 # limitations under the License.
 
 import whd.server as whd_server
+import util
 
 
 def start_whd(
+    webhook_dispatcher_cfg_name: str='sap_external',
     port: int=5000,
     debug: bool=True,
 ):
-    app = whd_server.webhook_dispatcher_app()
+    cfg_factory = util.ctx().cfg_factory()
+    webhook_dispatcher_cfg = cfg_factory.webhook_dispatcher(webhook_dispatcher_cfg_name)
+
+    app = whd_server.webhook_dispatcher_app(whd_cfg=webhook_dispatcher_cfg)
 
     app.run(debug=debug, port=port)

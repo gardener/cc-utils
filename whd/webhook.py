@@ -23,10 +23,12 @@ from flask_restful import (
 )
 
 from model.base import ModelBase
+from model.webhook_dispatcher import WebhookDispatcherConfig
 
 
 class GithubWebhook(Resource):
-    def __init__(self):
+    def __init__(self, whd_cfg: WebhookDispatcherConfig):
+        self.whd_cfg = whd_cfg
         self.parser = reqparse.RequestParser()
         self.parser.add_argument('X-GitHub-Event', type=str, location='headers')
 

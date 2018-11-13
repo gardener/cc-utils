@@ -17,12 +17,19 @@ from flask import Flask
 from flask_restful import Api
 
 from .webhook import GithubWebhook
+from model.webhook_dispatcher import WebhookDispatcherConfig
 
 
-def webhook_dispatcher_app():
+def webhook_dispatcher_app(whd_cfg: WebhookDispatcherConfig):
     app = Flask(__name__)
     api = Api(app)
 
-    api.add_resource(GithubWebhook, '/github-webhook')
+    api.add_resource(
+        GithubWebhook,
+        '/github-webhook',
+        resource_class_kwargs={
+            'whd_cfg': whd_cfg,
+        }
+    )
 
     return app
