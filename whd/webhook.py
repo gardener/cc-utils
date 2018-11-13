@@ -13,12 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from flask import abort
+import urllib.parse
+
+from flask import abort, request
 
 from flask_restful import (
     Resource,
     reqparse,
 )
+
+from model.base import ModelBase
 
 
 class GithubWebhook(Resource):
@@ -32,7 +36,19 @@ class GithubWebhook(Resource):
         if not event:
             abort(400, 'X-GitHub-Event must be set')
 
-        if event in ():
-            pass
+        if event == 'push':
+            parsed = PushEvent(raw_dict=request.get_json())
+            return parsed.raw
         else:
             return f'event {event} ignored'
+
+
+class PushEvent(ModelBase):
+    def _repository(self):
+        return self.raw['repository']
+
+    def github_host(self):
+        return urllib.parse.urlparse(self._repository()['url']).hostname
+
+    def repository_path(self):
+        return self._repository()['full_name']
