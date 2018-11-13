@@ -24,6 +24,7 @@ from flask_restful import (
 
 from model.base import ModelBase
 from model.webhook_dispatcher import WebhookDispatcherConfig
+from .dispatcher import GithubWebhookDispatcher
 
 
 class GithubWebhook(Resource):
@@ -31,6 +32,7 @@ class GithubWebhook(Resource):
         self.whd_cfg = whd_cfg
         self.parser = reqparse.RequestParser()
         self.parser.add_argument('X-GitHub-Event', type=str, location='headers')
+        self.dispatcher = GithubWebhookDispatcher(whd_cfg=whd_cfg)
 
     def post(self):
         args = self.parser.parse_args()
@@ -40,7 +42,8 @@ class GithubWebhook(Resource):
 
         if event == 'push':
             parsed = PushEvent(raw_dict=request.get_json())
-            return parsed.raw
+            self.dispatcher.dispatch_push_event(push_event=parsed)
+            return 'OK'
         else:
             return f'event {event} ignored'
 
