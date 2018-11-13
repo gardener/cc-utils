@@ -13,16 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from flask import Flask
-from flask_restful import Api
-
-from .webhook import GithubWebhook
+from flask_restful import Resource
 
 
-def webhook_dispatcher_app():
-    app = Flask(__name__)
-    api = Api(app)
-
-    api.add_resource(GithubWebhook, '/github-webhook')
-
-    return app
+class GithubWebhook(Resource):
+    pass
