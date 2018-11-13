@@ -540,6 +540,9 @@ class Resource(object):
     def webhook_token(self):
         return self.raw['webhook_token']
 
+    def pipeline_name(self):
+        return self.pipeline.name
+
     def github_source(self):
         return GithubSource(self.source, self.concourse_api)
 
@@ -565,6 +568,9 @@ class GithubSource(object):
         self.raw = raw_dict
         self.uri = raw_dict['uri']
 
+    def team_name(self):
+        return self.raw['team_name']
+
     def repo_path(self):
         return urlparse(self.uri).path
 
@@ -580,6 +586,9 @@ class GithubSource(object):
 
     def hostname(self):
         return urlparse(self.uri).hostname
+
+    def branch_name(self):
+        return self.raw['branch']
 
     def access_token(self):
         return self.raw['access_token']
