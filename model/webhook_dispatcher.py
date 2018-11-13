@@ -18,8 +18,15 @@ from model.base import (
 )
 
 
-class WebhookDispatcher(NamedModelElement):
+class WebhookDispatcherConfig(NamedModelElement):
     def _required_attributes(self):
         return {
-
+            'concourse_cfgs',
         }
+
+    def concourse_cfgs(self):
+        return self.raw['concourse_cfgs']
+
+
+# make backwards-compatible - XXX remove asap
+WebhookDispatcher = WebhookDispatcherConfig
