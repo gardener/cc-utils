@@ -13,8 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from flask_restful import Resource
+from flask import abort
+
+from flask_restful import (
+    Resource,
+    reqparse,
+)
 
 
 class GithubWebhook(Resource):
-    pass
+    def __init__(self):
+        self.parser = reqparse.RequestParser()
+        self.parser.add_argument('X-GitHub-Event', type=str, location='headers')
+
+    def post(self):
+        args = self.parser.parse_args()
+        event = args.get('X-GitHub-Event')
+        if not event:
+            abort(400, 'X-GitHub-Event must be set')
+
+        if event in ():
+            pass
+        else:
+            return f'event {event} ignored'
