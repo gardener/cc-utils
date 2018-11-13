@@ -54,3 +54,6 @@ class PushEvent(ModelBase):
 
     def repository_path(self):
         return self._repository()['full_name']
+
+    def ref(self):
+        return self.raw['ref']
