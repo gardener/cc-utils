@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import urllib.parse
-
 from flask import abort, request
 
 from flask_restful import (
@@ -22,9 +20,9 @@ from flask_restful import (
     reqparse,
 )
 
-from model.base import ModelBase
 from model.webhook_dispatcher import WebhookDispatcherConfig
 from .dispatcher import GithubWebhookDispatcher
+from .model import PushEvent, PullRequestEvent
 
 
 class GithubWebhook(Resource):
@@ -44,19 +42,8 @@ class GithubWebhook(Resource):
             parsed = PushEvent(raw_dict=request.get_json())
             self.dispatcher.dispatch_push_event(push_event=parsed)
             return 'OK'
+        elif event == 'pull_request':
+            parsed = PullRequestEvent(raw_dict=request.get_json())
+            self.dispatcher.dispatch_pullrequest_event(pr_event=parsed)
         else:
             return f'event {event} ignored'
-
-
-class PushEvent(ModelBase):
-    def _repository(self):
-        return self.raw['repository']
-
-    def github_host(self):
-        return urllib.parse.urlparse(self._repository()['url']).hostname
-
-    def repository_path(self):
-        return self._repository()['full_name']
-
-    def ref(self):
-        return self.raw['ref']

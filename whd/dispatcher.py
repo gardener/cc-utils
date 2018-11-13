@@ -16,6 +16,7 @@
 import functools
 
 from model.webhook_dispatcher import WebhookDispatcherConfig
+from .model import PushEvent, PullRequestEvent, PullRequestAction
 import concourse.client
 import util
 
@@ -44,7 +45,7 @@ class GithubWebhookDispatcher(object):
         for concourse_api in self.concourse_clients():
             resources = self._matching_resources(
                 concourse_api=concourse_api,
-                push_event=push_event,
+                event=push_event,
             )
             self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
 
@@ -56,19 +57,48 @@ class GithubWebhookDispatcher(object):
                 resource_name=resource.name,
             )
 
-    def _matching_resources(self, concourse_api, push_event):
+    def _matching_resources(self, concourse_api, event):
         resources = concourse_api.pipeline_resources(concourse_api.pipelines())
+        if isinstance(event, PushEvent):
+            resource_type = 'git'
+        elif isinstance(event, PullRequestEvent):
+            resource_type = 'pull-request'
+        else:
+            raise NotImplementedError
+        print(resource_type)
+
         for resource in resources:
             if not resource.has_webhook_token():
                 continue
-            if not resource.type == 'git':
+            if not resource.type == resource_type:
                 continue
             ghs = resource.github_source()
-            if not ghs.hostname() == push_event.github_host():
+            repository = event.repository()
+            if not ghs.hostname() == repository.github_host():
+                print(repository.github_host())
                 continue
-            if not ghs.repo_path().lstrip('/') == push_event.repository_path():
+            if not ghs.repo_path().lstrip('/') == repository.repository_path():
+                print(repository.repository_path())
                 continue
-            if not push_event.ref().endswith(ghs.branch_name()):
-                continue
+            print('xx')
+            if isinstance(event, PushEvent):
+                if not event.ref().endswith(ghs.branch_name()):
+                    continue
 
             yield resource
+
+    def dispatch_pullrequest_event(self, pr_event):
+        if not pr_event.action() in (
+            PullRequestAction.OPENED,
+            PullRequestAction.REOPENED,
+            PullRequestAction.LABELED,
+            PullRequestAction.SYNCHRONIZE,
+        ):
+            return util.info(f'ignoring pull-request action {pr_event.action()}')
+
+        for concourse_api in self.concourse_clients():
+            resources = self._matching_resources(
+                concourse_api=concourse_api,
+                event=pr_event,
+            )
+            self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
