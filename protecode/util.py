@@ -48,19 +48,18 @@ def upload_images(
         if not analysis_result.components():
             continue
 
-        vulnerability_scores = list()
+        greatest_cve = -1
 
         for component in analysis_result.components():
             vulnerabilities = filter(lambda v: not v.historical(), component.vulnerabilities())
             if ignore_if_triaged:
                 vulnerabilities = filter(lambda v: not v.has_triage(), vulnerabilities)
-            highest_cve = highest_major_cve_severity(vulnerabilities)
-            vulnerability_scores.append(highest_cve)
+            greatest_cve_candidate = highest_major_cve_severity(vulnerabilities)
+            if greatest_cve_candidate > greatest_cve:
+                greatest_cve = greatest_cve_candidate
 
-        highest_cve = max(vulnerability_scores)
-
-        if highest_cve >= cve_threshold:
-            info('Highest found CVE Severity: {cve} - Action required'.format(cve=highest_cve))
+        if greatest_cve >= cve_threshold:
+            info('Greatest found CVE Severity: {cve} - Action required'.format(cve=greatest_cve))
         else:
             info('CVE below configured threshold - clean')
 
