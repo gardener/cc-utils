@@ -21,28 +21,11 @@ from model.base import (
 class WebhookDispatcherConfig(NamedModelElement):
     def _required_attributes(self):
         return {
-            'concourse_cfgs',
+            'concourse_config_names',
         }
 
-    def concourse_cfgs(self):
-        return [
-            ConcourseJobMapping(name=name, raw_dict=raw_dict) for
-            name, raw_dict in self.raw['concourse_cfgs'].items()
-        ]
-
-
-class ConcourseJobMapping(NamedModelElement):
-    def _required_attributes(self):
-        return {
-            'cfg_name',
-            'job_mapping',
-        }
-
-    def cfg_name(self):
-        return self.raw['cfg_name']
-
-    def job_mapping(self):
-        return self.raw['job_mapping']
+    def concourse_config_names(self):
+        return self.raw['concourse_config_names']
 
 
 # make backwards-compatible - XXX remove asap
