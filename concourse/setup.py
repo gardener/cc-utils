@@ -457,7 +457,7 @@ def deploy_webhook_dispatcher_landscape(
     chart_dir = os.path.abspath(chart_dir)
     cfg_factory = global_ctx().cfg_factory()
 
-    # Set the global context to the cluster specified in the ConcourseConfig
+    # Set the global context to the cluster specified in KubernetesConfig
     kubernetes_config_name = webhook_dispatcher_deployment_cfg.kubernetes_config_name()
     kubernetes_config = cfg_factory.kubernetes(kubernetes_config_name)
     kube_ctx.set_kubecfg(kubernetes_config.kubeconfig())
