@@ -27,4 +27,4 @@ def start_whd(
 
     app = whd_server.webhook_dispatcher_app(whd_cfg=webhook_dispatcher_cfg)
 
-    app.run(debug=debug, port=port)
+    app.run(debug=debug, port=port, host='0.0.0.0')
