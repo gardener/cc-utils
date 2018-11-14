@@ -42,7 +42,7 @@ class PullRequestAction(enum.Enum):
     UNASSIGNED = 'unassigned'
     REVIEW_REQUESTED = 'review_requested'
     REVIEW_REQUEST_REMOVED = 'review_request_removed'
-    LABELED = 'labeleled'
+    LABELED = 'labeled'
     UNLABELED = 'unlabeled'
     OPENED = 'opened'
     EDITED = 'edited'
