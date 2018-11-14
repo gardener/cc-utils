@@ -16,7 +16,7 @@ spec:
         - image: {{.Values.image_reference}}
           imagePullPolicy: IfNotPresent
           name: webhook-dispatcher
-          livelinessProbe:
+          livenessProbe:
             tcpSocket:
               port: 5000
             initialDelaySeconds: 10
