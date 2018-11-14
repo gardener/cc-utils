@@ -64,7 +64,6 @@ class GithubWebhookDispatcher(object):
             resource_type = 'pull-request'
         else:
             raise NotImplementedError
-        print(resource_type)
 
         for resource in resources:
             if not resource.has_webhook_token():
@@ -74,12 +73,9 @@ class GithubWebhookDispatcher(object):
             ghs = resource.github_source()
             repository = event.repository()
             if not ghs.hostname() == repository.github_host():
-                print(repository.github_host())
                 continue
             if not ghs.repo_path().lstrip('/') == repository.repository_path():
-                print(repository.repository_path())
                 continue
-            print('xx')
             if isinstance(event, PushEvent):
                 if not event.ref().endswith(ghs.branch_name()):
                     continue
