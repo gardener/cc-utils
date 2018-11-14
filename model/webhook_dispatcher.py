@@ -28,5 +28,31 @@ class WebhookDispatcherConfig(NamedModelElement):
         return self.raw['concourse_config_names']
 
 
-# make backwards-compatible - XXX remove asap
-WebhookDispatcher = WebhookDispatcherConfig
+class WebhookDispatcherDeploymentConfig(NamedModelElement):
+    def _required_attributes(self):
+        return {
+            'image_reference',
+            'ingress_host',
+            'tls_config',
+            'secrets_server_config',
+            'kubernetes_config',
+            'webhook_dispatcher_config',
+        }
+
+    def image_reference(self):
+        return self.raw.get('image_reference')
+
+    def ingress_host(self):
+        return self.raw.get('ingress_host')
+
+    def tls_config_name(self):
+        return self.raw.get('tls_config')
+
+    def secrets_server_config_name(self):
+        return self.raw.get('secrets_server_config')
+
+    def kubernetes_config_name(self):
+        return self.raw.get('kubernetes_config')
+
+    def webhook_dispatcher_config_name(self):
+        return self.raw.get('webhook_dispatcher_config')
