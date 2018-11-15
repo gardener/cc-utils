@@ -20,6 +20,7 @@ from flask_restful import (
     reqparse,
 )
 
+import util
 from model.webhook_dispatcher import WebhookDispatcherConfig
 from .dispatcher import GithubWebhookDispatcher
 from .model import PushEvent, PullRequestEvent
@@ -46,4 +47,6 @@ class GithubWebhook(Resource):
             parsed = PullRequestEvent(raw_dict=request.get_json())
             self.dispatcher.dispatch_pullrequest_event(pr_event=parsed)
         else:
-            return f'event {event} ignored'
+            msg = f'event {event} ignored'
+            util.info(msg)
+            return msg
