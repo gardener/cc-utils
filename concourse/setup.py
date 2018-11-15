@@ -272,6 +272,7 @@ def create_webhook_dispatcher_helm_values(
     secrets_server_concourse_cfg_name = '/'.join([
         secrets_server_cfg.secrets().concourse_secret_name(),
         secrets_server_cfg.secrets().concourse_attribute()])
+    container_port = webhook_dispatcher_deployment_cfg.webhook_dispatcher_container_port()
 
     env_vars = []
     env_vars.append({
@@ -284,6 +285,8 @@ def create_webhook_dispatcher_helm_values(
     cmd_args = [
         '--webhook-dispatcher-cfg-name',
         webhook_dispatcher_deployment_cfg.webhook_dispatcher_config_name(),
+        '--port',
+        f'"{container_port}"',
     ]
 
     helm_values = {
@@ -292,6 +295,7 @@ def create_webhook_dispatcher_helm_values(
         'image_reference': webhook_dispatcher_deployment_cfg.image_reference(),
         'cmd_args': cmd_args,
         'env_vars': env_vars,
+        'webhook_dispatcher_port': container_port,
     }
 
     return helm_values
