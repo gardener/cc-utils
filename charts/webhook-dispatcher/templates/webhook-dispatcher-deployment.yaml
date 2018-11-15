@@ -18,7 +18,7 @@ spec:
           name: webhook-dispatcher
           livenessProbe:
             tcpSocket:
-              port: 5000
+              port: {{ .Values.webhook_dispatcher_port }}
             initialDelaySeconds: 10
             periodSeconds: 10
           command:
@@ -35,5 +35,5 @@ spec:
             value: {{ index $entry "value" }}
           {{- end }}
           ports:
-            - containerPort: 5000
+            - containerPort: {{ .Values.webhook_dispatcher_port }}
               name: default

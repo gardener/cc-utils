@@ -37,6 +37,7 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
             'secrets_server_config',
             'kubernetes_config',
             'webhook_dispatcher_config',
+            'container_port'
         }
 
     def image_reference(self):
@@ -56,3 +57,6 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
 
     def webhook_dispatcher_config_name(self):
         return self.raw.get('webhook_dispatcher_config')
+
+    def webhook_dispatcher_container_port(self):
+        return self.raw['container_port']
