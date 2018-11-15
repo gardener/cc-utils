@@ -13,7 +13,7 @@ spec:
         app: webhook-dispatcher
     spec:
       containers:
-        - image: {{.Values.image_reference}}
+        - image: {{ .Values.image_reference }}
           imagePullPolicy: IfNotPresent
           name: webhook-dispatcher
           livenessProbe:
@@ -27,7 +27,7 @@ spec:
             - whdutil
             - start_whd
             {{- range $entry := .Values.cmd_args }}
-            - {{$entry}}
+            - {{ $entry }}
             {{- end}}
           env:
           {{- range $entry := .Values.env_vars }}
