@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 import test_utils
 
-from concourse.client import BuildStatus
+from concourse.client.model import BuildStatus
 from concourse.steps import step_def, step_lib_def
 from concourse.model.step import PipelineStep
 from concourse.model.traits.notifications import (

@@ -132,7 +132,8 @@ mailutil.notify(
 
 <%def name="notification_step_lib()">
 from concourse.model.traits.notifications import NotificationTriggeringPolicy
-from concourse.client import from_cfg, BuildStatus
+from concourse.client import from_cfg
+from concourse.client.model import BuildStatus
 
 def meta_vars():
     v = {}

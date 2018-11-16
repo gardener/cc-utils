@@ -19,6 +19,7 @@ from copy import copy
 import github.webhook
 from github.util import _create_github_api_object
 import concourse.client as concourse
+import concourse.client.model
 from model.github import (
     GithubConfig,
 )
@@ -97,7 +98,7 @@ def sync_webhooks(
 
 
 def _sync_webhook(
-    resources: [concourse.Resource],
+    resources: [concourse.client.model.Resource],
     webhook_syncer: github.webhook.GithubWebHookSyncer,
     job_mapping_name: str,
     concourse_cfg: 'ConcourseConfig',

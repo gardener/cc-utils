@@ -17,13 +17,13 @@ import unittest
 
 from urllib.parse import parse_qs, urlparse
 
-from concourse import client
+from concourse.client import routes
 from github.webhook import WebhookQueryAttributes
 
 
 class ConcourseApiRoutesBaseTest(unittest.TestCase):
     def setUp(self):
-        self.examinee = client.ConcourseApiRoutesBase(
+        self.examinee = routes.ConcourseApiRoutesBase(
             base_url='https://made-up-concourse.com',
             team='foo'
         )
@@ -133,7 +133,7 @@ class ConcourseApiRoutesBaseTest(unittest.TestCase):
 
 class ConcourseApiRoutesV3Test(unittest.TestCase):
     def setUp(self):
-        self.examinee = client.ConcourseApiRoutesV3(
+        self.examinee = routes.ConcourseApiRoutesV3(
             base_url='https://cc.v3',
             team='foo'
         )
@@ -147,7 +147,7 @@ class ConcourseApiRoutesV3Test(unittest.TestCase):
 
 class ConcourseApiRoutesV4Test(unittest.TestCase):
     def setUp(self):
-        self.examinee = client.ConcourseApiRoutesV4(
+        self.examinee = routes.ConcourseApiRoutesV4(
             base_url='https://cc.v4',
             team='foo'
         )
