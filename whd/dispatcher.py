@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import functools
+import time
 
 from model.webhook_dispatcher import WebhookDispatcherConfig
 from .model import PushEvent, PullRequestEvent, PullRequestAction
@@ -103,7 +104,19 @@ class GithubWebhookDispatcher(object):
 
             yield resource
 
-    def _ensure_pr_resource_updates(self, concourse_api, pr_event, resources):
+    def _ensure_pr_resource_updates(
+        self,
+        concourse_api,
+        pr_event,
+        resources,
+        retries=6,
+        sleep_seconds=0,
+    ):
+        time.sleep(sleep_seconds)
+        retries -= 1
+        if retries < 0:
+            util.info('giving up')
+
         def resource_versions(resource):
             return concourse_api.resource_versions(
                 pipeline_name=resource.pipeline_name(),
@@ -130,4 +143,12 @@ class GithubWebhookDispatcher(object):
         # XXX in case of label-required policy, this will happen repeatedly (until label is set)
         util.info(f'found {len(outdated_resources)} PR resource(s) that require being updated')
         self._trigger_resource_check(concourse_api=concourse_api, resources=outdated_resources)
-        util.info('retriggered resource check')
+        util.info(f'retriggered resource check will try again {retries} more times')
+
+        self._ensure_pr_resource_updates(
+            concourse_api=concourse_api,
+            pr_event=pr_event,
+            resources=outdated_resources,
+            retries=retries,
+            sleep_seconds=2,
+        )
