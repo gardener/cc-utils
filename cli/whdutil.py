@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from gevent.pywsgi import WSGIServer
+
 import whd.server as whd_server
 import util
 
@@ -20,11 +22,15 @@ import util
 def start_whd(
     webhook_dispatcher_cfg_name: str='sap_external',
     port: int=5000,
-    debug: bool=True,
+    production: bool=False,
 ):
     cfg_factory = util.ctx().cfg_factory()
     webhook_dispatcher_cfg = cfg_factory.webhook_dispatcher(webhook_dispatcher_cfg_name)
 
     app = whd_server.webhook_dispatcher_app(whd_cfg=webhook_dispatcher_cfg)
 
-    app.run(debug=debug, port=port, host='0.0.0.0')
+    if production:
+        server = WSGIServer(('', port), app)
+        server.serve_forever()
+    else:
+        app.run(debug=True, port=port, host='0.0.0.0')
