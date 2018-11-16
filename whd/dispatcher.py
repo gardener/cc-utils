@@ -116,6 +116,7 @@ class GithubWebhookDispatcher(object):
         retries -= 1
         if retries < 0:
             util.info('giving up')
+            return
 
         def resource_versions(resource):
             return concourse_api.resource_versions(
