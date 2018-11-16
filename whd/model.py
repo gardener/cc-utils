@@ -54,3 +54,9 @@ class PullRequestAction(enum.Enum):
 class PullRequestEvent(EventBase):
     def action(self):
         return PullRequestAction(self.raw['action'])
+
+    def number(self):
+        '''
+        the PR number
+        '''
+        return self.raw['number']
