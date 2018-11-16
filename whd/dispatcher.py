@@ -129,7 +129,7 @@ class GithubWebhookDispatcher(object):
             # XXX hard-code structure of concourse-PR-resource's version dict
             pr_numbers = map(lambda r: r.version()['pr'], resource_versions)
 
-            return pr_event.number() in pr_numbers
+            return str(pr_event.number()) in pr_numbers
 
         # filter out all resources that are _not_ up-to-date (we only care about those)
         outdated_resources = [
