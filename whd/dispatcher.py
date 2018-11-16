@@ -58,11 +58,16 @@ class GithubWebhookDispatcher(object):
             return util.info(f'ignoring pull-request action {pr_event.action()}')
 
         for concourse_api in self.concourse_clients():
-            resources = self._matching_resources(
+            resources = list(self._matching_resources(
                 concourse_api=concourse_api,
                 event=pr_event,
-            )
+            ))
             self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
+            self._ensure_pr_resource_updates(
+                concourse_api=concourse_api,
+                pr_event=pr_event,
+                resources=resources,
+            )
 
     def _trigger_resource_check(self, concourse_api, resources):
         for resource in resources:
@@ -97,3 +102,32 @@ class GithubWebhookDispatcher(object):
                     continue
 
             yield resource
+
+    def _ensure_pr_resource_updates(self, concourse_api, pr_event, resources):
+        def resource_versions(resource):
+            return concourse_api.resource_versions(
+                pipeline_name=resource.pipeline_name(),
+                resource_name=resource.name,
+            )
+
+        def is_up_to_date(resource, resource_versions):
+            # assumption: PR resource is up-to-date if our PR-number is listed
+            # XXX hard-code structure of concourse-PR-resource's version dict
+            pr_numbers = map(lambda r: r.version()['pr'], resource_versions)
+
+            return pr_event.number() in pr_numbers
+
+        # filter out all resources that are _not_ up-to-date (we only care about those)
+        outdated_resources = [
+            resource for resource in resources
+            if not is_up_to_date(resource, resource_versions(resource))
+        ]
+
+        if not outdated_resources:
+            util.info('no outdated_resources PR found')
+            return # nothing to do
+
+        # XXX in case of label-required policy, this will happen repeatedly (until label is set)
+        util.info(f'found {len(outdated_resources)} PR resource(s) that require being updated')
+        self._trigger_resource_check(concourse_api=concourse_api, resources=outdated_resources)
+        util.info('retriggered resource check')
