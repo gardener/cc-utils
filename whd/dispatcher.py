@@ -109,10 +109,13 @@ class GithubWebhookDispatcher(object):
         concourse_api,
         pr_event,
         resources,
-        retries=6,
+        retries=10,
         sleep_seconds=0,
     ):
         time.sleep(sleep_seconds)
+        if sleep_seconds == 0:
+            sleep_seconds = 3
+
         retries -= 1
         if retries < 0:
             util.info('giving up')
@@ -151,5 +154,5 @@ class GithubWebhookDispatcher(object):
             pr_event=pr_event,
             resources=outdated_resources,
             retries=retries,
-            sleep_seconds=2,
+            sleep_seconds=sleep_seconds*1.2,
         )
