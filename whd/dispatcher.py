@@ -48,6 +48,22 @@ class GithubWebhookDispatcher(object):
             )
             self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
 
+    def dispatch_pullrequest_event(self, pr_event):
+        if not pr_event.action() in (
+            PullRequestAction.OPENED,
+            PullRequestAction.REOPENED,
+            PullRequestAction.LABELED,
+            PullRequestAction.SYNCHRONIZE,
+        ):
+            return util.info(f'ignoring pull-request action {pr_event.action()}')
+
+        for concourse_api in self.concourse_clients():
+            resources = self._matching_resources(
+                concourse_api=concourse_api,
+                event=pr_event,
+            )
+            self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
+
     def _trigger_resource_check(self, concourse_api, resources):
         for resource in resources:
             util.info('triggering resource check for: ' + resource.name)
@@ -81,19 +97,3 @@ class GithubWebhookDispatcher(object):
                     continue
 
             yield resource
-
-    def dispatch_pullrequest_event(self, pr_event):
-        if not pr_event.action() in (
-            PullRequestAction.OPENED,
-            PullRequestAction.REOPENED,
-            PullRequestAction.LABELED,
-            PullRequestAction.SYNCHRONIZE,
-        ):
-            return util.info(f'ignoring pull-request action {pr_event.action()}')
-
-        for concourse_api in self.concourse_clients():
-            resources = self._matching_resources(
-                concourse_api=concourse_api,
-                event=pr_event,
-            )
-            self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
