@@ -46,6 +46,7 @@ from concourse.enumerator import (
 )
 
 from concourse import client
+import concourse.client.model
 
 
 def replicate_pipelines(
@@ -270,9 +271,9 @@ class ConcourseDeployer(DefinitionDeployer):
                 api.expose_pipeline(pipeline_name=pipeline_name)
 
             deploy_status = DeployStatus.SUCCEEDED
-            if response is client.SetPipelineResult.CREATED:
+            if response is concourse.client.model.SetPipelineResult.CREATED:
                 deploy_status |= DeployStatus.CREATED
-            elif response is client.SetPipelineResult.UPDATED:
+            elif response is concourse.client.model.SetPipelineResult.UPDATED:
                 pass
             else:
                 raise NotImplementedError
