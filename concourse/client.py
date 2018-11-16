@@ -202,6 +202,10 @@ class ConcourseApiRoutesBase(object):
         return self._api_url('pipelines', pipeline_name, 'resources', resource_name, 'check')
 
     @ensure_annotations
+    def resource_versions(self, pipeline_name: str, resource_name: str):
+        return self._api_url('pipelines', pipeline_name, 'resources', resource_name, 'versions')
+
+    @ensure_annotations
     def job_builds(self, pipeline_name: str, job_name: str):
         return self._api_url('pipelines', pipeline_name, 'jobs', job_name, 'builds')
 
@@ -398,6 +402,13 @@ class ConcourseApiBase(object):
         # the resource's check-url
         self._post(url, body='{}')
 
+    @ensure_annotations
+    def resource_versions(self, pipeline_name: str, resource_name: str):
+        url = self.routes.resource_versions(pipeline_name=pipeline_name, resource_name=resource_name)
+
+        response = self._get(url)
+        return [ResourceVersion(raw_dict=raw, concourse_api=None) for raw in response]
+
 
 class ConcourseApiV3(ConcourseApiBase):
     @ensure_annotations
@@ -494,6 +505,12 @@ class ModelBase(object):
     def __init__(self, raw_dict: dict, concourse_api:ConcourseApiBase):
         self.api = concourse_api
         self.raw_dict = raw_dict
+        self.raw = raw_dict
+
+
+class ResourceVersion(ModelBase):
+    def type(self):
+        return self.raw['type']
 
 
 class PipelineConfig(object):
