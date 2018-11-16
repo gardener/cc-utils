@@ -210,7 +210,7 @@ class ConcourseApiBase(object):
         url = self.routes.resource_versions(pipeline_name=pipeline_name, resource_name=resource_name)
 
         response = self._get(url)
-        return [ResourceVersion(raw_dict=raw, concourse_api=None) for raw in response]
+        return [ResourceVersion(raw=raw, concourse_api=None) for raw in response]
 
 
 class ConcourseApiV3(ConcourseApiBase):

@@ -36,10 +36,9 @@ class ModelBase(object):
     Not intended to be instantiated by users of this module
     '''
 
-    def __init__(self, raw_dict:dict, concourse_api):
+    def __init__(self, raw:dict, concourse_api):
         self.api = concourse_api
-        self.raw_dict = raw_dict
-        self.raw = raw_dict
+        self.raw = raw
 
 
 class ResourceVersion(ModelBase):
@@ -55,11 +54,11 @@ class PipelineConfig(object):
     Not intended to be instantiated by users of this module
     '''
     @ensure_annotations
-    def __init__(self, raw_dict:dict, concourse_api, name:str):
+    def __init__(self, raw:dict, concourse_api, name:str):
         self.concourse_api = concourse_api
         self.name = name
-        self.raw_dict = raw_dict['config']
-        resources = self.raw_dict.get('resources', None)
+        self.raw = raw['config']
+        resources = self.raw.get('resources', None)
         if not resources:
             warning('Pipeline did not contain resource definitions: {p}'.format(p=name))
             raise ValueError()
@@ -77,13 +76,13 @@ class Resource(object):
     Not intended to be instantiated by users of this module
     '''
     @ensure_annotations
-    def __init__(self, raw_dict:dict, pipeline:PipelineConfig):
+    def __init__(self, raw:dict, pipeline:PipelineConfig):
         self.pipeline = pipeline
         self.concourse_api = pipeline.concourse_api
-        self.raw = raw_dict
-        self.type = raw_dict['type']
-        self.source = raw_dict['source']
-        self.name = raw_dict['name']
+        self.raw = raw
+        self.type = raw['type']
+        self.source = raw['source']
+        self.name = raw['name']
 
     def has_webhook_token(self):
         return 'webhook_token' in self.raw and len(self.webhook_token()) > 0
@@ -114,10 +113,10 @@ class GithubSource(object):
     Not intended to be instantiated by users of this module
     '''
     @ensure_annotations
-    def __init__(self, raw_dict:dict, concourse_api):
+    def __init__(self, raw:dict, concourse_api):
         self.concourse_api = concourse_api
-        self.raw = raw_dict
-        self.uri = raw_dict['uri']
+        self.raw = raw
+        self.uri = raw['uri']
 
     def team_name(self):
         return self.raw['team_name']
@@ -153,16 +152,16 @@ class Build(ModelBase):
     '''
 
     def id(self):
-        return int(self.raw_dict.get('id'))
+        return int(self.raw.get('id'))
 
     def start_time(self):
-        return int(self.raw_dict.get('start_time'))
+        return int(self.raw.get('start_time'))
 
     def stop_time(self):
-        return int(self.raw_dict.get('end_time'))
+        return int(self.raw.get('end_time'))
 
     def status(self):
-        return BuildStatus(self.raw_dict.get('status'))
+        return BuildStatus(self.raw.get('status'))
 
     def plan(self):
         return self.api.build_plan(self.id())
@@ -179,7 +178,7 @@ class BuildPlan(ModelBase):
         the given name is returned.
         If no task with the given name is found, `None` is returned.
         '''
-        plan = self.raw_dict.get('plan')
+        plan = self.raw.get('plan')
 
         def find_tid(p):
             if 'task' in p:
