@@ -14,12 +14,29 @@
 # limitations under the License.
 
 import os
+import pathlib
 import requests
 import json
+import yaml
 
-from util import urljoin
-from util import ctx, CliHints
+from util import CliHints, ctx,existing_dir, urljoin
 from model import ConfigFactory, ConfigSetSerialiser as CSS
+
+
+def export_kubeconfig(
+    kubernetes_config_name: str,
+    output_file_path: str,
+):
+    '''Write the kubeconfig contained in a kubernetes config to a given path.
+    '''
+    cfg_factory = ctx().cfg_factory()
+    kubernetes_cfg = cfg_factory.kubernetes(kubernetes_config_name)
+
+    destination_path = pathlib.Path(output_file_path).resolve()
+    existing_dir(destination_path.parent)
+
+    with destination_path.open(mode='w') as f:
+        yaml.dump(kubernetes_cfg.kubeconfig(), f)
 
 
 def serialise_cfg(cfg_dir: CliHints.existing_dir(), cfg_sets: [str], out_file: str):
