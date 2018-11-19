@@ -27,17 +27,16 @@ SRC_DIR = os.path.abspath(
 CLI_PY = os.path.join(SRC_DIR, 'cli.py')
 
 
-class CliTest(unittest.TestCase):
-    def test_smoke(self):
-        # perform a very weak smoke-test:
-        # test if a trivial sub-command can be run
-        result = subprocess.run(
-            [CLI_PY, 'util', 'info', '--msg', 'foobar'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True
-        )
+def test_smoke():
+    # perform a very weak smoke-test:
+    # test if a trivial sub-command can be run
+    result = subprocess.run(
+        [CLI_PY, 'config', '-h'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True
+    )
 
-        self.assertEqual(result.stdout.strip(), 'INFO: foobar')
-        self.assertEqual(result.stderr.strip(), '')
-        self.assertEqual(result.returncode, 0)
+    assert result.returncode == 0
+    assert result.stderr.strip() == ''
+    assert result.stdout.strip().startswith('usage: cli.py config')
