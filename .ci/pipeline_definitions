@@ -35,10 +35,11 @@ cc-utils:
           inject_effective_version: True
         publish:
           dockerimages:
-            registry: 'gcr-readwrite'
-            image: 'eu.gcr.io/gardener-project/cc/job-image'
-            dockerfile: 'Dockerfile'
-            tag_as_latest: True
+            job-image:
+              registry: 'gcr-readwrite'
+              image: 'eu.gcr.io/gardener-project/cc/job-image'
+              dockerfile: 'Dockerfile'
+              tag_as_latest: True
         release:
           nextversion: 'bump_minor'
         component_descriptor: ~
