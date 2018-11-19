@@ -15,7 +15,6 @@
 
 import os
 import subprocess
-import unittest
 
 # assumption: we reside exactly one directory below our sources
 SRC_DIR = os.path.abspath(
