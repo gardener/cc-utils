@@ -60,3 +60,8 @@ class PullRequestEvent(EventBase):
         the PR number
         '''
         return self.raw['number']
+
+    def label_names(self):
+        return [
+            label.get('name') for label in self.raw.get('labels', ())
+        ]
