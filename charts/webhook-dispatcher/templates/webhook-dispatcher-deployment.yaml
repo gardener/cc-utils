@@ -29,6 +29,7 @@ spec:
             {{- range $entry := .Values.cmd_args }}
             - {{ $entry }}
             {{- end}}
+            - --production
           env:
           {{- range $entry := .Values.env_vars }}
           - name: {{ index $entry "name" }}
