@@ -1,3 +1,6 @@
+
+.. _build_pipeline_reference_manual:
+
 ******************************************
 CC-Utils - Build Pipeline Reference Manual
 ******************************************
@@ -11,6 +14,7 @@ CC-Utils - Build Pipeline Reference Manual
     pipeline_job
     pipeline_step
     traits
+    release_notes
 
 
 Introduction

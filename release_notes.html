@@ -1,0 +1,359 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Release Notes Process &mdash; cc-utils  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="version Trait" href="traits/version.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> cc-utils
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="pipeline_contract.html">CC-Utils - Build Pipeline Reference Manual</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="pipeline.html">Pipeline Definition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pipeline_job.html">Pipeline Job</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pipeline_step.html">Pipeline Steps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="traits.html">Pipeline Definition Traits</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Release Notes Process</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">cc-utils</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="pipeline_contract.html">CC-Utils - Build Pipeline Reference Manual</a> &raquo;</li>
+        
+      <li>Release Notes Process</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/release_notes.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="release-notes-process">
+<h1>Release Notes Process<a class="headerlink" href="#release-notes-process" title="Permalink to this headline">¶</a></h1>
+<p>In order to support the developers when creating a new release of a
+component, a new process is established to gather all release-relevant
+information since the last release to build the release notes text.</p>
+<div class="section" id="format">
+<h2>Format<a class="headerlink" href="#format" title="Permalink to this headline">¶</a></h2>
+<p>The release-relevant information has to be flagged as such, thus we
+introduce the following format, which is based on the format that
+<a class="reference external" href="https://raw.githubusercontent.com/kubernetes/kubernetes/master/.github/PULL_REQUEST_TEMPLATE.md">kubernetes</a>
+uses for building the release notes.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>```&lt;category&gt; &lt;target group&gt;
+
+&lt;your release note&gt;
+
+```
+</pre></div>
+</div>
+<p>Possible values:</p>
+<blockquote>
+<div><ul class="simple">
+<li>category: improvement|noteworthy|action</li>
+<li>target_group: user|operator</li>
+</ul>
+</div></blockquote>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>```improvement user
+
+This is my first release note
+
+```
+</pre></div>
+</div>
+<p>If no release note is required, just write <code class="docutils literal notranslate"><span class="pre">NONE</span></code> within the block or delete the block altogether.</p>
+<div class="section" id="category-title-mapping">
+<h3>Category - Title Mapping<a class="headerlink" href="#category-title-mapping" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="33%" />
+<col width="67%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">category</th>
+<th class="head">release note section title</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>improvement</td>
+<td>Improvement</td>
+</tr>
+<tr class="row-odd"><td>noteworthy</td>
+<td>Most notable changes</td>
+</tr>
+<tr class="row-even"><td>action</td>
+<td>Action Required</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="how-to-contribute-to-release-notes">
+<h2>How to Contribute to Release Notes<a class="headerlink" href="#how-to-contribute-to-release-notes" title="Permalink to this headline">¶</a></h2>
+<p>Now that we know the format for tagging release-relevant information,
+where do we put it so that it can be fetched automatically?</p>
+<p>There are two options:</p>
+<ol class="arabic simple">
+<li>As description in <em>pull requests</em> (preferred)</li>
+<li>As <em>commit message</em></li>
+</ol>
+<div class="section" id="pull-requests">
+<h3>Pull Requests<a class="headerlink" href="#pull-requests" title="Permalink to this headline">¶</a></h3>
+<p>The preferred option is to create a pull request that contains your
+proposed changes (to the code-basis) and in the description a code-block
+like above.</p>
+<p><strong>Example:</strong> Here is an example pull request that contains release
+notes: <a class="reference external" href="https://github.com/gardener/dashboard/pull/147">https://github.com/gardener/dashboard/pull/147</a> The release notes
+appeared in the release
+<a class="reference external" href="https://github.com/gardener/dashboard/releases/tag/1.18.0">https://github.com/gardener/dashboard/releases/tag/1.18.0</a>.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Pull requests that are still open and not merged are not considered for the release notes.</p>
+</div>
+<p>Even if the pull request is already merged you can still edit the
+description in case you need to make changes to your release note and it
+will be used once the release is created.</p>
+<p>To make it easier for the community to contribute to the release notes
+you can add a pull request template to your repository, e.g. like the
+<a class="reference external" href="https://raw.githubusercontent.com/gardener/dashboard/master/.github/pull_request_template.md">template</a>
+used for the gardener dashboard.</p>
+<p>See
+<a class="reference external" href="https://help.github.com/articles/creating-a-pull-request-template-for-your-repository/">https://help.github.com/articles/creating-a-pull-request-template-for-your-repository/</a>
+on how to create pull request template for your repository.</p>
+</div>
+<div class="section" id="commits">
+<h3>Commits<a class="headerlink" href="#commits" title="Permalink to this headline">¶</a></h3>
+<p>A second option on how to contribute to the release notes is to add a
+code-block like above to your commit message. This option is not
+preferred as once you have pushed your changes to the remote repository
+it cannot easily be changed anymore so you have to be very cautious.</p>
+</div>
+</div>
+<div class="section" id="draft-release">
+<h2>Draft Release<a class="headerlink" href="#draft-release" title="Permalink to this headline">¶</a></h2>
+<p>In order to see how the release notes would look like, draft releases
+are created/updated - usually on every head update.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Only users with write access to the repository can view drafts of releases</p>
+</div>
+<p>To enable draft releases, add the
+<a class="reference external" href="https://github.com/gardener/dashboard/blob/51fc9792af32da137d3c1b3e69635b2093dbbfd7/.ci/pipeline_definitions#L28">draft_release</a>
+trait to your variant that has (or inherits) the <em>version</em> trait.
+Usually you would add it to the <em>head-update</em> variant.</p>
+</div>
+<div class="section" id="transporting-release-notes">
+<h2>Transporting Release Notes<a class="headerlink" href="#transporting-release-notes" title="Permalink to this headline">¶</a></h2>
+<p>A component can depend upon other components. When releasing a
+component, ideally the release notes of the source repository (for which
+the release was created) should be included in the target component.
+This can be achieved by reusing the pull request mechanism as explained
+above:</p>
+<ol class="arabic simple">
+<li>On release of a source component, all pull requests (and commits are fetched since the last release)</li>
+<li>The release notes are extracted from the pull requests and commits</li>
+<li>A new pull request is created on the target component which contains the release notes within the description as code-blocks</li>
+<li>On release of the target component the release notes text is generated</li>
+<li>It will start over again for the next component with step 1</li>
+</ol>
+</div>
+<div class="section" id="posting-release-notes-to-slack">
+<h2>Posting Release Notes To Slack<a class="headerlink" href="#posting-release-notes-to-slack" title="Permalink to this headline">¶</a></h2>
+<p>When naming a <code class="docutils literal notranslate"><span class="pre">default_channel</span></code> and adding channel_cfgs as shown in the example below to the <code class="docutils literal notranslate"><span class="pre">slack</span></code> trait of your pipeline definition, the release notes will be posted to specified channel (channel name or channel id). The <code class="docutils literal notranslate"><span class="pre">slack_cfg_name</span></code> has to correspond to the config element name of a known slack config on our Concourse.</p>
+<p>Example:</p>
+<div class="code yaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">release</span><span class="p">:</span>
+  <span class="n">traits</span><span class="p">:</span>
+    <span class="n">release</span><span class="p">:</span>
+      <span class="n">nextversion</span><span class="p">:</span> <span class="s1">&#39;bump_minor&#39;</span>
+    <span class="n">slack</span><span class="p">:</span>
+      <span class="n">default_channel</span><span class="p">:</span> <span class="s1">&#39;channel_cfg&#39;</span> <span class="c1"># This channel config will be used for posting the release notes to</span>
+      <span class="n">channel_cfgs</span><span class="p">:</span>
+        <span class="n">channel_cfg</span><span class="p">:</span> <span class="c1"># channel config name</span>
+          <span class="n">channel_name</span><span class="p">:</span> <span class="s1">&#39;my_slack_channel_name&#39;</span> <span class="c1"># you can specify the channel name or channel id</span>
+          <span class="n">slack_cfg_name</span><span class="p">:</span> <span class="s1">&#39;example_slack_workspace&#39;</span> <span class="c1"># Specifies the slack configuration that holds the slack api key (which is bound to a slack workspace)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="traits/version.html" class="btn btn-neutral" title="version Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, SAP SE or an SAP affiliate company.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+    
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
