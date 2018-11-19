@@ -27,3 +27,18 @@ cc-utils:
           policies:
             require-label: 'reviewed/ok-to-test' # default
             build-forks: true # default
+
+    release_job_image:
+      traits:
+        version:
+          preprocess: 'finalize'
+          inject_effective_version: True
+        publish:
+          dockerimages:
+            registry: 'gcr-readwrite'
+            image: 'eu.gcr.io/gardener-project/cc/job-image'
+            dockerfile: 'Dockerfile'
+            tag_as_latest: True
+        release:
+          nextversion: 'bump_minor'
+        component_descriptor: ~
