@@ -128,6 +128,15 @@ class GithubWebhookDispatcher(object):
             )
 
         def is_up_to_date(resource, resource_versions):
+            # check if pr requires a label to be present
+            require_label = resource.source.get('label')
+            if require_label:
+                if require_label not in pr_event.label_names():
+                    util.info('skipping PR resource update (required label not present')
+                    # regardless of whether or not the resource is up-to-date, it would not
+                    # be discovered by concourse's PR resource due to policy
+                    return True
+
             # assumption: PR resource is up-to-date if our PR-number is listed
             # XXX hard-code structure of concourse-PR-resource's version dict
             pr_numbers = map(lambda r: r.version()['pr'], resource_versions)
@@ -144,7 +153,6 @@ class GithubWebhookDispatcher(object):
             util.info('no outdated_resources PR found')
             return # nothing to do
 
-        # XXX in case of label-required policy, this will happen repeatedly (until label is set)
         util.info(f'found {len(outdated_resources)} PR resource(s) that require being updated')
         self._trigger_resource_check(concourse_api=concourse_api, resources=outdated_resources)
         util.info(f'retriggered resource check will try again {retries} more times')
