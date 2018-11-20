@@ -132,7 +132,7 @@ class GithubWebhookDispatcher(object):
             require_label = resource.source.get('label')
             if require_label:
                 if require_label not in pr_event.label_names():
-                    util.info('skipping PR resource update (required label not present')
+                    util.info('skipping PR resource update (required label not present)')
                     # regardless of whether or not the resource is up-to-date, it would not
                     # be discovered by concourse's PR resource due to policy
                     return True
