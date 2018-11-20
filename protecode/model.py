@@ -61,6 +61,8 @@ class Vulnerability(ModelBase):
         return self.raw.get('triage') is not None
 
     def triages(self) -> 'Iterable[Triage]':
+        if not self.has_triage():
+            return ()
         return (Triage(raw_dict=raw) for raw in self.raw.get('triage'))
 
     def cve_major_severity(self) -> int:
