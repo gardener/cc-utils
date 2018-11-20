@@ -60,11 +60,18 @@ class Vulnerability(ModelBase):
     def has_triage(self):
         return self.raw.get('triage') is not None
 
+    def triages(self) -> 'Iterable[Triage]':
+        return (Triage(raw_dict=raw) for raw in self.raw.get('triage'))
+
     def cve_major_severity(self) -> int:
         if self.cve_severity_str():
             return int(self.cve_severity_str().split('.')[0])
         else:
             return -1
+
+
+class Triage(ModelBase):
+    pass
 
 
 # --- wrappers for inofficial protecode API responses
