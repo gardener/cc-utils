@@ -141,6 +141,10 @@ class ProtecodeApi(object):
         return self._request(requests.put, *args, **kwargs)
 
     @check_http_code
+    def _delete(self, *args, **kwargs):
+        return self._request(requests.delete, *args, **kwargs)
+
+    @check_http_code
     def _patch(self, *args, **kwargs):
         return self._request(requests.patch, *args, **kwargs)
 
