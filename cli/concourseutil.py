@@ -28,7 +28,6 @@ from util import (
 import concourse.setup as setup
 
 from concourse import client
-from concourse.util import sync_webhooks
 from concourse.enumerator import (
     DefinitionDescriptorPreprocessor,
     GithubOrganisationDefinitionEnumerator,
@@ -258,30 +257,6 @@ def render_pipelines(
     )
 
     replicator.replicate()
-
-
-def sync_webhooks_from_cfg(
-    cfg_name: str,
-):
-    '''
-    convenience wrapper for sync_webhooks for local usage with cc-config repo
-    '''
-    cfg_factory = ctx().cfg_factory()
-    cfg_set = cfg_factory.cfg_set(cfg_name)
-    github_cfg = cfg_set.github()
-    concourse_cfg = cfg_set.concourse()
-    job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
-
-    for job_mapping in job_mapping_set.job_mappings().values():
-        team_name = job_mapping.team_name()
-        info("syncing webhooks (team: {})".format(team_name))
-        team = concourse_cfg.team_credentials(team_name)
-        sync_webhooks(
-          github_cfg=github_cfg,
-          concourse_cfg=concourse_cfg,
-          job_mapping=job_mapping,
-          concourse_team_credentials=team,
-        )
 
 
 def diff_pipelines(left_file: CliHints.yaml_file(), right_file: CliHints.yaml_file()):
