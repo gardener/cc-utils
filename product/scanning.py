@@ -54,8 +54,14 @@ class ProtecodeUtil(object):
         self._api = not_none(protecode_api)
         self._group_id = group_id
 
-    def _image_ref_metadata(self, container_image):
-        return {'IMAGE_REFERENCE': container_image.image_reference()}
+    def _image_ref_metadata(self, container_image, omit_version):
+        metadata_dict = {
+            'IMAGE_REFERENCE_NAME': container_image.name(),
+        }
+        if not omit_version:
+            metadata_dict['IMAGE_REFERENCE'] = container_image.image_reference()
+
+        return metadata_dict
 
     def _component_metadata(self, component, omit_version=True):
         metadata = {'COMPONENT_NAME': component.name()}
@@ -89,7 +95,7 @@ class ProtecodeUtil(object):
             component: Component,
             omit_version,
         ):
-        metadata = self._image_ref_metadata(container_image)
+        metadata = self._image_ref_metadata(container_image, omit_version=omit_version)
         metadata.update(self._component_metadata(component=component, omit_version=omit_version))
         return metadata
 
