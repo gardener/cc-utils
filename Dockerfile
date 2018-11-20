@@ -1,7 +1,6 @@
 FROM eu.gcr.io/gardener-project/cc/job-image-base:0.12.0
 
-WORKDIR /cc/utils/
-COPY . .
+COPY . /cc/utils/
 
 # place version file into container's filesystem to make it easier to
 # determine the image version during runtime
