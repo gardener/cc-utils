@@ -78,7 +78,7 @@ class ProtecodeApiRoutes(object):
         return self._api_url('product', str(product_id), 'rescan')
 
     def triage(self):
-        return self._api_url('triage', 'vulnerability')
+        return self._api_url('triage', 'vulnerability/')
 
     # ---- "rest" routes (undocumented API)
 
