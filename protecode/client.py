@@ -172,6 +172,13 @@ class ProtecodeApi(object):
 
         return AnalysisResult(raw_dict=result.json().get('results'))
 
+    def delete_product(self, product_id: int):
+        url = self._routes.product(product_id=product_id)
+
+        self._delete(
+            url=url,
+        )
+
     def scan_result(self, product_id: int) -> AnalysisResult:
         url = self._routes.product(product_id=product_id)
 
