@@ -19,6 +19,7 @@ from protecode.client import ProtecodeApi
 from protecode.model import (
     ProcessingStatus,
     AnalysisResult,
+    TriageScope,
 )
 from util import not_none, warning, check_type
 from container.registry import retrieve_container_image
@@ -184,6 +185,8 @@ class ProtecodeUtil(object):
             container_image=container_image,
             component=component,
         )
+        # collect old triages in order to "transport" them after new upload (may be None)
+        triages = self._existing_triages(analysis_result=scan_result)
 
         upload_action = self._determine_upload_action(
             container_image=container_image,
@@ -215,6 +218,14 @@ class ProtecodeUtil(object):
             finally:
                 image_data_fh.close()
 
+            # upload triaging results - hard-code scope for now
+            for triage in triages:
+                self._api.add_triage(
+                    triage=triage,
+                    scope=TriageScope.RESULT,
+                    product_id=scan_result.product_id(),
+                )
+
         if upload_action.rescan:
             self._api.rescan(scan_result.product_id())
 
@@ -235,3 +246,11 @@ class ProtecodeUtil(object):
             status=upload_status,
             result=result
         )
+
+    def _existing_triages(self, analysis_result: AnalysisResult=None):
+        if not analysis_result:
+            return ()
+
+        for component in analysis_result.components():
+            for vulnerability in component.vulnerabilities():
+                yield from vulnerability.triages()
