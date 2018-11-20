@@ -5,6 +5,9 @@ cc-utils:
       pyflakes-lint: ~
       pycodestyle: ~
       test: ~
+    traits:
+      version: ~
+      component_descriptor: ~
   variants:
     head_update:
       repos:
@@ -42,4 +45,3 @@ cc-utils:
               tag_as_latest: True
         release:
           nextversion: 'bump_minor'
-        component_descriptor: ~
