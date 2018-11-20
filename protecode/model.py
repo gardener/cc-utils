@@ -70,8 +70,29 @@ class Vulnerability(ModelBase):
             return -1
 
 
+class TriageScope(Enum):
+    ACCOUNT_WIDE = 'CA'
+    FILE_NAME = 'FN'
+    FILE_HASH = 'FH'
+    RESULT = 'R'
+    GROUP = 'G'
+
+
 class Triage(ModelBase):
-    pass
+    def vulnerability_id(self):
+        return self.raw['vuln_id']
+
+    def component_name(self):
+        return self.raw['component']
+
+    def component_version(self):
+        return self.raw['version']
+
+    def scope(self) -> TriageScope:
+        return TriageScope(self.raw['scope'])
+
+    def reason(self):
+        return self.raw['reason']
 
 
 # --- wrappers for inofficial protecode API responses

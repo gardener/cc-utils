@@ -21,9 +21,15 @@ from typing import List
 
 import requests
 
-from util import not_empty, not_none, urljoin
+from util import not_empty, not_none, none, urljoin
 from http_requests import check_http_code
-from .model import AnalysisResult, ProcessingStatus, ScanResult
+from .model import (
+    AnalysisResult,
+    ProcessingStatus,
+    ScanResult,
+    Triage,
+    TriageScope,
+)
 
 
 class ProtecodeApiRoutes(object):
@@ -70,6 +76,9 @@ class ProtecodeApiRoutes(object):
 
     def rescan(self, product_id):
         return self._api_url('product', str(product_id), 'rescan')
+
+    def triage(self):
+        return self._api_url('triage', 'vulnerability')
 
     # ---- "rest" routes (undocumented API)
 
@@ -205,6 +214,64 @@ class ProtecodeApi(object):
             headers={},
         )
         return result.json().get('custom_data', {})
+
+    def add_triage(
+        self,
+        triage: Triage,
+        scope: TriageScope=None,
+        product_id=None,
+        group_id=None
+    ):
+        '''
+        adds an existing Protecode triage to a specified target. The existing triage is usually
+        retrieved from an already uploaded product (which is represented by `AnalysisResult`).
+        This method is offered to support "transporting" existing triages.
+
+        Note that - depending on the effective target scope, the `product_id`, `group_id` formal
+        parameters are either required or forbidden.
+
+        @param triage: the triage to "copy"
+        @param scope: if given, overrides the triage's scope
+        @param product_id: target product_id. required iff scope in FN, FH, R
+        @param group_id: target group_id. required iff scope is G(ROUP)
+        '''
+        url = self._routes.triage()
+
+        # if no scope is set, use the one from passed triage
+        scope = scope if scope else triage.scope()
+
+        # depending on the scope, different arguments are required
+        if scope == TriageScope.ACCOUNT_WIDE:
+            none(product_id)
+            none(group_id)
+        elif scope in (TriageScope.FILE_NAME, TriageScope.FILE_HASH, TriageScope.RESULT):
+            not_none(product_id)
+            none(group_id)
+        elif scope == TriageScope.GROUP:
+            none(product_id)
+            not_none(group_id)
+        else:
+            raise NotImplementedError()
+
+        # "copy" data from existing triage
+        triage_dict = {
+            'component': triage.component_name(),
+            'version': triage.component_version(),
+            'vulns': [triage.vulnerability_id()],
+            'scope': triage.scope().value,
+            'reason': triage.reason(),
+        }
+
+        if product_id:
+            triage_dict['product_id'] = product_id
+
+        if group_id:
+            triage_dict['group_id'] = group_id
+
+        self._put(
+            url=url,
+            json=triage_dict,
+        )
 
     # --- "rest" routes (undocumented API)
 
