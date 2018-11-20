@@ -208,6 +208,11 @@ class ProtecodeUtil(object):
 
         if upload_action.upload:
             image_data_fh = retrieve_container_image(container_image.image_reference())
+            # keep old product_id (in order to delete after update)
+            if scan_result:
+                product_id = scan_result.product_id()
+            else:
+                product_id = None
 
             try:
                 # Upload image and update outdated analysis result with the one triggered
@@ -231,6 +236,10 @@ class ProtecodeUtil(object):
                     scope=TriageScope.RESULT,
                     product_id=scan_result.product_id(),
                 )
+
+            # rm (now outdated) scan result
+            if product_id:
+                self._api.delete_product(product_id=product_id)
 
         if upload_action.rescan:
             self._api.rescan(scan_result.product_id())
