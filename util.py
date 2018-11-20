@@ -151,6 +151,12 @@ def not_none(value):
     return value
 
 
+def none(value):
+    if value is not None:
+        fail('value must be None')
+    return value
+
+
 def is_yaml_file(path: CliHints.existing_file()):
     with open(path) as f:
         try:
