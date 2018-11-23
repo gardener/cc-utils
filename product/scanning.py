@@ -21,7 +21,7 @@ from protecode.model import (
     AnalysisResult,
     TriageScope,
 )
-from util import not_none, warning, check_type
+from util import not_none, warning, check_type, info
 from container.registry import retrieve_container_image
 from .model import ContainerImage, Component, UploadResult, UploadStatus
 
@@ -119,6 +119,9 @@ class ProtecodeUtil(object):
 
         if len(existing_products) > 1:
             warning('found more than one product for image {i}'.format(i=container_image))
+            for product in existing_products[1:]:
+                self._api.delete_product(product.product_id())
+                info(f'deleted product with product_id: {product.product_id()}')
 
         # use first (or only) match (we already printed a warning if we found more than one)
         product =  existing_products[0]
