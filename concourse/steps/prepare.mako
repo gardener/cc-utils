@@ -15,8 +15,20 @@ for input_step_name in input_step_names:
   if not exposed_dir:
     raise ValueError('step must expose output_dir: ' + str(input_step_name))
   input_dirs.add(exposed_dir)
+
+if job_variant.has_trait('version'):
+  version_trait = job_variant.trait('version')
+  inject_effective_version = version_trait.inject_effective_version()
+else:
+  inject_effective_version = False
+
 %>
 cp -Tfr ${main_repo.resource_name()} ${job_step.output('image_path')}
+% if inject_effective_version:
+# patch-in effective version
+cp "${job_step.input('version_path')}/version" \
+   "${job_step.output('image_path')}/${version_trait.versionfile_relpath()}"
+% endif
 <% # caveat: mako will _dedent_ contents inside the for loop
 %>
 % for input_dir in input_dirs:
