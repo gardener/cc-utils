@@ -11,7 +11,7 @@ deepmerge==0.0.4
 deprecated
 ensure
 gevent
-github3.py==1.2.0
+RaphaelVogel-github3.py==1.2.0
 kubernetes
 pycodestyle
 pydash==4.6.0
