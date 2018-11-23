@@ -16,34 +16,28 @@
 from ensure import ensure_annotations
 from github3.exceptions import NotFoundError
 from github3.github import GitHub
-from github3.repos.hook import Hook
-from github3.repos.repo import Repository
+from github3.orgs import OrganizationHook
+from github3.orgs import Organization
 from urllib.parse import urlparse
 
-DEFAULT_HOOK_EVENTS = ['create', 'pull_request', 'push']
+DEFAULT_HOOK_EVENTS = ['*'] # "send everything"
 DEFAULT_HOOK_NAME = 'web' # see https://developer.github.com/v3/repos/hooks/
 DEFAULT_HOOK_CONTENT_TYPE = 'json'
 
 
 class WebhookQueryAttributes(object):
-    WEBHOOK_TOKEN_ATTRIBUTE_NAME = 'webhook_token'
-    CONCOURSE_ID_ATTRIBUTE_NAME = 'concourse_id'
-    JOB_MAPPING_ID_ATTRIBUTE_NAME = 'job_mapping_id'
+    WHD_ID_ATTRIBUTE_NAME = 'whd_id'
 
     def __init__(
         self,
-        webhook_token: str,
-        concourse_id: str,
-        job_mapping_id: str,
+        whd_id: str,
     ):
-        self.webhook_token = webhook_token
-        self.concourse_id = concourse_id
-        self.job_mapping_id = job_mapping_id
+        self.whd_id = whd_id
 
 
 class GithubWebHookSyncer(object):
     '''
-    Synchronises web hooks for repositories hosted on a github instance.
+    Synchronises web hooks for organisations hosted on a github instance.
     '''
     @ensure_annotations
     def __init__(self, github: GitHub):
@@ -59,14 +53,14 @@ class GithubWebHookSyncer(object):
     @ensure_annotations
     def _retrieve_existing_hook_or_none(
         self,
-        repository:Repository,
+        organization:Organization,
         hook_name:str,
         callback_url:str
     ):
         '''
         @raises github3.exceptions.NotFoundError in case of missing privileges to enumerate webhooks
         '''
-        hooks = filter(lambda h: h.name == hook_name, repository.hooks())
+        hooks = filter(lambda h: h.name == hook_name, organization.hooks())
         hooks = filter(lambda h: self._has_similar_url(h, callback_url), hooks)
         hooks = list(hooks)
         if len(hooks) == 1:
@@ -78,7 +72,7 @@ class GithubWebHookSyncer(object):
     @ensure_annotations
     def _create_hook(
         self,
-        repository:Repository,
+        organization:Organization,
         callback_url:str,
         hook_name:str=DEFAULT_HOOK_NAME,
         content_type:str=DEFAULT_HOOK_CONTENT_TYPE,
@@ -91,24 +85,24 @@ class GithubWebHookSyncer(object):
             'content_type': content_type,
         }
 
-        hook = repository.create_hook(
+        hook = organization.create_hook(
             name=hook_name,
             config=config,
             active=active
         )
 
         if not hook:
-            raise RuntimeError('failed to create webhook {n} for repo {r}'.format(
+            raise RuntimeError('failed to create webhook {n} for organization {r}'.format(
                 n=hook_name,
-                r=str(repository)
+                r=str(organization)
             )
-            )
+        )
         return hook
 
     @ensure_annotations
     def _requires_update(
         self,
-        hook:Hook,
+        hook:OrganizationHook,
         callback_url:str,
         events:list,
         active:bool=True
@@ -125,7 +119,7 @@ class GithubWebHookSyncer(object):
     @ensure_annotations
     def _has_similar_url(
         self,
-        hook:Hook,
+        hook:OrganizationHook,
         callback_url:str
     ):
         # we should update in case only the URL params or schema changed
@@ -139,8 +133,7 @@ class GithubWebHookSyncer(object):
     @ensure_annotations
     def add_or_update_hooks(
         self,
-        owner:str,
-        repository_name:str,
+        organization_name:str,
         callback_urls, # List[str]
         hook_name:str=DEFAULT_HOOK_NAME,
         events:list=DEFAULT_HOOK_EVENTS,
@@ -153,8 +146,7 @@ class GithubWebHookSyncer(object):
         '''
         for callback_url in callback_urls:
             self.add_or_update_hook(
-                owner=owner,
-                repository_name=repository_name,
+                organization_name=organization_name,
                 callback_url=callback_url,
                 hook_name=hook_name,
                 events=events,
@@ -166,8 +158,7 @@ class GithubWebHookSyncer(object):
     @ensure_annotations
     def add_or_update_hook(
         self,
-        owner:str,
-        repository_name:str,
+        organization_name:str,
         callback_url:str,
         hook_name:str=DEFAULT_HOOK_NAME,
         events:list=DEFAULT_HOOK_EVENTS,
@@ -177,50 +168,41 @@ class GithubWebHookSyncer(object):
     ):
         '''
         Idempotently ensures that the specified webhook configuration is set
-        for the given git repository. If the webhook is absent, it is created.
+        for the given git organization. If the webhook is absent, it is created.
         If it exists, it is reconfigured according to the specified configuration
         in case differences are detected.
 
         See https://developer.github.com/webhooks/
 
-        @param owner: repository owner
-        @param repository_name: repository name
+        @param organization_name: organization name
         @param callback_urls: URLs the webhook should call
         @param hook_name: the webhook's name
         @param events: the events for which the webhook should trigger
         @param content_type: webhook content type (see github webhook documentation)
         @param active: whether the webhook should be active
         '''
-        repository = self.github.repository(
-            owner=owner,
-            repository=repository_name
+        organization = self.github.organization(
+            username=organization_name,
         )
-        if not repository:
+        if not organization:
             raise RuntimeError(
-                'failed to access {o}/{r}. Verify credentials and repository path'.format(
-                    o=owner,
-                    r=repository_name
-                )
+                f'failed to access "{organization_name}". Verify credentials and organization name'
             )
         try:
             hook = self._retrieve_existing_hook_or_none(
-                repository=repository,
+                organization=organization,
                 hook_name=hook_name,
                 callback_url=callback_url
             )
         except NotFoundError:
             raise RuntimeError(
-                'failed to retrieve webhooks for {o}/{r}. Verify credentials'.format(
-                    o=owner,
-                    r=repository_name,
-                )
+                f'failed to retrieve webhooks for "{organization_name}". Verify credentials'
             )
-
         # create_hook requires additional parameter 'name'
         hook_kwargs = {}
 
         if not hook:
-            create_or_update = repository.create_hook
+            create_or_update = organization.create_hook
             hook_kwargs['name'] = hook_name
         else:
             # early-exit if up-to-date
@@ -239,7 +221,6 @@ class GithubWebHookSyncer(object):
             'content_type': content_type,
             'insecure_ssl': '1' if skip_ssl_validation else '0'
         }
-
         result = create_or_update(
             config=config,
             events=events,
@@ -249,28 +230,21 @@ class GithubWebHookSyncer(object):
 
         if not result:
             raise RuntimeError(
-                'failed to update or create webhook for {o}/{r}'.format(
-                    o=owner,
-                    r=repository_name
-                )
+                f'failed to update or create webhook for "{organization_name}"'
             )
 
     def remove_outdated_hooks(
         self,
-        owner:str,
-        repository_name:str,
+        organization_name:str,
         urls_to_keep,
         url_filter_fun,
     ):
-        repository = self.github.repository(
-            owner=owner,
-            repository=repository_name
+        organization = self.github.organization(
+            username=organization_name
         )
 
-        processed = 0
         removed = 0
-        for hook in repository.hooks():
-            processed += 1
+        for hook in organization.hooks():
             url = hook.config.get('url')
             if not url:
                 continue # strangely, sometimes webhooks do not have a callback url
@@ -282,4 +256,4 @@ class GithubWebHookSyncer(object):
                 hook.delete()
                 removed +=1
 
-        return (processed, removed)
+        return removed

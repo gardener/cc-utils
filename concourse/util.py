@@ -13,22 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from urllib.parse import urlparse, parse_qs
-from copy import copy
+from urllib.parse import urlparse, parse_qs, urlunparse
 
 import github.webhook
 from github.util import _create_github_api_object
 import concourse.client as concourse
 import concourse.client.model
-from model.github import (
-    GithubConfig,
-)
 from model.concourse import (
-    ConcourseTeamCredentials,
-    ConcourseConfig,
     JobMapping,
+    JobMappingSet,
 )
-from util import info, warning, fail
+from model.webhook_dispatcher import WebhookDispatcherConfig, WebhookDispatcherDeploymentConfig
+from util import info, warning, fail, ctx, merge_dicts
 
 
 def list_github_resources(
@@ -46,130 +42,114 @@ def list_github_resources(
 
 
 def sync_webhooks(
-    github_cfg: GithubConfig,
-    concourse_cfg: ConcourseConfig,
-    job_mapping: JobMapping,
-    concourse_team_credentials: ConcourseTeamCredentials,
-    concourse_pipelines: [str]=None,
-    concourse_verify_ssl: bool=True,
+    webhook_dispatcher_cfg: WebhookDispatcherConfig,
+    # TODO: There is currently nothing explicitly linking a whd-cfg and a whd-deployment-cfg
+    webhook_dispatcher_deployment_cfg: WebhookDispatcherDeploymentConfig,
 ):
-    concourse_team = concourse_team_credentials.teamname()
+    cfg_factory = ctx().cfg_factory()
 
-    github_resources = list_github_resources(
-        concourse_cfg=concourse_cfg,
-        concourse_team=concourse_team,
-        concourse_pipelines=concourse_pipelines,
-        github_url=github_cfg.http_url(),
-    )
-    # group by repositories
-    path_to_resources = {}
-    allowed_github_orgs = [
-        github_org.org_name() for github_org in job_mapping.github_organisations()
-    ]
-    for gh_res in github_resources:
-        repo_path = gh_res.github_source().repo_path()
-        if gh_res.github_source().parse_organisation() not in allowed_github_orgs:
-            continue
-        if repo_path not in path_to_resources:
-            path_to_resources[repo_path] = [gh_res]
-        else:
-            path_to_resources[repo_path].append(gh_res)
-
-    github_obj = _create_github_api_object(github_cfg=github_cfg)
-
-    webhook_syncer = github.webhook.GithubWebHookSyncer(github_obj)
+    concourse_cfg_names = webhook_dispatcher_cfg.concourse_config_names()
+    concourse_cfgs = map(cfg_factory.concourse, concourse_cfg_names)
     failed_hooks = 0
 
-    for repo, resources in path_to_resources.items():
-        try:
-            _sync_webhook(
-                resources=resources,
-                webhook_syncer=webhook_syncer,
-                job_mapping_name=job_mapping.name(),
-                concourse_cfg=concourse_cfg,
-                skip_ssl_validation=not concourse_verify_ssl
-            )
-        except Exception as e:
-            failed_hooks += 1
-            warning(f'repo: {repo} - error: {e}')
-
-    if failed_hooks is not 0:
-        fail('{n} webhooks could not be updated or created!'.format(n=failed_hooks))
-
-
-def _sync_webhook(
-    resources: [concourse.client.model.Resource],
-    webhook_syncer: github.webhook.GithubWebHookSyncer,
-    job_mapping_name: str,
-    concourse_cfg: 'ConcourseConfig',
-    skip_ssl_validation: bool=False
-):
-    first_res = resources[0]
-    first_github_src = first_res.github_source()
-    pipeline = first_res.pipeline
-
-    # construct webhook endpoint
-    routes = copy(pipeline.concourse_api.routes)
-
-    # workaround: direct webhooks against delaying proxy if configured
-    if concourse_cfg.deploy_delaying_proxy():
-        routes.base_url = concourse_cfg.proxy_url()
-
-    repository = first_github_src.parse_repository()
-    organisation = first_github_src.parse_organisation()
-
-    # collect callback URLs
-    def webhook_url(gh_res):
-        query_attributes = github.webhook.WebhookQueryAttributes(
-            webhook_token=gh_res.webhook_token(),
-            concourse_id=concourse_cfg.name(),
-            job_mapping_id=job_mapping_name,
-        )
-        webhook_url = routes.resource_check_webhook(
-            pipeline_name=gh_res.pipeline.name,
-            resource_name=gh_res.name,
-            query_attributes=query_attributes,
-        )
-        return webhook_url
-
-    webhook_urls = set(map(webhook_url, resources))
-
-    webhook_syncer.add_or_update_hooks(
-        owner=organisation,
-        repository_name=repository,
-        callback_urls=webhook_urls,
-        skip_ssl_validation=skip_ssl_validation
-    )
-
+    # define filter function here - it does not change for a given webhook_dispatcher_cfg
     def url_filter(url):
         parsed_url = parse_qs(urlparse(url).query)
-        concourse_id = parsed_url.get(
-            github.webhook.WebhookQueryAttributes.CONCOURSE_ID_ATTRIBUTE_NAME
+        whd_id = parsed_url.get(
+            github.webhook.WebhookQueryAttributes.WHD_ID_ATTRIBUTE_NAME
         )
-        job_mapping_id = parsed_url.get(
-            github.webhook.WebhookQueryAttributes.JOB_MAPPING_ID_ATTRIBUTE_NAME
-        )
-        # consider an url for removal iff it contains parameters 'concourse_id' and 'job_mapping_id'
-        # matching given concourse_id and job_mapping_name
+        # consider an url for removal iff it contains parameter
+        # 'whd_id' matching given whd_id
         return (
-            concourse_id is not None and
-            concourse_cfg.name() in concourse_id and
-            job_mapping_id is not None and
-            job_mapping_name in job_mapping_id
+            whd_id is not None and
+            webhook_dispatcher_cfg.name() in whd_id
         )
 
-    processed, removed = webhook_syncer.remove_outdated_hooks(
-      owner=organisation,
-      repository_name=repository,
-      urls_to_keep=webhook_urls,
-      # only process webhooks that were created by "us"
-      url_filter_fun=url_filter,
+    for concourse_cfg in concourse_cfgs:
+        job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
+
+        # We need to gather all the organizations and corresponding Githubs so that we can
+        # instantiate the Github api clients with the correct GitHub api cfg.
+        github_mapping = process_job_mapping_set(job_mapping_set)
+
+        for github_cfg_name, organizations in github_mapping.items():
+            github_api = _create_github_api_object(
+                github_cfg=cfg_factory.github(github_cfg_name),
+            )
+
+            webhook_syncer = github.webhook.GithubWebHookSyncer(github_api)
+            callback_url = build_callback_url(
+                ingress_host_url=webhook_dispatcher_deployment_cfg.ingress_host(),
+                webhook_dispatcher_cfg_name=webhook_dispatcher_cfg.name(),
+            )
+
+            for organization_name in organizations:
+                try:
+                    webhook_syncer.add_or_update_hook(
+                        organization_name=organization_name,
+                        callback_url=callback_url,
+                        skip_ssl_validation=False,
+                    )
+                except Exception as e:
+                    failed_hooks += 1
+                    warning(f'org: {organization_name} - error: {e}')
+
+                removed = webhook_syncer.remove_outdated_hooks(
+                    organization_name=organization_name,
+                    urls_to_keep=callback_url,
+                    # only process webhooks that were created by "us"
+                    url_filter_fun=url_filter,
+                )
+                info(f'Updated hook for "{organization_name}"')
+                if removed > 0:
+                    info(f'removed {removed} outdated hook(s) from "{organization_name}"')
+
+        if failed_hooks is not 0:
+            fail(f'Some webhooks could not be set - for more details see above.')
+
+
+def process_job_mapping_set(
+    job_mapping_set: JobMappingSet,
+):
+    # Obtain mappings of GitHub instance to organisations for all job mappings in this set and
+    # merge them to obtain a single, definitive mapping of
+    # (GitHub instance -> orgs on that instance) for all organisations in this JobMappingSet
+    result = dict()
+    for _, job_mapping in job_mapping_set.job_mappings().items():
+        result = merge_dicts(result, create_github_to_org_map(job_mapping))
+    return result
+
+
+def create_github_to_org_map(
+    job_mapping: JobMapping,
+):
+    github_organisation_cfgs = job_mapping.github_organisations()
+    # Create a list of (GitHub instance -> org) mappings from the organisation configs.
+    github_organisation_mappings = map(
+        lambda cfg: {cfg.github_cfg_name(): [cfg.org_name()]},
+        github_organisation_cfgs
     )
-    info('updated {c} hook(s) for: {o}/{r}'.format(
-        c=len(webhook_urls),
-        o=organisation,
-        r=repository
+    # Merge the resulting mappings so that we get all orgs grouped by GitHub instance in _this_
+    # mapping
+    # TODO: Maybe use reduce, even if its not recommended by G.v.R
+    result = dict()
+    for mapping in github_organisation_mappings:
+        result = merge_dicts(result, mapping)
+    return result
+
+
+def build_callback_url(
+    ingress_host_url: str,
+    webhook_dispatcher_cfg_name: str,
+):
+    scheme = 'https'
+    netloc = ingress_host_url
+    path = 'github-webhook'
+    params = ''
+    query = '{name}={value}'.format(
+        name=github.webhook.WebhookQueryAttributes.WHD_ID_ATTRIBUTE_NAME,
+        value=webhook_dispatcher_cfg_name,
     )
-    )
-    if removed > 0:
-        info('removed {c} outdated hook(s)'.format(c=removed))
+    fragment=''
+
+    return urlunparse([scheme, netloc, path, params, query, fragment])

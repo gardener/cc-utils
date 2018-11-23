@@ -261,27 +261,19 @@ def render_pipelines(
 
 
 def sync_webhooks_from_cfg(
-    cfg_name: str,
+    webhook_dispatcher_config_name: str,
+    webhook_dispatcher_deployment_config_name: str,
 ):
     '''
-    convenience wrapper for sync_webhooks for local usage with cc-config repo
+    Set or update all org-webhooks for the given configs.
     '''
     cfg_factory = ctx().cfg_factory()
-    cfg_set = cfg_factory.cfg_set(cfg_name)
-    github_cfg = cfg_set.github()
-    concourse_cfg = cfg_set.concourse()
-    job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
-
-    for job_mapping in job_mapping_set.job_mappings().values():
-        team_name = job_mapping.team_name()
-        info("syncing webhooks (team: {})".format(team_name))
-        team = concourse_cfg.team_credentials(team_name)
-        sync_webhooks(
-          github_cfg=github_cfg,
-          concourse_cfg=concourse_cfg,
-          job_mapping=job_mapping,
-          concourse_team_credentials=team,
-        )
+    webhook_dispatcher_cfg = cfg_factory.webhook_dispatcher(webhook_dispatcher_config_name)
+    # TODO: ingress-host should be determinable by whd_cfg
+    webhook_dispatcher_deployment_cfg = cfg_factory.webhook_dispatcher_deployment(
+        webhook_dispatcher_deployment_config_name,
+    )
+    sync_webhooks(webhook_dispatcher_cfg, webhook_dispatcher_deployment_cfg)
 
 
 def diff_pipelines(left_file: CliHints.yaml_file(), right_file: CliHints.yaml_file()):
