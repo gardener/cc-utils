@@ -18,7 +18,6 @@ import unittest
 from urllib.parse import parse_qs, urlparse
 
 from concourse.client import routes
-from github.webhook import WebhookQueryAttributes
 
 
 class ConcourseApiRoutesBaseTest(unittest.TestCase):
@@ -79,31 +78,6 @@ class ConcourseApiRoutesBaseTest(unittest.TestCase):
         self.assertEqual(
             self.examinee.resource_check(pipeline_name='baz', resource_name='bar'),
             'https://made-up-concourse.com/api/v1/teams/foo/pipelines/baz/resources/bar/check',
-        )
-
-    def test_resource_check_webhook_route(self):
-        webhook_route = self.examinee.resource_check_webhook(
-            pipeline_name='baz',
-            resource_name='bar',
-            query_attributes=WebhookQueryAttributes(
-                webhook_token='made-up-token',
-                concourse_id='made-up-concourse',
-                job_mapping_id='made-up-mapping',
-            ),
-        )
-
-        scheme, netloc, path, _, query, _ = urlparse(webhook_route)
-        self.assertEqual(scheme, 'https')
-        self.assertEqual(netloc, 'made-up-concourse.com')
-        self.assertEqual(path, '/api/v1/teams/foo/pipelines/baz/resources/bar/check/webhook')
-        query_data = parse_qs(query)
-        self.assertEqual(
-            {
-                'webhook_token': ['made-up-token'],
-                'concourse_id': ['made-up-concourse'],
-                'job_mapping_id': ['made-up-mapping'],
-            },
-            query_data,
         )
 
     def test_job_build_route(self):
