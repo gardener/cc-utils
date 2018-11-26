@@ -180,6 +180,10 @@ def determine_previous_build_status(v):
     concourse_api = from_cfg(cfg_set.concourse(), team_name=v['build-team-name'])
     try:
       build_number = int(v['build-name'])
+      if build_number < 2:
+        util.info('this seems to be the first build - will notify')
+        return BuildStatus.SUCCEEDED
+
       previous_build = str(build_number - 1)
       previous_build = concourse_api.job_build(
         pipeline_name=v['build-pipeline-name'],
