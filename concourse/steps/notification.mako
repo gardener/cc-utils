@@ -87,6 +87,11 @@ if 'component_diff_owners' in ${on_error_cfg.recipients()}:
     existing_comp_names = set(email_cfg['component_name_recipients'])
     email_cfg['component_name_recipients'] = existing_comp_names | set(comp_names)
 
+if 'codeowners' in ${on_error_cfg.recipients()}:
+  util.info('adding codeowners from main repository as recipients')
+  email_cfg['component_name_recipients'] = set(email_cfg['component_name_recipients'])
+  email_cfg['component_name_recipients'].add(util.check_env('COMPONENT_NAME'))
+
 def default_mail_recipients():
   recipients = set()
 % for repo_cfg in repo_cfgs:
