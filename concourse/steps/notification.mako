@@ -1,6 +1,7 @@
 <%def
   name="notification_step(
     job_step,
+    job_variant,
     cfg_set,
     repo_cfgs,
     subject,

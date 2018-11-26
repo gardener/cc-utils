@@ -50,6 +50,7 @@ class NotificationStepTest(unittest.TestCase):
         # as a smoke-test, just try to render
         step_snippet = self.render_step(
             job_step=self.job_step,
+            job_variant=None,
             cfg_set=self.cfg_set,
             repo_cfgs=(),
             subject='mail_subject1',
