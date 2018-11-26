@@ -11,6 +11,7 @@ import test_utils
 
 from concourse.client.model import BuildStatus
 from concourse.steps import step_def, step_lib_def
+from concourse.model.job import JobVariant
 from concourse.model.step import PipelineStep
 from concourse.model.traits.notifications import (
     NotificationCfgSet,
@@ -29,6 +30,8 @@ class NotificationStepTest(unittest.TestCase):
 
         self.job_step = PipelineStep('step1', raw_dict={})
         self.job_step._notifications_cfg = NotificationCfgSet('default', {})
+        self.job_variant = JobVariant(name='a_job', raw_dict={}, resource_registry='')
+        self.job_variant._traits_dict = {}
         self.cfg_set = MagicMock()
         self.github_cfg = MagicMock()
         self.github_cfg.name = MagicMock(return_value='github_cfg')
@@ -50,7 +53,7 @@ class NotificationStepTest(unittest.TestCase):
         # as a smoke-test, just try to render
         step_snippet = self.render_step(
             job_step=self.job_step,
-            job_variant=None,
+            job_variant=self.job_variant,
             cfg_set=self.cfg_set,
             repo_cfgs=(),
             subject='mail_subject1',

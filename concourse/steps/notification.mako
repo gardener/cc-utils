@@ -20,6 +20,11 @@ notification_cfg_name = notification_cfg.name()
 on_error_cfg = notification_cfg.on_error()
 triggering_policy = on_error_cfg.triggering_policy()
 on_error_dir = job_step.output('on_error_dir')
+
+if job_variant.has_trait('component_descriptor'):
+  component_name = job_variant.trait('component_descriptor').component_name()
+else:
+  component_name = None # todo: fallback to main repository
 %>
 import sys
 import os
@@ -88,10 +93,12 @@ if 'component_diff_owners' in ${on_error_cfg.recipients()}:
     existing_comp_names = set(email_cfg['component_name_recipients'])
     email_cfg['component_name_recipients'] = existing_comp_names | set(comp_names)
 
+% if component_name:
 if 'codeowners' in ${on_error_cfg.recipients()}:
   util.info('adding codeowners from main repository as recipients')
   email_cfg['component_name_recipients'] = set(email_cfg['component_name_recipients'])
-  email_cfg['component_name_recipients'].add(util.check_env('COMPONENT_NAME'))
+  email_cfg['component_name_recipients'].add('${component_name}')
+% endif
 
 def default_mail_recipients():
   recipients = set()
