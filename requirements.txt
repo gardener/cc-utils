@@ -23,5 +23,6 @@ semver
 slackclient==1.2.1
 sphinx_rtd_theme
 sseclient-py==1.7
+termcolor
 toposort
 urllib3
