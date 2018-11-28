@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+
+import json
+import yaml
+import sys
+
+def main():
+  json.dump(yaml.load(sys.stdin), sys.stdout)
+
+if __name__ == '__main__':
+  main()
