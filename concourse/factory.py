@@ -130,9 +130,9 @@ class DefinitionFactory(object):
 
         for transformer in transformers:
             if not set(transformer.dependencies()).issubset(transformer_names):
-                missing = transformer_names - set(transformer.dependencies())
+                missing = set(transformer.dependencies()) - transformer_names 
                 raise ModelValidationError(
-                    'trait requires missing traits: ' + ', '.join(missing)
+                    f'{pipeline_def}: trait requires missing traits: ' + ', '.join(missing)
                 )
 
         # order transformers according to dependencies
