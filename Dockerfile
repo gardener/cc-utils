@@ -7,7 +7,7 @@ COPY . /cc/utils/
 COPY VERSION /metadata/VERSION
 
 # add cc-utils' cli.py to PATH and PYTHONPATH
-ENV PATH /cc/utils/:$PATH
+ENV PATH /cc/utils/:/cc/utils/bin:$PATH
 ENV PYTHONPATH /cc/utils
 
 RUN pip3 install -r /cc/utils/requirements.txt
