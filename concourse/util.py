@@ -179,6 +179,29 @@ def _sync_webhook(
         info('removed {c} outdated hook(s)'.format(c=removed))
 
 
+def sync_org_webhooks(whd_deployment_cfg: WebhookDispatcherDeploymentConfig,):
+    '''Syncs required organization webhooks for a given webhook dispatcher instance'''
+
+    for organization_name, github_api, webhook_url in \
+        _enumerate_required_org_webhooks(whd_deployment_cfg=whd_deployment_cfg):
+
+        webhook_syncer = github.webhook.GithubWebHookSyncer(github_api)
+        failed_hooks = 0
+        try:
+            webhook_syncer.create_or_update_org_hook(
+                organization_name=organization_name,
+                webhook_url=webhook_url,
+                skip_ssl_validation=False,
+            )
+            info(f'Created/updated organization hook for organization "{organization_name}"')
+        except Exception as e:
+            failed_hooks += 1
+            warning(f'org: {organization_name} - error: {e}')
+
+    if failed_hooks is not 0:
+        warning('Some webhooks could not be set - for more details see above.')
+
+
 def _enumerate_required_org_webhooks(
     whd_deployment_cfg: WebhookDispatcherDeploymentConfig,
 ):
@@ -204,7 +227,10 @@ def _enumerate_required_org_webhooks(
                 scheme='https',
                 path='github-webhook',
                 params='',
-                query = '{name}={value}'.format(name='whd_config_name', value=whd_cfg_name),
+                query = '{name}={value}'.format(
+                    name=github.webhook.DEFAULT_ORG_HOOK_QUERY_KEY,
+                    value=whd_cfg_name
+                ),
                 fragment=''
             )
 
@@ -213,8 +239,8 @@ def _enumerate_required_org_webhooks(
 
 def _enumerate_github_org_configs(job_mapping_set: JobMappingSet,):
     '''Returns tuples of github org names and github config names'''
-    for job_mapping in job_mapping_set.job_mappings().items():
-        github_org_configs = job_mapping.github_organizations()
+    for _, job_mapping in job_mapping_set.job_mappings().items():
+        github_org_configs = job_mapping.github_organisations()
 
         for github_org_config in github_org_configs:
-            yield (github_org_config.org_name(), github_org_config.github_cfg_name)
+            yield (github_org_config.org_name(), github_org_config.github_cfg_name())
