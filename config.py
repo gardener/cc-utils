@@ -25,14 +25,14 @@ from model import ConfigFactory, ConfigSetSerialiser as CSS
 
 def export_kubeconfig(
     kubernetes_config_name: str,
-    output_file_path: str,
+    output_file: str,
 ):
     '''Write the kubeconfig contained in a kubernetes config to a given path.
     '''
     cfg_factory = ctx().cfg_factory()
     kubernetes_cfg = cfg_factory.kubernetes(kubernetes_config_name)
 
-    destination_path = pathlib.Path(output_file_path).resolve()
+    destination_path = pathlib.Path(output_file).resolve()
     existing_dir(destination_path.parent)
 
     with destination_path.open(mode='w') as f:
