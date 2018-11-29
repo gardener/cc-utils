@@ -768,7 +768,7 @@ def generate_secrets_server_deployment(
                 spec=V1PodSpec(
                     containers=[
                         V1Container(
-                            image='eu.gcr.io/gardener-project/cc/job-image:0.20.0',
+                            image='eu.gcr.io/gardener-project/cc/job-image:latest',
                             image_pull_policy='IfNotPresent',
                             name='secrets-server',
                             resources=V1ResourceRequirements(
