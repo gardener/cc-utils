@@ -18,21 +18,15 @@ import version
 import pathlib
 import subprocess
 
-from urllib.parse import urlparse, parse_qs
-from github3.exceptions import NotFoundError
-
 from util import (
     CliHint,
     CliHints,
     ctx,
     existing_file,
     fail,
-    info,
     verbose,
-    warning,
 )
 from gitutil import GitHelper
-from github.webhook import GithubWebHookSyncer, WebhookQueryAttributes
 from github.util import (
     GitHubRepositoryHelper,
     _create_github_api_object,
@@ -261,7 +255,7 @@ def _create_and_push_release_commit(
         target_ref: str,
         commit_msg: str,
         release_commit_callback: str=None,
-    ):
+):
     if release_commit_callback:
         release_commit_callback = os.path.join(repo_dir, release_commit_callback)
         existing_file(release_commit_callback)
@@ -335,60 +329,3 @@ def release_note_blocks_cli(
         repository_branch=repository_branch,
         commit_range=commit_range
     ).release_note_blocks()
-
-
-def remove_webhooks(
-    github_org_name: CliHints.non_empty_string(
-        help='process all repositories in the given github organisation'
-    ),
-    github_cfg_name: CliHints.non_empty_string(
-        help='github_cfg name (see cc-config repo)'
-    ),
-    concourse_cfg_name: CliHints.non_empty_string(
-        help='the concourse_cfg name for which webhooks are to be removed'
-    ),
-    job_mapping_name: CliHint(help='job mapping to remove webhooks from') = None,
-):
-    '''
-    Remove all webhooks which belong to the given Concourse-config name.
-    Optionally also filter by given job_mapping_name.
-    '''
-    cfg_factory = ctx().cfg_factory()
-    github_cfg = cfg_factory.github(github_cfg_name)
-
-    github_api = _create_github_api_object(github_cfg=github_cfg)
-    github_org = github_api.organization(github_org_name)
-    webhook_syncer = GithubWebHookSyncer(github_api)
-
-    def filter_function(url):
-        parsed_url = parse_qs(urlparse(url).query)
-        concourse_id = parsed_url.get(WebhookQueryAttributes.CONCOURSE_ID_ATTRIBUTE_NAME)
-        job_mapping_id = parsed_url.get(WebhookQueryAttributes.JOB_MAPPING_ID_ATTRIBUTE_NAME)
-        job_id_matches_or_absent = job_mapping_id is None or job_mapping_name in job_mapping_id
-        concourse_id_matches = concourse_id is not None and concourse_cfg_name in concourse_id
-
-        should_delete = job_id_matches_or_absent and concourse_id_matches
-        return should_delete
-
-    for repository in github_org.repositories():
-        removed = 0
-        try:
-            _, removed = webhook_syncer.remove_outdated_hooks(
-                owner=github_org_name,
-                repository_name=repository.name,
-                urls_to_keep=[],
-                url_filter_fun=filter_function
-            )
-        except NotFoundError as err:
-            warning("{msg}. Please check privileges for repository {repo}".format(
-                msg=err,
-                repo=repository.name)
-            )
-            continue
-
-        if removed > 0:
-            info("Removed {num} webhook(s) from repository {repo}".format(
-                num=removed, repo=repository.name)
-            )
-        else:
-            verbose("Nothing to do for repository {repo}".format(repo=repository.name))
