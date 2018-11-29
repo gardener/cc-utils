@@ -19,9 +19,6 @@ from urllib.parse import urljoin, urlencode
 
 import util
 
-from github.webhook import WebhookQueryAttributes
-
-
 CONCOURSE_API_SUFFIX = 'api/v1'
 
 
@@ -47,9 +44,9 @@ class ConcourseApiRoutesBase(object):
         prefix_team = kwargs.get('prefix_team', True)
         team_name = self.team
         base_url = self.team_url(team_name) if prefix_team else \
-                    urljoin(self.base_url, self.api_suffix)
+            urljoin(self.base_url, self.api_suffix)
         # preserve all parts of base url
-        base_url +='/'
+        base_url += '/'
 
         return urljoin(base_url, '/'.join(parts))
 
@@ -84,21 +81,6 @@ class ConcourseApiRoutesBase(object):
     @ensure_annotations
     def expose_pipeline(self, pipeline_name: str):
         return self._api_url('pipelines', pipeline_name, 'expose')
-
-    @ensure_annotations
-    def resource_check_webhook(
-        self,
-        pipeline_name: str,
-        resource_name: str,
-        query_attributes: WebhookQueryAttributes,
-    ):
-        base_url = self.resource_check(pipeline_name, resource_name)
-        query = urlencode({
-            WebhookQueryAttributes.WEBHOOK_TOKEN_ATTRIBUTE_NAME: query_attributes.webhook_token,
-            WebhookQueryAttributes.CONCOURSE_ID_ATTRIBUTE_NAME: query_attributes.concourse_id,
-            WebhookQueryAttributes.JOB_MAPPING_ID_ATTRIBUTE_NAME: query_attributes.job_mapping_id,
-        })
-        return util.urljoin(base_url, 'webhook?' + query)
 
     @ensure_annotations
     def resource_check(self, pipeline_name: str, resource_name: str):
