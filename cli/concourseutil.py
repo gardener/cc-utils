@@ -28,7 +28,6 @@ from util import (
 import concourse.setup as setup
 
 from concourse import client
-from concourse.util import sync_webhooks
 from concourse.util import sync_org_webhooks
 from concourse.enumerator import (
     DefinitionDescriptorPreprocessor,
@@ -146,7 +145,7 @@ def update_certificate(
     tls_config_element.set_private_key(private_key)
     tls_config_element.set_certificate(certificate)
 
-   # patch tls config dict so that yaml.dump outputs literal strings using '|'
+    # patch tls config dict so that yaml.dump outputs literal strings using '|'
     yaml.add_representer(LiteralStr, literal_str_representer)
     configs = cfg_factory._configs('tls_config')
     for k1, v1 in configs.items():
@@ -210,7 +209,7 @@ def render_pipelines(
         out_dir: str,
         template_include_dir: str = None,
         definitions_root_dir: str = None,
-    ):
+):
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
 
@@ -270,30 +269,6 @@ def sync_org_webhooks_from_cfg(
     cfg_factory = ctx().cfg_factory()
     whd_deployment_cfg = cfg_factory.webhook_dispatcher_deployment(whd_deployment_config_name)
     sync_org_webhooks(whd_deployment_cfg)
-
-
-def sync_webhooks_from_cfg(
-    cfg_name: str,
-):
-    '''
-    convenience wrapper for sync_webhooks for local usage with cc-config repo
-    '''
-    cfg_factory = ctx().cfg_factory()
-    cfg_set = cfg_factory.cfg_set(cfg_name)
-    github_cfg = cfg_set.github()
-    concourse_cfg = cfg_set.concourse()
-    job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
-
-    for job_mapping in job_mapping_set.job_mappings().values():
-        team_name = job_mapping.team_name()
-        info("syncing webhooks (team: {})".format(team_name))
-        team = concourse_cfg.team_credentials(team_name)
-        sync_webhooks(
-          github_cfg=github_cfg,
-          concourse_cfg=concourse_cfg,
-          job_mapping=job_mapping,
-          concourse_team_credentials=team,
-        )
 
 
 def diff_pipelines(left_file: CliHints.yaml_file(), right_file: CliHints.yaml_file()):
