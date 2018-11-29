@@ -78,9 +78,9 @@ def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
     if concourse_version is ConcourseApiVersion.V3:
         routes = ConcourseApiRoutesV3(base_url=base_url, team=team_name)
         request_builder = AuthenticatedRequestBuilder(
-                basic_auth_username=username,
-                basic_auth_passwd=password,
-                verify_ssl=verify_ssl
+            basic_auth_username=username,
+            basic_auth_passwd=password,
+            verify_ssl=verify_ssl
         )
         concourse_api = ConcourseApiV3(
             routes=routes,
@@ -90,9 +90,9 @@ def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
     elif concourse_version is ConcourseApiVersion.V4:
         routes = ConcourseApiRoutesV4(base_url=base_url, team=team_name)
         request_builder = AuthenticatedRequestBuilder(
-                basic_auth_username=AUTH_TOKEN_REQUEST_USER,
-                basic_auth_passwd=AUTH_TOKEN_REQUEST_PWD,
-                verify_ssl=verify_ssl
+            basic_auth_username=AUTH_TOKEN_REQUEST_USER,
+            basic_auth_passwd=AUTH_TOKEN_REQUEST_PWD,
+            verify_ssl=verify_ssl
         )
         concourse_api = ConcourseApiV4(
             routes=routes,
