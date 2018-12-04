@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from flask import Flask
 from flask_restful import Api
 
@@ -22,6 +23,7 @@ from model.webhook_dispatcher import WebhookDispatcherConfig
 
 def webhook_dispatcher_app(whd_cfg: WebhookDispatcherConfig):
     app = Flask(__name__)
+    app.logger.setLevel(logging.INFO)
     api = Api(app)
 
     api.add_resource(

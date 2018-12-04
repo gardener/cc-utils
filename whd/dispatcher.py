@@ -16,6 +16,7 @@
 import functools
 import time
 
+from flask import current_app as app
 from model.webhook_dispatcher import WebhookDispatcherConfig
 from .model import PushEvent, PullRequestEvent, PullRequestAction
 import concourse.client
@@ -56,7 +57,7 @@ class GithubWebhookDispatcher(object):
             PullRequestAction.LABELED,
             PullRequestAction.SYNCHRONIZE,
         ):
-            return util.info(f'ignoring pull-request action {pr_event.action()}')
+            return app.logger.info(f'ignoring pull-request action {pr_event.action()}')
 
         for concourse_api in self.concourse_clients():
             resources = list(self._matching_resources(
@@ -72,7 +73,7 @@ class GithubWebhookDispatcher(object):
 
     def _trigger_resource_check(self, concourse_api, resources):
         for resource in resources:
-            util.info('triggering resource check for: ' + resource.name)
+            app.logger.info('triggering resource check for: ' + resource.name)
             concourse_api.trigger_resource_check(
                 pipeline_name=resource.pipeline_name(),
                 resource_name=resource.name,
@@ -118,7 +119,7 @@ class GithubWebhookDispatcher(object):
 
         retries -= 1
         if retries < 0:
-            util.info('giving up')
+            app.logger.info('giving up')
             return
 
         def resource_versions(resource):
@@ -132,7 +133,7 @@ class GithubWebhookDispatcher(object):
             require_label = resource.source.get('label')
             if require_label:
                 if require_label not in pr_event.label_names():
-                    util.info('skipping PR resource update (required label not present)')
+                    app.logger.info('skipping PR resource update (required label not present)')
                     # regardless of whether or not the resource is up-to-date, it would not
                     # be discovered by concourse's PR resource due to policy
                     return True
@@ -150,12 +151,12 @@ class GithubWebhookDispatcher(object):
         ]
 
         if not outdated_resources:
-            util.info('no outdated_resources PR found')
+            app.logger.info('no outdated_resources PR found')
             return # nothing to do
 
-        util.info(f'found {len(outdated_resources)} PR resource(s) that require being updated')
+        app.logger.info(f'found {len(outdated_resources)} PR resource(s) that require being updated')
         self._trigger_resource_check(concourse_api=concourse_api, resources=outdated_resources)
-        util.info(f'retriggered resource check will try again {retries} more times')
+        app.logger.info(f'retriggered resource check will try again {retries} more times')
 
         self._ensure_pr_resource_updates(
             concourse_api=concourse_api,

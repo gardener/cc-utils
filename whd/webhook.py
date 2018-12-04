@@ -14,13 +14,13 @@
 # limitations under the License.
 
 from flask import abort, request
+from flask import current_app as app
 
 from flask_restful import (
     Resource,
     reqparse,
 )
 
-import util
 from model.webhook_dispatcher import WebhookDispatcherConfig
 from .dispatcher import GithubWebhookDispatcher
 from .model import PushEvent, PullRequestEvent
@@ -48,5 +48,5 @@ class GithubWebhook(Resource):
             self.dispatcher.dispatch_pullrequest_event(pr_event=parsed)
         else:
             msg = f'event {event} ignored'
-            util.info(msg)
+            app.logger.info(msg)
             return msg
