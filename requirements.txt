@@ -9,6 +9,7 @@ containerregistry-ccwienk==0.2.1
 deepdiff==3.3.0
 deepmerge==0.0.4
 deprecated
+elasticsearch
 ensure
 gevent
 RaphaelVogel-github3.py==1.2.0
