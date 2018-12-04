@@ -18,6 +18,7 @@ import json
 import ccc.elasticsearch
 import util
 
+
 def store(index: str, body: str, cfg_name: str):
     elastic_cfg = util.ctx().cfg_factory().elasticsearch(cfg_name)
     elastic_client = ccc.elasticsearch.from_cfg(elasticsearch_cfg=elastic_cfg)

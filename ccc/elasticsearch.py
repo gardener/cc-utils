@@ -40,7 +40,6 @@ class ElasticSearchClient(object):
     ):
         self._api = elasticsearch
 
-
     def store_document(
         self,
         index: str,
