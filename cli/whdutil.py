@@ -30,7 +30,7 @@ def start_whd(
     app = whd_server.webhook_dispatcher_app(whd_cfg=webhook_dispatcher_cfg)
 
     if production:
-        server = WSGIServer(('0.0.0.0', port), app)
+        server = WSGIServer(('0.0.0.0', port), app, log = None)
         server.serve_forever()
     else:
         app.run(debug=True, port=port, host='0.0.0.0')
