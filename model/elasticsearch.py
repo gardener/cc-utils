@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from model.base import (
-    BasicCredentials,
     NamedModelElement,
 )
 
