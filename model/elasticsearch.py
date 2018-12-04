@@ -23,8 +23,8 @@ class ElasticSearchConfig(NamedModelElement):
     Not intended to be instantiated by users of this module
     '''
 
-    def endpoint_url(self):
-        return self.raw['endpoint_url']
+    def endpoints(self):
+        return self.raw['endpoints']
 
     def _required_attributes(self):
         return ('endpoint_url',)
