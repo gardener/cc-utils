@@ -15,6 +15,7 @@
 
 import json
 
+import os
 import ccc.elasticsearch
 import util
 
@@ -45,3 +46,12 @@ def store_files(index: str, files: [str], cfg_name: str):
                 body=json.load(fh),
                 )
             )
+
+
+def store_dir(index: str, directory: util.CliHints.existing_dir(), cfg_name: str):
+    json_files = list()
+    for (dirpath, dirnames, filenames) in os.walk(directory):
+        for file in filenames:
+            if file.endswith('.json'):
+                json_files.append(os.path.join(dirpath, file))
+    store_files(index, json_files, cfg_name)
