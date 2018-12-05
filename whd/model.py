@@ -36,6 +36,14 @@ class PushEvent(EventBase):
     def ref(self):
         return self.raw['ref']
 
+    def modified_paths(self):
+        # for now, only take head-commit into account
+        # --> this could lead to missed updates
+        head_commit = self.get('head_commit', None)
+        if not head_commit:
+            return ()
+        yield from head_commit.get('modified', ())
+
 
 class PullRequestAction(enum.Enum):
     ASSIGNED = 'assigned'
