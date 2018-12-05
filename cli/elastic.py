@@ -29,3 +29,19 @@ def store(index: str, body: str, cfg_name: str):
     )
 
     print(result)
+
+
+def store_files(index: str, files: [str], cfg_name: str):
+    elastic_cfg = util.ctx().cfg_factory().elasticsearch(cfg_name)
+    elastic_client = ccc.elasticsearch.from_cfg(elasticsearch_cfg=elastic_cfg)
+
+    for f in files:
+        util.existing_file(f)
+
+    for f in files:
+        with open(f) as fh:
+            print(elastic_client.store_document(
+                index=index,
+                body=json.load(fh),
+                )
+            )
