@@ -26,8 +26,10 @@ import util
 class GithubWebhookDispatcher(object):
     def __init__(
         self,
+        cfg_set,
         whd_cfg: WebhookDispatcherConfig
     ):
+        self.cfg_set = cfg_set
         self.whd_cfg = whd_cfg
         self.cfg_factory = util.ctx().cfg_factory()
 

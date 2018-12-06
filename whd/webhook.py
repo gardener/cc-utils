@@ -36,7 +36,7 @@ class GithubWebhook(Resource):
         self.whd_cfg = whd_cfg
         self.parser = reqparse.RequestParser()
         self.parser.add_argument('X-GitHub-Event', type=str, location='headers')
-        self.dispatcher = GithubWebhookDispatcher(whd_cfg=whd_cfg)
+        self.dispatcher = GithubWebhookDispatcher(cfg_set=cfg_set, whd_cfg=whd_cfg)
 
     def post(self):
         args = self.parser.parse_args()
