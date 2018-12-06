@@ -39,7 +39,7 @@ class PushEvent(EventBase):
     def modified_paths(self):
         # for now, only take head-commit into account
         # --> this could lead to missed updates
-        head_commit = self.get('head_commit', None)
+        head_commit = self.raw.get('head_commit', None)
         if not head_commit:
             return ()
         yield from head_commit.get('modified', ())
