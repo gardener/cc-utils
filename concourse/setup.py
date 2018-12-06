@@ -452,6 +452,7 @@ def destroy_concourse_landscape(config_name: str, release_name: str):
 
 @ensure_annotations
 def deploy_webhook_dispatcher_landscape(
+    cfg_set,
     webhook_dispatcher_deployment_cfg: WebhookDispatcherDeploymentConfig,
     chart_dir: str,
     deployment_name: str,

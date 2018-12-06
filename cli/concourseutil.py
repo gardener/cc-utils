@@ -319,6 +319,7 @@ def deploy_or_upgrade_webhook_dispatcher(
     webhook_dispatcher_deployment_cfg = cfg_set.webhook_dispatcher_deployment()
 
     setup.deploy_webhook_dispatcher_landscape(
+        cfg_set=cfg_set,
         webhook_dispatcher_deployment_cfg=webhook_dispatcher_deployment_cfg,
         chart_dir=chart_dir,
         deployment_name=deployment_name,
