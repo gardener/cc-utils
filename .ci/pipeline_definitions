@@ -1,5 +1,5 @@
 cc-utils:
-  template: 'default'
+  # template: 'default'
   base_definition:
     steps:
       pyflakes-lint: ~
