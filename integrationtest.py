@@ -47,7 +47,7 @@ def deploy_and_run_smoketest_pipeline(
     # as this is an integration test, hard-code assumptions about the layout of
     # our pipelines repository
     template_path = os.path.join(cc_utils_repo_dir, 'concourse', 'templates')
-    template_include_dir = cc_pipelines_repo_dir
+    template_include_dir = os.path.join(cc_utils_repo_dir, 'concourse')
     pipeline_name = 'cc-smoketest'
 
     # retrieve pipeline-definition from github at hardcoded location
