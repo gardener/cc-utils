@@ -640,6 +640,7 @@ def deploy_or_upgrade_webhook_dispatcher(
         with open(os.path.join(temp_dir, WEBHOOK_DISPATCHER_HELM_VALUES_FILE_NAME), 'w') as f:
             yaml.dump(
                 create_webhook_dispatcher_helm_values(
+                    cfg_set=cfg_set,
                     webhook_dispatcher_deployment_cfg=webhook_dispatcher_deployment_cfg,
                     cfg_factory=cfg_factory,
                 ),
