@@ -306,21 +306,24 @@ def trigger_resource_check(
 
 
 def deploy_or_upgrade_webhook_dispatcher(
-    webhook_dispatcher_deployment_name: CliHints.non_empty_string(
-        help="webhook dispatcher deployment config name"
-    ),
+    cfg_set_name: str,
     chart_dir: CliHints.existing_dir(help="directory of webhook dispatcher chart"),
     deployment_name: str='webhook-dispatcher',
 ):
     chart_dir = os.path.abspath(chart_dir)
 
     cfg_factory = ctx().cfg_factory()
+    cfg_set = cfg_factory.cfg_set(cfg_set_name)
+
+    webhook_dispatcher_cfg = cfg_set.webhook_dispatcher()
+    webhook_dispatcher_deployment_cfg = cfg_set.webhook_dispatcher_deployment()
+
     webhook_dispatcher_deployment_cfg = cfg_factory.webhook_dispatcher_deployment(
-        webhook_dispatcher_deployment_name
+        webhook_dispatcher_deployment_cfg().name(),
     )
 
     setup.deploy_webhook_dispatcher_landscape(
         webhook_dispatcher_deployment_cfg=webhook_dispatcher_deployment_cfg,
         chart_dir=chart_dir,
-        deployment_name=deployment_name,
+        deployment_name=webhook_dispatcher_cfg.name(),
     )
