@@ -189,15 +189,18 @@ class ProtecodeApi(object):
         return AnalysisResult(raw_dict=result)
 
     def wait_for_scan_result(self, product_id: int, polling_interval_seconds=10):
-        result = self.scan_result(product_id=product_id)
-        if result.status() in (ProcessingStatus.READY, ProcessingStatus.FAILED):
-            return result
-        # keep polling until result is ready
-        time.sleep(polling_interval_seconds)
-        return self.wait_for_scan_result(
-            product_id=product_id,
-            polling_interval_seconds=polling_interval_seconds
-        )
+        def scan_finished():
+            result = self.scan_result(product_id=product_id)
+            if result.status() in (ProcessingStatus.READY, ProcessingStatus.FAILED):
+                return result
+            return False
+
+        result = scan_finished()
+        while not result:
+            # keep polling until result is ready
+            time.sleep(polling_interval_seconds)
+            result = scan_finished()
+        return result
 
     def list_apps(self, group_id, custom_attribs={}) -> List[AnalysisResult]:
         url = self._routes.apps(group_id=group_id, custom_attribs=custom_attribs)
