@@ -262,6 +262,7 @@ def create_instance_specific_helm_values(
 
 @ensure_annotations
 def create_webhook_dispatcher_helm_values(
+    cfg_set,
     webhook_dispatcher_deployment_cfg: WebhookDispatcherDeploymentConfig,
     cfg_factory: ConfigFactory,
 ):
@@ -287,6 +288,8 @@ def create_webhook_dispatcher_helm_values(
         webhook_dispatcher_deployment_cfg.webhook_dispatcher_config_name(),
         '--port',
         f'"{container_port}"',
+        '--cfg-set-name',
+        cfg_set.name(),
     ]
 
     helm_values = {
@@ -485,6 +488,7 @@ def deploy_webhook_dispatcher_landscape(
     kubernetes_cfg = cfg_factory.kubernetes(kubernetes_cfg_name)
 
     deploy_or_upgrade_webhook_dispatcher(
+        cfg_set=cfg_set,
         webhook_dispatcher_deployment_cfg=webhook_dispatcher_deployment_cfg,
         chart_dir=chart_dir,
         cfg_factory=cfg_factory,
@@ -595,6 +599,7 @@ def deploy_or_upgrade_concourse(
 
 @ensure_annotations
 def deploy_or_upgrade_webhook_dispatcher(
+        cfg_set,
         webhook_dispatcher_deployment_cfg: WebhookDispatcherDeploymentConfig,
         chart_dir: str,
         cfg_factory: ConfigFactory,
