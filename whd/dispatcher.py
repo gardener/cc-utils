@@ -53,11 +53,11 @@ class GithubWebhookDispatcher(object):
             )
             self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
 
-    def _update_pipeline_definition(push_event):
+    def _update_pipeline_definition(self, push_event):
         # for now, just log - actual update to be implemented
         app.logger.info('pipeline definition update found - should not update')
 
-    def _pipeline_definition_changed(push_event):
+    def _pipeline_definition_changed(self, push_event):
         if '.ci/pipeline_definitions' in push_event.modified_paths():
             return True
         return False
