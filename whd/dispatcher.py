@@ -55,7 +55,7 @@ class GithubWebhookDispatcher(object):
 
     def _update_pipeline_definition(self, push_event):
         # for now, just log - actual update to be implemented
-        app.logger.info('pipeline definition update found - should not update')
+        app.logger.info('pipeline definition update found - should now update')
 
     def _pipeline_definition_changed(self, push_event):
         if '.ci/pipeline_definitions' in push_event.modified_paths():
