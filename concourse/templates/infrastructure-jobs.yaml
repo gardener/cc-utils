@@ -242,7 +242,7 @@ ${email_notifications(deployment_pipeline_smoketest_job)}
               fail,
             )
 
-            template_path="${cc_pipelines_repo.resource_name()}/templates"
+            template_path="${cc_utils_repo.resource_name()}/concourse/templates"
             template_include_dir="${cc_pipelines_repo.resource_name()}"
             pipeline_definitions_root="${cc_pipelines_repo.resource_name()}/definitions"
             config_dir="${cc_config_repo.resource_name()}"
