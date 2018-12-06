@@ -21,7 +21,10 @@ from .webhook import GithubWebhook
 from model.webhook_dispatcher import WebhookDispatcherConfig
 
 
-def webhook_dispatcher_app(whd_cfg: WebhookDispatcherConfig):
+def webhook_dispatcher_app(
+    cfg_set,
+    whd_cfg: WebhookDispatcherConfig,
+):
     app = Flask(__name__)
     app.logger.setLevel(logging.INFO)
     api = Api(app)
@@ -31,6 +34,7 @@ def webhook_dispatcher_app(whd_cfg: WebhookDispatcherConfig):
         '/github-webhook',
         resource_class_kwargs={
             'whd_cfg': whd_cfg,
+            'cfg_set': cfg_set,
         }
     )
 

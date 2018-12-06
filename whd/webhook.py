@@ -27,7 +27,12 @@ from .model import PushEvent, PullRequestEvent
 
 
 class GithubWebhook(Resource):
-    def __init__(self, whd_cfg: WebhookDispatcherConfig):
+    def __init__(
+        self,
+        cfg_set,
+        whd_cfg: WebhookDispatcherConfig
+    ):
+        self.cfg_set = cfg_set
         self.whd_cfg = whd_cfg
         self.parser = reqparse.RequestParser()
         self.parser.add_argument('X-GitHub-Event', type=str, location='headers')

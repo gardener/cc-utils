@@ -26,9 +26,13 @@ def start_whd(
     production: bool=False,
 ):
     cfg_factory = util.ctx().cfg_factory()
+    cfg_set = cfg_factory.cfg_set(cfg_set_name)
     webhook_dispatcher_cfg = cfg_factory.webhook_dispatcher(webhook_dispatcher_cfg_name)
 
-    app = whd_server.webhook_dispatcher_app(whd_cfg=webhook_dispatcher_cfg)
+    app = whd_server.webhook_dispatcher_app(
+        cfg_set=cfg_set,
+        whd_cfg=webhook_dispatcher_cfg
+    )
 
     if production:
         server = WSGIServer(('0.0.0.0', port), app, log = None)
