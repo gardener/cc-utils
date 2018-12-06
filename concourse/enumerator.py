@@ -180,35 +180,7 @@ class BranchCfgEntry(NamedModelElement):
         return self.raw.get('inherit', {})
 
 
-class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
-    def __init__(self, job_mapping, cfg_set):
-        self.job_mapping = not_none(job_mapping)
-        self.cfg_set = not_none(cfg_set)
-
-    def enumerate_definition_descriptors(self):
-        executor = ThreadPoolExecutor(max_workers=8)
-
-        # scan github repositories
-        for github_org_cfg in self.job_mapping.github_organisations():
-            github_cfg = self.cfg_set.github(github_org_cfg.github_cfg_name())
-            github_org_name = github_org_cfg.org_name()
-            info('scanning github organisation {gho}'.format(gho=github_org_name))
-
-            github_api = _create_github_api_object(github_cfg)
-            github_org = github_api.organization(github_org_name)
-
-            scan_repository_for_definitions = functools.partial(
-                self._scan_repository_for_definitions,
-                github_cfg=github_cfg,
-                org_name=github_org_name,
-            )
-
-            for definition_descriptors in executor.map(
-                scan_repository_for_definitions,
-                github_org.repositories(),
-            ):
-                yield from definition_descriptors
-
+class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
     def _branch_cfg_or_none(
         self,
         repository,
@@ -268,6 +240,36 @@ class GithubOrganisationDefinitionEnumerator(DefinitionEnumerator):
                 raw_definitions=definitions,
                 override_definitions=override_definitions,
             )
+
+
+class GithubOrganisationDefinitionEnumerator(GithubDefinitionEnumeratorBase):
+    def __init__(self, job_mapping, cfg_set):
+        self.job_mapping = not_none(job_mapping)
+        self.cfg_set = not_none(cfg_set)
+
+    def enumerate_definition_descriptors(self):
+        executor = ThreadPoolExecutor(max_workers=8)
+
+        # scan github repositories
+        for github_org_cfg in self.job_mapping.github_organisations():
+            github_cfg = self.cfg_set.github(github_org_cfg.github_cfg_name())
+            github_org_name = github_org_cfg.org_name()
+            info('scanning github organisation {gho}'.format(gho=github_org_name))
+
+            github_api = _create_github_api_object(github_cfg)
+            github_org = github_api.organization(github_org_name)
+
+            scan_repository_for_definitions = functools.partial(
+                self._scan_repository_for_definitions,
+                github_cfg=github_cfg,
+                org_name=github_org_name,
+            )
+
+            for definition_descriptors in executor.map(
+                scan_repository_for_definitions,
+                github_org.repositories(),
+            ):
+                yield from definition_descriptors
 
 
 class DefinitionDescriptor(object):
