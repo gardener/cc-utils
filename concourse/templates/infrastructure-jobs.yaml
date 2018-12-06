@@ -152,6 +152,7 @@ ${job_header(pipeline_replication_job_name)}
             cfg_name = "internal_dev_active"
             team_name = "gardener"
             cc_pipelines_repo_dir = "${cc_pipelines_repo.resource_name()}"
+            cc_utils_repo_dir = "${cc_utils_repo.resource_name()}"
 
             import model
             cfg_factory = model.ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)
@@ -162,7 +163,8 @@ ${job_header(pipeline_replication_job_name)}
               config_dir=cfg_dir,
               config_name=cfg_name,
               concourse_team_name=team_name,
-              cc_pipelines_repo_dir=cc_pipelines_repo_dir
+              cc_pipelines_repo_dir=cc_pipelines_repo_dir,
+              cc_utils_repo_dir=cc_utils_repo_dir,
             )
       on_failure:
 ${email_notifications(deploy_smoketest_job)}

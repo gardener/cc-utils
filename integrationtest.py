@@ -37,6 +37,7 @@ def deploy_and_run_smoketest_pipeline(
     config_name: str,
     concourse_team_name: str,
     cc_pipelines_repo_dir: str,
+    cc_utils_repo_dir: str,
     wait_for_job_execution: bool=False,
 ):
     config_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
@@ -45,10 +46,7 @@ def deploy_and_run_smoketest_pipeline(
 
     # as this is an integration test, hard-code assumptions about the layout of
     # our pipelines repository
-    def calcdir(path):
-        return os.path.join(cc_pipelines_repo_dir, path)
-
-    template_path = calcdir('templates')
+    template_path = os.path.join(cc_utils_repo_dir, 'concourse', 'templates')
     template_include_dir = cc_pipelines_repo_dir
     pipeline_name = 'cc-smoketest'
 
