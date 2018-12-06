@@ -1,0 +1,399 @@
+---
+<%
+import os
+from util import urljoin
+from makoutil import indent_func
+from concourse.factory import DefinitionFactory
+from concourse.model.base import ScriptType
+
+# use pipeline_name for debugging / tracing purposes
+pipeline_name = pipeline.get('name')
+pipeline_definition = pipeline.get('definition')
+target_team = pipeline.get('target_team')
+resource_registry = pipeline_definition._resource_registry
+
+github = config_set.github()
+disable_tls_validation = "false" if github.tls_validation() else "true"
+
+gcr = config_set.container_registry()
+email = config_set.email()
+
+
+# expose secrets_server endpoint to all jobs
+secrets_server_cfg = config_set.secrets_server()
+
+# short-cut for now
+def has_version_trait(model_with_traits):
+  return model_with_traits.has_trait('version')
+
+def has_cron_trait(model_with_traits):
+  return model_with_traits.has_trait('cronjob')
+
+def has_pr_trait(model_with_traits):
+  return model_with_traits.has_trait('pull-request')
+
+def has_release_trait(model_with_traits):
+  return model_with_traits.has_trait('release')
+
+def has_publish_trait(model_with_traits):
+  return model_with_traits.has_trait('publish')
+
+def has_component_descriptor_trait(model_with_traits):
+  return model_with_traits.has_trait('component_descriptor')
+
+def suppress_parallel_execution(variant):
+  if variant.has_trait('scheduling'):
+    if variant.trait('scheduling').suppress_parallel_execution() is not None:
+      return variant.trait('scheduling').suppress_parallel_execution()
+  if has_cron_trait(variant):
+    return True
+  if has_release_trait(variant):
+    return True
+  return False
+
+output_image_descriptors = {}
+for variant in filter(has_publish_trait, pipeline_definition.variants()):
+  for image_descriptor in variant.trait('publish').dockerimages():
+    output_image_descriptors[image_descriptor.name()] = image_descriptor
+
+# import build steps from cc-utils
+# TODO: make this generic
+import concourse.steps
+version_step = concourse.steps.step_def('version')
+prepare_step = concourse.steps.step_def('prepare')
+release_step = concourse.steps.step_def('release')
+publish_step = concourse.steps.step_def('publish')
+rm_pr_label_step = concourse.steps.step_def('rm_pr_label')
+component_descriptor_step = concourse.steps.step_def('component_descriptor')
+update_component_deps_step = concourse.steps.step_def('update_component_deps')
+draft_release_step = concourse.steps.step_def('draft_release')
+scan_container_images_step = concourse.steps.step_def('scan_container_images')
+%>
+
+<%namespace file="/resources/defaults.mako" import="*"/>
+<%namespace file="/resources/resource_types.mako" import="*"/>
+<%namespace file="/resources/email.mako" import="*"/>
+<%namespace file="/resources/image.mako" import="*"/>
+<%namespace file="/resources/variants.mako" import="*"/>
+<%namespace file="/resources/time.mako" import="*"/>
+<%namespace file="/resources/meta.mako" import="*"/>
+
+inherit:
+${image_registry_defaults(registry_name='gcr', registry_cfg=gcr)}
+${task_image_resource(registry_name='gcr')}
+${configure_webhook(webhook_token=github.webhook_secret())}
+${pull_request_defaults(github_cfg=github)}
+resource_types:
+${include_pull_request_resource_type()}
+${include_meta_resource_type()}
+
+resources:
+${meta_resource()}
+${render_repositories(pipeline_definition=pipeline_definition, cfg_set=config_set)}
+
+% for descriptor in output_image_descriptors.values():
+<%
+  custom_registry_cfg_name = descriptor.registry_name()
+  if not custom_registry_cfg_name:
+    registry_cfg = gcr # default cfg
+  else:
+    registry_cfg = config_set.container_registry(custom_registry_cfg_name)
+%>
+${container_registry_image_resource(
+  name=descriptor.resource_name(),
+  image_reference=descriptor.image_reference(),
+  registry_cfg=registry_cfg
+)}
+% endfor
+% for variant in pipeline_definition.variants():
+% if has_cron_trait(variant):
+<%
+trait = variant.trait('cronjob')
+interval = trait.interval()
+resource_name = trait.resource_name()
+%>
+${time_resource(name=resource_name, interval=interval)}
+% endif
+% endfor
+
+<%def name="notification(indent, job_variant, job_step, status, single_step=False)" filter="indent_func(indent),trim">
+<%
+repo = job_variant.main_repository()
+%>
+% if has_pr_trait(job_variant):
+% if single_step:
+  do:
+% else:
+- do:
+% endif
+  - put: ${repo.resource_name()}
+    params:
+      path: ${repo.resource_name()}
+      context: ${job_step.name}
+      status: ${status}
+% endif
+## let's send an e-mail only in case of a problem
+## (sucks in comparison to the features the Jenkins extened e-mail plugin offers)
+% if not has_pr_trait(job_variant) and status == 'error':
+<%
+subject = 'Step {s} for {p}:{b} failed!'.format(s=job_step.name, p=pipeline.get('name'), b=repo.branch())
+%>
+${email_notification(
+  cfg_set=config_set,
+  secrets_server_cfg=secrets_server_cfg,
+  email_cfg=email,
+  repo_cfgs=[repo],
+  job_step=job_step,
+  subject=subject,
+  job_variant=job_variant,
+  )
+}
+% endif
+</%def>
+
+<%def name="execute(indent, job_step, job_variant)" filter="indent_func(indent),trim">
+<%
+source_repo = job_variant.main_repository()
+%>
+% if job_step.execute():
+- task: '${job_step.name}'
+  config:
+% if job_step.image():
+<%
+image_reference, tag = job_step.image().split(':', 1)
+%>
+    platform: linux
+    image_resource:
+      type: docker-image
+      source:
+% if job_step.registry() and 'gcr' in job_step.registry():
+        <<: *gcr_defaults
+% endif
+        repository: ${image_reference}
+        tag: '${tag}'
+% else:
+    <<: *task_image_resource
+% endif
+    inputs:
+% for repository in job_variant.repositories():
+    - name: ${repository.resource_name()}
+% endfor
+% for input in job_step.inputs().values():
+    - name: ${input}
+% endfor
+    outputs:
+% if job_step.publish_repository_names() and not has_pr_trait(job_variant):
+  % for publish_repo_name in job_step.publish_repository_names():
+    - name: ${job_variant.publish_repository(publish_repo_name).resource_name()}
+  % endfor
+% endif
+% for output in job_step.outputs().values():
+    - name: ${output}
+% endfor
+    params:
+<%
+# collect repositores that need to be cloned
+clone_repositories = [] # [<from:to>, ..]
+# name of the cloned main repository
+cloned_main_repo_name = None
+%>
+% for repository in job_variant.repositories():
+<%
+# the path to map to is usually the repository's resource name
+# except for cases where the repository shall be written to; in this
+# case we clone the source repository for our users and point them to the
+# cloned repository
+if job_variant.has_publish_repository(repository.logical_name()) and repository.logical_name() in job_step.publish_repository_names():
+  env_var_repo = job_variant.publish_repository(repository.logical_name())
+  if repository.is_main_repo():
+    cloned_main_repo_name = env_var_repo.resource_name()
+  clone_repositories.append((repository.resource_name(), env_var_repo.resource_name()))
+else:
+  env_var_repo = repository
+%>
+% for (env_var_name, env_var_value) in env_var_repo.env_var_value_dict().items():
+      ${env_var_name}: ${env_var_value}
+% endfor
+% endfor
+% for name, value in job_step.inputs().items():
+      ${name.upper().replace('-','_')}: ${value}
+% endfor
+% for name, value in job_step.outputs().items():
+      ${name.upper().replace('-','_')}: ${value}
+% endfor
+      SECRETS_SERVER_ENDPOINT: ${secrets_server_cfg.endpoint_url()}
+      SECRETS_SERVER_CONCOURSE_CFG_NAME: ${'/'.join([
+        secrets_server_cfg.secrets().concourse_secret_name(),
+        secrets_server_cfg.secrets().concourse_attribute()
+        ])
+      }
+      CONCOURSE_CURRENT_CFG: ${config_set.name()}
+      CONCOURSE_CURRENT_TEAM: ${target_team}
+% if has_component_descriptor_trait(job_variant):
+      COMPONENT_NAME: ${job_variant.trait('component_descriptor').component_name()}
+% endif
+% for name, expression in job_step.variables().items():
+      ${name}: ${eval(expression, {
+        'pipeline': pipeline_definition,
+        'pipeline_descriptor': pipeline,
+        })}
+% endfor
+% if job_step.script_type() == ScriptType.BOURNE_SHELL:
+    run:
+      path: /bin/sh
+      args:
+      - -exc
+      - |
+% elif job_step.script_type() == ScriptType.PYTHON3:
+    run:
+      path: /usr/bin/python3
+      args:
+      - -c
+      - |
+% else:
+  <% raise ValueError('unsupported script type') %>
+% endif
+% if not job_step.is_synthetic:
+  % if has_version_trait(job_variant) and job_variant.trait('version').inject_effective_version():
+        # copy processed version information to VERSION file
+        <%
+        version_file_path = os.path.join(
+          source_repo.resource_name(),
+          job_variant.trait('version').versionfile_relpath()
+        )
+        %>
+        cp "${job_step.input('version_path')}/version" "${version_file_path}"
+  % endif
+  % for from_path, to_path in clone_repositories:
+        # clone repositories for outputting
+        # cp directory recursively (resorting to least common deniminator defined by POSIX)
+        tar c -C ${from_path} . | tar x -C ${to_path}
+  % endfor
+  % if clone_repositories:
+        # init git config
+        git config --global user.name "${github.credentials().username()}"
+        git config --global user.email "${github.credentials().email_address()}"
+  % endif
+<%
+  if cloned_main_repo_name:
+    prefix = (cloned_main_repo_name, '.ci')
+  else:
+    prefix = (source_repo.resource_name(), '.ci')
+  executable_file = job_step.executable(prefix=prefix)
+  executable_cmd = job_step.execute(prefix=prefix)
+%>
+
+        if [ -x "${executable_file}" ]; then
+          ${executable_cmd}
+        elif [ -f "${executable_file}" ]; then
+          echo "ERROR: file ${executable_file} is not executable."
+          exit 1
+        else
+          echo "ERROR: no executable found at ${executable_file}"
+          exit 1
+        fi
+% elif job_step.name == 'prepare':
+        ${prepare_step(job_step=job_step, job_variant=job_variant, indent=8)}
+% elif job_step.name == 'version':
+        ${version_step(job_step=job_step, job_variant=job_variant, indent=8)}
+% elif job_step.name == 'release':
+        ${release_step(job_step=job_step, job_variant=job_variant, github_cfg=github, indent=8)}
+% elif job_step.name == 'rm_pr_label':
+        ${rm_pr_label_step(job_step=job_step, job_variant=job_variant, github_cfg=github, indent=8)}
+% elif job_step.name == 'component_descriptor':
+        ${component_descriptor_step(job_step=job_step, job_variant=job_variant, output_image_descriptors=output_image_descriptors, indent=8)}
+% elif job_step.name == 'update_component_dependencies':
+        ${update_component_deps_step(job_step=job_step, job_variant=job_variant, github_cfg_name=github.name(), indent=8)}
+% elif job_step.name == 'publish':
+    ${publish_step(job_step=job_step, job_variant=job_variant)}
+% elif job_step.name == 'create_draft_release_notes':
+        ${draft_release_step(job_step=job_step, job_variant=job_variant, github_cfg=github, indent=8)}
+% elif job_step.name == 'scan_container_images':
+        ${scan_container_images_step(job_step=job_step, job_variant=job_variant, indent=8)}
+% endif
+% endif
+% if job_step.publish_repository_names() and not job_variant.has_trait('pull-request'):
+<%
+publish_to_repo_dict = job_step.publish_repository_dict()
+%>
+  ensure:
+    aggregate:
+% for publish_to_repo_name, publish_options in publish_to_repo_dict.items():
+<%
+if not publish_options:
+  publish_options = {}
+%>
+      - put: ${job_variant.publish_repository(publish_to_repo_name).resource_name()}
+        params:
+          repository: ${job_variant.publish_repository(publish_to_repo_name).resource_name()}
+          rebase: ${not (publish_options.get('force_push', False))}
+          force: ${publish_options.get('force_push', False)}
+% endfor
+% endif
+</%def>
+
+<%def name="step(indent, job_variant, job_step)" filter="indent_func(indent),trim">
+<%
+job_type = job_variant.variant_name
+source_repo = job_variant.main_repository()
+%>
+- do:
+% if not job_step.is_synthetic:
+  ${notification(2, job_variant, job_step, 'pending')}
+% endif
+  ${execute(2, job_step, job_variant)}
+% if not job_step.is_synthetic:
+  ${notification(2, job_variant, job_step, 'success')}
+% endif
+  on_failure:
+    ${notification(4, job_variant, job_step, 'error', single_step=True)}
+</%def>
+
+<%def name="job(job_variant)">
+<%
+job_type = job_variant.variant_name
+repo = job_variant.main_repository()
+%>
+- name: ${job_variant.job_name()}
+  serial: ${'true' if suppress_parallel_execution(job_variant) else 'false'}
+  build_logs_to_retain: ${job_variant.trait('options').build_logs_to_retain()}
+  public: ${'true' if job_variant.trait('options').public_build_logs() else 'false'}
+  plan:
+  - get: meta
+% for repository in job_variant.repositories():
+  - get: ${repository.resource_name()}
+  % if repository.should_trigger():
+    trigger: true
+  % endif
+% endfor
+% if has_cron_trait(job_variant):
+  - get: "${job_variant.trait('cronjob').resource_name()}"
+    trigger: true
+% endif
+% if job_variant.publish_repositories() and not has_pr_trait(job_variant):
+  % for publish_repo in job_variant.publish_repositories():
+  # force concourse to rebase the source repositories we are going to write to later.
+  # otherwise, we may try to create a new commit onto an outdated branch head
+  <%
+  # determine the corresponding source (input) repository
+  source_repo = job_variant.repository(publish_repo.logical_name())
+  %>
+  - put: ${source_repo.resource_name()}
+    params:
+      repository: ${source_repo.resource_name()}
+      rebase: true
+  % endfor
+% endif
+% for parallel_steps in job_variant.ordered_steps():
+  - aggregate:
+% for step_name in parallel_steps:
+    ${step(4, job_variant, job_variant.step(step_name))}
+% endfor
+% endfor
+</%def>
+
+jobs:
+% for variant in pipeline_definition.variants():
+${job(variant)}
+% endfor
+...

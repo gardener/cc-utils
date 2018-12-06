@@ -1,0 +1,343 @@
+---
+<%
+from concourse.factory import DefinitionFactory
+from concourse.model.step import PipelineStep
+from concourse.model.traits.notifications import NotificationCfgSet
+from enum import Enum
+
+gcr = config_set.container_registry()
+github = config_set.github()
+disable_tls_validation = 'false' if github.tls_validation() else 'true'
+email = config_set.email()
+secrets_server_cfg = config_set.secrets_server()
+
+pipeline_args = pipeline.get('definition')
+resource_registry = pipeline_args.resource_registry()
+variant = pipeline_args.variant('head-update')
+repositories = list(resource_registry.resources(type_name='git'))
+
+cc_utils_repo = variant.repository('cc-utils')
+cc_config_repo = variant.repository('cc-config')
+cc_pipelines_repo = variant.repository('cc-pipelines')
+
+repos = (cc_utils_repo, cc_config_repo, cc_pipelines_repo)
+
+class TimeResources(Enum):
+  EVERY_TWO_AND_A_HALF_MINUTES = '2.5m'
+
+# Job/Task name definitions
+pipeline_replication_job_name = 'replicate-pipelines'
+secrets_replication_job_name = 'replicate-secrets-server-sercrets'
+
+def create_step(name):
+  step = PipelineStep(name=name, raw_dict={})
+  step._notifications_cfg = NotificationCfgSet('default', {})
+  return step
+
+
+deploy_smoketest_job = create_step('deploy-and-run-smoketest')
+deployment_pipeline_smoketest_job = create_step('deployment-pipeline-smoketest')
+pipeline_replication_step = create_step('render-and-replicate')
+secrets_replication_step = create_step('replicate-secrets')
+def replication_job(cfg_set_name):
+  return create_step('render-and-replicate-' + cfg_set_name)
+
+time_resource_mappings = {
+    pipeline_replication_job_name: TimeResources.EVERY_TWO_AND_A_HALF_MINUTES,
+    secrets_replication_job_name: TimeResources.EVERY_TWO_AND_A_HALF_MINUTES,
+}
+
+def should_trigger(job_name, repo_name):
+  if job_name == pipeline_replication_job_name:
+    return repo_name in [
+      cc_utils_repo.resource_name(),
+      cc_config_repo.resource_name(),
+      cc_pipelines_repo.resource_name(),
+    ]
+  elif job_name == secrets_replication_job_name:
+    return repo_name in [
+      cc_utils_repo.resource_name(),
+      cc_config_repo.resource_name(),
+      cc_pipelines_repo.resource_name(),
+    ]
+  else:
+    raise NotImplementedError
+
+def email_notification_args(repo_cfgs, pipeline_step: PipelineStep, indent=6):
+  return {
+    'cfg_set': config_set,
+    'repo_cfgs': repo_cfgs,
+    'subject': 'error during {t}'.format(t=pipeline_step.name),
+    'as_list': False,
+    'indent': indent,
+    'job_step': pipeline_step,
+    'job_variant': variant,
+  }
+
+# retrieve configuration sets describing our concourse landscapes. the cfg_set name is hard-coded
+# and must match the corresponding entry in github.wdf.sap.corp/kubernetes/cc-config/configs.yaml
+concourse_cfgs_cfg_set = config_set.cfg_factory.cfg_set('concourse_configuration_sets')
+concourse_cfg_set_names = list(concourse_cfgs_cfg_set._cfg_element_names(cfg_type_name='cfg_set'))
+%>
+
+<%namespace file="/resources/defaults.mako" import="*"/>
+<%namespace file="/resources/resource_types.mako" import="*"/>
+<%namespace file="/resources/email.mako" import="*"/>
+<%namespace file="/resources/image.mako" import="*"/>
+<%namespace file="/resources/variants.mako" import="*"/>
+<%namespace file="/resources/time.mako" import="*"/>
+<%namespace file="/resources/meta.mako" import="*"/>
+
+inherit:
+${image_registry_defaults(registry_name='gcr', registry_cfg=gcr)}
+${task_image_resource('gcr')}
+${task_image_resource(registry_name='gcr')}
+${configure_webhook(webhook_token=github.webhook_secret())}
+
+<%def name='email_notifications(pipeline_step: PipelineStep)'>
+        ${email_notification(
+          secrets_server_cfg=secrets_server_cfg,
+          email_cfg=email,
+          **email_notification_args(repo_cfgs=repos, pipeline_step=pipeline_step, indent=8))
+        }
+</%def>
+
+<%def name='job_header(job_name)'>
+- name: '${job_name}'
+  serial: true
+  public: ${'true' if variant.trait('options').public_build_logs() else 'false'}
+  plan:
+  - aggregate:
+    - get: meta
+% for repo_cfg in repositories:
+    - get: ${repo_cfg.resource_name()}
+      trigger: ${should_trigger(job_name, repo_cfg.resource_name())}
+% endfor
+    - get: ${time_resource_mappings.get(job_name).name.lower()}
+      trigger: true
+</%def>
+
+resource_types:
+${include_meta_resource_type()}
+
+resources:
+${meta_resource()}
+${render_repositories(pipeline_definition=pipeline_args, cfg_set=config_set)}
+% for resource in TimeResources:
+${time_resource(name=resource.name.lower(), interval=resource.value)}
+% endfor
+jobs:
+${job_header(pipeline_replication_job_name)}
+  - aggregate:
+    - task: '${deploy_smoketest_job.name}'
+      config:
+        <<: *task_image_resource
+        outputs:
+        - name: on_error_dir
+        inputs:
+% for repo_cfg in repositories:
+        - name: ${repo_cfg.resource_name()}
+% endfor
+        run:
+          path: /usr/bin/python3
+          args:
+          - -c
+          - |
+            import yaml, os, sys
+            # add cc-utils to PYTHONPATH
+            sys.path.insert(1, "${cc_utils_repo.resource_name()}")
+            from integrationtest import deploy_and_run_smoketest_pipeline
+
+            cfg_dir = "${cc_config_repo.resource_name()}"
+            cfg_name = "internal_dev_active"
+            team_name = "gardener"
+            cc_pipelines_repo_dir = "${cc_pipelines_repo.resource_name()}"
+
+            import model
+            cfg_factory = model.ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)
+            import ctx
+            ctx.cfg_factory = lambda: cfg_factory
+
+            deploy_and_run_smoketest_pipeline(
+              config_dir=cfg_dir,
+              config_name=cfg_name,
+              concourse_team_name=team_name,
+              cc_pipelines_repo_dir=cc_pipelines_repo_dir
+            )
+      on_failure:
+${email_notifications(deploy_smoketest_job)}
+    - task: '${deployment_pipeline_smoketest_job.name}'
+      # check if 'deploy-pipelines' pipeline can be rendered
+      config:
+        <<: *task_image_resource
+        outputs:
+        - name: on_error_dir
+        inputs:
+% for repo_cfg in repositories:
+        - name: ${repo_cfg.resource_name()}
+% endfor
+        run:
+          path: /usr/bin/python3
+          args:
+          - -c
+          - |
+            import yaml, os, sys
+            # add cc-utils to PYTHONPATH
+            sys.path.insert(1, '${cc_utils_repo.resource_name()}')
+            from concourse import replicator
+            import model
+            from util import parse_yaml_file
+
+            # shortcut test for now
+            sys.exit(0)
+
+            pipelines_repo_dir = "${cc_pipelines_repo.resource_name()}"
+            definitions_dir = os.path.join(pipelines_repo_dir, 'definitions', 'cc')
+            pipeline_definition_file = os.path.join(definitions_dir, 'deploy-pipelines.yaml')
+            pipeline_definition = parse_yaml_file(pipeline_definition_file)
+
+            template_path = [os.path.join(pipelines_repo_dir, 'templates')]
+            template_include_dir = pipelines_repo_dir
+
+            cfg_dir = '${cc_config_repo.resource_name()}'
+            cfg_name = 'internal_dev_active'
+            cfg_factory = model.ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)
+            cfg_set = cfg_factory.cfg_set(cfg_name=cfg_name)
+
+            replicator.render_pipelines(
+              pipeline_definition,
+              cfg_set,
+              template_path,
+              template_include_dir,
+            )
+      on_failure:
+${email_notifications(deployment_pipeline_smoketest_job)}
+
+<%def name='replicate_task(cfg_set_name)'>
+    - task: '${replication_job(cfg_set_name).name}'
+      config:
+        <<: *task_image_resource
+        outputs:
+        - name: on_error_dir
+        inputs:
+% for repo_cfg in repositories:
+        - name: ${repo_cfg.resource_name()}
+% endfor
+        run:
+          path: /usr/bin/python3
+          args:
+          - -c
+          - |
+            import os, sys
+            # add cc-utils to PYTHONPATH
+            sys.path.insert(1, "${cc_utils_repo.resource_name()}")
+            from concourse.replicator import replicate_pipelines
+            from model import ConfigFactory, ConfigSetSerialiser
+            from util import (
+              parse_yaml_file,
+              info,
+              fail,
+            )
+
+            template_path="${cc_pipelines_repo.resource_name()}/templates"
+            template_include_dir="${cc_pipelines_repo.resource_name()}"
+            pipeline_definitions_root="${cc_pipelines_repo.resource_name()}/definitions"
+            config_dir="${cc_config_repo.resource_name()}"
+            cfg_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
+            import ctx
+            ctx.cfg_factory = lambda: cfg_factory
+
+            def process_config(config_name):
+              cfg_set = cfg_factory.cfg_set(cfg_name=config_name)
+              concourse_cfg = cfg_set.concourse()
+              job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
+
+              all_successful = True
+              for job_mapping in job_mapping_set.job_mappings().values():
+                all_successful &= replicate_pipelines(
+                  cfg_set=cfg_set,
+                  concourse_cfg=concourse_cfg,
+                  job_mapping=job_mapping,
+                  definitions_root_dir=pipeline_definitions_root,
+                  template_path=template_path,
+                  template_include_dir=template_include_dir,
+                  unpause_pipelines=False,
+                  expose_pipelines=True,
+                )
+              return all_successful
+
+            config_name = '${cfg_set_name}'
+            info('Deploying from config ' + config_name + '.\n')
+            if not process_config(config_name=config_name):
+              fail('errors occurred during replication (see above)')
+
+
+      on_failure:
+${email_notifications(replication_job(cfg_set_name))}
+</%def>
+  - aggregate:
+% for cfg_set_name in concourse_cfg_set_names:
+  ${replicate_task(cfg_set_name)}
+% endfor
+
+${job_header(secrets_replication_job_name)}
+  - task: '${secrets_replication_job_name}'
+    config:
+      <<: *task_image_resource
+      outputs:
+      - name: on_error_dir
+      inputs:
+% for repo_cfg in repositories:
+      - name: ${repo_cfg.resource_name()}
+% endfor
+      run:
+        path: /usr/bin/python3
+        args:
+        - -c
+        - |
+          import os, sys
+          # add cc-utils to PYTHONPATH
+          sys.path.insert(1, "${cc_utils_repo.resource_name()}")
+          import json
+          from concourse.replicator import replicate_pipelines
+          from model import ConfigFactory, ConfigSetSerialiser
+          from util import parse_yaml_file, info
+          from kube.ctx import Ctx as KubeCtx
+
+          config_dir="${cc_config_repo.resource_name()}"
+          cfg_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
+
+          def process_config(config_name):
+            cfg_set = cfg_factory.cfg_set(cfg_name=config_name)
+            concourse_cfg = cfg_set.concourse()
+
+            kubernetes_cfg_name = concourse_cfg.kubernetes_cluster_config()
+            kubernetes_cfg = cfg_factory.kubernetes(kubernetes_cfg_name)
+            kubecfg_dict = kubernetes_cfg.kubeconfig()
+            ctx = KubeCtx(kubeconfig_dict=kubecfg_dict)
+            secrets_helper = ctx.secret_helper()
+            secrets_server_cfg = cfg_set.secrets_server()
+            secrets_cfg = secrets_server_cfg.secrets()
+
+            # serialise the configured cfg_sets and deploy them as a secret
+            cfg_sets = [cfg_factory.cfg_set(name) for name in secrets_cfg.cfg_set_names()]
+            cfg_set_names = [cfg_set.name() for cfg_set in cfg_sets]
+            info('deploying cfg_sets: ' + ', '.join(cfg_set_names))
+            serialiser = ConfigSetSerialiser(cfg_sets=cfg_sets, cfg_factory=cfg_factory)
+            cfg_json = serialiser.serialise(output_format='json')
+            parsed = json.loads(cfg_json)
+
+            secrets_helper.put_secret(
+              name=secrets_cfg.concourse_secret_name(),
+              data={"concourse_cfg": cfg_json},
+              namespace=secrets_server_cfg.namespace(),
+            )
+
+          config_names = ${concourse_cfg_set_names}
+          for cfg_name in config_names:
+            info('Replicating SecretsServer Secrets for: ' + cfg_name)
+            process_config(config_name=cfg_name)
+            print("")
+
+    on_failure:
+${email_notifications(secrets_replication_step)}
