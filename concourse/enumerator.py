@@ -33,7 +33,7 @@ from util import (
     not_empty,
     not_none,
 )
-from github.util import _create_github_api_object
+from github.util import _create_github_api_object, github_cfg_for_hostname
 from model.base import ModelBase, NamedModelElement
 from concourse.factory import RawPipelineDefinitionDescriptor
 
@@ -240,6 +240,38 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                 raw_definitions=definitions,
                 override_definitions=override_definitions,
             )
+
+
+class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
+    def __init__(self, repository_url:str, cfg_set):
+        self._repository_url = urlparse(not_none(repository_url))
+        self.cfg_set = not_none(cfg_set)
+        concourse_cfg = cfg_set.concourse()
+        job_mapping_set = cfg_set.job_mapping(concourse_cfg.job_mapping_cfg_name())
+
+        # hack: use first mapping that matches
+        org = self._repository_url.path.lstrip('/').split('/')[0]
+        for job_mapping in job_mapping_set.job_mappings().values():
+            if org in [o.org_name() for o in job_mapping.github_organisations()]:
+                self.job_mapping = job_mapping
+                break
+        else:
+            ValueError(f'could not find matching job-mapping for org {org}')
+
+    def enumerate_definition_descriptors(self):
+        github_cfg = github_cfg_for_hostname(
+            cfg_factory=self.cfg_set,
+            host_name=self._repository_url.hostname,
+        )
+        github_api = _create_github_api_object(github_cfg=github_cfg)
+        github_org, github_repo = self._repository_url.path.lstrip('/').split('/')
+        repository = github_api.repository(github_org, github_repo)
+
+        yield from self._scan_repository_for_definitions(
+            repository=repository,
+            github_cfg=github_cfg,
+            org_name=github_org,
+        )
 
 
 class GithubOrganisationDefinitionEnumerator(GithubDefinitionEnumeratorBase):
