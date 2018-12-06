@@ -191,12 +191,13 @@ ${email_notifications(deploy_smoketest_job)}
             # shortcut test for now
             sys.exit(0)
 
+            cc_utils_repo_dir = "${cc_utils_repo.resource_name()}"
             pipelines_repo_dir = "${cc_pipelines_repo.resource_name()}"
             definitions_dir = os.path.join(pipelines_repo_dir, 'definitions', 'cc')
             pipeline_definition_file = os.path.join(definitions_dir, 'deploy-pipelines.yaml')
             pipeline_definition = parse_yaml_file(pipeline_definition_file)
 
-            template_path = [os.path.join(pipelines_repo_dir, 'templates')]
+            template_path = [os.path.join(cc_utils_repo_dir, 'concourse', 'templates')]
             template_include_dir = pipelines_repo_dir
 
             cfg_dir = '${cc_config_repo.resource_name()}'
