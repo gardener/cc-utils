@@ -24,6 +24,18 @@ class WebhookDispatcherConfig(NamedModelElement):
             'concourse_config_names',
         }
 
+    def _defaults_dict(self):
+        return {
+            'pipeline_templates_path': ['/cc/utils/concourse/templates'],
+            'pipeline_include_path': '/cc/utils/concourse',
+        }
+
+    def pipeline_templates_path(self):
+        return self.raw['pipeline_templates_path']
+
+    def pipeline_include_path(self):
+        return self.raw['pipeline_include_path']
+
     def concourse_config_names(self):
         return self.raw['concourse_config_names']
 
