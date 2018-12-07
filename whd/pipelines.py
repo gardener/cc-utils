@@ -13,12 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import flask.current_app
-
 import concourse.enumerator
 import concourse.replicator
 
-logger = flask.current_app.logger
+
+def logger():
+    import flask.current_app
+    return flask.current_app.logger
 
 
 def update_repository_pipelines(
@@ -56,10 +57,10 @@ def update_repository_pipelines(
     )
     for render_result in render_results:
         if not render_result.render_status == concourse.replicator.RenderStatus.SUCCEEDED:
-            logger.warning('failed to render pipeline - ignoring')
+            logger().warning('failed to render pipeline - ignoring')
             continue
         deploy_result = deployer.deploy(render_result.definition_descriptor)
         if deploy_result.deploy_status == concourse.replicator.DeployStatus.SUCCEEDED:
-            logger.info('successfully rendered and deployed pipeline')
+            logger().info('successfully rendered and deployed pipeline')
         else:
-            logger.warning('failed to deploy a pipeline')
+            logger().warning('failed to deploy a pipeline')
