@@ -60,7 +60,7 @@ class GithubWebhookDispatcher(object):
     def _update_pipeline_definition(self, push_event):
         try:
             update_repository_pipelines(
-                repo_url=push_event.repository.repository_url(),
+                repo_url=push_event.repository().repository_url(),
                 cfg_set=self.cfg_set,
                 whd_cfg=self.whd_cfg,
             )
