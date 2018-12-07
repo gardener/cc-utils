@@ -29,7 +29,10 @@ class Repository(ModelBase):
         return urllib.parse.urlparse(self.repository_url()).hostname
 
     def repository_url(self):
-        return self.raw['clone_url']
+        url = self.raw['clone_url']
+        if url.endswith('.git'):
+            return url[:-4] # remove '.git' suffix
+        return url
 
     def repository_path(self):
         return self.raw['full_name']
