@@ -23,7 +23,7 @@ from flask_restful import (
 
 from model.webhook_dispatcher import WebhookDispatcherConfig
 from .dispatcher import GithubWebhookDispatcher
-from .model import PushEvent, PullRequestEvent
+from .model import CreateEvent, PushEvent, PullRequestEvent
 
 
 class GithubWebhook(Resource):
@@ -48,6 +48,9 @@ class GithubWebhook(Resource):
             parsed = PushEvent(raw_dict=request.get_json())
             self.dispatcher.dispatch_push_event(push_event=parsed)
             return 'OK'
+        if event == 'create':
+            parsed = CreateEvent(raw_dict=request.get_json())
+            self.dispatcher.dispatch_create_event(create_event=parsed)
         elif event == 'pull_request':
             parsed = PullRequestEvent(raw_dict=request.get_json())
             self.dispatcher.dispatch_pullrequest_event(pr_event=parsed)

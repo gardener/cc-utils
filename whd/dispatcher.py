@@ -19,7 +19,12 @@ import time
 from flask import current_app as app
 
 from model.webhook_dispatcher import WebhookDispatcherConfig
-from .model import PushEvent, PullRequestEvent, PullRequestAction
+from .model import (
+    PushEvent,
+    PullRequestEvent,
+    PullRequestAction,
+    RefType,
+)
 from .pipelines import update_repository_pipelines
 import concourse.client
 import util
@@ -45,6 +50,15 @@ class GithubWebhookDispatcher(object):
                     concourse_cfg=concourse_cfg,
                     team_name=job_mapping.team_name(),
                 )
+
+    def dispatch_create_event(self, create_event):
+        ref_type = create_event.ref_type()
+        if not ref_type == RefType.BRANCH:
+            app.logger.info(f'ignored create event with type {ref_type}')
+            return
+
+        # todo: rename parameter
+        self._update_pipeline_definition(push_event=create_event)
 
     def dispatch_push_event(self, push_event):
         if self._pipeline_definition_changed(push_event):
