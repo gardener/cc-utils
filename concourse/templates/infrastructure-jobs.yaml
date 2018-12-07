@@ -23,7 +23,7 @@ cc_pipelines_repo = variant.repository('cc-pipelines')
 repos = (cc_utils_repo, cc_config_repo, cc_pipelines_repo)
 
 class TimeResources(Enum):
-  REPLICATION_INTERVAL = '2.5m'
+  REPLICATION_INTERVAL = '5m'
 
 # Job/Task name definitions
 pipeline_replication_job_name = 'replicate-pipelines'
