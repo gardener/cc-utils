@@ -15,10 +15,15 @@
 
 from model.base import (
     NamedModelElement,
+    ModelDefaultsMixin,
 )
 
 
-class WebhookDispatcherConfig(NamedModelElement):
+class WebhookDispatcherConfig(NamedModelElement, ModelDefaultsMixin):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._apply_defaults(self.raw)
+
     def _required_attributes(self):
         return {
             'concourse_config_names',
