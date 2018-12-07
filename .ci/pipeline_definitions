@@ -9,7 +9,7 @@ cc-utils:
       version: ~
       component_descriptor: ~
   variants:
-    head_update:
+    head-update:
       repos:
       - name: 'gh_pages'
         path: 'gardener/cc-utils'
