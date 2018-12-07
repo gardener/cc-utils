@@ -38,6 +38,23 @@ class Repository(ModelBase):
         return self.raw['full_name']
 
 
+class RefType(enum.Enum):
+    REPOSITORY = 'repository'
+    BRANCH = 'branch'
+    TAG = 'tag'
+
+
+class CreateEvent(EventBase):
+    def ref_type(self):
+        return RefType(self.raw['ref_type'])
+
+    def ref(self):
+        '''
+        @return: the ref's name or None if ref_type is repository
+        '''
+        return self.raw.get('ref', None)
+
+
 class PushEvent(EventBase):
     def ref(self):
         return self.raw['ref']
