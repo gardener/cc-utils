@@ -26,7 +26,10 @@ class EventBase(ModelBase):
 
 class Repository(ModelBase):
     def github_host(self):
-        return urllib.parse.urlparse(self.raw['clone_url']).hostname
+        return urllib.parse.urlparse(self.repository_url()).hostname
+
+    def repository_url(self):
+        return self.raw['clone_url']
 
     def repository_path(self):
         return self.raw['full_name']
