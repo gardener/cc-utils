@@ -51,6 +51,7 @@ class GithubWebhook(Resource):
         elif event == 'pull_request':
             parsed = PullRequestEvent(raw_dict=request.get_json())
             self.dispatcher.dispatch_pullrequest_event(pr_event=parsed)
+            return 'OK'
         else:
             msg = f'event {event} ignored'
             app.logger.info(msg)
