@@ -17,8 +17,10 @@ import functools
 import time
 
 from flask import current_app as app
+
 from model.webhook_dispatcher import WebhookDispatcherConfig
 from .model import PushEvent, PullRequestEvent, PullRequestAction
+from .pipelines import update_repository_pipelines
 import concourse.client
 import util
 
@@ -56,8 +58,14 @@ class GithubWebhookDispatcher(object):
             self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
 
     def _update_pipeline_definition(self, push_event):
-        # for now, just log - actual update to be implemented
-        app.logger.info('pipeline definition update found - should now update')
+        try:
+            update_repository_pipelines(
+                repo_url=push_event.repository.repository_url(),
+                cfg_set=self.cfg_set,
+                whd_cfg=self.whd_cfg,
+            )
+        except BaseException:
+            app.logger.warning('failed to update pipeline definition - ignored')
 
     def _pipeline_definition_changed(self, push_event):
         if '.ci/pipeline_definitions' in push_event.modified_paths():
