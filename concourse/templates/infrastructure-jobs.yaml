@@ -23,7 +23,7 @@ cc_pipelines_repo = variant.repository('cc-pipelines')
 repos = (cc_utils_repo, cc_config_repo, cc_pipelines_repo)
 
 class TimeResources(Enum):
-  EVERY_TWO_AND_A_HALF_MINUTES = '2.5m'
+  REPLICATION_INTERVAL = '2.5m'
 
 # Job/Task name definitions
 pipeline_replication_job_name = 'replicate-pipelines'
@@ -43,8 +43,8 @@ def replication_job(cfg_set_name):
   return create_step('render-and-replicate-' + cfg_set_name)
 
 time_resource_mappings = {
-    pipeline_replication_job_name: TimeResources.EVERY_TWO_AND_A_HALF_MINUTES,
-    secrets_replication_job_name: TimeResources.EVERY_TWO_AND_A_HALF_MINUTES,
+    pipeline_replication_job_name: TimeResources.REPLICATION_INTERVAL,
+    secrets_replication_job_name: TimeResources.REPLICATION_INTERVAL,
 }
 
 def should_trigger(job_name, repo_name):
