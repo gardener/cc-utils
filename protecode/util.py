@@ -17,7 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import protecode.client
 from product.scanning import ProtecodeUtil, ProcessingMode
-from util import info
+from util import info, verbose
 from protecode.model import highest_major_cve_severity
 
 
@@ -42,7 +42,7 @@ def upload_images(
     results = executor.map(lambda task: task(), tasks)
 
     for result in results:
-        info('result: {r}'.format(r=result))
+        verbose('result: {r}'.format(r=result))
         analysis_result = result.result
 
         if not analysis_result.components():
@@ -58,10 +58,16 @@ def upload_images(
             if greatest_cve_candidate > greatest_cve:
                 greatest_cve = greatest_cve_candidate
 
+        display_name = analysis_result.display_name()
+
         if greatest_cve >= cve_threshold:
-            info('Greatest found CVE Severity: {cve} - Action required'.format(cve=greatest_cve))
+            info('{dn}: Greatest CVE Severity: {cve} - Action required'.format(
+                dn=display_name,
+                cve=greatest_cve,
+                )
+            )
         else:
-            info('CVE below configured threshold - clean')
+            info('{dn}: below configured threshold - clean')
 
 
 def _create_task(protecode_util, container_image, component):
@@ -75,13 +81,13 @@ def _create_task(protecode_util, container_image, component):
 
 def _create_tasks(product_model, protecode_util, image_reference_filter):
     for component in product_model.components():
-        info('processing component: {c}:{v}'.format(c=component.name(), v=component.version()))
+        verbose('processing component: {c}:{v}'.format(c=component.name(), v=component.version()))
         component_dependencies = component.dependencies()
         for container_image in filter(
                 image_reference_filter,
                 component_dependencies.container_images()
         ):
-            info('processing container image: {c}:{cir}'.format(
+            verbose('processing container image: {c}:{cir}'.format(
                 c=component.name(),
                 cir=container_image.image_reference(),
             )

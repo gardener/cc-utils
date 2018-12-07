@@ -29,6 +29,9 @@ class AnalysisResult(ModelBase):
     def product_id(self):
         return self.raw.get('product_id')
 
+    def display_name(self):
+        return self.raw.get('filename', '<None>')
+
     def status(self) -> ProcessingStatus:
         return ProcessingStatus(self.raw.get('status'))
 
