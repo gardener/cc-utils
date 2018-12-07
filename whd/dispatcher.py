@@ -64,8 +64,13 @@ class GithubWebhookDispatcher(object):
                 cfg_set=self.cfg_set,
                 whd_cfg=self.whd_cfg,
             )
-        except BaseException:
-            app.logger.warning('failed to update pipeline definition - ignored')
+        except BaseException as be:
+            app.logger.warning(f'failed to update pipeline definition - ignored {be}')
+            import traceback
+            try:
+                traceback.print_exc()
+            except BaseException:
+                pass # ignore
 
     def _pipeline_definition_changed(self, push_event):
         if '.ci/pipeline_definitions' in push_event.modified_paths():
