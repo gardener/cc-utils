@@ -67,7 +67,7 @@ def upload_images(
                 )
             )
         else:
-            info('{dn}: below configured threshold - clean')
+            info('{dn}: below configured threshold - clean'.format(dn=display_name))
 
 
 def _create_task(protecode_util, container_image, component):
