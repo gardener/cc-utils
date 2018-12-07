@@ -18,8 +18,8 @@ import concourse.replicator
 
 
 def logger():
-    import flask.current_app
-    return flask.current_app.logger
+    from flask import current_app
+    return current_app.logger
 
 
 def update_repository_pipelines(
