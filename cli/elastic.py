@@ -20,13 +20,26 @@ import ccc.elasticsearch
 import util
 
 
+meta_dir = './meta'
+meta_field_prefix = 'meta_'
+
+
 def store(index: str, body: str, cfg_name: str):
     elastic_cfg = util.ctx().cfg_factory().elasticsearch(cfg_name)
     elastic_client = ccc.elasticsearch.from_cfg(elasticsearch_cfg=elastic_cfg)
+    json_body = json.load(body)
+
+    try:
+        meta = get_meta()
+    except RuntimeError:
+        util.warning("Could not read metadata")
+        meta = dict()
+
+    json_body.update(meta)
 
     result = elastic_client.store_document(
         index=index,
-        body=json.loads(body),
+        body=json_body,
     )
 
     print(result)
@@ -39,11 +52,19 @@ def store_files(index: str, files: [str], cfg_name: str):
     for file in files:
         util.existing_file(file)
 
+    try:
+        meta = get_meta()
+    except RuntimeError:
+        util.warning("Could not read metadata")
+        meta = dict()
+
     for file in files:
         with open(file) as file_handle:
+            json_body = json.load(file_handle)
+            json_body.update(meta)
             print(elastic_client.store_document(
                 index=index,
-                body=json.load(file_handle),
+                body=json_body,
                 )
             )
 
@@ -55,3 +76,30 @@ def store_dir(index: str, directory: util.CliHints.existing_dir(), cfg_name: str
             if file.endswith('.json'):
                 json_files.append(os.path.join(dirpath, file))
     store_files(index, json_files, cfg_name)
+
+
+def get_meta():
+    meta = dict()
+    if not os.path.isdir(meta_dir):
+        raise RuntimeError()
+    for (dirpath, dirnames, filenames) in os.walk(meta_dir):
+        for file in filenames:
+            key = meta_field_prefix + file
+            value = ""
+            with open(os.path.join(dirpath, file)) as file_handle:
+                for line in file_handle.readlines():
+                    value += line
+            meta[key] = value
+    # calculate concourse url of corresponding build
+    meta['concourse_url'] = "/".join((
+        meta['meta_atc-external-url'],
+        'teams',
+        meta['meta_build-team-name'],
+        'pipelines',
+        meta['meta_build-pipeline-name'],
+        'jobs',
+        meta['meta_build-job-name'],
+        'builds',
+        meta['meta_build-name'],
+        ))
+    return meta
