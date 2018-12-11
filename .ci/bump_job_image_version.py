@@ -4,9 +4,9 @@ import os
 import pathlib
 import fileinput
 
-repo_dir = os.environ.get('SOURCE_PATH')
+repo_dir = os.environ.get('REPO_DIR')
 if repo_dir is None:
-    raise RuntimeError('SOURCE_PATH environment variable must be set')
+    raise RuntimeError('REPO_DIR environment variable must be set')
 
 version_path = os.environ.get('VERSION_PATH')
 if version_path is None:
