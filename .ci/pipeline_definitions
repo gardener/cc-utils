@@ -45,3 +45,4 @@ cc-utils:
               tag_as_latest: True
         release:
           nextversion: 'bump_minor'
+          release_callback: '.ci/bump_job_image_version.py'
