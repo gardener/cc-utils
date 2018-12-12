@@ -4,21 +4,16 @@ import os
 import pathlib
 import fileinput
 
-repo_dir = os.environ.get('REPO_DIR')
-if repo_dir is None:
-    raise RuntimeError('REPO_DIR environment variable must be set')
+from util import (
+    check_env,
+    existing_file,
+)
 
-version_path = os.environ.get('VERSION_PATH')
-if version_path is None:
-    raise RuntimeError('VERSION_PATH environment variable must be set')
+repo_dir = check_env('REPO_DIR')
+version_path = check_env('VERSION_PATH')
 
-template_file = pathlib.Path(repo_dir, 'concourse', 'resources', 'defaults.mako')
-version_file = pathlib.Path(version_path, 'version')
-
-if not template_file.is_file():
-    raise RuntimeError(f'Template file not found at {template_file}')
-if not version_file.is_file():
-    raise RuntimeError(f'Verson file not found at {version_file}')
+template_file = existing_file(pathlib.Path(repo_dir, 'concourse', 'resources', 'defaults.mako'))
+version_file = existing_file(pathlib.Path(version_path, 'version'))
 
 version = version_file.read_text()
 lines_replaced = 0
