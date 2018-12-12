@@ -21,7 +21,6 @@ import util
 
 
 meta_dir = './meta'
-meta_field_prefix = 'meta_'
 
 
 def store(index: str, body: str, cfg_name: str):
@@ -61,12 +60,12 @@ def store_files(index: str, files: [str], cfg_name: str):
     for file in files:
         with open(file) as file_handle:
             json_body = json.load(file_handle)
-            json_body.update(meta)
-            print(elastic_client.store_document(
+            json_body['cc_meta'] = meta
+            result = elastic_client.store_document(
                 index=index,
                 body=json_body,
                 )
-            )
+            print(result)
 
 
 def store_dir(index: str, directory: util.CliHints.existing_dir(), cfg_name: str):
@@ -84,7 +83,7 @@ def get_meta():
         raise RuntimeError()
     for (dirpath, dirnames, filenames) in os.walk(meta_dir):
         for file in filenames:
-            key = meta_field_prefix + file
+            key = file
             value = ""
             with open(os.path.join(dirpath, file)) as file_handle:
                 for line in file_handle.readlines():
@@ -92,14 +91,14 @@ def get_meta():
             meta[key] = value
     # calculate concourse url of corresponding build
     meta['concourse_url'] = "/".join((
-        meta['meta_atc-external-url'],
+        meta['atc-external-url'],
         'teams',
-        meta['meta_build-team-name'],
+        meta['build-team-name'],
         'pipelines',
-        meta['meta_build-pipeline-name'],
+        meta['build-pipeline-name'],
         'jobs',
-        meta['meta_build-job-name'],
+        meta['build-job-name'],
         'builds',
-        meta['meta_build-name'],
+        meta['build-name'],
         ))
     return meta
