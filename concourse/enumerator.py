@@ -29,7 +29,6 @@ from util import (
     info,
     fail,
     verbose,
-    existing_dir,
     not_empty,
     not_none,
 )
@@ -83,45 +82,6 @@ class DefinitionEnumerator(object):
                 concourse_target_team=self.job_mapping.team_name(),
                 override_definitions=[override_definitions.get(name,{}),],
             )
-
-
-class MappingfileDefinitionEnumerator(DefinitionEnumerator):
-    def __init__(self, base_dir, job_mapping, cfg_set):
-        self.base_dir = existing_dir(base_dir)
-        self.job_mapping = job_mapping
-        self.cfg_set = cfg_set
-
-    def enumerate_definition_descriptors(self):
-        # handle definition directories (legacy-case)
-        info('scanning legacy mappings')
-        for repo_path, pd in self._enumerate_pipeline_definitions(
-                [os.path.join(self.base_dir, d) for d in self.job_mapping.definition_dirs()]
-        ):
-            for definitions in pd:
-                for name, definition in definitions.items():
-                    info('from mapping: ' + name)
-                    yield from self._wrap_into_descriptors(
-                        repo_path=repo_path,
-                        # XXX un-hardcode
-                        repo_hostname='github.com',
-                        branch='master',
-                        raw_definitions=definitions
-                    )
-
-    def _enumerate_pipeline_definitions(self, directories):
-        for directory in directories:
-            # for now, hard-code mandatory .repository_mapping
-            repo_mapping = parse_yaml_file(os.path.join(directory, '.repository_mapping'))
-            repo_definition_mapping = {repo_path: list() for repo_path in repo_mapping.keys()}
-
-            for repo_path, definition_files in repo_mapping.items():
-                for definition_file_path in definition_files:
-                    abs_file = os.path.abspath(os.path.join(directory, definition_file_path))
-                    pipeline_raw_definition = parse_yaml_file(abs_file)
-                    repo_definition_mapping[repo_path].append(pipeline_raw_definition)
-
-            for repo_path, definitions in  repo_definition_mapping.items():
-                yield (repo_path, definitions)
 
 
 class SimpleFileDefinitionEnumerator(DefinitionEnumerator):
