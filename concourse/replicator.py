@@ -41,7 +41,6 @@ from concourse.factory import DefinitionFactory, RawPipelineDefinitionDescriptor
 from concourse.enumerator import (
     DefinitionDescriptorPreprocessor,
     TemplateRetriever,
-    MappingfileDefinitionEnumerator,
     GithubOrganisationDefinitionEnumerator,
 )
 
@@ -53,9 +52,9 @@ def replicate_pipelines(
     cfg_set,
     concourse_cfg,
     job_mapping,
-    definitions_root_dir,
     template_path,
     template_include_dir,
+    definitions_root_dir=None, # TODO: Remove in follow-up commit
     unpause_pipelines: bool=True,
     expose_pipelines: bool=True,
 ):
@@ -65,14 +64,6 @@ def replicate_pipelines(
             cfg_set=cfg_set,
         ),
     ]
-    if job_mapping.definition_dirs():
-        definition_enumerators.append(
-            MappingfileDefinitionEnumerator(
-                base_dir=definitions_root_dir,
-                job_mapping=job_mapping,
-                cfg_set=cfg_set,
-            ),
-        )
 
     preprocessor = DefinitionDescriptorPreprocessor()
     template_retriever = TemplateRetriever(template_path=template_path)

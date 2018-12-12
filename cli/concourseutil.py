@@ -32,7 +32,6 @@ from concourse.util import sync_org_webhooks
 from concourse.enumerator import (
     DefinitionDescriptorPreprocessor,
     GithubOrganisationDefinitionEnumerator,
-    MappingfileDefinitionEnumerator,
     SimpleFileDefinitionEnumerator,
     TemplateRetriever,
 )
@@ -208,7 +207,6 @@ def render_pipelines(
         config_name: str,
         out_dir: str,
         template_include_dir: str = None,
-        definitions_root_dir: str = None,
 ):
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
@@ -230,14 +228,6 @@ def render_pipelines(
                 cfg_set=config_set
             )
         )
-        if job_mapping.definition_dirs():
-            def_enumerators.append(
-                MappingfileDefinitionEnumerator(
-                    base_dir=definitions_root_dir,
-                    job_mapping=job_mapping,
-                    cfg_set=config_set,
-                )
-            )
 
     preprocessor = DefinitionDescriptorPreprocessor()
 

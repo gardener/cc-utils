@@ -230,9 +230,6 @@ class JobMapping(NamedModelElement):
     def team_name(self)->str:
         return self.raw.get('concourse_target_team')
 
-    def definition_dirs(self):
-        return self.raw['definition_dirs']
-
     def github_organisations(self):
         return [
             GithubOrganisationConfig(name, raw)

@@ -244,7 +244,6 @@ ${email_notifications(deployment_pipeline_smoketest_job)}
 
             template_path="${cc_utils_repo.resource_name()}/concourse/templates"
             template_include_dir="${cc_utils_repo.resource_name()}/concourse"
-            pipeline_definitions_root="${cc_pipelines_repo.resource_name()}/definitions"
             config_dir="${cc_config_repo.resource_name()}"
             cfg_factory = ConfigFactory.from_cfg_dir(cfg_dir=config_dir)
             import ctx
@@ -261,7 +260,6 @@ ${email_notifications(deployment_pipeline_smoketest_job)}
                   cfg_set=cfg_set,
                   concourse_cfg=concourse_cfg,
                   job_mapping=job_mapping,
-                  definitions_root_dir=pipeline_definitions_root,
                   template_path=template_path,
                   template_include_dir=template_include_dir,
                   unpause_pipelines=False,
