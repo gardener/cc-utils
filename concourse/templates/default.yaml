@@ -175,6 +175,8 @@ image_reference, tag = job_step.image().split(':', 1)
     <<: *task_image_resource
 % endif
     inputs:
+    # XXX: factor this out
+    - name: meta
 % for repository in job_variant.repositories():
     - name: ${repository.resource_name()}
 % endfor
