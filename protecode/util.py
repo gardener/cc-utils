@@ -76,7 +76,7 @@ def display_upload_results(
 
         greatest_cve = -1
 
-        for component in components():
+        for component in components:
             vulnerabilities = filter(lambda v: not v.historical(), component.vulnerabilities())
             if ignore_if_triaged:
                 vulnerabilities = filter(lambda v: not v.has_triage(), vulnerabilities)
