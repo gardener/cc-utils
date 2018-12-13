@@ -90,6 +90,11 @@ ATTRIBUTES = (
         name='protecode_cfg_name',
         doc='protecode cfg name to use (see cc-utils)',
     ),
+    AttributeSpec.optional(
+        name='email_recipients',
+        default=(),
+        doc='optional email recipients to be notified about critical scan results',
+    ),
 )
 
 
@@ -123,6 +128,9 @@ class ImageScanTrait(Trait):
 
     def filters(self):
         return FilterCfg(raw_dict=self.raw['filters'])
+
+    def email_recipients(self):
+        return self.raw['email_recipients']
 
     def validate(self):
         super().validate()
