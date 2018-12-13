@@ -80,4 +80,5 @@ mailutil._send_mail(
   mail_template=body,
   subject=f'[Action Required] landscape {component_name} has critical Vulnerabilities',
 )
+util.info('sent notification emails to: ' + ','.join(email_recipients))
 </%def>
