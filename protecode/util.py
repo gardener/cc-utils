@@ -60,7 +60,7 @@ def display_upload_results(
     upload_results: typing.Sequence[UploadResult],
     cve_threshold=7,
     ignore_if_triaged=True,
-):
+) -> typing.Sequence[typing.Tuple[AnalysisResult, int]]:
     # we only require the analysis_results for now
     results = [r.result for r in upload_results]
 
@@ -116,6 +116,8 @@ def display_upload_results(
     if results_above_cve_thresh:
         warning('The following components have critical vulnerabilities:')
         render_results_table(results=results_above_cve_thresh)
+
+    return results_above_cve_thresh
 
 
 def _create_task(protecode_util, container_image, component):
