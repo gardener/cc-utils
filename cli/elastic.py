@@ -26,7 +26,7 @@ meta_dir = './meta'
 def store(index: str, body: str, cfg_name: str):
     elastic_cfg = util.ctx().cfg_factory().elasticsearch(cfg_name)
     elastic_client = ccc.elasticsearch.from_cfg(elasticsearch_cfg=elastic_cfg)
-    json_body = json.load(body)
+    json_body = json.loads(body)
 
     try:
         meta = get_meta()
