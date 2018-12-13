@@ -1,5 +1,5 @@
 <%def
-  name="scan_container_images_step(job_step, job_variant, indent)",
+  name="scan_container_images_step(job_step, job_variant, cfg_set, indent)",
   filter="indent_func(indent),trim"
 >
 <%
@@ -10,10 +10,12 @@ repo_name = main_repo.logical_name().upper()
 
 image_scan_trait = job_variant.trait('image_scan')
 filter_cfg = image_scan_trait.filters()
+component_trait = job_variant.trait('component_descriptor')
 %>
 import sys
 import pathlib
 
+import mailutil
 import product.model
 import protecode.util
 import util
@@ -61,5 +63,21 @@ email_recipients = ${image_scan_trait.email_recipients}
 if not email_recipients:
   util.warning('Relevant Vulnerabilities were found, but there are no mail recipients configured')
   sys.exit(0)
-# send notification email
+
+# notify about critical vulnerabilities
+
+# component_name identifies the landscape that has been scanned
+component_name = component_trait.component_name()
+body = 'The following components were found to contain vulnerabilities:\n'
+body += tabulate.tabulate(
+  map(lambda r: (r[0].display_name(), r[1]), relevant_results),
+  headers=('Component Name', 'Greatest CVE'),
+)
+
+mailutil._send_mail(
+  email_cfg=cfg_set.email(),
+  recipients=email_recipients,
+  mail_template=body,
+  subject=f'[Action Required] landscape {component_name} has critical Vulnerabilities',
+)
 </%def>
