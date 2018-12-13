@@ -14,6 +14,7 @@ component_trait = job_variant.trait('component_descriptor')
 %>
 import sys
 import pathlib
+import tabulate
 
 import mailutil
 import product.model
