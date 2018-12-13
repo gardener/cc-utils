@@ -14,17 +14,11 @@
 # limitations under the License.
 
 from concurrent.futures import ThreadPoolExecutor
-import tabulate
-import typing
 
 import protecode.client
 from product.scanning import ProtecodeUtil, ProcessingMode
-from util import info, warning, verbose
-from protecode.model import (
-    AnalysisResult,
-    UploadResult,
-    highest_major_cve_severity,
-)
+from util import info, verbose
+from protecode.model import highest_major_cve_severity
 
 
 def upload_images(
@@ -47,34 +41,16 @@ def upload_images(
     tasks = _create_tasks(product_descriptor, protecode_util, image_reference_filter)
     results = executor.map(lambda task: task(), tasks)
 
-    display_upload_results(
-        upload_results=results,
-        cve_threshold=cve_threshold,
-        ignore_if_triaged=ignore_if_triaged,
-    )
-
-
-def display_upload_results(
-    upload_results: typing.Sequence[UploadResult],
-    cve_threshold=7,
-    ignore_if_triaged=True,
-):
-    # we only require the analysis_results for now
-    results = [r.result for r in upload_results]
-
-    results_without_components = []
-    results_below_cve_thresh = []
-    results_above_cve_thresh = []
-
     for result in results:
-        components = result.components()
-        if not components:
-            results_without_components.append()
+        verbose('result: {r}'.format(r=result))
+        analysis_result = result.result
+
+        if not analysis_result.components():
             continue
 
         greatest_cve = -1
 
-        for component in components():
+        for component in analysis_result.components():
             vulnerabilities = filter(lambda v: not v.historical(), component.vulnerabilities())
             if ignore_if_triaged:
                 vulnerabilities = filter(lambda v: not v.has_triage(), vulnerabilities)
@@ -82,37 +58,16 @@ def display_upload_results(
             if greatest_cve_candidate > greatest_cve:
                 greatest_cve = greatest_cve_candidate
 
+        display_name = analysis_result.display_name()
+
         if greatest_cve >= cve_threshold:
-            results_above_cve_thresh.append((result, greatest_cve))
-            continue
+            info('{dn}: Greatest CVE Severity: {cve} - Action required'.format(
+                dn=display_name,
+                cve=greatest_cve,
+                )
+            )
         else:
-            results_below_cve_thresh.append((result, greatest_cve))
-            continue
-
-    if results_without_components:
-        warning(f'Protecode did not identify components for {len(results_without_components)}:\n')
-        for result in results_without_components:
-            print(result.display_name())
-        print('')
-
-    def render_results_table(results: typing.Sequence[typing.Tuple[AnalysisResult, int]]):
-        header = ('Component Name', 'Greatest CVE')
-        results = sorted(results, key=lambda e: e[1])
-
-        tabulate.tabulate(
-            map(results, lambda r: r.display_name()),
-            headers=header,
-            tablefmt='fancy_grid',
-        )
-
-    if results_below_cve_thresh:
-        info(f'The following components were below configured cve threshold {cve_threshold}')
-        render_results_table(results=results_below_cve_thresh)
-        print('')
-
-    if results_above_cve_thresh:
-        warning('The following components have critical vulnerabilities:')
-        render_results_table(results=results_above_cve_thresh)
+            info('{dn}: below configured threshold - clean'.format(dn=display_name))
 
 
 def _create_task(protecode_util, container_image, component):
