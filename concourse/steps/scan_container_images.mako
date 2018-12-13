@@ -32,7 +32,7 @@ urllib3.disable_warnings()
 
 cfg_factory = util.ctx().cfg_factory()
 protecode_cfg = cfg_factory.protecode('${image_scan_trait.protecode_cfg_name()}')
-cfg_set = cfg_factory.cfg_set("${cfg_set.name()"})
+cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
 component_descriptor_file = pathlib.Path(
   util.check_env('COMPONENT_DESCRIPTOR_DIR'),
