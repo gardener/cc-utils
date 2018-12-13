@@ -181,7 +181,7 @@ class ProtecodeUtil(object):
             self,
             container_image: ContainerImage,
             component: Component,
-        ):
+        ) -> UploadResult:
         metadata = self._metadata(
             container_image=container_image,
             component=component,

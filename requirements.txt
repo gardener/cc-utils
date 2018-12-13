@@ -3,6 +3,7 @@ Flask
 Flask-RESTful
 GitPython
 Mako
+RaphaelVogel-github3.py==1.2.0
 Sphinx
 bcrypt
 containerregistry-ccwienk==0.2.1
@@ -12,7 +13,6 @@ deprecated
 elasticsearch
 ensure
 gevent
-RaphaelVogel-github3.py==1.2.0
 kubernetes
 pycodestyle
 pydash==4.6.0
