@@ -309,7 +309,7 @@ else:
 % elif job_step.name == 'create_draft_release_notes':
         ${draft_release_step(job_step=job_step, job_variant=job_variant, github_cfg=github, indent=8)}
 % elif job_step.name == 'scan_container_images':
-        ${scan_container_images_step(job_step=job_step, job_variant=job_variant, indent=8)}
+        ${scan_container_images_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
 % endif
 % endif
 % if job_step.publish_repository_names() and not job_variant.has_trait('pull-request'):

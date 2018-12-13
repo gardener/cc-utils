@@ -11,7 +11,7 @@ repo_name = main_repo.logical_name().upper()
 image_scan_trait = job_variant.trait('image_scan')
 filter_cfg = image_scan_trait.filters()
 %>
-
+import sys
 import pathlib
 
 import product.model
@@ -46,7 +46,7 @@ image_filter = image_reference_filter(
   exclude_regexes=${filter_cfg.exclude_image_references()},
 )
 
-protecode.util.upload_images(
+relevant_results = protecode.util.upload_images(
   protecode_cfg=protecode_cfg,
   product_descriptor=component_descriptor,
   processing_mode=processing_mode,
@@ -55,4 +55,11 @@ protecode.util.upload_images(
   cve_threshold=${image_scan_trait.cve_threshold()},
   image_reference_filter=image_filter,
 )
+if not relevant_results:
+  sys.exit(0)
+email_recipients = ${image_scan_trait.email_recipients}
+if not email_recipients:
+  util.warning('Relevant Vulnerabilities were found, but there are no mail recipients configured')
+  sys.exit(0)
+# send notification email
 </%def>
