@@ -101,11 +101,12 @@ def display_upload_results(
         header = ('Component Name', 'Greatest CVE')
         results = sorted(results, key=lambda e: e[1])
 
-        tabulate.tabulate(
+        result = tabulate.tabulate(
             map(lambda r: r[0].display_name(), results),
             headers=header,
             tablefmt='fancy_grid',
         )
+        print(result)
 
     if results_below_cve_thresh:
         info(f'The following components were below configured cve threshold {cve_threshold}')
