@@ -27,7 +27,7 @@ from kubernetes.client import (
 from kubernetes.client.rest import ApiException
 from ensure import ensure_annotations
 
-from util import info, not_empty, not_none
+from util import info, not_empty, not_none, fail
 
 
 class KubernetesSecretHelper(object):
@@ -262,6 +262,17 @@ class KubernetesDeploymentHelper(object):
                 return None
             raise ae
         return deployment
+
+    def patch_deployment(self, name: str, namespace: str, body: dict):
+        '''Patches a deployment with a given name in the given namespace.'''
+        not_empty(name)
+        not_empty(namespace)
+        not_empty(body)
+
+        if not self.get_deployment(namespace, name):
+            fail(f'Deployment {name} in namespace {namespace} does not exist')
+
+        self.apps_api.patch_namespaced_deployment(name, namespace, body)
 
     def wait_until_deployment_available(self, namespace: str, name: str, timeout_seconds: int=60):
         '''Block until the given deployment has at least one available replica (or timeout)
