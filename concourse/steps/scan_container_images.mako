@@ -59,7 +59,7 @@ relevant_results = protecode.util.upload_images(
 )
 if not relevant_results:
   sys.exit(0)
-email_recipients = ${image_scan_trait.email_recipients}
+email_recipients = ${image_scan_trait.email_recipients()}
 if not email_recipients:
   util.warning('Relevant Vulnerabilities were found, but there are no mail recipients configured')
   sys.exit(0)
