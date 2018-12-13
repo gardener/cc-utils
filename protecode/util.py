@@ -102,7 +102,7 @@ def display_upload_results(
         results = sorted(results, key=lambda e: e[1])
 
         tabulate.tabulate(
-            map(results, lambda r: r.display_name()),
+            map(lambda r: r[0].display_name(), results),
             headers=header,
             tablefmt='fancy_grid',
         )
