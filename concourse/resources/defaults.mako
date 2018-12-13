@@ -15,7 +15,7 @@ credentials = registry_cfg.credentials()
       source:
         <<: *${registry_name}_defaults
         repository: eu.gcr.io/gardener-project/cc/job-image
-        tag: "1.39.0"
+        tag: "1.40.0"
 </%def>
 <%def name='configure_webhook(webhook_token)'>
   configure_webhook: &configure_webhook
