@@ -67,7 +67,7 @@ if not email_recipients:
 # notify about critical vulnerabilities
 
 # component_name identifies the landscape that has been scanned
-component_name = component_trait.component_name()
+component_name = "${component_trait.component_name()}"
 body = 'The following components were found to contain vulnerabilities:\n'
 body += tabulate.tabulate(
   map(lambda r: (r[0].display_name(), r[1]), relevant_results),
