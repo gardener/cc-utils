@@ -20,9 +20,11 @@ import typing
 import protecode.client
 from product.scanning import ProtecodeUtil, ProcessingMode
 from util import info, warning, verbose
+from product.model import (
+    UploadResult,
+)
 from protecode.model import (
     AnalysisResult,
-    UploadResult,
     highest_major_cve_severity,
 )
 
