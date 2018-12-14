@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - image: {{ .Values.image_reference }}
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           name: webhook-dispatcher
           livenessProbe:
             tcpSocket:
