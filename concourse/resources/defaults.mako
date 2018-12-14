@@ -1,21 +1,16 @@
-<%def name='image_registry_defaults(registry_name, registry_cfg, indent=0)'
+<%def name='task_image_defaults(registry_cfg, indent=0)'
 filter="indent_func(indent),trim">
 <%
 from makoutil import indent_func
 # registry_cfg must be of type ContainerRegistryConfig (cc-utils)
 credentials = registry_cfg.credentials()
 %>
-  ${registry_name}_defaults: &${registry_name}_defaults
-    username: '${credentials.username()}'
-    password: '${credentials.passwd()}'
-</%def>
-<%def name='task_image_resource(registry_name)'>
-  task_image_resource: &task_image_resource
     platform: linux
     image_resource:
       type: docker-image
       source:
-        <<: *${registry_name}_defaults
+        username: '${credentials.username()}'
+        password: '${credentials.passwd()}'
         repository: eu.gcr.io/gardener-project/cc/job-image
         tag: "1.44.0"
 </%def>

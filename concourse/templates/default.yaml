@@ -16,7 +16,6 @@ github = config_set.github()
 disable_tls_validation = "false" if github.tls_validation() else "true"
 
 default_container_registry = config_set.container_registry()
-default_container_registry_name = 'gcr'
 email = config_set.email()
 
 
@@ -80,8 +79,6 @@ scan_container_images_step = concourse.steps.step_def('scan_container_images')
 <%namespace file="/resources/meta.mako" import="*"/>
 
 inherit:
-${image_registry_defaults(registry_name=default_container_registry_name, registry_cfg=default_container_registry)}
-${task_image_resource(registry_name=default_container_registry_name)}
 ${configure_webhook(webhook_token=github.webhook_secret())}
 ${pull_request_defaults(github_cfg=github)}
 resource_types:
@@ -96,7 +93,7 @@ ${render_repositories(pipeline_definition=pipeline_definition, cfg_set=config_se
 <%
   custom_registry_cfg_name = descriptor.registry_name()
   if not custom_registry_cfg_name:
-    registry_cfg = default_container_registry # default cfg
+    registry_cfg = default_container_registry
   else:
     registry_cfg = config_set.container_registry(custom_registry_cfg_name)
 %>
@@ -159,21 +156,24 @@ source_repo = job_variant.main_repository()
 % if job_step.execute():
 - task: '${job_step.name}'
   config:
+## If registry and image are given, use them. If no registry is given, use given image
+## with default registry. Finally, if neither image nor registry is given, use defaults
 % if job_step.image():
 <%
 image_reference, tag = job_step.image().split(':', 1)
+if job_step.registry():
+  container_registry = config_set.container_registry(job_step.registry())
+else:
+  container_registry = default_container_registry
 %>
-    platform: linux
-    image_resource:
-      type: docker-image
-      source:
-% if job_step.registry() and default_container_registry_name in job_step.registry():
-        <<: *gcr_defaults
-% endif
-        repository: ${image_reference}
-        tag: '${tag}'
+    ${task_image_resource(
+        registry_cfg=config_set.container_registry(job_step.registry()),
+        image_repository=image_reference,
+        image_tag=tag,
+        indent=4,
+    )}
 % else:
-    <<: *task_image_resource
+    ${task_image_defaults(registry_cfg=default_container_registry)}
 % endif
     inputs:
 % for repository in job_variant.repositories():

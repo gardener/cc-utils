@@ -1,3 +1,5 @@
+<%namespace file="/resources/defaults.mako" import="*"/>
+
 <%def name="email_notification(
   cfg_set,
   secrets_server_cfg,
@@ -42,7 +44,7 @@ on_error_cfg = notification_cfg.on_error()
           secrets_server_cfg.secrets().concourse_attribute()
           ])
         }
-      <<: *task_image_resource
+      ${task_image_defaults(cfg_set.container_registry(), indent=2)}
       run:
         path: /usr/bin/python3
         args:
