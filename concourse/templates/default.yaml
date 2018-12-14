@@ -15,7 +15,8 @@ resource_registry = pipeline_definition._resource_registry
 github = config_set.github()
 disable_tls_validation = "false" if github.tls_validation() else "true"
 
-gcr = config_set.container_registry()
+default_container_registry = config_set.container_registry()
+default_container_registry_name = 'gcr'
 email = config_set.email()
 
 
@@ -79,8 +80,8 @@ scan_container_images_step = concourse.steps.step_def('scan_container_images')
 <%namespace file="/resources/meta.mako" import="*"/>
 
 inherit:
-${image_registry_defaults(registry_name='gcr', registry_cfg=gcr)}
-${task_image_resource(registry_name='gcr')}
+${image_registry_defaults(registry_name=default_container_registry_name, registry_cfg=default_container_registry)}
+${task_image_resource(registry_name=default_container_registry_name)}
 ${configure_webhook(webhook_token=github.webhook_secret())}
 ${pull_request_defaults(github_cfg=github)}
 resource_types:
@@ -95,7 +96,7 @@ ${render_repositories(pipeline_definition=pipeline_definition, cfg_set=config_se
 <%
   custom_registry_cfg_name = descriptor.registry_name()
   if not custom_registry_cfg_name:
-    registry_cfg = gcr # default cfg
+    registry_cfg = default_container_registry # default cfg
   else:
     registry_cfg = config_set.container_registry(custom_registry_cfg_name)
 %>
@@ -166,7 +167,7 @@ image_reference, tag = job_step.image().split(':', 1)
     image_resource:
       type: docker-image
       source:
-% if job_step.registry() and 'gcr' in job_step.registry():
+% if job_step.registry() and default_container_registry_name in job_step.registry():
         <<: *gcr_defaults
 % endif
         repository: ${image_reference}
