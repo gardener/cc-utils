@@ -152,11 +152,9 @@ class GithubWebhookDispatcher(object):
         pr_event,
         resources,
         retries=10,
-        sleep_seconds=0,
+        sleep_seconds=3,
     ):
         time.sleep(sleep_seconds)
-        if sleep_seconds == 0:
-            sleep_seconds = 3
 
         retries -= 1
         if retries < 0:
