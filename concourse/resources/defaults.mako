@@ -1,5 +1,7 @@
-<%def name='image_registry_defaults(registry_name, registry_cfg)'>
+<%def name='image_registry_defaults(registry_name, registry_cfg, indent=0)'
+filter="indent_func(indent),trim">
 <%
+from makoutil import indent_func
 # registry_cfg must be of type ContainerRegistryConfig (cc-utils)
 credentials = registry_cfg.credentials()
 %>
