@@ -34,13 +34,12 @@ def store(index: str, body: str, cfg_name: str):
         util.warning("Could not read metadata")
         meta = dict()
 
-    json_body.update(meta)
+    json_body['cc_meta'] = meta
 
     result = elastic_client.store_document(
         index=index,
         body=json_body,
     )
-
     print(result)
 
 
