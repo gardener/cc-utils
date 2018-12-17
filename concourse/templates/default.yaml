@@ -176,7 +176,10 @@ image_reference, tag = job_step.image().split(':', 1)
 % endif
     inputs:
     # XXX: factor this out
+% if 'meta' not in job_step.inputs().values():
     - name: meta
+% endif
+
 % for repository in job_variant.repositories():
     - name: ${repository.resource_name()}
 % endfor
