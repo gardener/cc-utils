@@ -13,29 +13,63 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import enum
+
 from model.base import (
     BasicCredentials,
     NamedModelElement,
+    ModelDefaultsMixin,
 )
 
 from util import check_type
 
 
-class ContainerRegistryConfig(NamedModelElement):
+class Privileges(enum.Enum):
+    READ_ONLY = 'readonly'
+    READ_WRITE = 'readwrite'
+
+
+class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._apply_defaults(self.raw)
+
     '''
     Not intended to be instantiated by users of this module
     '''
+    def _defaults_dict(self):
+        return {
+            'privileges': Privileges.READ_ONLY,
+        }
+
     def _optional_attributes(self):
-        return {'image_reference_prefixes', 'username', 'password', 'host', 'email'}
+        return {
+            'image_reference_prefixes',
+            'host',
+            'email',
+        }
+
+    def _required_attributes(self):
+        return {
+            'username',
+            'password',
+        }
 
     def credentials(self):
         # this cfg currently only contains credentials
         return GcrCredentials(self.raw)
 
+    def privileges(self)->Privileges:
+        return Privileges(self.raw['privileges'])
+
     def image_reference_prefixes(self):
         return self.raw.get('image_reference_prefixes', ())
 
-    def image_ref_matches(self, image_reference: str):
+    def image_ref_matches(
+        self,
+        image_reference: str,
+        privileges: Privileges=None,
+    ):
         '''
         returns a boolean indicating whether a given container image reference matches any
         configured image reference prefixes (thus indicating this cfg might be adequate for
@@ -47,6 +81,8 @@ class ContainerRegistryConfig(NamedModelElement):
 
         prefixes = self.image_reference_prefixes()
         if not prefixes:
+            return False
+        if privileges and self.privileges() != privileges:
             return False
 
         for prefix in prefixes:
