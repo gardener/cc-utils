@@ -108,6 +108,7 @@ class ProtecodeUtil(object):
             self,
             container_image: ContainerImage,
             component: Component,
+            group_id: int=None,
         ):
         metadata = self._metadata(
             container_image=container_image,
@@ -115,8 +116,11 @@ class ProtecodeUtil(object):
             omit_version=True, # omit version when searching for existing app
             # (only one component version must exist per group by our chosen definition)
         )
+        if not group_id:
+            group_id = self._group_id
+
         existing_products = self._api.list_apps(
-            group_id=self._group_id,
+            group_id=group_id,
             custom_attribs=metadata
         )
         if len(existing_products) == 0:
@@ -200,8 +204,21 @@ class ProtecodeUtil(object):
             container_image=container_image,
             component=component,
         )
+        reference_results = [
+            self.retrieve_scan_result(
+                container_image=container_image,
+                component=component,
+                group_id=group_id,
+            ) for group_id in self._reference_group_ids
+        ]
+        reference_results = [r for r in reference_results if r] # remove None entries
+        if scan_result:
+            reference_results.insert(0, scan_result)
+
         # collect old triages in order to "transport" them after new upload (may be None)
-        triages = self._existing_triages(analysis_result=scan_result)
+        triages = self._existing_triages(
+            analysis_results=reference_results,
+        )
 
         upload_action = self._determine_upload_action(
             container_image=container_image,
@@ -276,13 +293,14 @@ class ProtecodeUtil(object):
             result=result
         )
 
-    def _existing_triages(self, analysis_result: AnalysisResult=None):
-        if not analysis_result:
+    def _existing_triages(self, analysis_results: AnalysisResult=()):
+        if not analysis_results:
             return ()
 
-        for component in analysis_result.components():
-            for vulnerability in component.vulnerabilities():
-                yield from vulnerability.triages()
+        for analysis_result in analysis_results:
+            for component in analysis_result.components():
+                for vulnerability in component.vulnerabilities():
+                    yield from vulnerability.triages()
 
     def upload_image_to_container_registry(self, container_image, image_data_fh):
         '''
