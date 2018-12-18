@@ -62,6 +62,7 @@ relevant_results = protecode.util.upload_images(
 % if upload_registry_prefix:
   upload_registry_prefix='${upload_registry_prefix}',
 % endif
+  reference_group_ids=${image_scan_trait.reference_protecode_group_ids()},
 )
 if not relevant_results:
   sys.exit(0)

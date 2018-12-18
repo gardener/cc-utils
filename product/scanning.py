@@ -50,12 +50,14 @@ class ProtecodeUtil(object):
             processing_mode: ProcessingMode=ProcessingMode.UPLOAD_IF_CHANGED,
             group_id: int=None,
             upload_registry_prefix: str=None,
+            reference_group_ids=(),
     ):
         protecode_api.login()
         self._processing_mode = check_type(processing_mode, ProcessingMode)
         self._api = not_none(protecode_api)
         self._group_id = group_id
         self._upload_registry_prefix = upload_registry_prefix
+        self._reference_group_ids = reference_group_ids
 
     def _image_ref_metadata(self, container_image, omit_version):
         metadata_dict = {

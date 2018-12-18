@@ -39,6 +39,7 @@ def upload_images(
     processing_mode=ProcessingMode.UPLOAD_IF_CHANGED,
     image_reference_filter=lambda _: True,
     upload_registry_prefix: str=None,
+    reference_group_ids=(),
 ) -> typing.Sequence[typing.Tuple[AnalysisResult, int]]:
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
     protecode_api = protecode.client.from_cfg(protecode_cfg)
@@ -47,6 +48,7 @@ def upload_images(
         processing_mode=processing_mode,
         group_id=protecode_group_id,
         upload_registry_prefix=upload_registry_prefix,
+        reference_group_ids=reference_group_ids,
     )
     tasks = _create_tasks(
         product_descriptor,
