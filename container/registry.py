@@ -26,6 +26,7 @@ from containerregistry.client.v2 import docker_image as v2_image
 from containerregistry.client.v2_2 import docker_http
 from containerregistry.client.v2_2 import docker_image as v2_2_image
 from containerregistry.client.v2_2 import docker_image_list as image_list
+from containerregistry.client.v2_2 import docker_session
 from containerregistry.client.v2_2 import save
 from containerregistry.client.v2_2 import v2_compat
 from containerregistry.transport import retry
@@ -123,6 +124,42 @@ def _mk_transport():
   retry_factory = retry_factory.WithSourceTransportCallable(httplib2.Http)
   transport = transport_pool.Http(retry_factory.Build, size=8)
   return transport
+
+
+def _push_image(image_reference: str, image_file: str, threads=8):
+  import util
+  util.not_none(image_reference)
+  util.existing_file(image_file)
+
+  transport = _mk_transport()
+
+  image_reference = normalise_image_reference(image_reference)
+  name = _parse_image_reference(image_reference)
+
+  try:
+    # first try container_registry cfgs from available cfg
+    creds = _credentials(image_reference=image_reference)
+    if not creds:
+      # fall-back to default docker lookup
+      creds = docker_creds.DefaultKeychain.Resolve(name)
+  except Exception as e:
+    util.fail('Error resolving credentials for {name}: {e}'.format(name=name, e=e))
+
+  with v2_2_image.FromTarball(image_file) as v2_2_img:
+    try:
+      with docker_session.Push(
+          name,
+          creds,
+          transport,
+          threads=threads,
+      ) as session:
+        session.upload(v2_2_img)
+        digest = v2_2_img.digest()
+        print(f'{name} was uploaded - digest: {digest}')
+    except Exception as e:
+      import traceback
+      traceback.print_exc()
+      raise e
 
 
 def _pull_image(image_reference: str):
