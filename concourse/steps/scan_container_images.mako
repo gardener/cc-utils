@@ -74,7 +74,13 @@ if not email_recipients:
 
 # component_name identifies the landscape that has been scanned
 component_name = "${component_trait.component_name()}"
-body = 'The following components were found to contain vulnerabilities:\n'
+body = '''
+Note: you receive this E-Mail, because you were configured as a mail recipient in repository
+"${component_trait.component_name()}" (see .ci/pipeline_definitions)
+To remove yourself, search for your e-mail address in said file and remove it.
+
+The following components were found to contain critical vulnerabilities:
+'''
 body += tabulate.tabulate(
   map(lambda r: (r[0].display_name(), r[1]), relevant_results),
   headers=('Component Name', 'Greatest CVE'),
