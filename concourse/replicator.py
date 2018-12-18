@@ -54,7 +54,6 @@ def replicate_pipelines(
     job_mapping,
     template_path,
     template_include_dir,
-    definitions_root_dir=None, # TODO: Remove in follow-up commit
     unpause_pipelines: bool=True,
     expose_pipelines: bool=True,
 ):
