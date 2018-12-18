@@ -159,9 +159,23 @@ source_repo = job_variant.main_repository()
 % if job_step.image():
 <%
 image_reference, tag = job_step.image().split(':', 1)
+if job_step.registry():
+  container_registry = config_set.container_registry(job_step.registry())
+else:
+  ## No containerregistry configured. Attempt to find a matching one on our side by looking
+  ## at the configured prefixes of the container-registries.
+  matching_cfgs = [
+    cfg for cfg in
+    config_set._cfg_elements('container_registry')
+    if cfg.image_ref_matches(image_reference)
+  ]
+  if not matching_cfgs:
+    container_registry = None
+  else:
+    container_registry = matching_cfgs[0]
 %>
     ${task_image_resource(
-        registry_cfg=config_set.container_registry(job_step.registry()),
+        registry_cfg=container_registry,
         image_repository=image_reference,
         image_tag=tag,
         indent=4,
