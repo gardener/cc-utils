@@ -95,6 +95,15 @@ ATTRIBUTES = (
         default=(),
         doc='optional email recipients to be notified about critical scan results',
     ),
+    AttributeSpec.optional(
+        name='upload_registry_prefix',
+        default=None,
+        doc='''
+        if specified, all matching container images are also uploaded as copies to
+        the specified container registry. The original image reference names are
+        mangled.
+        '''
+    ),
 )
 
 
@@ -131,6 +140,9 @@ class ImageScanTrait(Trait):
 
     def email_recipients(self):
         return self.raw['email_recipients']
+
+    def upload_registry_prefix(self):
+        return self.raw['upload_registry_prefix']
 
     def validate(self):
         super().validate()
