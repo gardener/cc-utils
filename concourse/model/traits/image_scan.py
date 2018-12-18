@@ -81,6 +81,13 @@ ATTRIBUTES = (
         default='upload_if_changed',
         doc='Protecode processing mode', # todo: document allowed values
     ),
+    AttributeSpec.optional(
+        name='reference_protecode_group_ids',
+        default=(),
+        doc='''
+        an optional list of protecode group IDs to import triages from.
+        ''',
+    ),
     AttributeSpec.required(
         name='protecode_group_id',
         doc='technical protecode group id to upload to',
@@ -119,6 +126,9 @@ class ImageScanTrait(Trait):
 
     def _required_attributes(self):
         return set(AttributeSpec.required_attr_names(ATTRIBUTES))
+
+    def reference_protecode_group_ids(self):
+        return self.raw['reference_protecode_group_id']
 
     def protecode_group_id(self):
         return self.raw.get('protecode_group_id')
