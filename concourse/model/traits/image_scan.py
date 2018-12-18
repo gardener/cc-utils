@@ -128,7 +128,7 @@ class ImageScanTrait(Trait):
         return set(AttributeSpec.required_attr_names(ATTRIBUTES))
 
     def reference_protecode_group_ids(self):
-        return self.raw['reference_protecode_group_id']
+        return self.raw['reference_protecode_group_ids']
 
     def protecode_group_id(self):
         return self.raw.get('protecode_group_id')
