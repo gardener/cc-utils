@@ -122,7 +122,7 @@ def retrieve_container_image(image_reference: str, outfileobj=None):
 
 def publish_container_image(image_reference: str, image_file_obj):
   image_file_obj.seek(0)
-  _push_image(image_reference=image_reference, image_file=image_file_obj)
+  _push_image(image_reference=image_reference, image_file=image_file_obj.name)
   image_file_obj.seek(0)
 
 
