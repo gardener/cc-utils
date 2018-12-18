@@ -39,7 +39,7 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
     '''
     def _defaults_dict(self):
         return {
-            'privileges': Privileges.READ_ONLY,
+            'privileges': Privileges.READ_ONLY.value,
         }
 
     def _optional_attributes(self):
