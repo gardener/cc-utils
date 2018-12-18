@@ -81,7 +81,6 @@ scan_container_images_step = concourse.steps.step_def('scan_container_images')
 
 inherit:
 ${image_registry_defaults(registry_name=default_container_registry_name, registry_cfg=default_container_registry)}
-${task_image_resource(registry_name=default_container_registry_name)}
 ${configure_webhook(webhook_token=github.webhook_secret())}
 ${pull_request_defaults(github_cfg=github)}
 resource_types:
@@ -163,17 +162,14 @@ source_repo = job_variant.main_repository()
 <%
 image_reference, tag = job_step.image().split(':', 1)
 %>
-    platform: linux
-    image_resource:
-      type: docker-image
-      source:
-% if job_step.registry() and default_container_registry_name in job_step.registry():
-        <<: *gcr_defaults
-% endif
-        repository: ${image_reference}
-        tag: '${tag}'
+    ${task_image_resource(
+        registry_cfg=config_set.container_registry(job_step.registry()),
+        image_repository=image_reference,
+        image_tag=tag,
+        indent=4,
+    )}
 % else:
-    <<: *task_image_resource
+    ${task_image_defaults(registry_cfg=default_container_registry, indent=4)}
 % endif
     inputs:
     # XXX: factor this out

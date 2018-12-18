@@ -1,3 +1,4 @@
+<%namespace file="/resources/image.mako" import="task_image_resource"/>
 <%def name='image_registry_defaults(registry_name, registry_cfg)'>
 <%
 # registry_cfg must be of type ContainerRegistryConfig (cc-utils)
@@ -7,31 +8,20 @@ credentials = registry_cfg.credentials()
     username: '${credentials.username()}'
     password: '${credentials.passwd()}'
 </%def>
-<%def name='task_image_resource(registry_name)'>
-  task_image_resource: &task_image_resource
-    platform: linux
-    image_resource:
-      type: docker-image
-      source:
-        <<: *${registry_name}_defaults
-        repository: eu.gcr.io/gardener-project/cc/job-image
-        tag: "1.52.0"
-</%def>
-<%def name="task_image_defaults(registry_cfg, indent=0)"
+<%def name='task_image_defaults(registry_cfg, indent=0)'
 filter="indent_func(indent),trim">
 <%
 from makoutil import indent_func
 # registry_cfg must be of type ContainerRegistryConfig (cc-utils)
-credentials = registry_cfg.credentials()
+tag = "1.52.0"
+repository = "eu.gcr.io/gardener-project/cc/job-image"
 %>
-platform: linux
-image_resource:
-  type: docker-image
-  source:
-    username: '${credentials.username()}'
-    password: '${credentials.passwd()}'
-    repository: 'repository: eu.gcr.io/gardener-project/cc/job-image'
-    tag: "1.44.0"
+${task_image_resource(
+  registry_cfg,
+  image_repository=repository,
+  image_tag=tag,
+  indent=0,
+)}
 </%def>
 <%def name='configure_webhook(webhook_token)'>
   configure_webhook: &configure_webhook
