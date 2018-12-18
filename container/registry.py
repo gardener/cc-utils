@@ -164,7 +164,7 @@ def _push_image(image_reference: str, image_file: str, threads=8):
       raise e
 
 
-def _pull_image(image_reference: str):
+def _pull_image(image_reference: str, outfileobj=None):
   import util
   util.not_none(image_reference)
 
@@ -195,8 +195,9 @@ def _pull_image(image_reference: str):
 
   try:
     # XXX TODO: use streaming rather than writing to local FS
-    tmp_file = tempfile.TemporaryFile()
-    with tarfile.open(fileobj=tmp_file, mode='w:') as tar:
+    # if outfile is given, we must use it instead of an ano
+    outfileobj = outfileobj if outfileobj else tempfile.TemporaryFile()
+    with tarfile.open(fileobj=outfileobj, mode='w:') as tar:
       util.info('Pulling manifest list from {name}..'.format(name=name))
       with image_list.FromRegistry(name, creds, transport) as img_list:
         if img_list.exists():
@@ -207,20 +208,20 @@ def _pull_image(image_reference: str):
           # pytype: disable=wrong-arg-types
           with img_list.resolve(platform) as default_child:
             save.tarball(_make_tag_if_digest(name), default_child, tar)
-            return tmp_file
+            return outfileobj
           # pytype: enable=wrong-arg-types
 
       util.info('Pulling v2.2 image from {name}..'.format(name=name))
       with v2_2_image.FromRegistry(name, creds, transport, accept) as v2_2_img:
         if v2_2_img.exists():
           save.tarball(_make_tag_if_digest(name), v2_2_img, tar)
-          return tmp_file
+          return outfileobj
 
       util.info('Pulling v2 image from {name}..'.format(name=name))
       with v2_image.FromRegistry(name, creds, transport) as v2_img:
         with v2_compat.V22FromV2(v2_img) as v2_2_img:
           save.tarball(_make_tag_if_digest(name), v2_2_img, tar)
-          return tmp_file
+          return outfileobj
   except Exception as e:
-    tmp_file.close()
+    outfileobj.close()
     util.fail('Error pulling and saving image {name}: {e}'.format(name=name, e=e))
