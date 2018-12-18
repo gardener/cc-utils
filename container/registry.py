@@ -114,10 +114,16 @@ def _credentials(image_reference: str, privileges:Privileges=None):
     return docker_creds.Basic(username=credentials.username(), password=credentials.passwd())
 
 
-def retrieve_container_image(image_reference: str):
-  tmp_file = _pull_image(image_reference=image_reference)
+def retrieve_container_image(image_reference: str, outfileobj=None):
+  tmp_file = _pull_image(image_reference=image_reference, outfileobj=outfileobj)
   tmp_file.seek(0)
   return tmp_file
+
+
+def publish_container_image(image_reference: str, image_file_obj):
+  image_file_obj.seek(0)
+  _push_image(image_reference=image_reference, image_file=image_file_obj)
+  image_file_obj.seek(0)
 
 
 def _mk_transport():
