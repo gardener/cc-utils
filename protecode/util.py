@@ -37,7 +37,8 @@ def upload_images(
     cve_threshold=7,
     ignore_if_triaged=True,
     processing_mode=ProcessingMode.UPLOAD_IF_CHANGED,
-    image_reference_filter=lambda _: True
+    image_reference_filter=lambda _: True,
+    upload_registry_prefix: str=None,
 ) -> typing.Sequence[typing.Tuple[AnalysisResult, int]]:
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
     protecode_api = protecode.client.from_cfg(protecode_cfg)
@@ -45,8 +46,13 @@ def upload_images(
         protecode_api=protecode_api,
         processing_mode=processing_mode,
         group_id=protecode_group_id,
+        upload_registry_prefix=upload_registry_prefix,
     )
-    tasks = _create_tasks(product_descriptor, protecode_util, image_reference_filter)
+    tasks = _create_tasks(
+        product_descriptor,
+        protecode_util,
+        image_reference_filter
+    )
     results = executor.map(lambda task: task(), tasks)
 
     relevant_results = filter_and_display_upload_results(

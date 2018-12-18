@@ -9,6 +9,7 @@ main_repo = job_variant.main_repository()
 repo_name = main_repo.logical_name().upper()
 
 image_scan_trait = job_variant.trait('image_scan')
+upload_registry_prefix = image_scan_trait.upload_registry_prefix()
 filter_cfg = image_scan_trait.filters()
 component_trait = job_variant.trait('component_descriptor')
 %>
@@ -58,6 +59,9 @@ relevant_results = protecode.util.upload_images(
   parallel_jobs=${image_scan_trait.parallel_jobs()},
   cve_threshold=${image_scan_trait.cve_threshold()},
   image_reference_filter=image_filter,
+% if upload_registry_prefix:
+  upload_registry_prefix='${upload_registry_prefix}',
+% endif
 )
 if not relevant_results:
   sys.exit(0)
