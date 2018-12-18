@@ -118,13 +118,18 @@ def retrieve_container_image(image_reference: str):
   return tmp_file
 
 
+def _mk_transport():
+  retry_factory = retry.Factory()
+  retry_factory = retry_factory.WithSourceTransportCallable(httplib2.Http)
+  transport = transport_pool.Http(retry_factory.Build, size=8)
+  return transport
+
+
 def _pull_image(image_reference: str):
   import util
   util.not_none(image_reference)
 
-  retry_factory = retry.Factory()
-  retry_factory = retry_factory.WithSourceTransportCallable(httplib2.Http)
-  transport = transport_pool.Http(retry_factory.Build, size=8)
+  transport = _mk_transport()
 
   image_reference = normalise_image_reference(image_reference)
   name = _parse_image_reference(image_reference)
