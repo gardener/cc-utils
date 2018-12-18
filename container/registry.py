@@ -19,6 +19,7 @@ import tarfile
 import tempfile
 
 import util
+from model.container_registry import Privileges
 
 from containerregistry.client import docker_creds
 from containerregistry.client import docker_name
@@ -93,7 +94,7 @@ def _parse_image_reference(image_reference):
 
 
 @functools.lru_cache()
-def _credentials(image_reference: str):
+def _credentials(image_reference: str, privileges:Privileges=None):
     util.check_type(image_reference, str)
 
     cfg_factory = util.ctx().cfg_factory()
@@ -101,7 +102,7 @@ def _credentials(image_reference: str):
     matching_cfgs = [
         cfg for cfg in
         cfg_factory._cfg_elements('container_registry')
-        if cfg.image_ref_matches(image_reference)
+        if cfg.image_ref_matches(image_reference, privileges=privileges)
     ]
 
     if not matching_cfgs:
@@ -138,8 +139,9 @@ def _push_image(image_reference: str, image_file: str, threads=8):
 
   try:
     # first try container_registry cfgs from available cfg
-    creds = _credentials(image_reference=image_reference)
+    creds = _credentials(image_reference=image_reference, privileges=Privileges.READ_WRITE)
     if not creds:
+      print('could not find rw-creds')
       # fall-back to default docker lookup
       creds = docker_creds.DefaultKeychain.Resolve(name)
   except Exception as e:
