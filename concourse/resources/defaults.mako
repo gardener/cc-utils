@@ -17,6 +17,22 @@ credentials = registry_cfg.credentials()
         repository: eu.gcr.io/gardener-project/cc/job-image
         tag: "1.52.0"
 </%def>
+<%def name="task_image_defaults(registry_cfg, indent=0)"
+filter="indent_func(indent),trim">
+<%
+from makoutil import indent_func
+# registry_cfg must be of type ContainerRegistryConfig (cc-utils)
+credentials = registry_cfg.credentials()
+%>
+platform: linux
+image_resource:
+  type: docker-image
+  source:
+    username: '${credentials.username()}'
+    password: '${credentials.passwd()}'
+    repository: 'repository: eu.gcr.io/gardener-project/cc/job-image'
+    tag: "1.44.0"
+</%def>
 <%def name='configure_webhook(webhook_token)'>
   configure_webhook: &configure_webhook
     webhook_token: ${webhook_token}
