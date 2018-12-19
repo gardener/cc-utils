@@ -30,7 +30,11 @@ def from_cfg(
 def _from_cfg(
     elasticsearch_cfg:model.elasticsearch.ElasticSearchConfig
 ):
-    return elasticsearch.Elasticsearch(elasticsearch_cfg.endpoints())
+    credentials = elasticsearch_cfg.credentials()
+    return elasticsearch.Elasticsearch(
+        elasticsearch_cfg.endpoints(),
+        http_auth=(credentials.username(), credentials.passwd()),
+    )
 
 
 class ElasticSearchClient(object):

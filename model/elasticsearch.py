@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from model.base import (
+    BasicCredentials,
     NamedModelElement,
 )
 
@@ -26,5 +27,15 @@ class ElasticSearchConfig(NamedModelElement):
     def endpoints(self):
         return self.raw['endpoints']
 
+    def credentials(self):
+        return ElasticSearchCredentials(raw_dict=self.raw['credentials'])
+
     def _required_attributes(self):
         return ('endpoint_url',)
+
+    def _optional_attributes(self):
+        return ('credentials',)
+
+
+class ElasticSearchCredentials(BasicCredentials):
+    pass
