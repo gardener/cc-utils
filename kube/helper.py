@@ -25,6 +25,7 @@ from kubernetes.client import (
     V1beta1Ingress,
 )
 from kubernetes.client.rest import ApiException
+from kubernetes.stream import stream
 from ensure import ensure_annotations
 
 from util import info, not_empty, not_none, fail
@@ -351,3 +352,62 @@ class KubernetesIngressHelper(object):
                 return None
             raise ae
         return ingress
+
+
+class KubernetesPodHelper(object):
+    def __init__(self, core_api: CoreV1Api):
+        self.core_api = core_api
+
+    def list_pods(self, namespace: str, label_selector: str='', field_selector: str=''):
+        '''Find all pods matching given labels and/or fields in the given namespace'''
+        not_empty(namespace)
+
+        try:
+            pods = self.core_api.list_namespaced_pod(
+                namespace,
+                label_selector=label_selector,
+                field_selector=field_selector,
+        )
+        except ApiException as ae:
+            if ae.status == 404:
+                return None
+            raise ae
+        return pods
+
+    def execute(
+        self,
+        name: str,
+        namespace: str,
+        command:[str],
+        container:str='',
+        stderr:bool=True,
+        stdout:bool=True,
+        stdin='Not implemented',
+        tty='Not implemented',
+    ):
+        '''Exec a command on a given pod in a given namespace. Does not support redirection of
+        stdin or allocation of a tty.
+        '''
+        not_empty(name)
+        not_empty(namespace)
+        not_empty(command)
+
+        if stdin != 'Not implemented' or tty != 'Not implemented':
+            raise NotImplementedError
+
+        try:
+            response = stream(
+                self.core_api.connect_post_namespaced_pod_exec,
+                name,
+                namespace,
+                command=command,
+                stderr=stderr,
+                stdin=False,
+                stdout=stdout,
+                tty=False,
+            )
+        except ApiException as ae:
+            if ae.status == 404:
+                return None
+            raise ae
+        return response
