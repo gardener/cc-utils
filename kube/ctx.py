@@ -27,6 +27,7 @@ from kube.helper import (
     KubernetesServiceHelper,
     KubernetesDeploymentHelper,
     KubernetesIngressHelper,
+    KubernetesPodHelper,
 )
 
 
@@ -84,6 +85,9 @@ class Ctx(object):
 
     def ingress_helper(self) -> 'KubernetesIngressHelper':
         return KubernetesIngressHelper(self.create_extensions_v1beta1_api())
+
+    def pod_helper(self) -> 'KubernetesPodHelper':
+        return KubernetesPodHelper(self.create_core_api())
 
     def create_core_api(self):
         cfg = self.get_kubecfg()
