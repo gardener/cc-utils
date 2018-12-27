@@ -70,7 +70,7 @@ def retrieve_build_log(concourse_api):
 notify_file = os.path.join('${on_error_dir}', 'notify.cfg')
 if os.path.isfile(notify_file):
   notify_cfg = util.parse_yaml_file(notify_file)
-  email_cfg = notify_cfg.get('email', {})
+  email_cfg = set(notify_cfg.get('email', {}))
   util.info('found notify.cfg - applying cfg:')
   print(notify_cfg)
 else:
@@ -102,8 +102,9 @@ if 'codeowners' in ${on_error_cfg.recipients()}:
 
 % if 'email_addresses' in on_error_cfg.recipients():
 util.info('adding excplicitly configured recipients')
-addresses = ${on_error_cfg.recipients()['email_addresses']}
-email_cfg.get('recipients').update(addresses)
+addresses = set(${on_error_cfg.recipients()['email_addresses']})
+existing_recipients = set(email_cfg.get('recipients', {}))
+email_cfg['recipients'] = existing_recipients | addresses
 % endif
 
 def default_mail_recipients():
