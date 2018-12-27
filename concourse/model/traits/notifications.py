@@ -82,6 +82,7 @@ class NotificationCfg(ModelBase):
     def __init__(self, raw_dict, *args, **kwargs):
         super().__init__(raw_dict=raw_dict, *args, **kwargs)
         self._apply_defaults(raw_dict=raw_dict)
+        self.raw['recipients'] = normalise_to_dict(self.recipients())
 
     def _attribute_specs(self):
         return NOTIFICATION_CFG_ATTRS
@@ -102,7 +103,7 @@ class NotificationCfg(ModelBase):
         return self.raw.get('inputs')
 
     def recipients(self):
-        return normalise_to_dict(self.raw.get('recipients'))
+        return self.raw.get('recipients')
 
     def cfg_callback(self):
         return self.raw.get('cfg_callback')
