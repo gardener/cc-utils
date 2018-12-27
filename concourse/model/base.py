@@ -129,7 +129,7 @@ class AttributeSpec(object):
     ):
         self._name = util.check_type(name, str)
         self._doc = util.check_type(doc, str)
-        self._type = util.check_type(type, globals()['__builtins__']['type'])
+        self._type = type
 
         # validate
         if default:
