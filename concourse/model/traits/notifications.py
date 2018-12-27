@@ -25,6 +25,7 @@ from concourse.model.base import (
   TraitTransformer,
   ScriptType,
   ModelBase,
+  normalise_to_dict,
 )
 from model.base import (
   NamedModelElement,
@@ -101,7 +102,7 @@ class NotificationCfg(ModelBase):
         return self.raw.get('inputs')
 
     def recipients(self):
-        return set(self.raw.get('recipients'))
+        return normalise_to_dict(self.raw.get('recipients'))
 
     def cfg_callback(self):
         return self.raw.get('cfg_callback')
