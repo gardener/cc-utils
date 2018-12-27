@@ -70,7 +70,7 @@ def retrieve_build_log(concourse_api):
 notify_file = os.path.join('${on_error_dir}', 'notify.cfg')
 if os.path.isfile(notify_file):
   notify_cfg = util.parse_yaml_file(notify_file)
-  email_cfg = set(notify_cfg.get('email', {}))
+  email_cfg = set(notify_cfg.get('email', dict()))
   util.info('found notify.cfg - applying cfg:')
   print(notify_cfg)
 else:
