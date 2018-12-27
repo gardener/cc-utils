@@ -100,6 +100,11 @@ if 'codeowners' in ${on_error_cfg.recipients()}:
   email_cfg['component_name_recipients'].add('${component_name}')
 % endif
 
+if 'email_addresses' in ${on_error_cfg.recipients()}:
+  util.info('adding excplicitly configured recipients')
+  addresses = ${on_error_cfg.recipients()['email_addresses']}
+  email_cfg.get('recipients').update(addresses)
+
 def default_mail_recipients():
   recipients = set()
 % for repo_cfg in repo_cfgs:
