@@ -211,7 +211,7 @@ def normalise_to_dict(dictish):
         for v in dictish:
             if type(v) == dict and v:
                 values.append(v.popitem())
-            else:
+            elif type(v) != dict:
                 values.append((v, {}))
         return dict(values)
     return dictish
