@@ -19,6 +19,8 @@ import shutil
 import sys
 import yaml
 
+import termcolor
+
 from urllib.parse import urlunparse
 
 
@@ -109,9 +111,20 @@ def _cli():
     return bool(ctx().args and hasattr(ctx().args, '._cli') and ctx().args._cli)
 
 
+def _print(msg, colour):
+    if not msg:
+        return
+    if not sys.stdout.isatty():
+        sys.stdout.write(msg + '\n')
+    else:
+        sys.stdout.write(termcolor.colored(msg, colour) + '\n')
+
+    sys.stdout.flush()
+
+
 def fail(msg=None):
     if msg:
-        print('ERROR: ' + str(msg))
+        _print('ERROR: ' + str(msg), colour='red')
     raise Failure(1)
 
 
@@ -119,24 +132,21 @@ def info(msg:str):
     if _quiet():
         return
     if msg:
-        print('INFO: ' + str(msg))
-        sys.stdout.flush()
+        _print('INFO: ' + str(msg), colour=None)
 
 
 def warning(msg:str):
     if _quiet():
         return
     if msg:
-        print('WARNING: ' + str(msg))
-        sys.stdout.flush()
+        _print('WARNING: ' + str(msg), 'red')
 
 
 def verbose(msg:str):
     if not _verbose():
         return
     if msg:
-        print('VERBOSE: ' + msg)
-        sys.stdout.flush()
+        _print('VERBOSE: ' + msg)
 
 
 def not_empty(value):
