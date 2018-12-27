@@ -209,7 +209,7 @@ def normalise_to_dict(dictish):
     if type(dictish) == list:
         values = []
         for v in dictish:
-            if type(v) == dict:
+            if type(v) == dict and v:
                 values.append(v.popitem())
             else:
                 values.append((v, {}))
