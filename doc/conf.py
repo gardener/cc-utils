@@ -63,6 +63,11 @@ extensions = [
     'cc_directives.model_element',
 ]
 
+
+def setup(app):
+    app.add_stylesheet('css/custom.css')
+
+
 # Set the default role. This is the role used when not specifying any other role in text-markup,
 # e.g.: `foo` (in contrast to, for instance, :literal:`foo`)
 default_role = 'code'
