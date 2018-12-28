@@ -10,28 +10,24 @@ Gardener CI/CD Documentation
 
     pipeline_contract
 
-CI/CD-Overview
-==============
 
-Image Build Pipelines
-^^^^^^^^^^^^^^^^^^^^^
+This documentation describes how the components of the `Gardener <https://github.com/gardener>`_ project
+are produced. See the linked documentation for more details on Gardener itself.
 
-`Gardener <https://github.com/gardener>`_ consists of many (docker) images which are deployed on K8s. A repetitive task for developers is to build docker images and upload them to the image registry (GCR). We automate this image build process. Each Github repository which builds an image will have a corresponding image build pipeline.
 
-.. image:: images/image_build_process.png
-    :width: 600
+Overview
+========
 
-Component Contract
-^^^^^^^^^^^^^^^^^^
+.. image:: res/overview.svg
 
-Each component declares a file :literal:`.ci/pipeline_definitions` in the component root directory.
-A scanner periodically checks your repository and
 
-* reads the pipeline_definitions file
-* generates a Concourse pipeline
-* deploys this pipeline to the external/internal concourse
+Gardener is tightly integrated into GitHub. In particular, each Gardener Component is represented by exactly
+one GitHub repository. Releases of Gardener Components are represented by GitHub releases.
 
-Please check :ref:`our documentation <build_pipeline_reference_manual>` to understand how to define your own pipeline.
+As is common practice in the Kubernetes eco-system, the main deliverables of each Gardener Component are
+container images. Each release of a Gardener Component thus also encompasses a `Comonent Descriptor`, which
+declares references to any container images that have been created for a given component release.
+
 
 Indices and Tables
 ==================

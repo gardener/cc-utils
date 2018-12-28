@@ -148,24 +148,15 @@
 <h1>Gardener CI/CD Documentation<a class="headerlink" href="#gardener-ci-cd-documentation" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 </div>
-<div class="section" id="ci-cd-overview">
-<h2>CI/CD-Overview<a class="headerlink" href="#ci-cd-overview" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="image-build-pipelines">
-<h3>Image Build Pipelines<a class="headerlink" href="#image-build-pipelines" title="Permalink to this headline">¶</a></h3>
-<p><a class="reference external" href="https://github.com/gardener">Gardener</a> consists of many (docker) images which are deployed on K8s. A repetitive task for developers is to build docker images and upload them to the image registry (GCR). We automate this image build process. Each Github repository which builds an image will have a corresponding image build pipeline.</p>
-<a class="reference internal image-reference" href="_images/image_build_process.png"><img alt="_images/image_build_process.png" src="_images/image_build_process.png" style="width: 600px;" /></a>
-</div>
-<div class="section" id="component-contract">
-<h3>Component Contract<a class="headerlink" href="#component-contract" title="Permalink to this headline">¶</a></h3>
-<p>Each component declares a file <code class="docutils literal notranslate"><span class="pre">.ci/pipeline_definitions</span></code> in the component root directory.
-A scanner periodically checks your repository and</p>
-<ul class="simple">
-<li>reads the pipeline_definitions file</li>
-<li>generates a Concourse pipeline</li>
-<li>deploys this pipeline to the external/internal concourse</li>
-</ul>
-<p>Please check <a class="reference internal" href="pipeline_contract.html#build-pipeline-reference-manual"><span class="std std-ref">our documentation</span></a> to understand how to define your own pipeline.</p>
-</div>
+<p>This documentation describes how the components of the <a class="reference external" href="https://github.com/gardener">Gardener</a> project
+are produced. See the linked documentation for more details on Gardener itself.</p>
+<div class="section" id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<img alt="_images/overview.svg" src="_images/overview.svg" /><p>Gardener is tightly integrated into GitHub. In particular, each Gardener Component is represented by exactly
+one GitHub repository. Releases of Gardener Components are represented by GitHub releases.</p>
+<p>As is common practice in the Kubernetes eco-system, the main deliverables of each Gardener Component are
+container images. Each release of a Gardener Component thus also encompasses a <code class="code docutils literal notranslate"><span class="pre">Comonent</span> <span class="pre">Descriptor</span></code>, which
+declares references to any container images that have been created for a given component release.</p>
 </div>
 <div class="section" id="indices-and-tables">
 <h2>Indices and Tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h2>
