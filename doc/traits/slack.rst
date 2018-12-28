@@ -1,3 +1,4 @@
+=============
 *slack* Trait
 =============
 
@@ -9,7 +10,7 @@ If declared, release notes are published to the configured slack channels upon r
 
 
 Example
--------
+=======
 
 .. code-block:: yaml
 

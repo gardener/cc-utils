@@ -1,6 +1,6 @@
-**************************
+==========================
 Pipeline Definition Traits
-**************************
+==========================
 
 .. toctree::
     :glob:
@@ -23,6 +23,6 @@ Pipeline Definition Traits
 * :doc:`traits/version`
 
 Indices and Tables
-##################
+==================
 
 * :ref:`genindex`

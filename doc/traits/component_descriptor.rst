@@ -1,3 +1,4 @@
+============================
 *component_descriptor* Trait
 ============================
 
@@ -11,7 +12,7 @@ component's release artifacts (as GitHub release asset).
 
 
 Example
--------
+=======
 
 .. code-block:: yaml
 
@@ -20,7 +21,7 @@ Example
 
 
 Default Component Descriptor
-----------------------------
+============================
 
 If no additional customisation is done, a _default_ component descriptor is created with the
 following data:
@@ -33,7 +34,7 @@ dependencies.
 
 
 Declaring Additional Dependencies
----------------------------------
+=================================
 
 The component descriptor should contain the full "bill-of-materials" that makes up a component.
 For many components this will simply be the set of container images built and released by the
@@ -51,7 +52,7 @@ component_descriptor at a defined file system path. Unresolved `component refere
 automatically resolved before uploading as release artifact.
 
 Environment Variables Passed to component_descriptor
-----------------------------------------------------
+====================================================
 
 +-----------------------------+----------------------------------------------------------+
 | name                        | explanation                                              |
@@ -70,7 +71,7 @@ Environment Variables Passed to component_descriptor
 
 
 Example
--------
+=======
 
 How to declare dependencies towards:
 
@@ -90,4 +91,3 @@ How to declare dependencies towards:
       '{"image_reference": "alpine:3.6", "version": "3.6", "name": "alpine"}'
   # don't forget to expose the image
   cp "${BASE_DEFINITION_PATH}" "${COMPONENT_DESCRIPTOR_PATH}"
-

@@ -1,3 +1,4 @@
+===============
 *publish* Trait
 ===============
 
@@ -15,7 +16,7 @@ Each container image build is run in a directory with definable contents (see `i
 using the specified `Dockerfile`.
 
 `inputs` Attribute
-------------------
+==================
 
 By default, the main repository's work tree is copied into the build directory. This behaviour
 may be changed by defining different logical repository names for `inputs.repos`.
@@ -29,7 +30,7 @@ are expected to place their outputs into a directory indicated by an environment
 
 
 Example
--------
+=======
 
 .. code-block:: yaml
 

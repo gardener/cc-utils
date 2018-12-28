@@ -1,3 +1,4 @@
+===============
 *version* Trait
 ===============
 
@@ -14,7 +15,7 @@ via regular file `${VERSION_PATH}/version`.
 Component versions must be valid `SemVer <https://semver.org>`_ versions.
 
 `preprocess` Attribute
-----------------------
+======================
 
 +--------------------+------------------------------------------------------+
 | value              | explanation                                          |

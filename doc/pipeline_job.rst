@@ -1,13 +1,13 @@
-************
+============
 Pipeline Job
-************
+============
 
 Each :doc:`Build Pipeline </pipeline>` may define an arbitrary amount of build jobs. Job definitions
 reside below a pipeline's `variants` attribute. Each job defines their name as root element.
 
 
 Attributes
-##########
+==========
 
 +-------------------+---------------------------------------------------------------------------+
 | attribute         | explanation                                                               |
@@ -24,10 +24,10 @@ Attributes
 +-------------------+---------------------------------------------------------------------------+
 
 (GitHub) Repositories
-#####################
+=====================
 
 Main Repository
----------------
+^^^^^^^^^^^^^^^
 
 Each pipeline has a main repository. It is implied by the GitHub repository from which the
 pipeline definition was read.
@@ -38,7 +38,7 @@ pipeline definition was read.
 
 
 Additional Repositories
------------------------
+^^^^^^^^^^^^^^^^^^^^^^^
 
 Additional repositories may be referenced. Different from the main repository, all of the
 following attributes must be specified:
@@ -48,7 +48,7 @@ following attributes must be specified:
 - repository path
 
 Repository Attributes
----------------------
+^^^^^^^^^^^^^^^^^^^^^
 
 .. model_element::
   :name: Repository Config
@@ -113,7 +113,7 @@ Examples
 
 
 Environment Variables
-#####################
+=====================
 
 Depending on pipeline definition, build jobs are run with a set of environment variables.
 The variables that are defined depend on:
@@ -132,7 +132,7 @@ any occurrence of dash `-` characters are converted to underscore `_` characters
 
 
 Environment Variables from repositories
----------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 For each repository, the following environment variable set is defined:
 
