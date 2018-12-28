@@ -29,6 +29,7 @@ from util import (
     info,
     fail,
     verbose,
+    merge_dicts,
     not_empty,
     not_none,
 )
@@ -196,6 +197,10 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
 
             verbose('from repo: ' + repository.name + ':' + branch_name)
             definitions = yaml.load(definitions.decoded.decode('utf-8'))
+
+            # handle inheritance
+            definitions = merge_dicts(definitions, override_definitions)
+
             yield from self._wrap_into_descriptors(
                 repo_path='/'.join([org_name, repository.name]),
                 repo_hostname=repo_hostname,
