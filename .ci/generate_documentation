@@ -37,6 +37,9 @@ sphinx-build -E -a "${SOURCE_DIR}" "${OUT_DIR}"
 # disable github's theme
 touch "${out_dir}/.nojekyll"
 
+# cp custom css
+cp -r "${SOURCE_DIR}/css" "${OUT_DIR}/_static/"
+
 export GIT_DIR="${OUT_DIR}/.git"
 export GIT_WORK_TREE="${OUT_DIR}"
 
