@@ -139,6 +139,9 @@ class BranchCfgEntry(NamedModelElement):
     def override_definitions(self):
         return self.raw.get('inherit', {})
 
+    def __repr__(self):
+        return f'BranchCfgEntry: {self.raw}'
+
 
 class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
     def _branch_cfg_or_none(
