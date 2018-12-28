@@ -1,3 +1,4 @@
+===============
 *cronjob* Trait
 ===============
 
@@ -13,7 +14,7 @@ Declaring :doc:`Build Jobs </pipeline_job>` will be triggered (executed) periodi
 
 
 Example
--------
+=======
 
 .. code-block:: yaml
 

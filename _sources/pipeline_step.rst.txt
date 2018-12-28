@@ -1,6 +1,6 @@
-**************
+==============
 Pipeline Steps
-**************
+==============
 
 Pipeline steps define the actual payloads that are run during job executions. Each pipeline
 step is run in a defined container image. Components may specify an arbitrary graph of steps.
@@ -25,7 +25,7 @@ failures.
 
 
 Examples
-########
+========
 
 .. code-block:: yaml
 

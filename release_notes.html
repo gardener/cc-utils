@@ -26,6 +26,7 @@
 
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="prev" title="version Trait" href="traits/version.html" /> 
@@ -211,9 +212,8 @@ This is my first release note
 </tbody>
 </table>
 </div>
-</div>
 <div class="section" id="how-to-contribute-to-release-notes">
-<h2>How to Contribute to Release Notes<a class="headerlink" href="#how-to-contribute-to-release-notes" title="Permalink to this headline">¶</a></h2>
+<h3>How to Contribute to Release Notes<a class="headerlink" href="#how-to-contribute-to-release-notes" title="Permalink to this headline">¶</a></h3>
 <p>Now that we know the format for tagging release-relevant information,
 where do we put it so that it can be fetched automatically?</p>
 <p>There are two options:</p>
@@ -222,7 +222,7 @@ where do we put it so that it can be fetched automatically?</p>
 <li>As <em>commit message</em></li>
 </ol>
 <div class="section" id="pull-requests">
-<h3>Pull Requests<a class="headerlink" href="#pull-requests" title="Permalink to this headline">¶</a></h3>
+<h4>Pull Requests<a class="headerlink" href="#pull-requests" title="Permalink to this headline">¶</a></h4>
 <p>The preferred option is to create a pull request that contains your
 proposed changes (to the code-basis) and in the description a code-block
 like above.</p>
@@ -246,7 +246,7 @@ used for the gardener dashboard.</p>
 on how to create pull request template for your repository.</p>
 </div>
 <div class="section" id="commits">
-<h3>Commits<a class="headerlink" href="#commits" title="Permalink to this headline">¶</a></h3>
+<h4>Commits<a class="headerlink" href="#commits" title="Permalink to this headline">¶</a></h4>
 <p>A second option on how to contribute to the release notes is to add a
 code-block like above to your commit message. This option is not
 preferred as once you have pushed your changes to the remote repository
@@ -254,7 +254,7 @@ it cannot easily be changed anymore so you have to be very cautious.</p>
 </div>
 </div>
 <div class="section" id="draft-release">
-<h2>Draft Release<a class="headerlink" href="#draft-release" title="Permalink to this headline">¶</a></h2>
+<h3>Draft Release<a class="headerlink" href="#draft-release" title="Permalink to this headline">¶</a></h3>
 <p>In order to see how the release notes would look like, draft releases
 are created/updated - usually on every head update.</p>
 <div class="admonition note">
@@ -267,7 +267,7 @@ trait to your variant that has (or inherits) the <em>version</em> trait.
 Usually you would add it to the <em>head-update</em> variant.</p>
 </div>
 <div class="section" id="transporting-release-notes">
-<h2>Transporting Release Notes<a class="headerlink" href="#transporting-release-notes" title="Permalink to this headline">¶</a></h2>
+<h3>Transporting Release Notes<a class="headerlink" href="#transporting-release-notes" title="Permalink to this headline">¶</a></h3>
 <p>A component can depend upon other components. When releasing a
 component, ideally the release notes of the source repository (for which
 the release was created) should be included in the target component.
@@ -282,7 +282,7 @@ above:</p>
 </ol>
 </div>
 <div class="section" id="posting-release-notes-to-slack">
-<h2>Posting Release Notes To Slack<a class="headerlink" href="#posting-release-notes-to-slack" title="Permalink to this headline">¶</a></h2>
+<h3>Posting Release Notes To Slack<a class="headerlink" href="#posting-release-notes-to-slack" title="Permalink to this headline">¶</a></h3>
 <p>When naming a <code class="docutils literal notranslate"><span class="pre">default_channel</span></code> and adding channel_cfgs as shown in the example below to the <code class="docutils literal notranslate"><span class="pre">slack</span></code> trait of your pipeline definition, the release notes will be posted to specified channel (channel name or channel id). The <code class="docutils literal notranslate"><span class="pre">slack_cfg_name</span></code> has to correspond to the config element name of a known slack config on our Concourse.</p>
 <p>Example:</p>
 <div class="code yaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">release</span><span class="p">:</span>
@@ -296,6 +296,7 @@ above:</p>
           <span class="n">channel_name</span><span class="p">:</span> <span class="s1">&#39;my_slack_channel_name&#39;</span> <span class="c1"># you can specify the channel name or channel id</span>
           <span class="n">slack_cfg_name</span><span class="p">:</span> <span class="s1">&#39;example_slack_workspace&#39;</span> <span class="c1"># Specifies the slack configuration that holds the slack api key (which is bound to a slack workspace)</span>
 </pre></div>
+</div>
 </div>
 </div>
 </div>

@@ -26,6 +26,7 @@
 
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Pipeline Steps" href="pipeline_step.html" />
@@ -315,10 +316,8 @@ default GitHub instance that is used in case no <code class="code docutils liter
 <p>Valid cfg_names are:
 - github_com
 - github_wdf_sap_corp</p>
-</div>
-</div>
 <div class="section" id="examples">
-<h3>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h3>
+<h5>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h5>
 <ul class="simple">
 <li>reference an additional repository <code class="code docutils literal notranslate"><span class="pre">github.com/foo/bar</span></code>, name it <code class="code docutils literal notranslate"><span class="pre">my_repo</span></code></li>
 <li>the repository will be made available to builds at <code class="code docutils literal notranslate"><span class="pre">${MY_REPO_PATH}</span></code></li>
@@ -329,6 +328,8 @@ default GitHub instance that is used in case no <code class="code docutils liter
   <span class="l l-Scalar l-Scalar-Plain">branch</span><span class="p p-Indicator">:</span> <span class="s">&#39;master&#39;</span>    <span class="c1"># must be specified - does not default to master</span>
   <span class="l l-Scalar l-Scalar-Plain">cfg_name</span><span class="p p-Indicator">:</span> <span class="s">&#39;github_com&#39;</span>
 </pre></div>
+</div>
+</div>
 </div>
 </div>
 </div>
@@ -356,9 +357,6 @@ characters is forbidden for user-defined identifiers.</p>
 <li>&lt;NAME&gt;_BRANCH -&gt; the configured branch</li>
 <li>&lt;NAME&gt;_GITHUB_REPO_OWNER_AND_NAME -&gt; github_path (e.g. gardener/gardener)</li>
 </ul>
-</div>
-<div class="section" id="example">
-<h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
 <p>In case the main repository has not been explicitly configured with a name, its default logical
 name is <code class="code docutils literal notranslate"><span class="pre">source</span></code>. Therefore, the following environemnt variables will then be defined:</p>
 <ul class="simple">

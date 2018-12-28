@@ -1,3 +1,4 @@
+=====================
 Release Notes Process
 =====================
 
@@ -6,7 +7,7 @@ component, a new process is established to gather all release-relevant
 information since the last release to build the release notes text.
 
 Format
-------
+======
 
 The release-relevant information has to be flagged as such, thus we
 introduce the following format, which is based on the format that
@@ -35,7 +36,7 @@ Example: ::
 If no release note is required, just write :literal:`NONE` within the block or delete the block altogether.
 
 Category - Title Mapping
-~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 +---------------+------------------------------+
 | category      | release note section title   |
@@ -48,7 +49,7 @@ Category - Title Mapping
 +---------------+------------------------------+
 
 How to Contribute to Release Notes
-----------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Now that we know the format for tagging release-relevant information,
 where do we put it so that it can be fetched automatically?
@@ -94,7 +95,7 @@ preferred as once you have pushed your changes to the remote repository
 it cannot easily be changed anymore so you have to be very cautious.
 
 Draft Release
--------------
+^^^^^^^^^^^^^
 
 In order to see how the release notes would look like, draft releases
 are created/updated - usually on every head update.
@@ -107,7 +108,7 @@ trait to your variant that has (or inherits) the *version* trait.
 Usually you would add it to the *head-update* variant.
 
 Transporting Release Notes
---------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A component can depend upon other components. When releasing a
 component, ideally the release notes of the source repository (for which
@@ -122,7 +123,7 @@ above:
 5. It will start over again for the next component with step 1
 
 Posting Release Notes To Slack
-------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 When naming a ``default_channel`` and adding channel\_cfgs as shown in the example below to the ``slack`` trait of your pipeline definition, the release notes will be posted to specified channel (channel name or channel id). The ``slack_cfg_name`` has to correspond to the config element name of a known slack config on our Concourse.
 

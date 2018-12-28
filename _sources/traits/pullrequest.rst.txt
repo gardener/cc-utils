@@ -1,3 +1,4 @@
+====================
 *pull_request* Trait
 ====================
 
@@ -11,7 +12,7 @@ post executions results to the corresponding PRs.
 
 
 Policies / Pull-Request Label Handling
---------------------------------------
+======================================
 
 For security reasons, Pull-Requests are by default only reacted upon if a label is added to them.
 To mitigate the risk of subsequent updates with malicious changes, said labels are removed at the
@@ -22,7 +23,7 @@ To make this more obvious, a "replacement label" is added after label removal.
 
 
 Example
--------
+=======
 
 .. code-block:: yaml
 

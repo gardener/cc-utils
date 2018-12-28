@@ -1,9 +1,9 @@
 
 .. _build_pipeline_reference_manual:
 
-******************************************
+==========================================
 CC-Utils - Build Pipeline Reference Manual
-******************************************
+==========================================
 
 .. toctree::
     :hidden:
@@ -18,7 +18,7 @@ CC-Utils - Build Pipeline Reference Manual
 
 
 Introduction
-############
+============
 
 In order to run continuous delivery workloads for all components contributing to the
 `Gardener <https://github.com/gardener>`_ project, we operate a central service.
@@ -40,7 +40,7 @@ We however abstract from the underlying "build executor" and instead offer a
 required.
 
 Terms, Definitions and Concepts
-###############################
+===============================
 
 Although we are using `Concourse <https://concourse-ci.org>`_ as underlying build scheduler, we
 use some terms differently as done in the context of concourse.
@@ -62,6 +62,6 @@ use some terms differently as done in the context of concourse.
 
 
 Indices and tables
-##################
+==================
 
 * :ref:`genindex`

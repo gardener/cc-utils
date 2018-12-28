@@ -1,3 +1,4 @@
+=============================
 *update_component_deps* Trait
 =============================
 
@@ -19,7 +20,7 @@ the greates discovered component version. Outdated Upgrade Pull Requests are rem
 
 
 Component Upgrade Contract
---------------------------
+==========================
 
 Declaring components **must** offer an executable at `.ci/set_dependency_version` in their
 repositories. It is called by the update component dependencies job for each discovered dependency
@@ -33,7 +34,7 @@ it may be assumed that a Python3 runtime is available, along with all tools from
 `github.com/gardener/cc-utils` (available from PYTHONPATH).
 
 Passed Environment Variables
-----------------------------
+============================
 
 +--------------------+-------------------------------------------------------------+
 | name               | explanation                                                 |
@@ -48,7 +49,7 @@ Passed Environment Variables
 +--------------------+-------------------------------------------------------------+
 
 Behavioural Contract
---------------------
+====================
 
 The executable must return an exit code equal to zero iff all environment variables as described
 above were set to sane values. I.e. an unknown dependency type or name **must** be signalled as an
@@ -59,9 +60,8 @@ The executable **should** output reasonable error descriptions in case of invali
 The work tree specified via `REPO_DIR` may be assumed to be "clean" and writeable.
 
 Extension Note
---------------
+==============
 
 This contract is also intended to be extended for other dependency types. Therefore, implementations
 of `.ci/set_dependency_version` are recommended to be implemented such as to reject dependency
 types other than 'component' to avoid undefined behaviour.
-

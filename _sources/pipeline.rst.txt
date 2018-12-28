@@ -1,6 +1,6 @@
-*******************
+===================
 Pipeline Definition
-*******************
+===================
 
 
 Any GitHub repository residing below an organisation owned by the Gardener team is scanned
@@ -12,7 +12,7 @@ Pipeline definitions are valid `YAML <https://yaml.org>`_ files adhering to the 
 in this reference documentation.
 
 Pipeline Definition Schema
-##########################
+==========================
 
 Pipeline definition documents may contain an arbitrary amount of pipelines. Each top-level
 attribute in a `.ci/pipeline_definitions` file declares a pipeline. The attribute name being
@@ -23,7 +23,7 @@ the pipeline name.
   already in use be another component.
 
 Attributes
-----------
+^^^^^^^^^^
 
 +-------------------+---------------------------------------------------------------------------+
 | attribute         | explanation                                                               |
@@ -48,7 +48,7 @@ Attributes
 
 
 Example `.ci/pipeline_definitions`
-----------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * define a build pipeline named `my_pipeline`
 * define two :doc:`Build Jobs </pipeline_job>` `job_A`, `job_B`
@@ -66,7 +66,7 @@ Example `.ci/pipeline_definitions`
 
 
 Example - Inheritance / "base_definition"
------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * define a common build step "inherit_me"
 * define two jobs inheriting it
@@ -92,7 +92,7 @@ Example - Inheritance / "base_definition"
 * job_b has one step: `inherit_me`
 
 Branch-specific configuration
-#############################
+=============================
 
 By default, only the default branch is considered. An optional `branch.cfg` YAML file **may** be
 placed in a repository's special ref `refs/meta/ci`.
@@ -108,7 +108,7 @@ attribute) are optionally applied.
 A common usage scenario may be the declaration of hotfix release jobs for release branches.
 
 Attributes
-----------
+^^^^^^^^^^
 
 +------------+---------------------------------------------------------------------------+
 | attribute  | explanation                                                               |
@@ -124,7 +124,7 @@ Attributes
 
 
 Example (schematic)
--------------------
+^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: yaml
 
@@ -135,7 +135,7 @@ Example (schematic)
 		inherit: ~ # optional branch-specific pipeline definition
 
 Example (hotfix-branch release jobs)
-------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: yaml
 
@@ -150,12 +150,9 @@ Example (hotfix-branch release jobs)
                               release:
                                   nextversion: 'bump_minor'
       hotfix:
-          branches: ['rel-.*']
+          branches: ['hotfix-.*']
           inherit:
               example-pipeline:
                   variants:
                       release-job:
                           traits:
-
-
-

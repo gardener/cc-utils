@@ -1,3 +1,4 @@
+===============
 *release* Trait
 ===============
 
@@ -30,7 +31,7 @@ The following operations are performed:
 
 
 Example
--------
+=======
 
 .. code-block:: yaml
 
