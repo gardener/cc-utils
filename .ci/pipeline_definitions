@@ -17,7 +17,6 @@ cc-utils:
       steps:
         generate_documentation:
           publish_to: ['gh_pages']
-
       traits:
         notifications:
           default:
