@@ -120,11 +120,18 @@ class BranchCfg(ModelBase):
         )
 
     def cfg_entry_for_branch(self, branch):
-        for entry in self.cfg_entries():
-            if entry.branch_matches(branch):
-                return entry
-            # todo: handle conflicts
-        return None
+        matching_entries = [
+            entry for entry in self.cfg_entries() if entry.branch_matches(branch)
+        ]
+        if not matching_entries:
+            return None
+
+        # merge entries
+        effective_branch_cfg = {}
+        for entry in matching_entries:
+            effective_branch_cfg = merge_dicts(effective_branch_cfg, entry.raw)
+
+        return BranchCfgEntry(name='merged', raw_dict=effective_branch_cfg)
 
 
 class BranchCfgEntry(NamedModelElement):
