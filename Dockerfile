@@ -12,4 +12,5 @@ ENV PYTHONPATH /cc/utils
 
 RUN pip3 install -r /cc/utils/requirements.txt
 
-RUN EFFECTIVE_VERSION="$(cat /metadata/VERSION)" REPO_DIR=/cc/utils /cc/utils/.ci/bump_job_image_version.py
+RUN EFFECTIVE_VERSION="$(cat /metadata/VERSION)" REPO_DIR=/cc/utils \
+  /cc/utils/.ci/bump_job_image_version.py
