@@ -54,7 +54,12 @@ class ElasticSearchClient(object):
         util.check_type(index, str)
         util.check_type(body, dict)
         if 'doc_type' in kwargs:
-            raise ValueError()
+            raise ValueError(
+                '''
+                doc_type attribute has been deprecated - see:
+                https://www.elastic.co/guide/en/elasticsearch/reference/6.0/removal-of-types.html
+                '''
+            )
 
         return self._api.index(
             index=index,
