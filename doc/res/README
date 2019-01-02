@@ -1,0 +1,15 @@
+===============
+Usage / Editing
+===============
+
+This directory contains graphical image files intended to be referenced by documentation documents.
+In case an image is created from a source format, always add (and update!) the source file. Name
+the source file identical to the output file (with a different file name extension, obviously).
+
+In case the adequate tool to use is not obvious, also state how to edit the source file.
+
+====== ==========================================================================
+Name   Explanation
+====== ==========================================================================
+*.vsdx MS Visio 2016 with TAM stencils (http://www.fmc-modeling.org/tam_stencils)
+====== ==========================================================================
