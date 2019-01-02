@@ -107,16 +107,6 @@ class ConcourseApiRoutesBase(object):
         return self._api_url('builds', str(build_id), 'plan', prefix_team=False)
 
 
-class ConcourseApiRoutesV3(ConcourseApiRoutesBase):
-    def login(self):
-        return util.urljoin(
-            self.base_url,
-            'auth',
-            'basic',
-            'token' + '?' + urlencode({'team_name': self.team})
-        )
-
-
 class ConcourseApiRoutesV4(ConcourseApiRoutesBase):
     def login(self):
         return util.urljoin(

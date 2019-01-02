@@ -172,39 +172,10 @@ def create_instance_specific_helm_values(
     creds = concourse_cfg.team_credentials('main')
     external_url = concourse_cfg.external_url()
     external_host = urlparse(external_url).netloc
-    concourse_tls_secret_name = concourse_cfg.tls_secret_name()
     ingress_host = concourse_cfg.ingress_host()
     concourse_version = concourse_cfg.concourse_version()
 
-    # helm chart values.yaml structurally differs from concourse 3.x to 4.x
-    if concourse_version is ConcourseApiVersion.V3:
-        instance_specific_values = {
-            'concourse': {
-                'externalURL': external_url,
-                'githubAuth': {
-                    'team': creds.github_auth_team(),
-                    'authUrl': creds.github_auth_auth_url(),
-                    'tokenUrl': creds.github_auth_token_url(),
-                    'apiUrl': creds.github_auth_api_url(),
-                }
-            },
-            'secrets': {
-                'basicAuthUsername': creds.username(),
-                'basicAuthPassword': creds.passwd(),
-                'githubAuthClientId': creds.github_auth_client_id(),
-                'githubAuthClientSecret': creds.github_auth_client_secret(),
-            },
-            'web': {
-                'ingress': {
-                    'hosts': [external_host, ingress_host],
-                    'tls': [{
-                        'secretName': concourse_tls_secret_name,
-                        'hosts': [external_host, ingress_host],
-                        }],
-                }
-            }
-        }
-    elif concourse_version is ConcourseApiVersion.V4:
+    if concourse_version is ConcourseApiVersion.V4:
         github_config_name = concourse_cfg.github_enterprise_host()
         # 'github_enterprise_host' only configured in case of internal concourse
         # using github enterprise

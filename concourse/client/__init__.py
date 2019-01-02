@@ -21,11 +21,9 @@ from urllib3.exceptions import InsecureRequestWarning
 import functools
 
 from .api import (
-    ConcourseApiV3,
     ConcourseApiV4,
 )
 from .routes import (
-    ConcourseApiRoutesV3,
     ConcourseApiRoutesV4,
 )
 from model.concourse import (
@@ -75,19 +73,7 @@ def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
     password = team_credentials.passwd()
     concourse_version = concourse_cfg.concourse_version()
 
-    if concourse_version is ConcourseApiVersion.V3:
-        routes = ConcourseApiRoutesV3(base_url=base_url, team=team_name)
-        request_builder = AuthenticatedRequestBuilder(
-            basic_auth_username=username,
-            basic_auth_passwd=password,
-            verify_ssl=verify_ssl
-        )
-        concourse_api = ConcourseApiV3(
-            routes=routes,
-            request_builder=request_builder,
-            verify_ssl=verify_ssl,
-        )
-    elif concourse_version is ConcourseApiVersion.V4:
+    if concourse_version is ConcourseApiVersion.V4:
         routes = ConcourseApiRoutesV4(base_url=base_url, team=team_name)
         request_builder = AuthenticatedRequestBuilder(
             basic_auth_username=AUTH_TOKEN_REQUEST_USER,

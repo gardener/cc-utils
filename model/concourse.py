@@ -24,7 +24,6 @@ from model.base import (
 
 class ConcourseApiVersion(Enum):
     '''Enum to define different Concourse versions'''
-    V3 = '3'
     V4 = '4'
 
 

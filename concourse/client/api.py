@@ -213,56 +213,6 @@ class ConcourseApiBase(object):
         return [ResourceVersion(raw=raw, concourse_api=None) for raw in response]
 
 
-class ConcourseApiV3(ConcourseApiBase):
-    @ensure_annotations
-    def login(self, username: str, passwd: str):
-        login_url = self.routes.login()
-        response = self.request_builder.get(login_url, return_type='json')
-        auth_token = response['value']
-        self.request_builder = AuthenticatedRequestBuilder(
-            auth_token=auth_token,
-            verify_ssl=self.verify_ssl
-        )
-        return auth_token
-
-    def set_team(self, team_credentials: ConcourseTeamCredentials):
-        body = {}
-        if team_credentials.has_basic_auth_credentials():
-            basic_auth_cfg = {
-                'username': team_credentials.username(),
-                'password': team_credentials.passwd(),
-            }
-            body['auth'] = {'basicauth': basic_auth_cfg}
-        if team_credentials.has_github_oauth_credentials():
-            github_org, github_team = team_credentials.github_auth_team(split=True)
-            github_cfg = {
-                    'client_id': team_credentials.github_auth_client_id(),
-                    'client_secret': team_credentials.github_auth_client_secret(),
-                    'teams':
-                    [{
-                        'organization_name': github_org,
-                        'team_name': github_team,
-                    }],
-            }
-            if team_credentials.has_custom_github_auth_urls():
-                github_cfg.update({
-                    'auth_url': team_credentials.github_auth_auth_url(),
-                    'token_url': team_credentials.github_auth_token_url(),
-                    'api_url': team_credentials.github_auth_api_url(),
-                })
-            if 'auth' in body:
-                body['auth'].update({'github': github_cfg})
-            else:
-                body['auth'] = {'github': github_cfg}
-
-        team_url = self.routes.team_url(team_credentials.teamname())
-
-        self._put(
-          team_url,
-          json.dumps(body)
-        )
-
-
 class ConcourseApiV4(ConcourseApiBase):
     def login(self, username: str, passwd: str):
         login_url = self.routes.login()
