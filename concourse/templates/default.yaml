@@ -155,6 +155,9 @@ source_repo = job_variant.main_repository()
 %>
 % if job_step.execute():
 - task: '${job_step.name}'
+% if job_step.timeout():
+  timeout: '${job_step.timeout()}'
+% endif
   config:
 % if job_step.image():
 <%

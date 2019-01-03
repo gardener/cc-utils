@@ -133,6 +133,13 @@ def attrs(pipeline_step):
             variable.
             ''',
         ),
+        AttributeSpec.optional(
+            name='timeout',
+            default=None,
+            doc='''
+            go-style time interval (e.g.: '1h30m') after which the step will be interrupted and fail.
+            ''',
+        ),
     )
 
 
@@ -266,6 +273,9 @@ class PipelineStep(ModelBase):
 
     def depends(self):
         return set(self.raw['depends'])
+
+    def timeout(self):
+        return self.raw['timeout']
 
     def validate(self):
         super().validate()
