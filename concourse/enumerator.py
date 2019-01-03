@@ -128,13 +128,28 @@ class BranchCfg(ModelBase):
 
         # merge entries
         effective_branch_cfg = {}
-        for entry in matching_entries:
+
+        # order by optional attribute 'index' (random order if omitted)
+        def entry_with_idx(idx, entry):
+            if entry.index():
+                idx = int(entry.index())
+            return (idx, entry)
+
+        indexed_entries = [entry_with_idx(idx, entry) for idx, entry in enumerate(matching_entries)]
+
+        for _, entry in sorted(indexed_entries, key=lambda i: i[0]):
             effective_branch_cfg = merge_dicts(effective_branch_cfg, entry.raw)
 
         return BranchCfgEntry(name='merged', raw_dict=effective_branch_cfg)
 
 
 class BranchCfgEntry(NamedModelElement):
+    def _optional_attributes(self):
+        return {'index'}
+
+    def index(self):
+        return self.raw.get('index')
+
     def branches(self):
         return self.raw.get('branches')
 
