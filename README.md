@@ -20,6 +20,8 @@ runtime dependencies).
 In addition to the Python API, some functions are exposed via a command line interface
 (`./cli.py`).
 
+You can find the documentation for our build pipeline on our [GitHub Pages](https://gardener.github.io/cc-utils).
+
 ## Special Modules
 
 * `cli.py`: CLI generator
