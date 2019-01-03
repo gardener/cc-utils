@@ -6,6 +6,8 @@
 context of Continuous Integration and output qualification of components
 relevant for the 'gardener' project.
 
+It also contains the code for generating our build pipelines. You can find the documentation for the build pipeline on our [GitHub Pages](https://gardener.github.io/cc-utils).
+
 ## How to use it
 
 A copy of cc-utils is contained in the default container image in which gardener
@@ -19,8 +21,6 @@ runtime dependencies).
 
 In addition to the Python API, some functions are exposed via a command line interface
 (`./cli.py`).
-
-You can find the documentation for our build pipeline on our [GitHub Pages](https://gardener.github.io/cc-utils).
 
 ## Special Modules
 
