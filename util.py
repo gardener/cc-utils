@@ -146,7 +146,7 @@ def verbose(msg:str):
     if not _verbose():
         return
     if msg:
-        _print('VERBOSE: ' + msg)
+        _print('VERBOSE: ' + msg, colour=None)
 
 
 def not_empty(value):
