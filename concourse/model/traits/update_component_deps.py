@@ -85,6 +85,7 @@ class UpdateComponentDependenciesTraitTransformer(TraitTransformer):
                 script_type=ScriptType.PYTHON3
         )
         self.update_component_deps_step.add_input(*COMPONENT_DESCRIPTOR_DIR_INPUT)
+        self.update_component_deps_step.set_timeout(duration_string='30m')
         yield self.update_component_deps_step
 
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):

@@ -70,6 +70,7 @@ class DraftReleaseTraitTransformer(TraitTransformer):
             is_synthetic=True,
             script_type=ScriptType.PYTHON3,
         )
+        self.release_step.set_timeout(duration_string='10m')
         yield self.release_step
 
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):

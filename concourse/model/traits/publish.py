@@ -151,9 +151,11 @@ class PublishTraitTransformer(TraitTransformer):
     def inject_steps(self):
         # 'publish' step
         publish_step = PipelineStep(name='publish', raw_dict={}, is_synthetic=True)
+        publish_step.set_timeout(duration_string='4h')
 
         # 'prepare' step
         prepare_step = PipelineStep(name='prepare', raw_dict={}, is_synthetic=True)
+        prepare_step.set_timeout(duration_string='30m')
 
         publish_step._add_dependency(prepare_step)
 

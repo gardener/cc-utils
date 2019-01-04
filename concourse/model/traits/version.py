@@ -97,6 +97,7 @@ class VersionTraitTransformer(TraitTransformer):
             script_type=ScriptType.PYTHON3,
             )
         self.version_step.add_output(name='version_path', variable_name='managed-version')
+        self.version_step.set_timeout(duration_string='5m')
 
         yield self.version_step
 
