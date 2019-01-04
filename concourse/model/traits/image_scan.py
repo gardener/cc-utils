@@ -178,6 +178,7 @@ class ImageScanTraitTransformer(TraitTransformer):
                 script_type=ScriptType.PYTHON3
         )
         self.image_scan_step.add_input(*COMPONENT_DESCRIPTOR_DIR_INPUT)
+        self.image_scan_step.set_timeout(duration_string='12h')
         yield self.image_scan_step
 
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):

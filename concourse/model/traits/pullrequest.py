@@ -95,6 +95,7 @@ class PullRequestTraitTransformer(TraitTransformer):
                 is_synthetic=True,
                 script_type=ScriptType.PYTHON3
         )
+        rm_pr_label_step.set_timeout(duration_string='5m')
         yield rm_pr_label_step
 
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):
