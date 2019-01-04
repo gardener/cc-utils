@@ -277,6 +277,10 @@ class PipelineStep(ModelBase):
     def timeout(self):
         return self.raw['timeout']
 
+    def set_timeout(self, duration_string: str):
+        util.not_empty(duration_string)
+        self.raw['timeout'] = duration_string
+
     def validate(self):
         super().validate()
         if self.image():
