@@ -36,6 +36,7 @@ protecode_cfg = cfg_factory.protecode('${image_scan_trait.protecode_cfg_name()}'
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
 protecode_group_id = int(${image_scan_trait.protecode_group_id()})
+protecode_group_url = f'{protecode_cfg.api_url()}/group/{protecode_group_id}/'
 
 component_descriptor_file = pathlib.Path(
   util.check_env('COMPONENT_DESCRIPTOR_DIR'),
@@ -82,8 +83,8 @@ Note: you receive this E-Mail, because you were configured as a mail recipient i
 "${component_trait.component_name()}" (see .ci/pipeline_definitions)
 To remove yourself, search for your e-mail address in said file and remove it.
 
-The following components in Protecode-group {protecode_group_id} were found to contain critical
-vulnerabilities:
+The following components in Protecode-group {protecode_group_id} ({protecode_group_url}) were found
+to contain critical vulnerabilities:
 '''
 body += tabulate.tabulate(
   map(lambda r: (r[0].display_name(), r[1]), relevant_results),
