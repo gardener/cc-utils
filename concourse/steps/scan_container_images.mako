@@ -87,8 +87,8 @@ The following components in Protecode-group {protecode_group_id} ({protecode_gro
 to contain critical vulnerabilities:
 '''
 body += tabulate.tabulate(
-  map(lambda r: (r[0].display_name(), r[1]), relevant_results),
-  headers=('Component Name', 'Greatest CVE'),
+  map(lambda r: (r[0].display_name(), r[1], r[0].custom_data().get('IMAGE_REFERENCE')), relevant_results),
+  headers=('Component Name', 'Greatest CVE', 'Container Image Reference'),
 )
 
 
