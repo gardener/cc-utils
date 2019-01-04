@@ -35,6 +35,8 @@ cfg_factory = util.ctx().cfg_factory()
 protecode_cfg = cfg_factory.protecode('${image_scan_trait.protecode_cfg_name()}')
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
+protecode_group_id = int(${image_scan_trait.protecode_group_id()})
+
 component_descriptor_file = pathlib.Path(
   util.check_env('COMPONENT_DESCRIPTOR_DIR'),
   'component_descriptor'
@@ -55,7 +57,7 @@ relevant_results = protecode.util.upload_images(
   protecode_cfg=protecode_cfg,
   product_descriptor=component_descriptor,
   processing_mode=processing_mode,
-  protecode_group_id=int(${image_scan_trait.protecode_group_id()}),
+  protecode_group_id=protecode_group_id,
   parallel_jobs=${image_scan_trait.parallel_jobs()},
   cve_threshold=${image_scan_trait.cve_threshold()},
   image_reference_filter=image_filter,
@@ -75,17 +77,19 @@ if not email_recipients:
 
 # component_name identifies the landscape that has been scanned
 component_name = "${component_trait.component_name()}"
-body = '''
+body = f'''
 Note: you receive this E-Mail, because you were configured as a mail recipient in repository
 "${component_trait.component_name()}" (see .ci/pipeline_definitions)
 To remove yourself, search for your e-mail address in said file and remove it.
 
-The following components were found to contain critical vulnerabilities:
+The following components in Protecode-group {protecode_group_id} were found to contain critical
+vulnerabilities:
 '''
 body += tabulate.tabulate(
   map(lambda r: (r[0].display_name(), r[1]), relevant_results),
   headers=('Component Name', 'Greatest CVE'),
 )
+
 
 mailutil._send_mail(
   email_cfg=cfg_set.email(),
