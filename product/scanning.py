@@ -309,8 +309,12 @@ class ProtecodeUtil(object):
         The original image reference is mangled, and prefixed with the configured
         prefix.
         '''
-        original_reference = container_image.image_reference()
-        mangled_reference = original_reference.replace('.', '_')
+        # we assume there is always a tag present
+        image_name, tag = container_image.image_reference().rsplit(':', 1)
+        mangled_reference = ':'.join(
+            image_name.replace('.', '_'),
+            tag
+        )
         target_reference = urljoin(self._upload_registry_prefix, mangled_reference)
 
         publish_container_image(
