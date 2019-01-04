@@ -31,6 +31,7 @@ from protecode.util import (
     upload_images,
     ProcessingMode
 )
+import product.xml
 
 
 def upload_product_images(
@@ -106,6 +107,23 @@ _parse_web_deps = _parse_dependency_str_func(
 _parse_generic_deps = _parse_dependency_str_func(
     factory_function=GenericDependency.create,
 )
+
+
+def component_descriptor_to_xml(
+    component_descriptor: CliHints.existing_file(),
+    out_file: str,
+):
+    component_descriptor = Product.from_dict(parse_yaml_file(component_descriptor))
+
+    def images(component_descriptor):
+        for component in component_descriptor.components():
+            yield from component.dependencies().container_images()
+
+    result_xml = product.xml.container_image_refs_to_xml(
+        container_images=images(component_descriptor),
+    )
+
+    result_xml.write(out_file)
 
 
 def component_descriptor(
