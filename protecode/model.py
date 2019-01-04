@@ -99,6 +99,9 @@ class Triage(ModelBase):
     def reason(self):
         return self.raw['reason']
 
+    def description(self):
+        return self.raw.get('description')
+
 
 # --- wrappers for inofficial protecode API responses
 

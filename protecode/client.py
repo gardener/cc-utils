@@ -274,6 +274,7 @@ class ProtecodeApi(object):
             'vulns': [triage.vulnerability_id()],
             'scope': triage.scope().value,
             'reason': triage.reason(),
+            'description': triage.description(),
         }
 
         if product_id:
