@@ -76,6 +76,18 @@ if not email_recipients:
 
 # notify about critical vulnerabilities
 
+def process_upload_results(upload_result):
+  # upload_result tuple of AnalysisResult and CVE Score
+  analysis_result = upload_result[0]
+  name = analysis_result.display_name()
+  greatest_cve = upload_result[1]
+  custom_data = analysis_result.custom_data()
+  if custom_data is not None:
+    image_reference = custom_data.get('IMAGE_REFERENCE')
+  else:
+    image_reference = None
+  return [name, greatest_cve, image_reference]
+
 # component_name identifies the landscape that has been scanned
 component_name = "${component_trait.component_name()}"
 body = f'''
@@ -87,10 +99,9 @@ The following components in Protecode-group {protecode_group_id} ({protecode_gro
 to contain critical vulnerabilities:
 '''
 body += tabulate.tabulate(
-  map(lambda r: (r[0].display_name(), r[1], r[0].custom_data().get('IMAGE_REFERENCE')), relevant_results),
+  map(process_upload_results, relevant_results),
   headers=('Component Name', 'Greatest CVE', 'Container Image Reference'),
 )
-
 
 mailutil._send_mail(
   email_cfg=cfg_set.email(),
