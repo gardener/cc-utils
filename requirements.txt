@@ -13,6 +13,7 @@ deprecated
 elasticsearch
 ensure
 gevent
+html2text
 kubernetes
 pycodestyle
 pydash==4.6.0
