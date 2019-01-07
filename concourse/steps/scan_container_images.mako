@@ -82,11 +82,12 @@ def process_upload_results(upload_result):
   name = analysis_result.display_name()
   greatest_cve = upload_result[1]
   custom_data = analysis_result.custom_data()
+  product_url = f'{protecode_cfg.api_url()}/products/{analysis_result.product_id()}/#/analysis'
   if custom_data is not None:
     image_reference = custom_data.get('IMAGE_REFERENCE')
   else:
     image_reference = None
-  return [name, greatest_cve, image_reference]
+  return [name, greatest_cve, image_reference, product_url]
 
 # component_name identifies the landscape that has been scanned
 component_name = "${component_trait.component_name()}"
@@ -100,7 +101,7 @@ to contain critical vulnerabilities:
 '''
 body += tabulate.tabulate(
   map(process_upload_results, relevant_results),
-  headers=('Component Name', 'Greatest CVE', 'Container Image Reference'),
+  headers=('Component Name', 'Greatest CVE', 'Container Image Reference', 'Link to Analysis'),
 )
 
 mailutil._send_mail(
