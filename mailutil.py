@@ -89,6 +89,7 @@ def _send_mail(
     subject: str,
     replace_tokens: dict={},
     cc_recipients: typing.Iterable[str]=[],
+    mimetype='text',
 ):
     not_none(email_cfg)
     not_empty(recipients)
@@ -110,7 +111,8 @@ def _send_mail(
         sender=email_cfg.sender_name(),
         recipients=recipients,
         cc_recipients=cc_recipients,
-        text=mail_body
+        text=mail_body,
+        mimetype=mimetype,
     )
 
     if email_cfg.use_tls():

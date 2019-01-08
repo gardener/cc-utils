@@ -14,6 +14,8 @@
 # limitations under the License.
 
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from html2text import html2text
 
 
 def create_body(mail_template: str, replace_tokens: dict):
@@ -23,7 +25,12 @@ def create_body(mail_template: str, replace_tokens: dict):
     return mail_template
 
 
-def send_mail(smtp_server: str, msg: str, sender: str, recipients: str):
+def send_mail(
+    smtp_server: str,
+    msg,
+    sender: str,
+    recipients: str,
+):
     smtp_server.sendmail(sender, recipients, msg.as_string())
 
 
@@ -33,9 +40,36 @@ def create_mail(
         recipients: [str],
         text: str,
         cc_recipients: [str]=[],
-        mail_type: str='plain'
+        mimetype: str='text'
     )->MIMEText:
-    msg = MIMEText(text, mail_type)
+    msg = MIMEMultipart('alternative')
+
+    if mimetype == 'html':
+        msg_html = MIMEText(
+            text,
+            mimetype,
+            'utf-8',
+        )
+        plain_text = html2text(text)
+        msg_plain = MIMEText(
+            plain_text,
+            'text',
+            'utf-8',
+        )
+    elif mimetype == 'text':
+        msg_html = None
+        msg_plain = MIMEText(
+            text,
+            mimetype,
+            'utf-8',
+        )
+    else:
+        raise NotImplementedError()
+
+    msg.attach(msg_plain)
+    if msg_html:
+        msg.attach(msg_html)
+
     msg['Subject'] = subject
     msg['From'] = sender
     msg['To'] = ';'.join(recipients)
