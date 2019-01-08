@@ -122,6 +122,13 @@ def _print(msg, colour):
     sys.stdout.flush()
 
 
+def error(msg=None):
+    if _quiet():
+        return
+    if msg:
+        _print('ERROR: ' + str(msg), colour='red')
+
+
 def fail(msg=None):
     if msg:
         _print('ERROR: ' + str(msg), colour='red')
