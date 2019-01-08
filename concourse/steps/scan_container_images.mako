@@ -15,6 +15,7 @@ component_trait = job_variant.trait('component_descriptor')
 %>
 import sys
 import pathlib
+import textwrap
 import tabulate
 
 import mailutil
@@ -91,14 +92,16 @@ def process_upload_results(upload_result):
 
 # component_name identifies the landscape that has been scanned
 component_name = "${component_trait.component_name()}"
-body = f'''
-Note: you receive this E-Mail, because you were configured as a mail recipient in repository
-"${component_trait.component_name()}" (see .ci/pipeline_definitions)
-To remove yourself, search for your e-mail address in said file and remove it.
+body = textwrap.dedent(
+  f'''
+  Note: you receive this E-Mail, because you were configured as a mail recipient in repository
+  "${component_trait.component_name()}" (see .ci/pipeline_definitions)
+  To remove yourself, search for your e-mail address in said file and remove it.
 
-The following components in Protecode-group {protecode_group_id} ({protecode_group_url}) were found
-to contain critical vulnerabilities:
-'''
+  The following components in Protecode-group {protecode_group_id} ({protecode_group_url}) were found
+  to contain critical vulnerabilities:
+  '''
+)
 body += tabulate.tabulate(
   map(process_upload_results, relevant_results),
   headers=('Component Name', 'Greatest CVE', 'Container Image Reference', 'Link to Analysis'),
