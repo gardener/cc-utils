@@ -105,6 +105,7 @@ body = textwrap.dedent(
 body += tabulate.tabulate(
   map(process_upload_results, relevant_results),
   headers=('Component Name', 'Greatest CVE', 'Container Image Reference', 'Link to Analysis'),
+  tablefmt='html',
 )
 
 mailutil._send_mail(
@@ -112,6 +113,7 @@ mailutil._send_mail(
   recipients=email_recipients,
   mail_template=body,
   subject=f'[Action Required] landscape {component_name} has critical Vulnerabilities',
+  mimetype='html',
 )
 util.info('sent notification emails to: ' + ','.join(email_recipients))
 </%def>
