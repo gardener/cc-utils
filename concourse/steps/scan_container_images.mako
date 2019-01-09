@@ -39,6 +39,20 @@ cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 protecode_group_id = int(${image_scan_trait.protecode_group_id()})
 protecode_group_url = f'{protecode_cfg.api_url()}/group/{protecode_group_id}/'
 
+# print configuration
+print(tabulate.tabulate(
+  (
+    ('Protecode target group id', str(protecode_group_id)),
+    ('Protecode group URL', protecode_group_url),
+    ('Protecode reference group IDs', ${image_scan_trait.reference_protecode_group_ids()}),
+    ('Image Filter (include)', ${filter_cfg.include_image_references()}),
+    ('Image Filter (exclude)', ${filter_cfg.exclude_image_references()}),
+% if upload_registry_prefix:
+    ('Upload Registry prefix', '${upload_registry_prefix}'),
+% endif
+  ),
+))
+
 component_descriptor_file = pathlib.Path(
   util.check_env('COMPONENT_DESCRIPTOR_DIR'),
   'component_descriptor'
