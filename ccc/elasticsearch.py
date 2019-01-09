@@ -15,6 +15,7 @@
 
 import functools
 import os
+import json
 
 import elasticsearch
 
@@ -64,6 +65,19 @@ def _metadata_dict():
         name: read_attr(name) for name in attrs
     }
 
+    # XXX deduplicate; mv to concourse package
+    meta_dict['concourse_url'] = util.urljoin(
+        meta_dict['atc-external-url'],
+        'teams',
+        meta_dict['build-team-name'],
+        'pipelines',
+        meta_dict['build-pipeline-name'],
+        'jobs',
+        meta_dict['build-job-name'],
+        'builds',
+        meta_dict['build-name'],
+    )
+
     return meta_dict
 
 
@@ -95,22 +109,37 @@ class ElasticSearchClient(object):
         if inject_metadata and _metadata_dict():
             md = _metadata_dict()
             body['cc_meta'] = md
-            # XXX deduplicate; mv to concourse package
-            md['concourse_url'] = util.urljoin(
-                md['atc-external-url'],
-                'teams',
-                md['build-team-name'],
-                'pipelines',
-                md['build-pipeline-name'],
-                'jobs',
-                md['build-job-name'],
-                'builds',
-                md['build-name'],
-            )
 
         return self._api.index(
             index=index,
             doc_type='_doc',
+            body=body,
+            *args,
+            **kwargs,
+        )
+
+    def store_bulk(
+        self,
+        body: str,
+        inject_metadata=True,
+        *args,
+        **kwargs,
+    ):
+        util.check_type(body, str)
+
+        if inject_metadata and _metadata_dict():
+            def inject_meta(line):
+                parsed = json.loads(line)
+                if 'index' not in parsed:
+                    parsed['cc_meta'] = md
+                    return json.dumps(parsed)
+                return line
+
+            md = _metadata_dict()
+            patched_body = '\n'.join([inject_meta(line) for line in body.splitlines])
+            body = patched_body
+
+        return self._api.bulk(
             body=body,
             *args,
             **kwargs,
