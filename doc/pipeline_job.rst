@@ -140,6 +140,9 @@ For each repository, the following environment variable set is defined:
 * <NAME>_BRANCH -> the configured branch
 * <NAME>_GITHUB_REPO_OWNER_AND_NAME -> github_path (e.g. gardener/gardener)
 
+In addition, the :strong:`relative` path to the main repository is always stored in the
+:literal:`MAIN_REPO_DIR` env variable.
+
 Example
 -------
 
@@ -149,3 +152,4 @@ name is `source`. Therefore, the following environment variables will then be de
 * SOURCE_PATH
 * SOURCE_BRANCH
 * SOURCE_GITHUB_REPO_OWNER_AND_NAME
+* MAIN_REPO_DIR
