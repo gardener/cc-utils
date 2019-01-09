@@ -14,12 +14,15 @@
 # limitations under the License.
 
 from concurrent.futures import ThreadPoolExecutor
+import sys
 import tabulate
 import typing
 
+import requests.exceptions
+
 import protecode.client
 from product.scanning import ProtecodeUtil, ProcessingMode
-from util import info, warning, verbose
+from util import info, warning, verbose, error
 from product.model import (
     UploadResult,
 )
@@ -131,10 +134,17 @@ def filter_and_display_upload_results(
 
 def _create_task(protecode_util, container_image, component):
     def task_function():
-        return protecode_util.upload_image(
-            container_image=container_image,
-            component=component,
-        )
+        try:
+            return protecode_util.upload_image(
+                container_image=container_image,
+                component=component,
+            )
+        except requests.exceptions.ConnectionError:
+            error(
+                'A connection error occurred. This might be due to connection problems in our '
+                'infrastructure. Please try executing the image scan job again.'
+                )
+            sys.exit(1)
     return task_function
 
 
