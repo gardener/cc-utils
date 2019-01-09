@@ -144,7 +144,7 @@ Example
 -------
 
 In case the main repository has not been explicitly configured with a name, its default logical
-name is `source`. Therefore, the following environemnt variables will then be defined:
+name is `source`. Therefore, the following environment variables will then be defined:
 
 * SOURCE_PATH
 * SOURCE_BRANCH
