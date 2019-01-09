@@ -214,6 +214,8 @@ clone_repositories = [] # [<from:to>, ..]
 # name of the cloned main repository
 cloned_main_repo_name = None
 %>
+## always add relative path to 'main repository' as special env var 'MAIN_REPO_DIR'
+      MAIN_REPO_DIR: ${job_variant.main_repository().resource_name()}
 % for repository in job_variant.repositories():
 <%
 # the path to map to is usually the repository's resource name
@@ -248,6 +250,7 @@ else:
       CONCOURSE_CURRENT_TEAM: ${target_team}
 % if has_component_descriptor_trait(job_variant):
       COMPONENT_NAME: ${job_variant.trait('component_descriptor').component_name()}
+
 % endif
 % for name, expression in job_step.variables().items():
       ${name}: ${eval(expression, {
