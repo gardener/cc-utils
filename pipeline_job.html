@@ -357,12 +357,15 @@ characters is forbidden for user-defined identifiers.</p>
 <li>&lt;NAME&gt;_BRANCH -&gt; the configured branch</li>
 <li>&lt;NAME&gt;_GITHUB_REPO_OWNER_AND_NAME -&gt; github_path (e.g. gardener/gardener)</li>
 </ul>
+<p>In addition, the <strong>relative</strong> path to the main repository is always stored in the
+<code class="docutils literal notranslate"><span class="pre">MAIN_REPO_DIR</span></code> env variable.</p>
 <p>In case the main repository has not been explicitly configured with a name, its default logical
-name is <code class="code docutils literal notranslate"><span class="pre">source</span></code>. Therefore, the following environemnt variables will then be defined:</p>
+name is <code class="code docutils literal notranslate"><span class="pre">source</span></code>. Therefore, the following environment variables will then be defined:</p>
 <ul class="simple">
 <li>SOURCE_PATH</li>
 <li>SOURCE_BRANCH</li>
 <li>SOURCE_GITHUB_REPO_OWNER_AND_NAME</li>
+<li>MAIN_REPO_DIR</li>
 </ul>
 </div>
 </div>
