@@ -187,11 +187,6 @@ else:
     ${task_image_defaults(registry_cfg=default_container_registry, indent=4)}
 % endif
     inputs:
-    # XXX: factor this out
-% if 'meta' not in job_step.inputs().values():
-    - name: meta
-% endif
-
 % for repository in job_variant.repositories():
     - name: ${repository.resource_name()}
 % endfor
