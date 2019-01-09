@@ -204,7 +204,7 @@ def _pull_image(image_reference: str, outfileobj=None):
     # if outfile is given, we must use it instead of an ano
     outfileobj = outfileobj if outfileobj else tempfile.TemporaryFile()
     with tarfile.open(fileobj=outfileobj, mode='w:') as tar:
-      util.info('Pulling manifest list from {name}..'.format(name=name))
+      util.verbose('Pulling manifest list from {name}..'.format(name=name))
       with image_list.FromRegistry(name, creds, transport) as img_list:
         if img_list.exists():
           platform = image_list.Platform({

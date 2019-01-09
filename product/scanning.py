@@ -233,6 +233,7 @@ class ProtecodeUtil(object):
             )
 
         if upload_action.upload:
+            info(f'uploading to protecode: {container_image.image_reference()}')
             image_data_fh = retrieve_container_image(
                 container_image.image_reference(),
                 outfileobj=tempfile.NamedTemporaryFile(),
