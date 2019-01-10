@@ -225,5 +225,6 @@ class DefinitionFactory(object):
                     raw_dict=dict(source_repo.raw),
                     logical_name=repo_name,
                     qualifier='output',
+                    is_main_repo=source_repo.is_main_repo(),
                 )
                 pipeline_def._publish_repos_dict[repo_name] = publish_repo
