@@ -297,7 +297,11 @@ else:
   executable_file = job_step.executable(prefix=prefix)
   executable_cmd = job_step.execute(prefix=prefix)
 %>
-
+        if CC_ROOT_DIR=$(readlink -f .>/dev/null 2>&1); then
+          export CC_ROOT_DIR
+        else
+          echo "WARNING: no readlink available - CC_ROOT_DIR not set"
+        fi
         if [ -x "${executable_file}" ]; then
           ${executable_cmd}
         elif [ -f "${executable_file}" ]; then
