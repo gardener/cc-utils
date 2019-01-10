@@ -209,8 +209,6 @@ clone_repositories = [] # [<from:to>, ..]
 # name of the cloned main repository
 cloned_main_repo_name = None
 %>
-## always add relative path to 'main repository' as special env var 'MAIN_REPO_DIR'
-      MAIN_REPO_DIR: ${job_variant.main_repository().resource_name()}
 % for repository in job_variant.repositories():
 <%
 # the path to map to is usually the repository's resource name
