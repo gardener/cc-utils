@@ -222,6 +222,20 @@ def check_env(name: str):
     fail('env var {n} must be set'.format(n=name))
 
 
+def _running_on_ci():
+    '''
+    heuristically determines whether or not the caller is running inside a central
+    CI/CD job.
+    '''
+    return 'CC_ROOT_DIR' in os.environ
+
+
+def _root_dir():
+    if not _running_on_ci():
+        raise RuntimeError('must only be called within CI/CD')
+    return check_env('CC_ROOT_DIR')
+
+
 def urljoin(*parts):
     if len(parts) == 1:
         return parts[0]
