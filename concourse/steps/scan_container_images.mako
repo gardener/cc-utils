@@ -94,31 +94,38 @@ if not email_recipients:
 def process_upload_results(upload_result):
   # upload_result tuple of AnalysisResult and CVE Score
   analysis_result = upload_result[0]
-  name = analysis_result.display_name()
   greatest_cve = upload_result[1]
+
+  name = analysis_result.display_name()
+  analysis_url = f'{protecode_cfg.api_url()}/products/{analysis_result.product_id()}/#/analysis'
+  link_to_analysis_url = f'<a href="{analysis_url}">{name}</a>'
+
   custom_data = analysis_result.custom_data()
-  product_url = f'{protecode_cfg.api_url()}/products/{analysis_result.product_id()}/#/analysis'
   if custom_data is not None:
     image_reference = custom_data.get('IMAGE_REFERENCE')
   else:
     image_reference = None
-  return [name, greatest_cve, image_reference, product_url]
+
+  return [link_to_analysis_url, greatest_cve, image_reference]
 
 # component_name identifies the landscape that has been scanned
 component_name = "${component_trait.component_name()}"
 body = textwrap.dedent(
   f'''
+  <p>
   Note: you receive this E-Mail, because you were configured as a mail recipient in repository
   "${component_trait.component_name()}" (see .ci/pipeline_definitions)
   To remove yourself, search for your e-mail address in said file and remove it.
-
-  The following components in Protecode-group {protecode_group_id} ({protecode_group_url}) were found
-  to contain critical vulnerabilities:
+  </p>
+  <p>
+  The following components in Protecode-group <a href="{protecode_group_url}">{protecode_group_id}</a>
+  were found to contain critical vulnerabilities:
+  </p>
   '''
 )
 body += tabulate.tabulate(
   map(process_upload_results, relevant_results),
-  headers=('Component Name', 'Greatest CVE', 'Container Image Reference', 'Link to Analysis'),
+  headers=('Component Name', 'Greatest CVE', 'Container Image Reference'),
   tablefmt='html',
 )
 
