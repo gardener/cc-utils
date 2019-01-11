@@ -93,8 +93,9 @@ ATTRIBUTES = (
         doc='technical protecode group id to upload to',
         type=int,
     ),
-    AttributeSpec.required(
+    AttributeSpec.optional(
         name='protecode_cfg_name',
+        default=None,
         doc='protecode cfg name to use (see cc-utils)',
     ),
     AttributeSpec.optional(

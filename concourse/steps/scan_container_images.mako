@@ -33,8 +33,13 @@ import urllib3
 urllib3.disable_warnings()
 
 cfg_factory = util.ctx().cfg_factory()
-protecode_cfg = cfg_factory.protecode('${image_scan_trait.protecode_cfg_name()}')
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
+
+% if not image_scan_trait.protecode_cfg_name():
+protecode_cfg = cfg_factory.protecode()
+% else:
+protecode_cfg = cfg_factory.protecode('${image_scan_trait.protecode_cfg_name()}')
+% endif
 
 protecode_group_id = int(${image_scan_trait.protecode_group_id()})
 protecode_group_url = f'{protecode_cfg.api_url()}/group/{protecode_group_id}/'
