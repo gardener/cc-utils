@@ -47,7 +47,7 @@ def _metadata_dict():
         return {}
 
     # XXX do not hard-code meta-dir
-    meta_dir = util.existing_dir(os.path.join(util._root_dir()))
+    meta_dir = util.existing_dir(os.path.join(util._root_dir(), 'meta'))
     attrs = (
         'atc-external-url',
         'build-team-name',
