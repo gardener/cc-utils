@@ -15,6 +15,7 @@ ensure
 gevent
 html2text
 kubernetes
+prometheus_client
 pycodestyle
 pydash==4.6.0
 pyflakes
