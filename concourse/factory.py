@@ -31,11 +31,19 @@ class RawPipelineDefinitionDescriptor(object):
     Basic value validation is done in the c'tor.
     '''
 
-    def __init__(self, name, base_definition, variants, template='default'):
+    def __init__(
+        self,
+        name,
+        base_definition,
+        variants,
+        exception=None,
+        template='default'
+    ):
         self.name = not_none(name)
         self.base_definition = ensure_dict(base_definition, allow_empty=True)
         self.variants = ensure_dict(variants, allow_empty=False)
         self.template = not_none(template)
+        self.exception = exception
 
 
 class DefinitionFactory(object):

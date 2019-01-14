@@ -430,20 +430,27 @@ class PipelineReplicator(object):
             yield from enumerator.enumerate_definition_descriptors()
 
     def _process_definition_descriptor(self, definition_descriptor):
-            preprocessed = self.descriptor_preprocessor.process_definition_descriptor(
-                    definition_descriptor
+        if definition_descriptor.exception:
+            return DeployResult(
+                definition_descriptor=definition_descriptor,
+                deploy_status=DeployStatus.SKIPPED,
+                error_details=definition_descriptor.exception,
             )
-            result = self.definition_renderer.render(preprocessed)
 
-            if result.render_status == RenderStatus.SUCCEEDED:
-                deploy_result = self.definition_deployer.deploy(result.definition_descriptor)
-            else:
-                deploy_result = DeployResult(
-                    definition_descriptor=definition_descriptor,
-                    deploy_status=DeployStatus.SKIPPED,
-                    error_details=result.error_details,
-                )
-            return deploy_result
+        preprocessed = self.descriptor_preprocessor.process_definition_descriptor(
+                definition_descriptor
+        )
+        result = self.definition_renderer.render(preprocessed)
+
+        if result.render_status == RenderStatus.SUCCEEDED:
+            deploy_result = self.definition_deployer.deploy(result.definition_descriptor)
+        else:
+            deploy_result = DeployResult(
+                definition_descriptor=definition_descriptor,
+                deploy_status=DeployStatus.SKIPPED,
+                error_details=result.error_details,
+            )
+        return deploy_result
 
     def _replicate(self):
         executor = ThreadPoolExecutor(max_workers=8)

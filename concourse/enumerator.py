@@ -101,12 +101,29 @@ class SimpleFileDefinitionEnumerator(DefinitionEnumerator):
     def enumerate_definition_descriptors(self):
         info('enumerating explicitly specified definition file')
 
-        yield from self._wrap_into_descriptors(
-            repo_path=self.repo_path,
-            repo_hostname=self.repo_host,
-            branch=self.repo_branch,
-            raw_definitions=parse_yaml_file(self.definition_file),
-        )
+        try:
+            definitions = parse_yaml_file(self.definition_file)
+            yield from self._wrap_into_descriptors(
+                repo_path=self.repo_path,
+                repo_hostname=self.repo_host,
+                branch=self.repo_branch,
+                raw_definitions=definitions,
+            )
+        except BaseException as e:
+            repo_path = self.repo_path
+            yield DefinitionDescriptor(
+                pipeline_name='<invalid YAML>',
+                pipeline_definition={},
+                main_repo={
+                    'path': self.repo_path,
+                    'branch': self.repo_branch,
+                    'hostname': self.repo_host,
+                },
+                concourse_target_cfg=self.cfg_set.concourse(),
+                concourse_target_team=self.job_mapping.team_name(),
+                override_definitions=(),
+                exception=e,
+            )
 
 
 class BranchCfg(ModelBase):
@@ -218,7 +235,20 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
             override_definitions = cfg_entry.override_definitions() if cfg_entry else {}
 
             verbose('from repo: ' + repository.name + ':' + branch_name)
-            definitions = yaml.load(definitions.decoded.decode('utf-8'))
+            try:
+                definitions = yaml.load(definitions.decoded.decode('utf-8'))
+            except BaseException as e:
+                repo_path = f'{org_name}/{repository.name}'
+                yield DefinitionDescriptor(
+                    pipeline_name='<invalid YAML>',
+                    pipeline_definition={},
+                    main_repo={'path': repo_path, 'branch': branch_name, 'hostname': repo_hostname},
+                    concourse_target_cfg=self.cfg_set.concourse(),
+                    concourse_target_team=self.job_mapping.team_name(),
+                    override_definitions=(),
+                    exception=e,
+                )
+                return # nothing else to yield in case parsing failed
 
             # handle inheritance
             definitions = merge_dicts(definitions, override_definitions)
@@ -302,7 +332,8 @@ class DefinitionDescriptor(object):
         main_repo,
         concourse_target_cfg,
         concourse_target_team,
-        override_definitions=[{},]
+        override_definitions=[{},],
+        exception=None,
     ):
         self.pipeline_name = not_empty(pipeline_name)
         self.pipeline_definition = not_none(pipeline_definition)
@@ -310,6 +341,7 @@ class DefinitionDescriptor(object):
         self.concourse_target_cfg = not_none(concourse_target_cfg)
         self.concourse_target_team = not_none(concourse_target_team)
         self.override_definitions = not_none(override_definitions)
+        self.exception = exception
 
     def template_name(self):
         return self.pipeline_definition.get('template', 'default')
