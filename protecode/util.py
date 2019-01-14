@@ -141,8 +141,8 @@ def _create_task(protecode_util, container_image, component):
             )
         except requests.exceptions.ConnectionError:
             error(
-                'A connection error occurred. This might be due to connection problems in our '
-                'infrastructure. Please try executing the image scan job again.'
+                'A connection error occurred. This might be due problems with Protecode. '
+                'Please try executing the image scan job again.'
                 )
             sys.exit(1)
     return task_function
