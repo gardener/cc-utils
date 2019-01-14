@@ -22,7 +22,7 @@ from typing import List
 import requests
 
 from util import not_empty, not_none, none, urljoin
-from http_requests import check_http_code
+from http_requests import check_http_code, mount_default_adapter
 from .model import (
     AnalysisResult,
     ProcessingStatus,
@@ -93,6 +93,9 @@ class ProtecodeApi(object):
         self._auth = (basic_credentials.username(), basic_credentials.passwd())
         self._tls_verify = tls_verify
         self._session_id = None
+        self._session = requests.Session()
+        mount_default_adapter(self._session)
+
         self._csrf_token = None
 
     @check_http_code
@@ -130,23 +133,23 @@ class ProtecodeApi(object):
 
     @check_http_code
     def _get(self, *args, **kwargs):
-        return self._request(requests.get, *args, **kwargs)
+        return self._request(self._session.get, *args, **kwargs)
 
     @check_http_code
     def _post(self, *args, **kwargs):
-        return self._request(requests.post, *args, **kwargs)
+        return self._request(self._session.post, *args, **kwargs)
 
     @check_http_code
     def _put(self, *args, **kwargs):
-        return self._request(requests.put, *args, **kwargs)
+        return self._request(self._session.put, *args, **kwargs)
 
     @check_http_code
     def _delete(self, *args, **kwargs):
-        return self._request(requests.delete, *args, **kwargs)
+        return self._request(self._session.delete, *args, **kwargs)
 
     @check_http_code
     def _patch(self, *args, **kwargs):
-        return self._request(requests.patch, *args, **kwargs)
+        return self._request(self._session.patch, *args, **kwargs)
 
     def _metadata_dict(self, custom_attributes):
         '''
