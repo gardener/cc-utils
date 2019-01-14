@@ -110,7 +110,6 @@ class SimpleFileDefinitionEnumerator(DefinitionEnumerator):
                 raw_definitions=definitions,
             )
         except BaseException as e:
-            repo_path = self.repo_path
             yield DefinitionDescriptor(
                 pipeline_name='<invalid YAML>',
                 pipeline_definition={},
