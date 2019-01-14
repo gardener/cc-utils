@@ -375,6 +375,7 @@ class ReplicationResultProcessor(object):
             codeowners_enumerator.enumerate_remote_repo(github_repo_helper=repo_helper)
         ))
 
+        info(f'Sending notification e-mail to {recipients}')
         email_cfg = self._cfg_set.email()
         _send_mail(
             email_cfg=email_cfg,
