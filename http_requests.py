@@ -21,8 +21,32 @@ from urllib3.util.retry import Retry
 
 from util import warning
 
+
+class LoggingRetry(Retry):
+    def increment(self,
+        method=None,
+        url=None,
+        response=None,
+        error=None,
+        _pool=None,
+        _stacktrace=None
+    ):
+        # super().increment will either raise an exception indicating that no retry is to
+        # be performed or return a new, modified instance of this class
+        retry = super().increment(method, url, response, error, _pool, _stacktrace)
+        # Use the Retry history to determine the number of retries.
+        num_retries = len(self.history) if self.history else 0
+        # Retrieve host from underlying connection pool and
+        host = _pool.host
+        warning(
+            f'HTTP request (host: {host}, url: {url}, method: {method}) unsuccessful. '
+            f'Retries so far: {num_retries}. Retrying ...'
+        )
+        return retry
+
+
 default_http_adapter = HTTPAdapter(
-    max_retries = Retry(
+    max_retries = LoggingRetry(
         total=3,
         connect=3,
         read=3,
