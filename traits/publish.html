@@ -253,23 +253,23 @@ are expected to place their outputs into a directory indicated by an environment
 </div>
 <div class="section" id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">steps</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">build</span><span class="p p-Indicator">:</span>
-    <span class="l l-Scalar l-Scalar-Plain">output_dir</span><span class="p p-Indicator">:</span> <span class="s">&#39;build_result&#39;</span>  <span class="c1"># &#39;build&#39; must cp to ${BUILD_RESULT_PATH}</span>
-<span class="l l-Scalar l-Scalar-Plain">traits</span><span class="p p-Indicator">:</span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">steps</span><span class="p">:</span>
+  <span class="nt">build</span><span class="p">:</span>
+    <span class="nt">output_dir</span><span class="p">:</span> <span class="s">&#39;build_result&#39;</span>  <span class="c1"># &#39;build&#39; must cp to ${BUILD_RESULT_PATH}</span>
+<span class="nt">traits</span><span class="p">:</span>
   <span class="l l-Scalar l-Scalar-Plain">publish</span>
     <span class="l l-Scalar l-Scalar-Plain">dockerimages</span><span class="p p-Indicator">:</span>
-      <span class="l l-Scalar l-Scalar-Plain">first_image</span><span class="p p-Indicator">:</span> <span class="c1"># logical image name</span>
-        <span class="l l-Scalar l-Scalar-Plain">image</span><span class="p p-Indicator">:</span> <span class="s">&#39;eu.grc.io/gardener-project/example/image&#39;</span>
-        <span class="l l-Scalar l-Scalar-Plain">dockerfile</span><span class="p p-Indicator">:</span> <span class="s">&#39;Dockerfile&#39;</span>
-        <span class="l l-Scalar l-Scalar-Plain">tag_as_latest</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
-        <span class="l l-Scalar l-Scalar-Plain">inputs</span><span class="p p-Indicator">:</span>
-          <span class="l l-Scalar l-Scalar-Plain">repos</span><span class="p p-Indicator">:</span>
-            <span class="l l-Scalar l-Scalar-Plain">source</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>  <span class="c1"># this is the default (--&gt; use main repository)</span>
-          <span class="l l-Scalar l-Scalar-Plain">steps</span><span class="p p-Indicator">:</span>
-            <span class="l l-Scalar l-Scalar-Plain">build</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>   <span class="c1"># copy results of step &#39;build&#39; over source tree</span>
-      <span class="l l-Scalar l-Scalar-Plain">second_image</span><span class="p p-Indicator">:</span>
-        <span class="l l-Scalar l-Scalar-Plain">image</span><span class="p p-Indicator">:</span> <span class="s">&#39;eu.gcr.io/gardener-project/example/second_image</span>
+      <span class="nt">first_image</span><span class="p">:</span> <span class="c1"># logical image name</span>
+        <span class="nt">image</span><span class="p">:</span> <span class="s">&#39;eu.grc.io/gardener-project/example/image&#39;</span>
+        <span class="nt">dockerfile</span><span class="p">:</span> <span class="s">&#39;Dockerfile&#39;</span>
+        <span class="nt">tag_as_latest</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
+        <span class="nt">inputs</span><span class="p">:</span>
+          <span class="nt">repos</span><span class="p">:</span>
+            <span class="nt">source</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>  <span class="c1"># this is the default (--&gt; use main repository)</span>
+          <span class="nt">steps</span><span class="p">:</span>
+            <span class="nt">build</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>   <span class="c1"># copy results of step &#39;build&#39; over source tree</span>
+      <span class="nt">second_image</span><span class="p">:</span>
+        <span class="nt">image</span><span class="p">:</span> <span class="s">&#39;eu.gcr.io/gardener-project/example/second_image</span>
         <span class="s">dockerfile:</span><span class="nv"> </span><span class="s">&#39;</span><span class="l l-Scalar l-Scalar-Plain">AnotherDockerfile&#39;</span>
 </pre></div>
 </div>
@@ -321,6 +321,7 @@ are expected to place their outputs into a directory indicated by an environment
         <script type="text/javascript" src="../_static/jquery.js"></script>
         <script type="text/javascript" src="../_static/underscore.js"></script>
         <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
     
 
   

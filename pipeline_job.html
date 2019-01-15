@@ -324,11 +324,11 @@ default GitHub instance that is used in case no <code class="code docutils liter
 <li>reference an additional repository <code class="code docutils literal notranslate"><span class="pre">github.com/foo/bar</span></code>, name it <code class="code docutils literal notranslate"><span class="pre">my_repo</span></code></li>
 <li>the repository will be made available to builds at <code class="code docutils literal notranslate"><span class="pre">${MY_REPO_PATH}</span></code></li>
 </ul>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">repos</span><span class="p p-Indicator">:</span>
-<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">name</span><span class="p p-Indicator">:</span> <span class="s">&#39;my_repo&#39;</span>
-  <span class="l l-Scalar l-Scalar-Plain">path</span><span class="p p-Indicator">:</span> <span class="s">&#39;foo/bar&#39;</span>
-  <span class="l l-Scalar l-Scalar-Plain">branch</span><span class="p p-Indicator">:</span> <span class="s">&#39;master&#39;</span>    <span class="c1"># must be specified - does not default to master</span>
-  <span class="l l-Scalar l-Scalar-Plain">cfg_name</span><span class="p p-Indicator">:</span> <span class="s">&#39;github_com&#39;</span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">repos</span><span class="p">:</span>
+<span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="s">&#39;my_repo&#39;</span>
+  <span class="nt">path</span><span class="p">:</span> <span class="s">&#39;foo/bar&#39;</span>
+  <span class="nt">branch</span><span class="p">:</span> <span class="s">&#39;master&#39;</span>    <span class="c1"># must be specified - does not default to master</span>
+  <span class="nt">cfg_name</span><span class="p">:</span> <span class="s">&#39;github_com&#39;</span>
 </pre></div>
 </div>
 </div>
@@ -418,6 +418,7 @@ name is <code class="code docutils literal notranslate"><span class="pre">source
         <script type="text/javascript" src="_static/jquery.js"></script>
         <script type="text/javascript" src="_static/underscore.js"></script>
         <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
     
 
   

@@ -217,14 +217,14 @@ and refrain from using whitespace of non-ASCII charaters.</p>
 <li>define a build pipeline named <code class="code docutils literal notranslate"><span class="pre">my_pipeline</span></code></li>
 <li>define two <a class="reference internal" href="pipeline_job.html"><span class="doc">Build Jobs</span></a> <code class="code docutils literal notranslate"><span class="pre">job_A</span></code>, <code class="code docutils literal notranslate"><span class="pre">job_B</span></code></li>
 </ul>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">my_pipeline</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">template</span><span class="p p-Indicator">:</span> <span class="s">&#39;default&#39;</span>   <span class="c1"># default value - may be omitted</span>
-  <span class="l l-Scalar l-Scalar-Plain">base_definition</span><span class="p p-Indicator">:</span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">my_pipeline</span><span class="p">:</span>
+  <span class="nt">template</span><span class="p">:</span> <span class="s">&#39;default&#39;</span>   <span class="c1"># default value - may be omitted</span>
+  <span class="nt">base_definition</span><span class="p">:</span>
     <span class="l l-Scalar l-Scalar-Plain">...</span> <span class="c1"># same schema as for jobs applies</span>
-  <span class="l l-Scalar l-Scalar-Plain">variants</span><span class="p p-Indicator">:</span>
-    <span class="l l-Scalar l-Scalar-Plain">job_A</span><span class="p p-Indicator">:</span>
+  <span class="nt">variants</span><span class="p">:</span>
+    <span class="nt">job_A</span><span class="p">:</span>
       <span class="l l-Scalar l-Scalar-Plain">...</span> <span class="c1"># see pipeline jobs definition for schema</span>
-    <span class="l l-Scalar l-Scalar-Plain">job_B</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>
+    <span class="nt">job_B</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>
 </pre></div>
 </div>
 </div>
@@ -234,17 +234,17 @@ and refrain from using whitespace of non-ASCII charaters.</p>
 <li>define a common build step “inherit_me”</li>
 <li>define two jobs inheriting it</li>
 </ul>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">another_pipeline</span><span class="p p-Indicator">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">base_definition</span><span class="p p-Indicator">:</span>
-    <span class="l l-Scalar l-Scalar-Plain">steps</span><span class="p p-Indicator">:</span>
-      <span class="l l-Scalar l-Scalar-Plain">inherit_me</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">another_pipeline</span><span class="p">:</span>
+  <span class="nt">base_definition</span><span class="p">:</span>
+    <span class="nt">steps</span><span class="p">:</span>
+      <span class="nt">inherit_me</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>
 
-  <span class="l l-Scalar l-Scalar-Plain">variants</span><span class="p p-Indicator">:</span>
-    <span class="l l-Scalar l-Scalar-Plain">job_a</span><span class="p p-Indicator">:</span>
-      <span class="l l-Scalar l-Scalar-Plain">steps</span><span class="p p-Indicator">:</span>
-        <span class="l l-Scalar l-Scalar-Plain">another_step</span><span class="p p-Indicator">:</span>
-          <span class="l l-Scalar l-Scalar-Plain">depends</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;inherit_me&#39;</span><span class="p p-Indicator">]</span>
-    <span class="l l-Scalar l-Scalar-Plain">job_b</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>
+  <span class="nt">variants</span><span class="p">:</span>
+    <span class="nt">job_a</span><span class="p">:</span>
+      <span class="nt">steps</span><span class="p">:</span>
+        <span class="nt">another_step</span><span class="p">:</span>
+          <span class="nt">depends</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;inherit_me&#39;</span><span class="p p-Indicator">]</span>
+    <span class="nt">job_b</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>
 </pre></div>
 </div>
 <p><strong>Result</strong></p>
@@ -295,33 +295,33 @@ attribute) are optionally applied.</p>
 </div>
 <div class="section" id="example-schematic">
 <h3>Example (schematic)<a class="headerlink" href="#example-schematic" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">cfgs</span><span class="p p-Indicator">:</span>         <span class="c1"># root attribute, required</span>
-   <span class="l l-Scalar l-Scalar-Plain">&lt;cfg_name&gt;</span><span class="p p-Indicator">:</span>
-        <span class="l l-Scalar l-Scalar-Plain">branches</span><span class="p p-Indicator">:</span> <span class="c1"># branch filter</span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">cfgs</span><span class="p">:</span>         <span class="c1"># root attribute, required</span>
+   <span class="nt">&lt;cfg_name&gt;</span><span class="p">:</span>
+        <span class="nt">branches</span><span class="p">:</span> <span class="c1"># branch filter</span>
            <span class="l l-Scalar l-Scalar-Plain">&lt;list of branch names&gt;</span>
-        <span class="l l-Scalar l-Scalar-Plain">inherit</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span> <span class="c1"># optional branch-specific pipeline definition</span>
+        <span class="nt">inherit</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span> <span class="c1"># optional branch-specific pipeline definition</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="example-hotfix-branch-release-jobs">
 <h3>Example (hotfix-branch release jobs)<a class="headerlink" href="#example-hotfix-branch-release-jobs" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">cfgs</span><span class="p p-Indicator">:</span>
-    <span class="l l-Scalar l-Scalar-Plain">default</span><span class="p p-Indicator">:</span>
-        <span class="l l-Scalar l-Scalar-Plain">branches</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;master&#39;</span><span class="p p-Indicator">]</span>
-        <span class="l l-Scalar l-Scalar-Plain">inherit</span><span class="p p-Indicator">:</span>
-            <span class="l l-Scalar l-Scalar-Plain">example-pipeline</span><span class="p p-Indicator">:</span>
-                <span class="l l-Scalar l-Scalar-Plain">variants</span><span class="p p-Indicator">:</span>
-                    <span class="l l-Scalar l-Scalar-Plain">release-job</span><span class="p p-Indicator">:</span>
-                        <span class="l l-Scalar l-Scalar-Plain">traits</span><span class="p p-Indicator">:</span>
-                            <span class="l l-Scalar l-Scalar-Plain">release</span><span class="p p-Indicator">:</span>
-                                <span class="l l-Scalar l-Scalar-Plain">nextversion</span><span class="p p-Indicator">:</span> <span class="s">&#39;bump_minor&#39;</span>
-    <span class="l l-Scalar l-Scalar-Plain">hotfix</span><span class="p p-Indicator">:</span>
-        <span class="l l-Scalar l-Scalar-Plain">branches</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;hotfix-.*&#39;</span><span class="p p-Indicator">]</span>
-        <span class="l l-Scalar l-Scalar-Plain">inherit</span><span class="p p-Indicator">:</span>
-            <span class="l l-Scalar l-Scalar-Plain">example-pipeline</span><span class="p p-Indicator">:</span>
-                <span class="l l-Scalar l-Scalar-Plain">variants</span><span class="p p-Indicator">:</span>
-                    <span class="l l-Scalar l-Scalar-Plain">release-job</span><span class="p p-Indicator">:</span>
-                        <span class="l l-Scalar l-Scalar-Plain">traits</span><span class="p p-Indicator">:</span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">cfgs</span><span class="p">:</span>
+    <span class="nt">default</span><span class="p">:</span>
+        <span class="nt">branches</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;master&#39;</span><span class="p p-Indicator">]</span>
+        <span class="nt">inherit</span><span class="p">:</span>
+            <span class="nt">example-pipeline</span><span class="p">:</span>
+                <span class="nt">variants</span><span class="p">:</span>
+                    <span class="nt">release-job</span><span class="p">:</span>
+                        <span class="nt">traits</span><span class="p">:</span>
+                            <span class="nt">release</span><span class="p">:</span>
+                                <span class="nt">nextversion</span><span class="p">:</span> <span class="s">&#39;bump_minor&#39;</span>
+    <span class="nt">hotfix</span><span class="p">:</span>
+        <span class="nt">branches</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;hotfix-.*&#39;</span><span class="p p-Indicator">]</span>
+        <span class="nt">inherit</span><span class="p">:</span>
+            <span class="nt">example-pipeline</span><span class="p">:</span>
+                <span class="nt">variants</span><span class="p">:</span>
+                    <span class="nt">release-job</span><span class="p">:</span>
+                        <span class="nt">traits</span><span class="p">:</span>
 </pre></div>
 </div>
 </div>
@@ -373,6 +373,7 @@ attribute) are optionally applied.</p>
         <script type="text/javascript" src="_static/jquery.js"></script>
         <script type="text/javascript" src="_static/underscore.js"></script>
         <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
     
 
   
