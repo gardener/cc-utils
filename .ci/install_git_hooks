@@ -1,0 +1,22 @@
+#!/usr/bin/env sh
+
+set -e
+
+repo_dir="$(readlink -f $(dirname $0)/..)"
+hooks_dir="${repo_dir}/.git/hooks"
+
+if [ ! -d "${hooks_dir}" ]; then
+  echo "Error: could not find .git/hooks at ${hooks_dir}"
+  exit 1
+fi
+
+pre_push_src="${repo_dir}/.ci/git-hooks/pre-push"
+pre_push_tgt="${hooks_dir}/pre-push"
+
+if [ -f "${pre_push_tgt}" ]; then
+  echo "Error: hook already exists: ${pre_push_tgt}"
+  exit 1
+fi
+
+echo "Registering pre-commit script"
+cp "${pre_push_src}" "${pre_push_tgt}"

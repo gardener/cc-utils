@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+
+set -e
+
+repo_dir=$(readlink -f $(dirname $0)/../..)
+
+${repo_dir}/.ci/pycodestyle
+${repo_dir}/.ci/pyflakes-lint
