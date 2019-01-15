@@ -10,9 +10,11 @@ from unittest.mock import MagicMock
 import test_utils
 
 from concourse.client.model import BuildStatus
-from concourse.steps import step_def, step_lib_def
+from concourse.steps import step_def
 from concourse.model.job import JobVariant
+from concourse.model.resources import RepositoryConfig
 from concourse.model.step import PipelineStep
+from concourse.steps import notification
 from concourse.model.traits.notifications import (
     NotificationCfgSet,
     NotificationTriggeringPolicy,
@@ -31,6 +33,22 @@ class NotificationStepTest(unittest.TestCase):
         self.job_step = PipelineStep('step1', raw_dict={})
         self.job_step._notifications_cfg = NotificationCfgSet('default', {})
         self.job_variant = JobVariant(name='a_job', raw_dict={}, resource_registry='')
+
+        # Set a main repository manually
+        test_repo_logical_name = 'test-repository'
+        self.job_variant._repos_dict = {}
+        self.job_variant._repos_dict[test_repo_logical_name] = RepositoryConfig(
+            raw_dict={
+                'branch': 'master',
+                'hostname': 'github.foo.bar',
+                'path': 'test/repo'
+            },
+            logical_name=test_repo_logical_name,
+            qualifier=None,
+            is_main_repo=True
+        )
+        self.job_variant._main_repository_name = test_repo_logical_name
+
         self.job_variant._traits_dict = {}
         self.cfg_set = MagicMock()
         self.github_cfg = MagicMock()
@@ -71,8 +89,6 @@ class NotificationStepLibTest(unittest.TestCase):
         os.mkdir(self.meta_dir)
         test_utils.populate_meta_dir(self.meta_dir)
 
-        self.render_step_lib = step_lib_def('notification')
-
         self.old_cwd = os.getcwd()
         os.chdir(self.tmp_dir.name)
 
@@ -81,9 +97,7 @@ class NotificationStepLibTest(unittest.TestCase):
         os.chdir(self.old_cwd)
 
     def test_meta_vars(self):
-        exec(self.render_step_lib())
-
-        result = eval('meta_vars()')
+        result = notification.meta_vars()
 
         for name in (
             'atc-external-url',
@@ -95,7 +109,6 @@ class NotificationStepLibTest(unittest.TestCase):
             self.assertEqual(result[name], name)
 
     def test_job_url(self):
-        exec(self.render_step_lib())
         v = {
             'atc-external-url': 'f://x',
             'build-team-name': 'team',
@@ -103,14 +116,13 @@ class NotificationStepLibTest(unittest.TestCase):
             'build-job-name': 'bjn',
             'build-name': 'bn'
         }
-        examinee = vars()['job_url']
+        examinee = notification.job_url
         result = examinee(v)
 
         self.assertEqual(result, 'f://x/teams/team/pipelines/pl/jobs/bjn/builds/bn')
 
     def test_should_notify(self):
-        exec(self.render_step_lib())
-        examinee = vars()['should_notify']
+        examinee = notification.should_notify
 
         # mock away `determine_previous_build_status` (previous build "succeeded"
         build_status_mock = MagicMock(return_value=BuildStatus.SUCCEEDED)
@@ -151,8 +163,7 @@ class NotificationStepLibTest(unittest.TestCase):
         )
 
     def test_cfg_from_callback(self):
-        exec(self.render_step_lib())
-        examinee = vars()['cfg_from_callback']
+        examinee = notification.cfg_from_callback
 
         callback_file = os.path.join(self.tmp_dir.name, 'call_me')
         with open(callback_file, 'w') as f:
