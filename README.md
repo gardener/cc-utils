@@ -8,6 +8,16 @@ relevant for the [gardener](https://github.com/gardener) project.
 
 [End-User Documentation](https://gardener.github.io/cc-utils)
 
+## How to contribute
+
+Be sure to run tests, linter and codestyle checks:
+
+- `.ci/pycodestyle`
+- `.ci/pyflakes-lint`
+- `.ci/test`
+
+Run `.ci/install_git_hooks` to register recommended git hooks.
+
 ## How to use it
 
 A copy of cc-utils is contained in the default container image in which gardener
