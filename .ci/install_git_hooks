@@ -18,5 +18,5 @@ if [ -f "${pre_push_tgt}" ]; then
   exit 1
 fi
 
-echo "Registering pre-commit script"
+echo "Registering pre-push script"
 cp "${pre_push_src}" "${pre_push_tgt}"
