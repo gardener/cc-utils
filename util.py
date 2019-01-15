@@ -156,6 +156,11 @@ def verbose(msg:str):
         _print('VERBOSE: ' + msg, colour=None)
 
 
+def success(msg:str):
+    if msg:
+        _print('SUCCESS: ' + msg, colour='green')
+
+
 def not_empty(value):
     if not value or len(value) == 0:
         fail('passed value must not be empty')
