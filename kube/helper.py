@@ -193,7 +193,13 @@ class KubernetesServiceHelper(object):
         service_name = service.metadata.name
         existing_service = self.get_service(namespace=namespace, name=service_name)
         if existing_service:
-            self.core_api.delete_namespaced_service(namespace=namespace, name=service_name)
+            delete_options = kubernetes.client.V1DeleteOptions()
+            delete_options.grace_period_seconds = 0
+            self.core_api.delete_namespaced_service(
+                namespace=namespace,
+                name=service_name,
+                body=delete_options,
+            )
         self.create_service(namespace=namespace, service=service)
 
     def create_service(self, namespace: str, service: V1Service):
