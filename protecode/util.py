@@ -45,7 +45,7 @@ def upload_images(
     reference_group_ids=(),
 ) -> typing.Sequence[typing.Tuple[AnalysisResult, int]]:
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
-    protecode_api = protecode.client.from_cfg(protecode_cfg)
+    protecode_api = protecode.client.from_cfg(protecode_cfg, connection_pool_size=parallel_jobs)
     protecode_util = ProtecodeUtil(
         protecode_api=protecode_api,
         processing_mode=processing_mode,
