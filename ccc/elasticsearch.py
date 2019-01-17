@@ -136,7 +136,7 @@ class ElasticSearchClient(object):
                 return line
 
             md = _metadata_dict()
-            patched_body = '\n'.join([inject_meta(line) for line in body.splitlines])
+            patched_body = '\n'.join([inject_meta(line) for line in body.splitlines()])
             body = patched_body
 
         return self._api.bulk(
