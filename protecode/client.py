@@ -100,6 +100,13 @@ class ProtecodeApi(object):
 
         self._csrf_token = None
 
+    def set_maximum_concurrent_connections(self, maximum_concurrent_connections: int):
+        # mount new adapter with new parameters
+        mount_default_adapter(
+            session=self._session,
+            max_pool_size=maximum_concurrent_connections,
+        )
+
     @check_http_code
     def _request(self, method, *args, **kwargs):
         if 'headers' in kwargs:
