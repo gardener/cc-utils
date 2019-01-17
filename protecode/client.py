@@ -87,7 +87,7 @@ class ProtecodeApiRoutes(object):
 
 
 class ProtecodeApi(object):
-    def __init__(self, api_routes, basic_credentials, tls_verify=False, connection_pool_size=12):
+    def __init__(self, api_routes, basic_credentials, tls_verify=False):
         self._routes = not_none(api_routes)
         self._credentials = not_none(basic_credentials)
         self._auth = (basic_credentials.username(), basic_credentials.passwd())
@@ -96,8 +96,6 @@ class ProtecodeApi(object):
         self._session = requests.Session()
         mount_default_adapter(
             session=self._session,
-            pool_size=connection_pool_size,
-            pool_maxsize=connection_pool_size,
         )
 
         self._csrf_token = None
@@ -351,6 +349,5 @@ def from_cfg(protecode_cfg, connection_pool_size=12):
         api_routes=routes,
         basic_credentials=protecode_cfg.credentials(),
         tls_verify=protecode_cfg.tls_verify(),
-        connection_pool_size=connection_pool_size,
     )
     return api
