@@ -140,6 +140,14 @@ def attrs(pipeline_step):
             go-style time interval (e.g.: '1h30m') after which the step will be interrupted and fail.
             ''',
         ),
+        AttributeSpec.optional(
+            name='retries',
+            default=None,
+            doc='''
+            positive integer specifying the maximum amount of failures until the step is
+            counted as failed
+            ''',
+        ),
     )
 
 
@@ -285,6 +293,9 @@ class PipelineStep(ModelBase):
     def set_timeout(self, duration_string: str):
         util.not_empty(duration_string)
         self.raw['timeout'] = duration_string
+
+    def retries(self):
+        return self.raw['retries']
 
     def validate(self):
         super().validate()

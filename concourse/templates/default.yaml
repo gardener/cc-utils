@@ -158,6 +158,9 @@ source_repo = job_variant.main_repository()
 % if job_step.timeout():
   timeout: '${job_step.timeout()}'
 % endif
+% if job_step.retries():
+  attempts: ${job_step.retries()}
+% endif
   config:
 % if job_step.image():
 <%
