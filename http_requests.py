@@ -47,12 +47,12 @@ class LoggingRetry(Retry):
 
 def mount_default_adapter(
     session: requests.Session,
-    pool_size=12,
-    pool_maxsize=12,
+    connection_pool_cache_size=10, # requests-library default
+    max_pool_size=10, # requests-library default
 ):
     default_http_adapter = HTTPAdapter(
-        pool_connections=pool_size,
-        pool_maxsize=pool_maxsize,
+        pool_connections = connection_pool_cache_size,
+        pool_maxsize = max_pool_size,
         max_retries = LoggingRetry(
             total=3,
             connect=3,
