@@ -375,6 +375,20 @@ class ReplicationResultProcessor(object):
             codeowners_enumerator.enumerate_remote_repo(github_repo_helper=repo_helper)
         ))
 
+        # in case no codeowners are available, resort to using the committer
+        if not recipients:
+            head_commit = repo_helper.repository.commit(main_repo['branch'])
+            user_ids = {
+                user_info.get('login')
+                for user_info
+                in (head_commit.committer, head_commit.author)
+                if user_info.get('login')
+            }
+            for user_id in user_ids:
+                user = github_api.user(user_id)
+                if user.email:
+                    recipients.add(user.email)
+
         info(f'Sending notification e-mail to {recipients} ({main_repo["path"]})')
         email_cfg = self._cfg_set.email()
         _send_mail(
