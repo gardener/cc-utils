@@ -68,18 +68,17 @@ def retrieve_build_log(concourse_api):
 
 
 notify_file = os.path.join('${on_error_dir}', 'notify.cfg')
+email_cfg = {
+  'recipients': set(),
+  'component_name_recipients': set(),
+  'codeowners_files': set(),
+  'mail_body': None,
+}
 if os.path.isfile(notify_file):
   notify_cfg = util.parse_yaml_file(notify_file)
-  email_cfg = notify_cfg.get('email', dict())
+  email_cfg.update(notify_cfg.get('email', dict()))
   util.info('found notify.cfg - applying cfg:')
   print(notify_cfg)
-else:
-  email_cfg = {
-    'recipients': set(),
-    'component_name_recipients': set(),
-    'codeowners_files': set(),
-    'mail_body': None,
-  }
 notify_cfg = {'email': email_cfg}
 
 if 'component_diff_owners' in ${on_error_cfg.recipients()}:
