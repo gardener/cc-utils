@@ -213,7 +213,7 @@
 <p>Adds version handling for the pipeline’s <code class="code docutils literal notranslate"><span class="pre">main</span> <span class="pre">repository</span></code>. Implies that the
 <code class="code docutils literal notranslate"><span class="pre">main</span> <span class="pre">repository</span></code> hosts a <code class="code docutils literal notranslate"><span class="pre">gardener</span> <span class="pre">component</span></code>.</p>
 <p>During job execution, an <code class="code docutils literal notranslate"><span class="pre">effective</span> <span class="pre">version</span></code> is calculated and made available
-via regular file <code class="code docutils literal notranslate"><span class="pre">${VERSION_PATH}/version</span></code>.</p>
+via regular file <code class="code docutils literal notranslate"><span class="pre">${VERSION_PATH}/version</span></code> or via environment variable <code class="code docutils literal notranslate"><span class="pre">EFFECTIVE_VERSION</span></code>.</p>
 <p>Component versions must be valid <a class="reference external" href="https://semver.org">SemVer</a> versions.</p>
 <div class="section" id="preprocess-attribute">
 <h2><code class="code docutils literal notranslate"><span class="pre">preprocess</span></code> Attribute<a class="headerlink" href="#preprocess-attribute" title="Permalink to this headline">¶</a></h2>
