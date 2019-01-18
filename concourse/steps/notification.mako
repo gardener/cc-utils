@@ -80,7 +80,7 @@ else:
     'codeowners_files': set(),
     'mail_body': None,
   }
-  notify_cfg = {'email': email_cfg}
+notify_cfg = {'email': email_cfg}
 
 if 'component_diff_owners' in ${on_error_cfg.recipients()}:
   util.info('adding mail recipients from component diff since last release')
