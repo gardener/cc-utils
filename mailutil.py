@@ -133,6 +133,57 @@ def _send_mail(
     )
 
 
+#TODO: refactor into class - MailHelper?
+def determine_head_commit_recipients(
+    src_dirs=(),
+):
+    '''returns a generator yielding e-mail adresses from the head commit's author and
+    committer for all given repository work trees.
+    '''
+    for src_dir in src_dirs:
+        # commiter/author from head commit
+        repo = git.Repo(existing_dir(src_dir))
+        head_commit = repo.commit(repo.head)
+        yield head_commit.author.email.lower()
+        yield head_commit.committer.email.lower()
+
+
+def determine_local_repository_codeowners_recipients(
+    github_api,
+    src_dirs=(),
+):
+    '''returns a generator yielding e-mail adresses from all given repository work
+    tree's CODEOWNERS files.
+    '''
+    enumerator = CodeownersEnumerator()
+    resolver = CodeOwnerEntryResolver(github_api=github_api)
+
+    def enumerate_entries_from_src_dirs(src_dirs):
+        for src_dir in src_dirs:
+            yield from enumerator.enumerate_local_repo(repo_dir=src_dir)
+
+    entries = enumerate_entries_from_src_dirs(src_dirs)
+
+    yield from resolver.resolve_email_addresses(entries)
+
+
+def determine_codeowner_file_recipients(
+    github_api,
+    codeowner_files=(),
+):
+    '''returns a generator yielding e-mail adresses from the given CODEOWNERS file(s).
+    '''
+    enumerator = CodeownersEnumerator()
+    resolver = CodeOwnerEntryResolver(github_api=github_api)
+
+    def enumerate_entries_from_codeowners_files(codeowners_files):
+        for codeowners_file in codeowners_files:
+            yield from enumerator.enumerate_single_file(codeowners_file)
+
+    entries = enumerate_entries_from_codeowners_files(codeowner_files)
+    yield from resolver.resolve_email_addresses(entries)
+
+
 def determine_mail_recipients(
     github_cfg_name,
     src_dirs=(),
@@ -157,30 +208,20 @@ def determine_mail_recipients(
 
     github_cfg = cfg_factory.github(github_cfg_name)
     github_api = github.util._create_github_api_object(github_cfg)
-    enumerator = CodeownersEnumerator()
-    resolver = CodeOwnerEntryResolver(github_api=github_api)
 
-    for src_dir in src_dirs:
-        # commiter/author from head commit
-        repo = git.Repo(existing_dir(src_dir))
-        head_commit = repo.commit(repo.head)
-        yield head_commit.author.email.lower()
-        yield head_commit.committer.email.lower()
+    yield from determine_head_commit_recipients(src_dirs)
 
-    # collect parsers, with corresponding resolvers
-    def enumerate_entries_from_src_dirs(src_dirs):
-        for src_dir in src_dirs:
-            yield from enumerator.enumerate_local_repo(repo_dir=src_dir)
+    yield from determine_local_repository_codeowners_recipients(
+        github_api=github_api,
+        src_dirs=src_dirs,
+    )
 
-    def enumerate_entries_from_codeowners_files(codeowners_files):
-        for codeowners_file in codeowners_files:
-            yield from enumerator.enumerate_single_file(codeowners_file)
+    yield from determine_codeowner_file_recipients(
+        github_api=github_api,
+        codeowners_files=codeowners_files,
+    )
 
-    entries_and_resolvers = [(resolver, enumerate_entries_from_src_dirs(src_dirs))]
-
-    entries_and_resolvers += [(resolver, enumerate_entries_from_codeowners_files(codeowners_files))]
-
-    entries_and_resolvers += [
+    entries_and_resolvers = [
         _codeowners_parser_from_component_name(
             component_name=component_name,
             branch_name=branch_name
