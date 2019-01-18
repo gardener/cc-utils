@@ -48,7 +48,8 @@ def _metadata_dict():
         return {}
 
     # XXX do not hard-code meta-dir
-    meta_dir = util.existing_dir(os.path.join(util._root_dir(), 'meta'))
+    meta_dir = util.existing_dir(os.path.join(util._root_dir(), os.environ.get('META')))
+
     attrs = (
         'atc-external-url',
         'build-team-name',
@@ -77,6 +78,10 @@ def _metadata_dict():
         'builds',
         meta_dict['build-name'],
     )
+
+    # XXX do not hard-code env variables
+    meta_dict['effective-version'] = os.environ.get('EFFECTIVE_VERSION')
+    meta_dict['component_name'] = os.environ.get('COMPONENT_NAME')
 
     return meta_dict
 
