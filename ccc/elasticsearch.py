@@ -43,26 +43,32 @@ def _from_cfg(
 
 @functools.lru_cache()
 def _metadata_dict():
-    # XXX mv to concourse package; deduplicate with notify step
+    def read_version_attr():
+        if not util._version_dir():
+            return None
+        version_file = os.path.join(util._root_dir(), util._version_dir(), 'version')
+        if not os.path.isfile(version_file):
+            return None
+        with open(version_file) as f:
+            return f.read().strip()
+
+    def read_meta_attr(name):
+        meta_file = util.existing_file(os.path.join(util._root_dir(), util._meta_dir(), name))
+        with open(meta_file) as f:
+            return f.read().strip()
+
     if not util._running_on_ci():
         return {}
 
-    # XXX do not hard-code meta-dir
-    meta_dir = util.existing_dir(os.path.join(util._root_dir(), 'meta'))
-    attrs = (
+    meta_attrs = (
         'atc-external-url',
         'build-team-name',
         'build-pipeline-name',
         'build-job-name',
         'build-name',
     )
-
-    def read_attr(name):
-        with open(os.path.join(meta_dir, name)) as f:
-            return f.read().strip()
-
     meta_dict = {
-        name: read_attr(name) for name in attrs
+        name: read_meta_attr(name) for name in meta_attrs
     }
 
     # XXX deduplicate; mv to concourse package
@@ -77,6 +83,14 @@ def _metadata_dict():
         'builds',
         meta_dict['build-name'],
     )
+
+    effective_version = read_version_attr()
+    if effective_version:
+        meta_dict['effective-version'] = effective_version
+
+    component_name = util._component_name()
+    if component_name:
+        meta_dict['component_name'] = component_name
 
     return meta_dict
 

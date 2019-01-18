@@ -241,6 +241,24 @@ def _root_dir():
     return check_env('CC_ROOT_DIR')
 
 
+def _meta_dir():
+    if not _running_on_ci():
+        raise RuntimeError('must only be called within CI/CD')
+    return os.environ.get('META')
+
+
+def _version_dir():
+    if not _running_on_ci():
+        raise RuntimeError('must only be called within CI/CD')
+    return os.environ.get('VERSION_PATH')
+
+
+def _component_name():
+    if not _running_on_ci():
+        raise RuntimeError('must only be called within CI/CD')
+    return os.environ.get('COMPONENT_NAME')
+
+
 def urljoin(*parts):
     if len(parts) == 1:
         return parts[0]
