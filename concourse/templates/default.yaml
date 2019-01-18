@@ -274,7 +274,9 @@ else:
   <% raise ValueError('unsupported script type') %>
 % endif
 % if not job_step.is_synthetic:
-  % if has_version_trait(job_variant) and job_variant.trait('version').inject_effective_version():
+  % if has_version_trait(job_variant):
+        export EFFECTIVE_VERSION=$(cat ${job_step.input('version_path')}/version)
+    % if job_variant.trait('version').inject_effective_version():
         # copy processed version information to VERSION file
         <%
         version_file_path = os.path.join(
@@ -283,6 +285,7 @@ else:
         )
         %>
         cp "${job_step.input('version_path')}/version" "${version_file_path}"
+    % endif
   % endif
   % for from_path, to_path in clone_repositories:
         # clone repositories for outputting

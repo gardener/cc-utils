@@ -10,7 +10,7 @@ Adds version handling for the pipeline's `main repository`. Implies that the
 `main repository` hosts a `gardener component`.
 
 During job execution, an `effective version` is calculated and made available
-via regular file `${VERSION_PATH}/version`.
+via regular file `${VERSION_PATH}/version` or via environment variable `EFFECTIVE_VERSION`.
 
 Component versions must be valid `SemVer <https://semver.org>`_ versions.
 
