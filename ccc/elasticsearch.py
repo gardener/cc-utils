@@ -81,7 +81,7 @@ def _metadata_dict():
 
     # XXX do not hard-code env variables
     meta_dict['effective-version'] = os.environ.get('EFFECTIVE_VERSION')
-    meta_dict['component_name'] = os.environ.get('COMPONENT_NAME')
+    meta_dict['component-name'] = os.environ.get('COMPONENT_NAME')
 
     return meta_dict
 
