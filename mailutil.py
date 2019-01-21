@@ -169,7 +169,7 @@ def determine_local_repository_codeowners_recipients(
 
 def determine_codeowner_file_recipients(
     github_api,
-    codeowner_files=(),
+    codeowners_files=(),
 ):
     '''returns a generator yielding e-mail adresses from the given CODEOWNERS file(s).
     '''
@@ -180,7 +180,7 @@ def determine_codeowner_file_recipients(
         for codeowners_file in codeowners_files:
             yield from enumerator.enumerate_single_file(codeowners_file)
 
-    entries = enumerate_entries_from_codeowners_files(codeowner_files)
+    entries = enumerate_entries_from_codeowners_files(codeowners_files)
     yield from resolver.resolve_email_addresses(entries)
 
 
