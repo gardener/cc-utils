@@ -286,7 +286,7 @@ def trigger_resource_check(
     concourse_cfg = cfg_set.concourse()
     team_credentials = concourse_cfg.team_credentials(team_name)
     api = client.from_cfg(
-        concouse_cfg=concourse_cfg,
+        concourse_cfg=concourse_cfg,
         team_name=team_credentials.teamname(),
     )
     api.trigger_resource_check(
