@@ -62,7 +62,7 @@ if not should_notify(
 notify_file = os.path.join('${on_error_dir}', 'notify.cfg')
 email_cfg = {
   'recipients': set(),
-  'component_names': set(),
+  'component_name_recipients': set(),
   'mail_body': None,
   'codeowners_files': set(),
 }
@@ -71,7 +71,7 @@ if os.path.isfile(notify_file):
     notify_cfg = util.parse_yaml_file(notify_file)
     email_cfg.update(notify_cfg.get('email', dict()))
     ## Convert elements of notify config to sets
-    email_cfg['component_names'] = set(email_cfg.get('component_names', set()))
+    email_cfg['component_name_recipients'] = set(email_cfg.get('component_name_recipients', set()))
     email_cfg['recipients'] = set(email_cfg.get('recipients', set()))
     email_cfg['codeowner_files'] = set(email_cfg.get('codeowner_files', set()))
     util.info(f'found notify.cfg - applying cfg: \n{notify_cfg}')
@@ -86,7 +86,7 @@ if 'component_diff_owners' in ${on_error_cfg.recipients()}:
     util.info('adding mail recipients from component diff since last release')
     components = components_with_version_changes(component_diff_path)
     ## Recipient-address resolution from component names will be done at a later point
-    email_cfg['component_names'] = email_cfg.get('component_names', set()) | set(components)
+    email_cfg['component_name_recipients'] = email_cfg.get('component_name_recipients', set()) | set(components)
 
 if 'codeowners' in ${on_error_cfg.recipients()}:
     ## Add codeowners from main repository to recipients
@@ -144,7 +144,7 @@ if not email_cfg.get('mail_body'):
 
 ## Finally, determine recipients for all component names gathered
 recipients = resolve_recipients_by_component_name(
-    component_names=email_cfg.get('component_names', ()),
+    component_names=email_cfg.get('component_name_recipients', ()),
     github_cfg_name="${default_github_cfg_name}",
 )
 email_cfg['recipients'] = email_cfg['recipients'] | set(recipients)
