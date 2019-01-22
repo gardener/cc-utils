@@ -38,9 +38,6 @@ class ConcourseConfig(NamedModelElement):
     def external_url(self):
         return self.raw.get('externalUrl')
 
-    def proxy_url(self):
-        return self.raw.get('proxyUrl')
-
     def job_mapping_cfg_name(self):
         return self.raw.get('job_mapping')
 
@@ -71,9 +68,6 @@ class ConcourseConfig(NamedModelElement):
 
     def tls_config(self):
         return self.raw.get('tls_config')
-
-    def deploy_delaying_proxy(self):
-        return self.raw.get('deploy_delaying_proxy')
 
     def kubernetes_cluster_config(self):
         return self.raw.get('kubernetes_cluster_config')
@@ -123,8 +117,6 @@ class ConcourseConfig(NamedModelElement):
         # exist for any concourse server.
         if not self.raw.get('teams').get('main'):
             raise ModelValidationError('No team "main" defined.')
-        if self.deploy_delaying_proxy() and self.proxy_url() is None:
-            raise ModelValidationError('must specify no proxy-url')
         # implicitly validate main team
         self.team_credentials('main')
         # Check for valid versions
