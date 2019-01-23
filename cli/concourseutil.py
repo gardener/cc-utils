@@ -38,11 +38,6 @@ from concourse.replicator import (
 )
 
 
-def __add_module_command_args(parser):
-    parser.add_argument('--kubeconfig', required=False)
-    return parser
-
-
 def update_certificate(
     tls_config_name: CliHint(typehint=str, help="TLS config element name to update"),
     certificate_file: CliHints.existing_file(help="certificate file path"),

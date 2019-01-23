@@ -24,11 +24,6 @@ from util import (
 import concourse.setup as setup
 
 
-def __add_module_command_args(parser):
-    parser.add_argument('--kubeconfig', required=False)
-    return parser
-
-
 def deploy_or_upgrade_concourse(
     config_name: CliHint(typehint=str, help="the cfg_set to use"),
     deployment_name: CliHint(typehint=str, help="namespace and deployment name")='concourse',
