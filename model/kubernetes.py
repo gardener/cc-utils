@@ -15,12 +15,33 @@
 
 from model.base import (
     NamedModelElement,
+    ModelBase,
 )
 
 
 class KubernetesConfig(NamedModelElement):
+    def _required_attributes(self):
+        return {
+            'kubeconfig',
+            'version',
+            'monitoring',
+        }
+
     def kubeconfig(self):
         return self.raw.get('kubeconfig')
 
     def cluster_version(self):
         return self.raw.get('version')
+
+    def monitoring(self):
+        return MonitoringConfig(self.raw.get('monitoring'))
+
+
+class MonitoringConfig(ModelBase):
+    def _required_attributes(self):
+        return {
+            'kube_state_metrics_version',
+        }
+
+    def kube_state_metrics_version(self):
+        return self.raw.get('kube_state_metrics_version')
