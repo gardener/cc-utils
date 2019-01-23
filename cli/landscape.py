@@ -21,7 +21,8 @@ from util import (
     CliHints,
     CliHint,
 )
-import concourse.setup as setup
+import landscape_setup.concourse as setup_concourse
+import landscape_setup.whd as setup_whd
 
 
 def deploy_or_upgrade_concourse(
@@ -42,7 +43,7 @@ def deploy_or_upgrade_concourse(
     if dry_run:
         return
 
-    setup.deploy_concourse_landscape(
+    setup_concourse.deploy_concourse_landscape(
         config_name=config_name,
         deployment_name=deployment_name,
         timeout_seconds=timeout_seconds,
@@ -65,7 +66,7 @@ def destroy_concourse(
     if dry_run:
         return
 
-    setup.destroy_concourse_landscape(
+    setup_concourse.destroy_concourse_landscape(
         config_name=config_name,
         release_name=release_name
     )
@@ -78,7 +79,7 @@ def set_teams(
     config_set = config_factory.cfg_set(cfg_name=config_name)
     config = config_set.concourse()
 
-    setup.set_teams(config=config)
+    setup_concourse.set_teams(config=config)
 
 
 def _display_info(dry_run: bool, operation: str, **kwargs):
@@ -104,7 +105,7 @@ def deploy_or_upgrade_webhook_dispatcher(
 
     webhook_dispatcher_deployment_cfg = cfg_set.webhook_dispatcher_deployment()
 
-    setup.deploy_webhook_dispatcher_landscape(
+    setup_whd.deploy_webhook_dispatcher_landscape(
         cfg_set=cfg_set,
         webhook_dispatcher_deployment_cfg=webhook_dispatcher_deployment_cfg,
         chart_dir=chart_dir,
