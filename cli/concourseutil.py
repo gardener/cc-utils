@@ -20,13 +20,9 @@ from util import ctx
 from util import (
     info,
     fail,
-    which,
-    warning,
     CliHints,
     CliHint,
 )
-import concourse.setup as setup
-
 from concourse import client
 from concourse.util import sync_org_webhooks
 from concourse.enumerator import (
@@ -47,74 +43,6 @@ def __add_module_command_args(parser):
     return parser
 
 
-def deploy_or_upgrade_concourse(
-    config_name: CliHint(typehint=str, help="the cfg_set to use"),
-    deployment_name: CliHint(typehint=str, help="namespace and deployment name")='concourse',
-    timeout_seconds: CliHint(typehint=int, help="how long to wait for concourse startup")=180,
-    dry_run: bool=True,
-):
-    '''Deploys a new concourse-instance using the given deployment name and config-directory.'''
-    which("helm")
-
-    _display_info(
-        dry_run=dry_run,
-        operation="DEPLOYED",
-        deployment_name=deployment_name,
-    )
-
-    if dry_run:
-        return
-
-    setup.deploy_concourse_landscape(
-        config_name=config_name,
-        deployment_name=deployment_name,
-        timeout_seconds=timeout_seconds,
-    )
-
-
-def destroy_concourse(
-    config_name: CliHint(typehint=str, help="The config set to use"),
-    release_name: CliHint(typehint=str, help="namespace and deployment name")='concourse',
-    dry_run: bool = True
-):
-    '''Destroys a concourse-instance using the given helm release name'''
-
-    _display_info(
-        dry_run=dry_run,
-        operation="DESTROYED",
-        deployment_name=release_name,
-    )
-
-    if dry_run:
-        return
-
-    setup.destroy_concourse_landscape(
-        config_name=config_name,
-        release_name=release_name
-    )
-
-
-def set_teams(
-    config_name: CliHint(typehint=str, help='the cfg_set name to use'),
-):
-    config_factory = ctx().cfg_factory()
-    config_set = config_factory.cfg_set(cfg_name=config_name)
-    config = config_set.concourse()
-
-    setup.set_teams(config=config)
-
-
-def _display_info(dry_run: bool, operation: str, **kwargs):
-    info("Concourse will be {o} using helm with the following arguments".format(o=operation))
-    max_leng = max(map(len, kwargs.keys()))
-    for k, v in kwargs.items():
-        key_str = k.ljust(max_leng)
-        info("{k}: {v}".format(k=key_str, v=v))
-
-    if dry_run:
-        warning("this was a --dry-run. Set the --no-dry-run flag to actually deploy")
-
-
 def update_certificate(
     tls_config_name: CliHint(typehint=str, help="TLS config element name to update"),
     certificate_file: CliHints.existing_file(help="certificate file path"),
@@ -124,7 +52,6 @@ def update_certificate(
     # Stuff used for yaml formatting, when dumping a dictionary
     class LiteralStr(str):
         """Used to create yaml block style indicator | """
-        pass
 
     def literal_str_representer(dumper, data):
         """Used to create yaml block style indicator"""
@@ -148,7 +75,7 @@ def update_certificate(
     yaml.add_representer(LiteralStr, literal_str_representer)
     configs = cfg_factory._configs('tls_config')
     for k1, v1 in configs.items():
-        for k2, v2 in v1.items():
+        for k2, _ in v1.items():
             configs[k1][k2] = LiteralStr(configs[k1][k2])
 
     # dump updated tls config to given output path
@@ -292,24 +219,4 @@ def trigger_resource_check(
     api.trigger_resource_check(
         pipeline_name=pipeline_name,
         resource_name=resource_name,
-    )
-
-
-def deploy_or_upgrade_webhook_dispatcher(
-    cfg_set_name: str,
-    chart_dir: CliHints.existing_dir(help="directory of webhook dispatcher chart"),
-    deployment_name: str='webhook-dispatcher',
-):
-    chart_dir = os.path.abspath(chart_dir)
-
-    cfg_factory = ctx().cfg_factory()
-    cfg_set = cfg_factory.cfg_set(cfg_set_name)
-
-    webhook_dispatcher_deployment_cfg = cfg_set.webhook_dispatcher_deployment()
-
-    setup.deploy_webhook_dispatcher_landscape(
-        cfg_set=cfg_set,
-        webhook_dispatcher_deployment_cfg=webhook_dispatcher_deployment_cfg,
-        chart_dir=chart_dir,
-        deployment_name=deployment_name,
     )
