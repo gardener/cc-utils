@@ -79,10 +79,10 @@ class ProtecodeUtil(object):
         image_reference = container_image.image_reference()
         image_path, image_tag = image_reference.split(':')
         image_name = image_path.split('/')[-1]
-        return '{c}_{i}_{v}'.format(
-            c=component.name(),
+        return '{i}_{v}_{c}'.format(
             i=image_name,
             v=image_tag,
+            c=component.name(),
         )
 
     def _update_product_name(self, product_id: int, upload_name: str):
