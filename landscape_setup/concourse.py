@@ -25,12 +25,13 @@ from urllib.parse import urlparse
 from subprocess import CalledProcessError
 
 import yaml
-
-import util
 import kube.ctx
-
 import concourse.client as client
-
+from landscape_setup.utils import (
+    ensure_helm_setup,
+    ensure_cluster_version,
+    create_tls_secret,
+)
 from model import (
     NamedModelElement,
     ConfigFactory,
@@ -39,14 +40,8 @@ from model.concourse import (
     ConcourseConfig,
     ConcourseApiVersion,
 )
-from model.webhook_dispatcher import (
-    WebhookDispatcherDeploymentConfig
-)
 from model.container_registry import (
     GcrCredentials,
-)
-from model.tls import (
-    TlsConfig,
 )
 from model.kubernetes import (
     KubernetesConfig,
@@ -122,34 +117,6 @@ def create_image_pull_secret(
         )
 
 
-@ensure_annotations
-def create_tls_secret(
-    tls_config: TlsConfig,
-    tls_secret_name: str,
-    namespace: str,
-):
-    """Creates the configured TLS secret for the Concourse web-component in the K8s cluster"""
-    not_none(tls_config)
-    not_empty(tls_secret_name)
-    not_empty(namespace)
-
-    ctx = kube_ctx
-    namespace_helper = ctx.namespace_helper()
-    namespace_helper.create_if_absent(namespace)
-
-    secret_helper = ctx.secret_helper()
-    if not secret_helper.get_secret(tls_secret_name, namespace):
-        data = {
-            'tls.key':tls_config.private_key(),
-            'tls.crt':tls_config.certificate(),
-        }
-        secret_helper.put_secret(
-            name=tls_secret_name,
-            data=data,
-            namespace=namespace,
-        )
-
-
 def create_instance_specific_helm_values(
     concourse_cfg: ConcourseConfig,
     config_factory: ConfigFactory,
@@ -221,50 +188,6 @@ def create_instance_specific_helm_values(
         )
 
     return instance_specific_values
-
-
-@ensure_annotations
-def create_webhook_dispatcher_helm_values(
-    cfg_set,
-    webhook_dispatcher_deployment_cfg: WebhookDispatcherDeploymentConfig,
-    cfg_factory: ConfigFactory,
-):
-    # calculate secrets server endpoint
-    secrets_server_name = webhook_dispatcher_deployment_cfg.secrets_server_config_name()
-    secrets_server_cfg = cfg_factory.secrets_server(secrets_server_name)
-    secrets_server_endpoint = secrets_server_cfg.endpoint_url()
-    secrets_server_concourse_cfg_name = '/'.join([
-        secrets_server_cfg.secrets().concourse_secret_name(),
-        secrets_server_cfg.secrets().concourse_attribute()])
-    container_port = webhook_dispatcher_deployment_cfg.webhook_dispatcher_container_port()
-
-    env_vars = []
-    env_vars.append({
-        'name': 'SECRETS_SERVER_ENDPOINT', 'value': secrets_server_endpoint
-    })
-    env_vars.append({
-        'name': 'SECRETS_SERVER_CONCOURSE_CFG_NAME', 'value': secrets_server_concourse_cfg_name
-    })
-
-    cmd_args = [
-        '--webhook-dispatcher-cfg-name',
-        webhook_dispatcher_deployment_cfg.webhook_dispatcher_config_name(),
-        '--port',
-        f'"{container_port}"',
-        '--cfg-set-name',
-        cfg_set.name(),
-    ]
-
-    helm_values = {
-        'ingress_host': webhook_dispatcher_deployment_cfg.ingress_host(),
-        'tls_name': webhook_dispatcher_deployment_cfg.tls_config_name(),
-        'image_reference': webhook_dispatcher_deployment_cfg.image_reference(),
-        'cmd_args': cmd_args,
-        'env_vars': env_vars,
-        'webhook_dispatcher_port': container_port,
-    }
-
-    return helm_values
 
 
 def deploy_concourse_landscape(
@@ -409,85 +332,6 @@ def destroy_concourse_landscape(config_name: str, release_name: str):
     namespace_helper.delete_namespace(namespace=release_name)
 
 
-@ensure_annotations
-def deploy_webhook_dispatcher_landscape(
-    cfg_set,
-    webhook_dispatcher_deployment_cfg: WebhookDispatcherDeploymentConfig,
-    chart_dir: str,
-    deployment_name: str,
-):
-    not_empty(deployment_name)
-
-    chart_dir = os.path.abspath(chart_dir)
-    cfg_factory = global_ctx().cfg_factory()
-
-    # Set the global context to the cluster specified in KubernetesConfig
-    kubernetes_config_name = webhook_dispatcher_deployment_cfg.kubernetes_config_name()
-    kubernetes_config = cfg_factory.kubernetes(kubernetes_config_name)
-    kube_ctx.set_kubecfg(kubernetes_config.kubeconfig())
-
-    ensure_cluster_version(kubernetes_config)
-
-    # TLS config
-    tls_config_name = webhook_dispatcher_deployment_cfg.tls_config_name()
-    tls_config = cfg_factory.tls_config(tls_config_name)
-    tls_secret_name = "webhook-dispatcher-tls"
-
-    info('Creating tls-secret ...')
-    create_tls_secret(
-        tls_config=tls_config,
-        tls_secret_name=tls_secret_name,
-        namespace=deployment_name,
-    )
-
-    kubernetes_cfg_name = webhook_dispatcher_deployment_cfg.kubernetes_config_name()
-    kubernetes_cfg = cfg_factory.kubernetes(kubernetes_cfg_name)
-
-    deploy_or_upgrade_webhook_dispatcher(
-        cfg_set=cfg_set,
-        webhook_dispatcher_deployment_cfg=webhook_dispatcher_deployment_cfg,
-        chart_dir=chart_dir,
-        cfg_factory=cfg_factory,
-        kubernetes_cfg=kubernetes_cfg,
-        deployment_name=deployment_name,
-    )
-
-
-def get_cluster_version_info():
-    api = kube_ctx.create_version_api()
-    return api.get_code()
-
-
-def ensure_cluster_version(kubernetes_config: KubernetesConfig):
-    not_none(kubernetes_config)
-
-    cluster_version_info = get_cluster_version_info()
-    configured_version_info = kubernetes_config.cluster_version()
-
-    if (
-        cluster_version_info.major != configured_version_info['major'] or
-        cluster_version_info.minor != configured_version_info['minor']
-    ):
-        fail(
-            'cluster version mismatch "Major: {a_major} Minor: '
-            '{a_minor}". Expected "Major: {e_major} Minor: {e_minor}".'.format(
-                a_major=cluster_version_info.major,
-                a_minor=cluster_version_info.minor,
-                e_major=configured_version_info['major'],
-                e_minor=configured_version_info['minor'],
-            )
-        )
-# pylint: enable=no-member
-
-
-def ensure_helm_setup():
-    """Ensure up-to-date helm installation. Return the path to the found Helm executable"""
-    helm_executable = util.which('helm')
-    with open(os.devnull) as devnull:
-        subprocess.run([helm_executable, 'repo', 'update'], check=True, stdout=devnull)
-    return helm_executable
-
-
 def deploy_or_upgrade_concourse(
         default_helm_values: NamedModelElement,
         custom_helm_values: NamedModelElement,
@@ -548,62 +392,6 @@ def deploy_or_upgrade_concourse(
             )
         with open(os.path.join(temp_dir, KUBECONFIG_FILE_NAME), 'w') as f:
             yaml.dump(kubernetes_config.kubeconfig(), f)
-
-        # run helm from inside the temporary directory so that the prepared file paths work
-        subprocess.run(subprocess_args, check=True, cwd=temp_dir, env=helm_env)
-
-
-@ensure_annotations
-def deploy_or_upgrade_webhook_dispatcher(
-        cfg_set,
-        webhook_dispatcher_deployment_cfg: WebhookDispatcherDeploymentConfig,
-        chart_dir: str,
-        cfg_factory: ConfigFactory,
-        kubernetes_cfg: KubernetesConfig,
-        deployment_name: str='webhook-dispatcher',
-):
-    """Deploys (or upgrades) webhook dispatcher via Helm CLI"""
-    helm_executable = ensure_helm_setup()
-    chart_dir = util.existing_dir(chart_dir)
-    namespace = not_empty(deployment_name)
-
-    # create namespace if absent
-    namespace_helper = kube_ctx.namespace_helper()
-    if not namespace_helper.get_namespace(namespace):
-        namespace_helper.create_namespace(namespace)
-
-    WEBHOOK_DISPATCHER_HELM_VALUES_FILE_NAME = 'webhook_dispatcher_helm_values'
-    KUBECONFIG_FILE_NAME = 'kubecfg'
-
-    # prepare subprocess args using relative file paths for the values files
-    subprocess_args = [
-        helm_executable, "upgrade", "--install", "--force",
-        "--recreate-pods",
-        "--wait",
-        "--namespace", namespace,
-        # Use Helm's value-rendering mechanism to merge value-sources.
-        "--values", WEBHOOK_DISPATCHER_HELM_VALUES_FILE_NAME,
-        namespace, # release name is the same as namespace name
-        chart_dir,
-    ]
-
-    helm_env = os.environ.copy()
-
-    # create temp dir containing all previously referenced files
-    with tempfile.TemporaryDirectory() as temp_dir:
-        kubeconfig_path = os.path.join(temp_dir, KUBECONFIG_FILE_NAME)
-        helm_env['KUBECONFIG'] = kubeconfig_path
-        with open(os.path.join(temp_dir, WEBHOOK_DISPATCHER_HELM_VALUES_FILE_NAME), 'w') as f:
-            yaml.dump(
-                create_webhook_dispatcher_helm_values(
-                    cfg_set=cfg_set,
-                    webhook_dispatcher_deployment_cfg=webhook_dispatcher_deployment_cfg,
-                    cfg_factory=cfg_factory,
-                ),
-                f
-            )
-        with open(kubeconfig_path, 'w') as f:
-            yaml.dump(kubernetes_cfg.kubeconfig(), f)
 
         # run helm from inside the temporary directory so that the prepared file paths work
         subprocess.run(subprocess_args, check=True, cwd=temp_dir, env=helm_env)
