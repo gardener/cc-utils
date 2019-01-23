@@ -518,7 +518,7 @@ def deploy_or_upgrade_concourse(
 
     # prepare subprocess args using relative file paths for the values files
     subprocess_args = [
-        helm_executable, "upgrade", "--install",
+        helm_executable, "upgrade", "--install", "--force",
         "--recreate-pods",
         "--wait",
         "--namespace", namespace,
@@ -577,7 +577,7 @@ def deploy_or_upgrade_webhook_dispatcher(
 
     # prepare subprocess args using relative file paths for the values files
     subprocess_args = [
-        helm_executable, "upgrade", "--install",
+        helm_executable, "upgrade", "--install", "--force",
         "--recreate-pods",
         "--wait",
         "--namespace", namespace,
