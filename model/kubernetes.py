@@ -40,8 +40,20 @@ class KubernetesConfig(NamedModelElement):
 class MonitoringConfig(ModelBase):
     def _required_attributes(self):
         return {
+            'namespace',
             'kube_state_metrics_version',
+            'kube_state_metrics_namespaces_to_monitor',
+            'kube_state_metrics_collectors',
         }
+
+    def namespace(self):
+        return self.raw.get('namespace')
 
     def kube_state_metrics_version(self):
         return self.raw.get('kube_state_metrics_version')
+
+    def kube_state_metrics_namespaces_to_monitor(self):
+        return self.raw.get('kube_state_metrics_namespaces_to_monitor')
+
+    def kube_state_metrics_collectors(self):
+        return self.raw.get('kube_state_metrics_collectors')

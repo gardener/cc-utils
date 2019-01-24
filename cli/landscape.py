@@ -23,6 +23,7 @@ from util import (
 )
 import landscape_setup.concourse as setup_concourse
 import landscape_setup.whd as setup_whd
+import landscape_setup.monitoring as setup_monitoring
 
 
 def deploy_or_upgrade_concourse(
@@ -110,4 +111,16 @@ def deploy_or_upgrade_webhook_dispatcher(
         webhook_dispatcher_deployment_cfg=webhook_dispatcher_deployment_cfg,
         chart_dir=chart_dir,
         deployment_name=deployment_name,
+    )
+
+
+def deploy_or_upgrade_monitoring(
+    cfg_set_name: str,
+):
+    cfg_factory = ctx().cfg_factory()
+    cfg_set = cfg_factory.cfg_set(cfg_set_name)
+    kubernetes_cfg = cfg_set.kubernetes()
+
+    setup_monitoring.deploy_monitoring_landscape(
+        kubernetes_cfg=kubernetes_cfg,
     )
