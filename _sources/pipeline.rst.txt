@@ -156,3 +156,5 @@ Example (hotfix-branch release jobs)
                   variants:
                       release-job:
                           traits:
+                              release:
+                                  nextversion: 'bump_patch'
