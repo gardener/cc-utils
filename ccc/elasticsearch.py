@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 import functools
 import os
 import json
@@ -80,8 +81,9 @@ def _metadata_dict():
     )
 
     # XXX do not hard-code env variables
-    meta_dict['effective-version'] = os.environ.get('EFFECTIVE_VERSION')
-    meta_dict['component-name'] = os.environ.get('COMPONENT_NAME')
+    meta_dict['effective_version'] = os.environ.get('EFFECTIVE_VERSION')
+    meta_dict['component_name'] = os.environ.get('COMPONENT_NAME')
+    meta_dict['creation_date'] = datetime.datetime.now().isoformat()
 
     return meta_dict
 
