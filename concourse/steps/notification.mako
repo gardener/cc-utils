@@ -64,6 +64,7 @@ email_cfg = {
   'recipients': set(),
   'component_name_recipients': set(),
   'mail_body': None,
+  'subject': None,
   'codeowners_files': set(),
 }
 if os.path.isfile(notify_file):
@@ -77,6 +78,8 @@ if os.path.isfile(notify_file):
     util.info(f'found notify.cfg - applying cfg: \n{notify_cfg}')
 
 notify_cfg = {'email': email_cfg}
+
+email_cfg['subject'] = email_cfg['subject'] or '${subject}'
 
 main_repo_github_cfg = cfg_set.github("${job_variant.main_repository().cfg_name() or default_github_cfg_name}")
 main_repo_github_api = github.util._create_github_api_object(main_repo_github_cfg)
@@ -152,7 +155,7 @@ email_cfg['recipients'] = email_cfg['recipients'] | set(recipients)
 ## Send mail
 email_cfg_name = "${cc_email_cfg.name()}"
 mailutil.notify(
-    subject="${subject}",
+    subject=email_cfg['subject'],
     body='\n'.join((job_url(meta_vars_dict), email_cfg['mail_body'])),
     email_cfg_name=email_cfg_name,
     recipients=email_cfg['recipients'],
