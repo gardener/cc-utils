@@ -1,5 +1,6 @@
 ---
 <%
+import itertools
 import os
 from util import urljoin
 from makoutil import indent_func
@@ -135,12 +136,16 @@ repo = job_variant.main_repository()
 % if not has_pr_trait(job_variant) and status == 'error':
 <%
 subject = 'Step {s} for {p}:{b} failed!'.format(s=job_step.name, p=pipeline.get('name'), b=repo.branch())
+def repos():
+  yield job_variant.main_repository()
+  if job_variant.has_publish_repository(job_variant.main_repository().logical_name()):
+    yield job_variant.publish_repository(job_variant.main_repository().logical_name())
 %>
 ${email_notification(
   cfg_set=config_set,
   secrets_server_cfg=secrets_server_cfg,
   email_cfg=email,
-  repo_cfgs=[repo],
+  repo_cfgs=tuple(repos()),
   job_step=job_step,
   subject=subject,
   job_variant=job_variant,
