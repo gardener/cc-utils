@@ -196,7 +196,7 @@ already in use be another component.</p>
 <tr class="row-even"><td>base_definition</td>
 <td>inherited from all <a class="reference internal" href="pipeline_job.html"><span class="doc">Jobs</span></a></td>
 </tr>
-<tr class="row-odd"><td>variants</td>
+<tr class="row-odd"><td>jobs</td>
 <td>defines <a class="reference internal" href="pipeline_job.html"><span class="doc">Jobs</span></a></td>
 </tr>
 </tbody>
@@ -221,7 +221,7 @@ and refrain from using whitespace of non-ASCII charaters.</p>
   <span class="nt">template</span><span class="p">:</span> <span class="s">&#39;default&#39;</span>   <span class="c1"># default value - may be omitted</span>
   <span class="nt">base_definition</span><span class="p">:</span>
     <span class="l l-Scalar l-Scalar-Plain">...</span> <span class="c1"># same schema as for jobs applies</span>
-  <span class="nt">variants</span><span class="p">:</span>
+  <span class="nt">jobs</span><span class="p">:</span>
     <span class="nt">job_A</span><span class="p">:</span>
       <span class="l l-Scalar l-Scalar-Plain">...</span> <span class="c1"># see pipeline jobs definition for schema</span>
     <span class="nt">job_B</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>
@@ -239,7 +239,7 @@ and refrain from using whitespace of non-ASCII charaters.</p>
     <span class="nt">steps</span><span class="p">:</span>
       <span class="nt">inherit_me</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">~</span>
 
-  <span class="nt">variants</span><span class="p">:</span>
+  <span class="nt">jobs</span><span class="p">:</span>
     <span class="nt">job_a</span><span class="p">:</span>
       <span class="nt">steps</span><span class="p">:</span>
         <span class="nt">another_step</span><span class="p">:</span>
@@ -310,7 +310,7 @@ attribute) are optionally applied.</p>
         <span class="nt">branches</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;master&#39;</span><span class="p p-Indicator">]</span>
         <span class="nt">inherit</span><span class="p">:</span>
             <span class="nt">example-pipeline</span><span class="p">:</span>
-                <span class="nt">variants</span><span class="p">:</span>
+                <span class="nt">jobs</span><span class="p">:</span>
                     <span class="nt">release-job</span><span class="p">:</span>
                         <span class="nt">traits</span><span class="p">:</span>
                             <span class="nt">release</span><span class="p">:</span>
@@ -319,7 +319,7 @@ attribute) are optionally applied.</p>
         <span class="nt">branches</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;hotfix-.*&#39;</span><span class="p p-Indicator">]</span>
         <span class="nt">inherit</span><span class="p">:</span>
             <span class="nt">example-pipeline</span><span class="p">:</span>
-                <span class="nt">variants</span><span class="p">:</span>
+                <span class="nt">jobs</span><span class="p">:</span>
                     <span class="nt">release-job</span><span class="p">:</span>
                         <span class="nt">traits</span><span class="p">:</span>
                             <span class="nt">release</span><span class="p">:</span>

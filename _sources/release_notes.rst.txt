@@ -104,8 +104,8 @@ are created/updated - usually on every head update.
 
 To enable draft releases, add the
 `draft\_release <https://github.com/gardener/dashboard/blob/51fc9792af32da137d3c1b3e69635b2093dbbfd7/.ci/pipeline_definitions#L28>`__
-trait to your variant that has (or inherits) the *version* trait.
-Usually you would add it to the *head-update* variant.
+trait to your job that has (or inherits) the *version* trait.
+Usually you would add it to the *head-update* job.
 
 Transporting Release Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
