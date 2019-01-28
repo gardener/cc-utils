@@ -19,7 +19,8 @@ from concourse.model.step import PipelineStep
 from concourse.model.base import (
   AttributeSpec,
   Trait,
-  TraitTransformer
+  TraitTransformer,
+  ScriptType,
 )
 
 
@@ -81,7 +82,12 @@ class ReleaseTraitTransformer(TraitTransformer):
 
     def inject_steps(self):
         # inject 'release' step
-        self.release_step = PipelineStep(name='release', raw_dict={}, is_synthetic=True)
+        self.release_step = PipelineStep(
+            name='release',
+            raw_dict={},
+            is_synthetic=True,
+            script_type=ScriptType.PYTHON3,
+            )
         yield self.release_step
 
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):

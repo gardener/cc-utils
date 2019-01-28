@@ -4,6 +4,7 @@
 >
 <%
 from makoutil import indent_func
+from concourse.steps import step_lib
 import os
 version_file = job_step.input('version_path') + '/version'
 release_trait = job_variant.trait('release')
@@ -30,26 +31,31 @@ if has_component_descriptor_trait:
 
 release_callback_path = release_trait.release_callback_path()
 %>
-/cc/utils/cli.py githubutil release_and_prepare_next_dev_cycle \
+
+${step_lib('release')}
+
+with open('${version_file}') as f:
+  version_str = f.read()
+
+release_and_prepare_next_dev_cycle(
   % if has_component_descriptor_trait:
-  --component-descriptor-file-path ${component_descriptor_file_path} \
+  component_descriptor_file_path='${component_descriptor_file_path}',
   % endif
   % if has_slack_trait:
-  --slack-cfg-name "${slack_cfg_name}" \
-  --slack-channel "${slack_channel}" \
+  slack_cfg_name='${slack_cfg_name}',
+  slack_channel='${slack_channel}',
   % endif
   % if release_callback_path:
-  --release-commit-callback "${release_callback_path}" \
+  release_commit_callback='${release_callback_path}',
   % endif
-  % if release_trait.rebase_before_release():
-   --rebase-before-release \
-  % endif
-   --github-cfg-name ${github_cfg.name()} \
-   --github-repository-name ${repo.repo_name()} \
-   --github-repository-owner ${repo.repo_owner()} \
-   --repository-version-file-path ${version_trait.versionfile_relpath()} \
-   --repository-branch ${repo.branch()} \
-   --release-version $(cat "${version_file}") \
-   --repo-dir ${repo.resource_name()} \
-   --version-operation "${version_op}"
+  rebase_before_release=${release_trait.rebase_before_release()},
+  github_cfg_name='${github_cfg.name()}',
+  github_repository_name='${repo.repo_name()}',
+  github_repository_owner='${repo.repo_owner()}',
+  repository_version_file_path='${version_trait.versionfile_relpath()}',
+  repository_branch='${repo.branch()}',
+  release_version=version_str,
+  repo_dir='${repo.resource_name()}',
+  version_operation='${version_op}',
+)
 </%def>
