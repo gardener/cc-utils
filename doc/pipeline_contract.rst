@@ -48,7 +48,7 @@ use some terms differently as done in the context of concourse.
 +------------------------------+-----------------------------------------------------+
 | term                         |  in Gardener CI/CD                                  |
 +==============================+=====================================================+
-| :doc:`Pipeline <pipeline>`   | a set of jobs (also: variants) defined in           |
+| :doc:`Pipeline <pipeline>`   | a set of jobs defined in                            |
 |                              | `.ci/pipeline_definitions`                          |
 +------------------------------+-----------------------------------------------------+
 | :doc:`Job <pipeline_job>`    |  a graph of build steps                             |

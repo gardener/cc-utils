@@ -3,7 +3,7 @@ Pipeline Job
 ============
 
 Each :doc:`Build Pipeline </pipeline>` may define an arbitrary amount of build jobs. Job definitions
-reside below a pipeline's `variants` attribute. Each job defines their name as root element.
+reside below a pipeline's `jobs` attribute. Each job defines their name as root element.
 
 
 Attributes

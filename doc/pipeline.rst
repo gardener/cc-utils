@@ -34,7 +34,7 @@ Attributes
 +-------------------+---------------------------------------------------------------------------+
 | base_definition   | inherited from all :doc:`Jobs </pipeline_job>`                            |
 +-------------------+---------------------------------------------------------------------------+
-| variants          | defines :doc:`Jobs </pipeline_job>`                                       |
+| jobs              | defines :doc:`Jobs </pipeline_job>`                                       |
 +-------------------+---------------------------------------------------------------------------+
 
 
@@ -59,7 +59,7 @@ Example `.ci/pipeline_definitions`
     template: 'default'   # default value - may be omitted
     base_definition:
       ... # same schema as for jobs applies
-    variants:
+    jobs:
       job_A:
         ... # see pipeline jobs definition for schema
       job_B: ~
@@ -78,7 +78,7 @@ Example - Inheritance / "base_definition"
       steps:
         inherit_me: ~
 
-    variants:
+    jobs:
       job_a:
         steps:
           another_step:
@@ -144,7 +144,7 @@ Example (hotfix-branch release jobs)
           branches: ['master']
           inherit:
               example-pipeline:
-                  variants:
+                  jobs:
                       release-job:
                           traits:
                               release:
@@ -153,7 +153,7 @@ Example (hotfix-branch release jobs)
           branches: ['hotfix-.*']
           inherit:
               example-pipeline:
-                  variants:
+                  jobs:
                       release-job:
                           traits:
                               release:
