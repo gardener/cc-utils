@@ -129,17 +129,21 @@ class Renderer(object):
         template_name = definition_descriptor.template_name()
         template_contents = self.template_retriever.template_contents(template_name)
 
-        # support declaring jobs by both 'jobs' and 'variants'
+        pipeline_name = definition_descriptor.pipeline_name
+
+        # support declaring jobs by either 'jobs' or 'variants'
         # TODO: Add deprecation message for old 'variants' syntax.
-        jobs = merge_dicts(
-            effective_definition.get('jobs', {}),
-            effective_definition.get('variants', {}),
-        )
+        jobs = effective_definition.get('jobs', {})
+        variants = effective_definition.get('variants', {})
+        if jobs and variants:
+            raise RuntimeError(
+                f"Both 'jobs' and 'variants' are defined in pipeline '{pipeline_name}'"
+            )
 
         pipeline_definition = RawPipelineDefinitionDescriptor(
-            name=definition_descriptor.pipeline_name,
+            name=pipeline_name,
             base_definition=effective_definition.get('base_definition', {}),
-            variants=jobs,
+            variants=jobs or variants,
             template=template_name,
         )
 
