@@ -23,6 +23,14 @@ from github.release_notes.util import (
 )
 
 
+def rebase(
+    git_helper,
+    upstream_ref,
+):
+    upstream_commit_sha = git_helper.fetch_head(upstream_ref).hexsha
+    git_helper.rebase(commit_ish=upstream_commit_sha)
+
+
 def release_and_prepare_next_dev_cycle(
     github_cfg_name: str,
     github_repository_owner: str,
