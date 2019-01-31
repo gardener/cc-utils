@@ -143,6 +143,10 @@ class GitHelper(object):
     def rebase(self, commit_ish: str):
         self.repo.git.rebase('--quiet', commit_ish)
 
+    def rebase_on_remote_ref(self, remote_ref):
+        upstream_commit_sha = self.fetch_head(remote_ref).hexsha
+        self.rebase(commit_ish=upstream_commit_sha)
+
     def fetch_head(self, ref: str):
         with self._authenticated_remote() as remote:
             fetch_result = remote.fetch(ref)[0]
