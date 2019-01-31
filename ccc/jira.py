@@ -19,13 +19,13 @@ import model.jira
 
 
 def from_cfg(
-    jira_cfg:model.jira.JiraSearchConfig
+    jira_cfg:model.jira.JiraConfig
 ):
     raise NotImplementedError()
 
 
 def _from_cfg(
-    jira_cfg:model.jira.JiraSearchConfig
+    jira_cfg:model.jira.JiraConfig
 ) -> jira.JIRA:
     credentials = jira_cfg.credentials()
     return jira.JIRA(
