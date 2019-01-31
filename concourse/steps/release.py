@@ -23,14 +23,6 @@ from github.release_notes.util import (
 )
 
 
-def rebase(
-    git_helper,
-    upstream_ref,
-):
-    upstream_commit_sha = git_helper.fetch_head(upstream_ref).hexsha
-    git_helper.rebase(commit_ish=upstream_commit_sha)
-
-
 def release_and_prepare_next_dev_cycle(
     github_cfg_name: str,
     github_repository_owner: str,
@@ -74,7 +66,7 @@ def release_and_prepare_next_dev_cycle(
         )
 
     if rebase_before_release:
-        rebase(git_helper=git_helper, upstream_ref=f'refs/heads/{repository_branch}')
+        git_helper.rebase_on_remote_ref(remote_ref=f'refs/heads/{repository_branch}')
 
     # Fetch release notes and generate markdown to catch errors early
     release_notes = fetch_release_notes(
