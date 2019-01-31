@@ -14,6 +14,7 @@ elasticsearch
 ensure
 gevent
 html2text
+jira
 kubernetes
 pycodestyle
 pydash==4.6.0
