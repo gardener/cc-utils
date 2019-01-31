@@ -128,5 +128,8 @@ class BasicCredentials(ModelBase):
     def passwd(self):
         return self.raw.get('password')
 
+    def as_tuple(self):
+        return (self.username(), self.passwd())
+
     def _required_attributes(self):
         return ['username', 'password']
