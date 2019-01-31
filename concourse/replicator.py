@@ -111,7 +111,10 @@ class Renderer(object):
                 render_status=RenderStatus.SUCCEEDED,
             )
         except Exception:
-            warning('erroneous pipeline definition: ' + definition_descriptor.pipeline_name)
+            warning(
+                f"erroneous pipeline definition '{definition_descriptor.pipeline_name}' "
+                f"in repository '{definition_descriptor.main_repo.get('path')}'"
+            )
             traceback.print_exc()
             return RenderResult(
                 definition_descriptor,
