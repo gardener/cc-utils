@@ -3,9 +3,13 @@
   filter="indent_func(indent),trim"
 >
 <%
-from makoutil import indent_func
-from concourse.steps import step_lib
 import os
+
+import ctx
+from concourse.steps import step_lib
+from makoutil import indent_func
+from util import existing_dir
+
 version_file = job_step.input('version_path') + '/version'
 release_trait = job_variant.trait('release')
 version_trait = job_variant.trait('version')
@@ -37,6 +41,23 @@ ${step_lib('release')}
 with open('${version_file}') as f:
   version_str = f.read()
 
+repo_dir = existing_dir('${repo.resource_name()}')
+
+github_cfg = ctx().cfg_factory().github('${github_cfg.name()}')
+github_repo_path = '${repo.repo_owner()}/${repo.repo_name()}'
+
+helper = GitHubRepositoryHelper(
+    github_cfg=github_cfg,
+    owner='${repo.repo_owner()}',
+    name='${repo.repo_name()}',
+    default_branch=repository_branch,
+)
+git_helper = GitHelper(
+    repo=repo_dir,
+    github_cfg=github_cfg,
+    github_repo_path=github_repo_path,
+)
+
 release_and_prepare_next_dev_cycle(
   % if has_component_descriptor_trait:
   component_descriptor_file_path='${component_descriptor_file_path}',
@@ -49,13 +70,9 @@ release_and_prepare_next_dev_cycle(
   release_commit_callback='${release_callback_path}',
   % endif
   rebase_before_release=${release_trait.rebase_before_release()},
-  github_cfg_name='${github_cfg.name()}',
-  github_repository_name='${repo.repo_name()}',
-  github_repository_owner='${repo.repo_owner()}',
   repository_version_file_path='${version_trait.versionfile_relpath()}',
   repository_branch='${repo.branch()}',
   release_version=version_str,
-  repo_dir='${repo.resource_name()}',
   version_operation='${version_op}',
 )
 </%def>

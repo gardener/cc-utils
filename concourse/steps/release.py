@@ -24,9 +24,8 @@ from github.release_notes.util import (
 
 
 def release_and_prepare_next_dev_cycle(
-    github_cfg_name: str,
-    github_repository_owner: str,
-    github_repository_name: str,
+    github_helper: GitHubRepositoryHelper,
+    git_helper: GitHelper,
     repository_branch: str,
     repository_version_file_path: str,
     release_version: str,
@@ -41,24 +40,7 @@ def release_and_prepare_next_dev_cycle(
     slack_channel: str=None,
     rebase_before_release: bool=False,
 ):
-    repo_dir = existing_dir(repo_dir)
-
-    github_cfg = ctx().cfg_factory().github(github_cfg_name)
-    github_repo_path = f'{github_repository_owner}/{github_repository_name}'
-
-    helper = GitHubRepositoryHelper(
-        github_cfg=github_cfg,
-        owner=github_repository_owner,
-        name=github_repository_name,
-        default_branch=repository_branch,
-    )
-    git_helper = GitHelper(
-        repo=repo_dir,
-        github_cfg=github_cfg,
-        github_repo_path=github_repo_path,
-    )
-
-    if helper.tag_exists(tag_name=release_version):
+    if github_helper.tag_exists(tag_name=release_version):
         fail(
             "Cannot create tag '{t}' in preparation for release: Tag already exists".format(
                 t=release_version,
@@ -77,8 +59,9 @@ def release_and_prepare_next_dev_cycle(
         github_helper=helper,
         repository_branch=repository_branch,
     )
-    release_notes_md = release_notes.to_markdown()
 
+    release_notes_md = release_notes.to_markdown()
+    github_repository_name = github_helper.repository_name
     # Do all the version handling upfront to catch errors early
     # Bump release version and add suffix
     next_version = version.process_version(
@@ -101,14 +84,14 @@ def release_and_prepare_next_dev_cycle(
         release_commit_callback=release_commit_callback,
     )
 
-    helper.create_tag(
+    github_helper.create_tag(
         tag_name=release_version,
         tag_message="Release " + release_version,
         repository_reference=release_commit_sha,
         author_name=author_name,
         author_email=author_email
     )
-    release = helper.create_release(
+    release = github_helper.create_release(
         tag_name=release_version,
         body=release_notes_md,
         draft=False,
@@ -127,14 +110,14 @@ def release_and_prepare_next_dev_cycle(
         )
 
     # Prepare version file for next dev cycle
-    helper.create_or_update_file(
+    github_helper.create_or_update_file(
         file_path=repository_version_file_path,
         file_contents=next_version_dev,
         commit_message="Prepare next dev cycle " + next_version_dev
     )
 
     draft_name = draft_release_name_for_version(release_version)
-    draft_release = helper.draft_release_with_name(draft_name)
+    draft_release = github_helper.draft_release_with_name(draft_name)
     if draft_release:
         verbose('cleaning up draft release {name}'.format(name=draft_release.name))
         draft_release.delete()
