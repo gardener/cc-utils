@@ -3,7 +3,6 @@ Flask
 Flask-RESTful
 GitPython
 Mako
-github3.py==1.3.0
 Sphinx
 bcrypt
 containerregistry-ccwienk==0.2.1
@@ -13,6 +12,7 @@ deprecated
 elasticsearch
 ensure
 gevent
+github3.py==1.3.0
 html2text
 jira
 kubernetes
