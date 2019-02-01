@@ -23,127 +23,6 @@ from github.release_notes.util import (
 )
 
 
-def prepare_release(
-    github_helper: GitHubRepositoryHelper,
-    git_helper: GitHelper,
-    repository_branch: str,
-    release_version: str,
-    version_operation: str,
-    prerelease_suffix: str,
-):
-    # Do all the validation, release note processing and
-    # version handling upfront to catch errors early
-    if github_helper.tag_exists(tag_name=release_version):
-        fail(
-            f"Cannot create tag '{release_version}' in preparation for release: Tag already exists"
-        )
-
-    release_notes = fetch_release_notes(
-        github_repository_owner=github_repository_owner,
-        github_repository_name=github_repository_name,
-        github_cfg=github_cfg,
-        repo_dir=repo_dir,
-        github_helper=helper,
-        repository_branch=repository_branch,
-    )
-
-    release_notes_md = release_notes.to_markdown()
-
-    # Do all the version handling upfront to catch errors early
-    # Bump release version and add suffix
-
-    next_version = version.process_version(
-        version_str=release_version,
-        operation=version_operation
-    )
-
-    next_version_dev = version.process_version(
-        version_str=next_version,
-        operation='set_prerelease',
-        prerelease=prerelease_suffix
-    )
-
-    if component_descriptor_file_path:
-        with open(component_descriptor_file_path) as f:
-            # TODO: validate descriptor
-            component_descriptor_contents = f.read()
-
-    return (next_version, next_version_dev, release_notes_md)
-
-
-def create_release_on_github(
-    git_helper: GitHelper,
-    github_helper: GitHubRepositoryHelper,
-    release_version,
-    release_notes,
-    release_commit_callback,
-    repo_dir: str,
-    repository_branch: str,
-    repository_version_file_path: str,
-    next_version: str,
-    author_name: str,
-    author_email: str,
-    component_descriptor_file_path,
-):
-    release_commit_sha = _create_and_push_release_commit(
-        repo_dir=repo_dir,
-        git_helper=git_helper,
-        version_file_path=repository_version_file_path,
-        release_version=release_version,
-        target_ref=repository_branch,
-        commit_msg=f'Release {release_version}',
-        release_commit_callback=release_commit_callback,
-    )
-
-    github_helper.create_tag(
-        tag_name=release_version,
-        tag_message="Release " + release_version,
-        repository_reference=release_commit_sha,
-        author_name=author_name,
-        author_email=author_email
-    )
-    release = github_helper.create_release(
-        tag_name=release_version,
-        body=release_notes,
-        draft=False,
-        prerelease=False
-    )
-
-    if component_descriptor_file_path:
-        with open(component_descriptor_file_path) as f:
-            # TODO: Do not duplicate in 'prepare_release'
-            component_descriptor_contents = f.read()
-        release.upload_asset(
-            content_type='application/x-yaml',
-            name=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
-            asset=component_descriptor_contents,
-            label=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
-        )
-
-
-def prepare_next_dev_cycle(
-    github_helper: GitHubRepositoryHelper,
-    repository_version_file_path: str,
-    next_version: str,
-):
-    github_helper.create_or_update_file(
-        file_path=repository_version_file_path,
-        file_contents=next_version,
-        commit_message="Prepare next dev cycle " + next_version
-    )
-
-
-def cleanup_draft_releases(
-    release_version: str,
-):
-    # TODO: Cleanup _ALL_ draft releases, similar to our upgrade-PR-handling
-    draft_name = draft_release_name_for_version(release_version)
-    draft_release = github_helper.draft_release_with_name(draft_name)
-    if draft_release:
-        info(f'cleaning up draft release {draft_release.name}')
-        draft_release.delete()
-
-
 def release_and_prepare_next_dev_cycle(
     github_helper: GitHubRepositoryHelper,
     git_helper: GitHelper,
@@ -262,3 +141,120 @@ def _create_and_push_release_commit(
             git_helper._pop_stash()
 
     return release_commit.hexsha
+
+
+def prepare_release(
+    github_helper: GitHubRepositoryHelper,
+    git_helper: GitHelper,
+    repository_branch: str,
+    release_version: str,
+    version_operation: str,
+    prerelease_suffix: str,
+):
+    # Do all the validation, release note processing and
+    # version handling upfront to catch errors early
+    if github_helper.tag_exists(tag_name=release_version):
+        fail(
+            f"Cannot create tag '{release_version}' in preparation for release: Tag already exists"
+        )
+
+    release_notes = fetch_release_notes(
+        github_repository_owner=github_repository_owner,
+        github_repository_name=github_repository_name,
+        github_cfg=github_cfg,
+        repo_dir=repo_dir,
+        github_helper=helper,
+        repository_branch=repository_branch,
+    )
+    release_notes_md = release_notes.to_markdown()
+
+    next_version = version.process_version(
+        version_str=release_version,
+        operation=version_operation
+    )
+
+    next_version_dev = version.process_version(
+        version_str=next_version,
+        operation='set_prerelease',
+        prerelease=prerelease_suffix
+    )
+
+    if component_descriptor_file_path:
+        with open(component_descriptor_file_path) as f:
+            # TODO: validate descriptor
+            component_descriptor_contents = f.read()
+
+    return (next_version, next_version_dev, release_notes_md)
+
+
+def create_release_on_github(
+    git_helper: GitHelper,
+    github_helper: GitHubRepositoryHelper,
+    release_version,
+    release_notes,
+    release_commit_callback,
+    repo_dir: str,
+    repository_branch: str,
+    repository_version_file_path: str,
+    next_version: str,
+    author_name: str,
+    author_email: str,
+    component_descriptor_file_path,
+):
+    release_commit_sha = _create_and_push_release_commit(
+        repo_dir=repo_dir,
+        git_helper=git_helper,
+        version_file_path=repository_version_file_path,
+        release_version=release_version,
+        target_ref=repository_branch,
+        commit_msg=f'Release {release_version}',
+        release_commit_callback=release_commit_callback,
+    )
+
+    github_helper.create_tag(
+        tag_name=release_version,
+        tag_message="Release " + release_version,
+        repository_reference=release_commit_sha,
+        author_name=author_name,
+        author_email=author_email
+    )
+    release = github_helper.create_release(
+        tag_name=release_version,
+        body=release_notes,
+        draft=False,
+        prerelease=False
+    )
+
+    if component_descriptor_file_path:
+        with open(component_descriptor_file_path) as f:
+            # TODO: Do not duplicate in 'prepare_release'
+            component_descriptor_contents = f.read()
+        release.upload_asset(
+            content_type='application/x-yaml',
+            name=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
+            asset=component_descriptor_contents,
+            label=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
+        )
+
+
+def prepare_next_dev_cycle(
+    github_helper: GitHubRepositoryHelper,
+    repository_version_file_path: str,
+    next_version: str,
+):
+    github_helper.create_or_update_file(
+        file_path=repository_version_file_path,
+        file_contents=next_version,
+        commit_message="Prepare next dev cycle " + next_version
+    )
+
+
+def cleanup_draft_releases(
+    release_version: str,
+):
+    # TODO: Cleanup _ALL_ draft releases, similar to our upgrade-PR-handling
+    draft_name = draft_release_name_for_version(release_version)
+    draft_release = github_helper.draft_release_with_name(draft_name)
+    if draft_release:
+        info(f'cleaning up draft release {draft_release.name}')
+        draft_release.delete()
