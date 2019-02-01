@@ -23,34 +23,21 @@ from github.release_notes.util import (
 )
 
 
-def release_and_prepare_next_dev_cycle(
+def prepare_release(
     github_helper: GitHubRepositoryHelper,
     git_helper: GitHelper,
     repository_branch: str,
-    repository_version_file_path: str,
     release_version: str,
-    repo_dir:str,
-    release_commit_callback: str=None,
-    version_operation: str="bump_minor",
-    prerelease_suffix: str="dev",
-    author_name: str="gardener-ci",
-    author_email: str="gardener.ci.user@gmail.com",
-    component_descriptor_file_path: str=None,
-    slack_cfg_name: str=None,
-    slack_channel: str=None,
-    rebase_before_release: bool=False,
+    version_operation: str,
+    prerelease_suffix: str,
 ):
+    # Do all the validation, release note processing and
+    # version handling upfront to catch errors early
     if github_helper.tag_exists(tag_name=release_version):
         fail(
-            "Cannot create tag '{t}' in preparation for release: Tag already exists".format(
-                t=release_version,
-            )
+            f"Cannot create tag '{release_version}' in preparation for release: Tag already exists"
         )
 
-    if rebase_before_release:
-        git_helper.rebase_on_remote_ref(remote_ref=f'refs/heads/{repository_branch}')
-
-    # Fetch release notes and generate markdown to catch errors early
     release_notes = fetch_release_notes(
         github_repository_owner=github_repository_owner,
         github_repository_name=github_repository_name,
@@ -61,19 +48,38 @@ def release_and_prepare_next_dev_cycle(
     )
 
     release_notes_md = release_notes.to_markdown()
-    github_repository_name = github_helper.repository_name
+
     # Do all the version handling upfront to catch errors early
     # Bump release version and add suffix
+
     next_version = version.process_version(
         version_str=release_version,
         operation=version_operation
     )
+
     next_version_dev = version.process_version(
         version_str=next_version,
         operation='set_prerelease',
         prerelease=prerelease_suffix
     )
 
+    return (next_version, next_version_dev, release_notes_md)
+
+
+def create_release_on_github(
+    git_helper: GitHelper,
+    github_helper: GitHubRepositoryHelper,
+    release_version,
+    release_notes,
+    release_commit_callback,
+    repo_dir: str,
+    repository_branch: str,
+    repository_version_file_path: str,
+    next_version: str,
+    author_name: str,
+    author_email: str,
+    component_descriptor_file_path,
+):
     release_commit_sha = _create_and_push_release_commit(
         repo_dir=repo_dir,
         git_helper=git_helper,
@@ -93,13 +99,14 @@ def release_and_prepare_next_dev_cycle(
     )
     release = github_helper.create_release(
         tag_name=release_version,
-        body=release_notes_md,
+        body=release_notes,
         draft=False,
         prerelease=False
     )
 
     if component_descriptor_file_path:
         with open(component_descriptor_file_path) as f:
+            # TODO: move to validation
             # todo: validate descriptor
             component_descriptor_contents = f.read()
         release.upload_asset(
@@ -112,15 +119,69 @@ def release_and_prepare_next_dev_cycle(
     # Prepare version file for next dev cycle
     github_helper.create_or_update_file(
         file_path=repository_version_file_path,
-        file_contents=next_version_dev,
-        commit_message="Prepare next dev cycle " + next_version_dev
+        file_contents=next_version,
+        commit_message="Prepare next dev cycle " + next_version
     )
 
+
+def cleanup_draft_releases(
+    release_version: str,
+):
+    # TODO: Cleanup _ALL_ draft releases, similar to our upgrade-PR-handling
     draft_name = draft_release_name_for_version(release_version)
     draft_release = github_helper.draft_release_with_name(draft_name)
     if draft_release:
-        verbose('cleaning up draft release {name}'.format(name=draft_release.name))
+        info(f'cleaning up draft release {draft_release.name}')
         draft_release.delete()
+
+
+def release_and_prepare_next_dev_cycle(
+    github_helper: GitHubRepositoryHelper,
+    git_helper: GitHelper,
+    repository_branch: str,
+    repository_version_file_path: str,
+    release_version: str,
+    repo_dir:str,
+    release_commit_callback: str=None,
+    version_operation: str="bump_minor",
+    prerelease_suffix: str="dev",
+    author_name: str="gardener-ci",
+    author_email: str="gardener.ci.user@gmail.com",
+    component_descriptor_file_path: str=None,
+    slack_cfg_name: str=None,
+    slack_channel: str=None,
+    rebase_before_release: bool=False,
+):
+    github_repository_name = github_helper.repository_name
+    # perform validation asap
+    next_version, next_version_dev, release_notes_md = prepare_release(
+        github_helper=github_helper,
+        git_helper=git_helper,
+        repository_branch=repository_branch,
+        next_version=next_version,
+        release_version=release_version,
+        version_operation=version_operation,
+        prerelease_suffix=prerelease_suffix,
+    )
+
+    if rebase_before_release:
+        git_helper.rebase_on_remote_ref(remote_ref=f'refs/heads/{repository_branch}')
+
+    create_release_on_github(
+        git_helper=git_helper,
+        release_version=next_version,
+        release_notes=release_notes_md,
+        release_commit_callback=release_commit_callback,
+        repo_dir=repo_dir,
+        repository_branch=repository_branch,
+        repository_version_file_path=repository_version_file_path,
+        next_version=next_version_dev,
+        author_name=author_name,
+        author_email=author_email,
+        component_descriptor_file_path=component_descriptor_file_path,
+    )
+
+    cleanup_draft_releases(release_version)
 
     if slack_cfg_name and slack_channel:
         post_to_slack(
