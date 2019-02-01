@@ -152,6 +152,10 @@ class GitHelper(object):
             fetch_result = remote.fetch(ref)[0]
             return fetch_result.commit
 
+    def get_file_contents(self, file_path: str):
+        with open(os.path.join(self.repo.working_tree_dir, file_path)) as f:
+            return f.read()
+
 
 def url_with_credentials(github_cfg, github_repo_path):
     base_url = urllib.parse.urlparse(github_cfg.http_url())
