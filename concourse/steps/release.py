@@ -71,7 +71,7 @@ def release_and_prepare_next_dev_cycle(
     prepare_next_dev_cycle(
         github_helper=github_helper,
         repository_version_file_path=repository_version_file_path,
-        next_version=next_version_dev,
+        next_dev_version=next_version_dev,
     )
 
     cleanup_draft_releases(next_version)
@@ -240,12 +240,12 @@ def create_release_on_github(
 def prepare_next_dev_cycle(
     github_helper: GitHubRepositoryHelper,
     repository_version_file_path: str,
-    next_version: str,
+    next_dev_version: str,
 ):
     github_helper.create_or_update_file(
         file_path=repository_version_file_path,
-        file_contents=next_version,
-        commit_message="Prepare next dev cycle " + next_version
+        file_contents=next_dev_version,
+        commit_message="Prepare next dev cycle " + next_dev_version
     )
 
 
