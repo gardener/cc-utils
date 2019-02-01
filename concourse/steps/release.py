@@ -63,6 +63,11 @@ def prepare_release(
         prerelease=prerelease_suffix
     )
 
+    if component_descriptor_file_path:
+        with open(component_descriptor_file_path) as f:
+            # TODO: validate descriptor
+            component_descriptor_contents = f.read()
+
     return (next_version, next_version_dev, release_notes_md)
 
 
@@ -106,8 +111,7 @@ def create_release_on_github(
 
     if component_descriptor_file_path:
         with open(component_descriptor_file_path) as f:
-            # TODO: move to validation
-            # todo: validate descriptor
+            # TODO: Do not duplicate in 'prepare_release'
             component_descriptor_contents = f.read()
         release.upload_asset(
             content_type='application/x-yaml',
