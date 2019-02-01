@@ -42,7 +42,7 @@ def release_and_prepare_next_dev_cycle(
 ):
     github_repository_name = github_helper.repository_name
     # perform validation asap
-    next_version, next_version_dev, release_notes_md = prepare_release(
+    next_version, next_version_dev, release_notes = prepare_release(
         github_helper=github_helper,
         git_helper=git_helper,
         repository_branch=repository_branch,
@@ -57,7 +57,7 @@ def release_and_prepare_next_dev_cycle(
     create_release_on_github(
         git_helper=git_helper,
         release_version=next_version,
-        release_notes=release_notes_md,
+        release_notes=release_notes.to_markdown(),
         release_commit_callback=release_commit_callback,
         repo_dir=repo_dir,
         repository_branch=repository_branch,
@@ -166,7 +166,6 @@ def prepare_release(
         github_helper=helper,
         repository_branch=repository_branch,
     )
-    release_notes_md = release_notes.to_markdown()
 
     next_version = version.process_version(
         version_str=release_version,
@@ -184,7 +183,7 @@ def prepare_release(
             # TODO: validate descriptor
             component_descriptor_contents = f.read()
 
-    return (next_version, next_version_dev, release_notes_md)
+    return (next_version, next_version_dev, release_notes)
 
 
 def create_release_on_github(
