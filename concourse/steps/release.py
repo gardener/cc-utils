@@ -28,8 +28,6 @@ def release_and_prepare_next_dev_cycle(
     git_helper: GitHelper,
     repository_branch: str,
     repository_version_file_path: str,
-    release_version: str,
-    repo_dir:str,
     release_commit_callback: str=None,
     version_operation: str="bump_minor",
     prerelease_suffix: str="dev",
@@ -40,7 +38,11 @@ def release_and_prepare_next_dev_cycle(
     slack_channel: str=None,
     rebase_before_release: bool=False,
 ):
+    # Assume the current version is injected to the repository on disk
+    release_version = git_helper.get_file_contents(file_path=repository_version_file_path)
+    repo_dir = git_helper.working_tree_dir()
     github_repository_name = github_helper.repository_name
+
     # perform validation asap
     next_version, next_version_dev, release_notes = prepare_release(
         github_helper=github_helper,
