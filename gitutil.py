@@ -153,8 +153,11 @@ class GitHelper(object):
             return fetch_result.commit
 
     def get_file_contents(self, file_path: str):
-        with open(os.path.join(self.repo.working_tree_dir, file_path)) as f:
+        with open(os.path.join(self.working_tree_dir(), file_path)) as f:
             return f.read()
+
+    def working_tree_dir(self):
+        return self.repo.working_tree_dir
 
 
 def url_with_credentials(github_cfg, github_repo_path):
