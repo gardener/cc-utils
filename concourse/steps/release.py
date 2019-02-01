@@ -120,7 +120,12 @@ def create_release_on_github(
             label=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
         )
 
-    # Prepare version file for next dev cycle
+
+def prepare_next_dev_cycle(
+    github_helper: GitHubRepositoryHelper,
+    repository_version_file_path: str,
+    next_version: str,
+):
     github_helper.create_or_update_file(
         file_path=repository_version_file_path,
         file_contents=next_version,
@@ -162,7 +167,6 @@ def release_and_prepare_next_dev_cycle(
         github_helper=github_helper,
         git_helper=git_helper,
         repository_branch=repository_branch,
-        next_version=next_version,
         release_version=release_version,
         version_operation=version_operation,
         prerelease_suffix=prerelease_suffix,
@@ -185,7 +189,13 @@ def release_and_prepare_next_dev_cycle(
         component_descriptor_file_path=component_descriptor_file_path,
     )
 
-    cleanup_draft_releases(release_version)
+    prepare_next_dev_cycle(
+        github_helper=github_helper,
+        repository_version_file_path=repository_version_file_path,
+        next_version=next_version_dev,
+    )
+
+    cleanup_draft_releases(next_version)
 
     if slack_cfg_name and slack_channel:
         post_to_slack(
@@ -193,7 +203,7 @@ def release_and_prepare_next_dev_cycle(
             github_repository_name=github_repository_name,
             slack_cfg_name=slack_cfg_name,
             slack_channel=slack_channel,
-            release_version=release_version,
+            release_version=next_version,
         )
 
 
