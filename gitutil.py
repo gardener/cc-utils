@@ -22,6 +22,8 @@ import urllib.parse
 import git
 import git.objects.util
 
+from github.util import GitHubRepoBranch
+
 from util import not_empty, not_none, existing_dir, fail, random_str, urljoin
 
 
@@ -53,6 +55,17 @@ class GitHelper(object):
             github_cfg = github_cfg,
             github_repo_path = github_repo_path,
             )
+
+    @staticmethod
+    def from_githubrepobranch(
+        githubrepobranch: GitHubRepoBranch,
+        repo_path: str,
+    ):
+        return GitHelper(
+            repo=repo_path,
+            github_cfg=githubrepobranch.github_config(),
+            github_repo_path=githubrepobranch.github_repo_path(),
+        )
 
     def _changed_file_paths(self):
         lines = git.cmd.Git(self.repo.working_tree_dir).status('--porcelain=1', '-z').split('\x00')

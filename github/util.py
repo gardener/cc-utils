@@ -300,6 +300,17 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             )
         return response['commit'].sha
 
+    @staticmethod
+    def from_githubrepobranch(
+        githubrepobranch: GitHubRepoBranch,
+    ):
+        return GitHubRepositoryHelper(
+            github_cfg=githubrepobranch.github_config(),
+            owner=githubrepobranch.repo_owner(),
+            name=githubrepobranch.repo_name(),
+            default_branch=githubrepobranch.branch(),
+        )
+
     def retrieve_file_contents(self, file_path: str, branch: str=None):
         if branch is None:
             branch = self.default_branch
