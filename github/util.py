@@ -47,6 +47,34 @@ class RepoPermission(enum.Enum):
     ADMIN = "admin"
 
 
+class GitHubRepoBranch(object):
+    '''Instances of this class represent a specific branch of a given GitHub repository.
+    '''
+    def __init__(
+        self,
+        github_config: GithubConfig,
+        repo_owner: str,
+        repo_name: str,
+        branch: str,
+    ):
+        self._github_config = util.not_none(github_config)
+        self._repo_owner = util.not_empty(repo_owner)
+        self._repo_name = util.not_empty(repo_name)
+        self._branch = util.not_empty(branch)
+
+    def github_repo_path(self):
+        return f'{self._repo_owner}/{self._repo_name}'
+
+    def github_config(self):
+        return self._github_config
+
+    def repo_owner(self):
+        return self._repo_owner
+
+    def repo_name(self):
+        return self._repo_name
+
+
 class RepositoryHelperBase(object):
     GITHUB_TIMESTAMP_UTC_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
