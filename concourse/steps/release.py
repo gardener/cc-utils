@@ -161,10 +161,7 @@ def prepare_release(
         )
 
     release_notes = fetch_release_notes(
-        github_repository_owner=github_repository_owner,
-        github_repository_name=github_repository_name,
-        github_cfg=github_cfg,
-        repo_dir=repo_dir,
+        git_helper=git_helper,
         github_helper=helper,
         repository_branch=repository_branch,
     )

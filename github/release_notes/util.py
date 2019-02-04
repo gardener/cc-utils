@@ -41,15 +41,10 @@ from slack.util import SlackHelper
 
 
 def fetch_release_notes(
-    github_repository_owner: str,
-    github_repository_name: str,
-    github_cfg: str,
-    repo_dir: str,
     github_helper: GitHubRepositoryHelper,
+    git_helper: GitHelper,
     repository_branch: str,
 ):
-    repo_path = github_repo_path(owner=github_repository_owner, name=github_repository_name)
-    git_helper = GitHelper(repo=repo_dir, github_cfg=github_cfg, github_repo_path=repo_path)
     return ReleaseNotes.create(
         github_helper=github_helper,
         git_helper=git_helper,
