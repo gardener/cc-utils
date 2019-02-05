@@ -78,7 +78,7 @@ ATTRIBUTES = (
     ),
     AttributeSpec.optional(
         name='processing_mode',
-        default='upload_if_changed',
+        default='force_upload',
         doc='Protecode processing mode', # todo: document allowed values
     ),
     AttributeSpec.optional(
