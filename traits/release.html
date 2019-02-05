@@ -237,6 +237,20 @@ to <code class="code docutils literal notranslate"><span class="pre">finalize</s
 <p class="first admonition-title">Note</p>
 <p class="last">Declaring this trait changes the default triggering behaviour to “manual”</p>
 </div>
+<div class="section" id="optional-release-callback">
+<h2>Optional Release Callback<a class="headerlink" href="#optional-release-callback" title="Permalink to this headline">¶</a></h2>
+<p>If an optional release-callback is specified, the release commit (if created) can be enriched
+with custom diffs (e.g. to update a build-tool-specific dependency declarations file).</p>
+<div class="section" id="contract">
+<h3>Contract<a class="headerlink" href="#contract" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>non-zero exit codes are considered as an error (leads to release failure)</li>
+<li>the following environment variables are passed:
+- <code class="code docutils literal notranslate"><span class="pre">REPO_DIR</span></code>: absolute path to main repository
+- <code class="code docutils literal notranslate"><span class="pre">EFFECTIVE_VERSION</span></code>: the effective version (see <a class="reference internal" href="version.html"><span class="doc">version Trait</span></a>)</li>
+</ul>
+</div>
+</div>
 <div class="section" id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">traits</span><span class="p">:</span>

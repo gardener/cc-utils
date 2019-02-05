@@ -30,6 +30,21 @@ The following operations are performed:
   Declaring this trait changes the default triggering behaviour to "manual"
 
 
+Optional Release Callback
+=========================
+
+If an optional release-callback is specified, the release commit (if created) can be enriched
+with custom diffs (e.g. to update a build-tool-specific dependency declarations file).
+
+Contract
+--------
+
+- non-zero exit codes are considered as an error (leads to release failure)
+- the following environment variables are passed:
+  - `REPO_DIR`: absolute path to main repository
+  - `EFFECTIVE_VERSION`: the effective version (see :doc:`version`)
+
+
 Example
 =======
 
