@@ -44,7 +44,7 @@ def sync_org_webhooks(whd_deployment_cfg: WebhookDispatcherDeploymentConfig,):
             failed_hooks += 1
             warning(f'org: {organization_name} - error: {e}')
 
-    if failed_hooks is not 0:
+    if failed_hooks != 0:
         warning('Some webhooks could not be set - for more details see above.')
 
 
