@@ -20,7 +20,10 @@ from github.release_notes.util import (
     ReleaseNotes,
     github_repo_path,
 )
-from github.util import GitHubRepositoryHelper
+from github.util import (
+    GitHubRepositoryHelper,
+    GitHubRepoBranch,
+)
 
 if '${version_operation}' != 'finalize':
     raise NotImplementedError(
@@ -35,18 +38,21 @@ processed_version = version.process_version(
 
 github_cfg = util.ctx().cfg_factory().github('${github_cfg.name()}')
 
-helper = GitHubRepositoryHelper(
-    github_cfg=github_cfg,
-    owner='${repo.repo_owner()}',
-    name='${repo.repo_name()}',
-    default_branch='${repo.branch()}',
+githubrepobranch = GitHubRepoBranch(
+    github_config=github_cfg,
+    repo_owner='${repo.repo_owner()}',
+    repo_name='${repo.repo_name()}',
+    branch='${repo.branch()}',
 )
-repo_path = github_repo_path(owner='${repo.repo_owner()}', name='${repo.repo_name()}')
-git_helper = GitHelper(
-    repo='${repo.resource_name()}',
-    github_cfg=github_cfg,
-    github_repo_path=repo_path,
+
+helper = GitHubRepositoryHelper.from_githubrepobranch(
+    githubrepobranch=githubrepobranch,
 )
+
+git_helper = GitHelper.from_githubrepobranch(
+        githubrepobranch=githubrepobranch,
+        repo_path='${repo.resource_name()}',
+    )
 
 release_notes_md = ReleaseNotes.create(
     github_helper=helper,

@@ -20,6 +20,7 @@ from util import (
 from gitutil import GitHelper
 from github.util import (
     GitHubRepositoryHelper,
+    GitHubRepoBranch,
     _create_github_api_object,
     _create_team,
     _add_user_to_team,
@@ -27,7 +28,6 @@ from github.util import (
 )
 from github.release_notes.util import (
     ReleaseNotes,
-    github_repo_path,
 )
 
 
@@ -85,14 +85,21 @@ def generate_release_notes_cli(
     commit_range: str=None
 ):
     github_cfg = ctx().cfg_factory().github(github_cfg_name)
-    helper = GitHubRepositoryHelper(
-        github_cfg=github_cfg,
-        owner=github_repository_owner,
-        name=github_repository_name,
-        default_branch=repository_branch,
+
+    githubrepobranch = GitHubRepoBranch(
+        github_config=github_cfg,
+        repo_owner=github_repository_owner,
+        repo_name=github_repository_name,
+        branch=repository_branch,
     )
-    repo_path = github_repo_path(owner=github_repository_owner, name=github_repository_name)
-    git_helper = GitHelper(repo=repo_dir, github_cfg=github_cfg, github_repo_path=repo_path)
+
+    helper = GitHubRepositoryHelper.from_githubrepobranch(
+        githubrepobranch=githubrepobranch,
+    )
+    git_helper = GitHelper.from_githubrepobranch(
+        repo_path=repo_dir,
+        githubrepobranch=githubrepobranch,
+    )
 
     ReleaseNotes.create(
         github_helper=helper,
@@ -112,14 +119,20 @@ def release_note_blocks_cli(
 ):
     github_cfg = ctx().cfg_factory().github(github_cfg_name)
 
-    helper = GitHubRepositoryHelper(
-        github_cfg=github_cfg,
-        owner=github_repository_owner,
-        name=github_repository_name,
-        default_branch=repository_branch,
+    githubrepobranch = GitHubRepoBranch(
+        github_config=github_cfg,
+        repo_owner=github_repository_owner,
+        repo_name=github_repository_name,
+        branch=repository_branch,
     )
-    repo_path = github_repo_path(owner=github_repository_owner, name=github_repository_name)
-    git_helper = GitHelper(repo=repo_dir, github_cfg=github_cfg, github_repo_path=repo_path)
+
+    helper = GitHubRepositoryHelper.from_githubrepobranch(
+        githubrepobranch=githubrepobranch,
+    )
+    git_helper = GitHelper.from_githubrepobranch(
+        repo_path=repo_dir,
+        githubrepobranch=githubrepobranch,
+    )
 
     ReleaseNotes.create(
         github_helper=helper,

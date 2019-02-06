@@ -33,6 +33,7 @@ from mailutil import _send_mail
 from github.util import (
     github_cfg_for_hostname,
     GitHubRepositoryHelper,
+    GitHubRepoBranch,
     _create_github_api_object,
 )
 from github.codeowners import CodeownersEnumerator, CodeOwnerEntryResolver
@@ -377,12 +378,17 @@ class ReplicationResultProcessor(object):
         github_api = _create_github_api_object(github_cfg)
         repo_owner, repo_name = main_repo['path'].split('/')
 
-        repo_helper = GitHubRepositoryHelper(
-            owner=repo_owner,
-            name=repo_name,
-            default_branch=main_repo['branch'],
-            github_api=github_api,
+        githubrepobranch = GitHubRepoBranch(
+            github_config=github_cfg,
+            repo_owner=repo_owner,
+            repo_name=repo_name,
+            branch=main_repo['branch'],
         )
+
+        repo_helper = GitHubRepositoryHelper.from_githubrepobranch(
+            githubrepobranch=githubrepobranch,
+        )
+
         codeowners_enumerator = CodeownersEnumerator()
         codeowners_resolver = CodeOwnerEntryResolver(github_api=github_api)
         recipients = set(codeowners_resolver.resolve_email_addresses(
