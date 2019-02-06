@@ -17,7 +17,6 @@ import datetime
 import enum
 import functools
 import io
-import os
 import re
 import semver
 import sys
@@ -37,7 +36,6 @@ import product.model
 
 from http_requests import mount_default_adapter
 from product.model import DependencyBase
-from model import ConfigFactory
 from model.github import GithubConfig
 
 
@@ -495,56 +493,6 @@ def branches(
     github_api = _create_github_api_object(github_cfg=github_cfg)
     repo = github_api.repository(repo_owner, repo_name)
     return list(map(lambda r: r.name, repo.branches()))
-
-
-def replicate_pipeline_definitions(
-    definition_dir: str,
-    cfg_dir: str,
-    cfg_name: str,
-):
-    '''
-    replicates pipeline definitions from cc-pipelines to component repositories.
-    will only be required until definitions are moved to component repositories.
-    '''
-    util.existing_dir(definition_dir)
-    util.existing_dir(cfg_dir)
-
-    cfg_factory = ConfigFactory.from_cfg_dir(cfg_dir)
-    cfg_set = cfg_factory.cfg_set(cfg_name)
-    github_cfg = cfg_set.github()
-
-    repo_mappings = util.parse_yaml_file(os.path.join(definition_dir, '.repository_mapping'))
-
-    for repo_path, definition_file in repo_mappings.items():
-        # hack: definition_file is a list with always exactly one entry
-        definition_file = util.existing_file(os.path.join(definition_dir, definition_file[0]))
-        with open(definition_file) as f:
-            definition_contents = f.read()
-
-        repo_owner, repo_name = repo_path.split('/')
-
-        helper = GitHubRepositoryHelper(
-            github_cfg=github_cfg,
-            owner=repo_owner,
-            name=repo_name,
-        )
-        # only do this for branch 'master' to avoid merge conflicts
-        for branch_name in ['master']: #branches(github_cfg, repo_owner, repo_name):
-            util.info('Replicating pipeline-definition: {r}:{b}'.format(
-                    r=repo_path,
-                    b=branch_name,
-            )
-            )
-            # create pipeline definition file in .ci/pipeline_definitions
-            try:
-                helper.create_or_update_file(
-                    branch=branch_name,
-                    file_path='.ci/pipeline_definitions',
-                    file_contents=definition_contents,
-                    commit_message="Import cc-pipeline definition"
-                )
-            except: # noqa
-                pass # keep going
 
 
 def retrieve_email_addresses(
