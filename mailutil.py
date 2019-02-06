@@ -240,12 +240,17 @@ def _codeowners_parser_from_component_name(component_name: str, branch_name='mas
     )
     github_api = github.util._create_github_api_object(github_cfg=github_cfg)
 
-    github_repo_helper = github.util.GitHubRepositoryHelper(
-        owner=component_name.github_organisation(),
-        name=component_name.github_repo(),
-        default_branch=branch_name,
-        github_api=github_api,
+    githubrepobranch = github.util.GitHubRepoBranch(
+        github_config=github_cfg,
+        repo_owner=component_name.github_organisation(),
+        repo_name=component_name.github_repo(),
+        branch=branch_name,
     )
+
+    github_repo_helper = github.util.GitHubRepositoryHelper.from_githubrepobranch(
+        githubrepobranch=githubrepobranch,
+    )
+
     resolver = CodeOwnerEntryResolver(github_api=github_api)
     enumerator = CodeownersEnumerator()
 

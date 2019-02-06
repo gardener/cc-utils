@@ -17,7 +17,10 @@ import os
 
 import yaml
 
-from github.util import GitHubRepositoryHelper
+from github.util import (
+    GitHubRepositoryHelper,
+    GitHubRepoBranch,
+)
 from util import fail, info
 from model import ConfigFactory
 from concourse.replicator import Renderer, ConcourseDeployer, DeployStatus
@@ -52,10 +55,16 @@ def deploy_and_run_smoketest_pipeline(
 
     # retrieve pipeline-definition from github at hardcoded location
     github_cfg = config_set.github()
-    helper = GitHubRepositoryHelper(
-      github_cfg=github_cfg,
-      owner='kubernetes',
-      name='cc-smoketest',
+
+    githubrepobranch = GitHubRepoBranch(
+        github_config=github_cfg,
+        repo_owner='kubernetes',
+        repo_name='cc-smoketest',
+        branch='master',
+    )
+
+    helper = GitHubRepositoryHelper.from_githubrepobranch(
+      githubrepobranch=githubrepobranch,
     )
     pipeline_definition = yaml.load(
         helper.retrieve_text_file_contents(

@@ -25,7 +25,10 @@ import product.util
 import util
 
 from github.release_notes.util import ReleaseNotes
-from github.util import GitHubRepositoryHelper
+from github.util import (
+    GitHubRepositoryHelper,
+    GitHubRepoBranch,
+)
 from util import check_env
 
 ${step_lib('update_component_deps')}
@@ -135,11 +138,17 @@ def create_upgrade_pr(from_ref, to_ref, ls_repo):
         nv=to_ref.version(),
     )
 
+    githubrepobranch = GitHubRepoBranch(
+        github_config=github_cfg,
+        repo_owner=REPO_OWNER,
+        repo_name=REPO_NAME,
+        branch=REPO_BRANCH,
+    )
+
     # mv diff into commit and push it
-    helper = gitutil.GitHelper(
-        repo=repo_dir,
-        github_cfg=github_cfg,
-        github_repo_path=REPO_OWNER + '/' + REPO_NAME,
+    helper = gitutil.GitHelper.from_githubrepobranch(
+        githubrepobranch=githubrepobranch,
+        repo_path=repo_dir,
     )
     commit = helper.index_to_commit(message=commit_msg)
 
