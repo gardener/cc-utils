@@ -74,6 +74,9 @@ class GitHubRepoBranch(object):
     def repo_name(self):
         return self._repo_name
 
+    def branch(self):
+        return self._branch
+
 
 class RepositoryHelperBase(object):
     GITHUB_TIMESTAMP_UTC_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
