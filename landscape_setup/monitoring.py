@@ -20,7 +20,7 @@ import yaml
 
 from ensure import ensure_annotations
 
-import kube.ctx
+from landscape_setup import kube_ctx
 from landscape_setup.utils import (
     ensure_helm_setup,
     ensure_cluster_version,
@@ -29,8 +29,6 @@ from model.kubernetes import (
     KubernetesConfig,
     MonitoringConfig,
 )
-
-kube_ctx = kube.ctx.Ctx()
 
 
 @ensure_annotations

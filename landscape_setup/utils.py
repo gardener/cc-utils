@@ -15,9 +15,9 @@
 
 import os
 import subprocess
-import kube.ctx
 from ensure import ensure_annotations
 
+from landscape_setup import kube_ctx
 from util import (
     not_none,
     not_empty,
@@ -30,8 +30,6 @@ from model.tls import (
 from model.kubernetes import (
     KubernetesConfig,
 )
-
-kube_ctx = kube.ctx.Ctx()
 
 
 def get_cluster_version_info():

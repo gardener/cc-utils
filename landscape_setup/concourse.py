@@ -25,8 +25,8 @@ from urllib.parse import urlparse
 from subprocess import CalledProcessError
 
 import yaml
-import kube.ctx
 import concourse.client as client
+from landscape_setup import kube_ctx
 from landscape_setup.utils import (
     ensure_helm_setup,
     ensure_cluster_version,
@@ -78,9 +78,6 @@ from kubernetes.client import (
     V1SecretVolumeSource,
     V1LabelSelector,
 )
-
-
-kube_ctx = kube.ctx.Ctx()
 
 
 @ensure_annotations
