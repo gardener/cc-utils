@@ -13,17 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import subprocess
-import tempfile
-import yaml
-
 from ensure import ensure_annotations
 
 from landscape_setup import kube_ctx
 from landscape_setup.utils import (
-    ensure_helm_setup,
     ensure_cluster_version,
+    execute_helm_deployment,
 )
 from model.kubernetes import (
     KubernetesConfig,
@@ -38,58 +33,19 @@ def deploy_monitoring_landscape(
     # Set the global context to the cluster specified in KubernetesConfig
     kube_ctx.set_kubecfg(kubernetes_cfg.kubeconfig())
     ensure_cluster_version(kubernetes_cfg)
+    monitoring_namespace = kubernetes_cfg.monitoring().namespace()
 
-    _deploy_or_upgrade_kube_state_metrics(
-        kubernetes_cfg=kubernetes_cfg,
+    # deploy kube-state-metrics
+    kube_state_metrics_helm_values = create_kube_state_metrics_helm_values(
+        monitoring_cfg=kubernetes_cfg.monitoring()
     )
-
-
-@ensure_annotations
-def _deploy_or_upgrade_kube_state_metrics(
-        kubernetes_cfg: KubernetesConfig,
-):
-    """Deploys (or upgrades) kube-state-metrics via Helm Cli"""
-    helm_executable = ensure_helm_setup()
-    namespace = kubernetes_cfg.monitoring().namespace()
-
-    # create namespace if absent
-    namespace_helper = kube_ctx.namespace_helper()
-    if not namespace_helper.get_namespace(namespace):
-        namespace_helper.create_namespace(namespace)
-
-    KUBE_STATE_METRICS_HELM_VALUES_FILE_NAME = 'kube_state_metrics_helm_values'
-    KUBECONFIG_FILE_NAME = 'kubecfg'
-
-    # prepare subprocess args using relative file paths for the values files
-    subprocess_args = [
-        helm_executable, "upgrade", "--install", "--force",
-        "--recreate-pods",
-        "--wait",
-        "--namespace", namespace,
-        # Use Helm's value-rendering mechanism to merge value-sources.
-        "--values", KUBE_STATE_METRICS_HELM_VALUES_FILE_NAME,
-        namespace, # helm release name is the same as namespace name
-        "stable/kube-state-metrics",
-    ]
-
-    helm_env = os.environ.copy()
-
-    # create temp dir containing all previously referenced files
-    with tempfile.TemporaryDirectory() as temp_dir:
-        kubeconfig_path = os.path.join(temp_dir, KUBECONFIG_FILE_NAME)
-        helm_env['KUBECONFIG'] = kubeconfig_path
-        with open(os.path.join(temp_dir, KUBE_STATE_METRICS_HELM_VALUES_FILE_NAME), 'w') as f:
-            yaml.dump(
-                create_kube_state_metrics_helm_values(
-                    monitoring_cfg=kubernetes_cfg.monitoring(),
-                ),
-                f
-            )
-        with open(kubeconfig_path, 'w') as f:
-            yaml.dump(kubernetes_cfg.kubeconfig(), f)
-
-        # run helm from inside the temporary directory so that the prepared file paths work
-        subprocess.run(subprocess_args, check=True, cwd=temp_dir, env=helm_env)
+    execute_helm_deployment(
+        kubernetes_cfg,
+        monitoring_namespace,
+        'stable/kube-state-metrics',
+        'kube-state-metrics',
+        kube_state_metrics_helm_values,
+    )
 
 
 @ensure_annotations
