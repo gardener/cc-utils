@@ -1,5 +1,3 @@
-import tempfile
-
 import container.registry
 import container.util
 import util
@@ -34,18 +32,8 @@ def filter_image(
     target_ref:str,
     remove_files:[str]=[],
 ):
-    with tempfile.NamedTemporaryFile() as in_fh:
-        container.registry.retrieve_container_image(image_reference=source_ref, outfileobj=in_fh)
-
-        # XXX enable filter_image_file / filter_container_image to work w/o named files
-        with tempfile.NamedTemporaryFile() as out_fh:
-            filter_image_file(
-                in_file=in_fh.name,
-                out_file=out_fh.name,
-                remove_files=remove_files
-            )
-
-            container.registry.publish_container_image(
-                image_reference=target_ref,
-                image_file_obj=out_fh,
-            )
+    container.util.filter_image(
+        source_ref=source_ref,
+        target_ref=target_ref,
+        remove_files=remove_files,
+    )
