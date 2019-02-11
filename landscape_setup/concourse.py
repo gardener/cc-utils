@@ -31,9 +31,9 @@ from landscape_setup.utils import (
     ensure_helm_setup,
     ensure_cluster_version,
     create_tls_secret,
+    execute_helm_deployment,
 )
 from model import (
-    NamedModelElement,
     ConfigFactory,
 )
 from model.concourse import (
@@ -43,9 +43,7 @@ from model.concourse import (
 from model.container_registry import (
     GcrCredentials,
 )
-from model.kubernetes import (
-    KubernetesConfig,
-)
+
 from model.secrets_server import (
     SecretsServerConfig,
 )
@@ -251,16 +249,21 @@ def deploy_concourse_landscape(
         'even if Helm eventually succeeds. In this case, run the deployment command again after '
         'Concourse is available.'
     )
-    # Concourse is deployed last since Helm will lose connection if deployment takes more
-    # than ~60 seconds.
-    # Helm will still continue deploying server-side, but the client will report an error.
-    deploy_or_upgrade_concourse(
-        default_helm_values=default_helm_values,
-        custom_helm_values=custom_helm_values,
-        concourse_cfg=concourse_cfg,
-        config_factory=config_factory,
-        kubernetes_config=kubernetes_config,
-        deployment_name=deployment_name,
+
+    instance_specific_helm_values = create_instance_specific_helm_values(
+        concourse_cfg=concourse_cfg, config_factory=config_factory,
+    )
+    chart_version = concourse_cfg.helm_chart_version()
+
+    execute_helm_deployment(
+        kubernetes_config,
+        deployment_name,
+        'stable/concourse',
+        deployment_name,
+        default_helm_values,
+        custom_helm_values,
+        instance_specific_helm_values,
+        chart_version=chart_version,
     )
 
     info('Waiting until the webserver can be reached ...')
@@ -327,71 +330,6 @@ def destroy_concourse_landscape(config_name: str, release_name: str):
     # delete namespace
     namespace_helper = context.namespace_helper()
     namespace_helper.delete_namespace(namespace=release_name)
-
-
-def deploy_or_upgrade_concourse(
-        default_helm_values: NamedModelElement,
-        custom_helm_values: NamedModelElement,
-        concourse_cfg: ConcourseConfig,
-        config_factory: ConfigFactory,
-        kubernetes_config: KubernetesConfig,
-        deployment_name: str='concourse',
-):
-    """Deploys (or upgrades) Concourse using the Helm CLI"""
-    not_none(default_helm_values)
-    not_none(custom_helm_values)
-    not_none(concourse_cfg)
-    helm_executable = ensure_helm_setup()
-    helm_chart_version = concourse_cfg.helm_chart_version()
-    not_none(helm_chart_version)
-
-    namespace = deployment_name
-
-    # create namespace if absent
-    namespace_helper = kube_ctx.namespace_helper()
-    if not namespace_helper.get_namespace(namespace):
-        namespace_helper.create_namespace(namespace)
-
-    DEFAULT_HELM_VALUES_FILE_NAME = 'default_helm_values'
-    CUSTOM_HELM_VALUES_FILE_NAME = 'custom_helm_values'
-    INSTANCE_SPECIFIC_HELM_VALUES_FILE_NAME = 'instance_specific_helm_values'
-    KUBECONFIG_FILE_NAME = 'kubecfg'
-
-    # prepare subprocess args using relative file paths for the values files
-    subprocess_args = [
-        helm_executable, "upgrade", "--install", "--force",
-        "--recreate-pods",
-        "--wait",
-        "--namespace", namespace,
-        # Use Helm's value-rendering mechanism to merge the different value-sources.
-        # This requires one values-file per source, with later value-files taking precedence.
-        "--values", DEFAULT_HELM_VALUES_FILE_NAME,
-        "--values", CUSTOM_HELM_VALUES_FILE_NAME,
-        "--values", INSTANCE_SPECIFIC_HELM_VALUES_FILE_NAME,
-        "--version", helm_chart_version,
-        namespace, # release name is the same as namespace name
-        "stable/concourse"
-    ]
-
-    helm_env = os.environ.copy()
-    # set KUBECONFIG env-var in the copy to relative file path
-    helm_env['KUBECONFIG'] = KUBECONFIG_FILE_NAME
-
-    # create temp dir containing all previously referenced files
-    with tempfile.TemporaryDirectory() as temp_dir:
-        with open(os.path.join(temp_dir, DEFAULT_HELM_VALUES_FILE_NAME), 'w') as f:
-            yaml.dump(default_helm_values, f)
-        with open(os.path.join(temp_dir, CUSTOM_HELM_VALUES_FILE_NAME), 'w') as f:
-            yaml.dump(custom_helm_values, f)
-        with open(os.path.join(temp_dir, INSTANCE_SPECIFIC_HELM_VALUES_FILE_NAME), 'w') as f:
-            yaml.dump(create_instance_specific_helm_values(
-                concourse_cfg=concourse_cfg, config_factory=config_factory,), f
-            )
-        with open(os.path.join(temp_dir, KUBECONFIG_FILE_NAME), 'w') as f:
-            yaml.dump(kubernetes_config.kubeconfig(), f)
-
-        # run helm from inside the temporary directory so that the prepared file paths work
-        subprocess.run(subprocess_args, check=True, cwd=temp_dir, env=helm_env)
 
 
 def deploy_secrets_server(secrets_server_config: SecretsServerConfig):

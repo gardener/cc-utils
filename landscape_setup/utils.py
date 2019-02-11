@@ -15,6 +15,8 @@
 
 import os
 import subprocess
+import yaml
+import tempfile
 from ensure import ensure_annotations
 
 from landscape_setup import kube_ctx
@@ -93,3 +95,57 @@ def create_tls_secret(
             data=data,
             namespace=namespace,
         )
+
+
+def execute_helm_deployment(
+    kubernetes_config: KubernetesConfig,
+    namespace: str,
+    chart_name: str,
+    release_name: str,
+    *values: dict,
+    chart_version: str=None,
+):
+
+    helm_executable = ensure_helm_setup()
+    # create namespace if absent
+    namespace_helper = kube_ctx.namespace_helper()
+    if not namespace_helper.get_namespace(namespace):
+        namespace_helper.create_namespace(namespace)
+
+    KUBECONFIG_FILE_NAME = "kubecfg"
+
+    # prepare subprocess args using relative file paths for the values files
+    subprocess_args = [
+        helm_executable,
+        "upgrade",
+        release_name,
+        chart_name,
+        "--install",
+        "--force",
+        "--recreate-pods",
+        "--wait",
+        "--namespace",
+        namespace,
+    ]
+
+    if chart_version:
+        subprocess_args += ["--version", chart_version]
+
+    for idx, _ in enumerate(values):
+        subprocess_args.append("--values")
+        subprocess_args.append("value" + str(idx))
+
+    helm_env = os.environ.copy()
+    helm_env['KUBECONFIG'] = KUBECONFIG_FILE_NAME
+
+    # create temp dir containing all previously referenced files
+    with tempfile.TemporaryDirectory() as temp_dir:
+        for idx, value in enumerate(values):
+            with open(os.path.join(temp_dir, "value" + str(idx)), 'w') as f:
+                yaml.dump(value, f)
+
+        with open(os.path.join(temp_dir, KUBECONFIG_FILE_NAME), 'w') as f:
+            yaml.dump(kubernetes_config.kubeconfig(), f)
+
+        # run helm from inside the temporary directory so that the prepared file paths work
+        subprocess.run(subprocess_args, check=True, cwd=temp_dir, env=helm_env)
