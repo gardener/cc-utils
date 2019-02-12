@@ -34,6 +34,16 @@ from model.kubernetes import (
 )
 
 
+# Stuff used for yaml formatting, when dumping a dictionary
+class LiteralStr(str):
+    """Used to create yaml block style indicator | """
+
+
+def literal_str_representer(dumper, data):
+    """Used to create yaml block style indicator"""
+    return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
+
+
 def get_cluster_version_info():
     api = kube_ctx.create_version_api()
     return api.get_code()
@@ -105,7 +115,7 @@ def execute_helm_deployment(
     *values: dict,
     chart_version: str=None,
 ):
-
+    yaml.add_representer(LiteralStr, literal_str_representer)
     helm_executable = ensure_helm_setup()
     # create namespace if absent
     namespace_helper = kube_ctx.namespace_helper()
