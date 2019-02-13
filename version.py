@@ -58,6 +58,8 @@ def process_version(
     build_metadata_length: int=12,
     verbatim_version: str=None,
 ):
+    if operation not in ALL_OPS:
+        raise ValueError(f'Unknown version operation: {operation}')
     if operation in [SET_PRERELEASE,SET_PRERELEASE_AND_BUILD,APPEND_PRERELEASE] and not prerelease:
         raise ValueError('Prerelease must be given when replacing or appending.')
     if operation in [SET_BUILD_METADATA,SET_PRERELEASE_AND_BUILD]:
