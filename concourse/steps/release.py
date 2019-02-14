@@ -1,3 +1,4 @@
+import abc
 import os
 import version
 import pathlib
@@ -30,6 +31,49 @@ def rebase(
 ):
     upstream_commit_sha = git_helper.fetch_head(upstream_ref).hexsha
     git_helper.rebase(commit_ish=upstream_commit_sha)
+
+
+class TransactionalStep(object, metaclass=abc.ABCMeta):
+    '''Abstract base class for operations that are to be executed with transactional semantics.
+
+    Instances represent operations which typically cause external and persistent side effects.
+    Typically, a sequence of (different) steps are grouped in a `Transaction`
+
+    Subclasses *may* overwrite the `validate` method, which performs optional checks that indicate
+    whether the operation would probably fail. Those checks are intended to be run for all steps of
+    a `Transaction` before actually executing it. Validation *must not* cause any persistent side
+    effects to external resources.
+
+    Subclasses *must* overwrite the `apply` method, which performs the actual payload of the step,
+    typically resulting in persistent external side effects. The `apply` method *may* also return
+    an object (e.g.: a `dict`) that is then made available to later steps
+    when part of a `Transaction`.
+
+    Subclasses *must* overwrite the `revert` method, which reverts any persistent external side
+    effects previously created by running the step's `apply` method. This should take into account
+    that the execution of the `apply` method may or may not have succeeded, failed,
+    or failed partially.
+    '''
+    def set_context(self, context: TransactionContext):
+        self._context = context
+
+    def context(self):
+        return self._context
+
+    def validate(self):
+        pass
+
+    @abc.abstractmethod
+    def apply(self):
+        return None
+
+    @abc.abstractmethod
+    def revert(self):
+        pass
+
+    @abc.abstractmethod
+    def name(self):
+        pass
 
 
 def release_and_prepare_next_dev_cycle(
