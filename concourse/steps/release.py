@@ -33,6 +33,19 @@ def rebase(
     git_helper.rebase(commit_ish=upstream_commit_sha)
 
 
+class TransactionContext(object):
+    def __init__(self):
+        self._step_outputs = {}
+
+    def step_output(self, step_name: str):
+        return self._step_outputs[step_name]
+
+    def set_step_output(self, step_name: str, output):
+        if step_name in self._step_outputs.keys():
+            raise RuntimeError(f"Context already contains output of step '{step_name}'")
+        self._step_outputs[step_name] = output
+
+
 class TransactionalStep(object, metaclass=abc.ABCMeta):
     '''Abstract base class for operations that are to be executed with transactional semantics.
 
