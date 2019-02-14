@@ -72,14 +72,13 @@ def deploy_monitoring_landscape(
 def create_kube_state_metrics_helm_values(
     monitoring_cfg: MonitoringConfig,
 ):
-    image_tag = monitoring_cfg.kube_state_metrics_version()
-
     configured_collectors = monitoring_cfg.kube_state_metrics_collectors()
     all_collectors = [
         "configmaps", "cronjobs", "daemonsets", "deployments", "endpoints",
-        "horizontalpodautoscalers", "jobs", "limi∏tranges", "namespaces", "nodes",
-        "persistentvolumeclaims", "persistentvolumes", "pods", "replicasets",
-        "replicationcontrollers", "resourcequotas", "secrets", "services", "statefulsets"
+        "horizontalpodautoscalers", "jobs", "limitranges", "namespaces", "nodes",
+        "persistentvolumeclaims", "persistentvolumes", "poddisruptionbudgets", "pods",
+        "replicasets", "replicationcontrollers", "resourcequotas", "secrets",
+        "services", "statefulsets"
     ]
 
     def configured(c):
@@ -90,9 +89,6 @@ def create_kube_state_metrics_helm_values(
     namespaces_to_monitor = monitoring_cfg.kube_state_metrics_namespaces_to_monitor()
 
     helm_values = {
-        "image": {
-            "tag": image_tag,
-        },
         "rbac": {
             "create": True
         },
