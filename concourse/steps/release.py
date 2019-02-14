@@ -13,6 +13,7 @@ from util import (
 from gitutil import GitHelper
 from github.util import (
     GitHubRepositoryHelper,
+    GitHubRepoBranch,
 )
 import product.model
 from github.release_notes.util import (
@@ -32,13 +33,10 @@ def rebase(
 
 
 def release_and_prepare_next_dev_cycle(
-    github_cfg_name: str,
-    github_repository_owner: str,
-    github_repository_name: str,
-    repository_branch: str,
+    githubrepobranch: GitHubRepoBranch,
     repository_version_file_path: str,
     release_version: str,
-    repo_dir:str,
+    repo_dir: str,
     release_commit_callback: str=None,
     version_operation: str="bump_minor",
     prerelease_suffix: str="dev",
@@ -51,19 +49,10 @@ def release_and_prepare_next_dev_cycle(
 ):
     repo_dir = existing_dir(repo_dir)
 
-    github_cfg = ctx().cfg_factory().github(github_cfg_name)
-    github_repo_path = f'{github_repository_owner}/{github_repository_name}'
-
-    helper = GitHubRepositoryHelper(
-        github_cfg=github_cfg,
-        owner=github_repository_owner,
-        name=github_repository_name,
-        default_branch=repository_branch,
-    )
-    git_helper = GitHelper(
-        repo=repo_dir,
-        github_cfg=github_cfg,
-        github_repo_path=github_repo_path,
+    helper = GitHubRepositoryHelper.from_githubrepobranch(githubrepobranch)
+    git_helper = GitHelper.from_githubrepobranch(
+        githubrepobranch=githubrepobranch,
+        repo_path=repo_dir,
     )
 
     if helper.tag_exists(tag_name=release_version):
