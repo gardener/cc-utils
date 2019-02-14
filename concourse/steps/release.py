@@ -208,7 +208,8 @@ class ReleaseCommitStep(TransactionalStep):
             self.git_helper._stash_changes()
 
         # update version file
-        self.repository_version_file_path.write_text(self.release_version)
+        with open(self.repository_version_file_path, 'w') as f:
+            f.write(self.release_version)
 
         try:
             # call optional release commit callback
@@ -462,7 +463,6 @@ def release_and_prepare_next_dev_cycle(
     slack_channel: str=None,
     rebase_before_release: bool=False,
 ):
-    repo_dir = existing_dir(repo_dir)
 
     helper = GitHubRepositoryHelper.from_githubrepobranch(githubrepobranch)
     git_helper = GitHelper.from_githubrepobranch(
@@ -470,91 +470,64 @@ def release_and_prepare_next_dev_cycle(
         repo_path=repo_dir,
     )
 
-    if helper.tag_exists(tag_name=release_version):
-        fail(
-            "Cannot create tag '{t}' in preparation for release: Tag already exists".format(
-                t=release_version,
-            )
-        )
-
-    if rebase_before_release:
-        rebase(git_helper=git_helper, upstream_ref=f'refs/heads/{repository_branch}')
-
-    # Fetch release notes and generate markdown to catch errors early
-    release_notes = fetch_release_notes(
-        github_repository_owner=github_repository_owner,
-        github_repository_name=github_repository_name,
-        github_cfg=github_cfg,
-        repo_dir=repo_dir,
-        github_helper=helper,
-        repository_branch=repository_branch,
-    )
-    release_notes_md = release_notes.to_markdown()
-
-    # Do all the version handling upfront to catch errors early
-    # Bump release version and add suffix
-    next_version = version.process_version(
-        version_str=release_version,
-        operation=version_operation
-    )
-    next_version_dev = version.process_version(
-        version_str=next_version,
-        operation='set_prerelease',
-        prerelease=prerelease_suffix
-    )
-
-    release_commit_sha = _create_and_push_release_commit(
-        repo_dir=repo_dir,
+    release_commit_step = ReleaseCommitStep(
         git_helper=git_helper,
-        version_file_path=repository_version_file_path,
+        repo_dir=repo_dir,
         release_version=release_version,
-        target_ref=repository_branch,
-        commit_msg=f'Release {release_version}',
+        repository_version_file_path=repository_version_file_path,
+        repository_branch=githubrepobranch.branch(),
         release_commit_callback=release_commit_callback,
+        rebase_before_release=rebase_before_release,
     )
 
-    helper.create_tag(
-        tag_name=release_version,
-        tag_message="Release " + release_version,
-        repository_reference=release_commit_sha,
+    release_tag_step = ReleaseTagStep(
+        github_helper=github_helper,
+        release_version=release_version,
+        author_email=author_email,
         author_name=author_name,
-        author_email=author_email
-    )
-    release = helper.create_release(
-        tag_name=release_version,
-        body=release_notes_md,
-        draft=False,
-        prerelease=False
     )
 
-    if component_descriptor_file_path:
-        with open(component_descriptor_file_path) as f:
-            # todo: validate descriptor
-            component_descriptor_contents = f.read()
-        release.upload_asset(
-            content_type='application/x-yaml',
-            name=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
-            asset=component_descriptor_contents,
-            label=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
-        )
-
-    # Prepare version file for next dev cycle
-    helper.create_or_update_file(
-        file_path=repository_version_file_path,
-        file_contents=next_version_dev,
-        commit_message="Prepare next dev cycle " + next_version_dev
+    github_release_step = GitHubReleaseStep(
+        github_helper=github_helper,
+        githubrepobranch=githubrepobranch,
+        repo_dir=repo_dir,
+        release_version=release_version,
+        component_descriptor_file_path=component_descriptor_file_path,
     )
 
+    dev_cycle_commit_step = PrepareDevCycleStep(
+        github_helper=github_helper,
+        repo_dir=repo_dir,
+        repository_version_file_path=repository_version_file_path,
+        release_version=release_version,
+        version_operation=version_operation,
+        prerelease_suffix=prerelease_suffix,
+    )
+
+    release_transaction = Transaction(
+        release_commit_step,
+        release_tag_step,
+        github_release_step,
+        dev_cycle_commit_step,
+    )
+
+    release_transaction.validate()
+    release_transaction.execute()
+
+    # clean up old draft release
     draft_name = draft_release_name_for_version(release_version)
-    draft_release = helper.draft_release_with_name(draft_name)
+    draft_release = github_helper.draft_release_with_name(draft_name)
+
     if draft_release:
-        verbose('cleaning up draft release {name}'.format(name=draft_release.name))
+        # TODO: clean up ALL previously made draft-releases (just in case)
+        info(f'cleaning up draft release {draft_release.name}')
         draft_release.delete()
 
+    # publish release notification to slack
     if slack_cfg_name and slack_channel:
         post_to_slack(
-            release_notes=release_notes,
-            github_repository_name=github_repository_name,
+            release_notes=release_context.release_notes(),
+            github_repository_name=githubrepobranch.github_repo_path(),
             slack_cfg_name=slack_cfg_name,
             slack_channel=slack_channel,
             release_version=release_version,
