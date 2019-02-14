@@ -30,14 +30,6 @@ from github.release_notes.util import (
 )
 
 
-def rebase(
-    git_helper,
-    upstream_ref,
-):
-    upstream_commit_sha = git_helper.fetch_head(upstream_ref).hexsha
-    git_helper.rebase(commit_ish=upstream_commit_sha)
-
-
 class TransactionContext(object):
     def __init__(self):
         self._step_outputs = {}
@@ -464,7 +456,7 @@ def release_and_prepare_next_dev_cycle(
     rebase_before_release: bool=False,
 ):
 
-    helper = GitHubRepositoryHelper.from_githubrepobranch(githubrepobranch)
+    github_helper = GitHubRepositoryHelper.from_githubrepobranch(githubrepobranch)
     git_helper = GitHelper.from_githubrepobranch(
         githubrepobranch=githubrepobranch,
         repo_path=repo_dir,
@@ -532,60 +524,3 @@ def release_and_prepare_next_dev_cycle(
             slack_channel=slack_channel,
             release_version=release_version,
         )
-
-
-def _create_and_push_release_commit(
-        repo_dir: str,
-        git_helper,
-        version_file_path: str,
-        release_version: str,
-        target_ref: str,
-        commit_msg: str,
-        release_commit_callback: str=None,
-):
-    if release_commit_callback:
-        release_commit_callback = os.path.join(repo_dir, release_commit_callback)
-        existing_file(release_commit_callback)
-
-    def invoke_release_callback():
-        if not release_commit_callback:
-            return # early exit if optional callback is absent
-
-        callback_env = os.environ.copy()
-        callback_env['REPO_DIR'] = repo_dir
-        callback_env['EFFECTIVE_VERSION'] = release_version
-
-        subprocess.run(
-            [release_commit_callback],
-            check=True,
-            env=callback_env,
-        )
-
-    try:
-        # clean repository if required
-        worktree_dirty = bool(git_helper._changed_file_paths())
-        if worktree_dirty:
-            git_helper._stash_changes()
-
-        # update version file
-        version_file = pathlib.Path(repo_dir, version_file_path)
-        version_file.write_text(release_version)
-
-        # call optional release commit callback
-        invoke_release_callback()
-
-        release_commit = git_helper.index_to_commit(message=commit_msg)
-
-        # forward head to new commit
-        git_helper.repo.head.set_commit(release_commit.hexsha)
-
-        git_helper.push(
-            from_ref=release_commit.hexsha,
-            to_ref=target_ref,
-            use_ssh=True,
-        )
-    finally:
-        if worktree_dirty and git_helper._has_stash():
-            git_helper._pop_stash()
-
-    return release_commit.hexsha
