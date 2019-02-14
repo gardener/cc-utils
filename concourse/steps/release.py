@@ -3,6 +3,7 @@ import os
 import version
 import pathlib
 import subprocess
+import traceback
 
 from util import (
     ctx,
@@ -10,6 +11,8 @@ from util import (
     existing_dir,
     fail,
     verbose,
+    info,
+    warning,
 )
 from gitutil import GitHelper
 from github.util import (
@@ -87,6 +90,67 @@ class TransactionalStep(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def name(self):
         pass
+
+
+class Transaction(object):
+    '''This class represents a transaction using `TransactionalStep`s
+
+    Provides aptly named methods to `validate` a series of `TransactionalStep`s and `execute`
+    it atomically, performing the necessary undo actions should an error occur.
+
+    `TransactionalStep`s are provided with access to a shared `TransactionContext` instance
+    to store and retrieve (by step name) information with greater scope than a single step.
+    '''
+    def __init__(
+        self,
+        *steps: TransactionalStep,
+    ):
+        # create context object for this transaction
+        self.context = TransactionContext()
+        # validate type of args and set context
+        for step in steps:
+            if not isinstance(step, TransactionalStep):
+                raise TypeError('Transactions may only contain instances of TransactionalStep')
+            step.set_context(self.context)
+        self._steps = steps
+
+    def validate(self):
+        for step in self._steps:
+            info(f"Validating step '{step.name()}'")
+            step.validate()
+
+    def execute(self):
+        executed_steps = list()
+        for step in self._steps:
+            step_name = step.name()
+            # attempt to execute the step
+            info(f"Applying step '{step_name}'")
+            executed_steps.append(step)
+            try:
+                output = step.apply()
+                self.context.set_step_output(step_name, output)
+            except BaseException as e:
+                warning(f"An error occured while applying step '{step_name}': {e}")
+                traceback.print_exc()
+                # revert the changes attempted, in reverse order
+                self._revert(reversed(executed_steps))
+                # do not execute apply for remaining steps
+                break
+
+    def _revert(self, steps):
+        # attempt to revert each step. Raise an exception if not all reverts succeeded.
+        all_reverted = True
+        for step in steps:
+            step_name = step.name()
+            info(f"Reverting step {step_name}")
+            try:
+                step.revert()
+            except BaseException as e:
+                all_reverted = False
+                warning(f"An error occured while reverting step '{step_name}': {e}")
+                traceback.print_exc()
+        if not all_reverted:
+            raise RuntimeError("Unable to revert all steps.")
 
 
 def release_and_prepare_next_dev_cycle(
