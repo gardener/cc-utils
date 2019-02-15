@@ -249,8 +249,7 @@ class ReleaseCommitStep(TransactionalStep):
         )
 
     def revert(self):
-        # TODO: revert commit
-        return
+        raise NotImplementedError('revert-method is not yet implemented')
 
 
 class ReleaseTagStep(TransactionalStep):
@@ -292,8 +291,7 @@ class ReleaseTagStep(TransactionalStep):
         )
 
     def revert(self):
-        # TODO: Delete tag
-        return
+        raise NotImplementedError('revert-method is not yet implemented')
 
 
 class GitHubReleaseStep(TransactionalStep):
@@ -368,8 +366,7 @@ class GitHubReleaseStep(TransactionalStep):
         }
 
     def revert(self):
-        #TODO: remove release from GitHub
-        return
+        raise NotImplementedError('revert-method is not yet implemented')
 
 
 class PrepareDevCycleStep(TransactionalStep):
@@ -436,8 +433,7 @@ class PrepareDevCycleStep(TransactionalStep):
         )
 
     def revert(self):
-        #TODO: remove created commit
-        return
+        raise NotImplementedError('revert-method is not yet implemented')
 
 
 def release_and_prepare_next_dev_cycle(
