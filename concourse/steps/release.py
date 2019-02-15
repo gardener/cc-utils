@@ -330,21 +330,10 @@ class GitHubReleaseStep(TransactionalStep):
     def apply(
         self,
     ):
-        # fetch release notes and generate markdown to catch errors early
-        release_notes = fetch_release_notes(
-            github_repository_owner=self.githubrepobranch.repo_owner(),
-            github_repository_name=self.githubrepobranch.repo_name(),
-            github_cfg=self.githubrepobranch.github_config(),
-            repo_dir=self.repo_dir,
-            github_helper=self.github_helper,
-            repository_branch=self.githubrepobranch.branch(),
-        )
-        release_notes_md = release_notes.to_markdown()
-
         # Create GitHub-release
         release = self.github_helper.create_release(
             tag_name=self.release_version,
-            body=release_notes_md,
+            body=None,
             draft=False,
             prerelease=False,
         )
@@ -360,10 +349,7 @@ class GitHubReleaseStep(TransactionalStep):
                     label=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
                 )
 
-        return {
-            'release notes': release_notes,
-            'release notes markdown': release_notes_md,
-        }
+        return {}
 
     def revert(self):
         raise NotImplementedError('revert-method is not yet implemented')
@@ -436,6 +422,109 @@ class PrepareDevCycleStep(TransactionalStep):
         raise NotImplementedError('revert-method is not yet implemented')
 
 
+class PublishReleaseNotesStep(TransactionalStep):
+    def name(self):
+        return "Publish Release Notes"
+
+    def __init__(
+        self,
+        githubrepobranch: GitHubRepoBranch,
+        github_helper: GitHubRepositoryHelper,
+        release_version: str,
+        repo_dir: str,
+    ):
+        self.githubrepobranch = not_none(githubrepobranch)
+        self.github_helper = not_none(github_helper)
+        self.release_version = not_empty(release_version)
+        self.repo_dir = os.path.abspath(not_empty(repo_dir))
+
+    def validate(self):
+        pass
+
+    def apply(self):
+        release_notes = fetch_release_notes(
+            github_repository_owner=self.githubrepobranch.repo_owner(),
+            github_repository_name=self.githubrepobranch.repo_name(),
+            github_cfg=self.githubrepobranch.github_config(),
+            repo_dir=self.repo_dir,
+            github_helper=self.github_helper,
+            repository_branch=self.githubrepobranch.branch(),
+        )
+        release_notes_md = release_notes.to_markdown()
+        self.github_helper.update_release_notes(
+            tag_name=self.release_version,
+            body=release_notes_md,
+        )
+        return {
+            'release notes': release_notes,
+            'release notes markdown': release_notes_md
+        }
+
+    def revert(self):
+        raise NotImplementedError('revert-method is not yet implemented')
+
+
+class CleanupDraftReleaseStep(TransactionalStep):
+    def name(self):
+        return "Cleanup Draft Release"
+
+    def __init__(
+        self,
+        github_helper: GitHubRepositoryHelper,
+        release_version: str,
+    ):
+        self.github_helper = not_none(github_helper)
+        self.release_version = not_empty(release_version)
+
+    def validate(self):
+        pass
+
+    def apply(self):
+        # TODO: inline?
+        draft_name = draft_release_name_for_version(self.release_version)
+        draft_release = self.github_helper.draft_release_with_name(draft_name)
+
+        if draft_release:
+            # TODO: clean up ALL previously made draft-releases (just in case)
+            draft_release.delete()
+
+    def revert(self):
+        raise NotImplementedError('revert-method is not yet implemented')
+
+
+class PostSlackReleaseStep(TransactionalStep):
+    def name(self):
+        return "Post Slack Release"
+
+    def __init__(
+        self,
+        slack_cfg_name: str,
+        slack_channel: str,
+        release_version: str,
+        githubrepobranch: GitHubRepoBranch,
+    ):
+        self.slack_cfg_name = not_empty(slack_cfg_name)
+        self.slack_channel = not_empty(slack_channel)
+        self.release_version = not_empty(release_version)
+        self.githubrepobranch = not_none(githubrepobranch)
+
+    def validate(self):
+        pass
+
+    def apply(self):
+        release_notes = self.context().step_output('Publish Release Notes').get('release notes')
+        post_to_slack(
+            release_notes=release_notes,
+            github_repository_name=self.githubrepobranch.github_repo_path(),
+            slack_cfg_name=self.slack_cfg_name,
+            slack_channel=self.slack_channel,
+            release_version=self.release_version,
+        )
+
+    def revert(self):
+        raise NotImplementedError('revert-method is not yet implemented')
+
+
 def release_and_prepare_next_dev_cycle(
     githubrepobranch: GitHubRepoBranch,
     repository_version_file_path: str,
@@ -502,21 +591,32 @@ def release_and_prepare_next_dev_cycle(
     release_transaction.validate()
     release_transaction.execute()
 
-    # clean up old draft release
-    draft_name = draft_release_name_for_version(release_version)
-    draft_release = github_helper.draft_release_with_name(draft_name)
+    publish_release_notes_step = PublishReleaseNotesStep(
+        githubrepobranch=githubrepobranch,
+        github_helper=github_helper,
+        release_version=release_version,
+        repo_dir=repo_dir,
+    )
 
-    if draft_release:
-        # TODO: clean up ALL previously made draft-releases (just in case)
-        info(f'cleaning up draft release {draft_release.name}')
-        draft_release.delete()
+    cleanup_draft_releases_step = CleanupDraftReleaseStep(
+        github_helper=github_helper,
+        release_version=release_version,
+    )
 
-    # publish release notification to slack
+    release_notes_steps = [
+        publish_release_notes_step,
+        cleanup_draft_releases_step,
+    ]
+
     if slack_cfg_name and slack_channel:
-        post_to_slack(
-            release_notes=release_context.release_notes(),
-            github_repository_name=githubrepobranch.github_repo_path(),
+        post_to_slack_step = PostSlackReleaseStep(
             slack_cfg_name=slack_cfg_name,
             slack_channel=slack_channel,
             release_version=release_version,
+            githubrepobranch=githubrepobranch,
         )
+        release_notes_steps.append(post_to_slack_step)
+
+    release_notes_transaction = Transaction(*release_notes_steps)
+    release_notes_transaction.validate()
+    release_notes_transaction.execute()
