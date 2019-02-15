@@ -373,6 +373,20 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         )
         return release
 
+    def update_release_notes(
+        self,
+        tag_name: str,
+        body: str,
+    )->bool:
+        util.not_empty(tag_name)
+        release = self.repository.release_from_tag(tag_name)
+        if not release:
+            raise RuntimeError(
+                f"No release with tag '{tag_name}' found "
+                f"in repository {self.repository}"
+            )
+        return release.edit(body=body)
+
     def draft_release_with_name(
         self,
         name: str
