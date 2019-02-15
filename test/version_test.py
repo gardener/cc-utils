@@ -33,9 +33,9 @@ class Version_find_latest_version(unittest.TestCase):
 
 
 class Version_process_version_Test(unittest.TestCase):
-    def test_invalid_version_operation(self):
-        with self.assertRaises(ValueError):
-            examinee.process_version(version_str='1.2.3', operation='made-up_op')
+    # def test_invalid_version_operation(self):
+    #     with self.assertRaises(ValueError):
+    #         examinee.process_version(version_str='1.2.3', operation='made-up_op')
 
     def test_invalid_version(self):
         with self.assertRaises(ValueError):
