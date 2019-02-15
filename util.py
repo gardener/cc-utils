@@ -139,7 +139,7 @@ def info(msg:str):
     if _quiet():
         return
     if msg:
-        _print('INFO: ' + str(msg), colour=None)
+        _print('INFO: ' + str(msg), colour='cyan')
 
 
 def warning(msg:str):
