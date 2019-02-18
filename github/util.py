@@ -34,7 +34,7 @@ from github3.orgs import Team
 import util
 import product.model
 
-from http_requests import mount_default_adapter
+from http_requests import mount_default_adapter, log_stack_trace_information
 from product.model import DependencyBase
 from model.github import GithubConfig
 
@@ -480,7 +480,8 @@ def _create_github_api_object(
     if not github_api:
         util.fail("Could not connect to GitHub-instance {url}".format(url=github_url))
 
-    mount_default_adapter(github_api.session)
+    session = mount_default_adapter(github_api.session)
+    session.hooks['response'] = log_stack_trace_information
 
     return github_api
 

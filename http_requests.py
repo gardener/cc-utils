@@ -70,7 +70,6 @@ def mount_default_adapter(
     )
     session.mount('http://', default_http_adapter)
     session.mount('https://', default_http_adapter)
-    session.hooks['response'] = log_stack_trace_information
 
     return session
 
