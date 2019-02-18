@@ -439,7 +439,13 @@ class PublishReleaseNotesStep(TransactionalStep):
         self.repo_dir = os.path.abspath(not_empty(repo_dir))
 
     def validate(self):
-        pass
+        semver.parse(self.release_version)
+        existing_dir(self.repo_dir)
+
+        # check whether a release with the given version exists
+        release = self.github_helper.repository.release_from_tag(self.release_version)
+        if not release:
+            raise RuntimeError(f'No release with tag {self.release_version} found')
 
     def apply(self):
         release_notes = fetch_release_notes(
@@ -457,7 +463,7 @@ class PublishReleaseNotesStep(TransactionalStep):
         )
         return {
             'release notes': release_notes,
-            'release notes markdown': release_notes_md
+            'release notes markdown': release_notes_md,
         }
 
     def revert(self):
@@ -477,10 +483,9 @@ class CleanupDraftReleaseStep(TransactionalStep):
         self.release_version = not_empty(release_version)
 
     def validate(self):
-        pass
+        semver.parse(self.release_version)
 
     def apply(self):
-        # TODO: inline?
         draft_name = draft_release_name_for_version(self.release_version)
         draft_release = self.github_helper.draft_release_with_name(draft_name)
 
@@ -509,7 +514,7 @@ class PostSlackReleaseStep(TransactionalStep):
         self.githubrepobranch = not_none(githubrepobranch)
 
     def validate(self):
-        pass
+        semver.parse(self.release_version)
 
     def apply(self):
         release_notes = self.context().step_output('Publish Release Notes').get('release notes')
