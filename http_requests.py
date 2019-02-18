@@ -14,12 +14,15 @@
 # limitations under the License.
 from functools import wraps
 
+import traceback
+import datetime
 import requests
 from requests.auth import HTTPBasicAuth
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from util import warning
+import ccc.elasticsearch
+from util import warning, info, ctx
 
 
 class LoggingRetry(Retry):
@@ -67,7 +70,42 @@ def mount_default_adapter(
     )
     session.mount('http://', default_http_adapter)
     session.mount('https://', default_http_adapter)
+    session.hooks['response'] = log_stack_trace_information
+
     return session
+
+
+def log_stack_trace_information(resp, *args, **kwargs):
+    '''
+    This function stores the current stacktrace in elastic search.
+    It must not return anything, otherwise the return value is assumed to replace the response
+    '''
+    try:
+        els_index = "github_access_stacktrace"
+        els_config = "sap_internal"
+
+        try:
+            elastic_cfg = ctx().cfg_factory().elasticsearch(els_config)
+        except KeyError:
+            # do nothing: external concourse does not have els config
+            return
+
+        now = datetime.datetime.utcnow()
+        json_body = {
+            'date': now.isoformat(),
+            'url': resp.url,
+            'req_method': resp.request.method,
+            'stacktrace': traceback.format_stack()
+        }
+
+        elastic_client = ccc.elasticsearch.from_cfg(elasticsearch_cfg=elastic_cfg)
+        elastic_client.store_document(
+            index=els_index,
+            body=json_body
+        )
+
+    except Exception as e:
+        info(f'Could not log stack trace information: {e}')
 
 
 def check_http_code(function):
