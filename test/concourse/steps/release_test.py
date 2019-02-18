@@ -1,0 +1,262 @@
+import os
+import pytest
+from unittest.mock import MagicMock
+from github.util import GitHubRepositoryHelper, GitHubRepoBranch
+
+import concourse.steps.release
+import util
+
+
+class TestReleaseCommitStep(object):
+    @pytest.fixture()
+    def examinee(self, tmp_path):
+        # create required temporary file relative to the provided temporary directory
+        temporary_version_file = tmp_path.joinpath('version_file')
+        temporary_version_file.touch()
+
+        def _examinee(
+            repo_dir=str(tmp_path),
+            release_version='1.0.0',
+            repository_version_file_path='version_file',
+            repository_branch='master',
+            rebase_before_release=True,
+            release_commit_callback=None,
+            ):
+            return concourse.steps.release.ReleaseCommitStep(
+                git_helper=MagicMock(),
+                repo_dir=repo_dir,
+                release_version=release_version,
+                repository_version_file_path=repository_version_file_path,
+                repository_branch=repository_branch,
+                rebase_before_release=rebase_before_release,
+                release_commit_callback=release_commit_callback,
+            )
+        return _examinee
+
+    def test_validation(self, examinee, tmp_path):
+        # create temporary files in the provided directory
+        temporary_callback_file = tmp_path.joinpath('callback_script')
+        temporary_callback_file.touch()
+        examinee(
+            release_commit_callback='callback_script',
+        ).validate()
+
+    def test_validation_fail_on_missing_callback_script(self, examinee, tmp_path):
+        with pytest.raises(ValueError):
+            # pass non-existing relative file-name
+            examinee(release_commit_callback='no_such_file').validate()
+
+    def test_validation_fail_on_missing_version_file(self, examinee, tmp_path):
+        with pytest.raises(ValueError):
+            examinee(repository_version_file_path='no_such_file').validate()
+
+    def test_validation_fail_on_invalid_semver(self, examinee):
+        with pytest.raises(ValueError):
+            examinee(release_version='invalid_semver').validate()
+
+
+class TestReleaseTagStep(object):
+    @pytest.fixture()
+    def examinee(self):
+        def _examinee(
+            release_version='1.0.0',
+            author_name='test_name',
+            author_email='test@mail.com',
+            tag_helper_return_value=False,
+        ):
+            # Create a github_helper mock that always reports a tag as existing/not existing,
+            # depending on the passed value
+            github_helper_mock = MagicMock(spec=GitHubRepositoryHelper)
+            tag_exists_mock = MagicMock(return_value=tag_helper_return_value)
+            github_helper_mock.tag_exists = tag_exists_mock
+
+            return concourse.steps.release.ReleaseTagStep(
+                github_helper=github_helper_mock,
+                release_version=release_version,
+                author_name=author_name,
+                author_email=author_email,
+            )
+        return _examinee
+
+    def test_validation(self, examinee):
+        examinee().validate()
+
+    def test_validation_fail_on_existing_tag(self, examinee):
+        with pytest.raises(RuntimeError):
+            examinee(tag_helper_return_value=True).validate()
+
+    def test_validation_fail_on_invalid_semver(self, examinee):
+        with pytest.raises(ValueError):
+            examinee(release_version='invalid_semver').validate()
+
+
+class TestGitHubReleaseStep(object):
+    @pytest.fixture()
+    def examinee(self, tmp_path):
+        # prepare test component descriptor file and fill it with test content
+        component_descriptor_file = tmp_path.joinpath('test_descriptor').resolve()
+        component_descriptor_file.write_text('component descriptor test content')
+
+        def _examinee(
+            github_helper=MagicMock(),
+            githubrepobranch=GitHubRepoBranch(
+                github_config='test_config',
+                repo_owner='test_owner',
+                repo_name='test_name',
+                branch='master',
+            ),
+            repo_dir=str(tmp_path),
+            release_version='1.0.0',
+            component_descriptor_file_path=str(component_descriptor_file),
+        ):
+            return concourse.steps.release.GitHubReleaseStep(
+                github_helper=github_helper,
+                githubrepobranch=githubrepobranch,
+                repo_dir=repo_dir,
+                release_version=release_version,
+                component_descriptor_file_path=component_descriptor_file_path,
+            )
+        return _examinee
+
+    def test_validation(self, examinee):
+        examinee().validate()
+
+    def test_validation_fails_on_invalid_semver(self, examinee):
+        with pytest.raises(ValueError):
+            examinee(release_version='invalid_semver').validate()
+
+    def test_validation_fails_on_missing_component_descriptor(self, examinee, tmp_path):
+        test_path = tmp_path.joinpath('no', 'such', 'dir')
+        with pytest.raises(ValueError):
+            examinee(component_descriptor_file_path=str(test_path)).validate()
+
+    def test_validation_fails_on_empty_component_descriptor(self, examinee, tmp_path):
+        test_path = tmp_path.joinpath('empty_component_descriptor')
+        test_path.touch()
+        with pytest.raises(ValueError):
+            examinee(component_descriptor_file_path=str(test_path)).validate()
+
+
+class TestDevCyclePrepareStep(object):
+    @pytest.fixture()
+    def examinee(self, tmp_path):
+        # create required temporary file relative to the provided temporary directory
+        temporary_version_file = tmp_path.joinpath('version_file')
+        temporary_version_file.touch()
+
+        def _examinee(
+            repo_dir=str(tmp_path),
+            repository_version_file_path='version_file',
+            release_version='1.0.0',
+            version_operation='finalize_version',
+            prerelease_suffix='dev',
+        ):
+            return concourse.steps.release.PrepareDevCycleStep(
+                github_helper=MagicMock(),
+                repo_dir=repo_dir,
+                repository_version_file_path=repository_version_file_path,
+                release_version=release_version,
+                version_operation=version_operation,
+                prerelease_suffix=prerelease_suffix,
+            )
+        return _examinee
+
+    def test_validation(self, examinee):
+        examinee().validate()
+
+    def test_validation_fail_on_missing_version_file(self, examinee, tmp_path):
+        with pytest.raises(ValueError):
+            examinee(repository_version_file_path='no_such_file').validate()
+
+    def test_validation_fail_on_nonexistent_repo_dir(self, examinee, tmp_path):
+        # create filepath not backed by an existing directory in the pytest tempdir
+        test_dir = tmp_path.joinpath('no', 'such', 'dir')
+        with pytest.raises(ValueError):
+            examinee(repo_dir=str(test_dir)).validate()
+
+
+class TestPublishReleaseNotesStep(object):
+    @pytest.fixture()
+    def examinee(self, tmp_path):
+        def _examinee(
+            github_helper=MagicMock(),
+            githubrepobranch=GitHubRepoBranch(
+                github_config='test_config',
+                repo_owner='test_owner',
+                repo_name='test_name',
+                branch='master',
+            ),
+            repo_dir=str(tmp_path),
+            release_version='1.0.0',
+        ):
+            return concourse.steps.release.PublishReleaseNotesStep(
+                github_helper=github_helper,
+                githubrepobranch=githubrepobranch,
+                repo_dir=repo_dir,
+                release_version=release_version,
+            )
+        return _examinee
+
+    def test_validation(self, examinee):
+        examinee().validate()
+
+    def test_validation_fail_on_nonexistent_repo_dir(self, examinee, tmp_path):
+        # create filepath not backed by an existing directory in the pytest tempdir
+        test_dir = tmp_path.joinpath('no', 'such', 'dir')
+        with pytest.raises(ValueError):
+            examinee(repo_dir=str(test_dir)).validate()
+
+    def test_validation_fails_on_invalid_semver(self, examinee):
+        with pytest.raises(ValueError):
+            examinee(release_version='invalid_semver').validate()
+
+
+class TestCleanupDraftReleaseStep(object):
+    @pytest.fixture()
+    def examinee(self):
+        def _examinee(
+            github_helper=MagicMock(),
+            release_version='1.0.0',
+        ):
+            return concourse.steps.release.CleanupDraftReleaseStep(
+                github_helper=github_helper,
+                release_version=release_version,
+            )
+        return _examinee
+
+    def test_validation(self, examinee):
+        examinee().validate()
+
+    def test_validation_fails_on_invalid_semver(self, examinee):
+        with pytest.raises(ValueError):
+            examinee(release_version='invalid_semver').validate()
+
+
+class TestSlackReleaseStep(object):
+    @pytest.fixture()
+    def examinee(self):
+        def _examinee(
+            slack_cfg_name='test_config',
+            slack_channel='test_channel',
+            githubrepobranch=GitHubRepoBranch(
+                github_config='test_config',
+                repo_owner='test_owner',
+                repo_name='test_name',
+                branch='master',
+            ),
+            release_version='1.0.0',
+        ):
+            return concourse.steps.release.PostSlackReleaseStep(
+                slack_cfg_name=slack_cfg_name,
+                slack_channel=slack_channel,
+                githubrepobranch=githubrepobranch,
+                release_version=release_version,
+            )
+        return _examinee
+
+    def test_validation(self, examinee):
+        examinee().validate()
+
+    def test_validation_fails_on_invalid_semver(self, examinee):
+        with pytest.raises(ValueError):
+            examinee(release_version='invalid_semver').validate()
