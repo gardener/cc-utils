@@ -43,6 +43,12 @@ cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 ${step_lib('notification')}
 
 meta_vars_dict = meta_vars()
+env_build_job_name = os.environ.get('BUILD_JOB_NAME')
+meta_resource_inconsistent = False
+if meta_vars_dict.get('build-job-name') != env_build_job_name:
+    meta_resource_inconsistent = True
+    util.warning('Inconsistent META resource. Job URL in email cannot be determined')
+
 concourse_api = from_cfg(cfg_set.concourse(), team_name=meta_vars_dict['build-team-name'])
 ## TODO: Replace with MAIN_REPO_DIR once it is available in synthetic steps
 path_to_main_repository = "${job_variant.main_repository().resource_name()}"
@@ -154,9 +160,17 @@ email_cfg['recipients'] = email_cfg['recipients'] | set(recipients)
 
 ## Send mail
 email_cfg_name = "${cc_email_cfg.name()}"
+if meta_resource_inconsistent:
+    body = '\n'.join(
+        (f'The Job URL cannot be determined. Please check your job "{env_build_job_name}"',
+        f'in pipeline "{meta_vars_dict["build-pipeline-name"]}"','',
+        email_cfg['mail_body'],)
+    )
+else:
+    body = '\n'.join((job_url(meta_vars_dict), email_cfg['mail_body']))
 mailutil.notify(
     subject=email_cfg['subject'],
-    body='\n'.join((job_url(meta_vars_dict), email_cfg['mail_body'])),
+    body=body,
     email_cfg_name=email_cfg_name,
     recipients=email_cfg['recipients'],
 )
