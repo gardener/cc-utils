@@ -261,13 +261,20 @@ class ProtecodeUtil(object):
             finally:
                 image_data_fh.close()
 
-            # upload triaging results - hard-code scope for now
             for triage in triages:
-                self._api.add_triage(
-                    triage=triage,
-                    scope=TriageScope.RESULT,
-                    product_id=scan_result.product_id(),
-                )
+                if triage.scope() is TriageScope.GROUP:
+                    self._api.add_triage(
+                        triage=triage,
+                        scope=TriageScope.GROUP,
+                        group_id=self._group_id,
+                    )
+                else:
+                    # hard-code scope for now
+                    self._api.add_triage(
+                        triage=triage,
+                        scope=TriageScope.RESULT,
+                        product_id=scan_result.product_id(),
+                    )
 
             # rm (now outdated) scan result
             if product_id:
