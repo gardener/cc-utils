@@ -200,7 +200,7 @@ class ProtecodeApi(object):
 
         return AnalysisResult(raw_dict=result)
 
-    def wait_for_scan_result(self, product_id: int, polling_interval_seconds=10):
+    def wait_for_scan_result(self, product_id: int, polling_interval_seconds=60):
         def scan_finished():
             result = self.scan_result(product_id=product_id)
             if result.status() in (ProcessingStatus.READY, ProcessingStatus.FAILED):
