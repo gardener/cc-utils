@@ -43,11 +43,16 @@ cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 ${step_lib('notification')}
 
 meta_vars_dict = meta_vars()
-env_build_job_name = os.environ.get('BUILD_JOB_NAME')
+env_build_job_name = os.environ.get('BUILD_JOB_NAME').strip()
+meta_build_job_name = meta_vars_dict.get('build-job-name').strip()
 meta_resource_inconsistent = False
-if meta_vars_dict.get('build-job-name') != env_build_job_name:
+if meta_build_job_name != env_build_job_name:
     meta_resource_inconsistent = True
-    util.warning('Inconsistent META resource. Job URL in email cannot be determined')
+    util.warning(
+        'Inconsistent META resource. Job URL in email cannot be determined\n'
+        f'Expected job name: {env_build_job_name}\n'
+        f'Job name in META resource: {meta_build_job_name}'
+    )
 
 concourse_api = from_cfg(cfg_set.concourse(), team_name=meta_vars_dict['build-team-name'])
 ## TODO: Replace with MAIN_REPO_DIR once it is available in synthetic steps
