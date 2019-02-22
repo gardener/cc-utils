@@ -38,6 +38,9 @@ from http_requests import mount_default_adapter, log_stack_trace_information
 from product.model import DependencyBase
 from model.github import GithubConfig
 
+# log Github API calls to Elastic Search
+log_github_access = False
+
 
 class RepoPermission(enum.Enum):
     PULL = "pull"
@@ -495,7 +498,9 @@ def _create_github_api_object(
         util.fail("Could not connect to GitHub-instance {url}".format(url=github_url))
 
     session = mount_default_adapter(github_api.session)
-    session.hooks['response'] = log_stack_trace_information
+
+    if log_github_access:
+        session.hooks['response'] = log_stack_trace_information
 
     return github_api
 
