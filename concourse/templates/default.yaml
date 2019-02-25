@@ -87,7 +87,7 @@ ${include_pull_request_resource_type()}
 ${include_meta_resource_type()}
 
 resources:
-${meta_resource()}
+${meta_resource(pipeline_definition=pipeline_definition)}
 ${render_repositories(pipeline_definition=pipeline_definition, cfg_set=config_set)}
 
 % for descriptor in output_image_descriptors.values():
@@ -201,6 +201,7 @@ else:
 % for input in job_step.inputs().values():
     - name: ${input}
 % endfor
+    - name: ${job_variant.meta_resource_name()}
     outputs:
 % if job_step.publish_repository_names() and not has_pr_trait(job_variant):
   % for publish_repo_name in job_step.publish_repository_names():
@@ -241,6 +242,7 @@ else:
 % for name, value in job_step.outputs().items():
       ${name.upper().replace('-','_')}: ${value}
 % endfor
+      META: ${job_variant.meta_resource_name()}
       SECRETS_SERVER_ENDPOINT: ${secrets_server_cfg.endpoint_url()}
       SECRETS_SERVER_CONCOURSE_CFG_NAME: ${'/'.join([
         secrets_server_cfg.secrets().concourse_secret_name(),
@@ -392,7 +394,7 @@ repo = job_variant.main_repository()
   build_logs_to_retain: ${job_variant.trait('options').build_logs_to_retain()}
   public: ${'true' if job_variant.trait('options').public_build_logs() else 'false'}
   plan:
-  - get: meta
+  - get: ${job_variant.meta_resource_name()}
 % for repository in job_variant.repositories():
   - get: ${repository.resource_name()}
   % if repository.should_trigger():

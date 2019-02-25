@@ -20,7 +20,7 @@ from concourse.model.base import (
     select_attr,
 )
 from util import not_none
-from concourse.model.resources import RepositoryConfig
+from concourse.model.resources import RepositoryConfig, ResourceIdentifier
 
 
 class JobVariant(ModelBase):
@@ -57,6 +57,12 @@ class JobVariant(ModelBase):
             b=self.main_repository().branch(),
             n=self.variant_name,
         )
+
+    def meta_resource_name(self):
+        meta_res = self._resource_registry.resource(
+            ResourceIdentifier(type_name='meta', base_name=self.variant_name)
+        )
+        return meta_res.resource_identifier().name()
 
     def steps(self):
         return self._steps_dict.values()
