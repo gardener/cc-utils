@@ -11,7 +11,12 @@ from concourse.model.base import (
 from concourse.validator import PipelineDefinitionValidator
 from concourse.model.job import JobVariant
 from concourse.model.pipeline import PipelineDefinition
-from concourse.model.resources import RepositoryConfig, ResourceRegistry
+from concourse.model.resources import (
+    RepositoryConfig,
+    ResourceRegistry,
+    ResourceIdentifier,
+    Resource,
+)
 from concourse.model.traits import TraitsFactory
 
 
@@ -88,6 +93,11 @@ class DefinitionFactory(object):
                     resource_registry.add_resource(deepcopy(repo), discard_duplicates=False)
 
             variants[variant_name] = variant
+
+            # add meta resources
+            meta_resource_identifier = ResourceIdentifier(type_name='meta', base_name=variant_name)
+            meta_resource = Resource(resource_identifier=meta_resource_identifier, raw_dict={})
+            resource_registry.add_resource(meta_resource)
 
         pipeline_definition = PipelineDefinition()
         pipeline_definition._variants_dict = variants

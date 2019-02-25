@@ -190,11 +190,6 @@ class PipelineStep(ModelBase):
         for name, variable_name in raw_dict.get('inputs').items():
             self.add_input(name, variable_name)
 
-        # add hard-coded 'meta' input to every step if not already defined
-        # TODO: remove existence check after new contract is propagated
-        if 'meta' not in self.inputs().keys():
-            self.add_input('meta', 'meta')
-
         self._publish_to_dict = normalise_to_dict(raw_dict['publish_to'])
 
     def script_type(self) -> ScriptType:

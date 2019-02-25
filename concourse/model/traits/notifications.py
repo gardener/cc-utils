@@ -53,7 +53,7 @@ NOTIFICATION_CFG_ATTRS = (
     ),
     AttributeSpec.optional(
         name='inputs',
-        default=['on_error_dir', 'meta'],
+        default=['on_error_dir'],
         doc='whether to send email notifications',
         type=typing.List[str],
     ),
@@ -65,7 +65,7 @@ NOTIFICATION_CFG_ATTRS = (
     ),
     AttributeSpec.optional(
         name='cfg_callback',
-        default=['on_error_dir', 'meta'],
+        default=['on_error_dir'],
         doc='''
         an optional callback (relative to main repository root). Called as subprocess with
         an environment variables:

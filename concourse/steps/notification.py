@@ -16,7 +16,7 @@ def meta_vars():
       'build-pipeline-name',
       'atc-external-url'
     ):
-      with open(os.path.join('meta', name)) as f:
+      with open(os.path.join(os.environ.get('META'), name)) as f:
         v[name] = f.read().strip()
 
     return v
