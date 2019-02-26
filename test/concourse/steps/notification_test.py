@@ -12,7 +12,12 @@ import test_utils
 from concourse.client.model import BuildStatus
 from concourse.steps import step_def
 from concourse.model.job import JobVariant
-from concourse.model.resources import RepositoryConfig
+from concourse.model.resources import (
+    RepositoryConfig,
+    ResourceRegistry,
+    ResourceIdentifier,
+    Resource,
+)
 from concourse.model.step import PipelineStep
 from concourse.steps import notification
 from concourse.model.traits.notifications import (
@@ -32,7 +37,15 @@ class NotificationStepTest(unittest.TestCase):
 
         self.job_step = PipelineStep('step1', raw_dict={})
         self.job_step._notifications_cfg = NotificationCfgSet('default', {})
-        self.job_variant = JobVariant(name='a_job', raw_dict={}, resource_registry='')
+        resource_registry = ResourceRegistry()
+        meta_resource_identifier = ResourceIdentifier(type_name='meta', base_name='a_job')
+        meta_resource = Resource(resource_identifier=meta_resource_identifier, raw_dict={})
+        resource_registry.add_resource(meta_resource)
+        self.job_variant = JobVariant(
+            name='a_job',
+            raw_dict={},
+            resource_registry=resource_registry
+        )
 
         # Set a main repository manually
         test_repo_logical_name = 'test-repository'
@@ -87,6 +100,7 @@ class NotificationStepLibTest(unittest.TestCase):
         self.tmp_dir = tempfile.TemporaryDirectory()
         self.meta_dir = os.path.join(self.tmp_dir.name, 'meta')
         os.mkdir(self.meta_dir)
+        os.environ['META'] = 'meta'
         test_utils.populate_meta_dir(self.meta_dir)
 
         self.old_cwd = os.getcwd()
@@ -95,6 +109,7 @@ class NotificationStepLibTest(unittest.TestCase):
     def tearDown(self):
         self.tmp_dir.cleanup()
         os.chdir(self.old_cwd)
+        del os.environ['META']
 
     def test_meta_vars(self):
         result = notification.meta_vars()
