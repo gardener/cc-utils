@@ -8,14 +8,23 @@ import test_utils
 
 from concourse.steps import step_def
 from concourse.steps.update_component_deps import current_product_descriptor
-import concourse.model.traits.component_descriptor as component_descriptor
+import concourse.model.traits.update_component_deps as update_component_deps
 
 
-class ComponentDescriptorStepTest(unittest.TestCase):
+class UpdateComponentDependenciesStepTest(unittest.TestCase):
     def setUp(self):
         self.tmp_dir = tempfile.TemporaryDirectory()
 
         self.render_step = step_def('update_component_deps')
+
+        self.update_component_deps_trait = update_component_deps.UpdateComponentDependenciesTrait(
+            name='update_component_dependencies',
+            variant_name='don\'t_care',
+            raw_dict= {
+                'set_dependency_version_script':'some_path',
+                'upstream_component_name':'don\'t_care',
+            },
+        )
 
         self.main_repo = test_utils.repository()
 
@@ -23,6 +32,7 @@ class ComponentDescriptorStepTest(unittest.TestCase):
         repo_dir.mkdir()
 
         self.job_variant = test_utils.job(self.main_repo)
+        self.job_variant._traits_dict = {'update_component_deps': self.update_component_deps_trait}
 
         self.old_cwd = os.getcwd()
 
