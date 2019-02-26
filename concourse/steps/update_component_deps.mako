@@ -7,6 +7,8 @@ from concourse.steps import step_lib
 from makoutil import indent_func
 main_repo = job_variant.main_repository()
 repo_name = main_repo.logical_name().upper()
+update_component_deps_trait = job_variant.trait('update_component_deps')
+set_dependency_version_script_path = update_component_deps_trait.set_dependency_version_script_path()
 %>
 
 import os
@@ -115,7 +117,7 @@ def create_upgrade_pr(from_ref, to_ref, ls_repo):
     repo_dir = str(REPO_ROOT)
 
     # have component create upgradation diff
-    upgrade_script_path = REPO_ROOT.joinpath('.ci', 'set_dependency_version')
+    upgrade_script_path = REPO_ROOT.joinpath('${set_dependency_version_script_path}')
     cmd_env = os.environ.copy()
     cmd_env['DEPENDENCY_TYPE'] = to_ref.type_name()
     cmd_env['DEPENDENCY_NAME'] = to_ref.name()
