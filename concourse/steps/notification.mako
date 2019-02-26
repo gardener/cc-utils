@@ -37,6 +37,9 @@ import mailutil
 
 
 from util import ctx
+
+CC_ROOT_DIR = os.path.abspath('.')
+os.environ['CC_ROOT_DIR'] = CC_ROOT_DIR
 cfg_factory = ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
