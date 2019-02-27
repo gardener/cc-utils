@@ -28,6 +28,7 @@ from product.model import (
 )
 from protecode.model import (
     AnalysisResult,
+    License,
     highest_major_cve_severity,
 )
 
@@ -67,6 +68,19 @@ def upload_images(
         ignore_if_triaged=ignore_if_triaged,
     )
     return relevant_results
+
+
+def license_report(
+    upload_results: typing.Sequence[UploadResult],
+) -> typing.Sequence[typing.Tuple[UploadResult, typing.Set[License]]]:
+    for upload_result in upload_results:
+        analysis_result = upload_result.result
+        licenses = {
+            component.license() for component in analysis_result.components()
+            if component.license()
+        }
+        yield (upload_result, licenses)
+
 
 
 def filter_and_display_upload_results(
