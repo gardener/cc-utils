@@ -60,7 +60,7 @@ def upload_images(
         protecode_util,
         image_reference_filter
     )
-    results = executor.map(lambda task: task(), tasks)
+    results = tuple(executor.map(lambda task: task(), tasks))
 
     relevant_results = filter_and_display_upload_results(
         upload_results=results,
