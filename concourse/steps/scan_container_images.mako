@@ -97,7 +97,7 @@ def create_license_report(license_report):
 
   license_lines = [
     to_table_row(upload_result, licenses)
-    for upload_result, licences in license_report
+    for upload_result, licenses in license_report
   ]
 
   print(tabulate.tabulate(
