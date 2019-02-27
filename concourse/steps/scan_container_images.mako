@@ -95,7 +95,10 @@ def create_license_report(license_report):
     license_names_str = ', '.join(license_names)
     yield (component_name, license_names_str)
 
-  license_lines = [to_table_row(license_report_entry) for license_report_entry in license_report]
+  license_lines = [
+    to_table_row(upload_result, licenses)
+    for upload_result, licences in license_report
+  ]
 
   print(tabulate.tabulate(
     license_lines,
