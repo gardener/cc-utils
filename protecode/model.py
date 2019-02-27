@@ -55,7 +55,6 @@ class Component(ModelBase):
             return None
         return License(raw_dict=license_raw)
 
-
 class License(ModelBase):
     def name(self):
         return self.raw.get('name')
@@ -65,6 +64,21 @@ class License(ModelBase):
 
     def url(self):
         return self.raw.get('url')
+
+    def __eq__(self, other):
+        if not isinstance(other, License):
+            return False
+
+        return self.name() == other.name() \
+            and self.license_type() == other.license_type() \
+            and self.url() == other.url()
+
+    def __hash__(self):
+        return hash((
+            self.name(),
+            self.url(),
+            self.license_type(),
+        ))
 
 
 class Vulnerability(ModelBase):
