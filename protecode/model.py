@@ -49,6 +49,23 @@ class Component(ModelBase):
     def vulnerabilities(self) -> 'Iterable[Vulnerability]':
         return (Vulnerability(raw_dict=raw) for raw in self.raw.get('vulns'))
 
+    def license(self) -> 'License':
+        license_raw = self.raw.get('license', None)
+        if not license_raw:
+            return None
+        return License(raw_dict=license_raw)
+
+
+class License(ModelBase):
+    def name(self):
+        return self.raw.get('name')
+
+    def license_type(self):
+        return self.raw.get('type')
+
+    def url(self):
+        return self.raw.get('url')
+
 
 class Vulnerability(ModelBase):
     def historical(self):
