@@ -55,6 +55,7 @@ class Component(ModelBase):
             return None
         return License(raw_dict=license_raw)
 
+
 class License(ModelBase):
     def name(self):
         return self.raw.get('name')

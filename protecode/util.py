@@ -67,7 +67,10 @@ def upload_images(
         cve_threshold=cve_threshold,
         ignore_if_triaged=ignore_if_triaged,
     )
-    return relevant_results
+
+    _license_report = license_report(upload_results=results)
+
+    return (relevant_results, _license_report)
 
 
 def license_report(
@@ -80,7 +83,6 @@ def license_report(
             if component.license()
         }
         yield (upload_result, licenses)
-
 
 
 def filter_and_display_upload_results(

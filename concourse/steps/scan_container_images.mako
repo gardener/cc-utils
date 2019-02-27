@@ -74,7 +74,7 @@ image_filter = image_reference_filter(
   exclude_regexes=${filter_cfg.exclude_image_references()},
 )
 
-relevant_results = protecode.util.upload_images(
+relevant_results, license_report = protecode.util.upload_images(
   protecode_cfg=protecode_cfg,
   product_descriptor=component_descriptor,
   processing_mode=processing_mode,
