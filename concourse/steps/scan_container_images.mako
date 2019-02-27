@@ -87,6 +87,28 @@ relevant_results, license_report = protecode.util.upload_images(
 % endif
   reference_group_ids=${image_scan_trait.reference_protecode_group_ids()},
 )
+
+def create_license_report(license_report):
+  def to_table_row(upload_result, licenses):
+    component_name = upload_result.result.name()
+    license_names = {license.name() for license in licenses}
+    license_names_str = ', '.join(license_names)
+    yield (component_name, license_names_str)
+
+  license_lines = [to_table_row(license_report_entry) for license_report_entry in license_report]
+
+  print(tabulate.tabulate(
+    license_lines,
+    headers=('Component Name', 'Licenses'),
+    )
+  )
+
+  return license_lines
+
+
+# XXX also include in email
+report_lines = create_license_report(license_report=license_report)
+
 if not relevant_results:
   sys.exit(0)
 email_recipients = ${image_scan_trait.email_recipients()}
