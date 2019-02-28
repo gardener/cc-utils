@@ -166,6 +166,7 @@ class ReleaseCommitsStep(TransactionalStep):
         version_operation: str,
         prerelease_suffix: str,
         release_commit_callback: str=None,
+        next_version_callback: str=None,
     ):
         self.git_helper = not_none(git_helper)
         self.repository_branch = not_empty(repository_branch)
@@ -181,6 +182,7 @@ class ReleaseCommitsStep(TransactionalStep):
             repo_dir_absolute,
             repository_version_file_path,
         )
+
         if release_commit_callback:
             self.release_commit_callback = os.path.join(
                 repo_dir_absolute,
@@ -189,14 +191,26 @@ class ReleaseCommitsStep(TransactionalStep):
         else:
             self.release_commit_callback = None
 
+        if next_version_callback:
+            self.next_version_callback = os.path.join(
+                repo_dir_absolute,
+                next_version_callback,
+            )
+        else:
+            self.next_version_callback = None
+
     def name(self):
         return "Create Release Commits"
 
     def validate(self):
         existing_dir(self.repo_dir)
         semver.parse(self.release_version)
+
         if(self.release_commit_callback):
             existing_file(self.release_commit_callback)
+        if self.next_version_callback:
+            existing_file(self.next_version_callback)
+
         existing_file(self.repository_version_file_path)
 
         # perform version ops once to validate args
@@ -230,10 +244,10 @@ class ReleaseCommitsStep(TransactionalStep):
 
         # call optional release commit callback
         if self.release_commit_callback:
-            self._invoke_release_callback(
-                release_commit_callback=self.release_commit_callback,
+            self._invoke_callback(
+                callback_script_path=self.release_commit_callback,
                 repo_dir=self.repo_dir,
-                release_version=self.release_version,
+                effective_version=self.release_version,
             )
 
         release_commit = self._add_all_and_create_commit(
@@ -248,6 +262,14 @@ class ReleaseCommitsStep(TransactionalStep):
         )
         with open(self.repository_version_file_path, 'w') as f:
             f.write(next_cycle_dev_version)
+
+        # call optional dev cycle commit callback
+        if self.next_version_callback:
+            self._invoke_callback(
+                callback_script_path=self.next_version_callback,
+                repo_dir=self.repo_dir,
+                effective_version=next_cycle_dev_version,
+            )
 
         next_cycle_commit = self._add_all_and_create_commit(
             message=self._next_dev_cycle_commit_message(next_cycle_dev_version)
@@ -306,6 +328,25 @@ class ReleaseCommitsStep(TransactionalStep):
                 use_ssh=True,
             )
 
+    def _invoke_callback(
+        self,
+        callback_script_path: str,
+        repo_dir: str,
+        effective_version: str,
+    ):
+        '''This invokes the callback script with the REPO_DIR and EFFECTIVE_VERSION
+        env variable set to the given values.
+        '''
+        callback_env = os.environ.copy()
+        callback_env['REPO_DIR'] = repo_dir
+        callback_env['EFFECTIVE_VERSION'] = effective_version
+
+        subprocess.run(
+            [callback_script_path],
+            check=True,
+            env=callback_env,
+        )
+
     def _add_all_and_create_commit(self, message: str):
         commit = self.git_helper.index_to_commit(
             message=message,
@@ -330,22 +371,6 @@ class ReleaseCommitsStep(TransactionalStep):
             ),
             operation='set_prerelease',
             prerelease=prerelease_suffix,
-        )
-
-    def _invoke_release_callback(
-        self,
-        release_commit_callback,
-        repo_dir,
-        release_version,
-    ):
-        callback_env = os.environ.copy()
-        callback_env['REPO_DIR'] = repo_dir
-        callback_env['EFFECTIVE_VERSION'] = release_version
-
-        subprocess.run(
-            [release_commit_callback],
-            check=True,
-            env=callback_env,
         )
 
 
@@ -578,6 +603,7 @@ def release_and_prepare_next_dev_cycle(
     release_version: str,
     repo_dir: str,
     release_commit_callback: str=None,
+    next_version_callback: str=None,
     version_operation: str="bump_minor",
     prerelease_suffix: str="dev",
     author_name: str="gardener-ci",
@@ -602,6 +628,7 @@ def release_and_prepare_next_dev_cycle(
         version_operation=version_operation,
         prerelease_suffix=prerelease_suffix,
         release_commit_callback=release_commit_callback,
+        next_version_callback=next_version_callback,
         rebase_before_release=rebase_before_release,
     )
 

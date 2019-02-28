@@ -30,6 +30,7 @@ if has_component_descriptor_trait:
   )
 
 release_callback_path = release_trait.release_callback_path()
+next_version_callback_path = release_trait.next_version_callback_path()
 %>
 
 ${step_lib('release')}
@@ -60,6 +61,9 @@ release_and_prepare_next_dev_cycle(
   % endif
   % if release_callback_path:
   release_commit_callback='${release_callback_path}',
+  % endif
+  % if next_version_callback_path:
+  next_version_callback='${next_version_callback_path}',
   % endif
   rebase_before_release=${release_trait.rebase_before_release()},
   githubrepobranch=githubrepobranch,

@@ -23,6 +23,7 @@ class TestReleaseCommitsStep(object):
             prerelease_suffix='dev',
             rebase_before_release=True,
             release_commit_callback=None,
+            dev_cycle_commit_callback=None,
             ):
             return concourse.steps.release.ReleaseCommitsStep(
                 git_helper=MagicMock(),
@@ -34,6 +35,7 @@ class TestReleaseCommitsStep(object):
                 repository_branch=repository_branch,
                 rebase_before_release=rebase_before_release,
                 release_commit_callback=release_commit_callback,
+                next_version_callback=dev_cycle_commit_callback,
             )
         return _examinee
 
@@ -45,10 +47,15 @@ class TestReleaseCommitsStep(object):
             release_commit_callback='callback_script',
         ).validate()
 
-    def test_validation_fail_on_missing_callback_script(self, examinee, tmp_path):
+    def test_validation_fail_on_missing_release_callback_script(self, examinee, tmp_path):
         with pytest.raises(ValueError):
             # pass non-existing relative file-name
             examinee(release_commit_callback='no_such_file').validate()
+
+    def test_validation_fail_on_missing_dev_cycle_callback_script(self, examinee, tmp_path):
+        with pytest.raises(ValueError):
+            # pass non-existing relative file-name
+            examinee(dev_cycle_commit_callback='no_such_file').validate()
 
     def test_validation_fail_on_missing_version_file(self, examinee, tmp_path):
         with pytest.raises(ValueError):
