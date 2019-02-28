@@ -48,6 +48,16 @@ ATTRIBUTES = (
         ''',
         type=bool,
     ),
+    AttributeSpec.optional(
+        name='next_version_callback',
+        default=None,
+        doc='''
+        an optional callback that is called during next version commit creation.
+        The callback is passed the absolute path to the main repository's work tree via environment
+        variable `REPO_DIR`.
+        Any changes left inside the worktree are added to the resulting release commit.
+        ''',
+    ),
 )
 
 
@@ -69,6 +79,9 @@ class ReleaseTrait(Trait):
 
     def release_callback_path(self):
         return self.raw['release_callback']
+
+    def next_version_callback_path(self):
+        return self.raw['next_version_callback']
 
     def rebase_before_release(self):
         return self.raw['rebase_before_release']
