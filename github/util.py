@@ -376,6 +376,14 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         )
         return release
 
+    def delete_releases(
+        self,
+        release_names: [str],
+    ):
+        for release in self.repository.releases():
+            if release.name in release_names:
+                release.delete()
+
     def update_release_notes(
         self,
         tag_name: str,
