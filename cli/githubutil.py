@@ -140,3 +140,18 @@ def release_note_blocks_cli(
         repository_branch=repository_branch,
         commit_range=commit_range
     ).release_note_blocks()
+
+
+def delete_releases(
+    github_cfg_name: str,
+    github_repository_owner: str,
+    github_repository_name: str,
+    release_name: [str],
+):
+    github_cfg = ctx().cfg_factory().github(github_cfg_name)
+    github_helper = GitHubRepositoryHelper(
+        owner=github_repository_owner,
+        name=github_repository_name,
+        github_cfg=github_cfg,
+    )
+    github_helper.delete_releases(release_names=release_name)
