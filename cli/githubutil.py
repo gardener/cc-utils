@@ -142,6 +142,22 @@ def release_note_blocks_cli(
     ).release_note_blocks()
 
 
+def list_draft_releases(
+    github_cfg_name: str,
+    github_repository_owner: str,
+    github_repository_name: str,
+):
+    github_cfg = ctx().cfg_factory().github(github_cfg_name)
+    github_helper = GitHubRepositoryHelper(
+        owner=github_repository_owner,
+        name=github_repository_name,
+        github_cfg=github_cfg,
+    )
+    release_list = [release for release in github_helper.repository.releases() if release.draft]
+    for draft_release in release_list:
+        print(draft_release.name)
+
+
 def delete_releases(
     github_cfg_name: str,
     github_repository_owner: str,
