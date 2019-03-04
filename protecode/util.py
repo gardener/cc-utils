@@ -24,6 +24,7 @@ import protecode.client
 from product.scanning import ProtecodeUtil, ProcessingMode
 from util import info, warning, verbose, error
 from product.model import (
+    Product,
     UploadResult,
 )
 from protecode.model import (
@@ -165,21 +166,31 @@ def _create_task(protecode_util, container_image, component):
     return task_function
 
 
-def _create_tasks(product_model, protecode_util, image_reference_filter):
-    for component in product_model.components():
-        verbose('processing component: {c}:{v}'.format(c=component.name(), v=component.version()))
+def _enumerate_images(
+    component_descriptor: Product,
+    image_reference_filter=lambda _: True,
+):
+    for component in component_descriptor.components():
         component_dependencies = component.dependencies()
         for container_image in filter(
                 image_reference_filter,
                 component_dependencies.container_images()
         ):
-            verbose('processing container image: {c}:{cir}'.format(
-                c=component.name(),
-                cir=container_image.image_reference(),
+            yield (component, container_image)
+
+
+def _create_tasks(product_model, protecode_util, image_reference_filter):
+    for component, container_image in _enumerate_images(
+        component_descriptor=product_model,
+        image_reference_filter=image_reference_filter,
+    ):
+        verbose('processing container image: {c}:{cir}'.format(
+            c=component.name(),
+            cir=container_image.image_reference(),
             )
-            )
-            yield _create_task(
-                    protecode_util=protecode_util,
-                    container_image=container_image,
-                    component=component,
-            )
+        )
+        yield _create_task(
+                protecode_util=protecode_util,
+                container_image=container_image,
+                component=component,
+        )
