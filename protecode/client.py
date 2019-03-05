@@ -320,9 +320,21 @@ class ProtecodeApi(object):
 
         relevant_response = result.history[0]
 
+        # work around breaking change in protecode endpoint behaviour
+        if not relevant_response.cookies.get('sessionid'):
+            raw_cookie = relevant_response.raw.headers['Set-Cookie']
+            session_id_key = 'sessionid='
+            # XXX hack
+            sid = raw_cookie[raw_cookie.find(session_id_key) + len(session_id_key):]
+            sid = sid[:sid.find(';')] # let's hope sid never contains a semicolon
+            self._session_id = sid
+            del sid
+
         self._session_id = relevant_response.cookies.get('sessionid')
         self._csrf_token = relevant_response.cookies.get('csrftoken')
         if not self._session_id:
+            print(relevant_response)
+            return relevant_response
             raise RuntimeError('authentication failed: ' + str(relevant_response.text))
 
     def scan_result_short(self, product_id: int):
