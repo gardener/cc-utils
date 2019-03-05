@@ -329,9 +329,11 @@ class ProtecodeApi(object):
             sid = sid[:sid.find(';')] # let's hope sid never contains a semicolon
             self._session_id = sid
             del sid
+        else:
+            self._session_id = relevant_response.cookies.get('sessionid')
 
-        self._session_id = relevant_response.cookies.get('sessionid')
         self._csrf_token = relevant_response.cookies.get('csrftoken')
+
         if not self._session_id:
             raise RuntimeError('authentication failed: ' + str(relevant_response.text))
 
