@@ -333,8 +333,6 @@ class ProtecodeApi(object):
         self._session_id = relevant_response.cookies.get('sessionid')
         self._csrf_token = relevant_response.cookies.get('csrftoken')
         if not self._session_id:
-            print(relevant_response)
-            return relevant_response
             raise RuntimeError('authentication failed: ' + str(relevant_response.text))
 
     def scan_result_short(self, product_id: int):
