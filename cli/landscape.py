@@ -73,16 +73,6 @@ def destroy_concourse(
     )
 
 
-def set_teams(
-    config_name: CliHint(typehint=str, help='the cfg_set name to use'),
-):
-    config_factory = ctx().cfg_factory()
-    config_set = config_factory.cfg_set(cfg_name=config_name)
-    config = config_set.concourse()
-
-    setup_concourse.set_teams(config=config)
-
-
 def _display_info(dry_run: bool, operation: str, **kwargs):
     info("Concourse will be {o} using helm with the following arguments".format(o=operation))
     max_leng = max(map(len, kwargs.keys()))
