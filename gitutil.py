@@ -91,7 +91,8 @@ class GitHelper(object):
             self.repo.delete_remote(remote)
 
     def index_to_commit(self, message, parent_commits=None):
-        '''moves all diffs from worktree to a new commit without modifying branches
+        '''moves all diffs from worktree to a new commit without modifying branches.
+        The worktree remains unchanged after the method returns.
 
         @param parent_commits: optional iterable of parent commits; head is used if absent
         @return the git.Commit object representing the newly created commit
