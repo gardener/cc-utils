@@ -30,6 +30,7 @@ from .draft_release import DraftReleaseTrait
 from .update_component_deps import UpdateComponentDependenciesTrait
 from .notifications import NotificationsTrait
 from .image_scan import ImageScanTrait
+from .image_alter import ImageAlterTrait
 
 TRAITS = {
     'version': VersionTrait,
@@ -44,6 +45,7 @@ TRAITS = {
     'update_component_deps': UpdateComponentDependenciesTrait,
     'draft_release': DraftReleaseTrait,
     'image_scan': ImageScanTrait,
+    'image_alter': ImageAlterTrait,
     'notifications': NotificationsTrait,
 }
 
