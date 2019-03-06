@@ -96,7 +96,14 @@ def _download_images(
     continue to run (and thus update vulnerability reports) for images that keep being
     retrieved occasionally (relevant timeout being roughly 4w).
     '''
-    image_refs = [ci.image_reference() for _, ci in _enumerate_images()]
+    image_refs = [
+        ci.image_reference()
+        for _, ci
+        in _enumerate_images(
+            component_descriptor=component_descriptor,
+            image_reference_filter=image_reference_filter,
+        )
+    ]
 
     # XXX deduplicate this again (copied from product/scanning.py)
     def upload_image_ref(image_reference):
