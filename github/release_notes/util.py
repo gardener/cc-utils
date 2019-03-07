@@ -81,6 +81,17 @@ def post_to_slack(
         warning(e)
 
 
+def delete_file_from_slack(
+    slack_cfg_name: str,
+    file_id: str,
+):
+    slack_cfg = ctx().cfg_factory().slack(slack_cfg_name)
+    response = SlackHelper(slack_cfg).delete_file(
+        file_id=file_id,
+    )
+    return response
+
+
 def github_repo_path(owner, name):
     return owner + '/' + name
 
