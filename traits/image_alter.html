@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>image_scan Trait &mdash; cc-utils  documentation</title>
+  <title>image_alter Trait &mdash; cc-utils  documentation</title>
   
 
   
@@ -31,8 +31,8 @@
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="notifications Trait" href="notifications.html" />
-    <link rel="prev" title="image_alter Trait" href="image_alter.html" /> 
+    <link rel="next" title="image_scan Trait" href="image_scan.html" />
+    <link rel="prev" title="draft_release Trait" href="draft_release.html" /> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -90,8 +90,8 @@
 <li class="toctree-l3"><a class="reference internal" href="component_descriptor.html"><em>component_descriptor</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="cronjob.html"><em>cronjob</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="draft_release.html"><em>draft_release</em> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="image_alter.html"><em>image_alter</em> Trait</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#"><em>image_scan</em> Trait</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#"><em>image_alter</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="image_scan.html"><em>image_scan</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notifications.html"><em>notifications</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="options.html"><em>options</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="publish.html"><em>publish</em> Trait</a></li>
@@ -155,13 +155,13 @@
         
           <li><a href="../traits.html">Pipeline Definition Traits</a> &raquo;</li>
         
-      <li><em>image_scan</em> Trait</li>
+      <li><em>image_alter</em> Trait</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../_sources/traits/image_scan.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/traits/image_alter.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -174,10 +174,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="image-scan-trait">
-<h1><em>image_scan</em> Trait<a class="headerlink" href="#image-scan-trait" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="trait-image-scan">
-<span id="trait-image-scan"></span><h2 class="section-subtitle"><span class="section-subtitle">Attributes</span></h2>
+  <div class="section" id="image-alter-trait">
+<h1><em>image_alter</em> Trait<a class="headerlink" href="#image-alter-trait" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="trait-image-alter">
+<span id="trait-image-alter"></span><h2 class="section-subtitle"><span class="section-subtitle">Attributes</span></h2>
 <table border="1" class="colwidths-auto docutils">
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">name</th>
@@ -194,83 +194,11 @@
 <td>int</td>
 <td>amount of parallel scanning threads</td>
 </tr>
-<tr class="row-odd"><td>cve_threshold</td>
-<td>no</td>
-<td>7</td>
-<td>int</td>
-<td>CVE threshold to interpret as an error</td>
-</tr>
-<tr class="row-even"><td>filters</td>
-<td>no</td>
-<td>{‘include_image_references’: (), ‘exclude_image_references’: ()}</td>
-<td>FilterCfg</td>
-<td>optional filters to restrict container images to process</td>
-</tr>
-<tr class="row-odd"><td>processing_mode</td>
-<td>no</td>
-<td>upload_if_changed</td>
-<td>str</td>
-<td>Protecode processing mode</td>
-</tr>
-<tr class="row-even"><td>reference_protecode_group_ids</td>
-<td>no</td>
-<td>()</td>
-<td>str</td>
-<td>an optional list of protecode group IDs to import triages from.</td>
-</tr>
-<tr class="row-odd"><td>protecode_group_id</td>
+<tr class="row-odd"><td>cfgs</td>
 <td>yes</td>
 <td>None</td>
-<td>int</td>
-<td>technical protecode group id to upload to</td>
-</tr>
-<tr class="row-even"><td>protecode_cfg_name</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>protecode cfg name to use (see cc-utils)</td>
-</tr>
-<tr class="row-odd"><td>email_recipients</td>
-<td>no</td>
-<td>()</td>
-<td>str</td>
-<td>optional email recipients to be notified about critical scan results</td>
-</tr>
-<tr class="row-even"><td>upload_registry_prefix</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>if specified, all matching container images are also uploaded as copies to
-the specified container registry. The original image reference names are
-mangled.</td>
-</tr>
-</tbody>
-</table>
-<h2 class="section-subtitle"><span class="section-subtitle">filters Attributes</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">required?</th>
-<th class="head">default</th>
-<th class="head">type</th>
-<th class="head">explanation</th>
-</tr>
-</thead>
-<tbody valign="top">
-<tr class="row-even"><td>include_image_references</td>
-<td>no</td>
-<td>()</td>
-<td>str</td>
-<td>a list of regular expressions. If configured, only matching image references are
-processed. By default, all image references are considered.</td>
-</tr>
-<tr class="row-odd"><td>exclude_image_references</td>
-<td>no</td>
-<td>()</td>
-<td>str</td>
-<td>a list of regular expressions. If configured, matching image references are
-exempted from processing. Has precedence over include_image_references.
-By default, no image references are excluded.</td>
+<td>dict</td>
+<td>ImageAlterCfgs {name: ImageAlterCfg}</td>
 </tr>
 </tbody>
 </table>
@@ -290,10 +218,10 @@ By default, no image references are excluded.</td>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="notifications.html" class="btn btn-neutral float-right" title="notifications Trait" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="image_scan.html" class="btn btn-neutral float-right" title="image_scan Trait" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="image_alter.html" class="btn btn-neutral" title="image_alter Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="draft_release.html" class="btn btn-neutral" title="draft_release Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
