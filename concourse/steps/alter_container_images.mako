@@ -21,7 +21,7 @@ alter_image(
   tgt_ref='${alter_cfg.tgt_ref()}',
   filter_path_file=os.path.join(
     CC_ROOT_DIR,
-    '${repo_patah}',
+    '${repo_path}',
     '${alter_cfg.rm_paths_file()}'
   ),
 )
