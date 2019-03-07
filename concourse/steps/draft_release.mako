@@ -45,7 +45,7 @@ githubrepobranch = GitHubRepoBranch(
     branch='${repo.branch()}',
 )
 
-helper = GitHubRepositoryHelper.from_githubrepobranch(
+github_helper = GitHubRepositoryHelper.from_githubrepobranch(
     githubrepobranch=githubrepobranch,
 )
 
@@ -55,20 +55,17 @@ git_helper = GitHelper.from_githubrepobranch(
     )
 
 release_notes_md = ReleaseNotes.create(
-    github_helper=helper,
+    github_helper=github_helper,
     git_helper=git_helper,
     repository_branch='${repo.branch()}'
 ).to_markdown()
 
 draft_name = draft_release_name_for_version(processed_version)
-draft_release = helper.draft_release_with_name(draft_name)
+draft_release = github_helper.draft_release_with_name(draft_name)
 if not draft_release:
-    helper.create_release(
-        tag_name='',
+    github_helper.create_draft_release(
         name=draft_name,
         body=release_notes_md,
-        draft=True,
-        prerelease=False
     )
 else:
     if not draft_release.body == release_notes_md:
