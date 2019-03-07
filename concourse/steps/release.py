@@ -264,6 +264,47 @@ class ReleaseCommitsStep(TransactionalStep):
             'next cycle commit sha': next_cycle_commit_sha,
             }
 
+    def revert(self):
+        if not self.context().has_output(self.name()):
+            # push unsuccessful, nothing to do
+            return
+        else:
+            output = self.context().step_output(self.name())
+            # create revert commits for the release commits and push them, but first
+            # clean repository if required
+            worktree_dirty = bool(self.git_helper._changed_file_paths())
+            if worktree_dirty:
+                self.git_helper.repo.head.reset(working_tree=True)
+
+            # revert in reverse order. We need to create the commits using our githelper
+            # otherwise git will complain about missing author information
+            next_cycle_dev_version = self._calculate_next_cycle_dev_version(
+                release_version=self.release_version,
+                version_operation=self.version_operation,
+                prerelease_suffix=self.prerelease_suffix,
+            )
+            self.git_helper.repo.git.revert(
+                output['next cycle commit sha'],
+                no_edit=True,
+                no_commit=True,
+            )
+            self._add_all_and_create_commit(
+                message=f"Revert '{self._next_dev_cycle_commit_message(next_cycle_dev_version)}'"
+            )
+            self.git_helper.repo.git.revert(
+                output['release commit sha'],
+                no_edit=True,
+                no_commit=True,
+            )
+            release_revert_commit = self._add_all_and_create_commit(
+                message=f"Revert '{self._release_commit_message(self.release_version)}'"
+            )
+            self.git_helper.push(
+                from_ref=release_revert_commit.hexsha,
+                to_ref=self.repository_branch,
+                use_ssh=True,
+            )
+
     def _add_all_and_create_commit(self, message: str):
         commit = self.git_helper.index_to_commit(
             message=message,
@@ -305,9 +346,6 @@ class ReleaseCommitsStep(TransactionalStep):
             check=True,
             env=callback_env,
         )
-
-    def revert(self):
-        raise NotImplementedError('revert-method is not yet implemented')
 
 
 class GitHubReleaseStep(TransactionalStep):
