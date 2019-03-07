@@ -34,11 +34,14 @@ class TransactionContext(object):
     def __init__(self):
         self._step_outputs = {}
 
+    def has_output(self, step_name: str):
+        return step_name in self._step_outputs.keys()
+
     def step_output(self, step_name: str):
         return self._step_outputs[step_name]
 
     def set_step_output(self, step_name: str, output):
-        if step_name in self._step_outputs.keys():
+        if self.has_output(step_name):
             raise RuntimeError(f"Context already contains output of step '{step_name}'")
         self._step_outputs[step_name] = output
 
