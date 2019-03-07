@@ -35,6 +35,6 @@ def alter_image(
 
     container.util.filter_image(
         source_ref=src_ref,
-        target_ref=target_ref,
+        target_ref=tgt_ref,
         remove_files=rm_paths,
     )
