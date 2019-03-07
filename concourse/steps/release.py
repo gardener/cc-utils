@@ -375,7 +375,22 @@ class GitHubReleaseStep(TransactionalStep):
                 )
 
     def revert(self):
-        raise NotImplementedError('revert-method is not yet implemented')
+        # Fetch release
+        try:
+            release = self.github_helper.repository.release_from_tag(self.release_version)
+        except NotFoundError:
+            release = None
+        if release:
+            info(f"Deleting Release {self.release_version}")
+            if not release.delete():
+                raise RuntimeError("Release could not be deleted")
+        try:
+            tag = self.github_helper.repository.ref(f"tags/{self.release_version}")
+        except NotFoundError:
+            # Ref wasn't created
+            return
+        if not tag.delete():
+            raise RuntimeError("Tag could not be deleted")
 
 
 class PublishReleaseNotesStep(TransactionalStep):
