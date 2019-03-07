@@ -471,7 +471,14 @@ class PublishReleaseNotesStep(TransactionalStep):
         }
 
     def revert(self):
-        raise NotImplementedError('revert-method is not yet implemented')
+        if not self.context().has_output(self.name()):
+            # Updating release notes was unsuccessful, nothing to do
+            return
+        # purge release notes
+        self.github_helper.update_release_notes(
+            tag_name=self.release_version,
+            body='',
+        )
 
 
 class CleanupDraftReleaseStep(TransactionalStep):
