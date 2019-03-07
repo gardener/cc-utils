@@ -36,7 +36,7 @@ ATTRIBUTES = (
     AttributeSpec.required(
         name='cfgs',
         doc='ImageAlterCfgs {name: ImageAlterCfg}',
-        type={},
+        type=dict, # TODO: define types
     ),
 )
 
