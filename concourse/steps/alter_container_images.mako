@@ -6,7 +6,7 @@
 from makoutil import indent_func
 from concourse.steps import step_lib
 main_repo = job_variant.main_repository()
-repo_name = main_repo.logical_name().upper()
+repo_path = main_repo.logical_name()
 
 image_alter_trait = job_variant.trait('image_alter')
 image_alter_cfgs = image_alter_trait.image_alter_cfgs()
@@ -21,6 +21,7 @@ alter_image(
   tgt_ref='${alter_cfg.tgt_ref()}',
   filter_path_file=os.path.join(
     CC_ROOT_DIR,
+    repo_path,
     '${alter_cfg.rm_paths_file()}'
   ),
 )
