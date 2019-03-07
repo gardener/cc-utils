@@ -69,6 +69,7 @@ component_descriptor_step = concourse.steps.step_def('component_descriptor')
 update_component_deps_step = concourse.steps.step_def('update_component_deps')
 draft_release_step = concourse.steps.step_def('draft_release')
 scan_container_images_step = concourse.steps.step_def('scan_container_images')
+alter_container_images_step = concourse.steps.step_def('alter_container_images')
 %>
 
 <%namespace file="/resources/defaults.mako" import="*"/>
@@ -345,6 +346,8 @@ else:
         ${draft_release_step(job_step=job_step, job_variant=job_variant, github_cfg=github, indent=8)}
 % elif job_step.name == 'scan_container_images':
         ${scan_container_images_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
+% elif job_step.name == 'alter_container_images':
+        ${alter_container_images_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
 % endif
 % endif
 % if job_step.publish_repository_names() and not job_variant.has_trait('pull-request'):

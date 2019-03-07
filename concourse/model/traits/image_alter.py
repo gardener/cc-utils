@@ -101,6 +101,9 @@ class ImageAlterCfg(ModelBase):
         _, tag = self.src_ref().rsplit(':', 1)
         return f'{ref}:{tag}'
 
+    def rm_paths_file(self):
+        return self.raw['remove_paths_file']
+
 
 class ImageAlterTrait(Trait):
     def _attribute_specs(self):
