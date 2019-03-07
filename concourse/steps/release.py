@@ -506,18 +506,15 @@ class CleanupDraftReleaseStep(TransactionalStep):
     def apply(self):
         draft_name = draft_release_name_for_version(self.release_version)
         draft_release = self.github_helper.draft_release_with_name(draft_name)
-
-        # store output data for possible later revert
-        output = {
-            'release name': draft_release.name,
-            'release body': draft_release.body,
-        }
-
         if draft_release:
+            # store output data for possible later revert
+            output = {
+                'release name': draft_release.name,
+                'release body': draft_release.body,
+            }
             # TODO: clean up ALL previously made draft-releases (just in case)
             draft_release.delete()
-
-        return output
+            return output
 
     def revert(self):
         if not self.context().has_output(self.name()):
