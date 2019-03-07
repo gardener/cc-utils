@@ -135,7 +135,8 @@ class Transaction(object):
                 # revert the changes attempted, in reverse order
                 self._revert(reversed(executed_steps))
                 # do not execute apply for remaining steps
-                break
+                return False
+        return True
 
     def _revert(self, steps):
         # attempt to revert each step. Raise an exception if not all reverts succeeded.
