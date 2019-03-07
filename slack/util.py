@@ -22,7 +22,6 @@ except ModuleNotFoundError:
     sys.modules['requests.packages.urllib3.util.url'] = requests.packages.urllib3.util
 
 from slackclient import SlackClient
-from pydash import _
 
 from util import info
 from model.slack import SlackConfig
@@ -47,21 +46,20 @@ class SlackHelper(object):
         if not api_token:
             raise RuntimeError("can't post to slack as there is no slack api token in config")
 
-        info('posting message "{title}" to slack channel {c}'.format(title=title, c=channel))
+        info(f"posting message '{title}' to slack channel '{channel}'")
         client = SlackClient(token=api_token)
         # We expect rather long messages, so we do not use incoming webhooks etc. to post
         # messages as those get truncated, see
         # https://api.slack.com/changelog/2018-04-truncating-really-long-messages
         # Instead we use the file upload mechanism so that this limit does not apply.
-        result = client.api_call(
+        # For contents of result see https://api.slack.com/methods/files.upload
+        response = client.api_call(
             "files.upload",
             channels=channel,
             file=(title, message),
             title=title,
-            filetype=filtetype
+            filetype=filtetype,
         )
-        if not _.get(result, 'ok', False):
-            raise RuntimeError('failed to post to slack channel {c}: {err}'.format(
-                c=channel,
-                err=_.get(result, 'error')
-            ))
+        if not response['ok']:
+            raise RuntimeError(f"failed to post to slack channel '{channel}': {response['error']}")
+        return response
