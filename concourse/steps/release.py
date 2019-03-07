@@ -493,12 +493,27 @@ class CleanupDraftReleaseStep(TransactionalStep):
         draft_name = draft_release_name_for_version(self.release_version)
         draft_release = self.github_helper.draft_release_with_name(draft_name)
 
+        # store output data for possible later revert
+        output = {
+            'release name': draft_release.name,
+            'release body': draft_release.body,
+        }
+
         if draft_release:
             # TODO: clean up ALL previously made draft-releases (just in case)
             draft_release.delete()
 
+        return output
+
     def revert(self):
-        raise NotImplementedError('revert-method is not yet implemented')
+        if not self.context().has_output(self.name()):
+            # Deleting the draft release was unsuccessful, nothing to do
+            return
+        release_data = self.context().step_output(self.name())
+        self.github_helper.create_draft_release(
+            name=release_data['release name'],
+            body=release_data['release body'],
+        )
 
 
 class PostSlackReleaseStep(TransactionalStep):
