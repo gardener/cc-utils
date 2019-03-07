@@ -63,3 +63,20 @@ class SlackHelper(object):
         if not response['ok']:
             raise RuntimeError(f"failed to post to slack channel '{channel}': {response['error']}")
         return response
+
+    def delete_file(
+        self,
+        file_id: str,
+    ):
+        api_token = self.slack_cfg.api_token()
+        if not api_token:
+            raise RuntimeError("can't post to slack as there is no slack api token in config")
+        info(f"deleting file with id '{file_id}' from Slack")
+        client = SlackClient(token=api_token)
+        response = client.api_call(
+            "files.delete",
+            file=file_id,
+        )
+        if not response['ok']:
+            raise RuntimeError(f"failed to delete file with id {file_id}")
+        return response
