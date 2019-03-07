@@ -91,6 +91,7 @@ class ImageAlterCfg(ModelBase):
         # very basic poor-man's validation
         if ':' not in ref:
             raise ValueError(f'img-ref must contain tag: {ref}')
+        return ref
 
     def tgt_ref(self):
         # XXX validate ref schema
@@ -121,7 +122,7 @@ class ImageAlterTrait(Trait):
     def image_alter_cfgs(self):
         return (
             ImageAlterCfg(name=name, raw_dict=raw)
-            for name, raw in self.raw['cfgs']
+            for name, raw in self.raw['cfgs'].items()
         )
 
     def transformer(self):
