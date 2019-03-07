@@ -25,6 +25,7 @@ import product.model
 from github.release_notes.util import (
     fetch_release_notes,
     post_to_slack,
+    delete_file_from_slack,
     github_repo_path,
     draft_release_name_for_version,
 )
@@ -521,16 +522,28 @@ class PostSlackReleaseStep(TransactionalStep):
 
     def apply(self):
         release_notes = self.context().step_output('Publish Release Notes').get('release notes')
-        post_to_slack(
+        response = post_to_slack(
             release_notes=release_notes,
             github_repository_name=self.githubrepobranch.github_repo_path(),
             slack_cfg_name=self.slack_cfg_name,
             slack_channel=self.slack_channel,
             release_version=self.release_version,
         )
+        if response and 'file' in response.keys:
+            uploaded_file_id = response['file']['id']
+            return {'uploaded file id': uploaded_file_id}
+        else:
+            raise RuntimeError("Unable to get file id from Slack response")
 
     def revert(self):
-        raise NotImplementedError('revert-method is not yet implemented')
+        if not self.context().has_output(self.name()):
+            # Posting the release notes was unsuccessful, nothing to revert
+            return
+        uploaded_file_id = self.context().step_output(self.name()).get('uploaded file id')
+        delete_file_from_slack(
+            slack_cfg_name=self.slack_cfg_name,
+            file_id = uploaded_file_id,
+        )
 
 
 def release_and_prepare_next_dev_cycle(
