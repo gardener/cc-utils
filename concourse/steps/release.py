@@ -5,6 +5,8 @@ import semver
 import subprocess
 import traceback
 
+from github3.exceptions import NotFoundError
+
 from util import (
     ctx,
     existing_file,
@@ -447,8 +449,9 @@ class PublishReleaseNotesStep(TransactionalStep):
         existing_dir(self.repo_dir)
 
         # check whether a release with the given version exists
-        release = self.github_helper.repository.release_from_tag(self.release_version)
-        if not release:
+        try:
+            release = self.github_helper.repository.release_from_tag(self.release_version)
+        except NotFoundError:
             raise RuntimeError(f'No release with tag {self.release_version} found')
 
     def apply(self):
