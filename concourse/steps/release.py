@@ -622,7 +622,8 @@ def release_and_prepare_next_dev_cycle(
     )
 
     release_transaction.validate()
-    release_transaction.execute()
+    if not release_transaction.execute():
+        raise RuntimeError('An error occurred while creating the Release.')
 
     publish_release_notes_step = PublishReleaseNotesStep(
         githubrepobranch=githubrepobranch,
@@ -652,4 +653,5 @@ def release_and_prepare_next_dev_cycle(
 
     release_notes_transaction = Transaction(*release_notes_steps)
     release_notes_transaction.validate()
-    release_notes_transaction.execute()
+    if not release_notes_transaction.execute():
+        raise RuntimeError('An error occurred while Publishing the Release Notes.')
