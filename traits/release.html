@@ -209,6 +209,15 @@ Any changes left inside the worktree are added to the resulting release commit.<
 <td>whether or not a rebase against latest branch head should be done before publishing
 release commits.</td>
 </tr>
+<tr class="row-odd"><td>next_version_callback</td>
+<td>no</td>
+<td>None</td>
+<td>str</td>
+<td>an optional callback that is called during next version commit creation.
+The callback is passed the absolute path to the main repository’s work tree via environment
+variable <code class="code docutils literal notranslate"><span class="pre">REPO_DIR</span></code>.
+Any changes left inside the worktree are added to the resulting release commit.</td>
+</tr>
 </tbody>
 </table>
 <h2 class="section-subtitle"><span class="section-subtitle">Dependencies</span></h2>
@@ -260,6 +269,31 @@ with custom diffs (e.g. to update a build-tool-specific dependency declarations 
   <span class="nt">release</span><span class="p">:</span>
     <span class="nt">nextversion</span><span class="p">:</span> <span class="s">&#39;bump_minor&#39;</span>
     <span class="nt">release_callback</span><span class="p">:</span> <span class="s">&#39;release_callback&#39;</span> <span class="c1"># relative to main repository root</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="optional-dev-cycle-callback">
+<h2>Optional Dev Cycle Callback<a class="headerlink" href="#optional-dev-cycle-callback" title="Permalink to this headline">¶</a></h2>
+<p>If an optional dev-cycle-callback is specified, the dev-cycle commit (if created) can be enriched
+with custom diffs (e.g. to update a build-tool-specific dependency declarations file).</p>
+<div class="section" id="id1">
+<h3>Contract<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>non-zero exit codes are considered as an error (leads to release failure)</li>
+<li>the following environment variables are passed:
+- <code class="code docutils literal notranslate"><span class="pre">REPO_DIR</span></code>: absolute path to main repository
+- <code class="code docutils literal notranslate"><span class="pre">EFFECTIVE_VERSION</span></code>: the effective version (see <a class="reference internal" href="version.html"><span class="doc">version Trait</span></a>)</li>
+</ul>
+</div>
+</div>
+<div class="section" id="id2">
+<h2>Example<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">traits</span><span class="p">:</span>
+  <span class="nt">version</span><span class="p">:</span>
+    <span class="nt">preprocess</span><span class="p">:</span> <span class="s">&#39;finalize&#39;</span> <span class="c1"># recommended</span>
+  <span class="nt">release</span><span class="p">:</span>
+    <span class="nt">nextversion</span><span class="p">:</span> <span class="s">&#39;bump_minor&#39;</span>
+    <span class="nt">dev_cycle_callback</span><span class="p">:</span> <span class="s">&#39;dev_cycle_callback&#39;</span> <span class="c1"># relative to main repository root</span>
 </pre></div>
 </div>
 </div>

@@ -56,3 +56,31 @@ Example
     release:
       nextversion: 'bump_minor'
       release_callback: 'release_callback' # relative to main repository root
+
+
+Optional Dev Cycle Callback
+===========================
+
+If an optional dev-cycle-callback is specified, the dev-cycle commit (if created) can be enriched
+with custom diffs (e.g. to update a build-tool-specific dependency declarations file).
+
+Contract
+--------
+
+- non-zero exit codes are considered as an error (leads to release failure)
+- the following environment variables are passed:
+  - `REPO_DIR`: absolute path to main repository
+  - `EFFECTIVE_VERSION`: the effective version (see :doc:`version`)
+
+
+Example
+=======
+
+.. code-block:: yaml
+
+  traits:
+    version:
+      preprocess: 'finalize' # recommended
+    release:
+      nextversion: 'bump_minor'
+      dev_cycle_callback: 'dev_cycle_callback' # relative to main repository root
