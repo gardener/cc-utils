@@ -178,6 +178,9 @@ class PipelineStep(ModelBase):
         return set(AttributeSpec.optional_attr_names(attrs(self)))
 
     def custom_init(self, raw_dict: dict):
+        if not isinstance(raw_dict, dict):
+            raise ValueError(f'expected a dict, but received: {type(raw_dict)} ({raw_dict})')
+
         raw_dict['depends'] = set(raw_dict['depends'])
         if raw_dict.get('output_dir', None):
             name = raw_dict['output_dir']
