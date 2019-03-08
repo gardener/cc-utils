@@ -86,6 +86,9 @@ class ImageAlterCfg(ModelBase):
     def _required_attributes(self):
         return set(AttributeSpec.required_attr_names(IMG_ALTER_ATTRS))
 
+    def name(self):
+        return self._name
+
     def src_ref(self):
         ref = self.raw['src_ref']
         # very basic poor-man's validation
