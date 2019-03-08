@@ -10,13 +10,6 @@ cc-utils:
       component_descriptor: ~
   variants:
     head-update:
-      repos:
-      - name: 'gh_pages'
-        path: 'gardener/cc-utils'
-        branch: 'gh-pages'
-      steps:
-        generate_documentation:
-          publish_to: ['gh_pages']
       traits:
         notifications:
           default:
@@ -31,6 +24,13 @@ cc-utils:
             build-forks: true # default
 
     release_job_image:
+      repos:
+      - name: 'gh_pages'
+        path: 'gardener/cc-utils'
+        branch: 'gh-pages'
+      steps:
+        generate_documentation:
+          publish_to: ['gh_pages']
       traits:
         version:
           preprocess: 'finalize'
