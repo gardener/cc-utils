@@ -149,9 +149,7 @@ class ImageAlterTraitTransformer(TraitTransformer):
         yield self.image_alter_step
 
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):
-        # our step depends on dependency descriptor step
-        component_descriptor_step = pipeline_args.step('component_descriptor')
-        component_descriptor_step._add_dependency(self.image_alter_step)
+        pass
 
     @classmethod
     def dependencies(cls):
