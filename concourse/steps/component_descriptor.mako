@@ -8,6 +8,11 @@ from concourse.steps import step_lib
 descriptor_trait = job_variant.trait('component_descriptor')
 main_repo = job_variant.main_repository()
 main_repo_path_env_var = main_repo.logical_name().replace('-', '_').upper() + '_PATH'
+
+if job_variant.has_trait('image_alter'):
+  image_alter_cfgs = job_variant.trait('image_alter').image_alter_cfgs()
+else:
+  image_alter_cfgs = ()
 %>
 import json
 import os
@@ -49,6 +54,17 @@ dependencies.add_container_image_dependency(
     name='${name}',
     version=effective_version,
     image_reference='${image_descriptor.image_reference()}' + ':' + effective_version
+  )
+)
+% endfor
+
+# add container image references from patch_images trait
+% for image_alter_cfg in image_alter_cfgs:
+dependencies.add_container_image_dependency(
+  ContainerImage.create(
+    name='${image_alter_cfg.name()}',
+    version='${image_alter_cfg.tgt_ref().rsplit(':', 1)[-1]}',
+    image_reference='${image_alter_cfg.tgt_ref()}',
   )
 )
 % endfor
