@@ -63,7 +63,8 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
         super().__init__(*args, **kwargs)
         self._apply_defaults(raw_dict=self.raw)
 
-    def _attribute_specs(self):
+    @classmethod
+    def _attribute_specs(cls):
         return IMG_DESCRIPTOR_ATTRIBS
 
     def _defaults_dict(self):
@@ -121,14 +122,9 @@ class PublishTrait(Trait):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _attribute_specs(self):
+    @classmethod
+    def _attribute_specs(cls):
         return ATTRIBUTES
-
-    def _defaults_dict(self):
-        return AttributeSpec.defaults_dict(ATTRIBUTES)
-
-    def _required_attributes(self):
-        return set(AttributeSpec.required_attr_names(ATTRIBUTES))
 
     def dockerimages(self):
         return [

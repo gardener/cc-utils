@@ -86,6 +86,10 @@ class Resource(ModelBase):
         self._resource_identifier = resource_identifier
         super().__init__(*args, **kwargs)
 
+    @classmethod
+    def _attribute_specs(cls):
+        return ()
+
     def resource_identifier(self):
         return self._resource_identifier
 
@@ -244,14 +248,9 @@ class RepositoryConfig(Resource):
 
         super().__init__(resource_identifier=resource_identifier, *args, **kwargs)
 
-    def _attribute_specs(self):
+    @classmethod
+    def _attribute_specs(cls):
         return REPO_ATTRS
-
-    def _defaults_dict(self):
-        return AttributeSpec.defaults_dict(REPO_ATTRS)
-
-    def _optional_attributes(self):
-        return AttributeSpec.optional_attr_names(REPO_ATTRS)
 
     def custom_init(self, raw_dict):
         if raw_dict.get('trigger') is not None:

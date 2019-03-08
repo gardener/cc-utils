@@ -74,14 +74,9 @@ class ImageAlterCfg(ModelBase):
             **kwargs,
         )
 
-    def _attribute_specs(self):
+    @classmethod
+    def _attribute_specs(cls):
         return IMG_ALTER_ATTRS
-
-    def _defaults_dict(self):
-        return AttributeSpec.defaults_dict(IMG_ALTER_ATTRS)
-
-    def _optional_attributes(self):
-        return set(AttributeSpec.optional_attr_names(IMG_ALTER_ATTRS))
 
     def _required_attributes(self):
         return set(AttributeSpec.required_attr_names(IMG_ALTER_ATTRS))
@@ -110,17 +105,9 @@ class ImageAlterCfg(ModelBase):
 
 
 class ImageAlterTrait(Trait):
-    def _attribute_specs(self):
+    @classmethod
+    def _attribute_specs(cls):
         return ATTRIBUTES
-
-    def _defaults_dict(self):
-        return AttributeSpec.defaults_dict(ATTRIBUTES)
-
-    def _optional_attributes(self):
-        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
-
-    def _required_attributes(self):
-        return set(AttributeSpec.required_attr_names(ATTRIBUTES))
 
     def image_alter_cfgs(self):
         return (

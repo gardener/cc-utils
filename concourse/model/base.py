@@ -27,12 +27,30 @@ from model.base import(
 
 
 class AttribSpecMixin(object):
-    @abstractmethod
-    def _attribute_spec(self):
+    @classmethod
+    def _attribute_specs(cls):
         raise NotImplementedError
 
+    @classmethod
+    def _defaults_dict(cls):
+        return AttributeSpec.defaults_dict(cls._attribute_specs())
 
-class ModelBase(ModelDefaultsMixin, ModelValidationMixin, AttribSpecMixin):
+    @classmethod
+    def _optional_attributes(cls):
+        return set(AttributeSpec.optional_attr_names(cls._attribute_specs()))
+
+    @classmethod
+    def _required_attributes(cls):
+        return set(AttributeSpec.required_attr_names(cls._attribute_specs()))
+
+    def _apply_defaults(self, raw_dict):
+        self.raw = util.merge_dicts(
+            self._defaults_dict(),
+            raw_dict,
+        )
+
+
+class ModelBase(AttribSpecMixin, ModelValidationMixin):
     def __init__(self, raw_dict: dict):
         util.not_none(raw_dict)
 

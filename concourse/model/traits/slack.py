@@ -38,6 +38,10 @@ ATTRIBUTES = (
 
 
 class ChannelConfig(ModelBase):
+    @classmethod
+    def _attribute_specs(cls):
+        return ()
+
     def channel_name(self):
         return self.raw.get('channel_name')
 
@@ -55,14 +59,9 @@ class SlackTrait(Trait):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _attribute_specs(self):
+    @classmethod
+    def _attribute_specs(cls):
         return ATTRIBUTES
-
-    def _defaults_dict(self):
-        return AttributeSpec.defaults_dict(ATTRIBUTES)
-
-    def _required_attributes(self):
-        return set(AttributeSpec.required_attr_names(ATTRIBUTES))
 
     def _children(self):
        return self.channel_cfgs().values()

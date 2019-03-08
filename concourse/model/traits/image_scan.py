@@ -29,7 +29,8 @@ from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
 
 
 class FilterCfg(ModelBase):
-    def _attribute_specs(self):
+    @classmethod
+    def _attribute_specs(cls):
         return (
             AttributeSpec.optional(
                 name='include_image_references',
@@ -116,17 +117,9 @@ ATTRIBUTES = (
 
 
 class ImageScanTrait(Trait):
-    def _attribute_specs(self):
+    @classmethod
+    def _attribute_specs(cls):
         return ATTRIBUTES
-
-    def _defaults_dict(self):
-        return AttributeSpec.defaults_dict(ATTRIBUTES)
-
-    def _optional_attributes(self):
-        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
-
-    def _required_attributes(self):
-        return set(AttributeSpec.required_attr_names(ATTRIBUTES))
 
     def reference_protecode_group_ids(self):
         return self.raw['reference_protecode_group_ids']

@@ -42,14 +42,9 @@ ATTRIBUTES = (
 
 
 class UpdateComponentDependenciesTrait(Trait):
-    def _attribute_specs(self):
+    @classmethod
+    def _attribute_specs(cls):
         return ATTRIBUTES
-
-    def _defaults_dict(self):
-        return AttributeSpec.defaults_dict(ATTRIBUTES)
-
-    def _optional_attributes(self):
-        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
 
     def set_dependency_version_script_path(self):
         return self.raw['set_dependency_version_script']

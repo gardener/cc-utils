@@ -32,14 +32,9 @@ class CronTrait(Trait):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _attribute_specs(self):
+    @classmethod
+    def _attribute_specs(cls):
         return ATTRIBUTES
-
-    def _defaults_dict(self):
-        return AttributeSpec.defaults_dict(ATTRIBUTES)
-
-    def _optional_attributes(self):
-        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
 
     def interval(self):
         return self.raw['interval']

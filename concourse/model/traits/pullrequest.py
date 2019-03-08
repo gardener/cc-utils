@@ -39,7 +39,8 @@ POLICIES_ATTRIBS = (
 
 
 class PullRequestPolicies(ModelBase):
-    def _attribute_specs(self):
+    @classmethod
+    def _attribute_specs(cls):
         return POLICIES_ATTRIBS
 
     def require_label(self):
@@ -63,14 +64,9 @@ ATTRIBUTES = (
 
 
 class PullRequestTrait(Trait):
+    @classmethod
     def _attribute_specs(self):
         return ATTRIBUTES
-
-    def _defaults_dict(self):
-        return AttributeSpec.defaults_dict(ATTRIBUTES)
-
-    def _optional_attributes(self):
-        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
 
     def policies(self):
         policies_dict = self.raw['policies']

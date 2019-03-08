@@ -38,14 +38,9 @@ ATTRIBUTES = (
 
 
 class OptionsTrait(Trait):
-    def _attribute_specs(self):
+    @classmethod
+    def _attribute_specs(cls):
         return ATTRIBUTES
-
-    def _defaults_dict(self):
-        return AttributeSpec.defaults_dict(ATTRIBUTES)
-
-    def _optional_attributes(self):
-        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
 
     def build_logs_to_retain(self):
         return self.raw['build_logs_to_retain']

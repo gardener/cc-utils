@@ -58,14 +58,9 @@ class ComponentDescriptorTrait(Trait):
         if not self.step_name() == 'component_descriptor':
             raise ModelValidationError('component_descriptor step name must be component_descriptor')
 
-    def _attribute_specs(self):
+    @classmethod
+    def _attribute_specs(cls):
         return ATTRIBUTES
-
-    def _defaults_dict(self):
-        return AttributeSpec.defaults_dict(ATTRIBUTES)
-
-    def _optional_attributes(self):
-        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
 
     def component_name(self):
         return self.raw['component_name']

@@ -30,6 +30,10 @@ class JobVariant(ModelBase):
         self.variant_name = name
         super().__init__(raw_dict=raw_dict, *args, **kwargs)
 
+    @classmethod
+    def _attribute_specs(cls):
+        return ()
+
     def _known_attributes(self):
         return {
             'steps',

@@ -84,14 +84,9 @@ class NotificationCfg(ModelBase):
         self._apply_defaults(raw_dict=raw_dict)
         self.raw['recipients'] = normalise_to_dict(self.recipients())
 
-    def _attribute_specs(self):
+    @classmethod
+    def _attribute_specs(cls):
         return NOTIFICATION_CFG_ATTRS
-
-    def _defaults_dict(self):
-        return AttributeSpec.defaults_dict(self._attribute_specs())
-
-    def _optional_attributes(self):
-        return set(AttributeSpec.optional_attr_names(self._attribute_specs()))
 
     def triggering_policy(self):
         return NotificationTriggeringPolicy(self.raw['triggering_policy'])
@@ -124,7 +119,8 @@ class NotificationCfgSet(NamedModelElement):
         super().__init__(name=name, raw_dict=raw_dict, *args, **kwargs)
         self._apply_defaults(raw_dict=raw_dict)
 
-    def _attribute_specs(self):
+    @classmethod
+    def _attribute_specs(cls):
         return NOTIFICATION_CFG_SET_ATTRS
 
     def _defaults_dict(self):
@@ -156,14 +152,12 @@ class NotificationsTrait(Trait):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _attribute_specs(self):
+    @classmethod
+    def _attribute_specs(cls):
         return ATTRIBUTES
 
-    def _defaults_dict(self):
-        return AttributeSpec.defaults_dict(ATTRIBUTES)
-
-    def _optional_attributes(self):
-        return set(self.raw.keys())
+    def _known_attributes(self):
+        return self.raw.keys()
 
     def _children(self):
         return [NotificationCfgSet(name, raw_dict) for name, raw_dict in self.raw.items()]

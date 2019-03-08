@@ -39,14 +39,9 @@ class DraftReleaseTrait(Trait):
     def transformer(self):
         return DraftReleaseTraitTransformer()
 
-    def _attribute_specs(self):
+    @classmethod
+    def _attribute_specs(cls):
         return ATTRIBUTES
-
-    def _defaults_dict(self):
-        return AttributeSpec.defaults_dict(ATTRIBUTES)
-
-    def _optional_attributes(self):
-        return set(AttributeSpec.optional_attr_names(ATTRIBUTES))
 
     def _preprocess(self):
         return self.raw['preprocess']
