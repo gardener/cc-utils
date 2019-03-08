@@ -14,7 +14,11 @@
 # limitations under the License.
 
 import util
+import typing
 
+from model.base import (
+    NamedModelElement,
+)
 from concourse.model.step import PipelineStep
 from concourse.model.base import (
     AttributeSpec,
@@ -36,7 +40,8 @@ ATTRIBUTES = (
     AttributeSpec.required(
         name='cfgs',
         doc='ImageAlterCfgs {name: ImageAlterCfg}',
-        type=dict, # TODO: define types
+        # XXX this would be appropriate: type=typing.Dict[str, ImageAlterCfg],
+        type=NamedModelElement,
     ),
 )
 
