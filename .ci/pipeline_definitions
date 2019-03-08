@@ -8,7 +8,7 @@ cc-utils:
     traits:
       version: ~
       component_descriptor: ~
-  variants:
+  jobs:
     head-update:
       traits:
         notifications:
