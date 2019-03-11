@@ -21,6 +21,7 @@ from model.base import (
 )
 from concourse.model.step import PipelineStep
 from concourse.model.base import (
+    AttribSpecMixin,
     AttributeSpec,
     Trait,
     TraitTransformer,
@@ -30,20 +31,6 @@ from concourse.model.base import (
 
 from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
 
-ATTRIBUTES = (
-    AttributeSpec.optional(
-        name='parallel_jobs',
-        default=12,
-        doc='amount of parallel scanning threads',
-        type=int,
-    ),
-    AttributeSpec.required(
-        name='cfgs',
-        doc='ImageAlterCfgs {name: ImageAlterCfg}',
-        # XXX this would be appropriate: type=typing.Dict[str, ImageAlterCfg],
-        type=NamedModelElement,
-    ),
-)
 
 IMG_ALTER_ATTRS = (
     AttributeSpec.required(
@@ -64,7 +51,7 @@ IMG_ALTER_ATTRS = (
 )
 
 
-class ImageAlterCfg(ModelBase):
+class ImageAlterCfg(ModelBase, AttribSpecMixin):
     def __init__(
         self,
         name: str,
@@ -107,6 +94,21 @@ class ImageAlterCfg(ModelBase):
 
     def rm_paths_file(self):
         return self.raw['remove_paths_file']
+
+
+ATTRIBUTES = (
+    AttributeSpec.optional(
+        name='parallel_jobs',
+        default=12,
+        doc='amount of parallel scanning threads',
+        type=int,
+    ),
+    AttributeSpec.required(
+        name='cfgs',
+        doc='ImageAlterCfgs {name: ImageAlterCfg}',
+        type=typing.Dict[str, ImageAlterCfg],
+    ),
+)
 
 
 class ImageAlterTrait(Trait):
