@@ -16,6 +16,7 @@
 import os
 import sys
 import textwrap
+import typing
 
 
 import concourse.model.base as model_base
@@ -34,7 +35,8 @@ class AttributesDocumentation(object):
         model_element: model_base.AttribSpecMixin,
         prefix: str='',
     ):
-        self._model_element = util.check_type(model_element, model_base.AttribSpecMixin)
+        #self._model_element = util.check_type(model_element, model_base.AttribSpecMixin)
+        self._model_element = model_element
         self._child_elements = []
         self._prefix = util.check_type(prefix, str)
 
@@ -78,7 +80,15 @@ class AttributesDocumentation(object):
                     child_element = type_(raw_dict={})
 
                 self.add_child(model_element=child_element, element_name=name)
-
+            elif isinstance(type_, type) and type_.__base__ == typing.Dict:
+                # assumption: type is typing.Dict[T1, T2]
+                key_type, val_type = type_.__args__
+                child_element = val_type
+                self.add_child(
+                    model_element=child_element,
+                    element_name=f'{name}.<user-chosen>'
+                )
+                type_str = type_.__name__
             else:
                 type_str = type_.__name__
 
