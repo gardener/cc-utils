@@ -197,8 +197,40 @@
 <tr class="row-odd"><td>cfgs</td>
 <td>yes</td>
 <td>None</td>
-<td>dict</td>
+<td>Dict</td>
 <td>ImageAlterCfgs {name: ImageAlterCfg}</td>
+</tr>
+</tbody>
+</table>
+<h2 class="section-subtitle"><span class="section-subtitle">cfgs.&lt;user-chosen&gt; Attributes</span></h2>
+<table border="1" class="colwidths-auto docutils">
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">name</th>
+<th class="head">required?</th>
+<th class="head">default</th>
+<th class="head">type</th>
+<th class="head">explanation</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>src_ref</td>
+<td>yes</td>
+<td>None</td>
+<td>str</td>
+<td>source image reference (including tag)</td>
+</tr>
+<tr class="row-odd"><td>tgt_ref</td>
+<td>yes</td>
+<td>None</td>
+<td>str</td>
+<td>target image reference (tag defaults to src_ref tag if absent)</td>
+</tr>
+<tr class="row-even"><td>remove_paths_file</td>
+<td>yes</td>
+<td>None</td>
+<td>str</td>
+<td>path to a text file containing absolute paths (w/o leading /) to be purged from
+src image. Interpreted relative to main repository root.</td>
 </tr>
 </tbody>
 </table>

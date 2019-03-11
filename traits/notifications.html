@@ -198,6 +198,55 @@ mails upon errors).</p>
 </tr>
 </tbody>
 </table>
+<h2 class="section-subtitle"><span class="section-subtitle">default.&lt;user-chosen&gt; Attributes</span></h2>
+<table border="1" class="colwidths-auto docutils">
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">name</th>
+<th class="head">required?</th>
+<th class="head">default</th>
+<th class="head">type</th>
+<th class="head">explanation</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>triggering_policy</td>
+<td>no</td>
+<td>NotificationTriggeringPolicy.ONLY_FIRST</td>
+<td>NotificationTriggeringPolicy</td>
+<td>when to issue the configured notifications</td>
+</tr>
+<tr class="row-odd"><td>email</td>
+<td>no</td>
+<td>True</td>
+<td>bool</td>
+<td>whether to send email notifications</td>
+</tr>
+<tr class="row-even"><td>inputs</td>
+<td>no</td>
+<td>[‘on_error_dir’]</td>
+<td>List</td>
+<td>whether to send email notifications</td>
+</tr>
+<tr class="row-odd"><td>recipients</td>
+<td>no</td>
+<td>[‘committers’]</td>
+<td>List</td>
+<td>whom to notify</td>
+</tr>
+<tr class="row-even"><td>cfg_callback</td>
+<td>no</td>
+<td>[‘on_error_dir’]</td>
+<td>str</td>
+<td><p>an optional callback (relative to main repository root). Called as subprocess with
+an environment variables:</p>
+<ul class="simple">
+<li><code class="code docutils literal notranslate"><span class="pre">REPO_ROOT</span></code>: absolute path to main repository</li>
+<li><code class="code docutils literal notranslate"><span class="pre">NOTIFY_CFG_OUT</span></code>: absolute path to write notify.cfg to</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
 <h2 class="section-subtitle"><span class="section-subtitle">Dependencies</span></h2>
 <p>This trait has <em>no</em> dependencies</p>
 </div>
