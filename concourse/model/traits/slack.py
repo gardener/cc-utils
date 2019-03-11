@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
+
 from util import not_none
 
 from concourse.model.step import PipelineStep
@@ -24,15 +26,16 @@ from concourse.model.base import (
   ModelValidationError,
 )
 
-
-ATTRIBUTES = (
+CHANNEL_CFG_ATTRS = (
     AttributeSpec.required(
-        name='channel_cfgs',
-        doc='the slack channel configuration to use',
+        name='channel_name',
+        doc='the slack channel name',
+        type=str,
     ),
     AttributeSpec.required(
-        name='default_channel',
-        doc='the default channel config',
+        name='slack_cfg_name',
+        doc='slack_cfg name (see cc-config)',
+        type=str,
     ),
 )
 
@@ -40,7 +43,7 @@ ATTRIBUTES = (
 class ChannelConfig(ModelBase):
     @classmethod
     def _attribute_specs(cls):
-        return ()
+        return CHANNEL_CFG_ATTRS
 
     def channel_name(self):
         return self.raw.get('channel_name')
@@ -53,6 +56,19 @@ class ChannelConfig(ModelBase):
             'channel_name',
             'slack_cfg_name',
         }
+
+
+ATTRIBUTES = (
+    AttributeSpec.required(
+        name='channel_cfgs',
+        doc='the slack channel configuration to use',
+        type=typing.Dict[str, ChannelConfig],
+    ),
+    AttributeSpec.required(
+        name='default_channel',
+        doc='the default channel config',
+    ),
+)
 
 
 class SlackTrait(Trait):
