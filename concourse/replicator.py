@@ -17,6 +17,7 @@ import os
 from enum import Enum, IntEnum
 from concurrent.futures import ThreadPoolExecutor
 import functools
+import threading
 import traceback
 
 import mako.template
@@ -461,6 +462,17 @@ class PipelineReplicator(object):
         self.definition_deployer = definition_deployer
         self.result_processor = result_processor
 
+        # keep track of generated pipelines to detect conflicts
+        self._pipeline_names_lock = threading.Lock()
+        self._pipeline_names = set()
+
+    def _pipeline_name_conflict(self, definition_descriptor:DefinitionDescriptor):
+        with self._pipeline_names_lock:
+            pipeline_name = definition_descriptor.pipeline_name
+            if pipeline_name in self._pipeline_names:
+                return True
+            self._pipeline_names.add(pipeline_name)
+
     def _enumerate_definitions(self):
         for enumerator in self.definition_enumerators:
             yield from enumerator.enumerate_definition_descriptors()
@@ -477,6 +489,18 @@ class PipelineReplicator(object):
                 definition_descriptor
         )
         result = self.definition_renderer.render(preprocessed)
+
+        if self._pipeline_name_conflict(
+            definition_descriptor=result.definition_descriptor,
+        ):
+            # early exit upon pipeline name conflict
+            pipeline_name = result.definition_descriptor.pipeline_name
+            warning(f'duplicate pipeline name: {pipeline_name}')
+            return DeployResult(
+                definition_descriptor=definition_descriptor,
+                deploy_status=DeployStatus.SKIPPED,
+                error_details=f'duplicate pipeline name: {pipeline_name}',
+            )
 
         if result.render_status == RenderStatus.SUCCEEDED:
             deploy_result = self.definition_deployer.deploy(result.definition_descriptor)
