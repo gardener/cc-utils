@@ -40,6 +40,7 @@ from github.codeowners import CodeownersEnumerator, CodeOwnerEntryResolver
 
 from concourse.factory import DefinitionFactory, RawPipelineDefinitionDescriptor
 from concourse.enumerator import (
+    DefinitionDescriptor,
     DefinitionDescriptorPreprocessor,
     TemplateRetriever,
     GithubOrganisationDefinitionEnumerator,
@@ -192,7 +193,7 @@ class RenderStatus(Enum):
 class RenderResult(object):
     def __init__(
         self,
-        definition_descriptor,
+        definition_descriptor:DefinitionDescriptor,
         render_status,
         error_details=None,
     ):
