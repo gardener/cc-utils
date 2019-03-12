@@ -324,6 +324,10 @@ class GithubOrganisationDefinitionEnumerator(GithubDefinitionEnumeratorBase):
 
 
 class DefinitionDescriptor(object):
+    '''
+    Container type holding the result of a pipeline rendering and additional
+    metadata required to deploy as concrete Concourse Pipeline.
+    '''
     def __init__(
         self,
         pipeline_name,
@@ -353,6 +357,9 @@ class DefinitionDescriptor(object):
             n=self.concourse_target_cfg.name(),
             t=self.concourse_target_team
         )
+
+    def __repr__(self):
+        return f'{self.__class__}: {self.pipeline_name}'
 
 
 class TemplateRetriever(object):
