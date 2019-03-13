@@ -55,6 +55,11 @@ IMG_DESCRIPTOR_ATTRIBS = (
         default=None,
         doc='the relative path to the container image build file',
     ),
+    AttributeSpec.optional(
+        name='target',
+        default=None,
+        doc='only for multistage builds: the target up to which to build',
+    ),
 )
 
 
@@ -92,7 +97,7 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
         return self.raw['tag_as_latest']
 
     def target_name(self):
-        return self.raw.get('target_name')
+        return self.raw.get('target')
 
     def dockerfile_relpath(self):
         return self.raw['dockerfile']
