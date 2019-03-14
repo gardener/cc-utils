@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import typing
 
 from util import not_none
 from model import NamedModelElement
@@ -118,7 +119,7 @@ ATTRIBUTES = (
     AttributeSpec.required(
         name='dockerimages',
         doc='specifies the container images to be built',
-        type=PublishDockerImageDescriptor,
+        type=typing.Dict[str, PublishDockerImageDescriptor],
     ),
 )
 

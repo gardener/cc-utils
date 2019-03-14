@@ -15,6 +15,7 @@
 
 import sphinxutil
 import attributes
+import enum
 import concourse.model.base as base_model
 
 
@@ -30,6 +31,9 @@ class AttributesDocMixin(sphinxutil.SphinxUtilsMixin):
                 subtitle = f'{prefix} Attributes'
             else:
                 subtitle = 'Attributes'
+
+            if isinstance(attributes_doc._model_element, enum.EnumMeta):
+                subtitle = f'{subtitle[:-1]} Values'
 
             self.add_subtitle(subtitle)
 
