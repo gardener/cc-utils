@@ -17,6 +17,7 @@ import os
 import sys
 import textwrap
 import typing
+import enum
 
 
 import concourse.model.base as model_base
@@ -46,7 +47,7 @@ class AttributesDocumentation(object):
         element_name: str,
     ):
         if self._prefix:
-            child_prefix = '.'.join(self.prefix, element_name)
+            child_prefix = '.'.join((self._prefix, element_name))
         else:
             child_prefix = element_name
 
@@ -62,7 +63,10 @@ class AttributesDocumentation(object):
         return self._child_elements
 
     def fill_table(self, table_builder):
-        table_builder.add_table_header(['name', 'required?', 'default', 'type', 'explanation'])
+        if isinstance(self._model_element, enum.EnumMeta):
+            table_builder.add_table_header(['name', 'default', 'type', 'explanation'])
+        else:
+            table_builder.add_table_header(['name', 'required?', 'default', 'type', 'explanation'])
 
         def attr_to_table_row(attr_spec, prefix=None):
             name = attr_spec.name()
@@ -74,11 +78,7 @@ class AttributesDocumentation(object):
             if issubclass(type_, model_base.AttribSpecMixin):
                 type_str = type_.__name__
                 # recurse to child element
-                if issubclass(type_, model.NamedModelElement):
-                    child_element = type_(name='<user-chosen>', raw_dict={})
-                else:
-                    child_element = type_(raw_dict={})
-
+                child_element = type_
                 self.add_child(model_element=child_element, element_name=name)
             elif isinstance(type_, type) and type_.__base__ == typing.Dict:
                 # assumption: type is typing.Dict[T1, T2]
@@ -92,7 +92,10 @@ class AttributesDocumentation(object):
             else:
                 type_str = type_.__name__
 
-            table_builder.add_table_row((name, required, default_value, type_str, doc))
+            if isinstance(self._model_element, enum.EnumMeta):
+                table_builder.add_table_row((name, default_value, type_str, doc))
+            else:
+                table_builder.add_table_row((name, required, default_value, type_str, doc))
 
         for attr_spec in self._model_element._attribute_specs():
             attr_to_table_row(attr_spec)

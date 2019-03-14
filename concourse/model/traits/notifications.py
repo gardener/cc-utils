@@ -21,6 +21,7 @@ from util import not_none
 from concourse.model.step import PipelineStep
 from concourse.model.base import (
   AttributeSpec,
+  AttribSpecMixin,
   Trait,
   TraitTransformer,
   ScriptType,
@@ -32,16 +33,39 @@ from model.base import (
 )
 
 
-class NotificationTriggeringPolicy(enum.Enum):
+class NotificationTriggeringPolicy(AttribSpecMixin, enum.Enum):
     ONLY_FIRST = 'only_first'
     ALWAYS = 'always'
     NEVER = 'never'
+
+    @classmethod
+    def _attribute_specs(cls):
+        return (
+            AttributeSpec.optional(
+                name=cls.ONLY_FIRST.value,
+                default=True,
+                doc='notify on first error only',
+                type=str,
+            ),
+            AttributeSpec.optional(
+                name=cls.ALWAYS.value,
+                default=False,
+                doc='notify on every errors',
+                type=str,
+            ),
+            AttributeSpec.optional(
+                name=cls.NEVER.value,
+                default=False,
+                doc='notify never in case of errors',
+                type=str,
+            ),
+        )
 
 
 NOTIFICATION_CFG_ATTRS = (
     AttributeSpec.optional(
         name='triggering_policy',
-        default=NotificationTriggeringPolicy.ONLY_FIRST,
+        default=NotificationTriggeringPolicy.ONLY_FIRST.value,
         doc='when to issue the configured notifications',
         type=NotificationTriggeringPolicy,
     ),
@@ -114,7 +138,7 @@ NOTIFICATION_CFG_SET_ATTRS = (
 )
 
 
-class NotificationCfgSet(NamedModelElement):
+class NotificationCfgSet(NamedModelElement, AttribSpecMixin):
     def __init__(self, name, raw_dict, *args, **kwargs):
         super().__init__(name=name, raw_dict=raw_dict, *args, **kwargs)
         self._apply_defaults(raw_dict=raw_dict)
@@ -143,7 +167,7 @@ ATTRIBUTES = (
             }
         },
         doc='the default notification cfg (more may be defined)',
-        type=typing.Dict[str, NotificationCfg],
+        type=NotificationCfgSet,
     ),
 )
 
