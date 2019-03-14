@@ -17,6 +17,7 @@ import os
 from enum import Enum, IntEnum
 from concurrent.futures import ThreadPoolExecutor
 import functools
+import textwrap
 import threading
 import traceback
 
@@ -411,16 +412,26 @@ class ReplicationResultProcessor(object):
                 if user.email:
                     recipients.add(user.email)
 
-        info(f'Sending notification e-mail to {recipients} ({main_repo["path"]})')
-        email_cfg = self._cfg_set.email()
-        _send_mail(
-            email_cfg=email_cfg,
-            recipients=recipients,
-            subject='Your pipeline definition in {repo} is erroneous'.format(
-                repo=main_repo['path'],
-            ),
-            mail_template='Error details:\n' + str(failed_descriptor.error_details),
-        )
+        # if there are still no recipients available print a warning
+        if not recipients:
+            warning(textwrap.dedent(
+                f"""
+                Unable to determine recipient for pipeline '{definition_descriptor.pipeline_name}'
+                found in branch '{main_repo['branch']}' ({main_repo['path']}). Please make sure that
+                CODEOWNERS and committers have exposed a public e-mail address in their profile.
+                """
+            ))
+        else:
+            info(f'Sending notification e-mail to {recipients} ({main_repo["path"]})')
+            email_cfg = self._cfg_set.email()
+            _send_mail(
+                email_cfg=email_cfg,
+                recipients=recipients,
+                subject='Your pipeline definition in {repo} is erroneous'.format(
+                    repo=main_repo['path'],
+                ),
+                mail_template='Error details:\n' + str(failed_descriptor.error_details),
+            )
 
     def _initialise_new_pipeline_resources(self, concourse_api, results):
         newly_deployed_pipeline_names = map(
