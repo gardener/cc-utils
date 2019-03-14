@@ -650,3 +650,18 @@ def _retrieve_team_by_name_or_none(
 
     team_list = list(filter(lambda t: t.name == team_name, organization.teams()))
     return team_list[0] if team_list else None
+
+
+def find_greatest_github_release_version(
+    releases: [github3.repos.release.Release],
+):
+    # currently, non-draft-releases are not created with a name by us. Use the tag name as fallback
+    release_versions = [
+        release.name if release.name else release.tag_name
+        for release in releases
+    ]
+    release_version_infos = [
+        semver.parse_version_info(release_version)
+        for release_version in release_versions
+    ]
+    return str(version.find_latest_version(release_version_infos))
