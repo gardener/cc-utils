@@ -13,10 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import collections
 import os
 import semver
 import sys
 
+from typing import (
+    Iterable,
+    Set,
+)
 own_dir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(own_dir, os.path.pardir))
 
@@ -117,3 +122,17 @@ def find_latest_version_with_matching_major(reference_version: semver.VersionInf
             if not latest_candidate or latest_candidate < candidate:
                 latest_candidate = candidate
     return latest_candidate
+
+
+def partition_by_major_and_minor(
+    versions: Iterable[semver.VersionInfo],
+) -> Iterable[Set[semver.VersionInfo]]:
+    '''partition an iterable of semver VersionInfos by their joined major and minor version
+    '''
+    partitions = collections.defaultdict(set)
+    for version_info in versions:
+        partitions[(version_info.major,version_info.minor)].add(version_info)
+    yield from [
+        sorted(partition, reverse=True)
+        for partition in partitions.values()
+    ]
