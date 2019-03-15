@@ -39,12 +39,12 @@ if ctx.Config.TERMINAL.value.output_columns() is not None:
     # Create a custom width formatter by fixing two arguments for the default formatter class,
     # namely 'width' (defaults to 80 - 2) and 'max_help_position' (defaults to 24)
     FORMATTER_CLASS = functools.partial(
-        argparse.HelpFormatter,
+        argparse.RawDescriptionHelpFormatter,
         max_help_position=24,
         width=column_width
     )
 else:
-    FORMATTER_CLASS = argparse.HelpFormatter
+    FORMATTER_CLASS = argparse.RawDescriptionHelpFormatter
 
 
 def main():
