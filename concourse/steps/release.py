@@ -425,6 +425,7 @@ class GitHubReleaseStep(TransactionalStep):
             body=None,
             draft=False,
             prerelease=False,
+            name=self.release_version,
         )
 
         # Upload component descriptor to GitHub-release if one has been calculated
