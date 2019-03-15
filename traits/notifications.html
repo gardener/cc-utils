@@ -232,7 +232,7 @@ mails upon errors).</p>
 <td>no</td>
 <td>only_first</td>
 <td>NotificationTriggeringPolicy</td>
-<td>when to issue the configured notifications</td>
+<td>when to issue the configured notifications. Possible values see below</td>
 </tr>
 <tr class="row-odd"><td>email</td>
 <td>no</td>
@@ -244,13 +244,13 @@ mails upon errors).</p>
 <td>no</td>
 <td>[‘on_error_dir’]</td>
 <td>List</td>
-<td>whether to send email notifications</td>
+<td>configures the inputs that are made available to the notification</td>
 </tr>
 <tr class="row-odd"><td>recipients</td>
 <td>no</td>
-<td>[‘committers’]</td>
-<td>List</td>
-<td>whom to notify</td>
+<td>committers</td>
+<td>NotificationRecipients</td>
+<td>whom to notify. Possible values see blow.</td>
 </tr>
 <tr class="row-even"><td>cfg_callback</td>
 <td>no</td>
@@ -284,7 +284,7 @@ an environment variables:</p>
 <tr class="row-odd"><td>always</td>
 <td>False</td>
 <td>str</td>
-<td>notify on every errors</td>
+<td>notify on every error</td>
 </tr>
 <tr class="row-even"><td>never</td>
 <td>False</td>
@@ -293,8 +293,67 @@ an environment variables:</p>
 </tr>
 </tbody>
 </table>
+<h2 class="section-subtitle"><span class="section-subtitle">default.on_error.recipients Attribute Values</span></h2>
+<table border="1" class="colwidths-auto docutils">
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">name</th>
+<th class="head">default</th>
+<th class="head">type</th>
+<th class="head">explanation</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>committers</td>
+<td>True</td>
+<td>str</td>
+<td>notify committers of the last commit</td>
+</tr>
+<tr class="row-odd"><td>email_addresses</td>
+<td>False</td>
+<td>str</td>
+<td><p>notifiy specific email addresses</p>
+<p>Example:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">recipients</span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="nt">email_addresses</span><span class="p">:</span>
+        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">foo.bar@mycloud.com</span>
+        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">bar.buzz@mycloud.com</span>
+</pre></div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td>component_diff_owners</td>
+<td>False</td>
+<td>str</td>
+<td>notify the codeowners of a component. CODEOWNERS file must exist</td>
+</tr>
+<tr class="row-odd"><td>codeowners</td>
+<td>False</td>
+<td>str</td>
+<td>notify the codeowners of the repository. CODEOWNERS file must exist</td>
+</tr>
+</tbody>
+</table>
 <h2 class="section-subtitle"><span class="section-subtitle">Dependencies</span></h2>
 <p>This trait has <em>no</em> dependencies</p>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">traits</span><span class="p">:</span>
+    <span class="nt">notifications</span><span class="p">:</span>
+        <span class="nt">demo_breakers</span><span class="p">:</span>
+            <span class="nt">on_error</span><span class="p">:</span>
+                <span class="nt">triggering_policy</span><span class="p">:</span> <span class="s">&#39;only_first&#39;</span>
+                <span class="nt">recipients</span><span class="p">:</span>
+                <span class="p p-Indicator">-</span> <span class="nt">email_addresses</span><span class="p">:</span>
+                    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">foo.bar@mycloud.com</span>
+                    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">bar.bazz@mycloud.com</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">committers</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">component_diff_owners</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">codeowners</span>
+                <span class="nt">inputs</span><span class="p">:</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">component_descriptor_dir</span>
+</pre></div>
+</div>
 </div>
 </div>
 
