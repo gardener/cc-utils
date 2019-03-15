@@ -193,12 +193,31 @@ mails upon errors).</p>
 <tr class="row-even"><td>default</td>
 <td>no</td>
 <td>{‘on_error’: {‘triggering_policy’: ‘only_first’, ‘email’: True}}</td>
-<td>Dict</td>
+<td>NotificationCfgSet</td>
 <td>the default notification cfg (more may be defined)</td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">default.&lt;user-chosen&gt; Attributes</span></h2>
+<h2 class="section-subtitle"><span class="section-subtitle">default Attributes</span></h2>
+<table border="1" class="colwidths-auto docutils">
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">name</th>
+<th class="head">required?</th>
+<th class="head">default</th>
+<th class="head">type</th>
+<th class="head">explanation</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>on_error</td>
+<td>no</td>
+<td>{‘triggering_policy’: ‘only_first’}</td>
+<td>NotificationCfg</td>
+<td>configures triggering policy in case a step fails with an error</td>
+</tr>
+</tbody>
+</table>
+<h2 class="section-subtitle"><span class="section-subtitle">default.on_error Attributes</span></h2>
 <table border="1" class="colwidths-auto docutils">
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">name</th>
@@ -211,7 +230,7 @@ mails upon errors).</p>
 <tbody valign="top">
 <tr class="row-even"><td>triggering_policy</td>
 <td>no</td>
-<td>NotificationTriggeringPolicy.ONLY_FIRST</td>
+<td>only_first</td>
 <td>NotificationTriggeringPolicy</td>
 <td>when to issue the configured notifications</td>
 </tr>
@@ -244,6 +263,33 @@ an environment variables:</p>
 <li><code class="code docutils literal notranslate"><span class="pre">NOTIFY_CFG_OUT</span></code>: absolute path to write notify.cfg to</li>
 </ul>
 </td>
+</tr>
+</tbody>
+</table>
+<h2 class="section-subtitle"><span class="section-subtitle">default.on_error.triggering_policy Attribute Values</span></h2>
+<table border="1" class="colwidths-auto docutils">
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">name</th>
+<th class="head">default</th>
+<th class="head">type</th>
+<th class="head">explanation</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>only_first</td>
+<td>True</td>
+<td>str</td>
+<td>notify on first error only</td>
+</tr>
+<tr class="row-odd"><td>always</td>
+<td>False</td>
+<td>str</td>
+<td>notify on every errors</td>
+</tr>
+<tr class="row-even"><td>never</td>
+<td>False</td>
+<td>str</td>
+<td>notify never in case of errors</td>
 </tr>
 </tbody>
 </table>
