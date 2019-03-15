@@ -50,7 +50,7 @@ class NotificationTriggeringPolicy(AttribSpecMixin, enum.Enum):
             AttributeSpec.optional(
                 name=cls.ALWAYS.value,
                 default=False,
-                doc='notify on every errors',
+                doc='notify on every error',
                 type=str,
             ),
             AttributeSpec.optional(
@@ -62,11 +62,58 @@ class NotificationTriggeringPolicy(AttribSpecMixin, enum.Enum):
         )
 
 
+class NotificationRecipients(AttribSpecMixin, enum.Enum):
+    EMAIL_ADDRESSES = 'email_addresses'
+    COMMITTERS = 'committers'
+    COMPONENT_DIFF_OWNERS = 'component_diff_owners'
+    CODEOWNERS = 'codeowners'
+
+    @classmethod
+    def _attribute_specs(cls):
+        return (
+            AttributeSpec.optional(
+                name=cls.COMMITTERS.value,
+                default=True,
+                doc='notify committers of the last commit',
+                type=str,
+            ),
+            AttributeSpec.optional(
+                name=cls.EMAIL_ADDRESSES.value,
+                default=False,
+                doc='''
+                notifiy specific email addresses
+
+                Example:
+
+                .. code-block:: yaml
+
+                    recipients:
+                        - email_addresses:
+                            - foo.bar@mycloud.com
+                            - bar.buzz@mycloud.com
+                ''',
+                type=str,
+            ),
+            AttributeSpec.optional(
+                name=cls.COMPONENT_DIFF_OWNERS.value,
+                default=False,
+                doc='notify the codeowners of a component. CODEOWNERS file must exist',
+                type=str,
+            ),
+            AttributeSpec.optional(
+                name=cls.CODEOWNERS.value,
+                default=False,
+                doc='notify the codeowners of the repository. CODEOWNERS file must exist',
+                type=str,
+            ),
+        )
+
+
 NOTIFICATION_CFG_ATTRS = (
     AttributeSpec.optional(
         name='triggering_policy',
         default=NotificationTriggeringPolicy.ONLY_FIRST.value,
-        doc='when to issue the configured notifications',
+        doc='when to issue the configured notifications. Possible values see below',
         type=NotificationTriggeringPolicy,
     ),
     AttributeSpec.optional(
@@ -78,14 +125,14 @@ NOTIFICATION_CFG_ATTRS = (
     AttributeSpec.optional(
         name='inputs',
         default=['on_error_dir'],
-        doc='whether to send email notifications',
+        doc='configures the inputs that are made available to the notification',
         type=typing.List[str],
     ),
     AttributeSpec.optional(
         name='recipients',
-        default=['committers'],
-        doc='whom to notify',
-        type=typing.List[str],
+        default=NotificationRecipients.COMMITTERS.value,
+        doc='whom to notify. Possible values see blow.',
+        type=NotificationRecipients,
     ),
     AttributeSpec.optional(
         name='cfg_callback',
