@@ -1,5 +1,5 @@
 ====================
-*pull_request* Trait
+*pull-request* Trait
 ====================
 
 .. trait::
