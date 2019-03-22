@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import enum
+
 from util import not_none
 
 from concourse.model.step import PipelineStep
@@ -22,6 +24,11 @@ from concourse.model.base import (
   TraitTransformer,
   ScriptType,
 )
+
+
+class ReleaseNotesPolicy(enum.Enum):
+    DEFAULT = 'default'
+    DISABLED = 'disabled'
 
 
 ATTRIBUTES = (
@@ -58,6 +65,13 @@ ATTRIBUTES = (
         Any changes left inside the worktree are added to the resulting release commit.
         ''',
     ),
+    AttributeSpec.optional(
+        name='release_notes_policy',
+        default=ReleaseNotesPolicy.DEFAULT,
+        doc='''
+        configures the release notes handling policy
+        ''',
+    )
 )
 
 
@@ -80,6 +94,9 @@ class ReleaseTrait(Trait):
 
     def rebase_before_release(self):
         return self.raw['rebase_before_release']
+
+    def release_notes_policy(self) -> ReleaseNotesPolicy:
+        return ReleaseNotesPolicy(self.raw.get('release_notes_policy'))
 
     def transformer(self):
         return ReleaseTraitTransformer()
