@@ -136,12 +136,12 @@ class ConcourseTeamCredentials(BasicCredentials):
 
     def github_auth_team(self, split: bool=False):
         '''
-        returns the github auth team (org/name)
+        returns the github auth team (org:team)
 
-        @param split: if `true` return [org, name]
+        @param split: if `true` return [org, team]
         '''
         if split and self.raw.get('gitAuthTeam'):
-            return self.raw.get('gitAuthTeam').split('/')
+            return self.raw.get('gitAuthTeam').split(':')
         return self.raw.get('gitAuthTeam')
 
     def github_auth_client_id(self):
@@ -149,15 +149,6 @@ class ConcourseTeamCredentials(BasicCredentials):
 
     def github_auth_client_secret(self):
         return self.raw.get('githubAuthClientSecret')
-
-    def github_auth_auth_url(self):
-        return self.raw.get('githubAuthAuthUrl')
-
-    def github_auth_token_url(self):
-        return self.raw.get('githubAuthTokenUrl')
-
-    def github_auth_api_url(self):
-        return self.raw.get('githubAuthApiUrl')
 
     def has_basic_auth_credentials(self):
         if self.raw.get('username') or self.raw.get('password'):
@@ -173,15 +164,6 @@ class ConcourseTeamCredentials(BasicCredentials):
             return True
         return False
 
-    def has_custom_github_auth_urls(self):
-        if (
-          self.raw.get('githubAuthAuthUrl') or
-          self.raw.get('githubAuthTokenUrl') or
-          self.raw.get('githubAuthApiUrl')
-        ):
-            return True
-        return False
-
     def _required_attributes(self):
         _required_attributes = ['teamname']
         if self.has_basic_auth_credentials():
@@ -189,10 +171,6 @@ class ConcourseTeamCredentials(BasicCredentials):
         if self.has_github_oauth_credentials():
             _required_attributes.extend(
                 ['gitAuthTeam', 'githubAuthClientId', 'githubAuthClientSecret']
-            )
-        if self.has_custom_github_auth_urls():
-            _required_attributes.extend(
-                ['githubAuthAuthUrl', 'githubAuthTokenUrl', 'githubAuthApiUrl']
             )
         return _required_attributes
 
