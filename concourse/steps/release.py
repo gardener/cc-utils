@@ -31,9 +31,6 @@ from github.release_notes.util import (
     github_repo_path,
     draft_release_name_for_version,
 )
-from concourse.model.traits.release import (
-    ReleaseNotesPolicy,
-)
 
 
 class TransactionContext(object):
@@ -606,7 +603,6 @@ def release_and_prepare_next_dev_cycle(
     repository_version_file_path: str,
     release_version: str,
     repo_dir: str,
-    release_notes_policy: str,
     release_commit_callback: str=None,
     next_version_callback: str=None,
     version_operation: str="bump_minor",
@@ -618,7 +614,6 @@ def release_and_prepare_next_dev_cycle(
     slack_channel: str=None,
     rebase_before_release: bool=False,
 ):
-    release_notes_policy = ReleaseNotesPolicy(release_notes_policy)
     github_helper = GitHubRepositoryHelper.from_githubrepobranch(githubrepobranch)
     git_helper = GitHelper.from_githubrepobranch(
         githubrepobranch=githubrepobranch,
@@ -666,13 +661,6 @@ def release_and_prepare_next_dev_cycle(
         github_helper=github_helper,
         release_version=release_version,
     )
-
-    if release_notes_policy == ReleaseNotesPolicy.DISABLED:
-        return info('release notes were disabled - skipping')
-    elif release_notes_policy == ReleaseNotesPolicy.DEFAULT:
-        pass
-    else:
-        raise NotImplementedError(release_notes_policy)
 
     release_notes_steps = [
         publish_release_notes_step,
