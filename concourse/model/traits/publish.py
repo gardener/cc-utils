@@ -32,6 +32,17 @@ from concourse.model.base import (
 
 IMG_DESCRIPTOR_ATTRIBS = (
     AttributeSpec.optional(
+        name='registry',
+        default=None,
+        type=str,
+        doc='name of the registry config to use when pushing the image (see cc-utils).',
+    ),
+    AttributeSpec.required(
+        name='image',
+        type=str,
+        doc='image reference to publish the created container image to.',
+    ),
+    AttributeSpec.optional(
         name='inputs',
         default={
             'repos': None, # None -> default to main repository
@@ -79,6 +90,9 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
     def _optional_attributes(self):
         return set(AttributeSpec.optional_attr_names(IMG_DESCRIPTOR_ATTRIBS))
 
+    def _required_attributes(self):
+        return set(AttributeSpec.required_attr_names(IMG_DESCRIPTOR_ATTRIBS))
+
     def _inputs(self):
         return self.raw['inputs']
 
@@ -114,6 +128,9 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
         image_name = parts[-1]
         return '_'.join([domain, image_name])
 
+    def _children(self):
+        return ()
+
 
 ATTRIBUTES = (
     AttributeSpec.required(
@@ -131,6 +148,9 @@ class PublishTrait(Trait):
     @classmethod
     def _attribute_specs(cls):
         return ATTRIBUTES
+
+    def _children(self):
+       return self.dockerimages()
 
     def dockerimages(self):
         return [
