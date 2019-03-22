@@ -29,7 +29,7 @@ class TeamCredentialTest(unittest.TestCase):
             'teamname': 'bar',
             'username': 'foo',
             'password': 'baz',
-            'gitAuthTeam': 'foo/bar',
+            'gitAuthTeam': 'foo:bar',
             'githubAuthClientId': 'foobarbaz',
             'githubAuthClientSecret': 'hush',
             'githubAuthAuthUrl': 'foo://some.url',
@@ -58,7 +58,7 @@ class TeamCredentialTest(unittest.TestCase):
         self.assertEqual(team, 'bar')
 
         org_team = test_object.github_auth_team(split=False)
-        self.assertEqual(org_team, 'foo/bar')
+        self.assertEqual(org_team, 'foo:bar')
 
     def test_validation_fails_on_missing_teamname(self):
         self.raw_dict.pop('teamname')
