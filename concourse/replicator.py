@@ -117,7 +117,8 @@ class Renderer(object):
         except Exception:
             warning(
                 f"erroneous pipeline definition '{definition_descriptor.pipeline_name}' "
-                f"in repository '{definition_descriptor.main_repo.get('path')}'"
+                f"in repository '{definition_descriptor.main_repo.get('path')}' on branch "
+                f"'{definition_descriptor.main_repo.get('branch')}'"
             )
             traceback.print_exc()
             return RenderResult(
