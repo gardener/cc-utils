@@ -71,5 +71,6 @@ release_and_prepare_next_dev_cycle(
   repository_version_file_path='${version_trait.versionfile_relpath()}',
   release_version=version_str,
   version_operation='${version_op}',
+  release_notes_policy='${release_trait.release_notes_policy().value}',
 )
 </%def>
