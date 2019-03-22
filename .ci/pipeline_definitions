@@ -45,3 +45,4 @@ cc-utils:
         release:
           nextversion: 'bump_minor'
           release_callback: '.ci/bump_job_image_version.py'
+          release_notes_policy: disabled
