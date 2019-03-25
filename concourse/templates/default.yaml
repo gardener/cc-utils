@@ -6,6 +6,7 @@ from util import urljoin
 from makoutil import indent_func
 from concourse.factory import DefinitionFactory
 from concourse.model.base import ScriptType
+from concourse.model.step import StepNotificationPolicy
 
 # use pipeline_name for debugging / tracing purposes
 pipeline_name = pipeline.get('name')
@@ -374,13 +375,20 @@ if not publish_options:
 <%
 job_type = job_variant.variant_name
 source_repo = job_variant.main_repository()
+notification_policy = job_step.notification_policy()
+if (
+    notification_policy is not StepNotificationPolicy.NOTIFY_PULL_REQUESTS
+    and notification_policy is not StepNotificationPolicy.NO_NOTIFICATION
+):
+  raise ValueError(f'unsupported StepNotificationPolicy: {job_step.notification_policy()}')
+
 %>
 - do:
-% if not job_step.is_synthetic:
+% if job_step.notification_policy() is StepNotificationPolicy.NOTIFY_PULL_REQUESTS:
   ${notification(2, job_variant, job_step, 'pending')}
 % endif
   ${execute(2, job_step, job_variant)}
-% if not job_step.is_synthetic:
+% if job_step.notification_policy() is StepNotificationPolicy.NOTIFY_PULL_REQUESTS:
   ${notification(2, job_variant, job_step, 'success')}
 % endif
   on_failure:

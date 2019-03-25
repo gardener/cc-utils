@@ -15,7 +15,10 @@
 
 from util import not_none
 
-from concourse.model.step import PipelineStep
+from concourse.model.step import (
+    PipelineStep,
+    StepNotificationPolicy,
+)
 from concourse.model.base import (
     AttributeSpec,
     Trait,
@@ -77,6 +80,7 @@ class UpdateComponentDependenciesTraitTransformer(TraitTransformer):
                 name='update_component_dependencies',
                 raw_dict={},
                 is_synthetic=True,
+                notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
                 script_type=ScriptType.PYTHON3
         )
         self.update_component_deps_step.add_input(*COMPONENT_DESCRIPTOR_DIR_INPUT)

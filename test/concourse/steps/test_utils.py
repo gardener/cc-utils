@@ -27,6 +27,7 @@ def pipeline_step(name):
     return concourse.model.step.PipelineStep(
         name=name,
         is_synthetic=True,
+        notification_policy=concourse.model.step.StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
         script_type=concourse.model.base.ScriptType.PYTHON3,
         raw_dict={}
     )

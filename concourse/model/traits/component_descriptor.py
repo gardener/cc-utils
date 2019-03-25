@@ -16,7 +16,10 @@
 from util import not_none
 from model import NamedModelElement
 
-from concourse.model.step import PipelineStep
+from concourse.model.step import (
+    PipelineStep,
+    StepNotificationPolicy,
+)
 from concourse.model.base import (
   AttributeSpec,
   Trait,
@@ -87,6 +90,7 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
             name=self.trait.step_name(),
             raw_dict={},
             is_synthetic=True,
+            notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
             script_type=ScriptType.PYTHON3,
         )
         self.descriptor_step.add_output(*COMPONENT_DESCRIPTOR_DIR_INPUT)

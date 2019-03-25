@@ -18,15 +18,21 @@ import unittest
 import shlex
 
 from concourse.model.base import ScriptType
-from concourse.model.step import PipelineStep
+from concourse.model.step import (
+    PipelineStep,
+    StepNotificationPolicy,
+)
+
 
 class PipelineStepTest(unittest.TestCase):
     def _examinee(self, name='dontcare',  **kwargs):
         return PipelineStep(
             name=name,
             is_synthetic=False,
+            notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
             script_type=ScriptType.BOURNE_SHELL,
             raw_dict=kwargs,
+        )
 
     def test_image(self):
         examinee = self._examinee(image='an_image:1.2.3')

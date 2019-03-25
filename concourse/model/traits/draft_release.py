@@ -15,7 +15,10 @@
 
 from util import not_none
 
-from concourse.model.step import PipelineStep
+from concourse.model.step import (
+    PipelineStep,
+    StepNotificationPolicy,
+)
 from concourse.model.base import (
   AttributeSpec,
   ScriptType,
@@ -63,6 +66,7 @@ class DraftReleaseTraitTransformer(TraitTransformer):
             name='create_draft_release_notes',
             raw_dict={},
             is_synthetic=True,
+            notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
             script_type=ScriptType.PYTHON3,
         )
         self.release_step.set_timeout(duration_string='10m')

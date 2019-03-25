@@ -151,11 +151,17 @@ def attrs(pipeline_step):
     )
 
 
+class StepNotificationPolicy(enum.Enum):
+    NO_NOTIFICATION = enum.auto()
+    NOTIFY_PULL_REQUESTS = enum.auto()
+
+
 class PipelineStep(ModelBase):
     def __init__(
         self,
         name,
         is_synthetic,
+        notification_policy,
         script_type,
         *args,
         **kwargs
@@ -166,6 +172,7 @@ class PipelineStep(ModelBase):
         self._outputs_dict = {}
         self._inputs_dict = {}
         self._publish_to_dict = {}
+        self._notification_policy = notification_policy
         super().__init__(*args, **kwargs)
 
     def _attribute_specs(self):
@@ -297,6 +304,9 @@ class PipelineStep(ModelBase):
 
     def retries(self):
         return self.raw['retries']
+
+    def notification_policy(self):
+        return self._notification_policy
 
     def validate(self):
         super().validate()
