@@ -19,7 +19,10 @@ import typing
 from model.base import (
     NamedModelElement,
 )
-from concourse.model.step import PipelineStep
+from concourse.model.step import (
+    PipelineStep,
+    StepNotificationPolicy,
+)
 from concourse.model.base import (
     AttribSpecMixin,
     AttributeSpec,
@@ -138,6 +141,7 @@ class ImageAlterTraitTransformer(TraitTransformer):
                 name='alter_container_images',
                 raw_dict={},
                 is_synthetic=True,
+                notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
                 script_type=ScriptType.PYTHON3
         )
         yield self.image_alter_step

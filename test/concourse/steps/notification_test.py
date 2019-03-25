@@ -19,7 +19,10 @@ from concourse.model.resources import (
     ResourceIdentifier,
     Resource,
 )
-from concourse.model.step import PipelineStep
+from concourse.model.step import (
+    PipelineStep,
+    StepNotificationPolicy,
+)
 from concourse.steps import notification
 from concourse.model.traits.notifications import (
     NotificationCfgSet,
@@ -39,8 +42,10 @@ class NotificationStepTest(unittest.TestCase):
         self.job_step = PipelineStep(
             name='step1',
             is_synthetic=False,
+            notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
             script_type=ScriptType.BOURNE_SHELL,
             raw_dict={},
+        )
         self.job_step._notifications_cfg = NotificationCfgSet('default', {})
         resource_registry = ResourceRegistry()
         meta_resource_identifier = ResourceIdentifier(type_name='meta', base_name='a_job')

@@ -17,7 +17,10 @@ import typing
 from util import not_none
 from model import NamedModelElement
 
-from concourse.model.step import PipelineStep
+from concourse.model.step import (
+    PipelineStep,
+    StepNotificationPolicy,
+)
 from concourse.model.base import (
   AttributeSpec,
   AttribSpecMixin,
@@ -177,6 +180,7 @@ class PublishTraitTransformer(TraitTransformer):
             name='publish',
             raw_dict={},
             is_synthetic=True,
+            notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
             script_type=ScriptType.BOURNE_SHELL,
         )
         publish_step.set_timeout(duration_string='4h')
@@ -186,6 +190,7 @@ class PublishTraitTransformer(TraitTransformer):
             name='prepare',
             raw_dict={},
             is_synthetic=True,
+            notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
             script_type=ScriptType.BOURNE_SHELL,
         )
         prepare_step.set_timeout(duration_string='30m')

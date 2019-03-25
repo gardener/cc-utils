@@ -16,7 +16,10 @@
 
 from util import not_none
 
-from concourse.model.step import PipelineStep
+from concourse.model.step import (
+    PipelineStep,
+    StepNotificationPolicy,
+)
 from concourse.model.base import (
   AttributeSpec,
   Trait,
@@ -89,6 +92,7 @@ class VersionTraitTransformer(TraitTransformer):
             name='version',
             raw_dict={},
             is_synthetic=True,
+            notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
             script_type=ScriptType.PYTHON3,
             )
         self.version_step.add_output(name='version_path', variable_name='managed-version')

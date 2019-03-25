@@ -15,7 +15,10 @@
 
 from util import not_none
 
-from concourse.model.step import PipelineStep
+from concourse.model.step import (
+    PipelineStep,
+    StepNotificationPolicy,
+)
 from concourse.model.base import (
     AttributeSpec,
     Trait,
@@ -169,6 +172,7 @@ class ImageScanTraitTransformer(TraitTransformer):
                 name='scan_container_images',
                 raw_dict={},
                 is_synthetic=True,
+                notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
                 script_type=ScriptType.PYTHON3
         )
         self.image_scan_step.add_input(*COMPONENT_DESCRIPTOR_DIR_INPUT)
