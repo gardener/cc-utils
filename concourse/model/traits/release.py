@@ -22,6 +22,7 @@ from concourse.model.step import (
     StepNotificationPolicy,
 )
 from concourse.model.base import (
+  AttribSpecMixin,
   AttributeSpec,
   Trait,
   TraitTransformer,
@@ -29,9 +30,26 @@ from concourse.model.base import (
 )
 
 
-class ReleaseNotesPolicy(enum.Enum):
+class ReleaseNotesPolicy(AttribSpecMixin, enum.Enum):
     DEFAULT = 'default'
     DISABLED = 'disabled'
+
+    @classmethod
+    def _attribute_specs(cls):
+        return (
+            AttributeSpec.optional(
+                name=cls.DEFAULT.value,
+                default=True,
+                doc='Create release notes and add them to the GitHub release.',
+                type=str,
+            ),
+            AttributeSpec.optional(
+                name=cls.DISABLED.value,
+                default=False,
+                doc='Do not create release notes.',
+                type=str,
+            ),
+        )
 
 
 ATTRIBUTES = (
@@ -70,10 +88,11 @@ ATTRIBUTES = (
     ),
     AttributeSpec.optional(
         name='release_notes_policy',
-        default=ReleaseNotesPolicy.DEFAULT,
+        default=ReleaseNotesPolicy.DEFAULT.value,
         doc='''
         configures the release notes handling policy
         ''',
+        type=ReleaseNotesPolicy,
     )
 )
 
