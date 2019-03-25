@@ -180,7 +180,7 @@ class PublishTraitTransformer(TraitTransformer):
             name='publish',
             raw_dict={},
             is_synthetic=True,
-            notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
+            notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
             script_type=ScriptType.BOURNE_SHELL,
         )
         publish_step.set_timeout(duration_string='4h')
