@@ -103,7 +103,14 @@ class ConcourseConfig(NamedModelElement):
             'teams',
             'helm_chart_default_values_config',
             'kubernetes_cluster_config',
-            'concourse_version'
+            'concourse_version',
+            'job_mapping',
+            'imagePullSecret',
+            'tls_secret_name',
+            'tls_config',
+            'ingress_host',
+            'helm_chart_version',
+            'helm_chart_values',
         ]
 
     def _optional_attributes(self):

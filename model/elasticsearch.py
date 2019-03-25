@@ -31,7 +31,7 @@ class ElasticSearchConfig(NamedModelElement):
         return ElasticSearchCredentials(raw_dict=self.raw['credentials'])
 
     def _required_attributes(self):
-        return ('endpoint_url',)
+        return ('endpoint_url', 'endpoints')
 
     def _optional_attributes(self):
         return ('credentials',)

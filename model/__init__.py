@@ -191,6 +191,7 @@ class ConfigFactory(object):
             kwargs['name'] = cfg_name
 
         element_instance = element_type(**kwargs)
+        element_instance.validate()
         return element_instance
 
     def _cfg_elements(self, cfg_type_name: str):
