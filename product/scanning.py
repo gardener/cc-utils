@@ -22,15 +22,51 @@ from protecode.model import (
     AnalysisResult,
     TriageScope,
 )
+from concourse.model.base import (
+    AttribSpecMixin,
+    AttributeSpec,
+)
 from util import not_none, warning, check_type, info, urljoin
 from container.registry import retrieve_container_image, publish_container_image
 from .model import ContainerImage, Component, UploadResult, UploadStatus
 
 
-class ProcessingMode(Enum):
+class ProcessingMode(AttribSpecMixin, Enum):
     UPLOAD_IF_CHANGED = 'upload_if_changed'
     RESCAN = 'rescan'
     FORCE_UPLOAD = 'force_upload'
+
+    @classmethod
+    def _attribute_specs(cls):
+        return (
+            AttributeSpec.optional(
+                name=cls.UPLOAD_IF_CHANGED.value,
+                default=True,
+                doc='''
+                    upload the container images. This will :strong:`not` upload the images if they
+                    are already present. This will :strong:`not` cause images already present to be
+                    rescanned.
+                ''',
+                type=str,
+            ),
+            AttributeSpec.optional(
+                name=cls.RESCAN.value,
+                default=False,
+                doc='''
+                    trigger a scan of container images. Images will be uploaded unless they are
+                    already present.
+                ''',
+                type=str,
+            ),
+            AttributeSpec.optional(
+                name=cls.FORCE_UPLOAD.value,
+                default=False,
+                doc='''
+                    :strong:`always` upload the images. This will cause all images to be rescanned.
+                ''',
+                type=str,
+            ),
+        )
 
 
 class UploadAction(Enum):
