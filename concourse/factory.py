@@ -7,6 +7,7 @@ from model.base import ModelValidationError
 from concourse.model.step import PipelineStep
 from concourse.model.base import (
         normalise_to_dict,
+        ScriptType,
 )
 from concourse.validator import PipelineDefinitionValidator
 from concourse.model.job import JobVariant
@@ -208,7 +209,11 @@ class DefinitionFactory(object):
         return steps_dict
 
     def _create_build_step(self, name: str, step_dict: dict):
-        return PipelineStep(name=name, raw_dict=step_dict)
+        return PipelineStep(
+            name=name,
+            is_synthetic=False,
+            raw_dict=step_dict,
+            script_type=ScriptType.BOURNE_SHELL,
 
     def _create_repos(self, pipeline_def, raw_dict):
         pipeline_def._repos_dict = {}

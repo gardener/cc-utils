@@ -11,6 +11,7 @@ import test_utils
 
 from concourse.client.model import BuildStatus
 from concourse.steps import step_def
+from concourse.model.base import ScriptType
 from concourse.model.job import JobVariant
 from concourse.model.resources import (
     RepositoryConfig,
@@ -35,7 +36,11 @@ class NotificationStepTest(unittest.TestCase):
         self.on_error_dir = os.path.join(self.tmp_dir.name, 'on_error_dir')
         os.mkdir(self.on_error_dir)
 
-        self.job_step = PipelineStep('step1', raw_dict={})
+        self.job_step = PipelineStep(
+            name='step1',
+            is_synthetic=False,
+            script_type=ScriptType.BOURNE_SHELL,
+            raw_dict={},
         self.job_step._notifications_cfg = NotificationCfgSet('default', {})
         resource_registry = ResourceRegistry()
         meta_resource_identifier = ResourceIdentifier(type_name='meta', base_name='a_job')
