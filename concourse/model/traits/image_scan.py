@@ -84,6 +84,7 @@ ATTRIBUTES = (
         name='processing_mode',
         default='upload_if_changed',
         doc='Protecode processing mode', # todo: document allowed values
+        type=ProcessingMode,
     ),
     AttributeSpec.optional(
         name='reference_protecode_group_ids',
