@@ -17,12 +17,16 @@ import unittest
 
 import shlex
 
+from concourse.model.base import ScriptType
 from concourse.model.step import PipelineStep
-
 
 class PipelineStepTest(unittest.TestCase):
     def _examinee(self, name='dontcare',  **kwargs):
-        return PipelineStep(name=name, raw_dict=kwargs)
+        return PipelineStep(
+            name=name,
+            is_synthetic=False,
+            script_type=ScriptType.BOURNE_SHELL,
+            raw_dict=kwargs,
 
     def test_image(self):
         examinee = self._examinee(image='an_image:1.2.3')

@@ -155,8 +155,8 @@ class PipelineStep(ModelBase):
     def __init__(
         self,
         name,
-        is_synthetic=False,
-        script_type=ScriptType.BOURNE_SHELL,
+        is_synthetic,
+        script_type,
         *args,
         **kwargs
     ):
