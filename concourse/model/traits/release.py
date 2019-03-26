@@ -36,13 +36,13 @@ class ReleaseNotesPolicy(AttribSpecMixin, enum.Enum):
         return (
             AttributeSpec.optional(
                 name=cls.DEFAULT.value,
-                default=True,
+                default=None,
                 doc='Create release notes and add them to the GitHub release.',
                 type=str,
             ),
             AttributeSpec.optional(
                 name=cls.DISABLED.value,
-                default=False,
+                default=None,
                 doc='Do not create release notes.',
                 type=str,
             ),

@@ -64,7 +64,7 @@ class AttributesDocumentation(object):
 
     def fill_table(self, table_builder):
         if isinstance(self._model_element, enum.EnumMeta):
-            table_builder.add_table_header(['name', 'default', 'type', 'explanation'])
+            table_builder.add_table_header(['value', 'explanation'])
         else:
             table_builder.add_table_header(['name', 'required?', 'default', 'type', 'explanation'])
 
@@ -93,7 +93,7 @@ class AttributesDocumentation(object):
                 type_str = type_.__name__
 
             if isinstance(self._model_element, enum.EnumMeta):
-                table_builder.add_table_row((name, default_value, type_str, doc))
+                table_builder.add_table_row((name, doc))
             else:
                 table_builder.add_table_row((name, required, default_value, type_str, doc))
 

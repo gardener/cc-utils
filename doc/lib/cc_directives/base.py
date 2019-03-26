@@ -33,7 +33,7 @@ class AttributesDocMixin(sphinxutil.SphinxUtilsMixin):
                 subtitle = 'Attributes'
 
             if isinstance(attributes_doc._model_element, enum.EnumMeta):
-                subtitle = f'{subtitle[:-1]} Values'
+                subtitle = f'{prefix} Enumeration Values'
 
             self.add_subtitle(subtitle)
 
