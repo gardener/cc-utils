@@ -144,7 +144,7 @@ In addition, the :strong:`relative` path to the main repository is always stored
 :literal:`MAIN_REPO_DIR` env variable.
 
 Example
--------
+~~~~~~~
 
 In case the main repository has not been explicitly configured with a name, its default logical
 name is `source`. Therefore, the following environment variables will then be defined:
