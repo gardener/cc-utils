@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import unittest
+import pytest
 
 import model.concourse as examinee
 from model.base import ModelValidationError
@@ -32,9 +33,6 @@ class TeamCredentialTest(unittest.TestCase):
             'gitAuthTeam': 'foo:bar',
             'githubAuthClientId': 'foobarbaz',
             'githubAuthClientSecret': 'hush',
-            'githubAuthAuthUrl': 'foo://some.url',
-            'githubAuthApiUrl': 'bar://another.url',
-            'githubAuthTokenUrl': 'baz://yet.another.url',
         }
 
     def test_team_credentials_complete_basic_auth_detected(self):
@@ -84,15 +82,6 @@ class TeamCredentialTest(unittest.TestCase):
                 with self.assertRaises(ModelValidationError):
                     element.validate()
 
-    def test_validation_fails_on_missing_github_oauth_urls(self):
-        for key in ('githubAuthAuthUrl', 'githubAuthApiUrl', 'githubAuthTokenUrl'):
-            with self.subTest(url=key):
-                test_dict = TeamCredentialTest.create_valid_test_dictionary()
-                test_dict.pop(key)
-                element = examinee.ConcourseTeamCredentials(test_dict)
-                with self.assertRaises(ModelValidationError):
-                    element.validate()
-
     def test_validation_fails_on_invalid_github_oauth_teamname(self):
         for value in ('foo/bar/baz', '/foo', 'bar/', 'baz'):
             with self.subTest(value=value):
@@ -111,10 +100,50 @@ class BasicCredentialsTest(unittest.TestCase):
         }
 
     def test_validation_fails_on_missing_key(self):
-        for key in ('username', 'password'):
+        for key in self.raw_dict.keys():
             with self.subTest(key=key):
                 test_dict = self.raw_dict.copy()
                 test_dict.pop(key)
                 element = examinee.BasicCredentials(test_dict)
                 with self.assertRaises(ModelValidationError):
                     element.validate()
+
+
+@pytest.fixture
+def required_dict():
+    return {
+        'externalUrl': 'foo',
+        'teams': {'main': 'foo'},
+        'helm_chart_default_values_config': 'foo',
+        'kubernetes_cluster_config': 'foo',
+        'concourse_version': examinee.ConcourseApiVersion.V4,
+        'job_mapping': 'foo',
+        'imagePullSecret': 'foo',
+        'tls_secret_name': 'foo',
+        'tls_config': 'foo',
+        'ingress_host': 'foo',
+        'helm_chart_version': 'foo',
+        'helm_chart_values': 'foo',
+    }
+
+
+def test_validation_fails_on_missing_required_key(required_dict):
+    for key in required_dict.keys():
+        test_dict = required_dict.copy()
+        test_dict.pop(key)
+        element = examinee.ConcourseConfig(name='foo', raw_dict=test_dict)
+        with pytest.raises(ModelValidationError):
+            element.validate()
+
+
+def test_validation_succeeds_on_required_dict(required_dict):
+    element = examinee.ConcourseConfig(name='foo', raw_dict=required_dict)
+    element.validate()
+
+
+def test_validation_fails_on_unknown_key(required_dict):
+    # since optional attributes are defined for ConcourseConfig, test should fail
+    test_dict = {**required_dict, **{'foo': 'bar'}}
+    element = examinee.ConcourseConfig(name='foo', raw_dict=test_dict)
+    with pytest.raises(ModelValidationError):
+        element.validate()
