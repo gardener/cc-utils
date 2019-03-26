@@ -23,8 +23,6 @@ from model.base import ModelValidationError
 def required_dict():
     return {
             'kubeconfig': 'foo',
-            'version': 'foo',
-            'monitoring': 'foo',
     }
 
 

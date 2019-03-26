@@ -23,8 +23,6 @@ class KubernetesConfig(NamedModelElement):
     def _required_attributes(self):
         return {
             'kubeconfig',
-            'version',
-            'monitoring',
         }
 
     def kubeconfig(self):
