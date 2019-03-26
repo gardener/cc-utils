@@ -73,13 +73,13 @@ class NotificationRecipients(AttribSpecMixin, enum.Enum):
         return (
             AttributeSpec.optional(
                 name=cls.COMMITTERS.value,
-                default=True,
+                default=None,
                 doc='notify committers of the last commit',
                 type=str,
             ),
             AttributeSpec.optional(
                 name=cls.EMAIL_ADDRESSES.value,
-                default=False,
+                default=None,
                 doc='''
                 notifiy specific email addresses
 
@@ -96,13 +96,13 @@ class NotificationRecipients(AttribSpecMixin, enum.Enum):
             ),
             AttributeSpec.optional(
                 name=cls.COMPONENT_DIFF_OWNERS.value,
-                default=False,
+                default=None,
                 doc='notify the codeowners of a component. CODEOWNERS file must exist',
                 type=str,
             ),
             AttributeSpec.optional(
                 name=cls.CODEOWNERS.value,
-                default=False,
+                default=None,
                 doc='notify the codeowners of the repository. CODEOWNERS file must exist',
                 type=str,
             ),

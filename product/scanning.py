@@ -41,7 +41,7 @@ class ProcessingMode(AttribSpecMixin, Enum):
         return (
             AttributeSpec.optional(
                 name=cls.UPLOAD_IF_CHANGED.value,
-                default=True,
+                default=None,
                 doc='''
                     upload the container images. This will :strong:`not` upload the images if they
                     are already present. This will :strong:`not` cause images already present to be
@@ -51,7 +51,7 @@ class ProcessingMode(AttribSpecMixin, Enum):
             ),
             AttributeSpec.optional(
                 name=cls.RESCAN.value,
-                default=False,
+                default=None,
                 doc='''
                     trigger a scan of container images. Images will be uploaded unless they are
                     already present.
@@ -60,7 +60,7 @@ class ProcessingMode(AttribSpecMixin, Enum):
             ),
             AttributeSpec.optional(
                 name=cls.FORCE_UPLOAD.value,
-                default=False,
+                default=None,
                 doc='''
                     :strong:`always` upload the images. This will cause all images to be rescanned.
                 ''',
