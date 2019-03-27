@@ -380,6 +380,23 @@ class KubernetesPodHelper(object):
             raise ae
         return pods
 
+    def delete_pod(self, name: str, namespace: str, grace_period_seconds: int=0):
+        '''Delete a pod in the given namespace.
+        grace_period_seconds: the duration in seconds before the object should be deleted.
+        Value must be non-negative integer. The value zero indicates delete immediately.
+        '''
+        not_empty(namespace)
+        not_empty(name)
+        body = kubernetes.client.V1DeleteOptions()
+        try:
+            self.core_api.delete_namespaced_pod(
+                name, namespace, body=body, grace_period_seconds=grace_period_seconds
+            )
+        except ApiException as ae:
+            if ae.status == 404:
+                return None
+            raise ae
+
     def execute(
         self,
         name: str,
