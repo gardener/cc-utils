@@ -21,6 +21,7 @@ from kubernetes.config.kube_config import KubeConfigLoader
 
 from util import ctx as global_ctx, fail, existing_file, not_none
 from kube.helper import (
+    KubernetesConfigMapHelper,
     KubernetesSecretHelper,
     KubernetesServiceAccountHelper,
     KubernetesNamespaceHelper,
@@ -88,6 +89,9 @@ class Ctx(object):
 
     def pod_helper(self) -> 'KubernetesPodHelper':
         return KubernetesPodHelper(self.create_core_api())
+
+    def config_map_helper(self) -> 'KubernetesConfigMapHelper':
+        return KubernetesConfigMapHelper(self.create_core_api())
 
     def create_core_api(self):
         cfg = self.get_kubecfg()
