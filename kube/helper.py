@@ -22,7 +22,7 @@ from kubernetes import watch
 from kubernetes.client import (
     CoreV1Api, AppsV1Api, ExtensionsV1beta1Api, V1ObjectMeta, V1Secret, V1ServiceAccount,
     V1LocalObjectReference, V1Namespace, V1Service, V1Deployment,
-    V1beta1Ingress,
+    V1beta1Ingress, V1ConfigMap,
 )
 from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
@@ -358,6 +358,61 @@ class KubernetesIngressHelper(object):
                 return None
             raise ae
         return ingress
+
+
+class KubernetesConfigMapHelper(object):
+    def __init__(self, core_api: CoreV1Api):
+        self.core_api = core_api
+
+    def create_config_map(self, namespace: str, name: str, data: dict):
+        not_empty(namespace)
+        not_empty(name)
+        not_none(data)
+
+        self.core_api.create_namespaced_config_map(
+            namespace = namespace,
+            body = V1ConfigMap(
+                data=data,
+                metadata=V1ObjectMeta(name=name, namespace=namespace),
+            ),
+        )
+
+    def replace_config_map(self, namespace: str, name: str, data: dict):
+        not_empty(namespace)
+        not_empty(name)
+        not_none(data)
+
+        self.core_api.replace_namespaced_config_map(
+            namespace = namespace,
+            name = name,
+            body = V1ConfigMap(
+                data=data,
+                metadata=V1ObjectMeta(name=name, namespace=namespace),
+            ),
+        )
+
+    def create_or_update_config_map(self, namespace: str, name: str, data: dict):
+        not_empty(namespace)
+        not_empty(name)
+        not_none(data)
+
+        if self.read_config_map(namespace=namespace, name=name):
+            self.replace_config_map(namespace=namespace, name=name, data=data)
+        else:
+            self.create_config_map(namespace=namespace, name=name, data=data)
+
+    def read_config_map(self, namespace: str, name: str):
+        '''Return the `V1ConfigMap` with the given name in the given namespace, or `None` if
+        no such config map exists.'''
+        not_empty(namespace)
+        not_empty(name)
+        try:
+            config_map = self.core_api.read_namespaced_config_map(namespace=namespace, name=name)
+        except ApiException as ae:
+            if ae.status == 404:
+                return None
+            raise ae
+        return config_map
 
 
 class KubernetesPodHelper(object):
