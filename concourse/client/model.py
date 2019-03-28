@@ -305,6 +305,18 @@ class BuildEvents(object):
         )
 
 
+class Worker(ModelBase):
+    '''
+    Wrapper around the dictionary representing a Concourse Worker.
+    Not intended to be instantiated by users of this module
+    '''
+    def state(self):
+        return self.raw['state']
+
+    def name(self):
+        return self.raw['name']
+
+
 class BuildStatus(Enum):
     SUCCEEDED = "succeeded"
     FAILED = "failed"

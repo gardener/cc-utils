@@ -106,6 +106,14 @@ class ConcourseApiRoutesBase(object):
     def build_plan(self, build_id):
         return self._api_url('builds', str(build_id), 'plan', prefix_team=False)
 
+    @ensure_annotations
+    def list_workers(self):
+        return self._api_url('workers', prefix_team=False)
+
+    @ensure_annotations
+    def prune_worker(self, worker_name: str):
+        return self._api_url('workers', worker_name, 'prune', prefix_team=False)
+
 
 class ConcourseApiRoutesV4(ConcourseApiRoutesBase):
     def login(self):

@@ -102,6 +102,18 @@ class ConcourseApiRoutesBaseTest(unittest.TestCase):
             'https://made-up-concourse.com/api/v1/builds/252525/plan',
         )
 
+    def test_list_worker_route(self):
+        self.assertEqual(
+            self.examinee.list_workers(),
+            'https://made-up-concourse.com/api/v1/workers',
+        )
+
+    def test_prune_worker_route(self):
+        self.assertEqual(
+            self.examinee.prune_worker(worker_name='foo'),
+            'https://made-up-concourse.com/api/v1/workers/foo/prune',
+        )
+
 
 class ConcourseApiRoutesV4Test(unittest.TestCase):
     def setUp(self):

@@ -30,6 +30,7 @@ from .model import (
     SetPipelineResult,
     PipelineConfig,
     ResourceVersion,
+    Worker,
 )
 from model.concourse import (
     ConcourseTeamCredentials,
@@ -208,9 +209,19 @@ class ConcourseApiBase(object):
     @ensure_annotations
     def resource_versions(self, pipeline_name: str, resource_name: str):
         url = self.routes.resource_versions(pipeline_name=pipeline_name, resource_name=resource_name)
-
         response = self._get(url)
         return [ResourceVersion(raw=raw, concourse_api=None) for raw in response]
+
+    @ensure_annotations
+    def list_workers(self):
+        url = self.routes.list_workers()
+        workers_list = self._get(url)
+        return [Worker(raw=worker, concourse_api=None) for worker in workers_list]
+
+    @ensure_annotations
+    def prune_worker(self, worker_name: str):
+        url = self.routes.prune_worker(worker_name)
+        self._put(url, "")
 
 
 class ConcourseApiV4(ConcourseApiBase):
