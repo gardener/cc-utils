@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import github.webhook
+import concourse.client
+import kube.ctx
 from github.util import _create_github_api_object
 
 from model.concourse import (
@@ -21,6 +23,7 @@ from model.concourse import (
 )
 from model.webhook_dispatcher import (
     WebhookDispatcherDeploymentConfig,
+    WebhookDispatcherConfig,
 )
 from util import info, warning, ctx, create_url_from_attributes
 
@@ -90,3 +93,34 @@ def _enumerate_github_org_configs(job_mapping_set: JobMappingSet,):
 
         for github_org_config in github_org_configs:
             yield (github_org_config.org_name(), github_org_config.github_cfg_name())
+
+
+def prune_and_restart_concourse_worker(
+    whd_config: WebhookDispatcherConfig,
+):
+    cfg_factory = ctx().cfg_factory()
+    clients = _concourse_and_kubernetes_clients(whd_config, cfg_factory)
+    for concourse_client, kubernetes_client in clients:
+        concourse_url = concourse_client.routes.base_url
+        info(f'processing concourse {concourse_url}')
+        worker_list = concourse_client.list_workers()
+        for worker in worker_list:
+            info(f'worker {worker.name()} is {worker.state()}')
+            if worker.state() == 'stalled':
+                concourse_client.prune_worker(worker.name())
+                kubernetes_client.pod_helper().delete_pod()
+                info(f'pruned and restarted concourse worker {worker.name()}')
+
+
+def _concourse_and_kubernetes_clients(whd_config: WebhookDispatcherConfig, cfg_factory):
+    for concourse_config_name in whd_config.concourse_config_names():
+        concourse_cfg = cfg_factory.concourse(concourse_config_name)
+        concourse_client = concourse.client.from_cfg(
+            concourse_cfg=concourse_cfg,
+            team_name='main'
+        )
+        kubernetes_cfg_name = concourse_cfg.kubernetes_cluster_config()
+        kubernetes_cfg = cfg_factory.kubernetes(kubernetes_cfg_name)
+        kubernetes_client = kube.ctx.Ctx()
+        kubernetes_client.set_kubecfg(kubernetes_cfg.kubeconfig())
+        yield (concourse_client, kubernetes_client)

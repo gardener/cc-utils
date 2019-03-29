@@ -13,38 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-from flask import Flask
-from flask_restful import Api
+from flask import Response
+from flask_restful import Resource
 
-from .webhook import GithubWebhook
-from .worker import WorkerResurrector
+import concourse.util
 from model.webhook_dispatcher import WebhookDispatcherConfig
 
 
-def webhook_dispatcher_app(
-    cfg_set,
-    whd_cfg: WebhookDispatcherConfig,
-):
-    app = Flask(__name__)
-    app.logger.setLevel(logging.INFO)
-    api = Api(app)
+class WorkerResurrector(Resource):
+    def __init__(self, whd_cfg: WebhookDispatcherConfig):
+        self.whd_cfg = whd_cfg
 
-    api.add_resource(
-        GithubWebhook,
-        '/github-webhook',
-        resource_class_kwargs={
-            'whd_cfg': whd_cfg,
-            'cfg_set': cfg_set,
-        }
-    )
-
-    api.add_resource(
-        WorkerResurrector,
-        '/resurrect-worker',
-        resource_class_kwargs={
-            'whd_cfg': whd_cfg,
-        }
-    )
-
-    return app
+    # called from Prometheus Alert Manager. Indicates that concourse worker(s) got restarted
+    def post(self):
+        concourse.util.prune_and_restart_concourse_worker(self.whd_cfg,)
+        return Response(status=200)
