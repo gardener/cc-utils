@@ -183,10 +183,12 @@ class GithubWebhookDispatcher(object):
 
             return str(pr_event.number()) in pr_numbers
 
-        # filter out all resources that are _not_ up-to-date (we only care about those)
+        # filter out all resources that are _not_ up-to-date (we only care about those).
+        # Also keep resources that currently fail to check so that we keep retrying those
         outdated_resources = [
             resource for resource in resources
-            if not is_up_to_date(resource, resource_versions(resource))
+            if resource.failing_to_check()
+            or not is_up_to_date(resource, resource_versions(resource))
         ]
 
         if not outdated_resources:
