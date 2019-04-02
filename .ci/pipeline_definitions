@@ -16,7 +16,7 @@ cc-utils:
             on_error:
               triggering_policy: 'only_first'
 
-    pull_request:
+    pull-request:
       traits:
         pull-request:
           policies:
