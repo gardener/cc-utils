@@ -109,6 +109,9 @@ class Resource(object):
     def github_source(self):
         return GithubSource(self.source, self.concourse_api)
 
+    def failing_to_check(self):
+        return self.raw.get('failing_to_check', False)
+
     def __str__(self):
         return 'Concourse Resource {n}. Type: {t}, webhook_token: {wht}'.format(
             n=self.name,
