@@ -125,6 +125,32 @@ class ElasticSearchClient(object):
             **kwargs,
         )
 
+    def store_documents(
+        self,
+        index: str,
+        body: [dict],
+        inject_metadata=True,
+        *args,
+        **kwargs,
+    ):
+        # Bulk-loading uses a special format: A json specifying index name and doc-type
+        # (always _doc) followed by the actual document json. These pairs (one for each document)
+        # are then converted to newline delimited json
+
+        # The index json does not change for bulk-loading into a single index.
+        index_json = json.dumps({
+            'index': {
+                '_index': index,
+                '_type': '_doc'
+            }
+        })
+        return self.store_bulk(
+            body='\n'.join([f'{index_json}\n{json.dumps(d)}' for d in body]),
+            inject_metadata=inject_metadata,
+            *args,
+            **kwargs,
+        )
+
     def store_bulk(
         self,
         body: str,
