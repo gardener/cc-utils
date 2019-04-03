@@ -56,6 +56,7 @@ def deplyment_required_dict():
         'kubernetes_config': 'foo',
         'webhook_dispatcher_config': 'foo',
         'container_port': 'foo',
+        'logging_els_index': 'foo',
     }
 
 
