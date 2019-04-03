@@ -78,3 +78,7 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
 
     def webhook_dispatcher_container_port(self):
         return self.raw['container_port']
+
+    def logging_els_index(self):
+        '''Name of the elastic-search index to log into'''
+        return self.raw['logging_els_index']
