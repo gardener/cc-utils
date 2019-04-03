@@ -158,7 +158,7 @@ class GithubWebhookDispatcher(object):
 
         retries -= 1
         if retries < 0:
-            app.logger.info('giving up')
+            app.logger.info('giving up triggering PR(s)')
             return
 
         def resource_versions(resource):
@@ -192,7 +192,7 @@ class GithubWebhookDispatcher(object):
         ]
 
         if not outdated_resources:
-            app.logger.info('no outdated_resources PR found')
+            app.logger.info('no outdated PR resources found')
             return # nothing to do
 
         app.logger.info(f'found {len(outdated_resources)} PR resource(s) that require being updated')
