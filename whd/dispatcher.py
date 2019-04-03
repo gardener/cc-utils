@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 import functools
 import time
 
@@ -26,6 +27,7 @@ from .model import (
     RefType,
 )
 from .pipelines import update_repository_pipelines
+import ccc
 import concourse.client
 import util
 
@@ -158,6 +160,11 @@ class GithubWebhookDispatcher(object):
 
         retries -= 1
         if retries < 0:
+            try:
+                self.log_outdated_resources(resources)
+            # ignore logging errors
+            except BaseException:
+                pass
             app.logger.info('giving up triggering PR(s)')
             return
 
@@ -205,4 +212,27 @@ class GithubWebhookDispatcher(object):
             resources=outdated_resources,
             retries=retries,
             sleep_seconds=sleep_seconds*1.2,
+        )
+
+    @functools.lru_cache()
+    def els_client(self):
+        elastic_cfg = self.cfg_set.elasticsearch()
+        elastic_client = ccc.elasticsearch.from_cfg(elasticsearch_cfg=elastic_cfg)
+        return elastic_client
+
+    def log_outdated_resources(self, outdated_resources):
+        els_index = self.cfg_set.webhook_dispatcher_deployment().logging_els_index()
+        elastic_client = self.els_client()
+
+        date = datetime.datetime.utcnow().isoformat()
+        elastic_client.store_documents(
+            index=els_index,
+            body=[
+                {
+                    'date': date,
+                    'resource_name': resource.name,
+                    'pipeline_name': resource.pipeline_name(),
+                }
+                for resource in outdated_resources
+            ],
         )
