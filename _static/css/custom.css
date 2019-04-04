@@ -6,3 +6,9 @@
 .wy-table-responsive {
   white-space: unset !important;
 }
+.td {
+  white-space: unset !important;
+}
+.table {
+  white-space: unset !important;
+}
