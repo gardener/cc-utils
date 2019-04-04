@@ -45,8 +45,10 @@ def attrs(pipeline_step):
             is calculated relative to `<main_repo>/.ci`.
 
             Has two forms:
+
             - scalar value (str in most cases) --> no shell-escaping is done
             - list of scalar values -> used verbatim as ARGV
+
             ''',
         ),
         AttributeSpec.optional(
