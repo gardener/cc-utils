@@ -16,6 +16,7 @@
 import os
 import yaml
 
+import kube.ctx
 import landscape_setup.concourse as setup_concourse
 
 from util import ctx
@@ -26,7 +27,10 @@ from util import (
     CliHint,
 )
 from concourse import client
-from concourse.util import sync_org_webhooks
+from concourse.util import (
+    sync_org_webhooks,
+    resurrect_pods,
+)
 from concourse.enumerator import (
     DefinitionDescriptorPreprocessor,
     GithubOrganisationDefinitionEnumerator,
@@ -227,3 +231,25 @@ def set_teams(
     config = config_set.concourse()
 
     setup_concourse.set_teams(config=config)
+
+
+def start_worker_resurrector(
+    config_name: CliHint(typehint=str, help='the config set name to use'),
+    concourse_namespace='concourse',
+    worker_label_selector='app=concourse-worker',
+):
+    config_factory = ctx().cfg_factory()
+    config_set = config_factory.cfg_set(cfg_name=config_name)
+    kubernetes_cfg = config_set.kubernetes()
+    kube_client = kube.ctx.Ctx()
+    kube_client.set_kubecfg(kubernetes_cfg.kubeconfig())
+
+    concourse_cfg = config_set.concourse()
+    concourse_client = client.from_cfg(concourse_cfg=concourse_cfg, team_name='main')
+
+    resurrect_pods(
+        namespace=concourse_namespace,
+        label_selector=worker_label_selector,
+        concourse_client=concourse_client,
+        kubernetes_client=kube_client
+    )
