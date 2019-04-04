@@ -70,7 +70,13 @@ class AttributesDocumentation(object):
         def attr_to_table_row(attr_spec, prefix=None):
             name = attr_spec.name()
             required = 'yes' if attr_spec.is_required() else 'no'
-            default_value = str(attr_spec.default_value())
+
+            default_value = attr_spec.default_value()
+            if callable(default_value):
+                default_value = default_value.__name__
+            else:
+                default_value = str(default_value)
+
             doc = textwrap.dedent(attr_spec.doc())
 
             type_ = attr_spec.type()
