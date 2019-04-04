@@ -2,3 +2,7 @@
 .wy-nav-content {
   max-width: 80%;
 }
+
+.table {
+  white-space: unset !important;
+}
