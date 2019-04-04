@@ -39,7 +39,7 @@ def attrs(pipeline_step):
         ),
         AttributeSpec.optional(
             name='execute',
-            default=pipeline_step.name,
+            default=None,
             doc='''
             The executable (with optional additional arguments) to run. The executable path
             is calculated relative to `<main_repo>/.ci`.
@@ -166,7 +166,7 @@ class PipelineStep(ModelBase):
         *args,
         **kwargs
     ):
-        self.name = name
+        self.name = util.not_empty(name)
         self.is_synthetic = is_synthetic
         self._script_type = script_type
         self._outputs_dict = {}
@@ -175,17 +175,21 @@ class PipelineStep(ModelBase):
         self._notification_policy = notification_policy
         super().__init__(*args, **kwargs)
 
-    def _attribute_specs(self):
-        return attrs(self)
+    @classmethod
+    def _attribute_specs(cls):
+        return attrs(cls)
 
-    def _defaults_dict(self):
-        return AttributeSpec.defaults_dict(attrs(self))
+    @classmethod
+    def _defaults_dict(cls):
+        return AttributeSpec.defaults_dict(attrs(cls))
 
-    def _optional_attributes(self):
-        return set(AttributeSpec.optional_attr_names(attrs(self)))
+    @classmethod
+    def _optional_attributes(cls):
+        return set(AttributeSpec.optional_attr_names(attrs(cls)))
 
-    def _required_attributes(self):
-        return set(AttributeSpec.required_attr_names(attrs(self)))
+    @classmethod
+    def _required_attributes(cls):
+        return set(AttributeSpec.required_attr_names(attrs(cls)))
 
     def custom_init(self, raw_dict: dict):
         if not isinstance(raw_dict, dict):
@@ -225,7 +229,7 @@ class PipelineStep(ModelBase):
         return self.raw['image']
 
     def _argv(self):
-        execute = self.raw['execute']
+        execute = self.raw.get('execute') or self.name
         if not isinstance(execute, list):
             return [str(execute)]
         return [shlex.quote(str(e)) for e in execute]
