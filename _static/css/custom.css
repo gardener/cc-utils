@@ -3,12 +3,6 @@
   max-width: 80%;
 }
 
-.wy-table-responsive {
-  white-space: unset !important;
-}
-.td {
-  white-space: unset !important;
-}
-.table {
+.wy-table-responsive table td {
   white-space: unset !important;
 }
