@@ -108,12 +108,7 @@ def deploy_or_upgrade_monitoring(
     cfg_set_name: str,
 ):
     cfg_factory = ctx().cfg_factory()
-    cfg_set = cfg_factory.cfg_set(cfg_set_name)
-    kubernetes_cfg = cfg_set.kubernetes()
-    concourse_cfg = cfg_set.concourse()
-
     setup_monitoring.deploy_monitoring_landscape(
-        kubernetes_cfg=kubernetes_cfg,
-        concourse_cfg=concourse_cfg,
+        cfg_set_name=cfg_set_name,
         cfg_factory=cfg_factory,
     )

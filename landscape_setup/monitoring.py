@@ -15,6 +15,17 @@
 
 from ensure import ensure_annotations
 
+from kubernetes.client import (
+    V1ObjectMeta,
+    V1Deployment,
+    V1DeploymentSpec,
+    V1PodTemplateSpec,
+    V1PodSpec,
+    V1Container,
+    V1LabelSelector,
+    V1EnvVar,
+)
+
 from landscape_setup import kube_ctx
 from landscape_setup.utils import (
     ensure_cluster_version,
@@ -23,7 +34,6 @@ from landscape_setup.utils import (
 )
 from model import ConfigFactory
 from model.kubernetes import (
-    KubernetesConfig,
     MonitoringConfig,
 )
 from model.concourse import (
@@ -33,10 +43,13 @@ from model.concourse import (
 
 @ensure_annotations
 def deploy_monitoring_landscape(
-    kubernetes_cfg: KubernetesConfig,
-    concourse_cfg: ConcourseConfig,
+    cfg_set_name: str,
     cfg_factory: ConfigFactory,
 ):
+    cfg_set = cfg_factory.cfg_set(cfg_set_name)
+    kubernetes_cfg = cfg_set.kubernetes()
+    concourse_cfg = cfg_set.concourse()
+
     # Set the global context to the cluster specified in KubernetesConfig
     kube_ctx.set_kubecfg(kubernetes_cfg.kubeconfig())
     ensure_cluster_version(kubernetes_cfg)
@@ -66,6 +79,9 @@ def deploy_monitoring_landscape(
         'prometheus-postgres-exporter',
         postgresql_helm_values,
     )
+
+    # deploy concourse worker resurrector
+    deploy_resurrector(cfg_set_name, monitoring_namespace)
 
 
 @ensure_annotations
@@ -147,3 +163,51 @@ def create_postgresql_helm_values(
         }
     }
     return helm_values
+
+
+def deploy_resurrector(cfg_set_name, monitoring_namespace):
+    name = 'worker-resurrector'
+    labels= {'app': name}
+
+    resurrector_deployment = V1Deployment(
+        kind='Deployment',
+        metadata=V1ObjectMeta(
+            name=name,
+            labels=labels,
+        ),
+        spec=V1DeploymentSpec(
+            replicas=1,
+            selector=V1LabelSelector(match_labels=labels),
+            template=V1PodTemplateSpec(
+                metadata=V1ObjectMeta(labels=labels),
+                spec=V1PodSpec(
+                    containers=[
+                        V1Container(
+                            image='eu.gcr.io/gardener-project/cc/job-image:latest',
+                            image_pull_policy='Always',
+                            name=name,
+                            command=['/cc/utils/cli.py'],
+                            args=[
+                                'concourseutil',
+                                'start_worker_resurrector',
+                                '--config-name',
+                                cfg_set_name,
+                            ],
+                            env=[
+                                V1EnvVar(
+                                    'SECRETS_SERVER_ENDPOINT',
+                                    'http://secrets-server.concourse.svc.cluster.local'
+                                ),
+                                V1EnvVar(
+                                    'SECRETS_SERVER_CONCOURSE_CFG_NAME',
+                                    'concourse-secrets/concourse_cfg'),
+                            ],
+                        ),
+                    ],
+                )
+            )
+        )
+    )
+
+    deployment_helper = kube_ctx.deployment_helper()
+    deployment_helper.replace_or_create_deployment(monitoring_namespace, resurrector_deployment)

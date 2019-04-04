@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 import github.webhook
-from github.util import _create_github_api_object
+import urllib3
 
+from github.util import _create_github_api_object
+from kubernetes import watch
 from model.concourse import (
     JobMappingSet,
 )
@@ -90,3 +93,59 @@ def _enumerate_github_org_configs(job_mapping_set: JobMappingSet,):
 
         for github_org_config in github_org_configs:
             yield (github_org_config.org_name(), github_org_config.github_cfg_name())
+
+
+def resurrect_pods(
+    namespace: str,
+    label_selector: str,
+    concourse_client,
+    kubernetes_client,
+):
+    '''
+    concourse pods tend to crash and need to be pruned to help with the self-healing
+    '''
+
+    info(f'Start resurrector for pods with labels {label_selector}')
+    while True:
+        w = watch.Watch()
+        try:
+            for event in w.stream(
+                kubernetes_client.create_core_api().list_namespaced_pod,
+                namespace=namespace,
+                label_selector=label_selector,
+                timeout_seconds=600,
+                watch=True,
+            ):
+                if event["type"] == "MODIFIED":
+                    pod = event["object"]
+                    if pod.status.container_statuses:
+                        for container_status in pod.status.container_statuses:
+                            if container_status and container_status.name == 'concourse-worker':
+                                if not container_status.ready:
+                                    _resurrect_pod(
+                                        concourse_client,
+                                        kubernetes_client,
+                                        pod.metadata.name,
+                                        namespace,
+                                    )
+        except urllib3.exceptions.ProtocolError:
+            # most likely infrastructure issues (broken connections) -> restart watch
+            w.stop()
+        except Exception as e:
+            warning(e)
+
+
+def _resurrect_pod(concourse_client, kubernetes_client, pod_name, namespace):
+    now = datetime.datetime.now()
+    info(now.strftime("%Y-%m-%d %H:%M:%S"))
+    info(f'Container of pod {pod_name} died - look for stalled workers')
+    worker_list = concourse_client.list_workers()
+    for worker in worker_list:
+        info(f'-> {pod_name} : {worker.state()}')
+        if worker.state() != "running":
+            info(f'Prune and resurrect worker {pod_name}')
+            concourse_client.prune_worker(pod_name)
+            kubernetes_client.pod_helper().delete_pod(
+                name=pod_name,
+                namespace=namespace
+            )
