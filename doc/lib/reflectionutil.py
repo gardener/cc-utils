@@ -59,16 +59,3 @@ def model_element_type(qualified_type_name: str):
 
     mod = module(module_name)
     return getattr(mod, class_name)
-
-
-def model_element_instance(qualified_type_name: str):
-    ctor = model_element_type(qualified_type_name)
-
-    if issubclass(ctor, resources.RepositoryConfig):
-        return ctor(raw_dict={'path': ''})
-
-    # apply some hard-coded heuristics to create an instance
-    try:
-        return ctor(raw_dict={})
-    except TypeError:
-        return ctor(name='<name>', raw_dict={})
