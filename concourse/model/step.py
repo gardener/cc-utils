@@ -29,6 +29,23 @@ from concourse.model.base import (
 )
 
 
+def from_instance(attr_name, value_doc: str=None):
+    '''
+    returns an attribute from a concourse.model.ModelBase instance
+
+    Used as default value for PipelineStep's execute attribute to support dynamic default values.
+    '''
+    def get_attr(self: ModelBase):
+        return getattr(self, attr_name)
+
+    if value_doc is not None:
+        get_attr.__name__ = value_doc
+    else:
+        get_attr.__name__ = f'{attr_name}'
+
+    return get_attr
+
+
 def attrs(pipeline_step):
     return (
         AttributeSpec.optional(
@@ -39,7 +56,7 @@ def attrs(pipeline_step):
         ),
         AttributeSpec.optional(
             name='execute',
-            default=None,
+            default=from_instance(attr_name='name', value_doc='step name'),
             doc='''
             The executable (with optional additional arguments) to run. The executable path
             is calculated relative to `<main_repo>/.ci`.
@@ -230,8 +247,15 @@ class PipelineStep(ModelBase):
     def image(self):
         return self.raw['image']
 
+    def _execute(self):
+        execute_value = self.raw.get('execute', self.name)
+        if callable(execute_value):
+            return execute_value(self)
+        else:
+            return execute_value
+
     def _argv(self):
-        execute = self.raw.get('execute') or self.name
+        execute = self._execute()
         if not isinstance(execute, list):
             return [str(execute)]
         return [shlex.quote(str(e)) for e in execute]
