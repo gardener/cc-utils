@@ -86,7 +86,7 @@ class ModelElementDirective(
         set_source_info(self, self._indexnode)
         ne.extend(process_index_entry(name_in_index, target_anchor))
 
-        self._model_element_instance = reflectionutil.model_element_instance(
+        self._model_element_type = reflectionutil.model_element_type(
             qualified_type_name=qualified_type_name,
         )
 
@@ -97,6 +97,6 @@ class ModelElementDirective(
 
         self._init(name=name, qualified_type_name=qualified_type_name)
 
-        self.attributes(self._model_element_instance)
+        self.attributes(self._model_element_type)
 
         return [self._indexnode, self._target, self._node] + self._parse_msgs
