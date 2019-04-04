@@ -209,7 +209,7 @@
 <tr class="row-odd"><td>processing_mode</td>
 <td>no</td>
 <td>upload_if_changed</td>
-<td>str</td>
+<td>ProcessingMode</td>
 <td>Protecode processing mode</td>
 </tr>
 <tr class="row-even"><td>reference_protecode_group_ids</td>
@@ -271,6 +271,28 @@ processed. By default, all image references are considered.</td>
 <td>a list of regular expressions. If configured, matching image references are
 exempted from processing. Has precedence over include_image_references.
 By default, no image references are excluded.</td>
+</tr>
+</tbody>
+</table>
+<h2 class="section-subtitle"><span class="section-subtitle">processing_mode Enumeration Values</span></h2>
+<table border="1" class="colwidths-auto docutils">
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">value</th>
+<th class="head">explanation</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>upload_if_changed</td>
+<td>upload the container images. This will <strong>not</strong> upload the images if they
+are already present. This will <strong>not</strong> cause images already present to be
+rescanned.</td>
+</tr>
+<tr class="row-odd"><td>rescan</td>
+<td>trigger a scan of container images. Images will be uploaded unless they are
+already present.</td>
+</tr>
+<tr class="row-even"><td>force_upload</td>
+<td><strong>always</strong> upload the images. This will cause all images to be rescanned.</td>
 </tr>
 </tbody>
 </table>

@@ -220,9 +220,25 @@ Any changes left inside the worktree are added to the resulting release commit.<
 </tr>
 <tr class="row-even"><td>release_notes_policy</td>
 <td>no</td>
-<td>ReleaseNotesPolicy.DEFAULT</td>
-<td>str</td>
+<td>default</td>
+<td>ReleaseNotesPolicy</td>
 <td>configures the release notes handling policy</td>
+</tr>
+</tbody>
+</table>
+<h2 class="section-subtitle"><span class="section-subtitle">release_notes_policy Enumeration Values</span></h2>
+<table border="1" class="colwidths-auto docutils">
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">value</th>
+<th class="head">explanation</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>default</td>
+<td>Create release notes and add them to the GitHub release.</td>
+</tr>
+<tr class="row-odd"><td>disabled</td>
+<td>Do not create release notes.</td>
 </tr>
 </tbody>
 </table>

@@ -192,13 +192,15 @@ failures.</p>
 </tr>
 <tr class="row-odd"><td>execute</td>
 <td>no</td>
-<td>&lt;name&gt;</td>
+<td>step name</td>
 <td>str</td>
 <td><p>The executable (with optional additional arguments) to run. The executable path
 is calculated relative to <code class="code docutils literal notranslate"><span class="pre">&lt;main_repo&gt;/.ci</span></code>.</p>
-<p>Has two forms:
-- scalar value (str in most cases) –&gt; no shell-escaping is done
-- list of scalar values -&gt; used verbatim as ARGV</p>
+<p>Has two forms:</p>
+<ul class="simple">
+<li>scalar value (str in most cases) –&gt; no shell-escaping is done</li>
+<li>list of scalar values -&gt; used verbatim as ARGV</li>
+</ul>
 </td>
 </tr>
 <tr class="row-even"><td>notifications_cfg</td>
