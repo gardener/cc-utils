@@ -87,6 +87,7 @@ class TraitDirective(Directive, cc_directives.base.AttributesDocMixin, sphinxuti
         ne.extend(process_index_entry(name_in_index, target_anchor))
 
         self._trait_instance = reflectionutil.trait_instance(trait_name)
+        self._trait_class = reflectionutil.trait_class(trait_name)
 
     def run(self):
         options = self.options
@@ -95,7 +96,7 @@ class TraitDirective(Directive, cc_directives.base.AttributesDocMixin, sphinxuti
         self._init(trait_name=trait_name)
 
         self.summary()
-        self.attributes(self._trait_instance)
+        self.attributes(self._trait_class)
         self.dependencies()
 
         return [self._indexnode, self._target, self._node] + self._parse_msgs

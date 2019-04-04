@@ -20,9 +20,9 @@ import concourse.model.base as base_model
 
 
 class AttributesDocMixin(sphinxutil.SphinxUtilsMixin):
-    def attributes(self, model_element: base_model.ModelBase):
+    def attributes(self, model_element_type):
         attributes_doc = attributes.AttributesDocumentation(
-            model_element,
+            model_element_type,
             prefix='',
         )
 
@@ -31,8 +31,7 @@ class AttributesDocMixin(sphinxutil.SphinxUtilsMixin):
                 subtitle = f'{prefix} Attributes'
             else:
                 subtitle = 'Attributes'
-
-            if isinstance(attributes_doc._model_element, enum.EnumMeta):
+            if issubclass(attributes_doc._model_element_type, enum.Enum):
                 subtitle = f'{prefix} Enumeration Values'
 
             self.add_subtitle(subtitle)

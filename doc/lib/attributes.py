@@ -20,7 +20,7 @@ import typing
 import enum
 
 
-import concourse.model.base as model_base
+import concourse.model.base as base_model
 import model
 import sphinxutil
 import util
@@ -33,17 +33,16 @@ sys.path.append(os.path.abspath('../..'))
 class AttributesDocumentation(object):
     def __init__(
         self,
-        model_element: model_base.AttribSpecMixin,
+        model_element_type,
         prefix: str='',
     ):
-        #self._model_element = util.check_type(model_element, model_base.AttribSpecMixin)
-        self._model_element = model_element
+        self._model_element_type = model_element_type
         self._child_elements = []
         self._prefix = util.check_type(prefix, str)
 
     def add_child(
         self,
-        model_element: model_base.AttribSpecMixin,
+        model_element_type,
         element_name: str,
     ):
         if self._prefix:
@@ -52,7 +51,7 @@ class AttributesDocumentation(object):
             child_prefix = element_name
 
         child_documentation = AttributesDocumentation(
-            model_element,
+            model_element_type,
             prefix=child_prefix,
         )
 
@@ -63,7 +62,7 @@ class AttributesDocumentation(object):
         return self._child_elements
 
     def fill_table(self, table_builder):
-        if isinstance(self._model_element, enum.EnumMeta):
+        if issubclass(self._model_element_type, enum.Enum):
             table_builder.add_table_header(['value', 'explanation'])
         else:
             table_builder.add_table_header(['name', 'required?', 'default', 'type', 'explanation'])
@@ -75,29 +74,24 @@ class AttributesDocumentation(object):
             doc = textwrap.dedent(attr_spec.doc())
 
             type_ = attr_spec.type()
-            if issubclass(type_, model_base.AttribSpecMixin):
-                type_str = type_.__name__
+            type_str = type_.__name__
+            if issubclass(type_, base_model.AttribSpecMixin):
                 # recurse to child element
-                child_element = type_
-                self.add_child(model_element=child_element, element_name=name)
+                self.add_child(model_element_type=type_, element_name=name)
             elif isinstance(type_, type) and type_.__base__ == typing.Dict:
                 # assumption: type is typing.Dict[T1, T2]
                 key_type, val_type = type_.__args__
-                child_element = val_type
                 self.add_child(
-                    model_element=child_element,
+                    model_element_type=val_type,
                     element_name=f'{name}.<user-chosen>'
                 )
-                type_str = type_.__name__
-            else:
-                type_str = type_.__name__
 
-            if isinstance(self._model_element, enum.EnumMeta):
+            if issubclass(self._model_element_type, enum.Enum):
                 table_builder.add_table_row((name, doc))
             else:
                 table_builder.add_table_row((name, required, default_value, type_str, doc))
 
-        for attr_spec in self._model_element._attribute_specs():
+        for attr_spec in self._model_element_type._attribute_specs():
             attr_to_table_row(attr_spec)
 
         return table_builder
