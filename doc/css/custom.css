@@ -3,6 +3,6 @@
   max-width: 80%;
 }
 
-.wy-table-responsive {
+.wy-table-responsive table td {
   white-space: unset !important;
 }
