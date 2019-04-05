@@ -2,7 +2,7 @@
 Flask
 Flask-RESTful
 GitPython
-Mako
+Mako==1.0.7
 Sphinx
 bcrypt
 containerregistry-ccwienk==0.2.1
@@ -20,7 +20,7 @@ pycodestyle
 pydash==4.6.0
 pyflakes
 pytest
-pyyaml
+pyyaml==3.13
 requests
 semver
 slackclient==1.2.1
