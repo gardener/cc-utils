@@ -40,7 +40,7 @@ from product.model import DependencyBase
 from model.github import GithubConfig
 
 # log Github API calls to Elastic Search
-log_github_access = False
+log_github_access = True
 
 
 class RepoPermission(enum.Enum):
