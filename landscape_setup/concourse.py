@@ -26,6 +26,8 @@ from subprocess import CalledProcessError
 
 import yaml
 import concourse.client as client
+import semver
+
 from landscape_setup import kube_ctx
 from landscape_setup.utils import (
     ensure_helm_setup,
@@ -43,7 +45,9 @@ from model.concourse import (
 from model.container_registry import (
     GcrCredentials,
 )
-
+from model.proxy import(
+    ProxyConfig
+)
 from model.secrets_server import (
     SecretsServerConfig,
 )
@@ -110,6 +114,36 @@ def create_image_pull_secret(
             namespace=namespace,
             image_pull_secret_name=image_pull_secret_name
         )
+
+
+# Constants related to the MitM-Proxy installation.
+# The name under which the config map will be stored in K8s
+MITM_CONFIG_CONFIGMAP_NAME = 'mitm-config'
+
+
+@ensure_annotations
+def create_proxy_configmaps(
+    proxy_cfg: ProxyConfig,
+    namespace: str,
+):
+    """Create the config map that contains the configuration of the mitm-proxy"""
+    not_empty(namespace)
+
+    ctx = kube_ctx
+    namespace_helper = ctx.namespace_helper()
+    namespace_helper.create_if_absent(namespace)
+
+    config_map_helper = ctx.config_map_helper()
+
+    mitm_proxy_config = proxy_cfg.mitm_proxy().config()
+
+    config_map_helper.create_or_update_config_map(
+        namespace=namespace,
+        name=MITM_CONFIG_CONFIGMAP_NAME,
+        data={
+            'config.yaml': yaml.dump(mitm_proxy_config),
+        }
+    )
 
 
 def create_instance_specific_helm_values(
@@ -181,6 +215,77 @@ def create_instance_specific_helm_values(
         raise NotImplementedError(
             "Concourse version {v} not supported".format(v=concourse_version)
         )
+    # Add proxy sidecars to instance specific values.
+    # NOTE: Only works for helm chart version 3.8.0 or greater
+    if concourse_cfg.proxy():
+        chart_version = semver.parse_version_info(concourse_cfg.helm_chart_version())
+        min_version = semver.parse_version_info('3.8.0')
+        if chart_version >= min_version:
+            instance_specific_values = add_proxy_values(
+                concourse_cfg=concourse_cfg,
+                config_factory=config_factory,
+                instance_specific_values=instance_specific_values,
+            )
+        else:
+            fail('Proxy deployment requires the configured helm chart version to be at least 4.2.2')
+
+    return instance_specific_values
+
+
+@ensure_annotations
+def add_proxy_values(
+    concourse_cfg: ConcourseConfig,
+    config_factory: ConfigFactory,
+    instance_specific_values: dict,
+):
+    # The dir into which the config map is mounted in the volume.
+    # NOTE: This _must_ align with what the mitm is configured to use by our docker image.
+    MITM_CONFIG_DIR = '/.mitmproxy'
+
+    # add the sidecar-configuration for the mitm-proxy
+    proxy_cfg = config_factory.proxy(concourse_cfg.proxy())
+    mitm_cfg = proxy_cfg.mitm_proxy()
+    sidecar_image_cfg = proxy_cfg.sidecar_image()
+    sidecar_containers = [{
+        'name': 'setup-iptables-sidecar',
+        'image': sidecar_image_cfg.image_reference(),
+        'env': [{
+            'name': 'PROXY_PORT',
+            'value': f'{mitm_cfg.config()["listen_port"]}',
+        }],
+        'securityContext': {
+            'privileged': True,
+        },
+    },{
+        'name': 'mitm-proxy',
+        'image': mitm_cfg.image_reference(),
+        'env': [{
+                'name': 'CONFIG_DIR',
+                'value': MITM_CONFIG_DIR,
+        }],
+        'ports': [{
+            'containerPort': mitm_cfg.config()["listen_port"],
+            'hostPort': mitm_cfg.config()["listen_port"],
+            'protocol': 'TCP',
+        }],
+        'volumeMounts': [{
+            'name': 'mitm-config',
+            'mountPath': MITM_CONFIG_DIR,
+        }],
+    }]
+    additional_volumes = [{
+        'name':'mitm-config',
+        'configMap': {'name': MITM_CONFIG_CONFIGMAP_NAME},
+    }]
+    # add new values to dict without replacing existing ones
+    vals = instance_specific_values.get('worker', {})
+    vals.update(
+        {
+            'sidecarContainers': sidecar_containers,
+            'additionalVolumes': additional_volumes,
+        }
+    )
+    instance_specific_values['worker']= vals
 
     return instance_specific_values
 
@@ -224,10 +329,20 @@ def deploy_concourse_landscape(
     helm_chart_values_name = concourse_cfg.helm_chart_values()
     custom_helm_values = config_factory.concourse_helmchart(helm_chart_values_name).raw
 
+    # Proxy config
+    proxy_cfg_name = concourse_cfg.proxy()
+    proxy_cfg = config_factory.proxy(proxy_cfg_name)
+
     info('Creating default image-pull-secret ...')
     create_image_pull_secret(
         credentials=cr_credentials,
         image_pull_secret_name=image_pull_secret_name,
+        namespace=deployment_name,
+    )
+
+    info('Creating config-maps for the mitm proxy ...')
+    create_proxy_configmaps(
+        proxy_cfg=proxy_cfg,
         namespace=deployment_name,
     )
 
