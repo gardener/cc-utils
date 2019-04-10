@@ -97,6 +97,9 @@ class ConcourseConfig(NamedModelElement):
     def github_enterprise_host(self):
         return self.raw.get('github_enterprise_host')
 
+    def proxy(self):
+        return self.raw.get('proxy')
+
     def _required_attributes(self):
         return [
             'externalUrl',
@@ -115,7 +118,8 @@ class ConcourseConfig(NamedModelElement):
 
     def _optional_attributes(self):
         return {
-            'github_enterprise_host'
+            'github_enterprise_host',
+            'proxy',
         }
 
     def validate(self):
