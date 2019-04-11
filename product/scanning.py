@@ -193,6 +193,7 @@ class ProtecodeUtil(object):
         # take shortcut if 'force upload' is configured.
         if self._processing_mode is ProcessingMode.FORCE_UPLOAD:
             return UploadAction.UPLOAD
+
         if self._processing_mode in (
             ProcessingMode.UPLOAD_IF_CHANGED,
             ProcessingMode.RESCAN,
@@ -212,6 +213,9 @@ class ProtecodeUtil(object):
         if self._processing_mode is ProcessingMode.UPLOAD_IF_CHANGED:
             return UploadAction.SKIP
         elif self._processing_mode is ProcessingMode.RESCAN:
+            # Wait for the current scan to finish if it there is still one pending
+            if scan_result.status() is ProcessingStatus.BUSY:
+                return UploadAction.WAIT_FOR_RESULT
             short_scan_result = self._api.scan_result_short(scan_result.product_id())
 
             if short_scan_result.is_stale():
@@ -263,7 +267,7 @@ class ProtecodeUtil(object):
             scan_result=scan_result
         )
 
-        if not upload_action.upload and not upload_action.rescan:
+        if not upload_action.upload and not upload_action.rescan and not upload_action.wait:
             # early exit (nothing to do)
             return upload_result(
                 status=UploadStatus.SKIPPED,
@@ -321,16 +325,13 @@ class ProtecodeUtil(object):
         if upload_action.rescan:
             self._api.rescan(scan_result.product_id())
 
-        result = self._api.wait_for_scan_result(product_id=scan_result.product_id())
+        if upload_action.wait:
+            result = self._api.wait_for_scan_result(product_id=scan_result.product_id())
+        else:
+            result = scan_result
 
         if result.status() == ProcessingStatus.BUSY:
-            # Should not happen since we waited until the scan result is ready.
-            raise RuntimeError(
-                'Analysis of container-image {c} was reported as completed, '
-                'but is still pending'.format(
-                    c=container_image.name(),
-                )
-            )
+            upload_status = UploadStatus.PENDING
         else:
             upload_status = UploadStatus.DONE
 
