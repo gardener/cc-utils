@@ -190,12 +190,14 @@ class ProtecodeUtil(object):
     ):
         check_type(container_image, ContainerImage)
 
+        # take shortcut if 'force upload' is configured.
+        if self._processing_mode is ProcessingMode.FORCE_UPLOAD:
+            return UploadAction.UPLOAD
         if self._processing_mode in (
             ProcessingMode.UPLOAD_IF_CHANGED,
             ProcessingMode.RESCAN,
-            ProcessingMode.FORCE_UPLOAD,
         ):
-            # if no scan_result is available, we have to upload in all cases
+            # if no scan_result is available, we have to upload in all remaining cases
             if not scan_result:
                 return UploadAction.UPLOAD
 
@@ -219,8 +221,6 @@ class ProtecodeUtil(object):
                     return UploadAction.RESCAN
             else:
                 return UploadAction.SKIP
-        elif self._processing_mode is ProcessingMode.FORCE_UPLOAD:
-            return UploadAction.UPLOAD
         else:
             raise NotImplementedError
 
