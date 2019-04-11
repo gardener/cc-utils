@@ -70,13 +70,15 @@ class ProcessingMode(AttribSpecMixin, Enum):
 
 
 class UploadAction(Enum):
-    def __init__(self, upload, rescan):
+    def __init__(self, upload, rescan, wait):
         self.upload = upload
         self.rescan = rescan
+        self.wait = wait
 
-    SKIP = (False, False)
-    UPLOAD = (True, False)
-    RESCAN = (False, True)
+    SKIP = (False, False, False)
+    UPLOAD = (True, False, True)
+    RESCAN = (False, True, True)
+    WAIT_FOR_RESULT = (False, False, True)
 
 
 class ProtecodeUtil(object):
