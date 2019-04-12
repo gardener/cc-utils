@@ -431,7 +431,11 @@ class ReplicationResultProcessor(object):
                 subject='Your pipeline definition in {repo} is erroneous'.format(
                     repo=main_repo['path'],
                 ),
-                mail_template='Error details:\n' + str(failed_descriptor.error_details),
+                mail_template=(
+                    f"The pipeline definition for pipeline '{definition_descriptor.pipeline_name}' "
+                    f" on branch '{main_repo['branch']}' contains errors.\n\n"
+                    f"Error details:\n{str(failed_descriptor.error_details)}"
+                )
             )
 
     def _initialise_new_pipeline_resources(self, concourse_api, results):
