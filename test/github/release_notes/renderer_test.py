@@ -94,12 +94,12 @@ class RendererTest(unittest.TestCase):
 
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
-            '# [a-foo-bar]\n'\
-            '## Improvements\n'\
-            '* *[USER]* other component, same github instance rls note (madeup/a-foo-bar#1, @foo)\n'\
             '# [current-repo]\n'\
             '## Improvements\n'\
-            '* *[USER]* default release note text (#42, @foo)'
+            '* *[USER]* default release note text (#42, @foo)\n'\
+            '# [a-foo-bar]\n'\
+            '## Improvements\n'\
+            '* *[USER]* other component, same github instance rls note (madeup/a-foo-bar#1, @foo)'
         self.assertEqual(expected_md_str, actual_md_str)
 
     def test_render_reference_commit(self):
@@ -134,13 +134,13 @@ class RendererTest(unittest.TestCase):
 
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = ''\
+            '# [current-repo]\n'\
+            '## Improvements\n'\
+            '* *[USER]* rls note 1 (commit-id-1, @foo)\n'\
             '# [a-foo-bar]\n'\
             '## Improvements\n'\
             '* *[USER]* other component rls note ' \
             '(madeup/a-foo-bar@very-long-commit-id-that-will-not-be-shortened, @bar)\n'\
-            '# [current-repo]\n'\
-            '## Improvements\n'\
-            '* *[USER]* rls note 1 (commit-id-1, @foo)\n'\
             '# [s]\n'\
             '## Improvements\n'\
             '* *[USER]* release note from different github instance ' \
@@ -167,12 +167,12 @@ class RendererTest(unittest.TestCase):
 
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
-            '# [a-foo-bar]\n'\
-            '## Improvements\n'\
-            '* *[USER]* default release note text (@bar)\n'\
             '# [current-repo]\n'\
             '## Improvements\n'\
-            '* *[USER]* default release note text (@foo)'
+            '* *[USER]* default release note text (@foo)\n'\
+            '# [a-foo-bar]\n'\
+            '## Improvements\n'\
+            '* *[USER]* default release note text (@bar)'
         self.assertEqual(expected_md_str, actual_md_str)
 
     def test_render_no_reference_no_user(self):
@@ -193,10 +193,10 @@ class RendererTest(unittest.TestCase):
 
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
-            '# [a-foo-bar]\n'\
+            '# [current-repo]\n'\
             '## Improvements\n'\
             '* *[USER]* default release note text\n'\
-            '# [current-repo]\n'\
+            '# [a-foo-bar]\n'\
             '## Improvements\n'\
             '* *[USER]* default release note text'
         self.assertEqual(expected_md_str, actual_md_str)

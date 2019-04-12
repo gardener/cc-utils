@@ -76,6 +76,7 @@ class Renderer(object):
         origin_nodes = _\
             .chain(self.rls_note_objs)\
             .sort_by(lambda rls_note_obj: rls_note_obj.cn_source_repo.github_repo())\
+            .sort_by(lambda rls_note_obj: rls_note_obj.is_current_repo, reverse=True)\
             .uniq_by(lambda rls_note_obj: rls_note_obj.cn_source_repo.name())\
             .map(lambda rls_note_obj: TitleNode(
                 identifier=rls_note_obj.cn_source_repo.name(),
