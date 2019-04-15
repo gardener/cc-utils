@@ -472,6 +472,12 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         search_result = self.github.search_issues(query)
         return search_result
 
+    def is_pr_created_by_org_member(self, pull_request_number):
+        pull_request = self.repository.pull_request(pull_request_number)
+        user_login = pull_request.user.login
+        organization = self.github.organization(self.owner)
+        return organization.is_member(user_login)
+
     def add_labels_to_pull_request(self, pull_request_number, *labels):
         pull_request = self.repository.pull_request(pull_request_number)
         pull_request.issue().add_labels(*labels)
