@@ -26,6 +26,7 @@ from .model import (
     PullRequestAction,
     RefType,
 )
+from github.util import GitHubRepositoryHelper
 from .pipelines import update_repository_pipelines
 import ccc
 import concourse.client
@@ -120,6 +121,30 @@ class GithubWebhookDispatcher(object):
             concourse_api.trigger_resource_check(
                 pipeline_name=resource.pipeline_name(),
                 resource_name=resource.name,
+            )
+
+    def _set_pr_labels(self, pr_event, *labels):
+        repo = pr_event.repository()
+        repository_path = repo.repository_path()
+        pr_number = pr_event.number()
+
+        github_cfg = self.cfg_set.github()
+        owner, name = repository_path.split('/')
+        github_helper = GitHubRepositoryHelper(
+            owner,
+            name,
+            github_cfg=github_cfg,
+        )
+        if github_helper.is_pr_created_by_org_member(pr_number):
+            app.logger.info(
+                f"New pull request by member of '{owner}' in '{repository_path}' found. "
+                f"Setting required labels '{labels}'."
+            )
+            github_helper.add_labels_to_pull_request(pr_number, *labels)
+        else:
+            app.logger.info(
+                f"New pull request by member in '{repository_path}' found, but creator is not "
+                f"member of '{owner}' - will not set required labels."
             )
 
     def _matching_resources(self, concourse_api, event):
