@@ -26,7 +26,9 @@ from .model import (
     PullRequestAction,
     RefType,
 )
+
 from github.util import GitHubRepositoryHelper
+
 from .pipelines import update_repository_pipelines
 import ccc
 import concourse.client
@@ -108,6 +110,9 @@ class GithubWebhookDispatcher(object):
                 concourse_api=concourse_api,
                 event=pr_event,
             ))
+
+            if len(resources) == 0:
+                continue
 
             if pr_event.action() is PullRequestAction.OPENED:
                 self._set_pr_labels(pr_event, resources)
