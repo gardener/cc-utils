@@ -472,6 +472,10 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         search_result = self.github.search_issues(query)
         return search_result
 
+    def add_labels_to_pull_request(self, pull_request_number, *labels):
+        pull_request = self.repository.pull_request(pull_request_number)
+        pull_request.issue().add_labels(*labels)
+
 
 def github_api_ctor(github_url: str, verify_ssl: bool=True):
     '''returns the appropriate github3.GitHub constructor for the given github URL
