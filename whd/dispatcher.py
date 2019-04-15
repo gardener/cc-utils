@@ -108,6 +108,10 @@ class GithubWebhookDispatcher(object):
                 concourse_api=concourse_api,
                 event=pr_event,
             ))
+
+            if pr_event.action() is PullRequestAction.OPENED:
+                self._set_pr_labels(pr_event, resources)
+
             self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
             self._ensure_pr_resource_updates(
                 concourse_api=concourse_api,
@@ -123,7 +127,11 @@ class GithubWebhookDispatcher(object):
                 resource_name=resource.name,
             )
 
-    def _set_pr_labels(self, pr_event, *labels):
+    def _set_pr_labels(self, pr_event, resources):
+        required_labels = {
+            resource.source.get('label')
+            for resource in resources if resource.source.get('label') is not None
+        }
         repo = pr_event.repository()
         repository_path = repo.repository_path()
         pr_number = pr_event.number()
@@ -138,11 +146,11 @@ class GithubWebhookDispatcher(object):
         if github_helper.is_pr_created_by_org_member(pr_number):
             app.logger.info(
                 f"New pull request by member of '{owner}' in '{repository_path}' found. "
-                f"Setting required labels '{labels}'."
+                f"Setting required labels '{required_labels}'."
             )
-            github_helper.add_labels_to_pull_request(pr_number, *labels)
+            github_helper.add_labels_to_pull_request(pr_number, *required_labels)
         else:
-            app.logger.info(
+            app.logger.debug(
                 f"New pull request by member in '{repository_path}' found, but creator is not "
                 f"member of '{owner}' - will not set required labels."
             )
