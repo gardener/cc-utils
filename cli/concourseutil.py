@@ -236,7 +236,6 @@ def set_teams(
 def start_worker_resurrector(
     config_name: CliHint(typehint=str, help='the config set name to use'),
     concourse_namespace='concourse',
-    worker_label_selector='app=concourse-worker',
 ):
     config_factory = ctx().cfg_factory()
     config_set = config_factory.cfg_set(cfg_name=config_name)
@@ -249,7 +248,6 @@ def start_worker_resurrector(
 
     resurrect_pods(
         namespace=concourse_namespace,
-        label_selector=worker_label_selector,
         concourse_client=concourse_client,
         kubernetes_client=kube_client
     )
