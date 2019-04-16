@@ -129,10 +129,7 @@ def _parse_model(raw_dict):
 
 
 def _retrieve_model_element(cfg_type: str, cfg_name: str):
-    client = _client()
-    secrets_dict = client.retrieve_secrets()
-    cfg_factory = _parse_model(secrets_dict)
-
+    cfg_factory = ctx().cfg_factory()
     return cfg_factory._cfg_element(cfg_type_name=cfg_type, cfg_name=cfg_name)
 
 
