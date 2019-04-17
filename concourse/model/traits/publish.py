@@ -130,7 +130,7 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
         # -> shorten this a bit (keep domain and last part of url path)
         domain = parts[0]
         image_name = parts[-1]
-        return '_'.join([domain, image_name])
+        return '_'.join([self.name(), domain, image_name])
 
     def _children(self):
         return ()
