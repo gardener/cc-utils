@@ -283,6 +283,7 @@ class ReleaseCommitsStep(TransactionalStep):
         self.git_helper.push(
             from_ref=next_cycle_commit_sha,
             to_ref=self.repository_branch,
+            use_ssh=True,
         )
         return {
             'release commit sha': release_commit.hexsha,
@@ -327,6 +328,7 @@ class ReleaseCommitsStep(TransactionalStep):
             self.git_helper.push(
                 from_ref=release_revert_commit.hexsha,
                 to_ref=self.repository_branch,
+                use_ssh=True,
             )
 
     def _invoke_callback(
