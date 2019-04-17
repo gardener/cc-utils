@@ -158,7 +158,7 @@ def create_upgrade_pr(from_ref, to_ref, ls_repo):
     head_sha = ls_repo.ref('heads/' + REPO_BRANCH).object.sha
     ls_repo.create_ref('refs/heads/' + new_branch_name, head_sha)
 
-    helper.push(from_ref=commit.hexsha, to_ref='refs/heads/' + new_branch_name, use_ssh=True)
+    helper.push(from_ref=commit.hexsha, to_ref='refs/heads/' + new_branch_name)
     helper.repo.git.checkout('.')
 
     with TemporaryDirectory() as temp_dir:
