@@ -235,7 +235,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
 
             verbose('from repo: ' + repository.name + ':' + branch_name)
             try:
-                definitions = yaml.load(definitions.decoded.decode('utf-8'))
+                definitions = yaml.load(definitions.decoded.decode('utf-8'), Loader=yaml.SafeLoader)
             except BaseException as e:
                 repo_path = f'{org_name}/{repository.name}'
                 yield DefinitionDescriptor(
