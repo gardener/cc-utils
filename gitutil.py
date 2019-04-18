@@ -76,6 +76,13 @@ class GitHelper(object):
     def _authenticated_remote(self, use_ssh=False):
         if use_ssh:
             url = urljoin(self.github_cfg.ssh_url(), self.github_repo_path)
+            tmp_id = os.path.abspath('tmp.id_rsa')
+            with open(tmp_id, 'w') as f:
+                f.write(self.github_cfg.credentials().private_key())
+            os.chmod(tmp_id, 0o400)
+            suppress_hostcheck = '-o "StrictHostKeyChecking no"'
+            id_only = '-o "IdentitiesOnly yes"'
+            os.environ['GIT_SSH_COMMAND'] = f'ssh -i {tmp_id} {suppress_hostcheck} {id_only}'
         else:
             url = url_with_credentials(self.github_cfg, self.github_repo_path)
 
@@ -84,11 +91,13 @@ class GitHelper(object):
             name=random_str(),
             url=url,
         )
-
         try:
             yield remote
         finally:
             self.repo.delete_remote(remote)
+            if use_ssh:
+                os.unlink(tmp_id)
+                del os.environ['GIT_SSH_COMMAND']
 
     def index_to_commit(self, message, parent_commits=None):
         '''moves all diffs from worktree to a new commit without modifying branches.
@@ -135,24 +144,8 @@ class GitHelper(object):
         self.repo.git.stash('pop', '--quiet')
 
     def push(self, from_ref, to_ref, use_ssh=False):
-        if use_ssh:
-            tmp_id = os.path.abspath('tmp.id_rsa')
-            with open(tmp_id, 'w') as f:
-                f.write(self.github_cfg.credentials().private_key())
-            os.chmod(tmp_id, 0o400)
-            os.environ['GIT_SSH_COMMAND'] = 'ssh -i {id_file} {suppress_hostcheck} {id_only}'.format(
-                id_file=tmp_id,
-                suppress_hostcheck='-o "StrictHostKeyChecking no"',
-                id_only='-o "IdentitiesOnly yes"',
-            )
-
         with self._authenticated_remote(use_ssh=use_ssh) as remote:
-            try:
-                remote.push(':'.join((from_ref, to_ref)))
-            finally:
-                if use_ssh:
-                    os.unlink(tmp_id)
-                    del os.environ['GIT_SSH_COMMAND']
+            remote.push(':'.join((from_ref, to_ref)))
 
     def rebase(self, commit_ish: str):
         self.repo.git.rebase('--quiet', commit_ish)
