@@ -73,7 +73,7 @@ class GitHelper(object):
         return [line[3:] for line in lines if line]
 
     @contextlib.contextmanager
-    def _authenticated_remote(self, use_ssh=False):
+    def _authenticated_remote(self, use_ssh=True):
         if use_ssh:
             url = urljoin(self.github_cfg.ssh_url(), self.github_repo_path)
             tmp_id = os.path.abspath('tmp.id_rsa')
@@ -143,15 +143,15 @@ class GitHelper(object):
     def _pop_stash(self):
         self.repo.git.stash('pop', '--quiet')
 
-    def push(self, from_ref, to_ref, use_ssh=False):
+    def push(self, from_ref, to_ref, use_ssh=True):
         with self._authenticated_remote(use_ssh=use_ssh) as remote:
             remote.push(':'.join((from_ref, to_ref)))
 
     def rebase(self, commit_ish: str):
         self.repo.git.rebase('--quiet', commit_ish)
 
-    def fetch_head(self, ref: str):
-        with self._authenticated_remote() as remote:
+    def fetch_head(self, ref: str, use_ssh=True):
+        with self._authenticated_remote(use_ssh=use_ssh) as remote:
             fetch_result = remote.fetch(ref)[0]
             return fetch_result.commit
 
