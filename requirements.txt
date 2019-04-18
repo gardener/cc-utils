@@ -1,4 +1,4 @@
-# add requirements for local tests. Install with: pip3 install -r requirements.txt
+# Install with: pip(3) install -r requirements.txt
 Flask
 Flask-RESTful
 GitPython
@@ -20,7 +20,7 @@ pycodestyle
 pydash==4.6.0
 pyflakes
 pytest
-pyyaml==3.13
+pyyaml
 requests
 semver
 slackclient==1.2.1
