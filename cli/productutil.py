@@ -238,8 +238,7 @@ def resolve_component_descriptor(
         cfg_factory=cfg_factory,
     )
 
-    with open(component_descriptor_file) as f:
-        component_descriptor = Product.from_dict(yaml.load(f))
+    component_descriptor = Product.from_dict(parse_yaml_file(component_descriptor_file))
 
     resolved_descriptor = resolver.resolve_component_references(product=component_descriptor)
 

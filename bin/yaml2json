@@ -5,7 +5,7 @@ import yaml
 import sys
 
 def main():
-  json.dump(yaml.load(sys.stdin), sys.stdout)
+  json.dump(yaml.load(sys.stdin, Loader=yaml.SafeLoader), sys.stdout)
 
 if __name__ == '__main__':
   main()

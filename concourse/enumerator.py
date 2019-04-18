@@ -192,7 +192,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                 path='branch.cfg',
                 ref='refs/meta/ci',
             ).decoded.decode('utf-8')
-            return BranchCfg(raw_dict=yaml.load(branch_cfg))
+            return BranchCfg(raw_dict=yaml.load(branch_cfg, Loader=yaml.SafeLoader))
         except NotFoundError:
             return None # no branch cfg present
 

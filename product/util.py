@@ -105,7 +105,7 @@ class ComponentDescriptorResolver(ResolverBase):
                 asset_label=COMPONENT_DESCRIPTOR_ASSET_NAME,
         )
         if as_dict:
-            return yaml.load(dependency_descriptor)
+            return yaml.load(dependency_descriptor, Loader=yaml.SafeLoader)
         else:
             return dependency_descriptor
 

@@ -182,7 +182,7 @@ def none(value):
 def is_yaml_file(path: CliHints.existing_file()):
     with open(path) as f:
         try:
-            if yaml.load(f):
+            if yaml.load(f, Loader=yaml.SafeLoader):
                 return True
         except Exception:
             warning('an error occurred whilst trying to parse {f}'.format(f=path))
@@ -192,7 +192,7 @@ def is_yaml_file(path: CliHints.existing_file()):
 
 def parse_yaml_file(path: CliHints.existing_file()):
     with open(path) as f:
-            return yaml.load(f)
+            return yaml.load(f, Loader=yaml.SafeLoader)
 
 
 def random_str(prefix=None, length=12):

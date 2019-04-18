@@ -70,6 +70,7 @@ def deploy_and_run_smoketest_pipeline(
         helper.retrieve_text_file_contents(
             file_path='.ci/smoketest-pipeline.yaml',
         ),
+        Loader=yaml.SafeLoader,
     )
 
     definition_descriptor = DefinitionDescriptor(
