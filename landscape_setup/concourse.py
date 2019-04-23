@@ -330,19 +330,20 @@ def deploy_concourse_landscape(
     custom_helm_values = config_factory.concourse_helmchart(helm_chart_values_name).raw
 
     # Proxy config
-    proxy_cfg_name = concourse_cfg.proxy()
-    proxy_cfg = config_factory.proxy(proxy_cfg_name)
+    if concourse_cfg.proxy():
+        proxy_cfg_name = concourse_cfg.proxy()
+        proxy_cfg = config_factory.proxy(proxy_cfg_name)
+
+        info('Creating config-maps for the mitm proxy ...')
+        create_proxy_configmaps(
+            proxy_cfg=proxy_cfg,
+            namespace=deployment_name,
+        )
 
     info('Creating default image-pull-secret ...')
     create_image_pull_secret(
         credentials=cr_credentials,
         image_pull_secret_name=image_pull_secret_name,
-        namespace=deployment_name,
-    )
-
-    info('Creating config-maps for the mitm proxy ...')
-    create_proxy_configmaps(
-        proxy_cfg=proxy_cfg,
         namespace=deployment_name,
     )
 
