@@ -4,12 +4,13 @@ cc-utils:
     steps:
       pyflakes-lint: ~
       pycodestyle: ~
-      test: ~
     traits:
       version: ~
       component_descriptor: ~
   jobs:
     head-update:
+      steps:
+        test: ~
       traits:
         notifications:
           default:
@@ -17,6 +18,8 @@ cc-utils:
               triggering_policy: 'only_first'
 
     pull-request:
+      steps:
+        test: ~
       traits:
         pull-request:
           policies:
@@ -24,6 +27,31 @@ cc-utils:
             build-forks: true # default
 
     release_job_image:
+      repos:
+      - name: 'gh_pages'
+        path: 'gardener/cc-utils'
+        branch: 'gh-pages'
+      steps:
+        test: ~
+        generate_documentation:
+          publish_to: ['gh_pages']
+      traits:
+        version:
+          preprocess: 'finalize'
+          inject_effective_version: True
+        publish:
+          dockerimages:
+            job-image:
+              registry: 'gcr-readwrite'
+              image: 'eu.gcr.io/gardener-project/cc/job-image'
+              dockerfile: 'Dockerfile'
+              tag_as_latest: True
+        release:
+          nextversion: 'bump_minor'
+          release_callback: '.ci/bump_job_image_version.py'
+          release_notes_policy: disabled
+
+    force_release_job_image:
       repos:
       - name: 'gh_pages'
         path: 'gardener/cc-utils'
