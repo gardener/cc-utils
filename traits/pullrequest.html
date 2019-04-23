@@ -19,13 +19,20 @@
   
 
   
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
@@ -33,21 +40,16 @@
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="release Trait" href="release.html" />
     <link rel="prev" title="publish Trait" href="publish.html" /> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -177,51 +179,51 @@
   <div class="section" id="pull-request-trait">
 <h1><em>pull-request</em> Trait<a class="headerlink" href="#pull-request-trait" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="trait-pullrequest">
-<span id="trait-pullrequest"></span><h2 class="section-subtitle"><span class="section-subtitle">Attributes</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">required?</th>
-<th class="head">default</th>
-<th class="head">type</th>
-<th class="head">explanation</th>
+<span id="trait-pullrequest"></span><p class="section-subtitle">Attributes</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>policies</td>
-<td>no</td>
-<td>{‘require-label’: ‘reviewed/ok-to-test’, ‘replacement-label’: ‘needs/ok-to-test’}</td>
-<td>PullRequestPolicies</td>
-<td>configures the policies to apply to pull-requests</td>
+<tbody>
+<tr class="row-even"><td><p>policies</p></td>
+<td><p>no</p></td>
+<td><p>{‘require-label’: ‘reviewed/ok-to-test’, ‘replacement-label’: ‘needs/ok-to-test’}</p></td>
+<td><p>PullRequestPolicies</p></td>
+<td><p>configures the policies to apply to pull-requests</p></td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">policies Attributes</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">required?</th>
-<th class="head">default</th>
-<th class="head">type</th>
-<th class="head">explanation</th>
+<p class="section-subtitle">policies Attributes</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>require-label</td>
-<td>no</td>
-<td>reviewed/ok-to-test</td>
-<td>str</td>
-<td>the label required for PR build to start</td>
+<tbody>
+<tr class="row-even"><td><p>require-label</p></td>
+<td><p>no</p></td>
+<td><p>reviewed/ok-to-test</p></td>
+<td><p>str</p></td>
+<td><p>the label required for PR build to start</p></td>
 </tr>
-<tr class="row-odd"><td>replacement-label</td>
-<td>no</td>
-<td>needs/ok-to-test</td>
-<td>str</td>
-<td>the label set after require-label was removed by PR build</td>
+<tr class="row-odd"><td><p>replacement-label</p></td>
+<td><p>no</p></td>
+<td><p>needs/ok-to-test</p></td>
+<td><p>str</p></td>
+<td><p>the label set after require-label was removed by PR build</p></td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">Dependencies</span></h2>
+<p class="section-subtitle">Dependencies</p>
 <p>This trait has <em>no</em> dependencies</p>
 </div>
 <p>Turns the declaring job into a pull-request job. This means it will be triggered upon the
@@ -255,7 +257,7 @@ execution is required.</p>
         <a href="release.html" class="btn btn-neutral float-right" title="release Trait" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="publish.html" class="btn btn-neutral" title="publish Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="publish.html" class="btn btn-neutral float-left" title="publish Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -281,26 +283,16 @@ execution is required.</p>
   
 
 
-  
-
-    
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

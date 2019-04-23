@@ -19,13 +19,20 @@
   
 
   
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
@@ -33,21 +40,16 @@
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Pipeline Steps" href="pipeline_step.html" />
     <link rel="prev" title="Pipeline Definition" href="pipeline.html" /> 
-
-  
-  <script src="_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -162,31 +164,31 @@
 reside below a pipeline’s <code class="code docutils literal notranslate"><span class="pre">jobs</span></code> attribute. Each job defines their name as root element.</p>
 <div class="section" id="attributes">
 <h2>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline">¶</a></h2>
-<table border="1" class="docutils">
+<table class="docutils align-center">
 <colgroup>
-<col width="20%" />
-<col width="80%" />
+<col style="width: 20%" />
+<col style="width: 80%" />
 </colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">attribute</th>
-<th class="head">explanation</th>
+<thead>
+<tr class="row-odd"><th class="head"><p>attribute</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>&lt;name&gt;</td>
-<td>the user-chosen job name.</td>
+<tbody>
+<tr class="row-even"><td><p>&lt;name&gt;</p></td>
+<td><p>the user-chosen job name.</p></td>
 </tr>
-<tr class="row-odd"><td>repo</td>
-<td>main repository configuration</td>
+<tr class="row-odd"><td><p>repo</p></td>
+<td><p>main repository configuration</p></td>
 </tr>
-<tr class="row-even"><td>repos</td>
-<td>optionally defines additional repositories</td>
+<tr class="row-even"><td><p>repos</p></td>
+<td><p>optionally defines additional repositories</p></td>
 </tr>
-<tr class="row-odd"><td>steps</td>
-<td>defines <a class="reference internal" href="pipeline_step.html"><span class="doc">Build Steps</span></a></td>
+<tr class="row-odd"><td><p>steps</p></td>
+<td><p>defines <a class="reference internal" href="pipeline_step.html"><span class="doc">Build Steps</span></a></p></td>
 </tr>
-<tr class="row-even"><td>traits</td>
-<td>defines <a class="reference internal" href="traits.html"><span class="doc">Traits</span></a></td>
+<tr class="row-even"><td><p>traits</p></td>
+<td><p>defines <a class="reference internal" href="traits.html"><span class="doc">Traits</span></a></p></td>
 </tr>
 </tbody>
 </table>
@@ -198,9 +200,9 @@ reside below a pipeline’s <code class="code docutils literal notranslate"><spa
 <p>Each pipeline has a main repository. It is implied by the GitHub repository from which the
 pipeline definition was read.</p>
 <ul class="simple">
-<li>logical repository name defaults to <code class="code docutils literal notranslate"><span class="pre">source</span></code></li>
-<li>branch and repo_path are determined by repository</li>
-<li>repository path is implied by repository</li>
+<li><p>logical repository name defaults to <code class="code docutils literal notranslate"><span class="pre">source</span></code></p></li>
+<li><p>branch and repo_path are determined by repository</p></li>
+<li><p>repository path is implied by repository</p></li>
 </ul>
 </div>
 <div class="section" id="additional-repositories">
@@ -208,79 +210,79 @@ pipeline definition was read.</p>
 <p>Additional repositories may be referenced. Different from the main repository, all of the
 following attributes must be specified:</p>
 <ul class="simple">
-<li>logical repository name</li>
-<li>branch name</li>
-<li>repository path</li>
+<li><p>logical repository name</p></li>
+<li><p>branch name</p></li>
+<li><p>repository path</p></li>
 </ul>
 </div>
 <div class="section" id="repository-attributes">
 <h3>Repository Attributes<a class="headerlink" href="#repository-attributes" title="Permalink to this headline">¶</a></h3>
 <div class="section" id="repository-config">
-<span id="repository-config"></span><h4 class="section-subtitle"><span class="section-subtitle">Attributes</span></h4>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">required?</th>
-<th class="head">default</th>
-<th class="head">type</th>
-<th class="head">explanation</th>
+<span id="repository-config"></span><p class="section-subtitle">Attributes</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>name</td>
-<td>no</td>
-<td>source</td>
-<td>str</td>
-<td>the logical repository name. affects environment variable names and is used to reference
-from traits.</td>
+<tbody>
+<tr class="row-even"><td><p>name</p></td>
+<td><p>no</p></td>
+<td><p>source</p></td>
+<td><p>str</p></td>
+<td><p>the logical repository name. affects environment variable names and is used to reference
+from traits.</p></td>
 </tr>
-<tr class="row-odd"><td>cfg_name</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>the github_cfg to use for authentication. Defaults to concourse-specific default</td>
+<tr class="row-odd"><td><p>cfg_name</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>the github_cfg to use for authentication. Defaults to concourse-specific default</p></td>
 </tr>
-<tr class="row-even"><td>force_push</td>
-<td>no</td>
-<td>False</td>
-<td>bool</td>
-<td>whether or not force-pushes ought to be done</td>
+<tr class="row-even"><td><p>force_push</p></td>
+<td><p>no</p></td>
+<td><p>False</p></td>
+<td><p>bool</p></td>
+<td><p>whether or not force-pushes ought to be done</p></td>
 </tr>
-<tr class="row-odd"><td>trigger_paths</td>
-<td>no</td>
-<td>{‘include’: [], ‘exclude’: []}</td>
-<td>dict</td>
-<td>repository paths to either ignore or to restrict triggering to</td>
+<tr class="row-odd"><td><p>trigger_paths</p></td>
+<td><p>no</p></td>
+<td><p>{‘include’: [], ‘exclude’: []}</p></td>
+<td><p>dict</p></td>
+<td><p>repository paths to either ignore or to restrict triggering to</p></td>
 </tr>
-<tr class="row-even"><td>trigger</td>
-<td>no</td>
-<td>None</td>
-<td>bool</td>
-<td>overwrites the defaults for triggering behaviour</td>
+<tr class="row-even"><td><p>trigger</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>bool</p></td>
+<td><p>overwrites the defaults for triggering behaviour</p></td>
 </tr>
-<tr class="row-odd"><td>disable_ci_skip</td>
-<td>no</td>
-<td>False</td>
-<td>bool</td>
-<td>whether to disable the ignoring of commits with [ci skip] in commit msg</td>
+<tr class="row-odd"><td><p>disable_ci_skip</p></td>
+<td><p>no</p></td>
+<td><p>False</p></td>
+<td><p>bool</p></td>
+<td><p>whether to disable the ignoring of commits with [ci skip] in commit msg</p></td>
 </tr>
-<tr class="row-even"><td>branch</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>only for non-main repository: specify branch to work with</td>
+<tr class="row-even"><td><p>branch</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>only for non-main repository: specify branch to work with</p></td>
 </tr>
-<tr class="row-odd"><td>path</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>github repository path (e.g. gardener/gardener)</td>
+<tr class="row-odd"><td><p>path</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>github repository path (e.g. gardener/gardener)</p></td>
 </tr>
-<tr class="row-even"><td>hostname</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>do not use</td>
+<tr class="row-even"><td><p>hostname</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>do not use</p></td>
 </tr>
 </tbody>
 </table>
@@ -290,11 +292,12 @@ from traits.</td>
 <p>The <code class="code docutils literal notranslate"><span class="pre">trigger</span></code> attribute specifies whether or not head updates should trigger a job execution.</p>
 <p>If it is not explicitly configured, the default behaviour is defined as follows:</p>
 <ul class="simple">
-<li>additional repositories default to <code class="code docutils literal notranslate"><span class="pre">false</span></code></li>
-<li>main repository:<ul>
-<li>presence of <code class="code docutils literal notranslate"><span class="pre">release</span></code> or <code class="code docutils literal notranslate"><span class="pre">cronjob</span></code> trait –&gt; <code class="code docutils literal notranslate"><span class="pre">false</span></code></li>
-<li>presence of <code class="code docutils literal notranslate"><span class="pre">pull-request</span></code> trait –&gt; <code class="code docutils literal notranslate"><span class="pre">true</span></code></li>
-<li>if none of the above traits are present –&gt; <code class="code docutils literal notranslate"><span class="pre">true</span></code></li>
+<li><p>additional repositories default to <code class="code docutils literal notranslate"><span class="pre">false</span></code></p></li>
+<li><p>main repository:</p>
+<ul>
+<li><p>presence of <code class="code docutils literal notranslate"><span class="pre">release</span></code> or <code class="code docutils literal notranslate"><span class="pre">cronjob</span></code> trait –&gt; <code class="code docutils literal notranslate"><span class="pre">false</span></code></p></li>
+<li><p>presence of <code class="code docutils literal notranslate"><span class="pre">pull-request</span></code> trait –&gt; <code class="code docutils literal notranslate"><span class="pre">true</span></code></p></li>
+<li><p>if none of the above traits are present –&gt; <code class="code docutils literal notranslate"><span class="pre">true</span></code></p></li>
 </ul>
 </li>
 </ul>
@@ -306,8 +309,8 @@ from traits.</td>
 <p>Using <code class="code docutils literal notranslate"><span class="pre">trigger_paths</span></code>, it is possible to ignore updates in case they touch (or do not touch)
 certain repository paths (globbing syntax supported).</p>
 <ul class="simple">
-<li>include: only react on specified paths - ignore all others</li>
-<li>exclude: ignore changes to specified paths (inverse of include)</li>
+<li><p>include: only react on specified paths - ignore all others</p></li>
+<li><p>exclude: ignore changes to specified paths (inverse of include)</p></li>
 </ul>
 </div>
 <div class="section" id="cfg-names-attribute">
@@ -321,8 +324,8 @@ default GitHub instance that is used in case no <code class="code docutils liter
 <div class="section" id="examples">
 <h5>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h5>
 <ul class="simple">
-<li>reference an additional repository <code class="code docutils literal notranslate"><span class="pre">github.com/foo/bar</span></code>, name it <code class="code docutils literal notranslate"><span class="pre">my_repo</span></code></li>
-<li>the repository will be made available to builds at <code class="code docutils literal notranslate"><span class="pre">${MY_REPO_PATH}</span></code></li>
+<li><p>reference an additional repository <code class="code docutils literal notranslate"><span class="pre">github.com/foo/bar</span></code>, name it <code class="code docutils literal notranslate"><span class="pre">my_repo</span></code></p></li>
+<li><p>the repository will be made available to builds at <code class="code docutils literal notranslate"><span class="pre">${MY_REPO_PATH}</span></code></p></li>
 </ul>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">repos</span><span class="p">:</span>
 <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="s">&#39;my_repo&#39;</span>
@@ -340,24 +343,24 @@ default GitHub instance that is used in case no <code class="code docutils liter
 <p>Depending on pipeline definition, build jobs are run with a set of environment variables.
 The variables that are defined depend on:</p>
 <ul class="simple">
-<li>which repositories are defined (and their logical names)</li>
-<li>which traits are defined</li>
+<li><p>which repositories are defined (and their logical names)</p></li>
+<li><p>which traits are defined</p></li>
 </ul>
 <p>In case user-specified identifiers are used as input to construct environment variable names,
 those are converted to UPPER-case. Kebap-case is converted into snake-case (or in other words:
 any occurrence of dash <code class="code docutils literal notranslate"><span class="pre">-</span></code> characters are converted to underscore <code class="code docutils literal notranslate"><span class="pre">_</span></code> characters).</p>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">For non-ASCII or non-alphanumeric characters, the behaviour is undefined. Usage of those
+<p class="admonition-title">Note</p>
+<p>For non-ASCII or non-alphanumeric characters, the behaviour is undefined. Usage of those
 characters is forbidden for user-defined identifiers.</p>
 </div>
 <div class="section" id="environment-variables-from-repositories">
 <h3>Environment Variables from repositories<a class="headerlink" href="#environment-variables-from-repositories" title="Permalink to this headline">¶</a></h3>
 <p>For each repository, the following environment variable set is defined:</p>
 <ul class="simple">
-<li>&lt;NAME&gt;_PATH -&gt; relative path to repository’s work tree</li>
-<li>&lt;NAME&gt;_BRANCH -&gt; the configured branch</li>
-<li>&lt;NAME&gt;_GITHUB_REPO_OWNER_AND_NAME -&gt; github_path (e.g. gardener/gardener)</li>
+<li><p>&lt;NAME&gt;_PATH -&gt; relative path to repository’s work tree</p></li>
+<li><p>&lt;NAME&gt;_BRANCH -&gt; the configured branch</p></li>
+<li><p>&lt;NAME&gt;_GITHUB_REPO_OWNER_AND_NAME -&gt; github_path (e.g. gardener/gardener)</p></li>
 </ul>
 <p>In addition, the <strong>relative</strong> path to the main repository is always stored in the
 <code class="docutils literal notranslate"><span class="pre">MAIN_REPO_DIR</span></code> env variable.</p>
@@ -366,10 +369,10 @@ characters is forbidden for user-defined identifiers.</p>
 <p>In case the main repository has not been explicitly configured with a name, its default logical
 name is <code class="code docutils literal notranslate"><span class="pre">source</span></code>. Therefore, the following environment variables will then be defined:</p>
 <ul class="simple">
-<li>SOURCE_PATH</li>
-<li>SOURCE_BRANCH</li>
-<li>SOURCE_GITHUB_REPO_OWNER_AND_NAME</li>
-<li>MAIN_REPO_DIR</li>
+<li><p>SOURCE_PATH</p></li>
+<li><p>SOURCE_BRANCH</p></li>
+<li><p>SOURCE_GITHUB_REPO_OWNER_AND_NAME</p></li>
+<li><p>MAIN_REPO_DIR</p></li>
 </ul>
 </div>
 </div>
@@ -387,7 +390,7 @@ name is <code class="code docutils literal notranslate"><span class="pre">source
         <a href="pipeline_step.html" class="btn btn-neutral float-right" title="Pipeline Steps" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="pipeline.html" class="btn btn-neutral" title="Pipeline Definition" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="pipeline.html" class="btn btn-neutral float-left" title="Pipeline Definition" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -413,26 +416,16 @@ name is <code class="code docutils literal notranslate"><span class="pre">source
   
 
 
-  
-
-    
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script type="text/javascript" src="_static/jquery.js"></script>
-        <script type="text/javascript" src="_static/underscore.js"></script>
-        <script type="text/javascript" src="_static/doctools.js"></script>
-        <script type="text/javascript" src="_static/language_data.js"></script>
-    
-
-  
-
-  <script type="text/javascript" src="_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

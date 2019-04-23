@@ -19,13 +19,20 @@
   
 
   
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
@@ -33,21 +40,16 @@
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="notifications Trait" href="notifications.html" />
     <link rel="prev" title="image_alter Trait" href="image_alter.html" /> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -177,129 +179,129 @@
   <div class="section" id="image-scan-trait">
 <h1><em>image_scan</em> Trait<a class="headerlink" href="#image-scan-trait" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="trait-image-scan">
-<span id="trait-image-scan"></span><h2 class="section-subtitle"><span class="section-subtitle">Attributes</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">required?</th>
-<th class="head">default</th>
-<th class="head">type</th>
-<th class="head">explanation</th>
+<span id="trait-image-scan"></span><p class="section-subtitle">Attributes</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>parallel_jobs</td>
-<td>no</td>
-<td>12</td>
-<td>int</td>
-<td>amount of parallel scanning threads</td>
+<tbody>
+<tr class="row-even"><td><p>parallel_jobs</p></td>
+<td><p>no</p></td>
+<td><p>12</p></td>
+<td><p>int</p></td>
+<td><p>amount of parallel scanning threads</p></td>
 </tr>
-<tr class="row-odd"><td>cve_threshold</td>
-<td>no</td>
-<td>7</td>
-<td>int</td>
-<td>CVE threshold to interpret as an error</td>
+<tr class="row-odd"><td><p>cve_threshold</p></td>
+<td><p>no</p></td>
+<td><p>7</p></td>
+<td><p>int</p></td>
+<td><p>CVE threshold to interpret as an error</p></td>
 </tr>
-<tr class="row-even"><td>filters</td>
-<td>no</td>
-<td>{‘include_image_references’: (), ‘exclude_image_references’: ()}</td>
-<td>FilterCfg</td>
-<td>optional filters to restrict container images to process</td>
+<tr class="row-even"><td><p>filters</p></td>
+<td><p>no</p></td>
+<td><p>{‘include_image_references’: (), ‘exclude_image_references’: ()}</p></td>
+<td><p>FilterCfg</p></td>
+<td><p>optional filters to restrict container images to process</p></td>
 </tr>
-<tr class="row-odd"><td>processing_mode</td>
-<td>no</td>
-<td>upload_if_changed</td>
-<td>ProcessingMode</td>
-<td>Protecode processing mode</td>
+<tr class="row-odd"><td><p>processing_mode</p></td>
+<td><p>no</p></td>
+<td><p>upload_if_changed</p></td>
+<td><p>ProcessingMode</p></td>
+<td><p>Protecode processing mode</p></td>
 </tr>
-<tr class="row-even"><td>reference_protecode_group_ids</td>
-<td>no</td>
-<td>()</td>
-<td>str</td>
-<td>an optional list of protecode group IDs to import triages from.</td>
+<tr class="row-even"><td><p>reference_protecode_group_ids</p></td>
+<td><p>no</p></td>
+<td><p>()</p></td>
+<td><p>str</p></td>
+<td><p>an optional list of protecode group IDs to import triages from.</p></td>
 </tr>
-<tr class="row-odd"><td>protecode_group_id</td>
-<td>yes</td>
-<td>None</td>
-<td>int</td>
-<td>technical protecode group id to upload to</td>
+<tr class="row-odd"><td><p>protecode_group_id</p></td>
+<td><p>yes</p></td>
+<td><p>None</p></td>
+<td><p>int</p></td>
+<td><p>technical protecode group id to upload to</p></td>
 </tr>
-<tr class="row-even"><td>protecode_cfg_name</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>protecode cfg name to use (see cc-utils)</td>
+<tr class="row-even"><td><p>protecode_cfg_name</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>protecode cfg name to use (see cc-utils)</p></td>
 </tr>
-<tr class="row-odd"><td>email_recipients</td>
-<td>no</td>
-<td>()</td>
-<td>str</td>
-<td>optional email recipients to be notified about critical scan results</td>
+<tr class="row-odd"><td><p>email_recipients</p></td>
+<td><p>no</p></td>
+<td><p>()</p></td>
+<td><p>str</p></td>
+<td><p>optional email recipients to be notified about critical scan results</p></td>
 </tr>
-<tr class="row-even"><td>upload_registry_prefix</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>if specified, all matching container images are also uploaded as copies to
+<tr class="row-even"><td><p>upload_registry_prefix</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>if specified, all matching container images are also uploaded as copies to
 the specified container registry. The original image reference names are
-mangled.</td>
+mangled.</p></td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">filters Attributes</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">required?</th>
-<th class="head">default</th>
-<th class="head">type</th>
-<th class="head">explanation</th>
+<p class="section-subtitle">filters Attributes</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>include_image_references</td>
-<td>no</td>
-<td>()</td>
-<td>str</td>
-<td>a list of regular expressions. If configured, only matching image references are
-processed. By default, all image references are considered.</td>
+<tbody>
+<tr class="row-even"><td><p>include_image_references</p></td>
+<td><p>no</p></td>
+<td><p>()</p></td>
+<td><p>str</p></td>
+<td><p>a list of regular expressions. If configured, only matching image references are
+processed. By default, all image references are considered.</p></td>
 </tr>
-<tr class="row-odd"><td>exclude_image_references</td>
-<td>no</td>
-<td>()</td>
-<td>str</td>
-<td>a list of regular expressions. If configured, matching image references are
+<tr class="row-odd"><td><p>exclude_image_references</p></td>
+<td><p>no</p></td>
+<td><p>()</p></td>
+<td><p>str</p></td>
+<td><p>a list of regular expressions. If configured, matching image references are
 exempted from processing. Has precedence over include_image_references.
-By default, no image references are excluded.</td>
+By default, no image references are excluded.</p></td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">processing_mode Enumeration Values</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">value</th>
-<th class="head">explanation</th>
+<p class="section-subtitle">processing_mode Enumeration Values</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>value</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>upload_if_changed</td>
-<td>upload the container images. This will <strong>not</strong> upload the images if they
+<tbody>
+<tr class="row-even"><td><p>upload_if_changed</p></td>
+<td><p>upload the container images. This will <strong>not</strong> upload the images if they
 are already present. This will <strong>not</strong> cause images already present to be
-rescanned.</td>
+rescanned.</p></td>
 </tr>
-<tr class="row-odd"><td>rescan</td>
-<td>trigger a scan of container images. Images will be uploaded unless they are
-already present.</td>
+<tr class="row-odd"><td><p>rescan</p></td>
+<td><p>trigger a scan of container images. Images will be uploaded unless they are
+already present.</p></td>
 </tr>
-<tr class="row-even"><td>force_upload</td>
-<td><strong>always</strong> upload the images. This will cause all images to be rescanned.</td>
+<tr class="row-even"><td><p>force_upload</p></td>
+<td><p><strong>always</strong> upload the images. This will cause all images to be rescanned.</p></td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">Dependencies</span></h2>
+<p class="section-subtitle">Dependencies</p>
 <p>This trait requires the following traits to be declared:</p>
 <ul class="simple">
-<li><a class="reference internal" href="component_descriptor.html#trait-component-descriptor"><span class="std std-ref">component_descriptor trait</span></a></li>
+<li><p><a class="reference internal" href="component_descriptor.html#trait-component-descriptor"><span class="std std-ref">component_descriptor trait</span></a></p></li>
 </ul>
 </div>
 </div>
@@ -315,7 +317,7 @@ already present.</td>
         <a href="notifications.html" class="btn btn-neutral float-right" title="notifications Trait" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="image_alter.html" class="btn btn-neutral" title="image_alter Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="image_alter.html" class="btn btn-neutral float-left" title="image_alter Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -341,26 +343,16 @@ already present.</td>
   
 
 
-  
-
-    
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

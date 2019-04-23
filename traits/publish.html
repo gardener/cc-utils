@@ -19,13 +19,20 @@
   
 
   
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
@@ -33,21 +40,16 @@
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="pull-request Trait" href="pullrequest.html" />
     <link rel="prev" title="options Trait" href="options.html" /> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -177,84 +179,84 @@
   <div class="section" id="publish-trait">
 <h1><em>publish</em> Trait<a class="headerlink" href="#publish-trait" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="trait-publish">
-<span id="trait-publish"></span><h2 class="section-subtitle"><span class="section-subtitle">Attributes</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">required?</th>
-<th class="head">default</th>
-<th class="head">type</th>
-<th class="head">explanation</th>
+<span id="trait-publish"></span><p class="section-subtitle">Attributes</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>dockerimages</td>
-<td>yes</td>
-<td>None</td>
-<td>Dict</td>
-<td>specifies the container images to be built</td>
+<tbody>
+<tr class="row-even"><td><p>dockerimages</p></td>
+<td><p>yes</p></td>
+<td><p>None</p></td>
+<td><p>Dict</p></td>
+<td><p>specifies the container images to be built</p></td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">dockerimages.&lt;user-chosen&gt; Attributes</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">required?</th>
-<th class="head">default</th>
-<th class="head">type</th>
-<th class="head">explanation</th>
+<p class="section-subtitle">dockerimages.&lt;user-chosen&gt; Attributes</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>registry</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>name of the registry config to use when pushing the image (see cc-utils).</td>
+<tbody>
+<tr class="row-even"><td><p>registry</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>name of the registry config to use when pushing the image (see cc-utils).</p></td>
 </tr>
-<tr class="row-odd"><td>image</td>
-<td>yes</td>
-<td>None</td>
-<td>str</td>
-<td>image reference to publish the created container image to.</td>
+<tr class="row-odd"><td><p>image</p></td>
+<td><p>yes</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>image reference to publish the created container image to.</p></td>
 </tr>
-<tr class="row-even"><td>inputs</td>
-<td>no</td>
-<td>{‘repos’: None, ‘steps’: {}}</td>
-<td>dict</td>
-<td>configures the inputs that are made available to image build</td>
+<tr class="row-even"><td><p>inputs</p></td>
+<td><p>no</p></td>
+<td><p>{‘repos’: None, ‘steps’: {}}</p></td>
+<td><p>dict</p></td>
+<td><p>configures the inputs that are made available to image build</p></td>
 </tr>
-<tr class="row-odd"><td>tag_as_latest</td>
-<td>no</td>
-<td>False</td>
-<td>bool</td>
-<td>whether or not published container images should <strong>also</strong> be labeled as latest</td>
+<tr class="row-odd"><td><p>tag_as_latest</p></td>
+<td><p>no</p></td>
+<td><p>False</p></td>
+<td><p>bool</p></td>
+<td><p>whether or not published container images should <strong>also</strong> be labeled as latest</p></td>
 </tr>
-<tr class="row-even"><td>dockerfile</td>
-<td>no</td>
-<td>Dockerfile</td>
-<td>str</td>
-<td>the file to use for building the container image</td>
+<tr class="row-even"><td><p>dockerfile</p></td>
+<td><p>no</p></td>
+<td><p>Dockerfile</p></td>
+<td><p>str</p></td>
+<td><p>the file to use for building the container image</p></td>
 </tr>
-<tr class="row-odd"><td>dir</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>the relative path to the container image build file</td>
+<tr class="row-odd"><td><p>dir</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>the relative path to the container image build file</p></td>
 </tr>
-<tr class="row-even"><td>target</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>only for multistage builds: the target up to which to build</td>
+<tr class="row-even"><td><p>target</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>only for multistage builds: the target up to which to build</p></td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">Dependencies</span></h2>
+<p class="section-subtitle">Dependencies</p>
 <p>This trait requires the following traits to be declared:</p>
 <ul class="simple">
-<li><a class="reference internal" href="version.html#trait-version"><span class="std std-ref">version trait</span></a></li>
+<li><p><a class="reference internal" href="version.html#trait-version"><span class="std std-ref">version trait</span></a></p></li>
 </ul>
 </div>
 <p>Used to build and publish container images in the declaring build jobs. An arbitrary amount of
@@ -309,7 +311,7 @@ are expected to place their outputs into a directory indicated by an environment
         <a href="pullrequest.html" class="btn btn-neutral float-right" title="pull-request Trait" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="options.html" class="btn btn-neutral" title="options Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="options.html" class="btn btn-neutral float-left" title="options Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -335,26 +337,16 @@ are expected to place their outputs into a directory indicated by an environment
   
 
 
-  
-
-    
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

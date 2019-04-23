@@ -19,13 +19,20 @@
   
 
   
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
@@ -33,21 +40,16 @@
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Pipeline Job" href="pipeline_job.html" />
     <link rel="prev" title="CC-Utils - Build Pipeline Reference Manual" href="pipeline_contract.html" /> 
-
-  
-  <script src="_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -170,52 +172,52 @@ in this reference documentation.</p>
 attribute in a <code class="code docutils literal notranslate"><span class="pre">.ci/pipeline_definitions</span></code> file declares a pipeline. The attribute name being
 the pipeline name.</p>
 <div class="admonition danger">
-<p class="first admonition-title">Danger</p>
-<p class="last">All pipeline names share a global namespace. So be sure not to re-use an existing name
+<p class="admonition-title">Danger</p>
+<p>All pipeline names share a global namespace. So be sure not to re-use an existing name
 already in use be another component.</p>
 </div>
 <div class="section" id="attributes">
 <h3>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline">¶</a></h3>
-<table border="1" class="docutils">
+<table class="docutils align-center">
 <colgroup>
-<col width="20%" />
-<col width="80%" />
+<col style="width: 20%" />
+<col style="width: 80%" />
 </colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">attribute</th>
-<th class="head">explanation</th>
+<thead>
+<tr class="row-odd"><th class="head"><p>attribute</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>&lt;name&gt;</td>
-<td>the user-chosen pipeline name. Top-level attribute</td>
+<tbody>
+<tr class="row-even"><td><p>&lt;name&gt;</p></td>
+<td><p>the user-chosen pipeline name. Top-level attribute</p></td>
 </tr>
-<tr class="row-odd"><td>template</td>
-<td>pipeline template to use. Defaults to ‘default’ (for future extensions)</td>
+<tr class="row-odd"><td><p>template</p></td>
+<td><p>pipeline template to use. Defaults to ‘default’ (for future extensions)</p></td>
 </tr>
-<tr class="row-even"><td>base_definition</td>
-<td>inherited from all <a class="reference internal" href="pipeline_job.html"><span class="doc">Jobs</span></a></td>
+<tr class="row-even"><td><p>base_definition</p></td>
+<td><p>inherited from all <a class="reference internal" href="pipeline_job.html"><span class="doc">Jobs</span></a></p></td>
 </tr>
-<tr class="row-odd"><td>jobs</td>
-<td>defines <a class="reference internal" href="pipeline_job.html"><span class="doc">Jobs</span></a></td>
+<tr class="row-odd"><td><p>jobs</p></td>
+<td><p>defines <a class="reference internal" href="pipeline_job.html"><span class="doc">Jobs</span></a></p></td>
 </tr>
 </tbody>
 </table>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">Each pipeline should at least define one job. Otherwise it would be empty.</p>
+<p class="admonition-title">Note</p>
+<p>Each pipeline should at least define one job. Otherwise it would be empty.</p>
 </div>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">Pipeline names are displayed in the Concourse UI. Try to keep names reasonably short (&lt; 20 chars)
+<p class="admonition-title">Note</p>
+<p>Pipeline names are displayed in the Concourse UI. Try to keep names reasonably short (&lt; 20 chars)
 and refrain from using whitespace of non-ASCII charaters.</p>
 </div>
 </div>
 <div class="section" id="example-ci-pipeline-definitions">
 <h3>Example <code class="code docutils literal notranslate"><span class="pre">.ci/pipeline_definitions</span></code><a class="headerlink" href="#example-ci-pipeline-definitions" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li>define a build pipeline named <code class="code docutils literal notranslate"><span class="pre">my_pipeline</span></code></li>
-<li>define two <a class="reference internal" href="pipeline_job.html"><span class="doc">Build Jobs</span></a> <code class="code docutils literal notranslate"><span class="pre">job_A</span></code>, <code class="code docutils literal notranslate"><span class="pre">job_B</span></code></li>
+<li><p>define a build pipeline named <code class="code docutils literal notranslate"><span class="pre">my_pipeline</span></code></p></li>
+<li><p>define two <a class="reference internal" href="pipeline_job.html"><span class="doc">Build Jobs</span></a> <code class="code docutils literal notranslate"><span class="pre">job_A</span></code>, <code class="code docutils literal notranslate"><span class="pre">job_B</span></code></p></li>
 </ul>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">my_pipeline</span><span class="p">:</span>
   <span class="nt">template</span><span class="p">:</span> <span class="s">&#39;default&#39;</span>   <span class="c1"># default value - may be omitted</span>
@@ -231,8 +233,8 @@ and refrain from using whitespace of non-ASCII charaters.</p>
 <div class="section" id="example-inheritance-base-definition">
 <h3>Example - Inheritance / “base_definition”<a class="headerlink" href="#example-inheritance-base-definition" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li>define a common build step “inherit_me”</li>
-<li>define two jobs inheriting it</li>
+<li><p>define a common build step “inherit_me”</p></li>
+<li><p>define two jobs inheriting it</p></li>
 </ul>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">another_pipeline</span><span class="p">:</span>
   <span class="nt">base_definition</span><span class="p">:</span>
@@ -249,8 +251,8 @@ and refrain from using whitespace of non-ASCII charaters.</p>
 </div>
 <p><strong>Result</strong></p>
 <ul class="simple">
-<li>job_a has two steps: <code class="code docutils literal notranslate"><span class="pre">inherit_me</span></code> (from base_definition) and <code class="code docutils literal notranslate"><span class="pre">another_step</span></code></li>
-<li>job_b has one step: <code class="code docutils literal notranslate"><span class="pre">inherit_me</span></code></li>
+<li><p>job_a has two steps: <code class="code docutils literal notranslate"><span class="pre">inherit_me</span></code> (from base_definition) and <code class="code docutils literal notranslate"><span class="pre">another_step</span></code></p></li>
+<li><p>job_b has one step: <code class="code docutils literal notranslate"><span class="pre">inherit_me</span></code></p></li>
 </ul>
 </div>
 </div>
@@ -267,28 +269,28 @@ attribute) are optionally applied.</p>
 <p>A common usage scenario may be the declaration of hotfix release jobs for release branches.</p>
 <div class="section" id="id1">
 <h3>Attributes<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
-<table border="1" class="docutils">
+<table class="docutils align-center">
 <colgroup>
-<col width="14%" />
-<col width="86%" />
+<col style="width: 14%" />
+<col style="width: 86%" />
 </colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">attribute</th>
-<th class="head">explanation</th>
+<thead>
+<tr class="row-odd"><th class="head"><p>attribute</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>cfgs</td>
-<td>mandatory root attribute</td>
+<tbody>
+<tr class="row-even"><td><p>cfgs</p></td>
+<td><p>mandatory root attribute</p></td>
 </tr>
-<tr class="row-odd"><td>&lt;cfg_name&gt;</td>
-<td>user-chosen configuration element name (ASCII-alphanumeric)</td>
+<tr class="row-odd"><td><p>&lt;cfg_name&gt;</p></td>
+<td><p>user-chosen configuration element name (ASCII-alphanumeric)</p></td>
 </tr>
-<tr class="row-even"><td>branches</td>
-<td>list of regular expcessions used to match branche names (at least one)</td>
+<tr class="row-even"><td><p>branches</p></td>
+<td><p>list of regular expcessions used to match branche names (at least one)</p></td>
 </tr>
-<tr class="row-odd"><td>inherit</td>
-<td>optional pipeline definition fragment; inherited into pipeline definition</td>
+<tr class="row-odd"><td><p>inherit</p></td>
+<td><p>optional pipeline definition fragment; inherited into pipeline definition</p></td>
 </tr>
 </tbody>
 </table>
@@ -341,7 +343,7 @@ attribute) are optionally applied.</p>
         <a href="pipeline_job.html" class="btn btn-neutral float-right" title="Pipeline Job" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="pipeline_contract.html" class="btn btn-neutral" title="CC-Utils - Build Pipeline Reference Manual" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="pipeline_contract.html" class="btn btn-neutral float-left" title="CC-Utils - Build Pipeline Reference Manual" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -367,26 +369,16 @@ attribute) are optionally applied.</p>
   
 
 
-  
-
-    
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script type="text/javascript" src="_static/jquery.js"></script>
-        <script type="text/javascript" src="_static/underscore.js"></script>
-        <script type="text/javascript" src="_static/doctools.js"></script>
-        <script type="text/javascript" src="_static/language_data.js"></script>
-    
-
-  
-
-  <script type="text/javascript" src="_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

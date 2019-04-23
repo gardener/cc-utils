@@ -19,13 +19,20 @@
   
 
   
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
@@ -33,21 +40,16 @@
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="cronjob Trait" href="cronjob.html" />
     <link rel="prev" title="Pipeline Definition Traits" href="../traits.html" /> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -177,41 +179,41 @@
   <div class="section" id="component-descriptor-trait">
 <h1><em>component_descriptor</em> Trait<a class="headerlink" href="#component-descriptor-trait" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="trait-component-descriptor">
-<span id="trait-component-descriptor"></span><h2 class="section-subtitle"><span class="section-subtitle">Attributes</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">required?</th>
-<th class="head">default</th>
-<th class="head">type</th>
-<th class="head">explanation</th>
+<span id="trait-component-descriptor"></span><p class="section-subtitle">Attributes</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>step</td>
-<td>no</td>
-<td>{‘name’: ‘component_descriptor’}</td>
-<td>dict</td>
-<td>The build step name injected by this trait</td>
+<tbody>
+<tr class="row-even"><td><p>step</p></td>
+<td><p>no</p></td>
+<td><p>{‘name’: ‘component_descriptor’}</p></td>
+<td><p>dict</p></td>
+<td><p>The build step name injected by this trait</p></td>
 </tr>
-<tr class="row-odd"><td>resolve_dependencies</td>
-<td>no</td>
-<td>True</td>
-<td>bool</td>
-<td>Indicates whether or not unresolved component dependencies should be resolved</td>
+<tr class="row-odd"><td><p>resolve_dependencies</p></td>
+<td><p>no</p></td>
+<td><p>True</p></td>
+<td><p>bool</p></td>
+<td><p>Indicates whether or not unresolved component dependencies should be resolved</p></td>
 </tr>
-<tr class="row-even"><td>component_name</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>Manually overwrites the component name (which defaults to github repository path)</td>
+<tr class="row-even"><td><p>component_name</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>Manually overwrites the component name (which defaults to github repository path)</p></td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">Dependencies</span></h2>
+<p class="section-subtitle">Dependencies</p>
 <p>This trait requires the following traits to be declared:</p>
 <ul class="simple">
-<li><a class="reference internal" href="version.html#trait-version"><span class="std std-ref">version trait</span></a></li>
+<li><p><a class="reference internal" href="version.html#trait-version"><span class="std std-ref">version trait</span></a></p></li>
 </ul>
 </div>
 <p>If declared, a <code class="code docutils literal notranslate"><span class="pre">Component</span> <span class="pre">Descriptor</span></code> is created during job execution. If their
@@ -229,8 +231,8 @@ component’s release artifacts (as GitHub release asset).</p>
 <p>If no additional customisation is done, a _default_ component descriptor is created with the
 following data:</p>
 <ul class="simple">
-<li>component_name (the github repository path, e.g. <code class="code docutils literal notranslate"><span class="pre">github.com/gardener/gardener</span></code>)</li>
-<li>component_version (the <code class="code docutils literal notranslate"><span class="pre">effective</span> <span class="pre">version</span></code>)</li>
+<li><p>component_name (the github repository path, e.g. <code class="code docutils literal notranslate"><span class="pre">github.com/gardener/gardener</span></code>)</p></li>
+<li><p>component_version (the <code class="code docutils literal notranslate"><span class="pre">effective</span> <span class="pre">version</span></code>)</p></li>
 </ul>
 <p>In addition, any container image that is built by the component is added as container image
 dependencies.</p>
@@ -251,32 +253,32 @@ automatically resolved before uploading as release artifact.</p>
 </div>
 <div class="section" id="environment-variables-passed-to-component-descriptor">
 <h2>Environment Variables Passed to component_descriptor<a class="headerlink" href="#environment-variables-passed-to-component-descriptor" title="Permalink to this headline">¶</a></h2>
-<table border="1" class="docutils">
+<table class="docutils align-center">
 <colgroup>
-<col width="33%" />
-<col width="67%" />
+<col style="width: 33%" />
+<col style="width: 67%" />
 </colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">explanation</th>
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>BASE_DEFINITION_PATH</td>
-<td>absolute file path to base component descriptor</td>
+<tbody>
+<tr class="row-even"><td><p>BASE_DEFINITION_PATH</p></td>
+<td><p>absolute file path to base component descriptor</p></td>
 </tr>
-<tr class="row-odd"><td>COMPONENT_DESCRIPTOR_PATH</td>
-<td>absolute file path to output final descriptor to</td>
+<tr class="row-odd"><td><p>COMPONENT_DESCRIPTOR_PATH</p></td>
+<td><p>absolute file path to output final descriptor to</p></td>
 </tr>
-<tr class="row-even"><td>ADD_DEPENDENCIES_CMD</td>
-<td>CLI cmd args to add dependency to base descriptor (see
-<code class="code docutils literal notranslate"><span class="pre">cc-utils/cli.py</span> <span class="pre">productutils</span> <span class="pre">add_dependencies</span> <span class="pre">-h</span></code>)</td>
+<tr class="row-even"><td><p>ADD_DEPENDENCIES_CMD</p></td>
+<td><p>CLI cmd args to add dependency to base descriptor (see
+<code class="code docutils literal notranslate"><span class="pre">cc-utils/cli.py</span> <span class="pre">productutils</span> <span class="pre">add_dependencies</span> <span class="pre">-h</span></code>)</p></td>
 </tr>
-<tr class="row-odd"><td>COMPONENT_NAME</td>
-<td>own component name (e.g. github.com/gardener/vpn)</td>
+<tr class="row-odd"><td><p>COMPONENT_NAME</p></td>
+<td><p>own component name (e.g. github.com/gardener/vpn)</p></td>
 </tr>
-<tr class="row-even"><td>COMPONENT_VERSION</td>
-<td>the effective version</td>
+<tr class="row-even"><td><p>COMPONENT_VERSION</p></td>
+<td><p>the effective version</p></td>
 </tr>
 </tbody>
 </table>
@@ -285,9 +287,9 @@ automatically resolved before uploading as release artifact.</p>
 <h2>Example<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
 <p>How to declare dependencies towards:</p>
 <ul class="simple">
-<li>component <code class="code docutils literal notranslate"><span class="pre">github.com/gardener/vpn</span></code> in version 1.2.3</li>
-<li>component <code class="code docutils literal notranslate"><span class="pre">github.com/gardener/dashboard</span></code> in version 4.5.6</li>
-<li>container image <code class="code docutils literal notranslate"><span class="pre">alpine:3.6</span></code></li>
+<li><p>component <code class="code docutils literal notranslate"><span class="pre">github.com/gardener/vpn</span></code> in version 1.2.3</p></li>
+<li><p>component <code class="code docutils literal notranslate"><span class="pre">github.com/gardener/dashboard</span></code> in version 4.5.6</p></li>
+<li><p>container image <code class="code docutils literal notranslate"><span class="pre">alpine:3.6</span></code></p></li>
 </ul>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># inside .ci/component_descriptor, assuming it is a shell script</span>
 <span class="si">${</span><span class="nv">ADD_DEPENDENCIES_CMD</span><span class="si">}</span> <span class="se">\</span>
@@ -315,7 +317,7 @@ cp <span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASE
         <a href="cronjob.html" class="btn btn-neutral float-right" title="cronjob Trait" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../traits.html" class="btn btn-neutral" title="Pipeline Definition Traits" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="../traits.html" class="btn btn-neutral float-left" title="Pipeline Definition Traits" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -341,26 +343,16 @@ cp <span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASE
   
 
 
-  
-
-    
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

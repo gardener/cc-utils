@@ -19,13 +19,20 @@
   
 
   
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
@@ -33,21 +40,16 @@
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="image_scan Trait" href="image_scan.html" />
     <link rel="prev" title="draft_release Trait" href="draft_release.html" /> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -177,67 +179,67 @@
   <div class="section" id="image-alter-trait">
 <h1><em>image_alter</em> Trait<a class="headerlink" href="#image-alter-trait" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="trait-image-alter">
-<span id="trait-image-alter"></span><h2 class="section-subtitle"><span class="section-subtitle">Attributes</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">required?</th>
-<th class="head">default</th>
-<th class="head">type</th>
-<th class="head">explanation</th>
+<span id="trait-image-alter"></span><p class="section-subtitle">Attributes</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>parallel_jobs</td>
-<td>no</td>
-<td>12</td>
-<td>int</td>
-<td>amount of parallel scanning threads</td>
+<tbody>
+<tr class="row-even"><td><p>parallel_jobs</p></td>
+<td><p>no</p></td>
+<td><p>12</p></td>
+<td><p>int</p></td>
+<td><p>amount of parallel scanning threads</p></td>
 </tr>
-<tr class="row-odd"><td>cfgs</td>
-<td>yes</td>
-<td>None</td>
-<td>Dict</td>
-<td>ImageAlterCfgs {name: ImageAlterCfg}</td>
+<tr class="row-odd"><td><p>cfgs</p></td>
+<td><p>yes</p></td>
+<td><p>None</p></td>
+<td><p>Dict</p></td>
+<td><p>ImageAlterCfgs {name: ImageAlterCfg}</p></td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">cfgs.&lt;user-chosen&gt; Attributes</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">required?</th>
-<th class="head">default</th>
-<th class="head">type</th>
-<th class="head">explanation</th>
+<p class="section-subtitle">cfgs.&lt;user-chosen&gt; Attributes</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>src_ref</td>
-<td>yes</td>
-<td>None</td>
-<td>str</td>
-<td>source image reference (including tag)</td>
+<tbody>
+<tr class="row-even"><td><p>src_ref</p></td>
+<td><p>yes</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>source image reference (including tag)</p></td>
 </tr>
-<tr class="row-odd"><td>tgt_ref</td>
-<td>yes</td>
-<td>None</td>
-<td>str</td>
-<td>target image reference (tag defaults to src_ref tag if absent)</td>
+<tr class="row-odd"><td><p>tgt_ref</p></td>
+<td><p>yes</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>target image reference (tag defaults to src_ref tag if absent)</p></td>
 </tr>
-<tr class="row-even"><td>remove_paths_file</td>
-<td>yes</td>
-<td>None</td>
-<td>str</td>
-<td>path to a text file containing absolute paths (w/o leading /) to be purged from
-src image. Interpreted relative to main repository root.</td>
+<tr class="row-even"><td><p>remove_paths_file</p></td>
+<td><p>yes</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>path to a text file containing absolute paths (w/o leading /) to be purged from
+src image. Interpreted relative to main repository root.</p></td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">Dependencies</span></h2>
+<p class="section-subtitle">Dependencies</p>
 <p>This trait requires the following traits to be declared:</p>
 <ul class="simple">
-<li><a class="reference internal" href="component_descriptor.html#trait-component-descriptor"><span class="std std-ref">component_descriptor trait</span></a></li>
+<li><p><a class="reference internal" href="component_descriptor.html#trait-component-descriptor"><span class="std std-ref">component_descriptor trait</span></a></p></li>
 </ul>
 </div>
 </div>
@@ -253,7 +255,7 @@ src image. Interpreted relative to main repository root.</td>
         <a href="image_scan.html" class="btn btn-neutral float-right" title="image_scan Trait" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="draft_release.html" class="btn btn-neutral" title="draft_release Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="draft_release.html" class="btn btn-neutral float-left" title="draft_release Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -279,26 +281,16 @@ src image. Interpreted relative to main repository root.</td>
   
 
 
-  
-
-    
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

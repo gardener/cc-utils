@@ -19,13 +19,20 @@
   
 
   
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
@@ -33,21 +40,16 @@
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="options Trait" href="options.html" />
     <link rel="prev" title="image_scan Trait" href="image_scan.html" /> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -179,125 +181,125 @@
 <p>Used to customise build result notifications (most prominently sending error
 mails upon errors).</p>
 <div class="section" id="trait-notifications">
-<span id="trait-notifications"></span><h2 class="section-subtitle"><span class="section-subtitle">Attributes</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">required?</th>
-<th class="head">default</th>
-<th class="head">type</th>
-<th class="head">explanation</th>
+<span id="trait-notifications"></span><p class="section-subtitle">Attributes</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>default</td>
-<td>no</td>
-<td>{‘on_error’: {‘triggering_policy’: ‘only_first’, ‘email’: True}}</td>
-<td>NotificationCfgSet</td>
-<td>the default notification cfg (more may be defined)</td>
+<tbody>
+<tr class="row-even"><td><p>default</p></td>
+<td><p>no</p></td>
+<td><p>{‘on_error’: {‘triggering_policy’: ‘only_first’, ‘email’: True}}</p></td>
+<td><p>NotificationCfgSet</p></td>
+<td><p>the default notification cfg (more may be defined)</p></td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">default Attributes</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">required?</th>
-<th class="head">default</th>
-<th class="head">type</th>
-<th class="head">explanation</th>
+<p class="section-subtitle">default Attributes</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>on_error</td>
-<td>no</td>
-<td>{‘triggering_policy’: ‘only_first’}</td>
-<td>NotificationCfg</td>
-<td>configures triggering policy in case a step fails with an error</td>
+<tbody>
+<tr class="row-even"><td><p>on_error</p></td>
+<td><p>no</p></td>
+<td><p>{‘triggering_policy’: ‘only_first’}</p></td>
+<td><p>NotificationCfg</p></td>
+<td><p>configures triggering policy in case a step fails with an error</p></td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">default.on_error Attributes</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">required?</th>
-<th class="head">default</th>
-<th class="head">type</th>
-<th class="head">explanation</th>
+<p class="section-subtitle">default.on_error Attributes</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>triggering_policy</td>
-<td>no</td>
-<td>only_first</td>
-<td>NotificationTriggeringPolicy</td>
-<td>when to issue the configured notifications. Possible values see below</td>
+<tbody>
+<tr class="row-even"><td><p>triggering_policy</p></td>
+<td><p>no</p></td>
+<td><p>only_first</p></td>
+<td><p>NotificationTriggeringPolicy</p></td>
+<td><p>when to issue the configured notifications. Possible values see below</p></td>
 </tr>
-<tr class="row-odd"><td>email</td>
-<td>no</td>
-<td>True</td>
-<td>bool</td>
-<td>whether to send email notifications</td>
+<tr class="row-odd"><td><p>email</p></td>
+<td><p>no</p></td>
+<td><p>True</p></td>
+<td><p>bool</p></td>
+<td><p>whether to send email notifications</p></td>
 </tr>
-<tr class="row-even"><td>inputs</td>
-<td>no</td>
-<td>[‘on_error_dir’]</td>
-<td>List</td>
-<td>configures the inputs that are made available to the notification</td>
+<tr class="row-even"><td><p>inputs</p></td>
+<td><p>no</p></td>
+<td><p>[‘on_error_dir’]</p></td>
+<td><p>List</p></td>
+<td><p>configures the inputs that are made available to the notification</p></td>
 </tr>
-<tr class="row-odd"><td>recipients</td>
-<td>no</td>
-<td>committers</td>
-<td>NotificationRecipients</td>
-<td>whom to notify. Possible values see blow.</td>
+<tr class="row-odd"><td><p>recipients</p></td>
+<td><p>no</p></td>
+<td><p>committers</p></td>
+<td><p>NotificationRecipients</p></td>
+<td><p>whom to notify. Possible values see blow.</p></td>
 </tr>
-<tr class="row-even"><td>cfg_callback</td>
-<td>no</td>
-<td>[‘on_error_dir’]</td>
-<td>str</td>
-<td><p>an optional callback (relative to main repository root). Called as subprocess with
+<tr class="row-even"><td><p>cfg_callback</p></td>
+<td><p>no</p></td>
+<td><p>[‘on_error_dir’]</p></td>
+<td><p>str</p></td>
+<td><p><p>an optional callback (relative to main repository root). Called as subprocess with
 an environment variables:</p>
 <ul class="simple">
-<li><code class="code docutils literal notranslate"><span class="pre">REPO_ROOT</span></code>: absolute path to main repository</li>
-<li><code class="code docutils literal notranslate"><span class="pre">NOTIFY_CFG_OUT</span></code>: absolute path to write notify.cfg to</li>
+<li><p><code class="code docutils literal notranslate"><span class="pre">REPO_ROOT</span></code>: absolute path to main repository</p></li>
+<li><p><code class="code docutils literal notranslate"><span class="pre">NOTIFY_CFG_OUT</span></code>: absolute path to write notify.cfg to</p></li>
 </ul>
-</td>
+</p></td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">default.on_error.triggering_policy Enumeration Values</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">value</th>
-<th class="head">explanation</th>
+<p class="section-subtitle">default.on_error.triggering_policy Enumeration Values</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>value</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>only_first</td>
-<td>notify on first error only</td>
+<tbody>
+<tr class="row-even"><td><p>only_first</p></td>
+<td><p>notify on first error only</p></td>
 </tr>
-<tr class="row-odd"><td>always</td>
-<td>notify on every error</td>
+<tr class="row-odd"><td><p>always</p></td>
+<td><p>notify on every error</p></td>
 </tr>
-<tr class="row-even"><td>never</td>
-<td>notify never in case of errors</td>
+<tr class="row-even"><td><p>never</p></td>
+<td><p>notify never in case of errors</p></td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">default.on_error.recipients Enumeration Values</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">value</th>
-<th class="head">explanation</th>
+<p class="section-subtitle">default.on_error.recipients Enumeration Values</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>value</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>committers</td>
-<td>notify committers of the last commit</td>
+<tbody>
+<tr class="row-even"><td><p>committers</p></td>
+<td><p>notify committers of the last commit</p></td>
 </tr>
-<tr class="row-odd"><td>email_addresses</td>
-<td><p>notifiy specific email addresses</p>
+<tr class="row-odd"><td><p>email_addresses</p></td>
+<td><p><p>notifiy specific email addresses</p>
 <p>Example:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">recipients</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="nt">email_addresses</span><span class="p">:</span>
@@ -305,17 +307,17 @@ an environment variables:</p>
         <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">bar.buzz@mycloud.com</span>
 </pre></div>
 </div>
-</td>
+</p></td>
 </tr>
-<tr class="row-even"><td>component_diff_owners</td>
-<td>notify the codeowners of a component. CODEOWNERS file must exist</td>
+<tr class="row-even"><td><p>component_diff_owners</p></td>
+<td><p>notify the codeowners of a component. CODEOWNERS file must exist</p></td>
 </tr>
-<tr class="row-odd"><td>codeowners</td>
-<td>notify the codeowners of the repository. CODEOWNERS file must exist</td>
+<tr class="row-odd"><td><p>codeowners</p></td>
+<td><p>notify the codeowners of the repository. CODEOWNERS file must exist</p></td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">Dependencies</span></h2>
+<p class="section-subtitle">Dependencies</p>
 <p>This trait has <em>no</em> dependencies</p>
 </div>
 <div class="section" id="example">
@@ -350,7 +352,7 @@ an environment variables:</p>
         <a href="options.html" class="btn btn-neutral float-right" title="options Trait" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="image_scan.html" class="btn btn-neutral" title="image_scan Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="image_scan.html" class="btn btn-neutral float-left" title="image_scan Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -376,26 +378,16 @@ an environment variables:</p>
   
 
 
-  
-
-    
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

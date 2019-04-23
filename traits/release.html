@@ -19,13 +19,20 @@
   
 
   
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
@@ -33,21 +40,16 @@
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="scheduling Trait" href="scheduling.html" />
     <link rel="prev" title="pull-request Trait" href="pullrequest.html" /> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -177,97 +179,98 @@
   <div class="section" id="release-trait">
 <h1><em>release</em> Trait<a class="headerlink" href="#release-trait" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="trait-release">
-<span id="trait-release"></span><h2 class="section-subtitle"><span class="section-subtitle">Attributes</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">required?</th>
-<th class="head">default</th>
-<th class="head">type</th>
-<th class="head">explanation</th>
+<span id="trait-release"></span><p class="section-subtitle">Attributes</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>nextversion</td>
-<td>no</td>
-<td>bump_minor</td>
-<td>str</td>
-<td>specifies how the next development version is to be calculated</td>
+<tbody>
+<tr class="row-even"><td><p>nextversion</p></td>
+<td><p>no</p></td>
+<td><p>bump_minor</p></td>
+<td><p>str</p></td>
+<td><p>specifies how the next development version is to be calculated</p></td>
 </tr>
-<tr class="row-odd"><td>release_callback</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>an optional callback that is called during release commit creation. The callback is passed
+<tr class="row-odd"><td><p>release_callback</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>an optional callback that is called during release commit creation. The callback is passed
 the absolute path to the main repository’s work tree via environment variable <code class="code docutils literal notranslate"><span class="pre">REPO_DIR</span></code>.
-Any changes left inside the worktree are added to the resulting release commit.</td>
+Any changes left inside the worktree are added to the resulting release commit.</p></td>
 </tr>
-<tr class="row-even"><td>rebase_before_release</td>
-<td>no</td>
-<td>False</td>
-<td>bool</td>
-<td>whether or not a rebase against latest branch head should be done before publishing
-release commits.</td>
+<tr class="row-even"><td><p>rebase_before_release</p></td>
+<td><p>no</p></td>
+<td><p>False</p></td>
+<td><p>bool</p></td>
+<td><p>whether or not a rebase against latest branch head should be done before publishing
+release commits.</p></td>
 </tr>
-<tr class="row-odd"><td>next_version_callback</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>an optional callback that is called during next version commit creation.
+<tr class="row-odd"><td><p>next_version_callback</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>an optional callback that is called during next version commit creation.
 The callback is passed the absolute path to the main repository’s work tree via environment
 variable <code class="code docutils literal notranslate"><span class="pre">REPO_DIR</span></code>.
-Any changes left inside the worktree are added to the resulting release commit.</td>
+Any changes left inside the worktree are added to the resulting release commit.</p></td>
 </tr>
-<tr class="row-even"><td>release_notes_policy</td>
-<td>no</td>
-<td>default</td>
-<td>ReleaseNotesPolicy</td>
-<td>configures the release notes handling policy</td>
+<tr class="row-even"><td><p>release_notes_policy</p></td>
+<td><p>no</p></td>
+<td><p>default</p></td>
+<td><p>ReleaseNotesPolicy</p></td>
+<td><p>configures the release notes handling policy</p></td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">release_notes_policy Enumeration Values</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">value</th>
-<th class="head">explanation</th>
+<p class="section-subtitle">release_notes_policy Enumeration Values</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>value</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>default</td>
-<td>Create release notes and add them to the GitHub release.</td>
+<tbody>
+<tr class="row-even"><td><p>default</p></td>
+<td><p>Create release notes and add them to the GitHub release.</p></td>
 </tr>
-<tr class="row-odd"><td>disabled</td>
-<td>Do not create release notes.</td>
+<tr class="row-odd"><td><p>disabled</p></td>
+<td><p>Do not create release notes.</p></td>
 </tr>
 </tbody>
 </table>
-<h2 class="section-subtitle"><span class="section-subtitle">Dependencies</span></h2>
+<p class="section-subtitle">Dependencies</p>
 <p>This trait requires the following traits to be declared:</p>
 <ul class="simple">
-<li><a class="reference internal" href="version.html#trait-version"><span class="std std-ref">version trait</span></a></li>
+<li><p><a class="reference internal" href="version.html#trait-version"><span class="std std-ref">version trait</span></a></p></li>
 </ul>
 </div>
 <p>This trait add release job semantics to the declaring build job.</p>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">while not enforced, it is strongly recommended to configure the effective version operation
+<p class="admonition-title">Note</p>
+<p>while not enforced, it is strongly recommended to configure the effective version operation
 to <code class="code docutils literal notranslate"><span class="pre">finalize</span></code> (see <a class="reference internal" href="version.html"><span class="doc">version Trait</span></a>)</p>
 </div>
 <p>The following operations are performed:</p>
 <ul class="simple">
-<li>create a release commit (persisting effective version + optional changes from callback)</li>
-<li>push and tag said commit as <code class="code docutils literal notranslate"><span class="pre">refs/tags/&lt;effective_version&gt;</span></code></li>
-<li>create a GitHub release for said tag<ul>
-<li>add <a class="reference internal" href="component_descriptor.html"><span class="doc">Component Descriptor</span></a> if present</li>
+<li><p>create a release commit (persisting effective version + optional changes from callback)</p></li>
+<li><p>push and tag said commit as <code class="code docutils literal notranslate"><span class="pre">refs/tags/&lt;effective_version&gt;</span></code></p></li>
+<li><p>create a GitHub release for said tag</p>
+<ul>
+<li><p>add <a class="reference internal" href="component_descriptor.html"><span class="doc">Component Descriptor</span></a> if present</p></li>
 </ul>
 </li>
-<li>calculate next development version and persist it (“bump commit”)</li>
-<li>post release notes to slack if <a class="reference internal" href="slack.html"><span class="doc">Slack trait</span></a> is declared</li>
+<li><p>calculate next development version and persist it (“bump commit”)</p></li>
+<li><p>post release notes to slack if <a class="reference internal" href="slack.html"><span class="doc">Slack trait</span></a> is declared</p></li>
 </ul>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">Declaring this trait changes the default triggering behaviour to “manual”</p>
+<p class="admonition-title">Note</p>
+<p>Declaring this trait changes the default triggering behaviour to “manual”</p>
 </div>
 <div class="section" id="optional-release-callback">
 <h2>Optional Release Callback<a class="headerlink" href="#optional-release-callback" title="Permalink to this headline">¶</a></h2>
@@ -276,10 +279,10 @@ with custom diffs (e.g. to update a build-tool-specific dependency declarations 
 <div class="section" id="contract">
 <h3>Contract<a class="headerlink" href="#contract" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li>non-zero exit codes are considered as an error (leads to release failure)</li>
-<li>the following environment variables are passed:
+<li><p>non-zero exit codes are considered as an error (leads to release failure)</p></li>
+<li><p>the following environment variables are passed:
 - <code class="code docutils literal notranslate"><span class="pre">REPO_DIR</span></code>: absolute path to main repository
-- <code class="code docutils literal notranslate"><span class="pre">EFFECTIVE_VERSION</span></code>: the effective version (see <a class="reference internal" href="version.html"><span class="doc">version Trait</span></a>)</li>
+- <code class="code docutils literal notranslate"><span class="pre">EFFECTIVE_VERSION</span></code>: the effective version (see <a class="reference internal" href="version.html"><span class="doc">version Trait</span></a>)</p></li>
 </ul>
 </div>
 </div>
@@ -301,10 +304,10 @@ with custom diffs (e.g. to update a build-tool-specific dependency declarations 
 <div class="section" id="id1">
 <h3>Contract<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li>non-zero exit codes are considered as an error (leads to release failure)</li>
-<li>the following environment variables are passed:
+<li><p>non-zero exit codes are considered as an error (leads to release failure)</p></li>
+<li><p>the following environment variables are passed:
 - <code class="code docutils literal notranslate"><span class="pre">REPO_DIR</span></code>: absolute path to main repository
-- <code class="code docutils literal notranslate"><span class="pre">EFFECTIVE_VERSION</span></code>: the effective version (see <a class="reference internal" href="version.html"><span class="doc">version Trait</span></a>)</li>
+- <code class="code docutils literal notranslate"><span class="pre">EFFECTIVE_VERSION</span></code>: the effective version (see <a class="reference internal" href="version.html"><span class="doc">version Trait</span></a>)</p></li>
 </ul>
 </div>
 </div>
@@ -332,7 +335,7 @@ with custom diffs (e.g. to update a build-tool-specific dependency declarations 
         <a href="scheduling.html" class="btn btn-neutral float-right" title="scheduling Trait" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="pullrequest.html" class="btn btn-neutral" title="pull-request Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="pullrequest.html" class="btn btn-neutral float-left" title="pull-request Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -358,26 +361,16 @@ with custom diffs (e.g. to update a build-tool-specific dependency declarations 
   
 
 
-  
-
-    
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

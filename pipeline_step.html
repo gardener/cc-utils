@@ -19,13 +19,20 @@
   
 
   
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
@@ -33,21 +40,16 @@
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Pipeline Definition Traits" href="traits.html" />
     <link rel="prev" title="Pipeline Job" href="pipeline_job.html" /> 
-
-  
-  <script src="_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -168,90 +170,90 @@ with a specifiable container image with a defined set of environment variables.<
 A zero exit code is interpreted as success, wheras non-zero exit codes are interpreted as
 failures.</p>
 <ul class="simple">
-<li>all job steps are executed in parallel by default</li>
-<li>dependendencies between steps may be declared</li>
-<li>job steps may publish changes to repositories</li>
+<li><p>all job steps are executed in parallel by default</p></li>
+<li><p>dependendencies between steps may be declared</p></li>
+<li><p>job steps may publish changes to repositories</p></li>
 </ul>
 <div class="section" id="pipeline-step">
-<span id="pipeline-step"></span><h2 class="section-subtitle"><span class="section-subtitle">Attributes</span></h2>
-<table border="1" class="colwidths-auto docutils">
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">name</th>
-<th class="head">required?</th>
-<th class="head">default</th>
-<th class="head">type</th>
-<th class="head">explanation</th>
+<span id="pipeline-step"></span><p class="section-subtitle">Attributes</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>depends</td>
-<td>no</td>
-<td>set()</td>
-<td>set</td>
-<td>step names this step declares a dependency towards</td>
+<tbody>
+<tr class="row-even"><td><p>depends</p></td>
+<td><p>no</p></td>
+<td><p>set()</p></td>
+<td><p>set</p></td>
+<td><p>step names this step declares a dependency towards</p></td>
 </tr>
-<tr class="row-odd"><td>execute</td>
-<td>no</td>
-<td>step name</td>
-<td>str</td>
-<td><p>The executable (with optional additional arguments) to run. The executable path
+<tr class="row-odd"><td><p>execute</p></td>
+<td><p>no</p></td>
+<td><p>step name</p></td>
+<td><p>str</p></td>
+<td><p><p>The executable (with optional additional arguments) to run. The executable path
 is calculated relative to <code class="code docutils literal notranslate"><span class="pre">&lt;main_repo&gt;/.ci</span></code>.</p>
 <p>Has two forms:</p>
 <ul class="simple">
-<li>scalar value (str in most cases) –&gt; no shell-escaping is done</li>
-<li>list of scalar values -&gt; used verbatim as ARGV</li>
+<li><p>scalar value (str in most cases) –&gt; no shell-escaping is done</p></li>
+<li><p>list of scalar values -&gt; used verbatim as ARGV</p></li>
 </ul>
-</td>
+</p></td>
 </tr>
-<tr class="row-even"><td>notifications_cfg</td>
-<td>no</td>
-<td>default</td>
-<td>str</td>
-<td>Configures build notification policies (see
-<a class="reference internal" href="traits/notifications.html#trait-notifications"><span class="std std-ref">notifications trait</span></a>)</td>
+<tr class="row-even"><td><p>notifications_cfg</p></td>
+<td><p>no</p></td>
+<td><p>default</p></td>
+<td><p>str</p></td>
+<td><p>Configures build notification policies (see
+<a class="reference internal" href="traits/notifications.html#trait-notifications"><span class="std std-ref">notifications trait</span></a>)</p></td>
 </tr>
-<tr class="row-odd"><td>image</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>the container image reference to use for the executing container.
-If not set, the default image will be used.</td>
+<tr class="row-odd"><td><p>image</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>the container image reference to use for the executing container.
+If not set, the default image will be used.</p></td>
 </tr>
-<tr class="row-even"><td>registry</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>The container image registry cfg_name. Required when retrieving container images
-from a non-default image registry that requires authentication.</td>
+<tr class="row-even"><td><p>registry</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>The container image registry cfg_name. Required when retrieving container images
+from a non-default image registry that requires authentication.</p></td>
 </tr>
-<tr class="row-odd"><td>inputs</td>
-<td>no</td>
-<td>{}</td>
-<td>dict</td>
-<td>a mapping of inputs produced by other build steps:
+<tr class="row-odd"><td><p>inputs</p></td>
+<td><p>no</p></td>
+<td><p>{}</p></td>
+<td><p>dict</p></td>
+<td><p>a mapping of inputs produced by other build steps:
 { input_name: output_name }
 <code class="code docutils literal notranslate"><span class="pre">input_name</span></code> is converted to UPPER_CASE and exposed to the step as an environment
-variable containing the relative path to the output.</td>
+variable containing the relative path to the output.</p></td>
 </tr>
-<tr class="row-even"><td>output_dir</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>exposes a writable directory to the job. The directory is specified via environment
+<tr class="row-even"><td><p>output_dir</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>exposes a writable directory to the job. The directory is specified via environment
 variable named as the given value + _PATH (converted to UPPER-case and snake_case).
 Any files placed into this directory are passed to subsequent steps declaring the output
 as input. The unchanged value configured is used as input name.
-e.g.: <code class="code docutils literal notranslate"><span class="pre">output_dir:</span> <span class="pre">out</span></code> results in env var <code class="code docutils literal notranslate"><span class="pre">OUT_PATH</span></code>.</td>
+e.g.: <code class="code docutils literal notranslate"><span class="pre">output_dir:</span> <span class="pre">out</span></code> results in env var <code class="code docutils literal notranslate"><span class="pre">OUT_PATH</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td>publish_to</td>
-<td>no</td>
-<td>{}</td>
-<td>list</td>
-<td><p>has two forms:</p>
+<tr class="row-odd"><td><p>publish_to</p></td>
+<td><p>no</p></td>
+<td><p>{}</p></td>
+<td><p>list</p></td>
+<td><p><p>has two forms:</p>
 <ul class="simple">
-<li>list of logical repository names to which commits created by this step should be
-published.</li>
-<li>a dictionary: &lt;name: options&gt;</li>
+<li><p>list of logical repository names to which commits created by this step should be
+published.</p></li>
+<li><p>a dictionary: &lt;name: options&gt;</p></li>
 </ul>
 <p>The second form currently accepts exactly one argument: <code class="code docutils literal notranslate"><span class="pre">force_push</span></code> (bool) and is used
 to specify that a force-push should be done.</p>
@@ -263,31 +265,31 @@ to specify that a force-push should be done.</p>
                 <span class="nt">force_push</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
 </pre></div>
 </div>
-</td>
+</p></td>
 </tr>
-<tr class="row-even"><td>vars</td>
-<td>no</td>
-<td>{}</td>
-<td>str</td>
-<td>pairs of {env_var_name: &lt;python expression&gt;}
+<tr class="row-even"><td><p>vars</p></td>
+<td><p>no</p></td>
+<td><p>{}</p></td>
+<td><p>str</p></td>
+<td><p>pairs of {env_var_name: &lt;python expression&gt;}
 the specified python expressions are evaluated during pipeline replication.
 An instance of the current pipeline_model is accessible through the
 <code class="code docutils literal notranslate"><span class="pre">pipeline_descriptor</span></code> symbol.
 The evaluation result is exposed to this build step via the specified environment
-variable.</td>
+variable.</p></td>
 </tr>
-<tr class="row-odd"><td>timeout</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>go-style time interval (e.g.: ‘1h30m’) after which the step will be interrupted and fail.</td>
+<tr class="row-odd"><td><p>timeout</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>go-style time interval (e.g.: ‘1h30m’) after which the step will be interrupted and fail.</p></td>
 </tr>
-<tr class="row-even"><td>retries</td>
-<td>no</td>
-<td>None</td>
-<td>str</td>
-<td>positive integer specifying the maximum amount of failures until the step is
-counted as failed</td>
+<tr class="row-even"><td><p>retries</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>positive integer specifying the maximum amount of failures until the step is
+counted as failed</p></td>
 </tr>
 </tbody>
 </table>
@@ -344,7 +346,7 @@ counted as failed</td>
         <a href="traits.html" class="btn btn-neutral float-right" title="Pipeline Definition Traits" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="pipeline_job.html" class="btn btn-neutral" title="Pipeline Job" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="pipeline_job.html" class="btn btn-neutral float-left" title="Pipeline Job" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -370,26 +372,16 @@ counted as failed</td>
   
 
 
-  
-
-    
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script type="text/javascript" src="_static/jquery.js"></script>
-        <script type="text/javascript" src="_static/underscore.js"></script>
-        <script type="text/javascript" src="_static/doctools.js"></script>
-        <script type="text/javascript" src="_static/language_data.js"></script>
-    
-
-  
-
-  <script type="text/javascript" src="_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>
