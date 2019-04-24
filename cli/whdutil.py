@@ -34,8 +34,11 @@ def start_whd(
         whd_cfg=webhook_dispatcher_cfg
     )
 
+    # allow external connections
+    any_interface = '0.0.0.0'
+
     if production:
-        server = WSGIServer(('0.0.0.0', port), app, log = None)
+        server = WSGIServer((any_interface, port), app, log = None)
         server.serve_forever()
     else:
-        app.run(debug=True, port=port, host='0.0.0.0')
+        app.run(debug=True, port=port, host=any_interface)
