@@ -518,7 +518,7 @@ def github_cfg_for_hostname(cfg_factory, host_name, require_labels=('ci')): # XX
     for github_cfg in filter(has_required_labels, cfg_factory._cfg_elements(cfg_type_name='github')):
         if github_cfg.matches_hostname(host_name=host_name):
             return github_cfg
-    raise RuntimeError('no github_cfg for {h}'.format(h=host_name))
+    raise RuntimeError(f'no github_cfg for {host_name} with {require_labels}')
 
 
 @functools.lru_cache()
