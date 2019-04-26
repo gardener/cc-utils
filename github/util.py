@@ -506,9 +506,16 @@ def github_api_ctor(github_url: str, verify_ssl: bool=True):
 
 
 @functools.lru_cache()
-def github_cfg_for_hostname(cfg_factory, host_name):
+def github_cfg_for_hostname(cfg_factory, host_name, require_labels=()):
     util.not_none(host_name)
-    for github_cfg in cfg_factory._cfg_elements(cfg_type_name='github'):
+
+    def has_required_labels(github_cfg):
+        for required_label in require_labels:
+            if required_label not in github_cfg.purpose_labels():
+                return False
+        return True
+
+    for github_cfg in filter(has_required_labels, cfg_factory._cfg_elements(cfg_type_name='github')):
         if github_cfg.matches_hostname(host_name=host_name):
             return github_cfg
     raise RuntimeError('no github_cfg for {h}'.format(h=host_name))
