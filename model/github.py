@@ -26,6 +26,9 @@ class GithubConfig(NamedModelElement):
     Not intended to be instantiated by users of this module
     '''
 
+    def purpose_labels(self):
+        return set(self.raw.get('purpose_labels', ()))
+
     def ssh_url(self):
         return self.raw.get('sshUrl')
 
@@ -46,6 +49,11 @@ class GithubConfig(NamedModelElement):
 
     def matches_hostname(self, host_name):
         return host_name.lower() == urlparse(self.http_url()).hostname.lower()
+
+    def _optional_attributes(self):
+        return (
+            'purpose_labels',
+        )
 
     def _required_attributes(self):
         return [
