@@ -506,7 +506,7 @@ def github_api_ctor(github_url: str, verify_ssl: bool=True):
 
 
 @functools.lru_cache()
-def github_cfg_for_hostname(cfg_factory, host_name, require_labels=('ci')): # XXX unhardcode label
+def github_cfg_for_hostname(cfg_factory, host_name, require_labels=('ci',)): # XXX unhardcode label
     util.not_none(host_name)
 
     if isinstance(require_labels, str):
