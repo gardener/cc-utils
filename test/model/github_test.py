@@ -43,9 +43,3 @@ def test_validation_fails_on_missing_required_key(required_dict):
 def test_validation_succeeds_on_required_dict(required_dict):
     element = examinee.GithubConfig(name='foo', raw_dict=required_dict)
     element.validate()
-
-
-def test_validation_succeeds_on_unknown_key(required_dict):
-    test_dict = {**required_dict, **{'foo': 'bar'}}
-    element = examinee.GithubConfig(name='foo', raw_dict=test_dict)
-    element.validate()
