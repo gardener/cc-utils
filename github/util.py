@@ -509,6 +509,9 @@ def github_api_ctor(github_url: str, verify_ssl: bool=True):
 def github_cfg_for_hostname(cfg_factory, host_name, require_labels=('ci')): # XXX unhardcode label
     util.not_none(host_name)
 
+    if isinstance(require_labels, str):
+        require_labels = tuple(require_labels)
+
     def has_required_labels(github_cfg):
         for required_label in require_labels:
             if required_label not in github_cfg.purpose_labels():
