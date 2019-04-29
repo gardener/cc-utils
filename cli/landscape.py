@@ -111,7 +111,8 @@ def deploy_or_upgrade_monitoring(
     cfg_set_name: str,
 ):
     cfg_factory = ctx().cfg_factory()
+    cfg_set = cfg_factory.cfg_set(cfg_set_name)
     setup_monitoring.deploy_monitoring_landscape(
-        cfg_set_name=cfg_set_name,
+        cfg_set=cfg_set,
         cfg_factory=cfg_factory,
     )
