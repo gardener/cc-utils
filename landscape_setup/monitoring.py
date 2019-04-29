@@ -21,7 +21,10 @@ from landscape_setup.utils import (
     execute_helm_deployment,
     LiteralStr,
 )
-from model import ConfigFactory
+from model import (
+    ConfigFactory,
+    ConfigurationSet,
+)
 from model.kubernetes import (
     MonitoringConfig,
 )
@@ -32,10 +35,9 @@ from model.concourse import (
 
 @ensure_annotations
 def deploy_monitoring_landscape(
-    cfg_set_name: str,
+    cfg_set: ConfigurationSet,
     cfg_factory: ConfigFactory,
 ):
-    cfg_set = cfg_factory.cfg_set(cfg_set_name)
     kubernetes_cfg = cfg_set.kubernetes()
     concourse_cfg = cfg_set.concourse()
 
