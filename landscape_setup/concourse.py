@@ -37,6 +37,7 @@ from landscape_setup.utils import (
 )
 from model import (
     ConfigFactory,
+    ConfigurationSet,
 )
 from model.concourse import (
     ConcourseConfig,
@@ -289,18 +290,16 @@ def add_proxy_values(
 
     return instance_specific_values
 
-
+@ensure_annotations
 def deploy_concourse_landscape(
-        config_name: str,
+        config_set: ConfigurationSet,
         deployment_name: str='concourse',
-        timeout_seconds: int='180'
+        timeout_seconds: int=180,
 ):
-    not_empty(config_name)
     ensure_helm_setup()
 
     # Fetch all the necessary config
     config_factory = global_ctx().cfg_factory()
-    config_set = config_factory.cfg_set(cfg_name=config_name)
     concourse_cfg = config_set.concourse()
 
     # Set the global context to the cluster specified in the ConcourseConfig
