@@ -44,8 +44,11 @@ def deploy_or_upgrade_concourse(
     if dry_run:
         return
 
+    cfg_factory = ctx().cfg_factory()
+    config_set = cfg_factory.cfg_set(config_name)
+
     setup_concourse.deploy_concourse_landscape(
-        config_name=config_name,
+        config_set=config_set,
         deployment_name=deployment_name,
         timeout_seconds=timeout_seconds,
     )
