@@ -46,7 +46,7 @@ class TestWebhookDispatcherConfig(object):
 
 class TestWebhookDispatcherDeploymentConfig(object):
     @pytest.fixture
-    def deplyment_required_dict(self):
+    def deployment_required_dict(self):
         return {
             'image_reference': 'foo',
             'ingress_host': 'foo',
@@ -59,21 +59,21 @@ class TestWebhookDispatcherDeploymentConfig(object):
             'logging_els_index': 'foo',
         }
 
-    def test_validation_fails_on_missing_required_key(self, deplyment_required_dict):
-        for key in deplyment_required_dict.keys():
-            test_dict = deplyment_required_dict.copy()
+    def test_validation_fails_on_missing_required_key(self, deployment_required_dict):
+        for key in deployment_required_dict.keys():
+            test_dict = deployment_required_dict.copy()
             test_dict.pop(key)
             element = examinee.WebhookDispatcherDeploymentConfig(name='foo', raw_dict=test_dict)
             with pytest.raises(ModelValidationError):
                 element.validate()
 
-    def test_validation_succeeds_on_required_dict(self, deplyment_required_dict):
+    def test_validation_succeeds_on_required_dict(self, deployment_required_dict):
         element = examinee.WebhookDispatcherDeploymentConfig(
-            name='foo', raw_dict=deplyment_required_dict
+            name='foo', raw_dict=deployment_required_dict
         )
         element.validate()
 
-    def test_validation_succeeds_on_unknown_key(self, deplyment_required_dict):
-        test_dict = {**deplyment_required_dict, **{'foo': 'bar'}}
+    def test_validation_succeeds_on_unknown_key(self, deployment_required_dict):
+        test_dict = {**deployment_required_dict, **{'foo': 'bar'}}
         element = examinee.WebhookDispatcherDeploymentConfig(name='foo', raw_dict=test_dict)
         element.validate()
