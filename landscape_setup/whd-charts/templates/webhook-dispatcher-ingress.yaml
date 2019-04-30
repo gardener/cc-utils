@@ -13,7 +13,14 @@ spec:
       - backend:
           serviceName: webhook-dispatcher-svc
           servicePort: 80
+  - host: {{ .Values.external_url }}
+    http:
+      paths:
+      - backend:
+          serviceName: webhook-dispatcher-svc
+          servicePort: 80
   tls:
   - hosts:
     - {{ .Values.ingress_host }}
+    - {{ .Values.external_url }}
     secretName: webhook-dispatcher-tls

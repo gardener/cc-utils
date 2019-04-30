@@ -70,6 +70,7 @@ def create_webhook_dispatcher_helm_values(
 
     helm_values = {
         'ingress_host': webhook_dispatcher_deployment_cfg.ingress_host(),
+        'external_url': webhook_dispatcher_deployment_cfg.external_url(),
         'tls_name': webhook_dispatcher_deployment_cfg.tls_config_name(),
         'image_reference': webhook_dispatcher_deployment_cfg.image_reference(),
         'cmd_args': cmd_args,
