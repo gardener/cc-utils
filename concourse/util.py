@@ -69,7 +69,7 @@ def _enumerate_required_org_webhooks(
             )
 
             webhook_url = create_url_from_attributes(
-                netloc=whd_deployment_cfg.ingress_host(),
+                netloc=whd_deployment_cfg.external_url(),
                 scheme='https',
                 path='github-webhook',
                 params='',
