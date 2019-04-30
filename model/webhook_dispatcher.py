@@ -50,6 +50,7 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
         return {
             'image_reference',
             'ingress_host',
+            'external_url',
             'tls_config',
             'secrets_server_config',
             'kubernetes_config',
@@ -60,6 +61,9 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
 
     def image_reference(self):
         return self.raw.get('image_reference')
+
+    def external_url(self):
+        return self.raw.get('external_url')
 
     def ingress_host(self):
         return self.raw.get('ingress_host')
