@@ -230,7 +230,7 @@ def retrieve_component_descriptor(
 
 
 def resolve_component_descriptor(
-    component_descriptor_file: CliHints.existing_file(),
+    component_descriptor: CliHints.existing_file(),
 ):
     cfg_factory = ctx().cfg_factory()
 
@@ -238,7 +238,7 @@ def resolve_component_descriptor(
         cfg_factory=cfg_factory,
     )
 
-    component_descriptor = Product.from_dict(parse_yaml_file(component_descriptor_file))
+    component_descriptor = Product.from_dict(parse_yaml_file(component_descriptor))
 
     resolved_descriptor = resolver.resolve_component_references(product=component_descriptor)
 
