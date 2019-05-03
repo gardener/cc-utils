@@ -227,7 +227,6 @@ def _create_task(protecode_util, container_image, component):
     return task_function
 
 
-
 def _create_tasks(product_model, protecode_util, image_reference_filter):
     for component, container_image in product.util._enumerate_images(
         component_descriptor=product_model,
