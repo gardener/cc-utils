@@ -14,9 +14,11 @@
 # limitations under the License.
 import argparse
 import github3.exceptions
+import os
 import yaml
 import json
 
+import container.registry
 from util import CliHints, CliHint, parse_yaml_file, ctx, fail
 from product.model import (
     Component,
@@ -26,7 +28,11 @@ from product.model import (
     Product,
     WebDependency,
 )
-from product.util import merge_products, ComponentDescriptorResolver
+from product.util import (
+    _enumerate_images,
+    merge_products,
+    ComponentDescriptorResolver,
+)
 from protecode.util import (
     upload_images,
     ProcessingMode
@@ -243,3 +249,30 @@ def resolve_component_descriptor(
     resolved_descriptor = resolver.resolve_component_references(product=component_descriptor)
 
     print(yaml.dump(resolved_descriptor.raw))
+
+
+def download_dependencies(
+    component_descriptor: CliHints.existing_file(),
+    out_dir: str,
+):
+    if not os.path.isdir(out_dir):
+        os.mkdir(out_dir)
+
+    component_descriptor = Product.from_dict(parse_yaml_file(component_descriptor))
+    image_references = [
+        container_image.image_reference() for _, container_image
+        in _enumerate_images(component_descriptor=component_descriptor)
+    ]
+
+    def mangled_outfile_name(image_reference):
+        mangled_fname = image_reference.replace(':', '_').replace('/', '_')
+        return os.path.join(out_dir, mangled_fname + '.tar')
+
+    for image_ref in image_references:
+        fname = mangled_outfile_name(image_ref)
+        with open(fname, 'wb') as f:
+            container.registry.retrieve_container_image(
+                image_reference=image_ref,
+                outfileobj=f,
+            )
+        print(fname)
