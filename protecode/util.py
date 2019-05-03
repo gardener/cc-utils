@@ -22,6 +22,7 @@ import requests.exceptions
 
 import container.registry
 import protecode.client
+import product.util
 from product.scanning import ProtecodeUtil, ProcessingMode
 from util import info, warning, verbose, error, success, urljoin
 from product.model import (
@@ -99,7 +100,7 @@ def _download_images(
     image_refs = [
         ci.image_reference()
         for _, ci
-        in _enumerate_images(
+        in product.util._enumerate_images(
             component_descriptor=component_descriptor,
             image_reference_filter=image_reference_filter,
         )
@@ -226,21 +227,9 @@ def _create_task(protecode_util, container_image, component):
     return task_function
 
 
-def _enumerate_images(
-    component_descriptor: Product,
-    image_reference_filter=lambda _: True,
-):
-    for component in component_descriptor.components():
-        component_dependencies = component.dependencies()
-        for container_image in filter(
-                image_reference_filter,
-                component_dependencies.container_images()
-        ):
-            yield (component, container_image)
-
 
 def _create_tasks(product_model, protecode_util, image_reference_filter):
-    for component, container_image in _enumerate_images(
+    for component, container_image in product.util._enumerate_images(
         component_descriptor=product_model,
         image_reference_filter=image_reference_filter,
     ):

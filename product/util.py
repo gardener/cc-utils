@@ -27,7 +27,9 @@ from github.util import GitHubRepositoryHelper, github_api_ctor
 from util import not_none, check_type, FluentIterable
 from .model import (
     COMPONENT_DESCRIPTOR_ASSET_NAME,
+    Component,
     ComponentReference,
+    ContainerImage,
     DependencyBase,
     Product,
 )
@@ -289,3 +291,16 @@ def greatest_references(references: typing.Iterable[DependencyBase]):
         )
         # greates version comes last
         yield matching_refs[-1]
+
+
+def _enumerate_images(
+    component_descriptor: Product,
+    image_reference_filter=lambda _: True,
+) -> typing.Iterable[typing.Tuple[Component, ContainerImage]]:
+    for component in component_descriptor.components():
+        component_dependencies = component.dependencies()
+        for container_image in filter(
+                image_reference_filter,
+                component_dependencies.container_images()
+        ):
+            yield (component, container_image)
