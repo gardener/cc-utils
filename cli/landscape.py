@@ -27,8 +27,14 @@ import landscape_setup.secrets_server as setup_secrets_server
 import landscape_setup.whd as setup_whd
 
 
+CONFIG_SET_HELP=(
+    "Name of the config set to use. All further configuration (e.g.: Concourse config) needed "
+    "for deployment will be pulled from the config set with the given name."
+)
+
+
 def deploy_or_upgrade_concourse(
-    config_name: CliHint(typehint=str, help="the cfg_set to use"),
+    config_set_name: CliHint(typehint=str, help=CONFIG_SET_HELP),
     deployment_name: CliHint(typehint=str, help="namespace and deployment name")='concourse',
     timeout_seconds: CliHint(typehint=int, help="how long to wait for concourse startup")=180,
     dry_run: bool=True,
@@ -46,7 +52,7 @@ def deploy_or_upgrade_concourse(
         return
 
     cfg_factory = ctx().cfg_factory()
-    config_set = cfg_factory.cfg_set(config_name)
+    config_set = cfg_factory.cfg_set(config_set_name)
 
     setup_concourse.deploy_concourse_landscape(
         config_set=config_set,
@@ -56,7 +62,7 @@ def deploy_or_upgrade_concourse(
 
 
 def destroy_concourse(
-    config_name: CliHint(typehint=str, help="The config set to use"),
+    config_set_name: CliHint(typehint=str, help=CONFIG_SET_HELP),
     release_name: CliHint(typehint=str, help="namespace and deployment name")='concourse',
     dry_run: bool = True
 ):
@@ -72,7 +78,7 @@ def destroy_concourse(
         return
 
     setup_concourse.destroy_concourse_landscape(
-        config_name=config_name,
+        config_name=config_set_name,
         release_name=release_name
     )
 
@@ -89,7 +95,7 @@ def _display_info(dry_run: bool, operation: str, **kwargs):
 
 
 def deploy_secrets_server(
-    config_set_name: CliHint(typehint=str, help="the name of the config set to use"),
+    config_set_name: CliHint(typehint=str, help=CONFIG_SET_HELP),
 ):
     cfg_factory = ctx().cfg_factory()
     config_set = cfg_factory.cfg_set(config_set_name)
@@ -102,14 +108,14 @@ def deploy_secrets_server(
 
 
 def deploy_or_upgrade_webhook_dispatcher(
-    cfg_set_name: str,
+    config_set_name: CliHint(typehint=str, help=CONFIG_SET_HELP),
     chart_dir: CliHints.existing_dir(help="directory of webhook dispatcher chart"),
     deployment_name: str='webhook-dispatcher',
 ):
     chart_dir = os.path.abspath(chart_dir)
 
     cfg_factory = ctx().cfg_factory()
-    cfg_set = cfg_factory.cfg_set(cfg_set_name)
+    cfg_set = cfg_factory.cfg_set(config_set_name)
 
     webhook_dispatcher_deployment_cfg = cfg_set.webhook_dispatcher_deployment()
 
@@ -122,10 +128,10 @@ def deploy_or_upgrade_webhook_dispatcher(
 
 
 def deploy_or_upgrade_monitoring(
-    cfg_set_name: str,
+    config_set_name: CliHint(typehint=str, help=CONFIG_SET_HELP),
 ):
     cfg_factory = ctx().cfg_factory()
-    cfg_set = cfg_factory.cfg_set(cfg_set_name)
+    cfg_set = cfg_factory.cfg_set(config_set_name)
     setup_monitoring.deploy_monitoring_landscape(
         cfg_set=cfg_set,
         cfg_factory=cfg_factory,
