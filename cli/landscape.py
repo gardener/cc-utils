@@ -22,8 +22,9 @@ from util import (
     CliHint,
 )
 import landscape_setup.concourse as setup_concourse
-import landscape_setup.whd as setup_whd
 import landscape_setup.monitoring as setup_monitoring
+import landscape_setup.secrets_server as setup_secrets_server
+import landscape_setup.whd as setup_whd
 
 
 def deploy_or_upgrade_concourse(
@@ -85,6 +86,19 @@ def _display_info(dry_run: bool, operation: str, **kwargs):
 
     if dry_run:
         warning("this was a --dry-run. Set the --no-dry-run flag to actually deploy")
+
+
+def deploy_secrets_server(
+    config_set_name: CliHint(typehint=str, help="the name of the config set to use"),
+):
+    cfg_factory = ctx().cfg_factory()
+    config_set = cfg_factory.cfg_set(config_set_name)
+    secrets_server_config = config_set.secrets_server()
+
+    info('Deploying secrets-server ...')
+    setup_secrets_server.deploy_secrets_server(
+        secrets_server_config=secrets_server_config,
+    )
 
 
 def deploy_or_upgrade_webhook_dispatcher(
