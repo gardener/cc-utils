@@ -12,9 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import enum
 import os
+
 from util import ctx
 from util import (
+    existing_dir,
     info,
     which,
     warning,
@@ -27,30 +30,99 @@ import landscape_setup.secrets_server as setup_secrets_server
 import landscape_setup.whd as setup_whd
 
 
+class LandscapeComponent(enum.Enum):
+    CONCOURSE='concourse'
+    SECRETS_SERVER='secrets_server'
+    WHD='webhook_dispatcher'
+    MONITORING='monitoring'
+
+
 CONFIG_SET_HELP=(
     "Name of the config set to use. All further configuration (e.g.: Concourse config) needed "
     "for deployment will be pulled from the config set with the given name."
 )
 
 
-def deploy_or_upgrade_concourse(
+def deploy_or_upgrade_landscape(
     config_set_name: CliHint(typehint=str, help=CONFIG_SET_HELP),
-    deployment_name: CliHint(typehint=str, help="namespace and deployment name")='concourse',
+    components: CliHint(
+        type=LandscapeComponent,
+        typehint=[LandscapeComponent],
+        choices=[component for component in LandscapeComponent],
+        help="list of components to deploy. By default, ALL components will be deployed."
+    )=None,
+    webhook_dispatcher_chart_dir: CliHint(
+        typehint=str,
+        help="directory of webhook dispatcher chart",
+    )=None,
+    concourse_deployment_name: CliHint(
+        typehint=str, help="namespace and deployment name for Concourse"
+    )='concourse',
     timeout_seconds: CliHint(typehint=int, help="how long to wait for concourse startup")=180,
+    webhook_dispatcher_deployment_name: str='webhook-dispatcher',
     dry_run: bool=True,
 ):
-    '''Deploys a new concourse-instance using the given deployment name and config-directory.'''
-    which("helm")
+    '''Deploys the given components of the Concourse landscape.
+    '''
+    # handle default (all known components)
+    if not components:
+        components = [component for component in LandscapeComponent]
+    # Validate
+    if LandscapeComponent.WHD in components:
+        if not webhook_dispatcher_chart_dir:
+            raise ValueError(
+                f"--webhook-dispatcher-chart-dir must be given if component "
+                f"'{LandscapeComponent.WHD.value}' is to be deployed."
+            )
+        else:
+            webhook_dispatcher_chart_dir = existing_dir(webhook_dispatcher_chart_dir)
 
     _display_info(
         dry_run=dry_run,
         operation="DEPLOYED",
-        deployment_name=deployment_name,
+        deployment_name=concourse_deployment_name,
+        components=components,
     )
 
     if dry_run:
         return
 
+    if LandscapeComponent.SECRETS_SERVER in components:
+        info('Deploying Secrets Server')
+        deploy_secrets_server(
+            config_set_name=config_set_name,
+        )
+
+    if LandscapeComponent.CONCOURSE in components:
+        info('Deploying Concourse')
+        deploy_or_upgrade_concourse(
+            config_set_name=config_set_name,
+            deployment_name=concourse_deployment_name,
+            timeout_seconds=timeout_seconds,
+        )
+
+    if LandscapeComponent.WHD in components:
+        info('Deploying Webhook Dispatcher')
+        deploy_or_upgrade_webhook_dispatcher(
+            config_set_name=config_set_name,
+            chart_dir=webhook_dispatcher_chart_dir,
+            deployment_name=webhook_dispatcher_deployment_name,
+        )
+
+    if LandscapeComponent.MONITORING in components:
+        info('Deploying Monitoring stack')
+        deploy_or_upgrade_monitoring(
+            config_set_name=config_set_name,
+        )
+
+
+def deploy_or_upgrade_concourse(
+    config_set_name: CliHint(typehint=str, help=CONFIG_SET_HELP),
+    deployment_name: CliHint(typehint=str, help="namespace and deployment name")='concourse',
+    timeout_seconds: CliHint(typehint=int, help="how long to wait for concourse startup")=180,
+):
+    '''Deploys a new concourse-instance using the given deployment name and config-directory.'''
+    which("helm")
     cfg_factory = ctx().cfg_factory()
     config_set = cfg_factory.cfg_set(config_set_name)
 
