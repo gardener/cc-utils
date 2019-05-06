@@ -227,7 +227,7 @@ def create_instance_specific_helm_values(
                 instance_specific_values=instance_specific_values,
             )
         else:
-            fail('Proxy deployment requires the configured helm chart version to be at least 4.2.2')
+            fail('Proxy deployment requires the configured helm chart version to be at least 3.8.0')
 
     return instance_specific_values
 
