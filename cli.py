@@ -206,7 +206,6 @@ def run_function(function):
         function(*function_args)
     return function_runner
 
-
 def display_usage_function(parser):
     def display_usage(_):
         parser.print_usage()
