@@ -17,7 +17,7 @@ html2text
 jira
 kubernetes
 pycodestyle
-pydash==4.6.0
+pydash
 pyflakes
 pytest
 pyyaml
@@ -25,8 +25,8 @@ requests
 semver
 slackclient==1.2.1
 sphinx_rtd_theme
-sseclient-py==1.7
+sseclient-py
 tabulate
 termcolor
 toposort
-urllib3==1.24.2
+urllib3
