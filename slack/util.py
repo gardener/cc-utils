@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import slack.web.client
+import slack
 
 from util import info
 from model.slack import SlackConfig
@@ -39,7 +39,7 @@ class SlackHelper(object):
             raise RuntimeError("can't post to slack as there is no slack api token in config")
 
         info(f"posting message '{title}' to slack channel '{channel}'")
-        client = slack.web.client.WebClient(token=api_token)
+        client = slack.WebClient(token=api_token)
         # We expect rather long messages, so we do not use incoming webhooks etc. to post
         # messages as those get truncated, see
         # https://api.slack.com/changelog/2018-04-truncating-really-long-messages
@@ -64,7 +64,7 @@ class SlackHelper(object):
         if not api_token:
             raise RuntimeError("can't post to slack as there is no slack api token in config")
         info(f"deleting file with id '{file_id}' from Slack")
-        client = slack.web.client.WebClient(token=api_token)
+        client = slack.WebClient(token=api_token)
         response = client.api_call(
             "files.delete",
             file=file_id,
