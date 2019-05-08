@@ -23,7 +23,7 @@ pytest
 pyyaml
 requests
 semver
-slackclient==1.2.1
+slackclient
 sphinx_rtd_theme
 sseclient-py
 tabulate
