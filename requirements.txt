@@ -21,7 +21,7 @@ pydash
 pyflakes
 pytest
 pyyaml
-requests
+requests-ccwienk==2.21.1
 semver
 slackclient
 sphinx_rtd_theme
