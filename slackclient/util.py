@@ -45,10 +45,9 @@ class SlackHelper(object):
         # https://api.slack.com/changelog/2018-04-truncating-really-long-messages
         # Instead we use the file upload mechanism so that this limit does not apply.
         # For contents of result see https://api.slack.com/methods/files.upload
-        response = client.api_call(
-            "files.upload",
+        response = client.files_upload(
             channels=channel,
-            file=(title, message),
+            content=message,
             title=title,
             filetype=filetype,
         )
