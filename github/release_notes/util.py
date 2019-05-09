@@ -37,7 +37,7 @@ from gitutil import GitHelper
 from util import info, warning, fail, verbose, existing_dir, ctx
 from product.model import ComponentName
 from model.base import ModelValidationError
-from slack.util import SlackHelper
+from slackclient.util import SlackHelper
 
 
 def fetch_release_notes(
