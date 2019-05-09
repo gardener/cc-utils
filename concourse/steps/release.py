@@ -584,7 +584,7 @@ class PostSlackReleaseStep(TransactionalStep):
             slack_channel=self.slack_channel,
             release_version=self.release_version,
         )
-        if response and 'file' in response.keys():
+        if response and 'file' in response:
             uploaded_file_id = response['file']['id']
             return {'uploaded file id': uploaded_file_id}
         else:
