@@ -64,9 +64,8 @@ class SlackHelper(object):
             raise RuntimeError("can't post to slack as there is no slack api token in config")
         info(f"deleting file with id '{file_id}' from Slack")
         client = slack.WebClient(token=api_token)
-        response = client.api_call(
-            "files.delete",
-            file=file_id,
+        response = client.files_delete(
+            id=file_id,
         )
         if not response['ok']:
             raise RuntimeError(f"failed to delete file with id {file_id}")
