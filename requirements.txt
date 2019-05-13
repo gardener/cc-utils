@@ -5,6 +5,7 @@ GitPython
 Mako==1.0.7
 Sphinx
 bcrypt
+clamd
 containerregistry-ccwienk==0.2.2
 deepdiff==3.3.0
 deepmerge==0.0.4
