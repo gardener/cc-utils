@@ -11,6 +11,7 @@ ENV PATH /cc/utils/:/cc/utils/bin:$PATH
 ENV PYTHONPATH /cc/utils
 
 RUN pip3 install -r /cc/utils/requirements.txt --upgrade
+RUN pip3 install --no-deps -r /cc/utils/requirements.nodeps.txt --upgrade
 
 RUN EFFECTIVE_VERSION="$(cat /metadata/VERSION)" REPO_DIR=/cc/utils \
   /cc/utils/.ci/bump_job_image_version.py
