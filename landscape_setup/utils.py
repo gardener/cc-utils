@@ -132,7 +132,6 @@ def execute_helm_deployment(
         chart_name,
         "--install",
         "--force",
-        "--recreate-pods",
         "--wait",
         "--namespace",
         namespace,

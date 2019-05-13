@@ -583,6 +583,9 @@ def generate_secrets_server_deployment(
                             ],
                         ),
                     ],
+                    node_selector={
+                        "worker.garden.sapcloud.io/group": "cc-control"
+                    },
                     volumes=[
                         V1Volume(
                             name=secret_name,
