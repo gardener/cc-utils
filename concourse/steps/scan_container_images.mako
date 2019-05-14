@@ -36,6 +36,8 @@ urllib3.disable_warnings()
 cfg_factory = util.ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
+util.ctx().configure_default_logging()
+
 % if not image_scan_trait.protecode_cfg_name():
 protecode_cfg = cfg_factory.protecode()
 % else:
