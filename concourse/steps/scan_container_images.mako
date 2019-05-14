@@ -185,6 +185,9 @@ if images_with_potential_virusses:
     headers=('Image-Reference', 'Scanning Result'),
     tablefmt='html',
   )
+else:
+  body += f'<p>Scanned {len(image_references)} container image(s) for matching virus signatures '
+  body += 'without any matches (id est: all container images seem to be free of known malware)'
 
 mailutil._send_mail(
   email_cfg=cfg_set.email(),
