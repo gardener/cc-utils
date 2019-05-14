@@ -5,6 +5,7 @@ import subprocess
 
 import clamd
 
+import container.registry
 
 logger = logging.getLogger(__name__)
 
@@ -53,3 +54,23 @@ def clamd_client():
     client.ping()
 
     return client
+
+
+def scan_container_image(image_reference: str):
+    c = clamd_client()
+
+    with container.registry.retrieve_container_image(image_reference) as fh:
+        result = c.instream(fh)
+
+    if not len(result) == 1 or not 'stream' in result:
+        # expected format: {"stream": (<status>, <signature-name|None>)}
+        raise RuntimeError(f'result does not meet expected format: {result}')
+
+    status, signature_or_none = result['stream']
+    return status, signature_or_none
+
+
+def result_ok(status, signature):
+    if status == 'OK':
+        return True
+    return False
