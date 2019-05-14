@@ -26,6 +26,8 @@ import util
 
 from product.scanning import ProcessingMode
 
+util.ctx().configure_default_logging()
+
 ${step_lib('scan_container_images')}
 
 # XXX suppress warnings for sap-ca
@@ -36,7 +38,6 @@ urllib3.disable_warnings()
 cfg_factory = util.ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
-util.ctx().configure_default_logging()
 
 % if not image_scan_trait.protecode_cfg_name():
 protecode_cfg = cfg_factory.protecode()
