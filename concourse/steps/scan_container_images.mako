@@ -124,7 +124,8 @@ def create_license_report(license_report):
 util.info('running virus scan for all container images')
 images_with_potential_virusses = tuple(virus_scan_images(image_references))
 if images_with_potential_virusses:
-  util.warning('Potential virusses found')
+  util.warning('Potential virusses found:')
+  util.warning('\n'.join(images_with_potential_virusses))
 else:
   util.info(f'{len(image_references)} image(s) scanned for virus signatures w/o any matches')
 
