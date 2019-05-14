@@ -36,6 +36,7 @@ def init_daemon():
     if not clamd_executable:
         raise RuntimeError('clamd must be available from PATH')
 
+    logger.info('starting clamd - this may take a while')
     subprocess.run(
         [clamd_executable],
         stdout=subprocess.PIPE,
