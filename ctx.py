@@ -150,3 +150,33 @@ def cfg_factory():
         fail('cfg_factory is required. configure using the global --cfg-dir option or via env')
 
     return factory
+
+
+def configure_default_logging():
+    import logging
+    import logging.config
+
+    cfg = {
+        'version': 1,
+        'formatters': {
+            'default': {
+                'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+            },
+        },
+        'handlers': {
+            'console': {
+                'class': 'logging.StreamHandler',
+                'formatter': 'default',
+                'level': logging.DEBUG,
+                'stream': 'ext://sys.stdout',
+            },
+        },
+        'root': {
+            'level': logging.DEBUG,
+            'handlers': ['console',],
+        },
+        'loggers': {
+        }
+    }
+
+    logging.config.dictConfig(cfg)
