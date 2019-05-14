@@ -83,6 +83,7 @@ image_references = [
   in product.util._enumerate_images(
     component_descriptor=component_descriptor,
     image_reference_filter=image_filter,
+  )
 ]
 
 relevant_results, license_report = protecode.util.upload_images(
