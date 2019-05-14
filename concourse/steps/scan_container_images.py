@@ -14,7 +14,9 @@
 # limitations under the License.
 
 import re
+import typing
 
+import clamav.util
 import product.model
 
 
@@ -39,3 +41,11 @@ def image_reference_filter(include_regexes=(), exclude_regexes=()):
         return matches
 
     return _img_ref_filter
+
+
+def virus_scan_images(image_references: typing.Iterable[str]):
+    for image_reference in image_references:
+        status, signature = clamav.util.scan_container_image(image_reference=image_reference)
+        if clamav.util.result_ok(status=status, signature=signature):
+            continue
+        yield (image_reference, f'{status}: {signature}')

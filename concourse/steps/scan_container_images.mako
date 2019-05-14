@@ -20,6 +20,7 @@ import tabulate
 
 import mailutil
 import product.model
+import product.util
 import protecode.util
 import util
 
@@ -74,6 +75,14 @@ image_filter = image_reference_filter(
   exclude_regexes=${filter_cfg.exclude_image_references()},
 )
 
+image_references = [
+  ci.image_reference()
+  for _, ci
+  in product.util._enumerate_images(
+    component_descriptor=component_descriptor,
+    image_reference_filter=image_filter,
+]
+
 relevant_results, license_report = protecode.util.upload_images(
   protecode_cfg=protecode_cfg,
   product_descriptor=component_descriptor,
@@ -108,11 +117,14 @@ def create_license_report(license_report):
 
   return license_lines
 
+images_with_potential_virusses = tuple(virus_scan_images(image_references))
+if images_with_potential_virusses:
+  util.warning('Potential virusses found')
 
 # XXX also include in email
 report_lines = create_license_report(license_report=license_report)
 
-if not relevant_results:
+if not relevant_results and not images_with_potential_virusses:
   sys.exit(0)
 email_recipients = ${image_scan_trait.email_recipients()}
 if not email_recipients:
@@ -138,6 +150,7 @@ def process_upload_results(upload_result):
 
   return [link_to_analysis_url, greatest_cve, image_reference]
 
+
 # component_name identifies the landscape that has been scanned
 component_name = "${component_trait.component_name()}"
 body = textwrap.dedent(
@@ -158,6 +171,14 @@ body += tabulate.tabulate(
   headers=('Component Name', 'Greatest CVE', 'Container Image Reference'),
   tablefmt='html',
 )
+
+if images_with_potential_virusses:
+  body += '<p><div>Virus Scanning results</div>'
+  body += tabulate.tabulate(
+    images_with_potential_virusses,
+    headers=('Image-Reference', 'Scanning Result'),
+    tablefmt='html',
+  )
 
 mailutil._send_mail(
   email_cfg=cfg_set.email(),
