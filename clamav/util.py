@@ -56,11 +56,10 @@ def clamd_client():
     return client
 
 
-def scan_container_image(image_reference: str):
+def scan_stream(fileobj):
     c = clamd_client()
 
-    with container.registry.retrieve_container_image(image_reference) as fh:
-        result = c.instream(fh)
+    result = c.instream(fileobj)
 
     if not len(result) == 1 or not 'stream' in result:
         # expected format: {"stream": (<status>, <signature-name|None>)}
@@ -68,6 +67,11 @@ def scan_container_image(image_reference: str):
 
     status, signature_or_none = result['stream']
     return status, signature_or_none
+
+
+def scan_container_image(image_reference: str):
+    with container.registry.retrieve_container_image(image_reference) as fh:
+        return scan_stream(fileobj=fh)
 
 
 def result_ok(status, signature):
