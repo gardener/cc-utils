@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 import subprocess
+import tarfile
 
 import clamd
 
@@ -70,8 +71,22 @@ def scan_stream(fileobj):
 
 
 def scan_container_image(image_reference: str):
-    with container.registry.retrieve_container_image(image_reference) as fh:
-        return scan_stream(fileobj=fh)
+    with tarfile.open(
+        mode='r|',
+        fileobj=container.registry.retrieve_container_image(image_reference)
+    ) as tf:
+        for ti in tf:
+            # we only care to scan files, obviously
+            if not ti.isfile():
+                continue
+            stream = tf.extractfile(ti)
+            status, signature = scan_stream(fileobj=stream)
+            if result_ok(status, signature):
+                continue
+            else:
+                # early exit on first match
+                return status, f'{ti.name}: signature'
+        return 'OK', None # no match
 
 
 def result_ok(status, signature):
