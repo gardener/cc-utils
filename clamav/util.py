@@ -85,7 +85,7 @@ def scan_container_image(image_reference: str):
                 continue # only layer files may contain relevant data
             with tarfile.open(mode='r|', fileobj=tf.extractfile(ti)) as inner_tf:
                 for inner_ti in inner_tf:
-                    if not inner_tf.isfile():
+                    if not inner_ti.isfile():
                         continue
                     status, signature = scan_stream(fileobj=inner_tf.extractfile(inner_ti))
                     if result_ok(status, signature):
