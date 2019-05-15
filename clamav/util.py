@@ -16,7 +16,7 @@ _clamd_sock = '/run/clamav/clamd.sock'
 
 def init_daemon():
     if os.path.exists(_clamd_sock):
-        return logger.info('clamd already running')
+        return # assume deaom is alrady running
 
     # ensure runtime dependencies (we require clamav/clamd to be installed)
     fresh_clam = shutil.which('freshclam')
