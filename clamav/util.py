@@ -71,6 +71,8 @@ def scan_stream(fileobj):
 
 
 def scan_container_image(image_reference: str):
+    logger.debug(f'scanning container image {image_reference}')
+
     with tarfile.open(
         mode='r|',
         fileobj=container.registry.retrieve_container_image(image_reference)
@@ -82,10 +84,12 @@ def scan_container_image(image_reference: str):
             stream = tf.extractfile(ti)
             status, signature = scan_stream(fileobj=stream)
             if result_ok(status, signature):
+                logger.debug(f'layer/file {ti.name} looked clean')
                 continue
             else:
                 # early exit on first match
                 return status, f'{ti.name}: signature'
+        logger.debug(f'image looked clean: {image_reference}')
         return 'OK', None # no match
 
 
