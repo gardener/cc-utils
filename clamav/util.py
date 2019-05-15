@@ -88,7 +88,7 @@ def scan_container_image(image_reference: str):
                 continue
             else:
                 # early exit on first match
-                return status, f'{ti.name}: signature'
+                return status, f'{ti.name}: {signature}'
         logger.debug(f'image looked clean: {image_reference}')
         return 'OK', None # no match
 
