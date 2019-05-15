@@ -81,14 +81,19 @@ def scan_container_image(image_reference: str):
             # we only care to scan files, obviously
             if not ti.isfile():
                 continue
-            stream = tf.extractfile(ti)
-            status, signature = scan_stream(fileobj=stream)
-            if result_ok(status, signature):
-                logger.debug(f'layer/file {ti.name} looked clean')
-                continue
-            else:
-                # early exit on first match
-                return status, f'{ti.name}: {signature}'
+            if not ti.name.endswith('layer.tar'):
+                continue # only layer files may contain relevant data
+            with tarfile.open(mode='r|', fileobj=tf.extractfile(ti)) as inner_tf:
+                for inner_ti in inner_tf:
+                    if not inner_tf.isfile():
+                        continue
+                    status, signature = scan_stream(fileobj=inner_tf.extractfile(inner_ti))
+                    if result_ok(status, signature):
+                        continue
+                    else:
+                        # early exit on first match
+                        return status, f'{ti.name}:{inner_ti.name}: {signature}'
+            logger.debug(f'{image_reference}:{ti.name} looks clean')
         logger.debug(f'image looked clean: {image_reference}')
         return 'OK', None # no match
 
