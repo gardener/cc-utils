@@ -30,6 +30,7 @@ from github.release_notes.util import (
     fetch_release_notes,
     github_repo_path,
     post_to_slack,
+    ReleaseNotes,
 )
 from concourse.model.traits.release import (
     ReleaseNotesPolicy,
@@ -568,20 +569,21 @@ class PostSlackReleaseStep(TransactionalStep):
         slack_cfg_name: str,
         slack_channel: str,
         release_version: str,
+        release_notes: ReleaseNotes,
         githubrepobranch: GitHubRepoBranch,
     ):
         self.slack_cfg_name = not_empty(slack_cfg_name)
         self.slack_channel = not_empty(slack_channel)
         self.release_version = not_empty(release_version)
         self.githubrepobranch = not_none(githubrepobranch)
+        self.release_notes = not_none(release_notes)
 
     def validate(self):
         semver.parse(self.release_version)
 
     def apply(self):
-        release_notes = self.context().step_output('Publish Release Notes').get('release notes')
         response = post_to_slack(
-            release_notes=release_notes,
+            release_notes=self.release_notes,
             github_repository_name=self.githubrepobranch.github_repo_path(),
             slack_cfg_name=self.slack_cfg_name,
             slack_channel=self.slack_channel,
@@ -682,16 +684,23 @@ def release_and_prepare_next_dev_cycle(
         cleanup_draft_releases_step,
     ]
 
+    release_notes_transaction = Transaction(*release_notes_steps)
+    release_notes_transaction.validate()
+    if not release_notes_transaction.execute():
+        raise RuntimeError('An error occurred while publishing the release notes.')
+
     if slack_cfg_name and slack_channel:
+        context = release_notes_transaction.context()
+        release_notes = context.step_output(publish_release_notes_step.name()).get('release notes')
+
         post_to_slack_step = PostSlackReleaseStep(
             slack_cfg_name=slack_cfg_name,
             slack_channel=slack_channel,
             release_version=release_version,
+            release_notes=release_notes,
             githubrepobranch=githubrepobranch,
         )
-        release_notes_steps.append(post_to_slack_step)
-
-    release_notes_transaction = Transaction(*release_notes_steps)
-    release_notes_transaction.validate()
-    if not release_notes_transaction.execute():
-        raise RuntimeError('An error occurred while Publishing the Release Notes.')
+        slack_transaction = Transaction(post_to_slack_step)
+        slack_transaction.validate()
+        if not slack_transaction.execute():
+            raise RuntimeError('An error occurred while posting the release notes to Slack.')

@@ -2,6 +2,7 @@ import os
 import pytest
 from unittest.mock import MagicMock
 from github.util import GitHubRepositoryHelper, GitHubRepoBranch
+from github.release_notes.util import ReleaseNotes
 
 import concourse.steps.release
 import util
@@ -191,12 +192,14 @@ class TestSlackReleaseStep(object):
                 repo_name='test_name',
                 branch='master',
             ),
+            release_notes=ReleaseNotes(None),
             release_version='1.0.0',
         ):
             return concourse.steps.release.PostSlackReleaseStep(
                 slack_cfg_name=slack_cfg_name,
                 slack_channel=slack_channel,
                 githubrepobranch=githubrepobranch,
+                release_notes=release_notes,
                 release_version=release_version,
             )
         return _examinee
