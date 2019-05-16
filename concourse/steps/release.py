@@ -25,11 +25,11 @@ from github.util import (
 )
 import product.model
 from github.release_notes.util import (
-    fetch_release_notes,
-    post_to_slack,
     delete_file_from_slack,
-    github_repo_path,
     draft_release_name_for_version,
+    fetch_release_notes,
+    github_repo_path,
+    post_to_slack,
 )
 from concourse.model.traits.release import (
     ReleaseNotesPolicy,
