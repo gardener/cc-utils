@@ -109,13 +109,16 @@ class Transaction(object):
         *steps: TransactionalStep,
     ):
         # create context object for this transaction
-        self.context = TransactionContext()
+        self._context = TransactionContext()
         # validate type of args and set context
         for step in steps:
             if not isinstance(step, TransactionalStep):
                 raise TypeError('Transactions may only contain instances of TransactionalStep')
-            step.set_context(self.context)
+            step.set_context(self._context)
         self._steps = steps
+
+    def context(self):
+        return self._context
 
     def validate(self):
         for step in self._steps:
@@ -131,7 +134,7 @@ class Transaction(object):
             executed_steps.append(step)
             try:
                 output = step.apply()
-                self.context.set_step_output(step_name, output)
+                self._context.set_step_output(step_name, output)
             except BaseException as e:
                 warning(f"An error occured while applying step '{step_name}': {e}")
                 traceback.print_exc()
