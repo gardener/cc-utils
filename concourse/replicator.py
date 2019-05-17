@@ -60,6 +60,7 @@ def replicate_pipelines(
     template_include_dir,
     unpause_pipelines: bool=True,
     expose_pipelines: bool=True,
+    unpause_new_pipelines: bool=True,
 ):
     definition_enumerators = [
         GithubOrganisationDefinitionEnumerator(
@@ -83,6 +84,7 @@ def replicate_pipelines(
 
     result_processor = ReplicationResultProcessor(
         cfg_set=cfg_set,
+        unpause_new_pipelines=unpause_new_pipelines,
     )
 
     replicator = PipelineReplicator(
@@ -303,8 +305,9 @@ class ConcourseDeployer(DefinitionDeployer):
 
 
 class ReplicationResultProcessor(object):
-    def __init__(self, cfg_set):
+    def __init__(self, cfg_set, unpause_new_pipelines: bool=True):
         self._cfg_set = cfg_set
+        self.unpause_new_pipelines = unpause_new_pipelines
 
     def process_results(self, results):
         # collect pipelines by concourse target (concourse_cfg, team_name) as key
@@ -447,8 +450,9 @@ class ReplicationResultProcessor(object):
             )
         )
         for pipeline_name in newly_deployed_pipeline_names:
-            info('unpausing new pipeline {p}'.format(p=pipeline_name))
-            concourse_api.unpause_pipeline(pipeline_name)
+            if self.unpause_new_pipelines:
+                info('unpausing new pipeline {p}'.format(p=pipeline_name))
+                concourse_api.unpause_pipeline(pipeline_name)
 
             info('triggering initial resource check for pipeline {p}'.format(p=pipeline_name))
 
