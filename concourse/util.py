@@ -103,13 +103,16 @@ def resurrect_pods(
 
     info(f'Check for not running concourse workers')
     worker_list = concourse_client.list_workers()
+    pruned_workers = list()
     for worker in worker_list:
         worker_name = worker.name()
         info(f'Worker {worker_name}: {worker.state()}')
         if worker.state() != "running":
             warning(f'Prune worker {worker_name} and restart pod')
+            pruned_workers.append(worker_name)
             concourse_client.prune_worker(worker_name)
             kubernetes_client.pod_helper().delete_pod(
                 name=worker_name,
                 namespace=namespace
             )
+    return pruned_workers
