@@ -13,14 +13,16 @@ deprecated<2.0.0
 elasticsearch<8.0.0
 ensure<1.0.0
 gevent<2.0.0
+github3.py<2.0.0
 html2text<2019.0.0
 jira<3.0.0
+kubernetes<10.0.0
 pycodestyle<3.0.0
 pydash<5.0.0
 pyflakes<3.0.0
 pytest<5.0.0
 pyyaml<6.0.0
-requests-ccwienk<3.0.0
+requests<3.0.0
 semver<3.0.0
 slackclient<3.0.0
 sphinx_rtd_theme<1.0.0
