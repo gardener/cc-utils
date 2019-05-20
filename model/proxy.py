@@ -37,6 +37,21 @@ class DockerImageConfig(ModelBase):
         return f'{self.image_name()}:{self.image_tag()}'
 
 
+class MitmLoggingConfig(ModelBase):
+    def _required_attributes(self):
+            yield from super()._required_attributes()
+            yield from [
+                'els_config',
+                'els_index',
+            ]
+
+    def els_config_name(self):
+        return self.raw['els_config']
+
+    def els_index_name(self):
+        return self.raw['els_index']
+
+
 class ProxyConfig(NamedModelElement):
     '''Encompasses all configuration necessary for the deployment of a MitM-Proxy alongside
     Concourse.
@@ -65,7 +80,14 @@ class MitmProxyConfig(DockerImageConfig):
     annotated example of all options can be obtained by running 'mitmproxy --options'.
     '''
     def _required_attributes(self):
-        return super._required_attributes() + ['config']
+        yield from super()._required_attributes()
+        yield from [
+            'config',
+            'logging',
+        ]
 
     def config(self):
         return self.raw['config']
+
+    def logging(self):
+        return MitmLoggingConfig(self.raw['logging'])
