@@ -271,6 +271,23 @@ class PullRequestUtil(RepositoryHelperBase):
             .as_list()
         return parsed_prs
 
+    def retrieve_pr_template_text(self):
+        '''Return the content for the PR template file looking in predefined directories.
+        If no template is found None is returned.
+        '''
+        pattern = re.compile(r"(pull_request_template)(\..{1,3})?$")
+        directories = ['.github', '.', 'docs']
+        for directory in directories:
+            try:
+                for filename, content in self.repository.directory_contents(directory):
+                    if pattern.match(filename):
+                        content.refresh()
+                        return content.decoded.decode('utf-8')
+            except github3.exceptions.NotFoundError:
+                pass  # directory does not exists
+
+        return None
+
 
 class GitHubRepositoryHelper(RepositoryHelperBase):
     def create_or_update_file(
