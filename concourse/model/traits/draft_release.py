@@ -13,17 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from util import not_none
-
 from concourse.model.step import (
     PipelineStep,
     StepNotificationPolicy,
 )
 from concourse.model.base import (
   AttributeSpec,
+  ModelValidationError,
   ScriptType,
   Trait,
-  TraitTransformer
+  TraitTransformer,
+)
+from concourse.model.jop import (
+  JobVariant,
 )
 
 ATTRIBUTES = (
@@ -72,7 +74,7 @@ class DraftReleaseTraitTransformer(TraitTransformer):
         self.release_step.set_timeout(duration_string='10m')
         yield self.release_step
 
-    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
+    def process_pipeline_args(self, pipeline_args: JobVariant):
         pass
 
     @classmethod

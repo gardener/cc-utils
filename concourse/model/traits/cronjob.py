@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from util import not_none
-
+from concourse.model.job import JobVariant
 from concourse.model.base import Trait, TraitTransformer, AttributeSpec
 
 ATTRIBUTES = (
@@ -50,7 +49,7 @@ class CronTrait(Trait):
 class CronTraitTransformer(TraitTransformer):
     name = 'cronjob'
 
-    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
+    def process_pipeline_args(self, pipeline_args: JobVariant):
         main_repo = pipeline_args.main_repository()
         if main_repo:
             if 'trigger' not in pipeline_args.raw['repo']:

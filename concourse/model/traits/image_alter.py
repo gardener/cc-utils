@@ -13,11 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import util
 import typing
 
-from model.base import (
-    NamedModelElement,
+from concourse.model.job import (
+    JobVariant,
 )
 from concourse.model.step import (
     PipelineStep,
@@ -31,8 +30,6 @@ from concourse.model.base import (
     ModelBase,
     ScriptType,
 )
-
-from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
 
 
 IMG_ALTER_ATTRS = (
@@ -146,7 +143,7 @@ class ImageAlterTraitTransformer(TraitTransformer):
         )
         yield self.image_alter_step
 
-    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
+    def process_pipeline_args(self, pipeline_args: JobVariant):
         pass
 
     @classmethod

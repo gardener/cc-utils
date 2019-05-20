@@ -14,8 +14,10 @@
 # limitations under the License.
 
 from util import not_none
-from model import NamedModelElement
 
+from concourse.model.job import (
+    JobVariant,
+)
 from concourse.model.step import (
     PipelineStep,
     StepNotificationPolicy,
@@ -26,7 +28,6 @@ from concourse.model.base import (
   TraitTransformer,
   ModelValidationError,
   ScriptType,
-  normalise_to_dict,
 )
 
 COMPONENT_DESCRIPTOR_DIR_INPUT = ('component_descriptor_dir', 'component_descriptor_dir')
