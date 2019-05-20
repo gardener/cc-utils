@@ -256,11 +256,7 @@ else:
 % endfor
       META: ${job_variant.meta_resource_name()}
       SECRETS_SERVER_ENDPOINT: ${secrets_server_cfg.endpoint_url()}
-      SECRETS_SERVER_CONCOURSE_CFG_NAME: ${'/'.join([
-        secrets_server_cfg.secrets().concourse_secret_name(),
-        secrets_server_cfg.secrets().concourse_attribute()
-        ])
-      }
+      SECRETS_SERVER_CONCOURSE_CFG_NAME: ${secrets_server_cfg.secrets().concourse_cfg_name()}
       CONCOURSE_CURRENT_CFG: ${config_set.name()}
       CONCOURSE_CURRENT_TEAM: ${target_team}
 % if has_component_descriptor_trait(job_variant):

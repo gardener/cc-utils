@@ -46,9 +46,7 @@ def create_webhook_dispatcher_helm_values(
     secrets_server_name = webhook_dispatcher_deployment_cfg.secrets_server_config_name()
     secrets_server_cfg = cfg_factory.secrets_server(secrets_server_name)
     secrets_server_endpoint = secrets_server_cfg.endpoint_url()
-    secrets_server_concourse_cfg_name = '/'.join([
-        secrets_server_cfg.secrets().concourse_secret_name(),
-        secrets_server_cfg.secrets().concourse_attribute()])
+    secrets_server_concourse_cfg_name = secrets_server_cfg.secrets().concourse_cfg_name()
     container_port = webhook_dispatcher_deployment_cfg.webhook_dispatcher_container_port()
 
     env_vars = []

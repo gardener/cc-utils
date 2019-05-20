@@ -58,3 +58,6 @@ class SecretsServerSecrets(ModelBase):
 
     def cfg_set_names(self):
         return self.raw['cfg_sets']
+
+    def concourse_cfg_name(self):
+        return f'{self.concourse_secret_name()}/{self.concourse_attribute()}'

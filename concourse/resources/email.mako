@@ -39,11 +39,7 @@ on_error_cfg = notification_cfg.on_error()
       - name: ${job_variant.meta_resource_name()}
       params:
         SECRETS_SERVER_ENDPOINT: ${secrets_server_cfg.endpoint_url()}
-        SECRETS_SERVER_CONCOURSE_CFG_NAME: ${'/'.join([
-          secrets_server_cfg.secrets().concourse_secret_name(),
-          secrets_server_cfg.secrets().concourse_attribute()
-          ])
-        }
+        SECRETS_SERVER_CONCOURSE_CFG_NAME: ${secrets_server_cfg.secrets().concourse_cfg_name()}
         BUILD_JOB_NAME: ${job_variant.job_name()}
         META: ${job_variant.meta_resource_name()}
       ${task_image_defaults(cfg_set.container_registry(), indent=6)}
