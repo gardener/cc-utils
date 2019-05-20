@@ -190,23 +190,35 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>parallel_jobs</p></td>
-<td><p>no</p></td>
-<td><p>12</p></td>
-<td><p>int</p></td>
-<td><p>amount of parallel scanning threads</p></td>
-</tr>
-<tr class="row-odd"><td><p>cve_threshold</p></td>
-<td><p>no</p></td>
-<td><p>7</p></td>
-<td><p>int</p></td>
-<td><p>CVE threshold to interpret as an error</p></td>
-</tr>
 <tr class="row-even"><td><p>filters</p></td>
 <td><p>no</p></td>
 <td><p>{‘include_image_references’: (), ‘exclude_image_references’: ()}</p></td>
 <td><p>FilterCfg</p></td>
 <td><p>optional filters to restrict container images to process</p></td>
+</tr>
+<tr class="row-odd"><td><p>email_recipients</p></td>
+<td><p>no</p></td>
+<td><p>()</p></td>
+<td><p>str</p></td>
+<td><p>optional email recipients to be notified about critical scan results</p></td>
+</tr>
+<tr class="row-even"><td><p>protecode</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>ProtecodeScanCfg</p></td>
+<td><p>if present, perform protecode scanning</p></td>
+</tr>
+<tr class="row-odd"><td><p>parallel_jobs</p></td>
+<td><p>no</p></td>
+<td><p>12</p></td>
+<td><p>int</p></td>
+<td><p>amount of parallel scanning threads</p></td>
+</tr>
+<tr class="row-even"><td><p>cve_threshold</p></td>
+<td><p>no</p></td>
+<td><p>7</p></td>
+<td><p>int</p></td>
+<td><p>CVE threshold to interpret as an error</p></td>
 </tr>
 <tr class="row-odd"><td><p>processing_mode</p></td>
 <td><p>no</p></td>
@@ -232,13 +244,7 @@
 <td><p>str</p></td>
 <td><p>protecode cfg name to use (see cc-utils)</p></td>
 </tr>
-<tr class="row-odd"><td><p>email_recipients</p></td>
-<td><p>no</p></td>
-<td><p>()</p></td>
-<td><p>str</p></td>
-<td><p>optional email recipients to be notified about critical scan results</p></td>
-</tr>
-<tr class="row-even"><td><p>upload_registry_prefix</p></td>
+<tr class="row-odd"><td><p>upload_registry_prefix</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
@@ -273,6 +279,85 @@ processed. By default, all image references are considered.</p></td>
 <td><p>a list of regular expressions. If configured, matching image references are
 exempted from processing. Has precedence over include_image_references.
 By default, no image references are excluded.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="section-subtitle">protecode Attributes</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>parallel_jobs</p></td>
+<td><p>no</p></td>
+<td><p>12</p></td>
+<td><p>int</p></td>
+<td><p>amount of parallel scanning threads</p></td>
+</tr>
+<tr class="row-odd"><td><p>cve_threshold</p></td>
+<td><p>no</p></td>
+<td><p>7</p></td>
+<td><p>int</p></td>
+<td><p>CVE threshold to interpret as an error</p></td>
+</tr>
+<tr class="row-even"><td><p>processing_mode</p></td>
+<td><p>no</p></td>
+<td><p>upload_if_changed</p></td>
+<td><p>ProcessingMode</p></td>
+<td><p>Protecode processing mode</p></td>
+</tr>
+<tr class="row-odd"><td><p>reference_protecode_group_ids</p></td>
+<td><p>no</p></td>
+<td><p>()</p></td>
+<td><p>str</p></td>
+<td><p>an optional list of protecode group IDs to import triages from.</p></td>
+</tr>
+<tr class="row-even"><td><p>protecode_group_id</p></td>
+<td><p>yes</p></td>
+<td><p>None</p></td>
+<td><p>int</p></td>
+<td><p>technical protecode group id to upload to</p></td>
+</tr>
+<tr class="row-odd"><td><p>protecode_cfg_name</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>protecode cfg name to use (see cc-utils)</p></td>
+</tr>
+<tr class="row-even"><td><p>upload_registry_prefix</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>if specified, all matching container images are also uploaded as copies to
+the specified container registry. The original image reference names are
+mangled.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="section-subtitle">protecode.processing_mode Enumeration Values</p>
+<table class="colwidths-auto docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>value</p></th>
+<th class="head"><p>explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>upload_if_changed</p></td>
+<td><p>upload the container images. This will <strong>not</strong> upload the images if they
+are already present. This will <strong>not</strong> cause images already present to be
+rescanned.</p></td>
+</tr>
+<tr class="row-odd"><td><p>rescan</p></td>
+<td><p>trigger a scan of container images. Images will be uploaded unless they are
+already present.</p></td>
+</tr>
+<tr class="row-even"><td><p>force_upload</p></td>
+<td><p><strong>always</strong> upload the images. This will cause all images to be rescanned.</p></td>
 </tr>
 </tbody>
 </table>
