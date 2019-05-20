@@ -113,7 +113,8 @@ def upgrade_pr_exists(reference, upgrade_requests):
     )
 
 
-def create_upgrade_pr(from_ref, to_ref, ls_repo):
+def create_upgrade_pr(from_ref, to_ref, pull_request_util):
+    ls_repo = pull_request_util.repository
     repo_dir = str(REPO_ROOT)
 
     # have component create upgradation diff
@@ -187,7 +188,7 @@ def create_upgrade_pr(from_ref, to_ref, ls_repo):
                 blocks=release_note_blocks
             )
         else:
-            text = None
+            text = pull_request_util.retrieve_pr_template_text()
 
     ls_repo.create_pull(
             title=github.util.PullRequestUtil.calculate_pr_title(
@@ -209,8 +210,6 @@ pull_request_util = github.util.PullRequestUtil(
     default_branch=REPO_BRANCH,
     github_cfg=github_cfg,
 )
-
-ls_repository = pull_request_util.repository
 
 upgrade_pull_requests = pull_request_util.enumerate_upgrade_pull_requests(state_filter='all')
 
@@ -260,5 +259,5 @@ for reference in product.util.greatest_references(immediate_dependencies.compone
             name=reference.name(),
             version=str(latest_version),
         )
-        create_upgrade_pr(from_ref=reference, to_ref=to_ref, ls_repo=ls_repository)
+        create_upgrade_pr(from_ref=reference, to_ref=to_ref, pull_request_util=pull_request_util)
 </%def>
