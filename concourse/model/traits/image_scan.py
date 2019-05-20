@@ -189,7 +189,7 @@ ATTRIBUTES = (
         an optional list of protecode group IDs to import triages from.
         ''',
     ),
-    AttributeSpec.required(
+    AttributeSpec.optional(
         name='protecode_group_id',
         doc='technical protecode group id to upload to',
         type=int,
