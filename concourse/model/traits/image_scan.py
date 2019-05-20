@@ -30,6 +30,7 @@ from concourse.model.base import (
     ScriptType,
 )
 from product.scanning import ProcessingMode
+import util
 
 from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
 
@@ -225,7 +226,7 @@ class ImageScanTrait(Trait):
 
     def protecode(self):
         # XXX remove backward compatibility
-        if not 'protecode' in self.raw:
+        if not 'protecode' in self.raw or not self.raw.get('protecode'):
             util.warning('legacy protecode cfg - adjust pipeline_definition!')
             return ProtecodeScanCfg(raw_dict=self.raw)
         # TODO: after schema change, protecode cfg should become optional
