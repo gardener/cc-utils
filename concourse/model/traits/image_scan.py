@@ -64,6 +64,19 @@ class FilterCfg(ModelBase):
 
 ATTRIBUTES = (
     AttributeSpec.optional(
+        name='filters',
+        default={'include_image_references': (), 'exclude_image_references': ()},
+        doc='optional filters to restrict container images to process',
+        type=FilterCfg,
+    ),
+    AttributeSpec.optional(
+        name='email_recipients',
+        default=(),
+        doc='optional email recipients to be notified about critical scan results',
+    ),
+
+    # XXX attrs below are kept temporarily to not break old cfgs - to be removed
+    AttributeSpec.optional(
         name='parallel_jobs',
         default=12,
         doc='amount of parallel scanning threads',
@@ -74,12 +87,6 @@ ATTRIBUTES = (
         default=7,
         doc='CVE threshold to interpret as an error',
         type=int,
-    ),
-    AttributeSpec.optional(
-        name='filters',
-        default={'include_image_references': (), 'exclude_image_references': ()},
-        doc='optional filters to restrict container images to process',
-        type=FilterCfg,
     ),
     AttributeSpec.optional(
         name='processing_mode',
@@ -105,11 +112,6 @@ ATTRIBUTES = (
         doc='protecode cfg name to use (see cc-utils)',
     ),
     AttributeSpec.optional(
-        name='email_recipients',
-        default=(),
-        doc='optional email recipients to be notified about critical scan results',
-    ),
-    AttributeSpec.optional(
         name='upload_registry_prefix',
         default=None,
         doc='''
@@ -126,6 +128,13 @@ class ImageScanTrait(Trait):
     def _attribute_specs(cls):
         return ATTRIBUTES
 
+    def filters(self):
+        return FilterCfg(raw_dict=self.raw['filters'])
+
+    def email_recipients(self):
+        return self.raw['email_recipients']
+
+    # XXX attrs below are kept temporarily to not break old cfgs - to be removed
     def reference_protecode_group_ids(self):
         return self.raw['reference_protecode_group_ids']
 
@@ -143,12 +152,6 @@ class ImageScanTrait(Trait):
 
     def processing_mode(self):
         return self.raw.get('processing_mode')
-
-    def filters(self):
-        return FilterCfg(raw_dict=self.raw['filters'])
-
-    def email_recipients(self):
-        return self.raw['email_recipients']
 
     def upload_registry_prefix(self):
         return self.raw['upload_registry_prefix']
