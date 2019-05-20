@@ -230,6 +230,18 @@ def add_proxy_values(
         'env': [{
                 'name': 'CONFIG_DIR',
                 'value': MITM_CONFIG_DIR,
+            },{
+                'name': 'SECRETS_SERVER_ENDPOINT',
+                'value': secrets_server_cfg.endpoint_url(),
+            },{
+                'name': 'SECRETS_SERVER_CONCOURSE_CFG_NAME',
+                'value': secrets_server_cfg.secrets().concourse_cfg_name(),
+            },{
+                'name': 'ELASTIC_CONFIG_NAME',
+                'value': logging_cfg.els_config_name(),
+            },{
+                'name': 'ELASTIC_INDEX_NAME',
+                'value': logging_cfg.els_index_name(),
         }],
         'ports': [{
             'containerPort': mitm_cfg.config()["listen_port"],
