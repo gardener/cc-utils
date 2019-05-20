@@ -193,27 +193,13 @@ def create_instance_specific_helm_values(
         raise NotImplementedError(
             "Concourse version {v} not supported".format(v=concourse_version)
         )
-    # Add proxy sidecars to instance specific values.
-    # NOTE: Only works for helm chart version 3.8.0 or greater
-    if concourse_cfg.proxy():
-        chart_version = semver.parse_version_info(concourse_cfg.helm_chart_version())
-        min_version = semver.parse_version_info('3.8.0')
-        if chart_version >= min_version:
-            instance_specific_values = add_proxy_values(
-                concourse_cfg=concourse_cfg,
-                config_factory=config_factory,
-                instance_specific_values=instance_specific_values,
-            )
-        else:
-            fail('Proxy deployment requires the configured helm chart version to be at least 3.8.0')
 
     return instance_specific_values
 
 
 @ensure_annotations
 def add_proxy_values(
-    concourse_cfg: ConcourseConfig,
-    config_factory: ConfigFactory,
+    config_set,
     instance_specific_values: dict,
 ):
     # The dir into which the config map is mounted in the volume.
@@ -221,8 +207,12 @@ def add_proxy_values(
     MITM_CONFIG_DIR = '/.mitmproxy'
 
     # add the sidecar-configuration for the mitm-proxy
+    config_factory = global_ctx().cfg_factory()
+    concourse_cfg = config_set.concourse()
+    secrets_server_cfg = config_set.secrets_server()
     proxy_cfg = config_factory.proxy(concourse_cfg.proxy())
     mitm_cfg = proxy_cfg.mitm_proxy()
+    logging_cfg = mitm_cfg.logging()
     sidecar_image_cfg = proxy_cfg.sidecar_image()
     sidecar_containers = [{
         'name': 'setup-iptables-sidecar',
@@ -339,6 +329,19 @@ def deploy_concourse_landscape(
         concourse_cfg=concourse_cfg, config_factory=config_factory,
     )
     chart_version = concourse_cfg.helm_chart_version()
+
+    # Add proxy sidecars to instance specific values.
+    # NOTE: Only works for helm chart version 3.8.0 or greater
+    if concourse_cfg.proxy():
+        chart_version_semver = semver.parse_version_info(concourse_cfg.helm_chart_version())
+        min_version = semver.parse_version_info('3.8.0')
+        if chart_version_semver >= min_version:
+            instance_specific_helm_values = add_proxy_values(
+                config_set=config_set,
+                instance_specific_values=instance_specific_helm_values,
+            )
+        else:
+            fail('Proxy deployment requires the configured helm chart version to be at least 3.8.0')
 
     execute_helm_deployment(
         kubernetes_config,
