@@ -193,6 +193,7 @@ ATTRIBUTES = (
         name='protecode_group_id',
         doc='technical protecode group id to upload to',
         type=int,
+        default=-1, # XXX hack
     ),
     AttributeSpec.optional(
         name='protecode_cfg_name',
