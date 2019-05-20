@@ -82,7 +82,7 @@ PROTECODE_ATTRS = (
 )
 
 
-class ProtecodeScanCfg(Trait):
+class ProtecodeScanCfg(ModelBase):
     @classmethod
     def _attribute_specs(cls):
         return PROTECODE_ATTRS
@@ -229,7 +229,7 @@ class ImageScanTrait(Trait):
             util.warning('legacy protecode cfg - adjust pipeline_definition!')
             return ProtecodeScanCfg(raw_dict=self.raw)
         # TODO: after schema change, protecode cfg should become optional
-        return ProtecodeScanCfg(raw=self.raw['protecode'])
+        return ProtecodeScanCfg(raw_dict=self.raw['protecode'])
 
     # XXX attrs below are kept temporarily to not break old cfgs - to be removed
     @deprecated
