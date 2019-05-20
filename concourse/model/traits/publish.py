@@ -17,6 +17,9 @@ import typing
 from util import not_none
 from model import NamedModelElement
 
+from concourse.model.job import (
+    JobVariant,
+)
 from concourse.model.step import (
     PipelineStep,
     StepNotificationPolicy,
@@ -25,12 +28,11 @@ from concourse.model.base import (
   AttributeSpec,
   AttribSpecMixin,
   ScriptType,
-  TraitTransformer,
   Trait,
   TraitTransformer,
-  ModelValidationError,
+)
+from model.base import (
   ModelDefaultsMixin,
-  normalise_to_dict,
 )
 
 
@@ -200,7 +202,7 @@ class PublishTraitTransformer(TraitTransformer):
         yield prepare_step
         yield publish_step
 
-    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
+    def process_pipeline_args(self, pipeline_args: JobVariant):
         main_repo = pipeline_args.main_repository()
         prepare_step = pipeline_args.step('prepare')
         publish_step = pipeline_args.step('publish')

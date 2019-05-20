@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from util import not_none
-
 from concourse.model.step import (
     PipelineStep,
     StepNotificationPolicy,
@@ -23,8 +21,10 @@ from concourse.model.base import (
     AttributeSpec,
     Trait,
     TraitTransformer,
-    ModelBase,
     ScriptType,
+)
+from concourse.model.job import (
+    JobVariant,
 )
 
 from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
@@ -87,7 +87,7 @@ class UpdateComponentDependenciesTraitTransformer(TraitTransformer):
         self.update_component_deps_step.set_timeout(duration_string='30m')
         yield self.update_component_deps_step
 
-    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
+    def process_pipeline_args(self, pipeline_args: JobVariant):
         # our step depends on dependendency descriptor step
         component_descriptor_step = pipeline_args.step('component_descriptor')
         self.update_component_deps_step._add_dependency(component_descriptor_step)

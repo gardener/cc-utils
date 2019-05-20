@@ -20,7 +20,6 @@ import typing
 
 import util
 from model.base import(
-    ModelDefaultsMixin,
     ModelValidationError,
     ModelValidationMixin,
 )

@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from util import not_none
-
+from concourse.model.job import (
+    JobVariant,
+)
 from concourse.model.base import (
   AttributeSpec,
   Trait,
@@ -48,6 +49,6 @@ class SchedulingTrait(Trait):
 class SchedulingTraitTransformer(TraitTransformer):
     name = 'scheduling'
 
-    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
+    def process_pipeline_args(self, pipeline_args: JobVariant):
         # no-op
         pass

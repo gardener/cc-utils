@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from util import not_none
-
+from concourse.model.job import (
+    JobVariant,
+)
 from concourse.model.step import (
     PipelineStep,
     StepNotificationPolicy,
@@ -180,7 +181,7 @@ class ImageScanTraitTransformer(TraitTransformer):
         self.image_scan_step.set_timeout(duration_string='12h')
         yield self.image_scan_step
 
-    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
+    def process_pipeline_args(self, pipeline_args: JobVariant):
         # our step depends on dependency descriptor step
         component_descriptor_step = pipeline_args.step('component_descriptor')
         self.image_scan_step._add_dependency(component_descriptor_step)

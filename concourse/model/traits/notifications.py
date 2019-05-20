@@ -16,17 +16,16 @@
 import enum
 import typing
 
-from util import not_none
-
-from concourse.model.step import PipelineStep
 from concourse.model.base import (
   AttributeSpec,
   AttribSpecMixin,
   Trait,
   TraitTransformer,
-  ScriptType,
   ModelBase,
   normalise_to_dict,
+)
+from concourse.model.job import (
+    JobVariant,
 )
 from model.base import (
   NamedModelElement,
@@ -246,7 +245,7 @@ class NotificationsTraitTransformer(TraitTransformer):
     def __init__(self, trait):
         self.trait = trait
 
-    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
+    def process_pipeline_args(self, pipeline_args: JobVariant):
         # all steps depend from us and may consume our output
         for step in pipeline_args.steps():
             step._notifications_cfg = self.trait.notifications_cfg(step.notifications_cfg_name())

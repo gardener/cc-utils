@@ -15,7 +15,7 @@
 
 from abc import abstractmethod
 from ensure import ensure_annotations
-from urllib.parse import urljoin, urlencode
+from urllib.parse import urljoin
 
 import util
 

@@ -19,6 +19,9 @@ from concourse.model.base import (
     Trait,
     TraitTransformer
 )
+from concourse.model.job import (
+    JobVariant,
+)
 
 
 ATTRIBUTES = (
@@ -59,5 +62,5 @@ class OptionsTraitTransformer(TraitTransformer):
         super().__init__(*args, **kwargs)
         self.trait = not_none(trait)
 
-    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
+    def process_pipeline_args(self, pipeline_args: JobVariant):
         pass

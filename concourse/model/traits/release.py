@@ -15,8 +15,9 @@
 
 import enum
 
-from util import not_none
-
+from concourse.model.job import (
+    JobVariant,
+)
 from concourse.model.step import (
     PipelineStep,
     StepNotificationPolicy,
@@ -138,7 +139,7 @@ class ReleaseTraitTransformer(TraitTransformer):
             )
         yield self.release_step
 
-    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
+    def process_pipeline_args(self, pipeline_args: JobVariant):
         # we depend on all other steps
         for step in pipeline_args.steps():
             self.release_step._add_dependency(step)

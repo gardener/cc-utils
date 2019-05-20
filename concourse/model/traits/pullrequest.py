@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from util import not_none
-
+from concourse.model.job import (
+    JobVariant,
+)
 from concourse.model.step import (
     PipelineStep,
     StepNotificationPolicy,
@@ -98,7 +99,7 @@ class PullRequestTraitTransformer(TraitTransformer):
         rm_pr_label_step.set_timeout(duration_string='5m')
         yield rm_pr_label_step
 
-    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
+    def process_pipeline_args(self, pipeline_args: JobVariant):
         repo_name = pipeline_args.main_repository().logical_name()
 
         # convert main-repo to PR

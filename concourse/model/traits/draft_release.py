@@ -24,7 +24,7 @@ from concourse.model.base import (
   Trait,
   TraitTransformer,
 )
-from concourse.model.jop import (
+from concourse.model.job import (
   JobVariant,
 )
 

@@ -15,15 +15,15 @@
 
 import typing
 
-from util import not_none
-
-from concourse.model.step import PipelineStep
 from concourse.model.base import (
   AttributeSpec,
   Trait,
   TraitTransformer,
   ModelBase,
   ModelValidationError,
+)
+from concourse.model.job import (
+    JobVariant,
 )
 
 CHANNEL_CFG_ATTRS = (
@@ -108,5 +108,5 @@ class SlackTrait(Trait):
 class SlackTraitTransformer(TraitTransformer):
     name = 'slack'
 
-    def process_pipeline_args(self, pipeline_args: 'JobVariant'):
+    def process_pipeline_args(self, pipeline_args: JobVariant):
         pass
