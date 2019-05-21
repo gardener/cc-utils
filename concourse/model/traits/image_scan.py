@@ -231,7 +231,12 @@ class ImageScanTrait(Trait):
         # XXX remove backward compatibility
         if not 'protecode' in self.raw or not self.raw.get('protecode'):
             util.warning('legacy protecode cfg - adjust pipeline_definition!')
-            return ProtecodeScanCfg(raw_dict=self.raw)
+            # filter out unknown attrs
+            raw = self.raw.copy()
+            del raw['protecode']
+            del raw['filters']
+            del raw['email_recipients']
+            return ProtecodeScanCfg(raw_dict=raw)
         # TODO: after schema change, protecode cfg should become optional
         return ProtecodeScanCfg(raw_dict=self.raw['protecode'])
 
