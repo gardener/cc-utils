@@ -8,13 +8,10 @@ import traceback
 from github3.exceptions import NotFoundError
 
 from util import (
-    ctx,
     existing_file,
     existing_dir,
     not_empty,
     not_none,
-    fail,
-    verbose,
     info,
     warning,
 )
@@ -28,7 +25,6 @@ from github.release_notes.util import (
     delete_file_from_slack,
     draft_release_name_for_version,
     fetch_release_notes,
-    github_repo_path,
     post_to_slack,
     ReleaseNotes,
 )
@@ -487,7 +483,7 @@ class PublishReleaseNotesStep(TransactionalStep):
 
         # check whether a release with the given version exists
         try:
-            release = self.github_helper.repository.release_from_tag(self.release_version)
+            self.github_helper.repository.release_from_tag(self.release_version)
         except NotFoundError:
             raise RuntimeError(f'No release with tag {self.release_version} found')
 
