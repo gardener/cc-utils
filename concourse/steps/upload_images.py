@@ -11,7 +11,7 @@ def republish_image(
     if mangle:
         img_ref = img_ref.replace('.', '_')
 
-    tgt_ref = util.urljoin(tgt_prefix, ':'.join(img_ref, tag))
+    tgt_ref = util.urljoin(tgt_prefix, ':'.join((img_ref, tag)))
 
     fh = container.registry.retrieve_container_image(image_reference=src_ref)
     container.registry.publish_container_image(image_reference=tgt_ref, image_file_obj=fh)
