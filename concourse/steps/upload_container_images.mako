@@ -13,6 +13,7 @@ upload_registry_prefix = upload_trait.upload_registry_prefix()
 filter_cfg = upload_trait.filters()
 component_trait = job_variant.trait('component_descriptor')
 %>
+itertools
 import os
 import tabulate
 
@@ -22,6 +23,7 @@ import protecode.util
 import util
 
 ${step_lib('images')}
+${step_lib('upload_images')}
 
 cfg_factory = util.ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
@@ -59,7 +61,10 @@ image_references = [
   )
 ]
 
-# just print images for now
-print('would now process images:')
-print(image_references)
+executor = concurrent.futures.ThreadPoolExecutor(max_workers=${upload_trait.parallel_jobs()})
+
+reupload_fun = itertools.partial(republish_image, tgt_prefix=upload_registry_prefix, mangle=True)
+
+for from, to in executor.map(reupload_fun, image_references):
+  print(f'uploaded {from} -> {to}')
 </%def>
