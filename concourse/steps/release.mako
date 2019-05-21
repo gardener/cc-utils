@@ -6,7 +6,6 @@
 from makoutil import indent_func
 from concourse.steps import step_lib
 import os
-import util
 version_file = job_step.input('version_path') + '/version'
 release_trait = job_variant.trait('release')
 version_trait = job_variant.trait('version')
@@ -33,6 +32,7 @@ if has_component_descriptor_trait:
 release_callback_path = release_trait.release_callback_path()
 next_version_callback_path = release_trait.next_version_callback_path()
 %>
+import util
 
 ${step_lib('release')}
 
