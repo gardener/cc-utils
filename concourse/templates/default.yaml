@@ -80,6 +80,7 @@ update_component_deps_step = concourse.steps.step_def('update_component_deps')
 draft_release_step = concourse.steps.step_def('draft_release')
 scan_container_images_step = concourse.steps.step_def('scan_container_images')
 alter_container_images_step = concourse.steps.step_def('alter_container_images')
+upload_container_images_step = concourse.steps.step_def('upload_container_images')
 %>
 
 <%namespace file="/resources/defaults.mako" import="*"/>
