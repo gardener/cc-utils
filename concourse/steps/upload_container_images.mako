@@ -21,6 +21,7 @@ import product.util
 import protecode.util
 import util
 
+${step_lib('images')}
 
 cfg_factory = util.ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")

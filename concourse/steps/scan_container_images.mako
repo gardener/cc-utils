@@ -33,6 +33,7 @@ from product.scanning import ProcessingMode
 util.ctx().configure_default_logging()
 
 ${step_lib('scan_container_images')}
+${step_lib('images')}
 
 # XXX suppress warnings for sap-ca
 # (is installed in truststore in cc-job-image, but apparently not honoured by httlib2)

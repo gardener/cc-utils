@@ -13,34 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
 import typing
 
 import clamav.util
-import product.model
-
-
-def image_reference_filter(include_regexes=(), exclude_regexes=()):
-    # compile regexes
-    include_functions = [re.compile(r).fullmatch for r in include_regexes]
-    exclude_functions = [re.compile(r).fullmatch for r in exclude_regexes]
-
-    def _img_ref_filter(image_reference: product.model.ContainerImage):
-        matches = True
-        if include_functions:
-            matches &= any(
-                map(lambda f: f(image_reference.image_reference()), include_functions)
-            )
-
-        # exclusion filter has precedence
-        if exclude_functions:
-            matches &= not any(
-                map(lambda f: f(image_reference.image_reference()), exclude_functions)
-            )
-
-        return matches
-
-    return _img_ref_filter
 
 
 def virus_scan_images(image_references: typing.Iterable[str]):
