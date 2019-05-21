@@ -15,14 +15,11 @@
 
 from docutils import nodes
 from docutils.parsers.rst import Directive, directives
-from docutils.parsers.rst.directives.tables import Table
 from sphinx import addnodes
 from sphinx.util.nodes import set_source_info, process_index_entry
 
 import sphinxutil
 import reflectionutil
-import attributes
-import concourse.model.base as base_model
 import cc_directives.base
 
 __EXTENSION_VERSION__ = '0.0.1'
@@ -90,7 +87,6 @@ class TraitDirective(Directive, cc_directives.base.AttributesDocMixin, sphinxuti
         self._trait_class = reflectionutil.trait_class(trait_name)
 
     def run(self):
-        options = self.options
         trait_name = self.options['name']
 
         self._init(trait_name=trait_name)

@@ -17,7 +17,7 @@ from abc import abstractmethod
 from collections import namedtuple
 from pydash import _
 
-from github.release_notes.model import ReleaseNote, REF_TYPE_COMMIT, REF_TYPE_PULL_REQUEST
+from github.release_notes.model import ReleaseNote, REF_TYPE_COMMIT
 
 
 def get_or_call(obj, path):

@@ -14,10 +14,8 @@
 # limitations under the License.
 
 import unittest
-from pydash import _
 
 from github.release_notes.model import (
-    ReferenceType,
     REF_TYPE_PULL_REQUEST,
     REF_TYPE_COMMIT,
 )
@@ -30,11 +28,9 @@ from github.release_notes.renderer import (
     TARGET_GROUP_USER_ID,
     TARGET_GROUP_OPERATOR_ID,
 )
-from product.model import ComponentName
 from test.github.release_notes.default_util import (
     release_note_block_with_defaults,
     CURRENT_REPO_NAME,
-    CURRENT_REPO
 )
 
 

@@ -18,7 +18,6 @@ import unittest
 
 from _test_utils import AssertMixin
 
-import model.base
 import product.model
 import product.util
 

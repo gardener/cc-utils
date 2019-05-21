@@ -2,7 +2,6 @@ import tempfile
 import unittest
 import os
 import pathlib
-import json
 
 import test_utils
 

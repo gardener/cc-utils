@@ -14,11 +14,10 @@
 # limitations under the License.
 
 from collections import namedtuple
-from enum import Enum
 from pydash import _
 
 from product.model import ComponentName
-from util import fail, check_type
+from util import check_type
 
 ReleaseNote = namedtuple('ReleaseNote', [
     "category_id",

@@ -108,7 +108,6 @@ class TableBuilder(object):
 
     # taken and adjusted from sphinx.ext.Autosummary.get_table()
     def _create_row(self, *column_texts):
-        # type: (unicode) -> None
         row = nodes.row('')
         source, line = self.state_machine.get_source_and_line()
         for text_line in column_texts:

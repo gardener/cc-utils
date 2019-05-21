@@ -19,9 +19,7 @@ import os
 import inspect
 
 import concourse.model.base as model_base
-import concourse.model.resources as resources
 import concourse.model.traits as traits
-import model
 
 # add repository root to pythonpath
 sys.path.append(os.path.abspath('../..'))
@@ -46,7 +44,7 @@ def trait_class(trait_name: str):
             continue # skip import
         if issubclass(t, model_base.Trait):
             return t
-    raise RuntimeError('failed to find trait class in module ' + self.trait_name)
+    raise RuntimeError('failed to find trait class in module ' + trait_name)
 
 
 def trait_instance(trait_name: str):

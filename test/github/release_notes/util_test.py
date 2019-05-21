@@ -33,12 +33,9 @@ from github.release_notes.renderer import (
     TARGET_GROUP_USER_ID,
     TARGET_GROUP_OPERATOR_ID,
 )
-from model.base import ModelValidationError
-from product.model import ComponentName
 from test.github.release_notes.default_util import (
     release_note_block_with_defaults,
     extract_release_notes_with_defaults,
-    CURRENT_REPO_NAME,
     CURRENT_REPO
 )
 

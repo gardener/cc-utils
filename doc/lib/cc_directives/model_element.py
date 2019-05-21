@@ -15,14 +15,11 @@
 
 from docutils import nodes
 from docutils.parsers.rst import Directive, directives
-from docutils.parsers.rst.directives.tables import Table
 from sphinx import addnodes
 from sphinx.util.nodes import set_source_info, process_index_entry
 
 import sphinxutil
 import reflectionutil
-import attributes
-import concourse.model.base as base_model
 import cc_directives.base
 
 __EXTENSION_VERSION__ = '0.0.1'
@@ -91,7 +88,6 @@ class ModelElementDirective(
         )
 
     def run(self):
-        options = self.options
         name = self.options['name']
         qualified_type_name= self.options['qualified_type_name']
 
