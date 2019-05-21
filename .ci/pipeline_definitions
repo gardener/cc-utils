@@ -8,8 +8,7 @@ cc-utils:
     head-update:
       steps:
         test: ~
-        pyflakes-lint: ~
-        pycodestyle: ~
+        lint: ~
       traits:
         notifications:
           default:
