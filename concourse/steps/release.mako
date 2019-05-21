@@ -6,6 +6,7 @@
 from makoutil import indent_func
 from concourse.steps import step_lib
 import os
+import util
 version_file = job_step.input('version_path') + '/version'
 release_trait = job_variant.trait('release')
 version_trait = job_variant.trait('version')
@@ -41,7 +42,7 @@ with open('${version_file}') as f:
 repo_dir = existing_dir('${repo.resource_name()}')
 repository_branch = '${repo.branch()}'
 
-github_cfg = ctx().cfg_factory().github('${github_cfg.name()}')
+github_cfg = util.ctx().cfg_factory().github('${github_cfg.name()}')
 github_repo_path = '${repo.repo_owner()}/${repo.repo_name()}'
 
 githubrepobranch = GitHubRepoBranch(
