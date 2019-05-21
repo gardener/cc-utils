@@ -13,7 +13,7 @@ upload_registry_prefix = upload_trait.upload_registry_prefix()
 filter_cfg = upload_trait.filters()
 component_trait = job_variant.trait('component_descriptor')
 %>
-itertools
+import itertools
 import os
 import tabulate
 
