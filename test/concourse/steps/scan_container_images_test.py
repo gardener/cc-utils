@@ -15,10 +15,10 @@
 
 import pytest
 
-import concourse.steps.scan_container_images as scan_container_images
+import concourse.steps.images as images
 import product.model
 
-examinee = scan_container_images.image_reference_filter
+examinee = images.image_reference_filter
 
 
 @pytest.fixture
