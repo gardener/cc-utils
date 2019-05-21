@@ -33,6 +33,10 @@ from product.scanning import ProcessingMode
 import util
 
 from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
+from .images import (
+    IMAGE_ATTRS,
+    ImageFilterMixin,
+)
 
 
 PROTECODE_ATTRS = (
@@ -115,43 +119,8 @@ class ProtecodeScanCfg(ModelBase):
         ProcessingMode(self.processing_mode())
 
 
-class FilterCfg(ModelBase):
-    @classmethod
-    def _attribute_specs(cls):
-        return (
-            AttributeSpec.optional(
-                name='include_image_references',
-                default=(),
-                doc='''
-                a list of regular expressions. If configured, only matching image references are
-                processed. By default, all image references are considered.
-                ''',
-            ),
-            AttributeSpec.optional(
-                name='exclude_image_references',
-                default=(),
-                doc='''
-                a list of regular expressions. If configured, matching image references are
-                exempted from processing. Has precedence over include_image_references.
-                By default, no image references are excluded.
-                ''',
-            ),
-        )
-
-    def include_image_references(self):
-        return self.raw['include_image_references']
-
-    def exclude_image_references(self):
-        return self.raw['exclude_image_references']
-
-
 ATTRIBUTES = (
-    AttributeSpec.optional(
-        name='filters',
-        default={'include_image_references': (), 'exclude_image_references': ()},
-        doc='optional filters to restrict container images to process',
-        type=FilterCfg,
-    ),
+    *IMAGE_ATTRS,
     AttributeSpec.optional(
         name='email_recipients',
         default=(),
@@ -213,16 +182,13 @@ ATTRIBUTES = (
 )
 
 
-class ImageScanTrait(Trait):
+class ImageScanTrait(Trait, ImageFilterMixin):
     @classmethod
     def _attribute_specs(cls):
         return ATTRIBUTES
 
     def _children(self):
         return (self.protecode(),)
-
-    def filters(self):
-        return FilterCfg(raw_dict=self.raw['filters'])
 
     def email_recipients(self):
         return self.raw['email_recipients']
