@@ -235,35 +235,6 @@ class ImageScanTrait(Trait):
         # TODO: after schema change, protecode cfg should become optional
         return ProtecodeScanCfg(raw_dict=self.raw['protecode'])
 
-    # XXX attrs below are kept temporarily to not break old cfgs - to be removed
-    @deprecated
-    def reference_protecode_group_ids(self):
-        return self.raw['reference_protecode_group_ids']
-
-    @deprecated
-    def protecode_group_id(self):
-        return self.raw.get('protecode_group_id')
-
-    @deprecated
-    def protecode_cfg_name(self):
-        return self.raw.get('protecode_cfg_name')
-
-    @deprecated
-    def parallel_jobs(self):
-        return self.raw.get('parallel_jobs')
-
-    @deprecated
-    def cve_threshold(self):
-        return self.raw.get('cve_threshold')
-
-    @deprecated
-    def processing_mode(self):
-        return self.raw.get('processing_mode')
-
-    @deprecated
-    def upload_registry_prefix(self):
-        return self.raw['upload_registry_prefix']
-
     def transformer(self):
         return ImageScanTraitTransformer(trait=self)
 
