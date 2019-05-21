@@ -19,8 +19,7 @@ cc-utils:
     pull-request:
       steps:
         test: ~
-        pyflakes-lint: ~
-        pycodestyle: ~
+        lint: ~
       traits:
         pull-request:
           policies:
@@ -34,8 +33,7 @@ cc-utils:
         branch: 'gh-pages'
       steps:
         test: ~
-        pyflakes-lint: ~
-        pycodestyle: ~
+        lint: ~
         generate_documentation:
           publish_to: ['gh_pages']
       traits:
