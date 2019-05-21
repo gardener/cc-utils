@@ -21,8 +21,6 @@ import enum
 
 
 import concourse.model.base as base_model
-import model
-import sphinxutil
 import util
 
 

@@ -64,7 +64,7 @@ def test_validation_fails_missing_required_key(monitoring_required_dict):
             element.validate()
 
 
-def test_validation_succeeds_on_required_dict(monitoring_required_dict):
+def test_monitoring_validation_succeeds_on_required_dict(monitoring_required_dict):
     element = examinee.MonitoringConfig(raw_dict=monitoring_required_dict)
     element.validate()
 

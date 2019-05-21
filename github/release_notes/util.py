@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import abstractmethod
 import git
 from git.exc import GitError
 from github.util import GitHubRepositoryHelper
@@ -27,14 +26,13 @@ from github.release_notes.model import (
     Commit,
     ReleaseNoteBlock,
     ReferenceType,
-    Reference,
     reference_type_for_type_identifier,
     REF_TYPE_PULL_REQUEST,
     REF_TYPE_COMMIT
 )
 from github.release_notes.renderer import MarkdownRenderer
 from gitutil import GitHelper
-from util import info, warning, fail, verbose, existing_dir, ctx
+from util import info, warning, fail, verbose, ctx
 from product.model import ComponentName
 from model.base import ModelValidationError
 from slackclient.util import SlackHelper
@@ -423,10 +421,8 @@ def extract_release_notes(
             if not rls_note_block:
                 continue
             release_notes.append(rls_note_block)
-        except ModelValidationError:
-            warning('skipping invalid origin repository: {source_repo}'.format(
-                source_repo=source_repo
-            ))
+        except ModelValidationError as e:
+            warning(f'an exception occurred while extracting release notes: {e}')
             continue
     return release_notes
 

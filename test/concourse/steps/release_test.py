@@ -1,11 +1,9 @@
-import os
 import pytest
 from unittest.mock import MagicMock
 from github.util import GitHubRepositoryHelper, GitHubRepoBranch
 from github.release_notes.util import ReleaseNotes
 
 import concourse.steps.release
-import util
 
 
 class TestReleaseCommitsStep(object):

@@ -37,6 +37,7 @@ def job_url(v):
 
 
 def determine_previous_build_status(v):
+    # cfg_set is defined in notification.mako
     concourse_api = from_cfg(cfg_set.concourse(), team_name=v['build-team-name'])
     try:
       build_number = int(v['build-name'])

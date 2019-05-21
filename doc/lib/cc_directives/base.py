@@ -16,7 +16,6 @@
 import sphinxutil
 import attributes
 import enum
-import concourse.model.base as base_model
 
 
 class AttributesDocMixin(sphinxutil.SphinxUtilsMixin):
