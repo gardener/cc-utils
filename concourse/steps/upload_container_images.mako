@@ -65,6 +65,6 @@ executor = concurrent.futures.ThreadPoolExecutor(max_workers=${upload_trait.para
 
 reupload_fun = itertools.partial(republish_image, tgt_prefix=upload_registry_prefix, mangle=True)
 
-for from, to in executor.map(reupload_fun, image_references):
-  print(f'uploaded {from} -> {to}')
+for from_ref, to_ref in executor.map(reupload_fun, image_references):
+  print(f'uploaded {from_ref} -> {to_ref}')
 </%def>
