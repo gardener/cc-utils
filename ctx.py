@@ -167,7 +167,7 @@ def configure_default_logging():
             'console': {
                 'class': 'logging.StreamHandler',
                 'formatter': 'default',
-                'level': logging.DEBUG,
+                'level': logging.INFO,
                 'stream': 'ext://sys.stdout',
             },
         },
