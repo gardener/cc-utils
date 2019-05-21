@@ -261,11 +261,6 @@ class ImageScanTrait(Trait):
     def upload_registry_prefix(self):
         return self.raw['upload_registry_prefix']
 
-    def validate(self):
-        super().validate()
-        # Use enum.Enum's validation to validate configured processing mode.
-        ProcessingMode(self.processing_mode())
-
     def transformer(self):
         return ImageScanTraitTransformer(trait=self)
 
