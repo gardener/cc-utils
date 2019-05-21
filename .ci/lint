@@ -1,0 +1,18 @@
+#!/bin/bash -e
+
+set -e
+
+# usage: $1: <src-dir>
+
+src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
+
+echo 'Running flake8 for all python modules..'
+
+if flake8 ${src_dir}; then
+    echo 'flake8 succeeded'
+    exit 0
+else
+    echo 'flake8 found errors (see above)'
+    exit 1
+fi
+
