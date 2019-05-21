@@ -218,6 +218,9 @@ class ImageScanTrait(Trait):
     def _attribute_specs(cls):
         return ATTRIBUTES
 
+    def _children(self):
+        return (self.protecode(),)
+
     def filters(self):
         return FilterCfg(raw_dict=self.raw['filters'])
 
