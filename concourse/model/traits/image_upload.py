@@ -64,6 +64,9 @@ class ImageUploadTrait(Trait, ImageFilterMixin):
     def parallel_jobs(self):
         return self.raw['parallel_jobs']
 
+    def upload_registry_prefix(self):
+        return self.raw['upload_registry_prefix']
+
     def transformer(self):
         return ImageUploadTraitTransformer(trait=self)
 
