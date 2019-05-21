@@ -29,13 +29,14 @@ ${step_lib('upload_images')}
 cfg_factory = util.ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
+upload_registry_prefix = '${upload_registry_prefix}'
 
 # print configuration
 print(tabulate.tabulate(
   (
     ('Image Filter (include)', ${filter_cfg.include_image_references()}),
     ('Image Filter (exclude)', ${filter_cfg.exclude_image_references()}),
-    ('Upload Registry prefix', '${upload_registry_prefix}'),
+    ('Upload Registry prefix', upload_registry_prefix),
   ),
 ))
 
