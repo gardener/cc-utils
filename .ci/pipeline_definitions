@@ -1,9 +1,6 @@
 cc-utils:
   template: 'default'
   base_definition:
-    steps:
-      pyflakes-lint: ~
-      pycodestyle: ~
     traits:
       version: ~
       component_descriptor: ~
@@ -11,6 +8,8 @@ cc-utils:
     head-update:
       steps:
         test: ~
+        pyflakes-lint: ~
+        pycodestyle: ~
       traits:
         notifications:
           default:
@@ -20,6 +19,8 @@ cc-utils:
     pull-request:
       steps:
         test: ~
+        pyflakes-lint: ~
+        pycodestyle: ~
       traits:
         pull-request:
           policies:
@@ -33,6 +34,8 @@ cc-utils:
         branch: 'gh-pages'
       steps:
         test: ~
+        pyflakes-lint: ~
+        pycodestyle: ~
         generate_documentation:
           publish_to: ['gh_pages']
       traits:
