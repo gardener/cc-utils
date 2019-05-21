@@ -19,34 +19,34 @@ from concourse.model.base import ModelValidationError
 
 from .component_descriptor import ComponentDescriptorTrait
 from .cronjob import CronTrait
+from .draft_release import DraftReleaseTrait
+from .image_alter import ImageAlterTrait
+from .image_scan import ImageScanTrait
+from .notifications import NotificationsTrait
+from .options import OptionsTrait
 from .publish import PublishTrait
 from .pullrequest import PullRequestTrait
 from .release import ReleaseTrait
 from .scheduling import SchedulingTrait
 from .slack import SlackTrait
-from .version import VersionTrait
-from .options import OptionsTrait
-from .draft_release import DraftReleaseTrait
 from .update_component_deps import UpdateComponentDependenciesTrait
-from .notifications import NotificationsTrait
-from .image_scan import ImageScanTrait
-from .image_alter import ImageAlterTrait
+from .version import VersionTrait
 
 TRAITS = {
-    'version': VersionTrait,
-    'cronjob': CronTrait,
     'component_descriptor': ComponentDescriptorTrait,
+    'cronjob': CronTrait,
+    'draft_release': DraftReleaseTrait,
+    'image_alter': ImageAlterTrait,
+    'image_scan': ImageScanTrait,
+    'notifications': NotificationsTrait,
+    'options': OptionsTrait,
+    'publish': PublishTrait,
     'pull-request': PullRequestTrait,
     'release': ReleaseTrait,
     'scheduling': SchedulingTrait,
     'slack': SlackTrait,
-    'publish': PublishTrait,
-    'options': OptionsTrait,
     'update_component_deps': UpdateComponentDependenciesTrait,
-    'draft_release': DraftReleaseTrait,
-    'image_scan': ImageScanTrait,
-    'image_alter': ImageAlterTrait,
-    'notifications': NotificationsTrait,
+    'version': VersionTrait,
 }
 
 
