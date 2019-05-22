@@ -25,6 +25,7 @@ import util
 
 ${step_lib('images')}
 ${step_lib('upload_images')}
+${step_lib('component_descriptor_util')}
 
 cfg_factory = util.ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
@@ -45,9 +46,7 @@ component_descriptor_path = os.path.join(
   'component_descriptor'
 )
 
-component_descriptor = product.model.Product.from_dict(
-  raw_dict=util.parse_yaml_file(component_descriptor_path)
-)
+component_descriptor = parse_component_descriptor()
 
 image_filter = image_reference_filter(
   include_regexes=${filter_cfg.include_image_references()},

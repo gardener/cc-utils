@@ -17,10 +17,11 @@ upload_registry_prefix = protecode_scan.upload_registry_prefix()
 filter_cfg = image_scan_trait.filters()
 component_trait = job_variant.trait('component_descriptor')
 %>
-import sys
+import os
 import pathlib
-import textwrap
+import sys
 import tabulate
+import textwrap
 
 import mailutil
 import product.model
@@ -34,6 +35,7 @@ util.ctx().configure_default_logging()
 
 ${step_lib('scan_container_images')}
 ${step_lib('images')}
+${step_lib('component_descriptor_util')}
 
 # XXX suppress warnings for sap-ca
 # (is installed in truststore in cc-job-image, but apparently not honoured by httlib2)
@@ -67,14 +69,7 @@ print(tabulate.tabulate(
   ),
 ))
 
-component_descriptor_file = pathlib.Path(
-  util.check_env('COMPONENT_DESCRIPTOR_DIR'),
-  'component_descriptor'
-)
-
-component_descriptor = product.model.Product.from_dict(
-  raw_dict=util.parse_yaml_file(component_descriptor_file)
-)
+component_descriptor = parse_component_descriptor()
 
 processing_mode = ProcessingMode('${protecode_scan.processing_mode()}')
 
