@@ -33,7 +33,7 @@ from .model import (
     Worker,
 )
 from model.concourse import (
-    ConcourseTeamCredentials,
+    ConcourseTeam,
 )
 from http_requests import AuthenticatedRequestBuilder
 from util import not_empty
@@ -241,19 +241,19 @@ class ConcourseApiV4(ConcourseApiBase):
         )
         return auth_token
 
-    def set_team(self, team_credentials: ConcourseTeamCredentials):
+    def set_team(self, concourse_team: ConcourseTeam):
         body = {}
         body['auth'] = {
             "users": [
-                "local:" + team_credentials.username()
+                "local:" + concourse_team.username()
             ]
         }
-        if team_credentials.has_github_oauth_credentials():
+        if concourse_team.has_github_oauth_credentials():
             body['auth'].update({
                 "groups": [
-                    "github:" + team_credentials.github_auth_team()
+                    "github:" + concourse_team.github_auth_team()
                 ]
             })
 
-        team_url = self.routes.team_url(team_credentials.teamname())
+        team_url = self.routes.team_url(concourse_team.teamname())
         self._put(team_url, json.dumps(body))

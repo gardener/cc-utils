@@ -135,7 +135,9 @@ def create_instance_specific_helm_values(
     not_none(concourse_cfg)
 
     # 'main'-team credentials need to be included in the values.yaml, unlike the other teams
-    creds = concourse_cfg.team_credentials('main')
+    concourse_uam_cfg_name = concourse_cfg.concourse_uam_config()
+    concourse_uam_cfg = config_factory.concourse_uam(concourse_uam_cfg_name)
+    main_team = concourse_uam_cfg.main_team()
     external_url = concourse_cfg.external_url()
     external_host = urlparse(external_url).netloc
     ingress_host = concourse_cfg.ingress_host()
@@ -153,7 +155,7 @@ def create_instance_specific_helm_values(
             github_host = None
 
         bcrypted_pwd = bcrypt.hashpw(
-            creds.passwd().encode('utf-8'),
+            main_team.password().encode('utf-8'),
             bcrypt.gensalt()
         ).decode('utf-8')
 
@@ -163,9 +165,9 @@ def create_instance_specific_helm_values(
                     'externalUrl': external_url,
                     'auth': {
                         'mainTeam': {
-                            'localUser': creds.username(),
+                            'localUser': main_team.username(),
                             'github': {
-                                'team': creds.github_auth_team()
+                                'team': main_team.github_auth_team()
                             }
                         },
                         'github': {
@@ -175,9 +177,9 @@ def create_instance_specific_helm_values(
                 }
             },
             'secrets': {
-                'localUsers': creds.username() + ':' + bcrypted_pwd,
-                'githubClientId': creds.github_auth_client_id(),
-                'githubClientSecret': creds.github_auth_client_secret()
+                'localUsers': main_team.username() + ':' + bcrypted_pwd,
+                'githubClientId': main_team.github_auth_client_id(),
+                'githubClientSecret': main_team.github_auth_client_secret()
             },
             'web': {
                 'ingress': {
@@ -434,16 +436,18 @@ def destroy_concourse_landscape(config_name: str, release_name: str):
 
 def set_teams(config: ConcourseConfig):
     not_none(config)
-
+    cfg_factory = global_ctx().cfg_factory()
+    concourse_uam_cfg_name = config.concourse_uam_config()
+    concourse_uam_cfg = cfg_factory.concourse_uam(concourse_uam_cfg_name)
     # Use main-team, i.e. the team that can change the other teams' credentials
-    main_team_credentials = config.main_team_credentials()
+    main_team = concourse_uam_cfg.main_team()
 
     concourse_api = client.from_cfg(
         concourse_cfg=config,
-        team_name=main_team_credentials.teamname(),
+        team_name=main_team.teamname(),
     )
-    for team in config.all_team_credentials():
+    for team in concourse_uam_cfg.teams():
         # We skip the main team here since we cannot update all its credentials at this time.
-        if team.teamname() == "main":
+        if team.teamname() == main_team.teamname():
             continue
         concourse_api.set_team(team)
