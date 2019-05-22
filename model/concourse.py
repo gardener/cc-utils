@@ -16,7 +16,6 @@
 from enum import Enum
 
 from model.base import (
-    BasicCredentials,
     NamedModelElement,
     ModelValidationError,
 )
@@ -32,27 +31,14 @@ class ConcourseConfig(NamedModelElement):
     Not intended to be instantiated by users of this module
     '''
 
-    def all_team_credentials(self):
-        return [ConcourseTeamCredentials(team_dict) for team_dict in self.raw.get('teams').values()]
-
     def external_url(self):
         return self.raw.get('externalUrl')
 
     def job_mapping_cfg_name(self):
         return self.raw.get('job_mapping')
 
-    def team_credentials(self, teamname):
-        raw_credentials = self.raw.get('teams').get(teamname)
-        if not raw_credentials:
-            raise ValueError('unknown team {t}; known: {kt}'.format(
-                t=teamname,
-                kt=', '.join(self.raw.get('teams').keys()),
-                )
-            )
-        return ConcourseTeamCredentials(raw_credentials)
-
-    def main_team_credentials(self):
-        return self.team_credentials('main')
+    def concourse_uam_config(self):
+        return self.raw.get('concourse_uam_config')
 
     def helm_chart_default_values_config(self):
         return self.raw.get('helm_chart_default_values_config')
@@ -106,7 +92,7 @@ class ConcourseConfig(NamedModelElement):
     def _required_attributes(self):
         return [
             'externalUrl',
-            'teams',
+            'concourse_uam_config',
             'helm_chart_default_values_config',
             'kubernetes_cluster_config',
             'concourse_version',
@@ -128,12 +114,6 @@ class ConcourseConfig(NamedModelElement):
 
     def validate(self):
         super().validate()
-        # We check for the existence of the 'main'-team as it is the only team that is *required* to
-        # exist for any concourse server.
-        if not self.raw.get('teams').get('main'):
-            raise ModelValidationError('No team "main" defined.')
-        # implicitly validate main team
-        self.team_credentials('main')
         # Check for valid versions
         if self.concourse_version() not in ConcourseApiVersion:
             raise ModelValidationError(
@@ -141,13 +121,48 @@ class ConcourseConfig(NamedModelElement):
             )
 
 
-class ConcourseTeamCredentials(BasicCredentials):
-    '''
-    Not intended to be instantiated by users of this module
-    '''
+class ConcourseUAMConfig(NamedModelElement):
+    def teams(self):
+        return [
+            ConcourseTeam(name=name, raw_dict=raw)
+            for name, raw in self.raw.get('teams').items()
+        ]
 
+    def team(self, team_name: str):
+        for team in self.teams():
+            if team.teamname() == team_name:
+                return team
+        raise ValueError(
+            f"Unknown team '{team_name}'; known teams: {', '.join(self.raw.get('teams').keys())}"
+        )
+
+    def main_team(self):
+        return self.team('main')
+
+    def _required_attributes(self):
+        yield from super()._required_attributes()
+        yield from [
+            'teams',
+        ]
+
+    def validate(self):
+        # We check for the existence of the 'main'-team as it is the only team that is *required* to
+        # exist for any concourse server.
+        if not self.main_team():
+            raise ModelValidationError("No team 'main' defined.")
+        # explicitly validate main team
+        self.main_team().validate()
+
+
+class ConcourseTeam(NamedModelElement):
     def teamname(self):
-        return self.raw.get('teamname')
+        return self.name()
+
+    def username(self):
+        return self.raw.get('username')
+
+    def password(self):
+        return self.raw.get('password')
 
     def github_auth_team(self, split: bool=False):
         '''
@@ -155,15 +170,15 @@ class ConcourseTeamCredentials(BasicCredentials):
 
         @param split: if `true` return [org, team]
         '''
-        if split and self.raw.get('gitAuthTeam'):
-            return self.raw.get('gitAuthTeam').split(':')
-        return self.raw.get('gitAuthTeam')
+        if split and self.raw.get('git_auth_team'):
+            return self.raw.get('git_auth_team').split(':')
+        return self.raw.get('git_auth_team')
 
     def github_auth_client_id(self):
-        return self.raw.get('githubAuthClientId')
+        return self.raw.get('github_auth_client_id')
 
     def github_auth_client_secret(self):
-        return self.raw.get('githubAuthClientSecret')
+        return self.raw.get('github_auth_client_secret')
 
     def has_basic_auth_credentials(self):
         if self.raw.get('username') or self.raw.get('password'):
@@ -172,22 +187,19 @@ class ConcourseTeamCredentials(BasicCredentials):
 
     def has_github_oauth_credentials(self):
         if (
-            self.raw.get('gitAuthTeam') or
-            self.raw.get('githubAuthClientId') or
-            self.raw.get('githubAuthClientSecret')
+            self.raw.get('git_auth_team') or
+            self.raw.get('github_auth_client_id') or
+            self.raw.get('github_auth_client_secret')
         ):
             return True
         return False
 
     def _required_attributes(self):
-        _required_attributes = ['teamname']
+        yield from super()._required_attributes()
         if self.has_basic_auth_credentials():
-            _required_attributes.extend(['username', 'password'])
+            yield from ['username', 'password']
         if self.has_github_oauth_credentials():
-            _required_attributes.extend(
-                ['gitAuthTeam', 'githubAuthClientId', 'githubAuthClientSecret']
-            )
-        return _required_attributes
+            yield from ['git_auth_team', 'github_auth_client_id', 'github_auth_client_secret']
 
     def validate(self):
         super().validate()

@@ -20,6 +20,7 @@ from urllib3.exceptions import InsecureRequestWarning
 
 import functools
 
+import util
 from .api import (
     ConcourseApiV4,
 )
@@ -67,10 +68,13 @@ def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
     Factory method to get Concourse API object
     '''
     base_url = concourse_cfg.ingress_url()
-    team_credentials = concourse_cfg.team_credentials(team_name)
-    team_name = team_credentials.teamname()
-    username = team_credentials.username()
-    password = team_credentials.passwd()
+    cfg_factory = util.ctx().cfg_factory()
+    concourse_uam_cfg_name = concourse_cfg.concourse_uam_config()
+    concourse_uam_cfg = cfg_factory.concourse_uam(concourse_uam_cfg_name)
+    concourse_team = concourse_uam_cfg.team(team_name)
+    team_name = concourse_team.teamname()
+    username = concourse_team.username()
+    password = concourse_team.password()
     concourse_version = concourse_cfg.concourse_version()
 
     if concourse_version is ConcourseApiVersion.V4:

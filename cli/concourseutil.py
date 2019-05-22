@@ -212,10 +212,9 @@ def trigger_resource_check(
     cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(cfg_name)
     concourse_cfg = cfg_set.concourse()
-    team_credentials = concourse_cfg.team_credentials(team_name)
     api = client.from_cfg(
         concourse_cfg=concourse_cfg,
-        team_name=team_credentials.teamname(),
+        team_name=team_name,
     )
     api.trigger_resource_check(
         pipeline_name=pipeline_name,
