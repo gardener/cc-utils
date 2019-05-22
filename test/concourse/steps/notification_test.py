@@ -147,7 +147,7 @@ class NotificationStepLibTest(unittest.TestCase):
     def test_should_notify(self):
         examinee = notification.should_notify
 
-        # mock away `determine_previous_build_status` (previous build "succeeded"
+        # mock away `determine_previous_build_status` (previous build "succeeded")
         build_status_mock = MagicMock(return_value=BuildStatus.SUCCEEDED)
 
         # test policies in case previous build succeeded
@@ -155,16 +155,19 @@ class NotificationStepLibTest(unittest.TestCase):
                 NotificationTriggeringPolicy.ONLY_FIRST,
                 meta_vars={},
                 determine_previous_build_status=build_status_mock,
+                cfg_set=None,
         )
         assert examinee(
                 NotificationTriggeringPolicy.ALWAYS,
                 meta_vars={},
                 determine_previous_build_status=build_status_mock,
+                cfg_set=None,
         )
         assert not examinee(
                 NotificationTriggeringPolicy.NEVER,
                 meta_vars={},
                 determine_previous_build_status=build_status_mock,
+                cfg_set=None,
         )
 
         # test policies in case previous build failed
@@ -173,16 +176,19 @@ class NotificationStepLibTest(unittest.TestCase):
                 NotificationTriggeringPolicy.ONLY_FIRST,
                 meta_vars={},
                 determine_previous_build_status=build_status_mock,
+                cfg_set=None,
         )
         assert examinee(
                 NotificationTriggeringPolicy.ALWAYS,
                 meta_vars={},
                 determine_previous_build_status=build_status_mock,
+                cfg_set=None,
         )
         assert not examinee(
                 NotificationTriggeringPolicy.NEVER,
                 meta_vars={},
                 determine_previous_build_status=build_status_mock,
+                cfg_set=None,
         )
 
     def test_cfg_from_callback(self):
