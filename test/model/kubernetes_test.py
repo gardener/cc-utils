@@ -52,6 +52,7 @@ def monitoring_required_dict():
             'namespace': 'foo',
             'kube_state_metrics_namespaces_to_monitor': 'foo',
             'kube_state_metrics_collectors': 'foo',
+            'tls_config': 'foo',
     }
 
 
