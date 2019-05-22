@@ -18,7 +18,7 @@ from model.base import (
 )
 
 
-class MonitoringConfig(NamedModelElement):
+class CCMonitoringConfig(NamedModelElement):
     def _required_attributes(self):
         return {
             'namespace',
