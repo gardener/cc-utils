@@ -3,6 +3,7 @@ import util
 
 import product.model
 
+
 def parse_component_descriptor():
     component_descriptor_file = os.path.join(
       util.check_env('COMPONENT_DESCRIPTOR_DIR'),

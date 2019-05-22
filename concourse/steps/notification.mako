@@ -29,7 +29,6 @@ else:
 %>
 import sys
 import os
-import traceback
 
 import github
 import util
@@ -68,6 +67,7 @@ util.info("Will notify: ${on_error_cfg.recipients()}")
 if not should_notify(
     NotificationTriggeringPolicy('${triggering_policy.value}'),
     meta_vars=meta_vars_dict,
+    cfg_set=cfg_set,
 ):
     print('will not notify due to policy')
     sys.exit(0)

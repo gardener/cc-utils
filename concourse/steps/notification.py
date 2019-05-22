@@ -3,6 +3,9 @@ from concourse.client import from_cfg
 from concourse.client.model import BuildStatus
 
 import os
+import traceback
+
+import mailutil
 import util
 
 
@@ -36,8 +39,7 @@ def job_url(v):
     ])
 
 
-def determine_previous_build_status(v):
-    # cfg_set is defined in notification.mako
+def determine_previous_build_status(v, cfg_set):
     concourse_api = from_cfg(cfg_set.concourse(), team_name=v['build-team-name'])
     try:
       build_number = int(v['build-name'])
@@ -63,6 +65,7 @@ def determine_previous_build_status(v):
 def should_notify(
     triggering_policy,
     meta_vars,
+    cfg_set,
     determine_previous_build_status=determine_previous_build_status,
 ):
     if triggering_policy == NotificationTriggeringPolicy.ALWAYS:
@@ -70,7 +73,7 @@ def should_notify(
     elif triggering_policy == NotificationTriggeringPolicy.NEVER:
         return False
     elif triggering_policy == NotificationTriggeringPolicy.ONLY_FIRST:
-        previous_build_status = determine_previous_build_status(meta_vars)
+        previous_build_status = determine_previous_build_status(meta_vars, cfg_set)
         if not previous_build_status:
           util.info('failed to determine previous build status - will notify')
           return True
@@ -127,7 +130,7 @@ def retrieve_build_log(concourse_api, task_name):
       build_events = concourse_api.build_events(build_id=build_id)
       build_log = '\n'.join(build_events.iter_buildlog(task_id=task_id))
       return build_log
-    except Exception as e:
+    except Exception:
       traceback.print_exc() # print_err, but send email notification anyway
       return 'failed to retrieve build log'
 
