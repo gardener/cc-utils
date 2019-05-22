@@ -217,6 +217,7 @@ class ImageScanTrait(Trait, ImageFilterMixin):
             del raw['protecode']
             del raw['filters']
             del raw['email_recipients']
+            del raw['notify']
             return ProtecodeScanCfg(raw_dict=raw)
         # TODO: after schema change, protecode cfg should become optional
         return ProtecodeScanCfg(raw_dict=self.raw['protecode'])
