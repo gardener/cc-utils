@@ -25,8 +25,8 @@ from model import (
     ConfigFactory,
     ConfigurationSet,
 )
-from model.kubernetes import (
-    MonitoringConfig,
+from model.monitoring import (
+    CCMonitoringConfig,
 )
 from model.concourse import (
     ConcourseConfig,
@@ -44,11 +44,14 @@ def deploy_monitoring_landscape(
     # Set the global context to the cluster specified in KubernetesConfig
     kube_ctx.set_kubecfg(kubernetes_cfg.kubeconfig())
     ensure_cluster_version(kubernetes_cfg)
-    monitoring_namespace = kubernetes_cfg.monitoring().namespace()
+
+    monitoring_config_name = concourse_cfg.monitoring_config()
+    monitoring_cfg = cfg_factory.monitoring(monitoring_config_name)
+    monitoring_namespace = monitoring_cfg.namespace()
 
     # deploy kube-state-metrics
     kube_state_metrics_helm_values = create_kube_state_metrics_helm_values(
-        monitoring_cfg=kubernetes_cfg.monitoring()
+        monitoring_cfg=monitoring_cfg
     )
     execute_helm_deployment(
         kubernetes_cfg,
@@ -74,7 +77,7 @@ def deploy_monitoring_landscape(
 
 @ensure_annotations
 def create_kube_state_metrics_helm_values(
-    monitoring_cfg: MonitoringConfig,
+    monitoring_cfg: CCMonitoringConfig,
 ):
     configured_collectors = monitoring_cfg.kube_state_metrics_collectors()
     all_collectors = [
