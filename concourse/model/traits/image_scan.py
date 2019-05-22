@@ -12,6 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import enum
+
 from concourse.model.job import (
     JobVariant,
 )
@@ -116,8 +119,20 @@ class ProtecodeScanCfg(ModelBase):
         ProcessingMode(self.processing_mode())
 
 
+class Notify(enum.Enum):
+    EMAIL_RECIPIENTS = 'email_recipients'
+    NOBODY = 'nobody'
+    COMPONENT_OWNERS = 'component_owners'
+
+
 ATTRIBUTES = (
     *IMAGE_ATTRS,
+    AttributeSpec.optional(
+        name='notify',
+        default=Notify.EMAIL_RECIPIENTS,
+        doc='whom to notify about found issues',
+        type=Notify,
+    ),
     AttributeSpec.optional(
         name='email_recipients',
         default=(),
@@ -186,6 +201,9 @@ class ImageScanTrait(Trait, ImageFilterMixin):
 
     def _children(self):
         return (self.protecode(),)
+
+    def notify(self):
+        return Notify(self.raw['notify'])
 
     def email_recipients(self):
         return self.raw['email_recipients']
