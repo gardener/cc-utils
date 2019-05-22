@@ -37,14 +37,8 @@ ${step_lib('scan_container_images')}
 ${step_lib('images')}
 ${step_lib('component_descriptor_util')}
 
-# XXX suppress warnings for sap-ca
-# (is installed in truststore in cc-job-image, but apparently not honoured by httlib2)
-import urllib3
-urllib3.disable_warnings()
-
 cfg_factory = util.ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
-
 
 % if not protecode_scan.protecode_cfg_name():
 protecode_cfg = cfg_factory.protecode()
