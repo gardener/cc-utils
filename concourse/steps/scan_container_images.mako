@@ -18,7 +18,6 @@ filter_cfg = image_scan_trait.filters()
 component_trait = job_variant.trait('component_descriptor')
 %>
 import os
-import pathlib
 import sys
 import tabulate
 import textwrap
