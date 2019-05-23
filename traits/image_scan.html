@@ -197,55 +197,61 @@
 <td><p>FilterCfg</p></td>
 <td><p>optional filters to restrict container images to process</p></td>
 </tr>
-<tr class="row-odd"><td><p>email_recipients</p></td>
+<tr class="row-odd"><td><p>notify</p></td>
+<td><p>no</p></td>
+<td><p>Notify.EMAIL_RECIPIENTS</p></td>
+<td><p>Notify</p></td>
+<td><p>whom to notify about found issues</p></td>
+</tr>
+<tr class="row-even"><td><p>email_recipients</p></td>
 <td><p>no</p></td>
 <td><p>()</p></td>
 <td><p>str</p></td>
 <td><p>optional email recipients to be notified about critical scan results</p></td>
 </tr>
-<tr class="row-even"><td><p>protecode</p></td>
+<tr class="row-odd"><td><p>protecode</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>ProtecodeScanCfg</p></td>
 <td><p>if present, perform protecode scanning</p></td>
 </tr>
-<tr class="row-odd"><td><p>parallel_jobs</p></td>
+<tr class="row-even"><td><p>parallel_jobs</p></td>
 <td><p>no</p></td>
 <td><p>12</p></td>
 <td><p>int</p></td>
 <td><p>amount of parallel scanning threads</p></td>
 </tr>
-<tr class="row-even"><td><p>cve_threshold</p></td>
+<tr class="row-odd"><td><p>cve_threshold</p></td>
 <td><p>no</p></td>
 <td><p>7</p></td>
 <td><p>int</p></td>
 <td><p>CVE threshold to interpret as an error</p></td>
 </tr>
-<tr class="row-odd"><td><p>processing_mode</p></td>
+<tr class="row-even"><td><p>processing_mode</p></td>
 <td><p>no</p></td>
 <td><p>upload_if_changed</p></td>
 <td><p>ProcessingMode</p></td>
 <td><p>Protecode processing mode</p></td>
 </tr>
-<tr class="row-even"><td><p>reference_protecode_group_ids</p></td>
+<tr class="row-odd"><td><p>reference_protecode_group_ids</p></td>
 <td><p>no</p></td>
 <td><p>()</p></td>
 <td><p>str</p></td>
 <td><p>an optional list of protecode group IDs to import triages from.</p></td>
 </tr>
-<tr class="row-odd"><td><p>protecode_group_id</p></td>
+<tr class="row-even"><td><p>protecode_group_id</p></td>
 <td><p>no</p></td>
 <td><p>-1</p></td>
 <td><p>int</p></td>
 <td><p>technical protecode group id to upload to</p></td>
 </tr>
-<tr class="row-even"><td><p>protecode_cfg_name</p></td>
+<tr class="row-odd"><td><p>protecode_cfg_name</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>protecode cfg name to use (see cc-utils)</p></td>
 </tr>
-<tr class="row-odd"><td><p>upload_registry_prefix</p></td>
+<tr class="row-even"><td><p>upload_registry_prefix</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
