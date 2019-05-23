@@ -133,8 +133,10 @@ if not email_recipients:
 # notify about critical vulnerabilities
 
 def process_upload_results(upload_result):
-  # upload_result tuple of AnalysisResult and CVE Score
-  analysis_result = upload_result[0]
+  # upload_result tuple of product.model.UploadResult and CVE Score
+  upload_result = upload_result[0]
+  # protecode.model.AnalysisResult
+  analysis_result = upload_result.result
   greatest_cve = upload_result[1]
 
   name = analysis_result.display_name()

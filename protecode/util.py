@@ -30,7 +30,6 @@ from product.model import (
     UploadResult,
 )
 from protecode.model import (
-    AnalysisResult,
     License,
     highest_major_cve_severity,
 )
@@ -47,7 +46,7 @@ def upload_images(
     image_reference_filter=lambda _: True,
     upload_registry_prefix: str=None,
     reference_group_ids=(),
-) -> typing.Sequence[typing.Tuple[AnalysisResult, int]]:
+) -> typing.Iterable[typing.Tuple[UploadResult, int]]:
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
     protecode_api = protecode.client.from_cfg(protecode_cfg)
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
@@ -151,18 +150,18 @@ def filter_and_display_upload_results(
     upload_results: typing.Sequence[UploadResult],
     cve_threshold=7,
     ignore_if_triaged=True,
-) -> typing.Sequence[typing.Tuple[AnalysisResult, int]]:
+) -> typing.Iterable[typing.Tuple[UploadResult, int]]:
     # we only require the analysis_results for now
-    results = [r.result for r in upload_results]
 
     results_without_components = []
     results_below_cve_thresh = []
     results_above_cve_thresh = []
 
-    for result in results:
+    for upload_result in upload_results:
+        result = upload_result.result
         components = result.components()
         if not components:
-            results_without_components.append()
+            results_without_components.append(upload_result)
             continue
 
         greatest_cve = -1
@@ -176,24 +175,24 @@ def filter_and_display_upload_results(
                 greatest_cve = greatest_cve_candidate
 
         if greatest_cve >= cve_threshold:
-            results_above_cve_thresh.append((result, greatest_cve))
+            results_above_cve_thresh.append((upload_result, greatest_cve))
             continue
         else:
-            results_below_cve_thresh.append((result, greatest_cve))
+            results_below_cve_thresh.append((upload_result, greatest_cve))
             continue
 
     if results_without_components:
         warning(f'Protecode did not identify components for {len(results_without_components)}:\n')
         for result in results_without_components:
-            print(result.display_name())
+            print(result.result.display_name())
         print('')
 
-    def render_results_table(results: typing.Sequence[typing.Tuple[AnalysisResult, int]]):
+    def render_results_table(upload_results: typing.Sequence[typing.Tuple[UploadResult, int]]):
         header = ('Component Name', 'Greatest CVE')
-        results = sorted(results, key=lambda e: e[1])
+        results = sorted(upload_results, key=lambda e: e[1])
 
         result = tabulate.tabulate(
-            map(lambda r: (r[0].display_name(), r[1]), results),
+            map(lambda r: (r[0].result.display_name(), r[1]), results),
             headers=header,
             tablefmt='fancy_grid',
         )
@@ -201,12 +200,12 @@ def filter_and_display_upload_results(
 
     if results_below_cve_thresh:
         info(f'The following components were below configured cve threshold {cve_threshold}')
-        render_results_table(results=results_below_cve_thresh)
+        render_results_table(upload_results=results_below_cve_thresh)
         print('')
 
     if results_above_cve_thresh:
         warning('The following components have critical vulnerabilities:')
-        render_results_table(results=results_above_cve_thresh)
+        render_results_table(upload_results=results_above_cve_thresh)
 
     return results_above_cve_thresh
 
@@ -214,10 +213,11 @@ def filter_and_display_upload_results(
 def _create_task(protecode_util, container_image, component):
     def task_function():
         try:
-            return protecode_util.upload_image(
+            upload_result = protecode_util.upload_image(
                 container_image=container_image,
                 component=component,
             )
+            return upload_result
         except requests.exceptions.ConnectionError:
             error(
                 'A connection error occurred. This might be due problems with Protecode. '

@@ -60,7 +60,7 @@ def upload_product_images(
         raw_dict=parse_yaml_file(product_cfg_file)
     )
 
-    upload_images(
+    upload_results, license_report = upload_images(
         protecode_cfg=protecode_cfg,
         product_descriptor=product_descriptor,
         protecode_group_id=protecode_group_id,
