@@ -15,7 +15,11 @@
 
 import typing
 
+import tabulate
+
 import clamav.util
+
+from product.model import UploadResult
 
 
 def virus_scan_images(image_references: typing.Iterable[str]):
@@ -24,3 +28,32 @@ def virus_scan_images(image_references: typing.Iterable[str]):
         if clamav.util.result_ok(status=status, signature=signature):
             continue
         yield (image_reference, f'{status}: {signature}')
+
+
+def protecode_results_table(protecode_cfg, upload_results: typing.Iterable[UploadResult]):
+    def result_to_tuple(upload_result: UploadResult):
+        # upload_result tuple of product.model.UploadResult and CVE Score
+        upload_result = upload_result[0]
+        # protecode.model.AnalysisResult
+        analysis_result = upload_result.result
+        greatest_cve = upload_result[1]
+
+        name = analysis_result.display_name()
+        analysis_url = \
+            f'{protecode_cfg.api_url()}/products/{analysis_result.product_id()}/#/analysis'
+        link_to_analysis_url = f'<a href="{analysis_url}">{name}</a>'
+
+        custom_data = analysis_result.custom_data()
+        if custom_data is not None:
+          image_reference = custom_data.get('IMAGE_REFERENCE')
+        else:
+          image_reference = None
+
+        return [link_to_analysis_url, greatest_cve, image_reference]
+
+    table = tabulate.tabulate(
+      map(result_to_tuple, upload_results),
+      headers=('Component Name', 'Greatest CVE', 'Container Image Reference'),
+      tablefmt='html',
+    )
+    return table
