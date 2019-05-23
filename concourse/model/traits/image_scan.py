@@ -30,7 +30,6 @@ from concourse.model.base import (
     ScriptType,
 )
 from product.scanning import ProcessingMode
-import util
 
 from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
 from .images import (
@@ -144,53 +143,6 @@ ATTRIBUTES = (
         type=ProtecodeScanCfg,
         doc='if present, perform protecode scanning',
     ),
-
-    # XXX attrs below are kept temporarily to not break old cfgs - to be removed
-    AttributeSpec.optional(
-        name='parallel_jobs',
-        default=12,
-        doc='amount of parallel scanning threads',
-        type=int,
-    ),
-    AttributeSpec.optional(
-        name='cve_threshold',
-        default=7,
-        doc='CVE threshold to interpret as an error',
-        type=int,
-    ),
-    AttributeSpec.optional(
-        name='processing_mode',
-        default='upload_if_changed',
-        doc='Protecode processing mode',
-        type=ProcessingMode,
-    ),
-    AttributeSpec.optional(
-        name='reference_protecode_group_ids',
-        default=(),
-        doc='''
-        an optional list of protecode group IDs to import triages from.
-        ''',
-    ),
-    AttributeSpec.optional(
-        name='protecode_group_id',
-        doc='technical protecode group id to upload to',
-        type=int,
-        default=-1, # XXX hack
-    ),
-    AttributeSpec.optional(
-        name='protecode_cfg_name',
-        default=None,
-        doc='protecode cfg name to use (see cc-utils)',
-    ),
-    AttributeSpec.optional(
-        name='upload_registry_prefix',
-        default=None,
-        doc='''
-        if specified, all matching container images are also uploaded as copies to
-        the specified container registry. The original image reference names are
-        mangled.
-        '''
-    ),
 )
 
 
@@ -209,17 +161,6 @@ class ImageScanTrait(Trait, ImageFilterMixin):
         return self.raw['email_recipients']
 
     def protecode(self):
-        # XXX remove backward compatibility
-        if not 'protecode' in self.raw or not self.raw.get('protecode'):
-            util.warning('legacy protecode cfg - adjust pipeline_definition!')
-            # filter out unknown attrs
-            raw = self.raw.copy()
-            del raw['protecode']
-            del raw['filters']
-            del raw['email_recipients']
-            del raw['notify']
-            return ProtecodeScanCfg(raw_dict=raw)
-        # TODO: after schema change, protecode cfg should become optional
         return ProtecodeScanCfg(raw_dict=self.raw['protecode'])
 
     def transformer(self):
