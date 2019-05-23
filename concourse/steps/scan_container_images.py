@@ -30,7 +30,7 @@ class MailRecipients(object):
         protecode_cfg,
         protecode_group_id: int,
         protecode_group_url: str,
-        result_filter=lambda _:True,
+        result_filter=None,
         recipients: typing.List[str]=[],
         recipients_component_name: ComponentName=None,
     ):
@@ -53,8 +53,9 @@ class MailRecipients(object):
 
     def add_protecode_results(self, results: typing.Iterable[typing.Tuple[UploadResult, int]]):
         for result in results:
-            if not self._result_filter(component=result[0].component):
-                continue
+            if self._result_filter:
+                if self._result_filter(component=result[0].component):
+                    continue
             self._protecode_results.append(result)
 
     def add_clamav_results(self, results):
