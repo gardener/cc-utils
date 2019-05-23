@@ -114,17 +114,17 @@ def create_license_report(license_report):
   return license_lines
 
 util.info('running virus scan for all container images')
-images_with_potential_virusses = tuple(virus_scan_images(image_references))
-if images_with_potential_virusses:
-  util.warning('Potential virusses found:')
-  util.warning('\n'.join(map(str, images_with_potential_virusses)))
+images_with_potential_viruses = tuple(virus_scan_images(image_references))
+if images_with_potential_viruses:
+  util.warning('Potential viruses found:')
+  util.warning('\n'.join(map(str, images_with_potential_viruses)))
 else:
   util.info(f'{len(image_references)} image(s) scanned for virus signatures w/o any matches')
 
 # XXX also include in email
 report_lines = create_license_report(license_report=license_report)
 
-if not relevant_results and not images_with_potential_virusses:
+if not relevant_results and not images_with_potential_viruses:
   sys.exit(0)
 email_recipients = ${image_scan_trait.email_recipients()}
 if not email_recipients:
@@ -143,7 +143,7 @@ email_recipients = mail_rcp_ctor(
 )
 
 email_recipients.add_protecode_results(results=relevant_results)
-email_recipients.add_clamav_results(results=images_with_potential_virusses)
+email_recipients.add_clamav_results(results=images_with_potential_viruses)
 
 body = email_recipients.mail_body()
 email_recipients = email_recipients.resolve_recipients()
