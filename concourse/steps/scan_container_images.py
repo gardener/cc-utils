@@ -115,10 +115,9 @@ def virus_scan_images(image_references: typing.Iterable[str]):
 def protecode_results_table(protecode_cfg, upload_results: typing.Iterable[UploadResult]):
     def result_to_tuple(upload_result: UploadResult):
         # upload_result tuple of product.model.UploadResult and CVE Score
-        upload_result = upload_result[0]
+        upload_result, greatest_cve = upload_result
         # protecode.model.AnalysisResult
         analysis_result = upload_result.result
-        greatest_cve = upload_result[1]
 
         name = analysis_result.display_name()
         analysis_url = \
