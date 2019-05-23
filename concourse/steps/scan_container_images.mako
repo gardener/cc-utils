@@ -130,10 +130,17 @@ if not email_recipients:
   util.warning('Relevant Vulnerabilities were found, but there are no mail recipients configured')
   sys.exit(0)
 
-email_recipients = MailRecipients(recipients=email_recipients)
+email_recipients = MailRecipients(
+  root_component_name='${component_trait.component_name()}',
+  protecode_cfg=protecode_cfg,
+  protecode_group_id=protecode_group_id,
+  protecode_group_url=protecode_group_url,
+  recipients=email_recipients,
+)
 
 email_recipients.add_protecode_results(results=relevant_results)
 
+body = email_recipients.mail_body()
 email_recipients = email_recipients.resolve_recipients()
 
 # notify about critical vulnerabilities
@@ -141,19 +148,6 @@ email_recipients = email_recipients.resolve_recipients()
 
 # component_name identifies the landscape that has been scanned
 component_name = "${component_trait.component_name()}"
-body = textwrap.dedent(
-  f'''
-  <p>
-  Note: you receive this E-Mail, because you were configured as a mail recipient in repository
-  "${component_trait.component_name()}" (see .ci/pipeline_definitions)
-  To remove yourself, search for your e-mail address in said file and remove it.
-  </p>
-  <p>
-  The following components in Protecode-group <a href="{protecode_group_url}">{protecode_group_id}</a>
-  were found to contain critical vulnerabilities:
-  </p>
-  '''
-)
 body += protecode_results_table(
   protecode_cfg=protecode_cfg,
   upload_results=email_recipients._protecode_results,

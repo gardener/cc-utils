@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import textwrap
 import typing
 
 import tabulate
@@ -25,26 +26,60 @@ from product.model import ComponentName, UploadResult
 class MailRecipients(object):
     def __init__(
         self,
+        root_component_name: str,
+        protecode_cfg,
+        protecode_group_id: int,
+        protecode_group_url: str,
         result_filter=lambda _:True,
         recipients: typing.List[str]=[],
-        component_name: ComponentName=None,
+        recipients_component_name: ComponentName=None,
     ):
+        self._root_component_name = root_component_name
         self._result_filter = result_filter
         self._protecode_results = []
-        if not bool(recipients) ^ bool(component_name):
+        if not bool(recipients) ^ bool(recipients_component_name):
             raise ValueError('exactly one of recipients, component_name must be given')
         self._recipients = recipients
-        self._component_name = component_name
+        self._recipients_component_name = recipients_component_name
+        self._protecode_cfg = protecode_cfg
+        self._protecode_group_id = protecode_group_id
+        self._protecode_group_url = protecode_group_url
 
     def resolve_recipients(self):
-        if not self._component_name:
+        if not self._recipients_component_name:
             return self._recipients
+        raise NotImplementedError()
 
     def add_protecode_results(self, results: typing.Iterable[UploadResult]):
         for result in results:
             if not self._result_filter(component=result.component):
                 continue
             self._protecode_results.append(result)
+
+    def mail_body(self):
+        disclaimer = self._mail_disclaimer()
+        protecode_results = protecode_results_table(
+            protecode_cfg=self._protecode_cfg,
+            upload_results=self._protecode_results,
+        )
+
+        return ''.join((disclaimer, protecode_results))
+
+    def _mail_disclaimer(self):
+         return textwrap.dedent(f'''
+            <div>
+              <p>
+              Note: you receive this E-Mail, because you were configured as a mail recipient
+              in repository "{self.root_component_name}" (see .ci/pipeline_definitions)
+              To remove yourself, search for your e-mail address in said file and remove it.
+              </p>
+              <p>
+              The following components in Protecode-group
+              <a href="{self._protecode_group_url}">{self._protecode_group_id}</a>
+              were found to contain critical vulnerabilities:
+              </p>
+            </div>
+          ''')
 
 
 def virus_scan_images(image_references: typing.Iterable[str]):
