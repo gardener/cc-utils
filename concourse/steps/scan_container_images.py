@@ -79,7 +79,7 @@ class MailRecipients(object):
             <div>
               <p>
               Note: you receive this E-Mail, because you were configured as a mail recipient
-              in repository "{self.root_component_name}" (see .ci/pipeline_definitions)
+              in repository "{self._root_component_name}" (see .ci/pipeline_definitions)
               To remove yourself, search for your e-mail address in said file and remove it.
               </p>
               <p>
