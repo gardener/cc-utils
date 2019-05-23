@@ -17,6 +17,7 @@ upload_registry_prefix = protecode_scan.upload_registry_prefix()
 filter_cfg = image_scan_trait.filters()
 component_trait = job_variant.trait('component_descriptor')
 %>
+import functools
 import os
 import sys
 import tabulate
@@ -130,11 +131,14 @@ if not email_recipients:
   util.warning('Relevant Vulnerabilities were found, but there are no mail recipients configured')
   sys.exit(0)
 
-email_recipients = MailRecipients(
+mail_rcp_ctor = functools.partial(MailRecipients,
   root_component_name='${component_trait.component_name()}',
   protecode_cfg=protecode_cfg,
   protecode_group_id=protecode_group_id,
   protecode_group_url=protecode_group_url,
+)
+
+email_recipients = mail_rcp_ctor(
   recipients=email_recipients,
 )
 
