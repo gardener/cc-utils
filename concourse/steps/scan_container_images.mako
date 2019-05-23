@@ -130,6 +130,12 @@ if not email_recipients:
   util.warning('Relevant Vulnerabilities were found, but there are no mail recipients configured')
   sys.exit(0)
 
+email_recipients = MailRecipients(recipients=email_recipients)
+
+email_recipients.add_protecode_results(results=relevant_results)
+
+email_recipients = email_recipients.resolve_recipients()
+
 # notify about critical vulnerabilities
 
 
@@ -148,7 +154,10 @@ body = textwrap.dedent(
   </p>
   '''
 )
-body += protecode_results_table(protecode_cfg=protecode_cfg, upload_results=relevant_results)
+body += protecode_results_table(
+  protecode_cfg=protecode_cfg,
+  upload_results=email_recipients._protecode_results,
+)
 
 if images_with_potential_virusses:
   body += '<p><div>Virus Scanning results</div>'

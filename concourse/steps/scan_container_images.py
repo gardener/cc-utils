@@ -19,7 +19,32 @@ import tabulate
 
 import clamav.util
 
-from product.model import UploadResult
+from product.model import ComponentName, UploadResult
+
+
+class MailRecipients(object):
+    def __init__(
+        self,
+        result_filter=lambda _:True,
+        recipients: typing.List[str]=[],
+        component_name: ComponentName=None,
+    ):
+        self._result_filter = result_filter
+        self._protecode_results = []
+        if not bool(recipients) ^ bool(component_name):
+            raise ValueError('exactly one of recipients, component_name must be given')
+        self._recipients = recipients
+        self._component_name = component_name
+
+    def resolve_recipients(self):
+        if not self._component_name:
+            return self._recipients
+
+    def add_protecode_results(self, results: typing.Iterable[UploadResult]):
+        for result in results:
+            if not self.result_filter(component=result.component):
+                continue
+            self._protecode_results.append(result)
 
 
 def virus_scan_images(image_references: typing.Iterable[str]):
