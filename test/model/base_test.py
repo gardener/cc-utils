@@ -13,14 +13,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
+import pytest
 
-from model.base import ModelBase
+import model.base as examinee
+from model.base import ModelValidationError
 
 
-class ModelBaseTest(unittest.TestCase):
+class ModelBaseTest(object):
     def test_raw_dict_values_are_stored(self):
         empty_dict = dict()
-        examinee = ModelBase(raw_dict=empty_dict)
+        model_base = examinee.ModelBase(raw_dict=empty_dict)
 
-        self.assertIs(examinee.raw, empty_dict)
+        self.assertIs(model_base.raw, empty_dict)
+
+
+class BasicCredentialsTest(object):
+    @pytest.fixture
+    def credentials_dict(self):
+        return {
+            'username':'foo',
+            'password':'bar',
+        }
+
+    def test_validation_fails_on_missing_key(self, credentials_dict):
+        for key in credentials_dict.keys():
+            with self.subTest(key=key):
+                test_dict = credentials_dict.copy()
+                test_dict.pop(key)
+                element = examinee.BasicCredentials(test_dict)
+                with self.assertRaises(ModelValidationError):
+                    element.validate()
