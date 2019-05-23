@@ -37,6 +37,7 @@ class MailRecipients(object):
         self._root_component_name = root_component_name
         self._result_filter = result_filter
         self._protecode_results = []
+        self._clamav_results = []
         if not bool(recipients) ^ bool(recipients_component_name):
             raise ValueError('exactly one of recipients, component_name must be given')
         self._recipients = recipients
@@ -56,14 +57,21 @@ class MailRecipients(object):
                 continue
             self._protecode_results.append(result)
 
+    def add_clamav_results(self, results):
+        for result in results:
+            self._clamav_results.append(result)
+
     def mail_body(self):
-        disclaimer = self._mail_disclaimer()
-        protecode_results = protecode_results_table(
+        parts = []
+        parts.append(self._mail_disclaimer())
+        parts.append(protecode_results_table(
             protecode_cfg=self._protecode_cfg,
             upload_results=self._protecode_results,
+            )
         )
+        parts.append(self._clamav_report())
 
-        return ''.join((disclaimer, protecode_results))
+        return ''.join(parts)
 
     def _mail_disclaimer(self):
          return textwrap.dedent(f'''
@@ -80,6 +88,19 @@ class MailRecipients(object):
               </p>
             </div>
           ''')
+
+    def _clamav_report(self):
+        if not self._clamav_results:
+            return textwrap.dedent(f'''
+                <p>Scanned all container image(s) for matching virus signatures
+                without any matches (id est: all container images seem to be free of known malware)
+            ''')
+        result = '<p><div>Virus Scanning Results</div>'
+        return result + tabulate.tabulate(
+            self._clamav_results,
+            headers=('Image-Reference', 'Scanning Result'),
+            tablefmt='html',
+        )
 
 
 def virus_scan_images(image_references: typing.Iterable[str]):

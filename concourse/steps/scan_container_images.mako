@@ -143,31 +143,17 @@ email_recipients = mail_rcp_ctor(
 )
 
 email_recipients.add_protecode_results(results=relevant_results)
+email_recipients.add_clamav_results(results=images_with_potential_virusses)
 
 body = email_recipients.mail_body()
 email_recipients = email_recipients.resolve_recipients()
 
-# notify about critical vulnerabilities
-
 
 # component_name identifies the landscape that has been scanned
 component_name = "${component_trait.component_name()}"
-body += protecode_results_table(
-  protecode_cfg=protecode_cfg,
-  upload_results=email_recipients._protecode_results,
-)
 
-if images_with_potential_virusses:
-  body += '<p><div>Virus Scanning results</div>'
-  body += tabulate.tabulate(
-    images_with_potential_virusses,
-    headers=('Image-Reference', 'Scanning Result'),
-    tablefmt='html',
-  )
-else:
-  body += f'<p>Scanned {len(image_references)} container image(s) for matching virus signatures '
-  body += 'without any matches (id est: all container images seem to be free of known malware)'
 
+# notify about critical vulnerabilities
 mailutil._send_mail(
   email_cfg=cfg_set.email(),
   recipients=email_recipients,
