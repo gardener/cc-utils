@@ -51,7 +51,7 @@ class MailRecipients(object):
             return self._recipients
         raise NotImplementedError()
 
-    def add_protecode_results(self, results: typing.Iterable[typing.tuple[UploadResult, int]]):
+    def add_protecode_results(self, results: typing.Iterable[typing.Tuple[UploadResult, int]]):
         for result in results:
             if not self._result_filter(component=result[0].component):
                 continue
