@@ -42,7 +42,7 @@ class MailRecipients(object):
 
     def add_protecode_results(self, results: typing.Iterable[UploadResult]):
         for result in results:
-            if not self.result_filter(component=result.component):
+            if not self._result_filter(component=result.component):
                 continue
             self._protecode_results.append(result)
 
