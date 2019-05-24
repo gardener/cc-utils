@@ -85,26 +85,6 @@ relevant_results, license_report = protecode.util.upload_images(
   reference_group_ids=${protecode_scan.reference_protecode_group_ids()},
 )
 
-def create_license_report(license_report):
-  def to_table_row(upload_result, licenses):
-    component_name = upload_result.result.display_name()
-    license_names = {license.name() for license in licenses}
-    license_names_str = ', '.join(license_names)
-    yield (component_name, license_names_str)
-
-  license_lines = [
-    to_table_row(upload_result, licenses)
-    for upload_result, licenses in license_report
-  ]
-
-  print(tabulate.tabulate(
-    license_lines,
-    headers=('Component Name', 'Licenses'),
-    )
-  )
-
-  return license_lines
-
 util.info('running virus scan for all container images')
 images_with_potential_viruses = tuple(virus_scan_images(image_references))
 if images_with_potential_viruses:

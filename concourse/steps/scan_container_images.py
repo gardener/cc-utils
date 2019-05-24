@@ -211,3 +211,23 @@ def protecode_results_table(protecode_cfg, upload_results: typing.Iterable[Uploa
       tablefmt='html',
     )
     return table
+
+
+def create_license_report(license_report):
+    def to_table_row(upload_result, licenses):
+        component_name = upload_result.result.display_name()
+        license_names = {license.name() for license in licenses}
+        license_names_str = ', '.join(license_names)
+        yield (component_name, license_names_str)
+
+    license_lines = [
+        to_table_row(upload_result, licenses)
+        for upload_result, licenses in license_report
+    ]
+    print(tabulate.tabulate(
+        license_lines,
+        headers=('Component Name', 'Licenses'),
+        )
+    )
+
+    return license_lines
