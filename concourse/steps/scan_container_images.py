@@ -63,9 +63,11 @@ class MailRecipients(object):
         )
 
     def add_protecode_results(self, results: typing.Iterable[typing.Tuple[UploadResult, int]]):
+        print(f'adding protecode results for {self}')
         for result in results:
             if self._result_filter:
                 if not self._result_filter(component=result[0].component):
+                    print(f'did not match: {result}')
                     continue
             self._protecode_results.append(result)
 
@@ -162,6 +164,7 @@ def mail_recipients(
     elif notification_policy == Notify.COMPONENT_OWNERS:
         for comp in components:
             def comp_filter(component):
+                print(f'result filter: my component: {comp} - other: {component}')
                 return comp.name() == component.name() # only care about matching results
 
             yield mail_recps_ctor(
