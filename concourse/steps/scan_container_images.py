@@ -122,6 +122,7 @@ def mail_recipients(
     components: typing.Iterable[ComponentName]=(),
 ):
     mail_recps_ctor = functools.partial(
+        MailRecipients,
         root_component_name=root_component_name,
         protecode_cfg=protecode_cfg,
         protecode_group_id=protecode_group_id,
