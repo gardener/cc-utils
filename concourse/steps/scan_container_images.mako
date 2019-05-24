@@ -135,6 +135,7 @@ email_recipients = tuple(
     protecode_cfg=protecode_cfg,
     protecode_group_id=protecode_group_id,
     protecode_group_url=protecode_group_url,
+    cfg_set=cfg_set,
     email_recipients=email_recipients,
     components=component_descriptor.components(),
   )

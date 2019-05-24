@@ -20,6 +20,7 @@ import typing
 import tabulate
 
 import clamav.util
+import mailutil
 
 from concourse.model.traits.image_scan import Notify
 from product.model import ComponentName, UploadResult
@@ -32,26 +33,34 @@ class MailRecipients(object):
         protecode_cfg,
         protecode_group_id: int,
         protecode_group_url: str,
+        cfg_set,
         result_filter=None,
         recipients: typing.List[str]=[],
-        recipients_component_name: ComponentName=None,
+        recipients_component: ComponentName=None,
     ):
         self._root_component_name = root_component_name
         self._result_filter = result_filter
         self._protecode_results = []
         self._clamav_results = []
-        if not bool(recipients) ^ bool(recipients_component_name):
+        self._cfg_set = cfg_set
+        if not bool(recipients) ^ bool(recipients_component):
             raise ValueError('exactly one of recipients, component_name must be given')
         self._recipients = recipients
-        self._recipients_component_name = recipients_component_name
+        self._recipients_component= recipients_component
         self._protecode_cfg = protecode_cfg
         self._protecode_group_id = protecode_group_id
         self._protecode_group_url = protecode_group_url
 
+    @functools.lru_cache()
     def resolve_recipients(self):
-        if not self._recipients_component_name:
+        if not self._recipients_component:
             return self._recipients
-        raise NotImplementedError()
+
+        # XXX it should not be necessary to pass github_cfg
+        return mailutil.determine_mail_recipients(
+            github_cfg_name=self._cfg_set.github().name(),
+            component_names=(self._recipients_component.name(),),
+        )
 
     def add_protecode_results(self, results: typing.Iterable[typing.Tuple[UploadResult, int]]):
         for result in results:
@@ -118,6 +127,7 @@ def mail_recipients(
     protecode_cfg,
     protecode_group_id: int,
     protecode_group_url: str,
+    cfg_set,
     email_recipients: typing.Iterable[str]=(),
     components: typing.Iterable[ComponentName]=(),
 ):
@@ -127,6 +137,7 @@ def mail_recipients(
         protecode_cfg=protecode_cfg,
         protecode_group_id=protecode_group_id,
         protecode_group_url=protecode_group_url,
+        cfg_set=cfg_set,
     )
 
     notification_policy = Notify(notification_policy)
@@ -146,7 +157,7 @@ def mail_recipients(
                 return comp == component # only care about matching results
 
             yield mail_recps_ctor(
-                recipients_component_name=comp,
+                recipients_component=comp,
                 result_filter=comp_filter,
             )
     else:
