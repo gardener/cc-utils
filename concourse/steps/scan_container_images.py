@@ -125,7 +125,7 @@ def mail_recipients(
             protecode_cfg=protecode_cfg,
             protecode_group_id=protecode_group_id,
             protecode_group_url=protecode_group_url,
-            mail_recipients=email_recipients,
+            recipients=email_recipients,
         )
     elif notification_policy == Notify.NOBODY:
         return
