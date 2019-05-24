@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import functools
 import textwrap
 import typing
 
@@ -62,6 +63,12 @@ class MailRecipients(object):
     def add_clamav_results(self, results):
         for result in results:
             self._clamav_results.append(result)
+
+    def has_results(self):
+        if self._protecode_results:
+            return True
+        if self._clamav_results:
+            return True
 
     def mail_body(self):
         parts = []
@@ -114,23 +121,33 @@ def mail_recipients(
     email_recipients: typing.Iterable[str]=(),
     components: typing.Iterable[ComponentName]=(),
 ):
+    mail_recps_ctor = functools.partial(
+        root_component_name=root_component_name,
+        protecode_cfg=protecode_cfg,
+        protecode_group_id=protecode_group_id,
+        protecode_group_url=protecode_group_url,
+    )
+
     notification_policy = Notify(notification_policy)
     if notification_policy == Notify.EMAIL_RECIPIENTS:
         if not email_recipients:
             raise ValueError('at least one email_recipient must be specified')
 
         # exactly one MailRecipients, catching all (hence no filter)
-        yield MailRecipients(
-            root_component_name=root_component_name,
-            protecode_cfg=protecode_cfg,
-            protecode_group_id=protecode_group_id,
-            protecode_group_url=protecode_group_url,
+        yield mail_recps_ctor(
             recipients=email_recipients,
         )
     elif notification_policy == Notify.NOBODY:
         return
     elif notification_policy == Notify.COMPONENT_OWNERS:
-        raise NotImplementedError()
+        for comp in components:
+            def comp_filter(component):
+                return comp == component # only care about matching results
+
+            yield mail_recps_ctor(
+                recipients_component_name=comp,
+                result_filter=comp_filter,
+            )
     else:
         raise NotImplementedError()
 
