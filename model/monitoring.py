@@ -15,6 +15,7 @@
 
 from model.base import (
     NamedModelElement,
+    ModelBase,
 )
 
 
@@ -22,19 +23,61 @@ class CCMonitoringConfig(NamedModelElement):
     def _required_attributes(self):
         return {
             'namespace',
-            'kube_state_metrics_namespaces_to_monitor',
-            'kube_state_metrics_collectors',
+            'kube_state_metrics',
+            'postgresql_exporter',
+            'node_exporter',
             'tls_config',
+            'ingress_host',
+            'external_url',
         }
 
     def namespace(self):
         return self.raw.get('namespace')
 
-    def kube_state_metrics_namespaces_to_monitor(self):
-        return self.raw.get('kube_state_metrics_namespaces_to_monitor')
+    def kube_state_metrics(self):
+        return KubeStateMetrics(raw_dict=self.raw['kube_state_metrics'])
 
-    def kube_state_metrics_collectors(self):
-        return self.raw.get('kube_state_metrics_collectors')
+    def postgresql_exporter(self):
+        return PostgresqlExporter(raw_dict=self.raw['postgresql_exporter'])
+
+    def node_exporter(self):
+        return NodeExporter(raw_dict=self.raw['node_exporter'])
 
     def tls_config(self):
         return self.raw.get('tls_config')
+
+    def ingress_host(self):
+        return self.raw.get('ingress_host')
+
+    def external_url(self):
+        return self.raw.get('external_url')
+
+
+class KubeStateMetrics(ModelBase):
+    def namespaces_to_monitor(self):
+        return self.raw.get('namespaces_to_monitor')
+
+    def collectors(self):
+        return self.raw.get('collectors')
+
+    def service_name(self):
+        return self.raw.get('service_name')
+
+    def service_port(self):
+        return self.raw.get('service_port')
+
+
+class PostgresqlExporter(ModelBase):
+    def service_name(self):
+        return self.raw.get('service_name')
+
+    def service_port(self):
+        return self.raw.get('service_port')
+
+
+class NodeExporter(ModelBase):
+    def service_name(self):
+        return self.raw.get('service_name')
+
+    def service_port(self):
+        return self.raw.get('service_port')

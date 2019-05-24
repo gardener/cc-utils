@@ -79,7 +79,7 @@ def deploy_monitoring_landscape(
 def create_kube_state_metrics_helm_values(
     monitoring_cfg: CCMonitoringConfig,
 ):
-    configured_collectors = monitoring_cfg.kube_state_metrics_collectors()
+    configured_collectors = monitoring_cfg.kube_state_metrics().collectors()
     all_collectors = [
         "configmaps", "cronjobs", "daemonsets", "deployments", "endpoints",
         "horizontalpodautoscalers", "jobs", "limitranges", "namespaces", "nodes",
@@ -93,7 +93,7 @@ def create_kube_state_metrics_helm_values(
 
     used_collectors = {c: configured(c) for c in all_collectors}
 
-    namespaces_to_monitor = monitoring_cfg.kube_state_metrics_namespaces_to_monitor()
+    namespaces_to_monitor = monitoring_cfg.kube_state_metrics().namespaces_to_monitor()
 
     helm_values = {
         "rbac": {
