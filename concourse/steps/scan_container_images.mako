@@ -127,39 +127,37 @@ report_lines = create_license_report(license_report=license_report)
 if not relevant_results and not images_with_potential_viruses:
   sys.exit(0)
 email_recipients = ${image_scan_trait.email_recipients()}
-if not email_recipients:
-  util.warning('Relevant Vulnerabilities were found, but there are no mail recipients configured')
-  sys.exit(0)
 
-mail_rcp_ctor = functools.partial(MailRecipients,
-  root_component_name='${component_trait.component_name()}',
-  protecode_cfg=protecode_cfg,
-  protecode_group_id=protecode_group_id,
-  protecode_group_url=protecode_group_url,
+email_recipients = tuple(
+  mail_recipients(
+    notification_policy='${image_scan_trait.notify().value}'
+    root_component_name='${component_trait.component_name()}',
+    protecode_cfg=protecode_cfg,
+    protecode_group_id=protecode_group_id,
+    protecode_group_url=protecode_group_url,
+    email_recipients=email_recipients,
+  )
 )
 
-email_recipients = mail_rcp_ctor(
-  recipients=email_recipients,
-)
+for email_recipient in email_recipients:
+  email_recipient.add_protecode_results(results=relevant_results)
+  email_recipient.add_clamav_results(results=images_with_potential_viruses)
 
-email_recipients.add_protecode_results(results=relevant_results)
-email_recipients.add_clamav_results(results=images_with_potential_viruses)
-
-body = email_recipients.mail_body()
-email_recipients = email_recipients.resolve_recipients()
+  body = email_recipients.mail_body()
+  email_addresses = email_recipients.resolve_recipients()
 
 
-# component_name identifies the landscape that has been scanned
-component_name = "${component_trait.component_name()}"
+  # component_name identifies the landscape that has been scanned
+  component_name = "${component_trait.component_name()}"
 
 
-# notify about critical vulnerabilities
-mailutil._send_mail(
-  email_cfg=cfg_set.email(),
-  recipients=email_recipients,
-  mail_template=body,
-  subject=f'[Action Required] landscape {component_name} has critical Vulnerabilities',
-  mimetype='html',
-)
-util.info('sent notification emails to: ' + ','.join(email_recipients))
+  # notify about critical vulnerabilities
+  mailutil._send_mail(
+    email_cfg=cfg_set.email(),
+    recipients=email_addresses,
+    mail_template=body,
+    subject=f'[Action Required] landscape {component_name} has critical Vulnerabilities',
+    mimetype='html',
+  )
+  util.info('sent notification emails to: ' + ','.join(email_addresses))
 </%def>

@@ -20,6 +20,7 @@ import tabulate
 
 import clamav.util
 
+from concourse.model.traits.image_scan import Notify
 from product.model import ComponentName, UploadResult
 
 
@@ -102,6 +103,36 @@ class MailRecipients(object):
             headers=('Image-Reference', 'Scanning Result'),
             tablefmt='html',
         )
+
+
+def mail_recipients(
+    notification_policy: Notify,
+    root_component_name:str,
+    protecode_cfg,
+    protecode_group_id: int,
+    protecode_group_url: str,
+    email_recipients: typing.Iterable[str]=(),
+    components: typing.Iterable[ComponentName]=(),
+):
+    notification_policy = Notify(notification_policy)
+    if notification_policy == Notify.EMAIL_RECIPIENTS:
+        if not email_recipients:
+            raise ValueError('at least one email_recipient must be specified')
+
+        # exactly one MailRecipients, catching all (hence no filter)
+        yield MailRecipients(
+            root_component_name=root_component_name,
+            protecode_cfg=protecode_cfg,
+            protecode_group_id=protecode_group_id,
+            protecode_group_url=protecode_group_url,
+            mail_recipients=email_recipients,
+        )
+    elif notification_policy == Notify.NOBODY:
+        return
+    elif notification_policy == Notify.COMPONENT_OWNERS:
+        raise NotImplementedError()
+    else:
+        raise NotImplementedError()
 
 
 def virus_scan_images(image_references: typing.Iterable[str]):
