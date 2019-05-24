@@ -162,14 +162,16 @@ def mail_recipients(
     elif notification_policy == Notify.NOBODY:
         return
     elif notification_policy == Notify.COMPONENT_OWNERS:
-        for comp in components:
+        def make_comp_filter(own_component):
             def comp_filter(component):
-                print(f'result filter: my component: {comp.name()} - other: {component.name()}')
-                return comp.name() == component.name() # only care about matching results
+                print(f'filter: component: {own_component.name()} - other: {component.name()}')
+                return own_component.name() == component.name() # only care about matching results
+            return comp_filter
 
+        for comp in components:
             yield mail_recps_ctor(
                 recipients_component=comp,
-                result_filter=comp_filter,
+                result_filter=make_comp_filter(own_component=comp)
             )
     else:
         raise NotImplementedError()
