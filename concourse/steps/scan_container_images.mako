@@ -150,7 +150,7 @@ for email_recipient in email_recipients:
     continue
 
   body = email_recipient.mail_body()
-  email_addresses = email_recipient.resolve_recipients()
+  email_addresses = set(email_recipient.resolve_recipients())
 
 
   # component_name identifies the landscape that has been scanned
