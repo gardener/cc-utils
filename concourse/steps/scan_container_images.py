@@ -122,7 +122,7 @@ class MailRecipients(object):
 
     def __repr__(self):
         if self._recipients_component:
-            descr = 'component {self._recipients_component}'
+            descr = f'component {self._recipients_component}'
         else:
             descr = 'for all results'
 
