@@ -176,6 +176,12 @@ def configure_default_logging():
             'handlers': ['console',],
         },
         'loggers': {
+            'github3': {
+                'level': logging.WARNING,
+            },
+            'elasticsearch': {
+                'level': logging.WARNING,
+            },
         }
     }
 
