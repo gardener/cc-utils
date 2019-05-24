@@ -143,7 +143,7 @@ email_recipients = tuple(
 
 for email_recipient in email_recipients:
   if not email_recipient.has_results():
-    util.info('skipping recipients, since there are not relevant results')
+    util.info('skipping {email_recipient}, since there are not relevant results')
     continue
 
   email_recipient.add_protecode_results(results=relevant_results)

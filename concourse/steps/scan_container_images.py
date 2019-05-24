@@ -120,6 +120,14 @@ class MailRecipients(object):
             tablefmt='html',
         )
 
+    def __repr__(self):
+        if self._recipients_component:
+            descr = 'component {self._recipients_component}'
+        else:
+            descr = 'for all results'
+
+        return 'MailRecipients: ' + descr
+
 
 def mail_recipients(
     notification_policy: Notify,
