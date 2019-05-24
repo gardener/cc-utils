@@ -38,3 +38,9 @@ class CCMonitoringConfig(NamedModelElement):
 
     def tls_config(self):
         return self.raw.get('tls_config')
+
+    def ingress_host(self):
+        return self.raw.get('ingress_host')
+
+    def external_url(self):
+        return self.raw.get('external_url')
