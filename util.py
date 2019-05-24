@@ -192,7 +192,7 @@ def is_yaml_file(path: CliHints.existing_file()):
 
 def parse_yaml_file(path: CliHints.existing_file()):
     with open(path) as f:
-            return yaml.load(f, Loader=yaml.SafeLoader)
+        return yaml.load(f, Loader=yaml.SafeLoader)
 
 
 def random_str(prefix=None, length=12):

@@ -94,7 +94,7 @@ class MailRecipients(object):
         return ''.join(parts)
 
     def _mail_disclaimer(self):
-         return textwrap.dedent(f'''
+        return textwrap.dedent(f'''
             <div>
               <p>
               Note: you receive this E-Mail, because you were configured as a mail recipient

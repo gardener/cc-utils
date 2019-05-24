@@ -21,11 +21,11 @@ from model.base import (
 
 class DockerImageConfig(ModelBase):
     def _required_attributes(self):
-            yield from super()._required_attributes()
-            yield from [
-                'image_name',
-                'image_tag',
-            ]
+        yield from super()._required_attributes()
+        yield from [
+            'image_name',
+            'image_tag',
+        ]
 
     def image_name(self):
         return self.raw['image_name']
@@ -39,11 +39,11 @@ class DockerImageConfig(ModelBase):
 
 class MitmLoggingConfig(ModelBase):
     def _required_attributes(self):
-            yield from super()._required_attributes()
-            yield from [
-                'els_config',
-                'els_index',
-            ]
+        yield from super()._required_attributes()
+        yield from [
+            'els_config',
+            'els_index',
+        ]
 
     def els_config_name(self):
         return self.raw['els_config']
@@ -60,11 +60,11 @@ class ProxyConfig(NamedModelElement):
     mitm-proxy and the configuration of the MitM-proxy.
     '''
     def _required_attributes(self):
-            yield from super()._required_attributes()
-            yield from [
-                'mitm_proxy',
-                'sidecar_image',
-            ]
+        yield from super()._required_attributes()
+        yield from [
+            'mitm_proxy',
+            'sidecar_image',
+        ]
 
     def mitm_proxy(self):
         return MitmProxyConfig(raw_dict=self.raw['mitm_proxy'])

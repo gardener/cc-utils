@@ -21,13 +21,13 @@ from concourse.model.job import JobVariant
 
 
 def component_descriptor_transformer(trait_dict: dict):
-        trait = trait_module.ComponentDescriptorTrait(
-            variant_name='does_not_matter',
-            name='does_not_matter',
-            raw_dict=trait_dict,
-        )
-        examinee = trait.transformer()
-        return examinee
+    trait = trait_module.ComponentDescriptorTrait(
+        variant_name='does_not_matter',
+        name='does_not_matter',
+        raw_dict=trait_dict,
+    )
+    examinee = trait.transformer()
+    return examinee
 
 
 class ComponentDescriptorTraitTransformerTest(unittest.TestCase):

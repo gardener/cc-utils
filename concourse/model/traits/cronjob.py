@@ -39,7 +39,7 @@ class CronTrait(Trait):
         return self.raw['interval']
 
     def resource_name(self):
-         # variant-names must be unique, so this should suffice
+        # variant-names must be unique, so this should suffice
         return self.variant_name + '-' + self.interval() + '-cron'
 
     def transformer(self):
