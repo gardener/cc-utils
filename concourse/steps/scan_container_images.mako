@@ -130,7 +130,7 @@ email_recipients = ${image_scan_trait.email_recipients()}
 
 email_recipients = tuple(
   mail_recipients(
-    notification_policy='${image_scan_trait.notify().value}'
+    notification_policy='${image_scan_trait.notify().value}',
     root_component_name='${component_trait.component_name()}',
     protecode_cfg=protecode_cfg,
     protecode_group_id=protecode_group_id,
