@@ -46,6 +46,9 @@ class CCMonitoringConfig(NamedModelElement):
     def tls_config(self):
         return self.raw.get('tls_config')
 
+    def tls_secret_name(self):
+        return self.raw.get('tls_secret_name')
+
     def ingress_host(self):
         return self.raw.get('ingress_host')
 
@@ -81,3 +84,6 @@ class NodeExporter(ModelBase):
 
     def service_port(self):
         return self.raw.get('service_port')
+
+    def namespace(self):
+        return self.raw.get('namespace')
