@@ -142,12 +142,12 @@ email_recipients = tuple(
 )
 
 for email_recipient in email_recipients:
+  email_recipient.add_protecode_results(results=relevant_results)
+  email_recipient.add_clamav_results(results=images_with_potential_viruses)
+
   if not email_recipient.has_results():
     util.info(f'skipping {email_recipient}, since there are not relevant results')
     continue
-
-  email_recipient.add_protecode_results(results=relevant_results)
-  email_recipient.add_clamav_results(results=images_with_potential_viruses)
 
   body = email_recipients.mail_body()
   email_addresses = email_recipients.resolve_recipients()
