@@ -15,11 +15,23 @@
 
 from ensure import ensure_annotations
 
+from kubernetes.client import(
+    V1beta1Ingress,
+    V1ObjectMeta,
+    V1beta1IngressSpec,
+    V1beta1IngressRule,
+    V1beta1IngressTLS,
+    V1beta1HTTPIngressRuleValue,
+    V1beta1HTTPIngressPath,
+    V1beta1IngressBackend,
+)
+
 from landscape_setup import kube_ctx
 from landscape_setup.utils import (
     ensure_cluster_version,
     execute_helm_deployment,
     LiteralStr,
+    create_tls_secret,
 )
 from model import (
     ConfigFactory,
@@ -30,6 +42,9 @@ from model.monitoring import (
 )
 from model.concourse import (
     ConcourseConfig,
+)
+from util import (
+    info,
 )
 
 
@@ -48,6 +63,9 @@ def deploy_monitoring_landscape(
     monitoring_config_name = concourse_cfg.monitoring_config()
     monitoring_cfg = cfg_factory.monitoring(monitoring_config_name)
     monitoring_namespace = monitoring_cfg.namespace()
+
+    tls_config_name = concourse_cfg.tls_config()
+    tls_config = cfg_factory.tls_config(tls_config_name)
 
     # deploy kube-state-metrics
     kube_state_metrics_helm_values = create_kube_state_metrics_helm_values(
@@ -72,6 +90,115 @@ def deploy_monitoring_landscape(
         'stable/prometheus-postgres-exporter',
         'prometheus-postgres-exporter',
         postgresql_helm_values,
+    )
+
+    # deploy ingresses for kube-state-metrics, postgresql exporter and node-exporter
+    monitoring_tls_secret_name = monitoring_cfg.tls_secret_name()
+    node_exporter_namespace = monitoring_cfg.node_exporter().namespace()
+
+    info('Creating tls-secret in monitoring namespace for kube-state-metrics and postgresql...')
+    create_tls_secret(
+        tls_config=tls_config,
+        tls_secret_name=monitoring_tls_secret_name,
+        namespace=monitoring_namespace,
+    )
+    info('Creating tls-secret in kube-system namespace for node-exporter...')
+    create_tls_secret(
+        tls_config=tls_config,
+        tls_secret_name=monitoring_tls_secret_name,
+        namespace=node_exporter_namespace,
+    )
+
+    ingress_helper = kube_ctx.ingress_helper()
+    info('Create ingress for kube-state-metrics')
+    ingress = generate_monitoring_ingress_object(
+        secret_name=monitoring_tls_secret_name,
+        namespace=monitoring_namespace,
+        hosts=[monitoring_cfg.ingress_host(), monitoring_cfg.external_url()],
+        service_name=monitoring_cfg.kube_state_metrics().service_name(),
+        service_port=monitoring_cfg.kube_state_metrics().service_port(),
+    )
+    ingress_helper.replace_or_create_ingress(monitoring_namespace, ingress)
+
+    info('Create ingress for postgres-exporter')
+    ingress = generate_monitoring_ingress_object(
+        secret_name=monitoring_tls_secret_name,
+        namespace=monitoring_namespace,
+        hosts=[monitoring_cfg.ingress_host(), monitoring_cfg.external_url()],
+        service_name=monitoring_cfg.postgresql_exporter().service_name(),
+        service_port=monitoring_cfg.postgresql_exporter().service_port(),
+    )
+    ingress_helper.replace_or_create_ingress(monitoring_namespace, ingress)
+
+    info('Create ingress for node-exporter')
+    ingress = generate_monitoring_ingress_object(
+        secret_name=monitoring_tls_secret_name,
+        namespace=node_exporter_namespace,
+        hosts=[monitoring_cfg.ingress_host(), monitoring_cfg.external_url()],
+        service_name=monitoring_cfg.node_exporter().service_name(),
+        service_port=monitoring_cfg.node_exporter().service_port(),
+    )
+    ingress_helper.replace_or_create_ingress(node_exporter_namespace, ingress)
+
+
+def generate_monitoring_ingress_object(
+    secret_name: str,
+    namespace: str,
+    hosts: [str],
+    service_name: str,
+    service_port: int,
+) -> V1beta1Ingress:
+
+    ingress_path = "/" + service_name + "(/|$)(.*)"
+    return V1beta1Ingress(
+        kind='Ingress',
+        metadata=V1ObjectMeta(
+            annotations={
+                "nginx.ingress.kubernetes.io/auth-tls-verify-client": "on",
+                "nginx.ingress.kubernetes.io/rewrite-target": "/$2",
+                "nginx.ingress.kubernetes.io/auth-tls-secret": "/".join([namespace, secret_name])
+            },
+            name=service_name,
+            namespace=namespace,
+        ),
+        spec=V1beta1IngressSpec(
+            rules=[
+                V1beta1IngressRule(
+                    host=hosts[0],
+                    http=V1beta1HTTPIngressRuleValue(
+                        paths=[
+                            V1beta1HTTPIngressPath(
+                                path=ingress_path,
+                                backend=V1beta1IngressBackend(
+                                    service_name=service_name,
+                                    service_port=service_port,
+                                )
+                            )
+                        ]
+                    )
+                ),
+                V1beta1IngressRule(
+                    host=hosts[1],
+                    http=V1beta1HTTPIngressRuleValue(
+                        paths=[
+                            V1beta1HTTPIngressPath(
+                                path=ingress_path,
+                                backend=V1beta1IngressBackend(
+                                    service_name=service_name,
+                                    service_port=service_port,
+                                )
+                            )
+                        ]
+                    )
+                )
+            ],
+            tls=[
+                V1beta1IngressTLS(
+                    hosts=[hosts[0], hosts[1]],
+                    secret_name=secret_name,
+                )
+            ]
+        )
     )
 
 
