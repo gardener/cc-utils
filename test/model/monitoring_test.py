@@ -15,32 +15,32 @@
 
 import pytest
 
-import model.kubernetes as examinee
+import model.monitoring as examinee
 from model.base import ModelValidationError
 
 
 @pytest.fixture
-def required_dict():
+def monitoring_required_dict():
     return {
-            'kubeconfig': 'foo',
+            'namespace': 'foo',
+            'kube_state_metrics': 'foo',
+            'postgresql_exporter': 'foo',
+            'node_exporter': 'foo',
+            'tls_config': 'foo',
+            'ingress_host': 'foo',
+            'external_url': 'foo',
     }
 
 
-def test_validation_fails_on_missing_required_key(required_dict):
-    for key in required_dict.keys():
-        test_dict = required_dict.copy()
+def test_validation_fails_missing_required_key(monitoring_required_dict):
+    for key in monitoring_required_dict.keys():
+        test_dict = monitoring_required_dict.copy()
         test_dict.pop(key)
-        element = examinee.KubernetesConfig(name='foo', raw_dict=test_dict)
+        element = examinee.CCMonitoringConfig(name='foo', raw_dict=test_dict)
         with pytest.raises(ModelValidationError):
             element.validate()
 
 
-def test_validation_succeeds_on_required_dict(required_dict):
-    element = examinee.KubernetesConfig(name='foo', raw_dict=required_dict)
-    element.validate()
-
-
-def test_validation_succeeds_on_unknown_key(required_dict):
-    test_dict = {**required_dict, **{'foo': 'bar'}}
-    element = examinee.KubernetesConfig(name='foo', raw_dict=test_dict)
+def test_monitoring_validation_succeeds_on_required_dict(monitoring_required_dict):
+    element = examinee.CCMonitoringConfig(name='foo', raw_dict=monitoring_required_dict)
     element.validate()
