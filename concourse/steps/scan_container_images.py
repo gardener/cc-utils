@@ -162,7 +162,7 @@ def mail_recipients(
     elif notification_policy == Notify.COMPONENT_OWNERS:
         for comp in components:
             def comp_filter(component):
-                return comp == component # only care about matching results
+                return comp.name() == component.name() # only care about matching results
 
             yield mail_recps_ctor(
                 recipients_component=comp,
