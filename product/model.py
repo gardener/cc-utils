@@ -42,6 +42,7 @@ class ProductModelBase(ModelBase):
     def __init__(self, **kwargs):
         raw_dict = {**kwargs}
         super().__init__(raw_dict=raw_dict)
+        self.validate()
 
 
 class DependencyBase(ModelBase):
@@ -50,6 +51,10 @@ class DependencyBase(ModelBase):
 
     Not intended to be instantiated.
     '''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.validate()
+
     def _required_attributes(self):
         return {'name', 'version'}
 
@@ -251,6 +256,18 @@ class ContainerImage(ContainerImageReference):
 
     def image_reference(self):
         return self.raw.get('image_reference')
+
+    def validate(self):
+        img_ref = check_type(self.image_reference(), str)
+        # XXX this is an incomplete validation that will only detect some obvious errors,
+        # such as missing image tag
+        if not ':' in img_ref:
+            raise ModelValidationError(f'img ref does not contain tag separator (:): {img_ref}')
+        name, tag = img_ref.rsplit(':', 1)
+        if not name:
+            raise ModelValidationError(f'img ref name must not be empty: {img_ref}')
+        if not tag:
+            raise ModelValidationError(f'img ref tag must not be empty: {img_ref}')
 
 
 class WebDependencyReference(DependencyBase):
