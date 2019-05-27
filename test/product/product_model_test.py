@@ -21,6 +21,8 @@ from _test_utils import AssertMixin
 import product.model
 import product.util
 
+from model.base import ModelValidationError
+
 
 class ProductModelTest(unittest.TestCase):
     def setUp(self):
@@ -137,7 +139,7 @@ class ProductModelTest(unittest.TestCase):
         container_image_dep = product.model.ContainerImage.create(
                 name='container_name',
                 version='container_version',
-                image_reference='dontcare',
+                image_reference='dontcare:sometag',
         )
         first_comp_deps = right_model.component((
                     'example.org/foo/first_component',
@@ -246,7 +248,11 @@ class DependenciesModelTest(unittest.TestCase, AssertMixin):
     def test_adding_dependencies(self):
         examinee = product.model.ComponentDependencies(raw_dict={})
 
-        ci_dep = product.model.ContainerImage.create(name='cn', version='cv', image_reference='cir')
+        ci_dep = product.model.ContainerImage.create(
+            name='cn',
+            version='cv',
+            image_reference='cir:ct',
+        )
         comp_dep = product.model.ComponentReference.create(name='h/o/c', version='c')
         web_dep = product.model.WebDependency.create(name='wn', version='wv', url='u')
         gen_dep = product.model.GenericDependency.create(name='gn', version='gv')
@@ -268,3 +274,20 @@ class DependenciesModelTest(unittest.TestCase, AssertMixin):
         self.assertEqual(redundant_dep, gen_dep)
         examinee.add_generic_dependency(redundant_dep)
         self.assertEqual((gen_dep,), tuple(examinee.generic_dependencies()))
+
+
+class ContainerImageTest(unittest.TestCase):
+    def test_validation(self):
+        examinee = product.model.ContainerImage.create
+
+        # image references must contain a ':'
+        with self.assertRaises(ModelValidationError):
+            examinee(name='made_up', version='some_version', image_reference='foo')
+
+        # image_references must contain a tag
+        with self.assertRaises(ModelValidationError):
+            examinee(name='made_up', version='some_version', image_reference=':bar')
+
+        # image references must contain an image name
+        with self.assertRaises(ModelValidationError):
+            examinee(name='made_up', version='some_version', image_reference='foo:')
