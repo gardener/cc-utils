@@ -33,10 +33,10 @@ def img_ref():
 
 
 def test_image_reference_filter(img_ref):
-    ref1 = img_ref('image1')
-    ref2 = img_ref('image2/foo')
-    ref3 = img_ref('another_image1')
-    ref4 = img_ref('unrelated/for/testing')
+    ref1 = img_ref('image1:bar')
+    ref2 = img_ref('image2/foo:bar')
+    ref3 = img_ref('another_image1:bar')
+    ref4 = img_ref('unrelated/for/testing:bar')
 
     default_filter = examinee()
 

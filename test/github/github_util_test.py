@@ -74,12 +74,14 @@ class UpgradePullRequestTest(unittest.TestCase):
         self.assertFalse(examinee.is_obsolete(reference_component=reference_component))
 
         # add differently-named web dependency with greater version
-        dependencies.add_web_dependency(pm.WebDependencyReference.create(name='xxx', version='123'))
+        dependencies.add_web_dependency(
+            pm.WebDependency.create(name='xxx', version='123', url='made-up.url')
+        )
         self.assertFalse(examinee.is_obsolete(reference_component=reference_component))
 
         # add same-named web dependency with lesser version
         dependencies.add_web_dependency(
-            pm.WebDependencyReference.create(name='dep_red', version='0.0.1')
+            pm.WebDependency.create(name='dep_red', version='0.0.1', url='made-up.url')
         )
         self.assertFalse(examinee.is_obsolete(reference_component=reference_component))
 
@@ -91,14 +93,14 @@ class UpgradePullRequestTest(unittest.TestCase):
 
         # finally, add greater dependency of matching type and name
         dependencies.add_web_dependency(
-            pm.WebDependencyReference.create(name='dep_red', version='9.9.9')
+            pm.WebDependency.create(name='dep_red', version='9.9.9', url='made-up.url')
         )
         self.assertTrue(examinee.is_obsolete(reference_component=reference_component))
 
     def test_target_matches(self):
         examinee = create_upgrade_pr(
-            from_ref=pm.WebDependencyReference.create(name='red', version='1.2.3'),
-            to_ref=pm.WebDependencyReference.create(name='red', version='2.0.0'),
+            from_ref=pm.WebDependency.create(name='red', version='1.2.3', url='made-up.url'),
+            to_ref=pm.WebDependency.create(name='red', version='2.0.0', url='made-up.url'),
         )
 
         # test validation
@@ -114,15 +116,21 @@ class UpgradePullRequestTest(unittest.TestCase):
 
         # same type, and version, different name
         self.assertFalse(
-            examinee.target_matches(pm.WebDependencyReference.create(name='xxx', version='2.0.0'))
+            examinee.target_matches(
+                pm.WebDependency.create(name='xxx', version='2.0.0', url='made-up.url')
+            )
         )
 
         # same type, and name, different version
         self.assertFalse(
-            examinee.target_matches(pm.WebDependencyReference.create(name='red', version='5.5.5'))
+            examinee.target_matches(
+                pm.WebDependency.create(name='red', version='5.5.5', url='made-up.url')
+            )
         )
 
         # all matches
         self.assertTrue(
-            examinee.target_matches(pm.WebDependencyReference.create(name='red', version='2.0.0'))
+            examinee.target_matches(
+                pm.WebDependency.create(name='red', version='2.0.0', url='made-up.url')
+            )
         )
