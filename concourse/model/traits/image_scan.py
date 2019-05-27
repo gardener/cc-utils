@@ -29,6 +29,7 @@ from concourse.model.base import (
     ModelBase,
     ScriptType,
 )
+from model.base import ModelValidationError
 from product.scanning import ProcessingMode
 
 from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
@@ -106,6 +107,26 @@ class ProtecodeScanCfg(ModelBase):
         ProcessingMode(self.processing_mode())
 
 
+CLAMAV_ATTRS = (
+    AttributeSpec.required(
+        name='clamav_cfg_name',
+        doc='clamav cfg name to use (see cc-config)',
+    ),
+)
+
+
+class ClamAVScanCfg(ModelBase):
+    @classmethod
+    def _attribute_specs(cls):
+        return CLAMAV_ATTRS
+
+    def clamav_cfg_name(self):
+        return self.raw.get('clamav_cfg_name')
+
+    def validate(self):
+        super().validate()
+
+
 class Notify(enum.Enum):
     EMAIL_RECIPIENTS = 'email_recipients'
     NOBODY = 'nobody'
@@ -131,6 +152,12 @@ ATTRIBUTES = (
         type=ProtecodeScanCfg,
         doc='if present, perform protecode scanning',
     ),
+    AttributeSpec.optional(
+        name='clam_av',
+        default=None,
+        type=ClamAVScanCfg,
+        doc='if present, perform ClamAV scanning',
+    ),
 )
 
 
@@ -140,7 +167,10 @@ class ImageScanTrait(Trait, ImageFilterMixin):
         return ATTRIBUTES
 
     def _children(self):
-        return (self.protecode(),)
+        if self.protecode():
+            yield self.protecode()
+        if self.clam_av():
+            yield self.clam_av()
 
     def notify(self):
         return Notify(self.raw['notify'])
@@ -149,10 +179,22 @@ class ImageScanTrait(Trait, ImageFilterMixin):
         return self.raw['email_recipients']
 
     def protecode(self):
-        return ProtecodeScanCfg(raw_dict=self.raw['protecode'])
+        if self.raw['protecode']:
+            return ProtecodeScanCfg(raw_dict=self.raw['protecode'])
+
+    def clam_av(self):
+        if self.raw['clam_av']:
+            return ClamAVScanCfg(raw_dict=self.raw['clam_av'])
 
     def transformer(self):
         return ImageScanTraitTransformer(trait=self)
+
+    def validate(self):
+        super().validate()
+        if not (self.protecode() or self.clam_av()):
+            raise ModelValidationError(
+                f"{self}: One of 'protecode' or 'clam_av' must be defined."
+            )
 
 
 class ImageScanTraitTransformer(TraitTransformer):
