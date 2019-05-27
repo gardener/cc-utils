@@ -136,7 +136,7 @@ class ComponentDescriptorResolver(ResolverBase):
         merged = Product.from_dict(deepcopy(dict(product.raw.items())))
 
         for component_reference in itertools.chain(
-                *map(unresolved_references, product.components())
+            *map(unresolved_references, product.components())
         ):
             resolved_descriptor = self.retrieve_descriptor(component_reference)
             merged = merge_products(merged, resolved_descriptor)
