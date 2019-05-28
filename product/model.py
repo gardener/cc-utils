@@ -89,9 +89,11 @@ class ComponentDescriptor(ProductModelBase):
         super().__init__(*args, **kwargs)
         if 'components' not in self.raw:
             self.raw['components'] = []
+        if 'component_overwrites' not in self.raw:
+            self.raw['component_overwrites'] = []
 
     def _optional_attributes(self):
-        return {'components'}
+        return {'components', 'component_overwrites'}
 
     def components(self):
         return (Component(raw_dict=raw_dict) for raw_dict in self.raw['components'])
@@ -108,6 +110,10 @@ class ComponentDescriptor(ProductModelBase):
 
     def add_component(self, component):
         self.raw['components'].append(component.raw)
+
+    def component_overwrites(self):
+        return (ComponentOverwrites(raw_dict=raw_dict)
+            for raw_dict in self.raw['component_overwrites'])
 
 
 Product = ComponentDescriptor # XXX replace all usages of legacy class name 'Product'
@@ -386,6 +392,20 @@ class ComponentDependencies(ModelBase):
     def add_generic_dependency(self, generic_dependency):
         if generic_dependency not in self.generic_dependencies():
             self.raw['generic'].append(generic_dependency.raw)
+
+
+class ComponentOverwrites(ModelBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not 'dependency_overwrites' in self.raw:
+            self.raw['dependency_overwrites'] = []
+
+    def _required_attributes(self):
+        return {'parent_component', 'version', 'references'}
+
+    def parent_component(self)->ComponentReference:
+        parent_comp = self.raw['parent_component']
+        return ComponentReference.create(name=parent_comp['name'], version=parent_comp['version'])
 
 
 def reference_type(name: str):
