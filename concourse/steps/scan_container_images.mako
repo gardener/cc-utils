@@ -37,10 +37,41 @@ cfg_factory = util.ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
 component_descriptor = parse_component_descriptor()
+
+protecode_results = ()
+% if protecode_scan:
+  % if not protecode_scan.protecode_cfg_name():
+protecode_cfg = cfg_factory.protecode()
+  % else:
+protecode_cfg = cfg_factory.protecode('${protecode_scan.protecode_cfg_name()}')
+  % endif
+
+protecode_group_id = ${protecode_scan.protecode_group_id()}
+protecode_group_url = f'{protecode_cfg.api_url()}/group/{protecode_group_id}/'
+
+protecode_results, license_report = protecode_scan(
+  protecode_cfg=protecode_cfg,
+  protecode_group_id = protecode_group_id,
+  protecode_group_url = protecode_group_url,
+  product_descriptor = component_descriptor,
+  reference_protecode_group_ids = ${protecode_scan.reference_protecode_group_ids()},
+  processing_mode = ProcessingMode('${protecode_scan.processing_mode()}'),
+  parallel_jobs=${protecode_scan.parallel_jobs()},
+  cve_threshold=${protecode_scan.cve_threshold()},
+  include_image_references=${filter_cfg.include_image_references()},
+  exclude_image_references=${filter_cfg.exclude_image_references()},
+)
+% endif
+
+images_with_potential_viruses = ()
+
+% if clam_av:
+
 image_filter = image_reference_filter(
   include_regexes=${filter_cfg.include_image_references()},
   exclude_regexes=${filter_cfg.exclude_image_references()},
 )
+
 image_references = [
   ci.image_reference()
   for _, ci
@@ -50,48 +81,6 @@ image_references = [
   )
 ]
 
-protecode_results = None
-% if protecode_scan:
-  % if not protecode_scan.protecode_cfg_name():
-protecode_cfg = cfg_factory.protecode()
-  % else:
-protecode_cfg = cfg_factory.protecode('${protecode_scan.protecode_cfg_name()}')
-  % endif
-
-protecode_group_id = int(${protecode_scan.protecode_group_id()})
-protecode_group_url = f'{protecode_cfg.api_url()}/group/{protecode_group_id}/'
-
-# print configuration
-print(tabulate.tabulate(
-  (
-    ('Protecode target group id', str(protecode_group_id)),
-    ('Protecode group URL', protecode_group_url),
-    ('Protecode reference group IDs', ${protecode_scan.reference_protecode_group_ids()}),
-    ('Image Filter (include)', ${filter_cfg.include_image_references()}),
-    ('Image Filter (exclude)', ${filter_cfg.exclude_image_references()}),
-  ),
-))
-
-processing_mode = ProcessingMode('${protecode_scan.processing_mode()}')
-
-protecode_results, license_report = protecode.util.upload_images(
-  protecode_cfg=protecode_cfg,
-  product_descriptor=component_descriptor,
-  processing_mode=processing_mode,
-  protecode_group_id=protecode_group_id,
-  parallel_jobs=${protecode_scan.parallel_jobs()},
-  cve_threshold=${protecode_scan.cve_threshold()},
-  image_reference_filter=image_filter,
-  reference_group_ids=${protecode_scan.reference_protecode_group_ids()},
-)
-
-# XXX also include in email
-report_lines = create_license_report(license_report=license_report)
-
-% endif
-
-images_with_potential_viruses = None
-% if clam_av:
 util.info('running virus scan for all container images')
 images_with_potential_viruses = tuple(virus_scan_images(image_references))
 if images_with_potential_viruses:
@@ -123,10 +112,8 @@ email_recipients = tuple(
 )
 
 for email_recipient in email_recipients:
-  if protecode_results:
-    email_recipient.add_protecode_results(results=protecode_results)
-  if images_with_potential_viruses:
-    email_recipient.add_clamav_results(results=images_with_potential_viruses)
+  email_recipient.add_protecode_results(results=protecode_results)
+  email_recipient.add_clamav_results(results=images_with_potential_viruses)
 
   if not email_recipient.has_results():
     util.info(f'skipping {email_recipient}, since there are not relevant results')
@@ -135,10 +122,8 @@ for email_recipient in email_recipients:
   body = email_recipient.mail_body()
   email_addresses = set(email_recipient.resolve_recipients())
 
-
   # component_name identifies the landscape that has been scanned
   component_name = "${component_trait.component_name()}"
-
 
   # notify about critical vulnerabilities
   mailutil._send_mail(
