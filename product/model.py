@@ -412,7 +412,7 @@ class ComponentOverwrites(ModelBase):
         )
 
     def dependency_overwrites(self)->typing.Iterable['DependencyOverwrites']:
-        pass
+        return (DependencyOverwrites(raw_dict) for raw_dict in self.raw['dependency_overwrites'])
 
 
 class DependencyOverwrites(ModelBase):
@@ -424,8 +424,11 @@ class DependencyOverwrites(ModelBase):
     def _required_attributes(self):
         return {'references'}
 
-    def declaring_component(self)->ComponentReference:
+    def references(self)->ComponentReference:
         return ComponentReference.create(**self.raw['references'])
+
+    def container_images(self):
+        return (ContainerImage(raw_dict=raw_dict) for raw_dict in self.raw.get('container_images'))
 
 
 def reference_type(name: str):

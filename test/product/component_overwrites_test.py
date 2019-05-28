@@ -61,7 +61,11 @@ def minimal_component_descriptor_with_overwrites():
 def test_overwrites_parsing(minimal_component_descriptor_with_overwrites):
     comp_descriptor = minimal_component_descriptor_with_overwrites
 
+    components = tuple(comp_descriptor.components())
     overwrites = tuple(comp_descriptor.component_overwrites())
+
+    assert len(components) == 1
+    component = components[0]
 
     assert len(overwrites) == 1
     overwrite = overwrites[0]
@@ -72,3 +76,20 @@ def test_overwrites_parsing(minimal_component_descriptor_with_overwrites):
         name='example.org/acme/declaring',
         version='0.1.0-declaring'
     )
+
+    dep_overwrites = tuple(overwrite.dependency_overwrites())
+
+    assert len(dep_overwrites) == 1
+    dep_overwrite = dep_overwrites[0]
+
+    refd_component = dep_overwrite.references()
+    assert refd_component == component
+
+    overwrite_images = tuple(dep_overwrite.container_images())
+    assert len(overwrite_images) == 1
+
+    overwrite_img = overwrite_images[0]
+
+    assert overwrite_img.name() == 'image_1'
+    assert overwrite_img.version() == '1.2.3-patched'
+    assert overwrite_img.image_reference() == 'alpine-patched:1.2.3-patched'
