@@ -117,9 +117,6 @@ class ComponentDescriptor(ProductModelBase):
             for raw_dict in self.raw['component_overwrites'])
 
 
-Product = ComponentDescriptor # XXX remove "soon-ish"
-
-
 class ComponentName(object):
     @staticmethod
     def validate_component_name(name: str):
