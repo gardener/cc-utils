@@ -30,3 +30,4 @@ tabulate<1.0.0
 termcolor<2.0.0
 toposort<2.0.0
 urllib3<2.0.0
+yamllint<2
