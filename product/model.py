@@ -401,11 +401,14 @@ class ComponentOverwrites(ModelBase):
             self.raw['dependency_overwrites'] = []
 
     def _required_attributes(self):
-        return {'parent_component', 'version', 'references'}
+        return {'declaring_component', 'version', 'references'}
 
-    def parent_component(self)->ComponentReference:
-        parent_comp = self.raw['parent_component']
-        return ComponentReference.create(name=parent_comp['name'], version=parent_comp['version'])
+    def declaring_component(self)->ComponentReference:
+        declaring_comp = self.raw['declaring_component']
+        return ComponentReference.create(
+            name=declaring_comp['name'],
+            version=declaring_comp['version']
+        )
 
 
 def reference_type(name: str):
