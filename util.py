@@ -18,6 +18,8 @@ import pathlib
 import shutil
 import sys
 import yaml
+import yamllint
+import yamllint.config
 
 import termcolor
 
@@ -190,9 +192,32 @@ def is_yaml_file(path):
     return False
 
 
-def parse_yaml_file(path):
+def parse_yaml_file(path, lint=False):
+    if lint:
+        lint_yaml_file(path)
+
     with open(path) as f:
         return yaml.load(f, Loader=yaml.SafeLoader)
+
+
+def lint_yaml_file(path):
+    existing_file(path)
+    # hard-code relaxed cfg for now
+    cfg = yamllint.config.YamlLintConfig('extends: relaxed')
+    info(f'linting YAML file: {path}')
+    worst_level = 0
+    with open(path) as f:
+        for problem in yamllint.linter.run(f, conf=cfg, filepath=path):
+            # problem is of type yamllint.linter.LintProblem
+            level = problem.level
+            if isinstance(problem.level, str):
+                level = yamllint.linter.PROBLEM_LEVELS[problem.level]
+
+            if level >= yamllint.linter.PROBLEM_LEVELS['warning']:
+                warning(str(problem))
+            worst_level = max(worst_level, level)
+    if worst_level >= yamllint.linter.PROBLEM_LEVELS['error']:
+        fail('found errors whilst linting (see above)')
 
 
 def random_str(prefix=None, length=12):
