@@ -15,6 +15,7 @@
 
 import abc
 import urllib.parse
+import typing
 from enum import Enum
 
 from model.base import ModelBase, ModelValidationError
@@ -409,6 +410,22 @@ class ComponentOverwrites(ModelBase):
             name=declaring_comp['name'],
             version=declaring_comp['version']
         )
+
+    def dependency_overwrites(self)->typing.Iterable['DependencyOverwrites']:
+        pass
+
+
+class DependencyOverwrites(ModelBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not 'container_images' in self.raw:
+            self.raw['container_images'] = []
+
+    def _required_attributes(self):
+        return {'references'}
+
+    def declaring_component(self)->ComponentReference:
+        return ComponentReference.create(**self.raw['references'])
 
 
 def reference_type(name: str):
