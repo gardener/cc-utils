@@ -80,7 +80,7 @@ class DependencyBase(ModelBase):
         return hash(tuple(sorted(self.raw.items())))
 
 
-class Product(ProductModelBase):
+class ComponentDescriptor(ProductModelBase):
     @staticmethod
     def from_dict(raw_dict: dict):
         return Product(**raw_dict)
@@ -108,6 +108,9 @@ class Product(ProductModelBase):
 
     def add_component(self, component):
         self.raw['components'].append(component.raw)
+
+
+Product = ComponentDescriptor # XXX replace all usages of legacy class name 'Product'
 
 
 class ComponentName(object):
