@@ -179,7 +179,7 @@ def none(value):
     return value
 
 
-def is_yaml_file(path: CliHints.existing_file()):
+def is_yaml_file(path):
     with open(path) as f:
         try:
             if yaml.load(f, Loader=yaml.SafeLoader):
@@ -190,7 +190,7 @@ def is_yaml_file(path: CliHints.existing_file()):
     return False
 
 
-def parse_yaml_file(path: CliHints.existing_file()):
+def parse_yaml_file(path):
     with open(path) as f:
         return yaml.load(f, Loader=yaml.SafeLoader)
 
