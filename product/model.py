@@ -401,7 +401,7 @@ class ComponentOverwrites(ModelBase):
             self.raw['dependency_overwrites'] = []
 
     def _required_attributes(self):
-        return {'declaring_component', 'version', 'references'}
+        return {'declaring_component'}
 
     def declaring_component(self)->ComponentReference:
         declaring_comp = self.raw['declaring_component']
