@@ -25,4 +25,4 @@ def current_product_descriptor():
     component_descriptor_dir = pathlib.Path(util.check_env('COMPONENT_DESCRIPTOR_DIR')).absolute()
     component_descriptor = component_descriptor_dir.joinpath('component_descriptor')
     raw = util.parse_yaml_file(component_descriptor)
-    return product.model.Product.from_dict(raw)
+    return product.model.ComponentDescriptor.from_dict(raw)

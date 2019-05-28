@@ -25,7 +25,7 @@ from product.model import (
     ComponentReference,
     ContainerImage,
     GenericDependency,
-    Product,
+    ComponentDescriptor,
     WebDependency,
 )
 from product.util import (
@@ -56,7 +56,7 @@ def upload_product_images(
     cfg_factory = ctx().cfg_factory()
     protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
 
-    product_descriptor = Product.from_dict(
+    product_descriptor = ComponentDescriptor.from_dict(
         raw_dict=parse_yaml_file(product_cfg_file)
     )
 
@@ -119,7 +119,7 @@ def component_descriptor_to_xml(
     component_descriptor: CliHints.existing_file(),
     out_file: str,
 ):
-    component_descriptor = Product.from_dict(parse_yaml_file(component_descriptor))
+    component_descriptor = ComponentDescriptor.from_dict(parse_yaml_file(component_descriptor))
 
     def images(component_descriptor):
         for component in component_descriptor.components():
@@ -161,7 +161,7 @@ def merge_descriptors(descriptors: [str]):
         fail('at least two descriptors are required for merging')
 
     def parse_product_file(f):
-        return Product.from_dict(parse_yaml_file(f))
+        return ComponentDescriptor.from_dict(parse_yaml_file(f))
 
     merged = parse_product_file(descriptors[0])
 
@@ -184,7 +184,7 @@ def add_dependencies(
     web_dependencies: CliHint(typehint=_parse_web_deps, action='append')=[],
     generic_dependencies: CliHint(typehint=_parse_generic_deps, action='append')=[],
 ):
-    product = Product.from_dict(parse_yaml_file(descriptor_src_file))
+    product = ComponentDescriptor.from_dict(parse_yaml_file(descriptor_src_file))
 
     component = product.component(
         ComponentReference.create(name=component_name, version=component_version)
@@ -244,7 +244,7 @@ def resolve_component_descriptor(
         cfg_factory=cfg_factory,
     )
 
-    component_descriptor = Product.from_dict(parse_yaml_file(component_descriptor))
+    component_descriptor = ComponentDescriptor.from_dict(parse_yaml_file(component_descriptor))
 
     resolved_descriptor = resolver.resolve_component_references(product=component_descriptor)
 
@@ -258,7 +258,7 @@ def download_dependencies(
     if not os.path.isdir(out_dir):
         os.mkdir(out_dir)
 
-    component_descriptor = Product.from_dict(parse_yaml_file(component_descriptor))
+    component_descriptor = ComponentDescriptor.from_dict(parse_yaml_file(component_descriptor))
     image_references = [
         container_image.image_reference() for _, container_image
         in _enumerate_images(component_descriptor=component_descriptor)

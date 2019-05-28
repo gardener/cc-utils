@@ -10,7 +10,7 @@ def parse_component_descriptor():
       'component_descriptor'
     )
 
-    component_descriptor = product.model.Product.from_dict(
+    component_descriptor = product.model.ComponentDescriptor.from_dict(
       raw_dict=util.parse_yaml_file(component_descriptor_file)
     )
     return component_descriptor

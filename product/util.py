@@ -31,7 +31,7 @@ from .model import (
     ComponentReference,
     ContainerImage,
     DependencyBase,
-    Product,
+    ComponentDescriptor,
 )
 
 
@@ -123,7 +123,7 @@ class ComponentDescriptorResolver(ResolverBase):
                 component_reference=component_reference,
             )
 
-        return Product.from_dict(dependency_descriptor)
+        return ComponentDescriptor.from_dict(dependency_descriptor)
 
     def resolve_component_references(
         self,
@@ -133,7 +133,7 @@ class ComponentDescriptorResolver(ResolverBase):
             component_references = component.dependencies().components()
             yield from filter(lambda cr: not product.component(cr), component_references)
 
-        merged = Product.from_dict(deepcopy(dict(product.raw.items())))
+        merged = ComponentDescriptor.from_dict(deepcopy(dict(product.raw.items())))
 
         for component_reference in itertools.chain(
             *map(unresolved_references, product.components())
@@ -169,7 +169,7 @@ def merge_products(left_product, right_product):
     not_none(right_product)
 
     # start with a copy of left_product
-    merged = Product.from_dict(deepcopy(dict(left_product.raw.items())))
+    merged = ComponentDescriptor.from_dict(deepcopy(dict(left_product.raw.items())))
     for component in right_product.components():
         existing_component = merged.component(component)
         if existing_component:
@@ -294,7 +294,7 @@ def greatest_references(references: typing.Iterable[DependencyBase]):
 
 
 def _enumerate_images(
-    component_descriptor: Product,
+    component_descriptor: ComponentDescriptor,
     image_reference_filter=lambda _: True,
 ) -> typing.Iterable[typing.Tuple[Component, ContainerImage]]:
     for component in component_descriptor.components():

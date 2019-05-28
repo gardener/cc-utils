@@ -26,7 +26,7 @@ import product.util
 from product.scanning import ProtecodeUtil, ProcessingMode
 from util import info, warning, verbose, error, success, urljoin
 from product.model import (
-    Product,
+    ComponentDescriptor,
     UploadResult,
 )
 from protecode.model import (
@@ -84,7 +84,7 @@ def upload_images(
 
 
 def _download_images(
-    component_descriptor: Product,
+    component_descriptor: ComponentDescriptor,
     upload_registry_prefix: str,
     image_reference_filter,
     parallel_jobs=8, # eight is a good number

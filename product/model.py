@@ -83,7 +83,7 @@ class DependencyBase(ModelBase):
 class ComponentDescriptor(ProductModelBase):
     @staticmethod
     def from_dict(raw_dict: dict):
-        return Product(**raw_dict)
+        return ComponentDescriptor(**raw_dict)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -116,7 +116,7 @@ class ComponentDescriptor(ProductModelBase):
             for raw_dict in self.raw['component_overwrites'])
 
 
-Product = ComponentDescriptor # XXX replace all usages of legacy class name 'Product'
+Product = ComponentDescriptor # XXX remove "soon-ish"
 
 
 class ComponentName(object):

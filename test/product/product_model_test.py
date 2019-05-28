@@ -77,7 +77,7 @@ class ProductModelTest(unittest.TestCase):
         }
 
     def test_deserialisation_returns_correct_model(self):
-        examinee = product.model.Product.from_dict(raw_dict=self.raw_dict)
+        examinee = product.model.ComponentDescriptor.from_dict(raw_dict=self.raw_dict)
 
         components = list(examinee.components())
         self.assertEqual(len(components), 2)
@@ -123,8 +123,8 @@ class ProductModelTest(unittest.TestCase):
         self.assertEqual(first_generic_dep.version(), 'generic_version')
 
     def test_merge_identical_products(self):
-        left_model = product.model.Product.from_dict(raw_dict=self.raw_dict)
-        right_model = product.model.Product.from_dict(raw_dict=self.raw_dict)
+        left_model = product.model.ComponentDescriptor.from_dict(raw_dict=self.raw_dict)
+        right_model = product.model.ComponentDescriptor.from_dict(raw_dict=self.raw_dict)
 
         merged = product.util.merge_products(left_model, right_model)
 
@@ -132,8 +132,8 @@ class ProductModelTest(unittest.TestCase):
         self.assertEqual(len(components), 2)
 
     def test_merge_conflicting_products_should_raise(self):
-        left_model = product.model.Product.from_dict(raw_dict=deepcopy(self.raw_dict))
-        right_model = product.model.Product.from_dict(raw_dict=deepcopy(self.raw_dict))
+        left_model = product.model.ComponentDescriptor.from_dict(raw_dict=deepcopy(self.raw_dict))
+        right_model = product.model.ComponentDescriptor.from_dict(raw_dict=deepcopy(self.raw_dict))
 
         # add a new dependency to create a conflicting definition
         container_image_dep = product.model.ContainerImage.create(
@@ -151,8 +151,8 @@ class ProductModelTest(unittest.TestCase):
             product.util.merge_products(left_model, right_model)
 
     def test_merge_products(self):
-        left_model = product.model.Product.from_dict(raw_dict={})
-        right_model = product.model.Product.from_dict(raw_dict={})
+        left_model = product.model.ComponentDescriptor.from_dict(raw_dict={})
+        right_model = product.model.ComponentDescriptor.from_dict(raw_dict={})
 
         left_component1 = product.model.Component.create(name='x/y/lcomp1', version='1')
         right_component1 = product.model.Component.create(name='x/y/rcomp1', version='2')
