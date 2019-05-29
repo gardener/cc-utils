@@ -44,7 +44,6 @@ def upload_images(
     ignore_if_triaged=True,
     processing_mode=ProcessingMode.UPLOAD_IF_CHANGED,
     image_reference_filter=lambda _: True,
-    upload_registry_prefix: str=None,
     reference_group_ids=(),
 ) -> typing.Iterable[typing.Tuple[UploadResult, int]]:
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
@@ -54,7 +53,6 @@ def upload_images(
         protecode_api=protecode_api,
         processing_mode=processing_mode,
         group_id=protecode_group_id,
-        upload_registry_prefix=upload_registry_prefix,
         reference_group_ids=reference_group_ids,
     )
     tasks = _create_tasks(
@@ -69,14 +67,6 @@ def upload_images(
         cve_threshold=cve_threshold,
         ignore_if_triaged=ignore_if_triaged,
     )
-
-    if upload_registry_prefix:
-        # XXX this is an ugly hack / workaround (see below)
-        _download_images(
-            component_descriptor=product_descriptor,
-            upload_registry_prefix=upload_registry_prefix,
-            image_reference_filter=image_reference_filter,
-        )
 
     _license_report = license_report(upload_results=results)
 

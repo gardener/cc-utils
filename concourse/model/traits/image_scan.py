@@ -74,15 +74,6 @@ PROTECODE_ATTRS = (
         default=None,
         doc='protecode cfg name to use (see cc-utils)',
     ),
-    AttributeSpec.optional(
-        name='upload_registry_prefix',
-        default=None,
-        doc='''
-        if specified, all matching container images are also uploaded as copies to
-        the specified container registry. The original image reference names are
-        mangled.
-        '''
-    ),
 )
 
 
@@ -108,9 +99,6 @@ class ProtecodeScanCfg(ModelBase):
 
     def processing_mode(self):
         return self.raw.get('processing_mode')
-
-    def upload_registry_prefix(self):
-        return self.raw['upload_registry_prefix']
 
     def validate(self):
         super().validate()

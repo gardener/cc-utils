@@ -12,8 +12,6 @@ image_scan_trait = job_variant.trait('image_scan')
 protecode_scan = image_scan_trait.protecode()
 # XXX: protecode soon to become optional!
 
-# XXX: consider moving upload-images to separate trait (or cfg in this trait)
-upload_registry_prefix = protecode_scan.upload_registry_prefix()
 filter_cfg = image_scan_trait.filters()
 component_trait = job_variant.trait('component_descriptor')
 %>
@@ -55,9 +53,6 @@ print(tabulate.tabulate(
     ('Protecode reference group IDs', ${protecode_scan.reference_protecode_group_ids()}),
     ('Image Filter (include)', ${filter_cfg.include_image_references()}),
     ('Image Filter (exclude)', ${filter_cfg.exclude_image_references()}),
-% if upload_registry_prefix:
-    ('Upload Registry prefix', '${upload_registry_prefix}'),
-% endif
   ),
 ))
 
@@ -87,9 +82,6 @@ relevant_results, license_report = protecode.util.upload_images(
   parallel_jobs=${protecode_scan.parallel_jobs()},
   cve_threshold=${protecode_scan.cve_threshold()},
   image_reference_filter=image_filter,
-% if upload_registry_prefix:
-  upload_registry_prefix='${upload_registry_prefix}',
-% endif
   reference_group_ids=${protecode_scan.reference_protecode_group_ids()},
 )
 
