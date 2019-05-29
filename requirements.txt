@@ -18,6 +18,7 @@ github3.py<2.0.0
 html2text<2019.0.0
 jira<3.0.0
 kubernetes<10.0.0
+passlib<2.0.0
 pydash<5.0.0
 pytest<5.0.0
 pyyaml<6.0.0
