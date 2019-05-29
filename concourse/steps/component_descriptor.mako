@@ -22,7 +22,7 @@ import subprocess
 import sys
 import yaml
 
-from product.model import Product, Component, ContainerImage
+from product.model import ComponentDescriptor, Component, ContainerImage
 from product.util import ComponentDescriptorResolver
 from util import info, fail, parse_yaml_file, ctx
 
@@ -39,7 +39,7 @@ with open(version_file_path) as f:
 component_name = '${descriptor_trait.component_name()}'
 
 # create base descriptor filled with default values
-base_descriptor = Product()
+base_descriptor = ComponentDescriptor()
 component = Component.create(
   name='${descriptor_trait.component_name()}',
   version=effective_version,
@@ -131,7 +131,7 @@ subprocess.run(
 if not os.path.isfile(descriptor_path):
   fail('no descriptor file was found at: ' + descriptor_path)
 
-descriptor = Product.from_dict(parse_yaml_file(descriptor_path))
+descriptor = ComponentDescriptor.from_dict(parse_yaml_file(descriptor_path))
 cfg_factory = ctx().cfg_factory()
 info('resolving dependencies')
 
