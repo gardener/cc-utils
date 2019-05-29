@@ -46,6 +46,9 @@ from model.concourse import (
 from util import (
     info,
 )
+from .utils import(
+    BasicAuthCred,
+)
 
 
 @ensure_annotations
@@ -101,12 +104,20 @@ def deploy_monitoring_landscape(
         tls_config=tls_config,
         tls_secret_name=monitoring_tls_secret_name,
         namespace=monitoring_namespace,
+        basic_auth_cred=BasicAuthCred(
+            user=monitoring_cfg.basic_auth_user(),
+            password=monitoring_cfg.basic_auth_pwd()
+        )
     )
     info('Creating tls-secret in kube-system namespace for node-exporter...')
     create_tls_secret(
         tls_config=tls_config,
         tls_secret_name=monitoring_tls_secret_name,
         namespace=node_exporter_namespace,
+        basic_auth_cred=BasicAuthCred(
+            user=monitoring_cfg.basic_auth_user(),
+            password=monitoring_cfg.basic_auth_pwd()
+        )
     )
 
     ingress_helper = kube_ctx.ingress_helper()
@@ -154,9 +165,9 @@ def generate_monitoring_ingress_object(
         kind='Ingress',
         metadata=V1ObjectMeta(
             annotations={
-                "nginx.ingress.kubernetes.io/auth-tls-verify-client": "on",
+                "nginx.ingress.kubernetes.io/auth-type": "basic",
+                "nginx.ingress.kubernetes.io/auth-secret": secret_name,
                 "nginx.ingress.kubernetes.io/rewrite-target": "/$2",
-                "nginx.ingress.kubernetes.io/auth-tls-secret": "/".join([namespace, secret_name])
             },
             name=service_name,
             namespace=namespace,

@@ -18,6 +18,8 @@ import subprocess
 import yaml
 import tempfile
 from ensure import ensure_annotations
+from collections import namedtuple
+from passlib.apache import HtpasswdFile
 
 from landscape_setup import kube_ctx
 from util import (
@@ -32,6 +34,9 @@ from model.tls import (
 from model.kubernetes import (
     KubernetesConfig,
 )
+
+
+BasicAuthCred = namedtuple('BasicAuthCred', ['user', 'password'])
 
 
 # Stuff used for yaml formatting, when dumping a dictionary
@@ -84,8 +89,10 @@ def create_tls_secret(
     tls_config: TlsConfig,
     tls_secret_name: str,
     namespace: str,
+    basic_auth_cred: BasicAuthCred=None
 ):
-    """Creates the configured TLS secret for the Concourse web-component in the K8s cluster"""
+    """ Creates a secret with the configured TLS certificates in the K8s cluster.
+        Optionally adds credentials for Basic Authentication"""
     not_none(tls_config)
     not_empty(tls_secret_name)
     not_empty(namespace)
@@ -100,6 +107,10 @@ def create_tls_secret(
             'tls.key':tls_config.private_key(),
             'tls.crt':tls_config.certificate(),
         }
+        if basic_auth_cred:
+            ht = HtpasswdFile()
+            ht.set_password(basic_auth_cred.user, basic_auth_cred.password)
+            data['auth'] = ht.to_string().decode('utf-8')
         secret_helper.put_secret(
             name=tls_secret_name,
             data=data,
