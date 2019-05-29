@@ -73,7 +73,7 @@ def upload_images(
     return (relevant_results, _license_report)
 
 
-def _download_images(
+def download_images(
     component_descriptor: ComponentDescriptor,
     upload_registry_prefix: str,
     image_reference_filter,
