@@ -22,6 +22,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 import ccc.elasticsearch
+import util
 from util import warning, info, ctx
 
 
@@ -79,6 +80,9 @@ def log_stack_trace_information(resp, *args, **kwargs):
     This function stores the current stacktrace in elastic search.
     It must not return anything, otherwise the return value is assumed to replace the response
     '''
+    if not util._running_on_ci():
+        return # early exit if not running in ci job
+
     try:
         els_index = "github_access_stacktrace"
         els_config = "sap_internal"
