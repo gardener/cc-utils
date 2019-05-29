@@ -27,8 +27,11 @@ class CCMonitoringConfig(NamedModelElement):
             'postgresql_exporter',
             'node_exporter',
             'tls_config',
+            'tls_secret_name',
             'ingress_host',
             'external_url',
+            'basic_auth_user',
+            'basic_auth_pwd',
         }
 
     def namespace(self):
@@ -54,6 +57,12 @@ class CCMonitoringConfig(NamedModelElement):
 
     def external_url(self):
         return self.raw.get('external_url')
+
+    def basic_auth_user(self):
+        return self.raw.get('basic_auth_user')
+
+    def basic_auth_pwd(self):
+        return self.raw.get('basic_auth_pwd')
 
 
 class KubeStateMetrics(ModelBase):
