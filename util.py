@@ -213,8 +213,11 @@ def lint_yaml_file(path):
             if isinstance(problem.level, str):
                 level = yamllint.linter.PROBLEM_LEVELS[problem.level]
 
-            if level >= yamllint.linter.PROBLEM_LEVELS['warning']:
+            if level == yamllint.linter.PROBLEM_LEVELS['warning']:
                 warning(str(problem))
+            elif level > yamllint.linter.PROBLEM_LEVELS['warning']:
+                error(str(problem))
+
             worst_level = max(worst_level, level)
     if worst_level >= yamllint.linter.PROBLEM_LEVELS['error']:
         fail('found errors whilst linting (see above)')
