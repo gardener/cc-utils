@@ -26,8 +26,8 @@ from concourse.model.base import (
     AttribSpecMixin,
     AttributeSpec,
 )
-from util import not_none, warning, check_type, info, urljoin
-from container.registry import retrieve_container_image, publish_container_image
+from util import not_none, warning, check_type, info
+from container.registry import retrieve_container_image
 from .model import ContainerImage, Component, UploadResult, UploadStatus
 
 
@@ -87,14 +87,12 @@ class ProtecodeUtil(object):
             protecode_api: ProtecodeApi,
             processing_mode: ProcessingMode=ProcessingMode.UPLOAD_IF_CHANGED,
             group_id: int=None,
-            upload_registry_prefix: str=None,
             reference_group_ids=(),
     ):
         protecode_api.login()
         self._processing_mode = check_type(processing_mode, ProcessingMode)
         self._api = not_none(protecode_api)
         self._group_id = group_id
-        self._upload_registry_prefix = upload_registry_prefix
         self._reference_group_ids = reference_group_ids
 
     def _image_ref_metadata(self, container_image, omit_version):
@@ -280,8 +278,6 @@ class ProtecodeUtil(object):
                 container_image.image_reference(),
                 outfileobj=tempfile.NamedTemporaryFile(),
             )
-            if self._upload_registry_prefix:
-                self.upload_image_to_container_registry(container_image, image_data_fh)
             # keep old product_id (in order to delete after update)
             if scan_result:
                 product_id = scan_result.product_id()
@@ -348,23 +344,3 @@ class ProtecodeUtil(object):
             for component in analysis_result.components():
                 for vulnerability in component.vulnerabilities():
                     yield from vulnerability.triages()
-
-    def upload_image_to_container_registry(self, container_image, image_data_fh):
-        '''
-        uploads the given container images (read from the passed fileobj, which
-        must have a name) to the configured container registry.
-        The original image reference is mangled, and prefixed with the configured
-        prefix.
-        '''
-        # we assume there is always a tag present
-        image_name, tag = container_image.image_reference().rsplit(':', 1)
-        mangled_reference = ':'.join((
-            image_name.replace('.', '_'),
-            tag
-        ))
-        target_reference = urljoin(self._upload_registry_prefix, mangled_reference)
-
-        publish_container_image(
-            image_reference=target_reference,
-            image_file_obj=image_data_fh,
-        )
