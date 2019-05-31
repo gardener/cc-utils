@@ -33,8 +33,10 @@ class ConcourseApiRoutesBaseTest(unittest.TestCase):
         )
 
     def test_login_route(self):
-        with self.assertRaises(NotImplementedError):
+        self.assertEqual(
             self.examinee.login(),
+            'https://made-up-concourse.com/sky/token'
+        )
 
     def test_pipelines_route(self):
         self.assertEqual(
@@ -112,18 +114,4 @@ class ConcourseApiRoutesBaseTest(unittest.TestCase):
         self.assertEqual(
             self.examinee.prune_worker(worker_name='foo'),
             'https://made-up-concourse.com/api/v1/workers/foo/prune',
-        )
-
-
-class ConcourseApiRoutesV4Test(unittest.TestCase):
-    def setUp(self):
-        self.examinee = routes.ConcourseApiRoutesV4(
-            base_url='https://cc.v4',
-            team='foo'
-        )
-
-    def test_login_route(self):
-        self.assertEqual(
-            self.examinee.login(),
-            'https://cc.v4/sky/token'
         )
