@@ -437,6 +437,22 @@ class ComponentOverwrites(ModelBase):
     def dependency_overwrites(self)->typing.Iterable['DependencyOverwrites']:
         return (DependencyOverwrites(raw_dict) for raw_dict in self.raw['dependency_overwrites'])
 
+    def dependency_overwrite(self, referenced_component):
+        overwrites = next(
+            filter(
+                lambda do: do.references() == referenced_component,
+                self.dependency_overwrites()
+            ),
+            None
+        )
+        if not overwrites:
+            overwrites = DependencyOverwrites.create(referenced_component=referenced_component)
+            self.raw['dependency_overwrites'].append(overwrites.raw)
+        return overwrites
+
+    def _add_dependency_overwrite(self, dependency_overwrite):
+        self.raw['dependency_overwrites'].append(dependency_overwrite.raw)
+
     def __eq__(self, other):
         if not isinstance(other, ComponentOverwrites):
             return False
@@ -444,6 +460,17 @@ class ComponentOverwrites(ModelBase):
 
 
 class DependencyOverwrites(ModelBase):
+    @staticmethod
+    def create(referenced_component):
+        return DependencyOverwrites(
+            raw_dict={
+                'references': {
+                    'name': referenced_component.name(),
+                    'version': referenced_component.version(),
+                }
+            }
+        )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not 'container_images' in self.raw:
@@ -457,6 +484,11 @@ class DependencyOverwrites(ModelBase):
 
     def container_images(self):
         return (ContainerImage(raw_dict=raw_dict) for raw_dict in self.raw.get('container_images'))
+
+    def __eq__(self, other):
+        if not isinstance(other, DependencyOverwrites):
+            return False
+        return self.raw == other.raw
 
 
 def reference_type(name: str):
