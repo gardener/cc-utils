@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import abstractmethod
 from ensure import ensure_annotations
 from urllib.parse import urljoin
 
@@ -56,9 +55,12 @@ class ConcourseApiRoutesBase(object):
             team = self.team
         return self._api_url('teams', team, prefix_team=False)
 
-    @abstractmethod
     def login(self):
-        raise NotImplementedError
+        return util.urljoin(
+            self.base_url,
+            'sky',
+            'token'
+        )
 
     def pipelines(self):
         return self._api_url('pipelines')
@@ -116,9 +118,8 @@ class ConcourseApiRoutesBase(object):
 
 
 class ConcourseApiRoutesV4(ConcourseApiRoutesBase):
-    def login(self):
-        return util.urljoin(
-            self.base_url,
-            'sky',
-            'token'
-        )
+    '''Routes for Concourse V4'''
+
+
+class ConcourseApiRoutesV5(ConcourseApiRoutesBase):
+    '''Routes for Concourse V5'''

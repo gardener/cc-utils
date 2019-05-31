@@ -16,7 +16,6 @@
 import json
 import warnings
 
-from abc import abstractmethod
 from ensure import ensure_annotations
 from urllib3.exceptions import InsecureRequestWarning
 
@@ -83,9 +82,21 @@ class ConcourseApiBase(object):
     def _delete(self, url: str):
         return self.request_builder.delete(url)
 
-    @abstractmethod
-    def login(self, team: str, username: str, passwd: str):
-        raise NotImplementedError
+    def login(self, username: str, passwd: str):
+        login_url = self.routes.login()
+        form_data = "grant_type=password&password=" + passwd + \
+                    "&scope=openid+profile+email+federated%3Aid+groups&username=" + username
+        response = self._post(
+            url=login_url,
+            body=form_data,
+            headers={"content-type": "application/x-www-form-urlencoded"}
+        )
+        auth_token = response.json()['access_token']
+        self.request_builder = AuthenticatedRequestBuilder(
+            auth_token=auth_token,
+            verify_ssl=self.verify_ssl
+        )
+        return auth_token
 
     @ensure_annotations
     def set_pipeline(self, name: str, pipeline_definition):
@@ -225,22 +236,6 @@ class ConcourseApiBase(object):
 
 
 class ConcourseApiV4(ConcourseApiBase):
-    def login(self, username: str, passwd: str):
-        login_url = self.routes.login()
-        form_data = "grant_type=password&password=" + passwd + \
-                    "&scope=openid+profile+email+federated%3Aid+groups&username=" + username
-        response = self._post(
-            url=login_url,
-            body=form_data,
-            headers={"content-type": "application/x-www-form-urlencoded"}
-        )
-        auth_token = response.json()['access_token']
-        self.request_builder = AuthenticatedRequestBuilder(
-            auth_token=auth_token,
-            verify_ssl=self.verify_ssl
-        )
-        return auth_token
-
     def set_team(self, concourse_team: ConcourseTeam):
         body = {}
         body['auth'] = {
@@ -250,6 +245,28 @@ class ConcourseApiV4(ConcourseApiBase):
         }
         if concourse_team.has_github_oauth_credentials():
             body['auth'].update({
+                "groups": [
+                    "github:" + concourse_team.github_auth_team()
+                ]
+            })
+
+        team_url = self.routes.team_url(concourse_team.teamname())
+        self._put(team_url, json.dumps(body))
+
+
+class ConcourseApiV5(ConcourseApiBase):
+    def set_team(self, concourse_team: ConcourseTeam):
+        body = {
+            "auth": {
+                "member": {
+                    "users": [
+                        "local:" + concourse_team.username()
+                    ]
+                }
+            }
+        }
+        if concourse_team.has_github_oauth_credentials():
+            body["auth"]["member"].update({
                 "groups": [
                     "github:" + concourse_team.github_auth_team()
                 ]
