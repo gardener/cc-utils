@@ -119,3 +119,7 @@ class ConcourseApiRoutesBase(object):
 
 class ConcourseApiRoutesV4(ConcourseApiRoutesBase):
     '''Routes for Concourse V4'''
+
+
+class ConcourseApiRoutesV5(ConcourseApiRoutesBase):
+    '''Routes for Concourse V5'''

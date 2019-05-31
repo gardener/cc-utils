@@ -23,9 +23,11 @@ import functools
 import util
 from .api import (
     ConcourseApiV4,
+    ConcourseApiV5,
 )
 from .routes import (
     ConcourseApiRoutesV4,
+    ConcourseApiRoutesV5,
 )
 from model.concourse import (
     ConcourseApiVersion,
@@ -50,7 +52,7 @@ Other types defined in this module are not intended to be instantiated by users.
 
 [0] https://github.com/concourse/concourse/issues/1122
 [1] https://concourse.ci
-[2] https://github.com/concourse/atc/blob/master/routes.go
+[2] https://github.com/concourse/concourse/blob/master/atc/routes.go
 [3] https://www.getpostman.com/
 '''
 
@@ -77,14 +79,21 @@ def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
     password = concourse_team.password()
     concourse_version = concourse_cfg.concourse_version()
 
+    request_builder = AuthenticatedRequestBuilder(
+        basic_auth_username=AUTH_TOKEN_REQUEST_USER,
+        basic_auth_passwd=AUTH_TOKEN_REQUEST_PWD,
+        verify_ssl=verify_ssl
+    )
     if concourse_version is ConcourseApiVersion.V4:
         routes = ConcourseApiRoutesV4(base_url=base_url, team=team_name)
-        request_builder = AuthenticatedRequestBuilder(
-            basic_auth_username=AUTH_TOKEN_REQUEST_USER,
-            basic_auth_passwd=AUTH_TOKEN_REQUEST_PWD,
-            verify_ssl=verify_ssl
-        )
         concourse_api = ConcourseApiV4(
+            routes=routes,
+            request_builder=request_builder,
+            verify_ssl=verify_ssl,
+        )
+    elif concourse_version is ConcourseApiVersion.V5:
+        routes = ConcourseApiRoutesV5(base_url=base_url, team=team_name)
+        concourse_api = ConcourseApiV5(
             routes=routes,
             request_builder=request_builder,
             verify_ssl=verify_ssl,
