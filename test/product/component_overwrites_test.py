@@ -93,3 +93,27 @@ def test_overwrites_parsing(minimal_component_descriptor_with_overwrites):
     assert overwrite_img.name() == 'image_1'
     assert overwrite_img.version() == '1.2.3-patched'
     assert overwrite_img.image_reference() == 'alpine-patched:1.2.3-patched'
+
+
+def test_implicit_overwrite_creation(minimal_component_descriptor_with_overwrites):
+    comp_descriptor = minimal_component_descriptor_with_overwrites
+    # patch-out overwrite (add again later)
+    comp_descriptor.raw['component_overwrites'] = []
+
+    overwrites = tuple(comp_descriptor.component_overwrites())
+    assert len(overwrites) == 0
+
+    component_name = product.model.Component.create(name='x.org/foo/bar', version='1.2.3')
+
+    overwrite = comp_descriptor.component_overwrite(declaring_component=component_name)
+
+    overwrites = tuple(comp_descriptor.component_overwrites())
+    assert len(overwrites) == 1
+
+    # no implicit creation for same declaring component version
+    same_overwrite = comp_descriptor.component_overwrite(declaring_component=component_name)
+
+    overwrites = tuple(comp_descriptor.component_overwrites())
+    assert len(overwrites) == 1
+
+    assert overwrite == same_overwrite

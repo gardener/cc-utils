@@ -116,6 +116,21 @@ class ComponentDescriptor(ProductModelBase):
         return (ComponentOverwrites(raw_dict=raw_dict)
             for raw_dict in self.raw['component_overwrites'])
 
+    def component_overwrite(self, declaring_component):
+        overwrite = next(filter(
+            lambda co: co.declaring_component() == declaring_component, self.component_overwrites(),
+            ),
+            None,
+        )
+        if not overwrite:
+            overwrite = ComponentOverwrites.create(declaring_component=declaring_component)
+            self._add_component_overwrite(component_overwrite=overwrite)
+
+        return overwrite
+
+    def _add_component_overwrite(self, component_overwrite):
+        self.raw['component_overwrites'].append(component_overwrite.raw)
+
 
 class ComponentName(object):
     @staticmethod
@@ -393,6 +408,17 @@ class ComponentDependencies(ModelBase):
 
 
 class ComponentOverwrites(ModelBase):
+    @staticmethod
+    def create(declaring_component):
+        return ComponentOverwrites(
+            raw_dict={
+                'declaring_component': {
+                    'name': declaring_component.name(),
+                    'version': declaring_component.version(),
+                }
+            }
+        )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not 'dependency_overwrites' in self.raw:
@@ -410,6 +436,11 @@ class ComponentOverwrites(ModelBase):
 
     def dependency_overwrites(self)->typing.Iterable['DependencyOverwrites']:
         return (DependencyOverwrites(raw_dict) for raw_dict in self.raw['dependency_overwrites'])
+
+    def __eq__(self, other):
+        if not isinstance(other, ComponentOverwrites):
+            return False
+        return self.raw == other.raw
 
 
 class DependencyOverwrites(ModelBase):
