@@ -74,6 +74,8 @@ def filter_container_image(
     util.existing_file(image_file)
     if not remove_entries:
         raise ValueError('remove_entries must not be empty')
+    # allow absolute paths
+    remove_entries = [e.lstrip('/') for e in remove_entries]
 
     with tarfile.open(image_file) as tf:
         manifest = json.load(tf.extractfile('manifest.json'))
