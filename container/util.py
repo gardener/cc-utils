@@ -13,13 +13,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import functools
 import hashlib
 import json
 import tarfile
 import tempfile
 
+import container.model
 import container.registry
 import util
+
+
+def process_upload_request(request: container.model.ContainerImageUploadRequest):
+    publish_img = functools.partial(
+        container.registry.publish_container_image,
+        image_reference=request.target_ref,
+    )
+
+    with tempfile.NamedTemporaryFile() as in_fh:
+        container.registry.retrieve_container_image(
+            image_reference=request.source_ref,
+            outfileobj=in_fh
+        )
+
+        if not request.processing_callback:
+            return publish_img(image_file_obj=in_fh)
+
+        with tempfile.NamedTemporaryFile() as out_fh:
+            request.processing_callback(in_fh, out_fh)
+            return publish_img(image_file_obj=out_fh)
 
 
 def filter_image(
