@@ -117,3 +117,16 @@ def test_implicit_overwrite_creation(minimal_component_descriptor_with_overwrite
     assert len(overwrites) == 1
 
     assert overwrite == same_overwrite
+
+    dep_overwrite = overwrite.dependency_overwrite(referenced_component=component_name)
+    dep_overwrite.add_container_image_overwrite(container_image=product.model.ContainerImage.create(
+        name='dontcare',
+        version='1.2.3',
+        image_reference='i:1',
+    ))
+
+    # ensure it's propagated to component_descriptor
+    comp_descriptor = product.model.ComponentDescriptor.from_dict(comp_descriptor.raw)
+    overwrite = next(comp_descriptor.component_overwrites())
+    dep_overwrt = overwrite.dependency_overwrite(referenced_component=component_name)
+    assert len(tuple(dep_overwrt.container_images())) == 1
