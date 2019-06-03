@@ -13,29 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
+import reutil
 
 import product.model
 
 
 def image_reference_filter(include_regexes=(), exclude_regexes=()):
-    # compile regexes
-    include_functions = [re.compile(r).fullmatch for r in include_regexes]
-    exclude_functions = [re.compile(r).fullmatch for r in exclude_regexes]
+    def image_to_str(image_reference: product.model.ContainerImage):
+        return image_reference.image_reference()
 
-    def _img_ref_filter(image_reference: product.model.ContainerImage):
-        matches = True
-        if include_functions:
-            matches &= any(
-                map(lambda f: f(image_reference.image_reference()), include_functions)
-            )
-
-        # exclusion filter has precedence
-        if exclude_functions:
-            matches &= not any(
-                map(lambda f: f(image_reference.image_reference()), exclude_functions)
-            )
-
-        return matches
-
-    return _img_ref_filter
+    return reutil.re_filter(
+        include_regexes=include_regexes,
+        exclude_regexes=exclude_regexes,
+        value_transformation=image_to_str,
+    )
