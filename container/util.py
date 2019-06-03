@@ -40,7 +40,7 @@ def process_upload_request(request: container.model.ContainerImageUploadRequest)
             return publish_img(image_file_obj=in_fh)
 
         with tempfile.NamedTemporaryFile() as out_fh:
-            request.processing_callback(in_fh, out_fh)
+            request.processing_callback(in_fh.name, out_fh.name)
             return publish_img(image_file_obj=out_fh)
 
 
