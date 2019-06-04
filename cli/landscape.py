@@ -24,6 +24,10 @@ from util import (
     CliHints,
     CliHint,
 )
+from landscape_setup import kube_ctx
+from landscape_setup.utils import (
+    ensure_cluster_version,
+)
 import landscape_setup.concourse as setup_concourse
 import landscape_setup.monitoring as setup_monitoring
 import landscape_setup.secrets_server as setup_secrets_server
@@ -86,6 +90,16 @@ def deploy_or_upgrade_landscape(
 
     if dry_run:
         return
+
+    cfg_factory = ctx().cfg_factory()
+    config_set = cfg_factory.cfg_set(config_set_name)
+    concourse_cfg = config_set.concourse()
+
+    # Set the global kubernetes cluster context to the cluster specified in the ConcourseConfig
+    kubernetes_config_name = concourse_cfg.kubernetes_cluster_config()
+    kubernetes_cfg = cfg_factory.kubernetes(kubernetes_config_name)
+    ensure_cluster_version(kubernetes_cfg)
+    kube_ctx.set_kubecfg(kubernetes_cfg.kubeconfig())
 
     if LandscapeComponent.SECRETS_SERVER in components:
         info('Deploying Secrets Server')
@@ -173,7 +187,6 @@ def deploy_secrets_server(
     config_set = cfg_factory.cfg_set(config_set_name)
     secrets_server_config = config_set.secrets_server()
 
-    info('Deploying secrets-server ...')
     setup_secrets_server.deploy_secrets_server(
         secrets_server_config=secrets_server_config,
     )
