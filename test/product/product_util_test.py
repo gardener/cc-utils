@@ -86,3 +86,46 @@ def test_diff_components(cref):
     assert result.names_only_left == {'gh.com/o/c3'}
     assert result.names_only_right == {'gh.com/o/c4'}
     assert result.names_version_changed == {'gh.com/o/c1'}
+
+
+def test_enumerate_effective_images(cref):
+    comp_desc = model.ComponentDescriptor.from_dict({})
+
+    c1 = cref('c1', '1.2.3')
+    comp_desc.add_component(c1)
+    c1 = comp_desc.component(c1)
+
+    c1deps = c1.dependencies()
+    image1 = model.ContainerImage.create(name='i1', version='1.2.3', image_reference='i:1')
+    c1deps.add_container_image_dependency(image1)
+
+    # ensure it's contained in regular enumerate_images
+    comps_and_images = tuple(util._enumerate_images(comp_desc))
+    assert len(comps_and_images) == 1
+    result_c, result_i = comps_and_images[0]
+    assert result_c == c1
+    assert result_i == image1
+
+    # ensure it's also there in enumerate_effective_images (with no overwrites)
+    comps_and_images = tuple(util._enumerate_effective_images(comp_desc))
+    assert len(comps_and_images) == 1
+    result_c, result_i = comps_and_images[0]
+    assert result_c == c1
+    assert result_i == image1
+
+    # now add an overwrite
+    comp_overwrites = comp_desc.component_overwrite(declaring_component=cref('dontcare1', '1.2.3'))
+    dep_overwrites = comp_overwrites.dependency_overwrite(
+        referenced_component=c1,
+        create_if_absent=True,
+    )
+    # name and version must match
+    image_overwrite = model.ContainerImage.create(name='i1', version='1.2.3', image_reference='i:2')
+    dep_overwrites.add_container_image_overwrite(image_overwrite)
+
+    # ensure the overwrite is evaluated
+    comps_and_images = tuple(util._enumerate_effective_images(comp_desc))
+    assert len(comps_and_images) == 1
+    result_c, result_i = comps_and_images[0]
+    assert result_c == c1
+    assert result_i == image_overwrite

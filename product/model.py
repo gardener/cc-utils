@@ -485,6 +485,16 @@ class DependencyOverwrites(ModelBase):
     def container_images(self):
         return (ContainerImage(raw_dict=raw_dict) for raw_dict in self.raw.get('container_images'))
 
+    def container_image(self, name: str):
+        image = next(
+            filter(
+                lambda img: img.name() == name,
+                self.container_images(),
+            ),
+            None
+        )
+        return image
+
     def add_container_image_overwrite(self, container_image: ContainerImage):
         if not container_image in self.container_images():
             self.raw['container_images'].append(container_image.raw)

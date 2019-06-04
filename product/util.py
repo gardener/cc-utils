@@ -304,3 +304,39 @@ def _enumerate_images(
                 component_dependencies.container_images()
         ):
             yield (component, container_image)
+
+
+def _dep_overwrites_for_component(
+    component_descriptor,
+    component,
+):
+    for comp_overwrites in component_descriptor.component_overwrites():
+        dep_overwrites = comp_overwrites.dependency_overwrite(referenced_component=component)
+        if dep_overwrites:
+            yield dep_overwrites
+
+
+def _effective_images(
+    component_descriptor,
+    component,
+):
+    dep_overwrites = tuple(
+        _dep_overwrites_for_component(
+            component_descriptor=component_descriptor,
+            component=component,
+        )
+    )
+    for image in component.dependencies().container_images():
+        effective_image = None
+        for do in dep_overwrites:
+            # last wins (if any)
+            effective_image = do.container_image(name=image.name()) or effective_image
+        yield effective_image or image
+
+
+def _enumerate_effective_images(
+    component_descriptor: ComponentDescriptor,
+) -> typing.Iterable[typing.Tuple[Component, ContainerImage]]:
+    for component, image in _enumerate_images(component_descriptor):
+        for effective_image in _effective_images(component_descriptor, component):
+            yield (component, effective_image)
