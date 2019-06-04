@@ -56,7 +56,7 @@ image_filter = image_reference_filter(
 image_references = [
   ci.image_reference()
   for _, ci
-  in product.util._enumerate_images(
+  in product.util._enumerate_effective_images(
     component_descriptor=component_descriptor,
     image_reference_filter=image_filter,
   )

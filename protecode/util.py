@@ -89,7 +89,7 @@ def download_images(
     image_refs = [
         ci.image_reference()
         for _, ci
-        in product.util._enumerate_images(
+        in product.util._enumerate_effective_images(
             component_descriptor=component_descriptor,
             image_reference_filter=image_reference_filter,
         )
@@ -218,7 +218,7 @@ def _create_task(protecode_util, container_image, component):
 
 
 def _create_tasks(product_model, protecode_util, image_reference_filter):
-    for component, container_image in product.util._enumerate_images(
+    for component, container_image in product.util._enumerate_effective_images(
         component_descriptor=product_model,
         image_reference_filter=image_reference_filter,
     ):

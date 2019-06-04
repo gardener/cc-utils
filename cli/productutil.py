@@ -29,7 +29,7 @@ from product.model import (
     WebDependency,
 )
 from product.util import (
-    _enumerate_images,
+    _enumerate_effective_images,
     merge_products,
     ComponentDescriptorResolver,
 )
@@ -261,7 +261,7 @@ def download_dependencies(
     component_descriptor = ComponentDescriptor.from_dict(parse_yaml_file(component_descriptor))
     image_references = [
         container_image.image_reference() for _, container_image
-        in _enumerate_images(component_descriptor=component_descriptor)
+        in _enumerate_effective_images(component_descriptor=component_descriptor)
     ]
 
     def mangled_outfile_name(image_reference):
