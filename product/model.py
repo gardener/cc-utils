@@ -437,7 +437,7 @@ class ComponentOverwrites(ModelBase):
     def dependency_overwrites(self)->typing.Iterable['DependencyOverwrites']:
         return (DependencyOverwrites(raw_dict) for raw_dict in self.raw['dependency_overwrites'])
 
-    def dependency_overwrite(self, referenced_component, create_if_absent=True):
+    def dependency_overwrite(self, referenced_component, create_if_absent=False):
         overwrites = next(
             filter(
                 lambda do: do.references() == referenced_component,

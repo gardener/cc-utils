@@ -13,12 +13,18 @@ def test_implicit_comp_overwrites_creation():
     # implicitly create overwrite
     component = product.model.Component.create(name='x.org/bar/foo', version='2.3.4')
 
-    dependency_overwrites = component_overwrites.dependency_overwrite(referenced_component=component)
+    dependency_overwrites = component_overwrites.dependency_overwrite(
+        referenced_component=component,
+        create_if_absent=True,
+    )
 
     assert len(tuple(component_overwrites.dependency_overwrites())) == 1
 
     # ensure only one overwrite per component
-    same_overwrites = component_overwrites.dependency_overwrite(referenced_component=component)
+    same_overwrites = component_overwrites.dependency_overwrite(
+        referenced_component=component,
+        create_if_absent=True,
+    )
 
     assert len(tuple(component_overwrites.dependency_overwrites())) == 1
     assert dependency_overwrites == same_overwrites

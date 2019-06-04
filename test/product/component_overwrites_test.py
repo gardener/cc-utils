@@ -118,7 +118,10 @@ def test_implicit_overwrite_creation(minimal_component_descriptor_with_overwrite
 
     assert overwrite == same_overwrite
 
-    dep_overwrite = overwrite.dependency_overwrite(referenced_component=component_name)
+    dep_overwrite = overwrite.dependency_overwrite(
+        referenced_component=component_name,
+        create_if_absent=True,
+    )
     dep_overwrite.add_container_image_overwrite(container_image=product.model.ContainerImage.create(
         name='dontcare',
         version='1.2.3',
