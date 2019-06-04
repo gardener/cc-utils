@@ -118,7 +118,12 @@ add_dependencies_cmd = ' '.join((
   '--component-version', effective_version,
   '--component-name', component_name,
 ))
+
 subproc_env['ADD_DEPENDENCIES_CMD'] = add_dependencies_cmd
+
+% for name, value in descriptor_trait.callback_env().items():
+subproc_env['${name}'] = '${value}'
+% endfor
 
 subprocess.run(
   [descriptor_script],
