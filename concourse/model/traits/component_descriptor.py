@@ -50,6 +50,11 @@ ATTRIBUTES = (
         default=None, # actually, it is determined at runtime
         doc='Manually overwrites the component name (which defaults to github repository path)',
     ),
+    AttributeSpec.optional(
+        name='callback_env',
+        default={},
+        doc='Specifies additional environment variables passed to .ci/component_descriptor script',
+    ),
 )
 
 
@@ -74,6 +79,9 @@ class ComponentDescriptorTrait(Trait):
 
     def resolve_dependencies(self):
         return self.raw['resolve_dependencies']
+
+    def callback_env(self)->dict:
+        return self.raw['callback_env']
 
     def transformer(self):
         return ComponentDescriptorTraitTransformer(trait=self)
