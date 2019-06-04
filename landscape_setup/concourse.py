@@ -31,7 +31,6 @@ import semver
 from landscape_setup import kube_ctx
 from landscape_setup.utils import (
     ensure_helm_setup,
-    ensure_cluster_version,
     create_tls_secret,
     execute_helm_deployment,
 )
@@ -284,12 +283,9 @@ def deploy_concourse_landscape(
     config_factory = global_ctx().cfg_factory()
     concourse_cfg = config_set.concourse()
 
-    # Set the global context to the cluster specified in the ConcourseConfig
+    # Kubernetes cluster config
     kubernetes_config_name = concourse_cfg.kubernetes_cluster_config()
     kubernetes_config = config_factory.kubernetes(kubernetes_config_name)
-    kube_ctx.set_kubecfg(kubernetes_config.kubeconfig())
-
-    ensure_cluster_version(kubernetes_config)
 
     # Container-registry config
     image_pull_secret_name = concourse_cfg.image_pull_secret()
@@ -332,7 +328,6 @@ def deploy_concourse_landscape(
         namespace=deployment_name,
     )
 
-    info('Deploying Concourse ...')
     warning(
         'Teams will not be set up properly on Concourse if the deployment times out, '
         'even if Helm eventually succeeds. In this case, run the deployment command again after '
