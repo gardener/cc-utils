@@ -143,7 +143,6 @@ def execute_helm_deployment(
         chart_name,
         "--install",
         "--force",
-        "--wait",
         "--namespace",
         namespace,
     ]
