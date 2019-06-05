@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import enum
+
 from concourse.model.step import (
     PipelineStep,
     StepNotificationPolicy,
@@ -30,6 +32,11 @@ from concourse.model.job import (
 from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
 
 
+class MergePolicy(enum.Enum):
+    MANUAL = 'manual'
+    AUTO_MERGE = 'auto_merge'
+
+
 ATTRIBUTES = (
     AttributeSpec.optional(
         name='set_dependency_version_script',
@@ -40,6 +47,11 @@ ATTRIBUTES = (
         name='upstream_component_name',
         default=None, # defaults to main repository
         doc='configures the upstream component',
+    ),
+    AttributeSpec.optional(
+        name='merge_policy',
+        default=MergePolicy.MANUAL,
+        doc='whether or not created PRs should be automatically merged',
     ),
 )
 
@@ -54,6 +66,9 @@ class UpdateComponentDependenciesTrait(Trait):
 
     def upstream_component_name(self):
         return self.raw.get('upstream_component_name')
+
+    def merge_policy(self)->MergePolicy:
+        return MergePolicy(self.raw['merge_policy'])
 
     def transformer(self):
         return UpdateComponentDependenciesTraitTransformer(trait=self)
