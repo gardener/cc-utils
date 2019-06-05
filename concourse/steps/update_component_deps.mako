@@ -26,6 +26,9 @@ import product.model
 import product.util
 import util
 
+from concourse.model.traits.update_component_deps import (
+    MergePolicy,
+)
 from github.release_notes.util import ReleaseNotes
 from github.util import (
     GitHubRepositoryHelper,
@@ -190,7 +193,7 @@ def create_upgrade_pr(from_ref, to_ref, pull_request_util):
         else:
             text = pull_request_util.retrieve_pr_template_text()
 
-    ls_repo.create_pull(
+    pull_request = ls_repo.create_pull(
             title=github.util.PullRequestUtil.calculate_pr_title(
                 reference=to_ref,
                 from_version=from_ref.version(),
@@ -200,6 +203,12 @@ def create_upgrade_pr(from_ref, to_ref, pull_request_util):
             head=new_branch_name,
             body=text,
     )
+
+    if MergePolicy(${update_component_deps_trait.merge_policy().value}) == MergePolicy.MANUAL:
+        return
+
+    # auto-merge - todo: make configurable (e.g. merge method)
+    pull_request.merge()
 
 
 reference_product = current_product_descriptor()
