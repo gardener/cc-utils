@@ -221,6 +221,13 @@ def add_proxy_values(
         'env': [{
             'name': 'PROXY_PORT',
             'value': f'{mitm_cfg.config()["listen_port"]}',
+        },{
+            'name': 'POD_IP',
+            'valueFrom': {
+                'fieldRef': {
+                    'fieldPath':'status.podIP',
+                },
+            },
         }],
         'securityContext': {
             'privileged': True,
