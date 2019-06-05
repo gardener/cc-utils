@@ -13,16 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pathlib
+import os
 
 import product.model
 import util
 
-# must point to component_descriptor directory
-
 
 def current_product_descriptor():
-    component_descriptor_dir = pathlib.Path(util.check_env('COMPONENT_DESCRIPTOR_DIR')).absolute()
-    component_descriptor = component_descriptor_dir.joinpath('component_descriptor')
-    raw = util.parse_yaml_file(component_descriptor)
-    return product.model.ComponentDescriptor.from_dict(raw)
+    component_descriptor = os.path.join(
+        util.check_env('COMPONENT_DESCRIPTOR_DIR'),
+        'component_descriptor',
+    )
+    return product.model.ComponentDescriptor.from_dict(
+        util.parse_yaml_file(component_descriptor),
+    )
