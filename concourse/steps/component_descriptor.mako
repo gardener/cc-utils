@@ -103,6 +103,7 @@ main_repo_path = os.path.abspath('${main_repo.resource_name()}')
 
 subproc_env = os.environ.copy()
 subproc_env['${main_repo_path_env_var}'] = main_repo_path
+subproc_env['MAIN_REPO_DIR'] = main_repo_path
 subproc_env['BASE_DEFINITION_PATH'] = base_descriptor_file
 subproc_env['COMPONENT_DESCRIPTOR_PATH'] = descriptor_path
 subproc_env['COMPONENT_NAME'] = component_name
