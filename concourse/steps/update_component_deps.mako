@@ -204,7 +204,7 @@ def create_upgrade_pr(from_ref, to_ref, pull_request_util):
             body=text,
     )
 
-    if MergePolicy(${update_component_deps_trait.merge_policy().value}) == MergePolicy.MANUAL:
+    if MergePolicy('${update_component_deps_trait.merge_policy().value}') == MergePolicy.MANUAL:
         return
 
     # auto-merge - todo: make configurable (e.g. merge method)
