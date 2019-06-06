@@ -59,9 +59,9 @@ ATTRIBUTES = (
         doc='callback to be invoked after auto-merge',
     ),
     AttributeSpec.optional(
-        name='after_merge_callback_env',
+        name='vars',
         default={},
-        doc='env vars to pass to after_merge_callback',
+        doc='env vars to pass to after_merge_callback (similar to step\'s vars)',
         type=dict,
     )
 )
@@ -84,8 +84,8 @@ class UpdateComponentDependenciesTrait(Trait):
     def after_merge_callback(self):
         return self.raw.get('after_merge_callback')
 
-    def after_merge_callback_env(self):
-        return self.raw['after_merge_callback']
+    def vars(self):
+        return self.raw['vars']
 
     def transformer(self):
         return UpdateComponentDependenciesTraitTransformer(trait=self)
@@ -117,6 +117,10 @@ class UpdateComponentDependenciesTraitTransformer(TraitTransformer):
         )
         self.update_component_deps_step.add_input(*COMPONENT_DESCRIPTOR_DIR_INPUT)
         self.update_component_deps_step.set_timeout(duration_string='30m')
+
+        for name, value in self.trait.vars().items():
+            self.update_component_deps_step.variables()[name] = value
+
         yield self.update_component_deps_step
 
     def process_pipeline_args(self, pipeline_args: JobVariant):
