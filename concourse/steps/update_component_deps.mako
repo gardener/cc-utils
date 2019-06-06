@@ -209,6 +209,7 @@ def create_upgrade_pr(from_ref, to_ref, pull_request_util):
 
     # auto-merge - todo: make configurable (e.g. merge method)
     pull_request.merge()
+    ls_repo.ref('heads/' + new_branch_name).delete()
 
 
 reference_product = current_product_descriptor()
