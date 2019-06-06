@@ -214,7 +214,7 @@ def create_upgrade_pr(from_ref, to_ref, pull_request_util):
 
 % if after_merge_callback:
     subprocess.run(
-        ['${after_merge_callback}'],
+        [os.path.join(repo_dir, '${after_merge_callback}')],
         check=True,
         env=cmd_env
     )
