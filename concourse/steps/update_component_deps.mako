@@ -9,6 +9,7 @@ main_repo = job_variant.main_repository()
 repo_name = main_repo.logical_name().upper()
 update_component_deps_trait = job_variant.trait('update_component_deps')
 set_dependency_version_script_path = update_component_deps_trait.set_dependency_version_script_path()
+after_merge_callback = update_component_deps_trait.after_merge_callback()
 %>
 
 import os
@@ -210,6 +211,14 @@ def create_upgrade_pr(from_ref, to_ref, pull_request_util):
     # auto-merge - todo: make configurable (e.g. merge method)
     pull_request.merge()
     ls_repo.ref('heads/' + new_branch_name).delete()
+
+    % if after_merge_callback
+    subprocess.run(
+        ['${after_merge_callback}'],
+        check=True,
+        env=cmd_env
+    )
+    % endif
 
 
 reference_product = current_product_descriptor()
