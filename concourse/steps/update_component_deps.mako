@@ -212,7 +212,7 @@ def create_upgrade_pr(from_ref, to_ref, pull_request_util):
     pull_request.merge()
     ls_repo.ref('heads/' + new_branch_name).delete()
 
-% if after_merge_callback
+% if after_merge_callback:
     subprocess.run(
         ['${after_merge_callback}'],
         check=True,
