@@ -53,6 +53,17 @@ ATTRIBUTES = (
         default=MergePolicy.MANUAL,
         doc='whether or not created PRs should be automatically merged',
     ),
+    AttributeSpec.optional(
+        name='after_merge_callback',
+        default=None,
+        doc='callback to be invoked after auto-merge',
+    ),
+    AttributeSpec.optional(
+        name='after_merge_callback_env',
+        default={},
+        doc='env vars to pass to after_merge_callback',
+        type=dict,
+    )
 )
 
 
@@ -69,6 +80,12 @@ class UpdateComponentDependenciesTrait(Trait):
 
     def merge_policy(self)->MergePolicy:
         return MergePolicy(self.raw['merge_policy'])
+
+    def after_merge_callback(self):
+        return self.raw.get('after_merge_callback')
+
+    def after_merge_callback_env(self):
+        return self.raw['after_merge_callback']
 
     def transformer(self):
         return UpdateComponentDependenciesTraitTransformer(trait=self)
