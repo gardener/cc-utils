@@ -338,7 +338,7 @@ def _enumerate_effective_images(
     component_descriptor: ComponentDescriptor,
     image_reference_filter=lambda _: True,
 ) -> typing.Iterable[typing.Tuple[Component, ContainerImage]]:
-    for component, image in _enumerate_images(component_descriptor):
+    for component in component_descriptor.components():
         for effective_image in _effective_images(component_descriptor, component):
             if image_reference_filter(effective_image):
                 yield (component, effective_image)
