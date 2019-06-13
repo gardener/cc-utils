@@ -78,17 +78,23 @@ class AttributesDocumentation(object):
             doc = textwrap.dedent(attr_spec.doc())
 
             type_ = attr_spec.type()
-            type_str = type_.__name__
-            if issubclass(type_, base_model.AttribSpecMixin):
+            if isinstance(type_, typing._GenericAlias):
+                if type_.__origin__ is dict:
+                    # assumption: type is typing.Dict[T1, T2]
+                    key_type, val_type = type_.__args__
+                    self.add_child(
+                        model_element_type=val_type,
+                        element_name=f'{name}.<user-chosen>'
+                    )
+                    type_str = type_._name + f'[{str(key_type)}, {str(val_type)}]'
+                elif type_.__origin__ is list:
+                    type_str = type_._name + f'[{str(type_.__args__[0])}]'
+            elif issubclass(type_, base_model.AttribSpecMixin):
                 # recurse to child element
                 self.add_child(model_element_type=type_, element_name=name)
-            elif isinstance(type_, type) and type_.__base__ == typing.Dict:
-                # assumption: type is typing.Dict[T1, T2]
-                key_type, val_type = type_.__args__
-                self.add_child(
-                    model_element_type=val_type,
-                    element_name=f'{name}.<user-chosen>'
-                )
+                type_str = type_.__name__
+            else:
+                type_str = type_.__name__
 
             if issubclass(self._model_element_type, enum.Enum):
                 table_builder.add_table_row((name, doc))
