@@ -158,12 +158,22 @@ def create_upgrade_pr(from_ref, to_ref, pull_request_util):
         repo_path=repo_dir,
     )
     commit = helper.index_to_commit(message=commit_msg)
+    util.info(f'commit for upgrade-PR: {commit.hexsha}')
 
     new_branch_name = util.random_str(prefix='ci-', length=12)
     head_sha = ls_repo.ref('heads/' + REPO_BRANCH).object.sha
     ls_repo.create_ref('refs/heads/' + new_branch_name, head_sha)
 
-    helper.push(from_ref=commit.hexsha, to_ref='refs/heads/' + new_branch_name, use_ssh=True)
+    def rm_pr_branch():
+      ls_repo.ref('heads/' + new_branch_name).delete()
+
+    try:
+      helper.push(from_ref=commit.hexsha, to_ref='refs/heads/' + new_branch_name, use_ssh=True)
+    except:
+      util.warning('an error occurred - removing now useless pr-branch')
+      rm_pr_branch()
+      raise
+
     helper.repo.git.checkout('.')
 
     with TemporaryDirectory() as temp_dir:
@@ -210,7 +220,7 @@ def create_upgrade_pr(from_ref, to_ref, pull_request_util):
 
     # auto-merge - todo: make configurable (e.g. merge method)
     pull_request.merge()
-    ls_repo.ref('heads/' + new_branch_name).delete()
+    rm_pr_branch()
 
 % if after_merge_callback:
     subprocess.run(
