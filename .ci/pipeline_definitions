@@ -56,9 +56,6 @@ cc-utils:
       - name: 'gh_pages'
         path: 'gardener/cc-utils'
         branch: 'gh-pages'
-      steps:
-        generate_documentation:
-          publish_to: ['gh_pages']
       traits:
         version:
           preprocess: 'finalize'
