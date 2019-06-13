@@ -2,24 +2,24 @@
 
 set -e
 
-parent_dir="$(readlink -f "$(dirname $0)/../..")"
-cc_utils_dir="${parent_dir}/${SOURCE_PATH}"
-out_dir="${parent_dir}/${GH_PAGES_PATH}"
-
 if [ -z "$SOURCE_PATH" ]; then
-  echo "SOURCE_PATH must be set"
-  exit 1
+  export SOURCE_PATH="$(readlink -f "$(dirname $0)/..")"
+  echo "setting SOURCE_PATH to: ${SOURCE_PATH}"
 fi
 
-if [ -z "$GH_PAGES_PATH" ]; then
-  echo "GH_PAGES_PATH must be set"
-  exit 1
-fi
+cc_utils_dir="${SOURCE_PATH}"
 
 if [ ! -d ${cc_utils_dir} ]; then
   echo "not a directory: ${cc_utils_dir}"
   exit 1
 fi
+
+if [ -z "$GH_PAGES_PATH" ]; then
+  echo "GH_PAGES_PATH must be set (out-dir)"
+  exit 1
+fi
+
+out_dir="${GH_PAGES_PATH}"
 
 if [ ! -d ${out_dir} ]; then
   echo "not a directory: ${cc_utils_dir}"
