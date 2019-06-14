@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import random
 from urllib.parse import urlparse
 
 from model.base import (
@@ -77,6 +78,10 @@ class GithubCredentials(BasicCredentials):
     '''
 
     def auth_token(self):
+        tokens = self.raw.get('auth_tokens', None)
+        if tokens:
+            return random.choice(tokens)
+        # fallback to single token
         return self.raw.get('authToken')
 
     def set_auth_token(self, auth_token):
