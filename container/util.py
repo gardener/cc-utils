@@ -16,12 +16,15 @@
 import functools
 import hashlib
 import json
+import logging
 import tarfile
 import tempfile
 
 import container.model
 import container.registry
 import util
+
+logger = logging.getLogger(__name__)
 
 
 def process_upload_request(request: container.model.ContainerImageUploadRequest):
@@ -147,7 +150,7 @@ def _filter_files(
             patched_tar.seek(0)
 
             out_tarfile.addfile(tar_info, fileobj=patched_tar)
-            print('patched: ' + str(tar_info.name))
+            logging.debug(f'patched: tar_info.name')
 
             changed_layer_hashes.append((old_hash.hexdigest(), new_hash.hexdigest()))
 
@@ -197,7 +200,6 @@ def _filter_single_tar(
     in_file: tarfile.TarFile,
     remove_entries,
 ):
-    print('looking for: ' + ', '.join(remove_entries))
     temp_fh = tempfile.TemporaryFile()
     temptar = tarfile.TarFile(fileobj=temp_fh, mode='w')
 
@@ -207,7 +209,7 @@ def _filter_single_tar(
             continue
 
         if tar_info.name in remove_entries:
-            print(f'purging entry: {tar_info.name}')
+            logging.debug(f'purging entry: {tar_info.name}')
             continue
 
         # copy entry
