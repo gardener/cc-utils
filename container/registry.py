@@ -96,7 +96,12 @@ def _parse_image_reference(image_reference):
 @functools.lru_cache()
 def _credentials(image_reference: str, privileges:Privileges=None):
     util.check_type(image_reference, str)
+    credentials = _retrieve_matching_credentials(image_reference, privileges)
+    return docker_creds.Basic(username=credentials.username(), password=credentials.passwd())
 
+
+def _retrieve_matching_credentials(image_reference: str, privileges:Privileges=None):
+    util.check_type(image_reference, str)
     cfg_factory = util.ctx().cfg_factory()
 
     matching_cfgs = [
@@ -108,10 +113,8 @@ def _credentials(image_reference: str, privileges:Privileges=None):
     if not matching_cfgs:
         return None
 
-    # use first match
-    credentials = matching_cfgs[0].credentials()
-
-    return docker_creds.Basic(username=credentials.username(), password=credentials.passwd())
+    # return first match
+    return matching_cfgs[0].credentials()
 
 
 def retrieve_container_image(image_reference: str, outfileobj=None):
