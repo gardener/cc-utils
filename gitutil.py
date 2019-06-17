@@ -27,6 +27,17 @@ from github.util import GitHubRepoBranch
 from util import not_empty, not_none, existing_dir, fail, random_str, urljoin
 
 
+def _ssh_auth_env(github_cfg):
+    tmp_id = os.path.abspath('tmp.id_rsa')
+    with open(tmp_id, 'w') as f:
+        f.write(github_cfg.credentials().private_key())
+    os.chmod(tmp_id, 0o400)
+    suppress_hostcheck = '-o "StrictHostKeyChecking no"'
+    id_only = '-o "IdentitiesOnly yes"'
+    os.environ['GIT_SSH_COMMAND'] = f'ssh -i {tmp_id} {suppress_hostcheck} {id_only}'
+    return tmp_id
+
+
 class GitHelper(object):
     def __init__(self, repo, github_cfg, github_repo_path):
         not_none(repo)
@@ -44,17 +55,20 @@ class GitHelper(object):
         github_repo_path: str,
         checkout_branch: str = None,
     ) -> 'GitHelper':
-        url = url_with_credentials(github_cfg, github_repo_path)
+        url = urljoin(github_cfg.ssh_url(), github_repo_path)
+        tmp_id = _ssh_auth_env(github_cfg=github_cfg)
         args = ['--quiet']
         if checkout_branch is not None:
             args += ['--branch', checkout_branch, '--single-branch']
         args += [url, target_directory]
         git.Git().clone(*args)
+        os.unlink(tmp_id)
+        del os.environ['GIT_SSH_COMMAND']
         return GitHelper(
             repo = target_directory,
             github_cfg = github_cfg,
             github_repo_path = github_repo_path,
-            )
+        )
 
     @staticmethod
     def from_githubrepobranch(
@@ -76,13 +90,7 @@ class GitHelper(object):
     def _authenticated_remote(self, use_ssh=True):
         if use_ssh:
             url = urljoin(self.github_cfg.ssh_url(), self.github_repo_path)
-            tmp_id = os.path.abspath('tmp.id_rsa')
-            with open(tmp_id, 'w') as f:
-                f.write(self.github_cfg.credentials().private_key())
-            os.chmod(tmp_id, 0o400)
-            suppress_hostcheck = '-o "StrictHostKeyChecking no"'
-            id_only = '-o "IdentitiesOnly yes"'
-            os.environ['GIT_SSH_COMMAND'] = f'ssh -i {tmp_id} {suppress_hostcheck} {id_only}'
+            tmp_id = _ssh_auth_env(github_cfg=self.github_cfg)
         else:
             url = url_with_credentials(self.github_cfg, self.github_repo_path)
 
