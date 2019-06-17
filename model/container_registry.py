@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import enum
+import util
 
 from model.base import (
     BasicCredentials,
@@ -103,3 +104,20 @@ class GcrCredentials(BasicCredentials):
 
     def email(self):
         return self.raw.get('email')
+
+
+def find_config(image_reference: str, privileges:Privileges=None) -> 'GcrCredentials':
+    util.check_type(image_reference, str)
+    cfg_factory = util.ctx().cfg_factory()
+
+    matching_cfgs = [
+        cfg for cfg in
+        cfg_factory._cfg_elements('container_registry')
+        if cfg.image_ref_matches(image_reference, privileges=privileges)
+    ]
+
+    if not matching_cfgs:
+        return None
+
+    # return first match
+    return matching_cfgs[0]
