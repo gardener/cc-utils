@@ -98,6 +98,8 @@ def _parse_image_reference(image_reference):
 def _credentials(image_reference: str, privileges:Privileges=None):
     util.check_type(image_reference, str)
     registry_cfg = model.container_registry.find_config(image_reference, privileges)
+    if not registry_cfg:
+        return None
     credentials = registry_cfg.credentials()
     return docker_creds.Basic(username=credentials.username(), password=credentials.passwd())
 
