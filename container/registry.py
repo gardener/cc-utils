@@ -19,6 +19,7 @@ import tarfile
 import tempfile
 
 import util
+import model.container_registry
 from model.container_registry import Privileges
 
 from containerregistry.client import docker_creds
@@ -96,25 +97,9 @@ def _parse_image_reference(image_reference):
 @functools.lru_cache()
 def _credentials(image_reference: str, privileges:Privileges=None):
     util.check_type(image_reference, str)
-    credentials = _retrieve_matching_credentials(image_reference, privileges)
+    registry_cfg = model.container_registry.find_config(image_reference, privileges)
+    credentials = registry_cfg.credentials()
     return docker_creds.Basic(username=credentials.username(), password=credentials.passwd())
-
-
-def _retrieve_matching_credentials(image_reference: str, privileges:Privileges=None):
-    util.check_type(image_reference, str)
-    cfg_factory = util.ctx().cfg_factory()
-
-    matching_cfgs = [
-        cfg for cfg in
-        cfg_factory._cfg_elements('container_registry')
-        if cfg.image_ref_matches(image_reference, privileges=privileges)
-    ]
-
-    if not matching_cfgs:
-        return None
-
-    # return first match
-    return matching_cfgs[0].credentials()
 
 
 def retrieve_container_image(image_reference: str, outfileobj=None):
