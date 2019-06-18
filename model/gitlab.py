@@ -65,6 +65,9 @@ class GitlabCredentials(BasicCredentials):
     def private_key(self):
         return self.raw.get('privateKey')
 
+    def access_token(self):
+        return self.raw.get('accessToken')
+
     def _required_attributes(self):
         required_attribs = set(super()._required_attributes())
-        return required_attribs | set(('privateKey', 'emailAddress'))
+        return required_attribs | set(('privateKey', 'emailAddress', 'accessToken'))
