@@ -101,6 +101,7 @@ class ProtecodeUtil(object):
         }
         if not omit_version:
             metadata_dict['IMAGE_REFERENCE'] = container_image.image_reference()
+            metadata_dict['IMAGE_VERSION'] = container_image.version()
 
         return metadata_dict
 
