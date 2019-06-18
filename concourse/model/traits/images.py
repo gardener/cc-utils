@@ -40,6 +40,23 @@ class FilterCfg(ModelBase):
                 By default, no image references are excluded.
                 ''',
             ),
+            AttributeSpec.optional(
+                name='include_image_names',
+                default=(),
+                doc='''
+                a list of regular expressions. If configured, only matching image names are
+                processed. By default, all image references are considered.
+                ''',
+            ),
+            AttributeSpec.optional(
+                name='exclude_image_names',
+                default=(),
+                doc='''
+                a list of regular expressions. If configured, matching image names are
+                exempted from processing. Has precedence over include_image_references.
+                By default, no image references are excluded.
+                ''',
+            ),
         )
 
     def include_image_references(self):
@@ -47,6 +64,12 @@ class FilterCfg(ModelBase):
 
     def exclude_image_references(self):
         return self.raw['exclude_image_references']
+
+    def include_image_names(self):
+        return self.raw['include_image_names']
+
+    def exclude_image_names(self):
+        return self.raw['exclude_image_names']
 
 
 class ImageFilterMixin(ModelBase):
@@ -57,7 +80,12 @@ class ImageFilterMixin(ModelBase):
 IMAGE_ATTRS = (
     AttributeSpec.optional(
         name='filters',
-        default={'include_image_references': (), 'exclude_image_references': ()},
+        default={
+            'include_image_references': (),
+            'exclude_image_references': (),
+            'include_image_names': (),
+            'exclude_image_names': (),
+        },
         doc='optional filters to restrict container images to process',
         type=FilterCfg,
     ),
