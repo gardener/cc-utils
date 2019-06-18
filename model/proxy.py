@@ -86,8 +86,35 @@ class MitmProxyConfig(DockerImageConfig):
             'logging',
         ]
 
+    def _optional_attributes(self):
+        yield from super()._optional_attributes()
+        yield from [
+            'filter_config',
+        ]
+
     def config(self):
         return self.raw['config']
 
     def logging(self):
         return MitmLoggingConfig(self.raw['logging'])
+
+    def filter_config(self):
+        config = self.raw.get('filter_config')
+        if not config:
+            return None
+        return MitmFilterConfig(config)
+
+
+class MitmFilterConfig(ModelBase):
+    def _optional_attributes(self):
+        yield from super()._optional_attributes()
+        yield from [
+            'whitelisted_hosts',
+            'blacklisted_hosts',
+        ]
+
+    def whitelisted_hosts(self):
+        return self.raw.get('whitelisted_hosts', ())
+
+    def blacklisted_hosts(self):
+        return self.raw.get('blacklisted_hosts', ())
