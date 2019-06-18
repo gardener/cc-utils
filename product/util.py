@@ -185,6 +185,14 @@ def merge_products(left_product, right_product):
                 )
         merged.add_component(component)
 
+    # merge overwrites
+    for component_overwrite in right_product.component_overwrites():
+        # only one overwrite per component is allowed
+        for co in left_product.component_overwrites():
+            if co.declaring_component == component_overwrite.declaring_component():
+                raise ValueError(f'overwrite redefinition: {co}')
+        merged._add_component_overwrite(component_overwrite=component_overwrite)
+
     return merged
 
 

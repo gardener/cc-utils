@@ -170,6 +170,51 @@ class ProductModelTest(unittest.TestCase):
         self.assertIsNotNone(merged.component(('x/y/rcomp1', '2')))
 
 
+def test_merge_products_with_overwrites():
+    left_model = product.model.ComponentDescriptor.from_dict(raw_dict={})
+    right_model = product.model.ComponentDescriptor.from_dict(raw_dict={})
+
+    left_component1 = product.model.Component.create(name='x/y/lc1', version='1')
+    left_component2 = product.model.Component.create(name='x/y/lc2', version='1')
+    image1 = product.model.ContainerImage.create(
+        name='image1',
+        version='1.2.3',
+        image_reference='image:1',
+    )
+
+    left_comp_overwrites = left_model.component_overwrite(declaring_component=left_component1)
+    left_dep_overwrites = left_comp_overwrites.dependency_overwrite(
+        referenced_component=left_component2,
+        create_if_absent=True,
+    )
+    left_dep_overwrites.add_container_image_overwrite(image1)
+
+    merged = product.util.merge_products(left_model, right_model)
+
+    merged_comp_overwrites = merged.component_overwrite(declaring_component=left_component1)
+    merged_dep_overwrites = merged_comp_overwrites.dependency_overwrite(
+        referenced_component=left_component2,
+        create_if_absent=False,
+    )
+
+    overwritten_image = merged_dep_overwrites.container_image(name='image1')
+
+    assert overwritten_image == image1
+
+    # test merging in inverse order
+    merged = product.util.merge_products(right_model, left_model)
+
+    merged_comp_overwrites = merged.component_overwrite(declaring_component=left_component1)
+    merged_dep_overwrites = merged_comp_overwrites.dependency_overwrite(
+        referenced_component=left_component2,
+        create_if_absent=False,
+    )
+
+    overwritten_image = merged_dep_overwrites.container_image(name='image1')
+
+    assert overwritten_image == image1
+
+
 class ComponentModelTest(unittest.TestCase, AssertMixin):
     def test_create(self):
         examinee = product.model.Component.create(name='github.com/example/name', version='1.2.3')
