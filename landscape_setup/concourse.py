@@ -250,6 +250,9 @@ def add_proxy_values(
             },{
                 'name': 'ELASTIC_INDEX_NAME',
                 'value': logging_cfg.els_index_name(),
+            },{
+                'name': 'PROXY_CONFIG_NAME',
+                'value': proxy_cfg.name(),
         }],
         'ports': [{
             'containerPort': mitm_cfg.config()["listen_port"],
