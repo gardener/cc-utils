@@ -5,7 +5,11 @@ import yaml
 import sys
 
 def main():
-  json.dump(yaml.load(sys.stdin, Loader=yaml.SafeLoader), sys.stdout)
+  if len(sys.argv) > 1:
+    fh = open(sys.argv[1])
+  else:
+    fh = sys.stdin
+  json.dump(yaml.load(fh, Loader=yaml.SafeLoader), sys.stdout)
 
 if __name__ == '__main__':
   main()
