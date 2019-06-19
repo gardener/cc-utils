@@ -80,6 +80,10 @@ def normalise_image_reference(image_reference):
     # probably, the first part is not a hostname; inject default registry host
     parts.insert(0, 'registry-1.docker.io')
 
+  # of course, docker.io gets special handling
+  if parts[0] == 'docker.io':
+      parts[0] = 'registry-1.docker.io'
+
   return '/'.join(parts)
 
 
