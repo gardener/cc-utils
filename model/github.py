@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import random
+import functools
 from urllib.parse import urlparse
 
 from model.base import (
@@ -45,7 +46,16 @@ class GithubConfig(NamedModelElement):
     def webhook_secret(self):
         return self.raw.get('webhook_token')
 
+    @functools.lru_cache()
     def credentials(self):
+        technical_users_list = self.raw.get('technical_users')
+        if technical_users_list:
+            technical_users = [
+                GithubCredentials(user) for user in technical_users_list
+            ]
+            return random.choice(technical_users)
+
+        # fallback to single technical user
         return GithubCredentials(self.raw.get('technicalUser'))
 
     def matches_hostname(self, host_name):
@@ -54,6 +64,7 @@ class GithubConfig(NamedModelElement):
     def _optional_attributes(self):
         return (
             'purpose_labels',
+            'technical_users',
         )
 
     def _required_attributes(self):
