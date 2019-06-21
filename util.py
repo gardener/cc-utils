@@ -148,7 +148,7 @@ def warning(msg:str):
     if _quiet():
         return
     if msg:
-        _print('WARNING: ' + str(msg), 'red')
+        _print('WARNING: ' + str(msg), colour='yellow')
 
 
 def verbose(msg:str):
