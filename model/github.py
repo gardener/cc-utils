@@ -59,7 +59,6 @@ class GithubConfig(NamedModelElement):
     def _optional_attributes(self):
         return (
             'purpose_labels',
-            'technicalUser',
         )
 
     def _required_attributes(self):
