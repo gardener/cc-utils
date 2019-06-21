@@ -176,33 +176,38 @@ def create_upgrade_pr(from_ref, to_ref, pull_request_util):
 
     helper.repo.git.checkout('.')
 
-    with TemporaryDirectory() as temp_dir:
-        from_github_cfg = cfg_factory.github(from_ref.config_name())
-        from_github_helper = GitHubRepositoryHelper(
-            github_cfg=from_github_cfg,
-            owner=from_ref.github_organisation(),
-            name=from_ref.github_repo(),
-        )
-        from_git_helper = gitutil.GitHelper.clone_into(
-            target_directory=temp_dir,
-            github_cfg=from_github_cfg,
-            github_repo_path=from_ref.github_repo_path()
-        )
-        commit_range = '{from_version}..{to_version}'.format(
-            from_version=from_ref.version(),
-            to_version=to_ref.version()
-        )
-        release_note_blocks = ReleaseNotes.create(
-            github_helper=from_github_helper,
-            git_helper=from_git_helper,
-            commit_range=commit_range
-        ).release_note_blocks()
-        if release_note_blocks:
-            text = '*Release Notes*:\n{blocks}'.format(
-                blocks=release_note_blocks
-            )
-        else:
-            text = pull_request_util.retrieve_pr_template_text()
+    try:
+      with TemporaryDirectory() as temp_dir:
+          from_github_cfg = cfg_factory.github(from_ref.config_name())
+          from_github_helper = GitHubRepositoryHelper(
+              github_cfg=from_github_cfg,
+              owner=from_ref.github_organisation(),
+              name=from_ref.github_repo(),
+          )
+          from_git_helper = gitutil.GitHelper.clone_into(
+              target_directory=temp_dir,
+              github_cfg=from_github_cfg,
+              github_repo_path=from_ref.github_repo_path()
+          )
+          commit_range = '{from_version}..{to_version}'.format(
+              from_version=from_ref.version(),
+              to_version=to_ref.version()
+          )
+          release_note_blocks = ReleaseNotes.create(
+              github_helper=from_github_helper,
+              git_helper=from_git_helper,
+              commit_range=commit_range
+          ).release_note_blocks()
+          if release_note_blocks:
+              text = '*Release Notes*:\n{blocks}'.format(
+                  blocks=release_note_blocks
+              )
+          else:
+              text = pull_request_util.retrieve_pr_template_text()
+    except:
+      util.warning('an error occurred during release notes processing (ignoring)')
+      import traceback
+      util.warning(traceback.format_exc())
 
     pull_request = ls_repo.create_pull(
             title=github.util.PullRequestUtil.calculate_pr_title(
