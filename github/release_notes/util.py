@@ -182,7 +182,7 @@ def calculate_range(
 
     try:
         # better readable range_end by describing head commit
-        range_end = repo.git.describe(branch_head)
+        range_end = repo.git.describe(branch_head, tags=True)
     except GitError as err:
         warning('failed to describe branch head, maybe the repository has no tags? '
             'GitError: {err}. Falling back to branch head commit hash.'.format(
