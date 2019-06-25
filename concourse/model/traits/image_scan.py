@@ -73,7 +73,7 @@ PROTECODE_ATTRS = (
     AttributeSpec.optional(
         name='protecode_cfg_name',
         default=None,
-        doc='protecode cfg name to use (see cc-utils)',
+        doc='protecode cfg name to use (see cc-config)',
     ),
 )
 
