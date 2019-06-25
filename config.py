@@ -14,37 +14,10 @@
 # limitations under the License.
 
 import os
-import pathlib
 import requests
 import json
-import yaml
 
-from util import CliHints, ctx,existing_dir, urljoin
-from model import ConfigFactory, ConfigSetSerialiser as CSS
-
-
-def export_kubeconfig(
-    kubernetes_config_name: str,
-    output_file: str,
-):
-    '''Write the kubeconfig contained in a kubernetes config to a given path.
-    '''
-    cfg_factory = ctx().cfg_factory()
-    kubernetes_cfg = cfg_factory.kubernetes(kubernetes_config_name)
-
-    destination_path = pathlib.Path(output_file).resolve()
-    existing_dir(destination_path.parent)
-
-    with destination_path.open(mode='w') as f:
-        yaml.dump(kubernetes_cfg.kubeconfig(), f)
-
-
-def serialise_cfg(cfg_dir: CliHints.existing_dir(), cfg_sets: [str], out_file: str):
-    factory = ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)
-    cfg_sets = [factory.cfg_set(cfg_set) for cfg_set in cfg_sets]
-    serialiser = CSS(cfg_sets=cfg_sets, cfg_factory=factory)
-    with open(out_file, 'w') as f:
-        f.write(serialiser.serialise())
+from util import urljoin
 
 
 class SecretsServerClient(object):
@@ -95,65 +68,3 @@ class SecretsServerClient(object):
                 json.dump(response.json(), f)
 
         return response.json()
-
-
-def __add_module_command_args(parser):
-    parser.add_argument('--server-endpoint', default=None)
-    parser.add_argument('--concourse-cfg-name', default=None)
-    parser.add_argument('--cache-file', default=None)
-
-
-def _client():
-    args = ctx().args
-    try:
-        if bool(args.server_endpoint) ^ bool(args.concourse_cfg_name):
-            raise ValueError(
-                    'either all or none of server-endpoint and concourse-cfg-name must be set'
-            )
-        if args.server_endpoint or args.cache_file:
-            return SecretsServerClient(
-                endpoint_url=args.server_endpoint,
-                concourse_secret_name=args.concourse_cfg_name,
-                cache_file=args.cache_file
-            )
-    except AttributeError:
-        pass # ignore
-
-    # fall-back to environemnt variables
-    return SecretsServerClient.from_env()
-
-
-def _parse_model(raw_dict):
-    factory = ConfigFactory.from_dict(raw_dict)
-    return factory
-
-
-def _retrieve_model_element(cfg_type: str, cfg_name: str):
-    cfg_factory = ctx().cfg_factory()
-    return cfg_factory._cfg_element(cfg_type_name=cfg_type, cfg_name=cfg_name)
-
-
-def model_element(cfg_type: str, cfg_name: str, key: str):
-    cfg = _retrieve_model_element(cfg_type=cfg_type, cfg_name=cfg_name)
-
-    attrib_path = key.split('.')
-    attrib_path.reverse()
-
-    while attrib_path:
-        getter = getattr(cfg, attrib_path.pop())
-        cfg = getter()
-
-    print(str(cfg))
-
-
-def attribute(cfg_type: str, cfg_name: str, key: str):
-    raw = _retrieve_model_element(cfg_type=cfg_type, cfg_name=cfg_name).raw
-
-    attrib_path = key.split('.')
-    attrib_path.reverse()
-
-    while attrib_path:
-        attrib = raw.get(attrib_path.pop())
-        raw = attrib
-
-    print(str(attrib))
