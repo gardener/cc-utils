@@ -48,10 +48,14 @@ class GithubConfig(NamedModelElement):
 
     @functools.lru_cache()
     def credentials(self):
-        technical_users = [
-            GithubCredentials(user) for user in self.raw.get('technical_users')
-        ]
-        return random.choice(technical_users)
+        if self.raw.get('technicalUser'):
+            return GithubCredentials(self.raw.get('technicalUser'))
+
+        if self.raw.get('technical_users'):
+            technical_users = [
+                GithubCredentials(user) for user in self.raw.get('technical_users')
+            ]
+            return random.choice(technical_users)
 
     def matches_hostname(self, host_name):
         return host_name.lower() == urlparse(self.http_url()).hostname.lower()
@@ -59,6 +63,8 @@ class GithubConfig(NamedModelElement):
     def _optional_attributes(self):
         return (
             'purpose_labels',
+            'technicalUser',
+            'technical_users',
         )
 
     def _required_attributes(self):
@@ -68,7 +74,6 @@ class GithubConfig(NamedModelElement):
             'apiUrl',
             'disable_tls_validation',
             'webhook_token',
-            'technical_users'
         ]
 
     def validate(self):
