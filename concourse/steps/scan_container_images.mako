@@ -10,7 +10,7 @@ repo_name = main_repo.logical_name().upper()
 
 image_scan_trait = job_variant.trait('image_scan')
 protecode_scan = image_scan_trait.protecode()
-# XXX: protecode soon to become optional!
+clam_av = image_scan_trait.clam_av()
 
 filter_cfg = image_scan_trait.filters()
 component_trait = job_variant.trait('component_descriptor')
@@ -36,11 +36,27 @@ ${step_lib('component_descriptor_util')}
 cfg_factory = util.ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
-% if not protecode_scan.protecode_cfg_name():
+component_descriptor = parse_component_descriptor()
+image_filter = image_reference_filter(
+  include_regexes=${filter_cfg.include_image_references()},
+  exclude_regexes=${filter_cfg.exclude_image_references()},
+)
+image_references = [
+  ci.image_reference()
+  for _, ci
+  in product.util._enumerate_images(
+    component_descriptor=component_descriptor,
+    image_reference_filter=image_filter,
+  )
+]
+
+protecode_results = None
+% if protecode_scan:
+  % if not protecode_scan.protecode_cfg_name():
 protecode_cfg = cfg_factory.protecode()
-% else:
+  % else:
 protecode_cfg = cfg_factory.protecode('${protecode_scan.protecode_cfg_name()}')
-% endif
+  % endif
 
 protecode_group_id = int(${protecode_scan.protecode_group_id()})
 protecode_group_url = f'{protecode_cfg.api_url()}/group/{protecode_group_id}/'
@@ -56,25 +72,9 @@ print(tabulate.tabulate(
   ),
 ))
 
-component_descriptor = parse_component_descriptor()
-
 processing_mode = ProcessingMode('${protecode_scan.processing_mode()}')
 
-image_filter = image_reference_filter(
-  include_regexes=${filter_cfg.include_image_references()},
-  exclude_regexes=${filter_cfg.exclude_image_references()},
-)
-
-image_references = [
-  ci.image_reference()
-  for _, ci
-  in product.util._enumerate_effective_images(
-    component_descriptor=component_descriptor,
-    image_reference_filter=image_filter,
-  )
-]
-
-relevant_results, license_report = protecode.util.upload_images(
+protecode_results, license_report = protecode.util.upload_images(
   protecode_cfg=protecode_cfg,
   product_descriptor=component_descriptor,
   processing_mode=processing_mode,
@@ -85,6 +85,13 @@ relevant_results, license_report = protecode.util.upload_images(
   reference_group_ids=${protecode_scan.reference_protecode_group_ids()},
 )
 
+# XXX also include in email
+report_lines = create_license_report(license_report=license_report)
+
+% endif
+
+images_with_potential_viruses = None
+% if clam_av:
 util.info('running virus scan for all container images')
 images_with_potential_viruses = tuple(virus_scan_images(image_references))
 if images_with_potential_viruses:
@@ -93,20 +100,22 @@ if images_with_potential_viruses:
 else:
   util.info(f'{len(image_references)} image(s) scanned for virus signatures w/o any matches')
 
-# XXX also include in email
-report_lines = create_license_report(license_report=license_report)
+% endif
 
-if not relevant_results and not images_with_potential_viruses:
+if not protecode_results and not images_with_potential_viruses:
   sys.exit(0)
+
 email_recipients = ${image_scan_trait.email_recipients()}
 
 email_recipients = tuple(
   mail_recipients(
     notification_policy='${image_scan_trait.notify().value}',
     root_component_name='${component_trait.component_name()}',
+% if protecode_scan:
     protecode_cfg=protecode_cfg,
     protecode_group_id=protecode_group_id,
     protecode_group_url=protecode_group_url,
+% endif
     cfg_set=cfg_set,
     email_recipients=email_recipients,
     components=component_descriptor.components(),
@@ -114,8 +123,10 @@ email_recipients = tuple(
 )
 
 for email_recipient in email_recipients:
-  email_recipient.add_protecode_results(results=relevant_results)
-  email_recipient.add_clamav_results(results=images_with_potential_viruses)
+  if protecode_results:
+    email_recipient.add_protecode_results(results=protecode_results)
+  if images_with_potential_viruses:
+    email_recipient.add_clamav_results(results=images_with_potential_viruses)
 
   if not email_recipient.has_results():
     util.info(f'skipping {email_recipient}, since there are not relevant results')

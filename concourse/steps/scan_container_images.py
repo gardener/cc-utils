@@ -30,10 +30,10 @@ class MailRecipients(object):
     def __init__(
         self,
         root_component_name: str,
-        protecode_cfg,
-        protecode_group_id: int,
-        protecode_group_url: str,
         cfg_set,
+        protecode_cfg: None,
+        protecode_group_id: int=None,
+        protecode_group_url: str=None,
         result_filter=None,
         recipients: typing.List[str]=[],
         recipients_component: ComponentName=None,
@@ -84,12 +84,11 @@ class MailRecipients(object):
     def mail_body(self):
         parts = []
         parts.append(self._mail_disclaimer())
-        parts.append(protecode_results_table(
-            protecode_cfg=self._protecode_cfg,
-            upload_results=self._protecode_results,
-            )
-        )
-        parts.append(self._clamav_report())
+
+        if self._protecode_results:
+            parts.append(self._protecode_report())
+        if self._clamav_results:
+            parts.append(self._clamav_report())
 
         return ''.join(parts)
 
@@ -101,21 +100,24 @@ class MailRecipients(object):
               in repository "{self._root_component_name}" (see .ci/pipeline_definitions)
               To remove yourself, search for your e-mail address in said file and remove it.
               </p>
-              <p>
+            </div>
+        ''')
+
+    def _protecode_report(self):
+        result = textwrap.dedent(f'''
+            <p>
               The following components in Protecode-group
               <a href="{self._protecode_group_url}">{self._protecode_group_id}</a>
               were found to contain critical vulnerabilities:
-              </p>
-            </div>
-          ''')
+            </p>
+        ''')
+        return result + protecode_results_table(
+            protecode_cfg=self._protecode_cfg,
+            upload_results=self._protecode_results,
+            )
 
     def _clamav_report(self):
-        if not self._clamav_results:
-            return textwrap.dedent(f'''
-                <p>Scanned all container image(s) for matching virus signatures
-                without any matches (id est: all container images seem to be free of known malware)
-            ''')
-        result = '<p><div>Virus Scanning Results</div>'
+        result = '<p><div>Virus Scanning Results:</div>'
         return result + tabulate.tabulate(
             self._clamav_results,
             headers=('Image-Reference', 'Scanning Result'),
@@ -134,10 +136,10 @@ class MailRecipients(object):
 def mail_recipients(
     notification_policy: Notify,
     root_component_name:str,
-    protecode_cfg,
-    protecode_group_id: int,
-    protecode_group_url: str,
     cfg_set,
+    protecode_cfg=None,
+    protecode_group_id: int=None,
+    protecode_group_url: str=None,
     email_recipients: typing.Iterable[str]=(),
     components: typing.Iterable[ComponentName]=(),
 ):
