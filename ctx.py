@@ -132,9 +132,31 @@ def _cfg_factory_from_dir():
     return factory
 
 
+def _secrets_server_client():
+    import ccc.secrets_server
+    try:
+        if bool(args.server_endpoint) ^ bool(args.concourse_cfg_name):
+            raise ValueError(
+                    'either all or none of server-endpoint and concourse-cfg-name must be set'
+            )
+        if args.server_endpoint or args.cache_file:
+            return ccc.secrets_server.SecretsServerClient(
+                endpoint_url=args.server_endpoint,
+                concourse_secret_name=args.concourse_cfg_name,
+                cache_file=args.cache_file
+            )
+    except AttributeError:
+        pass # ignore
+
+    # fall-back to environment variables
+    return ccc.secrets_server.SecretsServerClient.from_env()
+
+
 def _cfg_factory_from_secrets_server():
-    import cfg
-    return cfg._parse_model(cfg._client().retrieve_secrets())
+    import model
+    raw_dict = _secrets_server_client().retrieve_secrets()
+    factory = model.ConfigFactory.from_dict(raw_dict)
+    return factory
 
 
 @functools.lru_cache()
