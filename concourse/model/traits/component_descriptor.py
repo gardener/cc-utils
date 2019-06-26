@@ -103,7 +103,7 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
             script_type=ScriptType.PYTHON3,
         )
         self.descriptor_step.add_output(*COMPONENT_DESCRIPTOR_DIR_INPUT)
-        self.descriptor_step.set_timeout(duration_string='20m')
+        self.descriptor_step.set_timeout(duration_string='30m')
 
         yield self.descriptor_step
 
