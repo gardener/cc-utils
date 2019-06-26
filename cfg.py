@@ -13,61 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import requests
-import json
-
-from util import urljoin, ctx
-
-
-class SecretsServerClient(object):
-    @staticmethod
-    def from_env(
-        endpoint_env_var='SECRETS_SERVER_ENDPOINT',
-        concourse_secret_env_var='SECRETS_SERVER_CONCOURSE_CFG_NAME',
-        cache_file='SECRETS_SERVER_CACHE'
-    ):
-        if cache_file not in os.environ:
-            if not all(map(
-                        lambda e: e in os.environ,
-                        (endpoint_env_var, concourse_secret_env_var)
-                        )):
-                raise ValueError('the following environment variables must be defined: {v}'.format(
-                    v=', '.join((endpoint_env_var, concourse_secret_env_var))
-                ))
-        cache_file = os.environ.get(cache_file, None)
-
-        return SecretsServerClient(
-                endpoint_url=os.environ.get(endpoint_env_var),
-                concourse_secret_name=os.environ.get(concourse_secret_env_var),
-                cache_file=cache_file
-        )
-
-    def __init__(self, endpoint_url, concourse_secret_name, cache_file=None):
-        self.url = endpoint_url
-        self.concourse_secret_name = concourse_secret_name
-        self.cache_file=cache_file
-
-    def retrieve_secrets(self):
-        if self.cache_file and os.path.isfile(self.cache_file):
-            with open(self.cache_file) as f:
-                return json.load(f)
-
-        request_url = urljoin(self.url, self.concourse_secret_name)
-        response = requests.get(request_url)
-        # pylint: disable=no-member
-        if not response.status_code == requests.codes.ok:
-        # pylint: enable=no-member
-            raise RuntimeError('secrets_server sent {d}: {m}'.format(
-                d=response.status_code,
-                m=response.content
-            ))
-
-        if self.cache_file:
-            with open(self.cache_file, 'w') as f:
-                json.dump(response.json(), f)
-
-        return response.json()
+import ccc.secrets_server
+from util import ctx
 
 
 def _client():
@@ -78,7 +25,7 @@ def _client():
                     'either all or none of server-endpoint and concourse-cfg-name must be set'
             )
         if args.server_endpoint or args.cache_file:
-            return SecretsServerClient(
+            return ccc.secrets_server.SecretsServerClient(
                 endpoint_url=args.server_endpoint,
                 concourse_secret_name=args.concourse_cfg_name,
                 cache_file=args.cache_file
@@ -86,8 +33,8 @@ def _client():
     except AttributeError:
         pass # ignore
 
-    # fall-back to environemnt variables
-    return SecretsServerClient.from_env()
+    # fall-back to environment variables
+    return ccc.secrets_server.SecretsServerClient.from_env()
 
 
 def _parse_model(raw_dict):
