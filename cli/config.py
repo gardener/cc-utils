@@ -18,6 +18,7 @@ import yaml
 
 from util import CliHints, ctx,existing_dir
 from model import ConfigFactory, ConfigSetSerialiser as CSS
+from cfg import _retrieve_model_element
 
 
 def export_kubeconfig(
@@ -55,16 +56,6 @@ def attribute(cfg_type: str, cfg_name: str, key: str):
         raw = attrib
 
     print(str(attrib))
-
-
-def _parse_model(raw_dict):
-    factory = ConfigFactory.from_dict(raw_dict)
-    return factory
-
-
-def _retrieve_model_element(cfg_type: str, cfg_name: str):
-    cfg_factory = ctx().cfg_factory()
-    return cfg_factory._cfg_element(cfg_type_name=cfg_type, cfg_name=cfg_name)
 
 
 def model_element(cfg_type: str, cfg_name: str, key: str):

@@ -14,7 +14,7 @@ pr_id_path = main_repo.pr_id_path()
 % if require_label:
 from util import info, warning
 from github.util import _create_github_api_object
-from config import _retrieve_model_element
+from cfg import _retrieve_model_element
 from github3.exceptions import NotFoundError
 
 github_cfg = _retrieve_model_element(cfg_type='github', cfg_name='${github_cfg.name()}')

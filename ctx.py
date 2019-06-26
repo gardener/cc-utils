@@ -133,8 +133,8 @@ def _cfg_factory_from_dir():
 
 
 def _cfg_factory_from_secrets_server():
-    import config
-    return config._parse_model(config._client().retrieve_secrets())
+    import cfg
+    return cfg._parse_model(cfg._client().retrieve_secrets())
 
 
 @functools.lru_cache()

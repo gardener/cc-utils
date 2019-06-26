@@ -88,3 +88,14 @@ def _client():
 
     # fall-back to environemnt variables
     return SecretsServerClient.from_env()
+
+
+def _parse_model(raw_dict):
+    from model import ConfigFactory
+    factory = ConfigFactory.from_dict(raw_dict)
+    return factory
+
+
+def _retrieve_model_element(cfg_type: str, cfg_name: str):
+    cfg_factory = ctx().cfg_factory()
+    return cfg_factory._cfg_element(cfg_type_name=cfg_type, cfg_name=cfg_name)
