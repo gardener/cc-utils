@@ -12,12 +12,11 @@ main_repo = job_variant.main_repository()
 pr_id_path = main_repo.pr_id_path()
 %>
 % if require_label:
-from util import info, warning
+from util ctx, import info, warning
 from github.util import _create_github_api_object
-from cfg import _retrieve_model_element
 from github3.exceptions import NotFoundError
 
-github_cfg = _retrieve_model_element(cfg_type='github', cfg_name='${github_cfg.name()}')
+github_cfg = ctx().cfg_factory().github(cfg_name='${github_cfg.name()}')
 github_api = _create_github_api_object(github_cfg)
 
 # assumption: only main repository may be PR-repo
