@@ -215,6 +215,12 @@
 <td><p>ProtecodeScanCfg</p></td>
 <td><p>if present, perform protecode scanning</p></td>
 </tr>
+<tr class="row-even"><td><p>clam_av</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>ClamAVScanCfg</p></td>
+<td><p>if present, perform ClamAV scanning</p></td>
+</tr>
 </tbody>
 </table>
 <p class="section-subtitle">filters Attributes</p>
@@ -328,6 +334,25 @@ already present.</p></td>
 </tr>
 <tr class="row-even"><td><p>force_upload</p></td>
 <td><p><strong>always</strong> upload the images. This will cause all images to be rescanned.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="section-subtitle">clam_av Attributes</p>
+<table class="colwidths-auto docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>clamav_cfg_name</p></td>
+<td><p>yes</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>clamav cfg name to use (see cc-config)</p></td>
 </tr>
 </tbody>
 </table>
