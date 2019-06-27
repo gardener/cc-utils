@@ -14,6 +14,8 @@
 # limitations under the License.
 from functools import wraps
 
+import queue
+import threading
 import traceback
 import datetime
 import requests
@@ -75,6 +77,54 @@ def mount_default_adapter(
     return session
 
 
+def _create_logging_client():
+    '''Create an ELS Client for the default els in the active config set and return it
+
+    Returns `None` if the config set has no default ELS config. Raises an error if the active
+    config set cannot be determined (`CONCOURSE_CURRENT_CFG` env var must be set)
+    '''
+    config_set_name = util.check_env('CONCOURSE_CURRENT_CFG')
+    config_set = ctx().cfg_factory().cfg_set(config_set_name)
+    try:
+        elastic_cfg = config_set.elasticsearch()
+    except KeyError:
+        return None
+    return ccc.elasticsearch.from_cfg(elasticsearch_cfg=elastic_cfg)
+
+
+def _log_entry_consumer(
+    queue,
+    elastic_client,
+    elastic_index_name,
+):
+    while True:
+        log_item = queue.get()
+        if(elastic_client):
+            try:
+                elastic_client.store_document(
+                    index=elastic_index_name,
+                    body=log_item,
+                )
+            except Exception as e:
+                info(f'Could not log stack trace information: {e}')
+
+
+if util._running_on_ci():
+    ELS_LOGGING_INDEX_NAME = 'github_access_stacktrace' # TODO: Make configurable
+    ELS_LOGGING_QUEUE = queue.SimpleQueue()
+    ELS_LOGGING_THREAD = threading.Thread(
+        name='els_logging_daemon',
+        daemon=True,
+        target=_log_entry_consumer,
+        kwargs={
+            'queue': ELS_LOGGING_QUEUE,
+            'elastic_client': _create_logging_client(),
+            'elastic_index_name': ELS_LOGGING_INDEX_NAME,
+        }
+    )
+    ELS_LOGGING_THREAD.start()
+
+
 def log_stack_trace_information(resp, *args, **kwargs):
     '''
     This function stores the current stacktrace in elastic search.
@@ -82,17 +132,7 @@ def log_stack_trace_information(resp, *args, **kwargs):
     '''
     if not util._running_on_ci():
         return # early exit if not running in ci job
-
-    config_set_name = util.check_env('CONCOURSE_CURRENT_CFG')
-    try:
-        els_index = 'github_access_stacktrace'
-        try:
-            config_set = ctx().cfg_factory().cfg_set(config_set_name)
-        except KeyError:
-            # do nothing: external concourse does not have config set 'internal_active'
-            return
-        elastic_cfg = config_set.elasticsearch()
-
+    if ELS_LOGGING_QUEUE:
         now = datetime.datetime.utcnow()
         json_body = {
             'date': now.isoformat(),
@@ -100,15 +140,7 @@ def log_stack_trace_information(resp, *args, **kwargs):
             'req_method': resp.request.method,
             'stacktrace': traceback.format_stack()
         }
-
-        elastic_client = ccc.elasticsearch.from_cfg(elasticsearch_cfg=elastic_cfg)
-        elastic_client.store_document(
-            index=els_index,
-            body=json_body
-        )
-
-    except Exception as e:
-        info(f'Could not log stack trace information: {e}')
+        ELS_LOGGING_QUEUE.put(json_body)
 
 
 def check_http_code(function):
