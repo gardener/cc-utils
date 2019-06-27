@@ -84,14 +84,15 @@ def log_stack_trace_information(resp, *args, **kwargs):
         return # early exit if not running in ci job
 
     try:
-        els_index = "github_access_stacktrace"
-        els_config = "sap_internal"
+        els_index = 'github_access_stacktrace'
+        config_set_name = 'internal_active'
 
         try:
-            elastic_cfg = ctx().cfg_factory().elasticsearch(els_config)
+            config_set = ctx().cfg_factory().cfg_set(config_set_name)
         except KeyError:
-            # do nothing: external concourse does not have els config
+            # do nothing: external concourse does not have config set 'internal_active'
             return
+        elastic_cfg = config_set.elasticsearch()
 
         now = datetime.datetime.utcnow()
         json_body = {
