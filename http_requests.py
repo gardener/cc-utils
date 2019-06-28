@@ -85,8 +85,7 @@ def log_stack_trace_information(resp, *args, **kwargs):
 
     try:
         els_index = 'github_access_stacktrace'
-        config_set_name = 'internal_active'
-
+        config_set_name = util.check_env('CONCOURSE_CURRENT_CFG')
         try:
             config_set = ctx().cfg_factory().cfg_set(config_set_name)
         except KeyError:
@@ -108,7 +107,7 @@ def log_stack_trace_information(resp, *args, **kwargs):
             body=json_body
         )
 
-    except Exception as e:
+    except (Exception, util.Failure) as e:
         info(f'Could not log stack trace information: {e}')
 
 
