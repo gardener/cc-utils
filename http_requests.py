@@ -83,9 +83,9 @@ def log_stack_trace_information(resp, *args, **kwargs):
     if not util._running_on_ci():
         return # early exit if not running in ci job
 
+    config_set_name = util.check_env('CONCOURSE_CURRENT_CFG')
     try:
         els_index = 'github_access_stacktrace'
-        config_set_name = util.check_env('CONCOURSE_CURRENT_CFG')
         try:
             config_set = ctx().cfg_factory().cfg_set(config_set_name)
         except KeyError:
@@ -107,7 +107,7 @@ def log_stack_trace_information(resp, *args, **kwargs):
             body=json_body
         )
 
-    except (Exception, util.Failure) as e:
+    except Exception as e:
         info(f'Could not log stack trace information: {e}')
 
 
