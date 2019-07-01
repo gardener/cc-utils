@@ -31,13 +31,13 @@ class Privileges(enum.Enum):
 
 
 class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
+    '''
+    Not intended to be instantiated by users of this module
+    '''
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._apply_defaults(self.raw)
 
-    '''
-    Not intended to be instantiated by users of this module
-    '''
     def _defaults_dict(self):
         return {
             'privileges': Privileges.READ_ONLY.value,
