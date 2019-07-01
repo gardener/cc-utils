@@ -59,6 +59,9 @@ class ConcourseConfig(NamedModelElement):
     def kubernetes_cluster_config(self):
         return self.raw.get('kubernetes_cluster_config')
 
+    def clamav_config(self):
+        return self.raw.get('clamav_config')
+
     def disable_github_pr_webhooks(self):
         '''
         If set to True, the rendered concourse pull-request resources don't have webhooks configured.
@@ -111,6 +114,7 @@ class ConcourseConfig(NamedModelElement):
             'github_enterprise_host',
             'proxy',
             'monitoring_config',
+            'clamav_config',
         }
 
     def validate(self):
