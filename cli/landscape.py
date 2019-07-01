@@ -28,6 +28,7 @@ from landscape_setup import kube_ctx
 from landscape_setup.utils import (
     ensure_cluster_version,
 )
+import landscape_setup.clamav as setup_clamav
 import landscape_setup.concourse as setup_concourse
 import landscape_setup.monitoring as setup_monitoring
 import landscape_setup.secrets_server as setup_secrets_server
@@ -39,6 +40,7 @@ class LandscapeComponent(enum.Enum):
     SECRETS_SERVER='secrets_server'
     WHD='webhook_dispatcher'
     MONITORING='monitoring'
+    CLAMAV='clam_av'
 
 
 CONFIG_SET_HELP=(
@@ -126,6 +128,12 @@ def deploy_or_upgrade_landscape(
     if LandscapeComponent.MONITORING in components:
         info('Deploying Monitoring stack')
         deploy_or_upgrade_monitoring(
+            config_set_name=config_set_name,
+        )
+
+    if LandscapeComponent.CLAMAV in components:
+        info ('Deploying ClamAV')
+        deploy_or_upgrade_clamav(
             config_set_name=config_set_name,
         )
 
@@ -220,4 +228,18 @@ def deploy_or_upgrade_monitoring(
     setup_monitoring.deploy_monitoring_landscape(
         cfg_set=cfg_set,
         cfg_factory=cfg_factory,
+    )
+
+
+def deploy_or_upgrade_clamav(
+    config_set_name: CliHint(typehint=str, help=CONFIG_SET_HELP),
+):
+    cfg_factory = ctx().cfg_factory()
+    cfg_set = cfg_factory.cfg_set(config_set_name)
+    concourse_cfg = cfg_set.concourse()
+    kubernetes_cfg_name=concourse_cfg.kubernetes_cluster_config()
+    clamav_cfg_name=concourse_cfg.clamav_config()
+    setup_clamav.deploy_clam_av(
+        clamav_cfg_name=clamav_cfg_name,
+        kubernetes_cfg_name=kubernetes_cfg_name,
     )
