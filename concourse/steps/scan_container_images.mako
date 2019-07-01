@@ -125,6 +125,10 @@ for email_recipient in email_recipients:
   # component_name identifies the landscape that has been scanned
   component_name = "${component_trait.component_name()}"
 
+  if not email_addresses:
+    util.warning(f'no email addresses could be retrieved for {component_name}')
+    sys.exit(0)
+
   # notify about critical vulnerabilities
   mailutil._send_mail(
     email_cfg=cfg_set.email(),
