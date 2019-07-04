@@ -239,7 +239,13 @@ def deploy_or_upgrade_clamav(
     concourse_cfg = cfg_set.concourse()
     kubernetes_cfg_name=concourse_cfg.kubernetes_cluster_config()
     clamav_cfg_name=concourse_cfg.clamav_config()
-    setup_clamav.deploy_clam_av(
-        clamav_cfg_name=clamav_cfg_name,
-        kubernetes_cfg_name=kubernetes_cfg_name,
-    )
+    if clamav_cfg_name is not None:
+        setup_clamav.deploy_clam_av(
+            clamav_cfg_name=clamav_cfg_name,
+            kubernetes_cfg_name=kubernetes_cfg_name,
+        )
+    else:
+        info(
+            f"No ClamAV configured for the Concourse in config set '{config_set_name}'. Will "
+            "not deploy ClamAV."
+        )
