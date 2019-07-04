@@ -31,7 +31,7 @@ def deploy_clam_av(
     kubernetes_cfg_name,
 ):
     cfg_factory = util.ctx().cfg_factory()
-    clamav_config = clamav_config = cfg_factory.clamav(clamav_cfg_name)
+    clamav_config = cfg_factory.clamav(clamav_cfg_name)
     kubernetes_config = cfg_factory.kubernetes(kubernetes_cfg_name)
     clamav_deployment_name = clamav_config.namespace()
 
