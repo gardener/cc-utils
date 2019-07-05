@@ -41,8 +41,8 @@ class ClamAVRoutes(object):
     def monitor(self):
         return self._api_url('monitor')
 
-    def health(self):
-        return self._api_url('health')
-
     def signature_version(self):
         return self._api_url('signature-version')
+
+    def health(self):
+        return self._api_url('mwss-health')
