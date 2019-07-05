@@ -32,6 +32,7 @@ from github.release_notes.renderer import (
     CATEGORY_IMPROVEMENT_ID,
     TARGET_GROUP_USER_ID,
     TARGET_GROUP_OPERATOR_ID,
+    TARGET_GROUP_DEVELOPER_ID,
 )
 from test.github.release_notes.default_util import (
     release_note_block_with_defaults,
@@ -114,6 +115,22 @@ class ReleaseNotesTest(unittest.TestCase):
             category_id=CATEGORY_NOTEWORTHY_ID,
             target_group_id=TARGET_GROUP_OPERATOR_ID,
             text='notew-text',
+        )
+        self.assertEqual([exp_release_note], actual_release_notes)
+
+    def test_rls_note_extraction_developer(self):
+        text = \
+            '``` noteworthy developer\n'\
+            'rls-note-for-developer\n'\
+            '```'
+        actual_release_notes = extract_release_notes_with_defaults(
+            text=text,
+        )
+
+        exp_release_note = release_note_block_with_defaults(
+            category_id=CATEGORY_NOTEWORTHY_ID,
+            target_group_id=TARGET_GROUP_DEVELOPER_ID,
+            text='rls-note-for-developer',
         )
         self.assertEqual([exp_release_note], actual_release_notes)
 

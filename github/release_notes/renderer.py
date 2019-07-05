@@ -42,7 +42,14 @@ TARGET_GROUP_OPERATOR = TitleNode(
     nodes=None,
     matches_rls_note_field_path='target_group_id'
 )
-TARGET_GROUPS = [TARGET_GROUP_USER, TARGET_GROUP_OPERATOR]
+TARGET_GROUP_DEVELOPER_ID = 'developer'
+TARGET_GROUP_DEVELOPER = TitleNode(
+    identifier=TARGET_GROUP_DEVELOPER_ID,
+    title='DEVELOPER',
+    nodes=None,
+    matches_rls_note_field_path='target_group_id'
+)
+TARGET_GROUPS = [TARGET_GROUP_USER, TARGET_GROUP_OPERATOR, TARGET_GROUP_DEVELOPER]
 
 CATEGORY_ACTION_ID = 'action'
 CATEGORY_ACTION = TitleNode(
