@@ -30,7 +30,7 @@ class ClamAVRoutes(object):
         self.base_url = base_url
 
     def _api_url(self, *parts, **kwargs):
-        return urljoin(self.base_url, parts)
+        return urljoin(self.base_url, *parts)
 
     def scan(self):
         return self._api_url('scan')
