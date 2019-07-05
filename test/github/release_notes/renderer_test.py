@@ -27,6 +27,7 @@ from github.release_notes.renderer import (
     CATEGORY_IMPROVEMENT_ID,
     TARGET_GROUP_USER_ID,
     TARGET_GROUP_OPERATOR_ID,
+    TARGET_GROUP_DEVELOPER_ID,
 )
 from test.github.release_notes.default_util import (
     release_note_block_with_defaults,
@@ -326,6 +327,13 @@ class RendererTest(unittest.TestCase):
                 reference_id=None,
                 user_login=None,
             ),
+            release_note_block_with_defaults(
+                target_group_id=TARGET_GROUP_DEVELOPER_ID,
+                text='developer release note',
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+            ),
         ]
 
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
@@ -333,7 +341,8 @@ class RendererTest(unittest.TestCase):
             '# [current-repo]\n'\
             '## Improvements\n'\
             '* *[USER]* user release note\n'\
-            '* *[OPERATOR]* operator release note'
+            '* *[OPERATOR]* operator release note\n'\
+            '* *[DEVELOPER]* developer release note'
         self.assertEqual(expected_md_str, actual_md_str)
 
     def test_get_or_call(self):
