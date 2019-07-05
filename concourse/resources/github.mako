@@ -26,9 +26,9 @@ disable_tls_validation = not github_cfg.tls_validation()
   source:
     uri: ${github_cfg.ssh_url()}/${repo_cfg.repo_path()}
     branch: ${repo_cfg.branch()}
-    disable_ci_skip: ${repo_cfg.disable_ci_skip()}
-    skip_ssl_verification: ${disable_tls_validation}
-    no_ssl_verify: ${disable_tls_validation}
+    disable_ci_skip: ${'true' if repo_cfg.disable_ci_skip() else 'false'}
+    skip_ssl_verification: ${'true' if disable_tls_validation else 'false'}
+    no_ssl_verify: ${'true' if disable_tls_validation else 'false'}
     private_key: |
       ${indent_func(6)(credentials.private_key()).strip()}
     username: "${credentials.username()}"
