@@ -12,12 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import logging
 import requests
 
 from ensure import ensure_annotations
 from http_requests import check_http_code
 from .routes import ClamAVRoutes
+from clamav.util import iter_image_files
 
 from .model import (
     ClamAVInfo,
@@ -25,6 +26,8 @@ from .model import (
     ClamAVScanResult,
     ClamAVHealth,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ClamAVClient(object):
@@ -59,3 +62,14 @@ class ClamAVClient(object):
         url = self.routes.health()
         response = self._request(self._session.get, url)
         return ClamAVHealth(response.json())
+
+    def scan_container_image(self, image_reference: str):
+        '''Fetch and scan the container image with the given image reference using ClamAV
+        '''
+        logger.debug(f'scanning container image {image_reference}')
+        for content, path in iter_image_files(image_reference):
+            scan_result = self.scan(content)
+            if not scan_result.malware_detected():
+                continue
+            else:
+                return scan_result, path
