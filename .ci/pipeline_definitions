@@ -1,6 +1,8 @@
 cc-utils:
   template: 'default'
   base_definition:
+    repo:
+      disable_ci_skip: True
     traits:
       version: ~
       component_descriptor: ~
