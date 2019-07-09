@@ -63,11 +63,11 @@ def create_clamav_helm_values(clamav_cfg_name):
             'serviceName': clamav_config.service_name(),
             'servicePort': clamav_config.service_port(),
             'imageReference': clamav_image_config.image_name(),
-            'imageTage': clamav_image_config.image_tag(),
+            'imageTag': clamav_image_config.image_tag(),
         },
         'freshClam': {
             'imageReference': freshclam_image_config.image_name(),
-            'imageTage': freshclam_image_config.image_tag(),
+            'imageTag': freshclam_image_config.image_tag(),
         }
     }
     container_registry_config = find_config(clamav_image_name)
