@@ -67,6 +67,9 @@ class PushEvent(EventBase):
             return ()
         yield from head_commit.get('modified', ())
 
+    def commit_message(self):
+        return self.raw.get('head_commit').get('message')
+
 
 class PullRequestAction(enum.Enum):
     ASSIGNED = 'assigned'
