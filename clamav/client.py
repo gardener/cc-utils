@@ -27,9 +27,7 @@ from .model import (
 )
 
 
-class ClamAVApi(object):
-    '''Implements ClamAV REST API functionality.
-    '''
+class ClamAVClient(object):
     @ensure_annotations
     def __init__(
         self,
