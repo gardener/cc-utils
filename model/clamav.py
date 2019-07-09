@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import urllib
 
 from model.base import NamedModelElement
 from model.proxy import DockerImageConfig
@@ -36,8 +37,15 @@ class ClamAVConfig(NamedModelElement):
     def service_port(self):
         return self.raw.get('service_port')
 
-    def cluster_url(self):
-        return f'{self.service_name}.{self.namespace()}.svc.cluster.local:{self.service_port()}'
+    def service_url(self):
+        return urllib.parse.urlunparse((
+            'http',
+            f'{self.service_name()}.{self.namespace()}.svc.cluster.local:{self.service_port()}',
+            '',
+            '',
+            '',
+            '',
+        ))
 
     def container_registry_config_name(self):
         return self.raw.get('container_registry')
