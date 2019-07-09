@@ -33,7 +33,7 @@ class ClamAVApi(object):
     @ensure_annotations
     def __init__(
         self,
-        routes:ClamAVRoutes,
+        routes: ClamAVRoutes,
     ):
         self.routes = routes
         self._session = requests.Session()
