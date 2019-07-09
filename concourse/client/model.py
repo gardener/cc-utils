@@ -159,6 +159,9 @@ class GithubSource(object):
     def access_token(self):
         return self.raw['access_token']
 
+    def disable_ci_skip(self) -> bool:
+        return self.raw.get('disable_ci_skip')
+
 
 class Build(ModelBase):
     '''
