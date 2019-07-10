@@ -366,7 +366,7 @@ else:
 publish_to_repo_dict = job_step.publish_repository_dict()
 %>
   ensure:
-    aggregate:
+    in_parallel:
 % for publish_to_repo_name, publish_options in publish_to_repo_dict.items():
 <%
 if not publish_options:
@@ -441,7 +441,7 @@ repo = job_variant.main_repository()
   % endfor
 % endif
 % for parallel_steps in job_variant.ordered_steps():
-  - aggregate:
+  - in_parallel:
 % for step_name in parallel_steps:
     ${step(4, job_variant, job_variant.step(step_name))}
 % endfor
