@@ -271,9 +271,9 @@ def create_postgresql_helm_values(
         "config": {
             "datasource": {
                 "host": "concourse-postgresql.concourse.svc.cluster.local",
-                "user": default_helm_values.get('postgresql').get('postgresUser'),
-                "password": custom_helm_values.get('postgresql').get('postgresPassword'),
-                "database": default_helm_values.get('postgresql').get('postgresDatabase'),
+                "user": default_helm_values.get('postgresql').get('postgresqlUsername'),
+                "password": custom_helm_values.get('postgresql').get('postgresqlPassword'),
+                "database": default_helm_values.get('postgresql').get('postgresqlDatabase'),
                 "sslmode": "disable"
             },
             "disableDefaultMetrics": True,
