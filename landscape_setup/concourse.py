@@ -452,6 +452,8 @@ def set_teams(config: ConcourseConfig):
         team_name=main_team.teamname(),
     )
     for team in concourse_uam_cfg.teams():
+        if not team.has_basic_auth_credentials():
+            continue
         # We skip the main team here since we cannot update all its credentials at this time.
         if team.teamname() == main_team.teamname():
             continue
