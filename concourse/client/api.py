@@ -237,25 +237,6 @@ class ConcourseApiBase(object):
         self._put(url, "")
 
 
-class ConcourseApiV4(ConcourseApiBase):
-    def set_team(self, concourse_team: ConcourseTeam):
-        body = {}
-        body['auth'] = {
-            "users": [
-                "local:" + concourse_team.username()
-            ]
-        }
-        if concourse_team.has_github_oauth_credentials():
-            body['auth'].update({
-                "groups": [
-                    "github:" + concourse_team.github_auth_team()
-                ]
-            })
-
-        team_url = self.routes.team_url(concourse_team.teamname())
-        self._put(team_url, json.dumps(body))
-
-
 class ConcourseApiV5(ConcourseApiBase):
     def set_team(self, concourse_team: ConcourseTeam):
         body = {

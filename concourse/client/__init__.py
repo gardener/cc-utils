@@ -22,11 +22,9 @@ import functools
 
 import util
 from .api import (
-    ConcourseApiV4,
     ConcourseApiV5,
 )
 from .routes import (
-    ConcourseApiRoutesV4,
     ConcourseApiRoutesV5,
 )
 from model.concourse import (
@@ -84,14 +82,7 @@ def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
         basic_auth_passwd=AUTH_TOKEN_REQUEST_PWD,
         verify_ssl=verify_ssl
     )
-    if concourse_version is ConcourseApiVersion.V4:
-        routes = ConcourseApiRoutesV4(base_url=base_url, team=team_name)
-        concourse_api = ConcourseApiV4(
-            routes=routes,
-            request_builder=request_builder,
-            verify_ssl=verify_ssl,
-        )
-    elif concourse_version is ConcourseApiVersion.V5:
+    if concourse_version is ConcourseApiVersion.V5:
         routes = ConcourseApiRoutesV5(base_url=base_url, team=team_name)
         concourse_api = ConcourseApiV5(
             routes=routes,

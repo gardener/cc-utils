@@ -84,7 +84,7 @@ class ConcourseConfigTest(object):
             'concourse_uam_config': 'foo',
             'helm_chart_default_values_config': 'foo',
             'kubernetes_cluster_config': 'foo',
-            'concourse_version': examinee.ConcourseApiVersion.V4,
+            'concourse_version': examinee.ConcourseApiVersion.V5,
             'job_mapping': 'foo',
             'imagePullSecret': 'foo',
             'tls_secret_name': 'foo',

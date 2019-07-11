@@ -117,9 +117,5 @@ class ConcourseApiRoutesBase(object):
         return self._api_url('workers', worker_name, 'prune', prefix_team=False)
 
 
-class ConcourseApiRoutesV4(ConcourseApiRoutesBase):
-    '''Routes for Concourse V4'''
-
-
 class ConcourseApiRoutesV5(ConcourseApiRoutesBase):
     '''Routes for Concourse V5'''
