@@ -133,6 +133,42 @@ def _mk_transport(size=8):
   return transport
 
 
+def _mk_credentials(image_reference, privileges: Privileges=None):
+  try:
+    # first try container_registry cfgs from available cfg
+    creds = _credentials(image_reference=str(image_reference), privileges=privileges)
+    if not creds:
+      logger.warning('could not find rw-creds')
+      # fall-back to default docker lookup
+      creds = docker_creds.DefaultKeychain.Resolve(image_reference)
+
+    return creds
+  except Exception as e:
+    util.fail(f'Error resolving credentials for {image_reference}: {e}')
+
+
+def _image_exists(image_reference: str) -> bool:
+  transport = _mk_transport(size=1)
+
+  image_reference = normalise_image_reference(image_reference)
+  image_reference = _parse_image_reference(image_reference)
+  creds = _mk_credentials(image_reference=image_reference)
+  accept = docker_http.SUPPORTED_MANIFEST_MIMES
+
+  with image_list.FromRegistry(image_reference, creds, transport) as img_list:
+      if img_list.exists():
+          return True
+      logger.debug('no manifest found')
+
+  # look for image
+  with v2_2_image.FromRegistry(image_reference, creds, transport, accept) as v2_2_img:
+      if v2_2_img.exists():
+          return True
+      logger.debug('no img v2.2 found')
+
+  return False
+
+
 def _push_image(image_reference: str, image_file: str, threads=8):
   import util
   util.not_none(image_reference)
