@@ -142,7 +142,7 @@ def create_instance_specific_helm_values(
     ingress_host = concourse_cfg.ingress_host()
     concourse_version = concourse_cfg.concourse_version()
 
-    if concourse_version is ConcourseApiVersion.V4 or concourse_version is ConcourseApiVersion.V5:
+    if concourse_version is ConcourseApiVersion.V5:
         github_config_name = concourse_cfg.github_enterprise_host()
         # 'github_enterprise_host' only configured in case of internal concourse
         # using github enterprise
