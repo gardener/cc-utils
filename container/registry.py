@@ -177,22 +177,17 @@ def _push_image(image_reference: str, image_file: str, threads=8):
   transport = _mk_transport()
 
   image_reference = normalise_image_reference(image_reference)
-  name = _parse_image_reference(image_reference)
+  image_reference = _parse_image_reference(image_reference)
 
-  try:
-    # first try container_registry cfgs from available cfg
-    creds = _credentials(image_reference=image_reference, privileges=Privileges.READ_WRITE)
-    if not creds:
-      print('could not find rw-creds')
-      # fall-back to default docker lookup
-      creds = docker_creds.DefaultKeychain.Resolve(name)
-  except Exception as e:
-    util.fail('Error resolving credentials for {name}: {e}'.format(name=name, e=e))
+  creds = _mk_credentials(
+    image_reference=image_reference,
+    privileges=Privileges.READ_WRITE,
+  )
 
   with v2_2_image.FromTarball(image_file) as v2_2_img:
     try:
       with docker_session.Push(
-          name,
+          image_reference,
           creds,
           transport,
           threads=threads,
@@ -213,7 +208,8 @@ def _pull_image(image_reference: str, outfileobj=None):
   transport = _mk_transport()
 
   image_reference = normalise_image_reference(image_reference)
-  name = _parse_image_reference(image_reference)
+  image_reference = _parse_image_reference(image_reference)
+  creds = _mk_credentials(image_reference=image_reference)
 
   # OCI Image Manifest is compatible with Docker Image Manifest Version 2,
   # Schema 2. We indicate support for both formats by passing both media types
@@ -223,17 +219,6 @@ def _pull_image(image_reference: str, outfileobj=None):
   #   OCI: https://github.com/opencontainers/image-spec
   #   Docker: https://docs.docker.com/registry/spec/manifest-v2-2/
   accept = docker_http.SUPPORTED_MANIFEST_MIMES
-
-  # Resolve the appropriate credential to use based on the standard Docker
-  # client logic.
-  try:
-    # first try container_registry cfgs from available cfg
-    creds = _credentials(image_reference=image_reference)
-    if not creds:
-      # fall-back to default docker lookup
-      creds = docker_creds.DefaultKeychain.Resolve(name)
-  except Exception as e:
-    util.fail('Error resolving credentials for {name}: {e}'.format(name=name, e=e))
 
   try:
     # XXX TODO: use streaming rather than writing to local FS
@@ -249,21 +234,21 @@ def _pull_image(image_reference: str, outfileobj=None):
           })
           # pytype: disable=wrong-arg-types
           with img_list.resolve(platform) as default_child:
-            save.tarball(_make_tag_if_digest(name), default_child, tar)
+            save.tarball(_make_tag_if_digest(image_reference), default_child, tar)
             return outfileobj
           # pytype: enable=wrong-arg-types
 
-      util.info('Pulling v2.2 image from {name}..'.format(name=name))
-      with v2_2_image.FromRegistry(name, creds, transport, accept) as v2_2_img:
+      util.info(f'Pulling v2.2 image from {image_reference}..')
+      with v2_2_image.FromRegistry(image_reference, creds, transport, accept) as v2_2_img:
         if v2_2_img.exists():
-          save.tarball(_make_tag_if_digest(name), v2_2_img, tar)
+          save.tarball(_make_tag_if_digest(image_reference), v2_2_img, tar)
           return outfileobj
 
-      util.info('Pulling v2 image from {name}..'.format(name=name))
-      with v2_image.FromRegistry(name, creds, transport) as v2_img:
+      util.info(f'Pulling v2 image from {image_reference}..')
+      with v2_image.FromRegistry(image_reference, creds, transport) as v2_img:
         with v2_compat.V22FromV2(v2_img) as v2_2_img:
-          save.tarball(_make_tag_if_digest(name), v2_2_img, tar)
+          save.tarball(_make_tag_if_digest(image_reference), v2_2_img, tar)
           return outfileobj
   except Exception as e:
     outfileobj.close()
-    util.fail('Error pulling and saving image {name}: {e}'.format(name=name, e=e))
+    util.fail(f'Error pulling and saving image {image_reference}: {e}')
