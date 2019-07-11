@@ -126,10 +126,10 @@ def publish_container_image(image_reference: str, image_file_obj, threads=1):
   image_file_obj.seek(0)
 
 
-def _mk_transport():
+def _mk_transport(size=8):
   retry_factory = retry.Factory()
   retry_factory = retry_factory.WithSourceTransportCallable(httplib2.Http)
-  transport = transport_pool.Http(retry_factory.Build, size=8)
+  transport = transport_pool.Http(retry_factory.Build, size=size)
   return transport
 
 
