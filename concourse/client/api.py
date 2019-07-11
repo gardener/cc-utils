@@ -221,6 +221,8 @@ class ConcourseApiBase(object):
     def resource_versions(self, pipeline_name: str, resource_name: str):
         url = self.routes.resource_versions(pipeline_name=pipeline_name, resource_name=resource_name)
         response = self._get(url)
+        if not response:
+            return [] # new resources can have no versions
         return [ResourceVersion(raw=raw, concourse_api=None) for raw in response]
 
     @ensure_annotations
