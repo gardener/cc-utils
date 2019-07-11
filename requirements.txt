@@ -6,7 +6,7 @@ Mako<2.0.0
 Sphinx<3.0.0
 bcrypt<4.0.0
 clamd<2.0.0
-containerregistry-ccwienk<1.0.0
+containerregistry-ccwienk==0.2.2
 deepdiff<4.0.0
 deepmerge<1.0.0
 deprecated<2.0.0
