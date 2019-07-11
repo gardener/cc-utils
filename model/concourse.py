@@ -168,6 +168,9 @@ class ConcourseTeam(NamedModelElement):
     def password(self):
         return self.raw.get('password')
 
+    def role(self):
+        return self.raw.get('role')
+
     def github_auth_team(self, split: bool=False):
         '''
         returns the github auth team (org:team)

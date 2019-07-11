@@ -239,9 +239,10 @@ class ConcourseApiBase(object):
 
 class ConcourseApiV5(ConcourseApiBase):
     def set_team(self, concourse_team: ConcourseTeam):
+        role = concourse_team.role() if concourse_team.role() else "member"
         body = {
             "auth": {
-                "member": {
+                role: {
                     "users": [
                         "local:" + concourse_team.username()
                     ]
@@ -249,7 +250,7 @@ class ConcourseApiV5(ConcourseApiBase):
             }
         }
         if concourse_team.has_github_oauth_credentials():
-            body["auth"]["member"].update({
+            body["auth"][role].update({
                 "groups": [
                     "github:" + concourse_team.github_auth_team()
                 ]
