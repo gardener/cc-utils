@@ -15,6 +15,7 @@
 
 
 import functools
+import logging
 import tarfile
 import tempfile
 
@@ -36,6 +37,7 @@ from containerregistry.transport import transport_pool
 
 import httplib2
 
+logger = logging.getLogger(__name__)
 
 _DEFAULT_TAG = 'i-was-a-digest'
 
@@ -161,7 +163,7 @@ def _push_image(image_reference: str, image_file: str, threads=8):
       ) as session:
         session.upload(v2_2_img)
         digest = v2_2_img.digest()
-        print(f'{name} was uploaded - digest: {digest}')
+        logger.info(f'{image_reference} was uploaded - digest: {digest}')
     except Exception as e:
       import traceback
       traceback.print_exc()
@@ -202,8 +204,8 @@ def _pull_image(image_reference: str, outfileobj=None):
     # if outfile is given, we must use it instead of an ano
     outfileobj = outfileobj if outfileobj else tempfile.TemporaryFile()
     with tarfile.open(fileobj=outfileobj, mode='w:') as tar:
-      util.verbose('Pulling manifest list from {name}..'.format(name=name))
-      with image_list.FromRegistry(name, creds, transport) as img_list:
+      util.verbose(f'Pulling manifest list from {image_reference}..')
+      with image_list.FromRegistry(image_reference, creds, transport) as img_list:
         if img_list.exists():
           platform = image_list.Platform({
               'architecture': _PROCESSOR_ARCHITECTURE,
