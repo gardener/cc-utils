@@ -114,9 +114,13 @@ def retrieve_container_image(image_reference: str, outfileobj=None):
   return tmp_file
 
 
-def publish_container_image(image_reference: str, image_file_obj):
+def publish_container_image(image_reference: str, image_file_obj, threads=1):
   image_file_obj.seek(0)
-  _push_image(image_reference=image_reference, image_file=image_file_obj.name)
+  _push_image(
+        image_reference=image_reference,
+        image_file=image_file_obj.name,
+        threads=threads,
+    )
   image_file_obj.seek(0)
 
 
