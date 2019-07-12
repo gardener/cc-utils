@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import enum
+import typing
 
 from model import ModelBase
 
@@ -97,10 +98,10 @@ class ClamAVScanResult(ModelBase):
     def scan_size_octet(self) -> int:
         return self.raw['scanSize']
 
-    def finding(self) -> str:
-        '''Return a string describing ClamAV's findings (e.g.: "Eicar-Test-Signature")
+    def virus_signature(self) -> typing.Union[str, None]:
+        '''Return a string describing ClamAV's findings, if any (e.g.: "Eicar-Test-Signature")
         '''
-        return self.raw['finding']
+        return self.raw.get('finding')
 
     def mime_type(self) -> str:
         return self.raw['mimeType']
