@@ -28,6 +28,10 @@ logger = logging.getLogger(__name__)
 
 
 def process_upload_request(request: container.model.ContainerImageUploadRequest):
+    if container.registry._image_exists(request.target_ref):
+        logging.info(f'image exists: {request.target_ref}')
+        return
+
     publish_img = functools.partial(
         container.registry.publish_container_image,
         image_reference=request.target_ref,
