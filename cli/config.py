@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import pathlib
+import json as json_m
 import yaml
 
 from util import CliHints, ctx,existing_dir
@@ -49,7 +50,7 @@ def serialise_cfg(cfg_dir: CliHints.existing_dir(), cfg_sets: [str], out_file: s
         f.write(serialiser.serialise())
 
 
-def attribute(cfg_type: str, cfg_name: str, key: str):
+def attribute(cfg_type: str, cfg_name: str, key: str, json: bool=False):
     raw = _retrieve_model_element(cfg_type=cfg_type, cfg_name=cfg_name).raw
 
     attrib_path = key.split('.')
@@ -59,7 +60,10 @@ def attribute(cfg_type: str, cfg_name: str, key: str):
         attrib = raw.get(attrib_path.pop())
         raw = attrib
 
-    print(str(attrib))
+    if json:
+        json_m.dumps(attrib)
+    else:
+        print(str(attrib))
 
 
 def model_element(cfg_type: str, cfg_name: str, key: str):
