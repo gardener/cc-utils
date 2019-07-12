@@ -61,7 +61,7 @@ def attribute(cfg_type: str, cfg_name: str, key: str, json: bool=False):
         raw = attrib
 
     if json:
-        json_m.dumps(attrib)
+        print(json_m.dumps(attrib))
     else:
         print(str(attrib))
 
