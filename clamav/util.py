@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import tarfile
+import typing
 
 import clamd
 
@@ -70,32 +71,43 @@ def scan_stream(fileobj):
     return status, signature_or_none
 
 
-def scan_container_image(image_reference: str):
-    logger.debug(f'scanning container image {image_reference}')
-
+def iter_image_files(
+    container_image_reference: str,
+) -> typing.Iterable[typing.Tuple[typing.IO, str]]:
     with tarfile.open(
         mode='r|',
-        fileobj=container.registry.retrieve_container_image(image_reference)
-    ) as tf:
-        for ti in tf:
+        fileobj=container.registry.retrieve_container_image(container_image_reference)
+    ) as tar_file:
+        for tar_info in tar_file:
             # we only care to scan files, obviously
-            if not ti.isfile():
+            if not tar_info.isfile():
                 continue
-            if not ti.name.endswith('layer.tar'):
+            if not tar_info.name.endswith('layer.tar'):
                 continue # only layer files may contain relevant data
-            with tarfile.open(mode='r|', fileobj=tf.extractfile(ti)) as inner_tf:
-                for inner_ti in inner_tf:
-                    if not inner_ti.isfile():
+            with tarfile.open(
+                mode='r|',
+                fileobj=tar_file.extractfile(tar_info),
+            ) as inner_tar_file:
+                for inner_tar_info in inner_tar_file:
+                    if not inner_tar_info.isfile():
                         continue
-                    status, signature = scan_stream(fileobj=inner_tf.extractfile(inner_ti))
-                    if result_ok(status, signature):
-                        continue
-                    else:
-                        # early exit on first match
-                        return status, f'{ti.name}:{inner_ti.name}: {signature}'
-            logger.debug(f'{image_reference}:{ti.name} looks clean')
-        logger.debug(f'image looked clean: {image_reference}')
-        return 'OK', None # no match
+                    yield (
+                        inner_tar_file.extractfile(inner_tar_info),
+                        f'{tar_info.name}:{inner_tar_info.name}',
+                    )
+
+
+def scan_container_image(
+    image_reference: str,
+):
+    logger.debug(f'scanning container image {image_reference}')
+    for content, path in iter_image_files(image_reference):
+        status, signature = scan_stream(content)
+        if result_ok(status, signature):
+            continue
+        else:
+            return status, f'{path}: {signature}'
+    return 'OK', None
 
 
 def result_ok(status, signature):
