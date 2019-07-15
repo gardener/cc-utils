@@ -267,15 +267,37 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
         self.cfg_set = not_none(cfg_set)
         concourse_cfg = cfg_set.concourse()
         job_mapping_set = cfg_set.job_mapping(concourse_cfg.job_mapping_cfg_name())
-
-        # hack: use first mapping that matches
         org = self._repository_url.path.lstrip('/').split('/')[0]
+        self.job_mapping = self._find_matching_job_mapping(
+            job_mapping_set,
+            org,
+            self._repository_url.hostname,
+        )
+
+
+    def _find_matching_job_mapping(self,
+        job_mapping_set,
+        github_org_name: str,
+        repository_hostname: str,
+    ):
+        matching_mapping = None
         for job_mapping in job_mapping_set.job_mappings().values():
-            if org in [o.org_name() for o in job_mapping.github_organisations()]:
-                self.job_mapping = job_mapping
-                break
-        else:
-            ValueError(f'could not find matching job-mapping for org {org}')
+            for organisation in job_mapping.github_organisations():
+                if organisation.org_name() != github_org_name:
+                    continue
+                github_cfg = self.cfg_set.github(organisation.github_cfg_name())
+                if not github_cfg.matches_hostname(repository_hostname):
+                    continue
+                if matching_mapping:
+                    ValueError(
+                        'Unable to determine the correct job-mapping for pipeline definition '
+                        f'found at {self._repository_url} - more than one matching JobMapping configured.'
+                    )
+                matching_mapping = job_mapping
+        if not matching_mapping:
+            ValueError(f'could not find matching job-mapping for org {github_org_name}')
+        return matching_mapping
+
 
     def enumerate_definition_descriptors(self):
         github_cfg = github_cfg_for_hostname(
