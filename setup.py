@@ -48,7 +48,7 @@ setuptools.setup(
     name='cc-utils',
     version=version(),
     description='Gardener CI/CD Utils',
-    python_requires='>=3.6.*',
+    python_requires='>=3.7.*',
     py_modules=modules(),
     packages=packages(),
     install_requires=list(requirements()),
