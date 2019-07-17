@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import enum
+import json
+import sseclient
 import typing
 
 from model import ModelBase
@@ -123,3 +125,47 @@ class ClamAVHealth(ModelBase):
 
     def state(self) -> ClamAVHealthState:
         return ClamAVHealthState(self.raw['state'])
+
+
+class ClamAVScanEventTypes(enum.Enum):
+    ERROR = 'error'
+    RESULT = 'result'
+
+
+class ClamAVError(ModelBase):
+    def status_code(self) -> int:
+        '''Return the HTTP/1.1 status code that was given by ClamAV
+        '''
+        return self.raw['code']
+
+    def message(self) -> str:
+        return self.raw['message']
+
+
+class ClamAVScanEventClient(object):
+    '''Client to handle SSE events sent by our k8s ClamAV installation
+
+    Due to the quick timeout in our Infrastructure and the limited functionality our k8s ClamAV
+    service provides at this point, we use SSE to keep the connection open.
+    For more details, see the "process_events" method
+    '''
+    def __init__(self, response):
+        self.client = sseclient.SSEClient(response)
+
+    def process_events(self) -> typing.Union[ClamAVScanResult, ClamAVError]:
+        '''Process the events sent by our ClamAV service
+
+        Our ClamAV service will send exactly one SSE-event which is of one of two types:
+            1. An event of type 'error', with its data containing an error-code (a HTTP/1.1 Status
+                Code) and a message, in case an error was encountered when scanning.
+            2. An event of type 'result' containing the scan result in its data.
+
+        This method blocks until an event is received and then returns an instance of the
+        corresponding model class.
+        '''
+        for event in self.client.events():
+            event_type = ClamAVScanEventTypes(event.event)
+            if event_type is ClamAVScanEventTypes.ERROR:
+                return ClamAVError(json.loads(event.data))
+            if event_type is ClamAVScanEventTypes.RESULT:
+                return ClamAVScanResult(json.loads(event.data))
