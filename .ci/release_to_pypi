@@ -14,7 +14,7 @@ model_element_cmd="cli.py config model_element --cfg-type pypi --cfg-name garden
 username="$(${model_element_cmd} --key credentials.username)"
 passwd="$(${model_element_cmd} --key credentials.passwd)"
 
-pip3 install --upgrade pip twine
+pip3 install --upgrade pip twine wheel
 
 # upload to pypi
 twine upload --user "${username}" --password "${passwd}" dist/*
