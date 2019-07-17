@@ -35,6 +35,9 @@ class ClamAVRoutes(object):
     def scan(self):
         return self._api_url('scan')
 
+    def sse_scan(self):
+        return self._api_url('sse', 'scan')
+
     def info(self):
         return self._api_url('info')
 
