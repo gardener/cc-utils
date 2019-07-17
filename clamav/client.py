@@ -21,10 +21,11 @@ from .routes import ClamAVRoutes
 from clamav.util import iter_image_files
 
 from .model import (
+    ClamAVHealth,
     ClamAVInfo,
     ClamAVMonitoringInfo,
+    ClamAVScanEventClient,
     ClamAVScanResult,
-    ClamAVHealth,
 )
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,13 @@ class ClamAVClient(object):
         url = self.routes.scan()
         response = self._request(self._session.post, url=url, data=data)
         return ClamAVScanResult(response.json())
+
+    def sse_scan(self, data):
+        url = self.routes.sse_scan()
+        client = ClamAVScanEventClient(
+            self._request(self._session.post, url=url, data=data, stream=True)
+        )
+        return client.process_events()
 
     def health(self):
         url = self.routes.health()
