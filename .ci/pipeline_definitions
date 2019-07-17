@@ -35,6 +35,7 @@ cc-utils:
       steps:
         test: ~
         lint: ~
+        release_to_pypi: ~
         generate_documentation:
           publish_to: ['gh_pages']
       traits:

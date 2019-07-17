@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+set -e
+set -x
+
+repo_dir="$(readlink -f "$(dirname "$0")/..")"
+cd $repo_dir
+
+# build into "${repo_dir}/dist"
+python3 "${repo_dir}/setup.py" sdist bdist_wheel
+
+model_element_cmd="cli.py config model_element --cfg-type pypi --cfg-name gardener"
+
+username="$(${model_element_cmd} --key credentials.username)"
+passwd="$(${model_element_cmd} --key credentials.passwd)"
+
+pip3 install --upgrade pip twine
+
+# upload to pypi
+twine upload --user "${username}" --password "${passwd}" dist/*
