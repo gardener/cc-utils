@@ -142,13 +142,21 @@ class Renderer(object):
         pipeline_name = definition_descriptor.pipeline_name
 
         # support declaring jobs by either 'jobs' or 'variants'
-        # TODO: Add deprecation message for old 'variants' syntax.
         jobs = effective_definition.get('jobs', {})
         variants = effective_definition.get('variants', {})
-        if jobs and variants:
-            raise RuntimeError(
-                f"Both 'jobs' and 'variants' are defined in pipeline '{pipeline_name}'"
+        if variants:
+            pipeline_repository = definition_descriptor.main_repo.get('path')
+            pipeline_branch = definition_descriptor.main_repo.get('branch')
+            warning(
+                f"Deprecated attribute 'variants' defined in pipeline '{pipeline_name}'"
+                f"in repository '{pipeline_repository}' on branch "
+                f"'{pipeline_branch}. Please use 'jobs' instead."
             )
+            if jobs:
+                raise RuntimeError(
+                    f"Both 'jobs' and 'variants' are defined in pipeline '{pipeline_name}'"
+                    f"in repository '{pipeline_repository}' on branch '{pipeline_branch}'."
+                )
 
         pipeline_definition = RawPipelineDefinitionDescriptor(
             name=pipeline_name,
