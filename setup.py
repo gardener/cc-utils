@@ -21,24 +21,6 @@ def modules():
     ]
 
 
-def packages():
-    return [
-        'ccc',
-        'clamav',
-        'concourse',
-        'container',
-        'github',
-        'kube',
-        'landscape_setup',
-        'mail',
-        'model',
-        'product',
-        'protecode',
-        'slackclient',
-        'whd',
-    ]
-
-
 def version():
     with open(os.path.join(own_dir, 'VERSION')) as f:
         return f.read().strip()
