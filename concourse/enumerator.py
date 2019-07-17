@@ -264,16 +264,20 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
 class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
     def __init__(self, repository_url:str, cfg_set):
         self._repository_url = urlparse(not_none(repository_url))
+        self._repo_host = self._repository_url.hostname
         self.cfg_set = not_none(cfg_set)
         concourse_cfg = cfg_set.concourse()
         job_mapping_set = cfg_set.job_mapping(concourse_cfg.job_mapping_cfg_name())
 
-        # hack: use first mapping that matches
-        org = self._repository_url.path.lstrip('/').split('/')[0]
+        org_name = self._repository_url.path.lstrip('/').split('/')[0]
         for job_mapping in job_mapping_set.job_mappings().values():
-            if org in [o.org_name() for o in job_mapping.github_organisations()]:
-                self.job_mapping = job_mapping
-                break
+            for org in job_mapping.github_organisations():
+                if org.org_name() != org_name:
+                    continue
+                github_cfg = cfg_set.github(org.github_cfg_name())
+                if github_cfg.matches_hostname(self._repo_host):
+                    self.job_mapping = job_mapping
+                    return
         else:
             ValueError(f'could not find matching job-mapping for org {org}')
 
