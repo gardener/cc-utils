@@ -45,16 +45,13 @@ def version():
 
 
 setuptools.setup(
-    name='cc-utils',
+    name='gardener-cicd-libs',
     version=version(),
-    description='Gardener CI/CD Utils',
+    description='Gardener CI/CD Libraries',
     python_requires='>=3.7.*',
     py_modules=modules(),
-    packages=packages(),
+    packages=setuptools.find_packages(),
     install_requires=list(requirements()),
     entry_points={
-        'console_scripts': [
-            'cli=cli:main',
-        ],
     },
 )
