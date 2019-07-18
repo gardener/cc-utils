@@ -18,9 +18,9 @@ from util import urljoin
 
 
 class ClamAVRoutes(object):
-    '''Constructs ClamAV REST API endpoint URLs for the ClamAV base URL.
+    '''ClamAV REST API endpoint URLs for the ClamAV base URL.
 
-    Not intended to be used outside of this module.
+    Not intended to be instantiated by users of this module.
     '''
     @ensure_annotations
     def __init__(self, base_url: str):
