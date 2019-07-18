@@ -77,23 +77,23 @@ def iter_image_files(
     with tarfile.open(
         mode='r|',
         fileobj=container.registry.retrieve_container_image(container_image_reference)
-    ) as tar_file:
-        for tar_info in tar_file:
+    ) as image_tarfile:
+        for image_tar_info in image_tarfile:
             # we only care to scan files, obviously
-            if not tar_info.isfile():
+            if not image_tar_info.isfile():
                 continue
-            if not tar_info.name.endswith('layer.tar'):
+            if not image_tar_info.name.endswith('layer.tar'):
                 continue # only layer files may contain relevant data
             with tarfile.open(
                 mode='r|',
-                fileobj=tar_file.extractfile(tar_info),
-            ) as inner_tar_file:
-                for inner_tar_info in inner_tar_file:
-                    if not inner_tar_info.isfile():
+                fileobj=image_tarfile.extractfile(image_tar_info),
+            ) as layer_tarfile:
+                for layer_tar_info in layer_tarfile:
+                    if not layer_tar_info.isfile():
                         continue
                     yield (
-                        inner_tar_file.extractfile(inner_tar_info),
-                        f'{tar_info.name}:{inner_tar_info.name}',
+                        layer_tarfile.extractfile(layer_tar_info),
+                        f'{image_tar_info.name}:{layer_tar_info.name}',
                     )
 
 
