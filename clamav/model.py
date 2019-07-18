@@ -20,7 +20,7 @@ from model import ModelBase
 
 
 class ClamAVInfo(ModelBase):
-    def max_scan_size_octet(self) -> int:
+    def max_scan_size_octets(self) -> int:
         return self.raw['maxScanSize']
 
     def signature_timestamp(self) -> str:
@@ -31,16 +31,16 @@ class ClamAVInfo(ModelBase):
 
 
 class ClamAVMemoryInfo(ModelBase):
-    def resident_set_size_octet(self) -> int:
+    def resident_set_size_octets(self) -> int:
         return self.raw['rss']
 
-    def heap_total_octet(self) -> int:
+    def heap_total_octets(self) -> int:
         return self.raw['heapTotal']
 
-    def heap_used_octet(self) -> int:
+    def heap_used_octets(self) -> int:
         return self.raw['heapUsed']
 
-    def external_octet(self) -> int:
+    def external_octets(self) -> int:
         return self.raw['external']
 
 
@@ -95,7 +95,7 @@ class ClamAVScanResult(ModelBase):
     def encrypted_content_detected(self) -> bool:
         return self.raw['encryptedContentDetected']
 
-    def scan_size_octet(self) -> int:
+    def scan_size_octets(self) -> int:
         return self.raw['scanSize']
 
     def virus_signature(self) -> typing.Union[str, None]:
