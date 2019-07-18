@@ -116,7 +116,7 @@ class ClamAVHealthState(enum.Enum):
 
 
 class ClamAVHealth(ModelBase):
-    def age(self) -> int:
+    def age_hours(self) -> int:
         '''Return hours since last signature update
         '''
         return self.raw['age']
