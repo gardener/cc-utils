@@ -82,7 +82,9 @@ image_references = [
 ]
 
 util.info('running virus scan for all container images')
-images_with_potential_viruses = tuple(virus_scan_images(image_references))
+images_with_potential_viruses = tuple(
+  virus_scan_images(image_references, '${clam_av.clamav_cfg_name()}')
+)
 if images_with_potential_viruses:
   util.warning('Potential viruses found:')
   util.warning('\n'.join(map(str, images_with_potential_viruses)))
