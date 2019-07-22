@@ -76,7 +76,7 @@ class ClamAVClient(object):
         '''
         logger.debug(f'scanning container image {image_reference}')
         for content, path in iter_image_files(image_reference):
-            scan_result = self.scan(content)
+            scan_result = self.sse_scan(content)
             if not scan_result.malware_detected():
                 continue
             else:
