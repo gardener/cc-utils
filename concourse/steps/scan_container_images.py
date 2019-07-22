@@ -19,12 +19,13 @@ import typing
 
 import tabulate
 
-import clamav.util
+import ccc.clamav
 import mailutil
 import protecode.util
 
 from concourse.model.traits.image_scan import Notify
 from product.model import ComponentName, UploadResult
+from clamav.model import ClamAVError
 
 
 from concourse.steps import images
@@ -183,12 +184,19 @@ def mail_recipients(
         raise NotImplementedError()
 
 
-def virus_scan_images(image_references: typing.Iterable[str]):
+def virus_scan_images(image_references: typing.Iterable[str], clamav_config_name: str):
+    clamav_client = ccc.clamav.client_from_config_name(clamav_config_name)
     for image_reference in image_references:
-        status, signature = clamav.util.scan_container_image(image_reference=image_reference)
-        if clamav.util.result_ok(status=status, signature=signature):
-            continue
-        yield (image_reference, f'{status}: {signature}')
+        try:
+            scan_result, _ = clamav_client.scan_container_image(image_reference=image_reference)
+            if not scan_result.malware_detected():
+                continue
+            yield (image_reference, f'Malware detected: {scan_result.virus_signature()}')
+        except ClamAVError as e:
+            if e.error_code() == 422:
+                yield (image_reference, f'Scan aborted: {e.error_message()}')
+            else:
+                raise e
 
 
 def protecode_results_table(protecode_cfg, upload_results: typing.Iterable[UploadResult]):
