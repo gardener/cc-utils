@@ -47,6 +47,9 @@ class ClamAVConfig(NamedModelElement):
             '',
         ))
 
+    def clamd_config_values(self):
+        return self.raw.get('clamd_config_values', {})
+
     def container_registry_config_name(self):
         return self.raw.get('container_registry')
 
@@ -68,4 +71,5 @@ class ClamAVConfig(NamedModelElement):
         yield from super()._optional_attributes()
         yield from [
             'container_registry',
+            'clamd_config_values',
         ]
