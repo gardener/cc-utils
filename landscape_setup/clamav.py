@@ -64,6 +64,7 @@ def create_clamav_helm_values(clamav_cfg_name):
             'servicePort': clamav_config.service_port(),
             'imageReference': clamav_image_config.image_name(),
             'imageTag': clamav_image_config.image_tag(),
+            'configValues': clamav_config.clamd_config_values(),
         },
         'freshClam': {
             'imageReference': freshclam_image_config.image_name(),
