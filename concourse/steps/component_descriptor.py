@@ -51,6 +51,12 @@ def component_diff_since_last_release(
         (component_name, last_release_version)
     )
 
+    if not last_released_component:
+        util.fail(
+            f"Component '{component_name}' not found in the component "
+            f"descriptor of the last release ({last_release_version})."
+        )
+
     diff = diff_components(
         left_components=component.dependencies().components(),
         right_components=last_released_component.dependencies().components(),
