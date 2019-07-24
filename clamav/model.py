@@ -132,14 +132,19 @@ class ClamAVScanEventTypes(enum.Enum):
     RESULT = 'result'
 
 
-class ClamAVError(ModelBase):
-    def status_code(self) -> int:
-        '''Return the HTTP/1.1 status code that was given by ClamAV
-        '''
-        return self.raw['code']
+class ClamAVError(Exception):
+    def __init__(self, error_code: int, error_message: str):
+        super().__init__(
+            f'Received error response from ClamAV: {error_code} - {error_message}'
+        )
+        self._error_code = error_code
+        self._error_message = error_message
 
-    def message(self) -> str:
-        return self.raw['message']
+    def error_code(self) -> int:
+        return self._error_code
+
+    def error_message(self) -> str:
+        return self._error_message
 
 
 class ClamAVScanEventClient(object):
@@ -152,7 +157,7 @@ class ClamAVScanEventClient(object):
     def __init__(self, response):
         self.client = sseclient.SSEClient(response)
 
-    def process_events(self) -> typing.Union[ClamAVScanResult, ClamAVError]:
+    def process_events(self) -> ClamAVScanResult:
         '''Process the events sent by our ClamAV service
 
         Our ClamAV service will send exactly one SSE-event which is of one of two types:
@@ -160,12 +165,13 @@ class ClamAVScanEventClient(object):
                 Code) and a message, in case an error was encountered when scanning.
             2. An event of type 'result' containing the scan result in its data.
 
-        This method blocks until an event is received and then returns an instance of the
-        corresponding model class.
+        This method blocks until an event is received (i.e.: the scan is completed) and then either
+        returns the scan result or raises a ClamAVError to signal that an error occurred.
         '''
         for event in self.client.events():
             event_type = ClamAVScanEventTypes(event.event)
+            event_data = json.loads(event.data)
             if event_type is ClamAVScanEventTypes.ERROR:
-                return ClamAVError(json.loads(event.data))
+                raise ClamAVError(event_data['code'], event_data['message'])
             if event_type is ClamAVScanEventTypes.RESULT:
-                return ClamAVScanResult(json.loads(event.data))
+                return ClamAVScanResult(event_data)
