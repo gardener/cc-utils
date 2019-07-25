@@ -81,3 +81,4 @@ class ClamAVClient(object):
                 continue
             else:
                 return scan_result, path
+        return ClamAVScanResult({'malwareDetected':False}), ''
