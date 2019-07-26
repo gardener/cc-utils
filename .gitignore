@@ -1,5 +1,5 @@
 *.pyc
 .*.swp
+.vscode/
 __pycache__/
 tmp/
-.vscode/
