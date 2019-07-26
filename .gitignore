@@ -2,4 +2,6 @@
 .*.swp
 .vscode/
 __pycache__/
+build/
+dist/
 tmp/
