@@ -25,7 +25,6 @@ def monitoring_required_dict():
             'namespace': 'foo',
             'kube_state_metrics': 'foo',
             'postgresql_exporter': 'foo',
-            'node_exporter': 'foo',
             'tls_config': 'foo',
             'tls_secret_name': 'foo',
             'ingress_host': 'foo',
