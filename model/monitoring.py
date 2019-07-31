@@ -25,7 +25,6 @@ class CCMonitoringConfig(NamedModelElement):
             'namespace',
             'kube_state_metrics',
             'postgresql_exporter',
-            'node_exporter',
             'tls_config',
             'tls_secret_name',
             'ingress_host',
@@ -42,9 +41,6 @@ class CCMonitoringConfig(NamedModelElement):
 
     def postgresql_exporter(self):
         return PostgresqlExporter(raw_dict=self.raw['postgresql_exporter'])
-
-    def node_exporter(self):
-        return NodeExporter(raw_dict=self.raw['node_exporter'])
 
     def tls_config(self):
         return self.raw.get('tls_config')
@@ -85,14 +81,3 @@ class PostgresqlExporter(ModelBase):
 
     def service_port(self):
         return self.raw.get('service_port')
-
-
-class NodeExporter(ModelBase):
-    def service_name(self):
-        return self.raw.get('service_name')
-
-    def service_port(self):
-        return self.raw.get('service_port')
-
-    def namespace(self):
-        return self.raw.get('namespace')

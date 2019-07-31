@@ -95,25 +95,14 @@ def deploy_monitoring_landscape(
         postgresql_helm_values,
     )
 
-    # deploy ingresses for kube-state-metrics, postgresql exporter and node-exporter
+    # deploy ingresses for kube-state-metrics, postgresql exporter
     monitoring_tls_secret_name = monitoring_cfg.tls_secret_name()
-    node_exporter_namespace = monitoring_cfg.node_exporter().namespace()
 
     info('Creating tls-secret in monitoring namespace for kube-state-metrics and postgresql...')
     create_tls_secret(
         tls_config=tls_config,
         tls_secret_name=monitoring_tls_secret_name,
         namespace=monitoring_namespace,
-        basic_auth_cred=BasicAuthCred(
-            user=monitoring_cfg.basic_auth_user(),
-            password=monitoring_cfg.basic_auth_pwd()
-        )
-    )
-    info('Creating tls-secret in kube-system namespace for node-exporter...')
-    create_tls_secret(
-        tls_config=tls_config,
-        tls_secret_name=monitoring_tls_secret_name,
-        namespace=node_exporter_namespace,
         basic_auth_cred=BasicAuthCred(
             user=monitoring_cfg.basic_auth_user(),
             password=monitoring_cfg.basic_auth_pwd()
@@ -140,16 +129,6 @@ def deploy_monitoring_landscape(
         service_port=monitoring_cfg.postgresql_exporter().service_port(),
     )
     ingress_helper.replace_or_create_ingress(monitoring_namespace, ingress)
-
-    info('Create ingress for node-exporter')
-    ingress = generate_monitoring_ingress_object(
-        secret_name=monitoring_tls_secret_name,
-        namespace=node_exporter_namespace,
-        hosts=[monitoring_cfg.ingress_host(), monitoring_cfg.external_url()],
-        service_name=monitoring_cfg.node_exporter().service_name(),
-        service_port=monitoring_cfg.node_exporter().service_port(),
-    )
-    ingress_helper.replace_or_create_ingress(node_exporter_namespace, ingress)
 
 
 def generate_monitoring_ingress_object(
