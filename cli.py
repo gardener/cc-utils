@@ -1,1 +1,1 @@
-cli/cli-gen.py
+cli/gardener_ci/cli_gen.py
