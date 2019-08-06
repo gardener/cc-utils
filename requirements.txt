@@ -13,7 +13,6 @@ deprecated<2.0.0
 elasticsearch<8.0.0
 ensure<1.0.0
 flake8<4.0.0
-gevent<2.0.0
 github3.py<2.0.0
 html2text<2019.0.0
 jira<3.0.0
