@@ -60,7 +60,7 @@ def main():
     parser = argparse.ArgumentParser(formatter_class=FORMATTER_CLASS)
     add_global_args(parser)
     sub_command_parsers = parser.add_subparsers()
-    cli_module_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cli')
+    cli_module_dir = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
     sys.path.insert(0, cli_module_dir)
     for _, module_name, _ in pkgutil.iter_modules([cli_module_dir]):
     # skip own module name
