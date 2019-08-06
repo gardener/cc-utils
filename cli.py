@@ -1,1 +1,1 @@
-cli/cli.py
+cli/cli-gen.py
