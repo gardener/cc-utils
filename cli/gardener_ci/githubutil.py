@@ -23,7 +23,6 @@ from github.util import (
     GitHubRepoBranch,
     _add_user_to_team,
     _add_all_repos_to_team,
-    _create_github_api_object,
     _create_team,
     find_greatest_github_release_version,
     outdated_draft_releases,
@@ -32,6 +31,7 @@ from github.util import (
 from github.release_notes.util import (
     ReleaseNotes,
 )
+import ccc.github
 
 
 def assign_github_team_to_repo(
@@ -55,7 +55,7 @@ def assign_github_team_to_repo(
     # overwrite auth_token
     github_cfg.credentials().set_auth_token(auth_token=auth_token)
 
-    github = _create_github_api_object(
+    github = ccc.github.github_api(
         github_cfg=github_cfg,
     )
 

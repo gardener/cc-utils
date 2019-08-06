@@ -14,36 +14,30 @@
 # limitations under the License.
 
 import datetime
+import deprecated
 import enum
 import functools
 import io
 import re
 import semver
 import sys
-import urllib.parse
 from pydash import _
 
 import requests
 
 import github3
-from github3.github import GitHub, GitHubEnterprise
+from github3.github import GitHub
 from github3.repos.release import Release
 from github3.exceptions import NotFoundError, ForbiddenError
 from github3.orgs import Team
 
+import ccc.github
 import util
 import product.model
 import version
 
-from http_requests import mount_default_adapter, log_stack_trace_information
 from product.model import DependencyBase
 from model.github import GithubConfig
-
-if util._running_on_ci():
-    # log Github API calls to Elastic Search
-    log_github_access = True
-else:
-    log_github_access = False
 
 
 class RepoPermission(enum.Enum):
@@ -109,7 +103,7 @@ class RepositoryHelperBase(object):
             raise ValueError('exactly one of github_api and github_cfg must be given')
 
         if github_cfg:
-            self.github = _create_github_api_object(github_cfg)
+            self.github = ccc.github.github_api(github_cfg)
         else:
             self.github = github_api
 
@@ -503,25 +497,6 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         pull_request.issue().add_labels(*labels)
 
 
-def github_api_ctor(github_url: str, verify_ssl: bool=True):
-    '''returns the appropriate github3.GitHub constructor for the given github URL
-
-    In case github_url does not refer to github.com, the c'tor for GithubEnterprise is
-    returned with the url argument preset, thus disburdening users to differentiate
-    between github.com and non-github.com cases.
-    '''
-    parsed = urllib.parse.urlparse(github_url)
-    if parsed.scheme:
-        hostname = parsed.hostname
-    else:
-        raise ValueError('failed to parse url: ' + str(github_url))
-
-    if hostname.lower() == 'github.com':
-        return GitHub
-    else:
-        return functools.partial(GitHubEnterprise, url=github_url, verify=verify_ssl)
-
-
 @functools.lru_cache()
 def github_cfg_for_hostname(cfg_factory, host_name, require_labels=('ci',)): # XXX unhardcode label
     util.not_none(host_name)
@@ -541,29 +516,9 @@ def github_cfg_for_hostname(cfg_factory, host_name, require_labels=('ci',)): # X
     raise RuntimeError(f'no github_cfg for {host_name} with {require_labels}')
 
 
-@functools.lru_cache()
-def _create_github_api_object(
-    github_cfg: 'GithubConfig',
-):
-    github_url = github_cfg.http_url()
-    github_auth_token = github_cfg.credentials().auth_token()
-
-    verify_ssl = github_cfg.tls_validation()
-
-    github_ctor = github_api_ctor(github_url=github_url, verify_ssl=verify_ssl)
-    github_api = github_ctor(
-        token=github_auth_token,
-    )
-
-    if not github_api:
-        util.fail("Could not connect to GitHub-instance {url}".format(url=github_url))
-
-    session = mount_default_adapter(github_api.session)
-
-    if log_github_access:
-        session.hooks['response'] = log_stack_trace_information
-
-    return github_api
+@deprecated.deprecated
+def _create_github_api_object(github_cfg):
+    return ccc.github.github_api(github_cfg=github_cfg)
 
 
 def branches(
@@ -571,7 +526,7 @@ def branches(
     repo_owner: str,
     repo_name: str,
 ):
-    github_api = _create_github_api_object(github_cfg=github_cfg)
+    github_api = ccc.github.github_api(github_cfg=github_cfg)
     repo = github_api.repository(repo_owner, repo_name)
     return list(map(lambda r: r.name, repo.branches()))
 
@@ -581,7 +536,7 @@ def retrieve_email_addresses(
     github_users: [str],
     out_file: str=None
 ):
-    github = _create_github_api_object(github_cfg=github_cfg)
+    github = ccc.github.github_api(github_cfg=github_cfg)
 
     def retrieve_email(username: str):
         user = github.user(username)

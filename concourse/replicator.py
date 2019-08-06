@@ -36,7 +36,6 @@ from github.util import (
     github_cfg_for_hostname,
     GitHubRepositoryHelper,
     GitHubRepoBranch,
-    _create_github_api_object,
 )
 from github.codeowners import CodeownersEnumerator, CodeOwnerEntryResolver
 
@@ -49,6 +48,7 @@ from concourse.enumerator import (
 )
 
 from concourse import client
+import ccc.github
 import concourse.client.model
 
 
@@ -390,7 +390,7 @@ class ReplicationResultProcessor(object):
         definition_descriptor = failed_descriptor.definition_descriptor
         main_repo = definition_descriptor.main_repo
         github_cfg = github_cfg_for_hostname(self._cfg_set, main_repo['hostname'])
-        github_api = _create_github_api_object(github_cfg)
+        github_api = ccc.githubgithub_api(github_cfg)
         repo_owner, repo_name = main_repo['path'].split('/')
 
         githubrepobranch = GitHubRepoBranch(

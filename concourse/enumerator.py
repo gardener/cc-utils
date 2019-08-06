@@ -33,9 +33,10 @@ from util import (
     not_empty,
     not_none,
 )
-from github.util import _create_github_api_object, github_cfg_for_hostname
+from github.util import github_cfg_for_hostname
 from model.base import ModelBase, NamedModelElement
 from concourse.factory import RawPipelineDefinitionDescriptor
+import ccc.github
 
 
 class DefinitionDescriptorPreprocessor(object):
@@ -286,7 +287,7 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
             cfg_factory=self.cfg_set,
             host_name=self._repository_url.hostname,
         )
-        github_api = _create_github_api_object(github_cfg=github_cfg)
+        github_api = ccc.github.github_api(github_cfg=github_cfg)
         github_org, github_repo = self._repository_url.path.lstrip('/').split('/')
         repository = github_api.repository(github_org, github_repo)
 
@@ -311,7 +312,7 @@ class GithubOrganisationDefinitionEnumerator(GithubDefinitionEnumeratorBase):
             github_org_name = github_org_cfg.org_name()
             info('scanning github organisation {gho}'.format(gho=github_org_name))
 
-            github_api = _create_github_api_object(github_cfg)
+            github_api = ccc.github.github_api(github_cfg)
             github_org = github_api.organization(github_org_name)
 
             scan_repository_for_definitions = functools.partial(

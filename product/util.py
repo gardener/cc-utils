@@ -22,8 +22,9 @@ import semver
 import typing
 import yaml
 
+import ccc.github
 import version
-from github.util import GitHubRepositoryHelper, github_api_ctor
+from github.util import GitHubRepositoryHelper
 from util import not_none, check_type, FluentIterable
 from .model import (
     COMPONENT_DESCRIPTOR_ASSET_NAME,
@@ -67,7 +68,7 @@ class ResolverBase(object):
         not_none(host_name)
         # hard-code schema to https
         url = 'https://' + host_name
-        ctor = github_api_ctor(github_url=url)
+        ctor = ccc.github.github_api_ctor(github_url=url)
         return ctor()
 
     def _repository_helper(self, component_reference):

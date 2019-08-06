@@ -15,7 +15,6 @@
 
 import github.webhook
 
-from github.util import _create_github_api_object
 from model.concourse import (
     JobMappingSet,
 )
@@ -23,6 +22,7 @@ from model.webhook_dispatcher import (
     WebhookDispatcherDeploymentConfig,
 )
 from util import info, warning, ctx, create_url_from_attributes
+import ccc.github
 
 
 def sync_org_webhooks(whd_deployment_cfg: WebhookDispatcherDeploymentConfig,):
@@ -64,7 +64,7 @@ def _enumerate_required_org_webhooks(
         job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
 
         for github_orgname, github_cfg_name in _enumerate_github_org_configs(job_mapping_set):
-            github_api = _create_github_api_object(
+            github_api = ccc.github.github_api(
                 github_cfg=cfg_factory.github(github_cfg_name),
             )
 

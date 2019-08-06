@@ -29,6 +29,7 @@ from util import (
     CliHints,
 )
 from mail import template_mailer as mailer
+import ccc.github
 import github.util
 from github.codeowners import CodeownersEnumerator, CodeOwnerEntryResolver
 import product.model
@@ -207,7 +208,7 @@ def determine_mail_recipients(
     cfg_factory = ctx().cfg_factory()
 
     github_cfg = cfg_factory.github(github_cfg_name)
-    github_api = github.util._create_github_api_object(github_cfg)
+    github_api = ccc.github.github_api(github_cfg)
 
     yield from determine_head_commit_recipients(src_dirs)
 
@@ -238,7 +239,7 @@ def _codeowners_parser_from_component_name(component_name: str, branch_name='mas
         cfg_factory=ctx().cfg_factory(),
         host_name=component_name.github_host(),
     )
-    github_api = github.util._create_github_api_object(github_cfg=github_cfg)
+    github_api = ccc.github.github_api(github_cfg=github_cfg)
 
     githubrepobranch = github.util.GitHubRepoBranch(
         github_config=github_cfg,
