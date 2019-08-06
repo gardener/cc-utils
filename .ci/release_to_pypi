@@ -20,3 +20,14 @@ passwd="$(${model_element_cmd} --key credentials.passwd)"
 
 # upload to pypi
 twine upload --user "${username}" --password "${passwd}" dist/*
+
+
+###############################
+# gardener-cicd-cli
+
+cli_dir="${repo_dir}/cli"
+cd "${cli_dir}"
+python3 "${cli_dir}/setup.py" sdist bdist_wheel
+
+# upload to pypi
+twine upload --user "${username}" --password "${passwd}" dist/*
