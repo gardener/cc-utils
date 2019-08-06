@@ -66,6 +66,8 @@ def main():
     # skip own module name
         if module_name == os.path.splitext(os.path.basename(__file__))[0]:
             continue
+        if module_name == 'setup': # skip setup.py
+            continue
         add_module(module_name, sub_command_parsers)
     if len(sys.argv) == 1:
         parser.print_usage()
