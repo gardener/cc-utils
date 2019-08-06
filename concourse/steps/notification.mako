@@ -96,7 +96,7 @@ notify_cfg = {'email': email_cfg}
 email_cfg['subject'] = email_cfg['subject'] or '${subject}'
 
 main_repo_github_cfg = cfg_set.github("${job_variant.main_repository().cfg_name() or default_github_cfg_name}")
-main_repo_github_api = github.util._create_github_api_object(main_repo_github_cfg)
+main_repo_github_api = ccc.github.github_api(main_repo_github_cfg)
 
 if 'component_diff_owners' in ${on_error_cfg.recipients()}:
     component_diff_path = os.path.join('component_descriptor_dir', 'dependencies.diff')

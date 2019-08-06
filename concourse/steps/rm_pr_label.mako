@@ -13,11 +13,11 @@ pr_id_path = main_repo.pr_id_path()
 %>
 % if require_label:
 from util import ctx, info, warning
-from github.util import _create_github_api_object
 from github3.exceptions import NotFoundError
+import ccc.github
 
 github_cfg = ctx().cfg_factory().github(cfg_name='${github_cfg.name()}')
-github_api = _create_github_api_object(github_cfg)
+github_api = ccc.githubgithub_api(github_cfg)
 
 # assumption: only main repository may be PR-repo
 pr_id_path = '${pr_id_path}'
