@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from gevent.pywsgi import WSGIServer
+import bjoern
 
 import whd.server as whd_server
 import util
@@ -38,7 +38,6 @@ def start_whd(
     any_interface = '0.0.0.0'
 
     if production:
-        server = WSGIServer((any_interface, port), app, log = None)
-        server.serve_forever()
+        bjoern.run(app, any_interface, port)
     else:
         app.run(debug=True, port=port, host=any_interface)
