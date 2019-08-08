@@ -193,7 +193,7 @@
 <tbody>
 <tr class="row-even"><td><p>filters</p></td>
 <td><p>no</p></td>
-<td><p>{‘include_image_references’: (), ‘exclude_image_references’: (), ‘include_image_names’: (), ‘exclude_image_names’: ()}</p></td>
+<td><p>{‘include_image_references’: (), ‘exclude_image_references’: (), ‘include_image_names’: (), ‘exclude_image_names’: (), ‘include_component_names’: (), ‘exclude_component_names’: ()}</p></td>
 <td><p>FilterCfg</p></td>
 <td><p>optional filters to restrict container images to process</p></td>
 </tr>
@@ -263,6 +263,21 @@ processed. By default, all image references are considered.</p></td>
 <td><p>a list of regular expressions. If configured, matching image names are
 exempted from processing. Has precedence over include_image_references.
 By default, no image references are excluded.</p></td>
+</tr>
+<tr class="row-even"><td><p>include_component_names</p></td>
+<td><p>no</p></td>
+<td><p>()</p></td>
+<td><p>str</p></td>
+<td><p>a list of regular expressions. If configured, only image references from components
+whose name matches are considered.</p></td>
+</tr>
+<tr class="row-odd"><td><p>exclude_component_names</p></td>
+<td><p>no</p></td>
+<td><p>()</p></td>
+<td><p>str</p></td>
+<td><p>a list of regular expressions. If configured, image references from components whose
+name matches are excluded from further processing. Has precedence over
+include_component_names.</p></td>
 </tr>
 </tbody>
 </table>
