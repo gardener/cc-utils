@@ -30,6 +30,7 @@ else:
 import sys
 import os
 
+import ccc.github
 import github
 import util
 import mailutil
