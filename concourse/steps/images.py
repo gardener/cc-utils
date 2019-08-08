@@ -58,3 +58,34 @@ def component_name_filter(include_regexes=(), exclude_regexes=()):
         exclude_regexes=exclude_regexes,
         value_transformation=to_component_name,
     )
+
+
+def create_composite_filter_function(
+  include_image_references,
+  exclude_image_references,
+  include_image_names,
+  exclude_image_names,
+  include_component_names,
+  exclude_component_names,
+):
+    image_reference_filter_function = image_reference_filter(
+        include_image_references,
+        exclude_image_references,
+    )
+    image_name_filter_function = image_name_filter(
+        include_image_names,
+        exclude_image_names,
+    )
+    component_name_filter_function = component_name_filter(
+        include_component_names,
+        exclude_component_names,
+    )
+
+    def filter_function(component, container_image):
+        return (
+            image_reference_filter_function(container_image)
+            and image_name_filter_function(container_image)
+            and component_name_filter_function(component)
+        )
+
+    return filter_function
