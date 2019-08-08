@@ -16,8 +16,10 @@
 import functools
 import urllib.parse
 
+import cachecontrol
 import github3
 import github3.github
+import github3.session
 
 import http_requests
 import model
@@ -42,10 +44,28 @@ def github_api_ctor(github_url: str, verify_ssl: bool=True):
     else:
         raise ValueError('failed to parse url: ' + str(github_url))
 
+    # retries and caching
+    session = github3.session.GitHubSession()
+    session = http_requests.mount_default_adapter(session)
+    session = cachecontrol.CacheControl(
+        session,
+        cache_etags=True,
+    )
+    if log_github_access:
+        session.hooks['response'] = http_requests.log_stack_trace_information
+
     if hostname.lower() == 'github.com':
-        return github3.github.GitHub
+        return functools.partial(
+            github3.github.GitHub,
+            session=session,
+        )
     else:
-        return functools.partial(github3.github.GitHubEnterprise, url=github_url, verify=verify_ssl)
+        return functools.partial(
+            github3.github.GitHubEnterprise,
+            url=github_url,
+            verify=verify_ssl,
+            session=session,
+        )
 
 
 @functools.lru_cache()
@@ -64,10 +84,5 @@ def github_api(
 
     if not github_api:
         util.fail("Could not connect to GitHub-instance {url}".format(url=github_url))
-
-    session = http_requests.mount_default_adapter(github_api.session)
-
-    if log_github_access:
-        session.hooks['response'] = http_requests.log_stack_trace_information
 
     return github_api
