@@ -73,7 +73,7 @@ for from_ref, to_ref in executor.map(reupload_fun, image_references):
 protecode.util.download_images(
   component_descriptor=component_descriptor,
   upload_registry_prefix=upload_registry_prefix,
-  image_reference_filter=image_filter,
+  image_reference_filter=(lambda _, container_image: image_filter(container_image)),
   parallel_jobs=parallel_jobs,
 )
 </%def>

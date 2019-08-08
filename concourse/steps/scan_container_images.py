@@ -281,7 +281,7 @@ def protecode_scan(
         protecode_group_id=protecode_group_id,
         parallel_jobs=parallel_jobs,
         cve_threshold=cve_threshold,
-        image_reference_filter=image_filter,
+        image_reference_filter=(lambda _, container_image: image_filter(container_image)),
         reference_group_ids=reference_protecode_group_ids,
     )
 
