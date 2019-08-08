@@ -43,7 +43,7 @@ def upload_images(
     cve_threshold=7,
     ignore_if_triaged=True,
     processing_mode=ProcessingMode.UPLOAD_IF_CHANGED,
-    image_reference_filter=lambda _: True,
+    image_reference_filter=(lambda component, container_image: True),
     reference_group_ids=(),
 ) -> typing.Iterable[typing.Tuple[UploadResult, int]]:
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
@@ -76,7 +76,7 @@ def upload_images(
 def download_images(
     component_descriptor: ComponentDescriptor,
     upload_registry_prefix: str,
-    image_reference_filter,
+    image_reference_filter=(lambda component, container_image: True),
     parallel_jobs=8, # eight is a good number
 ):
     '''
@@ -87,12 +87,12 @@ def download_images(
     retrieved occasionally (relevant timeout being roughly 4w).
     '''
     image_refs = [
-        ci.image_reference()
-        for _, ci
+        container_image.image_reference()
+        for component, container_image
         in product.util._enumerate_effective_images(
             component_descriptor=component_descriptor,
-            image_reference_filter=image_reference_filter,
         )
+        if image_reference_filter(component, container_image)
     ]
 
     # XXX deduplicate this again (copied from product/scanning.py)
@@ -220,15 +220,15 @@ def _create_task(protecode_util, container_image, component):
 def _create_tasks(product_model, protecode_util, image_reference_filter):
     for component, container_image in product.util._enumerate_effective_images(
         component_descriptor=product_model,
-        image_reference_filter=image_reference_filter,
     ):
-        verbose('processing container image: {c}:{cir}'.format(
-            c=component.name(),
-            cir=container_image.image_reference(),
+        if image_reference_filter(component, container_image):
+            verbose('processing container image: {c}:{cir}'.format(
+                c=component.name(),
+                cir=container_image.image_reference(),
+                )
             )
-        )
-        yield _create_task(
-                protecode_util=protecode_util,
-                container_image=container_image,
-                component=component,
-        )
+            yield _create_task(
+                    protecode_util=protecode_util,
+                    container_image=container_image,
+                    component=component,
+            )
