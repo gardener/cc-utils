@@ -11,7 +11,7 @@ fi
 
 src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
 
-if pytest "${src_dir}"; then
+if PYTHONPATH="${src_dir}" pytest "${src_dir}"; then
     echo 'Unittest executions succeeded'
     exit 0
 else
