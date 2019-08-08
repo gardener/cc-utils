@@ -19,11 +19,42 @@ import product.model
 
 
 def image_reference_filter(include_regexes=(), exclude_regexes=()):
-    def image_to_str(image_reference: product.model.ContainerImage):
-        return image_reference.image_reference()
+    if not include_regexes and not exclude_regexes:
+        return lambda container_image: True
+
+    def to_image_reference(container_image: product.model.ContainerImage):
+        return container_image.image_reference()
 
     return reutil.re_filter(
         include_regexes=include_regexes,
         exclude_regexes=exclude_regexes,
-        value_transformation=image_to_str,
+        value_transformation=to_image_reference,
+    )
+
+
+def image_name_filter(include_regexes=(), exclude_regexes=()):
+    if not include_regexes and not exclude_regexes:
+        return lambda container_image: True
+
+    def to_logical_name(container_image: product.model.ContainerImage):
+        return container_image.name()
+
+    return reutil.re_filter(
+        include_regexes=include_regexes,
+        exclude_regexes=exclude_regexes,
+        value_transformation=to_logical_name,
+    )
+
+
+def component_name_filter(include_regexes=(), exclude_regexes=()):
+    if not include_regexes and not exclude_regexes:
+        return lambda component: True
+
+    def to_component_name(component):
+        return component.name()
+
+    return reutil.re_filter(
+        include_regexes=include_regexes,
+        exclude_regexes=exclude_regexes,
+        value_transformation=to_component_name,
     )
