@@ -17,7 +17,7 @@ from github3.exceptions import NotFoundError
 import ccc.github
 
 github_cfg = ctx().cfg_factory().github(cfg_name='${github_cfg.name()}')
-github_api = ccc.github_api(github_cfg)
+github_api = ccc.github.github_api(github_cfg)
 
 # assumption: only main repository may be PR-repo
 pr_id_path = '${pr_id_path}'

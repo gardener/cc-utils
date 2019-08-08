@@ -390,7 +390,7 @@ class ReplicationResultProcessor(object):
         definition_descriptor = failed_descriptor.definition_descriptor
         main_repo = definition_descriptor.main_repo
         github_cfg = github_cfg_for_hostname(self._cfg_set, main_repo['hostname'])
-        github_api = ccc.github_api(github_cfg)
+        github_api = ccc.github.github_api(github_cfg)
         repo_owner, repo_name = main_repo['path'].split('/')
 
         githubrepobranch = GitHubRepoBranch(
