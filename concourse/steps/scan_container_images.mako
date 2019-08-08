@@ -38,6 +38,15 @@ cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
 component_descriptor = parse_component_descriptor()
 
+filter_function = create_composite_filter_function(
+  include_image_references=${filter_cfg.include_image_references()},
+  exclude_image_references=${filter_cfg.exclude_image_references()},
+  include_image_names=${filter_cfg.include_image_names()},
+  exclude_image_names=${filter_cfg.exclude_image_names()},
+  include_component_names=${filter_cfg.include_component_names()},
+  exclude_component_names=${filter_cfg.exclude_component_names()},
+)
+
 protecode_results = ()
 % if protecode_scan:
   % if not protecode_scan.protecode_cfg_name():
@@ -49,17 +58,27 @@ protecode_cfg = cfg_factory.protecode('${protecode_scan.protecode_cfg_name()}')
 protecode_group_id = ${protecode_scan.protecode_group_id()}
 protecode_group_url = f'{protecode_cfg.api_url()}/group/{protecode_group_id}/'
 
+print_protecode_info_table(
+  protecode_group_id = protecode_group_id,
+  reference_protecode_group_ids = ${protecode_scan.reference_protecode_group_ids()},
+  protecode_group_url = protecode_group_url,
+  include_image_references=${filter_cfg.include_image_references()},
+  exclude_image_references=${filter_cfg.exclude_image_references()},
+  include_image_names=${filter_cfg.include_image_names()},
+  exclude_image_names=${filter_cfg.exclude_image_names()},
+  include_component_names=${filter_cfg.include_component_names()},
+  exclude_component_names=${filter_cfg.exclude_component_names()},
+)
+
 protecode_results, license_report = protecode_scan(
   protecode_cfg=protecode_cfg,
   protecode_group_id = protecode_group_id,
-  protecode_group_url = protecode_group_url,
   product_descriptor = component_descriptor,
   reference_protecode_group_ids = ${protecode_scan.reference_protecode_group_ids()},
   processing_mode = ProcessingMode('${protecode_scan.processing_mode()}'),
   parallel_jobs=${protecode_scan.parallel_jobs()},
   cve_threshold=${protecode_scan.cve_threshold()},
-  include_image_references=${filter_cfg.include_image_references()},
-  exclude_image_references=${filter_cfg.exclude_image_references()},
+  image_reference_filter=filter_function,
 )
 % endif
 
@@ -67,18 +86,13 @@ images_with_potential_viruses = ()
 
 % if clam_av:
 
-image_filter = image_reference_filter(
-  include_regexes=${filter_cfg.include_image_references()},
-  exclude_regexes=${filter_cfg.exclude_image_references()},
-)
-
 image_references = [
-  ci.image_reference()
-  for _, ci
+  container_image.image_reference()
+  for component, container_image
   in product.util._enumerate_images(
     component_descriptor=component_descriptor,
-    image_reference_filter=image_filter,
   )
+  if filter_function(component, container_image)
 ]
 
 util.info('running virus scan for all container images')

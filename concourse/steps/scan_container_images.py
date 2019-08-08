@@ -28,9 +28,6 @@ from product.model import ComponentName, UploadResult
 from clamav.model import ClamAVError
 
 
-from concourse.steps import images
-
-
 class MailRecipients(object):
     def __init__(
         self,
@@ -256,23 +253,15 @@ def protecode_scan(
     processing_mode,
     parallel_jobs: int,
     cve_threshold,
-    include_image_references,
-    exclude_image_references,
+    image_reference_filter,
 ):
     # print configuration
     table_data = (
         ('Protecode target group id', str(protecode_group_id)),
         ('Protecode group URL', protecode_group_url),
         ('Protecode reference group IDs', reference_protecode_group_ids),
-        ('Image Filter (include)', include_image_references),
-        ('Image Filter (exclude)', exclude_image_references),
     )
     print(tabulate.tabulate(table_data))
-
-    image_filter = images.image_reference_filter(
-        include_regexes=include_image_references,
-        exclude_regexes=exclude_image_references,
-    )
 
     protecode_results, license_report = protecode.util.upload_images(
         protecode_cfg=protecode_cfg,
@@ -281,7 +270,7 @@ def protecode_scan(
         protecode_group_id=protecode_group_id,
         parallel_jobs=parallel_jobs,
         cve_threshold=cve_threshold,
-        image_reference_filter=(lambda _, container_image: image_filter(container_image)),
+        image_reference_filter=image_reference_filter,
         reference_group_ids=reference_protecode_group_ids,
     )
 
