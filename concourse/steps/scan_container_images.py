@@ -244,10 +244,35 @@ def create_license_report(license_report):
     return license_lines
 
 
+def print_protecode_info_table(
+    protecode_group_url: str,
+    protecode_group_id: int,
+    reference_protecode_group_ids: typing.List[int],
+    include_image_references: typing.List[str],
+    exclude_image_references: typing.List[str],
+    include_image_names: typing.List[str],
+    exclude_image_names: typing.List[str],
+    include_component_names: typing.List[str],
+    exclude_component_names: typing.List[str],
+):
+    headers = ('Protecode Scan Configuration', '')
+    entries = (
+        ('Protecode target group id', str(protecode_group_id)),
+        ('Protecode group URL', protecode_group_url),
+        ('Protecode reference group IDs', reference_protecode_group_ids),
+        ('Image reference filter (include)', include_image_references),
+        ('Image reference filter (exclude)', exclude_image_references),
+        ('Image name filter (include)', include_image_names),
+        ('Image name filter (exclude)', exclude_image_names),
+        ('Component name filter (include)', include_component_names),
+        ('Component name filter (exclude)', exclude_component_names),
+    )
+    print(tabulate.tabulate(entries, headers=headers))
+
+
 def protecode_scan(
     protecode_cfg,
     protecode_group_id: int,
-    protecode_group_url: str,
     reference_protecode_group_ids,
     product_descriptor,
     processing_mode,
@@ -255,14 +280,6 @@ def protecode_scan(
     cve_threshold,
     image_reference_filter,
 ):
-    # print configuration
-    table_data = (
-        ('Protecode target group id', str(protecode_group_id)),
-        ('Protecode group URL', protecode_group_url),
-        ('Protecode reference group IDs', reference_protecode_group_ids),
-    )
-    print(tabulate.tabulate(table_data))
-
     protecode_results, license_report = protecode.util.upload_images(
         protecode_cfg=protecode_cfg,
         product_descriptor=product_descriptor,
