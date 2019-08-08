@@ -48,18 +48,22 @@ component_descriptor_path = os.path.join(
 
 component_descriptor = parse_component_descriptor()
 
-image_filter = image_reference_filter(
-  include_regexes=${filter_cfg.include_image_references()},
-  exclude_regexes=${filter_cfg.exclude_image_references()},
+filter_function = create_composite_filter_function(
+  include_image_references=${filter_cfg.include_image_references()},
+  exclude_image_references=${filter_cfg.exclude_image_references()},
+  include_image_names=${filter_cfg.include_image_names()},
+  exclude_image_names=${filter_cfg.exclude_image_names()},
+  include_component_names=${filter_cfg.include_component_names()},
+  exclude_component_names=${filter_cfg.exclude_component_names()},
 )
 
 image_references = [
   ci.image_reference()
-  for _, ci
+  for component, container_image
   in product.util._enumerate_effective_images(
     component_descriptor=component_descriptor,
-    image_reference_filter=image_filter,
   )
+  if filter_function(component, container_image)
 ]
 parallel_jobs = ${upload_trait.parallel_jobs()}
 executor = concurrent.futures.ThreadPoolExecutor(max_workers=parallel_jobs)
@@ -73,7 +77,7 @@ for from_ref, to_ref in executor.map(reupload_fun, image_references):
 protecode.util.download_images(
   component_descriptor=component_descriptor,
   upload_registry_prefix=upload_registry_prefix,
-  image_reference_filter=(lambda _, container_image: image_filter(container_image)),
+  image_reference_filter=filter_function,
   parallel_jobs=parallel_jobs,
 )
 </%def>
