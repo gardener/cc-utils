@@ -220,7 +220,21 @@ class ProtecodeApi(object):
         result = self._get(
             url=url,
         )
-        return [AnalysisResult(p) for p in result.json().get('products')]
+
+        # Protecode checks for substring match only.
+        def full_match(analysis_result_attribs):
+            if not custom_attribs:
+                return True
+            for attrib in custom_attribs:
+                # attrib is guaranteed to be a key in analysis_result_attribs at this point
+                if analysis_result_attribs[attrib] != custom_attribs[attrib]:
+                    return False
+            return True
+
+        return [
+            AnalysisResult(p)
+            for p in result.json().get('products') if full_match(p.get('custom_data'))
+        ]
 
     def set_metadata(self, product_id: int, custom_attribs: dict):
         url = self._routes.product_custom_data(product_id=product_id)
