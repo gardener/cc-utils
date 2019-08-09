@@ -16,7 +16,6 @@
 import datetime
 import deprecated
 import enum
-import functools
 import io
 import re
 import semver
@@ -497,23 +496,13 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         pull_request.issue().add_labels(*labels)
 
 
-@functools.lru_cache()
+@deprecated.deprecated
 def github_cfg_for_hostname(cfg_factory, host_name, require_labels=('ci',)): # XXX unhardcode label
-    util.not_none(host_name)
-
-    if isinstance(require_labels, str):
-        require_labels = tuple(require_labels)
-
-    def has_required_labels(github_cfg):
-        for required_label in require_labels:
-            if required_label not in github_cfg.purpose_labels():
-                return False
-        return True
-
-    for github_cfg in filter(has_required_labels, cfg_factory._cfg_elements(cfg_type_name='github')):
-        if github_cfg.matches_hostname(host_name=host_name):
-            return github_cfg
-    raise RuntimeError(f'no github_cfg for {host_name} with {require_labels}')
+    return ccc.github.github_cfg_for_hostname(
+        host_name=host_name,
+        cfg_factory=cfg_factory,
+        require_labels=require_labels,
+    )
 
 
 @deprecated.deprecated
