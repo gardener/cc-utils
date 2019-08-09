@@ -58,7 +58,7 @@ filter_function = create_composite_filter_function(
 )
 
 image_references = [
-  ci.image_reference()
+  container_image.image_reference()
   for component, container_image
   in product.util._enumerate_effective_images(
     component_descriptor=component_descriptor,
