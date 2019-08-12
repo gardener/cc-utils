@@ -99,3 +99,9 @@ class PullRequestEvent(EventBase):
         return [
             label.get('name') for label in self.raw.get('labels', ())
         ]
+
+    def sender(self):
+        '''
+        the user who performed the event
+        '''
+        return self.raw['sender']
