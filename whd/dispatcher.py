@@ -114,7 +114,7 @@ class GithubWebhookDispatcher(object):
             if len(resources) == 0:
                 continue
 
-            if pr_event.action() is PullRequestAction.OPENED:
+            if pr_event.action() in [PullRequestAction.OPENED, PullRequestAction.SYNCHRONIZE]:
                 self._set_pr_labels(pr_event, resources)
 
             self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
@@ -148,17 +148,31 @@ class GithubWebhookDispatcher(object):
             name,
             github_cfg=github_cfg,
         )
-        if github_helper.is_pr_created_by_org_member(pr_number):
-            app.logger.info(
-                f"New pull request by member of '{owner}' in '{repository_path}' found. "
-                f"Setting required labels '{required_labels}'."
-            )
-            github_helper.add_labels_to_pull_request(pr_number, *required_labels)
-        else:
-            app.logger.debug(
-                f"New pull request by member in '{repository_path}' found, but creator is not "
-                f"member of '{owner}' - will not set required labels."
-            )
+        if pr_event.action() is PullRequestAction.OPENED:
+            if github_helper.is_pr_created_by_org_member(pr_number):
+                app.logger.info(
+                    f"New pull request by member of '{owner}' in '{repository_path}' found. "
+                    f"Setting required labels '{required_labels}'."
+                )
+                github_helper.add_labels_to_pull_request(pr_number, *required_labels)
+            else:
+                app.logger.debug(
+                    f"New pull request by member in '{repository_path}' found, but creator is not "
+                    f"member of '{owner}' - will not set required labels."
+                )
+        elif pr_event.action() is PullRequestAction.SYNCHRONIZE:
+            sender_login = pr_event.sender()['login']
+            if github_helper.is_org_member(organization_name=owner, user_login=sender_login):
+                app.logger.info(
+                    f"Update to pull request #{pr_event.number()} by org member '{sender_login}' "
+                    f" in '{repository_path}' found. Setting required labels '{required_labels}'."
+                )
+                github_helper.add_labels_to_pull_request(pr_number, *required_labels)
+            else:
+                app.logger.debug(
+                    f"Update to pull request #{pr_event.number()} by '{sender_login}' "
+                    f" in '{repository_path}' found. Ignoring, since they are not an org member'."
+                )
 
     def _matching_resources(self, concourse_api, event):
         resources = concourse_api.pipeline_resources(concourse_api.pipelines())
