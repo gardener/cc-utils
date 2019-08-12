@@ -488,12 +488,15 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
     def is_pr_created_by_org_member(self, pull_request_number):
         pull_request = self.repository.pull_request(pull_request_number)
         user_login = pull_request.user.login
-        organization = self.github.organization(self.owner)
-        return organization.is_member(user_login)
+        return self.is_org_member(self.owner, user_login)
 
     def add_labels_to_pull_request(self, pull_request_number, *labels):
         pull_request = self.repository.pull_request(pull_request_number)
         pull_request.issue().add_labels(*labels)
+
+    def is_org_member(self, organization_name, user_login):
+        organization = self.github.organization(organization_name)
+        return organization.is_member(user_login)
 
 
 @deprecated.deprecated
