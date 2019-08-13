@@ -70,15 +70,16 @@ class ProcessingMode(AttribSpecMixin, Enum):
 
 
 class UploadAction(Enum):
-    def __init__(self, upload, rescan, wait):
+    def __init__(self, upload, rescan, wait, transport_triages):
         self.upload = upload
         self.rescan = rescan
         self.wait = wait
+        self.transport_triages = transport_triages
 
-    SKIP = (False, False, False)
-    UPLOAD = (True, False, True)
-    RESCAN = (False, True, True)
-    WAIT_FOR_RESULT = (False, False, True)
+    SKIP = (False, False, False, True)
+    UPLOAD = (True, False, True, True)
+    RESCAN = (False, True, True, True)
+    WAIT_FOR_RESULT = (False, False, True, False)
 
 
 class ProtecodeUtil(object):
@@ -266,6 +267,11 @@ class ProtecodeUtil(object):
             scan_result=scan_result
         )
 
+        # Transport triages early. For the upload-case we need to transport triages only after
+        # the image upload, so we do it later.
+        if upload_action.transport_triages and not upload_action.upload:
+            self._transport_triages(triages, scan_result.product_id())
+
         if not upload_action.upload and not upload_action.rescan and not upload_action.wait:
             # early exit (nothing to do)
             return upload_result(
@@ -300,20 +306,7 @@ class ProtecodeUtil(object):
             finally:
                 image_data_fh.close()
 
-            for triage in triages:
-                if triage.scope() is TriageScope.GROUP:
-                    self._api.add_triage(
-                        triage=triage,
-                        scope=TriageScope.GROUP,
-                        group_id=self._group_id,
-                    )
-                else:
-                    # hard-code scope for now
-                    self._api.add_triage(
-                        triage=triage,
-                        scope=TriageScope.RESULT,
-                        product_id=scan_result.product_id(),
-                    )
+            self._transport_triages(triages, scan_result.product_id())
 
             # rm (now outdated) scan result
             if product_id:
@@ -336,6 +329,22 @@ class ProtecodeUtil(object):
             status=upload_status,
             result=result
         )
+
+    def _transport_triages(self, triages, product_id):
+        for triage in triages:
+            if triage.scope() is TriageScope.GROUP:
+                self._api.add_triage(
+                    triage=triage,
+                    scope=TriageScope.GROUP,
+                    group_id=self._group_id,
+                )
+            else:
+                # hard-code scope for now
+                self._api.add_triage(
+                    triage=triage,
+                    scope=TriageScope.RESULT,
+                    product_id=product_id,
+                )
 
     def _existing_triages(self, analysis_results: AnalysisResult=()):
         if not analysis_results:
