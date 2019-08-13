@@ -15,6 +15,7 @@
 
 from copy import deepcopy
 import collections
+import deprecated
 import github3.exceptions
 import functools
 import itertools
@@ -55,7 +56,7 @@ class ResolverBase(object):
     ):
         self.cfg_factory=cfg_factory
 
-    @functools.lru_cache()
+    @deprecated.deprecated
     def _github_cfg_for_hostname(self, host_name):
         not_none(host_name)
         for github_cfg in self.cfg_factory._cfg_elements(cfg_type_name='github'):
@@ -63,7 +64,7 @@ class ResolverBase(object):
                 return github_cfg
         raise RuntimeError('no github_cfg for {h}'.format(host_name))
 
-    @functools.lru_cache()
+    @deprecated.deprecated
     def _github_api_for_hostname(self, host_name):
         not_none(host_name)
         # hard-code schema to https
@@ -82,18 +83,10 @@ class ResolverBase(object):
                 name=component_reference.github_repo(),
         )
 
-        if self.cfg_factory:
-            return gh_helper_ctor(
-                github_cfg=self._github_cfg_for_hostname(
-                    host_name=component_reference.github_host(),
-                )
-            )
-        else:
-            return gh_helper_ctor(
-                github_api=self._github_api_for_hostname(
-                    host_name=component_reference.github_host(),
-                )
-            )
+        github_cfg = ccc.github.github_cfg_for_hostname(component_reference.github_host())
+        github_api = ccc.github.github_api(github_cfg=github_cfg)
+
+        return gh_helper_ctor(github_api=github_api)
 
 
 class ComponentDescriptorResolver(ResolverBase):
