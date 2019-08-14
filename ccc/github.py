@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import enum
 import functools
 import urllib.parse
 
@@ -31,7 +32,17 @@ else:
     log_github_access = False
 
 
-def github_api_ctor(github_url: str, verify_ssl: bool=True):
+class SessionAdapter(enum.Enum):
+    NONE = enum.auto()
+    RETRY = enum.auto()
+    CACHE_CONTROL = enum.auto()
+
+
+def github_api_ctor(
+    github_url: str,
+    verify_ssl: bool=True,
+    session_adapter: SessionAdapter=SessionAdapter.RETRY,
+):
     '''returns the appropriate github3.GitHub constructor for the given github URL
 
     In case github_url does not refer to github.com, the c'tor for GithubEnterprise is
@@ -44,13 +55,19 @@ def github_api_ctor(github_url: str, verify_ssl: bool=True):
     else:
         raise ValueError('failed to parse url: ' + str(github_url))
 
-    # retries and caching
     session = github3.session.GitHubSession()
-    session = http_requests.mount_default_adapter(session)
-    session = cachecontrol.CacheControl(
-        session,
-        cache_etags=True,
-    )
+    if session_adapter is SessionAdapter.NONE:
+        pass
+    elif session_adapter is SessionAdapter.RETRY:
+        session = http_requests.mount_default_adapter(session)
+    elif session_adapter is SessionAdapter.CACHE_CONTROL:
+        session = cachecontrol.CacheControl(
+            session,
+            cache_etags=True,
+        )
+    else:
+        raise NotImplementedError
+
     if log_github_access:
         session.hooks['response'] = http_requests.log_stack_trace_information
 
