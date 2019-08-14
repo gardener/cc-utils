@@ -33,7 +33,6 @@ from util import (
 )
 from mailutil import _send_mail
 from github.util import (
-    github_cfg_for_hostname,
     GitHubRepositoryHelper,
     GitHubRepoBranch,
 )
@@ -389,7 +388,7 @@ class ReplicationResultProcessor(object):
     def _notify_broken_definition_owners(self, failed_descriptor):
         definition_descriptor = failed_descriptor.definition_descriptor
         main_repo = definition_descriptor.main_repo
-        github_cfg = github_cfg_for_hostname(self._cfg_set, main_repo['hostname'])
+        github_cfg = ccc.github.github_cfg_for_hostname(self._cfg_set, main_repo['hostname'])
         github_api = ccc.github.github_api(github_cfg)
         repo_owner, repo_name = main_repo['path'].split('/')
 

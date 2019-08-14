@@ -235,7 +235,7 @@ def determine_mail_recipients(
 
 def _codeowners_parser_from_component_name(component_name: str, branch_name='master'):
     component_name = product.model.ComponentName(component_name)
-    github_cfg = github.util.github_cfg_for_hostname(
+    github_cfg = ccc.github.github_cfg_for_hostname(
         cfg_factory=ctx().cfg_factory(),
         host_name=component_name.github_host(),
     )

@@ -33,7 +33,6 @@ from util import (
     not_empty,
     not_none,
 )
-from github.util import github_cfg_for_hostname
 from model.base import ModelBase, NamedModelElement
 from concourse.factory import RawPipelineDefinitionDescriptor
 import ccc.github
@@ -283,7 +282,7 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
             ValueError(f'could not find matching job-mapping for org {org}')
 
     def enumerate_definition_descriptors(self):
-        github_cfg = github_cfg_for_hostname(
+        github_cfg = ccc.github.github_cfg_for_hostname(
             cfg_factory=self.cfg_set,
             host_name=self._repository_url.hostname,
         )
