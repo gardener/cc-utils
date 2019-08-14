@@ -165,10 +165,13 @@ class ProtecodeUtil(object):
 
         if len(existing_products) > 1:
             warning('found more than one product for image {i}'.format(i=container_image))
-            product_ids_to_rm = {p.product_id() for p in existing_products[1:]}
-            for product_id in product_ids_to_rm:
-                self._api.delete_product(product_id)
-                info(f'deleted product with product_id: {product_id}')
+            products_to_rm = existing_products[1:]
+            for p in products_to_rm:
+                self._api.delete_product(p.product_id())
+                info(
+                    f'deleted product {p.display_name()} '
+                    f'with product_id: {p.product_id()}'
+                )
 
         # use first (or only) match (we already printed a warning if we found more than one)
         product =  existing_products[0]
