@@ -44,6 +44,7 @@ def quote_str(value):
 import pathlib
 import util
 import version
+import os
 
 version_file = util.existing_file(pathlib.Path(${quote_str(path_to_repo_version_file)}))
 
@@ -59,6 +60,11 @@ processed_version = version.process_version(
     **${version_operation_kwargs},
 )
 util.info(f'effective version: {processed_version}')
+
+cc_version = '/metadata/VERSION'
+if os.path.isfile(cc_version):
+  with open(cc_version) as f:
+    util.info(f'cc-utils version: {cc_version}')
 
 output_version_file = pathlib.Path(${quote_str(output_version_file)})
 legacy_version_file = pathlib.Path(${quote_str(legacy_version_file)})
