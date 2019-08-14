@@ -64,7 +64,7 @@ util.info(f'effective version: {processed_version}')
 cc_version = '/metadata/VERSION'
 if os.path.isfile(cc_version):
   with open(cc_version) as f:
-    util.info(f'cc-utils version: {cc_version}')
+    util.info(f'cc-utils version: {f.read()}')
 
 output_version_file = pathlib.Path(${quote_str(output_version_file)})
 legacy_version_file = pathlib.Path(${quote_str(legacy_version_file)})
