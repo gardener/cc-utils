@@ -127,26 +127,41 @@ ${time_resource(name=resource_name, interval=interval)}
 % endif
 % endfor
 
-<%def name="notification(indent, job_variant, job_step, status, single_step=False)" filter="indent_func(indent),trim">
+<%def name="update_pr_status(indent, job_variant, job_step, status)" filter="indent_func(indent),trim">
 <%
 repo = job_variant.main_repository()
 %>
-% if has_pr_trait(job_variant):
-% if single_step:
+- put: ${repo.resource_name()}
+  params:
+    path: ${repo.resource_name()}
+    context: ${job_step.name}
+    status: ${status}
+</%def>
+
+<%def name="notification(indent, job_variant, job_step, status)" filter="indent_func(indent),trim">
+<%
+notify_pull_request = (
+  has_pr_trait(job_variant)
+  and (
+    job_step.notification_policy() is StepNotificationPolicy.NOTIFY_PULL_REQUESTS
+    or job_step.is_synthetic
+  )
+
+)
+send_email_notification = not has_pr_trait(job_variant) and status == 'error'
+%>
+% if notify_pull_request or send_email_notification:
+on_failure:
   do:
-% else:
-- do:
 % endif
-  - put: ${repo.resource_name()}
-    params:
-      path: ${repo.resource_name()}
-      context: ${job_step.name}
-      status: ${status}
+% if notify_pull_request:
+  ${update_pr_status(2, job_variant, job_step, status)}
 % endif
 ## let's send an e-mail only in case of a problem
 ## (sucks in comparison to the features the Jenkins extened e-mail plugin offers)
-% if not has_pr_trait(job_variant) and status == 'error':
+% if send_email_notification:
 <%
+repo = job_variant.main_repository()
 subject = 'Step {s} for {p}:{b} failed!'.format(s=job_step.name, p=pipeline.get('name'), b=repo.branch())
 def repos():
   yield job_variant.main_repository()
@@ -391,18 +406,20 @@ if (
     and notification_policy is not StepNotificationPolicy.NO_NOTIFICATION
 ):
   raise ValueError(f'unsupported StepNotificationPolicy: {job_step.notification_policy()}')
-
+notify_pull_requests = (
+  has_pr_trait(job_variant)
+  and job_step.notification_policy() is StepNotificationPolicy.NOTIFY_PULL_REQUESTS
+)
 %>
 - do:
-% if job_step.notification_policy() is StepNotificationPolicy.NOTIFY_PULL_REQUESTS:
-  ${notification(2, job_variant, job_step, 'pending')}
+% if notify_pull_requests:
+  ${update_pr_status(2, job_variant, job_step, 'pending')}
 % endif
   ${execute(2, job_step, job_variant)}
-% if job_step.notification_policy() is StepNotificationPolicy.NOTIFY_PULL_REQUESTS:
-  ${notification(2, job_variant, job_step, 'success')}
+% if notify_pull_requests:
+  ${update_pr_status(2, job_variant, job_step, 'success')}
 % endif
-  on_failure:
-    ${notification(4, job_variant, job_step, 'error', single_step=True)}
+  ${notification(2, job_variant, job_step, 'error')}
 </%def>
 
 <%def name="job(job_variant)">
