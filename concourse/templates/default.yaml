@@ -153,16 +153,16 @@ def repos():
   if job_variant.has_publish_repository(job_variant.main_repository().logical_name()):
     yield job_variant.publish_repository(job_variant.main_repository().logical_name())
 %>
-${email_notification(
-  cfg_set=config_set,
-  secrets_server_cfg=secrets_server_cfg,
-  email_cfg=email,
-  repo_cfgs=tuple(repos()),
-  job_step=job_step,
-  subject=subject,
-  job_variant=job_variant,
-  )
-}
+  ${email_notification(
+    cfg_set=config_set,
+    secrets_server_cfg=secrets_server_cfg,
+    email_cfg=email,
+    repo_cfgs=tuple(repos()),
+    job_step=job_step,
+    subject=subject,
+    job_variant=job_variant,
+    indent=2,
+  )}
 % endif
 </%def>
 
