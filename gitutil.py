@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import contextlib
+import enum
 import functools
 import os
 import subprocess
@@ -36,6 +37,13 @@ def _ssh_auth_env(github_cfg):
     id_only = '-o "IdentitiesOnly yes"'
     os.environ['GIT_SSH_COMMAND'] = f'ssh -i {tmp_id} {suppress_hostcheck} {id_only}'
     return tmp_id
+
+
+class ConfigLevel(enum.Enum):
+    LOCAL = 'repository'
+    GLOBAL = 'global'
+    SYSTEM = 'system'
+    DEFAULT = None
 
 
 class GitHelper(object):
@@ -151,6 +159,9 @@ class GitHelper(object):
     def _pop_stash(self):
         self.repo.git.stash('pop', '--quiet')
 
+    def _config_value(self, section, option, level: ConfigLevel=ConfigLevel.DEFAULT):
+        return self.repo.git.config_reader(level.value).get_value(section, option)
+
     def push(self, from_ref, to_ref, use_ssh=True):
         with self._authenticated_remote(use_ssh=use_ssh) as remote:
             remote.push(':'.join((from_ref, to_ref)))
@@ -162,6 +173,13 @@ class GitHelper(object):
         with self._authenticated_remote(use_ssh=use_ssh) as remote:
             fetch_result = remote.fetch(ref)[0]
             return fetch_result.commit
+
+    # getters for special config values set by pull request resource
+    def pr_id(self):
+        return int(self._config_value(section='pullrequest', option='id'))
+
+    def pr_url(self):
+        return self._config_value(section='pullrequest', option='url')
 
 
 def url_with_credentials(github_cfg, github_repo_path):
