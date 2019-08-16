@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import model.base
+
 from concourse.model.job import (
     JobVariant,
 )
@@ -64,6 +66,12 @@ ATTRIBUTES = (
         doc='configures the policies to apply to pull-requests',
         type=PullRequestPolicies,
     ),
+    AttributeSpec.optional(
+        name='disable-status-report',
+        default=[],
+        doc='a list of names of steps which shall not report their status to the pull request.',
+        type=list,
+    ),
 )
 
 
@@ -75,6 +83,9 @@ class PullRequestTrait(Trait):
     def policies(self):
         policies_dict = self.raw['policies']
         return PullRequestPolicies(raw_dict=policies_dict)
+
+    def disable_status_report(self):
+        return self.raw.get('disable-status-report')
 
     def transformer(self):
         return PullRequestTraitTransformer(trait=self)
@@ -108,3 +119,13 @@ class PullRequestTraitTransformer(TraitTransformer):
 
         # patch-in the updated repository
         pipeline_args._repos_dict[repo_name] = pr_repo
+
+        # patch the configured steps so that they do not report their status back to PRs
+        for step_name in self.trait.disable_status_report():
+            if not pipeline_args.has_step(step_name):
+                raise model.base.ModelValidationError(
+                    f"Reporting to pull requests was disabled for step '{step_name}', but no step "
+                    f"'{step_name}' was found in job '{pipeline_args.variant_name}'"
+                )
+            step = pipeline_args.step(step_name)
+            step._notification_policy = StepNotificationPolicy.NO_NOTIFICATION
