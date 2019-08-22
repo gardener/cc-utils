@@ -13,34 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import namedtuple
+from dataclasses import dataclass
 from pydash import _
 
 from product.model import ComponentName
 from util import check_type
 
-ReleaseNote = namedtuple('ReleaseNote', [
-    "category_id",
-    "target_group_id",
-    "text",
-    "reference",
-    "user_login",
-    "is_current_repo",
-    "from_same_github_instance",
-    "cn_source_repo"
-])
 
-Commit = namedtuple('Commit', [
-    "hash",
-    "subject",
-    "message"
-])
+@dataclass
+class Commit:
+    hash: str
+    subject: str
+    message: str
 
-ReferenceType = namedtuple('ReferenceType', [
-    'identifier', # reference type identifier in release notes block
-    'prefix', # reference prefix that is used for the rendered text
-    'github_api_resource_type'
-])
+
+@dataclass
+class ReferenceType:
+    identifier: str # reference type identifier in release notes block
+    prefix: str # reference prefix that is used for the rendered text
+    github_api_resource_type: str # "pull" or "commit"
+
 
 REF_TYPE_PULL_REQUEST = ReferenceType(
     identifier='#',
@@ -55,10 +47,11 @@ REF_TYPE_COMMIT = ReferenceType(
 )
 REFERENCE_TYPES = [REF_TYPE_PULL_REQUEST, REF_TYPE_COMMIT]
 
-Reference = namedtuple('Reference', [
-    'type',
-    'identifier'
-])
+
+@dataclass
+class Reference:
+    type: ReferenceType
+    identifier: str
 
 
 def reference_type_for_type_identifier(
@@ -69,9 +62,21 @@ def reference_type_for_type_identifier(
     )
 
 
+@dataclass
+class ReleaseNote:
+    category_id: str
+    target_group_id: str
+    text: str
+    reference: Reference
+    user_login: str
+    is_current_repo: bool
+    from_same_github_instance: str
+    cn_source_repo: str
+
+
 class ReleaseNoteBlock(ReleaseNote):
-    def __new__(
-        cls,
+    def __init__(
+        self,
         category_id: str,
         target_group_id: str,
         text: str,
@@ -89,8 +94,7 @@ class ReleaseNoteBlock(ReleaseNote):
         cn_source_repo = ComponentName(name=source_repo)
         is_current_repo = cn_current_repo == cn_source_repo
         from_same_github_instance = cn_current_repo.github_host() == cn_source_repo.github_host()
-        self = super().__new__(
-            cls,
+        super().__init__(
             category_id,
             target_group_id,
             text,
@@ -100,7 +104,6 @@ class ReleaseNoteBlock(ReleaseNote):
             from_same_github_instance,
             cn_source_repo
         )
-        return self
 
     def ref(self):
         if not self.reference.identifier:
