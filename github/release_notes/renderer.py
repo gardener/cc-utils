@@ -77,7 +77,7 @@ CATEGORIES = [CATEGORY_ACTION, CATEGORY_NOTEWORTHY, CATEGORY_IMPROVEMENT]
 
 class Renderer(object):
     def __init__(self, release_note_objs: [ReleaseNote]):
-        self.rls_note_objs = release_note_objs
+        self.rls_note_objs = _.uniq(release_note_objs)
 
     def render(self)->str:
         origin_nodes = _\

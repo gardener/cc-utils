@@ -198,6 +198,31 @@ class RendererTest(unittest.TestCase):
             '* *[USER]* default release note text'
         self.assertEqual(expected_md_str, actual_md_str)
 
+    def test_render_drop_duplicates(self):
+        release_note_objs = [
+            release_note_block_with_defaults(
+                text='duplicate',
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+                source_repo=CURRENT_REPO_NAME,
+            ),
+            release_note_block_with_defaults(
+                text='duplicate',
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+                source_repo=CURRENT_REPO_NAME,
+            )
+        ]
+
+        actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
+        expected_md_str = \
+            '# [current-repo]\n'\
+            '## Improvements\n'\
+            '* *[USER]* duplicate'
+        self.assertEqual(expected_md_str, actual_md_str)
+
     def test_render_no_release_notes(self):
         release_note_objs = []
 
