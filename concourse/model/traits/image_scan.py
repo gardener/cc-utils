@@ -141,9 +141,8 @@ ATTRIBUTES = (
         doc='whom to notify about found issues',
         type=Notify,
     ),
-    AttributeSpec.optional(
+    AttributeSpec.required(
         name='email_recipients',
-        default=(),
         doc='optional email recipients to be notified about critical scan results',
     ),
     AttributeSpec.optional(
