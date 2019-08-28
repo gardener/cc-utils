@@ -91,13 +91,13 @@ def post_to_slack(
                     title += ']'
 
                 msg = release_notes_md_links[idx:]
-                slack_helper.post_to_slack(channel=slack_channel, title=title, message=msg)
+                yield slack_helper.post_to_slack(channel=slack_channel, title=title, message=msg)
                 break
 
             # post part
             title += f' - part {i} ]'
             msg = release_notes_md_links[idx: idx+max_msg_size_bytes]
-            slack_helper.post_to_slack(channel=slack_channel, title=title, message=msg)
+            yield slack_helper.post_to_slack(channel=slack_channel, title=title, message=msg)
 
             i += 1
             idx += max_msg_size_bytes
