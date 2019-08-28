@@ -306,6 +306,10 @@ else:
   <% raise ValueError('unsupported script type') %>
 % endif
 % if not job_step.is_synthetic:
+  % if has_pr_trait(job_variant):
+        export PULLREQUEST_ID=$(git config -f "${job_variant.main_repository().resource_name()}/.git/config" pullrequest.id)
+        export PULLREQUEST_URL=$(git config -f "${job_variant.main_repository().resource_name()}/.git/config" pullrequest.url)
+  % endif
   % if has_version_trait(job_variant):
         export EFFECTIVE_VERSION=$(cat ${job_step.input('version_path')}/version)
     % if job_variant.trait('version').inject_effective_version():
