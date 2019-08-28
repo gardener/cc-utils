@@ -578,18 +578,20 @@ class PostSlackReleaseStep(TransactionalStep):
         semver.parse(self.release_version)
 
     def apply(self):
-        response = post_to_slack(
+        responses = post_to_slack(
             release_notes=self.release_notes,
             github_repository_name=self.githubrepobranch.github_repo_path(),
             slack_cfg_name=self.slack_cfg_name,
             slack_channel=self.slack_channel,
             release_version=self.release_version,
         )
-        if response and response.get('file', None):
-            uploaded_file_id = response.get('file').get('id')
-            return {'uploaded file id': uploaded_file_id}
-        else:
-            raise RuntimeError("Unable to get file id from Slack response")
+
+        for response in responses:
+            if response and response.get('file', None):
+                uploaded_file_id = response.get('file').get('id')
+                yield {'uploaded file id': uploaded_file_id}
+            else:
+                raise RuntimeError("Unable to get file id from Slack response")
 
     def revert(self):
         if not self.context().has_output(self.name()):
