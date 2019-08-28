@@ -60,21 +60,48 @@ def post_to_slack(
     github_repository_name: str,
     slack_cfg_name: str,
     slack_channel: str,
-    release_version: str
+    release_version: str,
+    max_msg_size_bytes: int=30000,
 ):
     # slack can't auto link pull requests, commits or users
     # hence we force the link generation when building the markdown string
     release_notes_md_links = release_notes.to_markdown(
         force_link_generation=True
     )
-    title = '[{n}] {v} released'.format(n=github_repository_name, v=release_version)
+
+    # XXX slack imposes a maximum msg size
+    # https://api.slack.com/changelog/2018-04-truncating-really-long-messages#
+
     slack_cfg = ctx().cfg_factory().slack(slack_cfg_name)
+    slack_helper = SlackHelper(slack_cfg)
+
+    idx = 0
+    i = 0
+
     try:
-        return SlackHelper(slack_cfg).post_to_slack(
-            channel=slack_channel,
-            title=title,
-            message=release_notes_md_links
-        )
+        while True:
+            title = '[{n}] {v} released'.format(n=github_repository_name, v=release_version)
+
+            # abort on last
+            if idx + max_msg_size_bytes > len(release_notes_md_links):
+                did_split = i > 0
+                if did_split:
+                    title += ' - final]'
+                else:
+                    title += ']'
+
+                msg = release_notes_md_links[idx:]
+                slack_helper.post_to_slack(channel=slack_channel, title=title, message=msg)
+                break
+
+            # post part
+            title += f' - part {i} ]'
+            msg = release_notes_md_links[idx: idx+max_msg_size_bytes]
+            slack_helper.post_to_slack(channel=slack_channel, title=title, message=msg)
+
+            i += 1
+            idx += max_msg_size_bytes
+
     except RuntimeError as e:
         warning(e)
 
