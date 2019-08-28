@@ -35,7 +35,7 @@ else:
 class SessionAdapter(enum.Enum):
     NONE = enum.auto()
     RETRY = enum.auto()
-    CACHE_CONTROL = enum.auto()
+    CACHE = enum.auto()
 
 
 def github_api_ctor(
@@ -60,7 +60,7 @@ def github_api_ctor(
         pass
     elif session_adapter is SessionAdapter.RETRY:
         session = http_requests.mount_default_adapter(session)
-    elif session_adapter is SessionAdapter.CACHE_CONTROL:
+    elif session_adapter is SessionAdapter.CACHE:
         session = cachecontrol.CacheControl(
             session,
             cache_etags=True,
