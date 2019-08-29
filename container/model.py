@@ -1,10 +1,12 @@
-import collections
+import dataclasses
+import typing
 
-'''
-processing_callback: callable; called with (in_fh, out_fh)
-'''
-ContainerImageUploadRequest = collections.namedtuple(
-    'ContainerImageUploadRequest',
-    ['source_ref', 'target_ref', 'processing_callback'],
-    # defaults=[None], XXX re-enable after upgrading to Python3.7
-)
+
+@dataclasses.dataclass
+class ContainerImageUploadRequest:
+    '''
+    represents an image upload request (with optional processing, e.g. for removing files)
+    '''
+    source_ref: str
+    target_ref: str
+    processing_callback: typing.Callable[[str, str], None] = None # called with (in_fh, out_fh)
