@@ -20,6 +20,7 @@ import os
 import subprocess
 import urllib.parse
 
+import deprecated
 import git
 import git.objects.util
 
@@ -174,10 +175,11 @@ class GitHelper(object):
             fetch_result = remote.fetch(ref)[0]
             return fetch_result.commit
 
-    # getters for special config values set by pull request resource
+    @deprecated.deprecated
     def pr_id(self):
         return int(self._config_value(section='pullrequest', option='id'))
 
+    @deprecated.deprecated
     def pr_url(self):
         return self._config_value(section='pullrequest', option='url')
 
