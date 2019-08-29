@@ -34,9 +34,9 @@ else:
 
 
 class SessionAdapter(enum.Enum):
-    NONE = enum.auto()
-    RETRY = enum.auto()
-    CACHE = enum.auto()
+    NONE = None
+    RETRY = 'retry'
+    CACHE = 'cache'
 
 
 def github_api_ctor(
@@ -57,6 +57,7 @@ def github_api_ctor(
         raise ValueError('failed to parse url: ' + str(github_url))
 
     session = github3.session.GitHubSession()
+    session_adapter = SessionAdapter(session_adapter)
     if session_adapter is SessionAdapter.NONE:
         pass
     elif session_adapter is SessionAdapter.RETRY:
