@@ -86,7 +86,7 @@ def github_api_ctor(
         )
 
 
-def github_repo_helper(
+def repo_helper(
     host: str,
     org: str,
     repo: str,
@@ -104,6 +104,10 @@ def github_repo_helper(
         github_api=api,
         default_branch=branch,
     )
+
+
+# XXX remove this alias again
+github_repo_helper = repo_helper
 
 
 @functools.lru_cache()
