@@ -138,7 +138,7 @@ def _mk_credentials(image_reference, privileges: Privileges=None):
     # first try container_registry cfgs from available cfg
     creds = _credentials(image_reference=str(image_reference), privileges=privileges)
     if not creds:
-      logger.warning('could not find rw-creds')
+      logger.warning(f'could not find rw-creds for {image_reference}')
       # fall-back to default docker lookup
       creds = docker_creds.DefaultKeychain.Resolve(image_reference)
 
