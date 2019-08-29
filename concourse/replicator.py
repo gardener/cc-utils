@@ -32,10 +32,6 @@ from util import (
     FluentIterable
 )
 from mailutil import _send_mail
-from github.util import (
-    GitHubRepositoryHelper,
-    GitHubRepoBranch,
-)
 from github.codeowners import CodeownersEnumerator, CodeOwnerEntryResolver
 
 from concourse.factory import DefinitionFactory, RawPipelineDefinitionDescriptor
@@ -375,15 +371,11 @@ class ReplicationResultProcessor(object):
         github_api = ccc.github.github_api(github_cfg)
         repo_owner, repo_name = main_repo['path'].split('/')
 
-        githubrepobranch = GitHubRepoBranch(
-            github_config=github_cfg,
-            repo_owner=repo_owner,
-            repo_name=repo_name,
+        repo_helper = ccc.github.github_repo_helper(
+            host=main_repo['hostname'],
+            org=repo_owner,
+            repo=repo_name,
             branch=main_repo['branch'],
-        )
-
-        repo_helper = GitHubRepositoryHelper.from_githubrepobranch(
-            githubrepobranch=githubrepobranch,
         )
 
         codeowners_enumerator = CodeownersEnumerator()

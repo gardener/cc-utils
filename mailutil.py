@@ -30,7 +30,6 @@ from util import (
 )
 from mail import template_mailer as mailer
 import ccc.github
-import github.util
 from github.codeowners import CodeownersEnumerator, CodeOwnerEntryResolver
 import product.model
 
@@ -241,21 +240,17 @@ def _codeowners_parser_from_component_name(component_name: str, branch_name='mas
     )
     github_api = ccc.github.github_api(github_cfg=github_cfg)
 
-    githubrepobranch = github.util.GitHubRepoBranch(
-        github_config=github_cfg,
-        repo_owner=component_name.github_organisation(),
-        repo_name=component_name.github_repo(),
+    repo_helper = ccc.github.repo_helper(
+        host=component_name.github_host(),
+        org=component_name.github_organisation(),
+        repo=component_name.github_repo(),
         branch=branch_name,
-    )
-
-    github_repo_helper = github.util.GitHubRepositoryHelper.from_githubrepobranch(
-        githubrepobranch=githubrepobranch,
     )
 
     resolver = CodeOwnerEntryResolver(github_api=github_api)
     enumerator = CodeownersEnumerator()
 
-    return resolver, enumerator.enumerate_remote_repo(github_repo_helper=github_repo_helper)
+    return resolver, enumerator.enumerate_remote_repo(github_repo_helper=repo_helper)
 
 
 def notify(
