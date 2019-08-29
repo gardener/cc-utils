@@ -90,6 +90,7 @@ def github_repo_helper(
     host: str,
     org: str,
     repo: str,
+    branch: str='master',
     session_adapter: SessionAdapter=SessionAdapter.RETRY,
 ):
     api = github_api(
@@ -101,6 +102,7 @@ def github_repo_helper(
         owner=org,
         name=repo,
         github_api=api,
+        default_branch=branch,
     )
 
 
