@@ -106,6 +106,24 @@ def repo_helper(
     )
 
 
+def pr_helper(
+    host: str,
+    org: str,
+    repo: str,
+    session_adapter: SessionAdapter=SessionAdapter.RETRY,
+):
+    api = github_api(
+        github_cfg=github_cfg_for_hostname(host_name=host),
+        session_adapter=session_adapter,
+    )
+
+    return github.util.PullRequestUtil(
+        owner=org,
+        name=repo,
+        github_api=api,
+    )
+
+
 # XXX remove this alias again
 github_repo_helper = repo_helper
 
