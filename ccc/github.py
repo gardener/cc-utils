@@ -88,13 +88,17 @@ def github_api_ctor(
 @functools.lru_cache()
 def github_api(
     github_cfg: 'model.GithubConfig',
+    session_adapter: SessionAdapter=SessionAdapter.RETRY,
 ):
     github_url = github_cfg.http_url()
     github_auth_token = github_cfg.credentials().auth_token()
 
     verify_ssl = github_cfg.tls_validation()
 
-    github_ctor = github_api_ctor(github_url=github_url, verify_ssl=verify_ssl)
+    github_ctor = github_api_ctor(
+        github_url=github_url, verify_ssl=verify_ssl,
+        session_adapter=SessionAdapter.RETRY,
+    )
     github_api = github_ctor(
         token=github_auth_token,
     )
