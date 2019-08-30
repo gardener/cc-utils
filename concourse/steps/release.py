@@ -589,9 +589,10 @@ class PostSlackReleaseStep(TransactionalStep):
         for response in responses:
             if response and response.get('file', None):
                 uploaded_file_id = response.get('file').get('id')
-                yield {'uploaded file id': uploaded_file_id}
+                info(f'uploaded file id {uploaded_file_id} to slack')
             else:
                 raise RuntimeError("Unable to get file id from Slack response")
+        info('successfully posted contents to slack')
 
     def revert(self):
         if not self.context().has_output(self.name()):
