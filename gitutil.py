@@ -20,7 +20,6 @@ import os
 import subprocess
 import urllib.parse
 
-import deprecated
 import git
 import git.objects.util
 
@@ -174,14 +173,6 @@ class GitHelper(object):
         with self._authenticated_remote(use_ssh=use_ssh) as remote:
             fetch_result = remote.fetch(ref)[0]
             return fetch_result.commit
-
-    @deprecated.deprecated
-    def pr_id(self):
-        return int(self._config_value(section='pullrequest', option='id'))
-
-    @deprecated.deprecated
-    def pr_url(self):
-        return self._config_value(section='pullrequest', option='url')
 
 
 def url_with_credentials(github_cfg, github_repo_path):
