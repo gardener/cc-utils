@@ -10,6 +10,10 @@ Turns the declaring job into a pull-request job. This means it will be triggered
 creation or updating of GitHub pull-requests for the main repository (and only those) and
 post executions results to the corresponding PRs.
 
+Information about the pull-request being processed will be exposed to jobs at runtime:
+`PULLREQUEST_URL` contains the full pull-request URL whereas `PULLREQUEST_ID` contains the
+pull request number.
+
 
 Policies / Pull-Request Label Handling
 ======================================
