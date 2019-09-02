@@ -37,11 +37,15 @@ ${git_ignore_paths(repo_cfg)}
 </%def>
 <%def name="github_pr(repo_cfg, cfg_set, require_label=None, configure_webhook=True)">
 <%
+from makoutil import indent_func
 repo_name = repo_cfg.name()
 if repo_name is not None:
   github_cfg = cfg_set.github(cfg_name=repo_cfg.cfg_name())
 else:
   github_cfg = cfg_set.github()
+
+disable_tls_validation = 'false' if github_cfg.tls_validation() else 'true'
+credentials = github_cfg.credentials()
 %>
 - name: ${repo_cfg.resource_name()}
 % if configure_webhook:
@@ -49,10 +53,15 @@ else:
 % endif
   type: pull-request
   source:
-    <<: *pull_request_defaults
     repo: ${repo_cfg.repo_path()}
     base: ${repo_cfg.branch()}
     uri: ${github_cfg.ssh_url()}/${repo_cfg.repo_path()}
+    api_endpoint: ${github_cfg.api_url()}
+    skip_ssl_verification: ${disable_tls_validation}
+    access_token: ${credentials.auth_token()}
+    no_ssl_verify: ${disable_tls_validation}
+    private_key: |
+      ${indent_func(6)(credentials.private_key()).strip()}
 % if require_label:
     label: "${require_label}"
 % endif

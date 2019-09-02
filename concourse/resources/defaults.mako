@@ -19,17 +19,3 @@ ${task_image_resource(
     webhook_token: ${webhook_token}
     check_every: 12h
 </%def>
-<%def name="pull_request_defaults(github_cfg)">
-<%
-from makoutil import indent_func
-disable_tls_validation = 'false' if github_cfg.tls_validation() else 'true'
-credentials = github_cfg.credentials()
-%>
-  pull_request_defaults: &pull_request_defaults
-    skip_ssl_verification: ${disable_tls_validation}
-    no_ssl_verify: ${disable_tls_validation}
-    private_key: |
-      ${indent_func(6)(credentials.private_key()).strip()}
-    access_token: ${credentials.auth_token()}
-    api_endpoint: ${github_cfg.api_url()}
-</%def>

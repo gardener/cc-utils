@@ -93,7 +93,6 @@ upload_container_images_step = concourse.steps.step_def('upload_container_images
 
 inherit:
 ${configure_webhook(webhook_token=github.webhook_secret())}
-${pull_request_defaults(github_cfg=github)}
 resource_types:
 ${include_pull_request_resource_type()}
 ${include_meta_resource_type()}
