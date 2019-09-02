@@ -121,7 +121,7 @@ def create_upgrade_pr(from_ref, to_ref, pull_request_util):
     repo_dir = str(REPO_ROOT)
 
     # have component create upgradation diff
-    upgrade_script_path = REPO_ROOT.joinpath('${set_dependency_version_script_path}')
+    upgrade_script_path = os.path.join(REPO_ROOT, '${set_dependency_version_script_path}')
     cmd_env = os.environ.copy()
     cmd_env['DEPENDENCY_TYPE'] = to_ref.type_name()
     cmd_env['DEPENDENCY_NAME'] = to_ref.name()
