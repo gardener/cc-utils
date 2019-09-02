@@ -13,7 +13,6 @@ after_merge_callback = update_component_deps_trait.after_merge_callback()
 %>
 
 import os
-import pathlib
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
@@ -40,7 +39,7 @@ from util import check_env
 ${step_lib('update_component_deps')}
 
 # must point to this repository's root directory
-REPO_ROOT = pathlib.Path(check_env('${repo_name}_PATH')).absolute()
+REPO_ROOT = os.path.abspath(check_env('${repo_name}_PATH'))
 REPO_BRANCH = check_env('${repo_name}_BRANCH')
 REPO_OWNER, REPO_NAME = check_env('${repo_name}_GITHUB_REPO_OWNER_AND_NAME').split('/')
 
@@ -244,6 +243,14 @@ pull_request_util = github.util.PullRequestUtil(
     default_branch=REPO_BRANCH,
     github_cfg=github_cfg,
 )
+
+# hack / workaround: rebase to workaround concourse sometimes not refresing git-resource
+git_helper = gitutil.GitHelper(
+  repo=REPO_ROOT,
+  github_cfg=github_cfg,
+  github_repo_path=f'{REPO_OWNER}/{REPO_NAME}',
+)
+git_helper.rebase=REPO_BRANCH,
 
 upgrade_pull_requests = pull_request_util.enumerate_upgrade_pull_requests(state_filter='all')
 
