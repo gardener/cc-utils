@@ -37,7 +37,11 @@ ${git_ignore_paths(repo_cfg)}
 </%def>
 <%def name="github_pr(repo_cfg, cfg_set, require_label=None, configure_webhook=True)">
 <%
-github_cfg = cfg_set.github(cfg_name=repo_cfg.cfg_name())
+repo_name = repo_cfg.name()
+if repo_name is not None:
+  github_cfg = cfg_set.github(cfg_name=repo_cfg.cfg_name())
+else:
+  github_cfg = cfg_set.github()
 %>
 - name: ${repo_cfg.resource_name()}
 % if configure_webhook:
