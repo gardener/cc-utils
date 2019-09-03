@@ -82,8 +82,6 @@ protecode_results, license_report = protecode_scan(
 )
 % endif
 
-images_with_potential_viruses = ()
-
 % if clam_av:
 
 image_references = [
@@ -129,7 +127,9 @@ email_recipients = tuple(
 
 for email_recipient in email_recipients:
   email_recipient.add_protecode_results(results=protecode_results)
+% if clam_av:
   email_recipient.add_clamav_results(results=images_with_potential_viruses)
+% endif
 
   if not email_recipient.has_results():
     util.info(f'skipping {email_recipient}, since there are not relevant results')

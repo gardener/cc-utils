@@ -43,7 +43,7 @@ class MailRecipients(object):
         self._root_component_name = root_component_name
         self._result_filter = result_filter
         self._protecode_results = []
-        self._clamav_results = []
+        self._clamav_results = None
         self._cfg_set = cfg_set
         if not bool(recipients) ^ bool(recipients_component):
             raise ValueError('exactly one of recipients, component_name must be given')
@@ -74,6 +74,9 @@ class MailRecipients(object):
             self._protecode_results.append(result)
 
     def add_clamav_results(self, results):
+        if self._clamav_results is None:
+            self._clamav_results = []
+
         for result in results:
             self._clamav_results.append(result)
 
@@ -89,7 +92,7 @@ class MailRecipients(object):
 
         if self._protecode_results:
             parts.append(self._protecode_report())
-        if self._clamav_results:
+        if self._clamav_results is not None:
             parts.append(self._clamav_report())
 
         return ''.join(parts)
@@ -120,6 +123,10 @@ class MailRecipients(object):
 
     def _clamav_report(self):
         result = '<p><div>Virus Scanning Results:</div>'
+
+        if len(self._clamav_results) == 0:
+            return result + '<div>All images were scanned - no virus signatures were found</div>'
+
         return result + tabulate.tabulate(
             self._clamav_results,
             headers=('Image-Reference', 'Scanning Result'),
