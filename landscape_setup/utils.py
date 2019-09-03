@@ -80,6 +80,7 @@ def ensure_helm_setup():
     """Ensure up-to-date helm installation. Return the path to the found Helm executable"""
     helm_executable = which('helm')
     with open(os.devnull) as devnull:
+        subprocess.run([helm_executable, 'init', '--client-only'], check=True, stdout=devnull)
         subprocess.run([helm_executable, 'repo', 'update'], check=True, stdout=devnull)
     return helm_executable
 
