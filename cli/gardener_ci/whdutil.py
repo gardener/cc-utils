@@ -24,6 +24,7 @@ def start_whd(
     webhook_dispatcher_cfg_name: str,
     port: int=5000,
     production: bool=False,
+    workers: int=4,
 ):
     cfg_factory = util.ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(cfg_set_name)
@@ -38,6 +39,10 @@ def start_whd(
     any_interface = '0.0.0.0'
 
     if production:
-        bjoern.run(app, any_interface, port)
+        def serve():
+            bjoern.run(app, any_interface, port, reuse_port=True)
+        for _ in range(workers - 1):
+            serve()
+        serve()
     else:
         app.run(debug=True, port=port, host=any_interface)
