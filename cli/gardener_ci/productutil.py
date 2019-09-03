@@ -121,12 +121,13 @@ def component_descriptor_to_xml(
 ):
     component_descriptor = ComponentDescriptor.from_dict(parse_yaml_file(component_descriptor))
 
-    def images(component_descriptor):
-        for component in component_descriptor.components():
-            yield from component.dependencies().container_images()
+    image_references = [
+        container_image.image_reference() for _, container_image
+        in _enumerate_effective_images(component_descriptor=component_descriptor)
+    ]
 
     result_xml = product.xml.container_image_refs_to_xml(
-        container_images=images(component_descriptor),
+        image_references,
     )
 
     result_xml.write(out_file)
