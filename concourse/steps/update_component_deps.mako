@@ -205,6 +205,7 @@ def create_upgrade_pr(from_ref, to_ref, pull_request_util):
               text = pull_request_util.retrieve_pr_template_text()
     except:
       util.warning('an error occurred during release notes processing (ignoring)')
+      text = None
       import traceback
       util.warning(traceback.format_exc())
 
