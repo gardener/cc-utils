@@ -263,6 +263,7 @@ class ConcourseDeployer(DefinitionDeployer):
                 ' to team: ' + definition_descriptor.concourse_target_team
             )
             if self.unpause_pipelines:
+                info(f'Unpausing pipeline {pipeline_name}')
                 api.unpause_pipeline(pipeline_name=pipeline_name)
             if self.expose_pipelines:
                 api.expose_pipeline(pipeline_name=pipeline_name)
