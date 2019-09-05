@@ -167,7 +167,7 @@ def create_upgrade_pr(from_ref, to_ref, pull_request_util):
       ls_repo.ref('heads/' + new_branch_name).delete()
 
     try:
-      helper.push(from_ref=commit.hexsha, to_ref='refs/heads/' + new_branch_name, use_ssh=True)
+      helper.push(from_ref=commit.hexsha, to_ref='refs/heads/' + new_branch_name)
     except:
       util.warning('an error occurred - removing now useless pr-branch')
       rm_pr_branch()

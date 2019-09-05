@@ -24,8 +24,11 @@ import git
 import git.objects.util
 
 from github.util import GitHubRepoBranch
-
 from util import not_empty, not_none, existing_dir, fail, random_str, urljoin
+from model.github import (
+    GithubConfig,
+    Protocol,
+)
 
 
 def _ssh_auth_env(github_cfg):
@@ -59,19 +62,30 @@ class GitHelper(object):
     @staticmethod
     def clone_into(
         target_directory: str,
-        github_cfg,
+        github_cfg: GithubConfig,
         github_repo_path: str,
         checkout_branch: str = None,
     ) -> 'GitHelper':
-        url = urljoin(github_cfg.ssh_url(), github_repo_path)
-        tmp_id = _ssh_auth_env(github_cfg=github_cfg)
+
+        protocol = github_cfg.preferred_protocol()
+        if protocol is Protocol.SSH:
+            tmp_id = _ssh_auth_env(github_cfg=github_cfg)
+            url = urljoin(github_cfg.ssh_url(), github_repo_path)
+        elif protocol is Protocol.HTTPS:
+            url = url_with_credentials(github_cfg, github_repo_path)
+        else:
+            raise NotImplementedError
+
         args = ['--quiet']
         if checkout_branch is not None:
             args += ['--branch', checkout_branch, '--single-branch']
         args += [url, target_directory]
         git.Git().clone(*args)
-        os.unlink(tmp_id)
-        del os.environ['GIT_SSH_COMMAND']
+
+        if protocol is Protocol.SSH:
+            os.unlink(tmp_id)
+            del os.environ['GIT_SSH_COMMAND']
+
         return GitHelper(
             repo = target_directory,
             github_cfg = github_cfg,
@@ -95,12 +109,16 @@ class GitHelper(object):
         return [line[3:] for line in lines if line]
 
     @contextlib.contextmanager
-    def _authenticated_remote(self, use_ssh=True):
-        if use_ssh:
+    def _authenticated_remote(self):
+
+        protocol = self.github_cfg.preferred_protocol()
+        if protocol is Protocol.SSH:
             url = urljoin(self.github_cfg.ssh_url(), self.github_repo_path)
             tmp_id = _ssh_auth_env(github_cfg=self.github_cfg)
-        else:
+        elif protocol is Protocol.HTTPS:
             url = url_with_credentials(self.github_cfg, self.github_repo_path)
+        else:
+            raise NotImplementedError
 
         remote = git.remote.Remote.add(
             repo=self.repo,
@@ -111,7 +129,7 @@ class GitHelper(object):
             yield remote
         finally:
             self.repo.delete_remote(remote)
-            if use_ssh:
+            if protocol is Protocol.SSH:
                 os.unlink(tmp_id)
                 del os.environ['GIT_SSH_COMMAND']
 
@@ -162,15 +180,15 @@ class GitHelper(object):
     def _config_value(self, section, option, level: ConfigLevel=ConfigLevel.DEFAULT):
         return self.repo.git.config_reader(level.value).get_value(section, option)
 
-    def push(self, from_ref, to_ref, use_ssh=True):
-        with self._authenticated_remote(use_ssh=use_ssh) as remote:
+    def push(self, from_ref, to_ref):
+        with self._authenticated_remote() as remote:
             remote.push(':'.join((from_ref, to_ref)))
 
     def rebase(self, commit_ish: str):
         self.repo.git.rebase('--quiet', commit_ish)
 
-    def fetch_head(self, ref: str, use_ssh=True):
-        with self._authenticated_remote(use_ssh=use_ssh) as remote:
+    def fetch_head(self, ref: str):
+        with self._authenticated_remote() as remote:
             fetch_result = remote.fetch(ref)[0]
             return fetch_result.commit
 
