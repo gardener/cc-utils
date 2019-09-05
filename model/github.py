@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import random
 import functools
+import random
+
 from urllib.parse import urlparse
 
 from model.base import (
@@ -69,10 +70,10 @@ class GithubConfig(NamedModelElement):
 
     def _required_attributes(self):
         return [
-            'sshUrl',
-            'httpUrl',
             'apiUrl',
             'disable_tls_validation',
+            'httpUrl',
+            'sshUrl',
             'webhook_token',
         ]
 
