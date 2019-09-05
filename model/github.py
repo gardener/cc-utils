@@ -54,7 +54,7 @@ class GithubConfig(NamedModelElement):
         return self.raw.get('webhook_token')
 
     def preferred_protocol(self):
-        return PreferredProtocol(self.raw.get('preferred_protocol', PreferredProtocol.SSH.value))
+        return PreferredProtocol(self.raw.get('preferred_protocol', PreferredProtocol.SSH))
 
     @functools.lru_cache()
     def credentials(self):
