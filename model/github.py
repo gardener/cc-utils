@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import enum
 import functools
 import random
 
@@ -22,6 +23,11 @@ from model.base import (
     BasicCredentials,
     NamedModelElement,
 )
+
+
+class PreferredProtocol(enum.Enum):
+    SSH = 'ssh'
+    HTTPS = 'https'
 
 
 class GithubConfig(NamedModelElement):
@@ -47,6 +53,9 @@ class GithubConfig(NamedModelElement):
     def webhook_secret(self):
         return self.raw.get('webhook_token')
 
+    def preferred_protocol(self):
+        return PreferredProtocol(self.raw.get('preferred_protocol', PreferredProtocol.SSH.value))
+
     @functools.lru_cache()
     def credentials(self):
         if self.raw.get('technicalUser'):
@@ -63,6 +72,7 @@ class GithubConfig(NamedModelElement):
 
     def _optional_attributes(self):
         return (
+            'preferred_protocol',
             'purpose_labels',
             'technicalUser',
             'technical_users',
