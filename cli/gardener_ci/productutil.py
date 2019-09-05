@@ -122,7 +122,7 @@ def component_descriptor_to_xml(
     component_descriptor = ComponentDescriptor.from_dict(parse_yaml_file(component_descriptor))
 
     image_references = [
-        container_image.image_reference() for _, container_image
+        container_image for _, container_image
         in _enumerate_effective_images(component_descriptor=component_descriptor)
     ]
 
