@@ -265,6 +265,9 @@ class ContainerImageReference(DependencyBase):
     def type_name(self):
         return 'container_image'
 
+    def __repr__(self):
+        return f'ContainerImage: {self.name()}|{self.image_reference()}|{self.version()}'
+
 
 class ContainerImage(ContainerImageReference):
     @staticmethod
