@@ -97,18 +97,23 @@ def test_enumerate_effective_images(cref):
 
     c1deps = c1.dependencies()
     image1 = model.ContainerImage.create(name='i1', version='1.2.3', image_reference='i:1')
+    # image2 shares same logical name (-> regression test)
+    image2 = model.ContainerImage.create(name='i1', version='1.2.4', image_reference='i:2')
+    images_count = 2
+
     c1deps.add_container_image_dependency(image1)
+    c1deps.add_container_image_dependency(image2)
 
     # ensure it's contained in regular enumerate_images
     comps_and_images = tuple(util._enumerate_images(comp_desc))
-    assert len(comps_and_images) == 1
+    assert len(comps_and_images) == images_count
     result_c, result_i = comps_and_images[0]
     assert result_c == c1
     assert result_i == image1
 
     # ensure it's also there in enumerate_effective_images (with no overwrites)
     comps_and_images = tuple(util._enumerate_effective_images(comp_desc))
-    assert len(comps_and_images) == 1
+    assert len(comps_and_images) == images_count
     result_c, result_i = comps_and_images[0]
     assert result_c == c1
     assert result_i == image1
@@ -125,7 +130,7 @@ def test_enumerate_effective_images(cref):
 
     # ensure the overwrite is evaluated
     comps_and_images = tuple(util._enumerate_effective_images(comp_desc))
-    assert len(comps_and_images) == 1
+    assert len(comps_and_images) == images_count
     result_c, result_i = comps_and_images[0]
     assert result_c == c1
     assert result_i == image_overwrite
