@@ -38,7 +38,6 @@ def container_image_refs_to_xml(
     _se_with_text(contact, 'email', contact_email)
 
     for id, img_ref in enumerate([c.image_reference() for c in container_images]):
-        print(id)
         di = ET.SubElement(root, 'Dockerimage', id=str(id))
         normalised_ref = container.registry.normalise_image_reference(img_ref)
 
