@@ -197,7 +197,7 @@ def test_merge_products_with_overwrites():
         create_if_absent=False,
     )
 
-    overwritten_image = merged_dep_overwrites.container_image(name='image1')
+    overwritten_image = merged_dep_overwrites.container_image(name='image1', version='1.2.3')
 
     assert overwritten_image == image1
 
@@ -210,7 +210,7 @@ def test_merge_products_with_overwrites():
         create_if_absent=False,
     )
 
-    overwritten_image = merged_dep_overwrites.container_image(name='image1')
+    overwritten_image = merged_dep_overwrites.container_image(name='image1', version='1.2.3')
 
     assert overwritten_image == image1
 

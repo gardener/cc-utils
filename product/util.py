@@ -332,7 +332,8 @@ def _effective_images(
         effective_image = None
         for do in dep_overwrites:
             # last wins (if any)
-            effective_image = do.container_image(name=image.name()) or effective_image
+            effective_image = do.container_image(name=image.name(), version=image.version()) \
+                    or effective_image
         yield effective_image or image
 
 

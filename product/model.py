@@ -488,10 +488,10 @@ class DependencyOverwrites(ModelBase):
     def container_images(self):
         return (ContainerImage(raw_dict=raw_dict) for raw_dict in self.raw.get('container_images'))
 
-    def container_image(self, name: str):
+    def container_image(self, name: str, version: str):
         image = next(
             filter(
-                lambda img: img.name() == name,
+                lambda img: img.name() == name and img.version() == version,
                 self.container_images(),
             ),
             None
