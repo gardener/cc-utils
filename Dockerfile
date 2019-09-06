@@ -6,11 +6,12 @@ COPY . /cc/utils/
 # determine the image version during runtime
 COPY VERSION /metadata/VERSION
 
-# add cc-utils' cli.py to PATH and PYTHONPATH
+# XXX backards compatibility (remove eventually)
 ENV PATH /cc/utils/:/cc/utils/bin:$PATH
-ENV PYTHONPATH /cc/utils
 
-RUN pip3 install -r /cc/utils/requirements.txt --upgrade
+RUN pip3 install --upgrade \
+  gardener-cicd-libs \
+  gardener-cicd-cli
 
 RUN EFFECTIVE_VERSION="$(cat /metadata/VERSION)" REPO_DIR=/cc/utils \
   /cc/utils/.ci/bump_job_image_version.py
