@@ -433,3 +433,9 @@ class ConfigurationSet(NamedModelElement):
 
             return factory_method(cfg_name=cfg_name)
         return get_default_element
+
+    def validate(self):
+        cfg_types = self.cfg_factory._cfg_types()
+        for cfg_type_name in cfg_types:
+            for element in self._cfg_elements(cfg_type_name):
+                element.validate()
