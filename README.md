@@ -20,10 +20,17 @@ Run `.ci/install_git_hooks` to register recommended git hooks.
 
 ## How to use it
 
+### Install using pip
+
+`pip install gardener-cicd-libs` - install libraries (no CLI)
+`pip install gardener-cicd-cli` - install CLI
+
+### Consume from Container Image
+
 A copy of cc-utils is contained in the default container image in which gardener
 CI/CD jobs are run (`eu.gcr.io/gardener-project/cc/job-image`):
 
-- `cli.py` is available from PATH
+- `gardener-ci` is available from PATH
 - all modules are available from PYTHONPATH
 
 ## Runtime environment requirements
