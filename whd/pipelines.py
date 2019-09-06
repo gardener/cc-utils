@@ -41,7 +41,7 @@ def update_repository_pipelines(
         cfg_set=cfg_set,
     )
     deployer = concourse.replicator.ConcourseDeployer(
-        unpause_pipelines=False,
+        unpause_pipelines=True,
         expose_pipelines=True,
     )
 
