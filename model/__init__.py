@@ -22,13 +22,15 @@ import pkgutil
 from model.base import (
     ConfigElementNotFoundError,
     ModelBase,
+    ModelValidationError,
     NamedModelElement,
 )
 from util import (
-    parse_yaml_file,
     existing_dir,
-    not_none,
     not_empty,
+    not_none,
+    parse_yaml_file,
+    warn,
 )
 
 '''
@@ -191,7 +193,12 @@ class ConfigFactory(object):
             kwargs['name'] = cfg_name
 
         element_instance = element_type(**kwargs)
-        element_instance.validate()
+
+        try:
+            element_instance.validate()
+        except ModelValidationError as mve:
+            warn(f'validation error for {cfg_name} - ignored: {mve}')
+
         return element_instance
 
     def _cfg_elements(self, cfg_type_name: str):
