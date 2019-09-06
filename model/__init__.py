@@ -30,7 +30,7 @@ from util import (
     not_empty,
     not_none,
     parse_yaml_file,
-    warn,
+    warning,
 )
 
 '''
@@ -197,7 +197,7 @@ class ConfigFactory(object):
         try:
             element_instance.validate()
         except ModelValidationError as mve:
-            warn(f'validation error for {cfg_name} - ignored: {mve}')
+            warning(f'validation error for {cfg_name} - ignored: {mve}')
 
         return element_instance
 
