@@ -14,8 +14,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-import collections
-import deprecated
+import dataclasses
 import github3.exceptions
 import functools
 import itertools
@@ -55,22 +54,6 @@ class ResolverBase(object):
         cfg_factory=None,
     ):
         self.cfg_factory=cfg_factory
-
-    @deprecated.deprecated
-    def _github_cfg_for_hostname(self, host_name):
-        not_none(host_name)
-        for github_cfg in self.cfg_factory._cfg_elements(cfg_type_name='github'):
-            if github_cfg.matches_hostname(host_name=host_name):
-                return github_cfg
-        raise RuntimeError('no github_cfg for {h}'.format(host_name))
-
-    @deprecated.deprecated
-    def _github_api_for_hostname(self, host_name):
-        not_none(host_name)
-        # hard-code schema to https
-        url = 'https://' + host_name
-        ctor = ccc.github.github_api_ctor(github_url=url)
-        return ctor()
 
     def _repository_helper(self, component_reference):
         if isinstance(component_reference, tuple):
@@ -207,17 +190,14 @@ def diff_products(left_product, right_product, ignore_component_names=()):
     )
 
 
-ComponentDiff = collections.namedtuple(
-    'ComponentDiff',
-    [
-        'crefs_only_left',
-        'crefs_only_right',
-        'crefpairs_version_changed',
-        'names_only_left',
-        'names_only_right',
-        'names_version_changed',
-    ]
-)
+@dataclasses.dataclass
+class ComponentDiff:
+    crefs_only_left: set = dataclasses.field(default_factory=set)
+    crefs_only_right: set = dataclasses.field(default_factory=set)
+    crefpairs_version_changed: set = dataclasses.field(default_factory=set)
+    names_only_left: set = dataclasses.field(default_factory=set)
+    names_only_right: set = dataclasses.field(default_factory=set)
+    names_version_changed: set = dataclasses.field(default_factory=set)
 
 
 def diff_components(left_components, right_components, ignore_component_names=()) -> ComponentDiff:
