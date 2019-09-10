@@ -8,7 +8,7 @@ spec:
     matchLabels:
       app: webhook-dispatcher
   strategy:
-    type: Recreate
+    type: RollingUpdate
   template:
     metadata:
       labels:
@@ -29,6 +29,11 @@ spec:
           imagePullPolicy: IfNotPresent
           name: webhook-dispatcher
           livenessProbe:
+            tcpSocket:
+              port: {{ .Values.webhook_dispatcher_port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
             tcpSocket:
               port: {{ .Values.webhook_dispatcher_port }}
             initialDelaySeconds: 10
