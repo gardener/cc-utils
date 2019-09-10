@@ -14,16 +14,6 @@ spec:
       labels:
         app: webhook-dispatcher
     spec:
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: app
-                operator: In
-                values:
-                - webhook-dispatcher
-            topologyKey: kubernetes.io/hostname
       containers:
         - image: {{ .Values.image_reference }}
           imagePullPolicy: IfNotPresent
