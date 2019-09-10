@@ -4,7 +4,7 @@ filter="indent_func(indent),trim">
 <%
 from makoutil import indent_func
 # registry_cfg must be of type ContainerRegistryConfig (cc-utils)
-tag = "1.359.0"
+tag = "1.355.0"
 repository = "eu.gcr.io/gardener-project/cc/job-image"
 %>
 ${task_image_resource(
@@ -17,5 +17,5 @@ ${task_image_resource(
 <%def name='configure_webhook(webhook_token)'>
   configure_webhook: &configure_webhook
     webhook_token: ${webhook_token}
-    check_every: 12h
+    check_every: 4h
 </%def>
