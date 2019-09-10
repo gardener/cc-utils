@@ -133,7 +133,6 @@ class GithubWebhookDispatcher(object):
         app.logger.info(f'will refresh all meta-resources for {pipeline_names}')
         for resource in concourse_api.pipeline_resources(pipeline_names=pipeline_names):
             if not resource.type == 'meta': # XXX unhardcode `meta` str literal
-                app.logger.info(f'skipping resource (not meta): {resource.name}')
                 continue
             resources.insert(0, resource)
 
