@@ -41,22 +41,26 @@ def update_repository_pipelines(
         cfg_set=cfg_set,
     )
     deployer = concourse.replicator.ConcourseDeployer(
-        unpause_pipelines=False,
+        unpause_pipelines=True,
         expose_pipelines=True,
     )
-    results_processor = concourse.replicator.ReplicationResultProcessor(
-        cfg_set=cfg_set,
-        unpause_new_pipelines=True,
-        remove_pipelines=False,
-        reorder_pipelines=False,
-    )
 
-    replicator = concourse.replicator.PipelineReplicator(
-        definition_enumerators=[repo_enumerator],
-        descriptor_preprocessor=preprocessor,
-        definition_renderer=renderer,
-        definition_deployer=deployer,
-        result_processor=results_processor,
+    # no need for parallelisation
+    definition_descriptors = repo_enumerator.enumerate_definition_descriptors()
+    preprocessed_descriptors = map(
+        preprocessor.process_definition_descriptor,
+        definition_descriptors,
     )
-
-    replicator.replicate()
+    render_results = map(
+        renderer.render,
+        preprocessed_descriptors,
+    )
+    for render_result in render_results:
+        if not render_result.render_status == concourse.replicator.RenderStatus.SUCCEEDED:
+            logger().warning('failed to render pipeline - ignoring')
+            continue
+        deploy_result = deployer.deploy(render_result.definition_descriptor)
+        if deploy_result.deploy_status == concourse.replicator.DeployStatus.SUCCEEDED:
+            logger().info('successfully rendered and deployed pipeline')
+        else:
+            logger().warning('failed to deploy a pipeline')

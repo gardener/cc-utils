@@ -292,17 +292,9 @@ class ConcourseDeployer(DefinitionDeployer):
 
 
 class ReplicationResultProcessor(object):
-    def __init__(
-        self,
-        cfg_set,
-        unpause_new_pipelines: bool=True,
-        remove_pipelines: bool=True,
-        reorder_pipelines: bool=True,
-    ):
+    def __init__(self, cfg_set, unpause_new_pipelines: bool=True):
         self._cfg_set = cfg_set
         self.unpause_new_pipelines = unpause_new_pipelines
-        self.remove_pipelines = remove_pipelines
-        self.reorder_pipelines = reorder_pipelines
 
     def process_results(self, results):
         # collect pipelines by concourse target (concourse_cfg, team_name) as key
@@ -324,24 +316,23 @@ class ReplicationResultProcessor(object):
                 team_name=concourse_team,
             )
             # find pipelines to remove
-            if self.remove_pipelines:
-                deployed_pipeline_names = set(map(
-                    lambda r: r.definition_descriptor.pipeline_name, concourse_results
-                ))
+            deployed_pipeline_names = set(map(
+                lambda r: r.definition_descriptor.pipeline_name, concourse_results
+            ))
 
-                pipelines_to_remove = set(concourse_api.pipelines()) - deployed_pipeline_names
+            pipelines_to_remove = set(concourse_api.pipelines()) - deployed_pipeline_names
 
-                for pipeline_name in pipelines_to_remove:
-                    info('removing pipeline: {p}'.format(p=pipeline_name))
-                    concourse_api.delete_pipeline(pipeline_name)
+            for pipeline_name in pipelines_to_remove:
+                info('removing pipeline: {p}'.format(p=pipeline_name))
+                concourse_api.delete_pipeline(pipeline_name)
 
             # trigger resource checks in new pipelines
             self._initialise_new_pipeline_resources(concourse_api, concourse_results)
-            if self.reorder_pipelines:
-                # order pipelines alphabetically
-                pipeline_names = list(concourse_api.pipelines())
-                pipeline_names.sort()
-                concourse_api.order_pipelines(pipeline_names)
+
+            # order pipelines alphabetically
+            pipeline_names = list(concourse_api.pipelines())
+            pipeline_names.sort()
+            concourse_api.order_pipelines(pipeline_names)
 
         # evaluate results
         failed_descriptors = [
