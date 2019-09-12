@@ -33,6 +33,9 @@ setuptools.setup(
     python_requires='>=3.7.*',
     py_modules=modules(),
     packages=setuptools.find_packages(),
+    package_data={
+        '':['*.mako']
+    },
     install_requires=list(requirements()),
     entry_points={
     },
