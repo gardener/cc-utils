@@ -380,7 +380,7 @@ class TemplateRetriever(object):
     @functools.lru_cache()
     def template_file(self, template_name):
         # TODO: do not hard-code file name extension
-        template_file_name = template_name + '.yaml'
+        template_file_name = template_name + '.mako'
         for path in self.template_path:
             for dirpath, _, filenames in os.walk(path):
                 if template_file_name in filenames:
