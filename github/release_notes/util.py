@@ -61,7 +61,7 @@ def post_to_slack(
     slack_cfg_name: str,
     slack_channel: str,
     release_version: str,
-    max_msg_size_bytes: int=30000,
+    max_msg_size_bytes: int=20000,
 ):
     # slack can't auto link pull requests, commits or users
     # hence we force the link generation when building the markdown string
