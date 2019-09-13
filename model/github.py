@@ -22,10 +22,11 @@ from urllib.parse import urlparse
 from model.base import (
     BasicCredentials,
     NamedModelElement,
+    ModelValidationError,
 )
 
 
-class PreferredProtocol(enum.Enum):
+class Protocol(enum.Enum):
     SSH = 'ssh'
     HTTPS = 'https'
 
@@ -39,9 +40,13 @@ class GithubConfig(NamedModelElement):
         return set(self.raw.get('purpose_labels', ()))
 
     def ssh_url(self):
+        if Protocol.SSH not in self.available_protocols():
+            raise RuntimeError(f"SSH protocol is not available for Github config '{self.name()}'")
         return self.raw.get('sshUrl')
 
     def http_url(self):
+        if Protocol.HTTPS not in self.available_protocols():
+            raise RuntimeError(f"HTTPS protocol is not available for Github config '{self.name()}'")
         return self.raw.get('httpUrl')
 
     def api_url(self):
@@ -54,7 +59,12 @@ class GithubConfig(NamedModelElement):
         return self.raw.get('webhook_token')
 
     def preferred_protocol(self):
-        return PreferredProtocol(self.raw.get('preferred_protocol', PreferredProtocol.SSH))
+        return self.available_protocols()[0]
+
+    def available_protocols(self):
+        '''Return available git protocols, in order of preference (most preferred protcol first)
+        '''
+        return [Protocol(value) for value in self.raw.get('available_protocols')]
 
     @functools.lru_cache()
     def credentials(self):
@@ -72,8 +82,9 @@ class GithubConfig(NamedModelElement):
 
     def _optional_attributes(self):
         return (
-            'preferred_protocol',
+            'httpUrl',
             'purpose_labels',
+            'sshUrl',
             'technicalUser',
             'technical_users',
         )
@@ -81,14 +92,29 @@ class GithubConfig(NamedModelElement):
     def _required_attributes(self):
         return [
             'apiUrl',
+            'available_protocols',
             'disable_tls_validation',
-            'httpUrl',
-            'sshUrl',
             'webhook_token',
         ]
 
     def validate(self):
         super().validate()
+
+        available_protocols = self.available_protocols()
+        if len(available_protocols) < 1:
+            raise ModelValidationError(
+                'At least one available protocol must be configured '
+                f"for Github config '{self.name()}'"
+            )
+        if Protocol.SSH in available_protocols and not self.ssh_url():
+            raise ModelValidationError(
+                f"SSH url is missing for Github config '{self.name()}'"
+            )
+        if Protocol.HTTPS in available_protocols and not self.http_url():
+            raise ModelValidationError(
+                f"HTTP url is missing for Github config '{self.name()}'"
+            )
+
         # validation of credentials implicitly happens in the constructor
         self.credentials()
 
