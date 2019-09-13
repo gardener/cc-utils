@@ -94,18 +94,14 @@ image_references = [
 ]
 
 util.info('running virus scan for all container images')
-images_with_potential_viruses = tuple(
+malware_scan_results = tuple(
   virus_scan_images(image_references, '${clam_av.clamav_cfg_name()}')
 )
-if images_with_potential_viruses:
-  util.warning('Potential viruses found:')
-  util.warning('\n'.join(map(str, images_with_potential_viruses)))
-else:
-  util.info(f'{len(image_references)} image(s) scanned for virus signatures w/o any matches')
+util.info(f'{len(image_references)} image(s) scanned for virus signatures.')
 
 % endif
 
-if not protecode_results and not images_with_potential_viruses:
+if not protecode_results and not malware_scan_results:
   sys.exit(0)
 
 email_recipients = ${image_scan_trait.email_recipients()}
@@ -128,7 +124,7 @@ email_recipients = tuple(
 for email_recipient in email_recipients:
   email_recipient.add_protecode_results(results=protecode_results)
 % if clam_av:
-  email_recipient.add_clamav_results(results=images_with_potential_viruses)
+  email_recipient.add_clamav_results(results=malware_scan_results)
 % endif
 
   if not email_recipient.has_results():
