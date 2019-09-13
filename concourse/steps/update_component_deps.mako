@@ -251,7 +251,9 @@ git_helper = gitutil.GitHelper(
   github_cfg=github_cfg,
   github_repo_path=f'{REPO_OWNER}/{REPO_NAME}',
 )
-git_helper.rebase(REPO_BRANCH)
+git_helper.rebase(
+  commit_ish=REPO_BRANCH,
+)
 
 upgrade_pull_requests = pull_request_util.enumerate_upgrade_pull_requests(state_filter='all')
 
