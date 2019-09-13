@@ -56,10 +56,15 @@ class ModelValidationMixin(object):
     def _validate_known_attributes(self):
         unknown_attributes = [a for a in self.raw if a not in self._known_attributes()]
         if unknown_attributes:
+            if hasattr(self, 'name'):
+                name = self.name()
+            else:
+                name = '<unknown>'
+
             raise ModelValidationError(
                 '{c}:{e}: the following attributes are unknown: {m}'.format(
                     c=type(self).__name__,
-                    e=str(self),
+                    e=str(name),
                     m=', '.join(unknown_attributes)
                 )
             )
