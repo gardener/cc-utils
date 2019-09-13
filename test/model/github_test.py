@@ -27,6 +27,7 @@ def required_dict():
             'apiUrl': 'foo',
             'disable_tls_validation': 'foo',
             'webhook_token': 'foo',
+            'available_protocols': ['https', 'ssh'],
     }
 
 
