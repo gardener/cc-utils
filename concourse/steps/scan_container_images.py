@@ -123,10 +123,6 @@ class MailRecipients(object):
 
     def _clamav_report(self):
         result = '<p><div>Virus Scanning Results:</div>'
-
-        if len(self._clamav_results) == 0:
-            return result + '<div>All images were scanned - no virus signatures were found</div>'
-
         return result + tabulate.tabulate(
             self._clamav_results,
             headers=('Image-Reference', 'Scanning Result'),
@@ -194,8 +190,9 @@ def virus_scan_images(image_references: typing.Iterable[str], clamav_config_name
         try:
             scan_result, _ = clamav_client.scan_container_image(image_reference=image_reference)
             if not scan_result.malware_detected():
-                continue
-            yield (image_reference, f'Malware detected: {scan_result.virus_signature()}')
+                yield (image_reference, f'No malware detected.')
+            else:
+                yield (image_reference, f'Malware detected: {scan_result.virus_signature()}')
         except ClamAVError as e:
             if e.error_code() == 422:
                 yield (image_reference, f'Scan aborted: {e.error_message()}')
