@@ -8,8 +8,6 @@ COPY VERSION /metadata/VERSION
 
 # XXX backards compatibility (remove eventually)
 ENV PATH /cc/utils/:/cc/utils/bin:$PATH
-# XXX required for mako-template files --> RM again
-ENV PYTHONPATH /cc/utils
 
 RUN pip3 install --upgrade \
   gardener-cicd-libs \
