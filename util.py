@@ -116,12 +116,12 @@ def _cli():
 def _print(msg, colour):
     if not msg:
         return
-    if not sys.stdout.isatty():
-        sys.stdout.write(msg + '\n')
+    if not sys.stderr.isatty():
+        sys.stderr.write(msg + '\n')
     else:
-        sys.stdout.write(termcolor.colored(msg, colour) + '\n')
+        sys.stderr.write(termcolor.colored(msg, colour) + '\n')
 
-    sys.stdout.flush()
+    sys.stderr.flush()
 
 
 def error(msg=None):
