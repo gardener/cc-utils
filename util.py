@@ -113,27 +113,27 @@ def _cli():
     return bool(ctx().args and hasattr(ctx().args, '._cli') and ctx().args._cli)
 
 
-def _print(msg, colour):
+def _print(msg, colour, outfh=sys.stdout):
     if not msg:
         return
-    if not sys.stderr.isatty():
-        sys.stderr.write(msg + '\n')
+    if not outfh.isatty():
+        outfh.write(msg + '\n')
     else:
-        sys.stderr.write(termcolor.colored(msg, colour) + '\n')
+        outfh.write(termcolor.colored(msg, colour) + '\n')
 
-    sys.stderr.flush()
+    outfh.flush()
 
 
 def error(msg=None):
     if _quiet():
         return
     if msg:
-        _print('ERROR: ' + str(msg), colour='red')
+        _print('ERROR: ' + str(msg), colour='red', outfh=sys.stderr)
 
 
 def fail(msg=None):
     if msg:
-        _print('ERROR: ' + str(msg), colour='red')
+        _print('ERROR: ' + str(msg), colour='red', outfh=sys.stderr)
     raise Failure(1)
 
 
@@ -148,7 +148,7 @@ def warning(msg:str):
     if _quiet():
         return
     if msg:
-        _print('WARNING: ' + str(msg), colour='yellow')
+        _print('WARNING: ' + str(msg), colour='yellow', outfh=sys.stderr)
 
 
 def verbose(msg:str):
