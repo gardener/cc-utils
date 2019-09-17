@@ -98,7 +98,13 @@ malware_scan_results = tuple(
   virus_scan_images(image_references, '${clam_av.clamav_cfg_name()}')
 )
 util.info(f'{len(image_references)} image(s) scanned for virus signatures.')
-
+print(
+  tabulate.tabulate(
+    malware_scan_results,
+    headers=('Image Reference', 'Scan Result'),
+    tablefmt='fancy_grid',
+  )
+)
 % endif
 
 if not protecode_results and not malware_scan_results:
