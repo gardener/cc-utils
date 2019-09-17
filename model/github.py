@@ -115,8 +115,7 @@ class GithubConfig(NamedModelElement):
                 f"HTTP url is missing for Github config '{self.name()}'"
             )
 
-        # validation of credentials implicitly happens in the constructor
-        self.credentials()
+        self.credentials() and self.credentials().validate() # XXX refactor
 
 
 class GithubCredentials(BasicCredentials):
