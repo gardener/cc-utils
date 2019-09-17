@@ -48,8 +48,8 @@ class UtilTest(unittest.TestCase):
             with self.assertRaises(Failure):
                 examinee.fail(msg='foo bar')
 
-        self.assertEqual('ERROR: foo bar', stdout.getvalue().strip())
-        self.assertTrue(len(stderr.getvalue()) == 0)
+        self.assertEqual('ERROR: foo bar', stderr.getvalue().strip())
+        self.assertTrue(len(stdout.getvalue()) == 0)
 
     def test_not_empty(self):
         result = examinee.not_empty('foo')
@@ -62,8 +62,8 @@ class UtilTest(unittest.TestCase):
             with capture_out() as (stdout, stderr):
                 with self.assertRaises(Failure):
                     examinee.not_empty(value)
-            self.assertIn('must not be empty', stdout.getvalue().strip())
-            self.assertTrue(len(stderr.getvalue()) == 0)
+            self.assertIn('must not be empty', stderr.getvalue().strip())
+            self.assertTrue(len(stdout.getvalue()) == 0)
 
     def test_existing_file(self):
         import sys
@@ -76,8 +76,8 @@ class UtilTest(unittest.TestCase):
         with capture_out() as (stdout, stderr):
             with self.assertRaises(Failure):
                 examinee.existing_file('no such file, I hope')
-        self.assertIn('not an existing file', stdout.getvalue().strip())
-        self.assertTrue(len(stderr.getvalue()) == 0)
+        self.assertIn('not an existing file', stderr.getvalue().strip())
+        self.assertTrue(len(stdout.getvalue()) == 0)
 
         # should also work with pathlib.Path
         existing_file = pathlib.Path(existing_file)

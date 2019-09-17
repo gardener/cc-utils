@@ -141,7 +141,7 @@ def info(msg:str):
     if _quiet():
         return
     if msg:
-        _print('INFO: ' + str(msg), colour='cyan')
+        _print('INFO: ' + str(msg), colour='cyan', outfh=sys.stdout)
 
 
 def warning(msg:str):
@@ -155,12 +155,12 @@ def verbose(msg:str):
     if not _verbose():
         return
     if msg:
-        _print('VERBOSE: ' + msg, colour=None)
+        _print('VERBOSE: ' + msg, colour=None, outfh=sys.stdout)
 
 
 def success(msg:str):
     if msg:
-        _print('SUCCESS: ' + msg, colour='green')
+        _print('SUCCESS: ' + msg, colour='green', outfs=sys.stdout)
 
 
 def not_empty(value):
