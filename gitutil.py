@@ -18,6 +18,7 @@ import enum
 import functools
 import os
 import subprocess
+import tempfile
 import urllib.parse
 
 import git
@@ -32,13 +33,14 @@ from model.github import (
 
 
 def _ssh_auth_env(github_cfg):
-    tmp_id = os.path.abspath('tmp.id_rsa')
-    with open(tmp_id, 'w') as f:
-        f.write(github_cfg.credentials().private_key())
-    os.chmod(tmp_id, 0o400)
+    tmp_id = tempfile.NamedTemporaryFile(mode='w')
+    tmp_id.write(github_cfg.credentials().private_key())
+    tmp_id.flush()
+
+    os.chmod(tmp_id.name, 0o400)
     suppress_hostcheck = '-o "StrictHostKeyChecking no"'
     id_only = '-o "IdentitiesOnly yes"'
-    os.environ['GIT_SSH_COMMAND'] = f'ssh -i {tmp_id} {suppress_hostcheck} {id_only}'
+    os.environ['GIT_SSH_COMMAND'] = f'ssh -i {tmp_id.name} {suppress_hostcheck} {id_only}'
     return tmp_id
 
 
@@ -83,7 +85,7 @@ class GitHelper(object):
         git.Git().clone(*args)
 
         if protocol is Protocol.SSH:
-            os.unlink(tmp_id)
+            os.unlink(tmp_id.name)
             del os.environ['GIT_SSH_COMMAND']
 
         return GitHelper(
@@ -129,7 +131,7 @@ class GitHelper(object):
         finally:
             self.repo.delete_remote(remote)
             if protocol is Protocol.SSH:
-                os.unlink(tmp_id)
+                os.unlink(tmp_id.name)
                 del os.environ['GIT_SSH_COMMAND']
 
     def index_to_commit(self, message, parent_commits=None):
