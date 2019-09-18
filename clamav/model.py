@@ -132,6 +132,12 @@ class ClamAVScanEventTypes(enum.Enum):
     RESULT = 'result'
 
 
+# HTTP status code 422 (Unprocessable Entity) is returned iff our ClamAV installation
+# aborted the scan (due to the scanned file exceeding limits). See ClamAVs clamd.conf
+# for a detailed list of possible limits.
+ERROR_CODE_ON_SCAN_ABORTED = 422
+
+
 class ClamAVError(Exception):
     def __init__(self, error_code: int, error_message: str):
         super().__init__(
