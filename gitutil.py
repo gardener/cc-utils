@@ -111,7 +111,6 @@ class GitHelper(object):
     @contextlib.contextmanager
     def _authenticated_remote(self):
         protocol = self.github_cfg.preferred_protocol()
-        info(f'autenticated remote using {protocol}')
         if protocol is Protocol.SSH:
             url = urljoin(self.github_cfg.ssh_url(), self.github_repo_path)
             cmd_env, tmp_id = _ssh_auth_env(github_cfg=self.github_cfg)
@@ -126,6 +125,8 @@ class GitHelper(object):
             name=random_str(),
             url=url,
         )
+        info(f'autenticated remote {remote.name} using {protocol}')
+
         try:
             yield (cmd_env, remote)
         finally:
