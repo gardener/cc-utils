@@ -110,7 +110,6 @@ class GitHelper(object):
 
     @contextlib.contextmanager
     def _authenticated_remote(self):
-
         protocol = self.github_cfg.preferred_protocol()
         if protocol is Protocol.SSH:
             url = urljoin(self.github_cfg.ssh_url(), self.github_repo_path)
