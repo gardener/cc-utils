@@ -25,7 +25,6 @@ import protecode.util
 
 from concourse.model.traits.image_scan import Notify
 from product.model import ComponentName, UploadResult
-from clamav.model import ClamAVError
 
 
 class MailRecipients(object):
@@ -187,17 +186,14 @@ def mail_recipients(
 def virus_scan_images(image_references: typing.Iterable[str], clamav_config_name: str):
     clamav_client = ccc.clamav.client_from_config_name(clamav_config_name)
     for image_reference in image_references:
-        try:
-            scan_result, _ = clamav_client.scan_container_image(image_reference=image_reference)
-            if not scan_result.malware_detected():
-                yield (image_reference, f'No malware detected.')
-            else:
-                yield (image_reference, f'Malware detected: {scan_result.virus_signature()}')
-        except ClamAVError as e:
-            if e.error_code() == 422:
-                yield (image_reference, f'Scan aborted: {e.error_message()}')
-            else:
-                raise e
+        scan_results = [
+            (image_reference, scan_result.virus_signature())
+            for scan_result,_ in clamav_client.scan_container_image(image_reference=image_reference)
+        ]
+        if scan_results:
+            yield from scan_results
+        else:
+            yield (image_reference, 'No malware detected.')
 
 
 def protecode_results_table(protecode_cfg, upload_results: typing.Iterable[UploadResult]):

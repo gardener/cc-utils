@@ -94,9 +94,10 @@ image_references = [
 ]
 
 util.info('running virus scan for all container images')
-malware_scan_results = tuple(
-  virus_scan_images(image_references, '${clam_av.clamav_cfg_name()}')
-)
+malware_scan_results = [
+  (image_ref, reason)
+  for image_ref, reason in virus_scan_images(image_references, '${clam_av.clamav_cfg_name()}')
+]
 util.info(f'{len(image_references)} image(s) scanned for virus signatures.')
 print(
   tabulate.tabulate(

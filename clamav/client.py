@@ -26,6 +26,8 @@ from .model import (
     ClamAVMonitoringInfo,
     ClamAVScanEventClient,
     ClamAVScanResult,
+    ClamAVError,
+    ERROR_CODE_ON_SCAN_ABORTED,
 )
 
 logger = logging.getLogger(__name__)
@@ -76,9 +78,16 @@ class ClamAVClient(object):
         '''
         logger.debug(f'scanning container image {image_reference}')
         for content, path in iter_image_files(image_reference):
-            scan_result = self.sse_scan(content)
-            if not scan_result.malware_detected():
-                continue
-            else:
-                return scan_result, path
-        return ClamAVScanResult({'malwareDetected':False}), ''
+            try:
+                scan_result = self.sse_scan(content)
+                if not scan_result.malware_detected():
+                    continue
+                else:
+                    yield (scan_result, path)
+            except ClamAVError as e:
+                if e.error_code() == ERROR_CODE_ON_SCAN_ABORTED:
+                    yield (
+                        ClamAVScanResult({'finding': f'Scan aborted: {e.error_message()}'}), path
+                    )
+                else:
+                    raise e
