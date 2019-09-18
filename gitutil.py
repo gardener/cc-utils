@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import contextlib
-import enum
 import functools
 import os
 import subprocess
@@ -43,13 +42,6 @@ def _ssh_auth_env(github_cfg):
     cmd_env = os.environ.copy()
     cmd_env['GIT_SSH_COMMAND'] = f'ssh -v -i {tmp_id.name} {suppress_hostcheck} {id_only}'
     return (cmd_env, tmp_id)
-
-
-class ConfigLevel(enum.Enum):
-    LOCAL = 'repository'
-    GLOBAL = 'global'
-    SYSTEM = 'system'
-    DEFAULT = None
 
 
 class GitHelper(object):
@@ -184,9 +176,6 @@ class GitHelper(object):
 
     def _pop_stash(self):
         self.repo.git.stash('pop', '--quiet')
-
-    def _config_value(self, section, option, level: ConfigLevel=ConfigLevel.DEFAULT):
-        return self.repo.git.config_reader(level.value).get_value(section, option)
 
     def push(self, from_ref, to_ref):
         with self._authenticated_remote() as (cmd_env, remote):
