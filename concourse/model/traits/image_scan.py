@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import enum
+import typing
 
 from concourse.model.job import (
     JobVariant,
@@ -143,7 +144,8 @@ ATTRIBUTES = (
     ),
     AttributeSpec.required(
         name='email_recipients',
-        doc='optional email recipients to be notified about critical scan results',
+        doc='optional list of email recipients to be notified about critical scan results',
+        type=typing.List[str],
     ),
     AttributeSpec.optional(
         name='protecode',
