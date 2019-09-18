@@ -33,7 +33,7 @@ from model.github import (
 
 
 def _ssh_auth_env(github_cfg):
-    tmp_id = tempfile.NamedTemporaryFile(mode='w')
+    tmp_id = tempfile.NamedTemporaryFile(mode='w', delete=False) # attention: callers must unlink
     tmp_id.write(github_cfg.credentials().private_key())
     tmp_id.flush()
 
