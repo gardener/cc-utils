@@ -63,7 +63,7 @@ def mount_default_adapter(
             read=3,
             status=3,
             redirect=False,
-            status_forcelist=[500, 502, 503],
+            status_forcelist=[500, 502, 503, 504],
             raise_on_status=False,
             respect_retry_after_header=True,
             backoff_factor=1.0,
