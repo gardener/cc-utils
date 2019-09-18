@@ -40,8 +40,9 @@ def _ssh_auth_env(github_cfg):
     os.chmod(tmp_id.name, 0o400)
     suppress_hostcheck = '-o "StrictHostKeyChecking no"'
     id_only = '-o "IdentitiesOnly yes"'
-    os.environ['GIT_SSH_COMMAND'] = f'ssh -v -i {tmp_id.name} {suppress_hostcheck} {id_only}'
-    return tmp_id
+    cmd_env = os.environ.copy()
+    cmd_env['GIT_SSH_COMMAND'] = f'ssh -v -i {tmp_id.name} {suppress_hostcheck} {id_only}'
+    return (cmd_env, tmp_id)
 
 
 class ConfigLevel(enum.Enum):
@@ -71,7 +72,7 @@ class GitHelper(object):
 
         protocol = github_cfg.preferred_protocol()
         if protocol is Protocol.SSH:
-            tmp_id = _ssh_auth_env(github_cfg=github_cfg)
+            cmd_env, tmp_id = _ssh_auth_env(github_cfg=github_cfg)
             url = urljoin(github_cfg.ssh_url(), github_repo_path)
         elif protocol is Protocol.HTTPS:
             url = url_with_credentials(github_cfg, github_repo_path)
@@ -82,11 +83,16 @@ class GitHelper(object):
         if checkout_branch is not None:
             args += ['--branch', checkout_branch, '--single-branch']
         args += [url, target_directory]
-        git.Git().clone(*args)
+
+        repo = git.Git()
+        if protocol is Protocol.SSH:
+            with repo.custom_environment(**cmd_env):
+                repo.clone(*args)
+        else:
+            repo.clone(*args)
 
         if protocol is Protocol.SSH:
             os.unlink(tmp_id.name)
-            del os.environ['GIT_SSH_COMMAND']
 
         return GitHelper(
             repo = target_directory,
@@ -116,9 +122,10 @@ class GitHelper(object):
         info(f'autenticated remote using {protocol}')
         if protocol is Protocol.SSH:
             url = urljoin(self.github_cfg.ssh_url(), self.github_repo_path)
-            tmp_id = _ssh_auth_env(github_cfg=self.github_cfg)
+            cmd_env, tmp_id = _ssh_auth_env(github_cfg=self.github_cfg)
         elif protocol is Protocol.HTTPS:
             url = url_with_credentials(self.github_cfg, self.github_repo_path)
+            cmd_env = os.environ
         else:
             raise NotImplementedError
 
@@ -128,12 +135,11 @@ class GitHelper(object):
             url=url,
         )
         try:
-            yield remote
+            yield (cmd_env, remote)
         finally:
             self.repo.delete_remote(remote)
             if protocol is Protocol.SSH:
                 os.unlink(tmp_id.name)
-                del os.environ['GIT_SSH_COMMAND']
 
     def index_to_commit(self, message, parent_commits=None):
         '''moves all diffs from worktree to a new commit without modifying branches.
@@ -183,16 +189,18 @@ class GitHelper(object):
         return self.repo.git.config_reader(level.value).get_value(section, option)
 
     def push(self, from_ref, to_ref):
-        with self._authenticated_remote() as remote:
-            remote.push(':'.join((from_ref, to_ref)))
+        with self._authenticated_remote() as (cmd_env, remote):
+            with remote.repo.git.custom_environment(**cmd_env):
+                remote.push(':'.join((from_ref, to_ref)))
 
     def rebase(self, commit_ish: str):
         self.repo.git.rebase('--quiet', commit_ish)
 
     def fetch_head(self, ref: str):
-        with self._authenticated_remote() as remote:
-            fetch_result = remote.fetch(ref)[0]
-            return fetch_result.commit
+        with self._authenticated_remote() as (cmd_env, remote):
+            with remote.repo.git.custom_environment(**cmd_env):
+                fetch_result = remote.fetch(ref)[0]
+                return fetch_result.commit
 
 
 def url_with_credentials(github_cfg, github_repo_path):
