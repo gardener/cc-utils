@@ -113,6 +113,9 @@ class Transaction(object):
             step.set_context(self._context)
         self._steps = steps
 
+    def context(self):
+        return self._context
+
     def validate(self):
         for step in self._steps:
             info(f"Validating step '{step.name()}'")
