@@ -29,7 +29,7 @@ disable_tls_validation = not github_cfg.tls_validation()
 % elif github_cfg.preferred_protocol() is Protocol.HTTPS:
     uri: ${github_cfg.http_url()}/${repo_cfg.repo_path()}
 % else:
-  <% raise NotImplementedException %>
+  <% raise NotImplementedError %>
 % endif
     branch: ${repo_cfg.branch()}
     disable_ci_skip: ${repo_cfg.disable_ci_skip()}
@@ -67,7 +67,7 @@ credentials = github_cfg.credentials()
 % elif github_cfg.preferred_protocol() is Protocol.HTTPS:
     uri: ${github_cfg.http_url()}/${repo_cfg.repo_path()}
 % else:
-  <% raise NotImplementedException %>
+  <% raise NotImplementedError %>
 % endif
     api_endpoint: ${github_cfg.api_url()}
     skip_ssl_verification: ${disable_tls_validation}
