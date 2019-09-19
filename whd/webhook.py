@@ -12,6 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from concurrent.futures import (
+    ThreadPoolExecutor,
+    TimeoutError,
+)
 
 from flask import abort, request
 from flask import current_app as app
@@ -24,6 +28,9 @@ from flask_restful import (
 from model.webhook_dispatcher import WebhookDispatcherConfig
 from .dispatcher import GithubWebhookDispatcher
 from .model import CreateEvent, PushEvent, PullRequestEvent
+
+
+executor = ThreadPoolExecutor()
 
 
 class GithubWebhook(Resource):
@@ -39,6 +46,15 @@ class GithubWebhook(Resource):
         self.dispatcher = GithubWebhookDispatcher(cfg_set=cfg_set, whd_cfg=whd_cfg)
 
     def post(self):
+        # subsequent operations can take too long. However github-webhooks should be marked
+        # as "delivered successfully", so that we can identify actual Github delivery issues.
+        future = executor.submit(self._post)
+        try:
+            future.result(timeout=5)
+        except TimeoutError:
+            pass
+
+    def _post(self):
         args = self.parser.parse_args()
         event = args.get('X-GitHub-Event')
         if not event:
