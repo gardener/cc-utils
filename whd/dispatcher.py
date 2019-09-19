@@ -16,6 +16,7 @@
 import datetime
 import functools
 import time
+import traceback
 
 from flask import current_app as app
 
@@ -138,10 +139,13 @@ class GithubWebhookDispatcher(object):
 
         for resource in resources:
             app.logger.info('triggering resource check for: ' + resource.name)
-            concourse_api.trigger_resource_check(
-                pipeline_name=resource.pipeline_name(),
-                resource_name=resource.name,
-            )
+            try:
+                concourse_api.trigger_resource_check(
+                    pipeline_name=resource.pipeline_name(),
+                    resource_name=resource.name,
+                )
+            except Exception:
+                traceback.print_exc()
 
     def _set_pr_labels(self, pr_event, resources):
         required_labels = {
