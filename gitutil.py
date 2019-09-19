@@ -32,8 +32,11 @@ from model.github import (
 
 
 def _ssh_auth_env(github_cfg):
+    credentials = github_cfg.credentials()
+    info(f'using github-credentials with uid: {credentials.username()}')
+
     tmp_id = tempfile.NamedTemporaryFile(mode='w', delete=False) # attention: callers must unlink
-    tmp_id.write(github_cfg.credentials().private_key())
+    tmp_id.write(credentials.private_key())
     tmp_id.flush()
 
     os.chmod(tmp_id.name, 0o400)
