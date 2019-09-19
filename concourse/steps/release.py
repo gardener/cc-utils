@@ -111,7 +111,7 @@ class Transaction(object):
         self._context = util.check_type(ctx, TransactionContext)
         # validate type of args and set context
         for step in steps:
-            # util.check_type(step, TransactionalStep)
+            util.check_type(step, TransactionalStep)
             step.set_context(self._context)
         self._steps = steps
 
@@ -675,14 +675,9 @@ def release_and_prepare_next_dev_cycle(
     else:
         raise NotImplementedError(release_notes_policy)
 
-    release_notes_steps = [
-        publish_release_notes_step,
-        cleanup_draft_releases_step,
-    ]
-
     release_notes_transaction = Transaction(
         ctx=transaction_ctx,
-        steps=(release_notes_steps,),
+        steps=(publish_release_notes_step, cleanup_draft_releases_step),
     )
     release_notes_transaction.validate()
     if not release_notes_transaction.execute():
