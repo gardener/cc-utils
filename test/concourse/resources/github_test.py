@@ -73,6 +73,7 @@ class TestGithubMakoResource(object):
     @pytest.mark.parametrize('require_label', [None, 'some-label'])
     @pytest.mark.parametrize('include_paths', [[], ['path/to/include']])
     @pytest.mark.parametrize('exclude_paths', [[], ['path/to/exclude']])
+    @pytest.mark.parametrize('available_protocols', [['ssh','https'],['https', 'ssh']])
     def test_pr_resource_contains_required_attributes(
         self,
         repo_cfg,
@@ -81,10 +82,11 @@ class TestGithubMakoResource(object):
         require_label,
         include_paths,
         exclude_paths,
+        available_protocols,
     ):
         examinee = mako.template.Template(filename=self.test_file)
         test_repo_cfg = repo_cfg(include_paths=include_paths, exclude_paths=exclude_paths)
-        test_cfg_set = cfg_set()
+        test_cfg_set = cfg_set(available_protocols=available_protocols)
         render_result = examinee.get_def('github_pr').render(
             test_repo_cfg,
             test_cfg_set,
@@ -94,7 +96,7 @@ class TestGithubMakoResource(object):
 
         required_attributes = [
             'base', 'uri', 'api_endpoint', 'skip_ssl_verification', 'access_token', 'no_ssl_verify',
-            'private_key'
+            'private_key', 'username', 'password',
         ]
         if require_label:
             required_attributes.append('label')
@@ -118,6 +120,7 @@ class TestGithubMakoResource(object):
     @pytest.mark.parametrize('configure_webhook', [True, False])
     @pytest.mark.parametrize('include_paths', [[], ['path/to/include']])
     @pytest.mark.parametrize('exclude_paths', [[], ['path/to/exclude']])
+    @pytest.mark.parametrize('available_protocols', [['ssh','https'],['https', 'ssh']])
     def test_git_resource_contains_required_attributes(
         self,
         repo_cfg,
@@ -125,10 +128,11 @@ class TestGithubMakoResource(object):
         configure_webhook,
         include_paths,
         exclude_paths,
+        available_protocols,
     ):
         examinee = mako.template.Template(filename=self.test_file)
         test_repo_cfg = repo_cfg(include_paths=include_paths, exclude_paths=exclude_paths)
-        test_cfg_set = cfg_set()
+        test_cfg_set = cfg_set(available_protocols=available_protocols)
         render_result = examinee.get_def('github_repo').render(
             test_repo_cfg,
             test_cfg_set,
