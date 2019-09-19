@@ -160,7 +160,7 @@ def verbose(msg:str):
 
 def success(msg:str):
     if msg:
-        _print('SUCCESS: ' + msg, colour='green', outfs=sys.stdout)
+        _print('SUCCESS: ' + msg, colour='green', outfh=sys.stdout)
 
 
 def not_empty(value):
