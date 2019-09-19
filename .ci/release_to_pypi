@@ -3,6 +3,7 @@
 set -e
 set -x
 
+out_dir="$(readlink -f "$(dirname "$0")/${PYPI_PATH}")"
 repo_dir="$(readlink -f "$(dirname "$0")/..")"
 cd $repo_dir
 
@@ -20,6 +21,8 @@ passwd="$(${model_element_cmd} --key credentials.passwd)"
 
 # upload to pypi
 twine upload --user "${username}" --password "${passwd}" dist/*
+# keep for subsequent docker build
+cp dist/* ${out_dir}
 
 
 ###############################
@@ -31,3 +34,5 @@ python3 "${cli_dir}/setup.py" sdist bdist_wheel
 
 # upload to pypi
 twine upload --user "${username}" --password "${passwd}" dist/*
+# keep for subsequent docker build
+cp dist/* ${out_dir}

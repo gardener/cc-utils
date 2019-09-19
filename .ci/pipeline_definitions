@@ -35,7 +35,8 @@ cc-utils:
       steps:
         test: ~
         lint: ~
-        release_to_pypi: ~
+        release_to_pypi:
+          output_dir: 'pypi'
         generate_documentation:
           publish_to: ['gh_pages']
       traits:
@@ -49,6 +50,9 @@ cc-utils:
               image: 'eu.gcr.io/gardener-project/cc/job-image'
               dockerfile: 'Dockerfile'
               tag_as_latest: True
+              inputs:
+                steps:
+                  release_to_pypi: ~
         release:
           nextversion: 'bump_minor'
           release_callback: '.ci/bump_job_image_version.py'
