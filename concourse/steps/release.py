@@ -93,24 +93,23 @@ class TransactionalStep(object, metaclass=abc.ABCMeta):
 
 
 class Transaction(object):
-    '''This class represents a transaction using `TransactionalStep`s
+    '''Represents a transaction using `TransactionalStep`s
 
-    Provides aptly named methods to `validate` a series of `TransactionalStep`s and `execute`
-    it atomically, performing the necessary undo actions should an error occur.
+    After creation, invoke `validate` to have the transaction validate all steps. Invoke
+    `execute` to execute all steps. Both operations are done in the original step order.
 
-    `TransactionalStep`s are provided with access to a shared `TransactionContext` instance
-    to store and retrieve (by step name) information with greater scope than a single step.
+    Upon encountered errors, all steps that were already executed are reverted in inverse execution
+    order.
     '''
     def __init__(
         self,
         *steps: TransactionalStep,
     ):
-        # create context object for this transaction
         self._context = TransactionContext()
         # validate type of args and set context
         for step in steps:
             if not isinstance(step, TransactionalStep):
-                raise TypeError('Transactions may only contain instances of TransactionalStep')
+                raise ValueError('steps must be of type TransactionalStep')
             step.set_context(self._context)
         self._steps = steps
 
@@ -126,7 +125,6 @@ class Transaction(object):
         executed_steps = list()
         for step in self._steps:
             step_name = step.name()
-            # attempt to execute the step
             info(f"Applying step '{step_name}'")
             executed_steps.append(step)
             try:
@@ -287,7 +285,7 @@ class ReleaseCommitsStep(TransactionalStep):
         return {
             'release commit sha': release_commit.hexsha,
             'next cycle commit sha': next_cycle_commit_sha,
-            }
+        }
 
     def revert(self):
         if not self.context().has_output(self.name()):
