@@ -10,6 +10,7 @@ COPY VERSION /metadata/VERSION
 ENV PATH /cc/utils/:/cc/utils/bin:$PATH
 
 RUN pip3 install --upgrade \
+  --find-links /cc/utils/dist \
   gardener-cicd-libs \
   gardener-cicd-cli
 
