@@ -108,8 +108,7 @@ class Transaction(object):
         self._context = TransactionContext()
         # validate type of args and set context
         for step in steps:
-            if not isinstance(step, TransactionalStep):
-                raise ValueError('steps must be of type TransactionalStep')
+            util.check_type(step, TransactionalStep)
             step.set_context(self._context)
         self._steps = steps
 
