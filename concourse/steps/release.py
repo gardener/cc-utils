@@ -111,7 +111,7 @@ class Transaction(object):
         self._context = util.check_type(ctx, TransactionContext)
         # validate type of args and set context
         for step in steps:
-            util.check_type(step, TransactionalStep)
+            # util.check_type(step, TransactionalStep)
             step.set_context(self._context)
         self._steps = steps
 
