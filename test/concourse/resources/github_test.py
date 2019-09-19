@@ -38,14 +38,14 @@ class TestGithubMakoResource(object):
                     'disable_tls_validation': disable_tls_validation,
                     'webhook_token': webhook_token,
                     'available_protocols': available_protocols,
-                    'technicalUser': {
-                        'username': tu_username,
-                        'password': tu_password,
-                        'privateKey': tu_private_key,
-                        'authToken': tu_auth_token,
-                        'emailAddress': tu_email_address,
-                    }
-                }
+                    'technical_users': [{
+                            'username': tu_username,
+                            'password': tu_password,
+                            'privateKey': tu_private_key,
+                            'authToken': tu_auth_token,
+                            'emailAddress': tu_email_address,
+                    }],
+                },
             )
             cfg_set_mock.github.return_value = gh_cfg
             return cfg_set_mock
