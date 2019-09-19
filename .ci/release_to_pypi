@@ -4,7 +4,9 @@ set -e
 set -x
 
 repo_dir="$(readlink -f "$(dirname "$0")/..")"
-out_dir="$(readlink -f "${repo_dir}/../${PYPI_PATH}")"
+out_dir="$(readlink -f "${repo_dir}/../${PYPI_PATH}/dist")"
+mkdir "${out_dir}"
+
 cd $repo_dir
 
 # install build-only dependencies (no need to include in image)
