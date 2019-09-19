@@ -4,9 +4,11 @@ import version
 import semver
 import subprocess
 import traceback
+import typing
 
 from github3.exceptions import NotFoundError
 
+import util
 from util import (
     existing_file,
     existing_dir,
@@ -103,17 +105,15 @@ class Transaction(object):
     '''
     def __init__(
         self,
-        *steps: TransactionalStep,
+        ctx: TransactionContext,
+        steps: typing.Iterable[TransactionalStep],
     ):
-        self._context = TransactionContext()
+        self._context = util.check_type(ctx, TransactionContext)
         # validate type of args and set context
         for step in steps:
             util.check_type(step, TransactionalStep)
             step.set_context(self._context)
         self._steps = steps
-
-    def context(self):
-        return self._context
 
     def validate(self):
         for step in self._steps:
@@ -617,6 +617,8 @@ def release_and_prepare_next_dev_cycle(
     slack_channel: str=None,
     rebase_before_release: bool=False,
 ):
+    transaction_ctx = TransactionContext() # shared between all steps/trxs
+
     release_notes_policy = ReleaseNotesPolicy(release_notes_policy)
     github_helper = GitHubRepositoryHelper.from_githubrepobranch(githubrepobranch)
     git_helper = GitHelper.from_githubrepobranch(
@@ -646,8 +648,8 @@ def release_and_prepare_next_dev_cycle(
     )
 
     release_transaction = Transaction(
-        release_commits_step,
-        github_release_step,
+        ctx=transaction_ctx,
+        steps=(release_commits_step, github_release_step,)
     )
 
     release_transaction.validate()
@@ -678,14 +680,18 @@ def release_and_prepare_next_dev_cycle(
         cleanup_draft_releases_step,
     ]
 
-    release_notes_transaction = Transaction(*release_notes_steps)
+    release_notes_transaction = Transaction(
+        ctx=transaction_ctx,
+        steps=(release_notes_steps,),
+    )
     release_notes_transaction.validate()
     if not release_notes_transaction.execute():
         raise RuntimeError('An error occurred while publishing the release notes.')
 
     if slack_cfg_name and slack_channel:
-        context = release_notes_transaction.context()
-        release_notes = context.step_output(publish_release_notes_step.name()).get('release notes')
+        release_notes = transaction_ctx.step_output(
+            publish_release_notes_step.name()
+            ).get('release notes')
 
         post_to_slack_step = PostSlackReleaseStep(
             slack_cfg_name=slack_cfg_name,
@@ -694,7 +700,10 @@ def release_and_prepare_next_dev_cycle(
             release_notes=release_notes,
             githubrepobranch=githubrepobranch,
         )
-        slack_transaction = Transaction(post_to_slack_step)
+        slack_transaction = Transaction(
+            ctx=transaction_ctx,
+            steps=(post_to_slack_step,),
+        )
         slack_transaction.validate()
         if not slack_transaction.execute():
             raise RuntimeError('An error occurred while posting the release notes to Slack.')
