@@ -13,6 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
+import itertools
+import json
+import os
+
+import concourse.client
+import concourse.model.traits.meta
+import concourse.steps.meta
 import github.webhook
 
 from model.concourse import (
@@ -21,8 +29,23 @@ from model.concourse import (
 from model.webhook_dispatcher import (
     WebhookDispatcherDeploymentConfig,
 )
-from util import info, warning, ctx, create_url_from_attributes
+from util import (
+    _running_on_ci,
+    check_env,
+    create_url_from_attributes,
+    ctx,
+    info,
+    warning,
+)
 import ccc.github
+
+
+@dataclasses.dataclass
+class PipelineMetaData:
+    pipeline_name: str
+    job_name: str
+    current_config_set_name: str
+    team_name: str
 
 
 def sync_org_webhooks(whd_deployment_cfg: WebhookDispatcherDeploymentConfig,):
@@ -116,3 +139,60 @@ def resurrect_pods(
                 namespace=namespace
             )
     return pruned_workers
+
+
+def get_pipeline_metadata():
+    if not _running_on_ci():
+        raise RuntimeError('Pipeline-metadata is only available if running on CI infrastructure')
+
+    current_cfg_set_name = check_env('CONCOURSE_CURRENT_CFG')
+    team_name = check_env('CONCOURSE_CURRENT_TEAM')
+    pipeline_name = check_env('PIPELINE_NAME')
+    job_name = check_env('BUILD_JOB_NAME')
+
+    return PipelineMetaData(
+        pipeline_name=pipeline_name,
+        job_name=job_name,
+        current_config_set_name=current_cfg_set_name,
+        team_name=team_name,
+    )
+
+
+def find_own_running_build():
+    if not _running_on_ci():
+        raise RuntimeError('Can only find own running build if running on CI infrastructure.')
+
+    meta_dir = check_env(concourse.model.traits.meta.META_INFO_ENV_VAR_NAME)
+    meta_info_file = os.path.join(
+        os.path.abspath(check_env('CC_ROOT_DIR')),
+        meta_dir,
+        concourse.steps.meta.jobmetadata_filename,
+    )
+    with open(meta_info_file, 'r') as f:
+        metadata_json = json.load(f)
+    build_job_uuid = metadata_json['uuid']
+
+    pipeline_metadata = get_pipeline_metadata()
+    config_set = ctx().cfg_factory().cfg_set(pipeline_metadata.current_config_set_name)
+    concourse_cfg = config_set.concourse()
+    client = concourse.client.from_cfg(concourse_cfg, pipeline_metadata.team_name)
+
+    # returns builds in order from newest to oldest. To avoid a possibly _very_ large number of
+    # api accesses, use only the 10 most recent.
+    job_builds = client.job_builds(pipeline_metadata.pipeline_name, pipeline_metadata.job_name)[:10]
+
+    for build in job_builds:
+        if not build.status() is concourse.client.model.BuildStatus.RUNNING:
+            continue
+        build_events = build.events()
+        build_plan = build.plan()
+        meta_task_id = build_plan.task_id(concourse.model.traits.meta.META_STEP_NAME)
+        for line in itertools.islice(build_events.iter_buildlog(meta_task_id), 0, 40):
+            try:
+                uuid_json = json.loads(line)
+                if uuid_json['uuid'] == build_job_uuid:
+                    return build
+            except json.JSONDecodeError:
+                pass
+
+    raise RuntimeError('Could not determine own Concourse job.')

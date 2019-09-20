@@ -27,6 +27,7 @@ from concourse.model.base import (
 
 META_INFO_ENV_VAR_NAME = 'meta_info_dir'
 META_INFO_DIR_NAME = 'meta'
+META_STEP_NAME = 'meta'
 
 
 class MetaTraitTransformer(TraitTransformer):
