@@ -310,6 +310,13 @@ class PipelineStep(ModelBase):
             raise ValueError('input already exists: ' + str(name))
         self._inputs_dict[name] = variable_name
 
+    def remove_input(self, name):
+        util.not_none(name)
+
+        if not name in self._inputs_dict:
+            raise ValueError('input does not exist: ' + str(name))
+        self._inputs_dict.pop(name)
+
     def variables(self):
         return self.raw.get('vars')
 
@@ -321,6 +328,9 @@ class PipelineStep(ModelBase):
 
     def _add_dependency(self, step: 'PipelineStep'):
         self.raw['depends'].add(step.name)
+
+    def _remove_dependency(self, step: 'PipelineStep'):
+        self.raw['depends'].remove(step.name)
 
     def depends(self):
         return set(self.raw['depends'])

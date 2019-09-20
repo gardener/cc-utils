@@ -74,6 +74,7 @@ version_step = concourse.steps.step_def('version')
 prepare_step = concourse.steps.step_def('prepare')
 release_step = concourse.steps.step_def('release')
 publish_step = concourse.steps.step_def('publish')
+meta_step = concourse.steps.step_def('meta')
 rm_pr_label_step = concourse.steps.step_def('rm_pr_label')
 component_descriptor_step = concourse.steps.step_def('component_descriptor')
 update_component_deps_step = concourse.steps.step_def('update_component_deps')
@@ -361,6 +362,8 @@ else:
         ${version_step(job_step=job_step, job_variant=job_variant, indent=8)}
 % elif job_step.name == 'release':
         ${release_step(job_step=job_step, job_variant=job_variant, github_cfg=github, indent=8)}
+% elif job_step.name == 'meta':
+        ${meta_step(job_step=job_step, job_variant=job_variant, indent=8)}
 % elif job_step.name == 'rm_pr_label':
         ${rm_pr_label_step(job_step=job_step, job_variant=job_variant, github_cfg=github, indent=8)}
 % elif job_step.name == 'component_descriptor':

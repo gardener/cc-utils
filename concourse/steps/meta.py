@@ -4,14 +4,16 @@ import uuid
 
 import util
 
+import concourse.model.traits.meta
 
-out_dir_name='meta'
+
 uuid_filename='job.uuid'
 jobmetadata_filename='jobmetadata.json'
 
+
 out_dir = os.path.join(
   util.check_env('CC_ROOT_DIR'),
-  out_dir_name,
+  concourse.model.traits.meta.META_INFO_DIR_NAME,
 )
 
 
