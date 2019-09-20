@@ -161,6 +161,14 @@ class ConcourseApiBase(object):
         )
 
     @ensure_annotations
+    def pause_pipeline(self, pipeline_name: str):
+        pause_url = self.routes.pause_pipeline(pipeline_name)
+        self.request_builder.put(
+                pause_url,
+                body=""
+        )
+
+    @ensure_annotations
     def expose_pipeline(self, pipeline_name: str):
         expose_url = self.routes.expose_pipeline(pipeline_name)
         self.request_builder.put(
