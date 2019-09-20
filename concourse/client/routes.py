@@ -81,6 +81,10 @@ class ConcourseApiRoutesBase(object):
         return self._api_url('pipelines', pipeline_name, 'unpause')
 
     @ensure_annotations
+    def pause_pipeline(self, pipeline_name: str):
+        return self._api_url('pipelines', pipeline_name, 'pause')
+
+    @ensure_annotations
     def expose_pipeline(self, pipeline_name: str):
         return self._api_url('pipelines', pipeline_name, 'expose')
 
