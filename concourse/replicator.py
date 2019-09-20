@@ -453,10 +453,14 @@ class ReplicationResultProcessor(object):
                 pipeline_name=pipeline_name,
             )
 
-            FluentIterable(concourse_api.pipeline_resources(pipeline_name)) \
-            .filter(lambda resource: resource.has_webhook_token()) \
-            .map(lambda resource: trigger_pipeline_resource_check(resource_name=resource.name)) \
-            .as_list()
+            try:
+                FluentIterable(concourse_api.pipeline_resources(pipeline_name)) \
+                .filter(lambda resource: resource.has_webhook_token()) \
+                .map(lambda resource: trigger_pipeline_resource_check(resource_name=resource.name)) \
+                .as_list()
+            except Exception:
+                warning('initial resource check for pipeline {p} failed'.format(p=pipeline_name))
+                traceback.print_exc()
 
 
 class PipelineReplicator(object):
