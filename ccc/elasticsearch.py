@@ -21,6 +21,7 @@ import json
 import elasticsearch
 
 import model.elasticsearch
+import concourse.util
 import util
 
 
@@ -48,23 +49,18 @@ def _metadata_dict():
     if not util._running_on_ci():
         return {}
 
-    # XXX do not hard-code meta-dir
-    meta_dir = util.existing_dir(os.path.join(util._root_dir(), os.environ.get('META')))
-
-    attrs = (
-        'atc-external-url',
-        'build-team-name',
-        'build-pipeline-name',
-        'build-job-name',
-        'build-name',
-    )
-
-    def read_attr(name):
-        with open(os.path.join(meta_dir, name)) as f:
-            return f.read().strip()
+    build = concourse.util.find_own_running_build()
+    pipeline_metadata = concourse.util.get_pipeline_metadata()
+    config_set = util.ctx().cfg_factory().cfg_set(pipeline_metadata.current_config_set_name)
+    concourse_cfg = config_set.concourse()
 
     meta_dict = {
-        name: read_attr(name) for name in attrs
+      'build-id': build.id(),
+      'build-name': str(build.build_number()),
+      'build-job-name': pipeline_metadata.job_name,
+      'build-team-name': pipeline_metadata.team_name,
+      'build-pipeline-name': pipeline_metadata.pipeline_name,
+      'atc-external-url': concourse_cfg.external_url(),
     }
 
     # XXX deduplicate; mv to concourse package

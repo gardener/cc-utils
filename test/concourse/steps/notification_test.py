@@ -106,30 +106,12 @@ class NotificationStepTest(unittest.TestCase):
 class NotificationStepLibTest(unittest.TestCase):
     def setUp(self):
         self.tmp_dir = tempfile.TemporaryDirectory()
-        self.meta_dir = os.path.join(self.tmp_dir.name, 'meta')
-        os.mkdir(self.meta_dir)
-        os.environ['META'] = 'meta'
-        test_utils.populate_meta_dir(self.meta_dir)
-
         self.old_cwd = os.getcwd()
         os.chdir(self.tmp_dir.name)
 
     def tearDown(self):
         self.tmp_dir.cleanup()
         os.chdir(self.old_cwd)
-        del os.environ['META']
-
-    def test_meta_vars(self):
-        result = notification.meta_vars()
-
-        for name in (
-            'atc-external-url',
-            'build-team-name',
-            'build-pipeline-name',
-            'build-job-name',
-            'build-name'
-        ):
-            self.assertEqual(result[name], name)
 
     def test_job_url(self):
         v = {

@@ -88,16 +88,13 @@ upload_container_images_step = concourse.steps.step_def('upload_container_images
 <%namespace file="/resources/image.mako" import="*"/>
 <%namespace file="/resources/variants.mako" import="*"/>
 <%namespace file="/resources/time.mako" import="*"/>
-<%namespace file="/resources/meta.mako" import="*"/>
 
 inherit:
 ${configure_webhook(webhook_token=github.webhook_secret())}
 resource_types:
 ${include_pull_request_resource_type()}
-${include_meta_resource_type()}
 
 resources:
-${meta_resource(pipeline_definition=pipeline_definition)}
 ${render_repositories(pipeline_definition=pipeline_definition, cfg_set=config_set)}
 
 % for descriptor in output_image_descriptors.values():
@@ -159,6 +156,7 @@ on_failure:
 ## (sucks in comparison to the features the Jenkins extened e-mail plugin offers)
 % if send_email_notification:
 <%
+import concourse.model.traits.meta
 repo = job_variant.main_repository()
 subject = 'Step {s} for {p}:{b} failed!'.format(s=job_step.name, p=pipeline.get('name'), b=repo.branch())
 def repos():
@@ -173,13 +171,13 @@ on_error_cfg = notification_cfg.on_error()
 
 notification_inputs = [src_dir for src_dir in src_dirs]
 notification_inputs.extend([input for input in on_error_cfg.inputs()])
-notification_inputs.append(job_variant.meta_resource_name())
+notification_inputs.append(concourse.model.traits.meta.META_INFO_DIR_NAME)
 
 notification_env_vars = {
+  concourse.model.traits.meta.META_INFO_ENV_VAR_NAME: concourse.model.traits.meta.META_INFO_DIR_NAME,
   'BUILD_JOB_NAME': job_variant.job_name(),
   'CONCOURSE_CURRENT_CFG': config_set.name(),
   'CONCOURSE_CURRENT_TEAM': target_team,
-  'META': job_variant.meta_resource_name(),
   'PIPELINE_NAME': pipeline_name,
   'SECRETS_SERVER_CONCOURSE_CFG_NAME': secrets_server_cfg.secrets().concourse_cfg_name(),
   'SECRETS_SERVER_ENDPOINT': secrets_server_cfg.endpoint_url(),
@@ -245,7 +243,6 @@ else:
 % for input in job_step.inputs().values():
     - name: ${input}
 % endfor
-    - name: ${job_variant.meta_resource_name()}
     outputs:
 % if job_step.publish_repository_names() and not has_pr_trait(job_variant):
   % for publish_repo_name in job_step.publish_repository_names():
@@ -286,7 +283,6 @@ else:
 % for name, value in job_step.outputs().items():
       ${name.upper().replace('-','_')}: ${value}
 % endfor
-      META: ${job_variant.meta_resource_name()}
       SECRETS_SERVER_ENDPOINT: ${secrets_server_cfg.endpoint_url()}
       SECRETS_SERVER_CONCOURSE_CFG_NAME: ${secrets_server_cfg.secrets().concourse_cfg_name()}
       CONCOURSE_CURRENT_CFG: ${config_set.name()}
@@ -457,7 +453,6 @@ repo = job_variant.main_repository()
   build_logs_to_retain: ${job_variant.trait('options').build_logs_to_retain()}
   public: ${'true' if job_variant.trait('options').public_build_logs() else 'false'}
   plan:
-  - get: ${job_variant.meta_resource_name()}
 % for repository in job_variant.repositories():
   - get: ${repository.resource_name()}
   % if repository.should_trigger():

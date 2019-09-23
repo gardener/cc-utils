@@ -2,6 +2,8 @@ from concourse.model.traits.notifications import NotificationTriggeringPolicy
 from concourse.client import from_cfg
 from concourse.client.model import BuildStatus
 
+import concourse.util
+
 import os
 import traceback
 
@@ -10,17 +12,18 @@ import util
 
 
 def meta_vars():
-    v = {}
-    for name in (
-      'build-id',
-      'build-name',
-      'build-job-name',
-      'build-team-name',
-      'build-pipeline-name',
-      'atc-external-url'
-    ):
-      with open(os.path.join(os.environ.get('META'), name)) as f:
-        v[name] = f.read().strip()
+    build = concourse.util.find_own_running_build()
+    pipeline_metadata = concourse.util.get_pipeline_metadata()
+    config_set = util.ctx().cfg_factory().cfg_set(pipeline_metadata.current_config_set_name)
+    concourse_cfg = config_set.concourse()
+    v = {
+      'build-id': build.id(),
+      'build-name': str(build.build_number()),
+      'build-job-name': pipeline_metadata.job_name,
+      'build-team-name': pipeline_metadata.team_name,
+      'build-pipeline-name': pipeline_metadata.pipeline_name,
+      'atc-external-url': concourse_cfg.external_url(),
+    }
 
     return v
 
