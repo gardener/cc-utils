@@ -128,15 +128,6 @@ class GithubWebhookDispatcher(object):
     def _trigger_resource_check(self, concourse_api, resources):
         resources = list(resources) # use a list so we can insert meta-resources
 
-        # hack: also trigger resource checks for all affected meta resources
-        #       this needs to be done _prior_ to git/pr resource triggering
-        pipeline_names = {resource.pipeline_name() for resource in resources}
-        app.logger.info(f'will refresh all meta-resources for {pipeline_names}')
-        for resource in concourse_api.pipeline_resources(pipeline_names=pipeline_names):
-            if not resource.type == 'meta': # XXX unhardcode `meta` str literal
-                continue
-            resources.insert(0, resource)
-
         for resource in resources:
             app.logger.info('triggering resource check for: ' + resource.name)
             try:
