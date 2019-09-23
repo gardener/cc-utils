@@ -11,10 +11,11 @@ uuid_filename='job.uuid'
 jobmetadata_filename='jobmetadata.json'
 
 
-out_dir = os.path.join(
-  util.check_env('CC_ROOT_DIR'),
-  concourse.model.traits.meta.META_INFO_DIR_NAME,
-)
+def get_out_dir():
+    return os.path.join(
+        util.check_env('CC_ROOT_DIR'),
+        concourse.model.traits.meta.META_INFO_DIR_NAME,
+    )
 
 
 def generate_uuid():
@@ -32,11 +33,11 @@ def export_job_metadata():
         'uuid': uuid_str,
     }
 
-    uuid_outfile = os.path.join(out_dir, uuid_filename)
+    uuid_outfile = os.path.join(get_out_dir(), uuid_filename)
     with open(uuid_outfile, 'w') as f:
         f.write(uuid_str)
 
-    jobmetadata_outfile = os.path.join(out_dir, jobmetadata_filename)
+    jobmetadata_outfile = os.path.join(get_out_dir(), jobmetadata_filename)
     with open(jobmetadata_outfile, 'w') as f:
         json.dump(metadata, f)
 
