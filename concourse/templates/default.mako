@@ -176,10 +176,13 @@ notification_inputs.extend([input for input in on_error_cfg.inputs()])
 notification_inputs.append(job_variant.meta_resource_name())
 
 notification_env_vars = {
-  'SECRETS_SERVER_ENDPOINT': secrets_server_cfg.endpoint_url(),
-  'SECRETS_SERVER_CONCOURSE_CFG_NAME': secrets_server_cfg.secrets().concourse_cfg_name(),
   'BUILD_JOB_NAME': job_variant.job_name(),
+  'CONCOURSE_CURRENT_CFG': config_set.name(),
+  'CONCOURSE_CURRENT_TEAM': target_team,
   'META': job_variant.meta_resource_name(),
+  'PIPELINE_NAME': pipeline_name,
+  'SECRETS_SERVER_CONCOURSE_CFG_NAME': secrets_server_cfg.secrets().concourse_cfg_name(),
+  'SECRETS_SERVER_ENDPOINT': secrets_server_cfg.endpoint_url(),
 }
 %>
   ${email_notification(
