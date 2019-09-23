@@ -18,10 +18,9 @@ from concourse.model.pipeline import PipelineDefinition
 from concourse.model.resources import (
     RepositoryConfig,
     ResourceRegistry,
-    ResourceIdentifier,
-    Resource,
 )
 from concourse.model.traits import TraitsFactory
+from concourse.model.traits.meta import MetaTraitTransformer
 
 
 def ensure_dict(d, allow_empty=True):
@@ -98,11 +97,6 @@ class DefinitionFactory(object):
 
             variants[variant_name] = variant
 
-            # add meta resources
-            meta_resource_identifier = ResourceIdentifier(type_name='meta', base_name=variant_name)
-            meta_resource = Resource(resource_identifier=meta_resource_identifier, raw_dict={})
-            resource_registry.add_resource(meta_resource)
-
         pipeline_definition = PipelineDefinition()
         pipeline_definition._variants_dict = variants
         pipeline_definition._resource_registry = resource_registry
@@ -165,6 +159,9 @@ class DefinitionFactory(object):
         ordered_transformers = []
         for name in toposort.toposort_flatten(transformer_dependencies):
             ordered_transformers.append(transformers_dict[name])
+
+        # hardcode meta trait transformer
+        ordered_transformers.append(MetaTraitTransformer())
 
         # inject new steps
         for transformer in ordered_transformers:
