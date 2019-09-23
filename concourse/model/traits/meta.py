@@ -41,7 +41,10 @@ class MetaTraitTransformer(TraitTransformer):
             notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
             script_type=ScriptType.PYTHON3,
         )
-        self.meta_step.add_output(name=META_INFO_DIR_NAME, variable_name=META_INFO_ENV_VAR_NAME)
+        # name is the name of the env var exposed to tasks, variable name is the concourse-name
+        # of the input.
+        # TODO: Refactor arg names
+        self.meta_step.add_output(name=META_INFO_ENV_VAR_NAME, variable_name=META_INFO_DIR_NAME)
         yield self.meta_step
 
     def process_pipeline_args(self, pipeline_args: JobVariant):
@@ -50,7 +53,7 @@ class MetaTraitTransformer(TraitTransformer):
             if step == self.meta_step:
                 continue
             step._add_dependency(self.meta_step)
-            step.add_input(name=META_INFO_DIR_NAME, variable_name=META_INFO_ENV_VAR_NAME)
+            step.add_input(name=META_INFO_ENV_VAR_NAME, variable_name=META_INFO_DIR_NAME)
         if pipeline_args.has_trait('version'):
             # All steps depend on version. Remove ourself to avoid circular dependency
             version_step = pipeline_args.step('version')
