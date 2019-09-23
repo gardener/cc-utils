@@ -18,8 +18,6 @@ github = config_set.github()
 disable_tls_validation = "false" if github.tls_validation() else "true"
 
 default_container_registry = config_set.container_registry()
-email = config_set.email()
-
 
 # expose secrets_server endpoint to all jobs
 secrets_server_cfg = config_set.secrets_server()
@@ -167,15 +165,31 @@ def repos():
   yield job_variant.main_repository()
   if job_variant.has_publish_repository(job_variant.main_repository().logical_name()):
     yield job_variant.publish_repository(job_variant.main_repository().logical_name())
+
+repo_cfgs = list(repos())
+src_dirs = [repo_cfg.resource_name() for repo_cfg in repo_cfgs]
+notification_cfg = job_step.notifications_cfg()
+on_error_cfg = notification_cfg.on_error()
+
+notification_inputs = [src_dir for src_dir in src_dirs]
+notification_inputs.extend([input for input in on_error_cfg.inputs()])
+notification_inputs.append(job_variant.meta_resource_name())
+
+notification_env_vars = {
+  'SECRETS_SERVER_ENDPOINT': secrets_server_cfg.endpoint_url(),
+  'SECRETS_SERVER_CONCOURSE_CFG_NAME': secrets_server_cfg.secrets().concourse_cfg_name(),
+  'BUILD_JOB_NAME': job_variant.job_name(),
+  'META': job_variant.meta_resource_name(),
+}
 %>
   ${email_notification(
     cfg_set=config_set,
-    secrets_server_cfg=secrets_server_cfg,
-    email_cfg=email,
-    repo_cfgs=tuple(repos()),
+    repo_cfgs=repo_cfgs,
     job_step=job_step,
     subject=subject,
     job_variant=job_variant,
+    env_vars=notification_env_vars,
+    inputs=notification_inputs,
     indent=2,
   )}
 % endif
