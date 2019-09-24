@@ -58,8 +58,6 @@ def create_webhook_dispatcher_helm_values(
     })
 
     cmd_args = [
-        '--webhook-dispatcher-cfg-name',
-        webhook_dispatcher_deployment_cfg.webhook_dispatcher_config_name(),
         '--port',
         f'"{container_port}"',
         '--cfg-set-name',
