@@ -21,14 +21,13 @@ import util
 
 def start_whd(
     cfg_set_name: str,
-    webhook_dispatcher_cfg_name: str,
     port: int=5000,
     production: bool=False,
     workers: int=4,
 ):
     cfg_factory = util.ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(cfg_set_name)
-    webhook_dispatcher_cfg = cfg_factory.webhook_dispatcher(webhook_dispatcher_cfg_name)
+    webhook_dispatcher_cfg = cfg_set.webhook_dispatcher()
 
     app = whd_server.webhook_dispatcher_app(
         cfg_set=cfg_set,
