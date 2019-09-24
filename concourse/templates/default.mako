@@ -274,8 +274,6 @@ else:
       SECRETS_SERVER_CONCOURSE_CFG_NAME: ${secrets_server_cfg.secrets().concourse_cfg_name()}
       CONCOURSE_CURRENT_CFG: ${config_set.name()}
       CONCOURSE_CURRENT_TEAM: ${target_team}
-      PIPELINE_NAME: ${pipeline_name}
-      BUILD_JOB_NAME: ${job_variant.job_name()}
 % if has_component_descriptor_trait(job_variant):
       COMPONENT_NAME: ${job_variant.trait('component_descriptor').component_name()}
 
