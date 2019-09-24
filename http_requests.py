@@ -12,18 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import requests
+
 from functools import wraps
 
-import traceback
-import datetime
-import requests
-from requests.auth import HTTPBasicAuth
 from requests.adapters import HTTPAdapter
+from requests.auth import HTTPBasicAuth
 from urllib3.util.retry import Retry
 
-import ccc.elasticsearch
-import util
-from util import warning, info, ctx
+from util import warning
 
 
 class LoggingRetry(Retry):
@@ -73,42 +70,6 @@ def mount_default_adapter(
     session.mount('https://', default_http_adapter)
 
     return session
-
-
-def log_stack_trace_information(resp, *args, **kwargs):
-    '''
-    This function stores the current stacktrace in elastic search.
-    It must not return anything, otherwise the return value is assumed to replace the response
-    '''
-    if not util._running_on_ci():
-        return # early exit if not running in ci job
-
-    config_set_name = util.check_env('CONCOURSE_CURRENT_CFG')
-    try:
-        els_index = 'github_access_stacktrace'
-        try:
-            config_set = ctx().cfg_factory().cfg_set(config_set_name)
-        except KeyError:
-            # do nothing: external concourse does not have config set 'internal_active'
-            return
-        elastic_cfg = config_set.elasticsearch()
-
-        now = datetime.datetime.utcnow()
-        json_body = {
-            'date': now.isoformat(),
-            'url': resp.url,
-            'req_method': resp.request.method,
-            'stacktrace': traceback.format_stack()
-        }
-
-        elastic_client = ccc.elasticsearch.from_cfg(elasticsearch_cfg=elastic_cfg)
-        elastic_client.store_document(
-            index=els_index,
-            body=json_body
-        )
-
-    except Exception as e:
-        info(f'Could not log stack trace information: {e}')
 
 
 def check_http_code(function):
