@@ -1,3 +1,29 @@
+inherit:
+  gh_pages_repo: &gh_pages_repo
+    repos:
+    - name: 'gh_pages'
+      path: 'gardener/cc-utils'
+      branch: 'gh-pages'
+
+  release_traits: &release_traits
+    version:
+      preprocess: 'finalize'
+      inject_effective_version: True
+    publish:
+      dockerimages:
+        job-image:
+          registry: 'gcr-readwrite'
+          image: 'eu.gcr.io/gardener-project/cc/job-image'
+          dockerfile: 'Dockerfile'
+          tag_as_latest: True
+          inputs:
+            steps:
+              release_to_pypi: ~
+    release:
+      nextversion: 'bump_minor'
+      release_callback: '.ci/bump_job_image_version.py'
+      release_notes_policy: disabled
+
 cc-utils:
   template: 'default'
   base_definition:
@@ -28,10 +54,7 @@ cc-utils:
             build-forks: true # default
 
     release_job_image:
-      repos:
-      - name: 'gh_pages'
-        path: 'gardener/cc-utils'
-        branch: 'gh-pages'
+      <<: *gh_pages_repo
       steps:
         test: ~
         lint: ~
@@ -40,47 +63,12 @@ cc-utils:
         generate_documentation:
           publish_to: ['gh_pages']
       traits:
-        version:
-          preprocess: 'finalize'
-          inject_effective_version: True
-        publish:
-          dockerimages:
-            job-image:
-              registry: 'gcr-readwrite'
-              image: 'eu.gcr.io/gardener-project/cc/job-image'
-              dockerfile: 'Dockerfile'
-              tag_as_latest: True
-              inputs:
-                steps:
-                  release_to_pypi: ~
-        release:
-          nextversion: 'bump_minor'
-          release_callback: '.ci/bump_job_image_version.py'
-          release_notes_policy: disabled
+        <<: *release_traits
 
     force_release_job_image:
-      repos:
-      - name: 'gh_pages'
-        path: 'gardener/cc-utils'
-        branch: 'gh-pages'
+      <<: *gh_pages_repo
       steps:
         release_to_pypi:
           output_dir: 'pypi'
       traits:
-        version:
-          preprocess: 'finalize'
-          inject_effective_version: True
-        publish:
-          dockerimages:
-            job-image:
-              registry: 'gcr-readwrite'
-              image: 'eu.gcr.io/gardener-project/cc/job-image'
-              dockerfile: 'Dockerfile'
-              tag_as_latest: True
-              inputs:
-                steps:
-                  release_to_pypi: ~
-        release:
-          nextversion: 'bump_minor'
-          release_callback: '.ci/bump_job_image_version.py'
-          release_notes_policy: disabled
+        <<: *release_traits
