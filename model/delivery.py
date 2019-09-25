@@ -13,7 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from model.base import NamedModelElement
+from model.base import (
+    BasicCredentials,
+    ModelBase,
+    NamedModelElement,
+)
 
 
 class DeliveryConfig(NamedModelElement):
@@ -31,10 +35,57 @@ class DeliveryConfig(NamedModelElement):
     def service_url(self):
         return self.raw.get('service_url')
 
+    def deployment_name(self):
+        return self.raw.get('deployment_name', 'delivery-dashboard')
+
+    def mongodb_config(self):
+        if not self.raw.get('mongodb'):
+            return None
+        return MongoDbConfig(self.raw.get('mongodb'))
+
+    def _optional_attributes(self):
+        yield from super()._optional_attributes()
+        yield from [
+            'mongodb',
+            'deployment_name',
+        ]
+
     def _required_attributes(self):
         yield from super()._required_attributes()
         yield from [
             'config_set_name',
             'dashboard_url',
             'service_url',
+        ]
+
+
+class MongoDbConfig(ModelBase):
+    '''
+    Not intended to be instantiated by users of this module
+    '''
+
+    def credentials(self):
+        return BasicCredentials(self.raw.get('credentials'))
+
+    def configmap(self):
+        '''Entries for the MongoDB config file.
+        '''
+        return self.raw.get('configmap')
+
+    def service_port(self):
+        '''Return the port on which the kubernetes cluster-service is listening.
+        '''
+        return self.raw.get('service_port', 27017)
+
+    def _optional_attributes(self):
+        yield from super()._optional_attributes()
+        yield from [
+            'configmap',
+            'service_port'
+        ]
+
+    def _required_attributes(self):
+        yield from super()._required_attributes()
+        yield from [
+            'credentials',
         ]
