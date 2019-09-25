@@ -72,6 +72,9 @@ class MongoDbConfig(ModelBase):
         '''
         return self.raw.get('configmap')
 
+    def database_name(self):
+        return self.raw('database_name', 'delivery')
+
     def service_port(self):
         '''Return the port on which the kubernetes cluster-service is listening.
         '''
@@ -81,7 +84,8 @@ class MongoDbConfig(ModelBase):
         yield from super()._optional_attributes()
         yield from [
             'configmap',
-            'service_port'
+            'service_port',
+            'database_name',
         ]
 
     def _required_attributes(self):
