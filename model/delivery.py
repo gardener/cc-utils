@@ -73,7 +73,7 @@ class MongoDbConfig(ModelBase):
         return self.raw.get('configmap')
 
     def database_name(self):
-        return self.raw('database_name', 'delivery')
+        return self.raw.get('database_name', 'delivery')
 
     def service_port(self):
         '''Return the port on which the kubernetes cluster-service is listening.
