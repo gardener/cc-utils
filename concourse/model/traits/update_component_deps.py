@@ -29,7 +29,7 @@ from concourse.model.job import (
     JobVariant,
 )
 
-from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
+import concourse.model.traits.component_descriptor
 
 
 class MergePolicy(enum.Enum):
@@ -115,7 +115,10 @@ class UpdateComponentDependenciesTraitTransformer(TraitTransformer):
                 notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
                 script_type=ScriptType.PYTHON3
         )
-        self.update_component_deps_step.add_input(*COMPONENT_DESCRIPTOR_DIR_INPUT)
+        self.update_component_deps_step.add_input(
+            name=concourse.model.traits.component_descriptor.DIR_NAME,
+            variable_name=concourse.model.traits.component_descriptor.ENV_VAR_NAME,
+        )
         self.update_component_deps_step.set_timeout(duration_string='30m')
 
         for name, value in self.trait.vars().items():

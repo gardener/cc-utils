@@ -33,7 +33,7 @@ from concourse.model.base import (
 from model.base import ModelValidationError
 from product.scanning import ProcessingMode
 
-from .component_descriptor import COMPONENT_DESCRIPTOR_DIR_INPUT
+import concourse.model.traits.component_descriptor
 from .images import (
     IMAGE_ATTRS,
     ImageFilterMixin,
@@ -213,7 +213,10 @@ class ImageScanTraitTransformer(TraitTransformer):
                 notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
                 script_type=ScriptType.PYTHON3
         )
-        self.image_scan_step.add_input(*COMPONENT_DESCRIPTOR_DIR_INPUT)
+        self.image_scan_step.add_input(
+            name=concourse.model.traits.component_descriptor.DIR_NAME,
+            variable_name=concourse.model.traits.component_descriptor.ENV_VAR_NAME,
+        )
         self.image_scan_step.set_timeout(duration_string='12h')
         yield self.image_scan_step
 

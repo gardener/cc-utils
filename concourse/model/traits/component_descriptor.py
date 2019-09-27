@@ -30,8 +30,6 @@ from concourse.model.base import (
   ScriptType,
 )
 
-COMPONENT_DESCRIPTOR_DIR_INPUT = ('component_descriptor_dir', 'component_descriptor_dir')
-
 ATTRIBUTES = (
     AttributeSpec.optional(
         name='step',
@@ -87,6 +85,10 @@ class ComponentDescriptorTrait(Trait):
         return ComponentDescriptorTraitTransformer(trait=self)
 
 
+DIR_NAME = 'component_descriptor_dir'
+ENV_VAR_NAME = 'component_descriptor_dir'
+
+
 class ComponentDescriptorTraitTransformer(TraitTransformer):
     name = 'component_descriptor'
 
@@ -102,7 +104,10 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
             notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
             script_type=ScriptType.PYTHON3,
         )
-        self.descriptor_step.add_output(*COMPONENT_DESCRIPTOR_DIR_INPUT)
+        self.descriptor_step.add_output(
+            name=DIR_NAME,
+            variable_name=ENV_VAR_NAME,
+        )
         self.descriptor_step.set_timeout(duration_string='30m')
 
         yield self.descriptor_step
@@ -110,7 +115,10 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
     def process_pipeline_args(self, pipeline_args: 'JobVariant'):
         if pipeline_args.has_step('release'):
             release_step = pipeline_args.step('release')
-            release_step.add_input(*COMPONENT_DESCRIPTOR_DIR_INPUT)
+            release_step.add_input(
+                name=DIR_NAME,
+                variable_name=ENV_VAR_NAME,
+            )
 
         # inject component_name if not configured
         if not self.trait.raw.get('component_name'):
