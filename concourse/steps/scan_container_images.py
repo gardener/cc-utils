@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
 import functools
 import textwrap
 import typing
@@ -25,6 +26,20 @@ import protecode.util
 
 from concourse.model.traits.image_scan import Notify
 from product.model import ComponentName, UploadResult
+
+
+@dataclasses.dataclass
+class MalwareScanResult:
+    image_reference: str
+    file_path: str
+    finding: str
+
+    @staticmethod
+    def headers():
+        ''' Return a list of headers to be used when rendering this dataclass
+        using tabular.tabulate()
+        '''
+        return ('Image Reference', 'File Path', 'Scan Result')
 
 
 class MailRecipients(object):
@@ -72,7 +87,7 @@ class MailRecipients(object):
                     continue
             self._protecode_results.append(result)
 
-    def add_clamav_results(self, results):
+    def add_clamav_results(self, results: MalwareScanResult):
         if self._clamav_results is None:
             self._clamav_results = []
 
@@ -123,8 +138,8 @@ class MailRecipients(object):
     def _clamav_report(self):
         result = '<p><div>Virus Scanning Results:</div>'
         return result + tabulate.tabulate(
-            self._clamav_results,
-            headers=('Image-Reference', 'Scanning Result'),
+            map(lambda dc: dataclasses.astuple(dc), self._clamav_results),
+            headers=MalwareScanResult.headers(),
             tablefmt='html',
         )
 
@@ -187,13 +202,23 @@ def virus_scan_images(image_references: typing.Iterable[str], clamav_config_name
     clamav_client = ccc.clamav.client_from_config_name(clamav_config_name)
     for image_reference in image_references:
         scan_results = [
-            (image_reference, scan_result.virus_signature())
-            for scan_result,_ in clamav_client.scan_container_image(image_reference=image_reference)
+            MalwareScanResult(
+                image_reference=image_reference,
+                file_path=path.split(':')[1],
+                finding=scan_result.virus_signature(),
+            )
+            for scan_result, path in clamav_client.scan_container_image(
+                image_reference=image_reference
+            )
         ]
         if scan_results:
             yield from scan_results
         else:
-            yield (image_reference, 'No malware detected.')
+            yield MalwareScanResult(
+                image_reference=image_reference,
+                file_path='-',
+                finding='No malware detected.',
+            )
 
 
 def protecode_results_table(protecode_cfg, upload_results: typing.Iterable[UploadResult]):
