@@ -169,6 +169,10 @@ class PublishTrait(Trait):
         return PublishTraitTransformer(trait=self)
 
 
+IMAGE_ENV_VAR_NAME = 'image_path'
+TAG_ENV_VAR_NAME = 'tag_path'
+
+
 class PublishTraitTransformer(TraitTransformer):
     name = 'publish'
 
@@ -211,12 +215,12 @@ class PublishTraitTransformer(TraitTransformer):
         tag_name = main_repo.branch() + '-tag'
 
         # configure prepare step's outputs (consumed by publish step)
-        prepare_step.add_output('image_path', image_name)
-        prepare_step.add_output('tag_path', tag_name)
+        prepare_step.add_output(variable_name=IMAGE_ENV_VAR_NAME, name=image_name)
+        prepare_step.add_output(variable_name=TAG_ENV_VAR_NAME, name=tag_name)
 
         # configure publish step's inputs (produced by prepare step)
-        publish_step.add_input('image_path', image_name)
-        publish_step.add_input('tag_path', tag_name)
+        publish_step.add_input(variable_name=IMAGE_ENV_VAR_NAME, name=image_name)
+        publish_step.add_input(variable_name=TAG_ENV_VAR_NAME, name=tag_name)
 
         input_step_names = set()
         for image_descriptor in self.trait.dockerimages():

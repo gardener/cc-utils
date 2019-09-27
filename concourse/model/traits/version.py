@@ -85,6 +85,10 @@ class VersionTrait(Trait):
         return VersionTraitTransformer()
 
 
+ENV_VAR_NAME = 'version_path'
+DIR_NAME = 'managed-version'
+
+
 class VersionTraitTransformer(TraitTransformer):
     name = 'version'
 
@@ -96,7 +100,7 @@ class VersionTraitTransformer(TraitTransformer):
             notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
             script_type=ScriptType.PYTHON3,
             )
-        self.version_step.add_output(name='version_path', variable_name='managed-version')
+        self.version_step.add_output(name=DIR_NAME, variable_name=ENV_VAR_NAME)
         self.version_step.set_timeout(duration_string='5m')
 
         yield self.version_step
@@ -107,4 +111,4 @@ class VersionTraitTransformer(TraitTransformer):
             if step == self.version_step:
                 continue
             step._add_dependency(self.version_step)
-            step.add_input(name='version_path', variable_name='managed-version')
+            step.add_input(variable_name=ENV_VAR_NAME, name=DIR_NAME)

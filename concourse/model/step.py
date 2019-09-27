@@ -217,14 +217,14 @@ class PipelineStep(ModelBase):
         raw_dict['depends'] = set(raw_dict['depends'])
         if raw_dict.get('output_dir', None):
             name = raw_dict['output_dir']
-            self.add_output(name + '_path', name + '_path')
+            self.add_output(name=name + '_path', variable_name=name + '_path')
 
         # add hard-coded output "on_error" (allows build steps to pass custom
         # notification cfg for build errors)
-        self.add_output('on_error_dir', 'on_error_dir')
+        self.add_output(name='on_error_dir', variable_name='on_error_dir')
 
-        for name, variable_name in raw_dict.get('inputs').items():
-            self.add_input(name, variable_name)
+        for variable_name, name in raw_dict.get('inputs').items():
+            self.add_input(name=name, variable_name=variable_name)
 
         self._publish_to_dict = normalise_to_dict(raw_dict['publish_to'])
 
@@ -292,9 +292,9 @@ class PipelineStep(ModelBase):
         return self._outputs_dict
 
     def add_output(self, name, variable_name):
-        if name in self._outputs_dict:
-            raise ValueError('output already exists: ' + str(name))
-        self._outputs_dict[name] = variable_name
+        if variable_name in self._outputs_dict:
+            raise ValueError(f'output already exists: {variable_name}')
+        self._outputs_dict[variable_name] = name
 
     def inputs(self):
         return self._inputs_dict
@@ -306,15 +306,15 @@ class PipelineStep(ModelBase):
         util.not_none(name)
         util.not_none(variable_name)
 
-        if name in self._inputs_dict:
-            raise ValueError('input already exists: ' + str(name))
-        self._inputs_dict[name] = variable_name
+        if variable_name in self._inputs_dict:
+            raise ValueError(f'input already exists: {variable_name}')
+        self._inputs_dict[variable_name] = name
 
     def remove_input(self, name):
         util.not_none(name)
 
         if not name in self._inputs_dict:
-            raise ValueError('input does not exist: ' + str(name))
+            raise ValueError(f'input does not exist: {name}')
         self._inputs_dict.pop(name)
 
     def variables(self):

@@ -277,11 +277,11 @@ else:
       ${env_var_name}: ${env_var_value}
 % endfor
 % endfor
-% for name, value in job_step.inputs().items():
-      ${name.upper().replace('-','_')}: ${value}
+% for variable_name, value in job_step.inputs().items():
+      ${variable_name.upper().replace('-','_')}: ${value}
 % endfor
-% for name, value in job_step.outputs().items():
-      ${name.upper().replace('-','_')}: ${value}
+% for variable_name, value in job_step.outputs().items():
+      ${variable_name.upper().replace('-','_')}: ${value}
 % endfor
       SECRETS_SERVER_ENDPOINT: ${secrets_server_cfg.endpoint_url()}
       SECRETS_SERVER_CONCOURSE_CFG_NAME: ${secrets_server_cfg.secrets().concourse_cfg_name()}
