@@ -11,11 +11,3 @@
   source:
     repository: pcfseceng/email-resource
 </%def>
-
-<%def name="include_meta_resource_type()">
-- name: meta
-  type: docker-image
-  source:
-    repository: swce/metadata-resource
-</%def>
-
