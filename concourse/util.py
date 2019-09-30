@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import functools
 import dataclasses
 import json
 import os
@@ -157,6 +158,7 @@ def get_pipeline_metadata():
     )
 
 
+@functools.lru_cache()
 def find_own_running_build():
     '''
     Determines the current build job running on concourse by relying on the "meta" contract (
