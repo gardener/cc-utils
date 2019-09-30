@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import dataclasses
-import itertools
 import json
 import os
 
@@ -159,6 +158,13 @@ def get_pipeline_metadata():
 
 
 def find_own_running_build():
+    '''
+    Determines the current build job running on concourse by relying on the "meta" contract (
+    see steps/meta), which prints a JSON document containing a UUID. By iterating through all
+    current build jobs (considering running jobs only), and comparing the UUID read via file
+    system and the UUID from build log output, it is possible to tell whether or not a given
+    build job is the one from which this function was invoked.
+    '''
     if not _running_on_ci():
         raise RuntimeError('Can only find own running build if running on CI infrastructure.')
 
@@ -181,22 +187,32 @@ def find_own_running_build():
     concourse_cfg = config_set.concourse()
     client = concourse.client.from_cfg(concourse_cfg, pipeline_metadata.team_name)
 
-    # returns builds in order from newest to oldest. To avoid a possibly _very_ large number of
-    # api accesses, use only the 10 most recent.
-    job_builds = client.job_builds(pipeline_metadata.pipeline_name, pipeline_metadata.job_name)[:10]
+    # only consider limited amount of jobs to avoid large number of requests in case we do not
+    # find ourself (assumption: there are only few running jobs in parallel at a given time)
+    consider_builds = 20
+    builds = client.job_builds(pipeline_metadata.pipeline_name, pipeline_metadata.job_name)
+    builds = [
+        build for build in builds
+        if build.status() is concourse.client.model.BuildStatus.RUNNING
+    ][:consider_builds]
 
-    for build in job_builds:
-        if not build.status() is concourse.client.model.BuildStatus.RUNNING:
-            continue
+    # avoid parsing too much output. usually, there will be only one line (our JSON output)
+    # sometimes (new image version is retrieved), there will be a few lines more.
+    for build in builds:
         build_events = build.events()
         build_plan = build.plan()
         meta_task_id = build_plan.task_id(concourse.model.traits.meta.META_STEP_NAME)
-        for line in itertools.islice(build_events.iter_buildlog(meta_task_id), 0, 40):
-            try:
-                uuid_json = json.loads(line)
-                if uuid_json['uuid'] == build_job_uuid:
-                    return build
-            except json.JSONDecodeError:
+
+        last_line = None
+        try:
+            # "our" output is always the last line (ignore download logs from image retrieval)
+            for last_line in build_events.iter_buildlog(meta_task_id):
                 pass
+        except StopIteration:
+            pass
+
+        uuid_json = json.loads(last_line)
+        if uuid_json['uuid'] == build_job_uuid:
+            return build
 
     raise RuntimeError('Could not determine own Concourse job.')
