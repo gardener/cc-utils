@@ -162,14 +162,18 @@ def find_own_running_build():
     if not _running_on_ci():
         raise RuntimeError('Can only find own running build if running on CI infrastructure.')
 
-    meta_dir = check_env(concourse.model.traits.meta.META_INFO_ENV_VAR_NAME)
-    meta_info_file = os.path.join(
+    meta_dir = os.path.join(
         os.path.abspath(check_env('CC_ROOT_DIR')),
+        concourse.model.traits.meta.META_INFO_DIR_NAME
+    )
+    meta_info_file = os.path.join(
         meta_dir,
         concourse.steps.meta.jobmetadata_filename,
     )
+
     with open(meta_info_file, 'r') as f:
         metadata_json = json.load(f)
+
     build_job_uuid = metadata_json['uuid']
 
     pipeline_metadata = get_pipeline_metadata()
