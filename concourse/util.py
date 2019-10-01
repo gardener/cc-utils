@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import functools
 import dataclasses
+import functools
 import json
 import os
 
