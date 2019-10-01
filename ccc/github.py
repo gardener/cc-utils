@@ -31,7 +31,7 @@ import model
 import util
 
 if util._running_on_ci():
-    log_github_access = True
+    log_github_access = False
 else:
     log_github_access = False
 
