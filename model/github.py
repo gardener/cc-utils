@@ -67,11 +67,20 @@ class GithubConfig(NamedModelElement):
         return [Protocol(value) for value in self.raw.get('available_protocols')]
 
     @functools.lru_cache()
-    def credentials(self):
+    def credentials(self, technical_user_name: str = None):
         if self.raw.get('technical_users'):
             technical_users = [
                 GithubCredentials(user) for user in self.raw.get('technical_users')
             ]
+            if technical_user_name:
+                for user in technical_users:
+                    if user.username() == technical_user_name:
+                        return user
+                raise ModelValidationError(
+                    f'Did not find technical user "{technical_user_name}" '
+                    f'for Github config "{self.name()}"'
+                )
+
             return random.choice(technical_users)
 
         if self.raw.get('technicalUser'):
