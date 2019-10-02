@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import enum
-import functools
 import random
 
 from urllib.parse import urlparse
@@ -66,7 +65,6 @@ class GithubConfig(NamedModelElement):
         '''
         return [Protocol(value) for value in self.raw.get('available_protocols')]
 
-    @functools.lru_cache()
     def credentials(self, technical_user_name: str = None):
         if self.raw.get('technical_users'):
             technical_users = [
