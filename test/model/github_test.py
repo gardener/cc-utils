@@ -28,6 +28,13 @@ def required_dict():
             'disable_tls_validation': 'foo',
             'webhook_token': 'foo',
             'available_protocols': ['https', 'ssh'],
+            'technical_users': [{
+                'username': 'foo',
+                'password': 'foo',
+                'emailAddress': 'foo',
+                'privateKey': 'foo',
+                'authToken': 'foo',
+            }]
     }
 
 
