@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from copy import deepcopy
+import collections
 import dataclasses
 import github3.exceptions
 import functools
@@ -315,6 +316,24 @@ def _effective_images(
             effective_image = do.container_image(name=image.name(), version=image.version()) \
                     or effective_image
         yield effective_image or image
+
+
+def _grouped_effective_images(
+    component_descriptor,
+    component,
+):
+    '''
+    returns a generator yielding sets of effective images for the given component, grouped by
+    common image name. If the given component declares dependencies to multiples images of the
+    same image name (but with different image versions), they will be grouped in a common set.
+    Otherwise, the returned sets will contain exactly one element each.
+    '''
+    image_groups = collections.defaultdict(set) # image_name: [images]
+    for image in _effective_images(component_descriptor=component_descriptor, component=component):
+        image_groups[image.name()].add(image)
+
+    for image_name, images in image_groups.items():
+        yield images
 
 
 def _enumerate_effective_images(

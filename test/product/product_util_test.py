@@ -144,3 +144,34 @@ def test_enumerate_effective_images(cref):
     result_c, result_i2 = comps_and_images[1]
     assert result_c == c1
     assert result_i2 == image2
+
+
+def test_grouped_effective_images(cref):
+    comp_desc = model.ComponentDescriptor.from_dict({})
+
+    c1 = cref('c1', '1.2.3')
+    comp_desc.add_component(c1)
+    c1 = comp_desc.component(c1)
+
+    c1deps = c1.dependencies()
+    image1 = model.ContainerImage.create(name='i1', version='1.2.3', image_reference='i:1')
+    # image2 shares same logical name
+    image2 = model.ContainerImage.create(name='i1', version='1.2.4', image_reference='i:3')
+    # image3 has different logical name
+    image3 = model.ContainerImage.create(name='xo', version='1.2.4', image_reference='i:3')
+
+    c1deps.add_container_image_dependency(image1)
+    c1deps.add_container_image_dependency(image2)
+    c1deps.add_container_image_dependency(image3)
+
+    grouped_images = tuple(
+        util._grouped_effective_images(
+            component_descriptor=comp_desc, component=c1)
+        )
+
+    # image1 and image2 should have been grouped, so expect two groups
+    assert len(grouped_images) == 2
+    img1_and_img2, img3 = grouped_images
+
+    assert len(img1_and_img2) == 2
+    assert len(img3) == 1
