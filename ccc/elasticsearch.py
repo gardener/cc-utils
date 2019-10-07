@@ -49,32 +49,17 @@ def _metadata_dict():
     if not util._running_on_ci():
         return {}
 
-    build = concourse.util.find_own_running_build()
     pipeline_metadata = concourse.util.get_pipeline_metadata()
     config_set = util.ctx().cfg_factory().cfg_set(pipeline_metadata.current_config_set_name)
     concourse_cfg = config_set.concourse()
 
     meta_dict = {
-      'build-id': build.id(),
-      'build-name': str(build.build_number()),
-      'build-job-name': pipeline_metadata.job_name,
-      'build-team-name': pipeline_metadata.team_name,
-      'build-pipeline-name': pipeline_metadata.pipeline_name,
-      'atc-external-url': concourse_cfg.external_url(),
+        'build-uuid': pipeline_metadata.build_uuid,
+        'build-job-name': pipeline_metadata.job_name,
+        'build-team-name': pipeline_metadata.team_name,
+        'build-pipeline-name': pipeline_metadata.pipeline_name,
+        'atc-external-url': concourse_cfg.external_url(),
     }
-
-    # XXX deduplicate; mv to concourse package
-    meta_dict['concourse_url'] = util.urljoin(
-        meta_dict['atc-external-url'],
-        'teams',
-        meta_dict['build-team-name'],
-        'pipelines',
-        meta_dict['build-pipeline-name'],
-        'jobs',
-        meta_dict['build-job-name'],
-        'builds',
-        meta_dict['build-name'],
-    )
 
     # XXX do not hard-code env variables
     meta_dict['effective_version'] = os.environ.get('EFFECTIVE_VERSION')
