@@ -15,7 +15,7 @@ dockerfile = os.path.join(build_dir, descriptor.dockerfile_relpath())
   params:
     build: ${build_dir}
     dockerfile: ${dockerfile}
-    tag: ${job_step.input('version_path')}/version
+    tag_file: ${job_step.input('version_path')}/version
 % if descriptor.target_name():
     target_name: ${descriptor.target_name()}
 % endif
