@@ -158,17 +158,9 @@ def get_pipeline_metadata():
     )
 
 
-@functools.lru_cache()
-def find_own_running_build():
-    '''
-    Determines the current build job running on concourse by relying on the "meta" contract (
-    see steps/meta), which prints a JSON document containing a UUID. By iterating through all
-    current build jobs (considering running jobs only), and comparing the UUID read via file
-    system and the UUID from build log output, it is possible to tell whether or not a given
-    build job is the one from which this function was invoked.
-    '''
+def _get_build_uuid():
     if not _running_on_ci():
-        raise RuntimeError('Can only find own running build if running on CI infrastructure.')
+        raise RuntimeError('Build UUID is only available if running on CI infrastructure')
 
     meta_dir = os.path.join(
         os.path.abspath(check_env('CC_ROOT_DIR')),
@@ -182,7 +174,20 @@ def find_own_running_build():
     with open(meta_info_file, 'r') as f:
         metadata_json = json.load(f)
 
-    build_job_uuid = metadata_json['uuid']
+    return metadata_json['uuid']
+
+
+@functools.lru_cache()
+def find_own_running_build():
+    '''
+    Determines the current build job running on concourse by relying on the "meta" contract (
+    see steps/meta), which prints a JSON document containing a UUID. By iterating through all
+    current build jobs (considering running jobs only), and comparing the UUID read via file
+    system and the UUID from build log output, it is possible to tell whether or not a given
+    build job is the one from which this function was invoked.
+    '''
+    if not _running_on_ci():
+        raise RuntimeError('Can only find own running build if running on CI infrastructure.')
 
     pipeline_metadata = get_pipeline_metadata()
     config_set = ctx().cfg_factory().cfg_set(pipeline_metadata.current_config_set_name)
@@ -214,7 +219,7 @@ def find_own_running_build():
             pass
 
         uuid_json = json.loads(last_line)
-        if uuid_json['uuid'] == build_job_uuid:
+        if uuid_json['uuid'] == pipeline_metadata.build_uuid:
             return build
 
     raise RuntimeError('Could not determine own Concourse job.')
