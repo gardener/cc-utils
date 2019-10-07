@@ -45,6 +45,7 @@ class PipelineMetaData:
     pipeline_name: str
     job_name: str
     current_config_set_name: str
+    build_uuid: str
     team_name: str
 
 
@@ -149,11 +150,13 @@ def get_pipeline_metadata():
     team_name = check_env('CONCOURSE_CURRENT_TEAM')
     pipeline_name = check_env('PIPELINE_NAME')
     job_name = check_env('BUILD_JOB_NAME')
+    build_uuid = _get_build_uuid()
 
     return PipelineMetaData(
         pipeline_name=pipeline_name,
         job_name=job_name,
         current_config_set_name=current_cfg_set_name,
+        build_uuid=build_uuid,
         team_name=team_name,
     )
 
