@@ -19,8 +19,8 @@ import pytest
 
 from test._test_utils import capture_out
 
-from util import Failure
-import util as examinee
+from ci.util import Failure
+import ci.util as examinee
 
 
 def test_info():
