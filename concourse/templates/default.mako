@@ -171,10 +171,10 @@ on_error_cfg = notification_cfg.on_error()
 
 notification_inputs = [src_dir for src_dir in src_dirs]
 notification_inputs.extend([input for input in on_error_cfg.inputs()])
-notification_inputs.append(concourse.model.traits.meta.META_INFO_DIR_NAME)
+notification_inputs.append(concourse.model.traits.meta.DIR_NAME)
 
 notification_env_vars = {
-  concourse.model.traits.meta.META_INFO_ENV_VAR_NAME: concourse.model.traits.meta.META_INFO_DIR_NAME,
+  concourse.model.traits.meta.ENV_VAR_NAME: concourse.model.traits.meta.DIR_NAME,
   'BUILD_JOB_NAME': job_variant.job_name(),
   'CONCOURSE_CURRENT_CFG': config_set.name(),
   'CONCOURSE_CURRENT_TEAM': target_team,
