@@ -21,6 +21,7 @@ import yaml
 import yamllint
 import yamllint.config
 
+import pkg_resources
 import termcolor
 
 from urllib.parse import urlunparse
@@ -330,6 +331,17 @@ def merge_dicts(base: dict, other: dict, list_semantics='merge'):
     from copy import deepcopy
     # copy dicts, so they remain unmodified
     return merger.merge(deepcopy(base), deepcopy(other))
+
+
+DISTRIBUTION_NAME = 'gardener-cicd-libs'
+
+
+def gardener_cicd_libs_version():
+    '''Return the version of the active gardener-cicd-libs distribution
+    '''
+    for distribution in pkg_resources.working_set:
+        if distribution.key == DISTRIBUTION_NAME:
+            return distribution.version
 
 
 class FluentIterable(object):
