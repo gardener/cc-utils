@@ -332,6 +332,11 @@ def merge_dicts(base: dict, other: dict, list_semantics='merge'):
     return merger.merge(deepcopy(base), deepcopy(other))
 
 
+def sane_env_var_name(name: str):
+    not_none(name)
+    return name.replace('-', '_').upper()
+
+
 class FluentIterable(object):
     ''' a fluent object stream processing chain builder inspired by guava's FluentIterable
 

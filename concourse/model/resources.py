@@ -19,12 +19,10 @@ from concourse.model.base import (
     AttributeSpec,
     ModelBase
 )
-from ci.util import not_none
-
-
-def sane_env_var_name(name):
-    not_none(name)
-    return name.replace('-', '_').upper()
+from ci.util import (
+    not_none,
+    sane_env_var_name,
+)
 
 
 class ResourceIdentifier(object):
