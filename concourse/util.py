@@ -172,7 +172,7 @@ def find_own_running_build():
 
     meta_dir = os.path.join(
         os.path.abspath(check_env('CC_ROOT_DIR')),
-        concourse.model.traits.meta.META_INFO_DIR_NAME
+        concourse.model.traits.meta.DIR_NAME
     )
     meta_info_file = os.path.join(
         meta_dir,
