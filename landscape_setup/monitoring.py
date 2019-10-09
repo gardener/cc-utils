@@ -202,7 +202,8 @@ def create_kube_state_metrics_helm_values(
         "horizontalpodautoscalers", "jobs", "limitranges", "namespaces", "nodes",
         "persistentvolumeclaims", "persistentvolumes", "poddisruptionbudgets", "pods",
         "replicasets", "replicationcontrollers", "resourcequotas", "secrets",
-        "services", "statefulsets"
+        "services", "statefulsets", "certificatesigningrequests", "ingresses",
+        "storageclasses"
     ]
 
     def configured(c):
@@ -210,7 +211,8 @@ def create_kube_state_metrics_helm_values(
 
     used_collectors = {c: configured(c) for c in all_collectors}
 
-    namespaces_to_monitor = monitoring_cfg.kube_state_metrics().namespaces_to_monitor()
+    # due to a bug, comma separated namespaces do not work anymore -> we monitor all namespaces
+    #namespaces_to_monitor = monitoring_cfg.kube_state_metrics().namespaces_to_monitor()
 
     helm_values = {
         "rbac": {
@@ -220,7 +222,7 @@ def create_kube_state_metrics_helm_values(
             "enabled": True
         },
         "collectors": used_collectors,
-        "namespace": ','.join(namespaces_to_monitor)
+        #"namespace": ','.join(namespaces_to_monitor)
     }
     return helm_values
 
