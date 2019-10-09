@@ -6,7 +6,7 @@ import util
 def filter_image_file(
     in_file:str,
     out_file:str,
-    remove_files:[str]=(),
+    remove_files:[str]=[],
 ):
     '''
     processes an OCI container image [0] (from a local tar file) and writes a
