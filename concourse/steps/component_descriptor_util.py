@@ -1,12 +1,15 @@
 import ci.util
 import os
 
+import concourse.model.traits.component_descriptor
 import product.model
 
 
 def parse_component_descriptor():
     component_descriptor_file = os.path.join(
-      ci.util.check_env('COMPONENT_DESCRIPTOR_DIR'),
+      ci.util.check_env(
+        ci.util.sane_env_var_name(concourse.model.traits.component_descriptor.ENV_VAR_NAME)
+      ),
       'component_descriptor'
     )
 

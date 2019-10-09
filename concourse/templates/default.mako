@@ -326,7 +326,7 @@ else:
         export PULLREQUEST_URL=$(git config -f "${job_variant.main_repository().resource_name()}/.git/config" pullrequest.url)
   % endif
   % if has_version_trait(job_variant):
-        export EFFECTIVE_VERSION=$(cat ${job_step.input('version_path')}/version)
+        export EFFECTIVE_VERSION=$(cat ${job_step.input( concourse.model.traits.version.ENV_VAR_NAME)}/version)
     % if job_variant.trait('version').inject_effective_version():
         # copy processed version information to VERSION file
         <%
@@ -335,7 +335,7 @@ else:
           job_variant.trait('version').versionfile_relpath()
         )
         %>
-        cp "${job_step.input('version_path')}/version" "${version_file_path}"
+        cp "${job_step.input(concourse.model.traits.version.ENV_VAR_NAME)}/version" "${version_file_path}"
     % endif
   % endif
   % for from_path, to_path in clone_repositories:

@@ -1,5 +1,6 @@
 <%def name="version_step(job_step, job_variant, indent)", filter="indent_func(indent),trim">
 <%
+import concourse.model.traits.version
 from makoutil import indent_func
 
 main_repo = job_variant.main_repository()
@@ -7,8 +8,8 @@ head_sha_file = main_repo.head_sha_path()
 version_trait = job_variant.trait('version')
 
 path_to_repo_version_file = main_repo.resource_name() + '/' + version_trait.versionfile_relpath()
-output_version_file = job_step.output('version_path') + '/version'
-legacy_version_file = job_step.output('version_path') + '/number'
+output_version_file = job_step.output(concourse.model.traits.version.ENV_VAR_NAME) + '/version'
+legacy_version_file = job_step.output(concourse.model.traits.version.ENV_VAR_NAME) + '/number'
 
 version_operation = version_trait._preprocess()
 branch_name = main_repo.branch()

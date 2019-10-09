@@ -5,7 +5,9 @@ publish_trait = job_variant.trait('publish')
 % for descriptor in publish_trait.dockerimages():
 <%
 import os
-build_dir = job_step.input('image_path')
+import concourse.model.traits.publish
+import concourse.model.traits.version
+build_dir = job_step.input(concourse.model.traits.publish.IMAGE_ENV_VAR_NAME)
 if descriptor.builddir_relpath():
   build_dir = os.path.join(build_dir, descriptor.builddir_relpath())
 dockerfile = os.path.join(build_dir, descriptor.dockerfile_relpath())
@@ -15,7 +17,7 @@ dockerfile = os.path.join(build_dir, descriptor.dockerfile_relpath())
   params:
     build: ${build_dir}
     dockerfile: ${dockerfile}
-    tag_file: ${job_step.input('version_path')}/version
+    tag_file: ${job_step.input(concourse.model.traits.version.ENV_VAR_NAME)}/version
 % if descriptor.target_name():
     target_name: ${descriptor.target_name()}
 % endif

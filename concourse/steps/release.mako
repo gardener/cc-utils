@@ -5,8 +5,10 @@
 <%
 from makoutil import indent_func
 from concourse.steps import step_lib
+import concourse.model.traits.component_descriptor
+import concourse.model.traits.version
 import os
-version_file = job_step.input('version_path') + '/version'
+version_file = job_step.input(concourse.model.traits.version.ENV_VAR_NAME) + '/version'
 release_trait = job_variant.trait('release')
 version_trait = job_variant.trait('version')
 version_op = release_trait.nextversion()
@@ -25,7 +27,7 @@ repo = job_variant.main_repository()
 has_component_descriptor_trait = job_variant.has_trait('component_descriptor')
 if has_component_descriptor_trait:
   component_descriptor_file_path = os.path.join(
-    job_step.input('component_descriptor_dir'),
+    job_step.input(concourse.model.traits.component_descriptor.ENV_VAR_NAME),
     'component_descriptor'
   )
 

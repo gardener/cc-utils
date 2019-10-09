@@ -2,9 +2,10 @@
   name="draft_release_step(job_step, job_variant, github_cfg, indent)",
   filter="indent_func(indent),trim">
 <%
+import concourse.model.traits.version
 from makoutil import indent_func
 import os
-version_file = job_step.input('version_path') + '/version'
+version_file = job_step.input(concourse.model.traits.version.ENV_VAR_NAME) + '/version'
 repo = job_variant.main_repository()
 draft_release_trait = job_variant.trait('draft_release')
 version_operation = draft_release_trait._preprocess()

@@ -3,11 +3,17 @@
   filter="indent_func(indent),trim"
 >
 <%
+import concourse.model.traits.version
+import concourse.model.traits.component_descriptor
 from makoutil import indent_func
 from concourse.steps import step_lib
+
 descriptor_trait = job_variant.trait('component_descriptor')
 main_repo = job_variant.main_repository()
 main_repo_path_env_var = main_repo.logical_name().replace('-', '_').upper() + '_PATH'
+
+version_file_path = job_step.input(concourse.model.traits.version.ENV_VAR_NAME) + '/version'
+job_step_output = job_step.output(concourse.model.traits.component_descriptor.ENV_VAR_NAME)
 
 if job_variant.has_trait('image_alter'):
   image_alter_cfgs = job_variant.trait('image_alter').image_alter_cfgs()
@@ -29,10 +35,8 @@ from ci.util import info, fail, parse_yaml_file, ctx
 ${step_lib('component_descriptor')}
 
 # retrieve effective version
-version_file_path = os.path.join(
-  '${job_step.input('version_path')}',
-  'version',
-)
+version_file_path = '${version_file_path}'
+
 with open(version_file_path) as f:
   effective_version = f.read().strip()
 
@@ -72,7 +76,7 @@ dependencies.add_container_image_dependency(
 info('default component descriptor:\n')
 print(yaml.dump(base_descriptor.raw, indent=2))
 
-descriptor_out_dir = os.path.abspath('${job_step.output("component_descriptor_dir")}')
+descriptor_out_dir = os.path.abspath('${job_step_output}')
 descriptor_path = os.path.join(descriptor_out_dir, 'component_descriptor')
 
 descriptor_script = os.path.abspath(
