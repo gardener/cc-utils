@@ -32,6 +32,9 @@ class AnalysisResult(ModelBase):
     def display_name(self):
         return self.raw.get('filename', '<None>')
 
+    def name(self):
+        return self.raw.get('name')
+
     def status(self) -> ProcessingStatus:
         return ProcessingStatus(self.raw.get('status'))
 
@@ -40,6 +43,9 @@ class AnalysisResult(ModelBase):
 
     def custom_data(self):
         return self.raw.get('custom_data')
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}: {self.name()}({self.product_id()})'
 
 
 class Component(ModelBase):
