@@ -216,5 +216,5 @@ def find_own_running_build():
         uuid_json = json.loads(last_line)
         if uuid_json['uuid'] == build_job_uuid:
             return build
-
-    raise RuntimeError('Could not determine own Concourse job.')
+    else:
+        raise RuntimeError('Could not determine own Concourse job.')
