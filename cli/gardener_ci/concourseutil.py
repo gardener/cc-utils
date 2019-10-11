@@ -19,8 +19,8 @@ import yaml
 import kube.ctx
 import landscape_setup.concourse as setup_concourse
 
-from ci.util import ctx
 from ci.util import (
+    ctx,
     info,
     fail,
     CliHints,
