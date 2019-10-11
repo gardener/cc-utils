@@ -152,6 +152,13 @@ class ProtecodeUtil(object):
         self._group_id = group_id
         self._reference_group_ids = reference_group_ids
 
+    def _image_group_metadata(self, container_image_group: ContainerImageGroup):
+        metadata = {
+            'IMAGE_REFERENCE_NAME': container_image_group.image_name(),
+            'COMPONENT_VERSION': container_image_group.component().name(),
+        }
+        return metadata
+
     def _image_ref_metadata(self, container_image, omit_version):
         metadata_dict = {
             'IMAGE_REFERENCE_NAME': container_image.name(),
@@ -197,6 +204,72 @@ class ProtecodeUtil(object):
         metadata = self._image_ref_metadata(container_image, omit_version=omit_version)
         metadata.update(self._component_metadata(component=component, omit_version=omit_version))
         return metadata
+
+    def upload_plan(
+        self,
+        container_image_group: ContainerImageGroup,
+    ):
+        # depending on upload-mode, determine an upload-action for each related image
+        # - images to upload
+        # - protecode-apps to remove
+        # - triages to import
+        images_to_upload = {}
+        protecode_apps_to_remove = {}
+        protecode_apps_to_consider = {} # consider to rescan; return results
+        triages_to_import = {}
+
+        metadata = self._image_group_metadata(container_image_group=container_image_group)
+        existing_products = self._api.list_apps(
+            group_id=self._group_id,
+            custom_attribs=metadata,
+        )
+
+        # import triages from local group
+        scan_results = (
+            self._api._scan_result(product_id=product.product_id())
+            for product in existing_products
+        )
+        triages_to_import |= set(self._existing_triages(scan_results))
+
+        # import triages from reference groups
+        def enumerate_reference_triages():
+            for group_id in self._reference_group_ids:
+                ref_apps = self._api.list_apps(
+                    group_id=group_id,
+                    custom_attribs=metadata,
+                )
+                yield from self._existing_triages(ref_apps)
+
+        triages_to_import |= set(enumerate_reference_triages())
+
+        if self._processing_mode is ProcessingMode.FORCE_UPLOAD:
+            images_to_upload |= set(container_image_group.images())
+            # remove all
+            protecode_apps_to_remove = set(existing_products)
+        elif self._processing_mode in (ProcessingMode.RESCAN, ProcessingMode.UPLOAD_IF_CHANGED):
+            for container_image in container_image_group.images():
+                # find matching protecode product (aka app)
+                for existing_product in existing_products:
+                    if existing_product.metadata().get('IMAGE_VERSION') == container_image.version():
+                        existing_products.remove(existing_product)
+                        protecode_apps_to_consider.add(existing_product)
+                        break
+                else:
+                    # not found -> need to upload
+                    images_to_upload.add(container_image)
+
+            # all existing products that did not match shall be removed
+            protecode_apps_to_remove |= set(existing_products)
+
+        else:
+            raise NotImplementedError()
+
+        # todo:
+        # - determine actions for `protecode_apps_to_consider`
+        #   - re-upload + wait
+        #   - retrieve (and yield) results
+        # - apply imported triages for all protecode_apps
+        # - lastly: remove protecode-apps
 
     def retrieve_scan_result(
             self,
@@ -305,6 +378,7 @@ class ProtecodeUtil(object):
             container_image=container_image,
             component=component,
         )
+
         reference_results = [
             self.retrieve_scan_result(
                 container_image=container_image,
@@ -312,6 +386,7 @@ class ProtecodeUtil(object):
                 group_id=group_id,
             ) for group_id in self._reference_group_ids
         ]
+
         reference_results = [r for r in reference_results if r] # remove None entries
         if scan_result:
             reference_results.insert(0, scan_result)
