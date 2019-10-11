@@ -25,7 +25,7 @@ from concourse.model.base import (
   ScriptType,
 )
 
-ENV_VAR_NAME = 'META'
+ENV_VAR_NAME = 'meta'
 DIR_NAME = 'meta'
 META_STEP_NAME = 'meta'
 
