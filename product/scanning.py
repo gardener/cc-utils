@@ -40,12 +40,11 @@ class ProcessingMode(AttribSpecMixin, enum.Enum):
     def _attribute_specs(cls):
         return (
             AttributeSpec.optional(
-                name=cls.UPLOAD_IF_CHANGED.value,
+                name=cls.UPLOAD_IF_CHANGED.value, # XXX deprecated!! this is useless
                 default=None,
                 doc='''
-                    upload the container images. This will :strong:`not` upload the images if they
-                    are already present. This will :strong:`not` cause images already present to be
-                    rescanned.
+                    upload absent container images. This will _not_ upload images already present.
+                    Present images will _not_ be rescanned.
                 ''',
                 type=str,
             ),
@@ -53,8 +52,8 @@ class ProcessingMode(AttribSpecMixin, enum.Enum):
                 name=cls.RESCAN.value,
                 default=None,
                 doc='''
-                    trigger a scan of container images. Images will be uploaded unless they are
-                    already present.
+                    (re-)scan container images if Protecode indicates this might bear new results.
+                    Upload absent images.
                 ''',
                 type=str,
             ),
@@ -62,7 +61,7 @@ class ProcessingMode(AttribSpecMixin, enum.Enum):
                 name=cls.FORCE_UPLOAD.value,
                 default=None,
                 doc='''
-                    :strong:`always` upload the images. This will cause all images to be rescanned.
+                    `always` upload and scan all images.
                 ''',
                 type=str,
             ),
