@@ -28,7 +28,7 @@ from concourse.model.base import (
     AttribSpecMixin,
     AttributeSpec,
 )
-from util import not_none, warning, check_type, info
+from ci.util import not_none, warning, check_type, info
 from container.registry import retrieve_container_image
 from .model import ContainerImage, Component, UploadResult, UploadStatus
 

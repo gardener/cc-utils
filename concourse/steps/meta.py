@@ -2,7 +2,7 @@ import json
 import os
 import uuid
 
-import util
+import ci.util
 
 import concourse.model.traits.meta
 
@@ -13,7 +13,7 @@ jobmetadata_filename='jobmetadata.json'
 
 def get_out_dir():
     return os.path.join(
-        util.check_env('CC_ROOT_DIR'),
+        ci.util.check_env('CC_ROOT_DIR'),
         concourse.model.traits.meta.META_INFO_DIR_NAME,
     )
 

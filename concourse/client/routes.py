@@ -16,7 +16,7 @@
 from ensure import ensure_annotations
 from urllib.parse import urljoin
 
-import util
+import ci.util
 
 CONCOURSE_API_SUFFIX = 'api/v1'
 
@@ -56,7 +56,7 @@ class ConcourseApiRoutesBase(object):
         return self._api_url('teams', team, prefix_team=False)
 
     def login(self):
-        return util.urljoin(
+        return ci.util.urljoin(
             self.base_url,
             'sky',
             'token'

@@ -35,7 +35,7 @@ from model.concourse import (
     ConcourseTeam,
 )
 from http_requests import AuthenticatedRequestBuilder
-from util import not_empty
+from ci.util import not_empty
 
 warnings.filterwarnings('ignore', 'Unverified HTTPS request is being made.*', InsecureRequestWarning)
 

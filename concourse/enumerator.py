@@ -24,7 +24,7 @@ import yaml
 
 from github3.exceptions import NotFoundError
 
-from util import (
+from ci.util import (
     parse_yaml_file,
     info,
     fail,

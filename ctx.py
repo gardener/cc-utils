@@ -19,7 +19,7 @@ import os
 
 from pathlib import Path
 
-import util
+import ci.util
 
 from model.base import ModelBase
 '''
@@ -35,7 +35,7 @@ class ConfigBase(ModelBase):
         super().__init__(raw_dict={})
 
     def _add_config_source(self, config: dict):
-        self.raw = util.merge_dicts(self.raw, config)
+        self.raw = ci.util.merge_dicts(self.raw, config)
 
 
 class ContextConfig(ConfigBase):
@@ -80,7 +80,7 @@ def load_config_from_env():
 def load_config_from_user_home():
     config_file = Path.home() / '.cc-utils.cfg'
     if config_file.is_file():
-        return util.parse_yaml_file(config_file)
+        return ci.util.parse_yaml_file(config_file)
     return {}
 
 
@@ -98,9 +98,9 @@ def add_config_source(config_source: dict):
 def load_config():
     home_config = load_config_from_user_home()
     env_config = load_config_from_env()
-    merged = util.merge_dicts(home_config, env_config)
+    merged = ci.util.merge_dicts(home_config, env_config)
     cli_cfg = load_config_from_args()
-    merged = util.merge_dicts(merged, cli_cfg)
+    merged = ci.util.merge_dicts(merged, cli_cfg)
     add_config_source(merged)
 
 
@@ -124,7 +124,7 @@ def _cfg_factory_from_dir():
     if Config.CONTEXT.value.config_dir() is None:
         return None
 
-    from util import existing_dir
+    from ci.util import existing_dir
     cfg_dir = existing_dir(Config.CONTEXT.value.config_dir())
 
     from model import ConfigFactory
@@ -161,7 +161,7 @@ def _cfg_factory_from_secrets_server():
 
 @functools.lru_cache()
 def cfg_factory():
-    from util import fail
+    from ci.util import fail
 
     factory = _cfg_factory_from_dir()
     # fallback to secrets-server

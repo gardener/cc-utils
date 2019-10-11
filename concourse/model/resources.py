@@ -19,7 +19,7 @@ from concourse.model.base import (
     AttributeSpec,
     ModelBase
 )
-from util import not_none
+from ci.util import not_none
 
 
 def sane_env_var_name(name):

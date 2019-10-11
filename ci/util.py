@@ -247,7 +247,7 @@ def create_url_from_attributes(
 def check_env(name: str):
     '''
     returns: the specified environment variable's value.
-    raises: util.Failure if no environment variable with the given name is defined
+    raises: ci.util.Failure if no environment variable with the given name is defined
     '''
     not_none(name)
     if name in os.environ:
@@ -285,7 +285,7 @@ def urljoin(*parts):
 
 def which(cmd_name: str) -> str:
     '''
-    wrapper around shutil.which that calls util.fail if the requested executable is not
+    wrapper around shutil.which that calls ci.util.fail if the requested executable is not
     found in the PATH.
     '''
     cmd_path = shutil.which(cmd_name)

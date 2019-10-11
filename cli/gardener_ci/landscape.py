@@ -15,8 +15,8 @@
 import enum
 import os
 
-from util import ctx
-from util import (
+from ci.util import ctx
+from ci.util import (
     existing_dir,
     info,
     which,

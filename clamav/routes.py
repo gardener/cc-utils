@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from ensure import ensure_annotations
-from util import urljoin
+from ci.util import urljoin
 
 
 class ClamAVRoutes(object):

@@ -31,7 +31,7 @@ from github3.exceptions import NotFoundError, ForbiddenError
 from github3.orgs import Team
 
 import ccc.github
-import util
+import ci.util
 import product.model
 import version
 
@@ -55,10 +55,10 @@ class GitHubRepoBranch(object):
         repo_name: str,
         branch: str,
     ):
-        self._github_config = util.not_none(github_config)
-        self._repo_owner = util.not_empty(repo_owner)
-        self._repo_name = util.not_empty(repo_name)
-        self._branch = util.not_empty(branch)
+        self._github_config = ci.util.not_none(github_config)
+        self._repo_owner = ci.util.not_empty(repo_owner)
+        self._repo_name = ci.util.not_empty(repo_name)
+        self._branch = ci.util.not_empty(branch)
 
     def github_repo_path(self):
         return f'{self._repo_owner}/{self._repo_name}'
@@ -138,7 +138,7 @@ class UpgradePullRequest(object):
             from_ref: DependencyBase,
             to_ref: DependencyBase,
         ):
-        self.pull_request = util.not_none(pull_request)
+        self.pull_request = ci.util.not_none(pull_request)
 
         if from_ref.name() != to_ref.name():
             raise ValueError('reference names do not match')
@@ -177,7 +177,7 @@ class UpgradePullRequest(object):
         return greatest_reference_version >= semver.parse_version_info(self.to_ref.version())
 
     def target_matches(self, reference: DependencyBase):
-        util.check_type(reference, DependencyBase)
+        ci.util.check_type(reference, DependencyBase)
 
         if reference.type_name() != self.reference_type_name:
             return False
@@ -214,7 +214,7 @@ class PullRequestUtil(RepositoryHelperBase):
         return bool(self.PR_TITLE_PATTERN.fullmatch(pull_request.title))
 
     def _pr_to_upgrade_pull_request(self, pull_request):
-        util.not_none(pull_request)
+        ci.util.not_none(pull_request)
 
         match = self.PR_TITLE_PATTERN.fullmatch(pull_request.title)
         if match is None:
@@ -257,7 +257,7 @@ class PullRequestUtil(RepositoryHelperBase):
                 else:
                     raise
 
-        parsed_prs = util.FluentIterable(self.repository.pull_requests(state=state_filter)) \
+        parsed_prs = ci.util.FluentIterable(self.repository.pull_requests(state=state_filter)) \
             .filter(self._has_upgrade_pr_title) \
             .map(pr_to_upgrade_pr) \
             .filter(lambda e: e) \
@@ -302,7 +302,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             decoded_contents = contents.decoded.decode('utf-8')
             if decoded_contents == file_contents:
                 # Nothing to do
-                return util.info('Repository file contents are identical to passed file contents.')
+                return ci.util.info('Repository file contents are identical to passed file contents.')
             else:
                 response = contents.update(
                     message=commit_message,
@@ -415,7 +415,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         tag_name: str,
         body: str,
     )->bool:
-        util.not_empty(tag_name)
+        ci.util.not_empty(tag_name)
         release = self.repository.release_from_tag(tag_name)
         if not release:
             raise RuntimeError(
@@ -436,7 +436,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         self,
         tag_name: str,
     ):
-        util.not_empty(tag_name)
+        ci.util.not_empty(tag_name)
         try:
             self.repository.ref('tags/' + tag_name)
             return True
@@ -444,8 +444,8 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             return False
 
     def retrieve_asset_contents(self, release_tag: str, asset_label: str):
-        util.not_none(release_tag)
-        util.not_none(asset_label)
+        ci.util.not_none(release_tag)
+        ci.util.not_none(asset_label)
 
         release = self.repository.release_from_tag(release_tag)
         for asset in release.assets():
@@ -542,7 +542,7 @@ def retrieve_email_addresses(
         fh.write(email_address + '\n')
         email_addresses_count += 1
 
-    util.verbose('retrieved {sc} email address(es) from {uc} user(s)'.format(
+    ci.util.verbose('retrieved {sc} email address(es) from {uc} user(s)'.format(
         sc=email_addresses_count,
         uc=len(github_users)
     )
@@ -558,14 +558,14 @@ def _create_team(
     organization = github.organization(organization_name)
     team = _retrieve_team_by_name_or_none(organization, team_name)
     if team:
-        util.verbose("Team {name} already exists".format(name=team_name))
+        ci.util.verbose("Team {name} already exists".format(name=team_name))
         return
 
     try:
         organization.create_team(name=team_name)
-        util.info("Team {name} created".format(name=team_name))
+        ci.util.info("Team {name} created".format(name=team_name))
     except ForbiddenError as err:
-        util.fail("{err} Cannot create team {name} in org {org} due to missing privileges".format(
+        ci.util.fail("{err} Cannot create team {name} in org {org} due to missing privileges".format(
             err=err,
             name=team_name,
             org=organization_name
@@ -582,22 +582,22 @@ def _add_user_to_team(
     organization = github.organization(organization_name)
     team = _retrieve_team_by_name_or_none(organization, team_name)
     if not team:
-        util.fail("Team {name} does not exist".format(name=team_name))
+        ci.util.fail("Team {name} does not exist".format(name=team_name))
 
     if team.is_member(user_name):
-        util.verbose("{username} is already assigned to team {teamname}".format(
+        ci.util.verbose("{username} is already assigned to team {teamname}".format(
             username=user_name,
             teamname=team_name
         ))
         return
 
     if team.add_member(username=user_name):
-        util.info("Added {username} to team {teamname}".format(
+        ci.util.info("Added {username} to team {teamname}".format(
             username=user_name,
             teamname=team_name
         ))
     else:
-        util.fail("Could not add {username} to team {teamname}. Check for missing privileges".format(
+        ci.util.fail("Could not add {username} to team {teamname}. Check for missing privileges".format(
             username=user_name,
             teamname=team_name
         ))
@@ -614,18 +614,18 @@ def _add_all_repos_to_team(
     organization = github.organization(organization_name)
     team = _retrieve_team_by_name_or_none(organization, team_name)
     if not team:
-        util.fail("Team {name} does not exist".format(name=team_name))
+        ci.util.fail("Team {name} does not exist".format(name=team_name))
 
     for repo in organization.repositories():
         if team.has_repository(repo.full_name):
-            util.verbose("Team {teamnname} already assigned to repo {reponame}".format(
+            ci.util.verbose("Team {teamnname} already assigned to repo {reponame}".format(
                 teamnname=team_name,
                 reponame=repo.full_name
             ))
             continue
 
         team.add_repository(repository=repo.full_name, permission=permission.value)
-        util.info("Added team {teamname} to repository {reponame}".format(
+        ci.util.info("Added team {teamname} to repository {reponame}".format(
             teamname=team_name,
             reponame=repo.full_name
         ))

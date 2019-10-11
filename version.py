@@ -23,7 +23,7 @@ from typing import (
     Set,
 )
 
-import util
+import ci.util
 
 own_dir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(own_dir, os.path.pardir))
@@ -145,6 +145,6 @@ def is_semver_parseable(version_string: str):
     try:
         semver.parse_version_info(version_string)
     except ValueError:
-        util.verbose(f"Could not parse '{version_string}' as semver version")
+        ci.util.verbose(f"Could not parse '{version_string}' as semver version")
         return False
     return True

@@ -20,7 +20,7 @@ from textwrap import dedent
 from tempfile import TemporaryDirectory
 
 import model
-from util import Failure
+from ci.util import Failure
 from model import ConfigFactory
 
 

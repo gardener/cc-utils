@@ -17,7 +17,7 @@ import pathlib
 import json as json_m
 import yaml
 
-from util import CliHints, ctx,existing_dir
+from ci.util import CliHints, ctx,existing_dir
 from model import ConfigFactory, ConfigSetSerialiser as CSS
 
 

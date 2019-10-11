@@ -32,11 +32,11 @@ import os
 
 import ccc.github
 import github
-import util
+import ci.util
 import mailutil
 
 
-from util import ctx
+from ci.util import ctx
 
 CC_ROOT_DIR = os.path.abspath('.')
 os.environ['CC_ROOT_DIR'] = CC_ROOT_DIR
@@ -51,7 +51,7 @@ meta_build_job_name = meta_vars_dict.get('build-job-name').strip()
 meta_resource_inconsistent = False
 if meta_build_job_name != env_build_job_name:
     meta_resource_inconsistent = True
-    util.warning(
+    ci.util.warning(
         'Inconsistent META resource. Job URL in email cannot be determined\n'
         f'Expected job name: {env_build_job_name}\n'
         f'Job name in META resource: {meta_build_job_name}'
@@ -61,9 +61,9 @@ concourse_api = from_cfg(cfg_set.concourse(), team_name=meta_vars_dict['build-te
 ## TODO: Replace with MAIN_REPO_DIR once it is available in synthetic steps
 path_to_main_repository = "${job_variant.main_repository().resource_name()}"
 
-util.info('Notification cfg: ${notification_cfg_name}')
-util.info('Triggering policy: ${triggering_policy}')
-util.info("Will notify: ${on_error_cfg.recipients()}")
+ci.util.info('Notification cfg: ${notification_cfg_name}')
+ci.util.info('Triggering policy: ${triggering_policy}')
+ci.util.info("Will notify: ${on_error_cfg.recipients()}")
 
 if not should_notify(
     NotificationTriggeringPolicy('${triggering_policy.value}'),
@@ -84,13 +84,13 @@ email_cfg = {
 }
 if os.path.isfile(notify_file):
 ## custom notification config found in error dir
-    notify_cfg = util.parse_yaml_file(notify_file)
+    notify_cfg = ci.util.parse_yaml_file(notify_file)
     email_cfg.update(notify_cfg.get('email', dict()))
     ## Convert elements of notify config to sets
     email_cfg['component_name_recipients'] = set(email_cfg.get('component_name_recipients', set()))
     email_cfg['recipients'] = set(email_cfg.get('recipients', set()))
     email_cfg['codeowner_files'] = set(email_cfg.get('codeowner_files', set()))
-    util.info(f'found notify.cfg - applying cfg: \n{notify_cfg}')
+    ci.util.info(f'found notify.cfg - applying cfg: \n{notify_cfg}')
 
 notify_cfg = {'email': email_cfg}
 
@@ -101,14 +101,14 @@ main_repo_github_api = ccc.github.github_api(main_repo_github_cfg)
 
 if 'component_diff_owners' in ${on_error_cfg.recipients()}:
     component_diff_path = os.path.join('component_descriptor_dir', 'dependencies.diff')
-    util.info('adding mail recipients from component diff since last release')
+    ci.util.info('adding mail recipients from component diff since last release')
     components = components_with_version_changes(component_diff_path)
     ## Recipient-address resolution from component names will be done at a later point
     email_cfg['component_name_recipients'] = email_cfg.get('component_name_recipients', set()) | set(components)
 
 if 'codeowners' in ${on_error_cfg.recipients()}:
     ## Add codeowners from main repository to recipients
-    util.info('adding codeowners from main repository as recipients')
+    ci.util.info('adding codeowners from main repository as recipients')
     recipients = set(
         mailutil.determine_local_repository_codeowners_recipients(
             github_api=main_repo_github_api,
@@ -119,7 +119,7 @@ if 'codeowners' in ${on_error_cfg.recipients()}:
 
 ## Also consider explicitly given CODEOWNERS files
 if email_cfg['codeowners_files']:
-    util.info("adding codeowners from explicitly configured 'CODEOWNERS' files")
+    ci.util.info("adding codeowners from explicitly configured 'CODEOWNERS' files")
     recipients = set(
         mailutil.determine_codeowner_file_recipients(
             github_api=main_repo_github_api,
@@ -129,12 +129,12 @@ if email_cfg['codeowners_files']:
     email_cfg['recipients'] = email_cfg.get('recipients', set()) | recipients
 
 if 'email_addresses' in ${on_error_cfg.recipients()}:
-    util.info('adding excplicitly configured recipients')
+    ci.util.info('adding excplicitly configured recipients')
     recipients = set(${on_error_cfg.recipients().get('email_addresses',())})
     email_cfg['recipients'] = email_cfg.get('recipients', set()) | recipients
 
 if 'committers' in ${on_error_cfg.recipients()}:
-    util.info('adding committers of main repository to recipients')
+    ci.util.info('adding committers of main repository to recipients')
     recipients = set(mailutil.determine_head_commit_recipients(
             src_dirs=(path_to_main_repository,),
         ))

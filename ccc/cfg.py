@@ -1,8 +1,8 @@
 import functools
 
-import util
+import ci.util
 
-ctx = util.ctx()
+ctx = ci.util.ctx()
 
 
 @functools.lru_cache()

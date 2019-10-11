@@ -24,7 +24,7 @@ import github.util
 import gitutil
 import product.model
 import product.util
-import util
+import ci.util
 
 from concourse.model.traits.update_component_deps import (
     MergePolicy,
@@ -34,7 +34,7 @@ from github.util import (
     GitHubRepositoryHelper,
     GitHubRepoBranch,
 )
-from util import check_env
+from ci.util import check_env
 
 ${step_lib('update_component_deps')}
 
@@ -44,7 +44,7 @@ REPO_BRANCH = check_env('${repo_name}_BRANCH')
 REPO_OWNER, REPO_NAME = check_env('${repo_name}_GITHUB_REPO_OWNER_AND_NAME').split('/')
 
 
-cfg_factory = util.ctx().cfg_factory()
+cfg_factory = ci.util.ctx().cfg_factory()
 github_cfg_name = '${github_cfg_name}'
 github_cfg=cfg_factory.github(github_cfg_name)
 
@@ -62,9 +62,9 @@ def _component(product_descriptor, component_name):
     if component_count == 1:
         return component[0]
     elif component_count < 1:
-        util.fail('Did not find component {cn}'.format(cn=component_name))
+        ci.util.fail('Did not find component {cn}'.format(cn=component_name))
     elif component_count > 1:
-        util.fail('Found more than one component with name ' + component_name)
+        ci.util.fail('Found more than one component with name ' + component_name)
     else:
         raise NotImplementedError # this line should never be reached
 
@@ -157,9 +157,9 @@ def create_upgrade_pr(from_ref, to_ref, pull_request_util):
         repo_path=repo_dir,
     )
     commit = helper.index_to_commit(message=commit_msg)
-    util.info(f'commit for upgrade-PR: {commit.hexsha}')
+    ci.util.info(f'commit for upgrade-PR: {commit.hexsha}')
 
-    new_branch_name = util.random_str(prefix='ci-', length=12)
+    new_branch_name = ci.util.random_str(prefix='ci-', length=12)
     head_sha = ls_repo.ref('heads/' + REPO_BRANCH).object.sha
     ls_repo.create_ref('refs/heads/' + new_branch_name, head_sha)
 
@@ -169,7 +169,7 @@ def create_upgrade_pr(from_ref, to_ref, pull_request_util):
     try:
       helper.push(from_ref=commit.hexsha, to_ref='refs/heads/' + new_branch_name)
     except:
-      util.warning('an error occurred - removing now useless pr-branch')
+      ci.util.warning('an error occurred - removing now useless pr-branch')
       rm_pr_branch()
       raise
 
@@ -204,10 +204,10 @@ def create_upgrade_pr(from_ref, to_ref, pull_request_util):
           else:
               text = pull_request_util.retrieve_pr_template_text()
     except:
-      util.warning('an error occurred during release notes processing (ignoring)')
+      ci.util.warning('an error occurred during release notes processing (ignoring)')
       text = None
       import traceback
-      util.warning(traceback.format_exc())
+      ci.util.warning(traceback.format_exc())
 
     pull_request = ls_repo.create_pull(
             title=github.util.PullRequestUtil.calculate_pr_title(
@@ -283,7 +283,7 @@ for reference in product.util.greatest_references(immediate_dependencies.compone
       version=str(latest_version),
     )
     if latest_version <= semver.parse_version_info(reference.version()):
-        util.info('skipping outdated component upgrade: {n}; our version: {ov}, found: {fv}'.format(
+        ci.util.info('skipping outdated component upgrade: {n}; our version: {ov}, found: {fv}'.format(
           n=reference.name(),
           ov=str(reference.version()),
           fv=str(latest_version),
@@ -291,10 +291,10 @@ for reference in product.util.greatest_references(immediate_dependencies.compone
         )
         continue
     elif upgrade_pr_exists(reference=latest_cref, upgrade_requests=upgrade_pull_requests):
-        util.info('skipping upgrade (PR already exists): ' + reference.name())
+        ci.util.info('skipping upgrade (PR already exists): ' + reference.name())
         continue
     else:
-        util.info('creating upgrade PR: {n}->{v}'.format(
+        ci.util.info('creating upgrade PR: {n}->{v}'.format(
           n=reference.name(),
           v=str(latest_version),
           )

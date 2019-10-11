@@ -33,7 +33,7 @@ from github.util import GitHubRepositoryHelper
 from .pipelines import update_repository_pipelines
 import ccc
 import concourse.client
-import util
+import ci.util
 
 
 class GithubWebhookDispatcher(object):
@@ -44,7 +44,7 @@ class GithubWebhookDispatcher(object):
     ):
         self.cfg_set = cfg_set
         self.whd_cfg = whd_cfg
-        self.cfg_factory = util.ctx().cfg_factory()
+        self.cfg_factory = ci.util.ctx().cfg_factory()
 
     @functools.lru_cache()
     def concourse_clients(self):

@@ -16,7 +16,7 @@
 import bjoern
 
 import whd.server as whd_server
-import util
+import ci.util
 
 
 def start_whd(
@@ -25,7 +25,7 @@ def start_whd(
     production: bool=False,
     workers: int=4,
 ):
-    cfg_factory = util.ctx().cfg_factory()
+    cfg_factory = ci.util.ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(cfg_set_name)
     webhook_dispatcher_cfg = cfg_set.webhook_dispatcher()
 

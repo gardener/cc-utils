@@ -32,7 +32,7 @@ from github.release_notes.model import (
 )
 from github.release_notes.renderer import MarkdownRenderer
 from gitutil import GitHelper
-from util import info, warning, fail, verbose, ctx
+from ci.util import info, warning, fail, verbose, ctx
 from product.model import ComponentName
 from model.base import ModelValidationError
 from slackclient.util import SlackHelper

@@ -15,7 +15,7 @@
 
 import slack
 
-from util import info, warning
+from ci.util import info, warning
 from model.slack import SlackConfig
 
 
