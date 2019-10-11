@@ -24,7 +24,7 @@ import yaml
 
 from product.model import ComponentDescriptor, Component, ContainerImage
 from product.util import ComponentDescriptorResolver
-from util import info, fail, parse_yaml_file, ctx
+from ci.util import info, fail, parse_yaml_file, ctx
 
 ${step_lib('component_descriptor')}
 

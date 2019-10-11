@@ -20,7 +20,7 @@ from enum import Enum
 
 from model.base import ModelBase, ModelValidationError
 from protecode.model import AnalysisResult
-from util import not_none, urljoin, check_type
+from ci.util import not_none, urljoin, check_type
 
 #############################################################################
 ## product descriptor model

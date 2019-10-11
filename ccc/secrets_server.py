@@ -17,7 +17,7 @@ import os
 import requests
 import json
 
-from util import urljoin
+from ci.util import urljoin
 
 
 class SecretsServerClient(object):

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-import util
+import ci.util
 
 
 class ModelValidationError(ValueError):
@@ -75,7 +75,7 @@ class ModelDefaultsMixin(object):
         return {}
 
     def _apply_defaults(self, raw_dict):
-        self.raw = util.merge_dicts(
+        self.raw = ci.util.merge_dicts(
             self._defaults_dict(),
             raw_dict,
         )
@@ -92,7 +92,7 @@ class ModelBase(ModelValidationMixin, ModelDefaultsMixin):
     '''
 
     def __init__(self, raw_dict):
-        self.raw = util.not_none(raw_dict)
+        self.raw = ci.util.not_none(raw_dict)
 
     def __str__(self):
         return '{c} {a}'.format(
@@ -103,7 +103,7 @@ class ModelBase(ModelValidationMixin, ModelDefaultsMixin):
 
 class NamedModelElement(ModelBase):
     def __init__(self, name, raw_dict, *args, **kwargs):
-        self._name = util.not_none(name)
+        self._name = ci.util.not_none(name)
         super().__init__(raw_dict=raw_dict, *args, **kwargs)
 
     def _optional_attributes(self):

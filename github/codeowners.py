@@ -18,7 +18,7 @@ from github3.exceptions import NotFoundError
 
 from github.util import GitHubRepositoryHelper
 
-from util import existing_dir, existing_file, not_none, warning
+from ci.util import existing_dir, existing_file, not_none, warning
 
 
 class CodeownersEnumerator(object):

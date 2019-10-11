@@ -20,7 +20,7 @@ from requests.adapters import HTTPAdapter
 from requests.auth import HTTPBasicAuth
 from urllib3.util.retry import Retry
 
-from util import warning
+from ci.util import warning
 
 
 class LoggingRetry(Retry):

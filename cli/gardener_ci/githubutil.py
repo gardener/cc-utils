@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from util import (
+from ci.util import (
     CliHint,
     ctx,
 )

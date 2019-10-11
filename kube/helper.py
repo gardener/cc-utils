@@ -28,7 +28,7 @@ from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
 from ensure import ensure_annotations
 
-from util import info, not_empty, not_none, fail
+from ci.util import info, not_empty, not_none, fail
 
 
 class KubernetesSecretHelper(object):

@@ -19,7 +19,7 @@ from concourse.model.base import (
     ModelBase,
     select_attr,
 )
-from util import not_none
+from ci.util import not_none
 from concourse.model.resources import RepositoryConfig, ResourceIdentifier
 
 

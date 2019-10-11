@@ -19,7 +19,7 @@ import yaml
 import json
 
 import container.registry
-from util import CliHints, CliHint, parse_yaml_file, ctx, fail
+from ci.util import CliHints, CliHint, parse_yaml_file, ctx, fail
 from product.model import (
     Component,
     ComponentReference,

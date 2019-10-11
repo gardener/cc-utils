@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import enum
-import util
+import ci.util
 
 from model.base import (
     BasicCredentials,
@@ -22,7 +22,7 @@ from model.base import (
     ModelDefaultsMixin,
 )
 
-from util import check_type
+from ci.util import check_type
 
 
 class Privileges(enum.Enum):
@@ -107,8 +107,8 @@ class GcrCredentials(BasicCredentials):
 
 
 def find_config(image_reference: str, privileges:Privileges=None) -> 'GcrCredentials':
-    util.check_type(image_reference, str)
-    cfg_factory = util.ctx().cfg_factory()
+    ci.util.check_type(image_reference, str)
+    cfg_factory = ci.util.ctx().cfg_factory()
 
     matching_cfgs = [
         cfg for cfg in

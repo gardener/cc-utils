@@ -19,7 +19,7 @@ import kubernetes.client
 from kubernetes import config, client
 from kubernetes.config.kube_config import KubeConfigLoader
 
-from util import ctx as global_ctx, fail, existing_file, not_none
+from ci.util import ctx as global_ctx, fail, existing_file, not_none
 from kube.helper import (
     KubernetesConfigMapHelper,
     KubernetesSecretHelper,

@@ -24,7 +24,7 @@ import git
 import git.objects.util
 
 from github.util import GitHubRepoBranch
-from util import not_empty, not_none, existing_dir, fail, info, random_str, urljoin
+from ci.util import not_empty, not_none, existing_dir, fail, info, random_str, urljoin
 from model.github import (
     GithubConfig,
     Protocol,

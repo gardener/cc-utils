@@ -24,7 +24,7 @@ import container.registry
 import protecode.client
 import product.util
 from product.scanning import ProtecodeUtil, ProcessingMode
-from util import info, warning, verbose, error, success, urljoin
+from ci.util import info, warning, verbose, error, success, urljoin
 from product.model import (
     ComponentDescriptor,
     UploadResult,
