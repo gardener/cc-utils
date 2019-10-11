@@ -67,6 +67,13 @@ def check_type(instance, type):
     return instance
 
 
+def gardener_cicd_libs_version():
+    p = os.path.abspath(os.path.realpath(__file__))
+    versionfile_file_path = os.path.join(os.path.dirname(p), 'version')
+    with open(versionfile_file_path, 'rt') as f:
+        info(f"gardener-cicd-libs version: {f.readline()}")
+
+
 class CliHint(object):
     def __init__(self, typehint=str, *args, **kwargs):
         self.argparse_args = dict(*args, **kwargs)
