@@ -43,7 +43,7 @@ from model.monitoring import (
 from model.concourse import (
     ConcourseConfig,
 )
-from util import (
+from ci.util import (
     info,
 )
 from .utils import(

@@ -26,7 +26,7 @@ import yaml
 import ccc.github
 import version
 from github.util import GitHubRepositoryHelper
-from util import not_none, check_type, FluentIterable
+from ci.util import not_none, check_type, FluentIterable
 from .model import (
     COMPONENT_DESCRIPTOR_ASSET_NAME,
     Component,

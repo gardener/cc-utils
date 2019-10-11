@@ -1,6 +1,6 @@
 import container.registry
 import container.util
-import util
+import ci.util
 
 
 def filter_image_file(
@@ -18,7 +18,7 @@ def filter_image_file(
     [0] https://github.com/opencontainers/image-spec
     '''
     if not remove_files:
-        util.warning('no files to remove were specified - the output will remain unaltered')
+        ci.util.warning('no files to remove were specified - the output will remain unaltered')
 
     container.util.filter_container_image(
         image_file=in_file,

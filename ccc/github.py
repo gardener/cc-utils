@@ -28,9 +28,9 @@ import ccc.elasticsearch
 import github.util
 import http_requests
 import model
-import util
+import ci.util
 
-if util._running_on_ci():
+if ci.util._running_on_ci():
     log_github_access = False
 else:
     log_github_access = False
@@ -151,7 +151,7 @@ def github_api(
     )
 
     if not github_api:
-        util.fail("Could not connect to GitHub-instance {url}".format(url=github_url))
+        ci.util.fail("Could not connect to GitHub-instance {url}".format(url=github_url))
 
     return github_api
 
@@ -162,9 +162,9 @@ def github_cfg_for_hostname(
     cfg_factory=None,
     require_labels=('ci',), # XXX unhardcode label
 ):
-    util.not_none(host_name)
+    ci.util.not_none(host_name)
     if not cfg_factory:
-        ctx = util.ctx()
+        ctx = ci.util.ctx()
         cfg_factory = ctx.cfg_factory()
 
     if isinstance(require_labels, str):
@@ -188,14 +188,14 @@ def log_stack_trace_information_hook(resp, *args, **kwargs):
     This function stores the current stacktrace in elastic search.
     It must not return anything, otherwise the return value is assumed to replace the response
     '''
-    if not util._running_on_ci():
+    if not ci.util._running_on_ci():
         return # early exit if not running in ci job
 
-    config_set_name = util.check_env('CONCOURSE_CURRENT_CFG')
+    config_set_name = ci.util.check_env('CONCOURSE_CURRENT_CFG')
     try:
         els_index = 'github_access_stacktrace'
         try:
-            config_set = util.ctx().cfg_factory().cfg_set(config_set_name)
+            config_set = ci.util.ctx().cfg_factory().cfg_set(config_set_name)
         except KeyError:
             # do nothing: external concourse does not have config set 'internal_active'
             return
@@ -216,4 +216,4 @@ def log_stack_trace_information_hook(resp, *args, **kwargs):
         )
 
     except Exception as e:
-        util.info(f'Could not log stack trace information: {e}')
+        ci.util.info(f'Could not log stack trace information: {e}')

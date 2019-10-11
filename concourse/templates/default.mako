@@ -2,7 +2,7 @@
 <%
 import itertools
 import os
-from util import urljoin
+from ci.util import urljoin
 from makoutil import indent_func
 from concourse.factory import DefinitionFactory
 from concourse.model.base import ScriptType
@@ -316,7 +316,7 @@ else:
         os.environ['CC_ROOT_DIR'] = CC_ROOT_DIR
         del os
         # init logging
-        import util; util.ctx().configure_default_logging(); del util
+        import ci.util; ci.util.ctx().configure_default_logging(); del ci
 % else:
   <% raise ValueError('unsupported script type') %>
 % endif

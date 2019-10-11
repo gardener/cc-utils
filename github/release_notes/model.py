@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from pydash import _
 
 from product.model import ComponentName
-from util import check_type
+from ci.util import check_type
 
 
 @dataclass

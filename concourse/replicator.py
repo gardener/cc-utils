@@ -23,7 +23,7 @@ import traceback
 
 import mako.template
 
-from util import (
+from ci.util import (
     warning,
     existing_dir,
     not_none,

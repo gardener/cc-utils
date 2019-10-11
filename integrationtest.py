@@ -21,7 +21,7 @@ from github.util import (
     GitHubRepositoryHelper,
     GitHubRepoBranch,
 )
-from util import fail, info
+from ci.util import fail, info
 from model import ConfigFactory
 from concourse.replicator import Renderer, ConcourseDeployer, DeployStatus
 from concourse.enumerator import (

@@ -22,7 +22,7 @@ import tempfile
 
 import container.model
 import container.registry
-import util
+import ci.util
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ def filter_container_image(
     out_file,
     remove_entries,
 ):
-    util.existing_file(image_file)
+    ci.util.existing_file(image_file)
     if not remove_entries:
         raise ValueError('remove_entries must not be empty')
     # allow absolute paths

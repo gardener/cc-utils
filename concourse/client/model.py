@@ -21,7 +21,7 @@ from urllib.parse import urlparse
 
 import sseclient
 
-from util import warning
+from ci.util import warning
 
 
 class SetPipelineResult(Enum):

@@ -29,7 +29,7 @@ from model import (
 from model.webhook_dispatcher import (
     WebhookDispatcherDeploymentConfig
 )
-from util import (
+from ci.util import (
     ctx as global_ctx,
     not_empty,
     info,

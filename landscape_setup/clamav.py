@@ -14,7 +14,7 @@
 # limitations under the License.
 import os
 
-import util
+import ci.util
 import gitutil
 
 from tempfile import TemporaryDirectory
@@ -30,7 +30,7 @@ def deploy_clam_av(
     clamav_cfg_name,
     kubernetes_cfg_name,
 ):
-    cfg_factory = util.ctx().cfg_factory()
+    cfg_factory = ci.util.ctx().cfg_factory()
     clamav_config = cfg_factory.clamav(clamav_cfg_name)
     kubernetes_config = cfg_factory.kubernetes(kubernetes_cfg_name)
     clamav_deployment_name = clamav_config.namespace()
@@ -52,7 +52,7 @@ def deploy_clam_av(
 
 
 def create_clamav_helm_values(clamav_cfg_name):
-    cfg_factory = util.ctx().cfg_factory()
+    cfg_factory = ci.util.ctx().cfg_factory()
     clamav_config = cfg_factory.clamav(clamav_cfg_name)
     clamav_image_config = clamav_config.clamav_image_config()
     freshclam_image_config = clamav_config.freshclam_image_config()
