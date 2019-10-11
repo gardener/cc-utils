@@ -30,7 +30,8 @@ cc-utils:
     repo:
       disable_ci_skip: True
     traits:
-      version: ~
+      version:
+        versionfile: 'ci/version'
       component_descriptor: ~
   jobs:
     head-update:
