@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from enum import Enum
+import enum
 from functools import partial
 import tempfile
 
@@ -31,7 +31,7 @@ from container.registry import retrieve_container_image
 from .model import ContainerImage, Component, UploadResult, UploadStatus
 
 
-class ProcessingMode(AttribSpecMixin, Enum):
+class ProcessingMode(AttribSpecMixin, enum.Enum):
     UPLOAD_IF_CHANGED = 'upload_if_changed'
     RESCAN = 'rescan'
     FORCE_UPLOAD = 'force_upload'
@@ -69,7 +69,7 @@ class ProcessingMode(AttribSpecMixin, Enum):
         )
 
 
-class UploadAction(Enum):
+class UploadAction(enum.Enum):
     def __init__(self, upload, rescan, wait, transport_triages):
         self.upload = upload
         self.rescan = rescan
