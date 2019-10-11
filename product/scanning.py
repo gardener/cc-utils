@@ -142,7 +142,7 @@ class ProtecodeUtil(object):
     def __init__(
             self,
             protecode_api: ProtecodeApi,
-            processing_mode: ProcessingMode=ProcessingMode.UPLOAD_IF_CHANGED,
+            processing_mode: ProcessingMode=ProcessingMode.RESCAN,
             group_id: int=None,
             reference_group_ids=(),
     ):
