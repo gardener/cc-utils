@@ -12,9 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import enum
 from functools import partial
+import enum
+import semver
 import tempfile
+import typing
 
 from protecode.client import ProtecodeApi
 from protecode.model import (
@@ -79,6 +81,61 @@ class UploadAction(enum.Enum):
     UPLOAD = (True, False, True, True)
     RESCAN = (False, True, True, True)
     WAIT_FOR_RESULT = (False, False, True, False)
+
+
+class ContainerImageGroup(object):
+    '''
+    A set of Container Images sharing a common declaring component and a common logical image name.
+
+    Container Image Groups are intended to be handled as "virtual Protecode Groups".
+    This particularly means they share triages.
+
+    As a very common "special case", a container image group may contain exactly one container image.
+
+    @param component: the Component declaring dependency towards the given images
+    @param container_image: iterable of ContainerImages; must share logical name
+    '''
+    def __init__(
+        self,
+        component,
+        container_images: typing.Iterable[ContainerImage],
+    ):
+        def _to_semver(container_image):
+            # XXX do this centrally
+            version_str = container_image.version()
+            return semver.parse_version_info(version_str.lstrip('v'))
+
+        self._component = component
+
+        # sort, smallest version first
+        self._container_images = sorted(
+            container_images,
+            key=_to_semver,
+        )
+        if not len(self._container_images) > 0:
+            raise ValueError('at least one container image must be given')
+
+        image_name = {i.name() for i in self._container_images}
+        if len(image_name) > 1:
+            raise ValueError(f'all images must share same name: {image_name}')
+        self._image_name = image_name.pop()
+
+        # todo: also validate all images are in fact declared by given component
+
+    def component(self):
+        return self._component
+
+    def image_name(self):
+        return self._image_name
+
+    def images(self):
+        '''
+        @returns sorted iterable containing all images (smallest version first)
+        '''
+        return self._container_images
+
+    def __iter__(self):
+        return self._container_images.__iter__()
 
 
 class ProtecodeUtil(object):
