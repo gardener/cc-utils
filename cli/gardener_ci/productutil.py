@@ -46,7 +46,7 @@ def upload_product_images(
     processing_mode: CliHint(
         choices=list(ProcessingMode),
         type=ProcessingMode,
-    )=ProcessingMode.UPLOAD_IF_CHANGED,
+    )=ProcessingMode.RESCAN,
     protecode_group_id: int=5,
     parallel_jobs: int=4,
     cve_threshold: int=7,
