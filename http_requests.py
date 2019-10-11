@@ -12,15 +12,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import requests
+import enum
+import functools
 
-from functools import wraps
+import cachecontrol
+import requests
 
 from requests.adapters import HTTPAdapter
 from requests.auth import HTTPBasicAuth
 from urllib3.util.retry import Retry
 
 from util import warning
+
+
+class AdapterFlag(enum.Flag):
+    RETRY = enum.auto()
+    CACHE = enum.auto()
 
 
 class LoggingRetry(Retry):
@@ -50,21 +57,32 @@ def mount_default_adapter(
     session: requests.Session,
     connection_pool_cache_size=10, # requests-library default
     max_pool_size=10, # requests-library default
+    flags=AdapterFlag.CACHE|AdapterFlag.RETRY,
 ):
-    default_http_adapter = HTTPAdapter(
+    if AdapterFlag.CACHE in flags:
+        adapter_constructor = HTTPAdapter
+    else:
+        adapter_constructor = cachecontrol.CacheControlAdapter
+
+    if AdapterFlag.RETRY in flags:
+        adapter_constructor = functools.partial(
+            adapter_constructor,
+            max_retries = LoggingRetry(
+                total=3,
+                connect=3,
+                read=3,
+                status=3,
+                redirect=False,
+                status_forcelist=[500, 502, 503, 504],
+                raise_on_status=False,
+                respect_retry_after_header=True,
+                backoff_factor=1.0,
+        ))
+
+    default_http_adapter = adapter_constructor(
         pool_connections = connection_pool_cache_size,
         pool_maxsize = max_pool_size,
-        max_retries = LoggingRetry(
-            total=3,
-            connect=3,
-            read=3,
-            status=3,
-            redirect=False,
-            status_forcelist=[500, 502, 503, 504],
-            raise_on_status=False,
-            respect_retry_after_header=True,
-            backoff_factor=1.0,
-        )
+
     )
     session.mount('http://', default_http_adapter)
     session.mount('https://', default_http_adapter)
@@ -81,7 +99,7 @@ def check_http_code(function):
     @param: the function to wrap; should be `requests.<http-verb>`, e.g. requests.get
     @raises: `requests.HTTPError` if response's status code indicates an error
     '''
-    @wraps(function)
+    @functools.wraps(function)
     def http_checker(*args, **kwargs):
         result = function(*args, **kwargs)
         if result.status_code < 200 or result.status_code >= 300:
