@@ -22,7 +22,7 @@ def modules():
 
 
 def version():
-    with open(os.path.join(own_dir, 'VERSION')) as f:
+    with open(os.path.join(own_dir, 'ci', 'version')) as f:
         return f.read().strip()
 
 
@@ -34,7 +34,8 @@ setuptools.setup(
     py_modules=modules(),
     packages=setuptools.find_packages(),
     package_data={
-        '':['*.mako']
+        '':['*.mako'],
+        'ci':['version'],
     },
     install_requires=list(requirements()),
     entry_points={

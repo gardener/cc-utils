@@ -4,7 +4,7 @@ COPY . /cc/utils/
 
 # place version file into container's filesystem to make it easier to
 # determine the image version during runtime
-COPY VERSION /metadata/VERSION
+COPY ci/version /metadata/VERSION
 
 # XXX backards compatibility (remove eventually)
 ENV PATH /cc/utils/:/cc/utils/bin:$PATH
