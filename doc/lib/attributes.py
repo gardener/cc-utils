@@ -20,8 +20,8 @@ import typing
 import enum
 
 
-import concourse.model.base as base_model
 import ci.util
+import concourse.model.base as base_model
 
 
 # add repository root to pythonpath

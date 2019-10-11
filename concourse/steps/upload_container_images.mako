@@ -18,10 +18,10 @@ import functools
 import os
 import tabulate
 
+import ci.util
 import product.model
 import product.util
 import protecode.util
-import ci.util
 
 ${step_lib('images')}
 ${step_lib('upload_images')}

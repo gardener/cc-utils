@@ -15,8 +15,8 @@
 
 import os
 
-import product.model
 import ci.util
+import product.model
 
 
 def current_product_descriptor():
