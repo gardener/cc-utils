@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import container.util
 import ci.util
+import container.util
 
 
 def alter_image(

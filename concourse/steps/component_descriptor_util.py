@@ -1,5 +1,5 @@
-import os
 import ci.util
+import os
 
 import product.model
 

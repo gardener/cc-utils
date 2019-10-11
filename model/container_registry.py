@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import enum
+
 import ci.util
 
 from model.base import (
