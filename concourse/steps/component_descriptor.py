@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ci.util
+import util
 from product.util import (
     ComponentResolver,
     ComponentDescriptorResolver,
@@ -29,7 +29,7 @@ def component_diff_since_last_release(
     component_descriptor,
     cfg_factory,
 ):
-    component = ci.util.not_none(component_descriptor.component((component_name, component_version)))
+    component = util.not_none(component_descriptor.component((component_name, component_version)))
 
     resolver = ComponentResolver(cfg_factory=cfg_factory)
     last_release_version = resolver.greatest_release_before(
@@ -38,10 +38,10 @@ def component_diff_since_last_release(
     )
 
     if not last_release_version:
-        ci.util.warning('could not determine last release version')
+        util.warning('could not determine last release version')
         return None
     last_release_version = str(last_release_version)
-    ci.util.info('last released version: ' + str(last_release_version))
+    util.info('last released version: ' + str(last_release_version))
 
     descriptor_resolver = ComponentDescriptorResolver(cfg_factory=cfg_factory)
     last_released_component_descriptor = descriptor_resolver.retrieve_descriptor(
@@ -52,7 +52,7 @@ def component_diff_since_last_release(
     )
 
     if not last_released_component:
-        ci.util.fail(
+        util.fail(
             f"Component '{component_name}' not found in the component "
             f"descriptor of the last release ({last_release_version})."
         )

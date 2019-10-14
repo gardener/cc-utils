@@ -18,7 +18,7 @@ from abc import abstractmethod
 from enum import Enum
 import typing
 
-import ci.util
+import util
 from model.base import(
     ModelValidationError,
     ModelValidationMixin,
@@ -43,7 +43,7 @@ class AttribSpecMixin(object):
         return set(AttributeSpec.required_attr_names(cls._attribute_specs()))
 
     def _apply_defaults(self, raw_dict):
-        self.raw = ci.util.merge_dicts(
+        self.raw = util.merge_dicts(
             self._defaults_dict(),
             raw_dict,
         )
@@ -51,7 +51,7 @@ class AttribSpecMixin(object):
 
 class ModelBase(AttribSpecMixin, ModelValidationMixin):
     def __init__(self, raw_dict: dict):
-        ci.util.not_none(raw_dict)
+        util.not_none(raw_dict)
 
         self._apply_defaults(raw_dict=raw_dict)
         self.custom_init(self.raw)
@@ -93,23 +93,23 @@ class AttributeSpec(object):
     @staticmethod
     def filter_attrs(attrs: 'typing.Iterable[AttributeSpec]', required: RequiredPolicy):
         if required:
-            ci.util.check_type(required, RequiredPolicy)
+            util.check_type(required, RequiredPolicy)
         else:
             # no filtering
             yield from attrs
 
         for attr in attrs:
-            ci.util.check_type(attr, AttributeSpec)
+            util.check_type(attr, AttributeSpec)
             if attr.required_policy() is required:
                 yield attr
 
     @staticmethod
     def select_name(attr):
-        ci.util.check_type(attr, AttributeSpec)
+        util.check_type(attr, AttributeSpec)
         return attr.name()
 
     def select_name_and_default(attr):
-        ci.util.check_type(attr, AttributeSpec)
+        util.check_type(attr, AttributeSpec)
         return attr.name(), attr.default_value()
 
     @staticmethod
@@ -144,8 +144,8 @@ class AttributeSpec(object):
         required=None,
         type=str,
     ):
-        self._name = ci.util.check_type(name, str)
-        self._doc = ci.util.check_type(doc, str)
+        self._name = util.check_type(name, str)
+        self._doc = util.check_type(doc, str)
         self._type = type
 
         # validate
@@ -181,8 +181,8 @@ class AttributeSpec(object):
 
 class Trait(ModelBase):
     def __init__(self, name: str, variant_name: str, raw_dict: dict):
-        self.name = ci.util.not_none(name)
-        self.variant_name = ci.util.not_none(variant_name)
+        self.name = util.not_none(name)
+        self.variant_name = util.not_none(variant_name)
         super().__init__(raw_dict=raw_dict)
 
     @abstractmethod
@@ -197,7 +197,7 @@ class TraitTransformer(object):
     name = None # subclasses must overwrite
 
     def __init__(self):
-        ci.util.not_none(self.name)
+        util.not_none(self.name)
 
     def inject_steps(self):
         return []

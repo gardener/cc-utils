@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ci.util import not_none
+from util import not_none
 
 from concourse.model.base import ModelValidationError
 

@@ -12,7 +12,7 @@ main_repo = job_variant.main_repository()
 pr_id_path = main_repo.pr_id_path()
 %>
 % if require_label:
-from ci.util import ctx, info, warning
+from util import ctx, info, warning
 from github3.exceptions import NotFoundError
 import ccc.github
 

@@ -16,14 +16,14 @@
 import os
 
 import product.model
-import ci.util
+import util
 
 
 def current_product_descriptor():
     component_descriptor = os.path.join(
-        ci.util.check_env('COMPONENT_DESCRIPTOR_DIR'),
+        util.check_env('COMPONENT_DESCRIPTOR_DIR'),
         'component_descriptor',
     )
     return product.model.ComponentDescriptor.from_dict(
-        ci.util.parse_yaml_file(component_descriptor),
+        util.parse_yaml_file(component_descriptor),
     )

@@ -14,7 +14,7 @@
 # limitations under the License.
 import typing
 
-from ci.util import not_none
+from util import not_none
 from model import NamedModelElement
 
 from concourse.model.job import (

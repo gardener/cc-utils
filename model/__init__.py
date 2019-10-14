@@ -25,7 +25,7 @@ from model.base import (
     ModelValidationError,
     NamedModelElement,
 )
-from ci.util import (
+from util import (
     existing_dir,
     not_empty,
     not_none,

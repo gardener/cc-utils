@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import ci.util
+import util
 
 from clamav.client import ClamAVClient
 from clamav.routes import ClamAVRoutes
@@ -26,6 +26,6 @@ def client_from_config(clamav_config: ClamAVConfig):
 
 
 def client_from_config_name(clamav_config_name: str):
-    cfg_factory = ci.util.ctx().cfg_factory()
+    cfg_factory = util.ctx().cfg_factory()
     clamav_config = cfg_factory.clamav(clamav_config_name)
     return client_from_config(clamav_config)

@@ -21,13 +21,13 @@ import tabulate
 import product.model
 import product.util
 import protecode.util
-import ci.util
+import util
 
 ${step_lib('images')}
 ${step_lib('upload_images')}
 ${step_lib('component_descriptor_util')}
 
-cfg_factory = ci.util.ctx().cfg_factory()
+cfg_factory = util.ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
 upload_registry_prefix = '${upload_registry_prefix}'
@@ -42,7 +42,7 @@ print(tabulate.tabulate(
 ))
 
 component_descriptor_path = os.path.join(
-  ci.util.check_env('COMPONENT_DESCRIPTOR_DIR'),
+  util.check_env('COMPONENT_DESCRIPTOR_DIR'),
   'component_descriptor'
 )
 

@@ -42,14 +42,14 @@ def quote_str(value):
 
 %>
 import pathlib
-import ci.util
+import util
 import version
 import os
 
-version_file = ci.util.existing_file(pathlib.Path(${quote_str(path_to_repo_version_file)}))
+version_file = util.existing_file(pathlib.Path(${quote_str(path_to_repo_version_file)}))
 
 if ${quote_str(version_operation)} == 'inject-commit-hash':
-  head_sha_file = ci.util.existing_file(pathlib.Path(${quote_str(head_sha_file)}))
+  head_sha_file = util.existing_file(pathlib.Path(${quote_str(head_sha_file)}))
   prerelease = 'dev-' + head_sha_file.read_text().strip()
 else:
   prerelease = ${quote_str(prerelease)}
@@ -59,12 +59,12 @@ processed_version = version.process_version(
     prerelease=prerelease,
     **${version_operation_kwargs},
 )
-ci.util.info(f'effective version: {processed_version}')
+util.info(f'effective version: {processed_version}')
 
 cc_version = '/metadata/VERSION'
 if os.path.isfile(cc_version):
   with open(cc_version) as f:
-    ci.util.info(f'cc-utils version: {f.read()}')
+    util.info(f'cc-utils version: {f.read()}')
 
 output_version_file = pathlib.Path(${quote_str(output_version_file)})
 legacy_version_file = pathlib.Path(${quote_str(legacy_version_file)})

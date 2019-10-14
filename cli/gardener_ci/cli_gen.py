@@ -24,14 +24,14 @@ import itertools
 import sys
 
 import ctx
-import ci.util
+import util
 
 import_errs = []
 
 
 def print_import_errs():
     for ie in import_errs:
-        ci.util.verbose(ie)
+        util.verbose(ie)
 
 
 if ctx.Config.TERMINAL.value.output_columns() is not None:
@@ -75,14 +75,14 @@ def main():
         sys.exit(1)
     parsed = parser.parse_args()
     # write parsed args to global ctx module so called module functions may
-    # retrieve if (see ci.util.ctx)
+    # retrieve if (see util.ctx)
     ctx.args = parsed
 
     config_from_args = ctx.load_config_from_args()
     ctx.add_config_source(config_from_args)
 
     # mark 'cli' mode
-    ci.util._set_cli(True)
+    util._set_cli(True)
     if hasattr(parsed, 'module'):
         parsed.module.args = parsed
         parsed.func(parsed)
@@ -144,7 +144,7 @@ def add_module(module_name, parser):
             action = None
             kwargs = {}
             if annotation:
-                from ci.util import CliHint
+                from util import CliHint
                 # special case: CliHint
                 if type(annotation) == CliHint:
                     typehint = annotation.typehint

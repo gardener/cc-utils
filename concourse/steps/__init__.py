@@ -17,14 +17,14 @@ import os
 
 import mako.template
 
-import ci.util
+import util
 
 
 steps_dir = os.path.abspath(os.path.dirname(__file__))
 
 
 def step_template(name):
-    step_file = ci.util.existing_file(os.path.join(steps_dir, name + '.mako'))
+    step_file = util.existing_file(os.path.join(steps_dir, name + '.mako'))
 
     return mako.template.Template(filename=step_file)
 

@@ -21,7 +21,7 @@ import enum
 
 
 import concourse.model.base as base_model
-import ci.util
+import util
 
 
 # add repository root to pythonpath
@@ -36,7 +36,7 @@ class AttributesDocumentation(object):
     ):
         self._model_element_type = model_element_type
         self._child_elements = []
-        self._prefix = ci.util.check_type(prefix, str)
+        self._prefix = util.check_type(prefix, str)
 
     def add_child(
         self,

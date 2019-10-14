@@ -32,7 +32,7 @@ if has_component_descriptor_trait:
 release_callback_path = release_trait.release_callback_path()
 next_version_callback_path = release_trait.next_version_callback_path()
 %>
-import ci.util
+import util
 
 ${step_lib('release')}
 
@@ -42,7 +42,7 @@ with open('${version_file}') as f:
 repo_dir = existing_dir('${repo.resource_name()}')
 repository_branch = '${repo.branch()}'
 
-github_cfg = ci.util.ctx().cfg_factory().github('${github_cfg.name()}')
+github_cfg = util.ctx().cfg_factory().github('${github_cfg.name()}')
 github_repo_path = '${repo.repo_owner()}/${repo.repo_name()}'
 
 githubrepobranch = GitHubRepoBranch(

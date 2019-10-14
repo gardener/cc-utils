@@ -3,7 +3,7 @@
 import pathlib
 import fileinput
 
-from ci.util import (
+from util import (
     check_env,
     existing_file,
 )

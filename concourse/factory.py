@@ -2,7 +2,7 @@ from copy import deepcopy
 from itertools import chain
 import toposort
 
-from ci.util import merge_dicts, not_none
+from util import merge_dicts, not_none
 from model.base import ModelValidationError
 from concourse.model.step import (
     PipelineStep,

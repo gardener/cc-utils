@@ -48,7 +48,7 @@ from model.container_registry import (
 from model.proxy import(
     ProxyConfig
 )
-from ci.util import (
+from util import (
     ctx as global_ctx,
     not_empty,
     not_none,

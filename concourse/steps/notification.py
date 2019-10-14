@@ -8,13 +8,13 @@ import os
 import traceback
 
 import mailutil
-import ci.util
+import util
 
 
 def meta_vars():
     build = concourse.util.find_own_running_build()
     pipeline_metadata = concourse.util.get_pipeline_metadata()
-    config_set = ci.util.ctx().cfg_factory().cfg_set(pipeline_metadata.current_config_set_name)
+    config_set = util.ctx().cfg_factory().cfg_set(pipeline_metadata.current_config_set_name)
     concourse_cfg = config_set.concourse()
     v = {
       'build-id': build.id(),
@@ -47,7 +47,7 @@ def determine_previous_build_status(v, cfg_set):
     try:
       build_number = int(v['build-name'])
       if build_number < 2:
-        ci.util.info('this seems to be the first build - will notify')
+        util.info('this seems to be the first build - will notify')
         return BuildStatus.SUCCEEDED
 
       previous_build = str(build_number - 1)
@@ -78,12 +78,12 @@ def should_notify(
     elif triggering_policy == NotificationTriggeringPolicy.ONLY_FIRST:
         previous_build_status = determine_previous_build_status(meta_vars, cfg_set)
         if not previous_build_status:
-          ci.util.info('failed to determine previous build status - will notify')
+          util.info('failed to determine previous build status - will notify')
           return True
 
         # assumption: current job failed
         if previous_build_status in (BuildStatus.FAILED, BuildStatus.ERRORED):
-          ci.util.info('previous build was already broken - will not notify')
+          util.info('previous build was already broken - will not notify')
           return False
         return True
     else:
@@ -98,7 +98,7 @@ def cfg_from_callback(
     import subprocess
     import os
     import tempfile
-    import ci.util
+    import util
 
     tmp_file = tempfile.NamedTemporaryFile()
     cb_env = os.environ.copy()
@@ -112,15 +112,15 @@ def cfg_from_callback(
         env=cb_env,
     )
 
-    return ci.util.parse_yaml_file(tmp_file.name)
+    return util.parse_yaml_file(tmp_file.name)
 
 
 def components_with_version_changes(component_diff_path: str):
   if not os.path.isfile(component_diff_path):
-    ci.util.info('no component_diff found at: ' + str(component_diff_path))
+    util.info('no component_diff found at: ' + str(component_diff_path))
     return set()
   else:
-    component_diff = ci.util.parse_yaml_file(component_diff_path)
+    component_diff = util.parse_yaml_file(component_diff_path)
     comp_names = component_diff.get('component_names_with_version_changes', set())
     return set(comp_names)
 

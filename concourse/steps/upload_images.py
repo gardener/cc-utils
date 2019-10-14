@@ -1,7 +1,7 @@
 import tempfile
 
 import container.registry
-import ci.util
+import util
 
 
 def republish_image(
@@ -13,7 +13,7 @@ def republish_image(
     if mangle:
         img_ref = img_ref.replace('.', '_')
 
-    tgt_ref = ci.util.urljoin(tgt_prefix, ':'.join((img_ref, tag)))
+    tgt_ref = util.urljoin(tgt_prefix, ':'.join((img_ref, tag)))
 
     with tempfile.NamedTemporaryFile() as tmp_file:
         container.registry.retrieve_container_image(image_reference=src_ref, outfileobj=tmp_file)

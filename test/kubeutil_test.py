@@ -21,7 +21,7 @@ import os
 
 from test._test_utils import capture_out
 import kube.ctx
-from ci.util import Failure
+from util import Failure
 
 kube_ctx = kube.ctx.Ctx()
 

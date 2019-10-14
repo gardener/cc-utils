@@ -25,7 +25,7 @@ import mailutil
 import product.model
 import product.util
 import protecode.util
-import ci.util
+import util
 
 from product.scanning import ProcessingMode
 
@@ -33,7 +33,7 @@ ${step_lib('scan_container_images')}
 ${step_lib('images')}
 ${step_lib('component_descriptor_util')}
 
-cfg_factory = ci.util.ctx().cfg_factory()
+cfg_factory = util.ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
 component_descriptor = parse_component_descriptor()
@@ -93,12 +93,12 @@ image_references = [
   if filter_function(component, container_image)
 ]
 
-ci.util.info('running virus scan for all container images')
+util.info('running virus scan for all container images')
 malware_scan_results = [
   scan_result
   for scan_result in virus_scan_images(image_references, '${clam_av.clamav_cfg_name()}')
 ]
-ci.util.info(f'{len(image_references)} image(s) scanned for virus signatures.')
+util.info(f'{len(image_references)} image(s) scanned for virus signatures.')
 print(
   tabulate.tabulate(
     map(lambda dc: dataclasses.astuple(dc), malware_scan_results),
@@ -135,7 +135,7 @@ for email_recipient in email_recipients:
 % endif
 
   if not email_recipient.has_results():
-    ci.util.info(f'skipping {email_recipient}, since there are not relevant results')
+    util.info(f'skipping {email_recipient}, since there are not relevant results')
     continue
 
   body = email_recipient.mail_body()
@@ -145,7 +145,7 @@ for email_recipient in email_recipients:
   component_name = "${component_trait.component_name()}"
 
   if not email_addresses:
-    ci.util.warning(f'no email addresses could be retrieved for {component_name}')
+    util.warning(f'no email addresses could be retrieved for {component_name}')
     sys.exit(0)
 
   # notify about critical vulnerabilities
@@ -156,5 +156,5 @@ for email_recipient in email_recipients:
     subject=f'[Action Required] landscape {component_name} has critical Vulnerabilities',
     mimetype='html',
   )
-  ci.util.info('sent notification emails to: ' + ','.join(email_addresses))
+  util.info('sent notification emails to: ' + ','.join(email_addresses))
 </%def>

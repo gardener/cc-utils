@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import container.util
-import ci.util
+import util
 
 
 def alter_image(
@@ -22,12 +22,12 @@ def alter_image(
     tgt_ref: str,
     filter_path_file: str,
 ):
-    ci.util.not_none(src_ref)
-    ci.util.not_none(tgt_ref)
+    util.not_none(src_ref)
+    util.not_none(tgt_ref)
     if src_ref == tgt_ref:
         raise ValueError(f'src and tgt must not be be equal: {src_ref} {tgt_ref}')
 
-    with open(ci.util.existing_file(filter_path_file)) as f:
+    with open(util.existing_file(filter_path_file)) as f:
         rm_paths = [
             p.strip() for p in f.readlines()
             if p.strip() and not p.strip().startswith('#')

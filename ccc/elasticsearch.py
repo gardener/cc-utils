@@ -22,7 +22,7 @@ import elasticsearch
 
 import model.elasticsearch
 import concourse.util
-import ci.util
+import util
 
 
 def from_cfg(
@@ -46,12 +46,12 @@ def _from_cfg(
 @functools.lru_cache()
 def _metadata_dict():
     # XXX mv to concourse package; deduplicate with notify step
-    if not ci.util._running_on_ci():
+    if not util._running_on_ci():
         return {}
 
     build = concourse.util.find_own_running_build()
     pipeline_metadata = concourse.util.get_pipeline_metadata()
-    config_set = ci.util.ctx().cfg_factory().cfg_set(pipeline_metadata.current_config_set_name)
+    config_set = util.ctx().cfg_factory().cfg_set(pipeline_metadata.current_config_set_name)
     concourse_cfg = config_set.concourse()
 
     meta_dict = {
@@ -64,7 +64,7 @@ def _metadata_dict():
     }
 
     # XXX deduplicate; mv to concourse package
-    meta_dict['concourse_url'] = ci.util.urljoin(
+    meta_dict['concourse_url'] = util.urljoin(
         meta_dict['atc-external-url'],
         'teams',
         meta_dict['build-team-name'],
@@ -99,8 +99,8 @@ class ElasticSearchClient(object):
         *args,
         **kwargs,
     ):
-        ci.util.check_type(index, str)
-        ci.util.check_type(body, dict)
+        util.check_type(index, str)
+        util.check_type(body, dict)
         if 'doc_type' in kwargs:
             raise ValueError(
                 '''
@@ -154,7 +154,7 @@ class ElasticSearchClient(object):
         *args,
         **kwargs,
     ):
-        ci.util.check_type(body, str)
+        util.check_type(body, str)
 
         if inject_metadata and _metadata_dict():
             def inject_meta(line):

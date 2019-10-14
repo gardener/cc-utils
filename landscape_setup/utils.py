@@ -22,7 +22,7 @@ from collections import namedtuple
 from passlib.apache import HtpasswdFile
 
 from landscape_setup import kube_ctx
-from ci.util import (
+from util import (
     not_none,
     not_empty,
     fail,

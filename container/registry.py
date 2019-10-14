@@ -19,7 +19,7 @@ import logging
 import tarfile
 import tempfile
 
-import ci.util
+import util
 import model.container_registry
 from model.container_registry import Privileges
 
@@ -66,7 +66,7 @@ def _make_tag_if_digest(
 
 
 def normalise_image_reference(image_reference):
-  ci.util.check_type(image_reference, str)
+  util.check_type(image_reference, str)
   if '@' in image_reference:
     return image_reference
 
@@ -90,7 +90,7 @@ def normalise_image_reference(image_reference):
 
 
 def _parse_image_reference(image_reference):
-  ci.util.check_type(image_reference, str)
+  util.check_type(image_reference, str)
 
   if '@' in image_reference:
     name = docker_name.Digest(image_reference)
@@ -102,7 +102,7 @@ def _parse_image_reference(image_reference):
 
 @functools.lru_cache()
 def _credentials(image_reference: str, privileges:Privileges=None):
-    ci.util.check_type(image_reference, str)
+    util.check_type(image_reference, str)
     registry_cfg = model.container_registry.find_config(image_reference, privileges)
     if not registry_cfg:
         return None
@@ -144,7 +144,7 @@ def _mk_credentials(image_reference, privileges: Privileges=None):
 
     return creds
   except Exception as e:
-    ci.util.fail(f'Error resolving credentials for {image_reference}: {e}')
+    util.fail(f'Error resolving credentials for {image_reference}: {e}')
 
 
 def _image_exists(image_reference: str) -> bool:
@@ -170,9 +170,9 @@ def _image_exists(image_reference: str) -> bool:
 
 
 def _push_image(image_reference: str, image_file: str, threads=8):
-  import ci.util
-  ci.util.not_none(image_reference)
-  ci.util.existing_file(image_file)
+  import util
+  util.not_none(image_reference)
+  util.existing_file(image_file)
 
   transport = _mk_transport()
 
@@ -202,8 +202,8 @@ def _push_image(image_reference: str, image_file: str, threads=8):
 
 
 def _pull_image(image_reference: str, outfileobj=None):
-  import ci.util
-  ci.util.not_none(image_reference)
+  import util
+  util.not_none(image_reference)
 
   transport = _mk_transport()
 
@@ -225,7 +225,7 @@ def _pull_image(image_reference: str, outfileobj=None):
     # if outfile is given, we must use it instead of an ano
     outfileobj = outfileobj if outfileobj else tempfile.TemporaryFile()
     with tarfile.open(fileobj=outfileobj, mode='w:') as tar:
-      ci.util.verbose(f'Pulling manifest list from {image_reference}..')
+      util.verbose(f'Pulling manifest list from {image_reference}..')
       with image_list.FromRegistry(image_reference, creds, transport) as img_list:
         if img_list.exists():
           platform = image_list.Platform({
@@ -238,17 +238,17 @@ def _pull_image(image_reference: str, outfileobj=None):
             return outfileobj
           # pytype: enable=wrong-arg-types
 
-      ci.util.info(f'Pulling v2.2 image from {image_reference}..')
+      util.info(f'Pulling v2.2 image from {image_reference}..')
       with v2_2_image.FromRegistry(image_reference, creds, transport, accept) as v2_2_img:
         if v2_2_img.exists():
           save.tarball(_make_tag_if_digest(image_reference), v2_2_img, tar)
           return outfileobj
 
-      ci.util.info(f'Pulling v2 image from {image_reference}..')
+      util.info(f'Pulling v2 image from {image_reference}..')
       with v2_image.FromRegistry(image_reference, creds, transport) as v2_img:
         with v2_compat.V22FromV2(v2_img) as v2_2_img:
           save.tarball(_make_tag_if_digest(image_reference), v2_2_img, tar)
           return outfileobj
   except Exception as e:
     outfileobj.close()
-    ci.util.fail(f'Error pulling and saving image {image_reference}: {e}')
+    util.fail(f'Error pulling and saving image {image_reference}: {e}')

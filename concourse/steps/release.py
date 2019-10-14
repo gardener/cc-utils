@@ -8,8 +8,8 @@ import typing
 
 from github3.exceptions import NotFoundError
 
-import ci.util
-from ci.util import (
+import util
+from util import (
     existing_file,
     existing_dir,
     not_empty,
@@ -108,10 +108,10 @@ class Transaction(object):
         ctx: TransactionContext,
         steps: typing.Iterable[TransactionalStep],
     ):
-        self._context = ci.util.check_type(ctx, TransactionContext)
+        self._context = util.check_type(ctx, TransactionContext)
         # validate type of args and set context
         for step in steps:
-            ci.util.check_type(step, TransactionalStep)
+            util.check_type(step, TransactionalStep)
             step.set_context(self._context)
         self._steps = steps
 

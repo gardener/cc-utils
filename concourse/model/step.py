@@ -18,7 +18,7 @@ import os
 import string
 import shlex
 
-import ci.util
+import util
 
 from concourse.model.base import (
     AttributeSpec,
@@ -185,7 +185,7 @@ class PipelineStep(ModelBase):
         *args,
         **kwargs
     ):
-        self.name = ci.util.not_empty(name)
+        self.name = util.not_empty(name)
         self.is_synthetic = is_synthetic
         self._script_type = script_type
         self._outputs_dict = {}
@@ -303,15 +303,15 @@ class PipelineStep(ModelBase):
         return self.inputs()[name]
 
     def add_input(self, name, variable_name):
-        ci.util.not_none(name)
-        ci.util.not_none(variable_name)
+        util.not_none(name)
+        util.not_none(variable_name)
 
         if name in self._inputs_dict:
             raise ValueError('input already exists: ' + str(name))
         self._inputs_dict[name] = variable_name
 
     def remove_input(self, name):
-        ci.util.not_none(name)
+        util.not_none(name)
 
         if not name in self._inputs_dict:
             raise ValueError('input does not exist: ' + str(name))
@@ -339,7 +339,7 @@ class PipelineStep(ModelBase):
         return self.raw['timeout']
 
     def set_timeout(self, duration_string: str):
-        ci.util.not_empty(duration_string)
+        util.not_empty(duration_string)
         self.raw['timeout'] = duration_string
 
     def retries(self):

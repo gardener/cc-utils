@@ -12,7 +12,7 @@ version_operation = draft_release_trait._preprocess()
 import version
 import pathlib
 
-import ci.util
+import util
 
 from gitutil import GitHelper
 from github.release_notes.util import (
@@ -30,13 +30,13 @@ if '${version_operation}' != 'finalize':
         "Version-processing other than 'finalize' is not supported for draft release creation"
     )
 
-version_file = ci.util.existing_file(pathlib.Path('${version_file}'))
+version_file = util.existing_file(pathlib.Path('${version_file}'))
 processed_version = version.process_version(
     version_str=version_file.read_text().strip(),
     operation='${version_operation}',
 )
 
-github_cfg = ci.util.ctx().cfg_factory().github('${github_cfg.name()}')
+github_cfg = util.ctx().cfg_factory().github('${github_cfg.name()}')
 
 githubrepobranch = GitHubRepoBranch(
     github_config=github_cfg,
@@ -71,6 +71,6 @@ else:
     if not draft_release.body == release_notes_md:
         draft_release.edit(body=release_notes_md)
     else:
-        ci.util.info('draft release notes are already up to date')
+        util.info('draft release notes are already up to date')
 
 </%def>

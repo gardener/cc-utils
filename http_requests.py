@@ -22,7 +22,7 @@ from requests.adapters import HTTPAdapter
 from requests.auth import HTTPBasicAuth
 from urllib3.util.retry import Retry
 
-from ci.util import warning
+from util import warning
 
 
 class AdapterFlag(enum.Flag):

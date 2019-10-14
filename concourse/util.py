@@ -29,7 +29,7 @@ from model.concourse import (
 from model.webhook_dispatcher import (
     WebhookDispatcherDeploymentConfig,
 )
-from ci.util import (
+from util import (
     _running_on_ci,
     check_env,
     create_url_from_attributes,
