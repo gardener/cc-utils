@@ -31,8 +31,8 @@ import sys
 import os
 
 import ccc.github
-import github
 import ci.util
+import github
 import mailutil
 
 

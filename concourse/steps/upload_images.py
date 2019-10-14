@@ -1,7 +1,7 @@
 import tempfile
 
-import container.registry
 import ci.util
+import container.registry
 
 
 def republish_image(

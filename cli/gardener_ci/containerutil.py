@@ -1,6 +1,6 @@
+import ci.util
 import container.registry
 import container.util
-import ci.util
 
 
 def filter_image_file(

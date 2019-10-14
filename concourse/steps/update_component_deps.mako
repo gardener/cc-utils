@@ -19,12 +19,12 @@ from tempfile import TemporaryDirectory
 
 import semver
 
+import ci.util
 import ctx
 import github.util
 import gitutil
 import product.model
 import product.util
-import ci.util
 
 from concourse.model.traits.update_component_deps import (
     MergePolicy,

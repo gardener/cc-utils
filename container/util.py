@@ -20,9 +20,9 @@ import logging
 import tarfile
 import tempfile
 
+import ci.util
 import container.model
 import container.registry
-import ci.util
 
 logger = logging.getLogger(__name__)
 

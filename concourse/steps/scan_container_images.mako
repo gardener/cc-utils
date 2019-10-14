@@ -21,11 +21,11 @@ import sys
 import tabulate
 import textwrap
 
+import ci.util
 import mailutil
 import product.model
 import product.util
 import protecode.util
-import ci.util
 
 from product.scanning import ProcessingMode
 
