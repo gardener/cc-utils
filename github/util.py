@@ -302,9 +302,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             decoded_contents = contents.decoded.decode('utf-8')
             if decoded_contents == file_contents:
                 # Nothing to do
-                return ci.util.info(
-                    'Repository file contents are identical to passed file contents.'
-                )
+                return ci.util.info('Repository file contents are identical to passed file contents.')
             else:
                 response = contents.update(
                     message=commit_message,
@@ -584,18 +582,25 @@ def _add_user_to_team(
     organization = github.organization(organization_name)
     team = _retrieve_team_by_name_or_none(organization, team_name)
     if not team:
-        ci.util.fail(f"Team '{team_name}' does not exist")
+        ci.util.fail("Team {name} does not exist".format(name=team_name))
 
     if team.is_member(user_name):
-        ci.util.verbose(f"'{user_name}' is already assigned to team '{team_name}'")
+        ci.util.verbose("{username} is already assigned to team {teamname}".format(
+            username=user_name,
+            teamname=team_name
+        ))
         return
 
     if team.add_member(username=user_name):
-        ci.util.info(f"Added '{user_name}' to team '{team_name}'")
+        ci.util.info("Added {username} to team {teamname}".format(
+            username=user_name,
+            teamname=team_name
+        ))
     else:
-        ci.util.fail(
-            f"Could not add '{user_name}' to team '{team_name}'. Check for missing privileges"
-        )
+        ci.util.fail("Could not add {username} to team {teamname}. Check for missing privileges".format(
+            username=user_name,
+            teamname=team_name
+        ))
 
 
 def _add_all_repos_to_team(
