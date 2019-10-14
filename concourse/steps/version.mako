@@ -41,11 +41,10 @@ def quote_str(value):
     raise ValueError
 
 %>
-import os
 import pathlib
-
 import ci.util
 import version
+import os
 
 version_file = ci.util.existing_file(pathlib.Path(${quote_str(path_to_repo_version_file)}))
 

@@ -23,8 +23,8 @@ import inspect
 import itertools
 import sys
 
-import ci.util
 import ctx
+import ci.util
 
 import_errs = []
 

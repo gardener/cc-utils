@@ -25,10 +25,10 @@ import github3.github
 import github3.session
 
 import ccc.elasticsearch
-import ci.util
 import github.util
 import http_requests
 import model
+import ci.util
 
 if ci.util._running_on_ci():
     log_github_access = False

@@ -20,9 +20,9 @@ import json
 
 import elasticsearch
 
-import ci.util
-import concourse.util
 import model.elasticsearch
+import concourse.util
+import ci.util
 
 
 def from_cfg(

@@ -32,8 +32,8 @@ from github.util import GitHubRepositoryHelper
 
 from .pipelines import update_repository_pipelines
 import ccc
-import ci.util
 import concourse.client
+import ci.util
 
 
 class GithubWebhookDispatcher(object):

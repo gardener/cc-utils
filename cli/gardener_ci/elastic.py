@@ -14,8 +14,8 @@
 # limitations under the License.
 
 import json
-import os
 
+import os
 import ccc.elasticsearch
 import ci.util
 

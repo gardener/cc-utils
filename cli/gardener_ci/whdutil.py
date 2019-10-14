@@ -15,8 +15,8 @@
 
 import bjoern
 
-import ci.util
 import whd.server as whd_server
+import ci.util
 
 
 def start_whd(

@@ -7,8 +7,8 @@ import concourse.util
 import os
 import traceback
 
-import ci.util
 import mailutil
+import ci.util
 
 
 def meta_vars():
@@ -95,10 +95,9 @@ def cfg_from_callback(
     callback_path,
     effective_cfg_file,
 ):
-    import os
     import subprocess
+    import os
     import tempfile
-
     import ci.util
 
     tmp_file = tempfile.NamedTemporaryFile()
