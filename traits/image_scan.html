@@ -339,16 +339,15 @@ include_component_names.</p></td>
 </thead>
 <tbody>
 <tr class="row-even"><td><p>upload_if_changed</p></td>
-<td><p>upload the container images. This will <strong>not</strong> upload the images if they
-are already present. This will <strong>not</strong> cause images already present to be
-rescanned.</p></td>
+<td><p>upload absent container images. This will _not_ upload images already present.
+Present images will _not_ be rescanned.</p></td>
 </tr>
 <tr class="row-odd"><td><p>rescan</p></td>
-<td><p>trigger a scan of container images. Images will be uploaded unless they are
-already present.</p></td>
+<td><p>(re-)scan container images if Protecode indicates this might bear new results.
+Upload absent images.</p></td>
 </tr>
 <tr class="row-even"><td><p>force_upload</p></td>
-<td><p><strong>always</strong> upload the images. This will cause all images to be rescanned.</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">always</span></code> upload and scan all images.</p></td>
 </tr>
 </tbody>
 </table>
