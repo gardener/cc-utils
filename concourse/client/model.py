@@ -327,8 +327,8 @@ class Worker(ModelBase):
 
 
 class BuildStatus(Enum):
-    SUCCEEDED = "succeeded"
-    FAILED = "failed"
-    ERRORED = "errored"
-    RUNNING = "started"
     ABORTED = "aborted"
+    ERRORED = "errored"
+    FAILED = "failed"
+    RUNNING = "started"
+    SUCCEEDED = "succeeded"
