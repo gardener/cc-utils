@@ -330,5 +330,6 @@ class BuildStatus(Enum):
     ABORTED = "aborted"
     ERRORED = "errored"
     FAILED = "failed"
+    PENDING = "pending"
     RUNNING = "started"
     SUCCEEDED = "succeeded"
