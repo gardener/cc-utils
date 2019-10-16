@@ -31,6 +31,7 @@ from concourse.model.base import (
 from ci.util import not_none, warning, check_type, info
 from container.registry import retrieve_container_image
 from .model import ContainerImage, Component, UploadResult, UploadStatus
+import ci.util
 
 
 class ProcessingMode(AttribSpecMixin, enum.Enum):
@@ -244,6 +245,7 @@ class ProtecodeUtil(object):
         triages_to_import |= set(enumerate_reference_triages())
 
         if self._processing_mode is ProcessingMode.FORCE_UPLOAD:
+            ci.util.info(f'force-upload - will re-upload all images')
             images_to_upload |= set(container_image_group.images())
             # remove all
             protecode_apps_to_remove = set(existing_products)
@@ -257,6 +259,7 @@ class ProtecodeUtil(object):
                         protecode_apps_to_consider.add(existing_product)
                         break
                 else:
+                    ci.util.info(f'did not find image {container_image} - will upload')
                     # not found -> need to upload
                     images_to_upload.add(container_image)
 
@@ -297,6 +300,7 @@ class ProtecodeUtil(object):
         for protecode_app in protecode_apps_to_consider:
             # replace - potentially incomplete - scan result
             protecode_apps_to_consider.remove(protecode_app)
+            ci.util.info(f'waiting for {protecode_app.product_id()}')
             protecode_apps_to_consider.add(
                 self._api.wait_for_scan_result(protecode_app.product_id())
             )
