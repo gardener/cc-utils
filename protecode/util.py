@@ -18,12 +18,13 @@ import sys
 import tabulate
 import typing
 
+import deprecated
 import requests.exceptions
 
 import container.registry
 import protecode.client
 import product.util
-from product.scanning import ProtecodeUtil, ProcessingMode
+from product.scanning import ContainerImageGroup, ProtecodeUtil, ProcessingMode
 from ci.util import info, warning, verbose, error, success, urljoin
 from product.model import (
     ComponentDescriptor,
@@ -35,6 +36,72 @@ from protecode.model import (
 )
 
 
+def upload_grouped_images(
+    protecode_cfg,
+    component_descriptor,
+    protecode_group_id=5,
+    parallel_jobs=8,
+    cve_threshold=7,
+    ignore_if_triaged=True,
+    processing_mode=ProcessingMode.UPLOAD_IF_CHANGED,
+    image_reference_filter=(lambda component, container_image: True),
+    reference_group_ids=(),
+):
+    executor = ThreadPoolExecutor(max_workers=parallel_jobs)
+    protecode_api = protecode.client.from_cfg(protecode_cfg)
+    protecode_api.set_maximum_concurrent_connections(parallel_jobs)
+    protecode_util = ProtecodeUtil(
+        protecode_api=protecode_api,
+        processing_mode=processing_mode,
+        group_id=protecode_group_id,
+        reference_group_ids=reference_group_ids,
+    )
+
+    def _upload_task(component, image_group):
+        image_group = ContainerImageGroup(
+            component=component,
+            container_images=image_group,
+        )
+
+        def _task():
+            yield from protecode_util.upload_container_image_group(
+                container_image_group=image_group,
+            )
+
+        return _task
+
+    def _upload_tasks():
+        for component in component_descriptor.components():
+            for image_group in product.util._grouped_effective_images(
+                component_descriptor=component_descriptor,
+                component=component
+            ):
+                image_group = [
+                    image for image in image_group
+                    if image_reference_filter(component, image)
+                ]
+                yield _upload_task(component=component, image_group=image_group)
+
+    tasks = _upload_tasks()
+    results = tuple(executor.map(lambda task: task(), tasks))
+
+    def flatten_results():
+        for result_set in results:
+            yield from result_set
+
+    results = list(flatten_results())
+
+    relevant_results = filter_and_display_upload_results(
+        upload_results=results,
+        cve_threshold=cve_threshold,
+        ignore_if_triaged=ignore_if_triaged,
+    )
+
+    _license_report = license_report(upload_results=results)
+
+    return (relevant_results, _license_report)
+
+@deprecated.deprecated
 def upload_images(
     protecode_cfg,
     product_descriptor,
@@ -128,7 +195,11 @@ def license_report(
     upload_results: typing.Sequence[UploadResult],
 ) -> typing.Sequence[typing.Tuple[UploadResult, typing.Set[License]]]:
     for upload_result in upload_results:
-        analysis_result = upload_result.result
+        if isinstance(upload_result, UploadResult):
+            analysis_result = upload_result.result
+        else:
+            analysis_result = upload_result
+
         licenses = {
             component.license() for component in analysis_result.components()
             if component.license()
@@ -148,7 +219,11 @@ def filter_and_display_upload_results(
     results_above_cve_thresh = []
 
     for upload_result in upload_results:
-        result = upload_result.result
+        if isinstance(upload_result, UploadResult):
+            result = upload_result.result
+        else:
+            result = upload_result
+
         components = result.components()
         if not components:
             results_without_components.append(upload_result)
@@ -181,8 +256,13 @@ def filter_and_display_upload_results(
         header = ('Component Name', 'Greatest CVE')
         results = sorted(upload_results, key=lambda e: e[1])
 
+        def to_result(result):
+            if isinstance(result, UploadResult):
+                return result.result
+            return result
+
         result = tabulate.tabulate(
-            map(lambda r: (r[0].result.display_name(), r[1]), results),
+            map(lambda r: (to_result(r[0]).display_name(), r[1]), results),
             headers=header,
             tablefmt='fancy_grid',
         )
