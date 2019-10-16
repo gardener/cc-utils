@@ -264,8 +264,24 @@ class ProtecodeUtil(object):
         else:
             raise NotImplementedError()
 
-        # re-upload / wait
-        # xxx
+        # trigger rescan if recommended
+        for protecode_app in protecode_apps_to_consider:
+            scan_result = self._api.scan_result_short(product_id=protecode_app.product_id())
+
+            if not scan_result.is_stale():
+                continue # protecode does not recommend a rescan
+
+            if not scan_result.has_binary():
+                image_version = scan_result.metadata().get('IMAGE_VERSION')
+                # there should be at most one matching image (by version)
+                for container_image in container_image_group:
+                    if container_image.version() == image_version:
+                        images_to_upload.add(container_image)
+                        protecode_apps_to_consider.remove(protecode_app)
+                        # xxx - also add app for removal?
+                        break
+            else:
+                self._api.rescan(protecode_app.product_id())
 
         # upload new images
         for container_image in images_to_upload:
@@ -275,20 +291,27 @@ class ProtecodeUtil(object):
             )
             protecode_apps_to_consider.add(scan_result)
 
+        # wait for all apps currently being scanned
+        for protecode_app in protecode_apps_to_consider:
+            # replace - potentially incomplete - scan result
+            protecode_apps_to_consider.remove(protecode_app)
+            protecode_apps_to_consider.add(
+                self._api.wait_for_scan_result(protecode_app.product_id())
+            )
+
         # apply imported triages for all protecode apps
         for protecode_app in protecode_apps_to_consider:
             product_id = protecode_app.product_id()
             self._transport_triages(triages_to_import, product_id)
 
+        # yield results
+        for protecode_app in protecode_apps_to_consider:
+            yield self._api.scan_result(protecode_app.product_id())
+
         # rm all outdated protecode apps
         for protecode_app in protecode_apps_to_remove:
             product_id = protecode_app.product_id()
             self._api.delete_product(product_id=product_id)
-
-        # todo:
-        # - determine actions for `protecode_apps_to_consider`
-        #   - re-upload + wait
-        #   - retrieve (and yield) results
 
     def retrieve_scan_result(
             self,
@@ -333,6 +356,12 @@ class ProtecodeUtil(object):
         # retrieve existing product's details (list of products contained only subset of data)
         product = self._api.scan_result(product_id=product_id)
         return product
+
+    def _rescan_if_recommended(
+        self,
+        product_id: int,
+    ):
+        pass # XXX
 
     def _determine_upload_action(
             self,
