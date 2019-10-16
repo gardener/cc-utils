@@ -35,9 +35,42 @@ from product.util import (
 )
 from protecode.util import (
     upload_images,
+    upload_grouped_images,
     ProcessingMode
 )
 import product.xml
+
+
+def upload_grouped_product_images(
+    protecode_cfg_name: str,
+    product_cfg_file: CliHints.existing_file(),
+    processing_mode: CliHint(
+        choices=list(ProcessingMode),
+        type=ProcessingMode,
+    )=ProcessingMode.RESCAN,
+    protecode_group_id: int=5,
+    parallel_jobs: int=4,
+    cve_threshold: int=7,
+    ignore_if_triaged: bool=True,
+    reference_group_ids: [int]=[],
+):
+    cfg_factory = ctx().cfg_factory()
+    protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
+
+    component_descriptor = ComponentDescriptor.from_dict(
+        raw_dict=parse_yaml_file(product_cfg_file)
+    )
+
+    upload_results, license_report = upload_grouped_images(
+        protecode_cfg=protecode_cfg,
+        component_descriptor=component_descriptor,
+        protecode_group_id=protecode_group_id,
+        parallel_jobs=parallel_jobs,
+        cve_threshold=cve_threshold,
+        ignore_if_triaged=ignore_if_triaged,
+        processing_mode=processing_mode,
+        reference_group_ids=reference_group_ids,
+    )
 
 
 def upload_product_images(
