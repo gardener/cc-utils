@@ -101,6 +101,7 @@ def upload_grouped_images(
 
     return (relevant_results, _license_report)
 
+
 @deprecated.deprecated
 def upload_images(
     protecode_cfg,
