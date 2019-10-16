@@ -227,7 +227,7 @@ class ProtecodeUtil(object):
 
         # import triages from local group
         scan_results = (
-            self._api._scan_result(product_id=product.product_id())
+            self._api.scan_result(product_id=product.product_id())
             for product in existing_products
         )
         triages_to_import |= set(self._existing_triages(scan_results))
