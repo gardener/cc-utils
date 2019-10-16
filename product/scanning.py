@@ -205,7 +205,7 @@ class ProtecodeUtil(object):
         metadata.update(self._component_metadata(component=component, omit_version=omit_version))
         return metadata
 
-    def upload_plan(
+    def upload_container_image_group(
         self,
         container_image_group: ContainerImageGroup,
     ):
