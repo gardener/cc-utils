@@ -357,12 +357,6 @@ class ProtecodeUtil(object):
         product = self._api.scan_result(product_id=product_id)
         return product
 
-    def _rescan_if_recommended(
-        self,
-        product_id: int,
-    ):
-        pass # XXX
-
     def _determine_upload_action(
             self,
             container_image: ContainerImage,
