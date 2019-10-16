@@ -60,9 +60,9 @@ def mount_default_adapter(
     flags=AdapterFlag.CACHE|AdapterFlag.RETRY,
 ):
     if AdapterFlag.CACHE in flags:
-        adapter_constructor = HTTPAdapter
-    else:
         adapter_constructor = cachecontrol.CacheControlAdapter
+    else:
+        adapter_constructor = HTTPAdapter
 
     if AdapterFlag.RETRY in flags:
         adapter_constructor = functools.partial(
