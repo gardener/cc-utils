@@ -155,7 +155,8 @@ class ProtecodeUtil(object):
     def _image_group_metadata(self, container_image_group: ContainerImageGroup):
         metadata = {
             'IMAGE_REFERENCE_NAME': container_image_group.image_name(),
-            'COMPONENT_VERSION': container_image_group.component().name(),
+            'COMPONENT_VERSION': container_image_group.component().version(),
+            'COMPONENT_NAME': container_image_group.component().name(),
         }
         return metadata
 
