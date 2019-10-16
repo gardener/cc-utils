@@ -251,7 +251,8 @@ class ProtecodeUtil(object):
             for container_image in container_image_group.images():
                 # find matching protecode product (aka app)
                 for existing_product in existing_products:
-                    if existing_product.metadata().get('IMAGE_VERSION') == container_image.version():
+                    if existing_product.custom_data().get('IMAGE_VERSION') == \
+                      container_image.version():
                         existing_products.remove(existing_product)
                         protecode_apps_to_consider.add(existing_product)
                         break
