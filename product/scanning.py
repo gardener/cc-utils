@@ -214,10 +214,10 @@ class ProtecodeUtil(object):
         # - images to upload
         # - protecode-apps to remove
         # - triages to import
-        images_to_upload = {}
-        protecode_apps_to_remove = {}
-        protecode_apps_to_consider = {} # consider to rescan; return results
-        triages_to_import = {}
+        images_to_upload = set()
+        protecode_apps_to_remove = set()
+        protecode_apps_to_consider = set() # consider to rescan; return results
+        triages_to_import = set()
 
         metadata = self._image_group_metadata(container_image_group=container_image_group)
         existing_products = self._api.list_apps(
