@@ -365,12 +365,6 @@ class ProtecodeUtil(object):
             container_image: ContainerImage,
             component: Component,
         ) -> UploadResult:
-        metadata = self._metadata(
-            container_image=container_image,
-            component=component,
-            omit_version=False,
-        )
-
         upload_result = partial(UploadResult, container_image=container_image, component=component)
 
         # check if the image has already been uploaded for this component
@@ -415,30 +409,16 @@ class ProtecodeUtil(object):
 
         if upload_action.upload:
             info(f'uploading to protecode: {container_image.image_reference()}')
-            image_data_fh = retrieve_container_image(
-                container_image.image_reference(),
-                outfileobj=tempfile.NamedTemporaryFile(),
-            )
             # keep old product_id (in order to delete after update)
             if scan_result:
                 product_id = scan_result.product_id()
             else:
                 product_id = None
 
-            try:
-                # Upload image and update outdated analysis result with the one triggered
-                # by the upload.
-                scan_result = self._api.upload(
-                    application_name=self._upload_name(
-                        container_image=container_image,
-                        component=component
-                    ).replace('/', '_'),
-                    group_id=self._group_id,
-                    data=image_data_fh,
-                    custom_attribs=metadata,
-                )
-            finally:
-                image_data_fh.close()
+            scan_result = self._upload_image(
+                component=component,
+                container_image=container_image,
+            )
 
             self._transport_triages(triages, scan_result.product_id())
 
@@ -463,6 +443,38 @@ class ProtecodeUtil(object):
             status=upload_status,
             result=result
         )
+
+    def _upload_image(
+        self,
+        component: Component,
+        container_image: ContainerImage,
+    ):
+        metadata = self._metadata(
+            container_image=container_image,
+            component=component,
+            omit_version=False,
+        )
+
+        image_data_fh = retrieve_container_image(
+            container_image.image_reference(),
+            outfileobj=tempfile.NamedTemporaryFile(),
+        )
+
+        try:
+            # Upload image and update outdated analysis result with the one triggered
+            # by the upload.
+            scan_result = self._api.upload(
+                application_name=self._upload_name(
+                    container_image=container_image,
+                    component=component
+                ).replace('/', '_'),
+                group_id=self._group_id,
+                data=image_data_fh,
+                custom_attribs=metadata,
+            )
+            return scan_result
+        finally:
+            image_data_fh.close()
 
     def _transport_triages(self, triages, product_id):
         for triage in triages:
