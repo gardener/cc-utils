@@ -264,12 +264,31 @@ class ProtecodeUtil(object):
         else:
             raise NotImplementedError()
 
+        # re-upload / wait
+        # xxx
+
+        # upload new images
+        for container_image in images_to_upload:
+            scan_result = self._upload_image(
+                component=container_image_group.component(),
+                container_image=container_image,
+            )
+            protecode_apps_to_consider.add(scan_result)
+
+        # apply imported triages for all protecode apps
+        for protecode_app in protecode_apps_to_consider:
+            product_id = protecode_app.product_id()
+            self._transport_triages(triages_to_import, product_id)
+
+        # rm all outdated protecode apps
+        for protecode_app in protecode_apps_to_remove:
+            product_id = protecode_app.product_id()
+            self._api.delete_product(product_id=product_id)
+
         # todo:
         # - determine actions for `protecode_apps_to_consider`
         #   - re-upload + wait
         #   - retrieve (and yield) results
-        # - apply imported triages for all protecode_apps
-        # - lastly: remove protecode-apps
 
     def retrieve_scan_result(
             self,
