@@ -153,12 +153,19 @@ class ProtecodeUtil(object):
         self._group_id = group_id
         self._reference_group_ids = reference_group_ids
 
-    def _image_group_metadata(self, container_image_group: ContainerImageGroup):
+    def _image_group_metadata(
+        self,
+        container_image_group: ContainerImageGroup,
+        omit_version=False,
+    ):
         metadata = {
             'IMAGE_REFERENCE_NAME': container_image_group.image_name(),
-            'COMPONENT_VERSION': container_image_group.component().version(),
             'COMPONENT_NAME': container_image_group.component().name(),
         }
+
+        if not omit_version:
+            metadata['COMPONENT_VERSION'] = container_image_group.component().version()
+
         return metadata
 
     def _image_ref_metadata(self, container_image, omit_version):
@@ -220,7 +227,11 @@ class ProtecodeUtil(object):
         protecode_apps_to_consider = set() # consider to rescan; return results
         triages_to_import = set()
 
-        metadata = self._image_group_metadata(container_image_group=container_image_group)
+        metadata = self._image_group_metadata(
+            container_image_group=container_image_group,
+            omit_version=True,
+        )
+
         existing_products = self._api.list_apps(
             group_id=self._group_id,
             custom_attribs=metadata,
