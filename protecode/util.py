@@ -64,8 +64,11 @@ def upload_grouped_images(
         )
 
         def _task():
-            yield from protecode_util.upload_container_image_group(
-                container_image_group=image_group,
+            # force executor to actually iterate through generator
+            return set(
+                protecode_util.upload_container_image_group(
+                    container_image_group=image_group,
+                )
             )
 
         return _task
