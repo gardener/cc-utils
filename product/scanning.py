@@ -264,6 +264,7 @@ class ProtecodeUtil(object):
                 yield from self._existing_triages(ref_scan_results)
 
         triages_to_import |= set(enumerate_reference_triages())
+        ci.util.info(f'found {len(triages_to_import)} triage(s) to import')
 
         if self._processing_mode is ProcessingMode.FORCE_UPLOAD:
             ci.util.info(f'force-upload - will re-upload all images')
@@ -339,6 +340,7 @@ class ProtecodeUtil(object):
         for protecode_app in protecode_apps_to_remove:
             product_id = protecode_app.product_id()
             self._api.delete_product(product_id=product_id)
+            ci.util.info(f'purged outdated product {product_id}')
 
     def retrieve_scan_result(
             self,
