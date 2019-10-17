@@ -80,7 +80,8 @@ def upload_grouped_images(
                     image for image in image_group
                     if image_reference_filter(component, image)
                 ]
-                yield _upload_task(component=component, image_group=image_group)
+                if image_group:
+                    yield _upload_task(component=component, image_group=image_group)
 
     tasks = _upload_tasks()
     results = tuple(executor.map(lambda task: task(), tasks))
