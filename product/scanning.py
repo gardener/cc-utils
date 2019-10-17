@@ -108,13 +108,19 @@ class ContainerImageGroup(object):
 
         self._component = component
 
-        # sort, smallest version first
-        self._container_images = sorted(
-            container_images,
-            key=_to_semver,
-        )
+        self._container_images = list(container_images)
+
         if not len(self._container_images) > 0:
             raise ValueError('at least one container image must be given')
+
+        # workaround (not all versions are valid semver-versions unfortunately) :-(((
+        # - so at least do not try to parse in case no sorting is required
+        if len(container_images) > 1:
+            # sort, smallest version first
+            self._container_images = sorted(
+                self._container_images,
+                key=_to_semver,
+            )
 
         image_name = {i.name() for i in self._container_images}
         if len(image_name) > 1:
