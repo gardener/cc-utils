@@ -19,7 +19,6 @@ import json
 import time
 from typing import List
 
-import deprecated
 import requests
 
 from ci.util import not_empty, not_none, none, urljoin
@@ -374,15 +373,3 @@ class ProtecodeApi(object):
         self._post(
             url=url,
         )
-
-
-@deprecated.deprecated
-def from_cfg(protecode_cfg, connection_pool_size=12):
-    not_none(protecode_cfg)
-    routes = ProtecodeApiRoutes(base_url=protecode_cfg.api_url())
-    api = ProtecodeApi(
-        api_routes=routes,
-        basic_credentials=protecode_cfg.credentials(),
-        tls_verify=protecode_cfg.tls_verify(),
-    )
-    return api

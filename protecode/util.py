@@ -21,8 +21,8 @@ import typing
 import deprecated
 import requests.exceptions
 
+import ccc.protecode
 import container.registry
-import protecode.client
 import product.util
 from product.scanning import ContainerImageGroup, ProtecodeUtil, ProcessingMode
 from ci.util import info, warning, verbose, error, success, urljoin
@@ -48,7 +48,7 @@ def upload_grouped_images(
     reference_group_ids=(),
 ):
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
-    protecode_api = protecode.client.from_cfg(protecode_cfg)
+    protecode_api = ccc.protecode.client(protecode_cfg)
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
     protecode_util = ProtecodeUtil(
         protecode_api=protecode_api,
@@ -115,7 +115,7 @@ def upload_images(
     reference_group_ids=(),
 ) -> typing.Iterable[typing.Tuple[UploadResult, int]]:
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
-    protecode_api = protecode.client.from_cfg(protecode_cfg)
+    protecode_api = ccc.protecode.client(protecode_cfg)
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
     protecode_util = ProtecodeUtil(
         protecode_api=protecode_api,
