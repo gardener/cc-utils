@@ -555,11 +555,12 @@ class ProtecodeUtil(object):
                     product_id=product_id,
                 )
 
-    def _existing_triages(self, analysis_results: AnalysisResult=()):
+    def _existing_triages(self, analysis_results: typing.Iterable[AnalysisResult]=()):
         if not analysis_results:
             return ()
 
         for analysis_result in analysis_results:
+            ci.util.check_type(analysis_result, AnalysisResult)
             for component in analysis_result.components():
                 for vulnerability in component.vulnerabilities():
                     yield from vulnerability.triages()
