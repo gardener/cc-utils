@@ -25,7 +25,7 @@ import mailutil
 import protecode.util
 
 from concourse.model.traits.image_scan import Notify
-from product.model import ComponentName, UploadResult
+from product.model import AnalysisResult, ComponentName, UploadResult
 
 
 @dataclasses.dataclass
@@ -223,10 +223,13 @@ def virus_scan_images(image_references: typing.Iterable[str], clamav_config_name
 
 def protecode_results_table(protecode_cfg, upload_results: typing.Iterable[UploadResult]):
     def result_to_tuple(upload_result: UploadResult):
+        if not isinstance(upload_result, AnalysisResult):
+            upload_result = upload_result.result # xxx remove after cleanup
+
         # upload_result tuple of product.model.UploadResult and CVE Score
         upload_result, greatest_cve = upload_result
         # protecode.model.AnalysisResult
-        analysis_result = upload_result.result
+        analysis_result = upload_result
 
         name = analysis_result.display_name()
         analysis_url = \
@@ -251,7 +254,10 @@ def protecode_results_table(protecode_cfg, upload_results: typing.Iterable[Uploa
 
 def create_license_report(license_report):
     def to_table_row(upload_result, licenses):
-        component_name = upload_result.result.display_name()
+        if not isinstance(upload_result, AnalysisResult):
+            upload_result = upload_result.result # xxx remove after cleanup
+
+        component_name = upload_result.display_name()
         license_names = {license.name() for license in licenses}
         license_names_str = ', '.join(license_names)
         yield (component_name, license_names_str)
