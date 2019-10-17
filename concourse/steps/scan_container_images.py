@@ -299,7 +299,7 @@ def protecode_scan(
     protecode_cfg,
     protecode_group_id: int,
     reference_protecode_group_ids,
-    product_descriptor,
+    component_descriptor,
     processing_mode,
     parallel_jobs: int,
     cve_threshold,
@@ -307,7 +307,7 @@ def protecode_scan(
 ):
     protecode_results, license_report = protecode.util.upload_grouped_images(
         protecode_cfg=protecode_cfg,
-        product_descriptor=product_descriptor,
+        component_descriptor=component_descriptor,
         processing_mode=processing_mode,
         protecode_group_id=protecode_group_id,
         parallel_jobs=parallel_jobs,

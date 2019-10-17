@@ -73,7 +73,7 @@ print_protecode_info_table(
 protecode_results, license_report = protecode_scan(
   protecode_cfg=protecode_cfg,
   protecode_group_id = protecode_group_id,
-  product_descriptor = component_descriptor,
+  component_descriptor = component_descriptor,
   reference_protecode_group_ids = ${protecode_scan.reference_protecode_group_ids()},
   processing_mode = ProcessingMode('${protecode_scan.processing_mode()}'),
   parallel_jobs=${protecode_scan.parallel_jobs()},
