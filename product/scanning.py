@@ -251,7 +251,11 @@ class ProtecodeUtil(object):
                     group_id=group_id,
                     custom_attribs=metadata,
                 )
-                yield from self._existing_triages(ref_apps)
+                ref_scan_results = (
+                    self._api.scan_result(app.product_id())
+                    for app in ref_apps
+                )
+                yield from self._existing_triages(ref_scan_results)
 
         triages_to_import |= set(enumerate_reference_triages())
 
