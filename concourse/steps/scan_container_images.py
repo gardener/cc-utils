@@ -305,7 +305,7 @@ def protecode_scan(
     cve_threshold,
     image_reference_filter,
 ):
-    protecode_results, license_report = protecode.util.upload_images(
+    protecode_results, license_report = protecode.util.upload_grouped_images(
         protecode_cfg=protecode_cfg,
         product_descriptor=product_descriptor,
         processing_mode=processing_mode,
