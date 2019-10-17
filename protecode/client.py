@@ -19,6 +19,7 @@ import json
 import time
 from typing import List
 
+import deprecated
 import requests
 
 from ci.util import not_empty, not_none, none, urljoin
@@ -375,6 +376,7 @@ class ProtecodeApi(object):
         )
 
 
+@deprecated.deprecated
 def from_cfg(protecode_cfg, connection_pool_size=12):
     not_none(protecode_cfg)
     routes = ProtecodeApiRoutes(base_url=protecode_cfg.api_url())
