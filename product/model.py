@@ -540,15 +540,14 @@ class UploadResult(object):
     ):
         self.status = not_none(status)
         self.component = not_none(component)
-        self.container_image = not_none(container_image)
+        self.container_image = container_image
         if result:
             self.result = result
         else:
             self.result = None
 
     def __str__(self):
-        return '{c}:{ir} - {s}'.format(
+        return '{c} - {s}'.format(
             c=self.component.name(),
-            ir=self.container_image.image_reference(),
             s=self.status
         )
