@@ -39,7 +39,7 @@ def upload_grouped_images(
     parallel_jobs=8,
     cve_threshold=7,
     ignore_if_triaged=True,
-    processing_mode=ProcessingMode.UPLOAD_IF_CHANGED,
+    processing_mode=ProcessingMode.RESCAN,
     image_reference_filter=(lambda component, container_image: True),
     reference_group_ids=(),
 ):
