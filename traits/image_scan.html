@@ -306,7 +306,7 @@ include_component_names.</p></td>
 </tr>
 <tr class="row-even"><td><p>processing_mode</p></td>
 <td><p>no</p></td>
-<td><p>upload_if_changed</p></td>
+<td><p>ProcessingMode.RESCAN</p></td>
 <td><p>ProcessingMode</p></td>
 <td><p>Protecode processing mode</p></td>
 </tr>
@@ -338,15 +338,11 @@ include_component_names.</p></td>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>upload_if_changed</p></td>
-<td><p>upload absent container images. This will _not_ upload images already present.
-Present images will _not_ be rescanned.</p></td>
-</tr>
-<tr class="row-odd"><td><p>rescan</p></td>
+<tr class="row-even"><td><p>rescan</p></td>
 <td><p>(re-)scan container images if Protecode indicates this might bear new results.
 Upload absent images.</p></td>
 </tr>
-<tr class="row-even"><td><p>force_upload</p></td>
+<tr class="row-odd"><td><p>force_upload</p></td>
 <td><p><code class="code docutils literal notranslate"><span class="pre">always</span></code> upload and scan all images.</p></td>
 </tr>
 </tbody>
