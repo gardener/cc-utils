@@ -100,7 +100,7 @@ class ProtecodeScanCfg(ModelBase):
         return self.raw.get('cve_threshold')
 
     def processing_mode(self):
-        return self.raw.get('processing_mode')
+        return ProcessingMode(self.raw.get('processing_mode'))
 
     def validate(self):
         super().validate()
