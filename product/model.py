@@ -535,12 +535,10 @@ class UploadResult(object):
             self,
             status: UploadStatus,
             component: Component,
-            container_image: ContainerImage,
             result: AnalysisResult,
     ):
         self.status = not_none(status)
         self.component = not_none(component)
-        self.container_image = container_image
         if result:
             self.result = result
         else:

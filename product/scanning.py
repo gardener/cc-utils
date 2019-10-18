@@ -20,7 +20,6 @@ import typing
 
 from protecode.client import ProtecodeApi
 from protecode.model import (
-    ProcessingStatus,
     AnalysisResult,
     TriageScope,
 )
@@ -35,22 +34,12 @@ import ci.util
 
 
 class ProcessingMode(AttribSpecMixin, enum.Enum):
-    UPLOAD_IF_CHANGED = 'upload_if_changed'
     RESCAN = 'rescan'
     FORCE_UPLOAD = 'force_upload'
 
     @classmethod
     def _attribute_specs(cls):
         return (
-            AttributeSpec.optional(
-                name=cls.UPLOAD_IF_CHANGED.value, # XXX deprecated!! this is useless
-                default=None,
-                doc='''
-                    upload absent container images. This will _not_ upload images already present.
-                    Present images will _not_ be rescanned.
-                ''',
-                type=str,
-            ),
             AttributeSpec.optional(
                 name=cls.RESCAN.value,
                 default=None,
@@ -69,19 +58,6 @@ class ProcessingMode(AttribSpecMixin, enum.Enum):
                 type=str,
             ),
         )
-
-
-class UploadAction(enum.Enum):
-    def __init__(self, upload, rescan, wait, transport_triages):
-        self.upload = upload
-        self.rescan = rescan
-        self.wait = wait
-        self.transport_triages = transport_triages
-
-    SKIP = (False, False, False, True)
-    UPLOAD = (True, False, True, True)
-    RESCAN = (False, True, True, True)
-    WAIT_FOR_RESULT = (False, False, True, False)
 
 
 class ContainerImageGroup(object):
@@ -343,7 +319,6 @@ class ProtecodeUtil(object):
             yield mk_upload_result(
                 status=UploadStatus.DONE, # XXX remove this
                 result=scan_result,
-                container_image=None, # XXX remove this
             )
 
         # rm all outdated protecode apps
@@ -395,135 +370,6 @@ class ProtecodeUtil(object):
         # retrieve existing product's details (list of products contained only subset of data)
         product = self._api.scan_result(product_id=product_id)
         return product
-
-    def _determine_upload_action(
-            self,
-            container_image: ContainerImage,
-            scan_result: AnalysisResult,
-    ):
-        check_type(container_image, ContainerImage)
-
-        # take shortcut if 'force upload' is configured.
-        if self._processing_mode is ProcessingMode.FORCE_UPLOAD:
-            return UploadAction.UPLOAD
-
-        if self._processing_mode in (
-            ProcessingMode.UPLOAD_IF_CHANGED,
-            ProcessingMode.RESCAN,
-        ):
-            # if no scan_result is available, we have to upload in all remaining cases
-            if not scan_result:
-                return UploadAction.UPLOAD
-
-        # determine if image to be uploaded is already present in protecode
-        metadata = scan_result.custom_data()
-        image_reference = metadata.get('IMAGE_REFERENCE')
-        image_changed = image_reference != container_image.image_reference()
-
-        if image_changed:
-            return UploadAction.UPLOAD
-
-        if self._processing_mode is ProcessingMode.UPLOAD_IF_CHANGED:
-            return UploadAction.SKIP
-        elif self._processing_mode is ProcessingMode.RESCAN:
-            # Wait for the current scan to finish if it there is still one pending
-            if scan_result.status() is ProcessingStatus.BUSY:
-                return UploadAction.WAIT_FOR_RESULT
-            short_scan_result = self._api.scan_result_short(scan_result.product_id())
-
-            if short_scan_result.is_stale():
-                if not short_scan_result.has_binary():
-                    return UploadAction.UPLOAD
-                else:
-                    return UploadAction.RESCAN
-            else:
-                return UploadAction.SKIP
-        else:
-            raise NotImplementedError
-
-    def upload_image(
-            self,
-            container_image: ContainerImage,
-            component: Component,
-        ) -> UploadResult:
-        upload_result = partial(UploadResult, container_image=container_image, component=component)
-
-        # check if the image has already been uploaded for this component
-        scan_result = self.retrieve_scan_result(
-            container_image=container_image,
-            component=component,
-        )
-
-        reference_results = [
-            self.retrieve_scan_result(
-                container_image=container_image,
-                component=component,
-                group_id=group_id,
-            ) for group_id in self._reference_group_ids
-        ]
-
-        reference_results = [r for r in reference_results if r] # remove None entries
-        if scan_result:
-            reference_results.insert(0, scan_result)
-
-        # collect old triages in order to "transport" them after new upload (may be None)
-        triages = self._existing_triages(
-            analysis_results=reference_results,
-        )
-
-        upload_action = self._determine_upload_action(
-            container_image=container_image,
-            scan_result=scan_result
-        )
-
-        # Transport triages early. For the upload-case we need to transport triages only after
-        # the image upload, so we do it later.
-        if upload_action.transport_triages and not upload_action.upload:
-            self._transport_triages(triages, scan_result.product_id())
-
-        if not upload_action.upload and not upload_action.rescan and not upload_action.wait:
-            # early exit (nothing to do)
-            return upload_result(
-                status=UploadStatus.SKIPPED,
-                result=scan_result,
-            )
-
-        if upload_action.upload:
-            info(f'uploading to protecode: {container_image.image_reference()}')
-            # keep old product_id (in order to delete after update)
-            if scan_result:
-                product_id = scan_result.product_id()
-            else:
-                product_id = None
-
-            scan_result = self._upload_image(
-                component=component,
-                container_image=container_image,
-            )
-
-            self._transport_triages(triages, scan_result.product_id())
-
-            # rm (now outdated) scan result
-            if product_id:
-                self._api.delete_product(product_id=product_id)
-
-        if upload_action.rescan:
-            self._api.rescan(scan_result.product_id())
-
-        if upload_action.wait:
-            result = self._api.wait_for_scan_result(product_id=scan_result.product_id())
-        else:
-            result = scan_result
-
-        if result.status() == ProcessingStatus.BUSY:
-            upload_status = UploadStatus.PENDING
-        else:
-            upload_status = UploadStatus.DONE
-
-        return upload_result(
-            status=upload_status,
-            result=result
-        )
 
     def _upload_image(
         self,

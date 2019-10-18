@@ -14,18 +14,14 @@
 # limitations under the License.
 
 from concurrent.futures import ThreadPoolExecutor
-import sys
 import tabulate
 import typing
-
-import deprecated
-import requests.exceptions
 
 import ccc.protecode
 import container.registry
 import product.util
 from product.scanning import ContainerImageGroup, ProtecodeUtil, ProcessingMode
-from ci.util import info, warning, verbose, error, success, urljoin
+from ci.util import info, warning, success, urljoin
 from product.model import (
     ComponentDescriptor,
     UploadResult,
@@ -94,45 +90,6 @@ def upload_grouped_images(
             yield from result_set
 
     results = list(flatten_results())
-
-    relevant_results = filter_and_display_upload_results(
-        upload_results=results,
-        cve_threshold=cve_threshold,
-        ignore_if_triaged=ignore_if_triaged,
-    )
-
-    _license_report = license_report(upload_results=results)
-
-    return (relevant_results, _license_report)
-
-
-@deprecated.deprecated
-def upload_images(
-    protecode_cfg,
-    product_descriptor,
-    protecode_group_id=5,
-    parallel_jobs=8,
-    cve_threshold=7,
-    ignore_if_triaged=True,
-    processing_mode=ProcessingMode.UPLOAD_IF_CHANGED,
-    image_reference_filter=(lambda component, container_image: True),
-    reference_group_ids=(),
-) -> typing.Iterable[typing.Tuple[UploadResult, int]]:
-    executor = ThreadPoolExecutor(max_workers=parallel_jobs)
-    protecode_api = ccc.protecode.client(protecode_cfg)
-    protecode_api.set_maximum_concurrent_connections(parallel_jobs)
-    protecode_util = ProtecodeUtil(
-        protecode_api=protecode_api,
-        processing_mode=processing_mode,
-        group_id=protecode_group_id,
-        reference_group_ids=reference_group_ids,
-    )
-    tasks = _create_tasks(
-        product_descriptor,
-        protecode_util,
-        image_reference_filter
-    )
-    results = tuple(executor.map(lambda task: task(), tasks))
 
     relevant_results = filter_and_display_upload_results(
         upload_results=results,
@@ -283,37 +240,3 @@ def filter_and_display_upload_results(
         render_results_table(upload_results=results_above_cve_thresh)
 
     return results_above_cve_thresh
-
-
-def _create_task(protecode_util, container_image, component):
-    def task_function():
-        try:
-            upload_result = protecode_util.upload_image(
-                container_image=container_image,
-                component=component,
-            )
-            return upload_result
-        except requests.exceptions.ConnectionError:
-            error(
-                'A connection error occurred. This might be due problems with Protecode. '
-                'Please try executing the image scan job again.'
-                )
-            sys.exit(1)
-    return task_function
-
-
-def _create_tasks(product_model, protecode_util, image_reference_filter):
-    for component, container_image in product.util._enumerate_effective_images(
-        component_descriptor=product_model,
-    ):
-        if image_reference_filter(component, container_image):
-            verbose('processing container image: {c}:{cir}'.format(
-                c=component.name(),
-                cir=container_image.image_reference(),
-                )
-            )
-            yield _create_task(
-                    protecode_util=protecode_util,
-                    container_image=container_image,
-                    component=component,
-            )
