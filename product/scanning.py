@@ -223,7 +223,12 @@ class ProtecodeUtil(object):
     def upload_container_image_group(
         self,
         container_image_group: ContainerImageGroup,
-    ):
+    ) -> typing.Iterable[UploadResult]:
+        mk_upload_result = partial(
+            UploadResult,
+            component=container_image_group.component(),
+        )
+
         # depending on upload-mode, determine an upload-action for each related image
         # - images to upload
         # - protecode-apps to remove
@@ -334,7 +339,12 @@ class ProtecodeUtil(object):
 
         # yield results
         for protecode_app in protecode_apps_to_consider:
-            yield self._api.scan_result(protecode_app.product_id())
+            scan_result = self._api.scan_result(protecode_app.product_id())
+            yield mk_upload_result(
+                status=UploadStatus.DONE, # XXX remove this
+                result=scan_result,
+                container_image=None, # XXX remove this
+            )
 
         # rm all outdated protecode apps
         for protecode_app in protecode_apps_to_remove:
