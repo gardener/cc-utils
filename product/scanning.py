@@ -252,7 +252,7 @@ class ProtecodeUtil(object):
             images_to_upload |= set(container_image_group.images())
             # remove all
             protecode_apps_to_remove = set(existing_products)
-        elif self._processing_mode in (ProcessingMode.RESCAN, ProcessingMode.UPLOAD_IF_CHANGED):
+        elif self._processing_mode is ProcessingMode.RESCAN:
             for container_image in container_image_group.images():
                 # find matching protecode product (aka app)
                 for existing_product in existing_products:
