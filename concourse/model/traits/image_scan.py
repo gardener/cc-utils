@@ -55,7 +55,7 @@ PROTECODE_ATTRS = (
     ),
     AttributeSpec.optional(
         name='processing_mode',
-        default='upload_if_changed',
+        default=ProcessingMode.RESCAN,
         doc='Protecode processing mode',
         type=ProcessingMode,
     ),
