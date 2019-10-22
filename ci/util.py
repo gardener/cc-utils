@@ -71,7 +71,7 @@ def gardener_cicd_libs_version():
     p = os.path.abspath(os.path.realpath(__file__))
     versionfile_file_path = os.path.join(os.path.dirname(p), 'version')
     with open(versionfile_file_path, 'rt') as f:
-        info(f"gardener-cicd-libs version: {f.readline()}")
+        return f.readline()
 
 
 class CliHint(object):
