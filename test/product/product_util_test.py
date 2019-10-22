@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import functools
 import unittest
 import pytest
 
@@ -31,6 +32,19 @@ def component_ref(name, version, prefix='gh.com/o/'):
 @pytest.fixture
 def cref():
     return component_ref
+
+
+def image_ref(name, version):
+    return model.ContainerImage.create(
+        name=name,
+        version=version,
+        image_reference='dont:care',
+    )
+
+
+@pytest.fixture
+def iref():
+    return image_ref
 
 
 class ProductUtilTest(unittest.TestCase):
@@ -86,6 +100,57 @@ def test_diff_components(cref):
     assert result.names_only_left == {'gh.com/o/c3'}
     assert result.names_only_right == {'gh.com/o/c4'}
     assert result.names_version_changed == {'gh.com/o/c1'}
+
+
+def test_diff_images(cref, iref):
+    comp_desc = model.ComponentDescriptor.from_dict({})
+    left_comp = model.Component.create('x.o/a/b', '1.2.3')
+    right_comp = model.Component.create('x.o/a/b', '2.3.4')
+    comp_desc.add_component(left_comp)
+    comp_desc.add_component(right_comp)
+    l_deps = left_comp.dependencies()
+    r_deps = right_comp.dependencies()
+
+    examinee = functools.partial(util.diff_images, component_descriptor=comp_desc)
+
+    img1 = iref('i1', '1.2.3')
+
+    l_deps.add_container_image_dependency(img1)
+    r_deps.add_container_image_dependency(img1)
+
+    img_diff = examinee(left_component=left_comp, right_component=right_comp)
+
+    # same image added declared by left and right - expect empty diff
+    assert img_diff.left_component == left_comp
+    assert img_diff.right_component == right_comp
+    assert len(img_diff.irefs_only_left) == 0
+    assert len(img_diff.irefs_only_right) == 0
+
+    img2 = iref('i2', '1.2.3')
+    img3 = iref('i3', '1.2.3')
+    l_deps.add_container_image_dependency(img2)
+    r_deps.add_container_image_dependency(img3)
+
+    # img2 only left, img3 only right
+    img_diff = examinee(left_component=left_comp, right_component=right_comp)
+    assert len(img_diff.irefs_only_left) == 1
+    assert len(img_diff.irefs_only_right) == 1
+    assert list(img_diff.irefs_only_left)[0] == img2
+    assert list(img_diff.irefs_only_right)[0] == img3
+
+    img4_0 = iref('i4', '1.2.3')
+    img4_1 = iref('i4', '2.0.0') # "change version"
+    l_deps.add_container_image_dependency(img4_0)
+    r_deps.add_container_image_dependency(img4_1)
+    img_diff = examinee(left_component=left_comp, right_component=right_comp)
+    assert len(img_diff.irefs_only_left) == 1
+    assert len(img_diff.irefs_only_right) == 1
+    assert len(img_diff.irefpairs_version_changed) == 1
+    left_i, right_i = list(img_diff.irefpairs_version_changed)[0]
+    assert type(left_i) == type(img4_0)
+    assert left_i.raw == img4_0.raw
+    assert left_i == img4_0
+    assert right_i == img4_1
 
 
 def test_enumerate_effective_images(cref):

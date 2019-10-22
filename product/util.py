@@ -241,6 +241,86 @@ def diff_components(left_components, right_components, ignore_component_names=()
     )
 
 
+@dataclasses.dataclass
+class ImageDiff:
+    left_component: Component
+    right_component: Component
+    irefs_only_left: set = dataclasses.field(default_factory=set)
+    irefs_only_right: set = dataclasses.field(default_factory=set)
+    irefpairs_version_changed: set = dataclasses.field(default_factory=set)
+    names_only_left: set = dataclasses.field(default_factory=set)
+    names_only_right: set = dataclasses.field(default_factory=set)
+    names_version_changed: set = dataclasses.field(default_factory=set)
+
+
+def diff_images(component_descriptor, left_component, right_component):
+    left_images = set(_effective_images(component_descriptor, left_component))
+    right_images = set(_effective_images(component_descriptor, right_component))
+
+    left_names_to_imgs = {i.name(): i for i in left_images}
+    right_names_to_imgs = {i.name(): i for i in right_images}
+
+    img_diff = ImageDiff(
+        left_component=left_component,
+        right_component=right_component,
+    )
+
+    if left_images == right_images:
+        return img_diff
+
+    for name, img in left_names_to_imgs.items():
+        if not name in right_names_to_imgs:
+            img_diff.irefs_only_left.add(img)
+
+    for name, img in right_names_to_imgs.items():
+        if not name in left_names_to_imgs:
+            img_diff.irefs_only_right.add(img)
+
+    lgroups = list(_grouped_effective_images(component_descriptor, left_component))
+    rgroups = list(_grouped_effective_images(component_descriptor, right_component))
+
+    def enumerate_group_pairs(lgroups, rgroups):
+        for lgroup in lgroups:
+            lgroup = list(lgroup)
+            # img-group must always be non-empty
+            img_name = lgroup[0].name()
+            if not img_name in right_names_to_imgs:
+                continue # not all images exist on both sides
+            for rgroup in rgroups:
+                rgroup = list(rgroup)
+                if not rgroup[0].name() == img_name:
+                    continue
+                else:
+                    yield (lgroup, rgroup)
+
+    for lgroup, rgroup in enumerate_group_pairs(lgroups, rgroups):
+        lgroup = list(lgroup)
+        rgroup = list(rgroup)
+
+        # trivial case: image groups have length of 1
+        if len(lgroup) == 1 and len(rgroup) == 1:
+            if lgroup[0].version() != rgroup[0].version():
+                img_diff.irefpairs_version_changed.add((lgroup[0], rgroup[0]))
+            continue
+
+        # next case: img-groups have equal lengths
+
+        if len(lgroup) == len(rgroup):
+            # unfortunately, we cannot rely on all versions being semver-compliant :-/
+            lgroup = sorted(lgroup, key=lambda i: i.version())
+            rgroup = sorted(rgroup, key=lambda i: i.version())
+            # todo: semver-sort
+            for li, ri in zip(lgroup, rgroup):
+                if li.version() != ri.version():
+                    img_diff.irefpairs_version_changed.add((li, ri))
+
+        else:
+            # XXX rarely occurs; new version added or removed from/to img-group - ignore
+            raise NotImplementedError('amount of images of same name changed')
+
+    return img_diff
+
+
 def greatest_references(references: typing.Iterable[DependencyBase]):
     '''
     yields the component references from the specified iterable of ComponentReference that
