@@ -111,7 +111,11 @@ def test_diff_images(cref, iref):
     l_deps = left_comp.dependencies()
     r_deps = right_comp.dependencies()
 
-    examinee = functools.partial(util.diff_images, component_descriptor=comp_desc)
+    examinee = functools.partial(
+        util.diff_images,
+        left_component_descriptor=comp_desc,
+        right_component_descriptor=comp_desc,
+    )
 
     img1 = iref('i1', '1.2.3')
 

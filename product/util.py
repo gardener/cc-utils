@@ -253,9 +253,14 @@ class ImageDiff:
     names_version_changed: set = dataclasses.field(default_factory=set)
 
 
-def diff_images(component_descriptor, left_component, right_component):
-    left_images = set(_effective_images(component_descriptor, left_component))
-    right_images = set(_effective_images(component_descriptor, right_component))
+def diff_images(
+    left_component_descriptor,
+    right_component_descriptor,
+    left_component,
+    right_component
+):
+    left_images = set(_effective_images(left_component_descriptor, left_component))
+    right_images = set(_effective_images(right_component_descriptor, right_component))
 
     left_names_to_imgs = {i.name(): i for i in left_images}
     right_names_to_imgs = {i.name(): i for i in right_images}
@@ -276,8 +281,8 @@ def diff_images(component_descriptor, left_component, right_component):
         if not name in left_names_to_imgs:
             img_diff.irefs_only_right.add(img)
 
-    lgroups = list(_grouped_effective_images(component_descriptor, left_component))
-    rgroups = list(_grouped_effective_images(component_descriptor, right_component))
+    lgroups = list(_grouped_effective_images(left_component_descriptor, left_component))
+    rgroups = list(_grouped_effective_images(right_component_descriptor, right_component))
 
     def enumerate_group_pairs(lgroups, rgroups):
         for lgroup in lgroups:
