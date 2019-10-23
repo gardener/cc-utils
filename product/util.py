@@ -326,7 +326,7 @@ def diff_images(
             img_diff.irefs_only_left.add(i)
 
         for i in rgroup:
-            img_diff.irefs_only_left.add(i)
+            img_diff.irefs_only_right.add(i)
 
     return img_diff
 
