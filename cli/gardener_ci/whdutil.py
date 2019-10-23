@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import bjoern
-
 import ci.util
 import whd.server as whd_server
 
@@ -38,6 +36,8 @@ def start_whd(
     any_interface = '0.0.0.0'
 
     if production:
+        import bjoern
+
         def serve():
             bjoern.run(app, any_interface, port, reuse_port=True)
         for _ in range(workers - 1):
