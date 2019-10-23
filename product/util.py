@@ -299,29 +299,34 @@ def diff_images(
                     yield (lgroup, rgroup)
 
     for lgroup, rgroup in enumerate_group_pairs(lgroups, rgroups):
-        lgroup = list(lgroup)
-        rgroup = list(rgroup)
-
         # trivial case: image groups have length of 1
         if len(lgroup) == 1 and len(rgroup) == 1:
             if lgroup[0].version() != rgroup[0].version():
                 img_diff.irefpairs_version_changed.add((lgroup[0], rgroup[0]))
             continue
 
-        # next case: img-groups have equal lengths
+        # unfortunately, we cannot rely on all versions being semver-compliant :-/
+        lgroup = list(sorted(lgroup, key=lambda i: i.version()))
+        rgroup = list(sorted(rgroup, key=lambda i: i.version()))
 
-        if len(lgroup) == len(rgroup):
-            # unfortunately, we cannot rely on all versions being semver-compliant :-/
-            lgroup = sorted(lgroup, key=lambda i: i.version())
-            rgroup = sorted(rgroup, key=lambda i: i.version())
-            # todo: semver-sort
-            for li, ri in zip(lgroup, rgroup):
-                if li.version() != ri.version():
-                    img_diff.irefpairs_version_changed.add((li, ri))
+        # remove all images present in both
+        versions_in_both = {i.version() for i in lgroup} & {i.version() for i in rgroup}
+        lgroup = [i for i in lgroup if not i.version() in versions_in_both]
+        rgroup = [i for i in rgroup if not i.version() in versions_in_both]
 
-        else:
-            # XXX rarely occurs; new version added or removed from/to img-group - ignore
-            raise NotImplementedError('amount of images of same name changed')
+        i = 0
+        for i, left_image in enumerate(lgroup):
+            right_image = rgroup[i]
+            img_diff.irefpairs_version_changed((left_image, right_image))
+
+        lgroup = lgroup[i:]
+        rgroup = rgroup[i:]
+
+        for i in lgroup:
+            img_diff.irefs_only_left.add(i)
+
+        for i in rgroup:
+            img_diff.irefs_only_left.add(i)
 
     return img_diff
 
