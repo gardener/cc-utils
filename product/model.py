@@ -282,6 +282,9 @@ class ContainerImage(ContainerImageReference):
     def image_reference(self):
         return self.raw.get('image_reference')
 
+    def image_name(self):
+        return self.raw.get('name')
+
     def validate(self):
         img_ref = check_type(self.image_reference(), str)
         # XXX this is an incomplete validation that will only detect some obvious errors,

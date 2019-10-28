@@ -170,7 +170,7 @@ class ProtecodeUtil(object):
     def _upload_name(self, container_image, component):
         image_reference = container_image.image_reference()
         image_path, image_tag = image_reference.split(':')
-        image_name = image_path.split('/')[-1]
+        image_name = container_image.image_name()
         return '{i}_{v}_{c}'.format(
             i=image_name,
             v=image_tag,
