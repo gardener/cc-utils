@@ -207,10 +207,9 @@ def parse_yaml_file(path, lint=False):
         return yaml.load(f, Loader=yaml.SafeLoader)
 
 
-def lint_yaml_file(path):
+def lint_yaml_file(path, linter_config: dict={'extends': 'relaxed'}):
     existing_file(path)
-    # hard-code relaxed cfg for now
-    cfg = yamllint.config.YamlLintConfig('extends: relaxed')
+    cfg = yamllint.config.YamlLintConfig(yaml.dump(linter_config))
     info(f'linting YAML file: {path}')
     worst_level = 0
     with open(path) as f:
