@@ -194,7 +194,8 @@ def is_yaml_file(path):
             if yaml.load(f, Loader=yaml.SafeLoader):
                 return True
         except Exception:
-            warning('an error occurred whilst trying to parse {f}'.format(f=path))
+            if not _quiet():
+                warning('an error occurred whilst trying to parse {f}'.format(f=path))
             raise
     return False
 
