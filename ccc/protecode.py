@@ -1,5 +1,6 @@
-import protecode.client
+import ci.util
 import model.protecode
+import protecode.client
 
 
 def client(
@@ -18,3 +19,8 @@ def client(
         tls_verify=protecode_cfg.tls_verify(),
     )
     return api
+
+def client_from_config_name(protecode_cfg_name: str):
+    cfg_factory = ci.util.ctx().cfg_factory()
+    protecode_config = cfg_factory.protecode(protecode_cfg_name)
+    return client(protecode_config)
