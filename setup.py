@@ -31,7 +31,6 @@ def packages():
     package_names = setuptools.find_packages()
 
     # remove packages already contained in gardener-cicd-base
-    package_names.remove('ccc')
     package_names.remove('ci')
     package_names.remove('model')
 
