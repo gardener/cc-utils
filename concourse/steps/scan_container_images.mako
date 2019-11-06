@@ -82,6 +82,8 @@ protecode_results, license_report = protecode_scan(
 )
 % endif
 
+malware_scan_results = None
+
 % if clam_av:
 
 image_references = [
