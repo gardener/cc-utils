@@ -19,12 +19,15 @@ import json
 import os
 import yaml
 
+from typing import Iterable
+
 import container.registry
 from ci.util import CliHints, CliHint, parse_yaml_file, ctx, fail
 from product.model import (
     Component,
     ComponentReference,
     ContainerImage,
+    DependencyBase,
     GenericDependency,
     ComponentDescriptor,
     WebDependency,
@@ -83,8 +86,8 @@ def upload_grouped_product_images(
 
 def _parse_dependency_str_func(
         factory_function,
-        required_attributes=('name', 'version'),
-        forbid_extra_attribs=True
+        required_attributes,
+        validation_policies,
     ):
     def parse_dependency_str(token):
         try:
@@ -93,35 +96,25 @@ def _parse_dependency_str_func(
             raise argparse.ArgumentTypeError('Invalid JSON document: ' + '\n'.join(jde.args))
         missing_attribs = [attrib for attrib in required_attributes if attrib not in parsed]
         if missing_attribs:
-            raise argparse.ArgumentTypeError('missing required attributes: {ma}'.format(
-                ma=', '.join(missing_attribs))
+            raise argparse.ArgumentTypeError(
+                f"missing required attributes: {', '.join(missing_attribs)}",
             )
-        if forbid_extra_attribs:
+        if ValidationPolicy.FORBID_EXTRA_ATTRIBUTES in validation_policies:
             extra_attribs = [
                     attrib for attrib in parsed.keys() if attrib not in required_attributes
             ]
             if extra_attribs:
-                raise argparse.ArgumentTypeError('unknown attributes: {ua}'.format(
-                    ua=', '.join(extra_attribs))
+                raise argparse.ArgumentTypeError(
+                    f"unknown attributes: {', '.join(extra_attribs)}",
+                )
+        if ValidationPolicy.NOT_EMPTY in validation_policies:
+            empty_attribs = [attrib for attrib in parsed.keys() if not parsed[attrib]]
+            if empty_attribs:
+                raise argparse.ArgumentTypeError(
+                    f"no values given for attributes: {', '.join(empty_attribs)}",
                 )
         return factory_function(**parsed)
     return parse_dependency_str
-
-
-_parse_component_deps = _parse_dependency_str_func(
-    factory_function=ComponentReference.create
-)
-_parse_container_image_deps = _parse_dependency_str_func(
-    factory_function=ContainerImage.create,
-    required_attributes=('name', 'version', 'image_reference')
-)
-_parse_web_deps = _parse_dependency_str_func(
-    factory_function=WebDependency.create,
-    required_attributes=('name', 'version', 'url')
-)
-_parse_generic_deps = _parse_dependency_str_func(
-    factory_function=GenericDependency.create,
-)
 
 
 def component_descriptor_to_xml(
@@ -142,25 +135,100 @@ def component_descriptor_to_xml(
     result_xml.write(out_file)
 
 
+def _parse_component_dependencies(
+    component_dependencies,
+    validation_policies,
+):
+    _parse_component_deps = _parse_dependency_str_func(
+        factory_function=ComponentReference.create,
+        required_attributes=('name', 'version'),
+        validation_policies=validation_policies,
+    )
+    return [_parse_component_deps(token) for token in component_dependencies]
+
+
+def _parse_container_image_dependencies(
+    container_image_dependencies,
+    validation_policies,
+):
+    _parse_container_image_deps = _parse_dependency_str_func(
+        factory_function=ContainerImage.create,
+        required_attributes=('name', 'version', 'image_reference'),
+        validation_policies=validation_policies,
+    )
+    return [_parse_container_image_deps(token) for token in container_image_dependencies]
+
+
+def _parse_web_dependencies(
+    web_dependencies,
+    validation_policies,
+):
+    _parse_web_deps = _parse_dependency_str_func(
+        factory_function=WebDependency.create,
+        required_attributes=('name', 'version', 'url'),
+        validation_policies=validation_policies,
+    )
+    return [_parse_web_deps(token) for token in web_dependencies]
+
+
+def _parse_generic_dependencies(
+    generic_dependencies,
+    validation_policies,
+):
+    _parse_generic_deps = _parse_dependency_str_func(
+        factory_function=GenericDependency.create,
+        required_attributes=('name', 'version'),
+        validation_policies=validation_policies,
+    )
+    return [_parse_generic_deps(token) for token in generic_dependencies]
+
+
+def _parse_dependencies(
+    component_dependencies: [str],
+    container_image_dependencies: [str],
+    web_dependencies: [str],
+    generic_dependencies: [str],
+    validation_policies: [ValidationPolicy],
+) -> Iterable[DependencyBase]:
+    '''Return a generator that yields all parsed dependencies'''
+    yield from _parse_component_dependencies(component_dependencies, validation_policies)
+
+    yield from _parse_container_image_dependencies(
+        container_image_dependencies,
+        validation_policies,
+    )
+
+    yield from _parse_web_dependencies(web_dependencies, validation_policies)
+
+    yield from _parse_generic_dependencies(generic_dependencies, validation_policies)
+
+
 def component_descriptor(
     name: str,
     version: str,
-    component_dependencies: CliHint(typehint=_parse_component_deps, action='append')=[],
-    container_image_dependencies: CliHint(typehint=_parse_container_image_deps, action='append')=[],
-    web_dependencies: CliHint(typehint=_parse_web_deps, action='append')=[],
-    generic_dependencies: CliHint(typehint=_parse_generic_deps, action='append')=[],
+    component_dependencies: CliHint(action='append')=[],
+    container_image_dependencies: CliHint(action='append')=[],
+    web_dependencies: CliHint(action='append')=[],
+    generic_dependencies: CliHint(action='append')=[],
+    validation_policies: CliHint(
+        type=ValidationPolicy,
+        typehint=[ValidationPolicy],
+        choices=[policy for policy in ValidationPolicy],
+    )=[],
 ):
     component = Component.create(name=name, version=version)
-    component_deps = component.dependencies()
+    # maintain old behaviour
+    if not validation_policies:
+        validation_policies=[ValidationPolicy.FORBID_EXTRA_ATTRIBUTES]
 
-    for component_ref in component_dependencies:
-        component_deps.add_component_dependency(component_ref)
-    for image_dep in container_image_dependencies:
-        component_deps.add_container_image_dependency(image_dep)
-    for web_dep in web_dependencies:
-        component_deps.add_web_dependency(web_dep)
-    for generic_dep in generic_dependencies:
-        component_deps.add_generic_dependency(generic_dep)
+    dependencies = _parse_dependencies(
+        component_dependencies=component_dependencies,
+        container_image_dependencies=container_image_dependencies,
+        web_dependencies=web_dependencies,
+        generic_dependencies=generic_dependencies,
+        validation_policies=validation_policies,
+    )
+    component.add_dependencies(dependencies)
 
     product_dict = {'components': [component.raw]}
     print(yaml.dump(product_dict, indent=2))
@@ -189,10 +257,15 @@ def add_dependencies(
     component_name: str,
     component_version: str,
     descriptor_out_file: str=None,
-    component_dependencies: CliHint(typehint=_parse_component_deps, action='append')=[],
-    container_image_dependencies: CliHint(typehint=_parse_container_image_deps, action='append')=[],
-    web_dependencies: CliHint(typehint=_parse_web_deps, action='append')=[],
-    generic_dependencies: CliHint(typehint=_parse_generic_deps, action='append')=[],
+    component_dependencies: CliHint(action='append')=[],
+    container_image_dependencies: CliHint(action='append')=[],
+    web_dependencies: CliHint(action='append')=[],
+    generic_dependencies: CliHint(action='append')=[],
+    validation_policies: CliHint(
+        type=ValidationPolicy,
+        typehint=[ValidationPolicy],
+        choices=[policy for policy in ValidationPolicy],
+    )=[],
 ):
     product = ComponentDescriptor.from_dict(parse_yaml_file(descriptor_src_file))
 
@@ -204,19 +277,23 @@ def add_dependencies(
             c=component_name,
             v=component_version,
             f=descriptor_src_file
-        )
-        )
+        ))
 
-    component_deps = component.dependencies()
+    # maintain old behaviour
+    if not validation_policies:
+        validation_policies=[ValidationPolicy.FORBID_EXTRA_ATTRIBUTES]
 
-    for component_ref in component_dependencies:
-        component_deps.add_component_dependency(component_ref)
-    for image_dep in container_image_dependencies:
-        component_deps.add_container_image_dependency(image_dep)
-    for web_dep in web_dependencies:
-        component_deps.add_web_dependency(web_dep)
-    for generic_dep in generic_dependencies:
-        component_deps.add_generic_dependency(generic_dep)
+    dependencies = _parse_dependencies(
+        component_dependencies=component_dependencies,
+        container_image_dependencies=container_image_dependencies,
+        web_dependencies=web_dependencies,
+        generic_dependencies=generic_dependencies,
+        validation_policies=validation_policies,
+    )
+    component.add_dependencies(dependencies)
+
+    product_dict = {'components': [component.raw]}
+    print(yaml.dump(product_dict, indent=2))
 
     product_dict = json.loads(json.dumps({'components': [component.raw]}))
     if not descriptor_out_file:
