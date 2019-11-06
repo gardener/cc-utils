@@ -280,7 +280,10 @@ class ProtecodeUtil(object):
                 continue # protecode does not recommend a rescan
 
             if not scan_result.has_binary():
-                image_version = scan_result.metadata().get('IMAGE_VERSION')
+                # scan_result here is an AnalysisResult which lacks our metadata. We need the
+                # metadata to fetch the image version. Therefore, fetch the proper result
+                scan_result = self._api.scan_result(product_id=protecode_app.product_id())
+                image_version = scan_result.custom_data().get('IMAGE_VERSION')
                 # there should be at most one matching image (by version)
                 for container_image in container_image_group:
                     if container_image.version() == image_version:
