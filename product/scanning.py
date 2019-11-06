@@ -211,7 +211,7 @@ class ProtecodeUtil(object):
         # - triages to import
         images_to_upload = set()
         protecode_apps_to_remove = set()
-        protecode_apps_to_consider = set() # consider to rescan; return results
+        protecode_apps_to_consider = list() # consider to rescan; return results
         triages_to_import = set()
 
         metadata = self._image_group_metadata(
@@ -259,7 +259,7 @@ class ProtecodeUtil(object):
                     if existing_product.custom_data().get('IMAGE_VERSION') == \
                       container_image.version():
                         existing_products.remove(existing_product)
-                        protecode_apps_to_consider.add(existing_product)
+                        protecode_apps_to_consider.append(existing_product)
                         break
                 else:
                     ci.util.info(f'did not find image {container_image} - will upload')
@@ -300,14 +300,14 @@ class ProtecodeUtil(object):
                 component=container_image_group.component(),
                 container_image=container_image,
             )
-            protecode_apps_to_consider.add(scan_result)
+            protecode_apps_to_consider.append(scan_result)
 
         # wait for all apps currently being scanned
         for protecode_app in protecode_apps_to_consider:
             # replace - potentially incomplete - scan result
             protecode_apps_to_consider.remove(protecode_app)
             ci.util.info(f'waiting for {protecode_app.product_id()}')
-            protecode_apps_to_consider.add(
+            protecode_apps_to_consider.append(
                 self._api.wait_for_scan_result(protecode_app.product_id())
             )
 
