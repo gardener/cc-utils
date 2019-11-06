@@ -38,7 +38,7 @@ setuptools.setup(
     description='Gardener CI/CD Base Libraries',
     python_requires='>=3.7.*',
     py_modules=modules(),
-    packages=['ci', 'model'],
+    packages=['ccc', 'ci', 'model'],
     package_data={
         'ci':['version'],
     },
