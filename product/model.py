@@ -357,6 +357,26 @@ class Component(ComponentReference):
     def dependencies(self):
         return ComponentDependencies(raw_dict=self.raw['dependencies'])
 
+    def add_dependencies(self, dependencies):
+        '''Convenience method for adding multiple dependencies'''
+        for dependency in dependencies:
+            self.add_dependency(dependency)
+
+    def add_dependency(self, dependency:DependencyBase):
+        '''Convencience method for adding a single dependency. Delegates to the relevant
+        ComponentDependencies method.
+        '''
+        if isinstance(dependency, ComponentReference):
+            self.dependencies().add_component_dependency(dependency)
+        elif isinstance(dependency, ContainerImage):
+            self.dependencies().add_container_image_dependency(dependency)
+        elif isinstance(dependency, WebDependency):
+            self.dependencies().add_web_dependency(dependency)
+        elif isinstance(dependency, GenericDependency):
+            self.dependencies().add_generic_dependency(dependency)
+        else:
+            raise NotImplementedError
+
 
 class ComponentDependencies(ModelBase):
     def __init__(self, *args, **kwargs):
