@@ -13,6 +13,7 @@ cd $repo_dir
 pip3 install --upgrade pip twine wheel setuptools
 
 # build into "${repo_dir}/dist"
+python3 "${repo_dir}/setup.base.py" dist bdist_wheel
 python3 "${repo_dir}/setup.py" sdist bdist_wheel
 
 model_element_cmd="cli.py config model_element --cfg-type pypi --cfg-name gardener"
