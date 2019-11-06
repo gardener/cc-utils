@@ -13,10 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import argparse
+import enum
 import github3.exceptions
+import json
 import os
 import yaml
-import json
 
 import container.registry
 from ci.util import CliHints, CliHint, parse_yaml_file, ctx, fail
@@ -38,6 +39,14 @@ from protecode.util import (
     ProcessingMode
 )
 import product.xml
+
+
+class ValidationPolicy(enum.Enum):
+    NOT_EMPTY = "not_empty"
+    FORBID_EXTRA_ATTRIBUTES = "forbid_extra_attributes"
+
+    def __str__(self):
+        return self.value
 
 
 def upload_grouped_product_images(
