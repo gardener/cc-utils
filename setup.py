@@ -25,7 +25,7 @@ def modules():
     # remove modules already contained in gardener-cicd-base
     module_names.remove('util')
     module_names.remove('ctx')
-    module_names.remove('setup')
+    module_names.remove('setup.base')
     return module_names
 
 
