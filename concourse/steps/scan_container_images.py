@@ -236,10 +236,11 @@ def protecode_results_table(protecode_cfg, upload_results: typing.Iterable[Uploa
         custom_data = analysis_result.custom_data()
         if custom_data is not None:
           image_reference = custom_data.get('IMAGE_REFERENCE')
+          image_reference_url = f'<a href="https://{image_reference}">{image_reference}</a>'
         else:
-          image_reference = None
+          image_reference_url = None
 
-        return [link_to_analysis_url, greatest_cve, image_reference]
+        return [link_to_analysis_url, greatest_cve, image_reference_url]
 
     table = tabulate.tabulate(
       map(result_to_tuple, upload_results),
