@@ -72,8 +72,8 @@ def upload_grouped_images(
     def _upload_tasks():
         for component in component_descriptor.components():
             for image_group in product.util._grouped_effective_images(
+                component,
                 component_descriptor=component_descriptor,
-                component=component
             ):
                 image_group = [
                     image for image in image_group

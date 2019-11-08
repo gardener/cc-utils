@@ -281,8 +281,16 @@ def diff_images(
         if not name in left_names_to_imgs:
             img_diff.irefs_only_right.add(img)
 
-    lgroups = list(_grouped_effective_images(left_component_descriptor, left_component))
-    rgroups = list(_grouped_effective_images(right_component_descriptor, right_component))
+    lgroups = list(_grouped_effective_images(
+        left_component,
+        component_descriptor=left_component_descriptor,
+        )
+    )
+    rgroups = list(_grouped_effective_images(
+        right_component,
+        component_descriptor=right_component_descriptor,
+        )
+    )
 
     def enumerate_group_pairs(lgroups, rgroups):
         for lgroup in lgroups:
@@ -409,18 +417,23 @@ def _effective_images(
 
 
 def _grouped_effective_images(
+    *components,
     component_descriptor,
-    component,
 ):
     '''
-    returns a generator yielding sets of effective images for the given component, grouped by
+    returns a generator yielding sets of effective images for the given components, grouped by
     common image name. If the given component declares dependencies to multiples images of the
     same image name (but with different image versions), they will be grouped in a common set.
     Otherwise, the returned sets will contain exactly one element each.
+
     '''
     image_groups = collections.defaultdict(set) # image_name: [images]
-    for image in _effective_images(component_descriptor=component_descriptor, component=component):
-        image_groups[image.name()].add(image)
+    for component in components:
+        for image in _effective_images(
+                component_descriptor=component_descriptor,
+                component=component
+        ):
+            image_groups[image.name()].add(image)
 
     for image_name, images in image_groups.items():
         yield images

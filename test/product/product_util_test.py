@@ -235,8 +235,10 @@ def test_grouped_effective_images(cref):
 
     grouped_images = tuple(
         util._grouped_effective_images(
-            component_descriptor=comp_desc, component=c1)
+            c1,
+            component_descriptor=comp_desc,
         )
+    )
 
     # image1 and image2 should have been grouped, so expect two groups
     assert len(grouped_images) == 2
