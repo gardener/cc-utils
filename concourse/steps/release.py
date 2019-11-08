@@ -361,12 +361,16 @@ class ReleaseCommitsStep(TransactionalStep):
         version_operation: str,
         prerelease_suffix: str,
     ):
-        # calculate the next version and append the prerelease suffix
+        # calculate the next version
+        version_str = version.process_version(
+            version_str=release_version,
+            operation=version_operation,
+        )
+        if version_operation == version.NOOP:
+            return version_str
+
         return version.process_version(
-            version_str=version.process_version(
-                version_str=release_version,
-                operation=version_operation,
-            ),
+            version_str=version_str,
             operation='set_prerelease',
             prerelease=prerelease_suffix,
         )
