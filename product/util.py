@@ -417,7 +417,7 @@ def _effective_images(
 
 
 def _grouped_effective_images(
-    *components,
+    components,
     component_descriptor,
 ):
     '''

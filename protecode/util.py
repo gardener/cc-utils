@@ -82,7 +82,7 @@ def upload_grouped_images(
                 component_descriptor=component_descriptor,
             ):
                 # XXX HACK: arbitrarily use first component for filtering
-                component = components[0]
+                component = components.pop()
                 image_group = [
                     image for image in image_group
                     if image_reference_filter(component, image)
