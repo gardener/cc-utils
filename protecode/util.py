@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import collections
 from concurrent.futures import ThreadPoolExecutor
 import tabulate
 import typing
@@ -70,11 +71,18 @@ def upload_grouped_images(
         return _task
 
     def _upload_tasks():
+        # group images of same name w/ different versions
+        component_groups = collections.defaultdict(set)
         for component in component_descriptor.components():
+            component_groups[component.name()].add(component)
+
+        for component_name, components in component_groups.items():
             for image_group in product.util._grouped_effective_images(
-                component,
+                components,
                 component_descriptor=component_descriptor,
             ):
+                # XXX HACK: arbitrarily use first component for filtering
+                component = components[0]
                 image_group = [
                     image for image in image_group
                     if image_reference_filter(component, image)
