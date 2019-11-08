@@ -78,11 +78,11 @@ def upload_grouped_images(
 
         for component_name, components in component_groups.items():
             for image_group in product.util._grouped_effective_images(
-                components,
+                *components,
                 component_descriptor=component_descriptor,
             ):
                 # XXX HACK: arbitrarily use first component for filtering
-                component = components[0]
+                component = next(iter(components))
                 image_group = [
                     image for image in image_group
                     if image_reference_filter(component, image)
