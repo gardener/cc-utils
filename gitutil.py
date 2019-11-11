@@ -142,8 +142,12 @@ class GitHelper(object):
         The worktree remains unchanged after the method returns.
 
         @param parent_commits: optional iterable of parent commits; head is used if absent
-        @return the git.Commit object representing the newly created commit
+        @return the git.Commit object representing the newly created commit or
+        None if no changes are done
         '''
+        if not self.repo.is_dirty():
+            return None
+
         if not parent_commits:
             parent_commits = [self.repo.head.commit]
         # add all changes

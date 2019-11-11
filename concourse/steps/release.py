@@ -274,6 +274,10 @@ class ReleaseCommitsStep(TransactionalStep):
         next_cycle_commit = self._add_all_and_create_commit(
             message=self._next_dev_cycle_commit_message(next_cycle_dev_version)
         )
+
+        if not next_cycle_commit:
+            return {}
+
         next_cycle_commit_sha = next_cycle_commit.hexsha
 
         # Push commits to remote
@@ -349,6 +353,8 @@ class ReleaseCommitsStep(TransactionalStep):
         commit = self.git_helper.index_to_commit(
             message=message,
         )
+        if not commit:
+            return None
         self.git_helper.repo.head.reset(
             commit=commit,
             working_tree=True,
