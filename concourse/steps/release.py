@@ -154,6 +154,24 @@ class Transaction(object):
             raise RuntimeError("Unable to revert all steps.")
 
 
+class RebaseStep(TransactionalStep):
+    def __init__(self, git_helper: GitHelper, repository_branch: str):
+        self.git_helper = not_none(git_helper)
+        self.repository_branch = not_empty(repository_branch)
+
+    def name(self):
+        return f'Rebase against {self.repository_branch}'
+
+    def apply(self):
+        upstream_commit_sha = self.git_helper.fetch_head(
+            f'refs/heads/{self.repository_branch}'
+        ).hexsha
+        self.git_helper.rebase(commit_ish=upstream_commit_sha)
+
+    def revert(self):
+        pass
+
+
 class ReleaseCommitsStep(TransactionalStep):
     def __init__(
         self,
@@ -227,12 +245,6 @@ class ReleaseCommitsStep(TransactionalStep):
         return f'Prepare next dev cycle {version}'
 
     def apply(self):
-        if self.rebase_before_release:
-            upstream_commit_sha = self.git_helper.fetch_head(
-                f'refs/heads/{self.repository_branch}'
-            ).hexsha
-            self.git_helper.rebase(commit_ish=upstream_commit_sha)
-
         # clean repository if required
         worktree_dirty = bool(self.git_helper._changed_file_paths())
         if worktree_dirty:
@@ -626,6 +638,15 @@ def release_and_prepare_next_dev_cycle(
         repo_path=repo_dir,
     )
 
+    step_list = []
+
+    if rebase_before_release:
+        rebase_step = RebaseStep(
+            git_helper=git_helper,
+            repository_branch=githubrepobranch.branch(),
+        )
+        step_list.append(rebase_step)
+
     release_commits_step = ReleaseCommitsStep(
         git_helper=git_helper,
         repo_dir=repo_dir,
@@ -638,6 +659,7 @@ def release_and_prepare_next_dev_cycle(
         next_version_callback=next_version_callback,
         rebase_before_release=rebase_before_release,
     )
+    step_list.append(release_commits_step)
 
     github_release_step = GitHubReleaseStep(
         github_helper=github_helper,
@@ -646,10 +668,11 @@ def release_and_prepare_next_dev_cycle(
         release_version=release_version,
         component_descriptor_file_path=component_descriptor_file_path,
     )
+    step_list.append(github_release_step)
 
     release_transaction = Transaction(
         ctx=transaction_ctx,
-        steps=(release_commits_step, github_release_step,)
+        steps=step_list
     )
 
     release_transaction.validate()
