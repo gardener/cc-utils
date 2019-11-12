@@ -172,7 +172,7 @@ class RebaseStep(TransactionalStep):
         pass
 
 
-class ReleaseCommitsStep(TransactionalStep):
+class ReleaseCommitStep(TransactionalStep):
     def __init__(
         self,
         git_helper: GitHelper,
@@ -180,22 +180,13 @@ class ReleaseCommitsStep(TransactionalStep):
         release_version: str,
         repository_version_file_path: str,
         repository_branch: str,
-        rebase_before_release: bool,
-        version_operation: str,
-        prerelease_suffix: str,
         release_commit_callback: str=None,
-        next_version_callback: str=None,
     ):
         self.git_helper = not_none(git_helper)
         self.repository_branch = not_empty(repository_branch)
-        self.release_version = not_empty(release_version)
-        self.rebase_before_release = rebase_before_release
-
-        self.version_operation = not_empty(version_operation)
-        self.prerelease_suffix = not_empty(prerelease_suffix)
-
         repo_dir_absolute = os.path.abspath(not_empty(repo_dir))
         self.repo_dir = repo_dir_absolute
+        self.release_version = not_empty(release_version)
         self.repository_version_file_path = os.path.join(
             repo_dir_absolute,
             repository_version_file_path,
@@ -209,40 +200,19 @@ class ReleaseCommitsStep(TransactionalStep):
         else:
             self.release_commit_callback = None
 
-        if next_version_callback:
-            self.next_version_callback = os.path.join(
-                repo_dir_absolute,
-                next_version_callback,
-            )
-        else:
-            self.next_version_callback = None
+    def _release_commit_message(self, version: str):
+        return f'Release {version}'
 
     def name(self):
-        return "Create Release Commits"
+        return 'Create Release Commit'
 
     def validate(self):
         existing_dir(self.repo_dir)
         semver.parse(self.release_version)
-
         if(self.release_commit_callback):
             existing_file(self.release_commit_callback)
-        if self.next_version_callback:
-            existing_file(self.next_version_callback)
 
         existing_file(self.repository_version_file_path)
-
-        # perform version ops once to validate args
-        self._calculate_next_cycle_dev_version(
-            release_version=self.release_version,
-            version_operation=self.version_operation,
-            prerelease_suffix=self.prerelease_suffix,
-        )
-
-    def _release_commit_message(self, version: str):
-        return f'Release {version}'
-
-    def _next_dev_cycle_commit_message(self, version: str):
-        return f'Prepare next dev cycle {version}'
 
     def apply(self):
         # clean repository if required
@@ -250,52 +220,30 @@ class ReleaseCommitsStep(TransactionalStep):
         if worktree_dirty:
             self.git_helper.repo.head.reset(working_tree=True)
 
-        # first, prepare release commit
+        # prepare release commit
         with open(self.repository_version_file_path, 'w') as f:
             f.write(self.release_version)
 
         # call optional release commit callback
         if self.release_commit_callback:
-            self._invoke_callback(
+            _invoke_callback(
                 callback_script_path=self.release_commit_callback,
                 repo_dir=self.repo_dir,
                 effective_version=self.release_version,
             )
 
-        release_commit = self._add_all_and_create_commit(
+        release_commit = _add_all_and_create_commit(
+            git_helper=self.git_helper,
             message=self._release_commit_message(self.release_version),
         )
 
-        # second, prepare next dev cycle commit
-        next_cycle_dev_version = self._calculate_next_cycle_dev_version(
-            release_version=self.release_version,
-            version_operation=self.version_operation,
-            prerelease_suffix=self.prerelease_suffix,
-        )
-        with open(self.repository_version_file_path, 'w') as f:
-            f.write(next_cycle_dev_version)
-
-        # call optional dev cycle commit callback
-        if self.next_version_callback:
-            self._invoke_callback(
-                callback_script_path=self.next_version_callback,
-                repo_dir=self.repo_dir,
-                effective_version=next_cycle_dev_version,
-            )
-
-        next_cycle_commit = self._add_all_and_create_commit(
-            message=self._next_dev_cycle_commit_message(next_cycle_dev_version)
-        )
-        next_cycle_commit_sha = next_cycle_commit.hexsha
-
-        # Push commits to remote
+        # Push commit to remote
         self.git_helper.push(
-            from_ref=next_cycle_commit_sha,
+            from_ref=release_commit.hexsha,
             to_ref=self.repository_branch,
         )
         return {
             'release commit sha': release_commit.hexsha,
-            'next cycle commit sha': next_cycle_commit_sha,
         }
 
     def revert(self):
@@ -304,15 +252,132 @@ class ReleaseCommitsStep(TransactionalStep):
             return
         else:
             output = self.context().step_output(self.name())
-            # create revert commits for the release commits and push them, but first
+            # create revert commit for the release commit and push it, but first
             # clean repository if required
             worktree_dirty = bool(self.git_helper._changed_file_paths())
             if worktree_dirty:
                 self.git_helper.repo.head.reset(working_tree=True)
 
-            # revert in reverse order. We need to create the commits using our githelper
-            # otherwise git will complain about missing author information
-            next_cycle_dev_version = self._calculate_next_cycle_dev_version(
+            self.git_helper.repo.git.revert(
+                output['release commit sha'],
+                no_edit=True,
+                no_commit=True,
+            )
+            release_revert_commit = _add_all_and_create_commit(
+                git_helper=self.git_helper,
+                message=f"Revert '{self._release_commit_message(self.release_version)}'"
+            )
+            self.git_helper.push(
+                from_ref=release_revert_commit.hexsha,
+                to_ref=self.repository_branch,
+            )
+
+
+class NextDevCycleCommitStep(TransactionalStep):
+    def __init__(
+        self,
+        git_helper: GitHelper,
+        repo_dir: str,
+        release_version: str,
+        repository_version_file_path: str,
+        repository_branch: str,
+        version_operation: str,
+        prerelease_suffix: str,
+        next_version_callback: str=None,
+    ):
+        self.git_helper = not_none(git_helper)
+        self.repository_branch = not_empty(repository_branch)
+        repo_dir_absolute = os.path.abspath(not_empty(repo_dir))
+        self.repo_dir = repo_dir_absolute
+        self.release_version = not_empty(release_version)
+        self.version_operation = not_empty(version_operation)
+        self.prerelease_suffix = not_empty(prerelease_suffix)
+
+        self.repository_version_file_path = os.path.join(
+            repo_dir_absolute,
+            repository_version_file_path,
+        )
+
+        if next_version_callback:
+            self.next_version_callback = os.path.join(
+                repo_dir_absolute,
+                next_version_callback,
+            )
+        else:
+            self.next_version_callback = None
+
+    def _next_dev_cycle_commit_message(self, version: str):
+        return f'Prepare Next Dev Cycle {version}'
+
+    def name(self):
+        return 'Create next development cycle commit'
+
+    def validate(self):
+        existing_dir(self.repo_dir)
+        semver.parse(self.release_version)
+        if self.next_version_callback:
+            existing_file(self.next_version_callback)
+
+        existing_file(self.repository_version_file_path)
+
+        # perform version ops once to validate args
+        _calculate_next_cycle_dev_version(
+            release_version=self.release_version,
+            version_operation=self.version_operation,
+            prerelease_suffix=self.prerelease_suffix,
+        )
+
+    def apply(self):
+        # clean repository if required
+        worktree_dirty = bool(self.git_helper._changed_file_paths())
+        if worktree_dirty:
+            self.git_helper.repo.head.reset(working_tree=True)
+
+        # prepare next dev cycle commit
+        next_cycle_dev_version = _calculate_next_cycle_dev_version(
+            release_version=self.release_version,
+            version_operation=self.version_operation,
+            prerelease_suffix=self.prerelease_suffix,
+        )
+
+        with open(self.repository_version_file_path, 'w') as f:
+            f.write(next_cycle_dev_version)
+
+        # call optional dev cycle commit callback
+        if self.next_version_callback:
+            _invoke_callback(
+                callback_script_path=self.next_version_callback,
+                repo_dir=self.repo_dir,
+                effective_version=next_cycle_dev_version,
+            )
+
+        next_cycle_commit = _add_all_and_create_commit(
+            git_helper=self.git_helper,
+            message=self._next_dev_cycle_commit_message(next_cycle_dev_version)
+        )
+
+        # Push commit to remote
+        self.git_helper.push(
+            from_ref=next_cycle_commit.hexsha,
+            to_ref=self.repository_branch,
+        )
+        return {
+            'next cycle commit sha': next_cycle_commit.hexsha,
+        }
+
+    def revert(self):
+        if not self.context().has_output(self.name()):
+            # push unsuccessful, nothing to do
+            return
+        else:
+            output = self.context().step_output(self.name())
+            # create revert commit for the next dev cycle commit and push it, but first
+            # clean repository if required
+            worktree_dirty = bool(self.git_helper._changed_file_paths())
+            if worktree_dirty:
+                self.git_helper.repo.head.reset(working_tree=True)
+
+            next_cycle_dev_version = _calculate_next_cycle_dev_version(
                 release_version=self.release_version,
                 version_operation=self.version_operation,
                 prerelease_suffix=self.prerelease_suffix,
@@ -322,66 +387,14 @@ class ReleaseCommitsStep(TransactionalStep):
                 no_edit=True,
                 no_commit=True,
             )
-            self._add_all_and_create_commit(
+            next_cycle_revert_commit = _add_all_and_create_commit(
+                git_helper=self.git_helper,
                 message=f"Revert '{self._next_dev_cycle_commit_message(next_cycle_dev_version)}'"
             )
-            self.git_helper.repo.git.revert(
-                output['release commit sha'],
-                no_edit=True,
-                no_commit=True,
-            )
-            release_revert_commit = self._add_all_and_create_commit(
-                message=f"Revert '{self._release_commit_message(self.release_version)}'"
-            )
             self.git_helper.push(
-                from_ref=release_revert_commit.hexsha,
+                from_ref=next_cycle_revert_commit.hexsha,
                 to_ref=self.repository_branch,
             )
-
-    def _invoke_callback(
-        self,
-        callback_script_path: str,
-        repo_dir: str,
-        effective_version: str,
-    ):
-        '''This invokes the callback script with the REPO_DIR and EFFECTIVE_VERSION
-        env variable set to the given values.
-        '''
-        callback_env = os.environ.copy()
-        callback_env['REPO_DIR'] = repo_dir
-        callback_env['EFFECTIVE_VERSION'] = effective_version
-
-        subprocess.run(
-            [callback_script_path],
-            check=True,
-            env=callback_env,
-        )
-
-    def _add_all_and_create_commit(self, message: str):
-        commit = self.git_helper.index_to_commit(
-            message=message,
-        )
-        self.git_helper.repo.head.reset(
-            commit=commit,
-            working_tree=True,
-        )
-        return commit
-
-    def _calculate_next_cycle_dev_version(
-        self,
-        release_version: str,
-        version_operation: str,
-        prerelease_suffix: str,
-    ):
-        # calculate the next version and append the prerelease suffix
-        return version.process_version(
-            version_str=version.process_version(
-                version_str=release_version,
-                operation=version_operation,
-            ),
-            operation='set_prerelease',
-            prerelease=prerelease_suffix,
-        )
 
 
 class GitHubReleaseStep(TransactionalStep):
@@ -426,7 +439,7 @@ class GitHubReleaseStep(TransactionalStep):
     def apply(
         self,
     ):
-        release_commit_step_output = self.context().step_output('Create Release Commits')
+        release_commit_step_output = self.context().step_output('Create Release Commit')
         release_commit_sha = release_commit_step_output['release commit sha']
         # Create GitHub-release
         release = self.github_helper.repository.create_release(
@@ -612,6 +625,51 @@ class PostSlackReleaseStep(TransactionalStep):
         )
 
 
+def _invoke_callback(
+    callback_script_path: str,
+    repo_dir: str,
+    effective_version: str,
+):
+    '''This invokes the callback script with the REPO_DIR and EFFECTIVE_VERSION
+    env variable set to the given values.
+    '''
+    callback_env = os.environ.copy()
+    callback_env['REPO_DIR'] = repo_dir
+    callback_env['EFFECTIVE_VERSION'] = effective_version
+    subprocess.run(
+        [callback_script_path],
+        check=True,
+        env=callback_env,
+    )
+
+
+def _add_all_and_create_commit(git_helper: GitHelper, message: str):
+    commit = git_helper.index_to_commit(
+        message=message,
+    )
+    git_helper.repo.head.reset(
+        commit=commit,
+        working_tree=True,
+    )
+    return commit
+
+
+def _calculate_next_cycle_dev_version(
+    release_version: str,
+    version_operation: str,
+    prerelease_suffix: str,
+):
+    # calculate the next version and append the prerelease suffix
+    return version.process_version(
+        version_str=version.process_version(
+            version_str=release_version,
+            operation=version_operation,
+        ),
+        operation='set_prerelease',
+        prerelease=prerelease_suffix,
+    )
+
+
 def release_and_prepare_next_dev_cycle(
     githubrepobranch: GitHubRepoBranch,
     repository_version_file_path: str,
@@ -647,7 +705,17 @@ def release_and_prepare_next_dev_cycle(
         )
         step_list.append(rebase_step)
 
-    release_commits_step = ReleaseCommitsStep(
+    release_commit_step = ReleaseCommitStep(
+        git_helper=git_helper,
+        repo_dir=repo_dir,
+        release_version=release_version,
+        repository_version_file_path=repository_version_file_path,
+        repository_branch=githubrepobranch.branch(),
+        release_commit_callback=release_commit_callback,
+    )
+    step_list.append(release_commit_step)
+
+    next_cycle_commit_step = NextDevCycleCommitStep(
         git_helper=git_helper,
         repo_dir=repo_dir,
         release_version=release_version,
@@ -655,11 +723,9 @@ def release_and_prepare_next_dev_cycle(
         repository_branch=githubrepobranch.branch(),
         version_operation=version_operation,
         prerelease_suffix=prerelease_suffix,
-        release_commit_callback=release_commit_callback,
         next_version_callback=next_version_callback,
-        rebase_before_release=rebase_before_release,
     )
-    step_list.append(release_commits_step)
+    step_list.append(next_cycle_commit_step)
 
     github_release_step = GitHubReleaseStep(
         github_helper=github_helper,
