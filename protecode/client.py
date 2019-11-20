@@ -282,13 +282,14 @@ class ProtecodeApi(object):
 
         # depending on the scope, different arguments are required
         if scope == TriageScope.ACCOUNT_WIDE:
-            none(product_id)
-            none(group_id)
+            pass
+            #none(product_id)
+            #none(group_id)
         elif scope in (TriageScope.FILE_NAME, TriageScope.FILE_HASH, TriageScope.RESULT):
             not_none(product_id)
-            none(group_id)
+            #none(group_id)
         elif scope == TriageScope.GROUP:
-            none(product_id)
+            #none(product_id)
             not_none(group_id)
         else:
             raise NotImplementedError()
