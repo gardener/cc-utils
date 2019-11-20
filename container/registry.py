@@ -184,6 +184,8 @@ def _push_image(image_reference: str, image_file: str, threads=8):
     privileges=Privileges.READ_WRITE,
   )
 
+  # XXX fail if no creds were found
+
   with v2_2_image.FromTarball(image_file) as v2_2_img:
     try:
       with docker_session.Push(
