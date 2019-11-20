@@ -14,6 +14,7 @@
 # limitations under the License.
 import argparse
 import enum
+import itertools
 import github3.exceptions
 import json
 import os
@@ -21,8 +22,9 @@ import yaml
 
 from typing import Iterable
 
+import ccc.protecode
 import container.registry
-from ci.util import CliHints, CliHint, parse_yaml_file, ctx, fail
+from ci.util import CliHints, CliHint, parse_yaml_file, ctx, fail, info
 from product.model import (
     Component,
     ComponentReference,
@@ -50,6 +52,35 @@ class ValidationPolicy(enum.Enum):
 
     def __str__(self):
         return self.value
+
+
+def transport_triages(
+    protecode_cfg_name: str,
+    from_product_id: int,
+    to_group_id: int,
+    to_product_ids: [int],
+):
+    cfg_factory = ctx().cfg_factory()
+    protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
+    api = ccc.protecode.client(protecode_cfg)
+
+    scan_result_from = api.scan_result(product_id=from_product_id)
+
+    def enum_triages():
+        for component in scan_result_from.components():
+            for vulnerability in component.vulnerabilities():
+                yield from vulnerability.triages()
+
+    triages = list(enum_triages())
+    info(f'found {len(triages)} triage(s) to import')
+
+    for to_product_id, triage in itertools.product(to_product_ids, triages):
+        api.add_triage(
+            triage=triage,
+            product_id=to_product_id,
+            group_id=to_group_id,
+        )
+        info(f'added triage for {triage.component_name()} to {to_product_id}')
 
 
 def upload_grouped_product_images(
