@@ -21,7 +21,7 @@ from typing import List
 
 import requests
 
-from ci.util import not_empty, not_none, none, urljoin
+from ci.util import not_empty, not_none, urljoin
 from http_requests import check_http_code, mount_default_adapter
 from .model import (
     AnalysisResult,
@@ -283,13 +283,9 @@ class ProtecodeApi(object):
         # depending on the scope, different arguments are required
         if scope == TriageScope.ACCOUNT_WIDE:
             pass
-            #none(product_id)
-            #none(group_id)
         elif scope in (TriageScope.FILE_NAME, TriageScope.FILE_HASH, TriageScope.RESULT):
             not_none(product_id)
-            #none(group_id)
         elif scope == TriageScope.GROUP:
-            #none(product_id)
             not_none(group_id)
         else:
             raise NotImplementedError()
