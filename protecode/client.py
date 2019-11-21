@@ -316,10 +316,10 @@ class ProtecodeApi(object):
         if group_id:
             triage_dict['group_id'] = group_id
 
-        self._put(
+        return self._put(
             url=url,
             json=triage_dict,
-        )
+        ).json()
 
     # --- "rest" routes (undocumented API)
 
