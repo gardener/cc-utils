@@ -52,6 +52,9 @@ class Component(ModelBase):
     def name(self):
         return self.raw.get('lib')
 
+    def version(self):
+        return self.raw.get('version')
+
     def vulnerabilities(self) -> 'Iterable[Vulnerability]':
         return (Vulnerability(raw_dict=raw) for raw in self.raw.get('vulns'))
 
