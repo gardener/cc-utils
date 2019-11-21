@@ -65,21 +65,42 @@ def transport_triages(
     api = ccc.protecode.client(protecode_cfg)
 
     scan_result_from = api.scan_result(product_id=from_product_id)
+    scan_results_to = {
+        product_id: api.scan_result(product_id=product_id)
+        for product_id in to_product_ids
+    }
+
+    def target_component_versions(product_id: int, component_name: str):
+        scan_result = scan_results_to[product_id]
+        component_versions = {
+            c.version() for c
+            in scan_result.components()
+            if c.name() == component_name
+        }
+        return component_versions
 
     def enum_triages():
         for component in scan_result_from.components():
             for vulnerability in component.vulnerabilities():
-                yield from vulnerability.triages()
+                for triage in vulnerability.triages():
+                    yield component, triage
 
     triages = list(enum_triages())
     info(f'found {len(triages)} triage(s) to import')
 
-    for to_product_id, triage in itertools.product(to_product_ids, triages):
-        api.add_triage(
-            triage=triage,
+    for to_product_id, component_name_and_triage in itertools.product(to_product_ids, triages):
+        component, triage = component_name_and_triage
+        for target_component_version in target_component_versions(
             product_id=to_product_id,
-            group_id=to_group_id,
-        )
+            component_name=component.name(),
+        ):
+            info(f'adding triage for {triage.component_name()}:{target_component_version}')
+            api.add_triage(
+                triage=triage,
+                product_id=to_product_id,
+                group_id=to_group_id,
+                component_version=target_component_version,
+            )
         info(f'added triage for {triage.component_name()} to {to_product_id}')
 
 
