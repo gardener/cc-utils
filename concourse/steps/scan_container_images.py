@@ -15,6 +15,7 @@
 
 import dataclasses
 import functools
+import logging
 import textwrap
 import typing
 
@@ -26,6 +27,8 @@ import protecode.util
 
 from concourse.model.traits.image_scan import Notify
 from product.model import ComponentName, UploadResult
+
+logger = logging.getLogger()
 
 
 @dataclasses.dataclass
@@ -79,11 +82,11 @@ class MailRecipients(object):
         )
 
     def add_protecode_results(self, results: typing.Iterable[typing.Tuple[UploadResult, int]]):
-        print(f'adding protecode results for {self}')
+        logger.info(f'adding protecode results for {self}')
         for result in results:
             if self._result_filter:
                 if not self._result_filter(component=result[0].component):
-                    print(f'did not match: {result[0].component.name()}')
+                    logger.debug(f'did not match: {result[0].component.name()}')
                     continue
             self._protecode_results.append(result)
 
