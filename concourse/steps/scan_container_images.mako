@@ -150,13 +150,18 @@ for email_recipient in email_recipients:
     ci.util.warning(f'no email addresses could be retrieved for {component_name}')
     sys.exit(0)
 
+  import traceback
   # notify about critical vulnerabilities
-  mailutil._send_mail(
-    email_cfg=cfg_set.email(),
-    recipients=email_addresses,
-    mail_template=body,
-    subject=f'[Action Required] landscape {component_name} has critical Vulnerabilities',
-    mimetype='html',
-  )
-  ci.util.info('sent notification emails to: ' + ','.join(email_addresses))
+  try:
+    mailutil._send_mail(
+      email_cfg=cfg_set.email(),
+      recipients=email_addresses,
+      mail_template=body,
+      subject=f'[Action Required] landscape {component_name} has critical Vulnerabilities',
+      mimetype='html',
+    )
+    ci.util.info('sent notification emails to: ' + ','.join(email_addresses))
+  except Exception as e:
+    traceback.print_exc()
+    ci.util.warning(f'error whilst trying to send notification-mails for {component_name}')
 </%def>
