@@ -260,7 +260,8 @@ class ProtecodeApi(object):
         triage: Triage,
         scope: TriageScope=None,
         product_id=None,
-        group_id=None
+        group_id=None,
+        component_version=None,
     ):
         '''
         adds an existing Protecode triage to a specified target. The existing triage is usually
@@ -270,10 +271,16 @@ class ProtecodeApi(object):
         Note that - depending on the effective target scope, the `product_id`, `group_id` formal
         parameters are either required or forbidden.
 
+        Note that Protecode will only accept triages for matching (component, vulnerabilities,
+        version) tuples. In particular, triages for different component versions will be silently
+        ignored. Explicitly pass `component_version` of target protecode app (/product) to force
+        Protecode into accepting the given triage.
+
         @param triage: the triage to "copy"
         @param scope: if given, overrides the triage's scope
         @param product_id: target product_id. required iff scope in FN, FH, R
         @param group_id: target group_id. required iff scope is G(ROUP)
+        @param component_version: overwrite target component version
         '''
         url = self._routes.triage()
 
@@ -290,10 +297,13 @@ class ProtecodeApi(object):
         else:
             raise NotImplementedError()
 
+        if not component_version:
+            component_version = triage.component_version()
+
         # "copy" data from existing triage
         triage_dict = {
             'component': triage.component_name(),
-            'version': triage.component_version(),
+            'version': component_version,
             'vulns': [triage.vulnerability_id()],
             'scope': triage.scope().value,
             'reason': triage.reason(),
