@@ -715,17 +715,18 @@ def release_and_prepare_next_dev_cycle(
     )
     step_list.append(release_commit_step)
 
-    next_cycle_commit_step = NextDevCycleCommitStep(
-        git_helper=git_helper,
-        repo_dir=repo_dir,
-        release_version=release_version,
-        repository_version_file_path=repository_version_file_path,
-        repository_branch=githubrepobranch.branch(),
-        version_operation=version_operation,
-        prerelease_suffix=prerelease_suffix,
-        next_version_callback=next_version_callback,
-    )
-    step_list.append(next_cycle_commit_step)
+    if version_operation != version.NOOP:
+        next_cycle_commit_step = NextDevCycleCommitStep(
+            git_helper=git_helper,
+            repo_dir=repo_dir,
+            release_version=release_version,
+            repository_version_file_path=repository_version_file_path,
+            repository_branch=githubrepobranch.branch(),
+            version_operation=version_operation,
+            prerelease_suffix=prerelease_suffix,
+            next_version_callback=next_version_callback,
+        )
+        step_list.append(next_cycle_commit_step)
 
     github_release_step = GitHubReleaseStep(
         github_helper=github_helper,
