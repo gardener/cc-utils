@@ -221,9 +221,6 @@ class ComponentReference(DependencyBase):
     def type_name(self):
         return 'component'
 
-    def version(self):
-        return self.raw['version']
-
     def github_host(self):
         return self._componentName.github_host()
 
