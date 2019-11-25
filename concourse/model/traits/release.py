@@ -15,6 +15,7 @@
 
 import enum
 
+import version
 from concourse.model.job import (
     JobVariant,
 )
@@ -28,6 +29,9 @@ from concourse.model.base import (
   Trait,
   TraitTransformer,
   ScriptType,
+)
+from model.base import(
+    ModelValidationError,
 )
 
 
@@ -120,6 +124,13 @@ class ReleaseTrait(Trait):
 
     def release_notes_policy(self) -> ReleaseNotesPolicy:
         return ReleaseNotesPolicy(self.raw.get('release_notes_policy'))
+
+    def validate(self):
+        super().validate()
+        if self.nextversion() == version.NOOP and self.next_version_callback_path():
+            raise ModelValidationError(
+                f'not possible to configure "next_version_callback" if version is "{version.NOOP}"'
+            )
 
     def transformer(self):
         return ReleaseTraitTransformer()
