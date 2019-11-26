@@ -14,9 +14,7 @@
 # limitations under the License.
 
 import collections
-import os
 import semver
-import sys
 
 from typing import (
     Iterable,
@@ -24,9 +22,6 @@ from typing import (
 )
 
 import ci.util
-
-own_dir = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(own_dir, os.path.pardir))
 
 SEMVER_OPS = set([
     'bump_minor',
