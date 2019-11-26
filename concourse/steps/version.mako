@@ -60,6 +60,7 @@ processed_version = version.process_version(
     prerelease=prerelease,
     **${version_operation_kwargs},
 )
+ci.util.info('version preprocessing operation: ${version_operation}')
 ci.util.info(f'effective version: {processed_version}')
 
 cc_version = '/metadata/VERSION'
