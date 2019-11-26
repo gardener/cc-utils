@@ -18,7 +18,6 @@ from git.exc import GitError
 from github.util import GitHubRepositoryHelper
 from pydash import _
 import re
-from semver import parse_version_info
 import typing
 
 from github.release_notes.model import (
@@ -36,6 +35,7 @@ from ci.util import info, warning, fail, verbose, ctx
 from product.model import ComponentName
 from model.base import ModelValidationError
 from slackclient.util import SlackHelper
+import version
 
 
 def fetch_release_notes(
@@ -227,7 +227,7 @@ def release_tags(
 ) -> [str]:
     def is_valid_semver(tag_name):
         try:
-            parse_version_info(tag_name)
+            version.parse_to_semver(tag_name)
             return True
         except ValueError:
             warning('{tag} is not a valid SemVer string'.format(tag=tag_name))
@@ -275,7 +275,7 @@ def reachable_release_tags_from_commit(
             queue.extend(not_visited_parents)
             visited |= set(_.map(not_visited_parents, lambda commit: commit.hexsha))
 
-    reachable_tags.sort(key=lambda t: parse_version_info(t), reverse=True)
+    reachable_tags.sort(key=lambda t: version.parse_to_semver(t), reverse=True)
 
     if not reachable_tags:
         warning('no release tag found, falling back to root commit')

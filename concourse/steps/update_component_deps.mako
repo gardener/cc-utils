@@ -17,14 +17,13 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 
-import semver
-
 import ci.util
 import ctx
 import github.util
 import gitutil
 import product.model
 import product.util
+import version
 
 from concourse.model.traits.update_component_deps import (
     MergePolicy,
@@ -267,7 +266,7 @@ immediate_dependencies = current_component().dependencies()
 
 if UPGRADE_TO_UPSTREAM:
   def determine_reference_version(component_name):
-    return semver.parse_version_info(
+    return version.parse_to_semver(
       _component(upstream_reference_component().dependencies(), component_name).version()
     )
 else:
@@ -282,7 +281,7 @@ for reference in product.util.greatest_references(immediate_dependencies.compone
       name=reference.name(),
       version=str(latest_version),
     )
-    if latest_version <= semver.parse_version_info(reference.version()):
+    if latest_version <= version.parse_to_semver(reference.version()):
         ci.util.info('skipping outdated component upgrade: {n}; our version: {ov}, found: {fv}'.format(
           n=reference.name(),
           ov=str(reference.version()),

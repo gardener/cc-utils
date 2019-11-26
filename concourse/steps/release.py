@@ -1,7 +1,6 @@
 import abc
 import os
 import version
-import semver
 import subprocess
 import traceback
 import typing
@@ -208,7 +207,7 @@ class ReleaseCommitStep(TransactionalStep):
 
     def validate(self):
         existing_dir(self.repo_dir)
-        semver.parse(self.release_version)
+        version.parse_to_semver(self.release_version)
         if(self.release_commit_callback):
             existing_file(self.release_commit_callback)
 
@@ -314,7 +313,7 @@ class NextDevCycleCommitStep(TransactionalStep):
 
     def validate(self):
         existing_dir(self.repo_dir)
-        semver.parse(self.release_version)
+        version.parse_to_semver(self.release_version)
         if self.next_version_callback:
             existing_file(self.next_version_callback)
 
@@ -423,7 +422,7 @@ class GitHubReleaseStep(TransactionalStep):
         return "Create Release"
 
     def validate(self):
-        semver.parse(self.release_version)
+        version.parse_to_semver(self.release_version)
         # if a tag with the given release version exists, we cannot create another release
         # pointing to it
         if self.github_helper.tag_exists(tag_name=self.release_version):
@@ -498,7 +497,7 @@ class PublishReleaseNotesStep(TransactionalStep):
         self.repo_dir = os.path.abspath(not_empty(repo_dir))
 
     def validate(self):
-        semver.parse(self.release_version)
+        version.parse_to_semver(self.release_version)
         existing_dir(self.repo_dir)
 
         # check whether a release with the given version exists
@@ -550,7 +549,7 @@ class CleanupDraftReleaseStep(TransactionalStep):
         self.release_version = not_empty(release_version)
 
     def validate(self):
-        semver.parse(self.release_version)
+        version.parse_to_semver(self.release_version)
 
     def apply(self):
         draft_name = draft_release_name_for_version(self.release_version)
@@ -595,7 +594,7 @@ class PostSlackReleaseStep(TransactionalStep):
         self.release_notes = not_none(release_notes)
 
     def validate(self):
-        semver.parse(self.release_version)
+        version.parse_to_semver(self.release_version)
 
     def apply(self):
         responses = post_to_slack(
