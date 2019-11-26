@@ -98,6 +98,14 @@ ATTRIBUTES = (
         configures the release notes handling policy
         ''',
         type=ReleaseNotesPolicy,
+    ),
+    AttributeSpec.optional(
+        name='commit_message_prefix',
+        default=None,
+        doc='''
+        an optional prefix for release commit messages
+        ''',
+        type=str,
     )
 )
 
@@ -124,6 +132,9 @@ class ReleaseTrait(Trait):
 
     def release_notes_policy(self) -> ReleaseNotesPolicy:
         return ReleaseNotesPolicy(self.raw.get('release_notes_policy'))
+
+    def commit_message_prefix(self) -> str:
+        return self.raw.get('commit_message_prefix')
 
     def validate(self):
         super().validate()

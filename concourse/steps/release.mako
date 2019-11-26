@@ -10,6 +10,7 @@ version_file = job_step.input('version_path') + '/version'
 release_trait = job_variant.trait('release')
 version_trait = job_variant.trait('version')
 version_op = release_trait.nextversion()
+commit_message_prefix = release_trait.commit_message_prefix()
 
 has_slack_trait = job_variant.has_trait('slack')
 if has_slack_trait:
@@ -73,5 +74,8 @@ release_and_prepare_next_dev_cycle(
   release_version=version_str,
   version_operation='${version_op}',
   release_notes_policy='${release_trait.release_notes_policy().value}',
+  % if commit_message_prefix:
+  commit_message_prefix='${commit_message_prefix}',
+  % endif
 )
 </%def>

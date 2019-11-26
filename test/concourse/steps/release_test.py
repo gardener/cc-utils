@@ -26,6 +26,7 @@ class TestReleaseCommitStep(object):
                 release_version=release_version,
                 repository_version_file_path=repository_version_file_path,
                 repository_branch=repository_branch,
+                commit_message_prefix=None,
                 release_commit_callback=release_commit_callback,
             )
         return _examinee
