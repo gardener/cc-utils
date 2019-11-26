@@ -179,6 +179,7 @@ class ReleaseCommitStep(TransactionalStep):
         release_version: str,
         repository_version_file_path: str,
         repository_branch: str,
+        commit_message_prefix: str,
         release_commit_callback: str=None,
     ):
         self.git_helper = not_none(git_helper)
@@ -190,6 +191,7 @@ class ReleaseCommitStep(TransactionalStep):
             repo_dir_absolute,
             repository_version_file_path,
         )
+        self.commit_message_prefix = commit_message_prefix
 
         if release_commit_callback:
             self.release_commit_callback = os.path.join(
@@ -199,8 +201,12 @@ class ReleaseCommitStep(TransactionalStep):
         else:
             self.release_commit_callback = None
 
-    def _release_commit_message(self, version: str):
-        return f'Release {version}'
+    def _release_commit_message(self, version: str, commit_message_prefix: str):
+        message = f'Release {version}'
+        if commit_message_prefix:
+            return f'{commit_message_prefix} {message}'
+        else:
+            return message
 
     def name(self):
         return 'Create Release Commit'
@@ -233,7 +239,7 @@ class ReleaseCommitStep(TransactionalStep):
 
         release_commit = _add_all_and_create_commit(
             git_helper=self.git_helper,
-            message=self._release_commit_message(self.release_version),
+            message=self._release_commit_message(self.release_version, self.commit_message_prefix),
         )
 
         # Push commit to remote
@@ -685,6 +691,7 @@ def release_and_prepare_next_dev_cycle(
     slack_cfg_name: str=None,
     slack_channel: str=None,
     rebase_before_release: bool=False,
+    commit_message_prefix: str=None,
 ):
     transaction_ctx = TransactionContext() # shared between all steps/trxs
 
@@ -710,6 +717,7 @@ def release_and_prepare_next_dev_cycle(
         release_version=release_version,
         repository_version_file_path=repository_version_file_path,
         repository_branch=githubrepobranch.branch(),
+        commit_message_prefix=commit_message_prefix,
         release_commit_callback=release_commit_callback,
     )
     step_list.append(release_commit_step)
