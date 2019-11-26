@@ -136,7 +136,7 @@ def process_version(
         processed_version = str(parsed_version)
 
     if metadata.prefix:
-        return metadata.prefix + process_version
+        return metadata.prefix + processed_version
     return processed_version
 
 
