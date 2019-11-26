@@ -23,13 +23,6 @@ from typing import (
 
 import ci.util
 
-SEMVER_OPS = set([
-    'bump_minor',
-    'bump_major',
-    'bump_patch',
-    'finalize_version'
-])
-
 NOOP = 'noop'
 SET_PRERELEASE = 'set_prerelease'
 APPEND_PRERELEASE = 'append_prerelease'
