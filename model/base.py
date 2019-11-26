@@ -57,7 +57,10 @@ class ModelValidationMixin(object):
         unknown_attributes = [a for a in self.raw if a not in self._known_attributes()]
         if unknown_attributes:
             if hasattr(self, 'name'):
-                name = self.name()
+                if callable(self.name):
+                    name = self.name()
+                else:
+                    name = str(self.name)
             else:
                 name = '<unknown>'
 
