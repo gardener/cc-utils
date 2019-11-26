@@ -26,7 +26,7 @@ from subprocess import CalledProcessError
 
 import yaml
 import concourse.client as client
-import semver
+import version
 
 from landscape_setup import kube_ctx
 from landscape_setup.utils import (
@@ -352,8 +352,8 @@ def deploy_concourse_landscape(
     # Add proxy sidecars to instance specific values.
     # NOTE: Only works for helm chart version 3.8.0 or greater
     if concourse_cfg.proxy():
-        chart_version_semver = semver.parse_version_info(concourse_cfg.helm_chart_version())
-        min_version = semver.parse_version_info('3.8.0')
+        chart_version_semver = version.parse_to_semver(concourse_cfg.helm_chart_version())
+        min_version = version.parse_to_semver('3.8.0')
         if chart_version_semver >= min_version:
             instance_specific_helm_values = add_proxy_values(
                 config_set=config_set,

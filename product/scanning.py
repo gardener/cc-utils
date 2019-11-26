@@ -14,7 +14,6 @@
 # limitations under the License.
 from functools import partial
 import enum
-import semver
 import tempfile
 import typing
 
@@ -31,6 +30,7 @@ from ci.util import not_none, warning, check_type, info
 from container.registry import retrieve_container_image
 from .model import ContainerImage, Component, UploadResult, UploadStatus
 import ci.util
+import version
 
 
 class ProcessingMode(AttribSpecMixin, enum.Enum):
@@ -77,11 +77,6 @@ class ContainerImageGroup(object):
         component,
         container_images: typing.Iterable[ContainerImage],
     ):
-        def _to_semver(container_image):
-            # XXX do this centrally
-            version_str = container_image.version()
-            return semver.parse_version_info(version_str.lstrip('v'))
-
         self._component = component
 
         self._container_images = list(container_images)
@@ -89,13 +84,12 @@ class ContainerImageGroup(object):
         if not len(self._container_images) > 0:
             raise ValueError('at least one container image must be given')
 
-        # workaround (not all versions are valid semver-versions unfortunately) :-(((
-        # - so at least do not try to parse in case no sorting is required
+        # do not try to parse in case no sorting is required
         if len(container_images) > 1:
             # sort, smallest version first
             self._container_images = sorted(
                 self._container_images,
-                key=_to_semver,
+                key=version.parse_to_semver,
             )
 
         image_name = {i.name() for i in self._container_images}

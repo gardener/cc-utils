@@ -31,6 +31,50 @@ SET_PRERELEASE_AND_BUILD = 'set_prerelease_and_build'
 SET_VERBATIM = 'set_verbatim'
 
 
+def parse_to_semver(
+    version: str,
+):
+    '''
+    parses the given version into a semver.VersionInfo object.
+
+    Different from strict semver, the given version is preprocessed, if required, to
+    convert the version into a valid semver version, if possible.
+
+    The following preprocessings are done:
+
+    - strip away `v` prefix
+    - append patch-level `.0` for two-digit versions
+    '''
+    def raise_invalid():
+        raise ValueError(f'not a valid (semver) version: {version}')
+
+    if not version:
+        raise_invalid()
+
+    semver_version = version
+
+    # strip leading `v`
+    if version[0] == 'v':
+        semver_version = version[1:]
+
+    # in most cases, we should be fine now
+    try:
+        return semver.parse_version_info(semver_version)
+    except ValueError:
+        pass # try extending `.0` as patch-level
+
+    # blindly append patch-level
+    if '-' in version:
+        sep = '-'
+    else:
+        sep = '+'
+
+    numeric, sep, suffix = semver_version.partition(sep)
+    numeric += '.0'
+
+    return semver.parse_version_info(numeric + sep + suffix)
+
+
 def process_version(
     version_str: str,
     operation: str,
