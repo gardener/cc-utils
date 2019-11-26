@@ -35,6 +35,42 @@ from model.base import(
 )
 
 
+class NextVersion(AttribSpecMixin, enum.Enum):
+    BUMP_MAJOR = 'bump_major'
+    BUMP_MINOR = 'bump_minor'
+    BUMP_PATCH = 'bump_patch'
+    NOOP = 'noop'
+
+    @classmethod
+    def _attribute_specs(cls):
+        return (
+            AttributeSpec.optional(
+                name=cls.BUMP_MAJOR.value,
+                default=None,
+                doc='Increments the major version of the next development cycle',
+                type=str,
+            ),
+            AttributeSpec.optional(
+                name=cls.BUMP_MINOR.value,
+                default=None,
+                doc='Increments the minor version of the next development cycle',
+                type=str,
+            ),
+            AttributeSpec.optional(
+                name=cls.BUMP_PATCH.value,
+                default=None,
+                doc='Increments the patch version of the next development cycle',
+                type=str,
+            ),
+            AttributeSpec.optional(
+                name=cls.NOOP.value,
+                default=None,
+                doc='No change to the next development cycle version done',
+                type=str,
+            ),
+        )
+
+
 class ReleaseNotesPolicy(AttribSpecMixin, enum.Enum):
     DEFAULT = 'default'
     DISABLED = 'disabled'
@@ -60,8 +96,9 @@ class ReleaseNotesPolicy(AttribSpecMixin, enum.Enum):
 ATTRIBUTES = (
     AttributeSpec.optional(
         name='nextversion',
-        default='bump_minor',
+        default=NextVersion.BUMP_MINOR.value,
         doc='specifies how the next development version is to be calculated',
+        type=NextVersion,
     ),
     AttributeSpec.optional(
         name='release_callback',
