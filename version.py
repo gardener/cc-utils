@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import collections
+import dataclasses
 import semver
 
 from typing import (
@@ -31,6 +32,11 @@ SET_PRERELEASE_AND_BUILD = 'set_prerelease_and_build'
 SET_VERBATIM = 'set_verbatim'
 
 
+@dataclasses.dataclass
+class _VersionMetadata:
+    prefix: str = None
+
+
 def parse_to_semver(
     version: str,
 ):
@@ -45,6 +51,11 @@ def parse_to_semver(
     - strip away `v` prefix
     - append patch-level `.0` for two-digit versions
     '''
+    semver_version_info, _ = _parse_to_semver_and_metadata(version)
+    return semver_version_info
+
+
+def _parse_to_semver_and_metadata(version: str):
     def raise_invalid():
         raise ValueError(f'not a valid (semver) version: {version}')
 
@@ -52,14 +63,16 @@ def parse_to_semver(
         raise_invalid()
 
     semver_version = version
+    metadata = _VersionMetadata()
 
     # strip leading `v`
     if version[0] == 'v':
         semver_version = version[1:]
+        metadata.prefix='v'
 
     # in most cases, we should be fine now
     try:
-        return semver.parse_version_info(semver_version)
+        return semver.parse_version_info(semver_version), metadata
     except ValueError:
         pass # try extending `.0` as patch-level
 
@@ -72,7 +85,7 @@ def parse_to_semver(
     numeric, sep, suffix = semver_version.partition(sep)
     numeric += '.0'
 
-    return semver.parse_version_info(numeric + sep + suffix)
+    return semver.parse_version_info(numeric + sep + suffix), metadata
 
 
 def process_version(
@@ -97,7 +110,8 @@ def process_version(
     if operation == SET_VERBATIM and (not verbatim_version or prerelease or build_metadata):
         raise ValueError('Exactly verbatim-version must be given when using operation set_verbatim')
 
-    parsed_version = parse_to_semver(version_str)
+    parsed_version, metadata = _parse_to_semver_and_metadata(version_str)
+    version_str = str(parsed_version)
 
     if operation == APPEND_PRERELEASE and not parsed_version.prerelease:
         raise ValueError('Given SemVer must have prerelease-version to append to.')
@@ -121,6 +135,8 @@ def process_version(
             parsed_version._build = build_metadata[:build_metadata_length]
         processed_version = str(parsed_version)
 
+    if metadata.prefix:
+        return metadata.prefix + process_version
     return processed_version
 
 
