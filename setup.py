@@ -7,11 +7,17 @@ own_dir = os.path.abspath(os.path.dirname(__file__))
 def requirements():
     yield 'gardener-cicd-base'
 
+    # dependencies only required by WHD
+    whd_dependencies = ('Flask-RESTful', 'Flask', 'bjoern')
+
     with open(os.path.join(own_dir, 'requirements.txt')) as f:
         for line in f.readlines():
             line = line.strip()
             if not line or line.startswith('#'):
                 continue
+            if any((whd_dep in line for whd_dep in whd_dependencies)):
+                continue
+
             yield line
 
 
@@ -35,6 +41,8 @@ def packages():
     # remove packages already contained in gardener-cicd-base
     package_names.remove('ci')
     package_names.remove('model')
+    # remove whd (released in separate module)
+    package_names.remove('whd')
     return package_names
 
 
