@@ -496,15 +496,30 @@ class PublishReleaseNotesStep(TransactionalStep):
         github_helper: GitHubRepositoryHelper,
         release_version: str,
         repo_dir: str,
+        release_notes_callback: str=None,
     ):
         self.githubrepobranch = not_none(githubrepobranch)
         self.github_helper = not_none(github_helper)
         self.release_version = not_empty(release_version)
         self.repo_dir = os.path.abspath(not_empty(repo_dir))
+        self.release_notes_callback = release_notes_callback
+
+        if release_notes_callback:
+            self.release_notes_callback = os.path.join(
+                self.repo_dir,
+                release_notes_callback,
+            )
+            # write release notes outside of git repo
+            self.release_notes_file_path = os.path.join(
+                self.repo_dir,
+                os.pardir
+            )
 
     def validate(self):
         version.parse_to_semver(self.release_version)
         existing_dir(self.repo_dir)
+        if self.release_notes_callback:
+            existing_file(self.release_notes_callback)
 
         # check whether a release with the given version exists
         try:
@@ -522,6 +537,22 @@ class PublishReleaseNotesStep(TransactionalStep):
             repository_branch=self.githubrepobranch.branch(),
         )
         release_notes_md = release_notes.to_markdown()
+
+        if self.release_notes_callback:
+            with open(self.release_notes_file_path, 'w') as f:
+                f.write(release_notes_md)
+
+            callback_env = os.environ.copy()
+            callback_env['RELEASE_NOTES_FILE_PATH'] = self.release_notes_file_path
+            subprocess.run(
+                [self.release_notes_callback],
+                check=True,
+                env=callback_env,
+            )
+
+            with open(self.release_notes_file_path, 'r') as f:
+                release_notes_md = f.read()
+
         self.github_helper.update_release_notes(
             tag_name=self.release_version,
             body=release_notes_md,
@@ -683,6 +714,7 @@ def release_and_prepare_next_dev_cycle(
     release_notes_policy: str,
     release_commit_callback: str=None,
     next_version_callback: str=None,
+    release_notes_callback: str=None,
     version_operation: str="bump_minor",
     prerelease_suffix: str="dev",
     author_name: str="gardener-ci",
@@ -758,6 +790,7 @@ def release_and_prepare_next_dev_cycle(
         github_helper=github_helper,
         release_version=release_version,
         repo_dir=repo_dir,
+        release_notes_callback=release_notes_callback,
     )
 
     cleanup_draft_releases_step = CleanupDraftReleaseStep(

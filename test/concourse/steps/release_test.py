@@ -172,12 +172,14 @@ class TestPublishReleaseNotesStep(object):
             ),
             repo_dir=str(tmp_path),
             release_version='1.0.0',
+            release_notes_callback=None,
         ):
             return concourse.steps.release.PublishReleaseNotesStep(
                 github_helper=github_helper,
                 githubrepobranch=githubrepobranch,
                 repo_dir=repo_dir,
                 release_version=release_version,
+                release_notes_callback=release_notes_callback
             )
         return _examinee
 

@@ -129,6 +129,18 @@ ATTRIBUTES = (
         ''',
     ),
     AttributeSpec.optional(
+        name='release_notes_callback',
+        default=None,
+        doc='''
+        an optional callback that is called during release notes creation.
+        The file path is relative to the repo root and must be executable.
+        The callback is passed the absolute path to the releases notes via environment
+        variable `RELEASE_NOTES_FILE_PATH`. The release notes are a regular text file
+        with UTF-8 encoding. Markdown syntax is supported.
+        Any changes in this file will be part of the final release notes.
+        ''',
+    ),
+    AttributeSpec.optional(
         name='release_notes_policy',
         default=ReleaseNotesPolicy.DEFAULT.value,
         doc='''
@@ -163,6 +175,9 @@ class ReleaseTrait(Trait):
 
     def next_version_callback_path(self):
         return self.raw['next_version_callback']
+
+    def release_notes_callback_path(self):
+        return self.raw['release_notes_callback']
 
     def rebase_before_release(self):
         return self.raw['rebase_before_release']

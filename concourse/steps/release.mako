@@ -32,6 +32,7 @@ if has_component_descriptor_trait:
 
 release_callback_path = release_trait.release_callback_path()
 next_version_callback_path = release_trait.next_version_callback_path()
+release_notes_callback_path = release_trait.release_notes_callback_path()
 %>
 import ci.util
 
@@ -67,6 +68,9 @@ release_and_prepare_next_dev_cycle(
   % if next_version_callback_path:
   next_version_callback='${next_version_callback_path}',
   % endif
+  % if release_notes_callback_path:
+  release_notes_callback='${release_notes_callback_path}'
+  %endif
   rebase_before_release=${release_trait.rebase_before_release()},
   githubrepobranch=githubrepobranch,
   repo_dir=repo_dir,
