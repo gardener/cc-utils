@@ -97,7 +97,7 @@ def process_version(
     if operation == SET_VERBATIM and (not verbatim_version or prerelease or build_metadata):
         raise ValueError('Exactly verbatim-version must be given when using operation set_verbatim')
 
-    parsed_version = semver.parse_version_info(version_str)
+    parsed_version = parse_to_semver(version_str)
 
     if operation == APPEND_PRERELEASE and not parsed_version.prerelease:
         raise ValueError('Given SemVer must have prerelease-version to append to.')
@@ -164,7 +164,7 @@ def partition_by_major_and_minor(
 
 def is_semver_parseable(version_string: str):
     try:
-        semver.parse_version_info(version_string)
+        parse_to_semver(version_string)
     except ValueError:
         ci.util.verbose(f"Could not parse '{version_string}' as semver version")
         return False
