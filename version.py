@@ -37,17 +37,6 @@ SET_BUILD_METADATA = 'set_build_metadata'
 SET_PRERELEASE_AND_BUILD = 'set_prerelease_and_build'
 SET_VERBATIM = 'set_verbatim'
 
-CUSTOM_OPS = set([
-    NOOP,
-    SET_PRERELEASE,
-    APPEND_PRERELEASE,
-    SET_BUILD_METADATA,
-    SET_PRERELEASE_AND_BUILD,
-    SET_VERBATIM
-])
-
-ALL_OPS = SEMVER_OPS.union(CUSTOM_OPS)
-
 
 def process_version(
     version_str: str,
