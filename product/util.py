@@ -19,7 +19,6 @@ import dataclasses
 import github3.exceptions
 import functools
 import itertools
-import semver
 import typing
 import yaml
 
@@ -35,6 +34,7 @@ from .model import (
     DependencyBase,
     ComponentDescriptor,
 )
+import version as ver
 
 
 class ComponentResolutionException(Exception):
@@ -132,7 +132,7 @@ class ComponentResolver(ResolverBase):
     def greatest_release_before(self, component_name: str, version: str):
         component_reference = ComponentReference.create(name=component_name, version=version)
         repo_helper = self._repository_helper(component_reference)
-        version = semver.parse_version_info(version)
+        version = ver.parse_to_semver(version)
 
         versions = sorted(repo_helper.release_versions()) # greatest version comes last
         versions = [v for v in versions if v < version]
@@ -313,9 +313,8 @@ def diff_images(
                 img_diff.irefpairs_version_changed.add((lgroup[0], rgroup[0]))
             continue
 
-        # unfortunately, we cannot rely on all versions being semver-compliant :-/
-        lgroup = list(sorted(lgroup, key=lambda i: i.version()))
-        rgroup = list(sorted(rgroup, key=lambda i: i.version()))
+        lgroup = list(sorted(lgroup, key=lambda i: ver.parse_to_semver(i.version())))
+        rgroup = list(sorted(rgroup, key=lambda i: ver.parse_to_semver(i.version())))
 
         # remove all images present in both
         versions_in_both = {i.version() for i in lgroup} & {i.version() for i in rgroup}
@@ -368,7 +367,7 @@ def greatest_references(references: typing.Iterable[DependencyBase]):
         # --> use the greatest version in that case
         matching_refs = sorted(
             matching_refs,
-            key=lambda r: semver.parse_version_info(r.version()),
+            key=lambda r: ver.parse_to_semver(r.version()),
         )
         # greates version comes last
         yield matching_refs[-1]
