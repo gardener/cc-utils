@@ -194,7 +194,7 @@
 <tr class="row-even"><td><p>nextversion</p></td>
 <td><p>no</p></td>
 <td><p>bump_minor</p></td>
-<td><p>str</p></td>
+<td><p>NextVersion</p></td>
 <td><p>specifies how the next development version is to be calculated</p></td>
 </tr>
 <tr class="row-odd"><td><p>release_callback</p></td>
@@ -232,6 +232,28 @@ Any changes left inside the worktree are added to the resulting release commit.<
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>an optional prefix for release commit messages</p></td>
+</tr>
+</tbody>
+</table>
+<p class="section-subtitle">nextversion Enumeration Values</p>
+<table class="colwidths-auto docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>value</p></th>
+<th class="head"><p>explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>bump_major</p></td>
+<td><p>Increments the major version of the next development cycle</p></td>
+</tr>
+<tr class="row-odd"><td><p>bump_minor</p></td>
+<td><p>Increments the minor version of the next development cycle</p></td>
+</tr>
+<tr class="row-even"><td><p>bump_patch</p></td>
+<td><p>Increments the patch version of the next development cycle</p></td>
+</tr>
+<tr class="row-odd"><td><p>noop</p></td>
+<td><p>No change to the next development cycle version done</p></td>
 </tr>
 </tbody>
 </table>
