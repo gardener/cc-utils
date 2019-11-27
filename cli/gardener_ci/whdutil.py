@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import ci.util
-import whd.server as whd_server
 
 
 def start_whd(
@@ -23,11 +22,13 @@ def start_whd(
     production: bool=False,
     workers: int=4,
 ):
+    import whd.server
+
     cfg_factory = ci.util.ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(cfg_set_name)
     webhook_dispatcher_cfg = cfg_set.webhook_dispatcher()
 
-    app = whd_server.webhook_dispatcher_app(
+    app = whd.server.webhook_dispatcher_app(
         cfg_set=cfg_set,
         whd_cfg=webhook_dispatcher_cfg
     )
