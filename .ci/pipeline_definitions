@@ -60,6 +60,7 @@ cc-utils:
         test: ~
         lint: ~
         release_to_pypi:
+          depends: ['test', 'lint']
           output_dir: 'pypi'
         generate_documentation:
           publish_to: ['gh_pages']
