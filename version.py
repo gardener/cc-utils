@@ -38,7 +38,7 @@ class _VersionMetadata:
 
 
 def parse_to_semver(
-    version: str,
+    version,
 ):
     '''
     parses the given version into a semver.VersionInfo object.
@@ -50,8 +50,19 @@ def parse_to_semver(
 
     - strip away `v` prefix
     - append patch-level `.0` for two-digit versions
+
+    @param version: either a str, or a product.model object with a `version` attr
     '''
-    semver_version_info, _ = _parse_to_semver_and_metadata(version)
+    if isinstance(version, str):
+        version_str = version
+    else:
+        if hasattr(version, 'version'):
+            if callable(version.version):
+                version_str = version.version()
+            else:
+                version_str = str(version.version)
+
+    semver_version_info, _ = _parse_to_semver_and_metadata(version_str)
     return semver_version_info
 
 
