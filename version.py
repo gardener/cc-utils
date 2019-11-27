@@ -158,6 +158,8 @@ def find_latest_version(versions):
     for candidate in versions:
         if isinstance(candidate, str):
             candidate_semver = parse_to_semver(candidate)
+        else:
+            candidate_semver = candidate
 
         if not latest_candidate:
             latest_candidate = candidate_semver
