@@ -271,7 +271,7 @@ if UPGRADE_TO_UPSTREAM:
     )
 else:
   def determine_reference_version(component_name):
-    return component_resolver.latest_component_version(component_name)
+    return version.parse_to_semver(component_resolver.latest_component_version(component_name))
 
 
 # find components that need to be upgraded
