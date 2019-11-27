@@ -465,7 +465,9 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
     def release_versions(self):
         for tag_name in self.release_tags():
             try:
-                yield version.parse_to_semver(tag_name)
+                version.parse_to_semver(tag_name)
+                yield tag_name
+                # XXX should rather return a "Version" object, containing both parsed and original
             except ValueError:
                 pass # ignore
 

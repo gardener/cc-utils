@@ -134,8 +134,9 @@ class ComponentResolver(ResolverBase):
         repo_helper = self._repository_helper(component_reference)
         version = ver.parse_to_semver(version)
 
-        versions = sorted(repo_helper.release_versions()) # greatest version comes last
-        versions = [v for v in versions if v < version]
+        # greatest version comes last
+        versions = sorted(repo_helper.release_versions(), key=version.parse_to_semver)
+        versions = [v for v in versions if version.parse_to_semver(v) < version]
 
         if len(versions) == 0:
             return None # no release before current was found
