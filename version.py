@@ -163,6 +163,7 @@ def find_latest_version(versions):
 
         if not latest_candidate:
             latest_candidate = candidate_semver
+            latest_candidate_str = candidate
             continue
         if candidate_semver > latest_candidate:
             latest_candidate = candidate_semver
