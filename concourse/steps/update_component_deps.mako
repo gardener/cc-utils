@@ -281,6 +281,7 @@ for reference in product.util.greatest_references(immediate_dependencies.compone
       name=reference.name(),
       version=str(latest_version),
     )
+    print(f'latest_version: {latest_version}, ref: {reference}')
     if latest_version <= version.parse_to_semver(reference.version()):
         ci.util.info('skipping outdated component upgrade: {n}; our version: {ov}, found: {fv}'.format(
           n=reference.name(),
