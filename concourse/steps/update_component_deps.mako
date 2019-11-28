@@ -266,27 +266,26 @@ immediate_dependencies = current_component().dependencies()
 
 if UPGRADE_TO_UPSTREAM:
   def determine_reference_version(component_name):
-    return version.parse_to_semver(
-      _component(upstream_reference_component().dependencies(), component_name).version()
-    )
+    return _component(upstream_reference_component().dependencies(), component_name).version()
 else:
   def determine_reference_version(component_name):
-    return version.parse_to_semver(component_resolver.latest_component_version(component_name))
+    return component_resolver.latest_component_version(component_name)
 
 
 # find components that need to be upgraded
 for reference in product.util.greatest_references(immediate_dependencies.components()):
     latest_version = determine_reference_version(reference.name())
+    latest_version_semver = version.parse_to_semver(latest_version)
     latest_cref = product.model.ComponentReference.create(
       name=reference.name(),
-      version=str(latest_version),
+      version=latest_version,
     )
     print(f'latest_version: {latest_version}, ref: {reference}')
-    if latest_version <= version.parse_to_semver(reference.version()):
+    if latest_version_semver <= version.parse_to_semver(reference.version()):
         ci.util.info('skipping outdated component upgrade: {n}; our version: {ov}, found: {fv}'.format(
           n=reference.name(),
           ov=str(reference.version()),
-          fv=str(latest_version),
+          fv=latest_version,
           )
         )
         continue
@@ -296,12 +295,12 @@ for reference in product.util.greatest_references(immediate_dependencies.compone
     else:
         ci.util.info('creating upgrade PR: {n}->{v}'.format(
           n=reference.name(),
-          v=str(latest_version),
+          v=latest_version,
           )
         )
         to_ref = product.model.ComponentReference.create(
             name=reference.name(),
-            version=str(latest_version),
+            version=latest_version,
         )
         create_upgrade_pr(from_ref=reference, to_ref=to_ref, pull_request_util=pull_request_util)
 </%def>
