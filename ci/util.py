@@ -200,6 +200,24 @@ def is_yaml_file(path):
     return False
 
 
+def load_yaml(stream, *args, **kwargs):
+    '''
+    Parses YAML from the given stream in a (by default) safe manner. The given stream and any
+    *args and **kwargs are passed to `yaml.load`, by default using yaml.SafeLoader.
+
+    In addition to using SafeLoader, a mitigation against YAML Bombs (Billion Laughs Attack) is
+    applied (by limiting amount of allowed elements)
+
+    @raises ValueError if YAML Bomb was (heuristically) detected.
+    '''
+    if not 'Loader' in kwargs:
+        kwargs['Loader'] = yaml.SafeLoader
+
+    parsed = yaml.load(stream, *args, **kwargs)
+    _count_elements(parsed)
+    return parsed
+
+
 def parse_yaml_file(path, lint=False, max_elements_count=100000):
     if lint:
         lint_yaml_file(path)
