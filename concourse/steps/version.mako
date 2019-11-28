@@ -9,6 +9,7 @@ version_trait = job_variant.trait('version')
 path_to_repo_version_file = main_repo.resource_name() + '/' + version_trait.versionfile_relpath()
 output_version_file = job_step.output('version_path') + '/version'
 legacy_version_file = job_step.output('version_path') + '/number'
+path_to_lssd_version_file = main_repo.resource_name() + '/LANDSCAPE_SETUP_DEPENDENCIES_VERSION'
 
 version_operation = version_trait._preprocess()
 branch_name = main_repo.branch()
@@ -67,6 +68,10 @@ cc_version = '/metadata/VERSION'
 if os.path.isfile(cc_version):
   with open(cc_version) as f:
     ci.util.info(f'cc-utils version: {f.read()}')
+
+if os.path.isfile('${path_to_lssd_version_file}'):
+  with open('${path_to_lssd_version_file}') as f:
+    ci.util.info(f'lssd version: {f.read()}')
 
 output_version_file = pathlib.Path(${quote_str(output_version_file)})
 legacy_version_file = pathlib.Path(${quote_str(legacy_version_file)})
