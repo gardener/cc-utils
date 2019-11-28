@@ -200,12 +200,43 @@ def is_yaml_file(path):
     return False
 
 
-def parse_yaml_file(path, lint=False):
+def parse_yaml_file(path, lint=False, max_elements_count=100000):
     if lint:
         lint_yaml_file(path)
 
     with open(path) as f:
         return yaml.load(f, Loader=yaml.SafeLoader)
+
+
+def _count_elements(value, count=0, max_elements_count=100000):
+    '''
+    recursively counts elements contained in the given value. Before each recursion step,
+    the amount of encountered elements is checked against a maximum allowed elements count.
+    If said threshold is exceeded, recursion is aborted and a `ValueError` is raised.
+
+    This function is intended to be used as a mitigation against "Billion laughs attack"
+    (https://en.wikipedia.org/wiki/Billion_laughs_attack).
+
+    @param value: typically a dict or a list. Other types will yield a count of 1
+    '''
+    if count > max_elements_count:
+        raise ValueError('dict too large')
+
+    if not isinstance(value, dict):
+        if isinstance(value, list):
+            leng = 0
+            for e in value:
+                leng += _count_elements(e, count=count+leng)
+            return leng
+        else:
+            return 1
+
+    leng = 0
+
+    for value in value.values():
+        leng += _count_elements(value, count=count+leng)
+
+    return leng
 
 
 def lint_yaml_file(path, linter_config: dict={'extends': 'relaxed'}):

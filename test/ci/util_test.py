@@ -15,12 +15,15 @@
 
 import unittest
 import pathlib
+import textwrap
 import pytest
+import yaml
 
 from test._test_utils import capture_out
 
 from ci.util import Failure
 import ci.util as examinee
+import ci.util
 
 
 def test_info():
@@ -135,3 +138,45 @@ class UtilTest(unittest.TestCase):
             merged,
             {1: [3, 1, 0, 2, 4]},
         )
+
+
+def test_count_elements():
+    count = ci.util._count_elements
+
+    # trivial cases: non-iterable elements
+    assert count(1) == 1
+    assert count('foo') == 1
+    assert count(object()) == 1
+
+    # non-nested lists
+    assert count([]) == 0
+    assert count([1]) == 1
+    assert count([1, 'a']) == 2
+
+    # nested lists
+    assert count([[1,2], [3,4]]) == 4
+    assert count([[1,2], [['x'], 'y']]) == 4
+
+    # shallow dicts
+    assert count({1: 'foo', 2: 'bar'}) == 2
+    assert count({'list': [1,2,3,4]}) == 4
+
+    # nested dicts
+    assert count({1: {2: 4}}) == 1
+
+    # bomb
+    yaml_bomb = textwrap.dedent('''
+a: &a ["lol","lol","lol","lol","lol","lol","lol","lol","lol"]
+b: &b [*a,*a,*a,*a,*a,*a,*a,*a,*a]
+c: &c [*b,*b,*b,*b,*b,*b,*b,*b,*b]
+d: &d [*c,*c,*c,*c,*c,*c,*c,*c,*c]
+e: &e [*d,*d,*d,*d,*d,*d,*d,*d,*d]
+f: &f [*e,*e,*e,*e,*e,*e,*e,*e,*e]
+g: &g [*f,*f,*f,*f,*f,*f,*f,*f,*f]
+h: &h [*g,*g,*g,*g,*g,*g,*g,*g,*g]
+i: &i [*h,*h,*h,*h,*h,*h,*h,*h,*h]
+    ''')
+    parsed = yaml.safe_load(yaml_bomb)
+
+    with pytest.raises(ValueError):
+        count(parsed)
