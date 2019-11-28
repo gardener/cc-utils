@@ -19,6 +19,8 @@ import enum
 import io
 import re
 import sys
+
+from typing import Iterable, Tuple
 from pydash import _
 
 import requests
@@ -500,6 +502,35 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
     def is_org_member(self, organization_name, user_login):
         organization = self.github.organization(organization_name)
         return organization.is_member(user_login)
+
+    def delete_outdated_draft_releases(self) -> Iterable[Tuple[github3.repos.release.Release, bool]]:
+        '''Find outdated draft releases and try to delete them
+
+        Yields tuples containing a release and a boolean indicating whether its deletion was
+        successful.
+
+        A draft release is considered outdated iff:
+        1: its version is smaller than the greatest release version (according to semver) AND
+            2a: it is NOT a hotfix draft release AND
+            2b: there are no hotfix draft releases with the same major and minor version
+            OR
+            3a: it is a hotfix draft release AND
+            3b: there is a hotfix draft release of greater version (according to semver)
+                with the same major and minor version
+        '''
+
+        releases = [release for release in self.repository.releases()]
+        non_draft_releases = [release for release in releases if not release.draft]
+        draft_releases = [release for release in releases if release.draft]
+        greatest_release_version = find_greatest_github_release_version(non_draft_releases)
+
+        draft_releases_to_delete = outdated_draft_releases(
+                draft_releases=draft_releases,
+                greatest_release_version=greatest_release_version,
+        )
+
+        for release in draft_releases_to_delete:
+            yield release, release.delete()
 
 
 @deprecated.deprecated
