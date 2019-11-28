@@ -205,7 +205,10 @@ def parse_yaml_file(path, lint=False, max_elements_count=100000):
         lint_yaml_file(path)
 
     with open(path) as f:
-        return yaml.load(f, Loader=yaml.SafeLoader)
+        parsed = yaml.load(f, Loader=yaml.SafeLoader)
+        # mitigate yaml bomb
+        _count_elements(parsed)
+        return parsed
 
 
 def _count_elements(value, count=0, max_elements_count=100000):
