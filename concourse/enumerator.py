@@ -20,12 +20,12 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from urllib.parse import urlparse
 import functools
-import yaml
 
 from github3.exceptions import NotFoundError
 
 from ci.util import (
     parse_yaml_file,
+    load_yaml,
     info,
     fail,
     verbose,
@@ -192,7 +192,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                 path='branch.cfg',
                 ref='refs/meta/ci',
             ).decoded.decode('utf-8')
-            return BranchCfg(raw_dict=yaml.load(branch_cfg, Loader=yaml.SafeLoader))
+            return BranchCfg(raw_dict=load_yaml(branch_cfg))
         except NotFoundError:
             return None # no branch cfg present
 
@@ -235,7 +235,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
 
             verbose('from repo: ' + repository.name + ':' + branch_name)
             try:
-                definitions = yaml.load(definitions.decoded.decode('utf-8'), Loader=yaml.SafeLoader)
+                definitions = load_yaml(definitions.decoded.decode('utf-8'))
             except BaseException as e:
                 repo_path = f'{org_name}/{repository.name}'
                 yield DefinitionDescriptor(
