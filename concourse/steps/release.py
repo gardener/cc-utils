@@ -24,7 +24,6 @@ from github.util import (
 import product.model
 from github.release_notes.util import (
     delete_file_from_slack,
-    draft_release_name_for_version,
     fetch_release_notes,
     post_to_slack,
     ReleaseNotes,
@@ -542,43 +541,31 @@ class PublishReleaseNotesStep(TransactionalStep):
         )
 
 
-class CleanupDraftReleaseStep(TransactionalStep):
+class TryCleanupDraftReleasesStep(TransactionalStep):
     def name(self):
-        return "Cleanup Draft Release"
+        return "Try to Cleanup Draft Releases"
 
     def __init__(
         self,
         github_helper: GitHubRepositoryHelper,
-        release_version: str,
     ):
         self.github_helper = not_none(github_helper)
-        self.release_version = not_empty(release_version)
 
     def validate(self):
-        version.parse_to_semver(self.release_version)
+        # nothing to validate
+        pass
 
     def apply(self):
-        draft_name = draft_release_name_for_version(self.release_version)
-        draft_release = self.github_helper.draft_release_with_name(draft_name)
-        if draft_release:
-            # store output data for possible later revert
-            output = {
-                'release name': draft_release.name,
-                'release body': draft_release.body,
-            }
-            # TODO: clean up ALL previously made draft-releases (just in case)
-            draft_release.delete()
-            return output
+        for release, deletion_successful in self.github_helper.delete_outdated_draft_releases():
+            if deletion_successful:
+                ci.util.info(f"Deleted release '{release.name}'")
+            else:
+                ci.util.warning(f"Could not delete release '{release.name}'")
+        return
 
     def revert(self):
-        if not self.context().has_output(self.name()):
-            # Deleting the draft release was unsuccessful, nothing to do
-            return
-        release_data = self.context().step_output(self.name())
-        self.github_helper.create_draft_release(
-            name=release_data['release name'],
-            body=release_data['release body'],
-        )
+        # nothing to revert
+        pass
 
 
 class PostSlackReleaseStep(TransactionalStep):
@@ -760,9 +747,8 @@ def release_and_prepare_next_dev_cycle(
         repo_dir=repo_dir,
     )
 
-    cleanup_draft_releases_step = CleanupDraftReleaseStep(
+    cleanup_draft_releases_step = TryCleanupDraftReleasesStep(
         github_helper=github_helper,
-        release_version=release_version,
     )
 
     if release_notes_policy == ReleaseNotesPolicy.DISABLED:

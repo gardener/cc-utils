@@ -195,25 +195,19 @@ class TestPublishReleaseNotesStep(object):
             examinee(release_version='invalid_semver').validate()
 
 
-class TestCleanupDraftReleaseStep(object):
+class TestTryCleanupDraftReleaseStep(object):
     @pytest.fixture()
     def examinee(self):
         def _examinee(
             github_helper=MagicMock(),
-            release_version='1.0.0',
         ):
-            return concourse.steps.release.CleanupDraftReleaseStep(
+            return concourse.steps.release.TryCleanupDraftReleasesStep(
                 github_helper=github_helper,
-                release_version=release_version,
             )
         return _examinee
 
     def test_validation(self, examinee):
         examinee().validate()
-
-    def test_validation_fails_on_invalid_semver(self, examinee):
-        with pytest.raises(ValueError):
-            examinee(release_version='invalid_semver').validate()
 
 
 class TestSlackReleaseStep(object):
