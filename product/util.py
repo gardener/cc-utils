@@ -335,8 +335,11 @@ def diff_images(
 
         i = 0
         for i, left_image in enumerate(lgroup):
-            right_image = rgroup[i]
-            img_diff.irefpairs_version_changed.add((left_image, right_image))
+            if i >= len(rgroup):
+                img_diff.irefs_only_left.add(left_image)
+            else:
+                right_image = rgroup[i]
+                img_diff.irefpairs_version_changed.add((left_image, right_image))
 
         lgroup = lgroup[i:]
         rgroup = rgroup[i:]
