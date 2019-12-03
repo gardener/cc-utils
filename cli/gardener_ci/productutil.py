@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import argparse
-import enum
 import itertools
 import github3.exceptions
 import json
@@ -25,6 +24,7 @@ from typing import Iterable
 import ccc.protecode
 import container.registry
 from ci.util import CliHints, CliHint, parse_yaml_file, ctx, fail, info
+from concourse.model.traits.component_descriptor import ValidationPolicy
 from product.model import (
     Component,
     ComponentReference,
@@ -44,14 +44,6 @@ from protecode.util import (
     ProcessingMode
 )
 import product.xml
-
-
-class ValidationPolicy(enum.Enum):
-    NOT_EMPTY = "not_empty"
-    FORBID_EXTRA_ATTRIBUTES = "forbid_extra_attributes"
-
-    def __str__(self):
-        return self.value
 
 
 def transport_triages(
