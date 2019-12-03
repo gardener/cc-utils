@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import enum
+import typing
 
 from ci.util import not_none
 
@@ -47,7 +48,7 @@ class ValidationPolicy(AttribSpecMixin, enum.Enum):
                 name=cls.NOT_EMPTY.value,
                 default=None,
                 doc=(
-                    'Every given attribute (e.g.: "version") must must also be given a '
+                    'Every given attribute (e.g.: "version") must also be given a '
                     'non-empty value'
                 ),
                 type=str,
@@ -59,6 +60,7 @@ class ValidationPolicy(AttribSpecMixin, enum.Enum):
                 type=str,
             ),
         )
+
 
 ATTRIBUTES = (
     AttributeSpec.optional(
@@ -82,6 +84,15 @@ ATTRIBUTES = (
         name='callback_env',
         default={},
         doc='Specifies additional environment variables passed to .ci/component_descriptor script',
+    ),
+    AttributeSpec.optional(
+        name='validation_policies',
+        type=typing.List[ValidationPolicy],
+        default=[ValidationPolicy.FORBID_EXTRA_ATTRIBUTES],
+        doc=(
+            'The validation policies that should be applied to arguments of components added to '
+            'the component descriptor'
+        ),
     ),
 )
 
@@ -110,6 +121,12 @@ class ComponentDescriptorTrait(Trait):
 
     def callback_env(self)->dict:
         return self.raw['callback_env']
+
+    def validation_policies(self):
+        return [
+            ValidationPolicy(v)
+            for v in self.raw['validation_policies']
+        ]
 
     def transformer(self):
         return ComponentDescriptorTraitTransformer(trait=self)
