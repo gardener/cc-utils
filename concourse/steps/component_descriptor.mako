@@ -9,6 +9,8 @@ descriptor_trait = job_variant.trait('component_descriptor')
 main_repo = job_variant.main_repository()
 main_repo_path_env_var = main_repo.logical_name().replace('-', '_').upper() + '_PATH'
 
+policies = descriptor_trait.validation_policies()
+
 if job_variant.has_trait('image_alter'):
   image_alter_cfgs = job_variant.trait('image_alter').image_alter_cfgs()
 else:
@@ -118,6 +120,9 @@ add_dependencies_cmd = ' '.join((
   '--descriptor-out-file', base_descriptor_file,
   '--component-version', effective_version,
   '--component-name', component_name,
+% for policy in policies:
+  '--validation-policies', '${policy}',
+% endfor
 ))
 
 subproc_env['ADD_DEPENDENCIES_CMD'] = add_dependencies_cmd
