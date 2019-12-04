@@ -751,6 +751,14 @@ def release_and_prepare_next_dev_cycle(
         github_helper=github_helper,
     )
 
+    cleanup_draft_releases_transaction = Transaction(
+        ctx=transaction_ctx,
+        steps=(cleanup_draft_releases_step),
+    )
+
+    if not cleanup_draft_releases_transaction.execute():
+        ci.util.warning('An error occured while cleaning up draft releases')
+
     if release_notes_policy == ReleaseNotesPolicy.DISABLED:
         return info('release notes were disabled - skipping')
     elif release_notes_policy == ReleaseNotesPolicy.DEFAULT:
@@ -760,7 +768,7 @@ def release_and_prepare_next_dev_cycle(
 
     release_notes_transaction = Transaction(
         ctx=transaction_ctx,
-        steps=(publish_release_notes_step, cleanup_draft_releases_step),
+        steps=(publish_release_notes_step),
     )
     release_notes_transaction.validate()
     if not release_notes_transaction.execute():
