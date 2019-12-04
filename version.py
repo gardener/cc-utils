@@ -96,7 +96,11 @@ def _parse_to_semver_and_metadata(version: str):
     numeric, sep, suffix = semver_version.partition(sep)
     numeric += '.0'
 
-    return semver.parse_version_info(numeric + sep + suffix), metadata
+    try:
+        return semver.parse_version_info(numeric + sep + suffix), metadata
+    except ValueError:
+        # re-raise with original version str
+        raise_invalid()
 
 
 def process_version(
