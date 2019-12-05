@@ -80,7 +80,7 @@ def post_to_slack(
 
     try:
         while True:
-            title = '[{n}] {v} released'.format(n=github_repository_name, v=release_version)
+            title = f'[{github_repository_name}:{release_version} released'
 
             # abort on last
             if idx + max_msg_size_bytes > len(release_notes_md_links):
