@@ -126,7 +126,7 @@ def _sort_versions(
 
     if hasattr(versions[0], 'version'):
         if callable(versions[0].version):
-            versions = [v() for v in versions]
+            versions = [v.version() for v in versions]
         else:
             versions = [v.version for v in versions]
     else:
