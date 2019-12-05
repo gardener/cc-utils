@@ -110,10 +110,10 @@ def _sort_versions(
     sorts the given versions (which may be a sequence containing any combination of
     str, semver.VersionInfo, or model element bearing a `version` attr) on a best-effort
     base.
-    Firstly, versions are converted to their string representations. After that, it is checked
-    whether all versions are semver-parsable, using this module's `parse_to_semver` (which allows
-    some deviations from strict semver-v2). If all versions are parsable, str representations of
-    the originally given versions are returned, ordered according to semver artithmetics.
+    Firstly, it is checked whether all versions are semver-parsable, using this module's
+    `parse_to_semver` (which allows some deviations from strict semver-v2). If all versions
+    are parsable, str representations of the originally given versions are returned, ordered
+    according to semver artithmetics.
     Otherwise, sorting falls back to alphabetical sorting as implemented by python's str.
 
     Note that there is _no_ validation of any kind w.r.t. to the sanity of the passed values.
@@ -124,22 +124,31 @@ def _sort_versions(
     if not versions:
         return
 
-    if hasattr(versions[0], 'version'):
-        if callable(versions[0].version):
-            versions = [v.version() for v in versions]
+    def to_ver(version_obj):
+        if hasattr(version_obj, 'version'):
+            if callable(version_obj.version):
+                return version_obj.version()
+            else:
+                return version_obj.version
         else:
-            versions = [v.version for v in versions]
-    else:
-        versions = tuple(versions)
+            return str(version_obj)
 
     try:
         # try if all versions are semver-compatible
-        semver_versions = [parse_to_semver(version) for version in versions]
-        return [str(v) for v in sorted(semver_versions)]
+        for version_str in map(to_ver, versions):
+            parse_to_semver(version_str)
+
+        return sorted(
+            versions,
+            key=lambda vo: parse_to_semver(to_ver(vo)),
+        )
     except ValueError:
         pass # ignore and fall-back to str-sorting
 
-    return sorted([str(v) for v in versions])
+    return sorted(
+        versions,
+        key=to_ver,
+    )
 
 
 def process_version(
