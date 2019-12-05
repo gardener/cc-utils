@@ -310,27 +310,26 @@ def diff_images(
     for lgroup, rgroup in enumerate_group_pairs(lgroups, rgroups):
         # trivial case: image groups have length of 1
         if len(lgroup) == 1 and len(rgroup) == 1:
-            if version.parse_to_semver(lgroup[0].version()) != \
-               version.parse_to_semver(rgroup[0].version()):
+            if lgroup[0].version() != rgroup[0].version():
                 img_diff.irefpairs_version_changed.add((lgroup[0], rgroup[0]))
             continue
 
-        lgroup = list(sorted(lgroup, key=lambda i: ver.parse_to_semver(i.version())))
-        rgroup = list(sorted(rgroup, key=lambda i: ver.parse_to_semver(i.version())))
+        lgroup = list(ver._sort_versions(lgroup))
+        rgroup = list(ver._sort_versions(rgroup))
 
         # remove all images present in both
         versions_in_both = {
-            version.parse_to_semver(i.version()) for i in lgroup
+            i.version() for i in lgroup
         } & {
-            version.parse_to_semver(i.version()) for i in rgroup
+            i.version() for i in rgroup
         }
         lgroup = [
             i for i in lgroup
-            if not version.parse_to_semver(i.version()) in versions_in_both
+            if not i.version() in versions_in_both
         ]
         rgroup = [
             i for i in rgroup
-            if not version.parse_to_semver(i.version()) in versions_in_both
+            if not i.version() in versions_in_both
         ]
 
         i = 0
