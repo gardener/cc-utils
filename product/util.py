@@ -314,8 +314,8 @@ def diff_images(
                 img_diff.irefpairs_version_changed.add((lgroup[0], rgroup[0]))
             continue
 
-        lgroup = list(ver._sort_versions(lgroup))
-        rgroup = list(ver._sort_versions(rgroup))
+        lgroup = sorted(lgroup)
+        rgroup = sorted(rgroup)
 
         # remove all images present in both
         versions_in_both = {
