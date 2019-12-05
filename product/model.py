@@ -79,9 +79,20 @@ class Version:
     def __comparables(self, other):
         check_type(other, Version) # must only compare to other Version instances
 
+        # to find out which version representations to compare for sorting, we need to
+        # handle different cases:
+
         if self._version_semver and other._version_semver:
+            # both versions are semver versions -> use semver arithmethics
             return (self._version_semver, other._version_semver)
+        elif self.is_valid_semver() and not other.is_valid_semver():
+            # excactly other version is semver -> normalise (strip leading v..) and str-compare
+            return (str(self._version_semver), other._version_str)
+        elif not self.is_valid_semver() and other.is_valid_semver():
+            # exactly our version is semver -> normalise (strip leading v..) and str-compare
+            return (self._version_str, str(other._version_semver))
         else:
+            # fallback to str-compare only
             return (self._version_str, other._version_str)
 
     def __eq__(self, other):
