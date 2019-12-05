@@ -21,6 +21,7 @@ from enum import Enum
 from model.base import ModelBase, ModelValidationError
 from protecode.model import AnalysisResult
 from ci.util import not_none, urljoin, check_type
+import version as ver
 
 #############################################################################
 ## product descriptor model
@@ -44,6 +45,78 @@ class ProductModelBase(ModelBase):
         raw_dict = {**kwargs}
         super().__init__(raw_dict=raw_dict)
         self.validate()
+
+
+class Version:
+    '''
+    A Gardener Component Version. Accepts versions compliant to semver-v2 and Gardener-specific
+    extends of semver-v2:
+    - prefixed `v` is allowed
+    - versions may omit patch-level
+
+    Also accepts versions not compliant to semver-v2 or the afforementioned extensions with
+    reduced functionality.
+
+    Any sets of Version objects are sortable. If the underlying version is semver-v2-compliant
+    (considering the above-described relaxations), sorting is done according to version arithmetics
+    as defined by semver-v2.
+
+    Otherwise, comparisons are done as defined by Python's str class. Note that this will result
+    in different sorting semantics to be applied for sets containing both valid and invalid
+    semver versions.
+    '''
+    def __init__(self, version: str):
+        self._version_str = str(not_none(version))
+
+        try:
+            self._version_semver = ver.parse_to_semver(self._version_str)
+        except ValueError:
+            self._version_semver = None
+
+    def is_valid_semver(self):
+        return self._version_semver is not None
+
+    def __comparables(self, other):
+        check_type(other, Version) # must only compare to other Version instances
+
+        if self._version_semver and other._version_semver:
+            return (self._version_semver, other._version_semver)
+        else:
+            return (self._version_str, other._version_str)
+
+    def __eq__(self, other):
+        if not isinstance(other, Version):
+            return False
+
+        if self._version_semver and other._version_semver:
+            return self._version_semver == other._version_semver
+
+        return self._version_str == other._version_semver
+
+    def __hash__(self):
+        return hash(self._version_str)
+
+    def __lt__(self, other):
+        own_version, other_version = self.__comparables(other)
+        return own_version.__lt__(other_version)
+
+    def __le__(self, other):
+        own_version, other_version = self.__comparables(other)
+        return own_version.__le__(other_version)
+
+    def __gt__(self, other):
+        own_version, other_version = self.__comparables(other)
+        return own_version.__gt__(other_version)
+
+    def __ge__(self, other):
+        own_version, other_version = self.__comparables(other)
+        return own_version.__ge__(other_version)
+
+    def __repr__(self):
+        return f'Version("{self._version_str}")'
+
+    def __str__(self):
+        return self._version_str
 
 
 class DependencyBase(ModelBase):

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from copy import deepcopy
+import random
 
 import unittest
 
@@ -337,3 +338,19 @@ class ContainerImageTest(unittest.TestCase):
         # image references must contain an image name
         with self.assertRaises(ModelValidationError):
             examinee(name='made_up', version='some_version', image_reference='foo:')
+
+
+def test_version():
+    V = product.model.Version
+
+    v1 = V('1.2.3')
+    v2 = V('2.2.2')
+    v3 = V('v0.1.2')
+    v4 = V('v0.5')
+    v5 = V('4.0')
+    v6 = V('foo') # not valid semver, but also allowed
+
+    all_versions = [v1, v2, v3, v4, v5, v6]
+    random.shuffle(all_versions)
+
+    assert sorted(all_versions) == [v3, v4, v1, v2, v5, v6]
