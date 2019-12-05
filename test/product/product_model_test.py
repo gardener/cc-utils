@@ -358,3 +358,9 @@ def test_version():
 
     # test equality
     assert V('a') == V('a')
+    assert V('a') != V('b')
+    assert V('a') != V('1.2.3')
+    assert V('1.2.3') == v1
+    assert V('v1.2.3') == v1
+    assert v1 != v2
+    assert v1 != 42
