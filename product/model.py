@@ -151,7 +151,7 @@ class DependencyBase(ModelBase):
         return self.name() == other.name() and self.version() == other.version()
 
     def __hash__(self):
-        return hash(tuple(self.name(), self.version()))
+        return hash((self.name(), self.version()))
 
 
 class ComponentDescriptor(ProductModelBase):
