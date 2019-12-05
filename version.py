@@ -103,6 +103,45 @@ def _parse_to_semver_and_metadata(version: str):
         raise_invalid()
 
 
+def _sort_versions(
+    versions
+):
+    '''
+    sorts the given versions (which may be a sequence containing any combination of
+    str, semver.VersionInfo, or model element bearing a `version` attr) on a best-effort
+    base.
+    Firstly, versions are converted to their string representations. After that, it is checked
+    whether all versions are semver-parsable, using this module's `parse_to_semver` (which allows
+    some deviations from strict semver-v2). If all versions are parsable, str representations of
+    the originally given versions are returned, ordered according to semver artithmetics.
+    Otherwise, sorting falls back to alphabetical sorting as implemented by python's str.
+
+    Note that there is _no_ validation of any kind w.r.t. to the sanity of the passed values.
+
+    This function is not intended to be used by external users, and is planned to be removed
+    again.
+    '''
+    if not versions:
+        return
+
+    if hasattr(versions[0], 'version'):
+        if callable(versions[0].version):
+            versions = [v() for v in versions]
+        else:
+            versions = [v.version for v in versions]
+    else:
+        versions = tuple(versions)
+
+    try:
+        # try if all versions are semver-compatible
+        semver_versions = [parse_to_semver(version) for version in versions]
+        return [str(v) for v in sorted(semver_versions)]
+    except ValueError:
+        pass # ignore and fall-back to str-sorting
+
+    return sorted([str(v) for v in versions])
+
+
 def process_version(
     version_str: str,
     operation: str,
