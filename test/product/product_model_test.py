@@ -350,7 +350,11 @@ def test_version():
     v5 = V('4.0')
     v6 = V('foo') # not valid semver, but also allowed
 
+    # test sorting
     all_versions = [v1, v2, v3, v4, v5, v6]
     random.shuffle(all_versions)
 
     assert sorted(all_versions) == [v3, v4, v1, v2, v5, v6]
+
+    # test equality
+    assert V('a') == V('a')

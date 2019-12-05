@@ -91,7 +91,7 @@ class Version:
         if self._version_semver and other._version_semver:
             return self._version_semver == other._version_semver
 
-        return self._version_str == other._version_semver
+        return self._version_str == other._version_str
 
     def __hash__(self):
         return hash(self._version_str)
