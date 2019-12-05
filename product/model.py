@@ -138,6 +138,9 @@ class DependencyBase(ModelBase):
     def version(self):
         return self.raw.get('version')
 
+    def _version_obj(self): # XXX should actually be renamed to `version` (replacing it)
+        return Version(self.version())
+
     @abc.abstractmethod
     def type_name(self):
         '''
@@ -145,10 +148,37 @@ class DependencyBase(ModelBase):
         '''
         raise NotImplementedError
 
+    def __has_same_name(self, other):
+        if not isinstance(other, DependencyBase):
+            return False
+        return self.name() == other.name()
+
+    def __comparables(self, other):
+        if self.__has_same_name(other):
+            return (self._version_obj(), other._version_obj())
+        else:
+            return (self.name(), other.name())
+
     def __eq__(self, other):
         if not isinstance(other, DependencyBase):
             return False
         return self.name() == other.name() and self.version() == other.version()
+
+    def __lt__(self, other):
+        own, other = self.__comparables(other)
+        return own.__lt__(other)
+
+    def __le__(self, other):
+        own, other= self.__comparables(other)
+        return own.__le__(other)
+
+    def __gt__(self, other):
+        own, other= self.__comparables(other)
+        return own.__gt__(other)
+
+    def __ge__(self, other):
+        own, other= self.__comparables(other)
+        return own.__ge__(other)
 
     def __hash__(self):
         return hash((self.name(), self.version()))
