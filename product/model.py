@@ -148,10 +148,10 @@ class DependencyBase(ModelBase):
     def __eq__(self, other):
         if not isinstance(other, DependencyBase):
             return False
-        return self.raw == other.raw
+        return self.name() == other.name() and self.version() == other.version()
 
     def __hash__(self):
-        return hash(tuple(sorted(self.raw.items())))
+        return hash(tuple(self.name(), self.version()))
 
 
 class ComponentDescriptor(ProductModelBase):
