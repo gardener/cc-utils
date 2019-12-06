@@ -54,6 +54,8 @@ component_descriptor_resolver = product.util.ComponentDescriptorResolver(cfg_fac
 # indicates whether or not an upstream component was defined as a reference
 UPGRADE_TO_UPSTREAM = 'UPSTREAM_COMPONENT_NAME' in os.environ
 
+ci.util.info(f'Upgrade to upstream: {UPGRADE_TO_UPSTREAM}')
+
 
 def _component(product_descriptor, component_name):
     component = [c for c in product_descriptor.components() if c.name() == component_name]
