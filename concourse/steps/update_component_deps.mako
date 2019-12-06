@@ -58,6 +58,10 @@ UPGRADE_TO_UPSTREAM = 'UPSTREAM_COMPONENT_NAME' in os.environ
 def _component(product_descriptor, component_name):
     component = [c for c in product_descriptor.components() if c.name() == component_name]
     component_count = len(component)
+    try:
+      print('component names:', [c.name() for c in product_descriptor.components()])
+    except:
+      pass
     if component_count == 1:
         return component[0]
     elif component_count < 1:
