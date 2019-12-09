@@ -35,7 +35,7 @@ from model.kubernetes import (
     KubernetesConfig,
 )
 
-
+CONCOURSE_HELM_CHART_REPO = "https://concourse-charts.storage.googleapis.com/"
 BasicAuthCred = namedtuple('BasicAuthCred', ['user', 'password'])
 
 
@@ -81,6 +81,11 @@ def ensure_helm_setup():
     helm_executable = which('helm')
     with open(os.devnull) as devnull:
         subprocess.run([helm_executable, 'init', '--client-only'], check=True, stdout=devnull)
+        subprocess.run(
+            [helm_executable, 'repo', 'add', 'concourse', CONCOURSE_HELM_CHART_REPO],
+            check=True,
+            stdout=devnull
+        )
         subprocess.run([helm_executable, 'repo', 'update'], check=True, stdout=devnull)
     return helm_executable
 
