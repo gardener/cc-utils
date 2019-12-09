@@ -365,7 +365,7 @@ def deploy_concourse_landscape(
     execute_helm_deployment(
         kubernetes_config,
         deployment_name,
-        'stable/concourse',
+        'concourse/concourse',
         deployment_name,
         default_helm_values,
         custom_helm_values,
