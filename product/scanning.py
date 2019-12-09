@@ -17,6 +17,9 @@ import enum
 import tempfile
 import typing
 
+import requests
+import requests.exceptions
+
 from protecode.client import ProtecodeApi
 from protecode.model import (
     AnalysisResult,
@@ -290,10 +293,22 @@ class ProtecodeUtil(object):
 
         # upload new images
         for container_image in images_to_upload:
-            scan_result = self._upload_image(
-                component=container_image_group.component(),
-                container_image=container_image,
-            )
+            try:
+                scan_result = self._upload_image(
+                    component=container_image_group.component(),
+                    container_image=container_image,
+                )
+            except requests.exceptions.HTTPError as e:
+                # in case the image is currently being scanned, Protecode will answer with HTTP
+                # code 409 ('conflict'). In this case, fetch the ongoing scan to add it
+                # to the list of scans to consider. In all other cases re-raise the error.
+                if e.response.status_code != requests.codes.conflict:
+                    raise e
+                scan_result = self.retrieve_scan_result(
+                    component=container_image_group.component(),
+                    container_image=container_image,
+                )
+
             protecode_apps_to_consider.append(scan_result)
 
         # wait for all apps currently being scanned
