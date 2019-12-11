@@ -479,6 +479,7 @@ class KubernetesPodHelper(object):
                 name,
                 namespace,
                 command=command,
+                container=container,
                 stderr=stderr,
                 stdin=False,
                 stdout=stdout,
