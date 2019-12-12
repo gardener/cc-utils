@@ -30,6 +30,7 @@ from github.release_notes.util import (
 )
 from concourse.model.traits.release import (
     ReleaseNotesPolicy,
+    ReleaseCommitPublishingPolicy,
 )
 
 
@@ -179,6 +180,7 @@ class ReleaseCommitStep(TransactionalStep):
         repository_version_file_path: str,
         repository_branch: str,
         commit_message_prefix: str,
+        publishing_policy: ReleaseCommitPublishingPolicy,
         release_commit_callback: str=None,
     ):
         self.git_helper = not_none(git_helper)
@@ -191,6 +193,7 @@ class ReleaseCommitStep(TransactionalStep):
             repository_version_file_path,
         )
         self.commit_message_prefix = commit_message_prefix
+        self.publishing_policy = publishing_policy
 
         if release_commit_callback:
             self.release_commit_callback = os.path.join(
@@ -668,6 +671,7 @@ def release_and_prepare_next_dev_cycle(
     release_version: str,
     repo_dir: str,
     release_notes_policy: str,
+    release_commit_publishing_policy: str,
     release_commit_callback: str=None,
     next_version_callback: str=None,
     version_operation: str="bump_minor",
@@ -683,6 +687,9 @@ def release_and_prepare_next_dev_cycle(
     transaction_ctx = TransactionContext() # shared between all steps/trxs
 
     release_notes_policy = ReleaseNotesPolicy(release_notes_policy)
+    release_commit_publishing_policy = ReleaseCommitPublishingPolicy(
+        release_commit_publishing_policy
+    )
     github_helper = GitHubRepositoryHelper.from_githubrepobranch(githubrepobranch)
     git_helper = GitHelper.from_githubrepobranch(
         githubrepobranch=githubrepobranch,
@@ -706,6 +713,7 @@ def release_and_prepare_next_dev_cycle(
         repository_branch=githubrepobranch.branch(),
         commit_message_prefix=commit_message_prefix,
         release_commit_callback=release_commit_callback,
+        publishing_policy=release_commit_publishing_policy,
     )
     step_list.append(release_commit_step)
 

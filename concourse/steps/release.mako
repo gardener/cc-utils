@@ -74,6 +74,7 @@ release_and_prepare_next_dev_cycle(
   release_version=version_str,
   version_operation='${version_op}',
   release_notes_policy='${release_trait.release_notes_policy().value}',
+  release_commit_publishing_policy='${release_trait.release_commit_publishing_policy().value}',
   % if commit_message_prefix:
   commit_message_prefix='${commit_message_prefix}',
   % endif
