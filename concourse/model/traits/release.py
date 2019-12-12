@@ -146,7 +146,8 @@ ATTRIBUTES = (
         default=ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH,
         doc='''
         configures how the release commit should be published
-        '''
+        ''',
+        type=ReleaseCommitPublishingPolicy,
     ),
     AttributeSpec.optional(
         name='commit_message_prefix',
