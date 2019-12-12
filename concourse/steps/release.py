@@ -247,7 +247,7 @@ class ReleaseCommitStep(TransactionalStep):
             to_ref=self.repository_branch,
         )
         return {
-            'release commit sha': release_commit.hexsha,
+            'release_commit_sha1': release_commit.hexsha,
         }
 
     def revert(self):
@@ -263,7 +263,7 @@ class ReleaseCommitStep(TransactionalStep):
                 self.git_helper.repo.head.reset(working_tree=True)
 
             self.git_helper.repo.git.revert(
-                output['release commit sha'],
+                output['release_commit_sha1'],
                 no_edit=True,
                 no_commit=True,
             )
@@ -444,7 +444,7 @@ class GitHubReleaseStep(TransactionalStep):
         self,
     ):
         release_commit_step_output = self.context().step_output('Create Release Commit')
-        release_commit_sha = release_commit_step_output['release commit sha']
+        release_commit_sha = release_commit_step_output['release_commit_sha1']
         # Create GitHub-release
         release = self.github_helper.repository.create_release(
             tag_name=self.release_version,
