@@ -30,6 +30,7 @@ from product.model import (
 from protecode.model import (
     License,
     highest_major_cve_severity,
+    CVSSVersion,
 )
 
 
@@ -43,6 +44,7 @@ def upload_grouped_images(
     processing_mode=ProcessingMode.RESCAN,
     image_reference_filter=(lambda component, container_image: True),
     reference_group_ids=(),
+    cvss_version=CVSSVersion.V2,
 ):
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
     protecode_api = ccc.protecode.client(protecode_cfg)
@@ -101,6 +103,7 @@ def upload_grouped_images(
 
     relevant_results = filter_and_display_upload_results(
         upload_results=results,
+        cvss_version=cvss_version,
         cve_threshold=cve_threshold,
         ignore_if_triaged=ignore_if_triaged,
     )
@@ -179,6 +182,7 @@ def license_report(
 
 def filter_and_display_upload_results(
     upload_results: typing.Sequence[UploadResult],
+    cvss_version: CVSSVersion,
     cve_threshold=7,
     ignore_if_triaged=True,
 ) -> typing.Iterable[typing.Tuple[UploadResult, int]]:
@@ -205,7 +209,10 @@ def filter_and_display_upload_results(
             vulnerabilities = filter(lambda v: not v.historical(), component.vulnerabilities())
             if ignore_if_triaged:
                 vulnerabilities = filter(lambda v: not v.has_triage(), vulnerabilities)
-            greatest_cve_candidate = highest_major_cve_severity(vulnerabilities)
+            greatest_cve_candidate = highest_major_cve_severity(
+                vulnerabilities,
+                cvss_version,
+            )
             if greatest_cve_candidate > greatest_cve:
                 greatest_cve = greatest_cve_candidate
 

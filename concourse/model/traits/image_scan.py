@@ -32,6 +32,7 @@ from concourse.model.base import (
 )
 from model.base import ModelValidationError
 from product.scanning import ProcessingMode
+from protecode.model import CVSSVersion
 
 import concourse.model.traits.component_descriptor
 from .images import (
@@ -76,6 +77,12 @@ PROTECODE_ATTRS = (
         default=None,
         doc='protecode cfg name to use (see cc-config)',
     ),
+    AttributeSpec.optional(
+        name='cvss_version',
+        default=CVSSVersion.V2,
+        doc='CVSS version used to evaluate the severity of vulnerabilities',
+        type=CVSSVersion,
+    ),
 )
 
 
@@ -101,6 +108,9 @@ class ProtecodeScanCfg(ModelBase):
 
     def processing_mode(self):
         return ProcessingMode(self.raw.get('processing_mode'))
+
+    def cvss_version(self):
+        return CVSSVersion(self.raw.get('cvss_version'))
 
     def validate(self):
         super().validate()

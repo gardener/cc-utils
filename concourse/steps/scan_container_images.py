@@ -308,6 +308,7 @@ def protecode_scan(
     parallel_jobs: int,
     cve_threshold,
     image_reference_filter,
+    cvss_version,
 ):
     protecode_results, license_report = protecode.util.upload_grouped_images(
         protecode_cfg=protecode_cfg,
@@ -318,6 +319,7 @@ def protecode_scan(
         cve_threshold=cve_threshold,
         image_reference_filter=image_reference_filter,
         reference_group_ids=reference_protecode_group_ids,
+        cvss_version=cvss_version,
     )
 
     # XXX also include in email
