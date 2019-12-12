@@ -203,6 +203,8 @@ class ReleaseCommitStep(TransactionalStep):
         else:
             self.release_commit_callback = None
 
+        self.head_commit = None # stored while applying - used for revert
+
     def _release_commit_message(self, version: str, commit_message_prefix: str):
         message = f'Release {version}'
         if commit_message_prefix:
@@ -227,6 +229,10 @@ class ReleaseCommitStep(TransactionalStep):
         if worktree_dirty:
             self.git_helper.repo.head.reset(working_tree=True)
 
+        # store head-commit (type: git.Commit)
+        self.head_commit = self.git_helper.repo.head.commit
+        self.context().head_commit = self.head_commit # pass to other steps
+
         # prepare release commit
         with open(self.repository_version_file_path, 'w') as f:
             f.write(self.release_version)
@@ -239,16 +245,25 @@ class ReleaseCommitStep(TransactionalStep):
                 effective_version=self.release_version,
             )
 
-        release_commit = _add_all_and_create_commit(
-            git_helper=self.git_helper,
+        release_commit = self.git_helper.index_to_commit(
             message=self._release_commit_message(self.release_version, self.commit_message_prefix),
         )
+
+        self.context().release_commit = release_commit # pass to other steps
+
+        if self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
+            to_ref = self.repository_branch
+        elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
+            to_ref = f'refs/tags/{self.release_version}'
+        else:
+            raise NotImplementedError
 
         # Push commit to remote
         self.git_helper.push(
             from_ref=release_commit.hexsha,
-            to_ref=self.repository_branch,
+            to_ref=to_ref
         )
+
         return {
             'release_commit_sha1': release_commit.hexsha,
         }
@@ -290,6 +305,7 @@ class NextDevCycleCommitStep(TransactionalStep):
         repository_branch: str,
         version_operation: str,
         prerelease_suffix: str,
+        publishing_policy: ReleaseCommitPublishingPolicy,
         next_version_callback: str=None,
     ):
         self.git_helper = not_none(git_helper)
@@ -299,6 +315,7 @@ class NextDevCycleCommitStep(TransactionalStep):
         self.release_version = not_empty(release_version)
         self.version_operation = not_empty(version_operation)
         self.prerelease_suffix = not_empty(prerelease_suffix)
+        self.publishing_policy = publishing_policy
 
         self.repository_version_file_path = os.path.join(
             repo_dir_absolute,
@@ -358,9 +375,16 @@ class NextDevCycleCommitStep(TransactionalStep):
                 effective_version=next_cycle_dev_version,
             )
 
-        next_cycle_commit = _add_all_and_create_commit(
-            git_helper=self.git_helper,
-            message=self._next_dev_cycle_commit_message(next_cycle_dev_version)
+        # depending on publishing-policy, bump-commit should become successor of
+        # either the release commit, or just be pushed to branch-head
+        if self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
+            parent_commits = [self.context().release_commit]
+        elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
+            parent_commits = None # default to current branch head
+
+        next_cycle_commit = self.git_helper.index_to_commit(
+            message=self._next_dev_cycle_commit_message(next_cycle_dev_version),
+            parent_commits=parent_commits,
         )
 
         # Push commit to remote
@@ -727,6 +751,7 @@ def release_and_prepare_next_dev_cycle(
             version_operation=version_operation,
             prerelease_suffix=prerelease_suffix,
             next_version_callback=next_version_callback,
+            publishing_policy=release_commit_publishing_policy,
         )
         step_list.append(next_cycle_commit_step)
 
