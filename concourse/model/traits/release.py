@@ -93,6 +93,11 @@ class ReleaseNotesPolicy(AttribSpecMixin, enum.Enum):
         )
 
 
+class ReleaseCommitPublishingPolicy(enum.Enum):
+    TAG_AND_PUSH_TO_BRANCH = 'push_to_branch'
+    TAG_ONLY = 'tag_only'
+
+
 ATTRIBUTES = (
     AttributeSpec.optional(
         name='nextversion',
@@ -137,6 +142,13 @@ ATTRIBUTES = (
         type=ReleaseNotesPolicy,
     ),
     AttributeSpec.optional(
+        name='release_commit_publishing_policy',
+        default=ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH,
+        doc='''
+        configures how the release commit should be published
+        '''
+    ),
+    AttributeSpec.optional(
         name='commit_message_prefix',
         default=None,
         doc='''
@@ -169,6 +181,9 @@ class ReleaseTrait(Trait):
 
     def release_notes_policy(self) -> ReleaseNotesPolicy:
         return ReleaseNotesPolicy(self.raw.get('release_notes_policy'))
+
+    def release_commit_publishing_policy(self) -> ReleaseCommitPublishingPolicy:
+        return ReleaseCommitPublishingPolicy(self.raw['release_commit_publishing_policy'])
 
     def commit_message_prefix(self) -> str:
         return self.raw.get('commit_message_prefix')
