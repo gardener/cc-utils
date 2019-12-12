@@ -4,6 +4,9 @@ from github.util import GitHubRepositoryHelper, GitHubRepoBranch
 from github.release_notes.util import ReleaseNotes
 
 import concourse.steps.release
+from concourse.model.traits.release import (
+    ReleaseCommitPublishingPolicy,
+)
 
 
 class TestReleaseCommitStep(object):
@@ -28,6 +31,7 @@ class TestReleaseCommitStep(object):
                 repository_branch=repository_branch,
                 commit_message_prefix=None,
                 release_commit_callback=release_commit_callback,
+                publishing_policy=ReleaseCommitPublishingPolicy.TAG_ONLY,
             )
         return _examinee
 
