@@ -28,6 +28,7 @@ import product.util
 import protecode.util
 
 from product.scanning import ProcessingMode
+from protecode.model import CVSSVersion
 
 ${step_lib('scan_container_images')}
 ${step_lib('images')}
@@ -79,6 +80,7 @@ protecode_results, license_report = protecode_scan(
   parallel_jobs=${protecode_scan.parallel_jobs()},
   cve_threshold=${protecode_scan.cve_threshold()},
   image_reference_filter=filter_function,
+  cvss_version = CVSSVersion('${protecode_scan.cvss_version().value}'),
 )
 % endif
 

@@ -25,6 +25,11 @@ class ProcessingStatus(Enum):
     FAILED = 'F'
 
 
+class CVSSVersion(Enum):
+    V2 = 'CVSSv2'
+    V3 = 'CVSSv3'
+
+
 class AnalysisResult(ModelBase):
     def product_id(self):
         return self.raw.get('product_id')
@@ -98,8 +103,13 @@ class Vulnerability(ModelBase):
     def cve(self):
         return self.raw.get('vuln').get('cve')
 
-    def cve_severity_str(self):
-        return str(self.raw.get('vuln').get('cvss'))
+    def cve_severity_str(self, cvss_version):
+        if cvss_version is CVSSVersion.V3:
+            return str(self.raw.get('vuln').get('cvss3_score'))
+        elif cvss_version is CVSSVersion.V2:
+            return str(self.raw.get('vuln').get('cvss'))
+        else:
+            raise NotImplementedError(f'{cvss_version} not supported')
 
     def has_triage(self):
         return self.raw.get('triage') is not None
@@ -109,9 +119,9 @@ class Vulnerability(ModelBase):
             return ()
         return (Triage(raw_dict=raw) for raw in self.raw.get('triage'))
 
-    def cve_major_severity(self) -> int:
-        if self.cve_severity_str():
-            return int(self.cve_severity_str().split('.')[0])
+    def cve_major_severity(self, cvss_version) -> int:
+        if self.cve_severity_str(cvss_version):
+            return int(self.cve_severity_str(cvss_version).split('.')[0])
         else:
             return -1
 
@@ -168,10 +178,13 @@ class ScanResult(ModelBase):
         return self.raw.get('has_binary')
 
 
-def highest_major_cve_severity(vulnerabilites: Iterable[Vulnerability]) -> int:
+def highest_major_cve_severity(
+    vulnerabilites: Iterable[Vulnerability],
+    cvss_version,
+) -> int:
     try:
         return max(
-            map(lambda v: v.cve_major_severity(), vulnerabilites)
+            map(lambda v: v.cve_major_severity(cvss_version), vulnerabilites)
         )
     except ValueError:
         return -1
