@@ -525,7 +525,7 @@ class PipelineReplicator(object):
         return deploy_result
 
     def _replicate(self):
-        executor = ThreadPoolExecutor(max_workers=8)
+        executor = ThreadPoolExecutor(max_workers=16)
         yield from executor.map(
             self._process_definition_descriptor,
             self._enumerate_definitions(),
