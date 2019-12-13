@@ -55,8 +55,8 @@ class LoggingRetry(Retry):
 
 def mount_default_adapter(
     session: requests.Session,
-    connection_pool_cache_size=10, # requests-library default
-    max_pool_size=10, # requests-library default
+    connection_pool_cache_size=32, # requests-library default
+    max_pool_size=32, # requests-library default
     flags=AdapterFlag.CACHE|AdapterFlag.RETRY,
 ):
     if AdapterFlag.CACHE in flags:
