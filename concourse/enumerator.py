@@ -303,7 +303,7 @@ class GithubOrganisationDefinitionEnumerator(GithubDefinitionEnumeratorBase):
         self.cfg_set = not_none(cfg_set)
 
     def enumerate_definition_descriptors(self):
-        executor = ThreadPoolExecutor(max_workers=8)
+        executor = ThreadPoolExecutor(max_workers=16)
 
         # scan github repositories
         for github_org_cfg in self.job_mapping.github_organisations():
