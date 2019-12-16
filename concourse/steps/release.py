@@ -355,7 +355,18 @@ class NextDevCycleCommitStep(TransactionalStep):
         # clean repository if required
         worktree_dirty = bool(self.git_helper._changed_file_paths())
         if worktree_dirty:
-            self.git_helper.repo.head.reset(working_tree=True)
+            if self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
+                reset_to = self.context().release_commit
+            elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
+                reset_to = 'HEAD'
+            else:
+                raise NotImplementedError
+
+            self.git_helper.repo.head.reset(
+                commit=reset_to,
+                index=True,
+                working_tree=True,
+            )
 
         # prepare next dev cycle commit
         next_version = _calculate_next_cycle_dev_version(
