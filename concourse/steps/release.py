@@ -358,21 +358,22 @@ class NextDevCycleCommitStep(TransactionalStep):
             self.git_helper.repo.head.reset(working_tree=True)
 
         # prepare next dev cycle commit
-        next_cycle_dev_version = _calculate_next_cycle_dev_version(
+        next_version = _calculate_next_cycle_dev_version(
             release_version=self.release_version,
             version_operation=self.version_operation,
             prerelease_suffix=self.prerelease_suffix,
         )
+        info(f'next version: {next_version}')
 
         with open(self.repository_version_file_path, 'w') as f:
-            f.write(next_cycle_dev_version)
+            f.write(next_version)
 
         # call optional dev cycle commit callback
         if self.next_version_callback:
             _invoke_callback(
                 callback_script_path=self.next_version_callback,
                 repo_dir=self.repo_dir,
-                effective_version=next_cycle_dev_version,
+                effective_version=next_version,
             )
 
         # depending on publishing-policy, bump-commit should become successor of
@@ -383,7 +384,7 @@ class NextDevCycleCommitStep(TransactionalStep):
             parent_commits = None # default to current branch head
 
         next_cycle_commit = self.git_helper.index_to_commit(
-            message=self._next_dev_cycle_commit_message(next_cycle_dev_version),
+            message=self._next_dev_cycle_commit_message(next_version),
             parent_commits=parent_commits,
         )
 
