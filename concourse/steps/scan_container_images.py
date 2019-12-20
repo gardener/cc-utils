@@ -27,6 +27,7 @@ import protecode.util
 
 from concourse.model.traits.image_scan import Notify
 from product.model import ComponentName, UploadResult
+from protecode.model import CVSSVersion
 
 logger = logging.getLogger()
 
@@ -53,6 +54,7 @@ class MailRecipients(object):
         protecode_cfg: None,
         protecode_group_id: int=None,
         protecode_group_url: str=None,
+        cvss_version: CVSSVersion=None,
         result_filter=None,
         recipients: typing.List[str]=[],
         recipients_component: ComponentName=None,
@@ -69,6 +71,7 @@ class MailRecipients(object):
         self._protecode_cfg = protecode_cfg
         self._protecode_group_id = protecode_group_id
         self._protecode_group_url = protecode_group_url
+        self._cvss_version = cvss_version
 
     @functools.lru_cache()
     def resolve_recipients(self):
@@ -130,7 +133,7 @@ class MailRecipients(object):
             <p>
               The following components in Protecode-group
               <a href="{self._protecode_group_url}">{self._protecode_group_id}</a>
-              were found to contain critical vulnerabilities:
+              were found to contain critical vulnerabilities (applying {self._cvss_version.value}):
             </p>
         ''')
         return result + protecode_results_table(
@@ -162,6 +165,7 @@ def mail_recipients(
     protecode_cfg=None,
     protecode_group_id: int=None,
     protecode_group_url: str=None,
+    cvss_version: CVSSVersion=None,
     email_recipients: typing.Iterable[str]=(),
     components: typing.Iterable[ComponentName]=(),
 ):
@@ -171,6 +175,7 @@ def mail_recipients(
         protecode_cfg=protecode_cfg,
         protecode_group_id=protecode_group_id,
         protecode_group_url=protecode_group_url,
+        cvss_version=cvss_version,
         cfg_set=cfg_set,
     )
 
@@ -277,6 +282,7 @@ def print_protecode_info_table(
     protecode_group_url: str,
     protecode_group_id: int,
     reference_protecode_group_ids: typing.List[int],
+    cvss_version: CVSSVersion,
     include_image_references: typing.List[str],
     exclude_image_references: typing.List[str],
     include_image_names: typing.List[str],
@@ -289,6 +295,7 @@ def print_protecode_info_table(
         ('Protecode target group id', str(protecode_group_id)),
         ('Protecode group URL', protecode_group_url),
         ('Protecode reference group IDs', reference_protecode_group_ids),
+        ('Used CVSS version', cvss_version.value),
         ('Image reference filter (include)', include_image_references),
         ('Image reference filter (exclude)', exclude_image_references),
         ('Image name filter (include)', include_image_names),
