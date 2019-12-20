@@ -215,6 +215,28 @@
 <td><p>str</p></td>
 <td><p>Specifies additional environment variables passed to .ci/component_descriptor script</p></td>
 </tr>
+<tr class="row-even"><td><p>validation_policies</p></td>
+<td><p>no</p></td>
+<td><p>[&lt;ValidationPolicy.FORBID_EXTRA_ATTRIBUTES: ‘forbid_extra_attributes’&gt;]</p></td>
+<td><p>List[&lt;enum ‘ValidationPolicy’&gt;]</p></td>
+<td><p>The validation policies that should be applied to arguments of components added to the component descriptor</p></td>
+</tr>
+</tbody>
+</table>
+<p class="section-subtitle">validation_policies Enumeration Values</p>
+<table class="colwidths-auto docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>value</p></th>
+<th class="head"><p>explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>not_empty</p></td>
+<td><p>Every given attribute (e.g.: “version”) must also be given a non-empty value</p></td>
+</tr>
+<tr class="row-odd"><td><p>forbid_extra_attributes</p></td>
+<td><p><strong>only</strong> required attributes are allowed</p></td>
+</tr>
 </tbody>
 </table>
 <p class="section-subtitle">Dependencies</p>
