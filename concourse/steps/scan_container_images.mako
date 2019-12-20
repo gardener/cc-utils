@@ -63,6 +63,7 @@ print_protecode_info_table(
   protecode_group_id = protecode_group_id,
   reference_protecode_group_ids = ${protecode_scan.reference_protecode_group_ids()},
   protecode_group_url = protecode_group_url,
+  cvss_version = CVSSVersion('${protecode_scan.cvss_version().value}'),
   include_image_references=${filter_cfg.include_image_references()},
   exclude_image_references=${filter_cfg.exclude_image_references()},
   include_image_names=${filter_cfg.include_image_names()},
@@ -125,6 +126,7 @@ email_recipients = tuple(
     protecode_cfg=protecode_cfg,
     protecode_group_id=protecode_group_id,
     protecode_group_url=protecode_group_url,
+    cvss_version = CVSSVersion('${protecode_scan.cvss_version().value}'),
 % endif
     cfg_set=cfg_set,
     email_recipients=email_recipients,
