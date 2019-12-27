@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import enum
+
 from model.base import (
     BasicCredentials,
     ModelBase,
@@ -24,6 +26,9 @@ class DeliveryConfig(NamedModelElement):
     '''
     Not intended to be instantiated by users of this module
     '''
+    def auth(self):
+        return Auth(self.raw.get('auth'))
+
     def tls_cfg_name(self):
         return self.raw.get('tls_cfg_name')
 
@@ -55,6 +60,41 @@ class DeliveryConfig(NamedModelElement):
             'dashboard',
             'service',
         ]
+
+
+class OAuthType(enum.Enum):
+    GITHUB = 'github'
+
+
+class Auth(ModelBase):
+    def oauth_cfgs(self):
+        return [OAuth(raw) for raw in self.raw.get('oauth_cfgs')]
+
+    def oauth_cfg(self, github_cfg):
+        for oc in self.oauth_cfgs():
+            if oc.github_cfg() == github_cfg:
+                return oc
+        raise KeyError(f'no oauth cfg for {github_cfg}')
+
+
+class OAuth(ModelBase):
+    def type(self):
+        return OAuthType(self.raw.get('type'))
+
+    def github_cfg(self):
+        return self.raw.get('github_cfg')
+
+    def oauth_url(self):
+        return self.raw.get('oauth_url')
+
+    def client_id(self):
+        return self.raw.get('client_id')
+
+    def client_secret(self):
+        return self.raw.get('client_secret')
+
+    def scope(self):
+        return self.raw.get('scope')
 
 
 class DeliverySvcCfg(ModelBase):
