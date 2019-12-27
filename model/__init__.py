@@ -46,7 +46,7 @@ instantiated by users of this module.
 '''
 
 
-class ConfigFactory(object):
+class ConfigFactory:
     '''Creates configuration model element instances from the underlying configuration source
 
     Configuration elements are organised in a two-level hierarchy: Configuration type
