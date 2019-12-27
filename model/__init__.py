@@ -258,7 +258,7 @@ class ConfigFactory:
     def __dir__(self):
         # prepend factory methods (improve REPL-shell experience)
         for cfg_type in self._cfg_types().values():
-            if (factory_method := cfg_type.factory_method()):
+            if (factory_method:= cfg_type.factory_method()):
                 yield factory_method
 
         yield from super().__dir__()

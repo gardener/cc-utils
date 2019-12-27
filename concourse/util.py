@@ -124,9 +124,9 @@ def resurrect_pods(
     concourse pods tend to crash and need to be pruned to help with the self-healing
     '''
 
-    info(f'Check for not running concourse workers')
+    info('Checking for not running concourse workers')
     worker_list = concourse_client.list_workers()
-    pruned_workers = list()
+    pruned_workers = []
     for worker in worker_list:
         worker_name = worker.name()
         info(f'Worker {worker_name}: {worker.state()}')

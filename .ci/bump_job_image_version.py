@@ -19,7 +19,7 @@ string_to_match = 'tag = '
 for line in fileinput.FileInput(str(template_file), inplace=True):
     if string_to_match in line:
         if lines_replaced != 0:
-            raise RuntimeError(f'More than one image tag found in template file')
+            raise RuntimeError('More than one image tag found in template file')
         leading_spaces = line.index(string_to_match)
         print(f'{leading_spaces * " "}{string_to_match}"{effective_version}"')
         lines_replaced = 1

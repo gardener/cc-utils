@@ -154,7 +154,7 @@ def _filter_files(
             patched_tar.seek(0)
 
             out_tarfile.addfile(tar_info, fileobj=patched_tar)
-            logging.debug(f'patched: tar_info.name')
+            logging.debug(f'patched: {tar_info.name}')
 
             changed_layer_hashes.append((old_hash.hexdigest(), new_hash.hexdigest()))
 

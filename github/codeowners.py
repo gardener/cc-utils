@@ -38,7 +38,7 @@ class CodeownersEnumerator(object):
     def enumerate_local_repo(self, repo_dir: str):
         repo_dir = existing_dir(Path(repo_dir))
         if not repo_dir.joinpath('.git').is_dir():
-            raise ValueError('not a git root directory: {r}'.format(self.repo_dir))
+            raise ValueError(f'not a git root directory: {self.repo_dir}')
 
         for path in self.CODEOWNERS_PATHS:
             codeowners_file = repo_dir.joinpath(path)
@@ -121,7 +121,7 @@ class CodeOwnerEntryResolver(object):
         '''
         for codeowner_entry in codeowners_entries:
             if '@' not in codeowner_entry:
-                warning('invalid codeowners-entry: {e}'.format(codeowner_entry))
+                warning(f'invalid codeowners-entry: {codeowner_entry}')
                 continue
             if not codeowner_entry.startswith('@'):
                 yield codeowner_entry # plain email address

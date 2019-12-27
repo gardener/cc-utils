@@ -245,7 +245,7 @@ class ProtecodeUtil(object):
         ci.util.info(f'found {len(triages_to_import)} triage(s) to import')
 
         if self._processing_mode is ProcessingMode.FORCE_UPLOAD:
-            ci.util.info(f'force-upload - will re-upload all images')
+            ci.util.info('force-upload - will re-upload all images')
             images_to_upload |= set(container_image_group.images())
             # remove all
             protecode_apps_to_remove = set(existing_products)
