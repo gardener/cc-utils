@@ -27,11 +27,11 @@ class DeliveryConfig(NamedModelElement):
     def tls_cfg_name(self):
         return self.raw.get('tls_cfg_name')
 
-    def dashboard_url(self):
-        return self.raw.get('dashboard_url')
+    def dashboard(self):
+        return DeliveryDashboardCfg(self.raw.get('dashboard'))
 
-    def service_url(self):
-        return self.raw.get('service_url')
+    def service(self):
+        return DeliverySvcCfg(self.raw.get('service'))
 
     def deployment_name(self):
         return self.raw.get('deployment_name', 'delivery-dashboard')
@@ -52,9 +52,19 @@ class DeliveryConfig(NamedModelElement):
         yield from super()._required_attributes()
         yield from [
             'tls_cfg_name',
-            'dashboard_url',
-            'service_url',
+            'dashboard',
+            'service',
         ]
+
+
+class DeliverySvcCfg(ModelBase):
+    def external_host(self):
+        return self.raw.get('external_host')
+
+
+class DeliveryDashboardCfg(ModelBase):
+    def external_host(self):
+        return self.raw.get('external_host')
 
 
 class MongoDbConfig(ModelBase):
