@@ -255,6 +255,14 @@ class ConfigFactory:
         else:
             return set()
 
+    def __dir__(self):
+        # prepend factory methods (improve REPL-shell experience)
+        for cfg_type in self._cfg_types().values():
+            if (factory_method := cfg_type.factory_method()):
+                yield factory_method
+
+        yield from super().__dir__()
+
     def __getattr__(self, cfg_type_name):
         for cfg_type in self._cfg_types().values():
             if cfg_type.factory_method() == cfg_type_name:
