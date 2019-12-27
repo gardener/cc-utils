@@ -17,7 +17,7 @@ RUN pip3 install --upgrade \
 
 # XXX pyflakes does not yet support python3.8's "walrus operator"
 # (https://github.com/PyCQA/pyflakes/pull/457)
-RUN pip3 uninstall pyflakes && pip3 install git+https://github.com/pycqa/pyflakes
+RUN pip3 uninstall --yes pyflakes && pip3 install git+https://github.com/pycqa/pyflakes
 
 RUN EFFECTIVE_VERSION="$(cat /metadata/VERSION)" REPO_DIR=/cc/utils \
   /cc/utils/.ci/bump_job_image_version.py
