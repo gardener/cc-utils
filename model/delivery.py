@@ -24,10 +24,8 @@ class DeliveryConfig(NamedModelElement):
     '''
     Not intended to be instantiated by users of this module
     '''
-
-    def config_set_name(self):
-        # used to determine some defaults, e.g.: secretes server config
-        return self.raw.get('config_set_name')
+    def tls_cfg_name(self):
+        return self.raw.get('tls_cfg_name')
 
     def dashboard_url(self):
         return self.raw.get('dashboard_url')
@@ -53,7 +51,7 @@ class DeliveryConfig(NamedModelElement):
     def _required_attributes(self):
         yield from super()._required_attributes()
         yield from [
-            'config_set_name',
+            'tls_cfg_name',
             'dashboard_url',
             'service_url',
         ]
