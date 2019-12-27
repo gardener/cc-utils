@@ -71,6 +71,7 @@ cc-utils:
       <<: *gh_pages_repo
       steps:
         release_to_pypi:
+          depends: ['release']
           output_dir: 'pypi'
       traits:
         <<: *release_traits
