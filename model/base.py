@@ -118,6 +118,9 @@ class NamedModelElement(ModelBase):
     def name(self):
         return self._name
 
+    def __repr__(self):
+        return f'{self.__class__.__qualname__}: {self.name()}'
+
     def __str__(self):
         return '{n}: {d}'.format(n=self.name(), d=self.raw)
 
