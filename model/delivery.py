@@ -87,6 +87,9 @@ class OAuth(ModelBase):
     def oauth_url(self):
         return self.raw.get('oauth_url')
 
+    def token_url(self):
+        return self.raw.get('token_url')
+
     def client_id(self):
         return self.raw.get('client_id')
 
