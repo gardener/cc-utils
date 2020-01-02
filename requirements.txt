@@ -1,6 +1,4 @@
 # Install with: pip(3) install -r requirements.txt --upgrade
-Flask-RESTful<1.0.0
-Flask<2.0.0
 GitPython<3.0.0
 Mako<2.0.0
 Sphinx<3.0.0

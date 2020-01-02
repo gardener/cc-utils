@@ -13,20 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from flask import abort, request
-from flask import current_app as app
-
-from flask_restful import (
-    Resource,
-    reqparse,
-)
+import logging
 
 from model.webhook_dispatcher import WebhookDispatcherConfig
 from .dispatcher import GithubWebhookDispatcher
 from .model import CreateEvent, PushEvent, PullRequestEvent
 
+logger = logging.getLogger(__name__)
 
-class GithubWebhook(Resource):
+
+class GithubWebhook:
     def __init__(
         self,
         cfg_set,
@@ -34,28 +30,24 @@ class GithubWebhook(Resource):
     ):
         self.cfg_set = cfg_set
         self.whd_cfg = whd_cfg
-        self.parser = reqparse.RequestParser()
-        self.parser.add_argument('X-GitHub-Event', type=str, location='headers')
         self.dispatcher = GithubWebhookDispatcher(cfg_set=cfg_set, whd_cfg=whd_cfg)
 
-    def post(self):
-        args = self.parser.parse_args()
-        event = args.get('X-GitHub-Event')
-        if not event:
-            abort(400, 'X-GitHub-Event must be set')
+    def on_post(self, req, resp):
+        event = req.get_header('X-GitHub-Event', required=True)
 
         if event == 'push':
-            parsed = PushEvent(raw_dict=request.get_json())
+            parsed = PushEvent(raw_dict=req.media)
             self.dispatcher.dispatch_push_event(push_event=parsed)
-            return 'OK'
+            return
         if event == 'create':
-            parsed = CreateEvent(raw_dict=request.get_json())
+            parsed = CreateEvent(raw_dict=req.media)
             self.dispatcher.dispatch_create_event(create_event=parsed)
+            return
         elif event == 'pull_request':
-            parsed = PullRequestEvent(raw_dict=request.get_json())
+            parsed = PullRequestEvent(raw_dict=req.media)
             self.dispatcher.dispatch_pullrequest_event(pr_event=parsed)
-            return 'OK'
+            return
         else:
             msg = f'event {event} ignored'
-            app.logger.info(msg)
-            return msg
+            logger.info(msg)
+            return

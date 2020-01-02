@@ -8,7 +8,7 @@ def requirements():
     yield 'gardener-cicd-base'
 
     # dependencies only required by WHD
-    whd_dependencies = ('Flask-RESTful', 'Flask', 'bjoern')
+    whd_dependencies = ('falcon', 'bjoern')
 
     with open(os.path.join(own_dir, 'requirements.txt')) as f:
         for line in f.readlines():

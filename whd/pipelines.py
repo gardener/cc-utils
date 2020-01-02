@@ -17,11 +17,6 @@ import concourse.enumerator
 import concourse.replicator
 
 
-def logger():
-    from flask import current_app
-    return current_app.logger
-
-
 def update_repository_pipelines(
     repo_url,
     cfg_set,

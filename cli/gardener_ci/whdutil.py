@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import ci.util
+ci.util.ctx().configure_default_logging()
 
 
 def start_whd(
@@ -45,4 +46,11 @@ def start_whd(
             serve()
         serve()
     else:
-        app.run(debug=True, port=port, host=any_interface)
+        import werkzeug.serving
+        werkzeug.serving.run_simple(
+            hostname=any_interface,
+            port=port,
+            application=app,
+            use_reloader=True,
+            use_debugger=True,
+        )

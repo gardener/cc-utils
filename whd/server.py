@@ -13,9 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-from flask import Flask
-from flask_restful import Api
+import falcon
 
 from .webhook import GithubWebhook
 from model.webhook_dispatcher import WebhookDispatcherConfig
@@ -25,17 +23,15 @@ def webhook_dispatcher_app(
     cfg_set,
     whd_cfg: WebhookDispatcherConfig,
 ):
-    app = Flask(__name__)
-    app.logger.setLevel(logging.INFO)
-    api = Api(app)
+    app = falcon.API(
+        middleware=[],
+    )
 
-    api.add_resource(
-        GithubWebhook,
-        '/github-webhook',
-        resource_class_kwargs={
-            'whd_cfg': whd_cfg,
-            'cfg_set': cfg_set,
-        }
+    app.add_route('/github-webhook',
+        GithubWebhook(
+            whd_cfg=whd_cfg,
+            cfg_set=cfg_set,
+        ),
     )
 
     return app

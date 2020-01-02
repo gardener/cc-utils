@@ -15,10 +15,9 @@
 
 import datetime
 import functools
+import logging
 import time
 import traceback
-
-from flask import current_app as app
 
 from model.webhook_dispatcher import WebhookDispatcherConfig
 from .model import (
@@ -35,6 +34,8 @@ import ccc
 import ci.util
 import concourse.client
 
+logger = logging.getLogger(__name__)
+
 
 class GithubWebhookDispatcher(object):
     def __init__(
@@ -45,6 +46,7 @@ class GithubWebhookDispatcher(object):
         self.cfg_set = cfg_set
         self.whd_cfg = whd_cfg
         self.cfg_factory = ci.util.ctx().cfg_factory()
+        logger.info(f'github-whd initialised for cfg-set: {cfg_set.name()}')
 
     @functools.lru_cache()
     def concourse_clients(self):
@@ -60,7 +62,7 @@ class GithubWebhookDispatcher(object):
     def dispatch_create_event(self, create_event):
         ref_type = create_event.ref_type()
         if not ref_type == RefType.BRANCH:
-            app.logger.info(f'ignored create event with type {ref_type}')
+            logger.info(f'ignored create event with type {ref_type}')
             return
 
         # todo: rename parameter
@@ -85,7 +87,7 @@ class GithubWebhookDispatcher(object):
                 whd_cfg=self.whd_cfg,
             )
         except BaseException as be:
-            app.logger.warning(f'failed to update pipeline definition - ignored {be}')
+            logger.warning(f'failed to update pipeline definition - ignored {be}')
             import traceback
             try:
                 traceback.print_exc()
@@ -104,7 +106,7 @@ class GithubWebhookDispatcher(object):
             PullRequestAction.LABELED,
             PullRequestAction.SYNCHRONIZE,
         ):
-            return app.logger.info(f'ignoring pull-request action {pr_event.action()}')
+            return logger.info(f'ignoring pull-request action {pr_event.action()}')
 
         for concourse_api in self.concourse_clients():
             resources = list(self._matching_resources(
@@ -127,7 +129,7 @@ class GithubWebhookDispatcher(object):
 
     def _trigger_resource_check(self, concourse_api, resources):
         for resource in resources:
-            app.logger.info('triggering resource check for: ' + resource.name)
+            logger.info('triggering resource check for: ' + resource.name)
             try:
                 concourse_api.trigger_resource_check(
                     pipeline_name=resource.pipeline_name(),
@@ -154,26 +156,26 @@ class GithubWebhookDispatcher(object):
         )
         if pr_event.action() is PullRequestAction.OPENED:
             if github_helper.is_pr_created_by_org_member(pr_number):
-                app.logger.info(
+                logger.info(
                     f"New pull request by member of '{owner}' in '{repository_path}' found. "
                     f"Setting required labels '{required_labels}'."
                 )
                 github_helper.add_labels_to_pull_request(pr_number, *required_labels)
             else:
-                app.logger.debug(
+                logger.debug(
                     f"New pull request by member in '{repository_path}' found, but creator is not "
                     f"member of '{owner}' - will not set required labels."
                 )
         elif pr_event.action() is PullRequestAction.SYNCHRONIZE:
             sender_login = pr_event.sender()['login']
             if github_helper.is_org_member(organization_name=owner, user_login=sender_login):
-                app.logger.info(
+                logger.info(
                     f"Update to pull request #{pr_event.number()} by org member '{sender_login}' "
                     f" in '{repository_path}' found. Setting required labels '{required_labels}'."
                 )
                 github_helper.add_labels_to_pull_request(pr_number, *required_labels)
             else:
-                app.logger.debug(
+                logger.debug(
                     f"Update to pull request #{pr_event.number()} by '{sender_login}' "
                     f" in '{repository_path}' found. Ignoring, since they are not an org member'."
                 )
@@ -205,7 +207,7 @@ class GithubWebhookDispatcher(object):
             if isinstance(event, PushEvent):
                 if any(skip in event.commit_message() for skip in ('[skip ci]', '[ci skip]')):
                     if not ghs.disable_ci_skip():
-                        app.logger.info(
+                        logger.info(
                             f"Do not trigger resource {resource.name}. Found [skip ci] or [ci skip]"
                         )
                         continue
@@ -229,7 +231,7 @@ class GithubWebhookDispatcher(object):
             # ignore logging errors
             except BaseException:
                 pass
-            app.logger.info('giving up triggering PR(s)')
+            logger.info('giving up triggering PR(s)')
             return
 
         def resource_versions(resource):
@@ -243,7 +245,7 @@ class GithubWebhookDispatcher(object):
             require_label = resource.source.get('label')
             if require_label:
                 if require_label not in pr_event.label_names():
-                    app.logger.info('skipping PR resource update (required label not present)')
+                    logger.info('skipping PR resource update (required label not present)')
                     # regardless of whether or not the resource is up-to-date, it would not
                     # be discovered by concourse's PR resource due to policy
                     return True
@@ -263,12 +265,12 @@ class GithubWebhookDispatcher(object):
         ]
 
         if not outdated_resources:
-            app.logger.info('no outdated PR resources found')
+            logger.info('no outdated PR resources found')
             return # nothing to do
 
-        app.logger.info(f'found {len(outdated_resources)} PR resource(s) that require being updated')
+        logger.info(f'found {len(outdated_resources)} PR resource(s) that require being updated')
         self._trigger_resource_check(concourse_api=concourse_api, resources=outdated_resources)
-        app.logger.info(f'retriggered resource check will try again {retries} more times')
+        logger.info(f'retriggered resource check will try again {retries} more times')
 
         self._ensure_pr_resource_updates(
             concourse_api=concourse_api,
