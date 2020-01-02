@@ -49,7 +49,6 @@ class GithubWebhookDispatcher(object):
         self.cfg_factory = ci.util.ctx().cfg_factory()
         logger.info(f'github-whd initialised for cfg-set: {cfg_set.name()}')
 
-    @functools.lru_cache()
     def concourse_clients(self):
         for concourse_config_name in self.whd_cfg.concourse_config_names():
             concourse_cfg = self.cfg_factory.concourse(concourse_config_name)
