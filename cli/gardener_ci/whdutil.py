@@ -18,6 +18,7 @@ import logging
 import ci.util
 ci.util.ctx().configure_default_logging(stdout_level=logging.DEBUG)
 
+
 def start_whd(
     cfg_set_name: str,
     port: int=5000,
