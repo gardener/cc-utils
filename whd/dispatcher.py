@@ -35,7 +35,7 @@ import ci.util
 import concourse.client
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 
 class GithubWebhookDispatcher(object):
@@ -73,11 +73,14 @@ class GithubWebhookDispatcher(object):
         if self._pipeline_definition_changed(push_event):
             self._update_pipeline_definition(push_event)
 
+        logger.debug('before push-event dispatching')
         for concourse_api in self.concourse_clients():
+            logger.debug(f'using concourse-api: {concourse_api}')
             resources = self._matching_resources(
                 concourse_api=concourse_api,
                 event=push_event,
             )
+            logger.debug('triggering resource-check')
             self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
 
     def _update_pipeline_definition(self, push_event):
@@ -129,6 +132,7 @@ class GithubWebhookDispatcher(object):
             )
 
     def _trigger_resource_check(self, concourse_api, resources):
+        logger.debug('_trigger_resource_check')
         for resource in resources:
             logger.info('triggering resource check for: ' + resource.name)
             try:

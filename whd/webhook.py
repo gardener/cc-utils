@@ -20,7 +20,7 @@ from .dispatcher import GithubWebhookDispatcher
 from .model import CreateEvent, PushEvent, PullRequestEvent
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 
 class GithubWebhook:
@@ -40,6 +40,7 @@ class GithubWebhook:
         if event == 'push':
             parsed = PushEvent(raw_dict=req.media)
             self.dispatcher.dispatch_push_event(push_event=parsed)
+            logger.debug('after push-event dispatching')
             return
         if event == 'create':
             parsed = CreateEvent(raw_dict=req.media)
