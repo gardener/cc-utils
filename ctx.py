@@ -174,9 +174,11 @@ def cfg_factory():
     return factory
 
 
-def configure_default_logging():
+def configure_default_logging(stdout_level=None):
     import logging
     import logging.config
+    if not stdout_level:
+        stdout_level = logging.INFO
 
     cfg = {
         'version': 1,
@@ -189,7 +191,7 @@ def configure_default_logging():
             'console': {
                 'class': 'logging.StreamHandler',
                 'formatter': 'default',
-                'level': logging.INFO,
+                'level': stdout_level,
                 'stream': 'ext://sys.stdout',
             },
         },
