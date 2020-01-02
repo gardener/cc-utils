@@ -35,6 +35,7 @@ class GithubWebhook:
 
     def on_post(self, req, resp):
         event = req.get_header('X-GitHub-Event', required=True)
+        logger.info(f'received event of type {event}')
 
         if event == 'push':
             parsed = PushEvent(raw_dict=req.media)
