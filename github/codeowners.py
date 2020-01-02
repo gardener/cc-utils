@@ -67,11 +67,8 @@ class CodeownersEnumerator(object):
             line = line.strip()
             if line.startswith('#'):
                 continue
-            # first token is path filter (e.g. '*') - we ignore this for now
-            github_ids = line.split(' ')[1:]
-
-            # filter out empty strings (the empty string evaluates to False)
-            yield from filter(bool, github_ids)
+            # Yield tokens, ignoring the first (it is the path filter)
+            yield from line.split()[1:]
 
 
 def _first(iterable):
