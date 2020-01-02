@@ -13,8 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 import ci.util
-ci.util.ctx().configure_default_logging()
+ci.util.ctx().configure_default_logging(stdout_leve=logging.DEBUG)
 
 
 def start_whd(
