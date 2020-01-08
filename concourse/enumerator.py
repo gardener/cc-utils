@@ -269,10 +269,13 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
         concourse_cfg = cfg_set.concourse()
         job_mapping_set = cfg_set.job_mapping(concourse_cfg.job_mapping_cfg_name())
 
-        org_name = self._repository_url.path.lstrip('/').split('/')[0]
+        org_name, repo_name = self._repository_url.path.lstrip('/').split('/')
+
         for job_mapping in job_mapping_set.job_mappings().values():
             for org in job_mapping.github_organisations():
                 if org.org_name() != org_name:
+                    continue
+                if not job_mapping.repository_matches(repo_name):
                     continue
                 github_cfg = cfg_set.github(org.github_cfg_name())
                 if github_cfg.matches_hostname(self._repo_host):
@@ -322,7 +325,10 @@ class GithubOrganisationDefinitionEnumerator(GithubDefinitionEnumeratorBase):
 
             for definition_descriptors in executor.map(
                 scan_repository_for_definitions,
-                github_org.repositories(),
+                (
+                    repo for repo in github_org.repositories()
+                    if self.job_mapping.repository_matches(repo)
+                ),
             ):
                 yield from definition_descriptors
 
