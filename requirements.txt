@@ -5,7 +5,7 @@ Sphinx<3.0.0
 bcrypt<4.0.0
 bjoern<4
 cachecontrol<1
-containerregistry-ccwienk==0.2.2
+containerregistry-ccwienk==0.2.5
 dataclasses-json
 deepdiff<4.0.0
 deepmerge<1.0.0
