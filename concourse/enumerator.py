@@ -327,7 +327,7 @@ class GithubOrganisationDefinitionEnumerator(GithubDefinitionEnumeratorBase):
                 scan_repository_for_definitions,
                 (
                     repo for repo in github_org.repositories()
-                    if self.job_mapping.repository_matches(repo)
+                    if github_org_cfg.repository_matches(repo)
                 ),
             ):
                 yield from definition_descriptors
