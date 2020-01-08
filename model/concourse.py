@@ -15,6 +15,7 @@
 
 from enum import Enum
 
+import reutil
 from model.base import (
     NamedModelElement,
     ModelValidationError,
@@ -249,3 +250,17 @@ class GithubOrganisationConfig(NamedModelElement):
 
     def org_name(self):
         return self.raw.get('github_org')
+
+    def include_repositories(self):
+        return self.raw.get('include_repositories', ())
+
+    def exclude_repositories(self):
+        return self.raw.get('exclude_repositories', ())
+
+    def repository_matches(self, repository_name: str):
+        repo_filter = reutil.re_filter(
+            include_regexes=self.include_repositories(),
+            exclude_regexes=self.exclude_repositories(),
+        )
+
+        return repo_filter(repository_name)
