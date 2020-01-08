@@ -230,7 +230,7 @@ class JobMappingSet(NamedModelElement):
 
 
 class JobMapping(NamedModelElement):
-    def team_name(self)->str:
+    def team_name(self) -> str:
         return self.raw.get('concourse_target_team')
 
     def github_organisations(self):

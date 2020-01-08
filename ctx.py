@@ -26,7 +26,7 @@ from model.base import ModelBase
 Execution context. Filled upon invocation of cli.py, read by submodules
 '''
 
-args=None # the parsed command line arguments
+args = None # the parsed command line arguments
 
 
 class ConfigBase(ModelBase):

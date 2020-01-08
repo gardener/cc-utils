@@ -89,7 +89,7 @@ class ModelElementDirective(
 
     def run(self):
         name = self.options['name']
-        qualified_type_name= self.options['qualified_type_name']
+        qualified_type_name = self.options['qualified_type_name']
 
         self._init(name=name, qualified_type_name=qualified_type_name)
 

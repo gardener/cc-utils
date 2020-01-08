@@ -460,7 +460,7 @@ def release_note_block(
     user_login: str,
     cn_current_repo: ComponentName,
     reference_id: str=None
-)->ReleaseNoteBlock:
+) -> ReleaseNoteBlock:
     text = _.trim(code_block.get('text'))
     if not text or 'none' == text.lower():
         return None

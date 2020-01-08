@@ -276,7 +276,7 @@ def add_proxy_values(
             'additionalVolumes': additional_volumes,
         }
     )
-    instance_specific_values['worker']= vals
+    instance_specific_values['worker'] = vals
 
     return instance_specific_values
 

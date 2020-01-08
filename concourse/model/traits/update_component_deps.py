@@ -78,7 +78,7 @@ class UpdateComponentDependenciesTrait(Trait):
     def upstream_component_name(self):
         return self.raw.get('upstream_component_name')
 
-    def merge_policy(self)->MergePolicy:
+    def merge_policy(self) -> MergePolicy:
         return MergePolicy(self.raw['merge_policy'])
 
     def after_merge_callback(self):

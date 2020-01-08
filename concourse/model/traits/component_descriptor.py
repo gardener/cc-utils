@@ -119,7 +119,7 @@ class ComponentDescriptorTrait(Trait):
     def resolve_dependencies(self):
         return self.raw['resolve_dependencies']
 
-    def callback_env(self)->dict:
+    def callback_env(self) -> dict:
         return self.raw['callback_env']
 
     def validation_policies(self):

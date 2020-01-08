@@ -46,7 +46,7 @@ class SecretsServerClient(object):
     def __init__(self, endpoint_url, concourse_secret_name, cache_file=None):
         self.url = endpoint_url
         self.concourse_secret_name = concourse_secret_name
-        self.cache_file=cache_file
+        self.cache_file = cache_file
 
     def retrieve_secrets(self):
         if self.cache_file and os.path.isfile(self.cache_file):

@@ -112,7 +112,7 @@ class ConfigFactory:
     def _cfg_types_raw(self):
         return self.raw[self.CFG_TYPES]
 
-    def cfg_set(self, cfg_name: str)->'ConfigurationSet':
+    def cfg_set(self, cfg_name: str) -> 'ConfigurationSet':
         '''
         returns a new `ConfigurationSet` instance for the specified config name backed by the
         configured configuration source.

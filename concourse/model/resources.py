@@ -228,9 +228,9 @@ class RepositoryConfig(Resource):
 
         # todo: handle "qualifier"
         if is_pull_request:
-            type_name='pull-request'
+            type_name = 'pull-request'
         else:
-            type_name='git'
+            type_name = 'git'
 
         base_name = kwargs['raw_dict']['path'].replace('/', '_')
 

@@ -180,15 +180,15 @@ class DependencyBase(ModelBase):
         return own.__lt__(other)
 
     def __le__(self, other):
-        own, other= self.__comparables(other)
+        own, other = self.__comparables(other)
         return own.__le__(other)
 
     def __gt__(self, other):
-        own, other= self.__comparables(other)
+        own, other = self.__comparables(other)
         return own.__gt__(other)
 
     def __ge__(self, other):
-        own, other= self.__comparables(other)
+        own, other = self.__comparables(other)
         return own.__ge__(other)
 
     def __hash__(self):
@@ -564,14 +564,14 @@ class ComponentOverwrites(ModelBase):
     def _required_attributes(self):
         return {'declaring_component'}
 
-    def declaring_component(self)->ComponentReference:
+    def declaring_component(self) -> ComponentReference:
         declaring_comp = self.raw['declaring_component']
         return ComponentReference.create(
             name=declaring_comp['name'],
             version=declaring_comp['version']
         )
 
-    def dependency_overwrites(self)->typing.Iterable['DependencyOverwrites']:
+    def dependency_overwrites(self) -> typing.Iterable['DependencyOverwrites']:
         return (DependencyOverwrites(raw_dict) for raw_dict in self.raw['dependency_overwrites'])
 
     def dependency_overwrite(self, referenced_component, create_if_absent=False):
@@ -616,7 +616,7 @@ class DependencyOverwrites(ModelBase):
     def _required_attributes(self):
         return {'references'}
 
-    def references(self)->ComponentReference:
+    def references(self) -> ComponentReference:
         return ComponentReference.create(**self.raw['references'])
 
     def container_images(self):

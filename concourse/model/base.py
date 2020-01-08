@@ -156,16 +156,16 @@ class AttributeSpec(object):
         self._required_policy = required
         self._default_value = default
 
-    def name(self) ->str:
+    def name(self) -> str:
         return self._name
 
-    def doc(self) ->str:
+    def doc(self) -> str:
         return self._doc
 
     def default_value(self):
         return self._default_value
 
-    def type(self) ->type:
+    def type(self) -> type:
         return self._type
 
     def required_policy(self):

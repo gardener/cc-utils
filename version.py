@@ -79,7 +79,7 @@ def _parse_to_semver_and_metadata(version: str):
     # strip leading `v`
     if version[0] == 'v':
         semver_version = version[1:]
-        metadata.prefix='v'
+        metadata.prefix = 'v'
 
     # in most cases, we should be fine now
     try:

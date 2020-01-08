@@ -41,7 +41,7 @@ def create_mail(
         text: str,
         cc_recipients: [str]=[],
         mimetype: str='text'
-    )->MIMEMultipart:
+    ) -> MIMEMultipart:
     msg = MIMEMultipart('alternative')
 
     if mimetype == 'html':
