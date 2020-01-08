@@ -205,7 +205,7 @@ class ReleaseCommitStep(TransactionalStep):
 
         self.head_commit = None # stored while applying - used for revert
 
-    def _release_commit_message(self, version: str, commit_message_prefix: str):
+    def _release_commit_message(self, version: str, commit_message_prefix: str=''):
         message = f'Release {version}'
         if commit_message_prefix:
             return f'{commit_message_prefix} {message}'
