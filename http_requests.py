@@ -67,7 +67,7 @@ def mount_default_adapter(
     if AdapterFlag.RETRY in flags:
         adapter_constructor = functools.partial(
             adapter_constructor,
-            max_retries = LoggingRetry(
+            max_retries=LoggingRetry(
                 total=3,
                 connect=3,
                 read=3,
@@ -80,8 +80,8 @@ def mount_default_adapter(
         ))
 
     default_http_adapter = adapter_constructor(
-        pool_connections = connection_pool_cache_size,
-        pool_maxsize = max_pool_size,
+        pool_connections=connection_pool_cache_size,
+        pool_maxsize=max_pool_size,
 
     )
     session.mount('http://', default_http_adapter)

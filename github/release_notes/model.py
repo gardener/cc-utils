@@ -37,13 +37,13 @@ class ReferenceType:
 REF_TYPE_PULL_REQUEST = ReferenceType(
     identifier='#',
     prefix='#',
-    github_api_resource_type = 'pull'
+    github_api_resource_type='pull'
 )
 
 REF_TYPE_COMMIT = ReferenceType(
     identifier='$',
     prefix='@',
-    github_api_resource_type = 'commit'
+    github_api_resource_type='commit'
 )
 REFERENCE_TYPES = [REF_TYPE_PULL_REQUEST, REF_TYPE_COMMIT]
 

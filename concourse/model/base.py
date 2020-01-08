@@ -19,7 +19,7 @@ from enum import Enum
 import typing
 
 import ci.util
-from model.base import(
+from model.base import (
     ModelValidationError,
     ModelValidationMixin,
 )

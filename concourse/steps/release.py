@@ -652,7 +652,7 @@ class PostSlackReleaseStep(TransactionalStep):
         uploaded_file_id = self.context().step_output(self.name()).get('uploaded file id')
         delete_file_from_slack(
             slack_cfg_name=self.slack_cfg_name,
-            file_id = uploaded_file_id,
+            file_id=uploaded_file_id,
         )
 
 

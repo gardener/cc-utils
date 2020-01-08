@@ -370,8 +370,8 @@ class KubernetesConfigMapHelper(object):
         not_none(data)
 
         self.core_api.create_namespaced_config_map(
-            namespace = namespace,
-            body = V1ConfigMap(
+            namespace=namespace,
+            body=V1ConfigMap(
                 data=data,
                 metadata=V1ObjectMeta(name=name, namespace=namespace),
             ),
@@ -383,9 +383,9 @@ class KubernetesConfigMapHelper(object):
         not_none(data)
 
         self.core_api.replace_namespaced_config_map(
-            namespace = namespace,
-            name = name,
-            body = V1ConfigMap(
+            namespace=namespace,
+            name=name,
+            body=V1ConfigMap(
                 data=data,
                 metadata=V1ObjectMeta(name=name, namespace=namespace),
             ),

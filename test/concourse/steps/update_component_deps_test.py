@@ -19,7 +19,7 @@ class UpdateComponentDependenciesStepTest(unittest.TestCase):
         self.update_component_deps_trait = update_component_deps.UpdateComponentDependenciesTrait(
             name='update_component_dependencies',
             variant_name='don\'t_care',
-            raw_dict= {
+            raw_dict={
                 'set_dependency_version_script':'some_path',
                 'upstream_component_name':'don\'t_care',
             },

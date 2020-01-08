@@ -387,8 +387,8 @@ def deploy_concourse_landscape(
                 Check status of Pods created by "concourse-web"-deployment in namespace {ns}
                 """
             ).format(
-                t = timeout_seconds,
-                ns = deployment_name,
+                t=timeout_seconds,
+                ns=deployment_name,
             )
         )
     info('Webserver became accessible.')

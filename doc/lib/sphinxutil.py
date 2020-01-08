@@ -96,7 +96,7 @@ class TableBuilder(object):
         state_machine,
         table_classes: typing.List[str]=['colwidths-auto'],
     ):
-        self.table_node = nodes.table('', classes = table_classes)
+        self.table_node = nodes.table('', classes=table_classes)
 
         # state and state_machine are required by the _create_row method taken from sphinx
         self.state_machine = state_machine
@@ -133,7 +133,7 @@ class TableBuilder(object):
 
     def add_table_header(self, row_content: typing.List[str]):
         if self.groups is None:
-            self._setup_column_groups(column_count = len(row_content))
+            self._setup_column_groups(column_count=len(row_content))
         else:
             raise ValueError('A table may only have one table head which must be added first.')
         self.head.append(self._create_row(*row_content))
@@ -141,7 +141,7 @@ class TableBuilder(object):
 
     def add_table_row(self, row_content: typing.List[str]):
         if self.groups is None:
-            self._setup_column_groups(column_count = len(row_content))
+            self._setup_column_groups(column_count=len(row_content))
 
         # adding rows with less than column_count columns automatically inserts empty columns
         if len(row_content) > self.column_count:

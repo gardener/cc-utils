@@ -34,7 +34,7 @@ class SlackTraitTest(unittest.TestCase):
         examinee(
             'my_slack_trait',
             'my_variant_name',
-            raw_dict = {
+            raw_dict={
                 'default_channel': 'foo',
                 'channel_cfgs': channel_cfgs
             }
@@ -44,7 +44,7 @@ class SlackTraitTest(unittest.TestCase):
             examinee(
                 'my_slack_trait',
                 'my_variant_name',
-                raw_dict = {
+                raw_dict={
                     'default_channel': 'not_existing',
                     'channel_cfgs': channel_cfgs
                 }
