@@ -101,7 +101,7 @@ def generate_secrets_server_deployment(
     secret_name = secrets_server_config.secrets().concourse_secret_name()
     # We need to ensure that the labels and selectors match for both the deployment and the service,
     # therefore we base them on the configured service name.
-    labels={'app':service_name}
+    labels = {'app':service_name}
 
     return V1Deployment(
         kind='Deployment',

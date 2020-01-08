@@ -67,7 +67,7 @@ class MailRecipients(object):
         if not bool(recipients) ^ bool(recipients_component):
             raise ValueError('exactly one of recipients, component_name must be given')
         self._recipients = recipients
-        self._recipients_component= recipients_component
+        self._recipients_component = recipients_component
         self._protecode_cfg = protecode_cfg
         self._protecode_group_id = protecode_group_id
         self._protecode_group_url = protecode_group_url

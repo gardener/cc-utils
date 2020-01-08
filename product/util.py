@@ -54,7 +54,7 @@ class ResolverBase(object):
         self,
         cfg_factory=None,
     ):
-        self.cfg_factory=cfg_factory
+        self.cfg_factory = cfg_factory
 
     def _repository_helper(self, component_reference):
         if isinstance(component_reference, tuple):

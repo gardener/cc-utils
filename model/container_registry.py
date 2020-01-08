@@ -61,7 +61,7 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
         # this cfg currently only contains credentials
         return GcrCredentials(self.raw)
 
-    def privileges(self)->Privileges:
+    def privileges(self) -> Privileges:
         return Privileges(self.raw['privileges'])
 
     def image_reference_prefixes(self):

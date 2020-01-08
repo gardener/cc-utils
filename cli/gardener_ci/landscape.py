@@ -36,14 +36,14 @@ import landscape_setup.whd as setup_whd
 
 
 class LandscapeComponent(enum.Enum):
-    CONCOURSE='concourse'
-    SECRETS_SERVER='secrets_server'
-    WHD='webhook_dispatcher'
-    MONITORING='monitoring'
-    CLAMAV='clam_av'
+    CONCOURSE = 'concourse'
+    SECRETS_SERVER = 'secrets_server'
+    WHD = 'webhook_dispatcher'
+    MONITORING = 'monitoring'
+    CLAMAV = 'clam_av'
 
 
-CONFIG_SET_HELP=(
+CONFIG_SET_HELP = (
     "Name of the config set to use. All further configuration (e.g.: Concourse config) needed "
     "for deployment will be pulled from the config set with the given name."
 )
@@ -237,8 +237,8 @@ def deploy_or_upgrade_clamav(
     cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(config_set_name)
     concourse_cfg = cfg_set.concourse()
-    kubernetes_cfg_name=concourse_cfg.kubernetes_cluster_config()
-    clamav_cfg_name=concourse_cfg.clamav_config()
+    kubernetes_cfg_name = concourse_cfg.kubernetes_cluster_config()
+    clamav_cfg_name = concourse_cfg.clamav_config()
     if clamav_cfg_name is not None:
         setup_clamav.deploy_clam_av(
             clamav_cfg_name=clamav_cfg_name,

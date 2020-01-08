@@ -79,7 +79,7 @@ class Renderer(object):
     def __init__(self, release_note_objs: [ReleaseNote]):
         self.rls_note_objs = _.uniq(release_note_objs)
 
-    def render(self)->str:
+    def render(self) -> str:
         origin_nodes = _\
             .chain(self.rls_note_objs)\
             .sort_by(lambda rls_note_obj: rls_note_obj.cn_source_repo.github_repo())\
@@ -141,7 +141,7 @@ class Renderer(object):
     def _header_suffix(
         self,
         rls_note_obj: ReleaseNote
-    )->str:
+    ) -> str:
         if not rls_note_obj.user_login and not rls_note_obj.reference.identifier:
             return ''
 
@@ -274,7 +274,7 @@ class Renderer(object):
         line: str,
         tag: str,
         rls_note_obj: ReleaseNote
-    )->str:
+    ) -> str:
         """returns the headline of a bullet point, usually containing some meta information
         e.g. '* foo-message (#pr-number, @foo-user)' """
         pass
@@ -288,15 +288,15 @@ class Renderer(object):
         self,
         node: TitleNode,
         level: int
-    )->str:
+    ) -> str:
         pass
 
     @abstractmethod
-    def _generate_link(self, rls_note_obj: ReleaseNote)->bool:
+    def _generate_link(self, rls_note_obj: ReleaseNote) -> bool:
         pass
 
     @abstractmethod
-    def _build_link(self, url: str, text)->str:
+    def _build_link(self, url: str, text) -> str:
         pass
 
 
@@ -313,10 +313,10 @@ class MarkdownRenderer(Renderer):
         self,
         node: TitleNode,
         level: int
-    )->str:
+    ) -> str:
         return '{hashtags} {title}'.format(hashtags=_.repeat('#', level),title=node.title)
 
-    def _generate_link(self, rls_note_obj: ReleaseNote)->bool:
+    def _generate_link(self, rls_note_obj: ReleaseNote) -> bool:
         return self.force_link_generation or not rls_note_obj.from_same_github_instance
 
     def _build_bullet_point_head(
@@ -324,7 +324,7 @@ class MarkdownRenderer(Renderer):
         line: str,
         tag: str,
         rls_note_obj: ReleaseNote
-    )->str:
+    ) -> str:
         header_suffix = self._header_suffix(rls_note_obj)
 
         return '* *[{tag}]* {rls_note_line}{header_suffix}'.format(
@@ -336,7 +336,7 @@ class MarkdownRenderer(Renderer):
     def _build_sub_bullet_point(self, rls_note_line: str):
         return '  * {rls_note_line}'.format(rls_note_line=rls_note_line)
 
-    def _build_link(self, url: str, text)->str:
+    def _build_link(self, url: str, text) -> str:
         return '[{text}]({url})'.format(
             url=url,
             text=text

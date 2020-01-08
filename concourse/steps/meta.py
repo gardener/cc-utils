@@ -7,8 +7,8 @@ import ci.util
 import concourse.model.traits.meta
 
 
-uuid_filename='job.uuid'
-jobmetadata_filename='jobmetadata.json'
+uuid_filename = 'job.uuid'
+jobmetadata_filename = 'jobmetadata.json'
 
 
 def get_out_dir():

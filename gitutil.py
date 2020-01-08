@@ -274,7 +274,7 @@ def update_submodule(
     # on finalisation
     auto_interrupt = repo.git.mktree(istream = subprocess.PIPE, as_process=True)
     process = auto_interrupt.proc
-    stdout, _= process.communicate(input=tree_representation.encode())
+    stdout, _ = process.communicate(input=tree_representation.encode())
 
     # returned string is byte-encoded and newline-terminated
     new_sha = stdout.decode('utf-8').strip()

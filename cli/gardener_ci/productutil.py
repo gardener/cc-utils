@@ -263,7 +263,7 @@ def component_descriptor(
     component = Component.create(name=name, version=version)
     # maintain old behaviour
     if not validation_policies:
-        validation_policies=[ValidationPolicy.FORBID_EXTRA_ATTRIBUTES]
+        validation_policies = [ValidationPolicy.FORBID_EXTRA_ATTRIBUTES]
 
     dependencies = _parse_dependencies(
         component_dependencies=component_dependencies,
@@ -325,7 +325,7 @@ def add_dependencies(
 
     # maintain old behaviour
     if not validation_policies:
-        validation_policies=[ValidationPolicy.FORBID_EXTRA_ATTRIBUTES]
+        validation_policies = [ValidationPolicy.FORBID_EXTRA_ATTRIBUTES]
 
     dependencies = _parse_dependencies(
         component_dependencies=component_dependencies,

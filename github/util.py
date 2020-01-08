@@ -211,7 +211,7 @@ class PullRequestUtil(RepositoryHelperBase):
             tv=to_version,
         )
 
-    def _has_upgrade_pr_title(self, pull_request)-> bool:
+    def _has_upgrade_pr_title(self, pull_request) -> bool:
         return bool(self.PR_TITLE_PATTERN.fullmatch(pull_request.title))
 
     def _pr_to_upgrade_pull_request(self, pull_request):
@@ -290,7 +290,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         file_contents: str,
         commit_message: str,
         branch: str=None,
-    )-> str:
+    ) -> str:
         if branch is None:
             branch = self.default_branch
 
@@ -417,7 +417,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         self,
         tag_name: str,
         body: str,
-    )->bool:
+    ) -> bool:
         ci.util.not_empty(tag_name)
         release = self.repository.release_from_tag(tag_name)
         if not release:
@@ -430,7 +430,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
     def draft_release_with_name(
         self,
         name: str
-    )->Release:
+    ) -> Release:
         releases = list(self.repository.releases())
         release = _.find(releases, lambda rls: rls.draft and rls.name == name)
         return release

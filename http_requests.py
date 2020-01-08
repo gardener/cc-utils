@@ -129,7 +129,7 @@ class AuthenticatedRequestBuilder(object):
         self.auth = None
 
         if auth_token:
-            self.headers={'Authorization': 'Bearer {}'.format(auth_token)}
+            self.headers = {'Authorization': 'Bearer {}'.format(auth_token)}
         if basic_auth_username and basic_auth_passwd:
             self.auth = HTTPBasicAuth(basic_auth_username, basic_auth_passwd)
 

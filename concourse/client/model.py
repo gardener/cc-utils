@@ -49,13 +49,13 @@ class ResourceVersion(ModelBase):
     def type(self):
         return self.raw['type']
 
-    def version(self) ->dict:
+    def version(self) -> dict:
         return self.raw['version'] # specific to resource type
 
-    def metadata(self) ->dict:
+    def metadata(self) -> dict:
         return self.raw['metadata'] # specific to resource type
 
-    def enabled(self) ->bool:
+    def enabled(self) -> bool:
         return self.raw['enabled']
 
 
