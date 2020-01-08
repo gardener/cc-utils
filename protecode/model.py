@@ -112,7 +112,7 @@ class Vulnerability(ModelBase):
             raise NotImplementedError(f'{cvss_version} not supported')
 
     def has_triage(self):
-        return self.raw.get('triage') is not None
+        return 'triage' in self.raw and self.raw.get('triage')
 
     def triages(self) -> 'Iterable[Triage]':
         if not self.has_triage():
