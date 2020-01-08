@@ -247,8 +247,8 @@ class ConfigFactory:
         known_types = self._cfg_types()
         if cfg_type_name not in known_types:
             raise ValueError("Unknown config type '{c}'. Known types: {k}".format(
-                c = cfg_type_name,
-                k = ', '.join(known_types.keys()),
+                c=cfg_type_name,
+                k=', '.join(known_types.keys()),
             ))
         if cfg_type_name in self.raw:
             return set(self.raw[cfg_type_name].keys())

@@ -90,9 +90,9 @@ class GitHelper(object):
             os.unlink(tmp_id.name)
 
         return GitHelper(
-            repo = target_directory,
-            github_cfg = github_cfg,
-            github_repo_path = github_repo_path,
+            repo=target_directory,
+            github_cfg=github_cfg,
+            github_repo_path=github_repo_path,
         )
 
     @staticmethod
@@ -272,7 +272,7 @@ def update_submodule(
     # directly as it does not support arbitrary tree manipulation.
     # We must keep a reference to auto_interrupt as it closes all streams to the subprocess
     # on finalisation
-    auto_interrupt = repo.git.mktree(istream = subprocess.PIPE, as_process=True)
+    auto_interrupt = repo.git.mktree(istream=subprocess.PIPE, as_process=True)
     process = auto_interrupt.proc
     stdout, _ = process.communicate(input=tree_representation.encode())
 
@@ -283,9 +283,9 @@ def update_submodule(
     actor = git.Actor(author, email)
     parent_commit = repo.commit(tree_ish)
     commit = git.Commit.create_from_tree(
-      repo = repo,
-      tree = new_sha,
-      parent_commits = [parent_commit],
+      repo=repo,
+      tree=new_sha,
+      parent_commits=[parent_commit],
       message='Upgrade submodule {s} to commit {c}'.format(
           s=submodule_path,
           c=commit_hash,

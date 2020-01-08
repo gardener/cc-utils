@@ -70,7 +70,7 @@ class Version_process_version_Test(unittest.TestCase):
             examinee.process_version(
             version_str='3.5.4',
             operation='append_prerelease',
-            prerelease = 'foo'
+            prerelease='foo'
         )
 
     def test_noop(self):

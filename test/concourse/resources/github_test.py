@@ -54,10 +54,10 @@ class TestGithubMakoResource(object):
     @pytest.fixture()
     def repo_cfg(self):
         def _repo_cfg(
-            path = 'organisation/reponame',
-            branch = 'master',
-            include_paths = ['path/to/include'],
-            exclude_paths = ['path/to/exclude'],
+            path='organisation/reponame',
+            branch='master',
+            include_paths=['path/to/include'],
+            exclude_paths=['path/to/exclude'],
         ):
             return RepositoryConfig(raw_dict={
                 'path': path,
