@@ -44,7 +44,7 @@ class AnalysisResult(ModelBase):
         return ProcessingStatus(self.raw.get('status'))
 
     def components(self) -> 'Iterable[Component]':
-        return (Component(raw_dict=raw) for raw in self.raw.get('components'))
+        return (Component(raw_dict=raw) for raw in self.raw.get('components', []))
 
     def custom_data(self):
         return self.raw.get('custom_data')
