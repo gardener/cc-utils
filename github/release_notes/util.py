@@ -45,13 +45,15 @@ def fetch_release_notes(
     repo_dir: str,
     github_helper: GitHubRepositoryHelper,
     repository_branch: str,
+    release_version: str=None,
 ):
     repo_path = github_repo_path(owner=github_repository_owner, name=github_repository_name)
     git_helper = GitHelper(repo=repo_dir, github_cfg=github_cfg, github_repo_path=repo_path)
     return ReleaseNotes.create(
         github_helper=github_helper,
         git_helper=git_helper,
-        repository_branch=repository_branch
+        repository_branch=repository_branch,
+        release_version=release_version,
     )
 
 
@@ -133,13 +135,15 @@ class ReleaseNotes(object):
         github_helper: GitHubRepositoryHelper,
         git_helper: GitHelper,
         repository_branch: str=None,
-        commit_range: str=None
+        release_version: str=None,
+        commit_range: str=None,
     ):
         release_note_objs = _rls_note_objs(
             github_helper=github_helper,
             git_helper=git_helper,
             repository_branch=repository_branch,
-            commit_range=commit_range
+            release_version=release_version,
+            commit_range=commit_range,
         )
         return ReleaseNotes(release_note_objs)
 
@@ -173,16 +177,23 @@ def _rls_note_objs(
     github_helper: GitHubRepositoryHelper,
     git_helper: GitHelper,
     repository_branch: str=None,
+    release_version: str=None,
     commit_range: str=None
 ) -> [ReleaseNote]:
     cn_current_repo = ComponentName.from_github_repo_url(github_helper.repository.html_url)
 
     if not commit_range:
-        commit_range = calculate_range(repository_branch, git_helper, github_helper)
+        commit_range = calculate_range(
+            repository_branch=repository_branch,
+            git_helper=git_helper,
+            github_helper=github_helper,
+            release_version=release_version,
+        )
     info('Fetching release notes from revision range: {range}'.format(
         range=commit_range
     ))
-    commits = commits_in_range(git_helper.repo, commit_range, repository_branch)
+    commits = commits_in_range(git_helper.repo,
+    commit_range, repository_branch)
     pr_numbers = fetch_pr_numbers_from_commits(commits)
     verbose('Merged pull request numbers in range {range}: {pr_numbers}'.format(
         range=commit_range,
@@ -198,18 +209,25 @@ def calculate_range(
     repository_branch: str,
     git_helper: GitHelper,
     github_helper: GitHubRepositoryHelper,
+    release_version: str=None,
 ) -> str:
     repo = git_helper.repo
+    git_helper.fetch_tags()
     branch_head = git_helper.fetch_head(ref=repository_branch)
     if not branch_head:
         fail('could not determine branch head of {branch} branch'.format(
             branch=repository_branch
         ))
-    range_start = _.head(reachable_release_tags_from_commit(github_helper, repo, branch_head))
+    range_start = _.head(reachable_release_tags_from_commit(
+        github_helper=github_helper,
+        repo=repo,
+        commit=branch_head,
+        release_version=release_version,
+    ))
 
     try:
         # better readable range_end by describing head commit
-        range_end = repo.git.describe(branch_head, tags=True)
+        range_end = repo.git.describe(branch_head)
     except GitError as err:
         warning('failed to describe branch head, maybe the repository has no tags? '
             'GitError: {err}. Falling back to branch head commit hash.'.format(
@@ -234,13 +252,14 @@ def release_tags(
             return False
 
     release_tags = github_helper.release_tags()
+
     # you can remove the directive to disable the undefined-variable error once pylint is updated
     # with fix https://github.com/PyCQA/pylint/commit/db01112f7e4beadf7cd99c5f9237d580309f0494
     # included
     # pylint: disable=undefined-variable
     tags = _ \
         .chain(repo.tags) \
-        .map(lambda tag: {"tag": tag.name, "commit": tag.commit.hexsha}) \
+        .map(lambda tag: {"tag": tag.name, "commit": tag.commit.parents[0].hexsha}) \
         .filter(lambda item: _.find(release_tags, lambda el: el == item['tag'])) \
         .filter(lambda item: is_valid_semver(item['tag'])) \
         .key_by('commit') \
@@ -253,7 +272,8 @@ def release_tags(
 def reachable_release_tags_from_commit(
     github_helper: GitHubRepositoryHelper,
     repo: git.Repo,
-    commit: git.objects.Commit
+    commit: git.objects.Commit,
+    release_version: str=None,
 ) -> [str]:
     tags = release_tags(github_helper, repo)
 
@@ -275,6 +295,11 @@ def reachable_release_tags_from_commit(
             queue.extend(not_visited_parents)
             visited |= set(_.map(not_visited_parents, lambda commit: commit.hexsha))
 
+    if release_version:
+        try:
+            reachable_tags.remove(release_version)
+        except ValueError:
+            pass
     reachable_tags.sort(key=lambda t: version.parse_to_semver(t), reverse=True)
 
     if not reachable_tags:

@@ -557,6 +557,7 @@ class PublishReleaseNotesStep(TransactionalStep):
             github_cfg=self.githubrepobranch.github_config(),
             repo_dir=self.repo_dir,
             github_helper=self.github_helper,
+            release_version=self.release_version,
             repository_branch=self.githubrepobranch.branch(),
         )
         release_notes_md = release_notes.to_markdown()
