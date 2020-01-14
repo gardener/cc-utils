@@ -189,6 +189,11 @@ class GitHelper(object):
     def rebase(self, commit_ish: str):
         self.repo.git.rebase('--quiet', commit_ish)
 
+    def fetch_tags(self):
+        with self._authenticated_remote() as (cmd_env, remote):
+            with remote.repo.git.custom_environment(**cmd_env):
+                remote.fetch('--tags')
+
     def fetch_head(self, ref: str):
         with self._authenticated_remote() as (cmd_env, remote):
             with remote.repo.git.custom_environment(**cmd_env):
