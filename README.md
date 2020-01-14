@@ -1,5 +1,8 @@
 # Continuous Integration utils for 'gardener' project
 
+![tests](https://concourse.ci.infra.gardener.cloud/api/v1/teams/gardener/pipelines/cc-utils-master/jobs/master-head-update-job/badge?title=tests)
+![release](https://concourse.ci.infra.gardener.cloud/api/v1/teams/gardener/pipelines/cc-utils-master/jobs/master-release_job_image-job/badge?title=build)
+
 ## What is it
 
 `cc-utils` is a collection of re-usable utils intended to be used in the
