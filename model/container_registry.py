@@ -15,6 +15,8 @@
 
 import enum
 
+import json
+
 import ci.util
 
 from model.base import (
@@ -58,7 +60,7 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
         }
 
     def credentials(self):
-        # this cfg currently only contains credentials
+        # XXX handle different container registry types
         return GcrCredentials(self.raw)
 
     def privileges(self) -> Privileges:
@@ -105,6 +107,12 @@ class GcrCredentials(BasicCredentials):
 
     def email(self):
         return self.raw.get('email')
+
+    def service_account_credentials(self): # -> 'google.oauth2.service_account.Credentials':
+        import google.oauth2.service_account
+        return google.oauth2.service_account.Credentials.from_service_account_info(
+            json.loads(self.passwd())
+        )
 
 
 def find_config(image_reference: str, privileges:Privileges=None) -> 'GcrCredentials':
