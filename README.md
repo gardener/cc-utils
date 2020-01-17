@@ -4,7 +4,6 @@
 ![release](https://concourse.ci.infra.gardener.cloud/api/v1/teams/gardener/pipelines/cc-utils-master/jobs/master-release_job_image-job/badge?title=build)
 
 ![libs](https://badge.fury.io/py/gardener-cicd-libs.svg)
-[![PyPI version](https://badge.fury.io/py/gardener-cicd-libs.svg)](https://badge.fury.io/py/gardener-cicd-libs)
 
 ## What is it
 
