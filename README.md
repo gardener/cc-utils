@@ -3,8 +3,7 @@
 ![tests](https://concourse.ci.infra.gardener.cloud/api/v1/teams/gardener/pipelines/cc-utils-master/jobs/master-head-update-job/badge?title=tests)
 ![release](https://concourse.ci.infra.gardener.cloud/api/v1/teams/gardener/pipelines/cc-utils-master/jobs/master-release_job_image-job/badge?title=build)
 
-[libs](https://badge.fury.io/py/gardener-cicd-libs.svg)
-[cli](https://badge.fury.io/py/gardener-cicd-cli.svg)
+![libs](https://badge.fury.io/py/gardener-cicd-libs.svg)
 
 ## What is it
 
