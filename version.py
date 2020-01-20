@@ -61,6 +61,9 @@ def parse_to_semver(
                 version_str = version.version()
             else:
                 version_str = str(version.version)
+        else:
+            ci.util.warning(f'unexpected type for version: {type(version)}')
+            version_str = str(version) # fallback
 
     semver_version_info, _ = _parse_to_semver_and_metadata(version_str)
     return semver_version_info
