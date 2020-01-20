@@ -93,9 +93,22 @@ class ReleaseNotesPolicy(AttribSpecMixin, enum.Enum):
         )
 
 
-class ReleaseCommitPublishingPolicy(enum.Enum):
+class ReleaseCommitPublishingPolicy(AttribSpecMixin, enum.Enum):
     TAG_AND_PUSH_TO_BRANCH = 'push_to_branch'
     TAG_ONLY = 'tag_only'
+
+    @classmethod
+    def _attribute_specs(cls):
+        return (
+            AttributeSpec.optional(
+                name=cls.TAG_AND_PUSH_TO_BRANCH.value,
+                doc='publish release tag to branch'
+            ),
+            AttributeSpec(
+                name=cls.TAG_ONLY.value,
+                doc='publish release tag to dead-end'
+            ),
+        )
 
 
 ATTRIBUTES = (
