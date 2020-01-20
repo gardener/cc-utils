@@ -102,11 +102,13 @@ class ReleaseCommitPublishingPolicy(AttribSpecMixin, enum.Enum):
         return (
             AttributeSpec.optional(
                 name=cls.TAG_AND_PUSH_TO_BRANCH.value,
-                doc='publish release tag to branch'
+                doc='publish release tag to branch',
+                default=None,
             ),
             AttributeSpec(
                 name=cls.TAG_ONLY.value,
-                doc='publish release tag to dead-end'
+                doc='publish release tag to dead-end',
+                default=None,
             ),
         )
 
