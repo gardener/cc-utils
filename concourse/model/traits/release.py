@@ -105,7 +105,7 @@ class ReleaseCommitPublishingPolicy(AttribSpecMixin, enum.Enum):
                 doc='publish release tag to branch',
                 default=None,
             ),
-            AttributeSpec(
+            AttributeSpec.optional(
                 name=cls.TAG_ONLY.value,
                 doc='publish release tag to dead-end',
                 default=None,
