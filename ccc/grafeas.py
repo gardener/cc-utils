@@ -41,6 +41,8 @@ def retrieve_vulnerabilities(image_reference: str, cvss_threshold: int=7.0):
     if not registry_cfg:
         raise VulnerabilitiesRetrievalFailed('no registry-cfg found')
 
+    print(f'grafeas: {registry_cfg.name()}')
+
     logger.info(f'using {registry_cfg.name()}')
 
     client = grafeas_client(container_registry_cfg=registry_cfg)
