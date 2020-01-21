@@ -169,6 +169,34 @@ def _image_exists(image_reference: str) -> bool:
   return False
 
 
+def to_hash_reference(image_name: str):
+  transport = _mk_transport(size=1)
+
+  image_name = normalise_image_reference(image_name)
+  image_reference = _parse_image_reference(image_name)
+  creds = _mk_credentials(image_reference=image_reference)
+  accept = docker_http.SUPPORTED_MANIFEST_MIMES
+
+  digest = None
+
+  with image_list.FromRegistry(image_reference, creds, transport) as img_list:
+      if img_list.exists():
+          digest = img_list.digest()
+      else:
+          logger.debug('no manifest found')
+
+  # look for image
+  with v2_2_image.FromRegistry(image_reference, creds, transport, accept) as v2_2_img:
+      if v2_2_img.exists():
+          digest = v2_2_img.digest()
+      else:
+          logger.debug('no img v2.2 found')
+          raise RuntimeError(f'could not access img-metadata for {image_name}')
+
+  name = image_name.rsplit(':', 1)[0]
+  return f'{name}@{digest}'
+
+
 def _push_image(image_reference: str, image_file: str, threads=8):
   import ci.util
   ci.util.not_none(image_reference)
