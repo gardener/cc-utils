@@ -15,10 +15,13 @@
 
 import collections
 from concurrent.futures import ThreadPoolExecutor
+import logging
 import tabulate
 import typing
 
+import ccc.grafeas
 import ccc.protecode
+import ctx
 import container.registry
 import product.util
 from product.scanning import ContainerImageGroup, ProtecodeUtil, ProcessingMode
@@ -32,6 +35,9 @@ from protecode.model import (
     highest_major_cve_severity,
     CVSSVersion,
 )
+ctx.configure_default_logging()
+
+logger = logging.getLogger(__name__)
 
 
 def upload_grouped_images(
@@ -193,6 +199,8 @@ def filter_and_display_upload_results(
     results_above_cve_thresh = []
 
     for upload_result in upload_results:
+        container_image = upload_result.container_image
+
         if isinstance(upload_result, UploadResult):
             result = upload_result.result
         else:
@@ -217,6 +225,21 @@ def filter_and_display_upload_results(
                 greatest_cve = greatest_cve_candidate
 
         if greatest_cve >= cve_threshold:
+            try:
+                # XXX HACK: just one any image ref
+                image_ref = container_image.image_reference()
+                gcr_cve = 0
+                for r in ccc.grafeas.retrieve_vulnerabilities(
+                    image_ref,
+                    cvss_threshold=cve_threshold,
+                ):
+                    gcr_cve = max(gcr_cve, r.vulnerability.cvss_score)
+                info(f'gcr says max CVSS=={gcr_cve}')
+                # TODO: skip if < threshold - just report for now
+            except ccc.grafeas.VulnerabilitiesRetrievalFailed as vrf:
+                warning('failed to retrieve vulnerabilies from gcr')
+                print(vrf)
+
             results_above_cve_thresh.append((upload_result, greatest_cve))
             continue
         else:

@@ -331,6 +331,7 @@ class ProtecodeUtil(object):
             yield mk_upload_result(
                 status=UploadStatus.DONE, # XXX remove this
                 result=scan_result,
+                container_image=container_image,
             )
 
         # rm all outdated protecode apps
