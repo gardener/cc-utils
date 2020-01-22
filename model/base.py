@@ -97,7 +97,7 @@ class ModelBase(ModelValidationMixin, ModelDefaultsMixin):
     def __init__(self, raw_dict):
         self.raw = ci.util.not_none(raw_dict)
 
-    def __str__(self):
+    def __repr__(self):
         return '{c} {a}'.format(
             c=self.__class__.__name__,
             a=str(self.raw),
