@@ -50,7 +50,7 @@ class AnalysisResult(ModelBase):
         return self.raw.get('custom_data')
 
     def __repr__(self):
-        return f'{self.__class__.__name__}: {self.name()}({self.product_id()})'
+        return f'{self.__class__.__name__}: {self.display_name()}({self.product_id()})'
 
 
 class Component(ModelBase):
@@ -70,7 +70,10 @@ class Component(ModelBase):
         return License(raw_dict=license_raw)
 
     def __repr__(self):
-        return f'{self.__class__.__name__}: {self.name()}:{self.version()}'
+        return (
+            f'{self.__class__.__name__}: {self.name()} '
+            f'{self.version() or "Version not detected"}'
+        )
 
 
 class License(ModelBase):
@@ -128,6 +131,9 @@ class Vulnerability(ModelBase):
         else:
             return -1
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}: {self.cve()}'
+
 
 class TriageScope(Enum):
     ACCOUNT_WIDE = 'CA'
@@ -138,6 +144,9 @@ class TriageScope(Enum):
 
 
 class Triage(ModelBase):
+    def id(self):
+        return self.raw['id']
+
     def vulnerability_id(self):
         return self.raw['vuln_id']
 
@@ -155,6 +164,12 @@ class Triage(ModelBase):
 
     def description(self):
         return self.raw.get('description')
+
+    def __repr__(self):
+        return (
+            f'{self.__class__.__name__}: {self.id()} '
+            f'({self.component_name()} {self.component_version()}, {self.vulnerability_id()})'
+        )
 
 
 # --- wrappers for inofficial protecode API responses
