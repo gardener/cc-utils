@@ -8,6 +8,7 @@ import grafeas.grafeas_v1.gapic.transports.grafeas_grpc_transport
 import container.registry
 import model.container_registry
 
+grafeas_v1 = grafeas.grafeas_v1
 gcrp_transport = grafeas.grafeas_v1.gapic.transports.grafeas_grpc_transport
 container_analysis_v1 = google.cloud.devtools.containeranalysis_v1
 
@@ -34,14 +35,14 @@ def grafeas_client(container_registry_cfg: model.container_registry.ContainerReg
     return grafeas.grafeas_v1.GrafeasClient(transport)
 
 
-def retrieve_vulnerabilities(image_reference: str, cvss_threshold: int=7.0):
+def retrieve_vulnerabilities(
+    image_reference: str,
+):
     image_reference = container.registry.normalise_image_reference(image_reference)
     # XXX: should tell required privilege (-> read-vulnerabilities)
     registry_cfg = model.container_registry.find_config(image_reference=image_reference)
     if not registry_cfg:
         raise VulnerabilitiesRetrievalFailed('no registry-cfg found')
-
-    print(f'grafeas: {registry_cfg.name()}')
 
     logger.info(f'using {registry_cfg.name()}')
 
@@ -61,11 +62,34 @@ def retrieve_vulnerabilities(image_reference: str, cvss_threshold: int=7.0):
 
     try:
         for r in client.list_occurrences(f'projects/{project_name}', filter_=filter_str):
-            # r has type grafeas.grafeas_v1.types.Occurrence
-            vuln = r.vulnerability # grafeas.grafeas_v1.types.VulnerabilityOccurrence
-            if not hasattr(vuln, 'cvss_score'):
-                continue
-            if vuln.cvss_score >= cvss_threshold:
-                yield r
+            yield r
     except Exception as e:
         raise VulnerabilitiesRetrievalFailed(e)
+
+
+# shorten default value
+SEVERITY_UNSPECIFIED = grafeas_v1.enums.Severity.SEVERITY_UNSPECIFIED
+
+
+def filter_vulnerabilities(
+    image_reference: str,
+    cvss_threshold: int=7.0,
+    effective_severity_threshold: grafeas_v1.enums.Severity=SEVERITY_UNSPECIFIED
+):
+    for r in retrieve_vulnerabilities(image_reference=image_reference):
+        # r has type grafeas.grafeas_v1.types.Occurrence
+        vuln = r.vulnerability # grafeas.grafeas_v1.types.VulnerabilityOccurrence
+        if not hasattr(vuln, 'cvss_score'):
+            continue
+        if vuln.cvss_score < cvss_threshold:
+            continue
+        if hasattr(vuln, 'effective_severity'):
+            eff_sev = grafeas_v1.enums.Severity(vuln.effective_severity)
+            if not eff_sev is grafeas_v1.enums.Severity.SEVERITY_UNSPECIFIED and \
+              eff_sev < effective_severity_threshold:
+                continue
+            else:
+                pass # either not specified, or too severe - do not filter out
+
+        # return everything that was not filtered out
+        yield r

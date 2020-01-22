@@ -15,6 +15,7 @@
 
 import collections
 from concurrent.futures import ThreadPoolExecutor
+import logging
 import tabulate
 import typing
 
@@ -35,7 +36,6 @@ from protecode.model import (
     CVSSVersion,
 )
 ctx.configure_default_logging()
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -229,7 +229,7 @@ def filter_and_display_upload_results(
                 # XXX HACK: just one any image ref
                 image_ref = container_image.image_reference()
                 gcr_cve = -1
-                for r in ccc.grafeas.retrieve_vulnerabilities(
+                for r in ccc.grafeas.filter_vulnerabilities(
                     image_ref,
                     cvss_threshold=cve_threshold,
                 ):
