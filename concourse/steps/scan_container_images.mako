@@ -22,6 +22,7 @@ import tabulate
 import textwrap
 
 import ci.util
+import ctx
 import mailutil
 import product.model
 import product.util
@@ -29,6 +30,12 @@ import protecode.util
 
 from product.scanning import ProcessingMode
 from protecode.model import CVSSVersion
+
+try:
+  import logging
+  ctx.configure_default_logging(stdout_level=logging.DEBUG)
+except:
+  pass
 
 ${step_lib('scan_container_images')}
 ${step_lib('images')}
