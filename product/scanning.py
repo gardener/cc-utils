@@ -14,12 +14,15 @@
 # limitations under the License.
 from functools import partial
 import enum
+import logging
 import tempfile
 import typing
 
 import requests
 import requests.exceptions
 
+import ccc.grafeas
+import protecode.model
 from protecode.client import ProtecodeApi
 from protecode.model import (
     AnalysisResult,
@@ -34,6 +37,9 @@ from container.registry import retrieve_container_image
 from .model import ContainerImage, Component, UploadResult, UploadStatus
 import ci.util
 import version
+
+ci.util.ctx().configure_default_logging()
+logger = logging.getLogger(__name__)
 
 
 class ProcessingMode(AttribSpecMixin, enum.Enum):
@@ -125,12 +131,14 @@ class ProtecodeUtil(object):
             processing_mode: ProcessingMode=ProcessingMode.RESCAN,
             group_id: int=None,
             reference_group_ids=(),
+            cvss_threshold: int=7,
     ):
         protecode_api.login()
         self._processing_mode = check_type(processing_mode, ProcessingMode)
         self._api = not_none(protecode_api)
         self._group_id = group_id
         self._reference_group_ids = reference_group_ids
+        self.cvss_threshold = cvss_threshold
 
     def _image_group_metadata(
         self,
@@ -325,6 +333,10 @@ class ProtecodeUtil(object):
             product_id = protecode_app.product_id()
             self._transport_triages(triages_to_import, product_id)
 
+        # apply triages from GCR
+        for protecode_app in protecode_apps_to_consider:
+            self._import_triages_from_gcr(protecode_app)
+
         # yield results
         for protecode_app in protecode_apps_to_consider:
             scan_result = self._api.scan_result(protecode_app.product_id())
@@ -441,3 +453,40 @@ class ProtecodeUtil(object):
             for component in analysis_result.components():
                 for vulnerability in component.vulnerabilities():
                     yield from vulnerability.triages()
+
+    def _import_triages_from_gcr(self, scan_result: AnalysisResult):
+        image_ref = scan_result.custom_data().get('IMAGE_REFERENCE_NAME', None)
+        if not image_ref:
+            logging.warning(f'no image-ref-name custom-prop for {scan_result.product_id()}')
+            return scan_result
+
+        # determine worst CVE according to GCR's data
+        worst_cvss = -1
+        try:
+            for gcr_occ in ccc.grafeas.filter_vulnerabilities(
+                image_reference=image_ref,
+                cvss_threshold=self.cvss_threshold,
+            ):
+                gcr_score = gcr_occ.vulnerability.cvss_score
+                worst_cvss = max(worst_cvss, gcr_score)
+        except ccc.grafeas.VulnerabilitiesRetrievalFailed as vrf:
+            ci.util.warning(str(vrf))
+            # warn, but ignore
+            return scan_result
+
+        if worst_cvss >= self.cvss_threshold:
+            ci.util.info(f'GCR\'s worst CVSS rating is above threshold: {worst_cvss}')
+            return scan_result # do not import triages (althoug we could, considering components)
+
+        # if this line is reached, all vulnerabilities are considered to be less severe than
+        # protecode thinks. So triage all of them away
+        for component in scan_result.components():
+            for vulnerability in component.vulnerabilities():
+                severity = float(vulnerability.cve_severity_str(protecode.model.CVSSVersion.V3))
+                if severity < self.cvss_threshold:
+                    continue # only triage vulnerabilities above threshold
+                if vulnerability.has_triage():
+                    continue # nothing to do
+                ci.util.info('would now triage due to GCR import')
+
+        return scan_result
