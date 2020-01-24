@@ -282,8 +282,6 @@ class ProtecodeApi(object):
         @param group_id: target group_id. required iff scope is G(ROUP)
         @param component_version: overwrite target component version
         '''
-        url = self._routes.triage()
-
         # if no scope is set, use the one from passed triage
         scope = scope if scope else triage.scope()
 
@@ -316,6 +314,12 @@ class ProtecodeApi(object):
         if group_id:
             triage_dict['group_id'] = group_id
 
+        return self.add_triage_raw(triage_dict=triage_dict)
+
+    def add_triage_raw(
+        self, triage_dict: dict
+    ):
+        url = self._routes.triage()
         return self._put(
             url=url,
             json=triage_dict,
