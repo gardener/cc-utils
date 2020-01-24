@@ -5,6 +5,7 @@ import google.cloud.devtools.containeranalysis_v1
 import grafeas.grafeas_v1
 import grafeas.grafeas_v1.gapic.transports.grafeas_grpc_transport
 
+import ci.util
 import container.registry
 import model.container_registry
 
@@ -35,11 +36,9 @@ def grafeas_client(container_registry_cfg: model.container_registry.ContainerReg
     return grafeas.grafeas_v1.GrafeasClient(transport)
 
 
-def retrieve_vulnerabilities(
-    image_reference: str,
-):
+def grafeas_client_for_image(image_reference: str):
     image_reference = container.registry.normalise_image_reference(image_reference)
-    # XXX: should tell required privilege (-> read-vulnerabilities)
+
     registry_cfg = model.container_registry.find_config(image_reference=image_reference)
     if not registry_cfg:
         raise VulnerabilitiesRetrievalFailed(f'no registry-cfg found for: {image_reference}')
@@ -47,6 +46,63 @@ def retrieve_vulnerabilities(
     logger.info(f'using {registry_cfg.name()}')
 
     client = grafeas_client(container_registry_cfg=registry_cfg)
+
+    return client
+
+
+def scan_available(
+    image_reference: str,
+):
+    image_reference = container.registry.normalise_image_reference(image_reference)
+    client = grafeas_client_for_image(image_reference=image_reference)
+
+    # XXX / HACK: assuming we always handle GCRs (we should rather check!), the first URL path
+    # element is the GCR project name
+    project_name = urllib.parse.urlparse(image_reference).path.split('/')[1]
+    try:
+        hash_reference = container.registry.to_hash_reference(image_reference)
+    except Exception as e:
+        ci.util.warning(f'failed to determine hash for for {image_reference}')
+        return False
+
+    # shorten enum name
+    AnalysisStatus = grafeas_v1.enums.DiscoveryOccurrence.AnalysisStatus
+    ContinuousAnalysis = grafeas_v1.enums.DiscoveryOccurrence.ContinuousAnalysis
+
+    filter_str = f'resourceUrl = "https://{hash_reference}" AND kind="DISCOVERY"'
+    try:
+        results = list(client.list_occurrences(f'projects/{project_name}', filter_=filter_str))
+        if (r_count := len(results)) == 0:
+            ci.util.warning(f'found no discovery-info for {image_reference}')
+            return False
+        elif r_count > 1:
+            ci.util.warning(f'found {r_count} discovery-infos for {image_reference} (one expected)')
+            # let's just ignore for now
+        discovery = results[0].discovery
+
+        discovery_status = AnalysisStatus(discovery.analysis_status)
+        continuous_analysis = ContinuousAnalysis(discovery.continuous_analysis)
+
+        # XXX hard-code we require continuous scanning to be enabled
+        if not continuous_analysis is ContinuousAnalysis.ACTIVE:
+            ci.util.warning(f'{continuous_analysis=} for {image_reference}')
+            return False
+
+        if not discovery_status is AnalysisStatus.FINISHED_SUCCESS:
+            ci.util.warning(f'{discovery_status=} for {image_reference}')
+            return False
+
+        return True # finally
+    except Exception as e:
+        ci.util.warning(f'error whilst trying to determine discovery-status for {image_reference}')
+        return False
+
+
+def retrieve_vulnerabilities(
+    image_reference: str,
+):
+    image_reference = container.registry.normalise_image_reference(image_reference)
+    client = grafeas_client_for_image(image_reference=image_reference)
 
     # XXX / HACK: assuming we always handle GCRs (we should rather check!), the first URL path
     # element is the GCR project name
