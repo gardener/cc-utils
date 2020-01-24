@@ -127,6 +127,10 @@ class ComponentResolver(ResolverBase):
         component_reference = ComponentReference.create(name=component_name, version=None)
         repo_helper = self._repository_helper(component_reference)
         latest_version = version.find_latest_version(repo_helper.release_versions())
+        if not latest_version:
+            raise ValueError(
+                f'Component {component_name} has no valid release'
+            )
         return latest_version
 
     def greatest_release_before(self, component_name: str, version: str):
