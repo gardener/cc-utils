@@ -463,10 +463,13 @@ class ProtecodeUtil:
         worst_cvss = -1
         worst_effective_vuln = GrafeasSeverity.SEVERITY_UNSPECIFIED
         try:
-            for gcr_occ in ccc.grafeas.filter_vulnerabilities(
-                image_reference=image_ref,
-                cvss_threshold=self.cvss_threshold,
-            ):
+            vulnerabilities_from_grafeas = list(
+                ccc.grafeas.filter_vulnerabilities(
+                    image_reference=image_ref,
+                    cvss_threshold=self.cvss_threshold,
+                )
+            )
+            for gcr_occ in vulnerabilities_from_grafeas:
                 gcr_score = gcr_occ.vulnerability.cvss_score
                 worst_cvss = max(worst_cvss, gcr_score)
                 effective_sev = GrafeasSeverity(gcr_occ.vulnerability.effective_severity)
@@ -479,7 +482,41 @@ class ProtecodeUtil:
         if worst_cvss >= self.cvss_threshold:
             ci.util.info(f'GCR\'s worst CVSS rating is above threshold: {worst_cvss}')
             ci.util.info(f'however, consider: {worst_effective_vuln=}')
-            return scan_result # do not import triages (although we could, considering components)
+            triage_remainder = False
+        else:
+            # worst finding below our threshold -> we may safely triage everything
+            # w/o being able to match triages component-wise
+            triage_remainder = True
+
+        def find_worst_vuln(
+            component,
+            vulnerability,
+            grafeas_vulns
+        ):
+            component_name = component.name()
+            cve_str = vulnerability.cve()
+
+            wurst_cve = -1
+            wurst_eff = GrafeasSeverity.SEVERITY_UNSPECIFIED
+            found_it = False
+            for gv in grafeas_vulns:
+                v = gv.vulnerability
+                if v.short_description != cve_str:
+                    continue
+
+                for pi in v.package_issue:
+                    v_name = pi.affected_package
+                    if not v_name == component_name:
+                        continue
+                    found_it = True
+                    # XXX should also check for version
+                    wurst_cve = max(wurst_cve, v.cvss_score)
+                    wurst_eff = max(
+                        wurst_eff,
+                        GrafeasSeverity(getattr(v, 'effective_severity', wurst_eff))
+                    )
+
+            return found_it, wurst_cve, wurst_eff
 
         # if this line is reached, all vulnerabilities are considered to be less severe than
         # protecode thinks. So triage all of them away
@@ -491,12 +528,32 @@ class ProtecodeUtil:
                 if vulnerability.has_triage():
                     continue # nothing to do
 
+                if not triage_remainder:
+                    found_it, worst_cve, worst_eff = find_worst_vuln(
+                        component=component,
+                        vulnerability=vulnerability,
+                        grafeas_vulns=vulnerabilities_from_grafeas,
+                    )
+                    if not found_it:
+                        ci.util.info(
+                            f'did not find {component.name()}:{vulnerability.cve()} in GCR - ignored'
+                        )
+                        continue # did not find the component - skip
+                    elif worst_cve >= self.cvss_threshold:
+                        ci.util.info(
+                            f'found {component.name()}, but is above threshold {worst_cve=}'
+                        )
+                        continue
+                    else:
+                        description = \
+                            f'[ci] vulnerability was assessed by GCR at {image_ref} with {worst_cve}'
+                else:
+                    description = \
+                        f'[ci] vulnerability was not found by GCR at: {image_ref}'
+
                 version = component.version()
                 if not version:
                     version = 'unknown'
-
-                description = \
-                    f'[ci] vulnerability was not found by GCR at: {image_ref}'
 
                 triage_dict = {
                     'component': component.name(),
