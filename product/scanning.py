@@ -493,4 +493,17 @@ class ProtecodeUtil(object):
                     continue # nothing to do
                 ci.util.info('would now triage due to GCR import')
 
+                triage_dict = {
+                    'component': component.name(),
+                    'version': component.version(),
+                    'vulns': [vulnerability.cve()],
+                    'scope': protecode.model.TriageScope.RESULT.value,
+                    'reason': 'OT', # "other"
+                    'description': f'[ci] imported from GCR {image_ref}',
+                    'product_id': scan_result.product_id(),
+                }
+
+                self._api.add_triage_raw(triage_dict=triage_dict)
+                ci.util.info(f'added triage: {component.name()}:{vulnerability.cve()}')
+
         return scan_result
