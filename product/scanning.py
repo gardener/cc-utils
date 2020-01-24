@@ -498,13 +498,16 @@ class ProtecodeUtil(object):
                 if not version:
                     version = 'unknown'
 
+                description = \
+                    f'[ci] vulnerability was not found by GCR at: {image_ref}'
+
                 triage_dict = {
                     'component': component.name(),
                     'version': version,
                     'vulns': [vulnerability.cve()],
                     'scope': protecode.model.TriageScope.RESULT.value,
                     'reason': 'OT', # "other"
-                    'description': f'[ci] imported from GCR {image_ref}',
+                    'description': description,
                     'product_id': scan_result.product_id(),
                 }
 
