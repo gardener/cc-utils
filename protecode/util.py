@@ -24,7 +24,7 @@ import ccc.protecode
 import ctx
 import container.registry
 import product.util
-from product.scanning import ContainerImageGroup, ProtecodeUtil, ProcessingMode
+from protecode.scanning_util import ContainerImageGroup, ProtecodeUtil, ProcessingMode
 from ci.util import info, warning, success, urljoin
 from product.model import (
     ComponentDescriptor,

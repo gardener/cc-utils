@@ -28,7 +28,12 @@ import product.model
 import product.util
 import protecode.util
 
-from product.scanning import ProcessingMode
+try:
+  from product.scanning import ProcessingMode
+except ImportError:
+  ## migration hack
+  from protecode.scanning_util import ProcessingMode
+
 from protecode.model import CVSSVersion
 
 try:

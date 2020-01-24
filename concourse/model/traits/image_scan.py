@@ -31,7 +31,8 @@ from concourse.model.base import (
     ScriptType,
 )
 from model.base import ModelValidationError
-from product.scanning import ProcessingMode
+from protecode.scanning_util import ProcessingMode
+
 from protecode.model import CVSSVersion
 
 import concourse.model.traits.component_descriptor
