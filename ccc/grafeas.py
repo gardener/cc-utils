@@ -54,7 +54,12 @@ def scan_available(
     image_reference: str,
 ):
     image_reference = container.registry.normalise_image_reference(image_reference)
-    client = grafeas_client_for_image(image_reference=image_reference)
+    try:
+        client = grafeas_client_for_image(image_reference=image_reference)
+    except VulnerabilitiesRetrievalFailed as vrf:
+        ci.util.warning(f'no gcr-cfg for: {image_reference}: {vrf}')
+        # ignore
+        return False
 
     # XXX / HACK: assuming we always handle GCRs (we should rather check!), the first URL path
     # element is the GCR project name
