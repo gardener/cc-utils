@@ -478,7 +478,7 @@ class ProtecodeUtil:
 
         if worst_cvss >= self.cvss_threshold:
             ci.util.info(f'GCR\'s worst CVSS rating is above threshold: {worst_cvss}')
-            ci.util.info(f'however, consider: {worst_effective_vuln}')
+            ci.util.info(f'however, consider: {worst_effective_vuln=}')
             return scan_result # do not import triages (although we could, considering components)
 
         # if this line is reached, all vulnerabilities are considered to be less severe than
