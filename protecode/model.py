@@ -69,6 +69,9 @@ class Component(ModelBase):
             return None
         return License(raw_dict=license_raw)
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}: {self.name()}:{self.version()}'
+
 
 class License(ModelBase):
     def name(self):
