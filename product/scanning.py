@@ -506,7 +506,11 @@ class ProtecodeUtil(object):
                     'product_id': scan_result.product_id(),
                 }
 
-                self._api.add_triage_raw(triage_dict=triage_dict)
-                ci.util.info(f'added triage: {component.name()}:{vulnerability.cve()}')
+                try:
+                    self._api.add_triage_raw(triage_dict=triage_dict)
+                    ci.util.info(f'added triage: {component.name()}:{vulnerability.cve()}')
+                except requests.exceptions.HTTPError as http_err:
+                    # since we are auto-importing anyway, be a bit tolerant
+                    ci.util.warning(f'failed to add triage: {http_err}')
 
         return scan_result
