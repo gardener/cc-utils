@@ -62,7 +62,7 @@ def scan_available(
     try:
         hash_reference = container.registry.to_hash_reference(image_reference)
     except Exception as e:
-        ci.util.warning(f'failed to determine hash for for {image_reference}')
+        ci.util.warning(f'failed to determine hash for for {image_reference}: {e}')
         return False
 
     # shorten enum name
@@ -72,7 +72,7 @@ def scan_available(
     filter_str = f'resourceUrl = "https://{hash_reference}" AND kind="DISCOVERY"'
     try:
         results = list(client.list_occurrences(f'projects/{project_name}', filter_=filter_str))
-        if (r_count := len(results)) == 0:
+        if (r_count:= len(results)) == 0:
             ci.util.warning(f'found no discovery-info for {image_reference}')
             return False
         elif r_count > 1:
@@ -94,7 +94,9 @@ def scan_available(
 
         return True # finally
     except Exception as e:
-        ci.util.warning(f'error whilst trying to determine discovery-status for {image_reference}')
+        ci.util.warning(
+            f'error whilst trying to determine discovery-status for {image_reference}: {e}'
+        )
         return False
 
 
