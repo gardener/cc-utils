@@ -513,4 +513,5 @@ class ProtecodeUtil(object):
                     # since we are auto-importing anyway, be a bit tolerant
                     ci.util.warning(f'failed to add triage: {http_err}')
 
-        return scan_result
+        # retrieve scan-results again to get filtered results after taking triages into account
+        return self._api.scan_result(product_id=scan_result.product_id())
