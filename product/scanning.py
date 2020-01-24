@@ -460,6 +460,10 @@ class ProtecodeUtil(object):
             logging.warning(f'no image-ref-name custom-prop for {scan_result.product_id()}')
             return scan_result
 
+        if not ccc.grafeas.scan_available(image_reference=image_ref):
+            ci.util.warning(f'no scan result available in gcr: {image_ref}')
+            return scan_result
+
         # determine worst CVE according to GCR's data
         worst_cvss = -1
         try:
@@ -476,7 +480,7 @@ class ProtecodeUtil(object):
 
         if worst_cvss >= self.cvss_threshold:
             ci.util.info(f'GCR\'s worst CVSS rating is above threshold: {worst_cvss}')
-            return scan_result # do not import triages (althoug we could, considering components)
+            return scan_result # do not import triages (although we could, considering components)
 
         # if this line is reached, all vulnerabilities are considered to be less severe than
         # protecode thinks. So triage all of them away
