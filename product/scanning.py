@@ -491,11 +491,14 @@ class ProtecodeUtil(object):
                     continue # only triage vulnerabilities above threshold
                 if vulnerability.has_triage():
                     continue # nothing to do
-                ci.util.info('would now triage due to GCR import')
+
+                version = component.version()
+                if not version:
+                    version = 'unknown'
 
                 triage_dict = {
                     'component': component.name(),
-                    'version': component.version(),
+                    'version': version,
                     'vulns': [vulnerability.cve()],
                     'scope': protecode.model.TriageScope.RESULT.value,
                     'reason': 'OT', # "other"
