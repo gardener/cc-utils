@@ -60,6 +60,7 @@ def upload_grouped_images(
         processing_mode=processing_mode,
         group_id=protecode_group_id,
         reference_group_ids=reference_group_ids,
+        cvss_threshold=cve_threshold,
     )
 
     def _upload_task(component, image_group):
