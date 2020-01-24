@@ -42,7 +42,7 @@ def retrieve_vulnerabilities(
     # XXX: should tell required privilege (-> read-vulnerabilities)
     registry_cfg = model.container_registry.find_config(image_reference=image_reference)
     if not registry_cfg:
-        raise VulnerabilitiesRetrievalFailed('no registry-cfg found')
+        raise VulnerabilitiesRetrievalFailed(f'no registry-cfg found for: {image_reference}')
 
     logger.info(f'using {registry_cfg.name()}')
 
