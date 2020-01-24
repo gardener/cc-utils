@@ -334,8 +334,10 @@ class ProtecodeUtil(object):
             self._transport_triages(triages_to_import, product_id)
 
         # apply triages from GCR
-        for protecode_app in protecode_apps_to_consider:
-            self._import_triages_from_gcr(protecode_app)
+        protecode_apps_to_consider = [
+            self._import_triages_from_gcr(protecode_app) for protecode_app
+            in protecode_apps_to_consider
+        ]
 
         # yield results
         for protecode_app in protecode_apps_to_consider:
