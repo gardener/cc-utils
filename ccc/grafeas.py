@@ -76,9 +76,16 @@ def scan_available(
             ci.util.warning(f'found no discovery-info for {image_reference}')
             return False
         elif r_count > 1:
-            ci.util.warning(f'found {r_count} discovery-infos for {image_reference} (one expected)')
-            # let's just ignore for now
-        discovery = results[0].discovery
+            # use latest
+            ts_seconds = -1
+            candidate = None
+            for r in results:
+                ts_seconds = max(ts_seconds, r.update_time.seconds)
+                if ts_seconds == r.update_time.seconds:
+                    candidate = r
+            discovery = candidate.discovery
+        else:
+            discovery = results[0].discovery
 
         discovery_status = AnalysisStatus(discovery.analysis_status)
         continuous_analysis = ContinuousAnalysis(discovery.continuous_analysis)
