@@ -555,7 +555,7 @@ class ProtecodeUtil:
                         )
                         triaged_due_to_absent_count += 1
                         description = \
-                            '[ci] vulnerability was not reported by GCR at {image_ref}'
+                            f'[ci] vulnerability was not reported by GCR at {image_ref}'
                     elif worst_cve >= self.cvss_threshold:
                         triaged_due_to_gcr_optimism += 1
                         ci.util.info(
