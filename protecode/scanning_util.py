@@ -2,6 +2,7 @@ from functools import partial
 import enum
 import logging
 import tempfile
+import textwrap
 import typing
 
 import grafeas.grafeas_v1
@@ -520,13 +521,23 @@ class ProtecodeUtil:
 
         # if this line is reached, all vulnerabilities are considered to be less severe than
         # protecode thinks. So triage all of them away
+        components_count = 0
+        vulnerabilities_count = 0 # only above threshold, and untriaged
+        triaged_due_to_max_count = 0
+        triaged_due_to_gcr_optimism = 0
+        triaged_due_to_absent_count = 0
+
         for component in scan_result.components():
+            components_count += 1
+
             for vulnerability in component.vulnerabilities():
                 severity = float(vulnerability.cve_severity_str(protecode.model.CVSSVersion.V3))
                 if severity < self.cvss_threshold:
                     continue # only triage vulnerabilities above threshold
                 if vulnerability.has_triage():
                     continue # nothing to do
+
+                vulnerabilities_count += 1
 
                 if not triage_remainder:
                     found_it, worst_cve, worst_eff = find_worst_vuln(
@@ -538,8 +549,10 @@ class ProtecodeUtil:
                         ci.util.info(
                             f'did not find {component.name()}:{vulnerability.cve()} in GCR - ignored'
                         )
+                        triaged_due_to_absent_count += 1
                         continue # did not find the component - skip
                     elif worst_cve >= self.cvss_threshold:
+                        triaged_due_to_gcr_optimism += 1
                         ci.util.info(
                             f'found {component.name()}, but is above threshold {worst_cve=}'
                         )
@@ -548,6 +561,7 @@ class ProtecodeUtil:
                         description = \
                             f'[ci] vulnerability was assessed by GCR at {image_ref} with {worst_cve}'
                 else:
+                    triaged_due_to_max_count += 1
                     description = \
                         f'[ci] vulnerability was not found by GCR at: {image_ref}'
 
@@ -571,6 +585,12 @@ class ProtecodeUtil:
                 except requests.exceptions.HTTPError as http_err:
                     # since we are auto-importing anyway, be a bit tolerant
                     ci.util.warning(f'failed to add triage: {http_err}')
+
+        ci.util.info(textwrap.dedent(f'''
+            statistics: {components_count=} {vulnerabilities_count=} {triaged_due_to_max_count=}
+            {triaged_due_to_gcr_optimism=} {triaged_due_to_absent_count=}
+        '''
+        ))
 
         # retrieve scan-results again to get filtered results after taking triages into account
         return self._api.scan_result(product_id=scan_result.product_id())
