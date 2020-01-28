@@ -322,6 +322,12 @@ def _running_on_ci():
     return 'CC_ROOT_DIR' in os.environ
 
 
+def current_config_set_name():
+    if not _running_on_ci():
+        raise RuntimeError('must only be called within CI/CD')
+    return check_env('CONCOURSE_CURRENT_CFG')
+
+
 def _root_dir():
     if not _running_on_ci():
         raise RuntimeError('must only be called within CI/CD')
