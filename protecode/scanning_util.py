@@ -508,6 +508,10 @@ class ProtecodeUtil:
                 for pi in v.package_issue:
                     v_name = pi.affected_package
                     if not v_name == component_name:
+                        # XXX maybe we should be a bit more defensive, and check for CVE equality
+                        # (if CVEs match, but compont name differs, a human could/should have a look)
+                        if v.short_description == cve_str:
+                            ci.warning(f'XXX check if this is a match: {v_name} / {component_name}')
                         continue
                     found_it = True
                     # XXX should also check for version
