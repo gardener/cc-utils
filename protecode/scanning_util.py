@@ -547,10 +547,11 @@ class ProtecodeUtil:
                     )
                     if not found_it:
                         ci.util.info(
-                            f'did not find {component.name()}:{vulnerability.cve()} in GCR - ignored'
+                            f'did not find {component.name()}:{vulnerability.cve()} in GCR'
                         )
                         triaged_due_to_absent_count += 1
-                        continue # did not find the component - skip
+                        description = \
+                            '[ci] vulnerability was not reported by GCR at {image_ref}'
                     elif worst_cve >= self.cvss_threshold:
                         triaged_due_to_gcr_optimism += 1
                         ci.util.info(
