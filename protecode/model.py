@@ -118,12 +118,16 @@ class Vulnerability(ModelBase):
             raise NotImplementedError(f'{cvss_version} not supported')
 
     def has_triage(self) -> bool:
-        return bool(self.raw.get('triage'))
+        return bool(self.raw.get('triage')) or bool(self.raw.get('triages'))
 
     def triages(self) -> 'Iterable[Triage]':
         if not self.has_triage():
             return ()
-        return (Triage(raw_dict=raw) for raw in self.raw.get('triage'))
+        trs = self.raw.get('triage')
+        if not trs:
+            trs = self.raw.get('triages')
+
+        return (Triage(raw_dict=raw) for raw in trs)
 
     def cve_major_severity(self, cvss_version) -> int:
         if self.cve_severity_str(cvss_version):
