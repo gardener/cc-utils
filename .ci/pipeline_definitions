@@ -5,7 +5,6 @@ cc-utils:
       - name: 'gh_pages'
         path: 'gardener/cc-utils'
         branch: 'gh-pages'
-
     release_traits: &release_traits
       version:
         preprocess: 'finalize'
