@@ -275,7 +275,7 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
             for org in job_mapping.github_organisations():
                 if org.org_name() != org_name:
                     continue
-                if not job_mapping.repository_matches(repo_name):
+                if not org.repository_matches(repo_name):
                     continue
                 github_cfg = cfg_set.github(org.github_cfg_name())
                 if github_cfg.matches_hostname(self._repo_host):
