@@ -529,6 +529,8 @@ class ProtecodeUtil:
         # protecode thinks. So triage all of them away
         components_count = 0
         vulnerabilities_count = 0 # only above threshold, and untriaged
+        skipped_due_to_historicalness = 0
+        skipped_due_to_existing_triages = 0
         triaged_due_to_max_count = 0
         triaged_due_to_gcr_optimism = 0
         triaged_due_to_absent_count = 0
@@ -541,7 +543,11 @@ class ProtecodeUtil:
                 if severity < self.cvss_threshold:
                     continue # only triage vulnerabilities above threshold
                 if vulnerability.has_triage():
+                    skipped_due_to_existing_triages += 1
                     continue # nothing to do
+                if vulnerability.historical():
+                    skipped_due_to_historicalness += 1
+                    continue # historical vulnerabilities cannot be triaged.
 
                 vulnerabilities_count += 1
 
@@ -594,8 +600,11 @@ class ProtecodeUtil:
                     ci.util.warning(f'failed to add triage: {http_err}')
 
         ci.util.info(textwrap.dedent(f'''
-            statistics: {components_count=} {vulnerabilities_count=} {triaged_due_to_max_count=}
-            {triaged_due_to_gcr_optimism=} {triaged_due_to_absent_count=}
+            Product: {scan_result.display_name()}
+            Statistics: {components_count=} {vulnerabilities_count=}
+            {skipped_due_to_historicalness=} {skipped_due_to_existing_triages=}
+            {triaged_due_to_max_count=} {triaged_due_to_gcr_optimism=}
+            {triaged_due_to_absent_count=}
         '''
         ))
 
