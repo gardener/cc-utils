@@ -538,6 +538,17 @@ class ProtecodeUtil:
         for component in scan_result.components():
             components_count += 1
 
+            version = component.version()
+            if not version:
+                # protecode does not allow triage for vulnerabilities of
+                # 'unknown' versions of components.
+                ci.util.warning(
+                    f'Version of component "{component.name()}" in product scan '
+                    f'"{scan_result.display_name()}" could not be detected by '
+                    'Protecode. Unable to import triages from GCR.'
+                )
+                continue
+
             for vulnerability in component.vulnerabilities():
                 severity = float(vulnerability.cve_severity_str(protecode.model.CVSSVersion.V3))
                 if severity < self.cvss_threshold:
@@ -577,10 +588,6 @@ class ProtecodeUtil:
                     triaged_due_to_max_count += 1
                     description = \
                         f'[ci] vulnerability was not found by GCR at: {image_ref}'
-
-                version = component.version()
-                if not version:
-                    version = 'unknown'
 
                 triage_dict = {
                     'component': component.name(),
