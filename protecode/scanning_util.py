@@ -540,6 +540,7 @@ class ProtecodeUtil:
             components_count += 1
 
             version = component.version()
+            component_vulns_skipped_due_to_unknown_version = 0
 
             for vulnerability in component.vulnerabilities():
 
@@ -557,7 +558,7 @@ class ProtecodeUtil:
                 if not version:
                     # protecode does not allow triage for vulnerabilities of
                     # 'unknown' versions of components.
-                    skipped_due_to_unknown_version += 1
+                    component_vulns_skipped_due_to_unknown_version += 1
                     continue
 
                 if not triage_remainder:
@@ -604,7 +605,8 @@ class ProtecodeUtil:
                     # since we are auto-importing anyway, be a bit tolerant
                     ci.util.warning(f'failed to add triage: {http_err}')
 
-            if not version:
+            if not version and component_vulns_skipped_due_to_unknown_version:
+                skipped_due_to_unknown_version += component_vulns_skipped_due_to_unknown_version
                 ci.util.warning(
                     f'Version of component "{component.name()}" in product scan '
                     f'"{scan_result.display_name()}" could not be detected by '
