@@ -539,15 +539,6 @@ class ProtecodeUtil:
             components_count += 1
 
             version = component.version()
-            if not version:
-                # protecode does not allow triage for vulnerabilities of
-                # 'unknown' versions of components.
-                ci.util.warning(
-                    f'Version of component "{component.name()}" in product scan '
-                    f'"{scan_result.display_name()}" could not be detected by '
-                    'Protecode. Unable to import triages from GCR.'
-                )
-                continue
 
             for vulnerability in component.vulnerabilities():
                 severity = float(vulnerability.cve_severity_str(protecode.model.CVSSVersion.V3))
@@ -559,6 +550,17 @@ class ProtecodeUtil:
                 if vulnerability.historical():
                     skipped_due_to_historicalness += 1
                     continue # historical vulnerabilities cannot be triaged.
+
+                if not version:
+                    # protecode does not allow triage for vulnerabilities of
+                    # 'unknown' versions of components.
+                    ci.util.warning(
+                        f'Version of component "{component.name()}" in product scan '
+                        f'"{scan_result.display_name()}" could not be detected by '
+                        'Protecode. Unable to import triage for vulnerability '
+                        f'"{vulnerability.cve()}" from GCR.'
+                    )
+                    continue
 
                 vulnerabilities_count += 1
 
