@@ -286,6 +286,10 @@ class ProtecodeUtil:
                 # there should be at most one matching image (by version)
                 for container_image in container_image_group:
                     if container_image.version() == image_version:
+                        ci.util.info(
+                            f'File for container image "{container_image}" no longer available to '
+                            'protecode - will upload'
+                        )
                         images_to_upload.add(container_image)
                         protecode_apps_to_consider.remove(protecode_app)
                         # xxx - also add app for removal?
