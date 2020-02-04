@@ -1,4 +1,4 @@
-# Continuous Integration utils for 'gardener' project
+# CICD, Delivery, Compliance and Security Automation for Gardener
 
 ![tests](https://concourse.ci.infra.gardener.cloud/api/v1/teams/gardener/pipelines/cc-utils-master/jobs/master-head-update-job/badge?title=tests)
 ![release](https://concourse.ci.infra.gardener.cloud/api/v1/teams/gardener/pipelines/cc-utils-master/jobs/master-release_job_image-job/badge?title=build)
