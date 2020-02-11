@@ -29,6 +29,7 @@ from .model import (
     ScanResult,
     Triage,
     TriageScope,
+    VersionOverrideScope,
 )
 
 
@@ -79,6 +80,9 @@ class ProtecodeApiRoutes(object):
 
     def triage(self):
         return self._api_url('triage', 'vulnerability/')
+
+    def version_override(self):
+        return self._api_url('versionoverride/')
 
     # ---- "rest" routes (undocumented API)
 
@@ -384,3 +388,42 @@ class ProtecodeApi(object):
         self._post(
             url=url,
         )
+
+    def set_component_version(
+        self,
+        component_name:str,
+        component_version:str,
+        objects:[str],
+        scope:VersionOverrideScope=VersionOverrideScope.APP,
+        app_id:int = None,
+        group_id:int = None,
+    ):
+        url = self._routes.version_override()
+
+        override_dict = {
+            'component': component_name,
+            'version': component_version,
+            'objects': objects,
+            'group_scope': None,
+            'scope': scope.value,
+        }
+
+        if scope is VersionOverrideScope.APP:
+            if not app_id:
+                raise RuntimeError(
+                    'An App ID is required when overriding versions with App scope.'
+                )
+            override_dict['app_scope'] = app_id
+        elif scope is VersionOverrideScope.GROUP:
+            if not group_id:
+                raise RuntimeError(
+                    'A Group ID is required when overriding versions with Group scope.'
+                )
+            override_dict['group_scope'] = group_id
+        else:
+            raise NotImplementedError
+
+        return self._put(
+            url=url,
+            json=[override_dict],
+        ).json()

@@ -19,6 +19,12 @@ from typing import Iterable
 from model.base import ModelBase
 
 
+class VersionOverrideScope(Enum):
+    APP = 1
+    GROUP = 2
+    GLOBAL = 3
+
+
 class ProcessingStatus(Enum):
     BUSY = 'B'
     READY = 'R'
@@ -69,11 +75,22 @@ class Component(ModelBase):
             return None
         return License(raw_dict=license_raw)
 
+    def extended_objects(self) -> 'Iterable[ExtendedObject]':
+        return (ExtendedObject(raw_dict=raw) for raw in self.raw.get('extended-objects'))
+
     def __repr__(self):
         return (
             f'{self.__class__.__name__}: {self.name()} '
             f'{self.version() or "Version not detected"}'
         )
+
+
+class ExtendedObject(ModelBase):
+    def name(self):
+        return self.raw.get('name')
+
+    def sha1(self):
+        return self.raw.get('sha1')
 
 
 class License(ModelBase):
