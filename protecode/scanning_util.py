@@ -15,6 +15,7 @@ from protecode.client import ProtecodeApi
 from protecode.model import (
     AnalysisResult,
     TriageScope,
+    VersionOverrideScope,
 )
 from concourse.model.base import (
     AttribSpecMixin,
@@ -535,7 +536,6 @@ class ProtecodeUtil:
         vulnerabilities_count = 0 # only above threshold, and untriaged
         skipped_due_to_historicalness = 0
         skipped_due_to_existing_triages = 0
-        skipped_due_to_unknown_version = 0
         triaged_due_to_max_count = 0
         triaged_due_to_gcr_optimism = 0
         triaged_due_to_absent_count = 0
@@ -544,7 +544,6 @@ class ProtecodeUtil:
             components_count += 1
 
             version = component.version()
-            component_vulns_skipped_due_to_unknown_version = 0
 
             for vulnerability in component.vulnerabilities():
 
@@ -560,10 +559,25 @@ class ProtecodeUtil:
                     skipped_due_to_historicalness += 1
                     continue # historical vulnerabilities cannot be triaged.
                 if not version:
-                    # protecode does not allow triage for vulnerabilities of
-                    # 'unknown' versions of components.
-                    component_vulns_skipped_due_to_unknown_version += 1
-                    continue
+                    # Protecode only allows triages for components with known version.
+                    # set version to be able to triage away.
+                    component_name = component.name()
+                    version = '[ci]-not-found-in-GCR'
+                    ci.util.info(f"Setting dummy version for component '{component_name}'")
+                    try:
+                        self._api.set_component_version(
+                            component_name=component_name,
+                            component_version=version,
+                            objects=[o.sha1() for o in component.extended_objects()],
+                            scope=VersionOverrideScope.APP,
+                            app_id=scan_result.product_id(),
+                        )
+                    except requests.exceptions.HTTPError as http_err:
+                        ci.util.warning(
+                            f"Unable to set version for component '{component_name}': {http_err}."
+                        )
+                        # version was not set - cannot triage
+                        continue
 
                 if not triage_remainder:
                     found_it, worst_cve, worst_eff = find_worst_vuln(
@@ -609,19 +623,10 @@ class ProtecodeUtil:
                     # since we are auto-importing anyway, be a bit tolerant
                     ci.util.warning(f'failed to add triage: {http_err}')
 
-            if not version and component_vulns_skipped_due_to_unknown_version:
-                skipped_due_to_unknown_version += component_vulns_skipped_due_to_unknown_version
-                ci.util.warning(
-                    f'Version of component "{component.name()}" in product scan '
-                    f'"{scan_result.display_name()}" could not be detected by '
-                    'Protecode. Unable to import triages from GCR.'
-                )
-
         ci.util.info(textwrap.dedent(f'''
             Product: {scan_result.display_name()}
             Statistics: {components_count=} {vulnerabilities_count=}
             {skipped_due_to_historicalness=} {skipped_due_to_existing_triages=}
-            {skipped_due_to_unknown_version=}
             {triaged_due_to_max_count=} {triaged_due_to_gcr_optimism=}
             {triaged_due_to_absent_count=}
         '''
