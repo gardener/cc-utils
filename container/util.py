@@ -130,7 +130,11 @@ def _filter_files(
         # assumption: layers are always tarfiles
         # check if we need to patch
         layer_tar = tarfile.open(fileobj=fileobj)
-        have_match = bool(set(layer_tar.getnames()) & remove_entries)
+        # normalise paths
+        layer_tar_paths = {
+            path.lstrip('./') for path in layer_tar.getnames()
+        }
+        have_match = bool(layer_tar_paths & remove_entries)
         fileobj.seek(0)
 
         if not have_match:
