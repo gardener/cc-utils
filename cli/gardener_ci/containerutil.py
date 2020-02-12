@@ -1,3 +1,5 @@
+import os
+
 import ci.util
 import container.registry
 import container.util
@@ -20,10 +22,18 @@ def filter_image_file(
     if not remove_files:
         ci.util.warning('no files to remove were specified - the output will remain unaltered')
 
+    def parse_entries(remove_entries_files):
+        for remove_entries_file in remove_entries_files:
+            with open(remove_entries_file) as f:
+                for l in f.readlines():
+                    yield l.strip()
+
+    remove_entries = [e for e in parse_entries(remove_files)]
+
     container.util.filter_container_image(
         image_file=in_file,
         out_file=out_file,
-        remove_entries=remove_files,
+        remove_entries=remove_entries,
     )
 
 
