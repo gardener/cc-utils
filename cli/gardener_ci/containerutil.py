@@ -1,5 +1,3 @@
-import os
-
 import ci.util
 import container.registry
 import container.util
