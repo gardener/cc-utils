@@ -530,6 +530,23 @@ class ProtecodeUtil:
 
             return found_it, wurst_cve, wurst_eff
 
+        def find_component_version(component_name, occurrences):
+            determined_version = None
+            for occurrence in occurrences:
+                package_issues = occurrence.vulnerability.package_issue
+                for package_issue in package_issues:
+                    package_name = package_issue.affected_package
+                    if package_name == component_name:
+                        if (
+                            determined_version is not None and
+                            determined_version != package_issue.affected_version.full_name
+                        ):
+                            # found more than one possible version. Return None since we cannot
+                            # be sure which version is correct
+                            return None
+                        determined_version = package_issue.affected_version.full_name
+            return determined_version
+
         # if this line is reached, all vulnerabilities are considered to be less severe than
         # protecode thinks. So triage all of them away
         components_count = 0
@@ -544,6 +561,28 @@ class ProtecodeUtil:
             components_count += 1
 
             version = component.version()
+            component_name = component.name()
+
+            if not version:
+                # if version is not known to protecode, see if it can be determined using gcr's
+                # vulnerability-assessment
+                if (version := find_component_version(component_name, vulnerabilities_from_grafeas)): # noqa:E203,E501
+                    ci.util.info(
+                        f"Grafeas has version '{version}' for undetermined protecode-component "
+                        f"'{component_name}'. Will try to import version to Protecode."
+                    )
+                    try:
+                        self._api.set_component_version(
+                            component_name=component_name,
+                            component_version=version,
+                            objects=[o.sha1() for o in component.extended_objects()],
+                            scope=VersionOverrideScope.APP,
+                            app_id=scan_result.product_id(),
+                        )
+                    except requests.exceptions.HTTPError as http_err:
+                        ci.util.warning(
+                            f"Unable to set version for component '{component_name}': {http_err}."
+                        )
 
             for vulnerability in component.vulnerabilities():
 
@@ -561,7 +600,6 @@ class ProtecodeUtil:
                 if not version:
                     # Protecode only allows triages for components with known version.
                     # set version to be able to triage away.
-                    component_name = component.name()
                     version = '[ci]-not-found-in-GCR'
                     ci.util.info(f"Setting dummy version for component '{component_name}'")
                     try:
