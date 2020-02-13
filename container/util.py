@@ -216,7 +216,7 @@ def _filter_single_tar(
             temptar.addfile(tar_info)
             continue
 
-        if tar_info.name in remove_entries:
+        if tar_info.name.lstrip('./') in remove_entries:
             logging.debug(f'purging entry: {tar_info.name}')
             continue
 
