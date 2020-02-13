@@ -157,6 +157,8 @@ class ProtecodeUtil:
         if not omit_version:
             metadata_dict['IMAGE_REFERENCE'] = container_image.image_reference()
             metadata_dict['IMAGE_VERSION'] = container_image.version()
+            metadata_dict['IMAGE_DIGEST'] = container_image.image_digest()
+            metadata_dict['DIGEST_IMAGE_REFERENCE'] = container_image.image_reference_with_digest()
 
         return metadata_dict
 
@@ -256,8 +258,8 @@ class ProtecodeUtil:
             for container_image in container_image_group.images():
                 # find matching protecode product (aka app)
                 for existing_product in existing_products:
-                    if existing_product.custom_data().get('IMAGE_VERSION') == \
-                      container_image.version():
+                    product_image_digest = existing_product.custom_data().get('IMAGE_DIGEST')
+                    if product_image_digest == container_image.image_digest():
                         existing_products.remove(existing_product)
                         protecode_apps_to_consider.append(existing_product)
                         break
@@ -283,10 +285,10 @@ class ProtecodeUtil:
                 # scan_result here is an AnalysisResult which lacks our metadata. We need the
                 # metadata to fetch the image version. Therefore, fetch the proper result
                 scan_result = self._api.scan_result(product_id=protecode_app.product_id())
-                image_version = scan_result.custom_data().get('IMAGE_VERSION')
-                # there should be at most one matching image (by version)
+                image_digest = scan_result.custom_data().get('IMAGE_DIGEST')
+                # there should be at most one matching image (by image digest)
                 for container_image in container_image_group:
-                    if container_image.version() == image_version:
+                    if container_image.image_digest() == image_digest:
                         ci.util.info(
                             f'File for container image "{container_image}" no longer available to '
                             'protecode - will upload'
