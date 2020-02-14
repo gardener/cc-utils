@@ -50,4 +50,4 @@ def test_smoke():
 
     assert result.returncode == 0
     assert result.stderr.strip() == ''
-    assert result.stdout.strip().startswith('usage: cli.py')
+    assert result.stdout.strip().startswith('usage: cli_gen.py')
