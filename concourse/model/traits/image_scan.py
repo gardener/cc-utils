@@ -80,7 +80,7 @@ PROTECODE_ATTRS = (
     ),
     AttributeSpec.optional(
         name='cvss_version',
-        default=CVSSVersion.V2,
+        default=CVSSVersion.V3,
         doc='CVSS version used to evaluate the severity of vulnerabilities',
         type=CVSSVersion,
     ),
