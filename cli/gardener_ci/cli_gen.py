@@ -23,7 +23,17 @@ import inspect
 import itertools
 import sys
 
-import ci.util
+try:
+    import ci.util
+except ModuleNotFoundError:
+    repo_dir = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__name__),
+            os.pardir,
+            os.pardir,
+        )
+    )
+    sys.path.insert(1, repo_dir)
 import ctx
 
 import_errs = []
