@@ -23,7 +23,7 @@ SRC_DIR = os.path.abspath(
         os.pardir
     )
 )
-CLI_PY = os.path.join(SRC_DIR, 'cli.py')
+CLI_PY = os.path.join(SRC_DIR, 'cli_gen.py')
 
 
 def test_smoke():
