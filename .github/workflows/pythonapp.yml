@@ -32,4 +32,6 @@ jobs:
         pwd
         ls -la
         pip install pytest
+        echo $PYTHONPATH
+        export PYTHONPATH="$PWD"
         pytest
