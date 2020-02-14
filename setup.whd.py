@@ -6,16 +6,13 @@ own_dir = os.path.abspath(os.path.dirname(__file__))
 
 def requirements():
     yield 'gardener-cicd-libs'
+    yield 'gardener-cicd-cli'
 
-    whd_dependencies = ('falcon', 'bjoern')
 
-    with open(os.path.join(own_dir, 'requirements.txt')) as f:
+    with open(os.path.join(own_dir, 'requirements.whd.txt')) as f:
         for line in f.readlines():
             line = line.strip()
             if not line or line.startswith('#'):
-                continue
-            # we only need yaml, yamllint termcolor, urllib
-            if not any((whd_dep in line for whd_dep in whd_dependencies)):
                 continue
 
             yield line

@@ -7,15 +7,10 @@ own_dir = os.path.abspath(os.path.dirname(__file__))
 def requirements():
     yield 'gardener-cicd-base'
 
-    # dependencies only required by WHD
-    whd_dependencies = ('falcon', 'bjoern')
-
     with open(os.path.join(own_dir, 'requirements.txt')) as f:
         for line in f.readlines():
             line = line.strip()
             if not line or line.startswith('#'):
-                continue
-            if any((whd_dep in line for whd_dep in whd_dependencies)):
                 continue
 
             yield line

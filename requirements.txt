@@ -3,7 +3,6 @@ GitPython<3.0.0
 Mako<2.0.0
 Sphinx<3.0.0
 bcrypt<4.0.0
-bjoern<4
 cachecontrol<1
 containerregistry-ccwienk==0.2.5
 dataclasses-json
@@ -12,7 +11,6 @@ deepmerge<1.0.0
 deprecated<2.0.0
 elasticsearch<8.0.0
 ensure<1.0.0
-falcon
 flake8<4.0.0
 github3.py<2.0.0
 google-cloud-containeranalysis
@@ -33,5 +31,4 @@ tabulate<1.0.0
 termcolor<2.0.0
 toposort<2.0.0
 urllib3<2.0.0
-werkzeug
 yamllint<2
