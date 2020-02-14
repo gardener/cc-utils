@@ -15,22 +15,34 @@
 
 import os
 import subprocess
+import sys
 
 # assumption: we reside exactly one directory below our sources
-SRC_DIR = os.path.abspath(
+src_dir = os.path.abspath(
     os.path.join(
         os.path.dirname(__file__),
         os.pardir
     )
 )
-CLI_PY = os.path.join(SRC_DIR, 'cli_gen.py')
+cli_py = os.path.join(src_dir, 'cli_gen.py')
+
+repo_root = os.path.abspath(
+    os.path.join(
+        src_dir,
+        os.pardir,
+        os.pardir,
+    )
+)
+# hacky: add cc-utils (gardener-cicd-libs) to PYTHONPATH, so it's available during
+# test-execution
+sys.path.insert(1, repo_root)
 
 
 def test_smoke():
     # perform a very weak smoke-test:
     # test if a trivial sub-command can be run
     result = subprocess.run(
-        [CLI_PY, 'config', '-h'],
+        [cli_py, 'config', '-h'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True
