@@ -34,6 +34,7 @@ except ModuleNotFoundError:
         )
     )
     sys.path.insert(1, repo_dir)
+    import ci.util
 import ctx
 
 import_errs = []
