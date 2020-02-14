@@ -14,13 +14,16 @@
 # limitations under the License.
 
 import abc
-import urllib.parse
+import functools
 import typing
+import urllib.parse
 from enum import Enum
 
 from model.base import ModelBase, ModelValidationError
 from protecode.model import AnalysisResult
 from ci.util import not_none, urljoin, check_type
+
+import container.registry
 import version as ver
 
 #############################################################################
@@ -395,6 +398,13 @@ class ContainerImage(ContainerImageReference):
 
     def image_name(self):
         return self.raw.get('name')
+
+    @functools.lru_cache
+    def image_reference_with_digest(self):
+        return container.registry.to_hash_reference(self.image_reference())
+
+    def image_digest(self):
+        return f'@{self.image_reference_with_digest().split("@")[1]}'
 
     def validate(self):
         img_ref = check_type(self.image_reference(), str)
