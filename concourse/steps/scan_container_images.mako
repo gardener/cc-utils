@@ -153,7 +153,7 @@ for email_recipient in email_recipients:
 % endif
 
   if not email_recipient.has_results():
-    ci.util.info(f'skipping {email_recipient}, since there are not relevant results')
+    ci.util.info(f'skipping {email_recipient}, since there are no relevant results')
     continue
 
   body = email_recipient.mail_body()
