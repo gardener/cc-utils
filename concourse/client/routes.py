@@ -113,6 +113,10 @@ class ConcourseApiRoutesBase(object):
         return self._api_url('builds', str(build_id), 'plan', prefix_team=False)
 
     @ensure_annotations
+    def abort_build(self, build_id):
+        return self._api_url('builds', str(build_id), 'abort', prefix_team=False)
+
+    @ensure_annotations
     def list_workers(self):
         return self._api_url('workers', prefix_team=False)
 

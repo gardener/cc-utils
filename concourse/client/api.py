@@ -244,6 +244,11 @@ class ConcourseApiBase(object):
         url = self.routes.prune_worker(worker_name)
         self._put(url, "")
 
+    @ensure_annotations
+    def abort_build(self, build_id):
+        url = self.routes.abort_build(build_id)
+        self._put(url, "")
+
 
 class ConcourseApiV5(ConcourseApiBase):
     def set_team(self, concourse_team: ConcourseTeam):
