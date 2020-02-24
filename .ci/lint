@@ -8,7 +8,8 @@ src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
 
 echo 'Running flake8 for all python modules..'
 
-if flake8 ${src_dir}; then
+# flake8 / the linter it instruments cannot handle our special type-hints (CliHint)
+if flake8 --ignore=F722,F821 ${src_dir}; then
     echo 'flake8 succeeded'
     exit 0
 else
