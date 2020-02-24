@@ -7,9 +7,6 @@ if ! which pytest &>/dev/null; then
   exit 1
 fi
 
-# workaround missing release
-pip3 install dacite
-
 # usage: $1: <src-dir>
 
 src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
