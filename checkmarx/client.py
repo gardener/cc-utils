@@ -116,7 +116,7 @@ class CheckmarxClient:
         res = self.request(
             method='POST',
             url=self.routes.projects(),
-            data={
+            json={
                 "name": name,
                 "owningTeam": owning_team,
                 "isPublic": is_public,
@@ -139,7 +139,7 @@ class CheckmarxClient:
         res = self.request(
             method='POST',
             url=self.routes.remote_settings_git(project_id),
-            data={
+            json={
                 "url": url,
                 "branch": branch_ref,
             },
@@ -169,15 +169,14 @@ class CheckmarxClient:
         res = self.request(
             method="PUT",
             url=self.routes.project_by_id(str(project_details.id)),
-            data={
+            json={
                 'name': project_details.name,
                 'owningTeam': project_details.teamId,
                 'customFields': [
                     {
-                        'id': 0,
+                        'id': 'hash',
                         'value': 'blubb'
                     }
-
                     # [dataclasses.asdict(cf) for cf in project_details.customFields]
                 ],
             },
@@ -189,7 +188,7 @@ class CheckmarxClient:
         res = self.request(
             method='POST',
             url=self.routes.scan(),
-            data=dataclasses.asdict(scan_settings),
+            json=dataclasses.asdict(scan_settings),
         )
         return res.json()['id']
 

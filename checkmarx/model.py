@@ -9,9 +9,10 @@ class ScanResult(Enum):
     FAILED = 9
 
 
-class CustomFieldNames(Enum):
-    ZIP_HASH = 'zip_hash'
-    COMMIT_HASH = 'commit_hash'
+class CustomFieldKeys(Enum):
+    FILE_HASH = 'hash'
+    VERSION = 'version'
+    COMPONENT_NAME = 'component_name'
 
 
 @dataclasses.dataclass
