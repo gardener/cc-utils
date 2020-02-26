@@ -39,13 +39,19 @@ class EmailConfig(NamedModelElement):
     def credentials(self):
         return EmailCredentials(self.raw.get('credentials'))
 
+    def has_credentials(self):
+        if self.raw.get('credentials'):
+            return True
+        return False
+
     def _required_attributes(self):
         return ['host', 'port', 'credentials']
 
     def validate(self):
         super().validate()
         # ensure credentials are valid - validation implicitly happens in the constructor.
-        self.credentials()
+        if self.has_credentials():
+            self.credentials()
 
 
 class EmailCredentials(BasicCredentials):
