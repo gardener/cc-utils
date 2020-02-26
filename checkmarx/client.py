@@ -3,9 +3,10 @@ import model.checkmarx
 import requests
 from dacite import from_dict
 import datetime
-from .model import ScanResult, AuthResponse, ScanResponse, ProjectDetails, ScanSettings
+import checkmarx.model
 import time
 import dataclasses
+import model
 
 
 def require_auth(f: callable):
@@ -82,7 +83,7 @@ class CheckmarxClient:
             },
             verify=False,
         )
-        res = AuthResponse(**res.json())
+        res = checkmarx.model.AuthResponse(**res.json())
         res.expires_at = datetime.datetime.fromtimestamp(
             datetime.datetime.now().timestamp() + res.expires_in - 10
         )
@@ -165,45 +166,47 @@ class CheckmarxClient:
         )
         return res
 
-    def update_project(self, project_details: ProjectDetails):
+    def update_project(self, project_details: checkmarx.model.ProjectDetails):
         res = self.request(
             method="PUT",
             url=self.routes.project_by_id(str(project_details.id)),
             json={
                 'name': project_details.name,
                 'owningTeam': project_details.teamId,
-                'customFields': [
-                    {
-                        'id': 'hash',
-                        'value': 'blubb'
-                    }
-                    # [dataclasses.asdict(cf) for cf in project_details.customFields]
-                ],
+                'customFields': [dataclasses.asdict(cf) for cf in project_details.customFields],
             },
         )
+        print('successfully updated project')
         return res
 
-    def start_scan(self, scan_settings: 'ScanSettings'):
+    def start_scan(self, scan_settings: checkmarx.model.ScanSettings):
         print(dataclasses.asdict(scan_settings))
         res = self.request(
             method='POST',
             url=self.routes.scan(),
             json=dataclasses.asdict(scan_settings),
         )
-        return res.json()['id']
+        scan_id = res.json()['id']
+        print(f'created scan with id {scan_id}')
+        return scan_id
 
     def get_scan_state(self, scan_id: str):
         res = self.request(
             method='GET',
             url=self.routes.scan_by_id(scan_id=scan_id),
         )
-        return from_dict(data_class=ScanResponse, data=res.json())
+        return from_dict(data_class=checkmarx.model.ScanResponse, data=res.json())
 
-    def wait_for_scan_result(self, scan_id: int, polling_interval_seconds=60):
+    def wait_for_scan_result(self, scan_id: int, polling_interval_seconds=15):
         def scan_finished():
-            result = self.get_scan_state(scan_id=str(scan_id))
-            if result.status.id in (ScanResult.FINISHED.value, ScanResult.FAILED.value):
-                return result
+            res = self.get_scan_state(scan_id=str(scan_id))
+            res_status = checkmarx.model.ScanStatusValues(res.status.id)
+            print(f'polling for scan result. state: {res_status}')
+            if res_status in (
+                    checkmarx.model.ScanStatusValues.FINISHED,
+                    checkmarx.model.ScanStatusValues.FAILED
+            ):
+                return res
             return False
 
         result = scan_finished()
@@ -212,3 +215,7 @@ class CheckmarxClient:
             time.sleep(polling_interval_seconds)
             result = scan_finished()
         return result
+
+    def start_scan_and_poll(self, scan_settings: checkmarx.model.ScanSettings):
+        scan_id = self.start_scan(scan_settings=scan_settings)
+        return self.wait_for_scan_result(scan_id=scan_id)

@@ -1,18 +1,26 @@
 import datetime
 import dataclasses
 from enum import Enum
+import product.model
 import typing
 
 
-class ScanResult(Enum):
+class ScanStatusValues(Enum):
+    NEW = 1
+    PRE_SCAN = 2
+    QUEUED = 3
+    SCANNING = 4
+    POST_SCAN = 6
     FINISHED = 7
+    CANCELED = 8
     FAILED = 9
+    SOURCE_PULLING_AND_DEPLOYMENT = 10
 
 
 class CustomFieldKeys(Enum):
-    FILE_HASH = 'hash'
-    VERSION = 'version'
-    COMPONENT_NAME = 'component_name'
+    COMPONENT_NAME = 4
+    VERSION = 5
+    HASH = 6
 
 
 @dataclasses.dataclass
@@ -37,15 +45,12 @@ class ScanSettings:
 
 
 @dataclasses.dataclass
-class AuthResponse:
-    access_token: str
-    expires_in: int
-    token_type: str
-    expires_at: datetime.datetime = None
-
-    def is_valid(self):
-        return datetime.datetime.now() > self.expires_at
-
+class ScanStatistic:
+    highSeverity: int
+    mediumSeverity: int
+    lowSeverity: int
+    infoSeverity: int
+    statisticsCalculationDate: str
 
 @dataclasses.dataclass
 class ScanResponse:
@@ -54,9 +59,19 @@ class ScanResponse:
     scanRisk: int
     scanRiskSeverity: int
     status: ScanStatus
-    scanType: ScanType
     isIncremental: bool
     owningTeamId: str
+
+
+@dataclasses.dataclass
+class AuthResponse:
+    access_token: str
+    expires_in: int
+    token_type: str
+    expires_at: datetime.datetime = None
+
+    def is_valid(self):
+        return datetime.datetime.now() > self.expires_at
 
 
 @dataclasses.dataclass
@@ -72,14 +87,28 @@ class ProjectDetails:
     name: str
     customFields: typing.List[CustomField] = dataclasses.field(default_factory=list)
 
-    def get_custom_field(self, attribute_key: str, pop: bool = False):
+    def get_custom_field(self, attribute_key: CustomFieldKeys, pop: bool = False):
+        if not isinstance(attribute_key, CustomFieldKeys):
+            raise ValueError(attribute_key)
+
         for cf in self.customFields:
-            key, value = cf.value.split(':', 1)
-            if key == attribute_key:
+            if cf.id == attribute_key.value:
                 if pop:
                     self.customFields.remove(cf)
-                return value
+                return cf.value
 
-    def set_custom_field(self, attribute_key: str, value: str):
+    def set_custom_field(self, attribute_key: CustomFieldKeys, value: str):
         self.get_custom_field(attribute_key=attribute_key, pop=True)
-        self.customFields.append(CustomField(len(self.customFields), f'{attribute_key}:{value}'))
+        self.customFields.append(CustomField(id=attribute_key.value, value=value))
+
+
+# below types are not used for http body deserialization
+
+@dataclasses.dataclass
+class ScanResult:
+    """
+    ScanResult is a data container for a scan result for a component version
+    """
+    component: product.model.Component
+    scan_result: ScanResponse
+    scan_statistic: ScanStatistic
