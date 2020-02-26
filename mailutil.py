@@ -120,8 +120,9 @@ def _send_mail(
     else:
         smtp_server = smtplib.SMTP(email_cfg.smtp_host())
 
-    credentials = email_cfg.credentials()
-    smtp_server.login(user=credentials.username(), password=credentials.passwd())
+    if email_cfg.has_credentials():
+        credentials = email_cfg.credentials()
+        smtp_server.login(user=credentials.username(), password=credentials.passwd())
 
     recipients.update(cc_recipients)
 
