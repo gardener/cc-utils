@@ -52,6 +52,7 @@ class ScanStatistic:
     infoSeverity: int
     statisticsCalculationDate: str
 
+
 @dataclasses.dataclass
 class ScanResponse:
     owner: str
