@@ -1,8 +1,10 @@
-import checkmarx.facade
-import checkmarx.client
-import product.model
-import ci.util
+import dataclasses
 
+import ci.util
+import checkmarx.client
+import checkmarx.project
+import checkmarx.util
+import product.model
 
 def upload_and_scan_from_component_descriptor(
     checkmarx_cfg_name: str,
@@ -14,6 +16,7 @@ def upload_and_scan_from_component_descriptor(
     )
 
     for component in component_descriptor.components():
-        res = checkmarx.facade.upload_and_scan_repo(checkmarx_cfg_name, team_id, component)
-
-        print(res)
+        client = checkmarx.util.create_checkmarx_client(checkmarx_cfg_name)
+        scan_result = checkmarx.project.upload_and_scan_repo(client, team_id, component)
+        print(dataclasses.asdict(scan_result))
+        checkmarx.util.print_scan_result(scan_result=scan_result)

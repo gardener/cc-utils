@@ -50,15 +50,17 @@ class CheckmarxRoutes:
     def scan(self):
         return self._api_url('sast', 'scans')
 
-    def scan_by_id(self, scan_id: str):
+    def scan_by_id(self, scan_id: int):
         return urljoin(self.scan(), str(scan_id))
+
+    def scan_statistics(self, scan_id: int):
+        return urljoin(self.scan(), str(scan_id), 'resultsStatistics')
 
     def upload_zipped_source(self, project_id: int):
         return urljoin(str(self.project_by_id(project_id)), 'sourceCode', 'attachments')
 
-    def remote_settings_git(self, project_id: str):
+    def remote_settings_git(self, project_id: int):
         return urljoin(self.scan_by_id(project_id), 'sourceCode', 'remoteSettings', 'git')
-
 
 class CheckmarxClient:
     def __init__(self, checkmarx_cfg: model.checkmarx.CheckmarxConfig):
@@ -136,17 +138,6 @@ class CheckmarxClient:
         )
         return res
 
-    def update_git_project_remote_settings(self, project_id: str, url: str, branch_ref: str):
-        res = self.request(
-            method='POST',
-            url=self.routes.remote_settings_git(project_id),
-            json={
-                "url": url,
-                "branch": branch_ref,
-            },
-        )
-        return res
-
     def get_project_id_by_name(self, project_name: str, team_id: str):
         res = self.request(
             method='GET',
@@ -169,7 +160,7 @@ class CheckmarxClient:
     def update_project(self, project_details: checkmarx.model.ProjectDetails):
         res = self.request(
             method="PUT",
-            url=self.routes.project_by_id(str(project_details.id)),
+            url=self.routes.project_by_id(project_details.id),
             json={
                 'name': project_details.name,
                 'owningTeam': project_details.teamId,
@@ -180,7 +171,6 @@ class CheckmarxClient:
         return res
 
     def start_scan(self, scan_settings: checkmarx.model.ScanSettings):
-        print(dataclasses.asdict(scan_settings))
         res = self.request(
             method='POST',
             url=self.routes.scan(),
@@ -190,18 +180,26 @@ class CheckmarxClient:
         print(f'created scan with id {scan_id}')
         return scan_id
 
-    def get_scan_state(self, scan_id: str):
+    def get_scan_state(self, scan_id: int):
         res = self.request(
             method='GET',
             url=self.routes.scan_by_id(scan_id=scan_id),
         )
         return from_dict(data_class=checkmarx.model.ScanResponse, data=res.json())
 
+    def get_scan_statistics(self, scan_id: int):
+        print('retrieving scan statistics')
+        res = self.request(
+            method='GET',
+            url=self.routes.scan_statistics(scan_id=scan_id)
+        )
+        return from_dict(data_class=checkmarx.model.ScanStatistic, data=res.json())
+
     def wait_for_scan_result(self, scan_id: int, polling_interval_seconds=15):
         def scan_finished():
-            res = self.get_scan_state(scan_id=str(scan_id))
+            res = self.get_scan_state(scan_id=scan_id)
             res_status = checkmarx.model.ScanStatusValues(res.status.id)
-            print(f'polling for scan result. state: {res_status}')
+            print(f'polling for scan result. state: {res_status.name}')
             if res_status in (
                     checkmarx.model.ScanStatusValues.FINISHED,
                     checkmarx.model.ScanStatusValues.FAILED
