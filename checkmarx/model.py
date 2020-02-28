@@ -24,58 +24,6 @@ class CustomFieldKeys(Enum):
 
 
 @dataclasses.dataclass
-class ScanStatus:
-    id: int
-    name: str
-
-
-@dataclasses.dataclass
-class ScanType:
-    id: int
-    value: str
-
-
-@dataclasses.dataclass
-class ScanSettings:
-    projectId: int
-    isIncremental: bool = True
-    isPublic: bool = True
-    forceScan: bool = True
-    comment: str = ""
-
-
-@dataclasses.dataclass
-class ScanStatistic:
-    highSeverity: int
-    mediumSeverity: int
-    lowSeverity: int
-    infoSeverity: int
-    statisticsCalculationDate: str
-
-
-@dataclasses.dataclass
-class ScanResponse:
-    owner: str
-    id: int
-    scanRisk: int
-    scanRiskSeverity: int
-    status: ScanStatus
-    isIncremental: bool
-    owningTeamId: str
-
-
-@dataclasses.dataclass
-class AuthResponse:
-    access_token: str
-    expires_in: int
-    token_type: str
-    expires_at: datetime.datetime = None
-
-    def is_valid(self):
-        return datetime.datetime.now() > self.expires_at
-
-
-@dataclasses.dataclass
 class CustomField:
     id: int
     value: str
@@ -103,8 +51,60 @@ class ProjectDetails:
         self.customFields.append(CustomField(id=attribute_key.value, value=value))
 
 
-# below types are not used for http body deserialization
+@dataclasses.dataclass
+class ScanStatus:
+    id: int
+    name: str
 
+
+@dataclasses.dataclass
+class AuthResponse:
+    access_token: str
+    expires_in: int
+    token_type: str
+    expires_at: datetime.datetime = None
+
+    def is_valid(self):
+        return datetime.datetime.now() > self.expires_at
+
+
+@dataclasses.dataclass
+class ScanDateAndTime:
+    startedOn: str
+    finishedOn: typing.Optional[str]
+
+
+@dataclasses.dataclass
+class ScanResponse:
+    owner: str
+    id: int
+    scanRisk: int
+    scanRiskSeverity: int
+    status: ScanStatus
+    dateAndTime: ScanDateAndTime
+    isIncremental: bool
+    owningTeamId: str
+
+
+@dataclasses.dataclass
+class ScanStatistic:
+    highSeverity: int
+    mediumSeverity: int
+    lowSeverity: int
+    infoSeverity: int
+    statisticsCalculationDate: str
+
+
+@dataclasses.dataclass
+class ScanSettings:
+    projectId: int
+    isIncremental: bool = True
+    isPublic: bool = True
+    forceScan: bool = True
+    comment: str = ""
+
+
+# below types are not used for http body deserialization
 @dataclasses.dataclass
 class ScanResult:
     """

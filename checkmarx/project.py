@@ -1,30 +1,31 @@
 import hashlib
 import tempfile
-import functools
 
 import dacite
 
 import ccc.github
 import checkmarx.client
 import checkmarx.model
-import ci.util
 import product.model
+import checkmarx.util
 
 
 def upload_and_scan_repo(
-        checkmarx_cfg_name: str,
+        checkmarx_client: checkmarx.client.CheckmarxClient,
         team_id: str,
         component: product.model.Component,
 ):
-    project_facade = checkmarx.facade.create_project_facade(
-        checkmarx_cfg_name=checkmarx_cfg_name,
+    project_facade = _create_checkmarx_project(
+        checkmarx_client=checkmarx_client,
         team_id=team_id,
         component_name=component.name(),
     )
 
     project_facade.upload_source(ref=component.version())
+
     scan_result = project_facade.start_scan_and_poll()
-    statistics = None
+    statistics = project_facade.scan_statistics(scan_id=scan_result.id)
+
     return checkmarx.model.ScanResult(
         component=component,
         scan_result=scan_result,
@@ -32,8 +33,7 @@ def upload_and_scan_repo(
     )
 
 
-def create_project_facade(checkmarx_cfg_name: str, team_id: str, component_name: str):
-    client = _create_checkmarx_client(checkmarx_cfg_name)
+def _create_checkmarx_project(checkmarx_client: checkmarx.client.CheckmarxClient, team_id: str, component_name: str):
     if isinstance(component_name, str):
         component_name = product.model.ComponentName.from_github_repo_url(component_name)
     elif isinstance(component_name, product.model.ComponentName):
@@ -46,20 +46,14 @@ def create_project_facade(checkmarx_cfg_name: str, team_id: str, component_name:
 
     project_name = _calc_project_name_for_component(component_name=component_name)
 
-    project_id = _create_or_get_project(client=client, name=project_name, team_id=team_id)
+    project_id = _create_or_get_project(client=checkmarx_client, name=project_name, team_id=team_id)
 
-    return CheckmarxProjectFacade(
-        checkmarx_client=client,
+    return CheckmarxProject(
+        checkmarx_client=checkmarx_client,
         project_id=project_id,
         github_api=github_api,
         component_name=component_name,
     )
-
-
-@functools.lru_cache()
-def _create_checkmarx_client(checkmarx_cfg_name: str):
-    cfg_fac = ci.util.ctx().cfg_factory()
-    return checkmarx.client.CheckmarxClient(cfg_fac.checkmarx(checkmarx_cfg_name))
 
 
 def _create_or_get_project(
@@ -82,7 +76,7 @@ def _calc_project_name_for_component(component_name: product.model.ComponentName
     return component_name.name().replace('/', '_')
 
 
-class CheckmarxProjectFacade:
+class CheckmarxProject:
     def __init__(
             self,
             checkmarx_client: checkmarx.client.CheckmarxClient,
@@ -134,5 +128,7 @@ class CheckmarxProjectFacade:
 
     def start_scan_and_poll(self):
         scan_settings = checkmarx.model.ScanSettings(projectId=self.project_id)
-        scan_settings.projectId = self.project_id
         return self.client.start_scan_and_poll(scan_settings)
+
+    def scan_statistics(self, scan_id: int):
+        return self.client.get_scan_statistics(scan_id=scan_id)
