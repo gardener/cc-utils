@@ -32,6 +32,7 @@ from .scheduling import SchedulingTrait
 from .slack import SlackTrait
 from .update_component_deps import UpdateComponentDependenciesTrait
 from .version import VersionTrait
+from .source_scan import SourceScanTrait
 
 TRAITS = {
     'component_descriptor': ComponentDescriptorTrait,
@@ -49,6 +50,7 @@ TRAITS = {
     'slack': SlackTrait,
     'update_component_deps': UpdateComponentDependenciesTrait,
     'version': VersionTrait,
+    'scan_sources': SourceScanTrait,
 }
 
 
