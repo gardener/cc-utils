@@ -6,6 +6,7 @@ import checkmarx.project
 import checkmarx.util
 import product.model
 
+
 def upload_and_scan_from_component_descriptor(
     checkmarx_cfg_name: str,
     team_id: str,

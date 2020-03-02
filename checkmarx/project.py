@@ -33,7 +33,11 @@ def upload_and_scan_repo(
     )
 
 
-def _create_checkmarx_project(checkmarx_client: checkmarx.client.CheckmarxClient, team_id: str, component_name: str):
+def _create_checkmarx_project(
+    checkmarx_client: checkmarx.client.CheckmarxClient,
+    team_id: str,
+    component_name: str
+):
     if isinstance(component_name, str):
         component_name = product.model.ComponentName.from_github_repo_url(component_name)
     elif isinstance(component_name, product.model.ComponentName):

@@ -62,6 +62,7 @@ class CheckmarxRoutes:
     def remote_settings_git(self, project_id: int):
         return urljoin(self.scan_by_id(project_id), 'sourceCode', 'remoteSettings', 'git')
 
+
 class CheckmarxClient:
     def __init__(self, checkmarx_cfg: model.checkmarx.CheckmarxConfig):
         self.routes = CheckmarxRoutes(base_url=checkmarx_cfg.base_url())

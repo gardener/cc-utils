@@ -96,7 +96,7 @@ class SourceScanTrait(Trait):
         return self.raw['email_recipients']
 
     def checkmarx(self):
-        if checkmarx := self.raw.get('checkmarx'):
+        if checkmarx:=self.raw.get('checkmarx'):
             return CheckmarxCfg(checkmarx)
 
     def transformer(self):
