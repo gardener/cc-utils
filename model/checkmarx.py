@@ -44,4 +44,4 @@ class CheckmarxConfig(NamedModelElement):
         return CheckmarxCredentials(self.raw.get('credentials'))
 
     def _required_attributes(self):
-        return 'credentials', 'domain'
+        return 'credentials', 'base_url'
