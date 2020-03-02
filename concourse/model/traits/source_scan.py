@@ -66,8 +66,9 @@ ATTRIBUTES = (
         doc='whom to notify about found issues',
         type=Notify,
     ),
-    AttributeSpec.required(
+    AttributeSpec.optional(
         name='email_recipients',
+        default=(),
         doc='optional list of email recipients to be notified about critical scan results',
         type=typing.List[str],
     ),
@@ -98,9 +99,12 @@ class SourceScanTrait(Trait):
         if checkmarx := self.raw.get('checkmarx'):
             return CheckmarxCfg(checkmarx)
 
+    def transformer(self):
+        return SourceScanTraitTransformer(trait=self)
+
 
 class SourceScanTraitTransformer(TraitTransformer):
-    name = 'source_scan'
+    name = 'scan_sources'
 
     def __init__(self, trait, *args, **kwargs):
         self.trait = trait
