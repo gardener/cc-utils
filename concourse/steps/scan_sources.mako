@@ -16,7 +16,7 @@ component_trait = job_variant.trait('component_descriptor')
 ${step_lib('component_descriptor_util')}
 ${step_lib('scan_sources')}
 scan_sources(
-    checkmarx_cfg='${checkmarx_cfg.checkmarx_cfg_name()}',
+    checkmarx_cfg_name='${checkmarx_cfg.checkmarx_cfg_name()}',
     team_id='${checkmarx_cfg.team_id()}',
     component_descriptor=component_descriptor_path(),
 )
