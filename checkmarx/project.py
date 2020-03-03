@@ -122,8 +122,9 @@ class CheckmarxProject:
         url = repo._build_url('zipball', ref, base_url=repo._api)
         res = repo._get(url, verify=False, allow_redirects=True, stream=True)
         if not res.ok:
-            raise RuntimeError('request to download github'
-                               f' zip archive failed with {res.status_code=} {res.reason=}')
+            raise RuntimeError(
+               f'request to download github zip archive from {url=}'
+               f' failed with {res.status_code=} {res.reason=}')
 
         sha1 = hashlib.sha1()
 
