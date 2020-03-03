@@ -1,7 +1,9 @@
 import hashlib
 import tempfile
+import logging
 
 import dacite
+import github3.exceptions
 
 import ccc.github
 import checkmarx.client
@@ -9,6 +11,8 @@ import checkmarx.model
 import product.model
 import checkmarx.util
 import version
+
+logger = logging.getLogger(__name__)
 
 
 def upload_and_scan_repo(
@@ -38,20 +42,47 @@ def _guess_ref(component: product.model.Component):
     '''
     heuristically guess the appropriate git-ref for the given component's version
     '''
+    github_api = _github_api(component_name=component)
+    github_repo = github_api.repository(
+        component.github_organisation(),
+        component.github_repo(),
+    )
+
+    def in_repo(commit_ish):
+        try:
+            github_repo.ref(commit_ish)
+            return True
+        except github3.exceptions.NotFoundError:
+            pass
+        try:
+            github_repo.commit(commit_ish)
+            return True
+        except (github3.exceptions.UnprocessableEntity, github3.exceptions.NotFoundError):
+            return False
+
     # first guess: component version could already be a valid "Gardener-relaxed-semver"
     try:
-        return str(version.parse_to_semver(component))
+        version_str = str(version.parse_to_semver(component))
+        if in_repo(version_str):
+            return version_str
+        logger.debug(f'not in repo: {version_str}')
     except ValueError:
         pass
 
     # second guess: split commit-hash after last `-` character (inject-commit-hash semantics)
     if '-' in (version_str:=str(component.version())):
         last_part = version_str.split('-')[-1]
-        if len(last_part) == 40: # github commit-hash leng
+        if in_repo(last_part):
             return last_part
 
     # it could still be a branch-name or sth similar - return unparsed
     return str(component.version())
+
+
+def _github_api(component_name: product.model.ComponentName):
+    github_cfg = ccc.github.github_cfg_for_hostname(host_name=component_name.github_host())
+    github_api = ccc.github.github_api(github_cfg=github_cfg)
+    return github_api
 
 
 def _create_checkmarx_project(
@@ -66,8 +97,7 @@ def _create_checkmarx_project(
     else:
         raise NotImplementedError
 
-    github_cfg = ccc.github.github_cfg_for_hostname(host_name=component_name.github_host())
-    github_api = ccc.github.github_api(github_cfg=github_cfg)
+    github_api = _github_api(component_name=component_name)
 
     project_name = _calc_project_name_for_component(component_name=component_name)
 
