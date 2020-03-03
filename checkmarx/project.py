@@ -8,6 +8,7 @@ import checkmarx.client
 import checkmarx.model
 import product.model
 import checkmarx.util
+import version
 
 
 def upload_and_scan_repo(
@@ -21,7 +22,7 @@ def upload_and_scan_repo(
         component_name=component.name(),
     )
 
-    project_facade.upload_source(ref=component.version())
+    project_facade.upload_source(ref=_guess_ref(component=component))
 
     scan_result = project_facade.start_scan_and_poll()
     statistics = project_facade.scan_statistics(scan_id=scan_result.id)
@@ -31,6 +32,26 @@ def upload_and_scan_repo(
         scan_result=scan_result,
         scan_statistic=statistics,
     )
+
+
+def _guess_ref(component: product.model.Component):
+    '''
+    heuristically guess the appropriate git-ref for the given component's version
+    '''
+    # first guess: component version could already be a valid "Gardener-relaxed-semver"
+    try:
+        return str(version.parse_to_semver(component))
+    except ValueError:
+        pass
+
+    # second guess: split commit-hash after last `-` character (inject-commit-hash semantics)
+    if '-' in (version_str:=str(component.version())):
+        last_part = version_str.split('-')[-1]
+        if len(last_part) == 40: # github commit-hash leng
+            return last_part
+
+    # it could still be a branch-name or sth similar - return unparsed
+    return str(component.version())
 
 
 def _create_checkmarx_project(
