@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>update_component_deps Trait &mdash; cc-utils  documentation</title>
+  <title>source_scan Trait &mdash; cc-utils  documentation</title>
   
 
   
@@ -38,8 +38,8 @@
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="version Trait" href="version.html" />
-    <link rel="prev" title="source_scan Trait" href="source_scan.html" /> 
+    <link rel="next" title="update_component_deps Trait" href="update_component_deps.html" />
+    <link rel="prev" title="slack Trait" href="slack.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -102,8 +102,8 @@
 <li class="toctree-l3"><a class="reference internal" href="release.html"><em>release</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="scheduling.html"><em>scheduling</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="slack.html"><em>slack</em> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="source_scan.html"><em>source_scan</em> Trait</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#"><em>update_component_deps</em> Trait</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#"><em>source_scan</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="update_component_deps.html"><em>update_component_deps</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="version.html"><em>version</em> Trait</a></li>
 </ul>
 </li>
@@ -159,13 +159,13 @@
         
           <li><a href="../traits.html">Pipeline Definition Traits</a> &raquo;</li>
         
-      <li><em>update_component_deps</em> Trait</li>
+      <li><em>source_scan</em> Trait</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../_sources/traits/update_component_deps.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/traits/source_scan.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -178,10 +178,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="update-component-deps-trait">
-<h1><em>update_component_deps</em> Trait<a class="headerlink" href="#update-component-deps-trait" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="trait-update-component-deps">
-<span id="trait-update-component-deps"></span><p class="section-subtitle">Attributes</p>
+  <div class="section" id="source-scan-trait">
+<h1><em>source_scan</em> Trait<a class="headerlink" href="#source-scan-trait" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="trait-source-scan">
+<span id="trait-source-scan"></span><p class="section-subtitle">Attributes</p>
 <table class="colwidths-auto docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>name</p></th>
@@ -192,35 +192,54 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>set_dependency_version_script</p></td>
+<tr class="row-even"><td><p>notify</p></td>
 <td><p>no</p></td>
-<td><p>.ci/set_dependency_version</p></td>
-<td><p>str</p></td>
-<td><p>configures the path to set_dependency_version script</p></td>
+<td><p>Notify.EMAIL_RECIPIENTS</p></td>
+<td><p>Notify</p></td>
+<td><p>whom to notify about found issues</p></td>
 </tr>
-<tr class="row-odd"><td><p>upstream_component_name</p></td>
+<tr class="row-odd"><td><p>email_recipients</p></td>
 <td><p>no</p></td>
+<td><p>()</p></td>
+<td><p>List[&lt;class ‘str’&gt;]</p></td>
+<td><p>optional list of email recipients to be notified about critical scan results</p></td>
+</tr>
+<tr class="row-even"><td><p>checkmarx</p></td>
+<td><p>yes</p></td>
+<td><p>None</p></td>
+<td><p>CheckmarxCfg</p></td>
+<td><p>if present, perform checkmarx scanning</p></td>
+</tr>
+</tbody>
+</table>
+<p class="section-subtitle">checkmarx Attributes</p>
+<table class="colwidths-auto docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>team_id</p></td>
+<td><p>yes</p></td>
+<td><p>None</p></td>
+<td><p>int</p></td>
+<td><p>checkmarx team id</p></td>
+</tr>
+<tr class="row-odd"><td><p>severity_threshold</p></td>
+<td><p>no</p></td>
+<td><p>30</p></td>
+<td><p>int</p></td>
+<td><p>threshold above which to notify recipients</p></td>
+</tr>
+<tr class="row-even"><td><p>cfg_name</p></td>
+<td><p>yes</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
-<td><p>configures the upstream component</p></td>
-</tr>
-<tr class="row-even"><td><p>merge_policy</p></td>
-<td><p>no</p></td>
-<td><p>MergePolicy.MANUAL</p></td>
-<td><p>str</p></td>
-<td><p>whether or not created PRs should be automatically merged</p></td>
-</tr>
-<tr class="row-odd"><td><p>after_merge_callback</p></td>
-<td><p>no</p></td>
-<td><p>None</p></td>
-<td><p>str</p></td>
-<td><p>callback to be invoked after auto-merge</p></td>
-</tr>
-<tr class="row-even"><td><p>vars</p></td>
-<td><p>no</p></td>
-<td><p>{}</p></td>
-<td><p>dict</p></td>
-<td><p>env vars to pass to after_merge_callback (similar to step’s vars)</p></td>
+<td><p>config name for checkmarx</p></td>
 </tr>
 </tbody>
 </table>
@@ -229,70 +248,6 @@
 <ul class="simple">
 <li><p><a class="reference internal" href="component_descriptor.html#trait-component-descriptor"><span class="std std-ref">component_descriptor trait</span></a></p></li>
 </ul>
-</div>
-<p>Declaring jobs receive “Component Dependencies upgrade” semantics. Upon execution, any
-immediate dependencies declared in the component’s <code class="code docutils literal notranslate"><span class="pre">Component</span> <span class="pre">Descriptor</span></code> will be checked for
-newer released versions (compared to the ones declared in the current component descriptor). Checking
-for newer versions is done using <a class="reference external" href="https://semver.org">semver</a> semantics.</p>
-<p>For each discovered component with a later release version, an <code class="code docutils literal notranslate"><span class="pre">Upgrade</span> <span class="pre">Pull</span> <span class="pre">Request</span></code> is created to
-the greates discovered component version. Outdated Upgrade Pull Requests are removed.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>automatically created Upgrade PRs are identified using the following naming convention:</p>
-<p><code class="code docutils literal notranslate"><span class="pre">[ci:&lt;dependency-type&gt;:&lt;dependency-name&gt;:&lt;current-version&gt;-&gt;&lt;target-version&gt;]</span></code></p>
-</div>
-<div class="section" id="component-upgrade-contract">
-<h2>Component Upgrade Contract<a class="headerlink" href="#component-upgrade-contract" title="Permalink to this headline">¶</a></h2>
-<p>Declaring components <strong>must</strong> offer an executable at <code class="code docutils literal notranslate"><span class="pre">.ci/set_dependency_version</span></code> in their
-repositories. It is called by the update component dependencies job for each discovered dependency
-upon pull request creation.</p>
-<p>The executable must modify the indicated component work tree such a (component-specific) way that the
-changes contain the required changes for the requested dependency upgrade.</p>
-<p>The execution environment is defined to be the latest version of <code class="code docutils literal notranslate"><span class="pre">cc-job-image</span></code>. In this environment
-it may be assumed that a Python3 runtime is available, along with all tools from
-<code class="code docutils literal notranslate"><span class="pre">github.com/gardener/cc-utils</span></code> (available from PYTHONPATH).</p>
-</div>
-<div class="section" id="passed-environment-variables">
-<h2>Passed Environment Variables<a class="headerlink" href="#passed-environment-variables" title="Permalink to this headline">¶</a></h2>
-<table class="docutils align-default">
-<colgroup>
-<col style="width: 25%" />
-<col style="width: 75%" />
-</colgroup>
-<thead>
-<tr class="row-odd"><th class="head"><p>name</p></th>
-<th class="head"><p>explanation</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p>DEPENDENCY_TYPE</p></td>
-<td><p>one of: ‘component’, ‘container_image’, ‘web’, ‘generic’</p></td>
-</tr>
-<tr class="row-odd"><td><p>DEPENDENCY_NAME</p></td>
-<td><p>the dependency name as declared in component desscriptor</p></td>
-</tr>
-<tr class="row-even"><td><p>DEPENDENCY_VERSION</p></td>
-<td><p>the discovered target component version (e.g. 1.2.3)</p></td>
-</tr>
-<tr class="row-odd"><td><p>REPO_DIR</p></td>
-<td><p>the absolute path to component repo work tree</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="section" id="behavioural-contract">
-<h2>Behavioural Contract<a class="headerlink" href="#behavioural-contract" title="Permalink to this headline">¶</a></h2>
-<p>The executable must return an exit code equal to zero iff all environment variables as described
-above were set to sane values. I.e. an unknown dependency type or name <strong>must</strong> be signalled as an
-error (exit code != zero).</p>
-<p>The executable <strong>should</strong> output reasonable error descriptions in case of invalid or insane arguments.</p>
-<p>The work tree specified via <code class="code docutils literal notranslate"><span class="pre">REPO_DIR</span></code> may be assumed to be “clean” and writeable.</p>
-</div>
-<div class="section" id="extension-note">
-<h2>Extension Note<a class="headerlink" href="#extension-note" title="Permalink to this headline">¶</a></h2>
-<p>This contract is also intended to be extended for other dependency types. Therefore, implementations
-of <code class="code docutils literal notranslate"><span class="pre">.ci/set_dependency_version</span></code> are recommended to be implemented such as to reject dependency
-types other than ‘component’ to avoid undefined behaviour.</p>
 </div>
 </div>
 
@@ -304,10 +259,10 @@ types other than ‘component’ to avoid undefined behaviour.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="version.html" class="btn btn-neutral float-right" title="version Trait" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="update_component_deps.html" class="btn btn-neutral float-right" title="update_component_deps Trait" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="source_scan.html" class="btn btn-neutral float-left" title="source_scan Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="slack.html" class="btn btn-neutral float-left" title="slack Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
