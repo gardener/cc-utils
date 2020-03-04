@@ -48,7 +48,10 @@ class TestWebhookDispatcherDeploymentConfig(object):
     @pytest.fixture
     def deployment_required_dict(self):
         return {
-            'image_reference': 'foo',
+            'whd_image': {
+                'image_name': 'foo',
+                'image_tag': 'bar',
+            },
             'ingress_host': 'foo',
             'external_url': 'foo',
             'tls_config': 'foo',
