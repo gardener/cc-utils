@@ -12,11 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import deprecated
 
 from model.base import (
     NamedModelElement,
     ModelDefaultsMixin,
 )
+from model.proxy import DockerImageConfig
 
 
 class WebhookDispatcherConfig(NamedModelElement, ModelDefaultsMixin):
@@ -48,7 +50,7 @@ class WebhookDispatcherConfig(NamedModelElement, ModelDefaultsMixin):
 class WebhookDispatcherDeploymentConfig(NamedModelElement):
     def _required_attributes(self):
         return {
-            'image_reference',
+            'whd_image',
             'ingress_host',
             'external_url',
             'tls_config',
@@ -59,8 +61,10 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
             'logging_els_index',
         }
 
+    @deprecated.deprecated
     def image_reference(self):
-        return self.raw.get('image_reference')
+        image_config = self.image_config()
+        return image_config.image_reference()
 
     def external_url(self):
         return self.raw.get('external_url')
@@ -82,6 +86,9 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
 
     def webhook_dispatcher_container_port(self):
         return self.raw['container_port']
+
+    def image_config(self):
+        return DockerImageConfig(self.raw.get('whd_image'))
 
     def logging_els_index(self):
         '''Name of the elastic-search index to log into'''
