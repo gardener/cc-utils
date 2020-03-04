@@ -15,7 +15,7 @@ spec:
         app: webhook-dispatcher
     spec:
       containers:
-        - image: {{ .Values.image_reference }}
+        - image: {{ .Values.image_repository -}} : {{- .Values.image_tag }}
           imagePullPolicy: IfNotPresent
           name: webhook-dispatcher
           livenessProbe:

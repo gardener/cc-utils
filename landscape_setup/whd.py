@@ -48,6 +48,7 @@ def create_webhook_dispatcher_helm_values(
     secrets_server_endpoint = secrets_server_cfg.endpoint_url()
     secrets_server_concourse_cfg_name = secrets_server_cfg.secrets().concourse_cfg_name()
     container_port = webhook_dispatcher_deployment_cfg.webhook_dispatcher_container_port()
+    image_config = webhook_dispatcher_deployment_cfg.image_config()
 
     env_vars = []
     env_vars.append({
@@ -68,7 +69,8 @@ def create_webhook_dispatcher_helm_values(
         'ingress_host': webhook_dispatcher_deployment_cfg.ingress_host(),
         'external_url': webhook_dispatcher_deployment_cfg.external_url(),
         'tls_name': webhook_dispatcher_deployment_cfg.tls_config_name(),
-        'image_reference': webhook_dispatcher_deployment_cfg.image_reference(),
+        'image_repository': image_config.image_name(),
+        'image_tag': image_config.image_tag(),
         'cmd_args': cmd_args,
         'env_vars': env_vars,
         'webhook_dispatcher_port': container_port,
