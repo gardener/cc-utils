@@ -102,18 +102,11 @@ def _send_mail(
         replace_tokens=replace_tokens,
     )
 
-    recipients = set(map(str.lower, recipients))
-    cc_recipients = set(map(str.lower, cc_recipients))
+    recipients = {r.lower() for r in recipients}
+    cc_recipients = {r.lower() for r in cc_recipients}
 
-    # create mail envelope
-    mail = mailer.create_mail(
-        subject=subject,
-        sender=email_cfg.sender_name(),
-        recipients=recipients,
-        cc_recipients=cc_recipients,
-        text=mail_body,
-        mimetype=mimetype,
-    )
+    sender_name = email_cfg.sender_name() # used for the header
+    sender = sender_name # passed as from-address to the mailserver
 
     if email_cfg.use_tls():
         smtp_server = smtplib.SMTP_SSL(email_cfg.smtp_host())
@@ -122,14 +115,26 @@ def _send_mail(
 
     if email_cfg.has_credentials():
         credentials = email_cfg.credentials()
+        sender = credentials.username()
+        sender_name = email_cfg.sender_name() or sender
         smtp_server.login(user=credentials.username(), password=credentials.passwd())
+
+    # create mail envelope
+    mail = mailer.create_mail(
+        subject=subject,
+        sender=sender_name,
+        recipients=recipients,
+        cc_recipients=cc_recipients,
+        text=mail_body,
+        mimetype=mimetype,
+    )
 
     recipients.update(cc_recipients)
 
     mailer.send_mail(
         smtp_server=smtp_server,
         msg=mail,
-        sender=credentials.username(),
+        sender=sender,
         recipients=recipients
     )
 
