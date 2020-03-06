@@ -28,6 +28,4 @@ def scan_sources(
     )
 
     scan_results = executor.map(scan_func, component_descriptor.components())
-
-    for scan_result in scan_results:
-        checkmarx.util.print_scan_result(scan_result=scan_result)
+    checkmarx.util.print_scan_result(scan_results=scan_results)

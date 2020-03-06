@@ -4,6 +4,7 @@ import checkmarx.client
 import checkmarx.model
 
 import tabulate
+import typing
 
 
 @functools.lru_cache()
@@ -12,7 +13,10 @@ def create_checkmarx_client(checkmarx_cfg_name: str):
     return checkmarx.client.CheckmarxClient(cfg_fac.checkmarx(checkmarx_cfg_name))
 
 
-def print_scan_result(scan_result: checkmarx.model.ScanResult, tablefmt: str = 'simple'):
+def print_scan_result(
+    scan_results: typing.Iterable[checkmarx.model.ScanResult],
+    tablefmt: str = 'simple'
+):
     scan_info_header = ('ScanId', 'ComponentName', 'ScanState', 'Start', 'End')
     scan_info_data = (
         (
@@ -21,18 +25,26 @@ def print_scan_result(scan_result: checkmarx.model.ScanResult, tablefmt: str = '
             scan_result.scan_result.status.name,
             scan_result.scan_result.dateAndTime.startedOn,
             scan_result.scan_result.dateAndTime.finishedOn,
-         ),
+         ) for scan_result in scan_results
     )
 
-    scan_statistics_header = ('Overall risk severity', 'high', 'medium', 'low', 'info')
+    scan_statistics_header = (
+        'ComponentName',
+        'Overall severity',
+        'high',
+        'medium',
+        'low',
+        'info'
+    )
     scan_statistics_data = (
         (
+            scan_result.component.name(),
             scan_result.scan_result.scanRiskSeverity,
             scan_result.scan_statistic.highSeverity,
             scan_result.scan_statistic.mediumSeverity,
             scan_result.scan_statistic.lowSeverity,
             scan_result.scan_statistic.infoSeverity,
-        ),
+        ) for scan_result in scan_results
     )
 
     scan_info = tabulate.tabulate(
@@ -48,5 +60,4 @@ def print_scan_result(scan_result: checkmarx.model.ScanResult, tablefmt: str = '
     )
 
     print(scan_info)
-
     print(scan_statistics)
