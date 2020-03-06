@@ -27,5 +27,13 @@ def scan_sources(
             team_id=team_id,
     )
 
-    scan_results = executor.map(scan_func, component_descriptor.components())
-    checkmarx.util.print_scan_result(scan_results=scan_results)
+    scan_results = []
+    try:
+        for scan_result in executor.map(scan_func, component_descriptor.components()):
+            scan_results.append(scan_result)
+
+        checkmarx.util.print_scan_result(scan_results=scan_results)
+    except:
+        # at least print what we have so far
+        checkmarx.util.print_scan_result(scan_results=scan_results)
+        raise
