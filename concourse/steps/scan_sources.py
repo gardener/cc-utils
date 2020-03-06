@@ -1,5 +1,5 @@
 import concurrent.futures
-
+import functools
 
 import ci.util
 import checkmarx.project
@@ -21,11 +21,13 @@ def scan_sources(
 
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
 
-    scan_job_args = []
-    for component in component_descriptor.components():
-        scan_job_args.append((client, team_id, component))
+    scan_func = functools.partial(
+            checkmarx.project.upload_and_scan_repo,
+            checkmarx_client=client,
+            team_id=team_id,
+    )
 
-    scan_results = executor.map(checkmarx.project.upload_and_scan_repo, scan_job_args)
+    scan_results = executor.map(scan_func, component_descriptor.components())
 
     for scan_result in scan_results:
         checkmarx.util.print_scan_result(scan_result=scan_result)

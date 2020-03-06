@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 def upload_and_scan_repo(
+        component: product.model.Component, # needs to remain at first position (currying)
         checkmarx_client: checkmarx.client.CheckmarxClient,
         team_id: str,
-        component: product.model.Component,
 ):
     project_facade = _create_checkmarx_project(
         checkmarx_client=checkmarx_client,
