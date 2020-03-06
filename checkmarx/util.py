@@ -17,6 +17,15 @@ def print_scan_result(
     scan_results: typing.Iterable[checkmarx.model.ScanResult],
     tablefmt: str = 'simple'
 ):
+    results = scan_result_tables(scan_results=scan_results, tablefmt=tablefmt)
+    for k, table in results.items():
+        print(table)
+
+
+def scan_result_tables(
+    scan_results: typing.Iterable[checkmarx.model.ScanResult],
+    tablefmt: str = 'simple'
+):
     scan_info_header = ('ScanId', 'ComponentName', 'ScanState', 'Start', 'End')
     scan_info_data = (
         (
@@ -59,5 +68,4 @@ def print_scan_result(
         tablefmt=tablefmt,
     )
 
-    print(scan_info)
-    print(scan_statistics)
+    return {'scan_info': scan_info, 'scan_statistics': scan_statistics}
