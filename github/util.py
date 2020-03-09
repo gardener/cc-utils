@@ -675,6 +675,19 @@ def find_greatest_github_release_version(
         release.name if release.name else release.tag_name
         for release in releases
     ]
+
+    def filter_non_semver_parseable_releases(release_name):
+        try:
+            version.parse_to_semver(release_name)
+            return True
+        except ValueError:
+            ci.util.warning(f"Skipping release with non semver-parseable name {release_name}")
+            return False
+
+    release_versions = [
+        name for name in filter(filter_non_semver_parseable_releases, release_versions)
+    ]
+
     release_version_infos = [
         version.parse_to_semver(release_version)
         for release_version in release_versions
