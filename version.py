@@ -71,7 +71,7 @@ def parse_to_semver(
 
 def _parse_to_semver_and_metadata(version: str):
     def raise_invalid():
-        raise ValueError(f'not a valid (semver) version: {version}')
+        raise ValueError(f'not a valid (semver) version: `{version}`')
 
     if not version:
         raise_invalid()
