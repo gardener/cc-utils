@@ -155,6 +155,7 @@ class CheckmarxClient:
         res = self.request(
             method='GET',
             url=self.routes.project_by_id(project_id=project_id),
+            api_version="application/json;v=2.0",
         )
         return res
 
