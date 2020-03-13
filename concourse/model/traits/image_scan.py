@@ -170,6 +170,12 @@ ATTRIBUTES = (
         type=ClamAVScanCfg,
         doc='if present, perform ClamAV scanning',
     ),
+    AttributeSpec.optional(
+        name='trait_depends',
+        default=(),
+        type=typing.Set[str],
+        doc='if present, generated build steps depend on those generated from specified traits',
+    )
 )
 
 
@@ -200,6 +206,9 @@ class ImageScanTrait(Trait, ImageFilterMixin):
 
     def transformer(self):
         return ImageScanTraitTransformer(trait=self)
+
+    def trait_depends(self):
+        return set(self.raw['trait_depends'])
 
     def validate(self):
         super().validate()
@@ -235,6 +244,21 @@ class ImageScanTraitTransformer(TraitTransformer):
         # our step depends on dependency descriptor step
         component_descriptor_step = pipeline_args.step('component_descriptor')
         self.image_scan_step._add_dependency(component_descriptor_step)
+
+        for trait_name in self.trait.trait_depends():
+            if not pipeline_args.has_trait(trait_name):
+                raise ModelValidationError(f'dependency towards absent trait: {trait_name}')
+
+            depended_on_trait = pipeline_args.trait(trait_name)
+            # XXX refactor Trait/TraitTransformer
+            transformer = depended_on_trait.transformer()
+            # XXX step-injection may have (unintended) side-effects :-/
+            depended_on_step_names = (step.name() for step in transformer.inject_steps())
+
+            for step in pipeline_args.steps():
+                if not step.name() in depended_on_step_names:
+                    continue
+                step._add_dependency(self.image_scan_step)
 
     @classmethod
     def dependencies(cls):
