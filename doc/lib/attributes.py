@@ -87,7 +87,7 @@ class AttributesDocumentation(object):
                         element_name=f'{name}.<user-chosen>'
                     )
                     type_str = type_._name + f'[{str(key_type)}, {str(val_type)}]'
-                elif type_.__origin__ is list:
+                elif type_.__origin__ in (list, set):
                     type_str = type_._name + f'[{str(type_.__args__[0])}]'
                     # Also check type to support list of enum values
                     if issubclass(type_.__args__[0], base_model.AttribSpecMixin):
