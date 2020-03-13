@@ -253,10 +253,10 @@ class ImageScanTraitTransformer(TraitTransformer):
             # XXX refactor Trait/TraitTransformer
             transformer = depended_on_trait.transformer()
             # XXX step-injection may have (unintended) side-effects :-/
-            depended_on_step_names = (step.name() for step in transformer.inject_steps())
+            depended_on_step_names = (step.name for step in transformer.inject_steps())
 
             for step in pipeline_args.steps():
-                if not step.name() in depended_on_step_names:
+                if not step.name in depended_on_step_names:
                     continue
                 step._add_dependency(self.image_scan_step)
 
