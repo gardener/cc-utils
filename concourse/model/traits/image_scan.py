@@ -258,7 +258,7 @@ class ImageScanTraitTransformer(TraitTransformer):
             for step in pipeline_args.steps():
                 if not step.name in depended_on_step_names:
                     continue
-                step._add_dependency(self.image_scan_step)
+                self.image_scan_step._add_dependency(step)
 
     @classmethod
     def dependencies(cls):
