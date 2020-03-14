@@ -253,13 +253,22 @@ class ImageScanTraitTransformer(TraitTransformer):
             # XXX refactor Trait/TraitTransformer
             transformer = depended_on_trait.transformer()
             # XXX step-injection may have (unintended) side-effects :-/
-            depended_on_step_names = (step.name for step in transformer.inject_steps())
+            depended_on_step_names = {step.name for step in transformer.inject_steps()}
 
             for step in pipeline_args.steps():
                 if not step.name in depended_on_step_names:
                     continue
                 self.image_scan_step._add_dependency(step)
+                # prevent cyclic dependencies (from auto-injected depends)
+                if self.image_scan_step.name in step.depends():
+                    step._remove_dependency(self.image_scan_step)
 
     @classmethod
     def dependencies(cls):
         return {'component_descriptor'}
+
+    @classmethod
+    def order_dependencies(cls):
+        # required in case image-scanning should be done after publish
+        # (-> auto-injected dependency for "prepare"-step towards _all_ steps)
+        return {'publish'}
