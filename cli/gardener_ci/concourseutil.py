@@ -21,8 +21,6 @@ import landscape_setup.concourse as setup_concourse
 
 from ci.util import (
     ctx,
-    info,
-    fail,
     CliHints,
     CliHint,
 )
@@ -187,18 +185,6 @@ def sync_org_webhooks_from_cfg(
     cfg_factory = ctx().cfg_factory()
     whd_deployment_cfg = cfg_factory.webhook_dispatcher_deployment(whd_deployment_config_name)
     sync_org_webhooks(whd_deployment_cfg)
-
-
-def diff_pipelines(left_file: CliHints.yaml_file(), right_file: CliHints.yaml_file()):
-    from deepdiff import DeepDiff
-    from pprint import pprint
-
-    diff = DeepDiff(left_file, right_file, ignore_order=True)
-    if diff:
-        pprint(diff)
-        fail('diffs were found')
-    else:
-        info('the yaml documents are equivalent')
 
 
 def trigger_resource_check(
