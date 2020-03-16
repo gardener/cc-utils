@@ -3,6 +3,7 @@ GitPython<3.0.0
 Mako<2.0.0
 Sphinx<3.0.0
 bcrypt<4.0.0
+boto3
 cachecontrol<1
 containerregistry-ccwienk==0.2.5
 dacite
