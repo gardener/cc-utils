@@ -138,11 +138,7 @@ repo = job_variant.main_repository()
 <%
 notify_pull_request = (
   has_pr_trait(job_variant)
-  and (
-    job_step.notification_policy() is StepNotificationPolicy.NOTIFY_PULL_REQUESTS
-    or job_step.is_synthetic
-  )
-
+  and job_step.notification_policy() is StepNotificationPolicy.NOTIFY_PULL_REQUESTS
 )
 send_email_notification = not has_pr_trait(job_variant) and status == 'error'
 %>
