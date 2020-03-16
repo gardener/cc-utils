@@ -92,6 +92,8 @@ class AttributesDocumentation(object):
                     # Also check type to support list of enum values
                     if issubclass(type_.__args__[0], base_model.AttribSpecMixin):
                         self.add_child(model_element_type=type_.__args__[0], element_name=name)
+                else:
+                    type_str = type_.__name__
             elif issubclass(type_, base_model.AttribSpecMixin):
                 # recurse to child element
                 self.add_child(model_element_type=type_, element_name=name)
