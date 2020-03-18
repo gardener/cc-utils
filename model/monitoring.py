@@ -22,15 +22,16 @@ from model.base import (
 class CCMonitoringConfig(NamedModelElement):
     def _required_attributes(self):
         return {
-            'namespace',
+            'basic_auth_pwd',
+            'basic_auth_secret_name',
+            'basic_auth_user',
+            'external_url',
+            'ingress_host',
             'kube_state_metrics',
+            'namespace',
             'postgresql_exporter',
             'tls_config',
             'tls_secret_name',
-            'ingress_host',
-            'external_url',
-            'basic_auth_user',
-            'basic_auth_pwd',
         }
 
     def namespace(self):
@@ -47,6 +48,9 @@ class CCMonitoringConfig(NamedModelElement):
 
     def tls_secret_name(self):
         return self.raw.get('tls_secret_name')
+
+    def basic_auth_secret_name(self):
+        return self.raw.get('basic_auth_secret_name')
 
     def ingress_host(self):
         return self.raw.get('ingress_host')

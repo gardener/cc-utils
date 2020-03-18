@@ -31,11 +31,14 @@ from landscape_setup.utils import (
     ensure_cluster_version,
     execute_helm_deployment,
     LiteralStr,
-    create_tls_secret,
+    create_basic_auth_secret,
 )
 from model import (
     ConfigFactory,
     ConfigurationSet,
+)
+from model.ingress import (
+    IngressConfig,
 )
 from model.monitoring import (
     CCMonitoringConfig,
@@ -58,6 +61,7 @@ def deploy_monitoring_landscape(
 ):
     kubernetes_cfg = cfg_set.kubernetes()
     concourse_cfg = cfg_set.concourse()
+    ingress_cfg = cfg_set.ingress(concourse_cfg.ingress_config())
 
     # Set the global context to the cluster specified in KubernetesConfig
     kube_ctx.set_kubecfg(kubernetes_cfg.kubeconfig())
@@ -66,9 +70,6 @@ def deploy_monitoring_landscape(
     monitoring_config_name = concourse_cfg.monitoring_config()
     monitoring_cfg = cfg_factory.monitoring(monitoring_config_name)
     monitoring_namespace = monitoring_cfg.namespace()
-
-    tls_config_name = concourse_cfg.tls_config()
-    tls_config = cfg_factory.tls_config(tls_config_name)
 
     # deploy kube-state-metrics
     kube_state_metrics_helm_values = create_kube_state_metrics_helm_values(
@@ -97,11 +98,14 @@ def deploy_monitoring_landscape(
 
     # deploy ingresses for kube-state-metrics, postgresql exporter
     monitoring_tls_secret_name = monitoring_cfg.tls_secret_name()
+    monitoring_basic_auth_secret_name = monitoring_cfg.basic_auth_secret_name()
 
-    info('Creating tls-secret in monitoring namespace for kube-state-metrics and postgresql...')
-    create_tls_secret(
-        tls_config=tls_config,
-        tls_secret_name=monitoring_tls_secret_name,
+    info(
+        'Creating basic-auth-secret in monitoring namespace for '
+        'kube-state-metrics and postgresql...'
+    )
+    create_basic_auth_secret(
+        secret_name=monitoring_tls_secret_name,
         namespace=monitoring_namespace,
         basic_auth_cred=BasicAuthCred(
             user=monitoring_cfg.basic_auth_user(),
@@ -112,31 +116,40 @@ def deploy_monitoring_landscape(
     ingress_helper = kube_ctx.ingress_helper()
     info('Create ingress for kube-state-metrics')
     ingress = generate_monitoring_ingress_object(
-        secret_name=monitoring_tls_secret_name,
+        basic_auth_secret_name=monitoring_basic_auth_secret_name,
+        tls_secret_name=monitoring_tls_secret_name,
         namespace=monitoring_namespace,
-        hosts=[monitoring_cfg.ingress_host(), monitoring_cfg.external_url()],
+        external_url=monitoring_cfg.external_url(),
+        ingress_host=monitoring_cfg.ingress_host(),
         service_name=monitoring_cfg.kube_state_metrics().service_name(),
         service_port=monitoring_cfg.kube_state_metrics().service_port(),
+        ingress_config=ingress_cfg,
     )
     ingress_helper.replace_or_create_ingress(monitoring_namespace, ingress)
 
     info('Create ingress for postgres-exporter')
     ingress = generate_monitoring_ingress_object(
-        secret_name=monitoring_tls_secret_name,
+        basic_auth_secret_name=monitoring_basic_auth_secret_name,
+        tls_secret_name=monitoring_tls_secret_name,
         namespace=monitoring_namespace,
-        hosts=[monitoring_cfg.ingress_host(), monitoring_cfg.external_url()],
+        external_url=monitoring_cfg.external_url(),
+        ingress_host=monitoring_cfg.ingress_host(),
         service_name=monitoring_cfg.postgresql_exporter().service_name(),
         service_port=monitoring_cfg.postgresql_exporter().service_port(),
+        ingress_config=ingress_cfg,
     )
     ingress_helper.replace_or_create_ingress(monitoring_namespace, ingress)
 
 
 def generate_monitoring_ingress_object(
-    secret_name: str,
+    basic_auth_secret_name: str,
+    tls_secret_name: str,
     namespace: str,
-    hosts: [str],
+    external_url: str,
+    ingress_host: str,
     service_name: str,
     service_port: int,
+    ingress_config: IngressConfig,
 ) -> V1beta1Ingress:
 
     ingress_path = "/" + service_name + "(/|$)(.*)"
@@ -144,8 +157,13 @@ def generate_monitoring_ingress_object(
         kind='Ingress',
         metadata=V1ObjectMeta(
             annotations={
+                "cert.gardener.cloud/issuer": ingress_config.issuer_name(),
+                "cert.gardener.cloud/purpose": "managed",
+                "dns.gardener.cloud/class": "garden",
+                "dns.gardener.cloud/dnsnames": ingress_host,
+                "dns.gardener.cloud/ttl": str(ingress_config.ttl()),
                 "nginx.ingress.kubernetes.io/auth-type": "basic",
-                "nginx.ingress.kubernetes.io/auth-secret": secret_name,
+                "nginx.ingress.kubernetes.io/auth-secret": basic_auth_secret_name,
                 "nginx.ingress.kubernetes.io/rewrite-target": "/$2",
             },
             name=service_name,
@@ -154,7 +172,7 @@ def generate_monitoring_ingress_object(
         spec=V1beta1IngressSpec(
             rules=[
                 V1beta1IngressRule(
-                    host=hosts[0],
+                    host=external_url,
                     http=V1beta1HTTPIngressRuleValue(
                         paths=[
                             V1beta1HTTPIngressPath(
@@ -168,7 +186,7 @@ def generate_monitoring_ingress_object(
                     )
                 ),
                 V1beta1IngressRule(
-                    host=hosts[1],
+                    host=ingress_host,
                     http=V1beta1HTTPIngressRuleValue(
                         paths=[
                             V1beta1HTTPIngressPath(
@@ -184,8 +202,8 @@ def generate_monitoring_ingress_object(
             ],
             tls=[
                 V1beta1IngressTLS(
-                    hosts=[hosts[0], hosts[1]],
-                    secret_name=secret_name,
+                    hosts=ingress_config.tls_host_names(),
+                    secret_name=tls_secret_name,
                 )
             ]
         )
