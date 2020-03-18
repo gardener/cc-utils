@@ -52,6 +52,7 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
         return {
             'whd_image',
             'ingress_host',
+            'ingress_config',
             'external_url',
             'tls_config',
             'secrets_server_config',
@@ -71,6 +72,9 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
 
     def ingress_host(self):
         return self.raw.get('ingress_host')
+
+    def ingress_config(self):
+        return self.raw.get('ingress_config')
 
     def tls_config_name(self):
         return self.raw.get('tls_config')
