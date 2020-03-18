@@ -31,7 +31,6 @@ import version
 from landscape_setup import kube_ctx
 from landscape_setup.utils import (
     ensure_helm_setup,
-    create_tls_secret,
     execute_helm_deployment,
 )
 from model import (
@@ -140,6 +139,7 @@ def create_instance_specific_helm_values(
     external_url = concourse_cfg.external_url()
     external_host = urlparse(external_url).netloc
     ingress_host = concourse_cfg.ingress_host()
+    ingress_cfg = config_factory.ingress(concourse_cfg.ingress_config())
     concourse_version = concourse_cfg.concourse_version()
 
     if concourse_version is ConcourseApiVersion.V5:
@@ -182,10 +182,17 @@ def create_instance_specific_helm_values(
             },
             'web': {
                 'ingress': {
+                    'annotations': {
+                        'cert.gardener.cloud/issuer': ingress_cfg.issuer_name(),
+                        'cert.gardener.cloud/purpose': 'managed',
+                        'dns.gardener.cloud/class': 'garden',
+                        'dns.gardener.cloud/dnsnames': ingress_host,
+                        'dns.gardener.cloud/ttl': str(ingress_cfg.ttl()),
+                    },
                     'hosts': [external_host, ingress_host],
                     'tls': [{
                         'secretName': concourse_cfg.tls_secret_name(),
-                        'hosts': [external_host, ingress_host],
+                        'hosts': ingress_cfg.tls_host_names(),
                     }],
                 }
             }
@@ -302,11 +309,6 @@ def deploy_concourse_landscape(
     container_registry = config_factory.container_registry(image_pull_secret_name)
     cr_credentials = container_registry.credentials()
 
-    # TLS config
-    tls_config_name = concourse_cfg.tls_config()
-    tls_config = config_factory.tls_config(tls_config_name)
-    tls_secret_name = concourse_cfg.tls_secret_name()
-
     # Helm config
     helm_chart_default_values_name = concourse_cfg.helm_chart_default_values_config()
     default_helm_values = config_factory.concourse_helmchart(helm_chart_default_values_name).raw
@@ -328,13 +330,6 @@ def deploy_concourse_landscape(
     create_image_pull_secret(
         credentials=cr_credentials,
         image_pull_secret_name=image_pull_secret_name,
-        namespace=deployment_name,
-    )
-
-    info('Creating tls-secret ...')
-    create_tls_secret(
-        tls_config=tls_config,
-        tls_secret_name=tls_secret_name,
         namespace=deployment_name,
     )
 

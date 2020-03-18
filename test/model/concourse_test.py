@@ -90,6 +90,7 @@ class ConcourseConfigTest(object):
             'tls_secret_name': 'foo',
             'tls_config': 'foo',
             'ingress_host': 'foo',
+            'ingress_config': 'foo',
             'helm_chart_version': 'foo',
             'helm_chart_values': 'foo',
         }
