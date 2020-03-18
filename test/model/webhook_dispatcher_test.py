@@ -53,6 +53,7 @@ class TestWebhookDispatcherDeploymentConfig(object):
                 'image_tag': 'bar',
             },
             'ingress_host': 'foo',
+            'ingress_config': 'foo',
             'external_url': 'foo',
             'tls_config': 'foo',
             'secrets_server_config': 'foo',

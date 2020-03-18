@@ -20,7 +20,6 @@ from ensure import ensure_annotations
 from landscape_setup import kube_ctx
 from landscape_setup.utils import (
     ensure_cluster_version,
-    create_tls_secret,
     execute_helm_deployment,
 )
 from model import (
@@ -32,7 +31,6 @@ from model.webhook_dispatcher import (
 from ci.util import (
     ctx as global_ctx,
     not_empty,
-    info,
 )
 
 
@@ -49,6 +47,8 @@ def create_webhook_dispatcher_helm_values(
     secrets_server_concourse_cfg_name = secrets_server_cfg.secrets().concourse_cfg_name()
     container_port = webhook_dispatcher_deployment_cfg.webhook_dispatcher_container_port()
     image_config = webhook_dispatcher_deployment_cfg.image_config()
+    ingress_config_name = webhook_dispatcher_deployment_cfg.ingress_config()
+    ingress_config = cfg_factory.ingress(ingress_config_name)
 
     env_vars = []
     env_vars.append({
@@ -67,8 +67,10 @@ def create_webhook_dispatcher_helm_values(
 
     helm_values = {
         'ingress_host': webhook_dispatcher_deployment_cfg.ingress_host(),
+        'ingress_ttl': str(ingress_config.ttl()),
+        'ingress_tls_hosts': ingress_config.tls_host_names(),
+        'ingress_issuer_name': ingress_config.issuer_name(),
         'external_url': webhook_dispatcher_deployment_cfg.external_url(),
-        'tls_name': webhook_dispatcher_deployment_cfg.tls_config_name(),
         'image_repository': image_config.image_name(),
         'image_tag': image_config.image_tag(),
         'cmd_args': cmd_args,
@@ -97,18 +99,6 @@ def deploy_webhook_dispatcher_landscape(
     kube_ctx.set_kubecfg(kubernetes_config.kubeconfig())
 
     ensure_cluster_version(kubernetes_config)
-
-    # TLS config
-    tls_config_name = webhook_dispatcher_deployment_cfg.tls_config_name()
-    tls_config = cfg_factory.tls_config(tls_config_name)
-    tls_secret_name = "webhook-dispatcher-tls"
-
-    info('Creating tls-secret ...')
-    create_tls_secret(
-        tls_config=tls_config,
-        tls_secret_name=tls_secret_name,
-        namespace=deployment_name,
-    )
 
     kubernetes_cfg_name = webhook_dispatcher_deployment_cfg.kubernetes_config_name()
     kubernetes_cfg = cfg_factory.kubernetes(kubernetes_cfg_name)
