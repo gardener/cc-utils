@@ -75,6 +75,9 @@ class ConcourseConfig(NamedModelElement):
         '''
         return self.raw.get('ingress_host')
 
+    def ingress_config(self):
+        return self.raw.get('ingress_config')
+
     def ingress_url(self):
         return 'https://' + self.ingress_host()
 
@@ -105,6 +108,7 @@ class ConcourseConfig(NamedModelElement):
             'tls_secret_name',
             'tls_config',
             'ingress_host',
+            'ingress_config',
             'helm_chart_version',
             'helm_chart_values',
         ]
