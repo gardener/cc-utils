@@ -46,6 +46,11 @@ def from_instance(attr_name, value_doc: str=None):
     return get_attr
 
 
+class PrivilegeMode(enum.Enum):
+    PRIVILEGED = 'privileged'
+    UNPRIVILEGED = 'unprivileged'
+
+
 def attrs(pipeline_step):
     return (
         AttributeSpec.optional(
@@ -150,6 +155,14 @@ def attrs(pipeline_step):
             `pipeline_descriptor` symbol.
             The evaluation result is exposed to this build step via the specified environment
             variable.
+            ''',
+        ),
+        AttributeSpec.optional(
+            name='privilege_mode',
+            default=PrivilegeMode.UNPRIVILEGED,
+            type=PrivilegeMode,
+            doc='''
+            privilege mode for step. Use carefully when running potentially untrusted code.
             ''',
         ),
         AttributeSpec.optional(
@@ -341,6 +354,9 @@ class PipelineStep(ModelBase):
     def set_timeout(self, duration_string: str):
         ci.util.not_empty(duration_string)
         self.raw['timeout'] = duration_string
+
+    def privilege_mode(self) -> PrivilegeMode:
+        return PrivilegeMode(self.raw['privilege_mode'])
 
     def retries(self):
         return self.raw['retries']
