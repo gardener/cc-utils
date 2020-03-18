@@ -6,7 +6,7 @@ from ci.util import urljoin
 from makoutil import indent_func
 from concourse.factory import DefinitionFactory
 from concourse.model.base import ScriptType
-from concourse.model.step import StepNotificationPolicy
+from concourse.model.step import StepNotificationPolicy, PrivilegeMode
 
 # use pipeline_name for debugging / tracing purposes
 pipeline_name = pipeline.get('name')
@@ -199,6 +199,7 @@ source_repo = job_variant.main_repository()
 %>
 % if job_step.execute():
 - task: '${job_step.name}'
+  privileged: ${'true' if job_step.privilege_mode() is PrivilegeMode.PRIVILEGED else 'false'}
 % if job_step.timeout():
   timeout: '${job_step.timeout()}'
 % endif
