@@ -23,13 +23,10 @@ from passlib.apache import HtpasswdFile
 
 from landscape_setup import kube_ctx
 from ci.util import (
-    not_none,
-    not_empty,
     fail,
+    not_empty,
+    not_none,
     which,
-)
-from model.tls import (
-    TlsConfig,
 )
 from model.kubernetes import (
     KubernetesConfig,
@@ -91,16 +88,14 @@ def ensure_helm_setup():
 
 
 @ensure_annotations
-def create_tls_secret(
-    tls_config: TlsConfig,
-    tls_secret_name: str,
+def create_basic_auth_secret(
+    secret_name: str,
     namespace: str,
     basic_auth_cred: BasicAuthCred=None
 ):
     """ Creates a secret with the configured TLS certificates in the K8s cluster.
         Optionally adds credentials for Basic Authentication"""
-    not_none(tls_config)
-    not_empty(tls_secret_name)
+    not_empty(secret_name)
     not_empty(namespace)
 
     ctx = kube_ctx
@@ -108,17 +103,14 @@ def create_tls_secret(
     namespace_helper.create_if_absent(namespace)
 
     secret_helper = ctx.secret_helper()
-    if not secret_helper.get_secret(tls_secret_name, namespace):
+    if not secret_helper.get_secret(secret_name, namespace):
+        ht = HtpasswdFile()
+        ht.set_password(basic_auth_cred.user, basic_auth_cred.password)
         data = {
-            'tls.key':tls_config.private_key(),
-            'tls.crt':tls_config.certificate(),
+            'auth':ht.to_string().decode('utf-8'),
         }
-        if basic_auth_cred:
-            ht = HtpasswdFile()
-            ht.set_password(basic_auth_cred.user, basic_auth_cred.password)
-            data['auth'] = ht.to_string().decode('utf-8')
         secret_helper.put_secret(
-            name=tls_secret_name,
+            name=secret_name,
             data=data,
             namespace=namespace,
         )

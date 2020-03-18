@@ -27,6 +27,7 @@ def monitoring_required_dict():
             'postgresql_exporter': 'foo',
             'tls_config': 'foo',
             'tls_secret_name': 'foo',
+            'basic_auth_secret_name': 'foo',
             'ingress_host': 'foo',
             'external_url': 'foo',
             'basic_auth_user': 'foo',
