@@ -20,13 +20,13 @@ from model.base import (
 
 class AwsProfile(NamedModelElement):
     def region(self):
-        return self.raw.get('region')
+        return self.raw['region']
 
     def access_key_id(self):
-        return self.raw.get('aws_access_key_id')
+        return self.raw['access_key_id']
 
     def secret_access_key(self):
-        return self.raw.get('aws_secret_access_key')
+        return self.raw['secret_access_key']
 
     def _required_attributes(self):
         return ['region','access_key_id','secret_access_key']
