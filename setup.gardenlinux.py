@@ -27,7 +27,7 @@ def version():
 
 
 setuptools.setup(
-    name='gardener-cicd-whd',
+    name='gardenlinux',
     version=version(),
     description='gardenerlinux CICD utils',
     python_requires='>=3.8.*',
