@@ -29,7 +29,7 @@ def version():
 setuptools.setup(
     name='gardenlinux',
     version=version(),
-    description='gardenerlinux CICD utils',
+    description='gardenlinux CICD utils',
     python_requires='>=3.8.*',
     py_modules=modules(),
     packages=['gardenlinux'],
