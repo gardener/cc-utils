@@ -5,8 +5,8 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: nginx
     kubernetes.io/tls-acme: "true"
-    cert.gardener.cloud/issuer: {{ .Values.ingress_issuer_name }},
-    cert.gardener.cloud/purpose: managed,
+    cert.gardener.cloud/issuer: {{ .Values.ingress_issuer_name }}
+    cert.gardener.cloud/purpose: managed
     dns.gardener.cloud/class: garden
     dns.gardener.cloud/dnsnames: {{ .Values.ingress_host }}
     dns.gardener.cloud/ttl: "{{ .Values.ingress_ttl }}"
