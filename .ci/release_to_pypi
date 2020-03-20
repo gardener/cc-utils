@@ -15,6 +15,7 @@ pip3 install --upgrade pip twine wheel setuptools
 python3 "${repo_dir}/setup.base.py" sdist bdist_wheel
 python3 "${repo_dir}/setup.py" sdist bdist_wheel
 python3 "${repo_dir}/setup.whd.py" sdist bdist_wheel
+python3 "${repo_dir}/setup.gardenlinux.py" sdist bdist_wheel
 
 model_element_cmd="cli.py config model_element --cfg-type pypi --cfg-name gardener"
 
