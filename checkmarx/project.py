@@ -1,6 +1,7 @@
 import hashlib
-import tempfile
 import logging
+import tempfile
+import time
 
 import dacite
 import github3.exceptions
@@ -16,20 +17,31 @@ logger = logging.getLogger(__name__)
 
 
 def upload_and_scan_repo(
-        component: product.model.Component, # needs to remain at first position (currying)
+        component: product.model.Component,  # needs to remain at first position (currying)
         checkmarx_client: checkmarx.client.CheckmarxClient,
         team_id: str,
 ):
-    project_facade = _create_checkmarx_project(
+    cx_project = _create_checkmarx_project(
         checkmarx_client=checkmarx_client,
         team_id=team_id,
         component_name=component.name(),
     )
 
-    project_facade.upload_source(ref=_guess_ref(component=component))
+    last_scan = cx_project.client.get_last_scan_of_project(cx_project.project_id)
+    scan_id = last_scan.id
+    if checkmarx.util.is_scan_finished(last_scan):
+        print(f'No active scan found for component {component.name()}. Checking for hash')
 
-    scan_result = project_facade.start_scan_and_poll()
-    statistics = project_facade.scan_statistics(scan_id=scan_result.id)
+        sources_uploaded = cx_project.upload_source(ref=_guess_ref(component=component))
+
+        if sources_uploaded:
+            scan_id = cx_project.start_scan()
+    else:
+        print(f'scan with id: {last_scan.id} for component {component.name()} '
+              f'already running. Polling last scan.')
+
+    scan_result = cx_project.poll_scan(scan_id=scan_id)
+    statistics = cx_project.scan_statistics(scan_id=scan_result.id)
 
     return checkmarx.model.ScanResult(
         component=component,
@@ -39,9 +51,9 @@ def upload_and_scan_repo(
 
 
 def _guess_ref(component: product.model.Component):
-    '''
+    """
     heuristically guess the appropriate git-ref for the given component's version
-    '''
+    """
     github_api = _github_api(component_name=component)
     github_repo = github_api.repository(
         component.github_organisation(),
@@ -70,7 +82,7 @@ def _guess_ref(component: product.model.Component):
         pass
 
     # second guess: split commit-hash after last `-` character (inject-commit-hash semantics)
-    if '-' in (version_str:=str(component.version())):
+    if '-' in (version_str := str(component.version())):
         last_part = version_str.split('-')[-1]
         if in_repo(last_part):
             return last_part
@@ -86,9 +98,9 @@ def _github_api(component_name: product.model.ComponentName):
 
 
 def _create_checkmarx_project(
-    checkmarx_client: checkmarx.client.CheckmarxClient,
-    team_id: str,
-    component_name: str
+        checkmarx_client: checkmarx.client.CheckmarxClient,
+        team_id: str,
+        component_name: str
 ):
     if isinstance(component_name, str):
         component_name = product.model.ComponentName.from_github_repo_url(component_name)
@@ -153,8 +165,8 @@ class CheckmarxProject:
         res = repo._get(url, verify=False, allow_redirects=True, stream=True)
         if not res.ok:
             raise RuntimeError(
-               f'request to download github zip archive from {url=}'
-               f' failed with {res.status_code=} {res.reason=}')
+                f'request to download github zip archive from {url=}'
+                f' failed with {res.status_code=} {res.reason=}')
 
         sha1 = hashlib.sha1()
 
@@ -176,15 +188,34 @@ class CheckmarxProject:
             if remote_hash and not remote_hash.startswith('sha1:'):
                 raise NotImplementedError(remote_hash)
 
-            if remote_hash != current_hash:
+            if current_hash != remote_hash:
+                logger.info(f'Uploading changes of repo {repo.name}')
                 self.client.upload_zipped_source_code(self.project_id, tmp_file)
                 project.set_custom_field(checkmarx.model.CustomFieldKeys.HASH, current_hash)
                 project.set_custom_field(checkmarx.model.CustomFieldKeys.VERSION, ref)
                 self.client.update_project(project)
+                return True
+            print(f"given snapshot {ref} already scanned")
+            return False
 
-    def start_scan_and_poll(self):
+    def start_scan(self):
         scan_settings = checkmarx.model.ScanSettings(projectId=self.project_id)
-        return self.client.start_scan_and_poll(scan_settings)
+        return self.client.start_scan(scan_settings)
+
+    def poll_scan(self, scan_id: int, polling_interval_seconds=15):
+        def scan_finished():
+            scan = self.client.get_scan_state(scan_id=scan_id)
+            print(f'polling for scan result. state: {scan.status.name}')
+            if checkmarx.util.is_scan_finished(scan):
+                return scan
+            return False
+
+        result = scan_finished()
+        while not result:
+            # keep polling until result is ready
+            time.sleep(polling_interval_seconds)
+            result = scan_finished()
+        return result
 
     def scan_statistics(self, scan_id: int):
         return self.client.get_scan_statistics(scan_id=scan_id)

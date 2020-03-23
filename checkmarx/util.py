@@ -13,6 +13,16 @@ def create_checkmarx_client(checkmarx_cfg_name: str):
     return checkmarx.client.CheckmarxClient(cfg_fac.checkmarx(checkmarx_cfg_name))
 
 
+def is_scan_finished(scan: checkmarx.model.ScanResponse):
+    if checkmarx.model.ScanStatusValues(scan.status.id) in (
+            checkmarx.model.ScanStatusValues.FINISHED,
+            checkmarx.model.ScanStatusValues.FAILED
+    ):
+        return True
+    else:
+        return False
+
+
 def print_scan_result(
     scan_results: typing.Iterable[checkmarx.model.ScanResult],
     tablefmt: str = 'simple'

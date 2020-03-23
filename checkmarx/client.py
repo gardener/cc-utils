@@ -182,6 +182,18 @@ class CheckmarxClient:
         print(f'created scan with id {scan_id}')
         return scan_id
 
+    def get_last_scan_of_project(self, project_id: int):
+        res = self.request(
+            method="GET",
+            url=self.routes.scan(),
+            params={
+                "last": 1,
+                "projectId": str(project_id),
+            },
+            api_version='application/json;v=1.0',
+        )
+        return from_dict(data_class=checkmarx.model.ScanResponse, data=res.json()[0])
+
     def get_scan_state(self, scan_id: int):
         res = self.request(
             method='GET',
@@ -196,26 +208,3 @@ class CheckmarxClient:
             url=self.routes.scan_statistics(scan_id=scan_id)
         )
         return from_dict(data_class=checkmarx.model.ScanStatistic, data=res.json())
-
-    def wait_for_scan_result(self, scan_id: int, polling_interval_seconds=15):
-        def scan_finished():
-            res = self.get_scan_state(scan_id=scan_id)
-            res_status = checkmarx.model.ScanStatusValues(res.status.id)
-            print(f'polling for scan result. state: {res_status.name}')
-            if res_status in (
-                    checkmarx.model.ScanStatusValues.FINISHED,
-                    checkmarx.model.ScanStatusValues.FAILED
-            ):
-                return res
-            return False
-
-        result = scan_finished()
-        while not result:
-            # keep polling until result is ready
-            time.sleep(polling_interval_seconds)
-            result = scan_finished()
-        return result
-
-    def start_scan_and_poll(self, scan_settings: checkmarx.model.ScanSettings):
-        scan_id = self.start_scan(scan_settings=scan_settings)
-        return self.wait_for_scan_result(scan_id=scan_id)
