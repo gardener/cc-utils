@@ -4,7 +4,6 @@ import requests
 from dacite import from_dict
 import datetime
 import checkmarx.model
-import time
 import dataclasses
 import model
 
