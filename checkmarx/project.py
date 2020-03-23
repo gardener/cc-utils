@@ -82,7 +82,7 @@ def _guess_ref(component: product.model.Component):
         pass
 
     # second guess: split commit-hash after last `-` character (inject-commit-hash semantics)
-    if '-' in (version_str := str(component.version())):
+    if '-' in (version_str:= str(component.version())):
         last_part = version_str.split('-')[-1]
         if in_repo(last_part):
             return last_part

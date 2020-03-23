@@ -1,5 +1,3 @@
-import dataclasses
-
 import ci.util
 import checkmarx.client
 import checkmarx.project
