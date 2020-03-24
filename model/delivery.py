@@ -29,9 +29,6 @@ class DeliveryConfig(NamedModelElement):
     def auth(self):
         return Auth(self.raw.get('auth'))
 
-    def tls_cfg_name(self):
-        return self.raw.get('tls_cfg_name')
-
     def dashboard(self):
         return DeliveryDashboardCfg(self.raw.get('dashboard'))
 
@@ -56,7 +53,6 @@ class DeliveryConfig(NamedModelElement):
     def _required_attributes(self):
         yield from super()._required_attributes()
         yield from [
-            'tls_cfg_name',
             'dashboard',
             'service',
         ]

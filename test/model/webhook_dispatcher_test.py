@@ -55,7 +55,6 @@ class TestWebhookDispatcherDeploymentConfig(object):
             'ingress_host': 'foo',
             'ingress_config': 'foo',
             'external_url': 'foo',
-            'tls_config': 'foo',
             'secrets_server_config': 'foo',
             'kubernetes_config': 'foo',
             'webhook_dispatcher_config': 'foo',

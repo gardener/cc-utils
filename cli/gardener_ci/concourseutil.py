@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import os
-import yaml
 
 import kube.ctx
 import landscape_setup.concourse as setup_concourse
@@ -40,48 +39,6 @@ from concourse.replicator import (
     PipelineReplicator,
     Renderer,
 )
-
-
-def update_certificate(
-    tls_config_name: CliHint(typehint=str, help="TLS config element name to update"),
-    certificate_file: CliHints.existing_file(help="certificate file path"),
-    key_file: CliHints.existing_file(help="private key file path"),
-    output_path: CliHints.existing_dir(help="TLS config file output path")
-):
-    # Stuff used for yaml formatting, when dumping a dictionary
-    class LiteralStr(str):
-        """Used to create yaml block style indicator | """
-
-    def literal_str_representer(dumper, data):
-        """Used to create yaml block style indicator"""
-        return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
-
-    # read new certificate data
-    certificate_file = os.path.abspath(certificate_file)
-    private_key_file = os.path.abspath(key_file)
-    with open(certificate_file) as f:
-        certificate = f.read()
-    with open(private_key_file) as f:
-        private_key = f.read()
-
-    # set new certificate data to specified argument 'tls_config_name'
-    cfg_factory = ctx().cfg_factory()
-    tls_config_element = cfg_factory.tls_config(tls_config_name)
-    tls_config_element.set_private_key(private_key)
-    tls_config_element.set_certificate(certificate)
-
-    # patch tls config dict so that yaml.dump outputs literal strings using '|'
-    yaml.add_representer(LiteralStr, literal_str_representer)
-    configs = cfg_factory._configs('tls_config')
-    for k1, v1 in configs.items():
-        for k2, _ in v1.items():
-            configs[k1][k2] = LiteralStr(configs[k1][k2])
-
-    # dump updated tls config to given output path
-    tls_config_type = cfg_factory._cfg_types()['tls_config']
-    tls_config_file = list(tls_config_type.sources())[0].file()
-    with open(os.path.join(output_path, tls_config_file), 'w') as f:
-        yaml.dump(configs, f, indent=2, default_flow_style=False)
 
 
 def render_pipeline(

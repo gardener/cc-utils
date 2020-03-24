@@ -54,7 +54,6 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
             'ingress_host',
             'ingress_config',
             'external_url',
-            'tls_config',
             'secrets_server_config',
             'kubernetes_config',
             'webhook_dispatcher_config',
@@ -75,9 +74,6 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
 
     def ingress_config(self):
         return self.raw.get('ingress_config')
-
-    def tls_config_name(self):
-        return self.raw.get('tls_config')
 
     def secrets_server_config_name(self):
         return self.raw.get('secrets_server_config')

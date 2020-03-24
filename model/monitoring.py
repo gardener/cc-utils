@@ -30,7 +30,6 @@ class CCMonitoringConfig(NamedModelElement):
             'kube_state_metrics',
             'namespace',
             'postgresql_exporter',
-            'tls_config',
             'tls_secret_name',
         }
 
@@ -42,9 +41,6 @@ class CCMonitoringConfig(NamedModelElement):
 
     def postgresql_exporter(self):
         return PostgresqlExporter(raw_dict=self.raw['postgresql_exporter'])
-
-    def tls_config(self):
-        return self.raw.get('tls_config')
 
     def tls_secret_name(self):
         return self.raw.get('tls_secret_name')

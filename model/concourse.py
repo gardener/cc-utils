@@ -53,9 +53,6 @@ class ConcourseConfig(NamedModelElement):
     def tls_secret_name(self):
         return self.raw.get('tls_secret_name')
 
-    def tls_config(self):
-        return self.raw.get('tls_config')
-
     def kubernetes_cluster_config(self):
         return self.raw.get('kubernetes_cluster_config')
 
@@ -106,7 +103,6 @@ class ConcourseConfig(NamedModelElement):
             'job_mapping',
             'imagePullSecret',
             'tls_secret_name',
-            'tls_config',
             'ingress_host',
             'ingress_config',
             'helm_chart_version',
