@@ -1,6 +1,6 @@
 ===================
-*source_scan* Trait
+*scan_sources* Trait
 ===================
 
 .. trait::
-    :name: source_scan
+    :name: scan_sources
