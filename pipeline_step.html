@@ -169,6 +169,8 @@ with a specifiable container image with a defined set of environment variables.<
 <p>The resulting exit code is used to determine whether or not the step execution has succeeded.
 A zero exit code is interpreted as success, wheras non-zero exit codes are interpreted as
 failures.</p>
+<p>Accessing the path to a repository in your build step should be done using given environment variables
+as described in <a class="reference internal" href="pipeline_job.html#repository-environment-variables"><span class="std std-ref">Environment Variables from repositories</span></a>.</p>
 <ul class="simple">
 <li><p>all job steps are executed in parallel by default</p></li>
 <li><p>dependendencies between steps may be declared</p></li>
@@ -257,6 +259,8 @@ published.</p></li>
 </ul>
 <p>The second form currently accepts exactly one argument: <code class="code docutils literal notranslate"><span class="pre">force_push</span></code> (bool) and is used
 to specify that a force-push should be done.</p>
+<p>The step executable must only commit the changes in the repository’s worktree without
+pushing them.</p>
 <p>Example:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">steps</span><span class="p">:</span>
     <span class="nt">foo</span><span class="p">:</span>

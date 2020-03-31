@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>image_alter Trait &mdash; cc-utils  documentation</title>
+  <title>scan_sources Trait &mdash; cc-utils  documentation</title>
   
 
   
@@ -38,8 +38,8 @@
   <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="image_scan Trait" href="image_scan.html" />
-    <link rel="prev" title="draft_release Trait" href="draft_release.html" /> 
+    <link rel="next" title="scheduling Trait" href="scheduling.html" />
+    <link rel="prev" title="release Trait" href="release.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -92,7 +92,7 @@
 <li class="toctree-l3"><a class="reference internal" href="component_descriptor.html"><em>component_descriptor</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="cronjob.html"><em>cronjob</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="draft_release.html"><em>draft_release</em> Trait</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#"><em>image_alter</em> Trait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="image_alter.html"><em>image_alter</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="image_scan.html"><em>image_scan</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="image_upload.html"><em>image_upload</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notifications.html"><em>notifications</em> Trait</a></li>
@@ -100,7 +100,7 @@
 <li class="toctree-l3"><a class="reference internal" href="publish.html"><em>publish</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pullrequest.html"><em>pull-request</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="release.html"><em>release</em> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="scan_sources.html"><em>scan_sources</em> Trait</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#"><em>scan_sources</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="scheduling.html"><em>scheduling</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="slack.html"><em>slack</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="update_component_deps.html"><em>update_component_deps</em> Trait</a></li>
@@ -159,13 +159,13 @@
         
           <li><a href="../traits.html">Pipeline Definition Traits</a> &raquo;</li>
         
-      <li><em>image_alter</em> Trait</li>
+      <li><em>scan_sources</em> Trait</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../_sources/traits/image_alter.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/traits/scan_sources.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -178,10 +178,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="image-alter-trait">
-<h1><em>image_alter</em> Trait<a class="headerlink" href="#image-alter-trait" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="trait-image-alter">
-<span id="trait-image-alter"></span><p class="section-subtitle">Attributes</p>
+  <div class="section" id="scan-sources-trait">
+<h1><em>scan_sources</em> Trait<a class="headerlink" href="#scan-sources-trait" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="trait-scan-sources">
+<span id="trait-scan-sources"></span><p class="section-subtitle">Attributes</p>
 <table class="colwidths-auto docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>name</p></th>
@@ -192,21 +192,27 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>parallel_jobs</p></td>
+<tr class="row-even"><td><p>notify</p></td>
 <td><p>no</p></td>
-<td><p>12</p></td>
-<td><p>int</p></td>
-<td><p>amount of parallel scanning threads</p></td>
+<td><p>Notify.EMAIL_RECIPIENTS</p></td>
+<td><p>Notify</p></td>
+<td><p>whom to notify about found issues</p></td>
 </tr>
-<tr class="row-odd"><td><p>cfgs</p></td>
+<tr class="row-odd"><td><p>email_recipients</p></td>
+<td><p>no</p></td>
+<td><p>()</p></td>
+<td><p>List[&lt;class ‘str’&gt;]</p></td>
+<td><p>optional list of email recipients to be notified about critical scan results</p></td>
+</tr>
+<tr class="row-even"><td><p>checkmarx</p></td>
 <td><p>yes</p></td>
 <td><p>None</p></td>
-<td><p>Dict[&lt;class ‘str’&gt;, &lt;class ‘concourse.model.traits.image_alter.ImageAlterCfg’&gt;]</p></td>
-<td><p>ImageAlterCfgs {name: ImageAlterCfg}</p></td>
+<td><p>CheckmarxCfg</p></td>
+<td><p>if present, perform checkmarx scanning</p></td>
 </tr>
 </tbody>
 </table>
-<p class="section-subtitle">cfgs.&lt;user-chosen&gt; Attributes</p>
+<p class="section-subtitle">checkmarx Attributes</p>
 <table class="colwidths-auto docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>name</p></th>
@@ -217,24 +223,23 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>src_ref</p></td>
+<tr class="row-even"><td><p>team_id</p></td>
 <td><p>yes</p></td>
 <td><p>None</p></td>
-<td><p>str</p></td>
-<td><p>source image reference (including tag)</p></td>
+<td><p>int</p></td>
+<td><p>checkmarx team id</p></td>
 </tr>
-<tr class="row-odd"><td><p>tgt_ref</p></td>
-<td><p>yes</p></td>
-<td><p>None</p></td>
-<td><p>str</p></td>
-<td><p>target image reference (tag defaults to src_ref tag if absent)</p></td>
+<tr class="row-odd"><td><p>severity_threshold</p></td>
+<td><p>no</p></td>
+<td><p>30</p></td>
+<td><p>int</p></td>
+<td><p>threshold above which to notify recipients</p></td>
 </tr>
-<tr class="row-even"><td><p>remove_paths_file</p></td>
+<tr class="row-even"><td><p>cfg_name</p></td>
 <td><p>yes</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
-<td><p>path to a text file containing absolute paths (w/o leading /) to be purged from
-src image. Interpreted relative to main repository root.</p></td>
+<td><p>config name for checkmarx</p></td>
 </tr>
 </tbody>
 </table>
@@ -254,10 +259,10 @@ src image. Interpreted relative to main repository root.</p></td>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="image_scan.html" class="btn btn-neutral float-right" title="image_scan Trait" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="scheduling.html" class="btn btn-neutral float-right" title="scheduling Trait" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="draft_release.html" class="btn btn-neutral float-left" title="draft_release Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="release.html" class="btn btn-neutral float-left" title="release Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

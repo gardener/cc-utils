@@ -131,6 +131,8 @@ any occurrence of dash `-` characters are converted to underscore `_` characters
   characters is forbidden for user-defined identifiers.
 
 
+.. _repository-environment-variables:
+
 Environment Variables from repositories
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

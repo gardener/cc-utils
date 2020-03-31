@@ -11,7 +11,7 @@ Pipeline Definition Traits
 * :doc:`traits/component_descriptor`
 * :doc:`traits/cronjob`
 * :doc:`traits/draft_release`
-* :doc:`traits/source_scan`
+* :doc:`traits/scan_sources`
 * :doc:`traits/image_alter`
 * :doc:`traits/image_scan`
 * :doc:`traits/image_upload`

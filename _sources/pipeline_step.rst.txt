@@ -14,6 +14,9 @@ The resulting exit code is used to determine whether or not the step execution h
 A zero exit code is interpreted as success, wheras non-zero exit codes are interpreted as
 failures.
 
+Accessing the path to a repository in your build step should be done using given environment variables
+as described in :ref:`repository-environment-variables`.
+
 * all job steps are executed in parallel by default
 * dependendencies between steps may be declared
 * job steps may publish changes to repositories
