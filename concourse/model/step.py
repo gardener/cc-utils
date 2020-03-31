@@ -133,6 +133,8 @@ def attrs(pipeline_step):
             The second form currently accepts exactly one argument: `force_push` (bool) and is used
             to specify that a force-push should be done.
 
+            The step executable must only commit the changes in the repository's worktree without pushing them.
+
             Example:
 
             .. code-block:: yaml
