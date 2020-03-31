@@ -18,7 +18,7 @@ def meta_vars():
     concourse_cfg = config_set.concourse()
     v = {
       'build-id': build.id(),
-      'build-name': str(build.build_number()),
+      'build-name': build.build_number(),
       'build-job-name': pipeline_metadata.job_name,
       'build-team-name': pipeline_metadata.team_name,
       'build-pipeline-name': pipeline_metadata.pipeline_name,

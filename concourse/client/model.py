@@ -179,8 +179,8 @@ class Build(ModelBase):
     def stop_time(self):
         return int(self.raw.get('end_time'))
 
-    def build_number(self):
-        return int(self.raw.get('name'))
+    def build_number(self) -> str:
+        return self.raw.get('name')
 
     def status(self):
         return BuildStatus(self.raw.get('status'))
