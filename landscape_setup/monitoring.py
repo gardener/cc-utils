@@ -112,7 +112,10 @@ def deploy_monitoring_landscape(
             password=monitoring_cfg.basic_auth_pwd()
         )
     )
-
+    # we need to create two ingress objects since nginx-ingress does not support rewrites for
+    # multiple paths unless the premium version is used. NOTE: only one ingress should use
+    # gardener-managed dns. Otherwise the dns-controller will periodically complain that the
+    # dns-entry is busy as they share the same host
     ingress_helper = kube_ctx.ingress_helper()
     info('Create ingress for kube-state-metrics')
     ingress = generate_monitoring_ingress_object(
@@ -124,6 +127,7 @@ def deploy_monitoring_landscape(
         service_name=monitoring_cfg.kube_state_metrics().service_name(),
         service_port=monitoring_cfg.kube_state_metrics().service_port(),
         ingress_config=ingress_cfg,
+        managed_dns=True,
     )
     ingress_helper.replace_or_create_ingress(monitoring_namespace, ingress)
 
@@ -137,6 +141,7 @@ def deploy_monitoring_landscape(
         service_name=monitoring_cfg.postgresql_exporter().service_name(),
         service_port=monitoring_cfg.postgresql_exporter().service_port(),
         ingress_config=ingress_cfg,
+        managed_dns=False,
     )
     ingress_helper.replace_or_create_ingress(monitoring_namespace, ingress)
 
@@ -150,13 +155,12 @@ def generate_monitoring_ingress_object(
     service_name: str,
     service_port: int,
     ingress_config: IngressConfig,
+    managed_dns: bool,
 ) -> V1beta1Ingress:
 
     ingress_path = "/" + service_name + "(/|$)(.*)"
-    return V1beta1Ingress(
-        kind='Ingress',
-        metadata=V1ObjectMeta(
-            annotations={
+    if managed_dns:
+        ingress_annotations = {
                 "cert.gardener.cloud/issuer": ingress_config.issuer_name(),
                 "cert.gardener.cloud/purpose": "managed",
                 "dns.gardener.cloud/class": "garden",
@@ -165,7 +169,19 @@ def generate_monitoring_ingress_object(
                 "nginx.ingress.kubernetes.io/auth-type": "basic",
                 "nginx.ingress.kubernetes.io/auth-secret": basic_auth_secret_name,
                 "nginx.ingress.kubernetes.io/rewrite-target": "/$2",
-            },
+        }
+    else:
+        ingress_annotations = {
+                "cert.gardener.cloud/issuer": ingress_config.issuer_name(),
+                "cert.gardener.cloud/purpose": "managed",
+                "nginx.ingress.kubernetes.io/auth-type": "basic",
+                "nginx.ingress.kubernetes.io/auth-secret": basic_auth_secret_name,
+                "nginx.ingress.kubernetes.io/rewrite-target": "/$2",
+        }
+    return V1beta1Ingress(
+        kind='Ingress',
+        metadata=V1ObjectMeta(
+            annotations=ingress_annotations,
             name=service_name,
             namespace=namespace,
         ),
