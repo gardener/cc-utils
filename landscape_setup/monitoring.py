@@ -105,7 +105,7 @@ def deploy_monitoring_landscape(
         'kube-state-metrics and postgresql...'
     )
     create_basic_auth_secret(
-        secret_name=monitoring_tls_secret_name,
+        secret_name=monitoring_basic_auth_secret_name,
         namespace=monitoring_namespace,
         basic_auth_cred=BasicAuthCred(
             user=monitoring_cfg.basic_auth_user(),
