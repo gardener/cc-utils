@@ -48,11 +48,9 @@ REPO_BRANCH = '${repo_branch}'
 REPO_OWNER = '${repo_owner}'
 REPO_NAME = '${repo_name}'
 
-
 cfg_factory = ci.util.ctx().cfg_factory()
 github_cfg_name = '${github_cfg_name}'
 github_cfg=cfg_factory.github(github_cfg_name)
-
 
 component_resolver = product.util.ComponentResolver(cfg_factory=cfg_factory)
 component_descriptor_resolver = product.util.ComponentDescriptorResolver(cfg_factory=cfg_factory)
@@ -63,73 +61,9 @@ UPGRADE_TO_UPSTREAM = 'UPSTREAM_COMPONENT_NAME' in os.environ
 ci.util.info(f'Upgrade to upstream: {UPGRADE_TO_UPSTREAM}')
 
 
-def _component(product_descriptor, component_name):
-    component = [c for c in product_descriptor.components() if c.name() == component_name]
-    component_count = len(component)
-    try:
-      print('component names:', [c.name() for c in product_descriptor.components()])
-    except:
-      pass
-    if component_count == 1:
-        return component[0]
-    elif component_count < 1:
-        ci.util.fail('Did not find component {cn}'.format(cn=component_name))
-    elif component_count > 1:
-        ci.util.fail('Found more than one component with name ' + component_name)
-    else:
-        raise NotImplementedError # this line should never be reached
-
-
-def current_component():
-    product = current_product_descriptor()
-    component_name = check_env('COMPONENT_NAME')
-    return _component(product, component_name=component_name)
-
-
-def upstream_reference_component():
-    component_name = check_env('UPSTREAM_COMPONENT_NAME')
-    latest_version = component_resolver.latest_component_version(component_name)
-
-    component_reference = product.model.ComponentReference.create(
-        name=component_name,
-        version=latest_version,
-    )
-
-    reference_product = component_descriptor_resolver.retrieve_descriptor(
-        component_reference=component_reference,
-    )
-
-    reference_component = _component(
-        product_descriptor=reference_product,
-        component_name=component_name,
-    )
-
-    return reference_component
-
-
-def close_obsolete_pull_requests(upgrade_pull_requests, reference_component):
-    open_pull_requests = [
-        pr for pr in upgrade_pull_requests
-        if pr.pull_request.state == 'open'
-    ]
-    obsolete_upgrade_requests = [
-        pr for pr in open_pull_requests
-        if pr.is_obsolete(reference_component=reference_component)
-    ]
-
-    for obsolete_request in obsolete_upgrade_requests:
-        obsolete_request.purge()
-
-
-def upgrade_pr_exists(reference, upgrade_requests):
-    return any(
-        [upgrade_rq.target_matches(reference=reference) for upgrade_rq in upgrade_requests]
-    )
-
-
 def create_upgrade_pr(from_ref, to_ref, pull_request_util):
     ls_repo = pull_request_util.repository
-    repo_dir = str(REPO_ROOT)
+    repo_dir = REPO_ROOT
 
     # have component create upgradation diff
     upgrade_script_path = os.path.join(REPO_ROOT, '${set_dependency_version_script_path}')
@@ -273,12 +207,14 @@ close_obsolete_pull_requests(
     reference_component=current_component(),
 )
 
-
 immediate_dependencies = current_component().dependencies()
 
 if UPGRADE_TO_UPSTREAM:
   def determine_reference_version(component_name):
-    return _component(upstream_reference_component().dependencies(), component_name).version()
+    return _component(upstream_reference_component(
+      component_resolver=component_resolver,
+      component_descriptor_resolver=component_descriptor_resolver,
+    ).dependencies(), component_name).version()
 else:
   def determine_reference_version(component_name):
     return component_resolver.latest_component_version(component_name)
