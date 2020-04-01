@@ -5,8 +5,13 @@
 <%
 from concourse.steps import step_lib
 from makoutil import indent_func
+
 main_repo = job_variant.main_repository()
-repo_name = main_repo.logical_name().upper()
+repo_name = main_repo.repo_name()
+repo_relpath = main_repo.resource_name()
+repo_owner = main_repo.repo_owner()
+repo_branch = main_repo.branch()
+
 update_component_deps_trait = job_variant.trait('update_component_deps')
 set_dependency_version_script_path = update_component_deps_trait.set_dependency_version_script_path()
 after_merge_callback = update_component_deps_trait.after_merge_callback()
@@ -38,9 +43,10 @@ from ci.util import check_env
 ${step_lib('update_component_deps')}
 
 # must point to this repository's root directory
-REPO_ROOT = os.path.abspath(check_env('${repo_name}_PATH'))
-REPO_BRANCH = check_env('${repo_name}_BRANCH')
-REPO_OWNER, REPO_NAME = check_env('${repo_name}_GITHUB_REPO_OWNER_AND_NAME').split('/')
+REPO_ROOT = os.path.abspath('${repo_relpath}')
+REPO_BRANCH = '${repo_branch}'
+REPO_OWNER = '${repo_owner}'
+REPO_NAME = '${repo_name}'
 
 
 cfg_factory = ci.util.ctx().cfg_factory()
