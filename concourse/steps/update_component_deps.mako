@@ -139,6 +139,7 @@ for reference in product.util.greatest_references(immediate_dependencies.compone
           repo_dir=REPO_ROOT,
           github_cfg_name=github_cfg_name,
           cfg_factory=cfg_factory,
+          merge_policy=MergePolicy('${update_component_deps_trait.merge_policy().value}'),
 % if after_merge_callback:
           after_merge_callback='${after_merge_callback}',
 % endif

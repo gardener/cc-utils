@@ -117,6 +117,7 @@ def create_upgrade_pr(
         repo_dir,
         github_cfg_name,
         cfg_factory,
+        merge_policy,
         after_merge_callback=None,
     ):
     ls_repo = pull_request_util.repository
@@ -214,7 +215,7 @@ def create_upgrade_pr(
             body=text,
     )
 
-    if MergePolicy('${update_component_deps_trait.merge_policy().value}') == MergePolicy.MANUAL:
+    if merge_policy is MergePolicy.MANUAL:
         return
 
     # auto-merge - todo: make configurable (e.g. merge method)
