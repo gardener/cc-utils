@@ -77,7 +77,9 @@ def ensure_cluster_version(kubernetes_config: KubernetesConfig):
 
 def ensure_helm_setup():
     """Ensure up-to-date helm installation. Return the path to the found Helm executable"""
-    helm_executable = which('helm')
+    # we currently have both helmV3 and helmV2 in our images. TODO: change back to 'helm'
+    # once everything is is switched over to HelmV3
+    helm_executable = which('helm3')
     with open(os.devnull) as devnull:
         subprocess.run(
             [helm_executable, 'repo', 'add', 'concourse', CONCOURSE_HELM_CHART_REPO],
