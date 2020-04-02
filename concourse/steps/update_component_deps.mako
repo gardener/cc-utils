@@ -41,16 +41,17 @@ REPO_ROOT = os.path.abspath('${repo_relpath}')
 REPO_BRANCH = '${repo_branch}'
 REPO_OWNER = '${repo_owner}'
 REPO_NAME = '${repo_name}'
+
+cfg_factory = ci.util.ctx().cfg_factory()
+github_cfg_name = '${github_cfg_name}'
+github_cfg=cfg_factory.github(github_cfg_name)
+
 githubrepobranch = GitHubRepoBranch(
     github_config=github_cfg,
     repo_owner=REPO_OWNER,
     repo_name=REPO_NAME,
     branch=REPO_BRANCH,
 )
-
-cfg_factory = ci.util.ctx().cfg_factory()
-github_cfg_name = '${github_cfg_name}'
-github_cfg=cfg_factory.github(github_cfg_name)
 
 component_resolver = product.util.ComponentResolver(cfg_factory=cfg_factory)
 component_descriptor_resolver = product.util.ComponentDescriptorResolver(cfg_factory=cfg_factory)
