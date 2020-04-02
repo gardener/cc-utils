@@ -9,6 +9,7 @@ cc-utils:
       version:
         preprocess: 'finalize'
         inject_effective_version: True
+        versionfile: 'ci/version'
       publish:
         dockerimages:
           job-image:
