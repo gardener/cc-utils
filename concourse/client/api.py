@@ -219,11 +219,28 @@ class ConcourseApiBase(object):
         return BuildEvents(response, self)
 
     @ensure_annotations
-    def trigger_resource_check(self, pipeline_name: str, resource_name: str):
+    def trigger_resource_check(self, pipeline_name: str, resource_name: str, retries:int=5):
         url = self.routes.resource_check(pipeline_name=pipeline_name, resource_name=resource_name)
+
         # Resource checks are triggered by a POST with an empty JSON-document as body against
         # the resource's check-url
-        self._post(url, body='{}')
+        response = self.request_builder.post(url, check_http_code=False, body='{}', headers={})
+
+        if response.ok:
+            return
+
+        if response.status_code == 500 and response.reason.startswith('parent type has no version'):
+            if retries > 0:
+                self.trigger_resource_check(pipeline_name, resource_name, retries-1)
+            else:
+                response.reason = (
+                    f"Unable to check resource '{resource_name}' in pipeline "
+                    f"'{pipeline_name}'. If this pipeline was recently deployed, please "
+                    "try again in a minute."
+                )
+                response.raise_for_status()
+        else:
+            response.raise_for_status()
 
     @ensure_annotations
     def resource_versions(self, pipeline_name: str, resource_name: str):
