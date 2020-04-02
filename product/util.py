@@ -141,7 +141,7 @@ class ComponentResolver(ResolverBase):
         component_reference = ComponentReference.create(name=component_name, version=None)
         repo_helper = self._repository_helper(component_reference)
         latest_version = version.find_latest_version_with_matching_minor(
-                reference_version=parse_to_semver(reference_version),
+                reference_version=ver.parse_to_semver(reference_version),
                 versions=repo_helper.release_versions(),
         )
         if not latest_version:
