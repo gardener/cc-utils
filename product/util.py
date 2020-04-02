@@ -133,6 +133,22 @@ class ComponentResolver(ResolverBase):
             )
         return latest_version
 
+    def greatest_component_version_with_matching_minor(
+            self,
+            component_name: str,
+            reference_version: str,
+        ):
+        component_reference = ComponentReference.create(name=component_name, version=None)
+        repo_helper = self._repository_helper(component_reference)
+        latest_version = version.find_latest_version_with_matching_minor(
+                repo_helper.release_versions()
+        )
+        if not latest_version:
+            raise ValueError(
+                f'Component {component_name} has no valid release'
+            )
+        return latest_version
+
     def greatest_release_before(self, component_name: str, version: str):
         component_reference = ComponentReference.create(name=component_name, version=version)
         repo_helper = self._repository_helper(component_reference)
