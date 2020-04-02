@@ -68,7 +68,7 @@ export GIT_DIR="${REPO_DIR}/.git"
 export GIT_WORK_TREE="${REPO_DIR}"
 
 # determine where we should cut-off history
-cut_commit="$(git rev-list -1 --before="${RETAIN_RANGE}" ${BRANCH})"
+cut_commit="$(git rev-list -2 --before="${RETAIN_RANGE}" ${BRANCH} | tail -1)"
 
 if [ -z "${cut_commit}" ]; then
   echo "no commit outside of retain range (${RETAIN_RANGE})"
