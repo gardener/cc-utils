@@ -417,7 +417,7 @@ def destroy_concourse_landscape(config_name: str, release_name: str):
 
         try:
             subprocess.run(
-                [helm_cmd_path, "delete", release_name, "--purge"],
+                [helm_cmd_path, "delete", release_name],
                 env=helm_env,
                 check=True,
                 cwd=temp_dir
