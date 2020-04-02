@@ -97,7 +97,7 @@ if UPGRADE_TO_UPSTREAM:
     ).dependencies(), component_name).version()
     version_candidate = version.parse_to_semver(version_candidate)
     ref_ver = version.parse_to_semver(reference_version)
-    if version_candidate > ref_ver:
+    if version_candidate > ref_ver or True: # shortcut for now
       str(version_candidate)
     # also consider hotfixes
     hotfix_candidate = component_resolver.greatest_component_version_with_matching_minor(
