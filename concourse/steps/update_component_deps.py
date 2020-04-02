@@ -117,6 +117,7 @@ def create_upgrade_pr(
         repo_dir,
         github_cfg_name,
         cfg_factory,
+        after_merge_callback,
     ):
     ls_repo = pull_request_util.repository
 
@@ -219,3 +220,10 @@ def create_upgrade_pr(
     # auto-merge - todo: make configurable (e.g. merge method)
     pull_request.merge()
     rm_pr_branch()
+
+    if after_merge_callback:
+        subprocess.run(
+            [os.path.join(repo_dir, after_merge_callback)],
+            check=True,
+            env=cmd_env
+        )

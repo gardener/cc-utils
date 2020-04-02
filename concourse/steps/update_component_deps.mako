@@ -60,15 +60,6 @@ UPGRADE_TO_UPSTREAM = 'UPSTREAM_COMPONENT_NAME' in os.environ
 
 ci.util.info(f'Upgrade to upstream: {UPGRADE_TO_UPSTREAM}')
 
-% if after_merge_callback:
-    subprocess.run(
-        [os.path.join(repo_dir, '${after_merge_callback}')],
-        check=True,
-        env=cmd_env
-    )
-% endif
-
-
 reference_product = current_product_descriptor()
 
 pull_request_util = github.util.PullRequestUtil(
@@ -147,5 +138,6 @@ for reference in product.util.greatest_references(immediate_dependencies.compone
           repo_dir=REPO_ROOT,
           github_cfg_name=github_cfg_name,
           cfg_factory=cfg_factory,
+          after_merge_callback='${after_merge_callback}',
         )
 </%def>
