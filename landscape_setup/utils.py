@@ -23,7 +23,9 @@ from passlib.apache import HtpasswdFile
 
 from landscape_setup import kube_ctx
 from ci.util import (
+    Failure,
     fail,
+    info,
     not_empty,
     not_none,
     which,
@@ -77,9 +79,14 @@ def ensure_cluster_version(kubernetes_config: KubernetesConfig):
 
 def ensure_helm_setup():
     """Ensure up-to-date helm installation. Return the path to the found Helm executable"""
-    # we currently have both helmV3 and helmV2 in our images. TODO: change back to 'helm'
-    # once everything is is switched over to HelmV3
-    helm_executable = which('helm3')
+    # we currently have both helmV3 and helmV2 in our images. To keep it convenient for local
+    # execution, try both
+    try:
+        helm_executable = which('helm3')
+    except Failure:
+        info("No executable 'helm3' found in path. Falling back to 'helm'")
+        helm_executable = which('helm')
+
     with open(os.devnull) as devnull:
         subprocess.run(
             [helm_executable, 'repo', 'add', 'concourse', CONCOURSE_HELM_CHART_REPO],
