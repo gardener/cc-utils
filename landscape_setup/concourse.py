@@ -54,7 +54,6 @@ from ci.util import (
     info,
     warning,
     fail,
-    which,
 )
 
 

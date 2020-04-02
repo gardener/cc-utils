@@ -19,7 +19,6 @@ from ci.util import (
     ctx,
     existing_dir,
     info,
-    which,
     warning,
     CliHints,
     CliHint,
