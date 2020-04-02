@@ -407,7 +407,7 @@ def destroy_concourse_landscape(config_name: str, release_name: str):
     context.set_kubecfg(kubernetes_config.kubeconfig())
 
     # Delete helm release
-    helm_cmd_path = which("helm")
+    helm_cmd_path = ensure_helm_setup()
     KUBECONFIG_FILE_NAME = 'kubecfg'
     helm_env = os.environ.copy()
     helm_env['KUBECONFIG'] = KUBECONFIG_FILE_NAME

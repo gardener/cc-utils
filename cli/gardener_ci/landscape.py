@@ -27,6 +27,7 @@ from ci.util import (
 from landscape_setup import kube_ctx
 from landscape_setup.utils import (
     ensure_cluster_version,
+    ensure_helm_setup,
 )
 import landscape_setup.clamav as setup_clamav
 import landscape_setup.concourse as setup_concourse
@@ -144,7 +145,7 @@ def deploy_or_upgrade_concourse(
     timeout_seconds: CliHint(typehint=int, help="how long to wait for concourse startup")=180,
 ):
     '''Deploys a new concourse-instance using the given deployment name and config-directory.'''
-    which("helm")
+    ensure_helm_setup()
     cfg_factory = ctx().cfg_factory()
     config_set = cfg_factory.cfg_set(config_set_name)
 
