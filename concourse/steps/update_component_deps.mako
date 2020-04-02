@@ -117,7 +117,7 @@ else:
 
 # find components that need to be upgraded
 for reference in product.util.greatest_references(immediate_dependencies.components()):
-    latest_version = determine_reference_version(reference.name())
+    latest_version = determine_reference_version(reference.name(), reference.version())
     latest_version_semver = version.parse_to_semver(latest_version)
     latest_cref = product.model.ComponentReference.create(
       name=reference.name(),
