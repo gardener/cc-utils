@@ -271,7 +271,7 @@ def find_latest_version_with_matching_minor(reference_version: semver.VersionInf
         if candidate_semver.minor != reference_version.minor:
             continue
 
-        if candidate_semver > reference_version:
+        if candidate_semver >= reference_version:
             if not latest_candidate_semver or latest_candidate_semver < candidate_semver:
                 latest_candidate_semver = candidate_semver
                 latest_candidate_str = candidate
