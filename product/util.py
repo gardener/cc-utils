@@ -146,7 +146,8 @@ class ComponentResolver(ResolverBase):
         )
         if not latest_version:
             raise ValueError(
-                f'Component {component_name} has no valid release'
+                f'Component {component_name} has no valid release. '
+                f'Given reference version: {reference_version}'
             )
         return latest_version
 
