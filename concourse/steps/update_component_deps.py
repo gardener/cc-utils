@@ -14,9 +14,21 @@
 # limitations under the License.
 
 import os
+import subprocess
+import tempfile
 
 import ci.util
+import gitutil
+import github.util
 import product.model
+from concourse.model.traits.update_component_deps import (
+    MergePolicy,
+)
+from github.util import (
+    GitHubRepositoryHelper,
+    GitHubRepoBranch,
+)
+from github.release_notes.util import ReleaseNotes
 
 
 def current_product_descriptor():
@@ -94,3 +106,116 @@ def upgrade_pr_exists(reference, upgrade_requests):
     return any(
         [upgrade_rq.target_matches(reference=reference) for upgrade_rq in upgrade_requests]
     )
+
+
+def create_upgrade_pr(
+        from_ref,
+        to_ref,
+        pull_request_util,
+        upgrade_script_path,
+        githubrepobranch: GitHubRepoBranch,
+        repo_dir,
+        github_cfg_name,
+        cfg_factory,
+    ):
+    ls_repo = pull_request_util.repository
+
+    # have component create upgradation diff
+    cmd_env = os.environ.copy()
+    cmd_env['DEPENDENCY_TYPE'] = to_ref.type_name()
+    cmd_env['DEPENDENCY_NAME'] = to_ref.name()
+    cmd_env['DEPENDENCY_VERSION'] = to_ref.version()
+    cmd_env['REPO_DIR'] = repo_dir
+    cmd_env['GITHUB_CFG_NAME'] = github_cfg_name
+
+    # pass type-specific attributes
+    if to_ref.type_name() == 'container_image':
+      cmd_env['DEPENDENCY_IMAGE_REFERENCE'] = to_ref.image_reference()
+
+    subprocess.run(
+        [str(upgrade_script_path)],
+        check=True,
+        env=cmd_env
+    )
+    commit_msg = 'Upgrade {cn}\n\nfrom {ov} to {nv}'.format(
+        cn=to_ref.name(),
+        ov=from_ref.version(),
+        nv=to_ref.version(),
+    )
+
+    # mv diff into commit and push it
+    helper = gitutil.GitHelper.from_githubrepobranch(
+        githubrepobranch=githubrepobranch,
+        repo_path=repo_dir,
+    )
+    commit = helper.index_to_commit(message=commit_msg)
+    ci.util.info(f'commit for upgrade-PR: {commit.hexsha}')
+
+    new_branch_name = ci.util.random_str(prefix='ci-', length=12)
+    repo_branch = githubrepobranch.branch()
+    head_sha = ls_repo.ref(f'heads/{repo_branch}').object.sha
+    ls_repo.create_ref(f'refs/heads/{new_branch_name}', head_sha)
+
+    def rm_pr_branch():
+      ls_repo.ref(f'heads/{new_branch_name}').delete()
+
+    try:
+      helper.push(from_ref=commit.hexsha, to_ref=f'refs/heads/{new_branch_name}')
+    except:
+      ci.util.warning('an error occurred - removing now useless pr-branch')
+      rm_pr_branch()
+      raise
+
+    helper.repo.git.checkout('.')
+
+    try:
+      with tempfile.TemporaryDirectory() as temp_dir:
+          from_github_cfg = cfg_factory.github(from_ref.config_name())
+          from_github_helper = GitHubRepositoryHelper(
+              github_cfg=from_github_cfg,
+              owner=from_ref.github_organisation(),
+              name=from_ref.github_repo(),
+          )
+          from_git_helper = gitutil.GitHelper.clone_into(
+              target_directory=temp_dir,
+              github_cfg=from_github_cfg,
+              github_repo_path=from_ref.github_repo_path()
+          )
+          commit_range = '{from_version}..{to_version}'.format(
+              from_version=from_ref.version(),
+              to_version=to_ref.version()
+          )
+          release_note_blocks = ReleaseNotes.create(
+              github_helper=from_github_helper,
+              git_helper=from_git_helper,
+              commit_range=commit_range
+          ).release_note_blocks()
+          if release_note_blocks:
+              text = '*Release Notes*:\n{blocks}'.format(
+                  blocks=release_note_blocks
+              )
+          else:
+              text = pull_request_util.retrieve_pr_template_text()
+    except:
+      ci.util.warning('an error occurred during release notes processing (ignoring)')
+      text = None
+      import traceback
+      ci.util.warning(traceback.format_exc())
+
+    pull_request = ls_repo.create_pull(
+            title=github.util.PullRequestUtil.calculate_pr_title(
+                reference=to_ref,
+                from_version=from_ref.version(),
+                to_version=to_ref.version()
+            ),
+            base=repo_branch,
+            head=new_branch_name,
+            body=text,
+    )
+
+    if MergePolicy('${update_component_deps_trait.merge_policy().value}') == MergePolicy.MANUAL:
+        return
+
+    # auto-merge - todo: make configurable (e.g. merge method)
+    pull_request.merge()
+    rm_pr_branch()
