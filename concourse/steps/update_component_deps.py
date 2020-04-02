@@ -117,7 +117,7 @@ def create_upgrade_pr(
         repo_dir,
         github_cfg_name,
         cfg_factory,
-        after_merge_callback,
+        after_merge_callback=None,
     ):
     ls_repo = pull_request_util.repository
 

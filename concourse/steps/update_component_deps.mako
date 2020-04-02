@@ -133,11 +133,13 @@ for reference in product.util.greatest_references(immediate_dependencies.compone
           from_ref=reference,
           to_ref=to_ref,
           pull_request_util=pull_request_util,
-          upgrade_script_path=os.path.join(REPO_ROOT, '${set_dependency_version_script_path}',
+          upgrade_script_path=os.path.join(REPO_ROOT, '${set_dependency_version_script_path}'),
           githubrepobranch=githubrepobranch,
           repo_dir=REPO_ROOT,
           github_cfg_name=github_cfg_name,
           cfg_factory=cfg_factory,
+% if after_merge_callback:
           after_merge_callback='${after_merge_callback}',
+% endif
         )
 </%def>
