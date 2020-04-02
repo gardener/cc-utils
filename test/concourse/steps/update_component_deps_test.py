@@ -49,7 +49,7 @@ class UpdateComponentDependenciesStepTest(unittest.TestCase):
         )
 
         # try to compile (-> basic syntax check)
-        return compile(step_snippet, 'component_descriptor.mako', 'exec')
+        return compile(step_snippet, 'update_component_deps.mako', 'exec')
 
 
 def test_current_product_descriptor(tmpdir):
