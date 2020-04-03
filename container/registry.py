@@ -191,7 +191,15 @@ def to_hash_reference(image_name: str):
           digest = v2_2_img.digest()
       else:
           logger.debug('no img v2.2 found')
-          raise RuntimeError(f'could not access img-metadata for {image_name}')
+
+  if not digest:
+      # fallback to v2
+      with v2_image.FromRegistry(image_reference, creds, transport) as v2_img:
+          if v2_img.exists():
+              digest = v2_img.digest()
+          else:
+              logger.debug('no img v2 found')
+              raise RuntimeError(f'could not access img-metadata for {image_name}')
 
   name = image_name.rsplit(':', 1)[0]
   return f'{name}@{digest}'
