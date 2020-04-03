@@ -108,6 +108,17 @@ class GcrCredentials(BasicCredentials):
     def email(self):
         return self.raw.get('email')
 
+    def has_service_account_credentials(self):
+        '''
+        heuristically (aka HACKY!!!) guesses whether the configured passwd _could_ be a
+        GCP Service Account document
+        '''
+        try:
+            json.loads(self.passwd())
+            return True
+        except json.decoder.JSONDecodeError:
+            return False
+
     def service_account_credentials(self): # -> 'google.oauth2.service_account.Credentials':
         import google.oauth2.service_account
         return google.oauth2.service_account.Credentials.from_service_account_info(

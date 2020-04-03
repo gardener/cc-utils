@@ -42,6 +42,8 @@ def grafeas_client_for_image(image_reference: str):
     registry_cfg = model.container_registry.find_config(image_reference=image_reference)
     if not registry_cfg:
         raise VulnerabilitiesRetrievalFailed(f'no registry-cfg found for: {image_reference}')
+    if not registry_cfg.has_service_account_credentials():
+        raise VulnerabilitiesRetrievalFailed(f'no gcr-cfg ({registry_cfg.name()} {image_reference}')
 
     logger.info(f'using {registry_cfg.name()}')
 
