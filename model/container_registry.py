@@ -70,7 +70,10 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
         return Privileges(self.raw['privileges'])
 
     def image_reference_prefixes(self):
-        return self.raw.get('image_reference_prefixes', ())
+        prefixes = self.raw.get('image_reference_prefixes', ())
+        if isinstance(prefixes, str):
+            return [prefixes]
+        return prefixes
 
     def image_ref_matches(
         self,
