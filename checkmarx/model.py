@@ -87,6 +87,12 @@ class ScanResponse:
 
 
 @dataclasses.dataclass
+class ScanResponses:
+    # TODO: Fix parsing (list indices must be integers or slices, not str)
+    scans: typing.List[ScanResponse] = dataclasses.field(default_factory=list)
+
+
+@dataclasses.dataclass
 class ScanStatistic:
     highSeverity: int
     mediumSeverity: int

@@ -23,6 +23,14 @@ def is_scan_finished(scan: checkmarx.model.ScanResponse):
         return False
 
 
+def is_scan_necessary(project: checkmarx.model.ProjectDetails, hash: str):
+    remote_hash = project.get_custom_field(checkmarx.model.CustomFieldKeys.HASH)
+    if remote_hash != hash:
+        return True
+    else:
+        return False
+
+
 def print_scan_result(
     scan_results: typing.Iterable[checkmarx.model.ScanResult],
     tablefmt: str = 'simple'

@@ -28,7 +28,8 @@ class CXNotOkayException(Exception):
 
 
 class CheckmarxRoutes:
-    '''Checkmarx REST API endpoints for the checkmarx base URL.
+    '''
+    Checkmarx REST API endpoints for the checkmarx base URL.
     '''
 
     def __init__(self, base_url: str):
@@ -181,17 +182,18 @@ class CheckmarxClient:
         print(f'created scan with id {scan_id}')
         return scan_id
 
-    def get_last_scan_of_project(self, project_id: int):
+    def get_last_scans_of_project(self, project_id: int, last_scans: int = 1):
         res = self.request(
             method="GET",
             url=self.routes.scan(),
             params={
-                "last": 1,
+                "last": last_scans,
                 "projectId": str(project_id),
             },
             api_version='application/json;v=1.0',
         )
-        return from_dict(data_class=checkmarx.model.ScanResponse, data=res.json()[0])
+
+        return from_dict(data_class=checkmarx.model.ScanResponses, data=res.json())
 
     def get_scan_state(self, scan_id: int):
         res = self.request(
