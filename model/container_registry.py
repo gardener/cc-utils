@@ -63,6 +63,9 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
         # XXX handle different container registry types
         return GcrCredentials(self.raw)
 
+    def has_service_account_credentials(self):
+        return GcrCredentials(self.raw).has_service_account_credentials()
+
     def privileges(self) -> Privileges:
         return Privileges(self.raw['privileges'])
 
