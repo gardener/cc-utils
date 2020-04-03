@@ -45,3 +45,7 @@ def filter_image(
         target_ref=target_ref,
         remove_files=remove_files,
     )
+
+
+def to_digest_ref(image_ref:str):
+    print(container.registry.to_hash_reference(image_name=image_ref))
