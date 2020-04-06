@@ -38,7 +38,7 @@ from protecode.model import CVSSVersion
 
 try:
   import logging
-  ctx.configure_default_logging(stdout_level=logging.DEBUG)
+  ctx.configure_default_logging(stdout_level=logging.WARNING)
 except:
   pass
 
