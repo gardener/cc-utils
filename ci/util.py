@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import collections
 import os
 import pathlib
 import shutil
@@ -28,6 +29,47 @@ from urllib.parse import urlunparse
 
 class Failure(RuntimeError, ValueError):
     pass
+
+
+class LintingError(Failure):
+    pass
+
+
+class LintingResult:
+    def __init__(self, problems):
+        problems_dict = collections.defaultdict(list)
+        for p in problems:
+            problems_dict[self._normalise_problem_level(p)].append(p)
+        self.problems_dict = problems_dict
+
+    def _normalise_problem_level(self, p):
+        # Yamllint uses a dict with mappings for both int->level and level->int. Consistently use
+        # the int representation
+        if isinstance(p.level, str):
+            return yamllint.linter.PROBLEM_LEVELS[p.level]
+        else:
+            return p.level
+
+    def problems(self):
+        return self.problems_dict.items()
+
+    def has_problems(self):
+        return bool(self.problems_dict)
+
+    def max_level(self):
+        if self.problems:
+            max(self.problems_dict.keys())
+        return 0
+
+    def __str__(self):
+        if not self.has_problems():
+            return "No linting problems found"
+
+        return '\n'.join(s for s in [
+            f'[{yamllint.linter.PROBLEM_LEVELS[l]}] {p}'
+            for l in self.problems_dict.keys()
+            for p in self.problems_dict[l]
+        ])
 
 
 def _set_cli(is_cli: bool):
@@ -262,24 +304,42 @@ def _count_elements(value, count=0, max_elements_count=100000):
 
 def lint_yaml_file(path, linter_config: dict={'extends': 'relaxed'}):
     existing_file(path)
-    cfg = yamllint.config.YamlLintConfig(yaml.dump(linter_config))
     info(f'linting YAML file: {path}')
-    worst_level = 0
+
     with open(path) as f:
-        for problem in yamllint.linter.run(f, conf=cfg, filepath=path):
-            # problem is of type yamllint.linter.LintProblem
-            level = problem.level
-            if isinstance(problem.level, str):
-                level = yamllint.linter.PROBLEM_LEVELS[problem.level]
+        linting_result = _lint_yaml(f.read(), linter_config)
 
-            if level == yamllint.linter.PROBLEM_LEVELS['warning']:
-                warning(str(problem))
-            elif level > yamllint.linter.PROBLEM_LEVELS['warning']:
-                error(str(problem))
+    if not linting_result.has_problems():
+        return
 
-            worst_level = max(worst_level, level)
-    if worst_level >= yamllint.linter.PROBLEM_LEVELS['error']:
-        fail('found errors whilst linting (see above)')
+    for level, problems in linting_result.problems():
+        if level < yamllint.linter.PROBLEM_LEVELS['error']:
+            for p in problems:
+                warning(parse_yaml_file)
+        else:
+            for p in problems:
+                error(p)
+
+    if linting_result.max_level() >= yamllint.linter.PROBLEM_LEVELS['error']:
+        raise LintingError('Found some Errors while linting. See above.')
+
+
+def _lint_yaml(input, config):
+    cfg = yamllint.config.YamlLintConfig(yaml.dump(config))
+    return LintingResult(yamllint.linter.run(input=input, conf=cfg))
+
+
+def lint_yaml(input, config={'extends': 'relaxed'}):
+
+    linting_result = _lint_yaml(input=input, config=config)
+
+    if not linting_result.has_problems():
+        return
+
+    if linting_result.max_level() <= yamllint.linter.PROBLEM_LEVELS['warning']:
+        warning(f'Found some problems while linting:\n{linting_result}')
+    else:
+        raise LintingError(f'Found some errors while linting. \n{linting_result}')
 
 
 def random_str(prefix=None, length=12):

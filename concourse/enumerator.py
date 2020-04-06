@@ -24,14 +24,17 @@ import functools
 from github3.exceptions import NotFoundError
 
 from ci.util import (
-    parse_yaml_file,
-    load_yaml,
-    info,
+    LintingError,
     fail,
-    verbose,
+    info,
+    lint_yaml,
+    load_yaml,
     merge_dicts,
     not_empty,
     not_none,
+    parse_yaml_file,
+    warning,
+    verbose,
 )
 from model.base import ModelBase, NamedModelElement
 from concourse.factory import RawPipelineDefinitionDescriptor
@@ -198,15 +201,23 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                 path='branch.cfg',
                 ref='refs/meta/ci',
             ).decoded.decode('utf-8')
-            return BranchCfg(raw_dict=load_yaml(branch_cfg))
+            info(f'Linting branch cfg for {repository}')
+            lint_yaml(branch_cfg)
         except NotFoundError:
             return None # no branch cfg present
+
+        return BranchCfg(raw_dict=load_yaml(branch_cfg))
 
     def _determine_repository_branches(
         self,
         repository,
     ):
-        branch_cfg = self._branch_cfg_or_none(repository=repository)
+        try:
+            branch_cfg = self._branch_cfg_or_none(repository=repository)
+        except LintingError as e:
+            # some linting errors (and possibly warnings) present. Print warning and continue
+            warning(e)
+            return
         if not branch_cfg:
             # fallback for components w/o branch_cfg: use default branch
             try:
@@ -241,7 +252,11 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
 
             verbose('from repo: ' + repository.name + ':' + branch_name)
             try:
-                definitions = load_yaml(definitions.decoded.decode('utf-8'))
+                decoded_definitions = definitions.decoded.decode('utf-8')
+                info(f'Linting pipeline_definitions for {repository} on branch {branch_name}')
+                lint_yaml(decoded_definitions)
+                definitions = load_yaml(decoded_definitions)
+
             except BaseException as e:
                 repo_path = f'{org_name}/{repository.name}'
                 yield DefinitionDescriptor(
