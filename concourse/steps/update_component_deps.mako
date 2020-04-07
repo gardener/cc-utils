@@ -91,21 +91,19 @@ immediate_dependencies = current_component().dependencies()
 
 if UPGRADE_TO_UPSTREAM:
   def determine_reference_version(component_name, reference_version):
-    version_candidate =  _component(upstream_reference_component(
+    version_candidate = _component(upstream_reference_component(
       component_resolver=component_resolver,
       component_descriptor_resolver=component_descriptor_resolver,
     ).dependencies(), component_name).version()
     version_candidate = version.parse_to_semver(version_candidate)
     ref_ver = version.parse_to_semver(reference_version)
-    if version_candidate > ref_ver:
-      str(version_candidate)
     # also consider hotfixes
     hotfix_candidate = component_resolver.greatest_component_version_with_matching_minor(
       component_name=component_name,
       reference_version=str(reference_version),
     )
     hotfix_candidate = version.parse_to_semver(hotfix_candidate)
-    if hotfix_candidate > ref_ver:
+    if hotfix_candidate > version_candidate:
       return str(hotfix_candidate)
     else:
       return str(version_candidate)
