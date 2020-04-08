@@ -57,7 +57,8 @@ component_resolver = product.util.ComponentResolver(cfg_factory=cfg_factory)
 component_descriptor_resolver = product.util.ComponentDescriptorResolver(cfg_factory=cfg_factory)
 
 # indicates whether or not an upstream component was defined as a reference
-UPGRADE_TO_UPSTREAM = 'UPSTREAM_COMPONENT_NAME' in os.environ
+upstream_component_name = os.environ.get('UPSTREAM_COMPONENT_NAME', None)
+UPGRADE_TO_UPSTREAM = bool(upstream_component_name)
 
 ci.util.info(f'Upgrade to upstream: {UPGRADE_TO_UPSTREAM}')
 
@@ -89,33 +90,16 @@ close_obsolete_pull_requests(
 
 immediate_dependencies = current_component().dependencies()
 
-if UPGRADE_TO_UPSTREAM:
-  def determine_reference_version(component_name, reference_version):
-    version_candidate = _component(upstream_reference_component(
-      component_resolver=component_resolver,
-      component_descriptor_resolver=component_descriptor_resolver,
-    ).dependencies(), component_name).version()
-    version_candidate = version.parse_to_semver(version_candidate)
-    ref_ver = version.parse_to_semver(reference_version)
-    # also consider hotfixes
-    hotfix_candidate = component_resolver.greatest_component_version_with_matching_minor(
-      component_name=component_name,
-      reference_version=str(reference_version),
-    )
-    hotfix_candidate = version.parse_to_semver(hotfix_candidate)
-    if hotfix_candidate > version_candidate:
-      return str(hotfix_candidate)
-    else:
-      return str(version_candidate)
-
-else:
-  def determine_reference_version(component_name, reference_version):
-    return component_resolver.latest_component_version(component_name)
-
 
 # find components that need to be upgraded
 for reference in product.util.greatest_references(immediate_dependencies.components()):
-    latest_version = determine_reference_version(reference.name(), reference.version())
+    latest_version = determine_reference_version(
+      component_name=reference.name(),
+      reference_version=reference.version(),
+      component_resolver=component_resolver,
+      component_descriptor_resolver=component_descriptor_resolver,
+      upstream_component_name=upstream_component_name,
+    )
     latest_version_semver = version.parse_to_semver(latest_version)
     latest_cref = product.model.ComponentReference.create(
       name=reference.name(),

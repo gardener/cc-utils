@@ -21,6 +21,8 @@ import ci.util
 import gitutil
 import github.util
 import product.model
+import product.util
+import version
 from concourse.model.traits.update_component_deps import (
     MergePolicy,
 )
@@ -228,3 +230,32 @@ def create_upgrade_pr(
             check=True,
             env=cmd_env
         )
+
+
+def determine_reference_version(
+        component_name: str,
+        reference_version: str,
+        component_resolver: product.util.ComponentResolver,
+        component_descriptor_resolver: product.util.ComponentDescriptorResolver,
+        upstream_component_name: str=None,
+        _component: callable=_component, # allow easier mocking (for unittests)
+):
+    if upstream_component_name is None:
+        # no upstream component defined - look for greatest released version
+        return component_resolver.latest_component_version(component_name)
+
+    version_candidate = _component(upstream_reference_component(
+      component_resolver=component_resolver,
+      component_descriptor_resolver=component_descriptor_resolver,
+    ).dependencies(), component_name).version()
+    version_candidate = version.parse_to_semver(version_candidate)
+    # also consider hotfixes
+    hotfix_candidate = component_resolver.greatest_component_version_with_matching_minor(
+      component_name=component_name,
+      reference_version=str(reference_version),
+    )
+    hotfix_candidate = version.parse_to_semver(hotfix_candidate)
+    if hotfix_candidate > version_candidate:
+      return str(hotfix_candidate)
+    else:
+      return str(version_candidate)

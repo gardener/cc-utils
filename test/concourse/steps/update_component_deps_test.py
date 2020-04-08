@@ -1,13 +1,19 @@
 import tempfile
+import functools
 import unittest
 import os
 import pathlib
+from unittest.mock import MagicMock
 
 import test_utils
 
 from concourse.steps import step_def
-from concourse.steps.update_component_deps import current_product_descriptor
+from concourse.steps.update_component_deps import (
+    current_product_descriptor,
+    determine_reference_version,
+)
 import concourse.model.traits.update_component_deps as update_component_deps
+import product.util
 
 
 class UpdateComponentDependenciesStepTest(unittest.TestCase):
@@ -57,3 +63,27 @@ def test_current_product_descriptor(tmpdir):
     tmpdir.join('component_descriptor').write('{}')
 
     assert current_product_descriptor().raw == {'components': [], 'component_overwrites': []}
+
+
+def test_determine_reference_version():
+    greatest_version = '2.1.1'
+    component_resolver = product.util.ComponentResolver()
+    component_resolver.latest_component_version = MagicMock(return_value=greatest_version)
+    component_descriptor_resolver = product.util.ComponentDescriptorResolver()
+
+    examinee = functools.partial(
+        determine_reference_version,
+        component_name='example.org/foo/bar',
+        component_resolver=component_resolver,
+        component_descriptor_resolver=component_descriptor_resolver,
+    )
+
+    # no upstream component -> expect latest version to be returned
+    assert examinee(
+            reference_version='2.1.0',
+            upstream_component_name=None,
+        ) == greatest_version
+    assert examinee(
+            reference_version='2.2.0', # same result, if our version is already greater
+            upstream_component_name=None,
+        ) == greatest_version
