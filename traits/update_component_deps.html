@@ -204,19 +204,25 @@
 <td><p>str</p></td>
 <td><p>configures the upstream component</p></td>
 </tr>
-<tr class="row-even"><td><p>merge_policy</p></td>
+<tr class="row-even"><td><p>upstream_update_policy</p></td>
+<td><p>no</p></td>
+<td><p>UpstreamUpdatePolicy.STRICTLY_FOLLOW</p></td>
+<td><p>str</p></td>
+<td><p>configures the upstream component update policy</p></td>
+</tr>
+<tr class="row-odd"><td><p>merge_policy</p></td>
 <td><p>no</p></td>
 <td><p>MergePolicy.MANUAL</p></td>
 <td><p>str</p></td>
 <td><p>whether or not created PRs should be automatically merged</p></td>
 </tr>
-<tr class="row-odd"><td><p>after_merge_callback</p></td>
+<tr class="row-even"><td><p>after_merge_callback</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>callback to be invoked after auto-merge</p></td>
 </tr>
-<tr class="row-even"><td><p>vars</p></td>
+<tr class="row-odd"><td><p>vars</p></td>
 <td><p>no</p></td>
 <td><p>{}</p></td>
 <td><p>dict</p></td>
