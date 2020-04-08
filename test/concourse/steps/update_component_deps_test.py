@@ -117,13 +117,13 @@ def test_determine_reference_version():
     assert examinee(
         reference_version='1.2.3', # does not matter
         _component=MagicMock(return_value=upstream_comp)
-    ) == version.parse_to_semver(upstream_version)
+    ) == upstream_version
     # same behaviour if explicitly configured
     assert examinee(
         reference_version='1.2.3', # does not matter
         upstream_update_policy=UUP.STRICTLY_FOLLOW,
         _component=MagicMock(return_value=upstream_comp)
-    ) == version.parse_to_semver(upstream_version)
+    ) == upstream_version
 
     # if not strictly following, should consider hotfix
 
