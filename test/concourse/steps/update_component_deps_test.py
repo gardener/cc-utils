@@ -98,7 +98,6 @@ def test_determine_reference_version():
         mobject.dependencies = MagicMock(return_value=())
         return mobject
 
-
     examinee = functools.partial(
         determine_reference_version,
         component_name='example.org/foo/bar',
