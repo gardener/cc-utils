@@ -15,7 +15,6 @@ from concourse.steps.update_component_deps import (
     determine_reference_version,
 )
 import concourse.model.traits.update_component_deps as update_component_deps
-import version
 import product.util
 import product.model
 
