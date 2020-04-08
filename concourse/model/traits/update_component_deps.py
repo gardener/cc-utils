@@ -37,6 +37,11 @@ class MergePolicy(enum.Enum):
     AUTO_MERGE = 'auto_merge'
 
 
+class UpstreamUpdatePolicy(enum.Enum):
+    STRICTLY_FOLLOW = 'strictly_follow'
+    ACCEPT_HOTFIXES = 'accept_hotfixes'
+
+
 ATTRIBUTES = (
     AttributeSpec.optional(
         name='set_dependency_version_script',
@@ -47,6 +52,11 @@ ATTRIBUTES = (
         name='upstream_component_name',
         default=None, # defaults to main repository
         doc='configures the upstream component',
+    ),
+    AttributeSpec.optional(
+        name='upstream_update_policy',
+        default=UpstreamUpdatePolicy.STRICTLY_FOLLOW,
+        doc='configures the upstream component update policy',
     ),
     AttributeSpec.optional(
         name='merge_policy',
@@ -77,6 +87,9 @@ class UpdateComponentDependenciesTrait(Trait):
 
     def upstream_component_name(self):
         return self.raw.get('upstream_component_name')
+
+    def upstream_update_policy(self):
+        return self.raw.get('upstream_update_policy')
 
     def merge_policy(self) -> MergePolicy:
         return MergePolicy(self.raw['merge_policy'])
