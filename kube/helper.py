@@ -20,9 +20,18 @@ from urllib3.exceptions import ProtocolError
 import kubernetes
 from kubernetes import watch
 from kubernetes.client import (
-    CoreV1Api, AppsV1Api, ExtensionsV1beta1Api, V1ObjectMeta, V1Secret, V1ServiceAccount,
-    V1LocalObjectReference, V1Namespace, V1Service, V1Deployment,
-    V1beta1Ingress, V1ConfigMap,
+    AppsV1Api,
+    CoreV1Api,
+    ExtensionsV1beta1Api,
+    V1ConfigMap,
+    V1Deployment,
+    V1LocalObjectReference,
+    V1Namespace,
+    V1ObjectMeta,
+    V1Secret,
+    V1Service,
+    V1ServiceAccount,
+    ExtensionsV1beta1Ingress as V1beta1Ingress,
 )
 from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream

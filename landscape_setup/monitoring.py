@@ -16,14 +16,14 @@
 from ensure import ensure_annotations
 
 from kubernetes.client import(
-    V1beta1Ingress,
+    ExtensionsV1beta1Ingress as V1beta1Ingress,
+    ExtensionsV1beta1IngressSpec as V1beta1IngressSpec,
+    ExtensionsV1beta1IngressRule as V1beta1IngressRule,
+    ExtensionsV1beta1IngressTLS as V1beta1,
+    ExtensionsV1beta1HTTPIngressRuleValue as V1beta1HTTPIngressRuleValue,
+    ExtensionsV1beta1HTTPIngressPath as V1beta1HTTPIngressPath,
+    ExtensionsV1beta1IngressBackend as V1beta1IngressBackend,
     V1ObjectMeta,
-    V1beta1IngressSpec,
-    V1beta1IngressRule,
-    V1beta1IngressTLS,
-    V1beta1HTTPIngressRuleValue,
-    V1beta1HTTPIngressPath,
-    V1beta1IngressBackend,
 )
 
 from landscape_setup import kube_ctx
