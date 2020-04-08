@@ -248,7 +248,7 @@ def determine_reference_version(
         upstream_update_policy: UpstreamUpdatePolicy=UpstreamUpdatePolicy.STRICTLY_FOLLOW,
         _component: callable=_component, # allow easier mocking (for unittests)
         upstream_reference_component: callable=upstream_reference_component, # allow easier mocking
-):
+) -> str:
     if upstream_component_name is None:
         # no upstream component defined - look for greatest released version
         return component_resolver.latest_component_version(component_name)
@@ -261,7 +261,7 @@ def determine_reference_version(
         ).dependencies(), component_name).version()
     version_candidate = version.parse_to_semver(version_candidate)
     if upstream_update_policy is UpstreamUpdatePolicy.STRICTLY_FOLLOW:
-        return version_candidate
+        return str(version_candidate)
     elif upstream_update_policy is UpstreamUpdatePolicy.ACCEPT_HOTFIXES:
         pass # continue
     else:
