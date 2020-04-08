@@ -19,7 +19,7 @@ from kubernetes.client import(
     ExtensionsV1beta1Ingress as V1beta1Ingress,
     ExtensionsV1beta1IngressSpec as V1beta1IngressSpec,
     ExtensionsV1beta1IngressRule as V1beta1IngressRule,
-    ExtensionsV1beta1IngressTLS as V1beta1,
+    ExtensionsV1beta1IngressTLS as V1beta1IngressTLS,
     ExtensionsV1beta1HTTPIngressRuleValue as V1beta1HTTPIngressRuleValue,
     ExtensionsV1beta1HTTPIngressPath as V1beta1HTTPIngressPath,
     ExtensionsV1beta1IngressBackend as V1beta1IngressBackend,
