@@ -15,6 +15,7 @@ repo_branch = main_repo.branch()
 update_component_deps_trait = job_variant.trait('update_component_deps')
 set_dependency_version_script_path = update_component_deps_trait.set_dependency_version_script_path()
 after_merge_callback = update_component_deps_trait.after_merge_callback()
+upstream_update_policy = update_component_deps_trait.upstream_update_policy()
 %>
 
 import os
@@ -22,6 +23,7 @@ import subprocess
 import sys
 
 import ci.util
+import concourse.model.traits.update_component_deps
 import ctx
 import github.util
 import gitutil
@@ -89,6 +91,9 @@ close_obsolete_pull_requests(
 )
 
 immediate_dependencies = current_component().dependencies()
+upstream_update_policy = concourse.model.traits.update_component_deps.UpstreamUpdatePolicy(
+  '${upstream_update_policy.value}'
+)
 
 
 # find components that need to be upgraded
@@ -99,6 +104,7 @@ for reference in product.util.greatest_references(immediate_dependencies.compone
       component_resolver=component_resolver,
       component_descriptor_resolver=component_descriptor_resolver,
       upstream_component_name=upstream_component_name,
+      upstream_update_policy=upstream_update_policy,
     )
     latest_version_semver = version.parse_to_semver(latest_version)
     latest_cref = product.model.ComponentReference.create(

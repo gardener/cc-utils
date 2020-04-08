@@ -3,7 +3,9 @@ import functools
 import unittest
 import os
 import pathlib
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
+
+import semver
 
 import test_utils
 
@@ -13,7 +15,9 @@ from concourse.steps.update_component_deps import (
     determine_reference_version,
 )
 import concourse.model.traits.update_component_deps as update_component_deps
+import version
 import product.util
+import product.model
 
 
 class UpdateComponentDependenciesStepTest(unittest.TestCase):
@@ -87,3 +91,49 @@ def test_determine_reference_version():
             reference_version='2.2.0', # same result, if our version is already greater
             upstream_component_name=None,
         ) == greatest_version
+
+    # tests _with_ upstream component
+    def _upstream_ref_comp_mock(*args, **kwargs):
+        mobject = Mock()
+        mobject.dependencies = MagicMock(return_value=())
+        return mobject
+
+
+    examinee = functools.partial(
+        determine_reference_version,
+        component_name='example.org/foo/bar',
+        component_resolver=component_resolver,
+        component_descriptor_resolver=component_descriptor_resolver,
+        upstream_component_name='example.org/foo/bar',
+        upstream_reference_component=_upstream_ref_comp_mock,
+    )
+
+    # upstream component version should be returned
+    upstream_version = '2.2.2'
+    upstream_comp = product.model.Component.create('example.org/foo/bar', upstream_version)
+
+    UUP = update_component_deps.UpstreamUpdatePolicy
+
+    # should return upstream version, by default (default to strict-following)
+    assert examinee(
+        reference_version='1.2.3', # does not matter
+        _component=MagicMock(return_value=upstream_comp)
+    ) == version.parse_to_semver(upstream_version)
+    # same behaviour if explicitly configured
+    assert examinee(
+        reference_version='1.2.3', # does not matter
+        upstream_update_policy=UUP.STRICTLY_FOLLOW,
+        _component=MagicMock(return_value=upstream_comp)
+    ) == version.parse_to_semver(upstream_version)
+
+    # if not strictly following, should consider hotfix
+
+    # mock away lookup from component-resolver (used to determine hotfix version)
+    component_resolver.greatest_component_version_with_matching_minor = \
+        MagicMock(return_value=upstream_comp)
+
+    assert examinee(
+        reference_version=semver.parse_version_info('1.2.3'), # does not matter
+        upstream_update_policy=UUP.ACCEPT_HOTFIXES,
+        _component=MagicMock(return_value=upstream_comp)
+    ) == upstream_version

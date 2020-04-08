@@ -18,6 +18,7 @@ import subprocess
 import tempfile
 
 import ci.util
+import concourse.model.traits.update_component_deps
 import gitutil
 import github.util
 import product.model
@@ -69,8 +70,11 @@ def _component(
         raise NotImplementedError # this line should never be reached
 
 
-def upstream_reference_component(component_resolver, component_descriptor_resolver):
-    component_name = ci.util.check_env('UPSTREAM_COMPONENT_NAME')
+def upstream_reference_component(
+        component_resolver,
+        component_descriptor_resolver,
+        component_name: str,
+    ):
     latest_version = component_resolver.latest_component_version(component_name)
 
     component_reference = product.model.ComponentReference.create(
@@ -232,23 +236,37 @@ def create_upgrade_pr(
         )
 
 
+UpstreamUpdatePolicy = concourse.model.traits.update_component_deps.UpstreamUpdatePolicy
+
+
 def determine_reference_version(
         component_name: str,
         reference_version: str,
         component_resolver: product.util.ComponentResolver,
         component_descriptor_resolver: product.util.ComponentDescriptorResolver,
         upstream_component_name: str=None,
+        upstream_update_policy: UpstreamUpdatePolicy=UpstreamUpdatePolicy.STRICTLY_FOLLOW,
         _component: callable=_component, # allow easier mocking (for unittests)
+        upstream_reference_component: callable=upstream_reference_component, # allow easier mocking
 ):
     if upstream_component_name is None:
         # no upstream component defined - look for greatest released version
         return component_resolver.latest_component_version(component_name)
 
-    version_candidate = _component(upstream_reference_component(
-      component_resolver=component_resolver,
-      component_descriptor_resolver=component_descriptor_resolver,
-    ).dependencies(), component_name).version()
+    version_candidate = _component(
+        upstream_reference_component(
+          component_resolver=component_resolver,
+          component_descriptor_resolver=component_descriptor_resolver,
+          component_name=upstream_component_name,
+        ).dependencies(), component_name).version()
     version_candidate = version.parse_to_semver(version_candidate)
+    if upstream_update_policy is UpstreamUpdatePolicy.STRICTLY_FOLLOW:
+        return version_candidate
+    elif upstream_update_policy is UpstreamUpdatePolicy.ACCEPT_HOTFIXES:
+        pass # continue
+    else:
+        raise NotImplementedError
+
     # also consider hotfixes
     hotfix_candidate = component_resolver.greatest_component_version_with_matching_minor(
       component_name=component_name,
