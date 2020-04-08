@@ -7,6 +7,8 @@ if ! which pytest &>/dev/null; then
   exit 1
 fi
 
+pip3 install --upgrade kubernetes
+
 # usage: $1: <src-dir>
 
 src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
