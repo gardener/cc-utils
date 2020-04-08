@@ -11,6 +11,10 @@ cd $repo_dir
 # install build-only dependencies (no need to include in image)
 pip3 install --upgrade pip twine wheel setuptools
 
+# HACK
+pip3 uninstall kubernetes
+pip3 install kubernetes
+
 # build into "${repo_dir}/dist"
 python3 "${repo_dir}/setup.base.py" sdist bdist_wheel
 python3 "${repo_dir}/setup.py" sdist bdist_wheel
