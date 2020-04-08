@@ -8,15 +8,15 @@ cachecontrol<1
 containerregistry-ccwienk==0.2.5
 dacite
 dataclasses-json
-deepmerge<1.0.0
+deepmerge
 deprecated<2.0.0
 elasticsearch<8.0.0
 ensure<1.0.0
 flake8<4.0.0
 github3.py<2.0.0
 google-cloud-containeranalysis
-html2text<2019.0.0
-jira<3.0.0
+html2text
+jira
 kubernetes<12.0.0
 passlib<2.0.0
 pydash<5.0.0
@@ -30,6 +30,6 @@ sphinx_rtd_theme<1.0.0
 sseclient-py<2.0.0
 tabulate<1.0.0
 termcolor<2.0.0
-toposort<2.0.0
+toposort
 urllib3<2.0.0
 yamllint<2
