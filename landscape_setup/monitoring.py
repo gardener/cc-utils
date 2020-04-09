@@ -15,6 +15,8 @@
 
 from ensure import ensure_annotations
 
+from kube.client import KubernetesClient
+
 from kubernetes.client import(
     ExtensionsV1beta1Ingress as V1beta1Ingress,
     ExtensionsV1beta1IngressSpec as V1beta1IngressSpec,
@@ -26,7 +28,6 @@ from kubernetes.client import(
     V1ObjectMeta,
 )
 
-from landscape_setup import kube_ctx
 from landscape_setup.utils import (
     ensure_cluster_version,
     execute_helm_deployment,
@@ -64,7 +65,8 @@ def deploy_monitoring_landscape(
     ingress_cfg = cfg_set.ingress(concourse_cfg.ingress_config())
 
     # Set the global context to the cluster specified in KubernetesConfig
-    kube_ctx.set_kubecfg(kubernetes_cfg.kubeconfig())
+    kubeconfig = kubernetes_cfg.kubeconfig()
+    kubernetes_client = KubernetesClient(kubeconfig)
     ensure_cluster_version(kubernetes_cfg)
 
     monitoring_config_name = concourse_cfg.monitoring_config()
@@ -116,7 +118,7 @@ def deploy_monitoring_landscape(
     # multiple paths unless the premium version is used. NOTE: only one ingress should use
     # gardener-managed dns. Otherwise the dns-controller will periodically complain that the
     # dns-entry is busy as they share the same host
-    ingress_helper = kube_ctx.ingress_helper()
+    ingress_helper = kubernetes_client.ingress_helper()
     info('Create ingress for kube-state-metrics')
     ingress = generate_monitoring_ingress_object(
         basic_auth_secret_name=monitoring_basic_auth_secret_name,

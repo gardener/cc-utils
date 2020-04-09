@@ -15,7 +15,7 @@
 
 from ensure import ensure_annotations
 
-from landscape_setup import kube_ctx
+from kube.client import KubernetesClient
 from model.secrets_server import (
     SecretsServerConfig,
 )
@@ -42,11 +42,12 @@ from kubernetes.client import (
 
 @ensure_annotations
 def deploy_secrets_server(secrets_server_config: SecretsServerConfig):
-    ctx = kube_ctx
-    service_helper = ctx.service_helper()
-    deployment_helper = ctx.deployment_helper()
-    secrets_helper = ctx.secret_helper()
-    namespace_helper = ctx.namespace_helper()
+    # TODO: Verify that config is set in context, otherwise split landscape deployments may happen
+    client = KubernetesClient()
+    service_helper = client.service_helper()
+    deployment_helper = client.deployment_helper()
+    secrets_helper = client.secret_helper()
+    namespace_helper = client.namespace_helper()
 
     namespace = secrets_server_config.namespace()
     namespace_helper.create_if_absent(namespace)

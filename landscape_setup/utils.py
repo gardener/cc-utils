@@ -21,7 +21,6 @@ from ensure import ensure_annotations
 from collections import namedtuple
 from passlib.apache import HtpasswdFile
 
-from landscape_setup import kube_ctx
 from ci.util import (
     Failure,
     fail,
@@ -30,9 +29,8 @@ from ci.util import (
     not_none,
     which,
 )
-from model.kubernetes import (
-    KubernetesConfig,
-)
+from kube.client import KubernetesClient
+from model.kubernetes import KubernetesConfig
 
 CONCOURSE_HELM_CHART_REPO = "https://concourse-charts.storage.googleapis.com/"
 STABLE_HELM_CHART_REPO = "https://kubernetes-charts.storage.googleapis.com/"
@@ -50,15 +48,12 @@ def literal_str_representer(dumper, data):
     return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
 
 
-def get_cluster_version_info():
-    api = kube_ctx.create_version_api()
-    return api.get_code()
-
-
 def ensure_cluster_version(kubernetes_config: KubernetesConfig):
     not_none(kubernetes_config)
 
-    cluster_version_info = get_cluster_version_info()
+    client = KubernetesClient(kubernetes_config.kubeconfig())
+
+    cluster_version_info = client.get_cluster_version_info()
     configured_version_info = kubernetes_config.cluster_version()
 
     if (
@@ -113,11 +108,11 @@ def create_basic_auth_secret(
     not_empty(secret_name)
     not_empty(namespace)
 
-    ctx = kube_ctx
-    namespace_helper = ctx.namespace_helper()
+    c = KubernetesClient()
+    namespace_helper = c.namespace_helper()
     namespace_helper.create_if_absent(namespace)
 
-    secret_helper = ctx.secret_helper()
+    secret_helper = c.secret_helper()
     if not secret_helper.get_secret(secret_name, namespace):
         ht = HtpasswdFile()
         ht.set_password(basic_auth_cred.user, basic_auth_cred.password)
@@ -142,7 +137,8 @@ def execute_helm_deployment(
     yaml.add_representer(LiteralStr, literal_str_representer)
     helm_executable = ensure_helm_setup()
     # create namespace if absent
-    namespace_helper = kube_ctx.namespace_helper()
+    c = KubernetesClient(kubeconfig_dict=kubernetes_config.kubeconfig())
+    namespace_helper = c.namespace_helper()
     if not namespace_helper.get_namespace(namespace):
         namespace_helper.create_namespace(namespace)
 

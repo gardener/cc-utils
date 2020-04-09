@@ -28,7 +28,8 @@ import yaml
 import concourse.client as client
 import version
 
-from landscape_setup import kube_ctx
+from kube.client import KubernetesClient
+
 from landscape_setup.utils import (
     ensure_helm_setup,
     execute_helm_deployment,
@@ -59,6 +60,7 @@ from ci.util import (
 
 @ensure_annotations
 def create_image_pull_secret(
+    kubeconfig: dict,
     credentials: GcrCredentials,
     image_pull_secret_name: str,
     namespace: str,
@@ -68,11 +70,11 @@ def create_image_pull_secret(
     not_empty(image_pull_secret_name)
     not_empty(namespace)
 
-    ctx = kube_ctx
-    namespace_helper = ctx.namespace_helper()
+    client = KubernetesClient(kubeconfig)
+    namespace_helper = client.namespace_helper()
     namespace_helper.create_if_absent(namespace)
 
-    secret_helper = ctx.secret_helper()
+    secret_helper = client.secret_helper()
     if not secret_helper.get_secret(image_pull_secret_name, namespace):
         secret_helper.create_gcr_secret(
             namespace=namespace,
@@ -83,7 +85,7 @@ def create_image_pull_secret(
             server_url=credentials.host(),
         )
 
-        service_account_helper = ctx.service_account_helper()
+        service_account_helper = client.service_account_helper()
         service_account_helper.patch_image_pull_secret_into_service_account(
             name="default",
             namespace=namespace,
@@ -98,17 +100,18 @@ MITM_CONFIG_CONFIGMAP_NAME = 'mitm-config'
 
 @ensure_annotations
 def create_proxy_configmaps(
+    kubeconfig: dict,
     proxy_cfg: ProxyConfig,
     namespace: str,
 ):
     """Create the config map that contains the configuration of the mitm-proxy"""
     not_empty(namespace)
 
-    ctx = kube_ctx
-    namespace_helper = ctx.namespace_helper()
+    client = KubernetesClient(kubeconfig)
+    namespace_helper = client.namespace_helper()
     namespace_helper.create_if_absent(namespace)
 
-    config_map_helper = ctx.config_map_helper()
+    config_map_helper = client.config_map_helper()
 
     mitm_proxy_config = proxy_cfg.mitm_proxy().config()
 
@@ -302,6 +305,8 @@ def deploy_concourse_landscape(
     # Kubernetes cluster config
     kubernetes_config_name = concourse_cfg.kubernetes_cluster_config()
     kubernetes_config = config_factory.kubernetes(kubernetes_config_name)
+    kubeconfig = kubernetes_config.kubeconfig()
+    kubernetes_client = KubernetesClient(kubeconfig)
 
     # Container-registry config
     image_pull_secret_name = concourse_cfg.image_pull_secret()
@@ -321,12 +326,14 @@ def deploy_concourse_landscape(
 
         info('Creating config-maps for the mitm proxy ...')
         create_proxy_configmaps(
+            kubeconfig=kubeconfig,
             proxy_cfg=proxy_cfg,
             namespace=deployment_name,
         )
 
     info('Creating default image-pull-secret ...')
     create_image_pull_secret(
+        kubeconfig=kubeconfig,
         credentials=cr_credentials,
         image_pull_secret_name=image_pull_secret_name,
         namespace=deployment_name,
@@ -368,7 +375,7 @@ def deploy_concourse_landscape(
     )
 
     info('Waiting until the webserver can be reached ...')
-    deployment_helper = kube_ctx.deployment_helper()
+    deployment_helper = kubernetes_client.deployment_helper()
     is_web_deployment_available = deployment_helper.wait_until_deployment_available(
         namespace=deployment_name,
         name='concourse-web',
@@ -402,8 +409,8 @@ def destroy_concourse_landscape(config_name: str, release_name: str):
 
     kubernetes_config_name = concourse_cfg.kubernetes_cluster_config()
     kubernetes_config = config_factory.kubernetes(kubernetes_config_name)
-    context = kube_ctx
-    context.set_kubecfg(kubernetes_config.kubeconfig())
+    kubeconfig = kubernetes_config.kubeconfig()
+    kubernetes_client = KubernetesClient(kubeconfig)
 
     # Delete helm release
     helm_cmd_path = ensure_helm_setup()
@@ -429,7 +436,7 @@ def destroy_concourse_landscape(config_name: str, release_name: str):
             ))
 
     # delete namespace
-    namespace_helper = context.namespace_helper()
+    namespace_helper = kubernetes_client.namespace_helper()
     namespace_helper.delete_namespace(namespace=release_name)
 
 
