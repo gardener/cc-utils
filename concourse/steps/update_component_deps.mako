@@ -92,7 +92,7 @@ close_obsolete_pull_requests(
 
 immediate_dependencies = current_component().dependencies()
 upstream_update_policy = concourse.model.traits.update_component_deps.UpstreamUpdatePolicy(
-  '${upstream_update_policy}'
+  '${upstream_update_policy.value}'
 )
 
 
