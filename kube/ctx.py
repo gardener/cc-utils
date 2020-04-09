@@ -34,7 +34,7 @@ from kube.helper import (
 
 
 @deprecated.deprecated(
-    reason='kube.ctx.Ctx was refactored. Please use kube.client.KubernetesClient instead'
+    reason='kube.ctx.Ctx was refactored. Please use ccc.kubernetes.KubernetesClient instead'
 )
 class Ctx(object):
     '''

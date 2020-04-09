@@ -15,7 +15,7 @@
 
 from ensure import ensure_annotations
 
-from kube.client import KubernetesClient
+from ccc.kubernetes import KubernetesClient
 from model.secrets_server import (
     SecretsServerConfig,
 )

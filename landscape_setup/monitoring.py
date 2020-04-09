@@ -15,7 +15,7 @@
 
 from ensure import ensure_annotations
 
-from kube.client import KubernetesClient
+from ccc.kubernetes import KubernetesClient
 
 from kubernetes.client import(
     ExtensionsV1beta1Ingress as V1beta1Ingress,

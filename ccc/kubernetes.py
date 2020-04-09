@@ -55,26 +55,26 @@ class KubernetesClient:
     def get_cluster_version_info(self):
         return kubernetes.client.VersionApi(self.api_client).get_code()
 
-    def secret_helper(self) -> 'KubernetesSecretHelper':
+    def secret_helper(self) -> KubernetesSecretHelper:
         return KubernetesSecretHelper(kubernetes.client.CoreV1Api(self.api_client))
 
-    def service_account_helper(self) -> 'KubernetesServiceAccountHelper':
+    def service_account_helper(self) -> KubernetesServiceAccountHelper:
         return KubernetesServiceAccountHelper(kubernetes.client.CoreV1Api(self.api_client))
 
-    def namespace_helper(self) -> 'KubernetesNamespaceHelper':
+    def namespace_helper(self) -> KubernetesNamespaceHelper:
         return KubernetesNamespaceHelper(kubernetes.client.CoreV1Api(self.api_client))
 
-    def service_helper(self) -> 'KubernetesServiceHelper':
+    def service_helper(self) -> KubernetesServiceHelper:
         return KubernetesServiceHelper(kubernetes.client.CoreV1Api(self.api_client))
 
-    def deployment_helper(self) -> 'KubernetesDeploymentHelper':
+    def deployment_helper(self) -> KubernetesDeploymentHelper:
         return KubernetesDeploymentHelper(kubernetes.client.AppsV1Api(self.api_client))
 
-    def ingress_helper(self) -> 'KubernetesIngressHelper':
+    def ingress_helper(self) -> KubernetesIngressHelper:
         return KubernetesIngressHelper(kubernetes.client.ExtensionsV1beta1Api(self.api_client))
 
-    def pod_helper(self) -> 'KubernetesPodHelper':
+    def pod_helper(self) -> KubernetesPodHelper:
         return KubernetesPodHelper(kubernetes.client.CoreV1Api(self.api_client))
 
-    def config_map_helper(self) -> 'KubernetesConfigMapHelper':
+    def config_map_helper(self) -> KubernetesConfigMapHelper:
         return KubernetesConfigMapHelper(kubernetes.client.CoreV1Api(self.api_client))

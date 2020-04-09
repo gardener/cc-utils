@@ -29,7 +29,7 @@ from ci.util import (
     not_none,
     which,
 )
-from kube.client import KubernetesClient
+from ccc.kubernetes import KubernetesClient
 from model.kubernetes import KubernetesConfig
 
 CONCOURSE_HELM_CHART_REPO = "https://concourse-charts.storage.googleapis.com/"

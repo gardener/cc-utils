@@ -28,7 +28,7 @@ import yaml
 import concourse.client as client
 import version
 
-from kube.client import KubernetesClient
+from ccc.kubernetes import KubernetesClient
 
 from landscape_setup.utils import (
     ensure_helm_setup,

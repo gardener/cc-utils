@@ -17,8 +17,6 @@ import os
 
 from ensure import ensure_annotations
 
-from kube.client import KubernetesClient
-
 from landscape_setup.utils import (
     ensure_cluster_version,
     execute_helm_deployment,
