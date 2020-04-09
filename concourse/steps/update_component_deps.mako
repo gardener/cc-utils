@@ -98,53 +98,53 @@ upstream_update_policy = concourse.model.traits.update_component_deps.UpstreamUp
 
 # find components that need to be upgraded
 for reference in product.util.greatest_references(immediate_dependencies.components()):
-    latest_version = determine_reference_version(
+    for latest_version in determine_reference_versions(
       component_name=reference.name(),
       reference_version=reference.version(),
       component_resolver=component_resolver,
       component_descriptor_resolver=component_descriptor_resolver,
       upstream_component_name=upstream_component_name,
       upstream_update_policy=upstream_update_policy,
-    )
-    latest_version_semver = version.parse_to_semver(latest_version)
-    latest_cref = product.model.ComponentReference.create(
-      name=reference.name(),
-      version=latest_version,
-    )
-    print(f'latest_version: {latest_version}, ref: {reference}')
-    if latest_version_semver <= version.parse_to_semver(reference.version()):
-        ci.util.info('skipping outdated component upgrade: {n}; our version: {ov}, found: {fv}'.format(
-          n=reference.name(),
-          ov=str(reference.version()),
-          fv=latest_version,
-          )
+    ):
+        latest_version_semver = version.parse_to_semver(latest_version)
+        latest_cref = product.model.ComponentReference.create(
+          name=reference.name(),
+          version=latest_version,
         )
-        continue
-    elif upgrade_pr_exists(reference=latest_cref, upgrade_requests=upgrade_pull_requests):
-        ci.util.info('skipping upgrade (PR already exists): ' + reference.name())
-        continue
-    else:
-        ci.util.info('creating upgrade PR: {n}->{v}'.format(
-          n=reference.name(),
-          v=latest_version,
-          )
-        )
-        to_ref = product.model.ComponentReference.create(
-            name=reference.name(),
-            version=latest_version,
-        )
-        create_upgrade_pr(
-          from_ref=reference,
-          to_ref=to_ref,
-          pull_request_util=pull_request_util,
-          upgrade_script_path=os.path.join(REPO_ROOT, '${set_dependency_version_script_path}'),
-          githubrepobranch=githubrepobranch,
-          repo_dir=REPO_ROOT,
-          github_cfg_name=github_cfg_name,
-          cfg_factory=cfg_factory,
-          merge_policy=MergePolicy('${update_component_deps_trait.merge_policy().value}'),
+        print(f'latest_version: {latest_version}, ref: {reference}')
+        if latest_version_semver <= version.parse_to_semver(reference.version()):
+            ci.util.info('skipping outdated component upgrade: {n}; our version: {ov}, found: {fv}'.format(
+              n=reference.name(),
+              ov=str(reference.version()),
+              fv=latest_version,
+              )
+            )
+            continue
+        elif upgrade_pr_exists(reference=latest_cref, upgrade_requests=upgrade_pull_requests):
+            ci.util.info('skipping upgrade (PR already exists): ' + reference.name())
+            continue
+        else:
+            ci.util.info('creating upgrade PR: {n}->{v}'.format(
+              n=reference.name(),
+              v=latest_version,
+              )
+            )
+            to_ref = product.model.ComponentReference.create(
+                name=reference.name(),
+                version=latest_version,
+            )
+            create_upgrade_pr(
+              from_ref=reference,
+              to_ref=to_ref,
+              pull_request_util=pull_request_util,
+              upgrade_script_path=os.path.join(REPO_ROOT, '${set_dependency_version_script_path}'),
+              githubrepobranch=githubrepobranch,
+              repo_dir=REPO_ROOT,
+              github_cfg_name=github_cfg_name,
+              cfg_factory=cfg_factory,
+              merge_policy=MergePolicy('${update_component_deps_trait.merge_policy().value}'),
 % if after_merge_callback:
-          after_merge_callback='${after_merge_callback}',
+              after_merge_callback='${after_merge_callback}',
 % endif
-        )
+            )
 </%def>

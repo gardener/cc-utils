@@ -16,6 +16,7 @@
 import os
 import subprocess
 import tempfile
+import typing
 
 import ci.util
 import concourse.model.traits.update_component_deps
@@ -239,7 +240,7 @@ def create_upgrade_pr(
 UpstreamUpdatePolicy = concourse.model.traits.update_component_deps.UpstreamUpdatePolicy
 
 
-def determine_reference_version(
+def determine_reference_versions(
         component_name: str,
         reference_version: str,
         component_resolver: product.util.ComponentResolver,
@@ -248,10 +249,10 @@ def determine_reference_version(
         upstream_update_policy: UpstreamUpdatePolicy=UpstreamUpdatePolicy.STRICTLY_FOLLOW,
         _component: callable=_component, # allow easier mocking (for unittests)
         upstream_reference_component: callable=upstream_reference_component, # allow easier mocking
-) -> str:
+) -> typing.Sequence[str]:
     if upstream_component_name is None:
         # no upstream component defined - look for greatest released version
-        return component_resolver.latest_component_version(component_name)
+        return (component_resolver.latest_component_version(component_name),)
 
     version_candidate = _component(
         upstream_reference_component(
@@ -261,7 +262,7 @@ def determine_reference_version(
         ).dependencies(), component_name).version()
     version_candidate = version.parse_to_semver(version_candidate)
     if upstream_update_policy is UpstreamUpdatePolicy.STRICTLY_FOLLOW:
-        return str(version_candidate)
+        return (str(version_candidate),)
     elif upstream_update_policy is UpstreamUpdatePolicy.ACCEPT_HOTFIXES:
         pass # continue
     else:
@@ -273,7 +274,4 @@ def determine_reference_version(
       reference_version=str(reference_version),
     )
     hotfix_candidate = version.parse_to_semver(hotfix_candidate)
-    if hotfix_candidate > version_candidate:
-      return str(hotfix_candidate)
-    else:
-      return str(version_candidate)
+    return (str(hotfix_candidate), str(version_candidate))

@@ -12,7 +12,7 @@ import test_utils
 from concourse.steps import step_def
 from concourse.steps.update_component_deps import (
     current_product_descriptor,
-    determine_reference_version,
+    determine_reference_versions,
 )
 import concourse.model.traits.update_component_deps as update_component_deps
 import product.util
@@ -68,14 +68,14 @@ def test_current_product_descriptor(tmpdir):
     assert current_product_descriptor().raw == {'components': [], 'component_overwrites': []}
 
 
-def test_determine_reference_version():
+def test_determine_reference_versions():
     greatest_version = '2.1.1'
     component_resolver = product.util.ComponentResolver()
     component_resolver.latest_component_version = MagicMock(return_value=greatest_version)
     component_descriptor_resolver = product.util.ComponentDescriptorResolver()
 
     examinee = functools.partial(
-        determine_reference_version,
+        determine_reference_versions,
         component_name='example.org/foo/bar',
         component_resolver=component_resolver,
         component_descriptor_resolver=component_descriptor_resolver,
@@ -85,11 +85,11 @@ def test_determine_reference_version():
     assert examinee(
             reference_version='2.1.0',
             upstream_component_name=None,
-        ) == greatest_version
+        ) == (greatest_version,)
     assert examinee(
             reference_version='2.2.0', # same result, if our version is already greater
             upstream_component_name=None,
-        ) == greatest_version
+        ) == (greatest_version,)
 
     # tests _with_ upstream component
     def _upstream_ref_comp_mock(*args, **kwargs):
@@ -98,7 +98,7 @@ def test_determine_reference_version():
         return mobject
 
     examinee = functools.partial(
-        determine_reference_version,
+        determine_reference_versions,
         component_name='example.org/foo/bar',
         component_resolver=component_resolver,
         component_descriptor_resolver=component_descriptor_resolver,
@@ -116,13 +116,13 @@ def test_determine_reference_version():
     assert examinee(
         reference_version='1.2.3', # does not matter
         _component=MagicMock(return_value=upstream_comp)
-    ) == upstream_version
+    ) == (upstream_version,)
     # same behaviour if explicitly configured
     assert examinee(
         reference_version='1.2.3', # does not matter
         upstream_update_policy=UUP.STRICTLY_FOLLOW,
         _component=MagicMock(return_value=upstream_comp)
-    ) == upstream_version
+    ) == (upstream_version,)
 
     # if not strictly following, should consider hotfix
 
@@ -134,4 +134,4 @@ def test_determine_reference_version():
         reference_version=semver.parse_version_info('1.2.3'), # does not matter
         upstream_update_policy=UUP.ACCEPT_HOTFIXES,
         _component=MagicMock(return_value=upstream_comp)
-    ) == upstream_version
+    ) == (upstream_version, upstream_version)
