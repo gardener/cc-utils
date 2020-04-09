@@ -15,6 +15,7 @@
 
 import os
 
+import deprecated
 import kubernetes.client
 from kubernetes import config, client
 from kubernetes.config.kube_config import KubeConfigLoader
@@ -32,6 +33,9 @@ from kube.helper import (
 )
 
 
+@deprecated.deprecated(
+    reason='kube.ctx.Ctx was refactored. Please use kube.client.KubernetesClient instead'
+)
 class Ctx(object):
     '''
     handles the execution context of kubernetes-api calls.
