@@ -16,7 +16,6 @@
 import datetime
 import functools
 import logging
-import time
 import traceback
 
 from model.webhook_dispatcher import WebhookDispatcherConfig
@@ -124,11 +123,6 @@ class GithubWebhookDispatcher(object):
                 self._set_pr_labels(pr_event, resources)
 
             self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
-            self._ensure_pr_resource_updates(
-                concourse_api=concourse_api,
-                pr_event=pr_event,
-                resources=resources,
-            )
 
     def _trigger_resource_check(self, concourse_api, resources):
         logger.debug('_trigger_resource_check')
@@ -217,72 +211,6 @@ class GithubWebhookDispatcher(object):
                         continue
 
             yield resource
-
-    def _ensure_pr_resource_updates(
-        self,
-        concourse_api,
-        pr_event,
-        resources,
-        retries=10,
-        sleep_seconds=3,
-    ):
-        time.sleep(sleep_seconds)
-
-        retries -= 1
-        if retries < 0:
-            try:
-                self.log_outdated_resources(resources)
-            # ignore logging errors
-            except BaseException:
-                pass
-            logger.info('giving up triggering PR(s)')
-            return
-
-        def resource_versions(resource):
-            return concourse_api.resource_versions(
-                pipeline_name=resource.pipeline_name(),
-                resource_name=resource.name,
-            )
-
-        def is_up_to_date(resource, resource_versions):
-            # check if pr requires a label to be present
-            require_label = resource.source.get('label')
-            if require_label:
-                if require_label not in pr_event.label_names():
-                    logger.info('skipping PR resource update (required label not present)')
-                    # regardless of whether or not the resource is up-to-date, it would not
-                    # be discovered by concourse's PR resource due to policy
-                    return True
-
-            # assumption: PR resource is up-to-date if our PR-number is listed
-            # XXX hard-code structure of concourse-PR-resource's version dict
-            pr_numbers = map(lambda r: r.version()['pr'], resource_versions)
-
-            return str(pr_event.number()) in pr_numbers
-
-        # filter out all resources that are _not_ up-to-date (we only care about those).
-        # Also keep resources that currently fail to check so that we keep retrying those
-        outdated_resources = [
-            resource for resource in resources
-            if resource.failing_to_check()
-            or not is_up_to_date(resource, resource_versions(resource))
-        ]
-
-        if not outdated_resources:
-            logger.info('no outdated PR resources found')
-            return # nothing to do
-
-        logger.info(f'found {len(outdated_resources)} PR resource(s) that require being updated')
-        self._trigger_resource_check(concourse_api=concourse_api, resources=outdated_resources)
-        logger.info(f'retriggered resource check will try again {retries} more times')
-
-        self._ensure_pr_resource_updates(
-            concourse_api=concourse_api,
-            pr_event=pr_event,
-            resources=outdated_resources,
-            retries=retries,
-            sleep_seconds=sleep_seconds*1.2,
-        )
 
     @functools.lru_cache()
     def els_client(self):
