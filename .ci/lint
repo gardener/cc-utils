@@ -6,6 +6,9 @@ set -e
 
 src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
 
+pip3 uninstall --yes flake8
+pip3 install git+https://github.com/PyCQA/flake8.git
+
 echo 'Running flake8 for all python modules..'
 
 # flake8 / the linter it instruments cannot handle our special type-hints (CliHint)
