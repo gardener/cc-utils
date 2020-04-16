@@ -15,9 +15,8 @@ RUN pip3 install --upgrade \
   gardener-cicd-cli \
   gardener-cicd-whd
 
-# XXX pyflakes does not yet support python3.8's "walrus operator"
-# (https://github.com/PyCQA/pyflakes/pull/457)
-RUN pip3 uninstall --yes pyflakes && pip3 install git+https://github.com/pycqa/pyflakes
+# XXX flake8 does not yet support the greates pyflakes version (required for python3.8)
+RUN pip3 uninstall --yes flake8 && pip3 install git+https://github.com/PyCQA/flake8.git
 
 RUN EFFECTIVE_VERSION="$(cat /metadata/VERSION)" REPO_DIR=/cc/utils \
   /cc/utils/.ci/bump_job_image_version.py
