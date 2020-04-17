@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import requests
 import json
+import os
+import socket
+
+import requests
 
 from ci.util import urljoin
 
@@ -41,6 +43,23 @@ class SecretsServerClient(object):
                 endpoint_url=os.environ.get(endpoint_env_var),
                 concourse_secret_name=os.environ.get(concourse_secret_env_var),
                 cache_file=cache_file
+        )
+
+    @staticmethod
+    def default():
+        # hardcode default endpoint name (usually injected via env (see above))
+        default_secrets_server_hostname = 'secrets-server.concourse.svc.cluster.local'
+        try:
+            socket.getaddrinfo(default_secrets_server_hostname, 80)
+        except socket.gaierror:
+            raise ValueError('secrets-server not accessible (are you running in ci-cluster?)')
+        # also hardcode default url path (usually injected via env)
+        default_secrets_path = 'concourse-secrets/concourse_cfg'
+
+        return SecretsServerClient(
+            endpoint_url=f'http://{default_secrets_server_hostname}',
+            concourse_secret_name=default_secrets_path,
+            cache_file=None,
         )
 
     def __init__(self, endpoint_url, concourse_secret_name, cache_file=None):
