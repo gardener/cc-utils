@@ -122,6 +122,9 @@ class GithubWebhookDispatcher(object):
 
             if pr_event.action() in [PullRequestAction.OPENED, PullRequestAction.SYNCHRONIZE]:
                 self._set_pr_labels(pr_event, resources)
+                # no need to trigger resource here. Subsequent PR webhook with action LABELED
+                # should trigger resource.
+                continue
 
             self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
             self._ensure_pr_resource_updates(
