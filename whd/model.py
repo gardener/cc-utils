@@ -97,7 +97,7 @@ class PullRequestEvent(EventBase):
 
     def label_names(self):
         return [
-            label.get('name') for label in self.raw.get('labels', ())
+            label.get('name') for label in self.raw.get('pull_request').get('labels')
         ]
 
     def sender(self):
