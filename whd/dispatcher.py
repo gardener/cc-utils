@@ -127,11 +127,11 @@ class GithubWebhookDispatcher(object):
                 continue
 
             self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
-            self._ensure_pr_resource_updates(
-                concourse_api=concourse_api,
-                pr_event=pr_event,
-                resources=resources,
-            )
+            #self._ensure_pr_resource_updates(
+            #    concourse_api=concourse_api,
+            #    pr_event=pr_event,
+            #    resources=resources,
+            #)
 
     def _trigger_resource_check(self, concourse_api, resources):
         logger.debug('_trigger_resource_check')
