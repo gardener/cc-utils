@@ -19,9 +19,11 @@ import logging
 import textwrap
 import typing
 
+import requests.exceptions
 import tabulate
 
 import ccc.clamav
+import ci.util
 import mailutil
 import protecode.util
 
@@ -209,23 +211,34 @@ def mail_recipients(
 def virus_scan_images(image_references: typing.Iterable[str], clamav_config_name: str):
     clamav_client = ccc.clamav.client_from_config_name(clamav_config_name)
     for image_reference in image_references:
-        scan_results = [
-            MalwareScanResult(
-                image_reference=image_reference,
-                file_path=path.split(':')[1],
-                finding=scan_result.virus_signature(),
+        try:
+            scan_results = [
+                MalwareScanResult(
+                    image_reference=image_reference,
+                    file_path=path.split(':')[1],
+                    finding=scan_result.virus_signature(),
+                )
+                for scan_result, path in clamav_client.scan_container_image(
+                    image_reference=image_reference
+                )
+            ]
+            if scan_results:
+                yield from scan_results
+            else:
+                yield MalwareScanResult(
+                    image_reference=image_reference,
+                    file_path='-',
+                    finding='No malware detected.',
+                )
+        except requests.exceptions.RequestException as e:
+            ci.util.warning(
+                f'A connection error occurred while scanning the image "{image_reference}" '
+                f'for viruses: {e}'
             )
-            for scan_result, path in clamav_client.scan_container_image(
-                image_reference=image_reference
-            )
-        ]
-        if scan_results:
-            yield from scan_results
-        else:
             yield MalwareScanResult(
                 image_reference=image_reference,
                 file_path='-',
-                finding='No malware detected.',
+                finding=f'A connection error occurred while scanning the image: {e}'
             )
 
 
