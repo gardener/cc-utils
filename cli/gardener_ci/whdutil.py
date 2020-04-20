@@ -16,7 +16,7 @@
 import logging
 
 import ci.util
-ci.util.ctx().configure_default_logging(stdout_level=logging.DEBUG)
+ci.util.ctx().configure_default_logging(stdout_level=logging.INFO)
 
 
 def start_whd(
