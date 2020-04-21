@@ -242,7 +242,7 @@ def is_yaml_file(path):
     return False
 
 
-def load_yaml(stream, *args, **kwargs):
+def load_yaml(stream, lint=False, linter_config=None, *args, **kwargs):
     '''
     Parses YAML from the given stream in a (by default) safe manner. The given stream and any
     *args and **kwargs are passed to `yaml.load`, by default using yaml.SafeLoader.
@@ -252,6 +252,14 @@ def load_yaml(stream, *args, **kwargs):
 
     @raises ValueError if YAML Bomb was (heuristically) detected.
     '''
+    if lint:
+        # redefine stream, as yamllint will read() this, resulting in stream being empty
+        # when parsing later
+        stream = stream.read()
+        linter_config = yamllint.config.YamlLintConfig(yaml.dump(not_none(linter_config)))
+        linting_result = LintingResult(yamllint.linter.run(input=stream, conf=linter_config))
+        _print_linting_findings(linting_result)
+
     if not 'Loader' in kwargs:
         kwargs['Loader'] = yaml.SafeLoader
 
@@ -312,16 +320,20 @@ def lint_yaml_file(path, linter_config: dict={'extends': 'relaxed'}):
     if not linting_result.has_problems():
         return
 
-    for level, problems in linting_result.problems():
-        if level < yamllint.linter.PROBLEM_LEVELS['error']:
-            for p in problems:
-                warning(parse_yaml_file)
-        else:
-            for p in problems:
-                error(p)
+    _print_linting_findings(linting_result)
 
     if linting_result.max_level() >= yamllint.linter.PROBLEM_LEVELS['error']:
         raise LintingError('Found some Errors while linting. See above.')
+
+
+def _print_linting_findings(linting_result: LintingResult):
+    for level, problems in linting_result.problems():
+        if level < yamllint.linter.PROBLEM_LEVELS['error']:
+            for p in problems:
+                warning(p)
+        else:
+            for p in problems:
+                error(p)
 
 
 def _lint_yaml(input, config):
