@@ -10,12 +10,14 @@ def requirements():
             line = line.strip()
             if not line or line.startswith('#'):
                 continue
-            # we only need yaml, yamllint termcolor, urllib
+            # we only need yaml, yamllint termcolor, urllib, elasticsearch
             if not 'yaml' in line:
                 continue
             if not 'termcolor' in line:
                 continue
             if not 'urllib3' in line:
+                continue
+            if not 'elasticsearch' in line:
                 continue
             yield line
 
