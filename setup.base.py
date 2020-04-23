@@ -5,21 +5,14 @@ own_dir = os.path.abspath(os.path.dirname(__file__))
 
 
 def requirements():
+    in_list = ('yaml', 'yamllint', 'termcolor', 'urllib', 'elasticsearch')
     with open(os.path.join(own_dir, 'requirements.txt')) as f:
         for line in f.readlines():
             line = line.strip()
             if not line or line.startswith('#'):
                 continue
-            # we only need yaml, yamllint termcolor, urllib, elasticsearch
-            if not 'yaml' in line:
-                continue
-            if not 'termcolor' in line:
-                continue
-            if not 'urllib3' in line:
-                continue
-            if not 'elasticsearch' in line:
-                continue
-            yield line
+            if any(s in line for s in in_list):
+                yield line
 
 
 def modules():
