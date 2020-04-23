@@ -28,11 +28,8 @@ def upload_and_scan_repo(
     )
     try:
         commit_hash = _guess_commit_from_ref(component=component)
-        print(commit_hash)
-    except github3.exceptions.NotFoundError:
-        print("ref could not be parsed")
-        # TODO: error handling
-        exit(1)
+    except github3.exceptions.NotFoundError as e:
+        raise e
 
     project = dacite.from_dict(
         checkmarx.model.ProjectDetails,
@@ -41,7 +38,9 @@ def upload_and_scan_repo(
 
     last_scans = cx_project.client.get_last_scans_of_project(cx_project.project_id)
     if len(last_scans) > 0:
-        print('No scans found in project history.')
+        print(
+            f'No scans found in project history for component {component.name()}. Uploading sources'
+        )
 
         zipped_sources = cx_project.download_zipped_repo(ref=commit_hash)
         cx_project.upload_zip(file=zipped_sources)
@@ -65,9 +64,10 @@ def upload_and_scan_repo(
         if checkmarx.util.is_scan_necessary(project=project, hash=commit_hash):
             file_handle = cx_project.download_zipped_repo(ref=commit_hash)
             cx_project.upload_zip(file=file_handle)
-            project.set_custom_field(checkmarx.model.CustomFieldKeys.HASH, commit_hash)
 
+            project.set_custom_field(checkmarx.model.CustomFieldKeys.HASH, commit_hash)
             cx_project.client.update_project(project)
+
             scan_id = cx_project.start_scan()
 
     else:
@@ -95,12 +95,10 @@ def _guess_commit_from_ref(component: product.model.Component):
         try:
             return github_repo.ref(commit_ish).object.sha
         except github3.exceptions.NotFoundError:
-            print('exception ref')
             pass
         try:
             return github_repo.commit(commit_ish).sha
         except (github3.exceptions.UnprocessableEntity, github3.exceptions.NotFoundError):
-            print('exception ref')
             return None
 
     # first guess: component version could already be a valid "Gardener-relaxed-semver"
@@ -108,8 +106,6 @@ def _guess_commit_from_ref(component: product.model.Component):
     commit = in_repo(version_str)
     if commit:
         return commit
-
-    logger.debug(f'not in repo: {version_str}')
 
     # second guess: split commit-hash after last `-` character (inject-commit-hash semantics)
     if '-' in (version_str:= str(component.version())):
@@ -125,7 +121,7 @@ def _guess_commit_from_ref(component: product.model.Component):
         pass
 
     # still unknown commit-ish throw error
-    raise github3.exceptions.NotFoundError
+    raise github3.exceptions.NotFoundError(f'ref {version_str} could not be found in repo')
 
 
 def _github_api(component_name: product.model.ComponentName):
@@ -197,7 +193,7 @@ class CheckmarxProject:
         scan_result = self._poll_scan(scan_id=scan_id)
 
         if scan_result.status is not checkmarx.model.ScanStatusValues.FINISHED:
-            # TODO: print reason for scan not finished
+            print(f'scan for component {component.name} failed with state {scan_result.status}')
             raise RuntimeError("Scan did not finish successfully")
 
         statistics = self.scan_statistics(scan_id=scan_result.id)
