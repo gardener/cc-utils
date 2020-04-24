@@ -30,6 +30,7 @@ from landscape_setup.utils import (
 )
 import landscape_setup.clamav as setup_clamav
 import landscape_setup.concourse as setup_concourse
+import landscape_setup.gardenlinux_cache as setup_gardenlinux_cache
 import landscape_setup.monitoring as setup_monitoring
 import landscape_setup.secrets_server as setup_secrets_server
 import landscape_setup.whd as setup_whd
@@ -41,6 +42,7 @@ class LandscapeComponent(enum.Enum):
     WHD = 'webhook_dispatcher'
     MONITORING = 'monitoring'
     CLAMAV = 'clam_av'
+    GARDENLINUX_CACHE = 'gardenlinux_cache'
 
 
 CONFIG_SET_HELP = (
@@ -61,11 +63,16 @@ def deploy_or_upgrade_landscape(
         typehint=str,
         help="directory of webhook dispatcher chart",
     )=None,
+    gardenlinux_cache_chart_dir: CliHint(
+        typehint=str,
+        help="directory of gardenlinux-cache chart",
+    )=None,
     concourse_deployment_name: CliHint(
         typehint=str, help="namespace and deployment name for Concourse"
     )='concourse',
     timeout_seconds: CliHint(typehint=int, help="how long to wait for concourse startup")=180,
     webhook_dispatcher_deployment_name: str='webhook-dispatcher',
+    gardenlinux_cache_deployment_name: str='gardenlinux-cache',
     dry_run: bool=True,
 ):
     '''Deploys the given components of the Concourse landscape.
@@ -82,6 +89,14 @@ def deploy_or_upgrade_landscape(
             )
         else:
             webhook_dispatcher_chart_dir = existing_dir(webhook_dispatcher_chart_dir)
+    if LandscapeComponent.GARDENLINUX_CACHE in components:
+        if not gardenlinux_cache_chart_dir:
+            raise ValueError(
+                f"--gardenlinux--cache--chart--dir must be given if component "
+                f"'{LandscapeComponent.GARDENLINUX_CACHE.value}' is to be deployed."
+            )
+        else:
+            gardenlinux_cache_chart_dir = existing_dir(gardenlinux_cache_chart_dir)
 
     _display_info(
         dry_run=dry_run,
@@ -135,6 +150,14 @@ def deploy_or_upgrade_landscape(
         info ('Deploying ClamAV')
         deploy_or_upgrade_clamav(
             config_set_name=config_set_name,
+        )
+
+    if LandscapeComponent.GARDENLINUX_CACHE in components:
+        info ('Deploying Gardenlinux Cache')
+        deploy_or_upgrade_gardenlinux_cache(
+            config_set_name=config_set_name,
+            chart_dir=gardenlinux_cache_chart_dir,
+            deployment_name=gardenlinux_cache_deployment_name,
         )
 
 
@@ -249,3 +272,24 @@ def deploy_or_upgrade_clamav(
             f"No ClamAV configured for the Concourse in config set '{config_set_name}'. Will "
             "not deploy ClamAV."
         )
+
+
+def deploy_or_upgrade_gardenlinux_cache(
+    config_set_name: CliHint(typehint=str, help=CONFIG_SET_HELP),
+    chart_dir: CliHints.existing_dir(help="directory of gardenlinux-cache chart"),
+    deployment_name: str='gardenlinux-cache',
+):
+    chart_dir = os.path.abspath(chart_dir)
+
+    cfg_factory = ctx().cfg_factory()
+    cfg_set = cfg_factory.cfg_set(config_set_name)
+    concourse_cfg = cfg_set.concourse()
+    kubernetes_cfg = cfg_factory.kubernetes(concourse_cfg.kubernetes_cluster_config())
+    gardenlinux_cache_cfg = cfg_set.gardenlinux_cache()
+
+    setup_gardenlinux_cache.deploy_gardenlinux_cache(
+        gardenlinux_cache_config=gardenlinux_cache_cfg,
+        kubernetes_config=kubernetes_cfg,
+        chart_dir=chart_dir,
+        deployment_name=deployment_name,
+    )
