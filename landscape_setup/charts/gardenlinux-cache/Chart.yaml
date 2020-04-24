@@ -1,0 +1,5 @@
+apiVersion: v2
+name: gardenlinux-cache
+version: 0.1.0
+appVersion: 0.1.0
+home: https://github.wdf.sap.corp/kubernetes/gardenlinux-debian-snapshot-cache
