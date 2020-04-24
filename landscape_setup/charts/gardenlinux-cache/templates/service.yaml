@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.serviceName }}
+  labels:
+    app: debian-snapshot-cache
+spec:
+  type: ClusterIP
+  ports:
+  - port: {{ .Values.servicePort }}
+    targetPort: 80
+    name: default
+  selector:
+    app: debian-snapshot-cache

@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: debian-snapshot-cache
+spec:
+  serviceName: {{ .Values.serviceName }}
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: debian-snapshot-cache
+  template:
+    metadata:
+      labels:
+        app: debian-snapshot-cache
+        revision: {{ quote .Release.Revision }} # used to ensure that pods are rolled
+    spec:
+      containers:
+        - image: {{ .Values.imageReference }}:{{ .Values.imageTag }}
+          imagePullPolicy: IfNotPresent
+          name: snapshot-cache
+          ports:
+            - containerPort: 80
+              name: default
+          volumeMounts:
+          - name: cache-dir
+            mountPath: /cache
+  volumeClaimTemplates:
+  - metadata:
+      name: cache-dir
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: "default"
+      resources:
+        requests:
+          storage: {{ quote .Values.volumeSize }}
