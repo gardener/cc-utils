@@ -9,7 +9,7 @@ metadata:
     cert.gardener.cloud/purpose: managed
     dns.gardener.cloud/class: garden
     dns.gardener.cloud/dnsnames: {{ .Values.ingress_host }}
-    dns.gardener.cloud/ttl: "{{ .Values.ingress_ttl }}"
+    dns.gardener.cloud/ttl: {{ quote .Values.ingress_ttl }}
 spec:
   rules:
   - host: {{ .Values.ingress_host }}
