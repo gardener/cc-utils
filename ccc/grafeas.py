@@ -79,7 +79,7 @@ def scan_available(
     filter_str = f'resourceUrl = "https://{hash_reference}" AND kind="DISCOVERY"'
     try:
         results = list(client.list_occurrences(f'projects/{project_name}', filter_=filter_str))
-        if (r_count:= len(results)) == 0:
+        if (r_count := len(results)) == 0:
             ci.util.warning(f'found no discovery-info for {image_reference}')
             return False
         elif r_count > 1:
