@@ -12,7 +12,7 @@ deepmerge
 deprecated<2.0.0
 elasticsearch<8.0.0
 ensure<1.0.0
-flake8<4.0.0
+flake8>=3.8.0a2
 github3.py<2.0.0
 google-cloud-containeranalysis
 html2text
