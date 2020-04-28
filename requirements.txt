@@ -10,6 +10,7 @@ dacite
 dataclasses-json
 deepmerge
 deprecated<2.0.0
+docutils<0.16.0
 elasticsearch<8.0.0
 ensure<1.0.0
 flake8>=3.8.0a2
