@@ -19,7 +19,17 @@ import logging
 import time
 import traceback
 
+import ccc.elasticsearch
+import ccc.secrets_server
+import ci.util
+import concourse.client
+
+from .pipelines import update_repository_pipelines
+from concourse.enumerator import JobMappingNotFoundError
+from github.util import GitHubRepositoryHelper
+from model import ConfigFactory
 from model.webhook_dispatcher import WebhookDispatcherConfig
+
 from .model import (
     PushEvent,
     PullRequestEvent,
@@ -27,12 +37,6 @@ from .model import (
     RefType,
 )
 
-from github.util import GitHubRepositoryHelper
-
-from .pipelines import update_repository_pipelines
-import ccc
-import ci.util
-import concourse.client
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -84,11 +88,28 @@ class GithubWebhookDispatcher(object):
 
     def _update_pipeline_definition(self, push_event):
         try:
-            update_repository_pipelines(
-                repo_url=push_event.repository().repository_url(),
-                cfg_set=self.cfg_set,
-                whd_cfg=self.whd_cfg,
-            )
+            try:
+                update_repository_pipelines(
+                    repo_url=push_event.repository().repository_url(),
+                    cfg_set=self.cfg_set,
+                    whd_cfg=self.whd_cfg,
+                )
+            except JobMappingNotFoundError as je:
+                # No JobMapping for the given repository was present. Print warning, reload and try
+                # again
+                logger.warning(
+                    f'failed to update pipeline definition: {je}. Will reload config and try again.'
+                )
+                # Attempt to fetch latest cfg from SS and replace it
+                raw_dict = ccc.secrets_server.SecretsServerClient.default().retrieve_secrets()
+                factory = ConfigFactory.from_dict(raw_dict)
+                self.cfg_set = factory.cfg_set(self.cfg_set.name())
+                # retry
+                update_repository_pipelines(
+                    repo_url=push_event.repository().repository_url(),
+                    cfg_set=self.cfg_set,
+                    whd_cfg=self.whd_cfg,
+                )
         except BaseException as be:
             logger.warning(f'failed to update pipeline definition - ignored {be}')
             import traceback
