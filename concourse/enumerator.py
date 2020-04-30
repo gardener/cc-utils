@@ -38,6 +38,12 @@ from concourse.factory import RawPipelineDefinitionDescriptor
 import ccc.github
 
 
+class JobMappingNotFoundError(ValueError):
+    ''' Signals that no JobMapping was found for a GitHub repository when processing.
+    '''
+    pass
+
+
 class DefinitionDescriptorPreprocessor(object):
     def process_definition_descriptor(self, descriptor):
         self._add_branch_to_pipeline_name(descriptor)
@@ -282,7 +288,7 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
                     self.job_mapping = job_mapping
                     return
         else:
-            ValueError(f'could not find matching job-mapping for org {org}')
+            raise JobMappingNotFoundError(f'could not find matching job-mapping for org {org}')
 
     def enumerate_definition_descriptors(self):
         github_cfg = ccc.github.github_cfg_for_hostname(
