@@ -155,8 +155,8 @@ def _secrets_server_client():
     except ValueError as ve:
         exception = ve
 
-    # one last try: use hardcoded default client (will only work if runnin in
-    # CI-cluster
+    # one last try: use hardcoded default client (will only work if running in
+    # CI-cluster)
     try:
         return ccc.secrets_server.SecretsServerClient.default()
     except ValueError:

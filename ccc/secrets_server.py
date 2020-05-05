@@ -22,7 +22,7 @@ import requests
 from ci.util import urljoin
 
 
-class SecretsServerClient(object):
+class SecretsServerClient:
     @staticmethod
     def from_env(
         endpoint_env_var='SECRETS_SERVER_ENDPOINT',
