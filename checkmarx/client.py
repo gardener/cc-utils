@@ -169,7 +169,6 @@ class CheckmarxClient:
                 'customFields': [dataclasses.asdict(cf) for cf in project_details.customFields],
             },
         )
-        print('successfully updated project')
         return res
 
     def start_scan(self, scan_settings: checkmarx.model.ScanSettings):

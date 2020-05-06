@@ -287,7 +287,7 @@ class CheckmarxProject:
         scan_settings = checkmarx.model.ScanSettings(projectId=self.project_id)
         return self.client.start_scan(scan_settings)
 
-    def _poll_scan(self, scan_id: int, polling_interval_seconds=15):
+    def _poll_scan(self, scan_id: int, polling_interval_seconds=60):
         def scan_finished():
             scan = self.client.get_scan_state(scan_id=scan_id)
             print(f'polling for scan result. state: {scan.status.name}')
