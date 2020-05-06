@@ -39,11 +39,16 @@ def upload_and_scan_repo(
     last_scans = cx_project.client.get_last_scans_of_project(cx_project.project_id)
     if len(last_scans) > 0:
         print(
-            f'No scans found in project history for component {component.name()}. Uploading sources'
+            f'No scans found in project history for component {component.name()}'
         )
-
-        zipped_sources = cx_project.download_zipped_repo(ref=commit_hash)
-        cx_project.upload_zip(file=zipped_sources)
+        with tempfile.TemporaryFile() as tmp_file:
+            logger.info(f'downloading sources for component {component.name()}.')
+            cx_project.download_zipped_repo(
+                tmp_file=tmp_file,
+                ref=commit_hash,
+            )
+            logger.info(f'uploading sources for component {component.name()}')
+            cx_project.upload_zip(file=tmp_file)
 
         project.set_custom_field(checkmarx.model.CustomFieldKeys.HASH, commit_hash)
 
@@ -62,8 +67,14 @@ def upload_and_scan_repo(
         print(f'No active scan found for component {component.name()}. Checking for hash')
 
         if checkmarx.util.is_scan_necessary(project=project, hash=commit_hash):
-            file_handle = cx_project.download_zipped_repo(ref=commit_hash)
-            cx_project.upload_zip(file=file_handle)
+            logger.info(f'downloading repo for component {component.name()}')
+            with tempfile.TemporaryFile() as tmp_file:
+                cx_project.download_zipped_repo(
+                    tmp_file=tmp_file,
+                    ref=commit_hash,
+                )
+                logger.info(f'uploading sources for component {component.name()}')
+                cx_project.upload_zip(file=tmp_file)
 
             project.set_custom_field(checkmarx.model.CustomFieldKeys.HASH, commit_hash)
             cx_project.client.update_project(project)
@@ -204,7 +215,7 @@ class CheckmarxProject:
             scan_statistic=statistics,
         )
 
-    def download_zipped_repo(self, ref: str):
+    def download_zipped_repo(self, tmp_file, ref: str):
         repo = self.github_api.repository(
             self.component_name.github_organisation(),
             self.component_name.github_repo()
@@ -217,14 +228,11 @@ class CheckmarxProject:
                 f'request to download github zip archive from {url=}'
                 f' failed with {res.status_code=} {res.reason=}')
 
-        with tempfile.TemporaryFile() as tmp_file:
-            for chunk in res.iter_content(chunk_size=512):
-                tmp_file.write(chunk)
+        for chunk in res.iter_content(chunk_size=512):
+            tmp_file.write(chunk)
 
-            tmp_file.flush()
-            tmp_file.seek(0)
-
-            return tmp_file
+        tmp_file.flush()
+        tmp_file.seek(0)
 
     def upload_zip(self, file):
         self.client.upload_zipped_source_code(self.project_id, file)

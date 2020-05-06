@@ -192,8 +192,10 @@ class CheckmarxClient:
             },
             api_version='application/json;v=1.0',
         )
-
-        return from_dict(data_class=checkmarx.model.ScanResponses, data=res.json())
+        return [
+            from_dict(data_class=checkmarx.model.ScanResponse, data=resp)
+            for resp in res.json()
+        ]
 
     def get_scan_state(self, scan_id: int):
         res = self.request(

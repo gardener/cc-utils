@@ -87,11 +87,6 @@ class ScanResponse:
 
 
 @dataclasses.dataclass
-class ScanResponses:
-    scans: typing.List[ScanResponse] = dataclasses.field(default_factory=list)
-
-
-@dataclasses.dataclass
 class ScanStatistic:
     highSeverity: int
     mediumSeverity: int
