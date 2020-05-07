@@ -204,8 +204,8 @@ class CheckmarxProject:
         scan_result = self._poll_scan(scan_id=scan_id)
 
         if scan_result.status is not checkmarx.model.ScanStatusValues.FINISHED:
-            print(f'scan for component {component.name} failed with state {scan_result.status}')
-            raise RuntimeError("Scan did not finish successfully")
+            print(f'scan for {component.name=} failed with {scan_result.status=}')
+            raise RuntimeError('Scan did not finish successfully')
 
         statistics = self.scan_statistics(scan_id=scan_result.id)
 
@@ -226,7 +226,8 @@ class CheckmarxProject:
         if not res.ok:
             raise RuntimeError(
                 f'request to download github zip archive from {url=}'
-                f' failed with {res.status_code=} {res.reason=}')
+                f' failed with {res.status_code=} {res.reason=}'
+            )
 
         for chunk in res.iter_content(chunk_size=512):
             tmp_file.write(chunk)
@@ -290,7 +291,7 @@ class CheckmarxProject:
     def _poll_scan(self, scan_id: int, polling_interval_seconds=60):
         def scan_finished():
             scan = self.client.get_scan_state(scan_id=scan_id)
-            print(f'polling for scan result. state: {scan.status.name}')
+            print(f'{self.component_name.name()}: polling for {scan_id=}. {scan.status.name=}')
             if checkmarx.util.is_scan_finished(scan):
                 return scan
             return False
