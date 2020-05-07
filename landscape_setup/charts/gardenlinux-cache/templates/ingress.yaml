@@ -10,6 +10,7 @@ metadata:
     dns.gardener.cloud/class: garden
     dns.gardener.cloud/dnsnames: {{ .Values.ingress_host }}
     dns.gardener.cloud/ttl: {{ quote .Values.ingress_ttl }}
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
   rules:
   - host: {{ .Values.ingress_host }}
