@@ -203,8 +203,8 @@ class CheckmarxProject:
     def poll_and_retrieve_scan(self, scan_id: int, component: product.model.Component):
         scan_result = self._poll_scan(scan_id=scan_id)
 
-        if scan_result.status is not checkmarx.model.ScanStatusValues.FINISHED:
-            print(f'scan for {component.name=} failed with {scan_result.status=}')
+        if scan_result.status_value() is not checkmarx.model.ScanStatusValues.FINISHED:
+            print(f'scan for {component.name()} failed with {scan_result.status=}')
             raise RuntimeError('Scan did not finish successfully')
 
         statistics = self.scan_statistics(scan_id=scan_result.id)

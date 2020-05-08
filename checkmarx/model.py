@@ -85,6 +85,9 @@ class ScanResponse:
     isIncremental: bool
     owningTeamId: str
 
+    def status_value(self):
+        return ScanStatusValues(selt.status.id)
+
 
 @dataclasses.dataclass
 class ScanStatistic:
