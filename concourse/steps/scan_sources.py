@@ -1,5 +1,6 @@
 import concurrent.futures
 import functools
+import traceback
 
 import ci.util
 import checkmarx.project
@@ -27,13 +28,22 @@ def scan_sources(
             team_id=team_id,
     )
 
-    scan_results = []
-    try:
-        for scan_result in executor.map(scan_func, component_descriptor.components()):
-            scan_results.append(scan_result)
+    failed_sentinel = object()
 
-        checkmarx.util.print_scan_result(scan_results=scan_results)
-    except:
-        # at least print what we have so far
-        checkmarx.util.print_scan_result(scan_results=scan_results)
-        raise
+    def try_scanning(component):
+        try:
+            return scan_func(component)
+        except:
+            traceback.print_exc()
+            return failed_sentinel
+
+    scan_results = []
+    for scan_result in executor.map(scan_func, component_descriptor.components()):
+        if scan_result is failed_sentinel:
+            print('XXX scan failed (will not show in table)')
+            continue
+
+        scan_results.append(scan_result)
+
+    # XXX raise if an error occurred?
+    checkmarx.util.print_scan_result(scan_results=scan_results)
