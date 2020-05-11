@@ -17,6 +17,10 @@ import version
 logger = logging.getLogger(__name__)
 
 
+class RefGuessingFailedError(Exception):
+    pass
+
+
 @functools.lru_cache
 def component_logger(component):
     return logging.getLogger(component.name())
@@ -35,7 +39,7 @@ def upload_and_scan_repo(
     try:
         commit_hash = _guess_commit_from_ref(component=component)
     except github3.exceptions.NotFoundError as e:
-        raise e
+        raise RefGuessingFailedError(e)
 
     project = dacite.from_dict(
         checkmarx.model.ProjectDetails,
@@ -121,24 +125,11 @@ def _guess_commit_from_ref(component: product.model.Component):
             return github_repo.ref(commit_ish).object.sha
         except github3.exceptions.NotFoundError:
             pass
-        except AttributeError as ae:
-            # XXX bug in github3.py (AttributeError: 'str' object has no attribute 'status_code')
-            if ae.args and (err_str := ae.args[0]):
-                if "'str' object has no attribute 'status_code'" in err_str:
-                    clogger.info('worked around github3-bug (AttributeError) - ignored')
-                    return None
 
         try:
             return github_repo.commit(commit_ish).sha
         except (github3.exceptions.UnprocessableEntity, github3.exceptions.NotFoundError):
             return None
-        except AttributeError as ae:
-            # XXX bug in github3.py (AttributeError: 'str' object has no attribute 'status_code')
-            if ae.args and (err_str := ae.args[0]):
-                if "'str' object has no attribute 'status_code'" in err_str:
-                    clogger.info('worked around github3-bug (AttributeError) - ignored')
-                    return None
-            raise ae
 
     # first guess: component version could already be a valid "Gardener-relaxed-semver"
     version_str = str(version.parse_to_semver(component))
@@ -160,7 +151,7 @@ def _guess_commit_from_ref(component: product.model.Component):
         pass
 
     # still unknown commit-ish throw error
-    raise github3.exceptions.NotFoundError(f'ref {version_str} could not be found in repo')
+    raise RefGuessingFailedError(f'failed to guess on ref for {component.name=}')
 
 
 def _github_api(component_name: product.model.ComponentName):
