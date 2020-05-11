@@ -51,6 +51,7 @@ def upload_and_scan_repo(
             cx_project.upload_zip(file=tmp_file)
 
         project.set_custom_field(checkmarx.model.CustomFieldKeys.HASH, commit_hash)
+        project.set_custom_field(checkmarx.model.CustomFieldKeys.COMPONENT_NAME, component.name())
 
         cx_project.client.update_project(project)
         scan_id = cx_project.start_scan()
@@ -77,6 +78,10 @@ def upload_and_scan_repo(
                 cx_project.upload_zip(file=tmp_file)
 
             project.set_custom_field(checkmarx.model.CustomFieldKeys.HASH, commit_hash)
+            project.set_custom_field(
+                checkmarx.model.CustomFieldKeys.COMPONENT_NAME,
+                component.name()
+            )
             cx_project.client.update_project(project)
 
             scan_id = cx_project.start_scan()
