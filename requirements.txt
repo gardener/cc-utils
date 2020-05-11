@@ -6,7 +6,7 @@ bcrypt<4.0.0
 boto3
 cachecontrol<1
 containerregistry-ccwienk==0.2.5
-dacite
+dacite==1.4.0 # bug in 1.5.0
 dataclasses-json
 deepmerge
 deprecated<2.0.0
