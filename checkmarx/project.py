@@ -112,6 +112,16 @@ def _guess_commit_from_ref(component: product.model.Component):
             return github_repo.ref(commit_ish).object.sha
         except github3.exceptions.NotFoundError:
             pass
+        except AttributeError as ae:
+            # XXX bug in github3.py (AttributeError: 'str' object has no attribute 'status_code')
+            if ae.args and (err_str := ae.args[0]):
+                if "'str' object has no attribute 'status_code'" in err_str:
+                    print('worked around github3-bug (AttributeError) - ignored')
+                else:
+                    raise ae
+            else:
+                raise ae
+
         try:
             return github_repo.commit(commit_ish).sha
         except (github3.exceptions.UnprocessableEntity, github3.exceptions.NotFoundError):
