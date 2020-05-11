@@ -126,15 +126,19 @@ def _guess_commit_from_ref(component: product.model.Component):
             if ae.args and (err_str := ae.args[0]):
                 if "'str' object has no attribute 'status_code'" in err_str:
                     clogger.info('worked around github3-bug (AttributeError) - ignored')
-                else:
-                    raise ae
-            else:
-                raise ae
+                    return None
 
         try:
             return github_repo.commit(commit_ish).sha
         except (github3.exceptions.UnprocessableEntity, github3.exceptions.NotFoundError):
             return None
+        except AttributeError as ae:
+            # XXX bug in github3.py (AttributeError: 'str' object has no attribute 'status_code')
+            if ae.args and (err_str := ae.args[0]):
+                if "'str' object has no attribute 'status_code'" in err_str:
+                    clogger.info('worked around github3-bug (AttributeError) - ignored')
+                    return None
+            raise ae
 
     # first guess: component version could already be a valid "Gardener-relaxed-semver"
     version_str = str(version.parse_to_semver(component))
