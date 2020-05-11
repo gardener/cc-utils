@@ -83,7 +83,7 @@ class ScanResponse:
     status: ScanStatus
     isIncremental: bool
     owningTeamId: str
-    dateAndTime: ScanDateAndTime = None
+    dateAndTime: typing.Optional[ScanDateAndTime] = None
 
     def status_value(self):
         return ScanStatusValues(self.status.id)
