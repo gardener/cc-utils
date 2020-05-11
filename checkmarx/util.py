@@ -46,13 +46,18 @@ def scan_result_tables(
     tablefmt: str = 'simple'
 ):
     scan_info_header = ('ScanId', 'ComponentName', 'ScanState', 'Start', 'End')
+    started_on = scan_result.scan_result.dateAndTime.startedOn if \
+            scan_result.scan_result else 'unknown'
+    ended_on = scan_result.scan_result.dateAndTime.finishedOn if \
+            scan_result.scan_result else 'unknown'
+
     scan_info_data = (
         (
             scan_result.scan_result.id,
             scan_result.component.name(),
             scan_result.scan_result.status.name,
-            scan_result.scan_result.dateAndTime.startedOn,
-            scan_result.scan_result.dateAndTime.finishedOn,
+            started_on,
+            ended_on,
          ) for scan_result in scan_results
     )
 

@@ -81,9 +81,9 @@ class ScanResponse:
     scanRisk: int
     scanRiskSeverity: int
     status: ScanStatus
-    dateAndTime: ScanDateAndTime
     isIncremental: bool
     owningTeamId: str
+    dateAndTime: ScanDateAndTime = None
 
     def status_value(self):
         return ScanStatusValues(self.status.id)
