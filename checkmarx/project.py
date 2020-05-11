@@ -49,7 +49,8 @@ def upload_and_scan_repo(
     clogger = component_logger(component=component)
 
     last_scans = cx_project.client.get_last_scans_of_project(cx_project.project_id)
-    if len(last_scans) > 0:
+
+    if len(last_scans) < 1:
         clogger.info('No scans found in project history')
         with tempfile.TemporaryFile() as tmp_file:
             clogger.info('downloading sources for component.')
