@@ -48,7 +48,7 @@ def scan_sources(
     print(f'will scan {components_count} component(s)')
 
     scan_results = []
-    for scan_result in executor.map(scan_func, component_descriptor.components()):
+    for scan_result in executor.map(try_scanning, component_descriptor.components()):
         if scan_result is failed_sentinel:
             print('XXX scan failed (will not show in table)')
             continue
