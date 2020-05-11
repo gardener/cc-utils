@@ -26,6 +26,7 @@ def is_scan_finished(scan: checkmarx.model.ScanResponse):
 def is_scan_necessary(project: checkmarx.model.ProjectDetails, hash: str):
     remote_hash = project.get_custom_field(checkmarx.model.CustomFieldKeys.HASH)
     if remote_hash != hash:
+        print(f'{remote_hash=} != {hash=} - scan required')
         return True
     else:
         return False
