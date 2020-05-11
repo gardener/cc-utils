@@ -28,12 +28,14 @@ from landscape_setup.utils import (
     ensure_cluster_version,
     ensure_helm_setup,
 )
-import landscape_setup.clamav as setup_clamav
-import landscape_setup.concourse as setup_concourse
-import landscape_setup.gardenlinux_cache as setup_gardenlinux_cache
-import landscape_setup.monitoring as setup_monitoring
-import landscape_setup.secrets_server as setup_secrets_server
-import landscape_setup.whd as setup_whd
+from landscape_setup import (
+    clamav as setup_clamav,
+    concourse as setup_concourse,
+    gardenlinux_cache as setup_gardenlinux_cache,
+    monitoring as setup_monitoring,
+    secrets_server as setup_secrets_server,
+    whd as setup_whd,
+)
 
 
 class LandscapeComponent(enum.Enum):
