@@ -34,12 +34,9 @@ def scan_sources(
     components_count = len(tuple(component_descriptor.components()))
 
     def try_scanning(component):
-        global successful_count
         try:
             result = scan_func(component)
-            successful_count += 1
             print(f'{component.name()=} {result=}')
-            print(f'progress so far: {successful_count=} / {components_count=}')
             return result
         except:
             traceback.print_exc()
@@ -52,6 +49,8 @@ def scan_sources(
         if scan_result is failed_sentinel:
             print('XXX scan failed (will not show in table)')
             continue
+
+        successful_count += 1
 
         scan_results.append(scan_result)
 
