@@ -30,12 +30,22 @@ def scan_sources(
 
     failed_sentinel = object()
 
+    successful_count = 0
+    components_count = len(tuple(component_descriptor.components()))
+
     def try_scanning(component):
+        global successful_count
         try:
-            return scan_func(component)
+            result = scan_func(component)
+            successful_count += 1
+            print(f'{component.name()=} {result=}')
+            print(f'progress so far: {successful_count=} / {components_count=}')
+            return result
         except:
             traceback.print_exc()
             return failed_sentinel
+
+    print(f'will scan {components_count} component(s)')
 
     scan_results = []
     for scan_result in executor.map(scan_func, component_descriptor.components()):
@@ -47,3 +57,5 @@ def scan_sources(
 
     # XXX raise if an error occurred?
     checkmarx.util.print_scan_result(scan_results=scan_results)
+
+    print(f'{successful_count=} / {components_count=}')
