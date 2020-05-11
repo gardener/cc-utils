@@ -137,6 +137,9 @@ def _guess_commit_from_ref(component: product.model.Component):
     commit = in_repo(version_str)
     if commit:
         return commit
+    # also try unmodified version-str
+    if (commit := in_repo(component.version())):
+        return commit
 
     # second guess: split commit-hash after last `-` character (inject-commit-hash semantics)
     if '-' in (version_str := str(component.version())):
@@ -152,7 +155,9 @@ def _guess_commit_from_ref(component: product.model.Component):
         pass
 
     # still unknown commit-ish throw error
-    raise RefGuessingFailedError(f'failed to guess on ref for {component.name=}')
+    raise RefGuessingFailedError(
+        f'failed to guess on ref for {component.name()=}{component.version()=}'
+    )
 
 
 def _github_api(component_name: product.model.ComponentName):
