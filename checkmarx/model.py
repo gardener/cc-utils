@@ -86,7 +86,7 @@ class ScanResponse:
     owningTeamId: str
 
     def status_value(self):
-        return ScanStatusValues(selt.status.id)
+        return ScanStatusValues(self.status.id)
 
 
 @dataclasses.dataclass
