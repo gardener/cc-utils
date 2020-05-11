@@ -16,7 +16,8 @@ def create_checkmarx_client(checkmarx_cfg_name: str):
 def is_scan_finished(scan: checkmarx.model.ScanResponse):
     if checkmarx.model.ScanStatusValues(scan.status.id) in (
             checkmarx.model.ScanStatusValues.FINISHED,
-            checkmarx.model.ScanStatusValues.FAILED
+            checkmarx.model.ScanStatusValues.FAILED,
+            checkmarx.model.ScanStatusValues.CANCELED,
     ):
         return True
     else:
