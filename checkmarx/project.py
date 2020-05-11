@@ -76,7 +76,7 @@ def upload_and_scan_repo(
     scan_id = last_scan.id
 
     if checkmarx.util.is_scan_finished(last_scan):
-        clogger('No active scan found for component. Checking for hash')
+        clogger.info('No active scan found for component. Checking for hash')
 
         if checkmarx.util.is_scan_necessary(project=project, hash=commit_hash):
             clogger.info('downloading repo')
