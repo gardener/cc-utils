@@ -1,3 +1,4 @@
+import functools
 import hashlib
 import logging
 import tempfile
@@ -14,6 +15,11 @@ import checkmarx.util
 import version
 
 logger = logging.getLogger(__name__)
+
+
+@functools.lru_cache
+def component_logger(component):
+    return logging.getLogger(component.name())
 
 
 def upload_and_scan_repo(
@@ -36,18 +42,18 @@ def upload_and_scan_repo(
         cx_project.client.get_project_by_id(cx_project.project_id).json()
     )
 
+    clogger = component_logger(component=component)
+
     last_scans = cx_project.client.get_last_scans_of_project(cx_project.project_id)
     if len(last_scans) > 0:
-        print(
-            f'No scans found in project history for component {component.name()}'
-        )
+        clogger.info('No scans found in project history')
         with tempfile.TemporaryFile() as tmp_file:
-            logger.info(f'downloading sources for component {component.name()}.')
+            clogger.info('downloading sources for component.')
             cx_project.download_zipped_repo(
                 tmp_file=tmp_file,
                 ref=commit_hash,
             )
-            logger.info(f'uploading sources for component {component.name()}')
+            clogger.info('uploading sources for component')
             cx_project.upload_zip(file=tmp_file)
 
         project.set_custom_field(checkmarx.model.CustomFieldKeys.HASH, commit_hash)
@@ -65,16 +71,16 @@ def upload_and_scan_repo(
     scan_id = last_scan.id
 
     if checkmarx.util.is_scan_finished(last_scan):
-        print(f'No active scan found for component {component.name()}. Checking for hash')
+        clogger('No active scan found for component. Checking for hash')
 
         if checkmarx.util.is_scan_necessary(project=project, hash=commit_hash):
-            logger.info(f'downloading repo for component {component.name()}')
+            clogger.info('downloading repo')
             with tempfile.TemporaryFile() as tmp_file:
                 cx_project.download_zipped_repo(
                     tmp_file=tmp_file,
                     ref=commit_hash,
                 )
-                logger.info(f'uploading sources for component {component.name()}')
+                clogger.info('uploading sources')
                 cx_project.upload_zip(file=tmp_file)
 
             project.set_custom_field(checkmarx.model.CustomFieldKeys.HASH, commit_hash)
@@ -87,8 +93,9 @@ def upload_and_scan_repo(
             scan_id = cx_project.start_scan()
 
     else:
-        print(f'scan with id: {last_scan.id} for component {component.name()} '
-              f'already running. Polling last scan.')
+        clogger.info(f'scan with id: {last_scan.id} for component {component.name()} '
+              'already running. Polling last scan.'
+        )
 
     return cx_project.poll_and_retrieve_scan(
         scan_id=scan_id,
@@ -106,8 +113,10 @@ def _guess_commit_from_ref(component: product.model.Component):
         component.github_repo(),
     )
 
+    clogger = component_logger(component=component)
+
     def in_repo(commit_ish):
-        print(f"commit-ish {commit_ish}")
+        clogger.info(f"commit-ish {commit_ish}")
         try:
             return github_repo.ref(commit_ish).object.sha
         except github3.exceptions.NotFoundError:
@@ -116,7 +125,7 @@ def _guess_commit_from_ref(component: product.model.Component):
             # XXX bug in github3.py (AttributeError: 'str' object has no attribute 'status_code')
             if ae.args and (err_str := ae.args[0]):
                 if "'str' object has no attribute 'status_code'" in err_str:
-                    print('worked around github3-bug (AttributeError) - ignored')
+                    clogger.info('worked around github3-bug (AttributeError) - ignored')
                 else:
                     raise ae
             else:
