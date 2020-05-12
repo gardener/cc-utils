@@ -189,6 +189,22 @@ class ConcourseApiBase(object):
         return builds
 
     @ensure_annotations
+    def previous_build(self, pipeline_name: str, job_name: str, build_id: int):
+        '''Iterates over the 20 most recent builds and returns the predecessor of the one with
+        the given build id, or `None` if the predecessor could not be determined.
+        '''
+        builds = self.job_builds(pipeline_name, job_name)
+
+        subsequent_build_encountered = False
+        for build in builds[:20]:
+            if subsequent_build_encountered:
+                return build
+            if build.id() == build_id:
+                subsequent_build_encountered = True
+        else:
+            return None
+
+    @ensure_annotations
     def job_build(self, pipeline_name: str, job_name: str, build_name: str):
         build_url = self.routes.job_build(pipeline_name, job_name, build_name)
         response = self._get(build_url)
