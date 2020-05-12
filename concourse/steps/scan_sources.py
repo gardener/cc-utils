@@ -30,15 +30,21 @@ def scan_sources(
 
     failed_sentinel = object()
 
-    successful_count = 0
+    success_count = 0
+    failed_count = 0
     components_count = len(tuple(component_descriptor.components()))
 
     def try_scanning(component):
+        nonlocal failed_count
+        nonlocal success_count
+
         try:
             result = scan_func(component)
+            success_count += 1
             print(f'{component.name()=} {result=}')
             return result
         except:
+            failed_count += 1
             traceback.print_exc()
             return failed_sentinel
 
@@ -47,14 +53,11 @@ def scan_sources(
     scan_results = []
     for scan_result in executor.map(try_scanning, component_descriptor.components()):
         if scan_result is failed_sentinel:
-            print('XXX scan failed (will not show in table)')
-            continue
-
-        successful_count += 1
-
-        scan_results.append(scan_result)
+            scan_results.append(scan_result)
+        remaining = components_count - (success_count + failed_count)
+        print(f'{remaining=}')
 
     # XXX raise if an error occurred?
     checkmarx.util.print_scan_result(scan_results=scan_results)
 
-    print(f'{successful_count=} / {components_count=}')
+    print(f'{success_count=} / {components_count=}')
