@@ -45,7 +45,7 @@ def job_url(v):
 def determine_previous_build_status(v, cfg_set):
     concourse_api = from_cfg(cfg_set.concourse(), team_name=v['build-team-name'])
     try:
-        build_number = int(v['build-name'])
+        build_number = int(float(v['build-name']))
         if build_number < 2:
             ci.util.info('this seems to be the first build - will notify')
             return BuildStatus.SUCCEEDED
