@@ -17,12 +17,12 @@ def meta_vars():
     config_set = ci.util.ctx().cfg_factory().cfg_set(pipeline_metadata.current_config_set_name)
     concourse_cfg = config_set.concourse()
     v = {
-      'build-id': build.id(),
-      'build-name': build.build_number(),
-      'build-job-name': pipeline_metadata.job_name,
-      'build-team-name': pipeline_metadata.team_name,
-      'build-pipeline-name': pipeline_metadata.pipeline_name,
-      'atc-external-url': concourse_cfg.external_url(),
+        'build-id': build.id(),
+        'build-name': build.build_number(),
+        'build-job-name': pipeline_metadata.job_name,
+        'build-team-name': pipeline_metadata.team_name,
+        'build-pipeline-name': pipeline_metadata.pipeline_name,
+        'atc-external-url': concourse_cfg.external_url(),
     }
 
     return v
@@ -30,39 +30,39 @@ def meta_vars():
 
 def job_url(v):
     return '/'.join([
-      v['atc-external-url'],
-      'teams',
-      v['build-team-name'],
-      'pipelines',
-      v['build-pipeline-name'],
-      'jobs',
-      v['build-job-name'],
-      'builds',
-      v['build-name']
+        v['atc-external-url'],
+        'teams',
+        v['build-team-name'],
+        'pipelines',
+        v['build-pipeline-name'],
+        'jobs',
+        v['build-job-name'],
+        'builds',
+        v['build-name']
     ])
 
 
 def determine_previous_build_status(v, cfg_set):
     concourse_api = from_cfg(cfg_set.concourse(), team_name=v['build-team-name'])
     try:
-      build_number = int(v['build-name'])
-      if build_number < 2:
-        ci.util.info('this seems to be the first build - will notify')
-        return BuildStatus.SUCCEEDED
+        build_number = int(v['build-name'])
+        if build_number < 2:
+            ci.util.info('this seems to be the first build - will notify')
+            return BuildStatus.SUCCEEDED
 
-      previous_build = str(build_number - 1)
-      previous_build = concourse_api.job_build(
-        pipeline_name=v['build-pipeline-name'],
-        job_name=v['build-job-name'],
-        build_name=previous_build
-      )
-      return previous_build.status()
+        previous_build = str(build_number - 1)
+        previous_build = concourse_api.job_build(
+            pipeline_name=v['build-pipeline-name'],
+            job_name=v['build-job-name'],
+            build_name=previous_build
+        )
+        return previous_build.status()
     except Exception as e:
-      if type(e) == SystemExit:
-        raise e
-      # in doubt, ensure notification is sent
-      traceback.print_exc()
-      return None
+        if type(e) == SystemExit:
+            raise e
+        # in doubt, ensure notification is sent
+        traceback.print_exc()
+        return None
 
 
 def should_notify(
@@ -78,8 +78,8 @@ def should_notify(
     elif triggering_policy == NotificationTriggeringPolicy.ONLY_FIRST:
         previous_build_status = determine_previous_build_status(meta_vars, cfg_set)
         if not previous_build_status:
-          ci.util.info('failed to determine previous build status - will notify')
-          return True
+            ci.util.info('failed to determine previous build status - will notify')
+            return True
 
         # assumption: current job failed
         if previous_build_status in (BuildStatus.FAILED, BuildStatus.ERRORED):
@@ -117,13 +117,13 @@ def cfg_from_callback(
 
 
 def components_with_version_changes(component_diff_path: str):
-  if not os.path.isfile(component_diff_path):
-    ci.util.info('no component_diff found at: ' + str(component_diff_path))
-    return set()
-  else:
-    component_diff = ci.util.parse_yaml_file(component_diff_path)
-    comp_names = component_diff.get('component_names_with_version_changes', set())
-    return set(comp_names)
+    if not os.path.isfile(component_diff_path):
+        ci.util.info('no component_diff found at: ' + str(component_diff_path))
+        return set()
+    else:
+        component_diff = ci.util.parse_yaml_file(component_diff_path)
+        comp_names = component_diff.get('component_names_with_version_changes', set())
+        return set(comp_names)
 
 
 def retrieve_build_log(concourse_api, task_name):
