@@ -45,24 +45,25 @@ def job_url(v):
 def determine_previous_build_status(v, cfg_set):
     concourse_api = from_cfg(cfg_set.concourse(), team_name=v['build-team-name'])
     try:
-      build_number = int(v['build-name'])
-      if build_number < 2:
-        ci.util.info('this seems to be the first build - will notify')
-        return BuildStatus.SUCCEEDED
+        build_name = v['build-name']
+        if build_name == '1':
+            ci.util.info('this seems to be the first build - will notify')
+            return BuildStatus.SUCCEEDED
 
-      previous_build = str(build_number - 1)
-      previous_build = concourse_api.job_build(
-        pipeline_name=v['build-pipeline-name'],
-        job_name=v['build-job-name'],
-        build_name=previous_build
-      )
-      return previous_build.status()
+        if (previous_build := concourse_api.previous_build(
+            pipeline_name=v['build-pipeline-name'],
+            job_name=v['build-job-name'],
+            build_id=v['build-id'],
+        )):
+            return previous_build.status()
+        else:
+            return None
     except Exception as e:
-      if type(e) == SystemExit:
-        raise e
-      # in doubt, ensure notification is sent
-      traceback.print_exc()
-      return None
+        if type(e) == SystemExit:
+            raise e
+        # in doubt, ensure notification is sent
+        traceback.print_exc()
+        return None
 
 
 def should_notify(
