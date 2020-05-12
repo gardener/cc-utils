@@ -17,12 +17,12 @@ def meta_vars():
     config_set = ci.util.ctx().cfg_factory().cfg_set(pipeline_metadata.current_config_set_name)
     concourse_cfg = config_set.concourse()
     v = {
-      'build-id': build.id(),
-      'build-name': build.build_number(),
-      'build-job-name': pipeline_metadata.job_name,
-      'build-team-name': pipeline_metadata.team_name,
-      'build-pipeline-name': pipeline_metadata.pipeline_name,
-      'atc-external-url': concourse_cfg.external_url(),
+        'build-id': build.id(),
+        'build-name': build.build_number(),
+        'build-job-name': pipeline_metadata.job_name,
+        'build-team-name': pipeline_metadata.team_name,
+        'build-pipeline-name': pipeline_metadata.pipeline_name,
+        'atc-external-url': concourse_cfg.external_url(),
     }
 
     return v
@@ -30,15 +30,15 @@ def meta_vars():
 
 def job_url(v):
     return '/'.join([
-      v['atc-external-url'],
-      'teams',
-      v['build-team-name'],
-      'pipelines',
-      v['build-pipeline-name'],
-      'jobs',
-      v['build-job-name'],
-      'builds',
-      v['build-name']
+        v['atc-external-url'],
+        'teams',
+        v['build-team-name'],
+        'pipelines',
+        v['build-pipeline-name'],
+        'jobs',
+        v['build-job-name'],
+        'builds',
+        v['build-name']
     ])
 
 
@@ -79,13 +79,13 @@ def should_notify(
     elif triggering_policy == NotificationTriggeringPolicy.ONLY_FIRST:
         previous_build_status = determine_previous_build_status(meta_vars, cfg_set)
         if not previous_build_status:
-          ci.util.info('failed to determine previous build status - will notify')
-          return True
+            ci.util.info('failed to determine previous build status - will notify')
+            return True
 
         # assumption: current job failed
         if previous_build_status in (BuildStatus.FAILED, BuildStatus.ERRORED):
-          ci.util.info('previous build was already broken - will not notify')
-          return False
+            ci.util.info('previous build was already broken - will not notify')
+            return False
         return True
     else:
         raise NotImplementedError
@@ -130,14 +130,14 @@ def components_with_version_changes(component_diff_path: str):
 def retrieve_build_log(concourse_api, task_name):
     v = meta_vars()
     try:
-      build_id = v['build-id']
-      task_id = concourse_api.build_plan(build_id=build_id).task_id(task_name=task_name)
-      build_events = concourse_api.build_events(build_id=build_id)
-      build_log = '\n'.join(build_events.iter_buildlog(task_id=task_id))
-      return build_log
+        build_id = v['build-id']
+        task_id = concourse_api.build_plan(build_id=build_id).task_id(task_name=task_name)
+        build_events = concourse_api.build_events(build_id=build_id)
+        build_log = '\n'.join(build_events.iter_buildlog(task_id=task_id))
+        return build_log
     except Exception:
-      traceback.print_exc() # print_err, but send email notification anyway
-      return 'failed to retrieve build log'
+        traceback.print_exc() # print_err, but send email notification anyway
+        return 'failed to retrieve build log'
 
 
 def resolve_recipients_by_component_name(component_names, github_cfg_name):
