@@ -37,6 +37,7 @@ def scan_sources(
     def try_scanning(component):
         nonlocal failed_count
         nonlocal success_count
+        nonlocal failed_sentinel
 
         try:
             result = scan_func(component)
