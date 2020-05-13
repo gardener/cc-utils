@@ -23,3 +23,25 @@ def read_version(
         return version_str
     else:
         raise NotImplementedError
+
+
+def write_version(
+    version_interface: version_trait.VersionInterface,
+    version_str: str,
+    path: str,
+):
+    version_str = version_str.strip()
+
+    if version_interface is version_trait.VersionInterface.FILE:
+        with open(path, 'w') as f:
+            f.write(version_str)
+        return
+    elif version_interface is version_trait.VersionInterface.CALLBACK:
+        subprocess.run(
+            [path],
+            check=True,
+            text=True,
+            input=version_str,
+        )
+    else:
+        raise NotImplementedError

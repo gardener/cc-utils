@@ -18,6 +18,9 @@ legacy_version_file = os.path.join(job_step.output('version_path'), 'number')
 if (read_callback := version_trait.read_callback()):
   read_callback = os.path.abspath(os.path.join(main_repo.resource_name(), read_callback))
 
+if (write_callback := version_trait.write_callback()):
+  write_callback = os.path.abspath(os.path.join(main_repo.resource_name(), write_callback))
+
 version_operation = version_trait._preprocess()
 branch_name = main_repo.branch()
 
@@ -49,7 +52,7 @@ def quote_str(value):
 
 %>
 
-${step_lib('version')
+${step_lib('version')}
 import os
 import pathlib
 
@@ -90,7 +93,21 @@ if os.path.isfile(cc_version):
   with open(cc_version) as f:
     ci.util.info(f'cc-utils version: {f.read()}')
 
-with open(output_version_file, 'w') as f1, open('legacy_version_file', 'w') as f2:
-  f1.write(effective_version)
-  f2.write(effective_version)
+if version_interface is version_trait.VersionInterface.FILE:
+  version_output_path = '${output_version_file}'
+  write_version(
+    version_interface=version_interface,
+    version_str=effective_version,
+    path='${legacy_version_file}',
+  )
+elif version_interface is version_trait.VersionInterface.CALLBACK:
+  version_output_path = write_callback
+else:
+  raise NotImplementedError
+
+write_version(
+  version_interface=version_interface,
+  version_str=effective_version,
+  path=version_output_path,
+)
 </%def>
