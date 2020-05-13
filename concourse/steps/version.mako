@@ -2,6 +2,7 @@
 <%
 import os
 from makoutil import indent_func
+from concourse.steps import step_lib
 
 main_repo = job_variant.main_repository()
 head_sha_file = main_repo.head_sha_path()
@@ -13,6 +14,9 @@ path_to_repo_version_file = os.path.join(
 )
 output_version_file = os.path.join(job_step.output('version_path'), 'version')
 legacy_version_file = os.path.join(job_step.output('version_path'), 'number')
+
+if (read_callback := version_trait.read_callback()):
+  read_callback = os.path.abspath(os.path.join(main_repo.resource_name(), read_callback))
 
 version_operation = version_trait._preprocess()
 branch_name = main_repo.branch()
@@ -35,7 +39,6 @@ elif version_operation == 'use-branch-name':
 else:
   raise ValueError(f"unknown version operation: '{version_operation}'")
 
-
 def quote_str(value):
   if isinstance(value, str):
     return f"'{value}'"
@@ -45,13 +48,28 @@ def quote_str(value):
     raise ValueError
 
 %>
+
+${step_lib('version')
 import os
 import pathlib
 
 import ci.util
+import concourse.model.traits.version as version_trait
 import version
 
-version_file = ci.util.existing_file(pathlib.Path(${quote_str(path_to_repo_version_file)}))
+version_interface = version_trait.VersionInterface('${version_trait.version_interface().value}')
+
+if version_interface is version_trait.VersionInterface.FILE:
+  version_path = '${path_to_repo_version_file}'
+elif version_interface is version_trait.VersionInterface.CALLBACK:
+  version_path = '${read_callback}'
+else:
+  raise NotImplementedError
+
+current_version = read_version(
+  version_interface=version_interface,
+  path=version_path,
+)
 
 if ${quote_str(version_operation)} == 'inject-commit-hash':
   head_sha_file = ci.util.existing_file(pathlib.Path(${quote_str(head_sha_file)}))
@@ -59,22 +77,20 @@ if ${quote_str(version_operation)} == 'inject-commit-hash':
 else:
   prerelease = ${quote_str(prerelease)}
 
-processed_version = version.process_version(
-    version_str=version_file.read_text().strip(),
+effective_version = version.process_version(
+    version_str=current_version,
     prerelease=prerelease,
     **${version_operation_kwargs},
 )
 ci.util.info('version preprocessing operation: ${version_operation}')
-ci.util.info(f'effective version: {processed_version}')
+ci.util.info(f'effective version: {effective_version}')
 
 cc_version = '/metadata/VERSION'
 if os.path.isfile(cc_version):
   with open(cc_version) as f:
     ci.util.info(f'cc-utils version: {f.read()}')
 
-output_version_file = pathlib.Path(${quote_str(output_version_file)})
-legacy_version_file = pathlib.Path(${quote_str(legacy_version_file)})
-
-output_version_file.write_text(processed_version)
-legacy_version_file.write_text(processed_version)
+with open(output_version_file, 'w') as f1, open('legacy_version_file', 'w') as f2:
+  f1.write(effective_version)
+  f2.write(effective_version)
 </%def>
