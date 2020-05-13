@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import enum
 
 from concourse.model.job import (
     JobVariant,
@@ -27,6 +28,11 @@ from concourse.model.base import (
   TraitTransformer,
   ScriptType,
 )
+
+
+class VersionInterface(enum.Enum):
+    FILE = 'file'
+    CALLBACK = 'callback'
 
 
 ATTRIBUTES = (
@@ -47,6 +53,22 @@ ATTRIBUTES = (
         whether or not the effective version is to be written into the source tree's VERSION file
         ''',
         type=bool,
+    ),
+    AttributeSpec.optional(
+        name='version_interface',
+        default=VersionInterface.FILE,
+        doc='how the version can be read/written',
+        type=VersionInterface,
+    ),
+    AttributeSpec.optional(
+        name='read_callback',
+        default=None,
+        doc='relative path to an executable that returns current version via stdout',
+    ),
+    AttributeSpec.optional(
+        name='write_callback',
+        default=None,
+        doc='relative path to an executable that accepts version from stdin and writes it',
     ),
 )
 
@@ -79,6 +101,15 @@ class VersionTrait(Trait):
 
     def inject_effective_version(self):
         return self.raw['inject_effective_version']
+
+    def version_interface(self):
+        return VersionInterface(self.raw.get('version_interface'))
+
+    def read_callback(self):
+        return self.raw.get('read_callback')
+
+    def write_callback(self):
+        return self.raw.get('write_callback')
 
     @classmethod
     def transformer(self):
