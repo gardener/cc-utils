@@ -16,10 +16,10 @@ output_version_file = os.path.join(job_step.output('version_path'), 'version')
 legacy_version_file = os.path.join(job_step.output('version_path'), 'number')
 
 if (read_callback := version_trait.read_callback()):
-  read_callback = os.path.abspath(os.path.join(main_repo.resource_name(), read_callback))
+  read_callback = os.path.join(main_repo.resource_name(), read_callback)
 
 if (write_callback := version_trait.write_callback()):
-  write_callback = os.path.abspath(os.path.join(main_repo.resource_name(), write_callback))
+  write_callback = os.path.join(main_repo.resource_name(), write_callback)
 
 version_operation = version_trait._preprocess()
 branch_name = main_repo.branch()
