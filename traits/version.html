@@ -210,6 +210,24 @@
 <td><p>bool</p></td>
 <td><p>whether or not the effective version is to be written into the source tree’s VERSION file</p></td>
 </tr>
+<tr class="row-odd"><td><p>version_interface</p></td>
+<td><p>no</p></td>
+<td><p>VersionInterface.FILE</p></td>
+<td><p>VersionInterface</p></td>
+<td><p>how the version can be read/written</p></td>
+</tr>
+<tr class="row-even"><td><p>read_callback</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>relative path to an executable that returns current version via stdout</p></td>
+</tr>
+<tr class="row-odd"><td><p>write_callback</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>relative path to an executable that accepts version from stdin and writes it</p></td>
+</tr>
 </tbody>
 </table>
 <p class="section-subtitle">Dependencies</p>
