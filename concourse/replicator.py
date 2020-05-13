@@ -401,7 +401,7 @@ class ReplicationResultProcessor(object):
                 user_info.get('login')
                 for user_info
                 in (head_commit.committer, head_commit.author)
-                if user_info.get('login')
+                if user_info and user_info.get('login')
             }
             for user_id in user_ids:
                 user = github_api.user(user_id)
