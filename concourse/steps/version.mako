@@ -110,7 +110,7 @@ else:
 
 # always write version to `managed-version` dir (abstract from callback)
 write_version(
-  version_interface=version_interface,
+  version_interface=version_trait.VersionInterface.FILE,
   version_str=effective_version,
   path='${output_version_file}',
 )
