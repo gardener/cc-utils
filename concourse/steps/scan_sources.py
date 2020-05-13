@@ -53,7 +53,7 @@ def scan_sources(
 
     scan_results = []
     for scan_result in executor.map(try_scanning, component_descriptor.components()):
-        if scan_result is failed_sentinel:
+        if not scan_result is failed_sentinel:
             scan_results.append(scan_result)
         remaining = components_count - (success_count + failed_count)
         print(f'{remaining=}')
