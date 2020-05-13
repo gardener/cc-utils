@@ -1,0 +1,36 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: tekton-dashboard-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    kubernetes.io/tls-acme: "true"
+    cert.gardener.cloud/issuer: {{ .Values.ingress_issuer_name }}
+    cert.gardener.cloud/purpose: managed
+    dns.gardener.cloud/class: garden
+    dns.gardener.cloud/dnsnames: {{ .Values.ingress_host }}
+    dns.gardener.cloud/ttl: {{ quote .Values.ingress_ttl }}
+    nginx.ingress.kubernetes.io/auth-response-headers: Authorization
+    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.oauthProxyAuthUrl }}/oauth2/start?rd=https://$host$request_uri
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.oauthProxyAuthUrl }}/oauth2/auth
+spec:
+  rules:
+  - host: {{ .Values.ingress_host }}
+    http:
+      paths:
+      - backend:
+          serviceName: {{ .Values.serviceName }}
+          servicePort: {{ .Values.servicePort }}
+  - host: {{ .Values.external_url }}
+    http:
+      paths:
+      - backend:
+          serviceName: {{ .Values.serviceName }}
+          servicePort: {{ .Values.servicePort }}
+  tls:
+  - hosts:
+{{- range $host := .Values.ingress_tls_hosts }}
+    - "{{ $host }}"
+{{- end }}
+    secretName: tekton-dashboard-tls
+
