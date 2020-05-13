@@ -93,21 +93,25 @@ if os.path.isfile(cc_version):
   with open(cc_version) as f:
     ci.util.info(f'cc-utils version: {f.read()}')
 
-if version_interface is version_trait.VersionInterface.FILE:
-  version_output_path = '${output_version_file}'
+if version_interface is version_trait.VersionInterface.CALLBACK:
+  write_version(
+    version_interface=version_interface,
+    version_str=effective_version,
+    path='${write_callback}',
+  )
+elif version_interface is version_trait.VersionInterface.FILE:
   write_version(
     version_interface=version_interface,
     version_str=effective_version,
     path='${legacy_version_file}',
   )
-elif version_interface is version_trait.VersionInterface.CALLBACK:
-  version_output_path = write_callback
 else:
   raise NotImplementedError
 
+# always write version to `managed-version` dir (abstract from callback)
 write_version(
   version_interface=version_interface,
   version_str=effective_version,
-  path=version_output_path,
+  path='${output_version_file}',
 )
 </%def>
