@@ -33,7 +33,9 @@ from landscape_setup import (
     concourse as setup_concourse,
     gardenlinux_cache as setup_gardenlinux_cache,
     monitoring as setup_monitoring,
+    oauth2_proxy as setup_oauth2_proxy,
     secrets_server as setup_secrets_server,
+    tekton_dashboard_ingress as setup_tekton_dashboard,
     whd as setup_whd,
 )
 
@@ -291,6 +293,34 @@ def deploy_or_upgrade_gardenlinux_cache(
 
     setup_gardenlinux_cache.deploy_gardenlinux_cache(
         gardenlinux_cache_config=gardenlinux_cache_cfg,
+        kubernetes_config=kubernetes_cfg,
+        chart_dir=chart_dir,
+        deployment_name=deployment_name,
+    )
+
+
+def deploy_or_upgrade_tekton_dashboard_ingress(
+    config_set_name: CliHint(typehint=str, help=CONFIG_SET_HELP),
+    chart_dir: CliHints.existing_dir(help="directory of tekton-dashboard-ingress chart"),
+    deployment_name: str='tekton-dashboard-ingress',
+):
+    chart_dir = os.path.abspath(chart_dir)
+
+    cfg_factory = ctx().cfg_factory()
+    cfg_set = cfg_factory.cfg_set(config_set_name)
+    concourse_cfg = cfg_set.concourse()
+    kubernetes_cfg = cfg_factory.kubernetes(concourse_cfg.kubernetes_cluster_config())
+    oauth2_proxy_cfg = cfg_set.oauth2_proxy()
+    tekton_dashboard_ingress_cfg = cfg_set.tekton_dashboard_ingress()
+
+    setup_oauth2_proxy.deploy_oauth2_proxy(
+        oauth2_proxy_config=oauth2_proxy_cfg,
+        kubernetes_config=kubernetes_cfg,
+        deployment_name=f'{deployment_name}-oauth2-proxy',
+    )
+
+    setup_tekton_dashboard.deploy_tekton_dashboard_ingress(
+        tekton_dashboard_ingress_config=tekton_dashboard_ingress_cfg,
         kubernetes_config=kubernetes_cfg,
         chart_dir=chart_dir,
         deployment_name=deployment_name,
