@@ -16,7 +16,7 @@ from ci.util import ctx, info, warning
 from github3.exceptions import NotFoundError
 import ccc.github
 
-github_cfg = ctx().cfg_factory().github(cfg_name='${github_cfg.name()}')
+github_cfg = ccc.github.github_cfg_for_hostname('${main_repo.repo_hostname()}')
 github_api = ccc.github.github_api(github_cfg)
 
 # assumption: only main repository may be PR-repo

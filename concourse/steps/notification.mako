@@ -14,6 +14,7 @@ from makoutil import indent_func
 from concourse.steps import step_lib
 # xxx: for now, assume all repositories are from same github
 default_github_cfg_name = cfg_set.github().name()
+main_repo_hostname = job_variant.main_repository().repo_hostname()
 cc_email_cfg = cfg_set.email()
 
 notification_cfg = job_step.notifications_cfg()
@@ -96,7 +97,7 @@ notify_cfg = {'email': email_cfg}
 
 email_cfg['subject'] = email_cfg['subject'] or '${subject}'
 
-main_repo_github_cfg = cfg_set.github("${job_variant.main_repository().cfg_name() or default_github_cfg_name}")
+main_repo_github_cfg = ccc.github.github_cfg_for_hostname('${main_repo_hostname}')
 main_repo_github_api = ccc.github.github_api(main_repo_github_cfg)
 
 if 'component_diff_owners' in ${on_error_cfg.recipients()}:
