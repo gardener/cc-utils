@@ -25,15 +25,6 @@ def create_body(mail_template: str, replace_tokens: dict):
     return mail_template
 
 
-def send_mail(
-    smtp_server: str,
-    msg,
-    sender: str,
-    recipients: str,
-):
-    smtp_server.sendmail(sender, recipients, msg.as_string())
-
-
 def create_mail(
         subject: str,
         sender: str,
