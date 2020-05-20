@@ -63,7 +63,7 @@ def create_mail(
 
     msg['Subject'] = subject
     msg['From'] = sender
-    msg['To'] = ';'.join(recipients)
-    msg['Cc'] = ';'.join(cc_recipients)
+    msg['To'] = ','.join(recipients)
+    msg['Cc'] = ','.join(cc_recipients)
 
     return msg
