@@ -419,7 +419,7 @@ class ReplicationResultProcessor(object):
             ))
         else:
             info(f'Sending notification e-mail to {recipients} ({main_repo["path"]})')
-            email_cfg = self._cfg_set.email()
+            email_cfg = self._cfg_set.email("ses_gardener_cloud_sap")
             _send_mail(
                 email_cfg=email_cfg,
                 recipients=recipients,
