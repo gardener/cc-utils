@@ -29,18 +29,18 @@ import product.util
 import protecode.util
 
 try:
+  import logging
+  ctx.configure_default_logging(stdout_level=logging.INFO)
+except:
+  pass
+
+try:
   from product.scanning import ProcessingMode
 except ImportError:
   ## migration hack
   from protecode.scanning_util import ProcessingMode
 
 from protecode.model import CVSSVersion
-
-try:
-  import logging
-  ctx.configure_default_logging(stdout_level=logging.INFO)
-except:
-  pass
 
 ${step_lib('scan_container_images')}
 ${step_lib('images')}
