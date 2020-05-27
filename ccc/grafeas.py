@@ -13,7 +13,9 @@ grafeas_v1 = grafeas.grafeas_v1
 gcrp_transport = grafeas.grafeas_v1.gapic.transports.grafeas_grpc_transport
 container_analysis_v1 = google.cloud.devtools.containeranalysis_v1
 
-logger = logging.getLogger(__name__)
+
+def logger():
+    return logging.getLogger(__name__)
 
 
 class VulnerabilitiesRetrievalFailed(RuntimeError):
@@ -45,7 +47,7 @@ def grafeas_client_for_image(image_reference: str):
     if not registry_cfg.has_service_account_credentials():
         raise VulnerabilitiesRetrievalFailed(f'no gcr-cfg ({registry_cfg.name()} {image_reference}')
 
-    logger.info(f'using {registry_cfg.name()}')
+    logger().info(f'using {registry_cfg.name()}')
 
     client = grafeas_client(container_registry_cfg=registry_cfg)
 
@@ -128,7 +130,7 @@ def retrieve_vulnerabilities(
     except Exception as e:
         raise VulnerabilitiesRetrievalFailed(e)
 
-    logger.info(f'retrieving vulnerabilites for {project_name} / {hash_reference}')
+    logger().info(f'retrieving vulnerabilites for {project_name} / {hash_reference}')
 
     filter_str = f'resourceUrl = "https://{hash_reference}" AND kind="VULNERABILITY"'
 
