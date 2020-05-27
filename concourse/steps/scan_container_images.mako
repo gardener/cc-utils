@@ -34,12 +34,7 @@ try:
 except:
   pass
 
-try:
-  from product.scanning import ProcessingMode
-except ImportError:
-  ## migration hack
-  from protecode.scanning_util import ProcessingMode
-
+from protecode.scanning_util import ProcessingMode
 from protecode.model import CVSSVersion
 
 ${step_lib('scan_container_images')}
