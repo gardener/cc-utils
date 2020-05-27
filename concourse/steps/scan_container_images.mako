@@ -21,18 +21,17 @@ import sys
 import tabulate
 import textwrap
 
-import ci.util
 import ctx
+try:
+  ctx.configure_default_logging()
+except:
+  pass
+import ci.util
 import mailutil
 import product.model
 import product.util
 import protecode.util
 
-try:
-  import logging
-  ctx.configure_default_logging(stdout_level=logging.INFO)
-except:
-  pass
 
 from protecode.scanning_util import ProcessingMode
 from protecode.model import CVSSVersion
