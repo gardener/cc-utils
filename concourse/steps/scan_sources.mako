@@ -21,7 +21,7 @@ scan_sources_and_notify(
     checkmarx_cfg_name='${checkmarx_cfg.checkmarx_cfg_name()}',
     team_id='${checkmarx_cfg.team_id()}',
     component_descriptor=component_descriptor_path(),
-    email_recipients='${email_recipients}'
-    threshold='${checkmarx_cfg.severity_threshold()}'
+    email_recipients=${email_recipients},
+    threshold=${checkmarx_cfg.severity_threshold()},
 )
 </%def>

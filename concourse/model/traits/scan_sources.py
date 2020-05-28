@@ -52,8 +52,8 @@ class CheckmarxCfg(ModelBase):
     def team_id(self):
         return self.raw['team_id']
 
-    def severity_threshold(self):
-        return self.raw.get('severity_threshold')
+    def severity_threshold(self) -> int:
+        return int(self.raw.get('severity_threshold'))
 
     def checkmarx_cfg_name(self):
         return self.raw.get('cfg_name')
