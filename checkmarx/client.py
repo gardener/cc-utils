@@ -178,7 +178,6 @@ class CheckmarxClient:
             json=dataclasses.asdict(scan_settings),
         )
         scan_id = res.json()['id']
-        print(f'created scan with id {scan_id}')
         return scan_id
 
     def get_last_scans_of_project(self, project_id: int, last_scans: int = 1):
@@ -204,7 +203,6 @@ class CheckmarxClient:
         return from_dict(data_class=checkmarx.model.ScanResponse, data=res.json())
 
     def get_scan_statistics(self, scan_id: int):
-        print('retrieving scan statistics')
         res = self.request(
             method='GET',
             url=self.routes.scan_statistics(scan_id=scan_id)

@@ -8,12 +8,15 @@ import dacite
 import github3.exceptions
 
 import ccc.github
+import ctx
 import checkmarx.client
 import checkmarx.model
 import product.model
 import checkmarx.util
 import version
 
+
+ctx.configure_default_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -66,6 +69,7 @@ def upload_and_scan_repo(
 
         cx_project.client.update_project(project)
         scan_id = cx_project.start_scan()
+        clogger.info(f'created scan with id {scan_id}')
 
         return cx_project.poll_and_retrieve_scan(
             scan_id=scan_id,
@@ -88,15 +92,18 @@ def upload_and_scan_repo(
                 clogger.info('uploading sources')
                 cx_project.upload_zip(file=tmp_file)
 
-            project.set_custom_field(checkmarx.model.CustomFieldKeys.HASH, commit_hash)
+            project.set_custom_field(
+                checkmarx.model.CustomFieldKeys.HASH,
+                commit_hash,
+            )
             project.set_custom_field(
                 checkmarx.model.CustomFieldKeys.COMPONENT_NAME,
-                component.name()
+                component.name(),
             )
             cx_project.client.update_project(project)
 
             scan_id = cx_project.start_scan()
-
+            clogger.info(f'created scan with id {scan_id}')
     else:
         clogger.info(f'scan with id: {last_scan.id} for component {component.name()} '
               'already running. Polling last scan.'
@@ -226,12 +233,14 @@ class CheckmarxProject:
         self.github_api = github_api
 
     def poll_and_retrieve_scan(self, scan_id: int, component: product.model.Component):
-        scan_result = self._poll_scan(scan_id=scan_id)
+        scan_result = self._poll_scan(scan_id=scan_id, component=component)
 
         if scan_result.status_value() is not checkmarx.model.ScanStatusValues.FINISHED:
-            print(f'scan for {component.name()} failed with {scan_result.status=}')
+            logger.error(f'scan for {component.name()} failed with {scan_result.status=}')
             raise RuntimeError('Scan did not finish successfully')
 
+        clogger = component_logger(component)
+        clogger.info('retrieving scan statistics')
         statistics = self.scan_statistics(scan_id=scan_result.id)
 
         return checkmarx.model.ScanResult(
@@ -313,10 +322,16 @@ class CheckmarxProject:
         scan_settings = checkmarx.model.ScanSettings(projectId=self.project_id)
         return self.client.start_scan(scan_settings)
 
-    def _poll_scan(self, scan_id: int, polling_interval_seconds=60):
+    def _poll_scan(
+            self,
+            scan_id: int,
+            component: product.model.Component,
+            polling_interval_seconds=60
+    ):
         def scan_finished():
             scan = self.client.get_scan_state(scan_id=scan_id)
-            print(f'{self.component_name.name()}: polling for {scan_id=}. {scan.status.name=}')
+            clogger = component_logger(component)
+            clogger.info(f'polling for {scan_id=}. {scan.status.name=}')
             if checkmarx.util.is_scan_finished(scan):
                 return scan
             return False

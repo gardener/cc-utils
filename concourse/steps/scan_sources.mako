@@ -10,15 +10,18 @@ repo_name = main_repo.logical_name().upper()
 
 source_scan_trait = job_variant.trait('scan_sources')
 checkmarx_cfg = source_scan_trait.checkmarx()
+email_recipients = source_scan_trait.email_recipients()
 component_trait = job_variant.trait('component_descriptor')
 
 %>
 ${step_lib('component_descriptor_util')}
 ${step_lib('scan_sources')}
-scan_sources(
+
+scan_sources_and_notify(
     checkmarx_cfg_name='${checkmarx_cfg.checkmarx_cfg_name()}',
     team_id='${checkmarx_cfg.team_id()}',
     component_descriptor=component_descriptor_path(),
+    email_recipients='${email_recipients}'
+    threshold='${checkmarx_cfg.severity_threshold()}'
 )
-
 </%def>

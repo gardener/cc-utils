@@ -4,6 +4,7 @@ import checkmarx.client
 import checkmarx.model
 
 import tabulate
+import textwrap
 import typing
 
 
@@ -33,18 +34,9 @@ def is_scan_necessary(project: checkmarx.model.ProjectDetails, hash: str):
         return False
 
 
-def print_scan_result(
+def get_scan_info_table(
     scan_results: typing.Iterable[checkmarx.model.ScanResult],
-    tablefmt: str = 'simple'
-):
-    results = scan_result_tables(scan_results=scan_results, tablefmt=tablefmt)
-    for k, table in results.items():
-        print(table)
-
-
-def scan_result_tables(
-    scan_results: typing.Iterable[checkmarx.model.ScanResult],
-    tablefmt: str = 'simple'
+    tablefmt: str = 'simple',
 ):
     scan_info_header = ('ScanId', 'ComponentName', 'ScanState', 'Start', 'End')
 
@@ -65,7 +57,18 @@ def scan_result_tables(
             ended_on(scan_result),
          ) for scan_result in scan_results
     )
+    scan_info = tabulate.tabulate(
+        headers=scan_info_header,
+        tabular_data=scan_info_data,
+        tablefmt=tablefmt,
+    )
+    return scan_info
 
+
+def get_scan_statistics_tables(
+    scan_results: typing.Iterable[checkmarx.model.ScanResult],
+    tablefmt: str = 'simple',
+):
     scan_statistics_header = (
         'ComponentName',
         'Overall severity',
@@ -74,7 +77,8 @@ def scan_result_tables(
         'low',
         'info'
     )
-    scan_statistics_data = (
+
+    scan_statistics_data = [
         (
             scan_result.component.name(),
             scan_result.scan_result.scanRiskSeverity,
@@ -83,18 +87,77 @@ def scan_result_tables(
             scan_result.scan_statistic.lowSeverity,
             scan_result.scan_statistic.infoSeverity,
         ) for scan_result in scan_results
-    )
-
-    scan_info = tabulate.tabulate(
-        headers=scan_info_header,
-        tabular_data=scan_info_data,
-        tablefmt=tablefmt,
-    )
-
+    ]
     scan_statistics = tabulate.tabulate(
         headers=scan_statistics_header,
-        tabular_data=scan_statistics_data,
+        tabular_data=sorted(scan_statistics_data, key=lambda x: x[1], reverse=True),
         tablefmt=tablefmt,
     )
 
-    return {'scan_info': scan_info, 'scan_statistics': scan_statistics}
+    return scan_statistics
+
+
+def print_scan_result(
+    scan_results: typing.Iterable[checkmarx.model.ScanResult]
+):
+    scan_info_table = get_scan_info_table(scan_results=scan_results, tablefmt='simple')
+    scan_statistics_table = get_scan_statistics_tables(scan_results=scan_results, tablefmt='simple')
+
+    print(scan_info_table)
+    print('\n')
+    print(scan_statistics_table)
+
+
+def _mail_disclaimer():
+    return textwrap.dedent('''
+        <div>
+          <p>
+          Note: you receive this E-Mail, because you were configured as a mail recipient
+          (see .ci/pipeline_definitions)
+          To remove yourself, search for your e-mail address in said file and remove it.
+          </p>
+        </div>
+    ''')
+
+
+def assemble_mail_body(
+    scans_above_threshold: typing.Dict,
+    scans_below_threshold: typing.Dict,
+    failed_components: typing.Dict,
+    threshold: int,
+):
+    body_parts = [_mail_disclaimer()]
+
+    if len(scans_above_threshold) > 0:
+        above_threshold_text = textwrap.dedent(f'''
+            <p>
+              The following components in checkmarx were found to
+              contain critical vulnerabilities (applying threshold {threshold})
+            </p>
+        ''')
+        scan_statistics_above_threshold = checkmarx.util.get_scan_statistics_tables(
+            scan_results=scans_above_threshold, tablefmt='html',
+        )
+        body_parts.append(above_threshold_text + scan_statistics_above_threshold)
+
+    if len(scans_below_threshold) > 0:
+        below_threshold_text = textwrap.dedent('''
+            <p>
+              The following components were found to be below the configured threshold:
+            </p>
+        ''')
+        scan_statistics_below_threshold = checkmarx.util.get_scan_statistics_tables(
+            scan_results=scans_below_threshold, tablefmt='html',
+        )
+        body_parts.append(below_threshold_text + scan_statistics_below_threshold)
+
+    if len(failed_components) > 0:
+        failed_components_str = "\n".join((component.name for component in failed_components))
+        failed_components_text = textwrap.dedent(f'''
+            <p>
+              The following components finished in an erroneous state: {failed_components_str}):
+            </p>
+        ''')
+        body_parts.append(failed_components_text)
+
+    return ''.join(body_parts)
