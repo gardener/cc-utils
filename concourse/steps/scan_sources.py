@@ -140,7 +140,7 @@ def _print_scans(
         print('\n')
         failed_components_str = "\n".join(
             (
-                component.name for component in scans.get(failed_components_const)
+                component.name() for component in scans.get(failed_components_const)
             )
         )
         ci.util.info(f'failed components:\n{failed_components_str}')
