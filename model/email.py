@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import typing
 
 from model.base import (
     BasicCredentials,
@@ -43,6 +44,12 @@ class EmailConfig(NamedModelElement):
         if self.raw.get('credentials'):
             return True
         return False
+
+    def filter_recipients(self, recipients:typing.Iterable[str]):
+        blacklist = self.raw.get('blacklist')
+        if blacklist:
+            return {r for r in recipients if r not in blacklist}
+        return recipients
 
     def _required_attributes(self):
         return ['host', 'port', 'credentials']

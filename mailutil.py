@@ -127,6 +127,8 @@ def _send_mail(
     )
 
     recipients.update(cc_recipients)
+    recipients = email_cfg.filter_recipients(recipients)
+
     smtp_server.send_message(msg=mail, to_addrs=recipients)  # from_addr is taken from header
 
 
