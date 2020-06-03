@@ -17,6 +17,7 @@ flake8==3.8.0a2
 github3.py<2.0.0
 google-cloud-containeranalysis
 google-api-python-client
+google-auth
 html2text
 jira
 kubernetes<12.0.0
