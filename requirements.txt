@@ -18,6 +18,7 @@ github3.py<2.0.0
 google-cloud-containeranalysis
 google-api-python-client
 google-auth
+google-cloud-storage
 html2text
 jira
 kubernetes<12.0.0
