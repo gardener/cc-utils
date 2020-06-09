@@ -148,7 +148,7 @@ class MailRecipients(object):
         return result + tabulate.tabulate(
             map(lambda dc: dataclasses.astuple(dc), self._clamav_results),
             headers=MalwareScanResult.headers(),
-            tablefmt='html',
+            tablefmt='unsafehtml',
         )
 
     def __repr__(self):
@@ -266,7 +266,7 @@ def protecode_results_table(protecode_cfg, upload_results: typing.Iterable[Uploa
     table = tabulate.tabulate(
       map(result_to_tuple, upload_results),
       headers=('Component Name', 'Greatest CVE', 'Container Image Reference'),
-      tablefmt='html',
+      tablefmt='unsafehtml',
     )
     return table
 
