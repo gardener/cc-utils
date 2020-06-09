@@ -1,11 +1,14 @@
-from ci.util import urljoin
-import model.checkmarx
-import requests
-from dacite import from_dict
 import datetime
-import checkmarx.model
 import dataclasses
+import urllib.parse
+
+from dacite import from_dict
+import requests
+
+from ci.util import urljoin
+import checkmarx.model
 import model
+import model.checkmarx
 
 
 def require_auth(f: callable):
@@ -35,8 +38,11 @@ class CheckmarxRoutes:
     def __init__(self, base_url: str):
         self.base_url = base_url
 
-    def _api_url(self, *parts, **kwargs):
+    def _api_url(self, *parts):
         return urljoin(self.base_url, 'cxrestapi', *parts)
+
+    def _web_url(self, *parts):
+        return urljoin(self.base_url, 'CxWebClient', *parts)
 
     def auth(self):
         return self._api_url('auth', 'identity', 'connect', 'token')
@@ -61,6 +67,14 @@ class CheckmarxRoutes:
 
     def remote_settings_git(self, project_id: int):
         return urljoin(self.scan_by_id(project_id), 'sourceCode', 'remoteSettings', 'git')
+
+    def web_ui_scan_history(self, scan_id: int):
+        query = urllib.parse.urlencode({'id': scan_id, 'ProjectState': 'true'})
+        return urljoin(self._web_url(), 'projectscans.aspx?' + query)
+
+    def web_ui_scan_viewer(self, scan_id: int, project_id: int):
+        query = urllib.parse.urlencode({'scanId': scan_id, 'ProjectID': project_id})
+        return urljoin(self._web_url(), 'ViewerMain.aspx?' + query)
 
 
 class CheckmarxClient:

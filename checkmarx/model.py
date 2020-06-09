@@ -113,6 +113,7 @@ class ScanResult:
     """
     ScanResult is a data container for a scan result for a component version
     """
+    project_id: int
     component: product.model.Component
-    scan_result: ScanResponse
+    scan_response: ScanResponse
     scan_statistic: ScanStatistic

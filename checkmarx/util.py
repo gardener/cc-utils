@@ -35,27 +35,27 @@ def is_scan_necessary(project: checkmarx.model.ProjectDetails, hash: str):
 
 
 def get_scan_info_table(
-    scan_results: typing.Iterable[checkmarx.model.ScanResult],
-    tablefmt: str = 'simple',
+        scan_results: typing.Iterable[checkmarx.model.ScanResult],
+        tablefmt: str = 'simple',
 ):
     scan_info_header = ('ScanId', 'ComponentName', 'ScanState', 'Start', 'End')
 
     def started_on(scan_result):
-        return scan_result.scan_result.dateAndTime.startedOn if \
-                scan_result.scan_result else 'unknown'
+        return scan_result.scan_response.dateAndTime.startedOn if \
+            scan_result.scan_response else 'unknown'
 
     def ended_on(scan_result):
-        return scan_result.scan_result.dateAndTime.finishedOn if \
-                scan_result.scan_result else 'unknown'
+        return scan_result.scan_response.dateAndTime.finishedOn if \
+            scan_result.scan_response else 'unknown'
 
     scan_info_data = (
         (
-            scan_result.scan_result.id,
+            scan_result.scan_response.id,
             scan_result.component.name(),
-            scan_result.scan_result.status.name,
+            scan_result.scan_response.status.name,
             started_on(scan_result),
             ended_on(scan_result),
-         ) for scan_result in scan_results
+        ) for scan_result in scan_results
     )
     scan_info = tabulate.tabulate(
         headers=scan_info_header,
@@ -66,9 +66,30 @@ def get_scan_info_table(
 
 
 def get_scan_statistics_tables(
-    scan_results: typing.Iterable[checkmarx.model.ScanResult],
-    tablefmt: str = 'simple',
+        scan_results: typing.Iterable[checkmarx.model.ScanResult],
+        routes: checkmarx.client.CheckmarxRoutes,
+        tablefmt: str = 'simple',
 ):
+    def component_name(scan_result: checkmarx.model.ScanResult):
+        if tablefmt == 'html':
+            return f'''
+            <a href="{routes.web_ui_scan_history(scan_id=scan_result.scan_response.id)}">
+                {scan_result.component.name()}
+            </a>
+            '''
+        else:
+            return scan_result.component.name()
+
+    def scan_severity(scan_result: checkmarx.model.ScanResult):
+        if tablefmt == 'html':
+            scan_id = scan_result.scan_response.id
+            project_id = scan_result.project_id
+            return f'''
+            <a href="{routes.web_ui_scan_viewer(scan_id=scan_id, project_id=project_id)}">
+                {scan_result.scan_response.scanRiskSeverity}
+            </a>
+            '''
+
     scan_statistics_header = (
         'ComponentName',
         'Overall severity',
@@ -80,28 +101,37 @@ def get_scan_statistics_tables(
 
     scan_statistics_data = [
         (
-            scan_result.component.name(),
-            scan_result.scan_result.scanRiskSeverity,
+            component_name(scan_result),
+            scan_severity(scan_result),
             scan_result.scan_statistic.highSeverity,
             scan_result.scan_statistic.mediumSeverity,
             scan_result.scan_statistic.lowSeverity,
             scan_result.scan_statistic.infoSeverity,
         ) for scan_result in scan_results
     ]
+
+    # monkeypatch: disable html escaping
+    tabulate.htmlescape = lambda x: x
     scan_statistics = tabulate.tabulate(
         headers=scan_statistics_header,
         tabular_data=sorted(scan_statistics_data, key=lambda x: x[1], reverse=True),
         tablefmt=tablefmt,
+        colalign=('left', 'center', 'center', 'center', 'center', 'center')
     )
 
     return scan_statistics
 
 
 def print_scan_result(
-    scan_results: typing.Iterable[checkmarx.model.ScanResult]
+        scan_results: typing.Iterable[checkmarx.model.ScanResult],
+        routes: checkmarx.client.CheckmarxRoutes,
 ):
     scan_info_table = get_scan_info_table(scan_results=scan_results, tablefmt='simple')
-    scan_statistics_table = get_scan_statistics_tables(scan_results=scan_results, tablefmt='simple')
+    scan_statistics_table = get_scan_statistics_tables(
+        scan_results=scan_results,
+        tablefmt='simple',
+        routes=routes,
+    )
 
     print(scan_info_table)
     print('\n')
@@ -121,10 +151,11 @@ def _mail_disclaimer():
 
 
 def assemble_mail_body(
-    scans_above_threshold: typing.Dict,
-    scans_below_threshold: typing.Dict,
-    failed_components: typing.Dict,
-    threshold: int,
+        scans_above_threshold: typing.Dict,
+        scans_below_threshold: typing.Dict,
+        failed_components: typing.Dict,
+        threshold: int,
+        routes: checkmarx.client.CheckmarxRoutes,
 ):
     body_parts = [_mail_disclaimer()]
 
@@ -136,7 +167,9 @@ def assemble_mail_body(
             </p>
         ''')
         scan_statistics_above_threshold = checkmarx.util.get_scan_statistics_tables(
-            scan_results=scans_above_threshold, tablefmt='html',
+            scan_results=scans_above_threshold,
+            tablefmt='html',
+            routes=routes,
         )
         body_parts.append(above_threshold_text + scan_statistics_above_threshold)
 
@@ -147,17 +180,21 @@ def assemble_mail_body(
             </p>
         ''')
         scan_statistics_below_threshold = checkmarx.util.get_scan_statistics_tables(
-            scan_results=scans_below_threshold, tablefmt='html',
+            scan_results=scans_below_threshold,
+            tablefmt='html',
+            routes=routes,
         )
         body_parts.append(below_threshold_text + scan_statistics_below_threshold)
 
     if len(failed_components) > 0:
         failed_components_str = "\n".join((component.name() for component in failed_components))
-        failed_components_text = textwrap.dedent(f'''
-            <p>
-              The following components finished in an erroneous state: {failed_components_str}):
-            </p>
-        ''')
+        failed_components_text = textwrap.dedent(
+            f'''
+                <p>
+                  The following components finished in an erroneous state: {failed_components_str}):
+                </p>
+            '''
+        )
         body_parts.append(failed_components_text)
 
     return ''.join(body_parts)

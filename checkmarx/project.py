@@ -15,7 +15,6 @@ import product.model
 import checkmarx.util
 import version
 
-
 ctx.configure_default_logging()
 logger = logging.getLogger(__name__)
 
@@ -74,6 +73,7 @@ def upload_and_scan_repo(
         return cx_project.poll_and_retrieve_scan(
             scan_id=scan_id,
             component=component,
+            project_id=project.id,
         )
 
     last_scan = last_scans[0]
@@ -106,10 +106,11 @@ def upload_and_scan_repo(
             clogger.info(f'created scan with id {scan_id}')
     else:
         clogger.info(f'scan with id: {last_scan.id} for component {component.name()} '
-              'already running. Polling last scan.'
-        )
+                     'already running. Polling last scan.'
+                     )
 
     return cx_project.poll_and_retrieve_scan(
+        project_id=project.id,
         scan_id=scan_id,
         component=component,
     )
@@ -145,7 +146,7 @@ def _guess_commit_from_ref(component: product.model.Component):
     if commit:
         return commit
     # also try unmodified version-str
-    if (commit := in_repo(component.version())):
+    if commit := in_repo(component.version()):
         return commit
 
     # second guess: split commit-hash after last `-` character (inject-commit-hash semantics)
@@ -203,7 +204,7 @@ def _create_or_get_project(
         client: checkmarx.client.CheckmarxClient,
         name: str,
         team_id: str,
-        is_public: bool = True
+        is_public: bool = True,
 ):
     try:
         project_id = client.get_project_id_by_name(project_name=name, team_id=team_id)
@@ -225,34 +226,40 @@ class CheckmarxProject:
             checkmarx_client: checkmarx.client.CheckmarxClient,
             project_id: str,
             github_api,
-            component_name: product.model.ComponentName
+            component_name: product.model.ComponentName,
     ):
         self.client = checkmarx_client
         self.project_id = int(project_id)
         self.component_name = component_name
         self.github_api = github_api
 
-    def poll_and_retrieve_scan(self, scan_id: int, component: product.model.Component):
-        scan_result = self._poll_scan(scan_id=scan_id, component=component)
+    def poll_and_retrieve_scan(
+        self,
+        project_id: int,
+        scan_id: int,
+        component: product.model.Component,
+    ):
+        scan_response = self._poll_scan(scan_id=scan_id, component=component)
 
-        if scan_result.status_value() is not checkmarx.model.ScanStatusValues.FINISHED:
-            logger.error(f'scan for {component.name()} failed with {scan_result.status=}')
+        if scan_response.status_value() is not checkmarx.model.ScanStatusValues.FINISHED:
+            logger.error(f'scan for {component.name()} failed with {scan_response.status=}')
             raise RuntimeError('Scan did not finish successfully')
 
         clogger = component_logger(component)
         clogger.info('retrieving scan statistics')
-        statistics = self.scan_statistics(scan_id=scan_result.id)
+        statistics = self.scan_statistics(scan_id=scan_response.id)
 
         return checkmarx.model.ScanResult(
+            project_id=project_id,
             component=component,
-            scan_result=scan_result,
+            scan_response=scan_response,
             scan_statistic=statistics,
         )
 
     def download_zipped_repo(self, tmp_file, ref: str):
         repo = self.github_api.repository(
             self.component_name.github_organisation(),
-            self.component_name.github_repo()
+            self.component_name.github_repo(),
         )
 
         url = repo._build_url('zipball', ref, base_url=repo._api)

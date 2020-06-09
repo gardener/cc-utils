@@ -4,6 +4,7 @@ import traceback
 import typing
 
 import ci.util
+import checkmarx.client
 import checkmarx.project
 import checkmarx.util
 import mailutil
@@ -17,7 +18,7 @@ failed_components_const = 'failed_components'
 
 
 def _scan_sources(
-        checkmarx_cfg_name: str,
+        client: checkmarx.client.CheckmarxClient,
         team_id: str,
         component_descriptor: str,
         threshold: int,
@@ -26,8 +27,6 @@ def _scan_sources(
     component_descriptor = product.model.ComponentDescriptor.from_dict(
         ci.util.parse_yaml_file(component_descriptor)
     )
-
-    client = checkmarx.util.create_checkmarx_client(checkmarx_cfg_name)
 
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
 
@@ -74,7 +73,7 @@ def _scan_sources(
 
     for scan_result in executor.map(try_scanning, component_descriptor.components()):
         if scan_result is not failed_sentinel:
-            if scan_result.scan_result.scanRiskSeverity > threshold:
+            if scan_result.scan_response.scanRiskSeverity > threshold:
                 scan_results_above_threshold.append(scan_result)
             else:
                 scan_results_below_threshold.append(scan_result)
@@ -90,12 +89,14 @@ def _send_mail(
     scans: typing.Dict,
     threshold: int,
     email_recipients,
+    routes: checkmarx.client.CheckmarxRoutes,
 ):
     body = checkmarx.util.assemble_mail_body(
         scans_above_threshold=scans.get(scans_above_threshold_const),
         scans_below_threshold=scans.get(scans_below_threshold_const),
         failed_components=scans.get(failed_components_const),
         threshold=threshold,
+        routes=routes,
     )
     try:
         # get standard cfg set for email cfg
@@ -119,20 +120,27 @@ def _send_mail(
 
 
 def _print_scans(
-    scans: typing.Dict
+    scans: typing.Dict,
+    routes: checkmarx.client.CheckmarxRoutes,
 ):
     # XXX raise if an error occurred?
     if scans.get(scans_above_threshold_const):
         print('\n')
         ci.util.info('Critical scans above threshold')
-        checkmarx.util.print_scan_result(scan_results=scans.get(scans_above_threshold_const))
+        checkmarx.util.print_scan_result(
+            scan_results=scans.get(scans_above_threshold_const),
+            routes=routes,
+        )
     else:
         ci.util.info('no critical components above threshold found')
 
     if scans.get(scans_below_threshold_const):
         print('\n')
         ci.util.info('Clean scans below threshold')
-        checkmarx.util.print_scan_result(scan_results=scans.get(scans_below_threshold_const))
+        checkmarx.util.print_scan_result(
+            scan_results=scans.get(scans_below_threshold_const),
+            routes=routes,
+        )
     else:
         ci.util.info('no scans below threshold to print')
 
@@ -153,21 +161,25 @@ def scan_sources_and_notify(
     email_recipients,
     threshold: int = 40,
 ):
+    checkmarx_client = checkmarx.util.create_checkmarx_client(checkmarx_cfg_name)
+
     scans = _scan_sources(
-        checkmarx_cfg_name=checkmarx_cfg_name,
+        client=checkmarx_client,
         team_id=team_id,
         component_descriptor=component_descriptor,
         threshold=threshold,
     )
 
-    _print_scans(scans=scans)
-    if scans.get(scans_above_threshold_const):
-        _send_mail(
-            scans=scans,
-            threshold=threshold,
-            email_recipients=email_recipients,
-            )
-    else:
-        ci.util.info('no scans above threshold. Therefore no mail send')
+    _print_scans(
+        scans=scans,
+        routes=checkmarx_client.routes,
+    )
+
+    _send_mail(
+        scans=scans,
+        threshold=threshold,
+        email_recipients=email_recipients,
+        routes=checkmarx_client.routes,
+    )
     # codeowner recipient:
     # only send mail if over threshold
