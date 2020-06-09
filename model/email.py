@@ -14,6 +14,7 @@
 # limitations under the License.
 import typing
 
+import reutil
 from model.base import (
     BasicCredentials,
     NamedModelElement,
@@ -48,7 +49,8 @@ class EmailConfig(NamedModelElement):
     def filter_recipients(self, recipients:typing.Iterable[str]):
         blacklist = self.raw.get('blacklist')
         if blacklist:
-            return {r for r in recipients if r not in blacklist}
+            email_filter = reutil.re_filter(exclude_regexes=blacklist)
+            return {r for r in recipients if email_filter(r)}
         return recipients
 
     def _required_attributes(self):
