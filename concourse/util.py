@@ -205,15 +205,17 @@ def find_own_running_build():
         build_plan = build.plan()
         meta_task_id = build_plan.task_id(concourse.model.traits.meta.META_STEP_NAME)
 
-        last_line = None
+        uuid_line = None
         try:
-            # "our" output is always the last line (ignore download logs from image retrieval)
-            for last_line in build_events.iter_buildlog(meta_task_id):
-                pass
+            for line in reversed(list(build_events.iter_buildlog(meta_task_id))):
+                if line.strip():
+                    # last non empty line
+                    uuid_line = line
+                    break
         except StopIteration:
             pass
 
-        uuid_json = json.loads(last_line)
+        uuid_json = json.loads(uuid_line)
         if uuid_json['uuid'] == build_job_uuid:
             return build
     else:
