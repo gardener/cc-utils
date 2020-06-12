@@ -16,7 +16,7 @@
 from model.base import NamedModelElement
 
 
-class ServicePrincipal(NamedModelElement):
+class AzureServicePrincipal(NamedModelElement):
     '''
     Not intended to be instantiated by users of this module
     '''
@@ -39,7 +39,11 @@ class ServicePrincipal(NamedModelElement):
         ]
 
 
-class StorageAccountConfig(NamedModelElement):
+# XXX export previous name for - temporary - backwards compatibility
+ServicePrincipal = AzureServicePrincipal
+
+
+class AzureStorageAccountCfg(NamedModelElement):
     '''
     Not intended to be instantiated by users of this module
     '''
@@ -60,3 +64,7 @@ class StorageAccountConfig(NamedModelElement):
             'access_key',
             'container_name',
         ]
+
+
+# XXX export previous name for - temporary - backwards compatibility
+StorageAccountConfig = AzureStorageAccountCfg
