@@ -33,6 +33,9 @@ from protecode.model import CVSSVersion
 
 logger = logging.getLogger()
 
+# monkeypatch: disable html escaping
+tabulate.htmlescape = lambda x: x
+
 
 @dataclasses.dataclass
 class MalwareScanResult:
@@ -148,7 +151,7 @@ class MailRecipients(object):
         return result + tabulate.tabulate(
             map(lambda dc: dataclasses.astuple(dc), self._clamav_results),
             headers=MalwareScanResult.headers(),
-            tablefmt='unsafehtml',
+            tablefmt='html',
         )
 
     def __repr__(self):
@@ -266,7 +269,7 @@ def protecode_results_table(protecode_cfg, upload_results: typing.Iterable[Uploa
     table = tabulate.tabulate(
       map(result_to_tuple, upload_results),
       headers=('Component Name', 'Greatest CVE', 'Container Image Reference'),
-      tablefmt='unsafehtml',
+      tablefmt='html',
     )
     return table
 
