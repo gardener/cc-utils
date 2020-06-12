@@ -60,26 +60,3 @@ class StorageAccountConfig(NamedModelElement):
             'access_key',
             'container_name',
         ]
-
-
-class PlanConfig(NamedModelElement):
-    '''
-    Not intended to be instantiated by users of this module
-    '''
-
-    def offer_id(self):
-        return self.raw['offer_id']
-
-    def publisher_id(self):
-        return self.raw['publisher_id']
-
-    def plan_id(self):
-        return self.raw['plan_id']
-
-    def _required_attributes(self):
-        yield from super()._required_attributes()
-        yield from [
-            'offer_id',
-            'publisher_id',
-            'plan_id',
-        ]
