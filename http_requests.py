@@ -177,19 +177,15 @@ class AuthenticatedRequestBuilder(object):
             )
         except Exception as e:
             if ci.util._running_on_ci():
-                method_name = method.__name__
-                try:
-                    exc_type, exc_value, exc_traceback = sys.exc_info()
-                    _log_stacktrace_to_els(
-                        exc_type=exc_type,
-                        exc_value=exc_value,
-                        exc_traceback=exc_traceback,
-                        url=url,
-                        method=method_name,
-                        headers=headers
-                    )
-                except Exception as ex:
-                    ci.util.info(f'Could not log stack trace information to ELS: {ex}')
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                _log_stacktrace_to_els(
+                    exc_type=exc_type,
+                    exc_value=exc_value,
+                    exc_traceback=exc_traceback,
+                    url=url,
+                    method=method.__name__,
+                    headers=headers
+                )
             raise e
 
         if check_http_code:
@@ -242,23 +238,26 @@ def _log_stacktrace_to_els(exc_type, exc_value, exc_traceback, url, method, head
     els_index = 'requests_stacktrace'
     config_set = ci.util.ctx().cfg_factory().cfg_set(config_set_name)
     try:
-        elastic_cfg = config_set.elasticsearch()
-    except KeyError:
-        # no elastic search configuration in config set
-        return
+        try:
+            elastic_cfg = config_set.elasticsearch()
+        except KeyError:
+            # no elastic search configuration in config set
+            return
 
-    json_body = {
-        'url': url,
-        'method': method,
-        'target_host': urllib.parse.urlparse(url).netloc,
-        'headers': headers,
-        'exc_type': exc_type.__name__,
-        'exc_value': str(exc_value),
-        'exc_stacktrace': repr(traceback.format_tb(exc_traceback))
-    }
+        json_body = {
+            'url': url,
+            'method': method,
+            'target_host': urllib.parse.urlparse(url).netloc,
+            'headers': headers,
+            'exc_type': exc_type.__name__,
+            'exc_value': str(exc_value),
+            'exc_stacktrace': repr(traceback.format_tb(exc_traceback))
+        }
 
-    elastic_client = elasticsearch.from_cfg(elasticsearch_cfg=elastic_cfg)
-    elastic_client.store_document(
-        index=els_index,
-        body=json_body
-    )
+        elastic_client = elasticsearch.from_cfg(elasticsearch_cfg=elastic_cfg)
+        elastic_client.store_document(
+            index=els_index,
+            body=json_body
+        )
+    except Exception as ex:
+        ci.util.info(f'Could not log stack trace information to ELS: {ex}')
