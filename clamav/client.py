@@ -14,9 +14,14 @@
 # limitations under the License.
 import logging
 import requests
+import sys
+import ci.util
 
 from ensure import ensure_annotations
-from http_requests import check_http_code
+from http_requests import (
+    check_http_code,
+    _log_stacktrace_to_els,
+)
 from .routes import ClamAVRoutes
 from clamav.util import iter_image_files
 
@@ -44,7 +49,20 @@ class ClamAVClient(object):
 
     @check_http_code
     def _request(self, function, *args, **kwargs):
-        return function(*args, **kwargs)
+        try:
+            return function(*args, **kwargs)
+        except Exception as e:
+            if ci.util._running_on_ci():
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                _log_stacktrace_to_els(
+                    exc_type=exc_type,
+                    exc_value=exc_value,
+                    exc_traceback=exc_traceback,
+                    url=args[0] if args else kwargs.get('url'),
+                    method=function.__name__,
+                    headers=kwargs.get('headers', {}),
+                )
+            raise e
 
     def info(self):
         url = self.routes.info()
