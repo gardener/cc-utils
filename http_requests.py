@@ -177,9 +177,17 @@ class AuthenticatedRequestBuilder(object):
             )
         except Exception as e:
             if ci.util._running_on_ci():
+                method_name = method.__name__
                 try:
                     exc_type, exc_value, exc_traceback = sys.exc_info()
-                    _log_stacktrace_to_els(exc_type, exc_value, exc_traceback, url, method, headers)
+                    _log_stacktrace_to_els(
+                        exc_type=exc_type,
+                        exc_value=exc_value,
+                        exc_traceback=exc_traceback,
+                        url=url,
+                        method=method_name,
+                        headers=headers
+                    )
                 except Exception as ex:
                     ci.util.info(f'Could not log stack trace information to ELS: {ex}')
             raise e
@@ -241,7 +249,7 @@ def _log_stacktrace_to_els(exc_type, exc_value, exc_traceback, url, method, head
 
     json_body = {
         'url': url,
-        'method': method.__name__,
+        'method': method,
         'target_host': urllib.parse.urlparse(url).netloc,
         'headers': headers,
         'exc_type': exc_type.__name__,
