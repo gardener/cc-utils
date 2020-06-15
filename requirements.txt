@@ -38,3 +38,6 @@ termcolor<2.0.0
 toposort
 urllib3<2.0.0
 yamllint<2
+aliyun-python-sdk-ecs==4.19.7
+aliyun-python-sdk-core==2.13.16
+oss2==2.12.1
