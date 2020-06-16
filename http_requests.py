@@ -17,6 +17,7 @@ import enum
 import functools
 import traceback
 import urllib
+import socket
 
 import cachecontrol
 import requests
@@ -248,6 +249,7 @@ def _log_stacktrace_to_els(exc_type, exc_value, exc_traceback, url, method, head
             'url': url,
             'method': method,
             'target_host': urllib.parse.urlparse(url).netloc,
+            'source_host': socket.gethostname(),
             'headers': headers,
             'exc_type': exc_type.__name__,
             'exc_value': str(exc_value),
