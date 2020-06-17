@@ -151,6 +151,7 @@ class GithubWebhookDispatcher(object):
                 if pr_event.action() in [PullRequestAction.OPENED, PullRequestAction.SYNCHRONIZE]:
                     self._set_pr_labels(pr_event, resources)
 
+                logger.info(f'triggering resource check for PR number: {pr_event.number()}')
                 self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
 
         thread = threading.Thread(target=_set_labels)
