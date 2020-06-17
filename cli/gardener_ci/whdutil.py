@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+import multiprocessing
 
 import ci.util
 ci.util.ctx().configure_default_logging(stdout_level=logging.INFO)
@@ -41,11 +42,13 @@ def start_whd(
 
     if production:
         import bjoern
+        multiprocessing.set_start_method('fork')
 
         def serve():
             bjoern.run(app, any_interface, port, reuse_port=True)
         for _ in range(workers - 1):
-            serve()
+            p = multiprocessing.Process(target=serve)
+            p.start()
         serve()
     else:
         import werkzeug.serving
