@@ -18,6 +18,7 @@ import functools
 import logging
 import time
 import traceback
+import threading
 
 import ccc.elasticsearch
 import ccc.secrets_server
@@ -77,14 +78,19 @@ class GithubWebhookDispatcher(object):
             self._update_pipeline_definition(push_event)
 
         logger.debug('before push-event dispatching')
-        for concourse_api in self.concourse_clients():
-            logger.debug(f'using concourse-api: {concourse_api}')
-            resources = self._matching_resources(
-                concourse_api=concourse_api,
-                event=push_event,
-            )
-            logger.debug('triggering resource-check')
-            self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
+
+        def _check_resources():
+            for concourse_api in self.concourse_clients():
+                logger.debug(f'using concourse-api: {concourse_api}')
+                resources = self._matching_resources(
+                    concourse_api=concourse_api,
+                    event=push_event,
+                )
+                logger.debug('triggering resource-check')
+                self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
+
+        thread = threading.Thread(target=_check_resources)
+        thread.start()
 
     def _update_pipeline_definition(self, push_event):
         try:
@@ -132,24 +138,23 @@ class GithubWebhookDispatcher(object):
         ):
             return logger.info(f'ignoring pull-request action {pr_event.action()}')
 
-        for concourse_api in self.concourse_clients():
-            resources = list(self._matching_resources(
-                concourse_api=concourse_api,
-                event=pr_event,
-            ))
+        def _set_labels():
+            for concourse_api in self.concourse_clients():
+                resources = list(self._matching_resources(
+                    concourse_api=concourse_api,
+                    event=pr_event,
+                ))
 
-            if len(resources) == 0:
-                continue
+                if len(resources) == 0:
+                    continue
 
-            if pr_event.action() in [PullRequestAction.OPENED, PullRequestAction.SYNCHRONIZE]:
-                self._set_pr_labels(pr_event, resources)
+                if pr_event.action() in [PullRequestAction.OPENED, PullRequestAction.SYNCHRONIZE]:
+                    self._set_pr_labels(pr_event, resources)
 
-            self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
-            #self._ensure_pr_resource_updates(
-            #    concourse_api=concourse_api,
-            #    pr_event=pr_event,
-            #    resources=resources,
-            #)
+                self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
+
+        thread = threading.Thread(target=_set_labels)
+        thread.start()
 
     def _trigger_resource_check(self, concourse_api, resources):
         logger.debug('_trigger_resource_check')
