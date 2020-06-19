@@ -2,6 +2,7 @@ import datetime
 import dataclasses
 import urllib.parse
 import sys
+import socket
 
 from dacite import from_dict
 import requests
@@ -136,6 +137,7 @@ class CheckmarxClient:
                     method=method,
                     headers=headers,
                 )
+            ci.util.error(f'Source host: {socket.getfqdn()}')
             raise e
 
         if not res.ok:

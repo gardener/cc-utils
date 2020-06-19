@@ -187,6 +187,7 @@ class AuthenticatedRequestBuilder(object):
                     method=method.__name__,
                     headers=headers
                 )
+            ci.util.error(f'Source host: {socket.getfqdn()}')
             raise e
 
         if check_http_code:
@@ -249,7 +250,7 @@ def _log_stacktrace_to_els(exc_type, exc_value, exc_traceback, url, method, head
             'url': url,
             'method': method,
             'target_host': urllib.parse.urlparse(url).netloc,
-            'source_host': socket.gethostname(),
+            'source_host': socket.getfqdn(),
             'headers': headers,
             'exc_type': exc_type.__name__,
             'exc_value': str(exc_value),

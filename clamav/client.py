@@ -15,6 +15,7 @@
 import logging
 import requests
 import sys
+import socket
 import ci.util
 
 from ensure import ensure_annotations
@@ -62,6 +63,7 @@ class ClamAVClient(object):
                     method=function.__name__,
                     headers=kwargs.get('headers', {}),
                 )
+            ci.util.error(f'Source host: {socket.getfqdn()}')
             raise e
 
     def info(self):
