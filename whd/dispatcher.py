@@ -25,6 +25,7 @@ import ccc.secrets_server
 import ci.util
 import concourse.client
 
+from concourse.client.model import BuildStatus
 from .pipelines import update_repository_pipelines
 from concourse.enumerator import JobMappingNotFoundError
 from github.util import GitHubRepositoryHelper
@@ -153,6 +154,11 @@ class GithubWebhookDispatcher(object):
 
                 logger.info(f'triggering resource check for PR number: {pr_event.number()}')
                 self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
+                self._ensure_pull_requests_jobs_are_run(
+                    concourse_api=concourse_api,
+                    matching_resources=resources,
+                    pr_event=pr_event
+                )
 
         thread = threading.Thread(target=_set_labels)
         thread.start()
@@ -211,6 +217,130 @@ class GithubWebhookDispatcher(object):
                 logger.debug(
                     f"Update to pull request #{pr_event.number()} by '{sender_login}' "
                     f" in '{repository_path}' found. Ignoring, since they are not an org member'."
+                )
+
+    def _resource_versions_and_jobs(self, concourse_api, matching_resources, pr_event):
+        resource = [r for r in matching_resources if r.type == "pull-request"]
+        if len(resource) != 1:
+            logger.warning(f"none or more than on resource found for PR {pr_event.number()}")
+            return
+
+        resource = resource[0]
+        resource_versions = concourse_api.resource_versions(
+            pipeline_name=resource.pipeline.name,
+            resource_name=resource.name
+        )
+        if not resource_versions:
+            logger.warning(
+                f"no resource versions found for pipeline {resource.pipeline.name} "
+                f"and resource {resource.name}"
+            )
+            return
+
+        pr_resource_versions = [
+            rv for rv in resource_versions if rv.version()['pr'] == str(pr_event.number())
+        ]
+        if not pr_resource_versions:
+            logger.warning(
+                f"no resource versions found for pipeline {resource.pipeline.name} "
+                f"resource {resource.name} and PR {pr_event.number()}"
+            )
+            return
+
+        jobs_with_triggering_resource = [
+            job for job in resource.pipeline.jobs if job.is_triggered_by_resource(resource.name)
+        ]
+
+        # check if there is a pr resource version which was not build, if so return
+        # it with the corresponding job
+        for job in jobs_with_triggering_resource:
+            builds = concourse_api.job_builds(job.pipeline.name, job.name)
+            for resource_version in self._resource_version_ids_not_built(
+                resource_versions=pr_resource_versions,
+                builds=builds
+            ):
+                yield (job, resource, resource_version)
+
+    def _ensure_pull_requests_jobs_are_run(self, concourse_api, matching_resources, pr_event):
+        '''
+        check all PR resource versions for which no build exists. If a resource version has
+        no build, pin this resource version, trigger the corresponding job and unpin the resource
+        '''
+        for job, resource, resource_version in self._resource_versions_and_jobs(
+            concourse_api, matching_resources, pr_event
+        ):
+            logger.info(
+                f"Pin resource version {resource_version.version()} "
+                f"and trigger build for job {job.name}"
+            )
+            self._trigger_build_with_pinned_resource_version(
+                job=job,
+                resource_name=resource.name,
+                resource_version_id=resource_version.id()
+            )
+
+    def _resource_version_ids_not_built(self, resource_versions, builds):
+        '''
+        yield resource versions which have not been built by checking if the resource version
+        reference is found in an existing build
+        '''
+        for resource_version in resource_versions:
+            resource_version_in_build = False
+            for build in reversed(builds[-30:]):
+                build_plan = build.plan()
+                if build_plan.contains_version_ref(resource_version.version()['ref']):
+                    resource_version_in_build = True
+                    break
+            if not resource_version_in_build:
+                yield resource_version
+
+    def _trigger_build_with_pinned_resource_version(self, job, resource_name, resource_version_id):
+        '''
+        pin the passed resource version, trigger the corresponding job and unpin resourcce
+        version again
+        '''
+        def _job_running(
+            pipeline_name, job_name, build_number, concourse_api, retries=10, sleep_sec=3
+        ):
+            time.sleep(sleep_sec)
+            retries -= 1
+            if retries < 0:
+                logger.warning(
+                    f"Job {job_name} with build number {build_number} cannot be started"
+                )
+                return False
+
+            build = concourse_api.job_build(
+                pipeline_name=pipeline_name,
+                job_name=job_name,
+                build_name=build_number,
+            )
+            if build.status() == BuildStatus.RUNNING:
+                return True
+            else:
+                return _job_running(
+                            pipeline_name,
+                            job_name,
+                            build_number,
+                            concourse_api,
+                            retries,
+                            sleep_sec=sleep_sec*1.2
+                        )
+
+        concourse_api = job.concourse_api
+        pipeline_name = job.pipeline.name
+        version_pin_lock = threading.Lock()
+        with version_pin_lock:
+            concourse_api.pin_resource_version(
+                pipeline_name=pipeline_name,
+                resource_name=resource_name,
+                resource_version_id=resource_version_id,
+            )
+            build = concourse_api.trigger_build(pipeline_name, job.name)
+            if _job_running(pipeline_name, job.name, build.build_number(), concourse_api):
+                concourse_api.unpin_resource(
+                    pipeline_name=pipeline_name,
+                    resource_name=resource_name
                 )
 
     def _matching_resources(self, concourse_api, event):
