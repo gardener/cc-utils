@@ -46,6 +46,9 @@ class ResourceVersion(ModelBase):
     Wraps a single result returned from concourse's `<resource>/versions` route.
     Both `metadata` and `version` adhere to a schema specific to the resource type.
     '''
+    def id(self):
+        return self.raw['id']
+
     def type(self):
         return self.raw['type']
 
@@ -77,8 +80,50 @@ class PipelineConfig(object):
             raise ValueError()
         self.resources = map(lambda r: Resource(r, self), resources)
 
+    def jobs(self):
+        return [Job(job, self) for job in self.raw.get('jobs')]
+
     def resources_of_types(self, types):
         return filter(lambda r: r.type in types, self.resources)
+
+
+class Job:
+    '''
+    Wrapper around the dictionary representing a job as part of a
+    concourse.PipelineConfig
+
+    Not intended to be instantiated by users of this module
+    '''
+    @ensure_annotations
+    def __init__(self, raw: dict, pipeline: PipelineConfig):
+        self.pipeline = pipeline
+        self.concourse_api = pipeline.concourse_api
+        self.raw = raw
+        self.name = raw['name']
+
+    def plan(self):
+        return Plan(self.raw.get('plan'), self)
+
+    def is_triggered_by_resource(self, resource_name: str):
+        get_steps = self.plan().get_steps()
+        for get_step in get_steps:
+            if get_step['get'] == resource_name and get_step['trigger']:
+                return True
+        return False
+
+
+class Plan:
+    '''
+    Wrapper around the dictionary representing a plan as part of a job
+
+    Not intended to be instantiated by users of this module
+    '''
+    def __init__(self, raw: dict, job: Job):
+        self.raw = raw
+        self.job = job
+
+    def get_steps(self):
+        return [step for step in self.raw if 'get' in step]
 
 
 class Resource(object):
@@ -221,6 +266,28 @@ class BuildPlan(ModelBase):
                             return task_id
         return find_tid(plan)
 
+    def contains_version_ref(self, resource_version_ref: str):
+        '''
+        determines if the resource version reference is found in the build plan.
+        If found, the resource version triggered this build.
+        '''
+        def has_version_ref(p):
+            if 'ref' in p:
+                ref = p.get('ref')
+                if ref == resource_version_ref:
+                    return True  # end recursion
+            for k, v in p.items():
+                if isinstance(v, dict):
+                    if has_version_ref(v):
+                        return True
+                if isinstance(v, list):
+                    for element in v:
+                        if has_version_ref(element):
+                            return True
+            return False
+
+        return has_version_ref(self.raw.get('plan'))
+
 
 class BuildEvents(object):
     '''
@@ -324,6 +391,27 @@ class Worker(ModelBase):
 
     def name(self):
         return self.raw['name']
+
+
+class PipelineResource:
+    '''
+    Wrapper around the dictionary representing a pipeline resource
+
+    Not intended to be instantiated by users of this module
+    '''
+    @ensure_annotations
+    def __init__(self, raw:dict, concourse_api):
+        self.concourse_api = concourse_api
+        self.raw = raw
+        self.name = raw['name']
+
+    def is_pinned(self):
+        if self.raw.get('pinned_version'):
+            return True
+        return False
+
+    def pinned_version(self):
+        return self.raw.get('pinned_version')
 
 
 class BuildStatus(Enum):
