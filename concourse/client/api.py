@@ -30,6 +30,7 @@ from .model import (
     PipelineConfig,
     ResourceVersion,
     Worker,
+    PipelineResource,
 )
 from model.concourse import (
     ConcourseTeam,
@@ -197,7 +198,8 @@ class ConcourseApiBase(object):
     @ensure_annotations
     def trigger_build(self, pipeline_name: str, job_name: str):
         trigger_url = self.routes.job_builds(pipeline_name, job_name)
-        self._post(trigger_url)
+        response = self._post(trigger_url)
+        return Build(response.json(), self)
 
     @ensure_annotations
     def build_plan(self, build_id):
@@ -265,6 +267,22 @@ class ConcourseApiBase(object):
     def abort_build(self, build_id):
         url = self.routes.abort_build(build_id)
         self._put(url, "")
+
+    @ensure_annotations
+    def pin_resource_version(self, pipeline_name: str, resource_name: str, resource_version_id: int):
+        url = self.routes.pin_resource_version(pipeline_name, resource_name, resource_version_id)
+        self._put(url, "")
+
+    @ensure_annotations
+    def unpin_resource(self, pipeline_name: str, resource_name: str):
+        url = self.routes.unpin_resource(pipeline_name, resource_name)
+        self._put(url, "")
+
+    @ensure_annotations
+    def resource(self, pipeline_name: str, resource_name: str):
+        url = self.routes.resource(pipeline_name, resource_name)
+        response = self._get(url)
+        return PipelineResource(response, self)
 
 
 class ConcourseApiV5(ConcourseApiBase):
