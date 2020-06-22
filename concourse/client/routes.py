@@ -93,6 +93,10 @@ class ConcourseApiRoutesBase(object):
         return self._api_url('pipelines', pipeline_name, 'resources', resource_name, 'check')
 
     @ensure_annotations
+    def resource(self, pipeline_name: str, resource_name: str):
+        return self._api_url('pipelines', pipeline_name, 'resources', resource_name)
+
+    @ensure_annotations
     def resource_versions(self, pipeline_name: str, resource_name: str):
         return self._api_url('pipelines', pipeline_name, 'resources', resource_name, 'versions')
 
@@ -123,6 +127,23 @@ class ConcourseApiRoutesBase(object):
     @ensure_annotations
     def prune_worker(self, worker_name: str):
         return self._api_url('workers', worker_name, 'prune', prefix_team=False)
+
+    @ensure_annotations
+    def pin_resource_version(self, pipeline_name: str, resource_name: str, resource_version_id: int):
+        return self._api_url(
+            'pipelines', pipeline_name,
+            'resources', resource_name,
+            'versions', str(resource_version_id),
+            'pin'
+        )
+
+    @ensure_annotations
+    def unpin_resource(self, pipeline_name: str, resource_name: str):
+        return self._api_url('pipelines', pipeline_name, 'resources', resource_name, 'unpin')
+
+    @ensure_annotations
+    def pin_comment(self, pipeline_name: str, resource_name: str):
+        return self._api_url('pipelines', pipeline_name, 'resources', resource_name, 'pin_comment')
 
 
 class ConcourseApiRoutesV5(ConcourseApiRoutesBase):
