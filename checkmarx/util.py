@@ -102,12 +102,13 @@ def get_scan_statistics_tables(
     scan_statistics_data = [
         (
             component_name(scan_result),
-            scan_severity(scan_result),
+            severity,
             scan_result.scan_statistic.highSeverity,
             scan_result.scan_statistic.mediumSeverity,
             scan_result.scan_statistic.lowSeverity,
             scan_result.scan_statistic.infoSeverity,
         ) for scan_result in scan_results
+          if (severity := scan_severity(scan_result)) is not None
     ]
 
     # monkeypatch: disable html escaping
