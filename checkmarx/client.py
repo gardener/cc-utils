@@ -1,18 +1,14 @@
 import datetime
 import dataclasses
 import urllib.parse
-import sys
-import socket
 
 from dacite import from_dict
 import requests
 
 from ci.util import urljoin
-from http_requests import _log_stacktrace_to_els
 import checkmarx.model
 import model
 import model.checkmarx
-import ci.util
 
 
 def require_auth(f: callable):
@@ -124,21 +120,7 @@ class CheckmarxClient:
         if 'Accept' not in headers:
             headers['Accept'] = f'application/json;v={api_version}'
 
-        try:
-            res = requests.request(method=method, verify=False, headers=headers, *args, **kwargs)
-        except Exception as e:
-            if ci.util._running_on_ci():
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                _log_stacktrace_to_els(
-                    exc_type=exc_type,
-                    exc_value=exc_value,
-                    exc_traceback=exc_traceback,
-                    url=kwargs.get('url'),
-                    method=method,
-                    headers=headers,
-                )
-            ci.util.error(f'Source host: {socket.getfqdn()}')
-            raise e
+        res = requests.request(method=method, verify=False, headers=headers, *args, **kwargs)
 
         if not res.ok:
             msg = f'{method} request to url {res.url} failed with {res.status_code=} {res.reason=}'

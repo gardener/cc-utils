@@ -12,12 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import sys
 import enum
 import functools
-import traceback
-import urllib
-import socket
 
 import cachecontrol
 import requests
@@ -26,7 +22,6 @@ from requests.adapters import HTTPAdapter
 from requests.auth import HTTPBasicAuth
 from urllib3.util.retry import Retry
 
-import ci.util
 from ci.util import warning
 
 
@@ -168,27 +163,13 @@ class AuthenticatedRequestBuilder(object):
             if 'content-type' not in headers:
                 headers['content-type'] = 'application/x-yaml'
 
-        try:
-            result = method(
-                url,
-                headers=headers,
-                auth=self.auth,
-                verify=self.verify_ssl,
-                **kwargs
-            )
-        except Exception as e:
-            if ci.util._running_on_ci():
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                _log_stacktrace_to_els(
-                    exc_type=exc_type,
-                    exc_value=exc_value,
-                    exc_traceback=exc_traceback,
-                    url=url,
-                    method=method.__name__,
-                    headers=headers
-                )
-            ci.util.error(f'Source host: {socket.getfqdn()}')
-            raise e
+        result = method(
+            url,
+            headers=headers,
+            auth=self.auth,
+            verify=self.verify_ssl,
+            **kwargs
+        )
 
         if check_http_code:
             self._check_http_code(result, url)
@@ -231,36 +212,3 @@ class AuthenticatedRequestBuilder(object):
                 return_type=None,
                 **kwargs
         )
-
-
-def _log_stacktrace_to_els(exc_type, exc_value, exc_traceback, url, method, headers):
-    import ccc.elasticsearch as elasticsearch
-
-    config_set_name = ci.util.check_env('CONCOURSE_CURRENT_CFG')
-    els_index = 'requests_stacktrace'
-    config_set = ci.util.ctx().cfg_factory().cfg_set(config_set_name)
-    try:
-        try:
-            elastic_cfg = config_set.elasticsearch()
-        except KeyError:
-            # no elastic search configuration in config set
-            return
-
-        json_body = {
-            'url': url,
-            'method': method,
-            'target_host': urllib.parse.urlparse(url).netloc,
-            'source_host': socket.getfqdn(),
-            'headers': headers,
-            'exc_type': exc_type.__name__,
-            'exc_value': str(exc_value),
-            'exc_stacktrace': repr(traceback.format_tb(exc_traceback))
-        }
-
-        elastic_client = elasticsearch.from_cfg(elasticsearch_cfg=elastic_cfg)
-        elastic_client.store_document(
-            index=els_index,
-            body=json_body
-        )
-    except Exception as ex:
-        ci.util.info(f'Could not log stack trace information to ELS: {ex}')
