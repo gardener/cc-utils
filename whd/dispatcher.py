@@ -174,6 +174,8 @@ class GithubWebhookDispatcher(object):
             resource.source.get('label')
             for resource in resources if resource.source.get('label') is not None
         }
+        if not required_labels:
+            return
         repo = pr_event.repository()
         repository_path = repo.repository_path()
         pr_number = pr_event.number()
