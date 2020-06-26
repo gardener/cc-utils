@@ -153,6 +153,11 @@ class GithubWebhookDispatcher(object):
 
                 logger.info(f'triggering resource check for PR number: {pr_event.number()}')
                 self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
+                self._ensure_pr_resource_updates(
+                    concourse_api=concourse_api,
+                    pr_event=pr_event,
+                    resources=resources,
+                )
 
         thread = threading.Thread(target=_set_labels)
         thread.start()
