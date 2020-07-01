@@ -219,7 +219,6 @@ class GithubWebhookDispatcher(object):
                 )
 
     def _matching_resources(self, concourse_api, event):
-        resources = concourse_api.pipeline_resources(concourse_api.pipelines())
         if isinstance(event, PushEvent):
             resource_type = 'git'
         elif isinstance(event, PullRequestEvent):
@@ -227,10 +226,13 @@ class GithubWebhookDispatcher(object):
         else:
             raise NotImplementedError
 
+        resources = concourse_api.pipeline_resources(
+            concourse_api.pipelines(),
+            resource_type=resource_type,
+        )
+
         for resource in resources:
             if not resource.has_webhook_token():
-                continue
-            if not resource.type == resource_type:
                 continue
             ghs = resource.github_source()
             repository = event.repository()

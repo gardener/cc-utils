@@ -15,6 +15,7 @@
 
 import json
 import warnings
+import typing
 
 from ensure import ensure_annotations
 from urllib3.exceptions import InsecureRequestWarning
@@ -129,13 +130,20 @@ class ConcourseApiBase(object):
         not_empty(response)
         return PipelineConfig(response, concourse_api=self, name=pipeline_name)
 
-    def pipeline_resources(self, pipeline_names):
+    def pipeline_resources(
+        self,
+        pipeline_names: typing.Union[typing.Sequence[str], str],
+        resource_type: typing.Optional[str]=None,
+    ):
         if isinstance(pipeline_names, str):
             pipeline_names = [pipeline_names]
 
         resources = map(lambda name: self.pipeline_cfg(pipeline_name=name).resources, pipeline_names)
         for resource_list in resources:
-            yield from resource_list
+            for resource in resource_list:
+                # resource is of type concourse.model.Resource
+                if not resource_type or resource.type == resource_type:
+                    yield resource
 
     @ensure_annotations
     def pipeline_config_version(self, pipeline_name: str):
