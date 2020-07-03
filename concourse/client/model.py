@@ -14,7 +14,10 @@
 # limitations under the License.
 
 import json
+import typing
 
+from dacite import from_dict
+from dataclasses import dataclass
 from ensure import ensure_annotations
 from enum import Enum
 from urllib.parse import urlparse
@@ -400,6 +403,22 @@ class Worker(ModelBase):
         return self.raw['name']
 
 
+@dataclass
+class PinnedGitVersion:
+    ref: str
+
+
+@dataclass
+class PinnedPRVersion:
+    pr: str
+    ref: str
+
+
+@dataclass
+class PinnedTimeVersion:
+    time: str
+
+
 class PipelineResource:
     '''
     Wrapper around the dictionary representing a pipeline resource returned by Concourse API
@@ -412,13 +431,31 @@ class PipelineResource:
         self.raw = raw
         self.name = raw['name']
 
-    def is_pinned(self):
+    def is_pinned(self) -> bool:
         if self.raw.get('pinned_version'):
             return True
         return False
 
-    def pinned_version(self):
-        return self.raw.get('pinned_version')
+    def type(self) -> ResourceType:
+        return ResourceType(self.raw.get('type'))
+
+    def pipeline_name(self) -> str:
+        return self.raw.get('pipeline_name')
+
+    def pinned_version(self) -> typing.Union[PinnedPRVersion, PinnedGitVersion, PinnedTimeVersion]:
+        if self.is_pinned():
+            pinned_version = self.raw.get('pinned_version')
+            if self.type() is ResourceType.PULL_REQUEST:
+                return from_dict(data_class=PinnedPRVersion, data=pinned_version)
+            elif self.type() is ResourceType.GIT:
+                return from_dict(data_class=PinnedGitVersion, data=pinned_version)
+            elif self.type() is ResourceType.TIME:
+                return from_dict(data_class=PinnedTimeVersion, data=pinned_version)
+            else:
+                raise NotImplementedError(f'Pinned version for type {self.type()} not implemented')
+
+    def pin_comment(self) -> typing.Optional[str]:
+        return self.raw.get('pin_comment')
 
 
 class BuildStatus(Enum):
