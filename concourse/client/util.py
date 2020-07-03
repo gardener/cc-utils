@@ -19,6 +19,7 @@ from whd.model import (
     PullRequestEvent,
 )
 from .model import (
+    Job,
     PipelineConfigResource,
     ResourceVersion,
 )
@@ -54,3 +55,41 @@ def determine_pr_resource_versions(
         ]
 
         yield (pr_resource, pr_resource_versions)
+
+
+def determine_jobs_to_be_triggered(
+    resource: PipelineConfigResource,
+) -> typing.Iterator[Job]:
+
+    yield from (
+        job for job in resource.pipeline.jobs if job.is_triggered_by_resource(resource.name)
+    )
+
+
+def has_job_been_triggered(
+    job: Job,
+    resource_version: ResourceVersion,
+    concourse_api,
+) -> bool:
+
+    builds = concourse_api.job_builds(job.pipeline.name, job.name)
+    for build in builds:
+        build_plan = build.plan()
+        if build_plan.contains_version_ref(resource_version.version()['ref']):
+            return True
+    return False
+
+
+def jobs_not_triggered(
+    pr_event: PullRequestEvent,
+    concourse_api,
+) -> typing.Iterator[(Job, PipelineConfigResource, ResourceVersion)]:
+
+    for pr_resource, pr_resource_versions in determine_pr_resource_versions(
+        pr_event=pr_event,
+        concourse_api=concourse_api,
+    ):
+        for job in determine_jobs_to_be_triggered(pr_resource):
+            for pr_resource_version in pr_resource_versions:
+                if not has_job_been_triggered(job, pr_resource_version, concourse_api):
+                    yield (job, pr_resource, pr_resource_version)
