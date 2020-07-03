@@ -28,6 +28,7 @@ from .model import (
     BuildPlan,
     BuildEvents,
     PipelineConfig,
+    PipelineConfigResource,
     PipelineResource,
     ResourceVersion,
     SetPipelineResult,
@@ -134,7 +135,7 @@ class ConcourseApiBase(object):
         self,
         pipeline_names: typing.Union[typing.Sequence[str], str],
         resource_type: typing.Optional[str]=None,
-    ):
+    ) -> PipelineConfigResource:
         if isinstance(pipeline_names, str):
             pipeline_names = [pipeline_names]
 
