@@ -141,7 +141,7 @@ class ConcourseApiBase(object):
         resources = map(lambda name: self.pipeline_cfg(pipeline_name=name).resources, pipeline_names)
         for resource_list in resources:
             for resource in resource_list:
-                # resource is of type concourse.client.model.Resource
+                # resource is of type concourse.client.model.PipelineConfigResource
                 if not resource_type or resource.type == resource_type:
                     yield resource
 
