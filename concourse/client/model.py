@@ -78,19 +78,19 @@ class PipelineConfig(object):
         if not resources:
             warning('Pipeline did not contain resource definitions: {p}'.format(p=name))
             raise ValueError()
-        self.resources = map(lambda r: Resource(r, self), resources)
+        self.resources = [PipelineConfigResource(r, self) for r in resources]
 
     def jobs(self):
         return [Job(job, self) for job in self.raw.get('jobs')]
 
     def resources_of_types(self, types):
-        return filter(lambda r: r.type in types, self.resources)
+        return [r for r in self.resources if r.type in types]
 
 
 class Job:
     '''
     Wrapper around the dictionary representing a job as part of a
-    concourse.PipelineConfig
+    concourse.client.model.PipelineConfig
 
     Not intended to be instantiated by users of this module
     '''
@@ -114,7 +114,7 @@ class Job:
 
 class Plan:
     '''
-    Wrapper around the dictionary representing a plan as part of a job
+    Wrapper around the dictionary representing a plan as part of a concourse.client.model.Job
 
     Not intended to be instantiated by users of this module
     '''
@@ -126,10 +126,10 @@ class Plan:
         return [step for step in self.raw if 'get' in step]
 
 
-class Resource(object):
+class PipelineConfigResource(object):
     '''
     Wrapper around the dictionary representing a resource as part of a
-    concourse.PipelineConfig
+    concourse.client.model.PipelineConfig
 
     Not intended to be instantiated by users of this module
     '''
@@ -167,8 +167,8 @@ class Resource(object):
 
 class GithubSource(object):
     '''
-    Wrapper around the source attribute of a concourse.Resource instance in
-    the special case said resource is a "githubby" resource (either a git
+    Wrapper around the source attribute of a concourse.client.model.PipelineConfigResource
+    instance in the special case said resource is a "githubby" resource (either a git
     repository or a github-pull-request)
 
     Not intended to be instantiated by users of this module
@@ -395,7 +395,7 @@ class Worker(ModelBase):
 
 class PipelineResource:
     '''
-    Wrapper around the dictionary representing a pipeline resource
+    Wrapper around the dictionary representing a pipeline resource returned by Concourse API
 
     Not intended to be instantiated by users of this module
     '''
