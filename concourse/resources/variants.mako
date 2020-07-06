@@ -1,6 +1,9 @@
 <%def name="render_repositories(pipeline_definition, cfg_set)">
+<%
+from concourse.client.model import ResourceType
+%>
 <%namespace file="/resources/github.mako" import="*"/>
-% for repo_cfg in pipeline_definition._resource_registry.resources(type_name='git'):
+% for repo_cfg in pipeline_definition._resource_registry.resources(type_name=ResourceType.GIT.value):
 <%
 if repo_cfg.cfg_name() and repo_cfg.cfg_name() != cfg_set.github().name():
   # hack: If github is not default github webhook assume webhook delivery is not possible
@@ -15,7 +18,7 @@ ${github_repo(
   configure_webhook=configure_webhook,
 )}
 % endfor
-% for repo_cfg in pipeline_definition._resource_registry.resources(type_name='pull-request'):
+% for repo_cfg in pipeline_definition._resource_registry.resources(type_name=ResourceType.PULL_REQUEST.value):
 <%
 require_label = None
 # if we have at least one pr-repo, there must be a pr-trait

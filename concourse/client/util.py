@@ -21,6 +21,7 @@ from whd.model import (
 from .model import (
     Job,
     PipelineConfigResource,
+    ResourceType,
     ResourceVersion,
 )
 
@@ -32,7 +33,7 @@ def determine_pr_resource_versions(
 
     pr_resources = concourse_api.pipeline_resources(
         pipeline_names=concourse_api.pipelines(),
-        resource_type='pull-request',
+        resource_type=ResourceType.PULL_REQUEST,
     )
 
     for pr_resource in pr_resources:

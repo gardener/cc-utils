@@ -15,6 +15,9 @@
 
 import os
 
+from concourse.client.model import (
+    ResourceType,
+)
 from concourse.model.base import (
     AttributeSpec,
     ModelBase
@@ -228,9 +231,9 @@ class RepositoryConfig(Resource):
 
         # todo: handle "qualifier"
         if is_pull_request:
-            type_name = 'pull-request'
+            type_name = ResourceType.PULL_REQUEST.value
         else:
-            type_name = 'git'
+            type_name = ResourceType.GIT.value
 
         base_name = kwargs['raw_dict']['path'].replace('/', '_')
 
