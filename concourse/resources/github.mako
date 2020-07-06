@@ -8,6 +8,7 @@
 </%def>
 <%def name="github_repo(repo_cfg, cfg_set, configure_webhook=True)">
 <%
+from concourse.client.model import ResourceType
 from makoutil import indent_func
 from model.github import Protocol
 repo_name = repo_cfg.name()
@@ -22,7 +23,7 @@ disable_tls_validation = not github_cfg.tls_validation()
 % if configure_webhook:
   <<: *configure_webhook
 % endif
-  type: git
+  type: ${ResourceType.GIT.value}
   source:
 % if github_cfg.preferred_protocol() is Protocol.SSH:
     uri: ${github_cfg.ssh_url()}/${repo_cfg.repo_path()}
@@ -45,6 +46,7 @@ ${git_ignore_paths(repo_cfg)}
 </%def>
 <%def name="github_pr(repo_cfg, cfg_set, require_label=None, configure_webhook=True)">
 <%
+from concourse.client.model import ResourceType
 from makoutil import indent_func
 from model.github import Protocol
 repo_name = repo_cfg.name()
@@ -60,7 +62,7 @@ credentials = github_cfg.credentials()
 % if configure_webhook:
   <<: *configure_webhook
 % endif
-  type: pull-request
+  type: ${ResourceType.PULL_REQUEST.value}
   source:
     repo: ${repo_cfg.repo_path()}
     base: ${repo_cfg.branch()}

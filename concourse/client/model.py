@@ -24,6 +24,12 @@ import sseclient
 from ci.util import warning
 
 
+class ResourceType(Enum):
+    GIT = 'git'
+    PULL_REQUEST = 'pull-request'
+    TIME = 'time'
+
+
 class SetPipelineResult(Enum):
     UPDATED = 0
     CREATED = 1

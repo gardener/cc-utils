@@ -31,6 +31,9 @@ from github.util import GitHubRepositoryHelper
 from model import ConfigFactory
 from model.webhook_dispatcher import WebhookDispatcherConfig
 
+from concourse.client.model import (
+    ResourceType,
+)
 from .model import (
     PushEvent,
     PullRequestEvent,
@@ -220,9 +223,9 @@ class GithubWebhookDispatcher(object):
 
     def _matching_resources(self, concourse_api, event):
         if isinstance(event, PushEvent):
-            resource_type = 'git'
+            resource_type = ResourceType.GIT
         elif isinstance(event, PullRequestEvent):
-            resource_type = 'pull-request'
+            resource_type = ResourceType.PULL_REQUEST
         else:
             raise NotImplementedError
 

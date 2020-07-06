@@ -34,6 +34,9 @@ from .model import (
     SetPipelineResult,
     Worker,
 )
+from concourse.client.model import (
+    ResourceType,
+)
 from model.concourse import (
     ConcourseTeam,
 )
@@ -134,7 +137,7 @@ class ConcourseApiBase(object):
     def pipeline_resources(
         self,
         pipeline_names: typing.Union[typing.Sequence[str], str],
-        resource_type: typing.Optional[str]=None,
+        resource_type: typing.Optional[ResourceType]=None,
     ) -> PipelineConfigResource:
         if isinstance(pipeline_names, str):
             pipeline_names = [pipeline_names]
@@ -143,7 +146,7 @@ class ConcourseApiBase(object):
         for resource_list in resources:
             for resource in resource_list:
                 # resource is of type concourse.client.model.PipelineConfigResource
-                if not resource_type or resource.type == resource_type:
+                if not resource_type or ResourceType(resource.type) is resource_type:
                     yield resource
 
     @ensure_annotations
