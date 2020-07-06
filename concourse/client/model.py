@@ -28,6 +28,7 @@ class ResourceType(Enum):
     GIT = 'git'
     PULL_REQUEST = 'pull-request'
     TIME = 'time'
+    DOCKER_IMAGE = 'docker-image'
 
 
 class SetPipelineResult(Enum):
