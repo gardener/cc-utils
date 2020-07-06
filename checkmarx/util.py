@@ -89,6 +89,8 @@ def get_scan_statistics_tables(
                 {scan_result.scan_response.scanRiskSeverity}
             </a>
             '''
+        else:
+            return scan_result.scan_response.scanRiskSeverity
 
     scan_statistics_header = (
         'ComponentName',
