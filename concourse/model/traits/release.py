@@ -226,7 +226,7 @@ class ReleaseTraitTransformer(TraitTransformer):
             is_synthetic=True,
             notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
             script_type=ScriptType.PYTHON3,
-            )
+        )
         yield self.release_step
 
     def process_pipeline_args(self, pipeline_args: JobVariant):
