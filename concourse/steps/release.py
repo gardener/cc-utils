@@ -718,23 +718,23 @@ def _calculate_next_cycle_dev_version(
 
 def release_and_prepare_next_dev_cycle(
     githubrepobranch: GitHubRepoBranch,
-    repository_version_file_path: str,
+    release_commit_publishing_policy: str,
+    release_notes_policy: str,
     release_version: str,
     repo_dir: str,
-    release_notes_policy: str,
-    release_commit_publishing_policy: str,
-    release_commit_callback: str=None,
-    next_version_callback: str=None,
-    version_operation: str="bump_minor",
-    prerelease_suffix: str="dev",
-    author_name: str="gardener-ci",
+    repository_version_file_path: str,
     author_email: str="gardener.ci.user@gmail.com",
+    author_name: str="gardener-ci",
     component_descriptor_file_path: str=None,
     next_cycle_commit_message_prefix: str=None,
+    next_version_callback: str=None,
+    prerelease_suffix: str="dev",
+    rebase_before_release: bool=False,
+    release_commit_callback: str=None,
     release_commit_message_prefix: str=None,
     slack_cfg_name: str=None,
     slack_channel: str=None,
-    rebase_before_release: bool=False,
+    version_operation: str="bump_minor",
 ):
     transaction_ctx = TransactionContext() # shared between all steps/trxs
 
