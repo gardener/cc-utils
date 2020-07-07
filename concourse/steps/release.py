@@ -309,6 +309,7 @@ class NextDevCycleCommitStep(TransactionalStep):
         version_operation: str,
         prerelease_suffix: str,
         publishing_policy: ReleaseCommitPublishingPolicy,
+        next_cycle_commit_message_prefix: str=None,
         next_version_callback: str=None,
     ):
         self.git_helper = not_none(git_helper)
@@ -319,6 +320,7 @@ class NextDevCycleCommitStep(TransactionalStep):
         self.version_operation = not_empty(version_operation)
         self.prerelease_suffix = not_empty(prerelease_suffix)
         self.publishing_policy = publishing_policy
+        self.next_cycle_commit_message_prefix = next_cycle_commit_message_prefix
 
         self.repository_version_file_path = os.path.join(
             repo_dir_absolute,
@@ -333,8 +335,11 @@ class NextDevCycleCommitStep(TransactionalStep):
         else:
             self.next_version_callback = None
 
-    def _next_dev_cycle_commit_message(self, version: str):
-        return f'Prepare Next Dev Cycle {version}'
+    def _next_dev_cycle_commit_message(self, version: str, message_prefix: str):
+        message = f'Prepare Next Dev Cycle {version}'
+        if message_prefix:
+            message = f'{message_prefix} {message}'
+        return message
 
     def name(self):
         return 'Create next development cycle commit'
@@ -398,7 +403,10 @@ class NextDevCycleCommitStep(TransactionalStep):
             parent_commits = None # default to current branch head
 
         next_cycle_commit = self.git_helper.index_to_commit(
-            message=self._next_dev_cycle_commit_message(next_version),
+            message=self._next_dev_cycle_commit_message(
+                version=next_version,
+                message_prefix=self.next_cycle_commit_message_prefix,
+            ),
             parent_commits=parent_commits,
         )
 
@@ -428,6 +436,10 @@ class NextDevCycleCommitStep(TransactionalStep):
                 version_operation=self.version_operation,
                 prerelease_suffix=self.prerelease_suffix,
             )
+            commit_message = self._next_dev_cycle_commit_message(
+                version=next_cycle_dev_version,
+                message_prefix=self.self.next_cycle_commit_message_prefix,
+            )
             self.git_helper.repo.git.revert(
                 output['next cycle commit sha'],
                 no_edit=True,
@@ -435,7 +447,7 @@ class NextDevCycleCommitStep(TransactionalStep):
             )
             next_cycle_revert_commit = _add_all_and_create_commit(
                 git_helper=self.git_helper,
-                message=f"Revert '{self._next_dev_cycle_commit_message(next_cycle_dev_version)}'"
+                message=f"Revert '{commit_message}'"
             )
             self.git_helper.push(
                 from_ref=next_cycle_revert_commit.hexsha,
@@ -718,6 +730,7 @@ def release_and_prepare_next_dev_cycle(
     author_name: str="gardener-ci",
     author_email: str="gardener.ci.user@gmail.com",
     component_descriptor_file_path: str=None,
+    next_cycle_commit_message_prefix: str=None,
     release_commit_message_prefix: str=None,
     slack_cfg_name: str=None,
     slack_channel: str=None,
@@ -767,6 +780,7 @@ def release_and_prepare_next_dev_cycle(
             prerelease_suffix=prerelease_suffix,
             next_version_callback=next_version_callback,
             publishing_policy=release_commit_publishing_policy,
+            next_cycle_commit_message_prefix=next_cycle_commit_message_prefix,
         )
         step_list.append(next_cycle_commit_step)
 

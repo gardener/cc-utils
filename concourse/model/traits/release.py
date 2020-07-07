@@ -171,6 +171,15 @@ ATTRIBUTES = (
         an optional prefix for release commit messages
         ''',
         type=str,
+    ),
+        AttributeSpec.optional(
+        name='next_version_commit_message_prefix',
+        default=None,
+        doc='''
+        an optional prefix for the commit message of the commit bumping the release version
+        immediately after the release-commit
+        ''',
+        type=str,
     )
 )
 
@@ -203,6 +212,9 @@ class ReleaseTrait(Trait):
 
     def release_commit_message_prefix(self) -> str:
         return self.raw.get('commit_message_prefix')
+
+    def next_cycle_commit_message_prefix(self) -> str:
+        return self.raw.get('next_version_commit_message_prefix')
 
     def validate(self):
         super().validate()
