@@ -11,6 +11,7 @@ release_trait = job_variant.trait('release')
 version_trait = job_variant.trait('version')
 version_op = release_trait.nextversion()
 release_commit_message_prefix = release_trait.release_commit_message_prefix()
+next_cycle_commit_message_prefix = release_trait.next_cycle_commit_message_prefix()
 
 has_slack_trait = job_variant.has_trait('slack')
 if has_slack_trait:
@@ -78,6 +79,9 @@ release_and_prepare_next_dev_cycle(
   release_commit_publishing_policy='${release_trait.release_commit_publishing_policy().value}',
   % if release_commit_message_prefix:
   release_commit_message_prefix='${release_commit_message_prefix}',
+  % endif
+  % if next_cycle_commit_message_prefix:
+  next_cycle_commit_message_prefix='${next_cycle_commit_message_prefix}',
   % endif
 )
 </%def>
