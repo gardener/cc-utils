@@ -179,7 +179,7 @@ class ReleaseCommitStep(TransactionalStep):
         release_version: str,
         repository_version_file_path: str,
         repository_branch: str,
-        commit_message_prefix: str,
+        release_commit_message_prefix: str,
         publishing_policy: ReleaseCommitPublishingPolicy,
         release_commit_callback: str=None,
     ):
@@ -192,7 +192,7 @@ class ReleaseCommitStep(TransactionalStep):
             repo_dir_absolute,
             repository_version_file_path,
         )
-        self.commit_message_prefix = commit_message_prefix
+        self.release_commit_message_prefix = release_commit_message_prefix
         self.publishing_policy = publishing_policy
 
         if release_commit_callback:
@@ -205,10 +205,10 @@ class ReleaseCommitStep(TransactionalStep):
 
         self.head_commit = None # stored while applying - used for revert
 
-    def _release_commit_message(self, version: str, commit_message_prefix: str=''):
+    def _release_commit_message(self, version: str, release_commit_message_prefix: str=''):
         message = f'Release {version}'
-        if commit_message_prefix:
-            return f'{commit_message_prefix} {message}'
+        if release_commit_message_prefix:
+            return f'{release_commit_message_prefix} {message}'
         else:
             return message
 
@@ -246,7 +246,10 @@ class ReleaseCommitStep(TransactionalStep):
             )
 
         release_commit = self.git_helper.index_to_commit(
-            message=self._release_commit_message(self.release_version, self.commit_message_prefix),
+            message=self._release_commit_message(
+                self.release_version,
+                self.release_commit_message_prefix
+            ),
         )
 
         self.context().release_commit = release_commit # pass to other steps
@@ -715,10 +718,10 @@ def release_and_prepare_next_dev_cycle(
     author_name: str="gardener-ci",
     author_email: str="gardener.ci.user@gmail.com",
     component_descriptor_file_path: str=None,
+    release_commit_message_prefix: str=None,
     slack_cfg_name: str=None,
     slack_channel: str=None,
     rebase_before_release: bool=False,
-    commit_message_prefix: str=None,
 ):
     transaction_ctx = TransactionContext() # shared between all steps/trxs
 
@@ -747,7 +750,7 @@ def release_and_prepare_next_dev_cycle(
         release_version=release_version,
         repository_version_file_path=repository_version_file_path,
         repository_branch=githubrepobranch.branch(),
-        commit_message_prefix=commit_message_prefix,
+        release_commit_message_prefix=release_commit_message_prefix,
         release_commit_callback=release_commit_callback,
         publishing_policy=release_commit_publishing_policy,
     )

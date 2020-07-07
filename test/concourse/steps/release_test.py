@@ -29,7 +29,7 @@ class TestReleaseCommitStep(object):
                 release_version=release_version,
                 repository_version_file_path=repository_version_file_path,
                 repository_branch=repository_branch,
-                commit_message_prefix=None,
+                release_commit_message_prefix=None,
                 release_commit_callback=release_commit_callback,
                 publishing_policy=ReleaseCommitPublishingPolicy.TAG_ONLY,
             )

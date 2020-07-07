@@ -201,7 +201,7 @@ class ReleaseTrait(Trait):
     def release_commit_publishing_policy(self) -> ReleaseCommitPublishingPolicy:
         return ReleaseCommitPublishingPolicy(self.raw['release_commit_publishing_policy'])
 
-    def commit_message_prefix(self) -> str:
+    def release_commit_message_prefix(self) -> str:
         return self.raw.get('commit_message_prefix')
 
     def validate(self):
