@@ -255,8 +255,11 @@ class GithubWebhookDispatcher(object):
                 if not event.ref().endswith(ghs.branch_name()):
                     continue
             if isinstance(event, PushEvent):
-                if any(skip in event.commit_message() for skip in ('[skip ci]', '[ci skip]')):
-                    if not ghs.disable_ci_skip():
+                if msg := event.commit_message():
+                    if (
+                        not ghs.disable_ci_skip()
+                        and any(skip in msg for skip in ('[skip ci]', '[ci skip]'))
+                    ):
                         logger.info(
                             f"Do not trigger resource {resource.name}. Found [skip ci] or [ci skip]"
                         )

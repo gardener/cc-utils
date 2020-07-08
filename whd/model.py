@@ -68,7 +68,10 @@ class PushEvent(EventBase):
         yield from head_commit.get('modified', ())
 
     def commit_message(self):
-        return self.raw.get('head_commit').get('message')
+        # not all push events have a head_commit (e.g. push events sent on branch deletion)
+        if head_commit := self.raw.get('head_commit'):
+            return head_commit.get('message')
+        return None
 
 
 class PullRequestAction(enum.Enum):
