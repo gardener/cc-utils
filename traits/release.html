@@ -220,7 +220,8 @@ release commits.</p></td>
 <td><p>an optional callback that is called during next version commit creation.
 The callback is passed the absolute path to the main repository’s work tree via environment
 variable <code class="code docutils literal notranslate"><span class="pre">REPO_DIR</span></code>.
-Any changes left inside the worktree are added to the resulting release commit.</p></td>
+Any changes left inside the worktree are added to the commit bumping the version
+immediately after the release-commit.</p></td>
 </tr>
 <tr class="row-even"><td><p>release_notes_policy</p></td>
 <td><p>no</p></td>
@@ -239,6 +240,13 @@ Any changes left inside the worktree are added to the resulting release commit.<
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>an optional prefix for release commit messages</p></td>
+</tr>
+<tr class="row-odd"><td><p>next_version_commit_message_prefix</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>an optional prefix for the commit message of the commit bumping the release version
+immediately after the release-commit</p></td>
 </tr>
 </tbody>
 </table>
