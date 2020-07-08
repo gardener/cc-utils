@@ -152,11 +152,7 @@ class GithubWebhookDispatcher(object):
                     continue
 
                 if pr_event.action() in [PullRequestAction.OPENED, PullRequestAction.SYNCHRONIZE]:
-                    if self._set_pr_labels(pr_event, resources):
-                        # if a label was set, gihub will send a PullRequestAction.LABELED event,
-                        # which then will trigger resource checks, make sure that resource is
-                        # updated and process not triggered jobs. No need to do it at this point.
-                        continue
+                    self._set_pr_labels(pr_event, resources)
 
                 logger.info(f'triggering resource check for PR number: {pr_event.number()}')
                 self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
