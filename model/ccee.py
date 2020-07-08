@@ -16,7 +16,19 @@
 from model.base import (
     BasicCredentials,
     NamedModelElement,
+    ModelBase,
 )
+
+
+class CCEEProject(ModelBase):
+    def region(self):
+        return self.raw.get('region')
+
+    def name(self):
+        return self.raw.get('name')
+
+    def domain(self):
+        return self.raw.get('domain')
 
 
 class CCEEConfig(NamedModelElement):
@@ -29,3 +41,18 @@ class CCEEConfig(NamedModelElement):
 
     def credentials(self):
         return BasicCredentials(self.raw['credentials'])
+
+    def projects(self):
+        return [
+            CCEEProject(raw_dict=project_dict) for project_dict in self.raw['projects']
+        ]
+
+    def _defaults_dict(self):
+        return {
+            'projects': (),
+        }
+
+    def _optional_attributes(self):
+        return (
+            'projects',
+        )
