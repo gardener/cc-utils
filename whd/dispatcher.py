@@ -152,7 +152,11 @@ class GithubWebhookDispatcher(object):
                     continue
 
                 if pr_event.action() in [PullRequestAction.OPENED, PullRequestAction.SYNCHRONIZE]:
-                    self._set_pr_labels(pr_event, resources)
+                    if self._set_pr_labels(pr_event, resources):
+                        # if a label was set, gihub will send a PullRequestAction.LABELED event,
+                        # which then will trigger resource checks, make sure that resource is
+                        # updated and process not triggered jobs. No need to do it at this point.
+                        continue
 
                 logger.info(f'triggering resource check for PR number: {pr_event.number()}')
                 self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
@@ -177,13 +181,16 @@ class GithubWebhookDispatcher(object):
             except Exception:
                 traceback.print_exc()
 
-    def _set_pr_labels(self, pr_event, resources):
+    def _set_pr_labels(self, pr_event, resources) -> bool:
+        '''
+        @ return True if the required label was set
+        '''
         required_labels = {
             resource.source.get('label')
             for resource in resources if resource.source.get('label') is not None
         }
         if not required_labels:
-            return
+            return False
         repo = pr_event.repository()
         repository_path = repo.repository_path()
         pr_number = pr_event.number()
@@ -202,11 +209,13 @@ class GithubWebhookDispatcher(object):
                     f"Setting required labels '{required_labels}'."
                 )
                 github_helper.add_labels_to_pull_request(pr_number, *required_labels)
+                return True
             else:
                 logger.debug(
                     f"New pull request by member in '{repository_path}' found, but creator is not "
                     f"member of '{owner}' - will not set required labels."
                 )
+                return False
         elif pr_event.action() is PullRequestAction.SYNCHRONIZE:
             sender_login = pr_event.sender()['login']
             if github_helper.is_org_member(organization_name=owner, user_login=sender_login):
@@ -215,11 +224,14 @@ class GithubWebhookDispatcher(object):
                     f" in '{repository_path}' found. Setting required labels '{required_labels}'."
                 )
                 github_helper.add_labels_to_pull_request(pr_number, *required_labels)
+                return True
             else:
                 logger.debug(
                     f"Update to pull request #{pr_event.number()} by '{sender_login}' "
                     f" in '{repository_path}' found. Ignoring, since they are not an org member'."
                 )
+                return False
+        return False
 
     def _matching_resources(self, concourse_api, event):
         if isinstance(event, PushEvent):
