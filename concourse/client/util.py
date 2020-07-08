@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 import typing
 
 from whd.model import (
@@ -67,6 +68,33 @@ def determine_jobs_to_be_triggered(
     )
 
 
+def wait_for_job_to_be_triggered(
+    job: Job,
+    resource_version: ResourceVersion,
+    concourse_api,
+    retries: int=8,
+    sleep_time_seconds: int=5,
+) -> bool:
+    '''
+    There is some delay between the update of a resource and the start of the corresponding job.
+    Therefore we have to wait some time to decide if the job has been triggered or not.
+
+    @return True if the job has been triggered
+    '''
+    while retries >= 0:
+        if has_job_been_triggered(
+            job=job,
+            resource_version=resource_version,
+            concourse_api=concourse_api,
+        ):
+            return True
+
+        time.sleep(sleep_time_seconds)
+        retries -= 1
+
+    return False
+
+
 def has_job_been_triggered(
     job: Job,
     resource_version: ResourceVersion,
@@ -92,5 +120,5 @@ def jobs_not_triggered(
     ):
         for job in determine_jobs_to_be_triggered(pr_resource):
             for pr_resource_version in pr_resource_versions:
-                if not has_job_been_triggered(job, pr_resource_version, concourse_api):
+                if not wait_for_job_to_be_triggered(job, pr_resource_version, concourse_api):
                     yield (job, pr_resource, pr_resource_version)
