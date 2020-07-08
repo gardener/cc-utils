@@ -145,7 +145,8 @@ ATTRIBUTES = (
         an optional callback that is called during next version commit creation.
         The callback is passed the absolute path to the main repository's work tree via environment
         variable `REPO_DIR`.
-        Any changes left inside the worktree are added to the resulting release commit.
+        Any changes left inside the worktree are added to the commit bumping the version
+        immediately after the release-commit.
         ''',
     ),
     AttributeSpec.optional(
