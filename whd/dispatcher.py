@@ -254,7 +254,6 @@ class GithubWebhookDispatcher(object):
             if isinstance(event, PushEvent):
                 if not event.ref().endswith(ghs.branch_name()):
                     continue
-            # TODO: remove for Concourse 6.0 see https://github.com/concourse/concourse/issues/3463
             if isinstance(event, PushEvent):
                 if any(skip in event.commit_message() for skip in ('[skip ci]', '[ci skip]')):
                     if not ghs.disable_ci_skip():
