@@ -30,6 +30,9 @@ class CCEEProject(ModelBase):
     def domain(self):
         return self.raw.get('domain')
 
+    def auth_url(self):
+        return self.raw.get('auth_url')
+
 
 class CCEEConfig(NamedModelElement):
     '''
