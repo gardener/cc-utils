@@ -23,7 +23,6 @@ from ci.util import (
 )
 from landscape_setup import kube_ctx
 from landscape_setup.utils import (
-    ensure_cluster_version,
     execute_helm_deployment,
 )
 from model.gardenlinux_cache import GardenlinuxCacheConfig
@@ -65,7 +64,6 @@ def deploy_gardenlinux_cache(
     chart_dir = os.path.abspath(chart_dir)
 
     kube_ctx.set_kubecfg(kubernetes_config.kubeconfig())
-    ensure_cluster_version(kubernetes_config)
 
     ingress_config = cfg_factory.ingress(gardenlinux_cache_config.ingress_config())
     helm_values = create_gardenlinux_cache_helm_values(

@@ -23,7 +23,6 @@ from ci.util import (
 )
 from landscape_setup import kube_ctx
 from landscape_setup.utils import (
-    ensure_cluster_version,
     execute_helm_deployment,
 )
 from model.tekton_dashboard_ingress import TektonDashboardIngressConfig
@@ -65,7 +64,6 @@ def deploy_tekton_dashboard_ingress(
     chart_dir = os.path.abspath(chart_dir)
 
     kube_ctx.set_kubecfg(kubernetes_config.kubeconfig())
-    ensure_cluster_version(kubernetes_config)
 
     ingress_config = cfg_factory.ingress(tekton_dashboard_ingress_config.ingress_config())
     helm_values = create_tekton_dashboard_helm_values(

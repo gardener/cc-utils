@@ -25,7 +25,6 @@ from ci.util import (
 )
 from landscape_setup import kube_ctx
 from landscape_setup.utils import (
-    ensure_cluster_version,
     ensure_helm_setup,
 )
 from landscape_setup import (
@@ -120,7 +119,6 @@ def deploy_or_upgrade_landscape(
     kubernetes_config_name = concourse_cfg.kubernetes_cluster_config()
     kubernetes_cfg = cfg_factory.kubernetes(kubernetes_config_name)
     kube_ctx.set_kubecfg(kubernetes_cfg.kubeconfig())
-    ensure_cluster_version(kubernetes_cfg)
 
     if LandscapeComponent.SECRETS_SERVER in components:
         info('Deploying Secrets Server')

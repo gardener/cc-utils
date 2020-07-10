@@ -20,7 +20,6 @@ from ci.util import (
 )
 from landscape_setup import kube_ctx
 from landscape_setup.utils import (
-    ensure_cluster_version,
     execute_helm_deployment,
 )
 from model.oauth2_proxy import Oauth2ProxyConfig
@@ -93,7 +92,6 @@ def deploy_oauth2_proxy(
     cfg_factory = global_ctx().cfg_factory()
 
     kube_ctx.set_kubecfg(kubernetes_config.kubeconfig())
-    ensure_cluster_version(kubernetes_config)
 
     ingress_config = cfg_factory.ingress(oauth2_proxy_config.ingress_config())
     helm_values = create_oauth2_proxy_helm_values(

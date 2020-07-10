@@ -24,10 +24,8 @@ from passlib.apache import HtpasswdFile
 from landscape_setup import kube_ctx
 from ci.util import (
     Failure,
-    fail,
     info,
     not_empty,
-    not_none,
     which,
 )
 from model.kubernetes import (
@@ -55,25 +53,6 @@ def get_cluster_version_info():
     return api.get_code()
 
 
-def ensure_cluster_version(kubernetes_config: KubernetesConfig):
-    not_none(kubernetes_config)
-
-    cluster_version_info = get_cluster_version_info()
-    configured_version_info = kubernetes_config.cluster_version()
-
-    if (
-        cluster_version_info.major != configured_version_info['major'] or
-        cluster_version_info.minor != configured_version_info['minor']
-    ):
-        fail(
-            'cluster version mismatch "Major: {a_major} Minor: '
-            '{a_minor}". Expected "Major: {e_major} Minor: {e_minor}".'.format(
-                a_major=cluster_version_info.major,
-                a_minor=cluster_version_info.minor,
-                e_major=configured_version_info['major'],
-                e_minor=configured_version_info['minor'],
-            )
-        )
 # pylint: enable=no-member
 
 

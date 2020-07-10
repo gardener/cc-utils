@@ -28,7 +28,6 @@ from kubernetes.client import(
 
 from landscape_setup import kube_ctx
 from landscape_setup.utils import (
-    ensure_cluster_version,
     execute_helm_deployment,
     LiteralStr,
     create_basic_auth_secret,
@@ -65,7 +64,6 @@ def deploy_monitoring_landscape(
 
     # Set the global context to the cluster specified in KubernetesConfig
     kube_ctx.set_kubecfg(kubernetes_cfg.kubeconfig())
-    ensure_cluster_version(kubernetes_cfg)
 
     monitoring_config_name = concourse_cfg.monitoring_config()
     monitoring_cfg = cfg_factory.monitoring(monitoring_config_name)
