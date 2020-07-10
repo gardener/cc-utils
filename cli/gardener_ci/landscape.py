@@ -35,6 +35,7 @@ from landscape_setup import (
     monitoring as setup_monitoring,
     oauth2_proxy as setup_oauth2_proxy,
     secrets_server as setup_secrets_server,
+    tekton as setup_tekton,
     tekton_dashboard_ingress as setup_tekton_dashboard_ingress,
     whd as setup_whd,
 )
@@ -324,4 +325,21 @@ def deploy_or_upgrade_tekton_dashboard_ingress(
         kubernetes_config=kubernetes_cfg,
         chart_dir=chart_dir,
         deployment_name=deployment_name,
+    )
+
+
+def deploy_tekton(
+    config_set_name: CliHint(typehint=str, help=CONFIG_SET_HELP),
+):
+    cfg_factory = ctx().cfg_factory()
+    cfg_set = cfg_factory.cfg_set(config_set_name)
+
+    concourse_cfg = cfg_set.concourse()
+    kubernetes_cfg = cfg_factory.kubernetes(concourse_cfg.kubernetes_cluster_config())
+
+    tekton_cfg = cfg_set.tekton()
+
+    setup_tekton.deploy_tekton(
+        tekton_config=tekton_cfg,
+        kubernetes_config=kubernetes_cfg,
     )
