@@ -19,7 +19,6 @@ from ensure import ensure_annotations
 
 from landscape_setup import kube_ctx
 from landscape_setup.utils import (
-    ensure_cluster_version,
     execute_helm_deployment,
 )
 from model import (
@@ -97,8 +96,6 @@ def deploy_webhook_dispatcher_landscape(
     kubernetes_config_name = webhook_dispatcher_deployment_cfg.kubernetes_config_name()
     kubernetes_config = cfg_factory.kubernetes(kubernetes_config_name)
     kube_ctx.set_kubecfg(kubernetes_config.kubeconfig())
-
-    ensure_cluster_version(kubernetes_config)
 
     kubernetes_cfg_name = webhook_dispatcher_deployment_cfg.kubernetes_config_name()
     kubernetes_cfg = cfg_factory.kubernetes(kubernetes_cfg_name)
