@@ -35,7 +35,7 @@ from landscape_setup import (
     monitoring as setup_monitoring,
     oauth2_proxy as setup_oauth2_proxy,
     secrets_server as setup_secrets_server,
-    tekton_dashboard_ingress as setup_tekton_dashboard,
+    tekton_dashboard_ingress as setup_tekton_dashboard_ingress,
     whd as setup_whd,
 )
 
@@ -319,7 +319,7 @@ def deploy_or_upgrade_tekton_dashboard_ingress(
         deployment_name=f'{deployment_name}-oauth2-proxy',
     )
 
-    setup_tekton_dashboard.deploy_tekton_dashboard_ingress(
+    setup_tekton_dashboard_ingress.deploy_tekton_dashboard_ingress(
         tekton_dashboard_ingress_config=tekton_dashboard_ingress_cfg,
         kubernetes_config=kubernetes_cfg,
         chart_dir=chart_dir,
