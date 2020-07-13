@@ -66,8 +66,8 @@ class PinComment:
 
 def determine_pr_resource_versions(
     pr_event: PullRequestEvent,
-    concourse_api
-) -> typing.Iterator[(PipelineConfigResource, typing.Sequence[ResourceVersion])]:
+    concourse_api,
+) -> typing.Tuple[PipelineConfigResource, typing.Sequence[ResourceVersion]]:
 
     pr_resources = concourse_api.pipeline_resources(
         pipeline_names=concourse_api.pipelines(),
@@ -149,7 +149,7 @@ def has_job_been_triggered(
 def jobs_not_triggered(
     pr_event: PullRequestEvent,
     concourse_api,
-) -> typing.Iterator[(Job, PipelineConfigResource, ResourceVersion)]:
+) -> typing.Tuple[Job, PipelineConfigResource, ResourceVersion]:
 
     for pr_resource, pr_resource_versions in determine_pr_resource_versions(
         pr_event=pr_event,
