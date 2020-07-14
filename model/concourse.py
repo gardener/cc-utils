@@ -102,7 +102,7 @@ class ConcourseConfig(NamedModelElement):
         return response.json()['version']
 
     def compatible_api_version(self) -> ConcourseApiVersion:
-        cc_version = semver.VersionInfo.parse(self.raw.get('concourse_version'))
+        cc_version = semver.VersionInfo.parse(self.concourse_version())
 
         if cc_version >= semver.VersionInfo.parse('6.3.0'):
             return ConcourseApiVersion.V6_3_0
