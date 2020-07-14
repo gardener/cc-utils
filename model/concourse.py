@@ -27,6 +27,7 @@ from model.base import (
 class ConcourseApiVersion(Enum):
     '''Enum to define different Concourse versions'''
     V5 = '5'
+    V6_3_0 = '6.3.0'
 
 
 class ConcourseConfig(NamedModelElement):
@@ -86,7 +87,9 @@ class ConcourseConfig(NamedModelElement):
     def compatible_api_version(self) -> ConcourseApiVersion:
         cc_version = semver.VersionInfo.parse(self.raw.get('concourse_version'))
 
-        if cc_version >= semver.VersionInfo.parse('5.0.0'):
+        if cc_version >= semver.VersionInfo.parse('6.3.0'):
+            return ConcourseApiVersion.V6_3_0
+        elif cc_version >= semver.VersionInfo.parse('5.0.0'):
             return ConcourseApiVersion.V5
         else:
             raise NotImplementedError
