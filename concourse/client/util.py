@@ -101,7 +101,7 @@ def determine_jobs_to_be_triggered(
 ) -> typing.Iterator[Job]:
 
     yield from (
-        job for job in resource.pipeline.jobs if job.is_triggered_by_resource(resource.name)
+        job for job in resource.pipeline.jobs() if job.is_triggered_by_resource(resource.name)
     )
 
 
@@ -189,7 +189,7 @@ def pin_resource_and_trigger_build(
         for count in range(retries):
             concourse_api.trigger_build(
                 pipeline_name=resource.pipeline_name(),
-                job_name=job.pipeline_name,
+                job_name=job.name,
             )
             if wait_for_job_to_be_triggered(
                 job=job,
@@ -233,7 +233,7 @@ def _pin_and_comment_resource(
         version=resource_version.version(),
         next_retry=next_retry.isoformat(),
         comment=(
-            "pinned by technical user 'concourse', please do not unpin before "
+            "pinned by technical user concourse, please do not unpin before "
             f"{next_retry.isoformat()}"
         ),
     )

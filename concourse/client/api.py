@@ -354,7 +354,7 @@ class ConcourseApiBase:
     @ensure_annotations
     def pin_comment(self, pipeline_name: str, resource_name: str, comment: str):
         url = self.routes.pin_comment(pipeline_name, resource_name)
-        pin_comment = {'pin_comment': comment}
+        pin_comment = json.dumps({'pin_comment': comment})
         self._put(url, pin_comment)
 
 
