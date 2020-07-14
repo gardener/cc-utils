@@ -50,7 +50,7 @@ def select_attr(name: str):
     return lambda o: o.get(name)
 
 
-class ConcourseApiBase(object):
+class ConcourseApiBase:
     '''
     Implements a subset of concourse REST API functionality.
 
