@@ -313,7 +313,9 @@ class ConcourseApiBase(object):
         self._put(url, pin_comment)
 
 
-class ConcourseApiV5(ConcourseApiBase):
+class SetTeamAPIUpdateMixin:
+    '''Mixin for 'set team' API changed in Concourse 5.0.0
+    '''
     def set_team(self, concourse_team: ConcourseTeam):
         role = concourse_team.role() if concourse_team.role() else "member"
         body = {
@@ -334,3 +336,12 @@ class ConcourseApiV5(ConcourseApiBase):
 
         team_url = self.routes.team_url(concourse_team.teamname())
         self._put(team_url, json.dumps(body))
+
+
+class ConcourseApiV5(ConcourseApiBase, SetTeamAPIUpdateMixin):
+    pass
+
+
+class ConcourseApiV6_3_0(ConcourseApiBase, SetTeamAPIUpdateMixin):
+
+    AUTH_TOKEN_ATTRIBUTE_NAME = 'id_token'

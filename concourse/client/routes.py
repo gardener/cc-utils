@@ -148,3 +148,15 @@ class ConcourseApiRoutesBase(object):
 
 class ConcourseApiRoutesV5(ConcourseApiRoutesBase):
     '''Routes for Concourse V5'''
+
+
+class ConcourseApiRoutesV6_3_0(ConcourseApiRoutesBase):
+    '''Routes for Concourse v6.3.0'''
+
+    def login(self):
+        return ci.util.urljoin(
+            self.base_url,
+            'sky',
+            'issuer',
+            'token',
+        )
