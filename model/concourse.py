@@ -16,6 +16,8 @@
 from enum import Enum
 
 import reutil
+import semver
+
 from model.base import (
     NamedModelElement,
     ModelValidationError,
@@ -81,8 +83,13 @@ class ConcourseConfig(NamedModelElement):
     def helm_chart_version(self):
         return self.raw.get('helm_chart_version')
 
-    def concourse_version(self) -> ConcourseApiVersion:
-        return ConcourseApiVersion(self.raw.get('concourse_version'))
+    def compatible_api_version(self) -> ConcourseApiVersion:
+        cc_version = semver.VersionInfo.parse(self.raw.get('concourse_version'))
+
+        if cc_version >= semver.VersionInfo.parse('5.0.0'):
+            return ConcourseApiVersion.V5
+        else:
+            raise NotImplementedError
 
     def github_enterprise_host(self):
         return self.raw.get('github_enterprise_host')
@@ -120,7 +127,7 @@ class ConcourseConfig(NamedModelElement):
     def validate(self):
         super().validate()
         # Check for valid versions
-        if self.concourse_version() not in ConcourseApiVersion:
+        if self.compatible_api_version() not in ConcourseApiVersion:
             raise ModelValidationError(
                 'Concourse version {v} not supported'.format(v=self.concourse_version())
             )
