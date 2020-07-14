@@ -21,19 +21,10 @@ from urllib3.exceptions import InsecureRequestWarning
 import functools
 
 import ci.util
-from .api import (
-    ConcourseApiV5,
-    ConcourseApiV6_3_0,
-)
-from .routes import (
-    ConcourseApiRoutesV5,
-    ConcourseApiRoutesV6_3_0,
-)
-from model.concourse import (
-    ConcourseApiVersion,
-    ConcourseConfig,
-)
-from http_requests import AuthenticatedRequestBuilder
+
+from .api import ConcourseApiFactory
+from model.concourse import ConcourseConfig
+
 
 warnings.filterwarnings('ignore', 'Unverified HTTPS request is being made.*', InsecureRequestWarning)
 
@@ -57,17 +48,11 @@ Other types defined in this module are not intended to be instantiated by users.
 '''
 
 
-# Hard coded oauth user and password
-# https://github.com/concourse/fly/blob/f4592bb32fe38f54018c2f9b1f30266713882c54/commands/login.go#L143
-AUTH_TOKEN_REQUEST_USER = 'fly'
-AUTH_TOKEN_REQUEST_PWD = 'Zmx5'
-
-
 @functools.lru_cache()
 @ensure_annotations
 def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
     '''
-    Factory method to get Concourse API object
+    Helper method to get Concourse API object
     '''
     base_url = concourse_cfg.ingress_url()
     cfg_factory = ci.util.ctx().cfg_factory()
@@ -79,30 +64,12 @@ def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
     password = concourse_team.password()
     concourse_api_version = concourse_cfg.compatible_api_version()
 
-    request_builder = AuthenticatedRequestBuilder(
-        basic_auth_username=AUTH_TOKEN_REQUEST_USER,
-        basic_auth_passwd=AUTH_TOKEN_REQUEST_PWD,
-        verify_ssl=verify_ssl
+    concourse_api = ConcourseApiFactory.create_api(
+        base_url=base_url,
+        team_name=team_name,
+        verify_ssl=verify_ssl,
+        concourse_api_version=concourse_api_version,
     )
-
-    if concourse_api_version is ConcourseApiVersion.V5:
-        routes = ConcourseApiRoutesV5(base_url=base_url, team=team_name)
-        concourse_api = ConcourseApiV5(
-            routes=routes,
-            request_builder=request_builder,
-            verify_ssl=verify_ssl,
-        )
-    elif concourse_api_version is ConcourseApiVersion.V6_3_0:
-        routes = ConcourseApiRoutesV6_3_0(base_url=base_url, team=team_name)
-        concourse_api = ConcourseApiV6_3_0(
-            routes=routes,
-            request_builder=request_builder,
-            verify_ssl=verify_ssl,
-        )
-    else:
-        raise NotImplementedError(
-            "Concourse version {v} not supported".format(v=concourse_api_version.value)
-        )
 
     concourse_api.login(
         username=username,
