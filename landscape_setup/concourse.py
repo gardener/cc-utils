@@ -139,9 +139,9 @@ def create_instance_specific_helm_values(
     external_host = urlparse(external_url).netloc
     ingress_host = concourse_cfg.ingress_host()
     ingress_cfg = config_factory.ingress(concourse_cfg.ingress_config())
-    concourse_version = concourse_cfg.concourse_version()
+    concourse_api_version = concourse_cfg.compatible_api_version()
 
-    if concourse_version is ConcourseApiVersion.V5:
+    if concourse_api_version is ConcourseApiVersion.V5:
         github_config_name = concourse_cfg.github_enterprise_host()
         # 'github_enterprise_host' only configured in case of internal concourse
         # using github enterprise
@@ -198,7 +198,7 @@ def create_instance_specific_helm_values(
         }
     else:
         raise NotImplementedError(
-            "Concourse version {v} not supported".format(v=concourse_version)
+            "Concourse version {v} not supported".format(v=concourse_api_version)
         )
 
     return instance_specific_values

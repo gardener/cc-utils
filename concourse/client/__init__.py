@@ -75,14 +75,15 @@ def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
     team_name = concourse_team.teamname()
     username = concourse_team.username()
     password = concourse_team.password()
-    concourse_version = concourse_cfg.concourse_version()
+    concourse_api_version = concourse_cfg.compatible_api_version()
 
     request_builder = AuthenticatedRequestBuilder(
         basic_auth_username=AUTH_TOKEN_REQUEST_USER,
         basic_auth_passwd=AUTH_TOKEN_REQUEST_PWD,
         verify_ssl=verify_ssl
     )
-    if concourse_version is ConcourseApiVersion.V5:
+
+    if concourse_api_version is ConcourseApiVersion.V5:
         routes = ConcourseApiRoutesV5(base_url=base_url, team=team_name)
         concourse_api = ConcourseApiV5(
             routes=routes,
@@ -91,7 +92,7 @@ def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
         )
     else:
         raise NotImplementedError(
-            "Concourse version {v} not supported".format(v=concourse_version.value)
+            "Concourse version {v} not supported".format(v=concourse_api_version.value)
         )
 
     concourse_api.login(
