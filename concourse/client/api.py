@@ -22,6 +22,8 @@ from urllib3.exceptions import InsecureRequestWarning
 
 from .routes import (
     ConcourseApiRoutesBase,
+    ConcourseApiRoutesV5,
+    ConcourseApiRoutesV6_3_0,
 )
 from .model import (
     Build,
@@ -38,12 +40,55 @@ from concourse.client.model import (
     ResourceType,
 )
 from model.concourse import (
+    ConcourseApiVersion,
     ConcourseTeam,
 )
 from http_requests import AuthenticatedRequestBuilder
 from ci.util import not_empty
 
 warnings.filterwarnings('ignore', 'Unverified HTTPS request is being made.*', InsecureRequestWarning)
+
+
+# Hard coded oauth user and password
+# https://github.com/concourse/fly/blob/f4592bb32fe38f54018c2f9b1f30266713882c54/commands/login.go#L143
+AUTH_TOKEN_REQUEST_USER = 'fly'
+AUTH_TOKEN_REQUEST_PWD = 'Zmx5'
+
+
+class ConcourseApiFactory:
+    '''Factory for ConcourseApi objects
+    '''
+    @staticmethod
+    def create_api(
+        base_url: str,
+        team_name: str,
+        verify_ssl: str,
+        concourse_api_version: ConcourseApiVersion,
+    ):
+        request_builder = AuthenticatedRequestBuilder(
+            basic_auth_username=AUTH_TOKEN_REQUEST_USER,
+            basic_auth_passwd=AUTH_TOKEN_REQUEST_PWD,
+            verify_ssl=verify_ssl
+        )
+
+        if concourse_api_version is ConcourseApiVersion.V5:
+            routes = ConcourseApiRoutesV5(base_url=base_url, team=team_name)
+            return ConcourseApiV5(
+                routes=routes,
+                request_builder=request_builder,
+                verify_ssl=verify_ssl,
+            )
+        elif concourse_api_version is ConcourseApiVersion.V6_3_0:
+            routes = ConcourseApiRoutesV6_3_0(base_url=base_url, team=team_name)
+            return ConcourseApiV6_3_0(
+                routes=routes,
+                request_builder=request_builder,
+                verify_ssl=verify_ssl,
+            )
+        else:
+            raise NotImplementedError(
+                "Concourse version {v} not supported".format(v=concourse_api_version.value)
+            )
 
 
 def select_attr(name: str):
