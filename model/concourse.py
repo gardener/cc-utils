@@ -13,10 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import urllib.parse
+
 from enum import Enum
 
+import requests
 import reutil
 import semver
+
+import http_requests
 
 from model.base import (
     NamedModelElement,
@@ -28,6 +33,9 @@ class ConcourseApiVersion(Enum):
     '''Enum to define different Concourse versions'''
     V5 = '5'
     V6_3_0 = '6.3.0'
+
+
+CONCOURSE_INFO_API_ENDPOINT = 'api/v1/info'
 
 
 class ConcourseConfig(NamedModelElement):
@@ -83,6 +91,15 @@ class ConcourseConfig(NamedModelElement):
 
     def helm_chart_version(self):
         return self.raw.get('helm_chart_version')
+
+    def concourse_version(self):
+        session = requests.Session()
+        http_requests.mount_default_adapter(session)
+        response = session.get(urllib.parse.urljoin(self.ingress_url(), CONCOURSE_INFO_API_ENDPOINT))
+
+        response.raise_for_status()
+
+        return response.json()['version']
 
     def compatible_api_version(self) -> ConcourseApiVersion:
         cc_version = semver.VersionInfo.parse(self.raw.get('concourse_version'))
