@@ -165,19 +165,19 @@ def create_instance_specific_helm_values(
                         'mainTeam': {
                             'localUser': main_team.username(),
                             'github': {
-                                'team': main_team.github_auth_team()
-                            }
+                                'team': main_team.github_auth_team(),
+                            },
                         },
                         'github': {
                             'host': github_host
-                        }
-                    }
-                }
+                        },
+                    },
+                },
             },
             'secrets': {
                 'localUsers': main_team.username() + ':' + bcrypted_pwd,
                 'githubClientId': main_team.github_auth_client_id(),
-                'githubClientSecret': main_team.github_auth_client_secret()
+                'githubClientSecret': main_team.github_auth_client_secret(),
             },
             'web': {
                 'ingress': {
@@ -193,8 +193,8 @@ def create_instance_specific_helm_values(
                         'secretName': concourse_cfg.tls_secret_name(),
                         'hosts': ingress_cfg.tls_host_names(),
                     }],
-                }
-            }
+                },
+            },
         }
     else:
         raise NotImplementedError(
