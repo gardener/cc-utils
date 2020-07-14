@@ -15,6 +15,7 @@
 
 import dataclasses
 import json
+import logging
 import time
 import typing
 
@@ -29,10 +30,6 @@ from datetime import (
     timedelta,
 )
 
-from ci.util import (
-    info,
-    warning,
-)
 from whd.model import (
     PullRequestEvent,
 )
@@ -48,11 +45,11 @@ from .model import (
 )
 
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+
 class PinningFailedError(Exception):
-    pass
-
-
-class PinningUnnecessaryError(Exception):
     pass
 
 
@@ -198,7 +195,7 @@ def pin_resource_and_trigger_build(
                 retries=retries_for_job_trigger,
                 sleep_time_seconds=sleep_seconds_between_attempts,
             ):
-                info(f'{job.name=} for {resource_version.version()=} has been triggered')
+                logger.info(f'{job.name=} for {resource_version.version()=} has been triggered')
                 return
 
             else:
@@ -209,12 +206,12 @@ def pin_resource_and_trigger_build(
                     resource_version=resource_version,
                     concourse_api=concourse_api,
                 )
-                warning(
+                logger.warning(
                     f'job {job.name} for resource version {resource_version.version()} '
                     f'could not be triggered. Retry {count + 1}/{retries}'
                 )
 
-        warning(
+        logger.warning(
             f'job {job.name} for resource version {resource_version.version()} '
             f'could not be triggered. Giving up after {retries} retries'
         )
@@ -263,7 +260,7 @@ def ensure_resource_unpinned(
             pipeline_name=resource.pipeline_name(),
             resource_name=resource.name,
         )
-        info(f'successfully unpinned {resource.name=}')
+        logger.info(f'successfully unpinned {resource.name=}')
 
 
 def _ensure_resource_unpinned(
@@ -297,7 +294,7 @@ def _ensure_resource_unpinned(
                 maximal_checktime_seconds,
             )
             if next_retry_time <= datetime.now():
-                warning(
+                logger.warning(
                     'found resource which was not unpinned although timestamp expired: '
                     f'{resource.pipeline_name()=} {resource.name=}. Unpinning resource now'
                 )
@@ -308,12 +305,12 @@ def _ensure_resource_unpinned(
                 return
 
         except json.JSONDecodeError:
-            warning(
+            logger.warning(
                 f'Resource comment for {resource.name=} of {resource.pipeline_name()=} '
                 'could not be parsed - most likely pinned by human user'
             )
         except DaciteError:
-            warning(
+            logger.warning(
                 f'Resource comment for {resource.name=} of {resource.pipeline_name()=} '
                 'could not be instantiated'
             )
@@ -321,6 +318,6 @@ def _ensure_resource_unpinned(
         time.sleep(sleep_time)
 
     raise PinningFailedError(
-        f'Tried at least {latest_unpin_checktime} seconds to unpin '
+        f'Tried at least {maximal_checktime_seconds} seconds to unpin '
         f'{resource.name=} of pipeline {resource.pipeline_name()=}'
     )
