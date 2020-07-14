@@ -61,6 +61,9 @@ class ConcourseApiBase(object):
     @param team_name: the team name used for authentication
     @param verify_ssl: whether or not certificate validation is to be done
     '''
+
+    AUTH_TOKEN_ATTRIBUTE_NAME = 'access_token'
+
     @ensure_annotations
     def __init__(
         self,
@@ -97,7 +100,7 @@ class ConcourseApiBase(object):
             body=form_data,
             headers={"content-type": "application/x-www-form-urlencoded"}
         )
-        auth_token = response.json()['access_token']
+        auth_token = response.json()[self.AUTH_TOKEN_ATTRIBUTE_NAME]
         self.request_builder = AuthenticatedRequestBuilder(
             auth_token=auth_token,
             verify_ssl=self.verify_ssl
