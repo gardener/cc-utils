@@ -31,6 +31,11 @@ from github.util import GitHubRepositoryHelper
 from model import ConfigFactory
 from model.webhook_dispatcher import WebhookDispatcherConfig
 
+from concourse.client.util import (
+    jobs_not_triggered,
+    pin_resource_and_trigger_build,
+    PinningFailedError,
+)
 from concourse.client.model import (
     ResourceType,
 )
@@ -161,6 +166,7 @@ class GithubWebhookDispatcher(object):
                     pr_event=pr_event,
                     resources=resources,
                 )
+                #self.handle_untriggered_jobs(pr_event=pr_event, concourse_api=concourse_api)
 
         thread = threading.Thread(target=_set_labels)
         thread.start()
@@ -332,6 +338,23 @@ class GithubWebhookDispatcher(object):
             retries=retries,
             sleep_seconds=sleep_seconds*1.2,
         )
+
+    def handle_untriggered_jobs(self, pr_event: PullRequestEvent, concourse_api):
+        for job, resource, resource_version in jobs_not_triggered(pr_event, concourse_api):
+            logger.info(
+                f'processing untriggered job {job.name=} of {resource.pipeline_name()=} '
+                f'{resource.name=} {resource_version.version()=}'
+            )
+            try:
+                pin_resource_and_trigger_build(
+                    job=job,
+                    resource=resource,
+                    resource_version=resource_version,
+                    concourse_api=concourse_api,
+                    retries=3,
+                )
+            except PinningFailedError as e:
+                logger.warning(e)
 
     @functools.lru_cache()
     def els_client(self):
