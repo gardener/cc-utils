@@ -159,6 +159,11 @@ def jobs_not_triggered(
             for pr_resource_version in pr_resource_versions:
                 if not wait_for_job_to_be_triggered(job, pr_resource_version, concourse_api):
                     yield (job, pr_resource, pr_resource_version)
+                else:
+                    logger.info(
+                        f'Resource version {pr_resource_version.version()} '
+                        f'triggered job {job.name} - no pinning necessary'
+                    )
 
 
 def pin_resource_and_trigger_build(
