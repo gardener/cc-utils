@@ -166,7 +166,7 @@ class GithubWebhookDispatcher(object):
                     pr_event=pr_event,
                     resources=resources,
                 )
-                #self.handle_untriggered_jobs(pr_event=pr_event, concourse_api=concourse_api)
+                self.handle_untriggered_jobs(pr_event=pr_event, concourse_api=concourse_api)
 
         thread = threading.Thread(target=_set_labels)
         thread.start()
