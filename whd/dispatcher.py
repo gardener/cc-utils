@@ -147,7 +147,7 @@ class GithubWebhookDispatcher(object):
         ):
             return logger.info(f'ignoring pull-request action {pr_event.action()}')
 
-        def _set_labels():
+        def _process_pr_event():
             for concourse_api in self.concourse_clients():
                 resources = list(self._matching_resources(
                     concourse_api=concourse_api,
@@ -169,7 +169,7 @@ class GithubWebhookDispatcher(object):
                 )
                 self.handle_untriggered_jobs(pr_event=pr_event, concourse_api=concourse_api)
 
-        thread = threading.Thread(target=_set_labels)
+        thread = threading.Thread(target=_process_pr_event)
         thread.start()
 
     def _trigger_resource_check(self, concourse_api, resources):
