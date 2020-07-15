@@ -72,12 +72,4 @@ reupload_fun = functools.partial(republish_image, tgt_prefix=upload_registry_pre
 
 for from_ref, to_ref in executor.map(reupload_fun, image_references):
   print(f'uploaded {from_ref} -> {to_ref}')
-
-# download images again to ensure GCR vulnerability scanning (see method docstring for more info)
-protecode.util.download_images(
-  component_descriptor=component_descriptor,
-  upload_registry_prefix=upload_registry_prefix,
-  image_reference_filter=filter_function,
-  parallel_jobs=parallel_jobs,
-)
 </%def>
