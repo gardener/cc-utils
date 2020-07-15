@@ -162,7 +162,8 @@ def jobs_not_triggered(
                 else:
                     logger.info(
                         f'Resource version {pr_resource_version.version()} '
-                        f'triggered job {job.name} - no pinning necessary'
+                        f'triggered {job.name=} of {pr_resource.pipeline_name()=} '
+                        '- no pinning necessary'
                     )
 
 
