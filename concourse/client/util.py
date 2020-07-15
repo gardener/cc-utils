@@ -34,6 +34,7 @@ from whd.model import (
     PullRequestEvent,
 )
 from .model import (
+    BuildStatus,
     Job,
     PipelineConfigResource,
     PipelineResource,
@@ -107,7 +108,7 @@ def wait_for_job_to_be_triggered(
     resource_version: ResourceVersion,
     concourse_api,
     retries: int=10,
-    sleep_time_seconds: int=5,
+    sleep_time_seconds: int=6,
 ) -> bool:
     '''
     There is some delay between the update of a resource and the start of the corresponding job.
@@ -136,7 +137,9 @@ def has_job_been_triggered(
 ) -> bool:
 
     builds = concourse_api.job_builds(job.pipeline.name, job.name)
-    for build in builds:
+    for build in builds[-20:]:
+        if build.status() == BuildStatus.PENDING:
+            continue  # cannot retrieve build plan for a pending job
         build_plan = build.plan()
         if build_plan.contains_version_ref(resource_version.version()['ref']):
             return True
@@ -240,6 +243,7 @@ def _pin_and_comment_resource(
         resource_version_id=resource_version.id(),
         comment=json.dumps(dataclasses.asdict(pin_comment)),
     )
+    logger.info(f'pinned resource: {resource.name} version: {resource_version.version()}')
 
 
 @contextmanager
@@ -315,6 +319,10 @@ def _ensure_resource_unpinned(
                 'could not be instantiated'
             )
 
+        logger.info(
+            f'{resource.name=} of {resource.pipeline_name()=} is logged by another thread. '
+            f'Sleep for {sleep_time}s and try again'
+        )
         time.sleep(sleep_time)
 
     raise PinningFailedError(
