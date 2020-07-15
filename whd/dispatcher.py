@@ -35,6 +35,7 @@ from concourse.client.util import (
     jobs_not_triggered,
     pin_resource_and_trigger_build,
     PinningFailedError,
+    PinningUnnecessary,
 )
 from concourse.client.model import (
     ResourceType,
@@ -353,6 +354,8 @@ class GithubWebhookDispatcher(object):
                     concourse_api=concourse_api,
                     retries=3,
                 )
+            except PinningUnnecessary as e:
+                logger.info(e)
             except PinningFailedError as e:
                 logger.warning(e)
 

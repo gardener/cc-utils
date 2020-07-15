@@ -50,6 +50,10 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+class PinningUnnecessary(Exception):
+    pass
+
+
 class PinningFailedError(Exception):
     pass
 
@@ -297,6 +301,11 @@ def _ensure_resource_unpinned(
                 data_class=PinComment,
                 data=json.loads(cc_resource.pin_comment()),
             )
+
+            if pin_comment.version.ref == resource_version.version()['ref']:
+                raise PinningUnnecessary(
+                    "Resource is already pinned for the same version. Not waiting for unpin"
+                )
 
             next_retry_time = dateutil.parser.isoparse(pin_comment.next_retry)
             sleep_time = min(
