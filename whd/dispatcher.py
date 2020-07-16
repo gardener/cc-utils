@@ -291,7 +291,9 @@ class GithubWebhookDispatcher(object):
             # ignore logging errors
             except BaseException:
                 pass
-            logger.info('giving up triggering PR(s)')
+
+            outdated_resources_names = [r.name for r in resources]
+            logger.info(f'could not update resources {outdated_resources_names} - giving up')
             return
 
         def resource_versions(resource):
