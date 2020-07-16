@@ -92,7 +92,7 @@ class TektonDashboardConfig(ModelBase):
         )
         return gh_helper.retrieve_asset_contents(
             release_tag=self.version(),
-            asset_labell=TEKTON_DASHBOARD_RELEASE_ASSET_NAME,
+            asset_label=TEKTON_DASHBOARD_RELEASE_ASSET_NAME,
         )
 
     def _required_attributes(self):

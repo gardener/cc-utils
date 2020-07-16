@@ -17,7 +17,7 @@ def deploy_tekton(
 ):
     kube_ctx = kube.ctx.Ctx(kubeconfig_dict=kubernetes_config.kubeconfig())
     api_client = kubernetes_client.ApiClient(configuration=kube_ctx.kubeconfig)
-    namespace_helper = kube_ctx.namespace_namespace_()
+    namespace_helper = kube_ctx.namespace_helper()
 
     if pipelines_config := tekton_config.pipelines_config():
         install_manifests = yaml.safe_load_all(pipelines_config.install_manifests())
