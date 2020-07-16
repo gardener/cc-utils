@@ -143,8 +143,13 @@ def has_job_been_triggered(
     builds = concourse_api.job_builds(job.pipeline.name, job.name)
     for build in builds[-20:]:
         if build.status() == BuildStatus.PENDING:
-            continue  # cannot retrieve build plan for a pending job
-        build_plan = build.plan()
+            # cannot retrieve build plan for a pending job
+            continue
+        try:
+            build_plan = build.plan()
+        except RuntimeError:
+            # a job that just now went into running state could still have no build plan
+            continue
         if build_plan.contains_version_ref(resource_version.version()['ref']):
             return True
     return False
