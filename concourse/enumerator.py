@@ -220,9 +220,6 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
             # some linting errors (and possibly warnings) present. Print warning and continue
             warning(e)
             return
-        except yaml.scanner.ScannerError as e:
-            warning(f"Error when parsing yaml file: {e}")
-            return
         if not branch_cfg:
             # fallback for components w/o branch_cfg: use default branch
             try:
@@ -243,7 +240,27 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
         github_cfg,
         org_name,
     ) -> RawPipelineDefinitionDescriptor:
-        for branch_name, cfg_entry in self._determine_repository_branches(repository=repository):
+
+        repo_hostname = urlparse(github_cfg.http_url()).hostname
+        repo_path = f'{org_name}/{repository.name}'
+
+        try:
+            branches_and_cfg_entries = [
+                i for i in self._determine_repository_branches(repository=repository)
+            ]
+        except yaml.scanner.ScannerError as e:
+            yield DefinitionDescriptor(
+                pipeline_name='<invalid YAML>',
+                pipeline_definition=None,
+                main_repo={'path': repo_path, 'branch': 'refs/meta/ci', 'hostname': repo_hostname},
+                concourse_target_cfg=self.cfg_set.concourse(),
+                concourse_target_team=self.job_mapping.team_name(),
+                override_definitions=(),
+                exception=e,
+            )
+            return # nothing else to yield in case parsing the branch cfg failed
+
+        for branch_name, cfg_entry in branches_and_cfg_entries:
             try:
                 definitions = repository.file_contents(
                     path='.ci/pipeline_definitions',
@@ -252,7 +269,6 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
             except NotFoundError:
                 continue # no pipeline definition for this branch
 
-            repo_hostname = urlparse(github_cfg.http_url()).hostname
             override_definitions = cfg_entry.override_definitions() if cfg_entry else {}
 
             verbose('from repo: ' + repository.name + ':' + branch_name)
@@ -263,10 +279,9 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                 definitions = load_yaml(decoded_definitions)
 
             except BaseException as e:
-                repo_path = f'{org_name}/{repository.name}'
                 yield DefinitionDescriptor(
                     pipeline_name='<invalid YAML>',
-                    pipeline_definition={},
+                    pipeline_definition=None,
                     main_repo={'path': repo_path, 'branch': branch_name, 'hostname': repo_hostname},
                     concourse_target_cfg=self.cfg_set.concourse(),
                     concourse_target_team=self.job_mapping.team_name(),
