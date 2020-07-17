@@ -21,6 +21,8 @@ from copy import deepcopy
 from urllib.parse import urlparse
 import functools
 
+import yaml
+
 from github3.exceptions import NotFoundError
 
 from ci.util import (
@@ -217,6 +219,9 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
         except LintingError as e:
             # some linting errors (and possibly warnings) present. Print warning and continue
             warning(e)
+            return
+        except yaml.scanner.ScannerError as e:
+            warning(f"Error when parsing yaml file: {e}")
             return
         if not branch_cfg:
             # fallback for components w/o branch_cfg: use default branch
