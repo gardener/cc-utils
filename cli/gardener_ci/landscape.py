@@ -96,7 +96,7 @@ def deploy_or_upgrade_landscape(
     if LandscapeComponent.GARDENLINUX_CACHE in components:
         if not gardenlinux_cache_chart_dir:
             raise ValueError(
-                f"--gardenlinux--cache--chart--dir must be given if component "
+                f"--gardenlinux-cache-chart-dir must be given if component "
                 f"'{LandscapeComponent.GARDENLINUX_CACHE.value}' is to be deployed."
             )
         else:
