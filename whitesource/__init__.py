@@ -12,30 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from model.base import (
-    BasicCredentials,
-    NamedModelElement,
-)
-
-
-class WhitesourceCredentials(BasicCredentials):
-    def user(self):
-        return self.raw.get('user')
-
-    def user_key(self):
-        return self.raw.get('user_key')
-
-
-class WhitesourceConfig(NamedModelElement):
-    def base_url(self):
-        return self.raw.get('base_url')
-
-    def api_key(self):
-        return self.raw.get('api_key')
-
-    def credentials(self):
-        return WhitesourceCredentials(self.raw.get('credentials'))
-
-    def _required_attributes(self):
-        return 'credentials', 'base_url', 'api_key'
