@@ -42,3 +42,4 @@ yamllint<2
 aliyun-python-sdk-ecs==4.19.9
 aliyun-python-sdk-core==2.13.16
 oss2==2.12.1
+requests_toolbelt==0.9.1

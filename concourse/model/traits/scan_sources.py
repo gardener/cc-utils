@@ -44,6 +44,24 @@ CHECKMARX_ATTRIBUTES = (
 )
 
 
+WHITESOURCE_ATTRIBUTES = (
+    AttributeSpec.required(
+        name='product_token',
+        doc='whitesource product token',
+        type=str,
+    )
+)
+
+
+class WhitesourceCfg(ModelBase):
+    @classmethod
+    def _attribute_specs(cls):
+        return WHITESOURCE_ATTRIBUTES
+
+    def product_token(self):
+        return self.raw['product_token']
+
+
 class CheckmarxCfg(ModelBase):
     @classmethod
     def _attribute_specs(cls):
