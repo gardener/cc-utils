@@ -56,6 +56,7 @@ def create_oauth2_proxy_helm_values(
                 f'validate_url = "{github_cfg.api_url()}"',
                 f'ssl_insecure_skip_verify = {str(github_oauth_cfg.no_ssl_verify()).lower()}',
                 'whitelist_domains = ".gardener.cloud"',
+                'cookie_domain = ".gardener.cloud"',
             ])
         },
         'ingress': {
