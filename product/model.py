@@ -166,9 +166,6 @@ class DependencyBase(ModelBase):
     def version(self):
         return self.raw.get('version')
 
-    def _version_obj(self): # XXX should actually be renamed to `version` (replacing it)
-        return Version(self.version())
-
     @abc.abstractmethod
     def type_name(self):
         '''
@@ -183,7 +180,7 @@ class DependencyBase(ModelBase):
 
     def __comparables(self, other):
         if self.__has_same_name(other):
-            return (self._version_obj(), other._version_obj())
+            return (Version(self.version()), Version(other.version()))
         else:
             return (self.name(), other.name())
 
