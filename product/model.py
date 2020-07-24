@@ -14,10 +14,13 @@
 # limitations under the License.
 
 import abc
+import dataclasses
 import functools
 import typing
 import urllib.parse
 from enum import Enum
+
+import dacite
 
 from model.base import ModelBase, ModelValidationError
 from protecode.model import AnalysisResult
@@ -32,6 +35,8 @@ import version as ver
 # the asset name component descriptors are stored as part of component github releases
 COMPONENT_DESCRIPTOR_ASSET_NAME = 'component_descriptor.yaml'
 
+dc = dataclasses.dataclass
+
 
 class SchemaVersion(Enum):
     V1 = 'v1'
@@ -39,6 +44,11 @@ class SchemaVersion(Enum):
 
 class InvalidComponentReferenceError(ModelValidationError):
     pass
+
+
+@dc
+class Meta:
+    schema_version: SchemaVersion = SchemaVersion.V1
 
 
 class ProductModelBase(ModelBase):
@@ -205,7 +215,23 @@ class DependencyBase(ModelBase):
 class ComponentDescriptor(ProductModelBase):
     @staticmethod
     def from_dict(raw_dict: dict):
-        return ComponentDescriptor(**raw_dict)
+        # determine scheme version
+        if not (meta_dict := raw_dict.get('meta')):
+            schema_version = SchemaVersion.V1
+        else:
+            meta = dacite.from_dict(
+                data_class=Meta,
+                data=meta_dict,
+                config=dacite.Config(
+                    cast=[SchemaVersion],
+                )
+            )
+            schema_version = meta.schema_version
+
+        if schema_version == SchemaVersion.V1:
+            return ComponentDescriptor(**raw_dict)
+        else:
+            raise ModelValidationError(f'unknown schema version: {schema_version}')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
