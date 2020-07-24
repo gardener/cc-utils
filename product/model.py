@@ -33,6 +33,10 @@ import version as ver
 COMPONENT_DESCRIPTOR_ASSET_NAME = 'component_descriptor.yaml'
 
 
+class SchemaVersion(Enum):
+    V1 = 'v1'
+
+
 class InvalidComponentReferenceError(ModelValidationError):
     pass
 
@@ -209,9 +213,11 @@ class ComponentDescriptor(ProductModelBase):
             self.raw['components'] = []
         if 'component_overwrites' not in self.raw:
             self.raw['component_overwrites'] = []
+        if 'meta' not in self.raw:
+            self.raw['meta'] = {'schema_version': SchemaVersion.V1.value}
 
     def _optional_attributes(self):
-        return {'components', 'component_overwrites'}
+        return {'components', 'component_overwrites', 'meta'}
 
     def components(self):
         return (Component(raw_dict=raw_dict) for raw_dict in self.raw['components'])

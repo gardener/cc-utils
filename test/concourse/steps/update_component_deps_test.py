@@ -65,7 +65,11 @@ def test_current_product_descriptor(tmpdir):
     os.environ['COMPONENT_DESCRIPTOR_DIR'] = str(tmpdir)
     tmpdir.join('component_descriptor').write('{}')
 
-    assert current_product_descriptor().raw == {'components': [], 'component_overwrites': []}
+    assert current_product_descriptor().raw == {
+        'components': [],
+        'component_overwrites': [],
+        'meta': {'schema_version': 'v1'},
+    }
 
 
 def test_determine_reference_versions():
