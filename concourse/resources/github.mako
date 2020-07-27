@@ -41,7 +41,8 @@ disable_tls_validation = not github_cfg.tls_validation()
     username: "${credentials.username()}"
     password: "${credentials.passwd()}"
     git_config:
-      'protocol.version': '2'
+    - name: 'protocol.version'
+      value: '2'
 ${git_ignore_paths(repo_cfg)}
 </%def>
 <%def name="github_pr(repo_cfg, cfg_set, require_label=None, configure_webhook=True)">
