@@ -68,7 +68,6 @@ def test_current_product_descriptor(tmpdir):
     assert current_product_descriptor().raw == {
         'components': [],
         'component_overwrites': [],
-        'meta': {'schema_version': 'v1'},
     }
 
 
