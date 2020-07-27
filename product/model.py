@@ -236,8 +236,6 @@ class ComponentDescriptor(ProductModelBase):
             self.raw['components'] = []
         if 'component_overwrites' not in self.raw:
             self.raw['component_overwrites'] = []
-        if 'meta' not in self.raw:
-            self.raw['meta'] = {'schema_version': SchemaVersion.V1.value}
 
     def _optional_attributes(self):
         return {'components', 'component_overwrites', 'meta'}
