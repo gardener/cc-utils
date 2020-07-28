@@ -40,6 +40,15 @@ dc = dataclasses.dataclass
 
 class SchemaVersion(Enum):
     V1 = 'v1'
+    V2 = 'v2'
+
+
+class ComponentType(Enum):
+    GARDENER_COMPONENT = 'gardenerComponent'
+
+    OCI_IMAGE = 'ociImage'
+    WEB = 'web'
+    GENERIC = 'generic'
 
 
 class InvalidComponentReferenceError(ModelValidationError):
@@ -209,6 +218,107 @@ class DependencyBase(ModelBase):
         return hash((self.name(), self.version()))
 
 
+def _convert_v2_component_descriptor_dict_to_v1(d: dict):
+    '''
+    translates the given `dict` (which must be a ComponentDescriptor according to v2 spec)
+    into a v1-based component descriptor model. This is done as an intermediate step in
+    preparing the existing codebase to also accept v2-style ComponentDescriptors, without
+    having to adjust entire codebase (which will be done in a second step).
+    '''
+    # synthesise new component-descriptor (v1)
+    cd: ComponentDescriptor = ComponentDescriptorV1.from_dict({})
+
+    def handle_unsupported_type(type):
+        # use function, so we can optionally change the behaviour (e.g. discard instead of fail)
+        raise NotImplementedError(f'cannot convert {type=}')
+
+    def to_component(component_dict: dict):
+        name = component_dict['name']
+        version = component_dict['version']
+        type = ComponentType(component_dict['type'])
+        if not type is ComponentType.GARDENER_COMPONENT:
+            handle_unsupported_type()
+
+        return Component.create(name=name, version=version)
+
+    def convert_component_to_v1(component_dict: dict):
+        component = to_component(component_dict)
+        cd.add_component(component)
+
+        for dd in component_dict.get('dependencies', ()) or ():
+            name = dd['name']
+            version = dd['version']
+            dtype = ComponentType(dd['type'])
+            if dtype is ComponentType.GARDENER_COMPONENT:
+                dependency = ComponentReference.create(
+                    name=name,
+                    version=version
+                )
+            elif dtype is ComponentType.OCI_IMAGE:
+                dependency = ContainerImage.create(
+                    name=name,
+                    version=version,
+                    image_reference=dd['image_reference'],
+                )
+            elif dtype is ComponentType.WEB:
+                dependency = WebDependency.create(
+                    name=name,
+                    version=version,
+                    url=dd['url'],
+                )
+            elif dtype is ComponentType.GENERIC:
+                dependency = GenericDependency.create(
+                    name=name,
+                    version=version,
+                )
+            else:
+                handle_unsupported_type(type=dtype)
+
+            component.add_dependency(dependency)
+
+    for component_dict in d.get('components', ()):
+        convert_component_to_v1(component_dict)
+
+    def convert_overwrites_to_v1(od: dict):
+        dc_dict = od['declaring_component']
+
+        declaring_component = to_component(component_dict=dc_dict)
+        overwrites_dicts = od['overwrites']
+
+        overwrites = cd.component_overwrite(declaring_component=declaring_component)
+
+        for overwrites_dict in overwrites_dicts:
+            rc_dict = overwrites_dict['references']
+            referenced_component = to_component(component_dict=rc_dict)
+
+            dep_overwrites = overwrites.dependency_overwrite(
+                referenced_component=referenced_component,
+                create_if_absent=True,
+            )
+
+            for deps_dict in overwrites_dict['dependencies']:
+                dtype = ComponentType(deps_dict['type'])
+                if not dtype is ComponentType.OCI_IMAGE:
+                    handle_unsupported_type(type=dtype)
+
+                name = deps_dict['name']
+                version = deps_dict['version']
+                image_reference = deps_dict['image_reference']
+
+                dep_overwrites.add_container_image_overwrite(
+                    container_image=ContainerImage.create(
+                        name=name,
+                        version=version,
+                        image_reference=image_reference,
+                    )
+                )
+
+    for overwrite_dict in d.get('component_overwrites', ()):
+        convert_overwrites_to_v1(od=overwrite_dict)
+
+    return cd.raw
+
+
 class ComponentDescriptor(ProductModelBase):
     @staticmethod
     def from_dict(raw_dict: dict):
@@ -226,7 +336,9 @@ class ComponentDescriptor(ProductModelBase):
             schema_version = meta.schema_version
 
         if schema_version == SchemaVersion.V1:
-            return ComponentDescriptor(**raw_dict)
+            return ComponentDescriptorV1(**raw_dict)
+        elif schema_version == SchemaVersion.V2:
+            return ComponentDescriptorV1(**_convert_v2_component_descriptor_dict_to_v1(raw_dict))
         else:
             raise ModelValidationError(f'unknown schema version: {schema_version}')
 
@@ -274,6 +386,10 @@ class ComponentDescriptor(ProductModelBase):
 
     def _add_component_overwrite(self, component_overwrite):
         self.raw['component_overwrites'].append(component_overwrite.raw)
+
+
+class ComponentDescriptorV1(ComponentDescriptor):
+    pass
 
 
 class ComponentName(object):
