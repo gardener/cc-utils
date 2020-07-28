@@ -57,7 +57,7 @@ class InvalidComponentReferenceError(ModelValidationError):
 
 @dc
 class Meta:
-    schema_version: SchemaVersion = SchemaVersion.V1
+    schemaVersion: SchemaVersion = SchemaVersion.V1
 
 
 class ProductModelBase(ModelBase):
@@ -258,7 +258,7 @@ def _convert_v2_component_descriptor_dict_to_v1(d: dict):
                 dependency = ContainerImage.create(
                     name=name,
                     version=version,
-                    image_reference=dd['image_reference'],
+                    image_reference=dd['imageReference'],
                 )
             elif dtype is ComponentType.WEB:
                 dependency = WebDependency.create(
@@ -280,7 +280,7 @@ def _convert_v2_component_descriptor_dict_to_v1(d: dict):
         convert_component_to_v1(component_dict)
 
     def convert_overwrites_to_v1(od: dict):
-        dc_dict = od['declaring_component']
+        dc_dict = od['declaringComponent']
 
         declaring_component = to_component(component_dict=dc_dict)
         overwrites_dicts = od['overwrites']
@@ -303,7 +303,7 @@ def _convert_v2_component_descriptor_dict_to_v1(d: dict):
 
                 name = deps_dict['name']
                 version = deps_dict['version']
-                image_reference = deps_dict['image_reference']
+                image_reference = deps_dict['imageReference']
 
                 dep_overwrites.add_container_image_overwrite(
                     container_image=ContainerImage.create(
@@ -313,7 +313,7 @@ def _convert_v2_component_descriptor_dict_to_v1(d: dict):
                     )
                 )
 
-    for overwrite_dict in d.get('component_overwrites', ()):
+    for overwrite_dict in d.get('overwriteDeclarations', ()):
         convert_overwrites_to_v1(od=overwrite_dict)
 
     return cd.raw
@@ -333,7 +333,7 @@ class ComponentDescriptor(ProductModelBase):
                     cast=[SchemaVersion],
                 )
             )
-            schema_version = meta.schema_version
+            schema_version = meta.schemaVersion
 
         if schema_version == SchemaVersion.V1:
             return ComponentDescriptorV1(**raw_dict)

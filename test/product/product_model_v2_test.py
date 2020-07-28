@@ -3,7 +3,7 @@ import product.util
 
 v2_dict = {
     'meta':{
-        'schema_version': 'v2',
+        'schemaVersion': 'v2',
     },
     'components':[
       # first_component
@@ -22,7 +22,7 @@ v2_dict = {
                   'name': 'first',
                   'version': 'version',
                   'type': 'ociImage',
-                  'image_reference': 'first_creference:version',
+                  'imageReference': 'first_creference:version',
               },
               {
                   'name': 'first_web',
@@ -45,9 +45,9 @@ v2_dict = {
           'dependencies': None # no dependencies
       }
     ],
-    'component_overwrites':[
+    'overwriteDeclarations':[
       {
-        'declaring_component': {
+        'declaringComponent': {
           'name': 'example.org/bar/second_component',
           'version': 'second_version',
           'type': 'gardenerComponent',
@@ -64,7 +64,7 @@ v2_dict = {
                 'name': 'first',
                 'version': 'version',
                 'type': 'ociImage',
-                'image_reference': 'overwritten-image-ref:version',
+                'imageReference': 'overwritten-image-ref:version',
               },
             ],
           }
