@@ -54,12 +54,12 @@ v2_dict = {
         },
         'overwrites': [
           {
-            'references': {
+            'componentReference': {
               'name': 'example.org/foo/first_component',
               'version': 'first_version',
               'type': 'gardenerComponent',
             },
-            'dependencies': [
+            'dependencyOverwrites': [
               {
                 'name': 'first',
                 'version': 'version',
@@ -67,6 +67,7 @@ v2_dict = {
                 'imageReference': 'overwritten-image-ref:version',
               },
             ],
+            'componentOverwrites': {}
           }
         ],
       },

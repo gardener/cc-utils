@@ -288,7 +288,7 @@ def _convert_v2_component_descriptor_dict_to_v1(d: dict):
         overwrites = cd.component_overwrite(declaring_component=declaring_component)
 
         for overwrites_dict in overwrites_dicts:
-            rc_dict = overwrites_dict['references']
+            rc_dict = overwrites_dict['componentReference']
             referenced_component = to_component(component_dict=rc_dict)
 
             dep_overwrites = overwrites.dependency_overwrite(
@@ -296,7 +296,7 @@ def _convert_v2_component_descriptor_dict_to_v1(d: dict):
                 create_if_absent=True,
             )
 
-            for deps_dict in overwrites_dict['dependencies']:
+            for deps_dict in overwrites_dict['dependencyOverwrites']:
                 dtype = ComponentType(deps_dict['type'])
                 if not dtype is ComponentType.OCI_IMAGE:
                     handle_unsupported_type(type=dtype)
@@ -312,6 +312,10 @@ def _convert_v2_component_descriptor_dict_to_v1(d: dict):
                         image_reference=image_reference,
                     )
                 )
+
+            comp_overwrites_dict = overwrites_dict.get('componentOverwrites', {})
+            if len(comp_overwrites_dict) > 0:
+                raise NotImplementedError('do not know how to handle component-overwrites')
 
     for overwrite_dict in d.get('overwriteDeclarations', ()):
         convert_overwrites_to_v1(od=overwrite_dict)
