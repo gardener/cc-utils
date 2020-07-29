@@ -90,10 +90,17 @@ ATTRIBUTES = (
         doc='optional list of email recipients to be notified about critical scan results',
         type=typing.List[str],
     ),
-    AttributeSpec.required(
+    AttributeSpec.optional(
         name='checkmarx',
         type=CheckmarxCfg,
+        default=(),
         doc='if present, perform checkmarx scanning',
+    ),
+    AttributeSpec.optional(
+        name='whitesource',
+        type=WhitesourceCfg,
+        default=(),
+        doc='if present, perform whitesource scanning',
     ),
 )
 
@@ -116,6 +123,10 @@ class SourceScanTrait(Trait):
     def checkmarx(self):
         if checkmarx := self.raw.get('checkmarx'):
             return CheckmarxCfg(checkmarx)
+
+    def whitesource(self):
+        if whitesource := self.raw.get('whitesource'):
+            return WhitesourceCfg(whitesource)
 
     def transformer(self):
         return SourceScanTraitTransformer(trait=self)
