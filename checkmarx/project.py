@@ -12,15 +12,11 @@ import ctx
 import checkmarx.client
 import checkmarx.model
 import product.model
+import product.util
 import checkmarx.util
-import version
 
 ctx.configure_default_logging()
 logger = logging.getLogger(__name__)
-
-
-class RefGuessingFailedError(Exception):
-    pass
 
 
 @functools.lru_cache
@@ -39,9 +35,9 @@ def upload_and_scan_repo(
         component_name=component.name(),
     )
     try:
-        commit_hash = _guess_commit_from_ref(component=component)
+        commit_hash = product.util.guess_commit_from_ref(component=component)
     except github3.exceptions.NotFoundError as e:
-        raise RefGuessingFailedError(e)
+        raise product.util.RefGuessingFailedError(e)
 
     project = dacite.from_dict(
         checkmarx.model.ProjectDetails,
@@ -116,64 +112,6 @@ def upload_and_scan_repo(
     )
 
 
-def _guess_commit_from_ref(component: product.model.Component):
-    """
-    heuristically guess the appropriate git-ref for the given component's version
-    """
-    github_api = _github_api(component_name=component)
-    github_repo = github_api.repository(
-        component.github_organisation(),
-        component.github_repo(),
-    )
-
-    clogger = component_logger(component=component)
-
-    def in_repo(commit_ish):
-        clogger.info(f"commit-ish {commit_ish}")
-        try:
-            return github_repo.ref(commit_ish).object.sha
-        except github3.exceptions.NotFoundError:
-            pass
-
-        try:
-            return github_repo.commit(commit_ish).sha
-        except (github3.exceptions.UnprocessableEntity, github3.exceptions.NotFoundError):
-            return None
-
-    # first guess: component version could already be a valid "Gardener-relaxed-semver"
-    version_str = str(version.parse_to_semver(component))
-    commit = in_repo(version_str)
-    if commit:
-        return commit
-    # also try unmodified version-str
-    if commit := in_repo(component.version()):
-        return commit
-
-    # second guess: split commit-hash after last `-` character (inject-commit-hash semantics)
-    if '-' in (version_str := str(component.version())):
-        last_part = version_str.split('-')[-1]
-        commit = in_repo(last_part)
-        if commit:
-            return commit
-
-    # third guess: branch
-    try:
-        return github_repo.branch(version_str).commit.sha
-    except github3.exceptions.NotFoundError:
-        pass
-
-    # still unknown commit-ish throw error
-    raise RefGuessingFailedError(
-        f'failed to guess on ref for {component.name()=}{component.version()=}'
-    )
-
-
-def _github_api(component_name: product.model.ComponentName):
-    github_cfg = ccc.github.github_cfg_for_hostname(host_name=component_name.github_host())
-    github_api = ccc.github.github_api(github_cfg=github_cfg)
-    return github_api
-
-
 def _create_checkmarx_project(
         checkmarx_client: checkmarx.client.CheckmarxClient,
         team_id: str,
@@ -186,7 +124,7 @@ def _create_checkmarx_project(
     else:
         raise NotImplementedError
 
-    github_api = _github_api(component_name=component_name)
+    github_api = ccc.github.github_api_from_component(component=component_name)
 
     project_name = _calc_project_name_for_component(component_name=component_name)
 

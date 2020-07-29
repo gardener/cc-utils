@@ -482,3 +482,56 @@ def _enumerate_effective_images(
         for effective_image in _effective_images(component_descriptor, component):
             if image_reference_filter(effective_image):
                 yield (component, effective_image)
+
+
+class RefGuessingFailedError(Exception):
+    pass
+
+
+def guess_commit_from_ref(component: Component):
+    """
+    heuristically guess the appropriate git-ref for the given component's version
+    """
+    github_api = ccc.github.github_api_from_component(component=component)
+    github_repo = github_api.repository(
+        component.github_organisation(),
+        component.github_repo(),
+    )
+
+    def in_repo(commit_ish):
+        try:
+            return github_repo.ref(commit_ish).object.sha
+        except github3.exceptions.NotFoundError:
+            pass
+
+        try:
+            return github_repo.commit(commit_ish).sha
+        except (github3.exceptions.UnprocessableEntity, github3.exceptions.NotFoundError):
+            return None
+
+    # first guess: component version could already be a valid "Gardener-relaxed-semver"
+    version_str = str(version.parse_to_semver(component))
+    commit = in_repo(version_str)
+    if commit:
+        return commit
+    # also try unmodified version-str
+    if commit := in_repo(component.version()):
+        return commit
+
+    # second guess: split commit-hash after last `-` character (inject-commit-hash semantics)
+    if '-' in (version_str := str(component.version())):
+        last_part = version_str.split('-')[-1]
+        commit = in_repo(last_part)
+        if commit:
+            return commit
+
+    # third guess: branch
+    try:
+        return github_repo.branch(version_str).commit.sha
+    except github3.exceptions.NotFoundError:
+        pass
+
+    # still unknown commit-ish throw error
+    raise RefGuessingFailedError(
+        f'failed to guess on ref for {component.name()=}{component.version()=}'
+    )
