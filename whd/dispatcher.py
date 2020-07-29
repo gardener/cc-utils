@@ -211,12 +211,27 @@ class GithubWebhookDispatcher(object):
                     f"New pull request by member of '{owner}' in '{repository_path}' found. "
                     f"Setting required labels '{required_labels}'."
                 )
+                github_helper.add_comment_to_pr(
+                    pull_request_number=pr_number,
+                    comment=(
+                        "Thank you for your contribution. I will start a build for your PR. Once "
+                        "started, the build URL will be posted here."
+                    )
+                )
                 github_helper.add_labels_to_pull_request(pr_number, *required_labels)
                 return True
             else:
                 logger.debug(
                     f"New pull request by member in '{repository_path}' found, but creator is not "
                     f"member of '{owner}' - will not set required labels."
+                )
+                github_helper.add_comment_to_pr(
+                    pull_request_number=pr_number,
+                    comment=(
+                        "Thank you for your contribution. Before I can start building your "
+                        "PR, a member of the organization must set the required label(s) "
+                        f"{required_labels}. Once started, the build URL will be posted here"
+                    )
                 )
                 return False
         elif pr_event.action() is PullRequestAction.SYNCHRONIZE:
@@ -226,12 +241,27 @@ class GithubWebhookDispatcher(object):
                     f"Update to pull request #{pr_event.number()} by org member '{sender_login}' "
                     f" in '{repository_path}' found. Setting required labels '{required_labels}'."
                 )
+                github_helper.add_comment_to_pr(
+                    pull_request_number=pr_number,
+                    comment=(
+                        "Thank you for updating the PR. I will start a build. Once started the "
+                        "build URL will be posted here."
+                    )
+                )
                 github_helper.add_labels_to_pull_request(pr_number, *required_labels)
                 return True
             else:
                 logger.debug(
                     f"Update to pull request #{pr_event.number()} by '{sender_login}' "
                     f" in '{repository_path}' found. Ignoring, since they are not an org member'."
+                )
+                github_helper.add_comment_to_pr(
+                    pull_request_number=pr_number,
+                    comment=(
+                        "Thank you for your updating the PR. Before I can start building your "
+                        "PR, a member of the organization must set the required label(s) "
+                        f"{required_labels}. Once started, the build URL will be posted here"
+                    )
                 )
                 return False
         return False

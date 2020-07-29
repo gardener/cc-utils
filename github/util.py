@@ -499,6 +499,10 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         pull_request = self.repository.pull_request(pull_request_number)
         pull_request.issue().add_labels(*labels)
 
+    def add_comment_to_pr(self, pull_request_number, comment):
+        pull_request = self.repository.pull_request(pull_request_number)
+        pull_request.create_comment(comment)
+
     def is_org_member(self, organization_name, user_login):
         organization = self.github.organization(organization_name)
         return organization.is_member(user_login)
