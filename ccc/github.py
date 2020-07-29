@@ -29,6 +29,7 @@ import ci.util
 import github.util
 import http_requests
 import model
+import product.model
 
 if ci.util._running_on_ci():
     log_github_access = False
@@ -217,3 +218,8 @@ def log_stack_trace_information_hook(resp, *args, **kwargs):
 
     except Exception as e:
         ci.util.info(f'Could not log stack trace information: {e}')
+
+
+def github_api_from_component(component: product.model.Component):
+    github_cfg = github_cfg_for_hostname(host_name=component.github_host())
+    return github_api(github_cfg=github_cfg)
