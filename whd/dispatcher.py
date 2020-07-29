@@ -205,6 +205,7 @@ class GithubWebhookDispatcher(object):
             name,
             github_cfg=github_cfg,
         )
+        sender_login = pr_event.sender()['login']
         if pr_event.action() is PullRequestAction.OPENED:
             if github_helper.is_pr_created_by_org_member(pr_number):
                 logger.info(
@@ -214,8 +215,8 @@ class GithubWebhookDispatcher(object):
                 github_helper.add_comment_to_pr(
                     pull_request_number=pr_number,
                     comment=(
-                        "Thank you for your contribution. I will start a build for your PR. Once "
-                        "started, the build URL will be posted here."
+                        f"Thank you @{sender_login} for your contribution. I will start a build for "
+                        "your PR. Once started, the build URL will be posted here."
                     )
                 )
                 github_helper.add_labels_to_pull_request(pr_number, *required_labels)
@@ -228,14 +229,14 @@ class GithubWebhookDispatcher(object):
                 github_helper.add_comment_to_pr(
                     pull_request_number=pr_number,
                     comment=(
-                        "Thank you for your contribution. Before I can start building your "
-                        "PR, a member of the organization must set the required label(s) "
-                        f"{required_labels}. Once started, the build URL will be posted here"
+                        f"Thank you @{sender_login} for your contribution. Before I can start "
+                        "building your PR, a member of the organization must set the required "
+                        f"label(s) {required_labels}. Once started, the build URL "
+                        "will be posted here."
                     )
                 )
                 return False
         elif pr_event.action() is PullRequestAction.SYNCHRONIZE:
-            sender_login = pr_event.sender()['login']
             if github_helper.is_org_member(organization_name=owner, user_login=sender_login):
                 logger.info(
                     f"Update to pull request #{pr_event.number()} by org member '{sender_login}' "
@@ -244,8 +245,8 @@ class GithubWebhookDispatcher(object):
                 github_helper.add_comment_to_pr(
                     pull_request_number=pr_number,
                     comment=(
-                        "Thank you for updating the PR. I will start a build. Once started the "
-                        "build URL will be posted here."
+                        f"Thank you @{sender_login} for updating the PR. I will start a build. "
+                        "Once started, the build URL will be posted here."
                     )
                 )
                 github_helper.add_labels_to_pull_request(pr_number, *required_labels)
@@ -258,9 +259,10 @@ class GithubWebhookDispatcher(object):
                 github_helper.add_comment_to_pr(
                     pull_request_number=pr_number,
                     comment=(
-                        "Thank you for your updating the PR. Before I can start building your "
-                        "PR, a member of the organization must set the required label(s) "
-                        f"{required_labels}. Once started, the build URL will be posted here"
+                        f"Thank you @{sender_login} for your updating the PR. Before I can start "
+                        "building your PR, a member of the organization must set the required "
+                        f"label(s) {required_labels}. Once started, the build URL "
+                        "will be posted here."
                     )
                 )
                 return False
