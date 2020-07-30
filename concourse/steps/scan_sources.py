@@ -197,16 +197,16 @@ def scan_sources_and_notify(
 
 def scan_component_with_whitesource(whitesource_cfg_name: str,
                                     product_token: str,
-                                    component_descriptor: str):
+                                    component_descriptor: str,
+                                    optional: dict,
+                                    requester_mail: str):
     # create whitesource client
     client = whitesource.util.create_whitesource_client(whitesource_cfg_name=whitesource_cfg_name)
-    print('whitesource client created')
 
     # parse component_descriptor
     component_descriptor = product.model.ComponentDescriptor.from_dict(
         ci.util.parse_yaml_file(component_descriptor)
     )
-    print('component_descriptor parsed')
 
     # for component in []: "components matching component_descriptor"
     for component in component_descriptor.components():
@@ -215,27 +215,23 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
         wsc = create_whitesource_component(whitesource_client=client,
                                            product_token=product_token,
                                            component=component)
-        print('whitesource component created for {}'.format(component.name()))
 
         # store in tmp file
         with tempfile.NamedTemporaryFile(suffix='.tar.gz') as tmp_file:
 
             # guess git-ref for the given component's version
             commit_hash = product.util.guess_commit_from_ref(component)
-            print('git ref guessed to {} for component {}'.format(str(commit_hash), component.name()))
 
             # download whitesource component
             whitesource.component.download_component(github_api=wsc.github_api,
                                                      component_name=wsc.component_name,
                                                      dest=tmp_file,
                                                      ref=commit_hash)
-            print('component {} downloaded'.format(component.name()))
 
             # POST component>
             res = wsc.whitesource_client.post_component(product_token=wsc.product_token,
                                                         component_name=wsc.component_name.name(),
-                                                        requester_email="philipp.heil@sap.com",
-                                                        optional_config={"projectVersion": "3.3.3"},
+                                                        requester_email=requester_mail,
+                                                        optional_config=optional,
                                                         component=tmp_file.name)
-            print('status: {}'.format(res.status_code))
-            print('component {} posted to api'.format(component.name()))
+

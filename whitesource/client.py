@@ -2,6 +2,7 @@ import json
 import model.whitesource
 import requests
 from requests_toolbelt import MultipartEncoder
+from ci.util import urljoin
 
 
 class WSNotOkayException(Exception):
@@ -15,7 +16,7 @@ class WhitesourceClient:
 
     def __init__(self,
                  whitesource_cfg: model.whitesource.WhitesourceConfig):
-        self.routes = WhitesourceRoutes(base_url=whitesource_cfg.base_url())
+        self.routes = WhitesourceRoutes(extension_endpoint=whitesource_cfg.extension_endpoint())
         self.config = whitesource_cfg
         self.creds = self.config.credentials()
 
@@ -35,16 +36,21 @@ class WhitesourceClient:
                        product_token: str,
                        component_name: str,
                        requester_email: str,
-                       optional_config: dict,
+                       optional: dict,
                        component):
+
+        config = {
+            "componentName": component_name,
+            "requesterEmail": requester_email,
+            "productToken": product_token,
+            "userKey": self.creds.user_key(),
+            "apiKey": self.config.api_key(),
+            "apiBaseUrl": self.config.base_url(),
+            "optional": json.dumps(optional)
+        }
+
         m = MultipartEncoder(
-            fields={'componentName': component_name,
-                    'requesterEmail': requester_email,
-                    'productToken': product_token,
-                    'userKey': self.creds.user_key(),
-                    'apiKey': self.config.api_key(),
-                    'apiBaseUrl': self.config.base_url(),
-                    'optionalConfig': json.dumps(optional_config),
+            fields={"config": json.dumps(config),
                     'component': (component, open(component, 'rb'), 'text/plain')}
         )
         return self.request(method="POST",
@@ -55,10 +61,8 @@ class WhitesourceClient:
 
 class WhitesourceRoutes:
 
-    def __init__(self, base_url: str):
-        self.base_url = base_url
+    def __init__(self, extension_endpoint: str):
+        self.extension_endpoint = extension_endpoint
 
     def post_component(self):
-        # TODO use API endpoint
-        return "http://127.0.0.1:8000/component"
-        # return urljoin(self.base_url, 'component')
+        return urljoin(self.extension_endpoint, 'component')
