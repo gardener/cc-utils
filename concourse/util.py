@@ -23,6 +23,7 @@ import concourse.model.traits.meta
 import concourse.steps.meta
 import github.webhook
 
+from concourse.client.routes import ConcourseApiRoutesBase
 from model.concourse import (
     JobMappingSet,
 )
@@ -155,6 +156,16 @@ def get_pipeline_metadata():
         job_name=job_name,
         current_config_set_name=current_cfg_set_name,
         team_name=team_name,
+    )
+
+
+def own_running_build_url(concourse_cfg):
+    pipeline_metadata = get_pipeline_metadata()
+    own_build = find_own_running_build()
+    return ConcourseApiRoutesBase.running_build_url(
+        concourse_cfg.external_url(),
+        pipeline_metadata,
+        own_build.build_number()
     )
 
 

@@ -49,6 +49,21 @@ class ConcourseApiRoutesBase(object):
 
         return urljoin(base_url, '/'.join(parts))
 
+    @staticmethod
+    def running_build_url(concourse_base_url, pipeline_metadata, build_number):
+        url_parts = [
+            concourse_base_url,
+            'teams',
+            pipeline_metadata.team_name,
+            'pipelines',
+            pipeline_metadata.pipeline_name,
+            'jobs',
+            pipeline_metadata.job_name,
+            'builds',
+            build_number,
+        ]
+        return ci.util.urljoin(*url_parts)
+
     @ensure_annotations
     def team_url(self, team: str=None):
         if not team:
