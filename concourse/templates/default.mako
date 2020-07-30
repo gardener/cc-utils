@@ -15,6 +15,7 @@ target_team = pipeline.get('target_team')
 resource_registry = pipeline_definition._resource_registry
 
 github = config_set.github()
+concourse_cfg = config_set.concourse()
 disable_tls_validation = "false" if github.tls_validation() else "true"
 
 default_container_registry = config_set.container_registry()
@@ -378,7 +379,7 @@ else:
 % elif job_step.name == 'meta':
         ${meta_step(job_step=job_step, job_variant=job_variant, indent=8)}
 % elif job_step.name == 'rm_pr_label':
-        ${rm_pr_label_step(job_step=job_step, job_variant=job_variant, github_cfg=github, indent=8)}
+        ${rm_pr_label_step(job_step=job_step, job_variant=job_variant, github_cfg=github, concourse_cfg=concourse_cfg, indent=8)}
 % elif job_step.name == 'component_descriptor':
         ${component_descriptor_step(job_step=job_step, job_variant=job_variant, output_image_descriptors=output_image_descriptors, indent=8)}
 % elif job_step.name == 'update_component_dependencies':
