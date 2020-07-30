@@ -86,6 +86,7 @@ class PullRequestAction(enum.Enum):
     CLOSED = 'closed'
     REOPENED = 'reopened'
     SYNCHRONIZE = 'synchronize'
+    READY_FOR_REVIEW = 'ready_for_review'
 
 
 class PullRequestEvent(EventBase):
