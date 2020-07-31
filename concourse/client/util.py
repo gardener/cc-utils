@@ -275,11 +275,11 @@ def ensure_resource_unpinned(
         )
         yield
     finally:
-        concourse_api.unpin_resource(
+        if concourse_api.unpin_resource(
             pipeline_name=resource.pipeline_name(),
             resource_name=resource.name,
-        )
-        logger.info(f'successfully unpinned {resource.name=}')
+        ):
+            logger.info(f'successfully unpinned {resource.name=}')
 
 
 def _ensure_resource_unpinned(

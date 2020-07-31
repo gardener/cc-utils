@@ -347,11 +347,13 @@ class ConcourseApiBase:
         self.pin_comment(pipeline_name, resource_name, comment)
 
     @ensure_annotations
-    def unpin_resource(self, pipeline_name: str, resource_name: str):
+    def unpin_resource(self, pipeline_name: str, resource_name: str) -> bool:
         resource = self.resource(pipeline_name, resource_name)
         if resource.is_pinned():
             url = self.routes.unpin_resource(pipeline_name, resource_name)
             self._put(url, "")
+            return True
+        return False
 
     @ensure_annotations
     def pin_comment(self, pipeline_name: str, resource_name: str, comment: str):
