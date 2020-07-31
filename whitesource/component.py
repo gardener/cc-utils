@@ -1,13 +1,13 @@
 import tempfile
+
+import ccc.github
 import product.model
 import whitesource.client
-import product.model
-import ccc.github
 
 
-def create_whitesource_component(whitesource_client: whitesource.client.WhitesourceClient,
-                                 component: product.model.Component,
-                                 product_token: str):
+def get_post_project_object(whitesource_client: whitesource.client.WhitesourceClient,
+                            component: product.model.Component,
+                            product_token: str):
     # get component_name
     if isinstance(component.name(), str):
         component_name = product.model.ComponentName.from_github_repo_url(component.name())
@@ -17,7 +17,7 @@ def create_whitesource_component(whitesource_client: whitesource.client.Whitesou
         raise NotImplementedError
 
     github_api = ccc.github.github_api_from_component(component=component)
-    return WhitesourceComponent(
+    return PostProjectObject(
         whitesource_client=whitesource_client,
         github_api=github_api,
         product_token=product_token,
@@ -26,7 +26,7 @@ def create_whitesource_component(whitesource_client: whitesource.client.Whitesou
     )
 
 
-class WhitesourceComponent:
+class PostProjectObject:
     def __init__(self,
                  whitesource_client: whitesource.client.WhitesourceClient,
                  github_api,
@@ -42,7 +42,7 @@ class WhitesourceComponent:
 
 def download_component(github_api,
                        component_name: product.model.ComponentName,
-                       dest: tempfile.TemporaryFile(),
+                       dest: tempfile.TemporaryFile,
                        ref: str):
     repo = github_api.repository(
         component_name.github_organisation(),
