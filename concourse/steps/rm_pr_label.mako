@@ -13,8 +13,6 @@ pr_id_path = main_repo.pr_id_path()
 %>
 % if require_label:
 from ci.util import ctx, info, warning
-from concourse.util import own_running_build_url
-from github.util import GitHubRepositoryHelper
 from github3.exceptions import NotFoundError
 import ccc.github
 import ci.util
@@ -29,19 +27,6 @@ with open(pr_id_path) as f:
   pr_id = int(f.read().strip())
 
 repository = github_api.repository('${main_repo.repo_owner()}', '${main_repo.repo_name()}')
-build_url = own_running_build_url(concourse_cfg)
-github_helper = GitHubRepositoryHelper(
-    owner='${main_repo.repo_owner()}',
-    name='${main_repo.repo_name()}',
-    github_cfg=github_cfg,
-)
-github_helper.add_comment_to_pr(
-    pull_request_number=pr_id,
-    comment=(
-        f"A build of this pull request has started. You can check on its progress here: {build_url}"
-    )
-)
-info("added comment with build URL")
 pull_request = repository.pull_request(pr_id)
 issue = pull_request.issue()
 # rm label to prevent malicious changes to be built
