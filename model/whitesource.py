@@ -28,8 +28,8 @@ class WhitesourceCredentials(BasicCredentials):
 
 
 class WhitesourceConfig(NamedModelElement):
-    def base_url(self):
-        return self.raw.get('base_url')
+    def wss_endpoint(self):
+        return self.raw.get('wss_endpoint')
 
     def api_key(self):
         return self.raw.get('api_key')
@@ -41,4 +41,4 @@ class WhitesourceConfig(NamedModelElement):
         return WhitesourceCredentials(self.raw.get('credentials'))
 
     def _required_attributes(self):
-        return 'credentials', 'base_url', 'api_key', 'extension_endpoint'
+        return 'credentials', 'wss_endpoint', 'api_key', 'extension_endpoint'

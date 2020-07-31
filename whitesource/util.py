@@ -1,4 +1,5 @@
 import functools
+
 import ci.util
 import whitesource.client
 

@@ -1,8 +1,10 @@
 import json
-import model.whitesource
+
 import requests
 from requests_toolbelt import MultipartEncoder
+
 from ci.util import urljoin
+import model.whitesource
 
 
 class WSNotOkayException(Exception):
@@ -32,12 +34,12 @@ class WhitesourceClient:
             raise WSNotOkayException(res=res, msg=msg)
         return res
 
-    def post_component(self,
-                       product_token: str,
-                       component_name: str,
-                       requester_email: str,
-                       optional: dict,
-                       component):
+    def post_product(self,
+                     product_token: str,
+                     component_name: str,
+                     requester_email: str,
+                     extra_whitesource_config: {},
+                     file):
 
         config = {
             "componentName": component_name,
@@ -45,18 +47,18 @@ class WhitesourceClient:
             "productToken": product_token,
             "userKey": self.creds.user_key(),
             "apiKey": self.config.api_key(),
-            "apiBaseUrl": self.config.base_url(),
-            "optional": json.dumps(optional)
+            "wssEndpoint": self.config.wss_endpoint(),
+            "optional": json.dumps(extra_whitesource_config)
         }
 
         m = MultipartEncoder(
             fields={"config": json.dumps(config),
-                    'component': (component, open(component, 'rb'), 'text/plain')}
+                    'component': ('component.tar.gz', file, 'text/plain')}
         )
         return self.request(method="POST",
                             url=self.routes.post_component(),
                             headers={'Content-Type': m.content_type},
-                            data=m.to_string())
+                            data=m)
 
 
 class WhitesourceRoutes:

@@ -1,5 +1,6 @@
 import concurrent.futures
 import functools
+import tempfile
 import traceback
 import typing
 
@@ -11,15 +12,12 @@ import mailutil
 import product.model
 import threading
 
-import ctx
-import logging
-import tempfile
-import whitesource.client
-import whitesource.component
-from whitesource.component import create_whitesource_component
-import whitesource.util
 import checkmarx.project
 import product.util
+import whitesource.client
+import whitesource.component
+from whitesource.component import get_post_project_object
+import whitesource.util
 
 
 scans_above_threshold_const = 'scans_above_threshold'
@@ -197,41 +195,53 @@ def scan_sources_and_notify(
 
 def scan_component_with_whitesource(whitesource_cfg_name: str,
                                     product_token: str,
-                                    component_descriptor: str,
-                                    optional: dict,
+                                    component_descriptor_path: str,
+                                    extra_whitesource_config: dict,
                                     requester_mail: str):
+
     # create whitesource client
+    ci.util.info('creating whitesource client...')
     client = whitesource.util.create_whitesource_client(whitesource_cfg_name=whitesource_cfg_name)
+    ci.util.info('whitesource client created')
 
     # parse component_descriptor
+    ci.util.info('parsing component descriptor...')
     component_descriptor = product.model.ComponentDescriptor.from_dict(
-        ci.util.parse_yaml_file(component_descriptor)
+        ci.util.parse_yaml_file(component_descriptor_path)
     )
+    ci.util.info('component descriptor parsed\n')
 
     # for component in []: "components matching component_descriptor"
     for component in component_descriptor.components():
 
         # create whitesource component
-        wsc = create_whitesource_component(whitesource_client=client,
-                                           product_token=product_token,
-                                           component=component)
+        ci.util.info('preparing POST project for {}...'.format(component.name()))
+        post_project_object = get_post_project_object(whitesource_client=client,
+                                                      product_token=product_token,
+                                                      component=component)
+        ci.util.info('POST project prepared')
 
         # store in tmp file
-        with tempfile.NamedTemporaryFile(suffix='.tar.gz') as tmp_file:
+        with tempfile.TemporaryFile() as tmp_file:
 
+            ci.util.info('guessing commit hash...')
             # guess git-ref for the given component's version
             commit_hash = product.util.guess_commit_from_ref(component)
+            ci.util.info('commit hash guessed')
 
             # download whitesource component
-            whitesource.component.download_component(github_api=wsc.github_api,
-                                                     component_name=wsc.component_name,
+            ci.util.info('downloading component for scan...')
+            whitesource.component.download_component(github_api=post_project_object.github_api,
+                                                     component_name=post_project_object.component_name,
                                                      dest=tmp_file,
                                                      ref=commit_hash)
+            ci.util.info('component downloaded')
 
             # POST component>
-            res = wsc.whitesource_client.post_component(product_token=wsc.product_token,
-                                                        component_name=wsc.component_name.name(),
-                                                        requester_email=requester_mail,
-                                                        optional_config=optional,
-                                                        component=tmp_file.name)
-
+            ci.util.info('POST project...')
+            post_project_object.whitesource_client.post_product(product_token=post_project_object.product_token,
+                                                                component_name=post_project_object.component_name.name(),
+                                                                requester_email=requester_mail,
+                                                                extra_whitesource_config=extra_whitesource_config,
+                                                                file=tmp_file)
+            ci.util.info('project posted\n')
