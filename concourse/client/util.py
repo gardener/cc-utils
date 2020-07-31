@@ -183,23 +183,16 @@ def pin_resource_and_trigger_build(
     concourse_api,
     retries: int=3,
 ):
-    # TODO: check whether resource is still pinned for our version
-    with ensure_resource_unpinned(
+    retries_for_job_trigger = 10
+    sleep_seconds_between_attempts = 6
+    wait_until_next_retry_seconds = retries_for_job_trigger * sleep_seconds_between_attempts
+
+    with ensure_resource_pinned(
         resource=resource,
         resource_version=resource_version,
+        wait_until_next_retry_seconds=wait_until_next_retry_seconds,
         concourse_api=concourse_api,
     ):
-        retries_for_job_trigger = 10
-        sleep_seconds_between_attempts = 6
-        wait_until_next_retry_seconds = retries_for_job_trigger * sleep_seconds_between_attempts
-
-        # pin resource and add comment
-        _pin_and_comment_resource(
-            wait_until_next_retry_seconds=wait_until_next_retry_seconds,
-            resource=resource,
-            resource_version=resource_version,
-            concourse_api=concourse_api,
-        )
 
         for count in range(retries):
             concourse_api.trigger_build(
@@ -262,13 +255,21 @@ def _pin_and_comment_resource(
 
 
 @contextmanager
-def ensure_resource_unpinned(
+def ensure_resource_pinned(
     resource: PipelineResource,
     resource_version: ResourceVersion,
+    wait_until_next_retry_seconds: int,
     concourse_api,
 ):
     try:
         _ensure_resource_unpinned(
+            resource=resource,
+            resource_version=resource_version,
+            concourse_api=concourse_api,
+        )
+        # pin resource and add comment
+        _pin_and_comment_resource(
+            wait_until_next_retry_seconds=wait_until_next_retry_seconds,
             resource=resource,
             resource_version=resource_version,
             concourse_api=concourse_api,
