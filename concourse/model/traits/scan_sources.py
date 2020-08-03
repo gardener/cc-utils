@@ -1,6 +1,8 @@
 import enum
 import typing
 
+import ci.util
+
 from concourse.model.job import (
     JobVariant,
 )
@@ -136,8 +138,8 @@ class SourceScanTrait(Trait):
         if self.checkmarx() or self.whitesource():
             return True
         else:
-            raise model.base.ModelValidationError(
-                "At least one of checkmarx, whitesource must be configured.")
+            # TODO should actually raise something, but breaks docu generation
+            ci.util.warning('At least one of whitesource / checkmarx should be defined.')
 
 
 class SourceScanTraitTransformer(TraitTransformer):
