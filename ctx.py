@@ -198,7 +198,7 @@ def configure_default_logging(stdout_level=None):
         'version': 1,
         'formatters': {
             'default': {
-                'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s [%(threadName)s]',
+                'format': '%(asctime)s [%(levelname)s] [%(threadName)s] %(name)s: %(message)s',
             },
         },
         'handlers': {
