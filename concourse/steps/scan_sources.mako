@@ -10,6 +10,7 @@ repo_name = main_repo.logical_name().upper()
 
 source_scan_trait = job_variant.trait('scan_sources')
 checkmarx_cfg = source_scan_trait.checkmarx()
+whitesource_cfg = source_scan_trait.whitesource()
 email_recipients = source_scan_trait.email_recipients()
 component_trait = job_variant.trait('component_descriptor')
 
