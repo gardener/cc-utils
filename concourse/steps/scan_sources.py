@@ -216,9 +216,10 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
 
         # create whitesource component
         ci.util.info('preparing POST project for {}...'.format(component.name()))
-        post_project_object = get_post_project_object(whitesource_client=client,
-                                                      product_token=product_token,
-                                                      component=component)
+        post_project_object = get_post_project_object(
+            whitesource_client=client,
+            product_token=product_token,
+            component=component)
         ci.util.info('POST project prepared')
 
         # store in tmp file
@@ -231,17 +232,19 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
 
             # download whitesource component
             ci.util.info('downloading component for scan...')
-            whitesource.component.download_component(github_api=post_project_object.github_api,
-                                                     component_name=post_project_object.component_name,
-                                                     dest=tmp_file,
-                                                     ref=commit_hash)
+            whitesource.component.download_component(
+                github_api=post_project_object.github_api,
+                component_name=post_project_object.component_name,
+                dest=tmp_file,
+                ref=commit_hash)
             ci.util.info('component downloaded')
 
             # POST component>
             ci.util.info('POST project...')
-            post_project_object.whitesource_client.post_product(product_token=post_project_object.product_token,
-                                                                component_name=post_project_object.component_name.name(),
-                                                                requester_email=requester_mail,
-                                                                extra_whitesource_config=extra_whitesource_config,
-                                                                file=tmp_file)
+            post_project_object.whitesource_client.post_product(
+                product_token=post_project_object.product_token,
+                component_name=post_project_object.component_name.name(),
+                requester_email=requester_mail,
+                extra_whitesource_config=extra_whitesource_config,
+                file=tmp_file)
             ci.util.info('project posted\n')
