@@ -189,11 +189,14 @@ def assemble_mail_body(
         body_parts.append(below_threshold_text + scan_statistics_below_threshold)
 
     if len(failed_components) > 0:
-        failed_components_str = "\n".join((component.name() for component in failed_components))
+        failed_components_str = ''.join((
+            f'<li>{component.name()}</li>' for component in failed_components
+        ))
         failed_components_text = textwrap.dedent(
             f'''
                 <p>
-                  The following components finished in an erroneous state: {failed_components_str}):
+                  The following components finished in an erroneous state:
+                    <ul>{failed_components_str})</ul>
                 </p>
             '''
         )
