@@ -52,6 +52,11 @@ WHITESOURCE_ATTRIBUTES = (
         doc='whitesource product token',
         type=str,
     ),
+    AttributeSpec.required(
+        name='cfg_name',
+        doc='whitesource cfg_name',
+        type=str,
+    ),
 )
 
 
@@ -62,6 +67,9 @@ class WhitesourceCfg(ModelBase):
 
     def product_token(self):
         return self.raw['product_token']
+
+    def cfg_name(self):
+        return self.raw['cfg_name']
 
 
 class CheckmarxCfg(ModelBase):

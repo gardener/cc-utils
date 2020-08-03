@@ -30,7 +30,7 @@ scan_sources_and_notify(
 
 % if whitesource_cfg:
 scan_component_with_whitesource(
-    whitesource_cfg_name='${whitesource_cfg.whitesource_cfg_name()}',
+    whitesource_cfg_name='${whitesource_cfg.cfg_name()}',
     product_token='${whitesource_cfg.product_token()}',
     component_descriptor_path=component_descriptor_path(),
     extra_whitesource_config={},
