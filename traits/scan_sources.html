@@ -205,10 +205,16 @@
 <td><p>optional list of email recipients to be notified about critical scan results</p></td>
 </tr>
 <tr class="row-even"><td><p>checkmarx</p></td>
-<td><p>yes</p></td>
-<td><p>None</p></td>
+<td><p>no</p></td>
+<td><p>()</p></td>
 <td><p>CheckmarxCfg</p></td>
 <td><p>if present, perform checkmarx scanning</p></td>
+</tr>
+<tr class="row-odd"><td><p>whitesource</p></td>
+<td><p>no</p></td>
+<td><p>()</p></td>
+<td><p>WhitesourceCfg</p></td>
+<td><p>if present, perform whitesource scanning</p></td>
 </tr>
 </tbody>
 </table>
@@ -240,6 +246,25 @@
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>config name for checkmarx</p></td>
+</tr>
+</tbody>
+</table>
+<p class="section-subtitle">whitesource Attributes</p>
+<table class="colwidths-auto docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>product_token</p></td>
+<td><p>yes</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>whitesource product token</p></td>
 </tr>
 </tbody>
 </table>
