@@ -117,9 +117,6 @@ class ConcourseConfig(NamedModelElement):
     def proxy(self):
         return self.raw.get('proxy')
 
-    def monitoring_config(self):
-        return self.raw.get('monitoring_config')
-
     def _required_attributes(self):
         return [
             'externalUrl',
@@ -140,7 +137,6 @@ class ConcourseConfig(NamedModelElement):
         return {
             'github_enterprise_host',
             'proxy',
-            'monitoring_config',
             'clamav_config',
         }
 

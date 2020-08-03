@@ -31,7 +31,6 @@ from landscape_setup import (
     clamav as setup_clamav,
     concourse as setup_concourse,
     gardenlinux_cache as setup_gardenlinux_cache,
-    monitoring as setup_monitoring,
     oauth2_proxy as setup_oauth2_proxy,
     secrets_server as setup_secrets_server,
     tekton as setup_tekton,
@@ -44,7 +43,6 @@ class LandscapeComponent(enum.Enum):
     CONCOURSE = 'concourse'
     SECRETS_SERVER = 'secrets_server'
     WHD = 'webhook_dispatcher'
-    MONITORING = 'monitoring'
     CLAMAV = 'clam_av'
     GARDENLINUX_CACHE = 'gardenlinux_cache'
 
@@ -143,12 +141,6 @@ def deploy_or_upgrade_landscape(
             deployment_name=webhook_dispatcher_deployment_name,
         )
 
-    if LandscapeComponent.MONITORING in components:
-        info('Deploying Monitoring stack')
-        deploy_or_upgrade_monitoring(
-            config_set_name=config_set_name,
-        )
-
     if LandscapeComponent.CLAMAV in components:
         info ('Deploying ClamAV')
         deploy_or_upgrade_clamav(
@@ -243,17 +235,6 @@ def deploy_or_upgrade_webhook_dispatcher(
         webhook_dispatcher_deployment_cfg=webhook_dispatcher_deployment_cfg,
         chart_dir=chart_dir,
         deployment_name=deployment_name,
-    )
-
-
-def deploy_or_upgrade_monitoring(
-    config_set_name: CliHint(typehint=str, help=CONFIG_SET_HELP),
-):
-    cfg_factory = ctx().cfg_factory()
-    cfg_set = cfg_factory.cfg_set(config_set_name)
-    setup_monitoring.deploy_monitoring_landscape(
-        cfg_set=cfg_set,
-        cfg_factory=cfg_factory,
     )
 
 
