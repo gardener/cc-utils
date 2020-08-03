@@ -18,7 +18,6 @@ from concourse.model.base import (
     ScriptType,
 )
 import concourse.model.traits.component_descriptor
-import model.base
 
 
 class Notify(enum.Enum):
