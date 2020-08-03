@@ -49,7 +49,7 @@ WHITESOURCE_ATTRIBUTES = (
         name='product_token',
         doc='whitesource product token',
         type=str,
-    )
+    ),
 )
 
 
