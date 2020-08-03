@@ -16,6 +16,7 @@ from concourse.model.base import (
     ScriptType,
 )
 import concourse.model.traits.component_descriptor
+import model.base
 
 
 class Notify(enum.Enum):
@@ -130,6 +131,12 @@ class SourceScanTrait(Trait):
 
     def transformer(self):
         return SourceScanTraitTransformer(trait=self)
+
+    def custom_init(self, raw_dict: dict):
+        if self.checkmarx() or self.whitesource():
+            return True
+        else:
+            raise model.base.ModelValidationError("At least one of checkmarx, whitesource must be configured.")
 
 
 class SourceScanTraitTransformer(TraitTransformer):
