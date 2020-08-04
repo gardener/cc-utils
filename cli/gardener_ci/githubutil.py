@@ -201,3 +201,32 @@ def delete_releases(
         github_cfg=github_cfg,
     )
     github_helper.delete_releases(release_names=release_name)
+
+
+def greatest_release_version(
+    github_cfg_name: str,
+    github_repository_owner: str,
+    github_repository_name: str,
+):
+    '''Find the release with the greatest name (according to semver) and print its semver-version.
+
+    Note:
+    - This will only consider releases whose names are either immediately parseable as semver-
+    versions, or prefixed with a single character ('v').
+    - The 'v'-prefix (if present) will be not be present in the output.
+    - If a release has no name, its tag will be used instead of its name.
+
+    For more details on the ordering of semantic versioning, see 'https://www.semver.org'.
+    '''
+    github_cfg = ctx().cfg_factory().github(github_cfg_name)
+    github_helper = GitHubRepositoryHelper(
+        owner=github_repository_owner,
+        name=github_repository_name,
+        github_cfg=github_cfg,
+    )
+    print(
+        find_greatest_github_release_version(
+            releases=github_helper.repository.releases(),
+            warn_for_unparseable_releases=False,
+        )
+    )
