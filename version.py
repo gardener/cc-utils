@@ -183,26 +183,28 @@ def process_version(
         raise ValueError('Given SemVer must have prerelease-version to append to.')
 
     if hasattr(semver, operation):
-        function = getattr(semver, operation)
-        processed_version = function(version_str)
+        function = getattr(parsed_version, operation)
+        processed_version = str(function())
     elif operation == NOOP:
         processed_version = version_str
     elif operation == SET_VERBATIM:
         processed_version = str(verbatim_version)
     elif operation == APPEND_PRERELEASE:
-        parsed_version._prerelease = '-'.join((parsed_version.prerelease, prerelease))
+        parsed_version = parsed_version.replace(
+            prerelease='-'.join((parsed_version.prerelease, prerelease))
+        )
         processed_version = str(parsed_version)
     else:
-        parsed_version._prerelease = None
-        parsed_version._build = None
+        parsed_version = parsed_version.replace(prerelease=None, build=None)
         if operation in [SET_PRERELEASE, SET_PRERELEASE_AND_BUILD]:
-            parsed_version._prerelease = prerelease
+            parsed_version = parsed_version.replace(prerelease=prerelease)
         if operation in [SET_BUILD_METADATA, SET_PRERELEASE_AND_BUILD]:
-            parsed_version._build = build_metadata[:build_metadata_length]
+            parsed_version = parsed_version.replace(build=build_metadata[:build_metadata_length])
         processed_version = str(parsed_version)
 
     if metadata.prefix:
         return metadata.prefix + processed_version
+
     return processed_version
 
 
