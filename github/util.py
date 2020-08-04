@@ -673,6 +673,7 @@ def _retrieve_team_by_name_or_none(
 
 def find_greatest_github_release_version(
     releases: [github3.repos.release.Release],
+    warn_for_unparseable_releases: True,
 ):
     # currently, non-draft-releases are not created with a name by us. Use the tag name as fallback
     release_versions = [
@@ -685,7 +686,8 @@ def find_greatest_github_release_version(
             version.parse_to_semver(release_name)
             return True
         except ValueError:
-            ci.util.warning(f"Skipping release with non semver-parseable name {release_name}")
+            if warn_for_unparseable_releases:
+                ci.util.warning(f"Skipping release with non semver-parseable name {release_name}")
             return False
 
     release_versions = [
