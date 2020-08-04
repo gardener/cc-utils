@@ -134,7 +134,7 @@ def test_determine_reference_versions():
         MagicMock(return_value=upstream_comp)
 
     assert examinee(
-        reference_version=semver.parse_version_info('1.2.3'), # does not matter
+        reference_version=semver.VersionInfo.parse('1.2.3'), # does not matter
         upstream_update_policy=UUP.ACCEPT_HOTFIXES,
         _component=MagicMock(return_value=upstream_comp)
     ) == (upstream_version, upstream_version)

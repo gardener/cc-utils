@@ -86,7 +86,7 @@ def _parse_to_semver_and_metadata(version: str):
 
     # in most cases, we should be fine now
     try:
-        return semver.parse_version_info(semver_version), metadata
+        return semver.VersionInfo.parse(semver_version), metadata
     except ValueError:
         pass # try extending `.0` as patch-level
 
@@ -100,7 +100,7 @@ def _parse_to_semver_and_metadata(version: str):
     numeric += '.0'
 
     try:
-        return semver.parse_version_info(numeric + sep + suffix), metadata
+        return semver.VersionInfo.parse(numeric + sep + suffix), metadata
     except ValueError:
         # re-raise with original version str
         raise_invalid()
