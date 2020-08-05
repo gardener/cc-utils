@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import urllib
 
 from ci.util import (
     CliHint,
@@ -32,6 +33,8 @@ from github.release_notes.util import (
     ReleaseNotes,
 )
 import ccc.github
+
+import github3
 
 
 def assign_github_team_to_repo(
@@ -204,9 +207,11 @@ def delete_releases(
 
 
 def greatest_release_version(
-    github_cfg_name: str,
-    github_repository_owner: str,
-    github_repository_name: str,
+    github_repository_url: CliHint(help='e.g.: https://github.com/gardener/cc-utils'),
+    anonymous: CliHint(
+        typehint=bool,
+        help='Use anonymous access. Unauthenticated access is only possible on github.com.',
+    ) = False,
 ):
     '''Find the release with the greatest name (according to semver) and print its semver-version.
 
@@ -218,15 +223,30 @@ def greatest_release_version(
 
     For more details on the ordering of semantic versioning, see 'https://www.semver.org'.
     '''
-    github_cfg = ctx().cfg_factory().github(github_cfg_name)
-    github_helper = GitHubRepositoryHelper(
-        owner=github_repository_owner,
-        name=github_repository_name,
-        github_cfg=github_cfg,
-    )
+    parse_result = urllib.parse.urlparse(github_repository_url)
+
+    if not parse_result.netloc:
+        raise ValueError(f'Could not determine host for github-url {github_repository_url}')
+    host = parse_result.netloc
+
+    try:
+        path = parse_result.path.strip('/')
+        org, repo = path.split('/')
+    except ValueError as e:
+        raise ValueError(f"Could not extract org- and repo-name. Error: {e}")
+
+    if anonymous:
+        if 'github.com' not in host:
+            raise ValueError("Anonymous access is only possible for github.com")
+        github_api = github3.GitHub()
+        repo_helper = GitHubRepositoryHelper(owner=org, name=repo, github_api=github_api)
+
+    else:
+        repo_helper = ccc.github.repo_helper(host=host, org=org, repo=repo)
+
     print(
         find_greatest_github_release_version(
-            releases=github_helper.repository.releases(),
+            releases=repo_helper.repository.releases(),
             warn_for_unparseable_releases=False,
         )
     )
