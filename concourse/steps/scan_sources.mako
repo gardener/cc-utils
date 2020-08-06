@@ -31,12 +31,14 @@ scan_sources_and_notify(
 % endif
 
 % if whitesource_cfg:
+landscape = "${component_trait.component_name()}"
 scan_component_with_whitesource(
     whitesource_cfg_name='${whitesource_cfg.cfg_name()}',
     product_token='${whitesource_cfg.product_token()}',
     component_descriptor_path=component_descriptor_path(schema_version=cm.SchemaVersion.V1),
     extra_whitesource_config={},
     requester_mail='${email_recipients[0]}',
+    landscape=landscape,
 )
 % endif
 

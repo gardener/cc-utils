@@ -90,6 +90,7 @@ def _send_mail(
     replace_tokens: dict={},
     cc_recipients: typing.Iterable[str]=[],
     mimetype='text',
+    pdfs=[],
 ):
     not_none(email_cfg)
     not_empty(recipients)
@@ -124,6 +125,7 @@ def _send_mail(
         cc_recipients=cc_recipients,
         text=mail_body,
         mimetype=mimetype,
+        pdfs=pdfs,
     )
 
     recipients.update(cc_recipients)

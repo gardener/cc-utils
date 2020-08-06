@@ -22,7 +22,8 @@ def get_post_project_object(whitesource_client: whitesource.client.WhitesourceCl
         github_api=github_api,
         product_token=product_token,
         component=component,
-        component_name=component_name
+        component_name=component_name,
+        component_version=component.version()
     )
 
 
@@ -32,12 +33,14 @@ class PostProjectObject:
                  github_api,
                  component: product.model.Component,
                  product_token: str,
-                 component_name: product.model.ComponentName):
+                 component_name: product.model.ComponentName,
+                 component_version):
         self.whitesource_client = whitesource_client
         self.github_api = github_api
         self.component = component
         self.product_token = product_token
         self.component_name = component_name
+        self.component_version = component_version
 
 
 def download_component(github_api,

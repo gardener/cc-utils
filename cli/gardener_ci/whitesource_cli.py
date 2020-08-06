@@ -18,4 +18,5 @@ def upload_and_scan_component(
         product_token=product_token,
         component_descriptor_path=component_descriptor_path,
         extra_whitesource_config=extra_whitesource_config,
-        requester_mail=requester_mail)
+        requester_mail=requester_mail,
+        send_notificaton=send_notification)

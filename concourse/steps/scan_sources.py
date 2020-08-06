@@ -1,4 +1,5 @@
 import concurrent.futures
+from datetime import datetime
 import functools
 import tempfile
 import traceback
@@ -197,54 +198,94 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
                                     product_token: str,
                                     component_descriptor_path: str,
                                     extra_whitesource_config: dict,
-                                    requester_mail: str):
+                                    requester_mail: str,
+                                    landscape="landscape-unknown",
+                                    send_notificaton=True):
 
     # create whitesource client
-    ci.util.info('creating whitesource client...')
+    ci.util.info('creating whitesource client')
     client = whitesource.util.create_whitesource_client(whitesource_cfg_name=whitesource_cfg_name)
-    ci.util.info('whitesource client created')
 
     # parse component_descriptor
-    ci.util.info('parsing component descriptor...')
+    ci.util.info('parsing component descriptor')
     component_descriptor = product.model.ComponentDescriptor.from_dict(
         ci.util.parse_yaml_file(component_descriptor_path)
     )
-    ci.util.info('component descriptor parsed\n')
 
     # for component in []: "components matching component_descriptor"
     for component in component_descriptor.components():
 
         # create whitesource component
-        ci.util.info('preparing POST project for {}...'.format(component.name))
         post_project_object = get_post_project_object(
             whitesource_client=client,
             product_token=product_token,
             component=component)
-        ci.util.info('POST project prepared')
 
         # store in tmp file
         with tempfile.TemporaryFile() as tmp_file:
 
-            ci.util.info('guessing commit hash...')
+            ci.util.info('guessing commit hash')
             # guess git-ref for the given component's version
             commit_hash = product.util.guess_commit_from_ref(component)
-            ci.util.info('commit hash guessed')
 
             # download whitesource component
-            ci.util.info('downloading component for scan...')
+            ci.util.info('downloading component for scan')
             whitesource.component.download_component(
                 github_api=post_project_object.github_api,
                 component_name=post_project_object.component_name,
                 dest=tmp_file,
                 ref=commit_hash)
-            ci.util.info('component downloaded')
 
             # POST component>
-            ci.util.info('POST project...')
+            ci.util.info('POST project')
             post_project_object.whitesource_client.post_product(
                 product_token=post_project_object.product_token,
                 component_name=post_project_object.component_name.name(),
+                component_version=post_project_object.component_version,
                 requester_email=requester_mail,
                 extra_whitesource_config=extra_whitesource_config,
                 file=tmp_file)
-            ci.util.info('project posted\n')
+
+        # get all projects
+        ci.util.info('retrieving all projects')
+        projects = json.loads(client.get_all_projects(product_token=product_token).content)
+
+        report = whitesource.util.find_greatest_cve(client=client,
+                                                    projects=projects)
+
+        # TODO remove hardcoded threshold
+        threshold = 5
+
+        # generate reporting table for console
+        tables = whitesource.util.generate_reporting_tables(report=report,
+                                                            threshold=threshold,
+                                                            tablefmt="simple")
+
+        print('\n')
+        print(''.join(tables))
+
+        if send_notificaton:
+            # generate reporting table for notification
+            tables = whitesource.util.generate_reporting_tables(report=report,
+                                                                threshold=threshold,
+                                                                tablefmt="html")
+
+            # get product risk report
+            ci.util.info('retrieving product risk report')
+            prr = client.get_product_risk_report(product_token=product_token).content
+
+            # assemble html body
+            body = whitesource.util.assemble_mail_body(tables=tables,
+                                                       threshold=threshold)
+
+            # send mail
+            # TODO use real mail recipients
+            ci.util.info('sending notification')
+            dto = datetime.now()
+            fname = f"{landscape}-{dto.year}.{dto.month}-{dto.day}-product-risk-report.pdf"
+
+            whitesource.util.send_mail(body=body,
+                                       recipients=["philipp.heil@sap.com"],
+                                       landscape=landscape,
+                                       pdfs=[{"pdf_bytes": prr,
+                                              "filename": fname}])

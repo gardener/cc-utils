@@ -7,7 +7,6 @@ import requests
 
 from ci.util import urljoin
 import checkmarx.model
-import model
 import model.checkmarx
 
 
