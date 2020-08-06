@@ -41,19 +41,21 @@ class WhitesourceClient:
                      extra_whitesource_config: {},
                      file):
 
-        config = {
-            "componentName": component_name,
-            "requesterEmail": requester_email,
-            "productToken": product_token,
-            "userKey": self.creds.user_key(),
-            "apiKey": self.config.api_key(),
-            "wssEndpoint": self.config.wss_endpoint(),
-            "optional": json.dumps(extra_whitesource_config)
-        }
+        fields = {'projectName': component_name,
+                  'requesterEmail': requester_email,
+                  'productToken': product_token,
+                  'userKey': self.creds.user_key(),
+                  'apiKey': self.config.api_key(),
+                  'wss.url': self.config.wss_endpoint(),
+                  'includes': '*',
+                  'component': ('component.tar.gz', file, 'text/plain')}
+
+        # add extra whitesource config
+        for key, value in extra_whitesource_config.items():
+            fields[key] = value
 
         m = MultipartEncoder(
-            fields={"config": json.dumps(config),
-                    'component': ('component.tar.gz', file, 'text/plain')}
+            fields=fields
         )
         return self.request(method="POST",
                             url=self.routes.post_component(),
