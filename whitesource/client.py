@@ -16,7 +16,8 @@ class WhitesourceClient:
 
     def __init__(self,
                  whitesource_cfg: model.whitesource.WhitesourceConfig):
-        self.routes = WhitesourceRoutes(extension_endpoint=whitesource_cfg.extension_endpoint())
+        self.routes = WhitesourceRoutes(extension_endpoint=whitesource_cfg.extension_endpoint(),
+                                        wss_api_endpoint=whitesource_cfg.wss_api_endpoint())
         self.config = whitesource_cfg
         self.creds = self.config.credentials()
 
@@ -36,6 +37,7 @@ class WhitesourceClient:
                      product_token: str,
                      component_name: str,
                      requester_email: str,
+                     component_version: str,
                      extra_whitesource_config: {},
                      file):
 
@@ -45,6 +47,7 @@ class WhitesourceClient:
                   'userKey': self.creds.user_key(),
                   'apiKey': self.config.api_key(),
                   'wss.url': self.config.wss_endpoint(),
+                  'projectVersion': component_version,
                   'includes': '*',
                   'component': ('component.tar.gz', file, 'text/plain')}
 
@@ -60,11 +63,60 @@ class WhitesourceClient:
                             headers={'Content-Type': m.content_type},
                             data=m)
 
+    def get_product_risk_report(self,
+                                product_token: str):
+        body = {
+            "requestType": "getProductRiskReport",
+            "userKey": self.creds.user_key(),
+            "productToken": product_token
+        }
+        return self.request(method="POST",
+                            url=self.routes.get_product_risk_report(),
+                            headers={"content-type": "application/json"},
+                            data=json.dumps(body))
+
+    def get_all_projects(self,
+                         product_token: str):
+        body = {
+            "requestType": "getAllProjects",
+            "userKey": self.creds.user_key(),
+            "productToken": product_token
+        }
+        return self.request(method="POST",
+                            url=self.routes.get_all_projects(),
+                            headers={"content-type": "application/json"},
+                            data=json.dumps(body))
+
+    def get_project_vulnerability_report(self,
+                                         project_token: str):
+        body = {
+            "requestType": "getProjectVulnerabilityReport",
+            "userKey": self.creds.user_key(),
+            "projectToken": project_token,
+            "format": "json"
+        }
+        return self.request(method="POST",
+                            url=self.routes.get_project_vulnerability_report(),
+                            headers={"content-type": "application/json"},
+                            data=json.dumps(body))
+
 
 class WhitesourceRoutes:
 
-    def __init__(self, extension_endpoint: str):
+    def __init__(self,
+                 extension_endpoint: str,
+                 wss_api_endpoint: str,):
         self.extension_endpoint = extension_endpoint
+        self.wss_api_endpoint = wss_api_endpoint
 
     def post_component(self):
         return urljoin(self.extension_endpoint, 'component')
+
+    def get_product_risk_report(self):
+        return urljoin(self.wss_api_endpoint)
+
+    def get_all_projects(self):
+        return urljoin(self.wss_api_endpoint)
+
+    def get_project_vulnerability_report(self):
+        return urljoin(self.wss_api_endpoint)
