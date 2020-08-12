@@ -15,6 +15,7 @@
 
 
 import functools
+import json
 import logging
 import tarfile
 import tempfile
@@ -108,6 +109,29 @@ def _credentials(image_reference: str, privileges:Privileges=None):
         return None
     credentials = registry_cfg.credentials()
     return docker_creds.Basic(username=credentials.username(), password=credentials.passwd())
+
+
+def ls_image_tags(image_name: str):
+    image_name = normalise_image_reference(image_name)
+    credentials = _mk_credentials(image_reference=image_name)
+    image_name = docker_name.Repository(name=image_name)
+
+    transport_pool = _mk_transport_pool(size=1)
+
+    transport = docker_http.Transport(
+        name=image_name,
+        creds=credentials,
+        transport=transport_pool,
+        action=docker_http.PULL,
+    )
+
+    url = f'https://{image_name.registry}/v2/{image_name.repository}/tags/list'
+
+    res, body_bytes = transport.Request(url, (200,))
+    parsed = json.loads(body_bytes)
+
+    tags = parsed['tags']
+    return tags
 
 
 def retrieve_container_image(image_reference: str, outfileobj=None):
