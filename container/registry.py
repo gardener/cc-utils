@@ -14,6 +14,7 @@
 """This package pulls images from a Docker Registry."""
 
 
+import contextlib
 import functools
 import json
 import logging
@@ -264,12 +265,11 @@ def _push_image(image_reference: str, image_file: str, threads=8):
       raise e
 
 
-def _pull_image(image_reference: str, outfileobj=None):
-  import ci.util
+@contextlib.contextmanager
+def pulled_image(image_reference: str):
   ci.util.not_none(image_reference)
 
   transport = _mk_transport_pool()
-
   image_reference = normalise_image_reference(image_reference)
   image_reference = _parse_image_reference(image_reference)
   creds = _mk_credentials(image_reference=image_reference)
@@ -286,38 +286,49 @@ def _pull_image(image_reference: str, outfileobj=None):
   try:
     # XXX TODO: use streaming rather than writing to local FS
     # if outfile is given, we must use it instead of an ano
-    outfileobj = outfileobj if outfileobj else tempfile.TemporaryFile()
-    with tarfile.open(fileobj=outfileobj, mode='w:') as tar:
-      ci.util.verbose(f'Pulling manifest list from {image_reference}..')
-      with image_list.FromRegistry(image_reference, creds, transport) as img_list:
-        if img_list.exists():
-          platform = image_list.Platform({
-              'architecture': _PROCESSOR_ARCHITECTURE,
-              'os': _OPERATING_SYSTEM,
-          })
-          # pytype: disable=wrong-arg-types
-          with img_list.resolve(platform) as default_child:
-            save.tarball(_make_tag_if_digest(image_reference), default_child, tar)
-            return outfileobj
-          # pytype: enable=wrong-arg-types
+    ci.util.verbose(f'Pulling manifest list from {image_reference}..')
+    with image_list.FromRegistry(image_reference, creds, transport) as img_list:
+      if img_list.exists():
+        platform = image_list.Platform({
+            'architecture': _PROCESSOR_ARCHITECTURE,
+            'os': _OPERATING_SYSTEM,
+        })
+        # pytype: disable=wrong-arg-types
+        with img_list.resolve(platform) as default_child:
+          yield default_child
+          return
 
-      ci.util.info(f'Pulling v2.2 image from {image_reference}..')
-      with v2_2_image.FromRegistry(image_reference, creds, transport, accept) as v2_2_img:
-        if v2_2_img.exists():
-          save.tarball(_make_tag_if_digest(image_reference), v2_2_img, tar)
-          return outfileobj
+    ci.util.info(f'Pulling v2.2 image from {image_reference}..')
+    with v2_2_image.FromRegistry(image_reference, creds, transport, accept) as v2_2_img:
+      if v2_2_img.exists():
+        yield v2_2_img
+        return
 
-      ci.util.info(f'Pulling v2 image from {image_reference}..')
-      with v2_image.FromRegistry(image_reference, creds, transport) as v2_img:
-        if v2_img.exists():
-          with v2_compat.V22FromV2(v2_img) as v2_2_img:
-            print('v2')
-            save.tarball(_make_tag_if_digest(image_reference), v2_2_img, tar)
-            return outfileobj
+    ci.util.info(f'Pulling v2 image from {image_reference}..')
+    with v2_image.FromRegistry(image_reference, creds, transport) as v2_img:
+      if v2_img.exists():
+        with v2_compat.V22FromV2(v2_img) as v2_2_img:
+          print('v2')
+          yield v2_2_img
+          return
 
-      print('failed to retrieve image - does it exist?')
-      raise RuntimeError(f'failed to retrieve {image_reference}')
+    print('failed to retrieve image - does it exist?')
+    raise RuntimeError(f'failed to retrieve {image_reference}')
 
   except Exception as e:
-    outfileobj.close()
+    raise e
     ci.util.fail(f'Error pulling and saving image {image_reference}: {e}')
+
+
+def _pull_image(image_reference: str, outfileobj=None):
+  import ci.util
+  ci.util.not_none(image_reference)
+  image_reference = normalise_image_reference(image_reference=image_reference)
+
+  outfileobj = outfileobj if outfileobj else tempfile.TemporaryFile()
+
+  with tarfile.open(fileobj=outfileobj, mode='w:') as tar:
+    with pulled_image(image_reference=image_reference) as image:
+      image_reference = _parse_image_reference(image_reference=image_reference)
+      save.tarball(_make_tag_if_digest(image_reference), image, tar)
+      return outfileobj
