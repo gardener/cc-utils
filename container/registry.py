@@ -332,3 +332,8 @@ def _pull_image(image_reference: str, outfileobj=None):
       image_reference = _parse_image_reference(image_reference=image_reference)
       save.tarball(_make_tag_if_digest(image_reference), image, tar)
       return outfileobj
+
+
+def retrieve_manifest(image_reference: str):
+  with pulled_image(image_reference=image_reference) as image:
+    return json.loads(image.manifest())
