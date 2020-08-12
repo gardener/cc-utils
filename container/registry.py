@@ -126,7 +126,7 @@ def publish_container_image(image_reference: str, image_file_obj, threads=8):
   image_file_obj.seek(0)
 
 
-def _mk_transport(size=8):
+def _mk_transport_pool(size=8):
   retry_factory = retry.Factory()
   retry_factory = retry_factory.WithSourceTransportCallable(httplib2.Http)
   transport = transport_pool.Http(retry_factory.Build, size=size)
@@ -148,7 +148,7 @@ def _mk_credentials(image_reference, privileges: Privileges=None):
 
 
 def _image_exists(image_reference: str) -> bool:
-  transport = _mk_transport(size=1)
+  transport = _mk_transport_pool(size=1)
 
   image_reference = normalise_image_reference(image_reference)
   image_reference = _parse_image_reference(image_reference)
@@ -170,7 +170,7 @@ def _image_exists(image_reference: str) -> bool:
 
 
 def to_hash_reference(image_name: str):
-  transport = _mk_transport(size=1)
+  transport = _mk_transport_pool(size=1)
 
   image_name = normalise_image_reference(image_name)
   image_reference = _parse_image_reference(image_name)
@@ -210,7 +210,7 @@ def _push_image(image_reference: str, image_file: str, threads=8):
   ci.util.not_none(image_reference)
   ci.util.existing_file(image_file)
 
-  transport = _mk_transport()
+  transport = _mk_transport_pool()
 
   image_reference = normalise_image_reference(image_reference)
   image_reference = _parse_image_reference(image_reference)
@@ -243,7 +243,7 @@ def _pull_image(image_reference: str, outfileobj=None):
   import ci.util
   ci.util.not_none(image_reference)
 
-  transport = _mk_transport()
+  transport = _mk_transport_pool()
 
   image_reference = normalise_image_reference(image_reference)
   image_reference = _parse_image_reference(image_reference)
