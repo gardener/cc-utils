@@ -284,9 +284,15 @@ def _pull_image(image_reference: str, outfileobj=None):
 
       ci.util.info(f'Pulling v2 image from {image_reference}..')
       with v2_image.FromRegistry(image_reference, creds, transport) as v2_img:
-        with v2_compat.V22FromV2(v2_img) as v2_2_img:
-          save.tarball(_make_tag_if_digest(image_reference), v2_2_img, tar)
-          return outfileobj
+        if v2_img.exists():
+          with v2_compat.V22FromV2(v2_img) as v2_2_img:
+            print('v2')
+            save.tarball(_make_tag_if_digest(image_reference), v2_2_img, tar)
+            return outfileobj
+
+      print('failed to retrieve image - does it exist?')
+      raise RuntimeError(f'failed to retrieve {image_reference}')
+
   except Exception as e:
     outfileobj.close()
     ci.util.fail(f'Error pulling and saving image {image_reference}: {e}')
