@@ -130,6 +130,7 @@ def ls_image_tags(image_name: str):
     res, body_bytes = transport.Request(url, (200,))
     parsed = json.loads(body_bytes)
 
+    # XXX parsed['manifest'] might be used to e.g. determine stale images, and purge them
     tags = parsed['tags']
     return tags
 
