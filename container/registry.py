@@ -15,6 +15,7 @@
 
 
 import contextlib
+import dataclasses
 import functools
 import hashlib
 import json
@@ -48,6 +49,21 @@ _DEFAULT_TAG = 'i-was-a-digest'
 _PROCESSOR_ARCHITECTURE = 'amd64'
 
 _OPERATING_SYSTEM = 'linux'
+
+
+@dataclasses.dataclass
+class OciBlobRef:
+    digest: str
+    mediaType: str
+    size: int
+
+
+@dataclasses.dataclass
+class OciImageManifest:
+    config: OciBlobRef
+    layers: typing.Sequence[OciBlobRef]
+    mediaType: str = docker_http.MANIFEST_SCHEMA2_MIME
+    schemaVersion: int = 2
 
 
 # Today save.tarball expects a tag, which is emitted into one or more files
@@ -184,6 +200,40 @@ def put_blob(
         f'sha256:{sha256_digest}',
     )
     print(f'successfully pushed {image_name=} {sha256_digest=}')
+
+    return sha256_digest
+
+
+def put_image_manifest(
+    image_reference: str, # including tag
+    manifest: OciImageManifest,
+):
+    contents = json.dumps(dataclasses.asdict(manifest)).encode('utf-8')
+
+    image_name = docker_name.from_string(image_reference)
+
+    push_sess = docker_session.Push(
+        name=image_name,
+        creds=_mk_credentials(
+            image_reference=image_reference,
+            privileges=Privileges.READ_WRITE,
+        ),
+        transport=_mk_transport_pool(),
+    )
+
+    class ImageMock:
+        def digest(self):
+            return image_name.tag
+
+        def manifest(self):
+            return contents
+
+        def media_type(self):
+            return docker_http.MANIFEST_SCHEMA2_MIME
+
+    image_mock = ImageMock()
+
+    push_sess._put_manifest(image=image_mock, use_digest=True)
 
 
 def retrieve_container_image(image_reference: str, outfileobj=None):
