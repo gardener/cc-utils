@@ -91,17 +91,6 @@ def normalise_image_reference(image_reference):
   return '/'.join(parts)
 
 
-def _parse_image_reference(image_reference):
-  ci.util.check_type(image_reference, str)
-
-  if '@' in image_reference:
-    name = docker_name.Digest(image_reference)
-  else:
-    name = docker_name.Tag(image_reference)
-
-  return name
-
-
 @functools.lru_cache()
 def _credentials(image_reference: str, privileges:Privileges=None):
     ci.util.check_type(image_reference, str)
@@ -177,7 +166,7 @@ def _image_exists(image_reference: str) -> bool:
   transport = _mk_transport_pool(size=1)
 
   image_reference = normalise_image_reference(image_reference)
-  image_reference = _parse_image_reference(image_reference)
+  image_reference = docker_name.from_string(image_reference)
   creds = _mk_credentials(image_reference=image_reference)
   accept = docker_http.SUPPORTED_MANIFEST_MIMES
 
@@ -199,7 +188,7 @@ def to_hash_reference(image_name: str):
   transport = _mk_transport_pool(size=1)
 
   image_name = normalise_image_reference(image_name)
-  image_reference = _parse_image_reference(image_name)
+  image_reference = docker_name.from_string(image_name)
   creds = _mk_credentials(image_reference=image_reference)
   accept = docker_http.SUPPORTED_MANIFEST_MIMES
 
@@ -239,7 +228,7 @@ def _push_image(image_reference: str, image_file: str, threads=8):
   transport = _mk_transport_pool()
 
   image_reference = normalise_image_reference(image_reference)
-  image_reference = _parse_image_reference(image_reference)
+  image_reference = docker_name.from_string(image_reference)
 
   creds = _mk_credentials(
     image_reference=image_reference,
@@ -271,7 +260,7 @@ def pulled_image(image_reference: str):
 
   transport = _mk_transport_pool()
   image_reference = normalise_image_reference(image_reference)
-  image_reference = _parse_image_reference(image_reference)
+  image_reference = docker_name.from_string(image_reference)
   creds = _mk_credentials(image_reference=image_reference)
 
   # OCI Image Manifest is compatible with Docker Image Manifest Version 2,
@@ -329,7 +318,7 @@ def _pull_image(image_reference: str, outfileobj=None):
 
   with tarfile.open(fileobj=outfileobj, mode='w:') as tar:
     with pulled_image(image_reference=image_reference) as image:
-      image_reference = _parse_image_reference(image_reference=image_reference)
+      image_reference = docker_name.from_string(image_reference)
       save.tarball(_make_tag_if_digest(image_reference), image, tar)
       return outfileobj
 
