@@ -303,7 +303,11 @@ else:
       path: /bin/sh
       args:
       - -exc
+% if job_step.name != 'publish':
       - |
+% else:
+      - "echo this is a dummy step"
+% endif
 % elif job_step.script_type() == ScriptType.PYTHON3:
     run:
       path: /usr/bin/python3
@@ -385,7 +389,7 @@ else:
 % elif job_step.name == 'update_component_dependencies':
         ${update_component_deps_step(job_step=job_step, job_variant=job_variant, github_cfg_name=github.name(), indent=8)}
 % elif job_step.name == 'publish':
-    ${publish_step(job_step=job_step, job_variant=job_variant)}
+${publish_step(job_step=job_step, job_variant=job_variant)}
 % elif job_step.name == 'create_draft_release_notes':
         ${draft_release_step(job_step=job_step, job_variant=job_variant, github_cfg=github, indent=8)}
 % elif job_step.name == 'scan_container_images':

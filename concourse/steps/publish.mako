@@ -10,7 +10,6 @@ if descriptor.builddir_relpath():
   build_dir = os.path.join(build_dir, descriptor.builddir_relpath())
 dockerfile = os.path.join(build_dir, descriptor.dockerfile_relpath())
 %>
-      # noop
 - put: ${descriptor.resource_name()}
   params:
     build: ${build_dir}
