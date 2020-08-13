@@ -281,7 +281,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
             except BaseException as e:
                 yield DefinitionDescriptor(
                     pipeline_name='<invalid YAML>',
-                    pipeline_definition=None,
+                    pipeline_definition={},
                     main_repo={'path': repo_path, 'branch': branch_name, 'hostname': repo_hostname},
                     concourse_target_cfg=self.cfg_set.concourse(),
                     concourse_target_team=self.job_mapping.team_name(),
