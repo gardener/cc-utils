@@ -16,10 +16,12 @@
 
 import contextlib
 import functools
+import hashlib
 import json
 import logging
 import tarfile
 import tempfile
+import typing
 
 import ci.util
 import model.container_registry
@@ -101,10 +103,19 @@ def _credentials(image_reference: str, privileges:Privileges=None):
     return docker_creds.Basic(username=credentials.username(), password=credentials.passwd())
 
 
-def ls_image_tags(image_name: str):
-    image_name = normalise_image_reference(image_name)
-    credentials = _mk_credentials(image_reference=image_name)
-    image_name = docker_name.Repository(name=image_name)
+def _mk_transport(
+    image_name: str,
+    action: str=docker_http.PULL,
+    privileges: Privileges=Privileges.READ_ONLY,
+):
+    if isinstance(image_name, str):
+        image_name = normalise_image_reference(image_name)
+    credentials = _mk_credentials(
+        image_reference=str(image_name),
+        privileges=privileges,
+    )
+    if isinstance(image_name, str):
+        image_name = docker_name.from_string(name=image_name)
 
     transport_pool = _mk_transport_pool(size=1)
 
@@ -112,6 +123,15 @@ def ls_image_tags(image_name: str):
         name=image_name,
         creds=credentials,
         transport=transport_pool,
+        action=docker_http.PULL,
+    )
+
+    return transport
+
+
+def ls_image_tags(image_name: str):
+    transport = _mk_transport(
+        image_name=image_name,
         action=docker_http.PULL,
     )
 
@@ -123,6 +143,47 @@ def ls_image_tags(image_name: str):
     # XXX parsed['manifest'] might be used to e.g. determine stale images, and purge them
     tags = parsed['tags']
     return tags
+
+
+def put_blob(
+    image_name: str,
+    fileobj: typing.BinaryIO,
+    mimetype: str='application/octet-stream',
+):
+    '''
+    uploads the given blob to the specified namespace / target OCI registry
+
+    Note that the blob will be read into main memory; not suitable for larget contents.
+    '''
+    fileobj.seek(0)
+    sha256_hash = hashlib.sha256()
+    while (chunk := fileobj.read(4096)):
+        sha256_hash.update(chunk)
+    sha256_digest = sha256_hash.hexdigest()
+    fileobj.seek(0)
+    print(f'{sha256_digest=}')
+
+    image_ref = image_name
+    image_name = docker_name.from_string(image_name)
+    contents = fileobj.read()
+
+    push_sess = docker_session.Push(
+        name=image_name,
+        creds=_mk_credentials(
+            image_reference=image_ref,
+            privileges=Privileges.READ_WRITE,
+        ),
+        transport=_mk_transport_pool(),
+    )
+
+    print(f'{len(contents)=}')
+    # XXX superdirty hack - force usage of our blob :(
+    push_sess._get_blob = lambda a,b: contents
+    push_sess._patch_upload(
+        image_name,
+        f'sha256:{sha256_digest}',
+    )
+    print(f'successfully pushed {image_name=} {sha256_digest=}')
 
 
 def retrieve_container_image(image_reference: str, outfileobj=None):
