@@ -1,6 +1,7 @@
 import concurrent.futures
 from datetime import datetime
 import functools
+import json
 import tempfile
 import traceback
 import typing
@@ -199,8 +200,10 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
                                     component_descriptor_path: str,
                                     extra_whitesource_config: dict,
                                     requester_mail: str,
+                                    cve_threshold: float,
+                                    notification_recipients=[],
                                     landscape="landscape-unknown",
-                                    send_notificaton=True):
+                                    send_notificaton=True,):
 
     # create whitesource client
     ci.util.info('creating whitesource client')
@@ -253,12 +256,9 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
         report = whitesource.util.find_greatest_cve(client=client,
                                                     projects=projects)
 
-        # TODO remove hardcoded threshold
-        threshold = 5
-
         # generate reporting table for console
         tables = whitesource.util.generate_reporting_tables(report=report,
-                                                            threshold=threshold,
+                                                            threshold=cve_threshold,
                                                             tablefmt="simple")
 
         print('\n')
@@ -267,7 +267,7 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
         if send_notificaton:
             # generate reporting table for notification
             tables = whitesource.util.generate_reporting_tables(report=report,
-                                                                threshold=threshold,
+                                                                threshold=cve_threshold,
                                                                 tablefmt="html")
 
             # get product risk report
@@ -276,7 +276,7 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
 
             # assemble html body
             body = whitesource.util.assemble_mail_body(tables=tables,
-                                                       threshold=threshold)
+                                                       threshold=cve_threshold)
 
             # send mail
             # TODO use real mail recipients
@@ -285,7 +285,7 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
             fname = f"{landscape}-{dto.year}.{dto.month}-{dto.day}-product-risk-report.pdf"
 
             whitesource.util.send_mail(body=body,
-                                       recipients=["philipp.heil@sap.com"],
+                                       recipients=notification_recipients,
                                        landscape=landscape,
                                        pdfs=[{"pdf_bytes": prr,
                                               "filename": fname}])

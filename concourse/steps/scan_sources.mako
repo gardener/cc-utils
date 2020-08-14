@@ -38,6 +38,8 @@ scan_component_with_whitesource(
     component_descriptor_path=component_descriptor_path(schema_version=cm.SchemaVersion.V1),
     extra_whitesource_config={},
     requester_mail='${email_recipients[0]}',
+    cve_threshold=,'${whitesource_cfg.cve_threshold()}',
+    notification_recipients=${email_recipients},
     landscape=landscape,
 )
 % endif
