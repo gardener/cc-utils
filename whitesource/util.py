@@ -15,7 +15,7 @@ def create_whitesource_client(whitesource_cfg_name: str):
 
 
 def generate_reporting_tables(report,
-                              threshold: int,
+                              threshold: float,
                               tablefmt):
 
     # monkeypatch: disable html escaping

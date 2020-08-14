@@ -53,6 +53,11 @@ WHITESOURCE_ATTRIBUTES = (
         type=str,
     ),
     AttributeSpec.required(
+        name='cve_threshold',
+        doc='defines threshold for cve table generation',
+        type=str,
+    ),
+    AttributeSpec.required(
         name='cfg_name',
         doc='whitesource cfg_name',
         type=str,
@@ -67,6 +72,9 @@ class WhitesourceCfg(ModelBase):
 
     def product_token(self):
         return self.raw['product_token']
+
+    def cve_threshold(self):
+        return self.raw['cve_threshold']
 
     def cfg_name(self):
         return self.raw['cfg_name']
