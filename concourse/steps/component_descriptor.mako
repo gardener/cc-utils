@@ -16,6 +16,7 @@ if job_variant.has_trait('image_alter'):
 else:
   image_alter_cfgs = ()
 %>
+import dataclasses
 import json
 import os
 import shutil
@@ -27,6 +28,7 @@ import yaml
 from product.model import ComponentDescriptor, Component, ContainerImage
 from product.util import ComponentDescriptorResolver
 from ci.util import info, fail, parse_yaml_file, ctx
+import product.v2
 
 ${step_lib('component_descriptor')}
 
@@ -175,4 +177,18 @@ else:
   )
   with open(dependencies_path) as f:
     print(f.read())
+
+try:
+  info('trying to convert to component-descriptor v2')
+  component_descriptor_v2 = product.v2.convert_component_to_v2(
+    component_descriptor_v1=descriptor,
+    component_v1=component,
+    repository_ctx_base_url=ctx_repository_base_url,
+  )
+  info('successfully converted to v2 - dump follows:')
+  print(dataclasses.asdict(component_descriptor_v2))
+except:
+  info('XXX something went wrong whilst trying to convert component-descriptor (ignoring)')
+  import traceback
+  traceback.print_exc()
 </%def>
