@@ -41,6 +41,7 @@ with open(version_file_path) as f:
   effective_version = f.read().strip()
 
 component_name = '${descriptor_trait.component_name()}'
+ctx_repository_base_url = '${descriptor_trait.ctx_repository_base_url()}'
 
 # create base descriptor filled with default values
 base_descriptor = ComponentDescriptor()
