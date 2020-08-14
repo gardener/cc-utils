@@ -94,6 +94,14 @@ ATTRIBUTES = (
             'the component descriptor'
         ),
     ),
+    AttributeSpec.optional(
+        name='ctx_repository_base_url',
+        type=str,
+        default='eu.gcr.io/gardener-project/gci-dev/', # XXX read from cc-config
+        doc='''
+            the component descriptor context repository base_url (for component descriptor v2)
+        '''
+    ),
 )
 
 
@@ -127,6 +135,9 @@ class ComponentDescriptorTrait(Trait):
             ValidationPolicy(v)
             for v in self.raw['validation_policies']
         ]
+
+    def ctx_repository_base_url(self):
+        return self.raw['ctx_repository_base_url']
 
     def transformer(self):
         return ComponentDescriptorTraitTransformer(trait=self)
