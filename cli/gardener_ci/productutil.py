@@ -32,7 +32,6 @@ from product.model import (
     DependencyBase,
     GenericDependency,
     ComponentDescriptor,
-    WebDependency,
 )
 from product.util import (
     _enumerate_effective_images,
@@ -203,18 +202,6 @@ def _parse_container_image_dependencies(
     return [_parse_container_image_deps(token) for token in container_image_dependencies]
 
 
-def _parse_web_dependencies(
-    web_dependencies,
-    validation_policies,
-):
-    _parse_web_deps = _parse_dependency_str_func(
-        factory_function=WebDependency.create,
-        required_attributes=('name', 'version', 'url'),
-        validation_policies=validation_policies,
-    )
-    return [_parse_web_deps(token) for token in web_dependencies]
-
-
 def _parse_generic_dependencies(
     generic_dependencies,
     validation_policies,
@@ -230,7 +217,6 @@ def _parse_generic_dependencies(
 def _parse_dependencies(
     component_dependencies: [str],
     container_image_dependencies: [str],
-    web_dependencies: [str],
     generic_dependencies: [str],
     validation_policies: [ValidationPolicy],
 ) -> Iterable[DependencyBase]:
@@ -242,8 +228,6 @@ def _parse_dependencies(
         validation_policies,
     )
 
-    yield from _parse_web_dependencies(web_dependencies, validation_policies)
-
     yield from _parse_generic_dependencies(generic_dependencies, validation_policies)
 
 
@@ -252,7 +236,6 @@ def component_descriptor(
     version: str,
     component_dependencies: CliHint(action='append')=[],
     container_image_dependencies: CliHint(action='append')=[],
-    web_dependencies: CliHint(action='append')=[],
     generic_dependencies: CliHint(action='append')=[],
     validation_policies: CliHint(
         type=ValidationPolicy,
@@ -268,7 +251,6 @@ def component_descriptor(
     dependencies = _parse_dependencies(
         component_dependencies=component_dependencies,
         container_image_dependencies=container_image_dependencies,
-        web_dependencies=web_dependencies,
         generic_dependencies=generic_dependencies,
         validation_policies=validation_policies,
     )
@@ -303,7 +285,6 @@ def add_dependencies(
     descriptor_out_file: str=None,
     component_dependencies: CliHint(action='append')=[],
     container_image_dependencies: CliHint(action='append')=[],
-    web_dependencies: CliHint(action='append')=[],
     generic_dependencies: CliHint(action='append')=[],
     validation_policies: CliHint(
         type=ValidationPolicy,
@@ -330,7 +311,6 @@ def add_dependencies(
     dependencies = _parse_dependencies(
         component_dependencies=component_dependencies,
         container_image_dependencies=container_image_dependencies,
-        web_dependencies=web_dependencies,
         generic_dependencies=generic_dependencies,
         validation_policies=validation_policies,
     )
