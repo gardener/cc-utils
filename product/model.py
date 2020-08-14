@@ -43,6 +43,11 @@ class SchemaVersion(Enum):
     V2 = 'v2'
 
 
+class Relation(Enum):
+    LOCAL = 'local' # dependency is created by declaring component itself
+    THIRD_PARTY = '3rdparty'
+
+
 class ComponentType(Enum):
     GARDENER_COMPONENT = 'gardenerComponent'
 
@@ -169,11 +174,26 @@ class DependencyBase(ModelBase):
     def _required_attributes(self):
         return {'name', 'version'}
 
+    def _optional_attributes(self):
+        return {'relation'}
+
     def name(self):
         return self.raw.get('name')
 
     def version(self):
         return self.raw.get('version')
+
+    def relation(self):
+        '''
+        declares the relation of this dependency towards the declaring component.
+        Concretely put, whether the component builds the dependency itself, or just
+        references it as an external / 3rd-party dependency.
+
+        Required for migrating towards component-descriptor v2
+
+        defaults to THIRD_PARTY
+        '''
+        return Relation(self.raw.get('relation', Relation.THIRD_PARTY))
 
     @abc.abstractmethod
     def type_name(self):
