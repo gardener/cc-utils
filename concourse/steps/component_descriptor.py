@@ -90,7 +90,7 @@ def create_v2_component_descriptor(
       ci.util.info('successfully converted to v2 - dump follows:')
       print(dataclasses.asdict(component_descriptor_v2))
     except:
-      ci.util.info(
+      print(
         'XXX something went wrong whilst trying to convert component-descriptor (ignoring)'
       )
       import traceback
