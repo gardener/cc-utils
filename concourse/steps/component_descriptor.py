@@ -81,15 +81,17 @@ def create_v2_component_descriptor(
     ctx_repository_base_url,
 ):
     try:
-      info('trying to convert to component-descriptor v2')
+      ci.util.info('trying to convert to component-descriptor v2')
       component_descriptor_v2 = product.v2.convert_component_to_v2(
         component_descriptor_v1=descriptor,
         component_v1=component,
         repository_ctx_base_url=ctx_repository_base_url,
       )
-      info('successfully converted to v2 - dump follows:')
+      ci.util.info('successfully converted to v2 - dump follows:')
       print(dataclasses.asdict(component_descriptor_v2))
     except:
-      info('XXX something went wrong whilst trying to convert component-descriptor (ignoring)')
+      ci.util.info(
+        'XXX something went wrong whilst trying to convert component-descriptor (ignoring)'
+      )
       import traceback
       traceback.print_exc()
