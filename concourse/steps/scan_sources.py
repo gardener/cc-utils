@@ -279,7 +279,6 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
                                                        threshold=cve_threshold)
 
             # send mail
-            # TODO use real mail recipients
             ci.util.info('sending notification')
             dto = datetime.now()
             fname = f"{landscape}-{dto.year}.{dto.month}-{dto.day}-product-risk-report.pdf"
