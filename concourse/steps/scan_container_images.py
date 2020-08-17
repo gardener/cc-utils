@@ -25,6 +25,7 @@ import tabulate
 import ccc.clamav
 import ci.util
 import mailutil
+import reutil
 
 from concourse.model.traits.image_scan import Notify
 from product.model import ComponentName, UploadResult
@@ -346,6 +347,33 @@ def print_license_report(license_report):
     )
 
     return license_lines
+
+
+def determine_rejected_licenses(license_report, allowed_licenses, prohibited_licenses):
+    accepted_filter_func = reutil.re_filter(
+        include_regexes=allowed_licenses,
+        exclude_regexes=prohibited_licenses,
+    )
+
+    prohibited_filter_func = reutil.re_filter(
+        include_regexes=prohibited_licenses,
+    )
+
+    for upload_result, licenses in license_report:
+        all_licenses = set(licenses)
+
+        accepted_licenses = {l for l in all_licenses if accepted_filter_func(l.name())}
+
+        # The filter will always return true if its 'prohibited_licenses' is an empty collection.
+        if prohibited_licenses:
+            rejected_licenses = {l for l in all_licenses if prohibited_filter_func(l.name())}
+        else:
+            rejected_licenses = set()
+
+        unclassified_licenses = all_licenses - (accepted_licenses | rejected_licenses)
+
+        if rejected_licenses or unclassified_licenses:
+            yield upload_result, rejected_licenses, unclassified_licenses
 
 
 def print_protecode_info_table(
