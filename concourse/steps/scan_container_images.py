@@ -28,7 +28,7 @@ import mailutil
 
 from concourse.model.traits.image_scan import Notify
 from product.model import ComponentName, UploadResult
-from protecode.model import CVSSVersion
+from protecode.model import CVSSVersion, License
 
 logger = logging.getLogger()
 
@@ -66,6 +66,7 @@ class MailRecipients(object):
         self._root_component_name = root_component_name
         self._result_filter = result_filter
         self._protecode_results = []
+        self._license_scan_results = []
         self._clamav_results = None
         self._cfg_set = cfg_set
         if not bool(recipients) ^ bool(recipients_component):
@@ -97,6 +98,20 @@ class MailRecipients(object):
                     continue
             self._protecode_results.append(result)
 
+    def add_license_scan_results(
+        self,
+        results: typing.Iterable[
+            typing.Tuple[UploadResult, typing.Iterable[License], typing.Iterable[License]]
+        ],
+    ):
+        logger.info(f'adding license scan results for {self}')
+        for result in results:
+            if self._result_filter:
+                if not self._result_filter(component=result[0]):
+                    logger.debug(f'did not match: {result[0].component.name()}')
+                    continue
+            self._license_scan_results.append(result)
+
     def add_clamav_results(self, results: MalwareScanResult):
         if self._clamav_results is None:
             self._clamav_results = []
@@ -105,10 +120,11 @@ class MailRecipients(object):
             self._clamav_results.append(result)
 
     def has_results(self):
-        if self._protecode_results:
-            return True
-        if self._clamav_results:
-            return True
+        return any([
+            self._protecode_results,
+            self._clamav_results,
+            self._license_scan_results,
+        ])
 
     def mail_body(self):
         parts = []
@@ -116,6 +132,8 @@ class MailRecipients(object):
 
         if self._protecode_results:
             parts.append(self._protecode_report())
+        if self._license_scan_results:
+            parts.append(self._license_report())
         if self._clamav_results is not None:
             parts.append(self._clamav_report())
 
@@ -144,6 +162,21 @@ class MailRecipients(object):
             protecode_cfg=self._protecode_cfg,
             upload_results=self._protecode_results,
             )
+
+    def _license_report(self):
+        result = textwrap.dedent(f'''
+            <p>
+              The following components in Protecode-group
+              <a href="{self._protecode_group_url}">{self._protecode_group_id}</a>
+              have licenses to review. Licenses are separated in rejected licenses (explicitly
+              configured to be rejected) and unclassified licenses (neither explicitly accepted
+              nor explicitly prohibited):
+            </p>
+        ''')
+        return result + license_scan_results_table(
+            protecode_cfg=self._protecode_cfg,
+            license_report=self._license_scan_results,
+        )
 
     def _clamav_report(self):
         result = '<p><div>Virus Scanning Results:</div>'
@@ -269,6 +302,28 @@ def protecode_results_table(protecode_cfg, upload_results: typing.Iterable[Uploa
       map(result_to_tuple, upload_results),
       headers=('Component Name', 'Greatest CVE', 'Container Image Reference'),
       tablefmt='html',
+    )
+    return table
+
+
+def license_scan_results_table(license_report, protecode_cfg):
+    def license_scan_report_to_rows(license_report):
+        for upload_result, rejected_licenses, unclassified_licenses in license_report:
+            analysis_result = upload_result.result
+
+            name = analysis_result.display_name()
+            analysis_url = \
+                f'{protecode_cfg.api_url()}/products/{analysis_result.product_id()}/#/analysis'
+            link_to_analysis_url = f'<a href="{analysis_url}">{name}</a>'
+            rejected_licenses_str = ', '.join([l.name() for l in rejected_licenses])
+            unclassified_licenses_str = ', '.join([l.name() for l in unclassified_licenses])
+
+            yield [link_to_analysis_url, rejected_licenses_str, unclassified_licenses_str]
+
+    table = tabulate.tabulate(
+        license_scan_report_to_rows(license_report),
+        headers=('Component Name', 'Rejected Licenses', 'Unclassified Licenses'),
+        tablefmt='html',
     )
     return table
 
