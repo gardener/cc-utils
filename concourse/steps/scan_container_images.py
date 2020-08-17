@@ -25,7 +25,6 @@ import tabulate
 import ccc.clamav
 import ci.util
 import mailutil
-import protecode.util
 
 from concourse.model.traits.image_scan import Notify
 from product.model import ComponentName, UploadResult
@@ -274,7 +273,7 @@ def protecode_results_table(protecode_cfg, upload_results: typing.Iterable[Uploa
     return table
 
 
-def create_license_report(license_report):
+def print_license_report(license_report):
     def to_table_row(upload_result, licenses):
         component_name = upload_result.result.display_name()
         license_names = {license.name() for license in licenses}
@@ -320,32 +319,3 @@ def print_protecode_info_table(
         ('Component name filter (exclude)', exclude_component_names),
     )
     print(tabulate.tabulate(entries, headers=headers))
-
-
-def protecode_scan(
-    protecode_cfg,
-    protecode_group_id: int,
-    reference_protecode_group_ids,
-    component_descriptor,
-    processing_mode,
-    parallel_jobs: int,
-    cve_threshold,
-    image_reference_filter,
-    cvss_version,
-):
-    protecode_results, license_report = protecode.util.upload_grouped_images(
-        protecode_cfg=protecode_cfg,
-        component_descriptor=component_descriptor,
-        processing_mode=processing_mode,
-        protecode_group_id=protecode_group_id,
-        parallel_jobs=parallel_jobs,
-        cve_threshold=cve_threshold,
-        image_reference_filter=image_reference_filter,
-        reference_group_ids=reference_protecode_group_ids,
-        cvss_version=cvss_version,
-    )
-
-    # XXX also include in email
-    create_license_report(license_report=license_report)
-
-    return protecode_results, license_report

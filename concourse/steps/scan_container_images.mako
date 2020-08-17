@@ -78,17 +78,20 @@ print_protecode_info_table(
   exclude_component_names=${filter_cfg.exclude_component_names()},
 )
 
-protecode_results, license_report = protecode_scan(
+protecode_results, license_report = protecode.util.upload_grouped_images((
   protecode_cfg=protecode_cfg,
   protecode_group_id = protecode_group_id,
   component_descriptor = component_descriptor,
-  reference_protecode_group_ids = ${protecode_scan.reference_protecode_group_ids()},
+  reference_group_ids = ${protecode_scan.reference_protecode_group_ids()},
   processing_mode = ProcessingMode('${protecode_scan.processing_mode().value}'),
   parallel_jobs=${protecode_scan.parallel_jobs()},
   cve_threshold=${protecode_scan.cve_threshold()},
   image_reference_filter=filter_function,
   cvss_version = CVSSVersion('${protecode_scan.cvss_version().value}'),
 )
+
+print_license_report(license_report)
+
 % endif
 
 malware_scan_results = None
