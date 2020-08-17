@@ -95,3 +95,16 @@ def create_v2_component_descriptor(
       )
       import traceback
       traceback.print_exc()
+      return
+
+    try:
+      ci.util.info('trying to upload the component-descriptor to oci registry')
+      product.v2.upload_component_descriptor_v2_to_oci_registry(
+        component_descriptor_v2=component_descriptor_v2,
+      )
+    except:
+      print(
+        'XXX something went wrong whilst trying to convert component-descriptor (ignoring)'
+      )
+      import traceback
+      traceback.print_exc()
