@@ -84,6 +84,26 @@ PROTECODE_ATTRS = (
         doc='CVSS version used to evaluate the severity of vulnerabilities',
         type=CVSSVersion,
     ),
+    AttributeSpec.optional(
+        name='allowed_licenses',
+        default=[],
+        doc=(
+            'A list of regular expressions. If configured, licenses detected by protecode '
+            'that do not match at least one of regular expressions will result in a report mail '
+            'being sent. If not configured or empty, **all** licenses will be accepted.'
+        ),
+        type=list,
+    ),
+    AttributeSpec.optional(
+        name='prohibited_licenses',
+        default=[],
+        doc=(
+            'A list of regular expressions. If configured, licenses detected by protecode that '
+            'match one of the regular expressions will result in a report mail being sent, even '
+            'if they are included in `allowed_licenses` (e.g. due to the default value).'
+        ),
+        type=list,
+    ),
 )
 
 
@@ -112,6 +132,12 @@ class ProtecodeScanCfg(ModelBase):
 
     def cvss_version(self):
         return CVSSVersion(self.raw.get('cvss_version'))
+
+    def allowed_licenses(self):
+        return self.raw.get('allowed_licenses')
+
+    def prohibited_licenses(self):
+        return self.raw.get('prohibited_licenses')
 
     def validate(self):
         super().validate()
