@@ -78,7 +78,7 @@ print_protecode_info_table(
   exclude_component_names=${filter_cfg.exclude_component_names()},
 )
 
-protecode_results, license_report = protecode.util.upload_grouped_images((
+protecode_results, license_report = protecode.util.upload_grouped_images(
   protecode_cfg=protecode_cfg,
   protecode_group_id = protecode_group_id,
   component_descriptor = component_descriptor,
@@ -91,6 +91,13 @@ protecode_results, license_report = protecode.util.upload_grouped_images((
 )
 
 print_license_report(license_report)
+
+allowed_licenses = ${protecode_scan.allowed_licenses()}
+prohibited_licenses = ${protecode_scan.prohibited_licenses()}
+
+updated_license_report = list(
+  determine_rejected_licenses(license_report, allowed_licenses, prohibited_licenses)
+)
 
 % endif
 
@@ -122,7 +129,7 @@ print(
 )
 % endif
 
-if not protecode_results and not malware_scan_results:
+if not protecode_results and not malware_scan_results and not updated_license_report:
   sys.exit(0)
 
 email_recipients = ${image_scan_trait.email_recipients()}
@@ -145,6 +152,7 @@ email_recipients = tuple(
 
 for email_recipient in email_recipients:
   email_recipient.add_protecode_results(results=protecode_results)
+  email_recipient.add_license_scan_results(results=updated_license_report)
 % if clam_av:
   email_recipient.add_clamav_results(results=malware_scan_results)
 % endif
