@@ -186,7 +186,7 @@ else:
 
 create_v2_component_descriptor(
     descriptor=descriptor,
-    component=component,
+    component=descriptor.component(component),
     ctx_repository_base_url=ctx_repository_base_url,
 )
 </%def>
