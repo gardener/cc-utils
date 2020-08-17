@@ -4,8 +4,13 @@ utils used for transitioning to new component-descriptor v2
 see: https://github.com/gardener/component-spec
 '''
 
-import gci.componentmodel as cm
+import io
 
+import gci.componentmodel as cm
+import gci.oci
+
+import ci.util
+import container.registry
 import product.model
 import product.util
 
@@ -120,3 +125,74 @@ def convert_component_to_v2(
     )
 
     return component_descriptor
+
+
+def ensure_is_v2(
+    component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
+):
+    schema_version = component_descriptor_v2.meta.schemaVersion
+    if not schema_version is gci.componentmodel.SchemaVersion.V2:
+        raise RuntimeError(f'unsupported component-descriptor-version: {schema_version=}')
+
+
+def _target_oci_ref(
+    component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
+):
+    ensure_is_v2(component_descriptor_v2)
+    component = component_descriptor_v2.component
+
+    # last ctx-repo is target-repository
+    last_ctx_repo = component.repositoryContexts[-1]
+    base_url = last_ctx_repo.baseUrl
+
+    component_name = component.name
+    component_version = component.version
+
+    return ci.util.urljoin(
+        base_url,
+        'component-descriptors',
+        f'{component_name}:{component_version}',
+    )
+
+
+def upload_component_descriptor_v2_to_oci_registry(
+    component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
+):
+    ensure_is_v2(component_descriptor_v2)
+
+    target_ref = _target_oci_ref(component_descriptor_v2)
+
+    raw_fobj = gci.oci.component_descriptor_to_tarfileobj(component_descriptor_v2)
+
+    # upload cd-blob
+    cd_digest = container.registry.put_blob(
+        target_ref,
+        fileobj=raw_fobj,
+        mimetype=container.registry.docker_http.MANIFEST_SCHEMA2_MIME,
+    )
+    dummy_cfg = io.BytesIO(b'{}')
+    cfg_digest = container.registry.put_blob(
+        target_ref,
+        fileobj=dummy_cfg,
+        mimetype=container.registry.docker_http.OCI_CONFIG_JSON_MIME,
+    )
+
+    manifest = container.registry.OciImageManifest(
+        config=container.registry.OciBlobRef(
+            digest=f'sha256:{cfg_digest}',
+            mediaType=container.registry.docker_http.OCI_CONFIG_JSON_MIME,
+            size=dummy_cfg.tell(),
+        ),
+        layers=[
+            container.registry.OciBlobRef(
+                digest=f'sha256:{cd_digest}',
+                mediaType='application/tar',
+                size=raw_fobj.tell(),
+            ),
+        ],
+    )
+
+    container.registry.put_image_manifest(
+        image_reference=target_ref,
+        manifest=manifest,
+    )
