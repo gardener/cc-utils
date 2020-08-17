@@ -192,7 +192,7 @@ def filter_and_display_upload_results(
     cvss_version: CVSSVersion,
     cve_threshold=7,
     ignore_if_triaged=True,
-) -> typing.Iterable[typing.Tuple[UploadResult, int]]:
+) -> typing.Iterable[typing.Tuple[UploadResult, float]]:
     # we only require the analysis_results for now
 
     results_without_components = []
