@@ -174,17 +174,20 @@ def download_images(
 def license_report(
     upload_results: typing.Sequence[UploadResult],
 ) -> typing.Sequence[typing.Tuple[UploadResult, typing.Set[License]]]:
-    for upload_result in upload_results:
-        if isinstance(upload_result, UploadResult):
-            analysis_result = upload_result.result
-        else:
-            analysis_result = upload_result
+    def create_component_reports():
+        for upload_result in upload_results:
+            if isinstance(upload_result, UploadResult):
+                analysis_result = upload_result.result
+            else:
+                analysis_result = upload_result
 
-        licenses = {
-            component.license() for component in analysis_result.components()
-            if component.license()
-        }
-        yield (upload_result, licenses)
+            licenses = {
+                component.license() for component in analysis_result.components()
+                if component.license()
+            }
+            yield (upload_result, licenses)
+
+    return list(create_component_reports())
 
 
 def filter_and_display_upload_results(
