@@ -89,7 +89,7 @@ class MailRecipients(object):
             component_names=(self._recipients_component.name(),),
         )
 
-    def add_protecode_results(self, results: typing.Iterable[typing.Tuple[UploadResult, int]]):
+    def add_protecode_results(self, results: typing.Iterable[typing.Tuple[UploadResult, float]]):
         logger.info(f'adding protecode results for {self}')
         for result in results:
             if self._result_filter:
