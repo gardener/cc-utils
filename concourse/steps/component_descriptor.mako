@@ -197,7 +197,7 @@ v2_outfile = os.path.join(
 if not component_descriptor_v2:
   print('xxx failed to create component-descriptor-v2 - will not propagate')
   import sys;
-   sys.exit(0)
+  sys.exit(0)
 
 with open(v2_outfile, 'w') as f:
   component_descriptor_v2.to_fobj(fileobj=f)
