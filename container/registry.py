@@ -397,6 +397,12 @@ def pulled_image(image_reference: str):
   accept = docker_http.SUPPORTED_MANIFEST_MIMES
 
   try:
+    ci.util.info(f'Pulling v2.2 image from {image_reference}..')
+    with v2_2_image.FromRegistry(image_reference, creds, transport, accept) as v2_2_img:
+      if v2_2_img.exists():
+        yield v2_2_img
+        return
+
     # XXX TODO: use streaming rather than writing to local FS
     # if outfile is given, we must use it instead of an ano
     ci.util.verbose(f'Pulling manifest list from {image_reference}..')
@@ -410,12 +416,6 @@ def pulled_image(image_reference: str):
         with img_list.resolve(platform) as default_child:
           yield default_child
           return
-
-    ci.util.info(f'Pulling v2.2 image from {image_reference}..')
-    with v2_2_image.FromRegistry(image_reference, creds, transport, accept) as v2_2_img:
-      if v2_2_img.exists():
-        yield v2_2_img
-        return
 
     ci.util.info(f'Pulling v2 image from {image_reference}..')
     with v2_image.FromRegistry(image_reference, creds, transport) as v2_img:
