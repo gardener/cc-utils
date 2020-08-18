@@ -151,6 +151,9 @@ def ls_image_tags(image_name: str):
         action=docker_http.PULL,
     )
 
+    if isinstance(image_name, str):
+        image_name = docker_name.from_string(image_name)
+
     url = f'https://{image_name.registry}/v2/{image_name.repository}/tags/list'
 
     res, body_bytes = transport.Request(url, (200,))
