@@ -24,6 +24,8 @@ import tarfile
 import tempfile
 import typing
 
+import dacite
+
 import ci.util
 import model.container_registry
 from model.container_registry import Privileges
@@ -447,6 +449,12 @@ def _pull_image(image_reference: str, outfileobj=None):
       return outfileobj
 
 
-def retrieve_manifest(image_reference: str):
+def retrieve_manifest(image_reference: str) -> OciImageManifest:
   with pulled_image(image_reference=image_reference) as image:
-    return json.loads(image.manifest())
+    raw = json.loads(image.manifest())
+  manifest = dacite.from_dict(
+    data_class=OciImageManifest,
+    data=raw,
+  )
+
+  return manifest
