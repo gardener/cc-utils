@@ -365,9 +365,19 @@ def _push_image(image_reference: str, image_file: str, threads=8):
       raise e
 
 
+def _tag_or_digest_reference(image_reference):
+  if isinstance(image_reference, str):
+    image_reference = docker_name.from_string(image_reference)
+  ref_type = type(image_reference)
+  if ref_type in (docker_name.Tag, docker_name.Digest):
+    return True
+  raise ValueError(f'{image_reference=} is does not contain a symbolic or hash tag')
+
+
 @contextlib.contextmanager
 def pulled_image(image_reference: str):
   ci.util.not_none(image_reference)
+  _tag_or_digest_reference(image_reference)
 
   transport = _mk_transport_pool()
   image_reference = normalise_image_reference(image_reference)
