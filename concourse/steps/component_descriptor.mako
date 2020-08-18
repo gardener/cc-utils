@@ -104,6 +104,9 @@ if not os.path.isfile(descriptor_script):
       component=component,
       ctx_repository_base_url=ctx_repository_base_url,
   )
+  if not component_descriptor_v2:
+    print('warning: failed to create component-descriptor-v2')
+    sys.exit(0)
   with open(v2_outfile, 'w') as f:
     component_descriptor_v2.to_fobj(fileobj=f)
     print(f'wrote component-descriptor v2 to {v2_outfile=}')

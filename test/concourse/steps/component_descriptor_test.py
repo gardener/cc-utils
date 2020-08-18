@@ -5,8 +5,14 @@ import pathlib
 
 import test_utils
 
+import gci.componentmodel
 from concourse.steps import step_def
 import concourse.model.traits.component_descriptor as component_descriptor
+
+
+# make linter happy
+if gci.componentmodel.SchemaVersion.V2 == None:
+    pass
 
 
 class ComponentDescriptorStepTest(unittest.TestCase):
