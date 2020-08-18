@@ -31,6 +31,7 @@ from ci.util import info, fail, parse_yaml_file, ctx
 import product.v2
 
 ${step_lib('component_descriptor')}
+${step_lib('component_descriptor_util')}
 
 # retrieve effective version
 version_file_path = os.path.join(
