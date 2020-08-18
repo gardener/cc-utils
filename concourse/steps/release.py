@@ -50,7 +50,7 @@ class TransactionContext(object):
         self._step_outputs[step_name] = output
 
 
-class TransactionalStep(object, metaclass=abc.ABCMeta):
+class TransactionalStep(metaclass=abc.ABCMeta):
     '''Abstract base class for operations that are to be executed with transactional semantics.
 
     Instances represent operations which typically cause external and persistent side effects.
@@ -93,7 +93,7 @@ class TransactionalStep(object, metaclass=abc.ABCMeta):
         pass
 
 
-class Transaction(object):
+class Transaction:
     '''Represents a transaction using `TransactionalStep`s
 
     After creation, invoke `validate` to have the transaction validate all steps. Invoke
