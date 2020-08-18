@@ -88,7 +88,7 @@ def create_v2_component_descriptor(
         repository_ctx_base_url=ctx_repository_base_url,
       )
       ci.util.info('successfully converted to v2 - dump follows:')
-      print(dataclasses.asdict(component_descriptor_v2))
+      return component_descriptor_v2
     except:
       print(
         'XXX something went wrong whilst trying to convert component-descriptor (ignoring)'
@@ -97,6 +97,10 @@ def create_v2_component_descriptor(
       traceback.print_exc()
       return
 
+
+def publish_component_descriptor_v2(
+    component_descriptor_v2,
+):
     try:
       ci.util.info('trying to upload the component-descriptor to oci registry')
       product.v2.upload_component_descriptor_v2_to_oci_registry(
