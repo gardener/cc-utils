@@ -7,6 +7,8 @@ import typing
 
 from github3.exceptions import NotFoundError
 
+import gci.componentmodel
+
 import ci.util
 from ci.util import (
     existing_file,
@@ -22,6 +24,7 @@ from github.util import (
     GitHubRepoBranch,
 )
 import product.model
+import product.v2
 from github.release_notes.util import (
     delete_file_from_slack,
     fetch_release_notes,
@@ -463,6 +466,7 @@ class GitHubReleaseStep(TransactionalStep):
         repo_dir: str,
         release_version: str,
         component_descriptor_file_path:str = None,
+        component_descriptor_v2_path:str = None,
     ):
         self.github_helper = not_none(github_helper)
         self.githubrepobranch = githubrepobranch
@@ -476,6 +480,7 @@ class GitHubReleaseStep(TransactionalStep):
             )
         else:
             self.component_descriptor_file_path = None
+        self.component_descriptor_v2_path = component_descriptor_v2_path
 
     def name(self):
         return "Create Release"
@@ -519,6 +524,15 @@ class GitHubReleaseStep(TransactionalStep):
                     asset=component_descriptor_contents,
                     label=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
                 )
+        if self.component_descriptor_v2_path:
+            cdv2_dict = ci.util.parse_yaml_file(self.component_descriptor_v2_path)
+            component_descriptor_v2 = gci.componentmodel.ComponentDescriptor.from_dict(
+                component_descriptor_dict=cdv2_dict,
+            )
+            print('publishing component-descriptor v2')
+            product.v2.upload_component_descriptor_v2_to_oci_registry(
+                component_descriptor_v2=component_descriptor_v2,
+            )
 
     def revert(self):
         # Fetch release
@@ -726,6 +740,7 @@ def release_and_prepare_next_dev_cycle(
     author_email: str="gardener.ci.user@gmail.com",
     author_name: str="gardener-ci",
     component_descriptor_file_path: str=None,
+    component_descriptor_v2_path: str=None,
     next_cycle_commit_message_prefix: str=None,
     next_version_callback: str=None,
     prerelease_suffix: str="dev",
@@ -790,6 +805,7 @@ def release_and_prepare_next_dev_cycle(
         repo_dir=repo_dir,
         release_version=release_version,
         component_descriptor_file_path=component_descriptor_file_path,
+        component_descriptor_v2_path=component_descriptor_v2_path,
     )
     step_list.append(github_release_step)
 

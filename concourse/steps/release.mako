@@ -30,6 +30,11 @@ if has_component_descriptor_trait:
     job_step.input('component_descriptor_dir'),
     'component_descriptor'
   )
+  component_descriptor_v2_path = os.path.join(
+    job_step.input('component_descriptor_dir'),
+    'component_descriptor_v2', # XXX deduplicate -> component_descriptor_util.py
+  )
+
 
 release_callback_path = release_trait.release_callback_path()
 next_version_callback_path = release_trait.next_version_callback_path()
@@ -58,6 +63,7 @@ githubrepobranch = GitHubRepoBranch(
 release_and_prepare_next_dev_cycle(
   % if has_component_descriptor_trait:
   component_descriptor_file_path='${component_descriptor_file_path}',
+  component_descriptor_v2_path='${component_descriptor_v2_path}',
   % endif
   % if has_slack_trait:
   slack_cfg_name='${slack_cfg_name}',
