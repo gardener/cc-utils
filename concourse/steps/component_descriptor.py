@@ -87,7 +87,7 @@ def create_v2_component_descriptor(
         component_v1=component,
         repository_ctx_base_url=ctx_repository_base_url,
       )
-      ci.util.info('successfully converted to v2 - dump follows:')
+      ci.util.info('successfully converted to v2')
       return component_descriptor_v2
     except:
       print(

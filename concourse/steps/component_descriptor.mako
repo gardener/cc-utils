@@ -201,4 +201,5 @@ if not component_descriptor_v2:
 
 with open(v2_outfile, 'w') as f:
   component_descriptor_v2.to_fobj(fileobj=f)
+  print(f'wrote component-descriptor v2 to {v2_outfile=}')
 </%def>
