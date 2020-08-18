@@ -25,6 +25,8 @@ import subprocess
 import sys
 import yaml
 
+import gci.componentmodel
+
 from product.model import ComponentDescriptor, Component, ContainerImage
 from product.util import ComponentDescriptorResolver
 from ci.util import info, fail, parse_yaml_file, ctx
