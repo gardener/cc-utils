@@ -99,7 +99,7 @@ if not os.path.isfile(descriptor_script):
   with open(descriptor_path, 'w') as f:
     yaml.dump(base_descriptor.raw, f, indent=2)
   info('wrote component descriptor: ' + descriptor_path)
-  create_v2_component_descriptor(
+  component_descriptor_v2 = create_v2_component_descriptor(
       descriptor=base_descriptor,
       component=component,
       ctx_repository_base_url=ctx_repository_base_url,
