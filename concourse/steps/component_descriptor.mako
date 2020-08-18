@@ -184,9 +184,21 @@ else:
   with open(dependencies_path) as f:
     print(f.read())
 
-create_v2_component_descriptor(
+component_descriptor_v2 = create_v2_component_descriptor(
     descriptor=descriptor,
     component=descriptor.component(component),
     ctx_repository_base_url=ctx_repository_base_url,
 )
+v2_outfile = os.path.join(
+  os.path.dirname(descriptor_path),
+  component_descriptor_fname(schema_version=gci.componentmodel.SchemaVersion.V2),
+)
+
+if not component_descriptor_v2:
+  print('xxx failed to create component-descriptor-v2 - will not propagate')
+  import sys;
+   sys.exit(0)
+
+with open(v2_outfile, 'w') as f:
+  component_descriptor_v2.to_fobj(fileobj=f)
 </%def>
