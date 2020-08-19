@@ -1,16 +1,19 @@
 import logging
 import urllib.parse
 
-import google.cloud.devtools.containeranalysis_v1
 import grafeas.grafeas_v1
 
 try:
     from grafeas.grafeas_v1.gapic.transports.grafeas_grpc_transport import GrafeasGrpcTransport
+    from google.cloud.devtools.containeranalysis_v1.gapic.container_analysis_client import (
+        ContainerAnalysisClient,
+    )
     from grafeas.grafeas_v1.gapic.enums import (
         DiscoveryOccurrence,
         Severity,
     )
 except ModuleNotFoundError:
+    from google.cloud.devtools.containeranalysis_v1 import ContainerAnalysisClient
     from grafeas.grafeas_v1.services.grafeas.transports import GrafeasGrpcTransport
     from grafeas.grafeas_v1 import (
         DiscoveryOccurrence,
@@ -20,9 +23,6 @@ except ModuleNotFoundError:
 import ci.util
 import container.registry
 import model.container_registry
-
-grafeas_v1 = grafeas.grafeas_v1
-container_analysis_v1 = google.cloud.devtools.containeranalysis_v1
 
 
 def logger():
@@ -36,15 +36,27 @@ class VulnerabilitiesRetrievalFailed(RuntimeError):
 def grafeas_client(container_registry_cfg: model.container_registry.ContainerRegistryConfig):
     credentials = container_registry_cfg.credentials()
 
-    service_address = container_analysis_v1.ContainerAnalysisClient.SERVICE_ADDRESS
     default_oauth_scope = (
         'https://www.googleapis.com/auth/cloud-platform',
     )
-    transport = GrafeasGrpcTransport(
-        address=service_address,
-        scopes=default_oauth_scope, # XXX hard-code for now
-        credentials=credentials.service_account_credentials(),
-    )
+
+    try:
+        service_address = ContainerAnalysisClient.SERVICE_ADDRESS
+        transport = GrafeasGrpcTransport(
+            address=service_address,
+            scopes=default_oauth_scope, # XXX hard-code for now
+            credentials=credentials.service_account_credentials(),
+        )
+
+    except AttributeError:
+        service_address = ContainerAnalysisClient.DEFAULT_ENDPOINT
+        service_port = 443
+
+        transport = GrafeasGrpcTransport(
+            host=f'{service_address}:{service_port}',
+            scopes=default_oauth_scope, # XXX hard-code for now
+            credentials=credentials.service_account_credentials(),
+        )
 
     return grafeas.grafeas_v1.GrafeasClient(transport)
 
