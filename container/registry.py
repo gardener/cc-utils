@@ -458,3 +458,8 @@ def retrieve_manifest(image_reference: str) -> OciImageManifest:
   )
 
   return manifest
+
+
+def retrieve_blob(image_reference: str, digest: str) -> bytes:
+  with pulled_image(image_reference=image_reference) as image:
+      return image.blob(digest)
