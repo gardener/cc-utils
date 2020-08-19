@@ -180,9 +180,16 @@ class AttributeSpec(object):
 
 
 class Trait(ModelBase):
-    def __init__(self, name: str, variant_name: str, raw_dict: dict):
+    def __init__(
+        self,
+        name: str,
+        variant_name: str,
+        raw_dict: dict,
+        cfg_set=None,
+    ):
         self.name = ci.util.not_none(name)
         self.variant_name = ci.util.not_none(variant_name)
+        self.cfg_set = cfg_set
         super().__init__(raw_dict=raw_dict)
 
     @abstractmethod

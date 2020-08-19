@@ -97,9 +97,10 @@ ATTRIBUTES = (
     AttributeSpec.optional(
         name='ctx_repository_base_url',
         type=str,
-        default='eu.gcr.io/gardener-project/gci-dev/', # XXX read from cc-config
+        default=None, # if not explicitly configured, will be injected from cicd-default
         doc='''
-            the component descriptor context repository base_url (for component descriptor v2)
+            the component descriptor context repository base_url (for component descriptor v2).
+            If not configured, the CICD-landscape's default ctx will be used.
         '''
     ),
 )
@@ -137,7 +138,14 @@ class ComponentDescriptorTrait(Trait):
         ]
 
     def ctx_repository_base_url(self):
-        return self.raw['ctx_repository_base_url']
+        # use default ctx_repository_base_url, if not explicitly configured
+        if not (base_url := self.raw.get('ctx_repository_base_url')):
+            if not self.cfg_set:
+                return None
+            ctx_repo_cfg = self.cfg_set.ctx_repository()
+            base_url = ctx_repo_cfg.base_url()
+            self.raw['ctx_repository_base_url'] = base_url
+        return base_url
 
     def transformer(self):
         return ComponentDescriptorTraitTransformer(trait=self)

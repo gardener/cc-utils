@@ -143,7 +143,10 @@ class Renderer(object):
             template=template_name,
         )
 
-        factory = DefinitionFactory(raw_definition_descriptor=pipeline_definition)
+        factory = DefinitionFactory(
+            raw_definition_descriptor=pipeline_definition,
+            cfg_set=self.cfg_set,
+        )
         pipeline_metadata = dict()
         pipeline_metadata['definition'] = factory.create_pipeline_definition()
         pipeline_metadata['name'] = pipeline_definition.name

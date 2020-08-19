@@ -33,7 +33,7 @@ def ensure_dict(d, allow_empty=True):
     return d
 
 
-class RawPipelineDefinitionDescriptor(object):
+class RawPipelineDefinitionDescriptor:
     '''
     Container type holding a single (raw) pipeline definition and metadata.
     Basic value validation is done in the c'tor.
@@ -54,7 +54,7 @@ class RawPipelineDefinitionDescriptor(object):
         self.exception = exception
 
 
-class DefinitionFactory(object):
+class DefinitionFactory:
     '''
     Creates `PipelineDefinition` instances from "raw" `PipelineDefinitionDescriptor`s.
 
@@ -67,8 +67,13 @@ class DefinitionFactory(object):
     variant. Variants may overwrite inherited attributes.
     '''
 
-    def __init__(self, raw_definition_descriptor: RawPipelineDefinitionDescriptor):
+    def __init__(
+        self,
+        raw_definition_descriptor: RawPipelineDefinitionDescriptor,
+        cfg_set,
+    ):
         self.raw_definition_descriptor = not_none(raw_definition_descriptor)
+        self.cfg_set = cfg_set
 
     def create_pipeline_definition(self) -> PipelineDefinition:
         merged_variants_dict = self._create_variants_dict(self.raw_definition_descriptor)
@@ -186,7 +191,8 @@ class DefinitionFactory(object):
                 name: TraitsFactory.create(
                     name=name,
                     variant_name=variant_name,
-                    args_dict=args if args else {}
+                    args_dict=args if args else {},
+                    cfg_set=self.cfg_set,
                 )
                 for name, args in traits_args.items()
         }

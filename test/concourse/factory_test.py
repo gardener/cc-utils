@@ -23,10 +23,16 @@ class DefinitionFactoryTest(unittest.TestCase):
     def test_valid_validation(self):
         # "OK case"
         descriptor = DefDescriptor(name='a_name', base_definition=None, variants={'foo': 42})
-        DefinitionFactory(raw_definition_descriptor=descriptor)
+        DefinitionFactory(
+            raw_definition_descriptor=descriptor,
+            cfg_set=None,
+        )
 
         with self.assertRaises(ValueError):
-            DefinitionFactory(raw_definition_descriptor=None)
+            DefinitionFactory(
+                raw_definition_descriptor=None,
+                cfg_set=None,
+            )
 
     def test_inheritance(self):
         base_def = {'foo': 'bar', 123: 555}
@@ -35,7 +41,10 @@ class DefinitionFactoryTest(unittest.TestCase):
             'variant_b': {'xxx': 31}
         }
         descriptor = DefDescriptor(name='x_name', base_definition=base_def, variants=variants)
-        factory = DefinitionFactory(raw_definition_descriptor=descriptor)
+        factory = DefinitionFactory(
+            raw_definition_descriptor=descriptor,
+            cfg_set=None,
+        )
 
         merged_variants = factory._create_variants_dict(descriptor)
 
@@ -78,7 +87,10 @@ class DefinitionFactoryTest(unittest.TestCase):
             },
         }
         descriptor = DefDescriptor(name='foo', base_definition=base_def, variants=variants)
-        factory = DefinitionFactory(raw_definition_descriptor=descriptor)
+        factory = DefinitionFactory(
+            raw_definition_descriptor=descriptor,
+            cfg_set=None,
+        )
 
         result = factory.create_pipeline_definition()
         variant = result.variant('variant1')
