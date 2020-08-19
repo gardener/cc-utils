@@ -341,6 +341,18 @@ include_component_names.</p></td>
 <td><p>CVSSVersion</p></td>
 <td><p>CVSS version used to evaluate the severity of vulnerabilities</p></td>
 </tr>
+<tr class="row-odd"><td><p>allowed_licenses</p></td>
+<td><p>no</p></td>
+<td><p>[]</p></td>
+<td><p>list</p></td>
+<td><p>A list of regular expressions. If configured, licenses detected by protecode that do not match at least one of regular expressions will result in a report mail being sent. If not configured or empty, <strong>all</strong> licenses will be accepted.</p></td>
+</tr>
+<tr class="row-even"><td><p>prohibited_licenses</p></td>
+<td><p>no</p></td>
+<td><p>[]</p></td>
+<td><p>list</p></td>
+<td><p>A list of regular expressions. If configured, licenses detected by protecode that match one of the regular expressions will result in a report mail being sent, even if they are included in <code class="code docutils literal notranslate"><span class="pre">allowed_licenses</span></code> (e.g. due to the default value).</p></td>
+</tr>
 </tbody>
 </table>
 <p class="section-subtitle">protecode.processing_mode Enumeration Values</p>
