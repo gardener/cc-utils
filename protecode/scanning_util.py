@@ -1,16 +1,19 @@
-from functools import partial
 import enum
 import logging
 import tempfile
 import textwrap
 import typing
 
-import grafeas.grafeas_v1
 import requests
 import requests.exceptions
 
 import ccc.grafeas
+import ci.util
 import protecode.model
+import version
+
+from functools import partial
+
 from protecode.client import ProtecodeApi
 from protecode.model import (
     AnalysisResult,
@@ -24,8 +27,11 @@ from concourse.model.base import (
 from ci.util import not_none, warning, check_type, info
 from container.registry import retrieve_container_image
 from product.model import ContainerImage, Component, UploadResult, UploadStatus
-import ci.util
-import version
+
+try:
+    from grafeas.grafeas_v1.gapic.enums import Severity
+except ModuleNotFoundError:
+    from grafeas.grafeas_v1 import Severity
 
 ci.util.ctx().configure_default_logging()
 logger = logging.getLogger(__name__)
@@ -113,10 +119,6 @@ class ProcessingMode(AttribSpecMixin, enum.Enum):
         )
 
 
-# shorten and alias enum name
-GrafeasSeverity = grafeas.grafeas_v1.enums.Severity
-
-
 class ProtecodeUtil:
     def __init__(
             self,
@@ -125,7 +127,7 @@ class ProtecodeUtil:
             group_id: int=None,
             reference_group_ids=(),
             cvss_threshold: int=7,
-            effective_severity_threshold: GrafeasSeverity=GrafeasSeverity.SEVERITY_UNSPECIFIED,
+            effective_severity_threshold: Severity=Severity.SEVERITY_UNSPECIFIED,
     ):
         protecode_api.login()
         self._processing_mode = check_type(processing_mode, ProcessingMode)
@@ -133,7 +135,7 @@ class ProtecodeUtil:
         self._group_id = group_id
         self._reference_group_ids = reference_group_ids
         self.cvss_threshold = cvss_threshold
-        self.effective_severity_threshold = GrafeasSeverity(effective_severity_threshold)
+        self.effective_severity_threshold = Severity(effective_severity_threshold)
 
     def _image_group_metadata(
         self,
@@ -469,7 +471,7 @@ class ProtecodeUtil:
 
         # determine worst CVE according to GCR's data
         worst_cvss = -1
-        worst_effective_vuln = GrafeasSeverity.SEVERITY_UNSPECIFIED
+        worst_effective_vuln = Severity.SEVERITY_UNSPECIFIED
         try:
             vulnerabilities_from_grafeas = list(
                 ccc.grafeas.filter_vulnerabilities(
@@ -480,7 +482,7 @@ class ProtecodeUtil:
             for gcr_occ in vulnerabilities_from_grafeas:
                 gcr_score = gcr_occ.vulnerability.cvss_score
                 worst_cvss = max(worst_cvss, gcr_score)
-                effective_sev = GrafeasSeverity(gcr_occ.vulnerability.effective_severity)
+                effective_sev = Severity(gcr_occ.vulnerability.effective_severity)
                 worst_effective_vuln = max(worst_effective_vuln, effective_sev)
         except ccc.grafeas.VulnerabilitiesRetrievalFailed as vrf:
             ci.util.warning(str(vrf))
@@ -505,7 +507,7 @@ class ProtecodeUtil:
             cve_str = vulnerability.cve()
 
             wurst_cve = -1
-            wurst_eff = GrafeasSeverity.SEVERITY_UNSPECIFIED
+            wurst_eff = Severity.SEVERITY_UNSPECIFIED
             found_it = False
             for gv in grafeas_vulns:
                 v = gv.vulnerability
@@ -527,7 +529,7 @@ class ProtecodeUtil:
                     wurst_cve = max(wurst_cve, v.cvss_score)
                     wurst_eff = max(
                         wurst_eff,
-                        GrafeasSeverity(getattr(v, 'effective_severity', wurst_eff))
+                        Severity(getattr(v, 'effective_severity', wurst_eff))
                     )
 
             return found_it, wurst_cve, wurst_eff
