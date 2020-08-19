@@ -114,7 +114,7 @@ class ProcessingMode(AttribSpecMixin, enum.Enum):
 
 
 # shorten and alias enum name
-GrafeasSeverity = grafeas.grafeas_v1.Severity
+GrafeasSeverity = grafeas.grafeas_v1.enums.Severity
 
 
 class ProtecodeUtil:
