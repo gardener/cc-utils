@@ -136,17 +136,18 @@ def ensure_is_v2(
 
 
 def _target_oci_ref(
-    component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
+    component: gci.componentmodel.Component,
+    component_ref: gci.componentmodel.ComponentReference=None,
 ):
-    ensure_is_v2(component_descriptor_v2)
-    component = component_descriptor_v2.component
+    if component_ref is None:
+        component_ref = component
 
     # last ctx-repo is target-repository
     last_ctx_repo = component.repositoryContexts[-1]
     base_url = last_ctx_repo.baseUrl
 
-    component_name = component.name
-    component_version = component.version
+    component_name = component_ref.name
+    component_version = component_ref.version
 
     return ci.util.urljoin(
         base_url,
@@ -160,7 +161,7 @@ def upload_component_descriptor_v2_to_oci_registry(
 ):
     ensure_is_v2(component_descriptor_v2)
 
-    target_ref = _target_oci_ref(component_descriptor_v2)
+    target_ref = _target_oci_ref(component_descriptor_v2.component)
 
     raw_fobj = gci.oci.component_descriptor_to_tarfileobj(component_descriptor_v2)
 
@@ -196,3 +197,33 @@ def upload_component_descriptor_v2_to_oci_registry(
         image_reference=target_ref,
         manifest=manifest,
     )
+
+
+def resolve_dependency(
+    component: gci.componentmodel.Component,
+    component_ref: gci.componentmodel.ComponentReference,
+):
+    '''
+    resolves the given component version. for migration purposes, there is a fallback in place
+
+    - the component version is searched in the component's current ctx-repo
+      if it is found, it is retrieved and returned
+    - otherwise (not found), the component version is looked-up using v1-schema semantics
+      (i.e. retrieve from github)
+    - if it is found in github, it is retrieved, converted to v2, published to the component's
+      current ctx-repository, and then returned
+    '''
+    target_ref = _target_oci_ref(
+        component=component,
+        component_ref=component_ref,
+    )
+
+    # retrieve, if available
+    # fallback: retrieve from github
+    # convert and publish
+
+
+def resolve_dependencies(
+    component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
+):
+    pass
