@@ -3,14 +3,25 @@ import urllib.parse
 
 import google.cloud.devtools.containeranalysis_v1
 import grafeas.grafeas_v1
-import grafeas.grafeas_v1.gapic.transports.grafeas_grpc_transport
+
+try:
+    from grafeas.grafeas_v1.gapic.transports.grafeas_grpc_transport import GrafeasGrpcTransport
+    from grafeas.grafeas_v1.gapic.enums import (
+        DiscoveryOccurrence,
+        Severity,
+    )
+except ModuleNotFoundError:
+    from grafeas.grafeas_v1.services.grafeas.transports import GrafeasGrpcTransport
+    from grafeas.grafeas_v1 import (
+        DiscoveryOccurrence,
+        Severity,
+    )
 
 import ci.util
 import container.registry
 import model.container_registry
 
 grafeas_v1 = grafeas.grafeas_v1
-gcrp_transport = grafeas.grafeas_v1.gapic.transports.grafeas_grpc_transport
 container_analysis_v1 = google.cloud.devtools.containeranalysis_v1
 
 
@@ -29,7 +40,7 @@ def grafeas_client(container_registry_cfg: model.container_registry.ContainerReg
     default_oauth_scope = (
         'https://www.googleapis.com/auth/cloud-platform',
     )
-    transport = gcrp_transport.GrafeasGrpcTransport(
+    transport = GrafeasGrpcTransport(
         address=service_address,
         scopes=default_oauth_scope, # XXX hard-code for now
         credentials=credentials.service_account_credentials(),
@@ -75,8 +86,8 @@ def scan_available(
         return False
 
     # shorten enum name
-    AnalysisStatus = grafeas_v1.enums.DiscoveryOccurrence.AnalysisStatus
-    ContinuousAnalysis = grafeas_v1.enums.DiscoveryOccurrence.ContinuousAnalysis
+    AnalysisStatus = DiscoveryOccurrence.AnalysisStatus
+    ContinuousAnalysis = DiscoveryOccurrence.ContinuousAnalysis
 
     filter_str = f'resourceUrl = "https://{hash_reference}" AND kind="DISCOVERY"'
     try:
@@ -142,13 +153,13 @@ def retrieve_vulnerabilities(
 
 
 # shorten default value
-SEVERITY_UNSPECIFIED = grafeas_v1.enums.Severity.SEVERITY_UNSPECIFIED
+SEVERITY_UNSPECIFIED = Severity.SEVERITY_UNSPECIFIED
 
 
 def filter_vulnerabilities(
     image_reference: str,
     cvss_threshold: int=7.0,
-    effective_severity_threshold: grafeas_v1.enums.Severity=SEVERITY_UNSPECIFIED
+    effective_severity_threshold: Severity=SEVERITY_UNSPECIFIED
 ):
     for r in retrieve_vulnerabilities(image_reference=image_reference):
         # r has type grafeas.grafeas_v1.types.Occurrence
@@ -158,8 +169,8 @@ def filter_vulnerabilities(
         if vuln.cvss_score < cvss_threshold:
             continue
         if hasattr(vuln, 'effective_severity'):
-            eff_sev = grafeas_v1.enums.Severity(vuln.effective_severity)
-            if not eff_sev is grafeas_v1.enums.Severity.SEVERITY_UNSPECIFIED and \
+            eff_sev = Severity(vuln.effective_severity)
+            if not eff_sev is Severity.SEVERITY_UNSPECIFIED and \
               eff_sev < effective_severity_threshold:
                 continue
             else:
