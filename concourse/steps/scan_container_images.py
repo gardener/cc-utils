@@ -66,9 +66,12 @@ class MailRecipients(object):
     ):
         self._root_component_name = root_component_name
         self._result_filter = result_filter
+
         self._protecode_results = []
+        self._protecode_results_below_threshold = []
         self._license_scan_results = []
         self._clamav_results = None
+
         self._cfg_set = cfg_set
         if not bool(recipients) ^ bool(recipients_component):
             raise ValueError('exactly one of recipients, component_name must be given')
@@ -90,14 +93,22 @@ class MailRecipients(object):
             component_names=(self._recipients_component.name(),),
         )
 
-    def add_protecode_results(self, results: typing.Iterable[typing.Tuple[UploadResult, float]]):
+    def add_protecode_results(
+        self,
+        relevant_results: typing.Iterable[typing.Tuple[UploadResult, float]],
+        results_below_threshold: typing.Iterable[typing.Tuple[UploadResult, float]],
+    ):
         logger.info(f'adding protecode results for {self}')
-        for result in results:
-            if self._result_filter:
-                if not self._result_filter(component=result[0].component):
-                    logger.debug(f'did not match: {result[0].component.name()}')
-                    continue
-            self._protecode_results.append(result)
+
+        self._protecode_results.extend([
+                r for r in relevant_results
+                if not self._result_filter or self._result_filter(component=r[0].component)
+            ])
+
+        self._protecode_results_below_threshold.extend([
+                r for r in results_below_threshold
+                if not self._result_filter or self._result_filter(component=r[0].component)
+            ])
 
     def add_license_scan_results(
         self,
@@ -106,12 +117,10 @@ class MailRecipients(object):
         ],
     ):
         logger.info(f'adding license scan results for {self}')
-        for result in results:
-            if self._result_filter:
-                if not self._result_filter(component=result[0]):
-                    logger.debug(f'did not match: {result[0].component.name()}')
-                    continue
-            self._license_scan_results.append(result)
+        self._license_scan_results.extend([
+                r for r in results
+                if not self._result_filter or self._result_filter(component=r[0])
+            ])
 
     def add_clamav_results(self, results: MalwareScanResult):
         if self._clamav_results is None:
@@ -133,6 +142,8 @@ class MailRecipients(object):
 
         if self._protecode_results:
             parts.append(self._protecode_report())
+            if self._protecode_results_below_threshold:
+                parts.append(self._results_below_threshold_report())
         if self._license_scan_results:
             parts.append(self._license_report())
         if self._clamav_results is not None:
@@ -156,13 +167,28 @@ class MailRecipients(object):
             <p>
               The following components in Protecode-group
               <a href="{self._protecode_group_url}">{self._protecode_group_id}</a>
-              were found to contain critical vulnerabilities (applying {self._cvss_version.value}):
+              were found to contain critical vulnerabilities (according to
+              {self._cvss_version.value}):
             </p>
         ''')
         return result + protecode_results_table(
             protecode_cfg=self._protecode_cfg,
             upload_results=self._protecode_results,
-            )
+            show_cve=True,
+        )
+
+    def _results_below_threshold_report(self):
+        result = textwrap.dedent(f'''
+            <p>
+              For your overview, the following components
+              have vulnerabilites below the threshold (according to {self._cvss_version.value}):
+            </p>
+        ''')
+        return result + protecode_results_table(
+            protecode_cfg=self._protecode_cfg,
+            upload_results=self._protecode_results_below_threshold,
+            show_cve=False,
+        )
 
     def _license_report(self):
         result = textwrap.dedent(f'''
@@ -278,7 +304,11 @@ def virus_scan_images(image_references: typing.Iterable[str], clamav_config_name
             )
 
 
-def protecode_results_table(protecode_cfg, upload_results: typing.Iterable[UploadResult]):
+def protecode_results_table(
+    protecode_cfg,
+    upload_results: typing.Iterable[UploadResult],
+    show_cve: bool=True,
+):
     def result_to_tuple(upload_result: UploadResult):
         # upload_result tuple of product.model.UploadResult and CVE Score
         upload_result, greatest_cve = upload_result
@@ -297,11 +327,22 @@ def protecode_results_table(protecode_cfg, upload_results: typing.Iterable[Uploa
         else:
           image_reference_url = None
 
-        return [link_to_analysis_url, greatest_cve, image_reference_url]
+        if show_cve:
+            return [link_to_analysis_url, greatest_cve, image_reference_url]
+        else:
+            return [link_to_analysis_url, image_reference_url]
+
+    if show_cve:
+        table_headers = ('Component Name', 'Greatest CVE', 'Container Image Reference')
+    else:
+        table_headers = ('Component Name', 'Container Image Reference')
+
+    for r in upload_results:
+        print(str(r))
 
     table = tabulate.tabulate(
       map(result_to_tuple, upload_results),
-      headers=('Component Name', 'Greatest CVE', 'Container Image Reference'),
+      headers=table_headers,
       tablefmt='html',
     )
     return table
