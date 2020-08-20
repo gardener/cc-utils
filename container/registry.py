@@ -463,3 +463,17 @@ def retrieve_manifest(image_reference: str) -> OciImageManifest:
 def retrieve_blob(image_reference: str, digest: str) -> bytes:
   with pulled_image(image_reference=image_reference) as image:
       return image.blob(digest)
+
+
+def rm_tag(image_reference: str):
+  transport = _mk_transport_pool()
+  image_reference = normalise_image_reference(image_reference)
+  image_reference = docker_name.from_string(image_reference)
+  creds = _mk_credentials(image_reference=image_reference)
+
+  docker_session.Delete(
+    name=image_reference,
+    creds=creds,
+    transport=transport,
+    )
+  logger.info(f'untagged {image_reference=} - note: did not purge blobs!')

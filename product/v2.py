@@ -282,3 +282,27 @@ def resolve_dependencies(
     # XXX consider not resolving recursively, if immediate dependencies are present in ctx
     resolve_dependencies(component=resolved_component_descriptor.component)
   # if this line is reached, all dependencies could successfully be resolved
+
+
+def rm_component_descriptor(
+    component: gci.componentmodel.Component,
+    recursive=True,
+):
+    target_ref = _target_oci_ref(
+        component=component,
+        component_ref=component,
+    )
+
+    if recursive:
+        for component_ref in component.componentReferences:
+            component_descriptor = resolve_dependency(
+                component,
+                component_ref,
+                repository_ctx_base_url=None,
+            )
+            rm_component_descriptor(
+                component=component_descriptor.component,
+                recursive=recursive,
+            )
+
+    container.registry.rm_tag(image_reference=target_ref)
