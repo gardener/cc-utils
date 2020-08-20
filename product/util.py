@@ -49,7 +49,7 @@ class ComponentResolutionException(Exception):
         )
 
 
-class ResolverBase(object):
+class ResolverBase:
     def __init__(
         self,
         cfg_factory=None,
