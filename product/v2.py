@@ -271,7 +271,6 @@ def resolve_dependency(
 def resolve_dependencies(
     component: gci.componentmodel.Component,
 ):
-  component = component_descriptor_v2.component
   print(f'resolving dependencies for {component.name=} {component.version=}')
   for component_ref in component.componentReferences:
     print(f'resolving {component_ref=}')
