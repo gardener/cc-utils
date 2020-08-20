@@ -534,7 +534,11 @@ class GitHubReleaseStep(TransactionalStep):
                 component_descriptor_v2=component_descriptor_v2,
             )
             info('resolving / importing dependencies')
-            product.v2.resolve_dependencies(component=component_descriptor_v2.component)
+            try:
+                product.v2.resolve_dependencies(component=component_descriptor_v2.component)
+            except:
+                import traceback
+                traceback.print_exc()
 
     def revert(self):
         # Fetch release
