@@ -147,7 +147,7 @@ def _target_oci_ref(
     last_ctx_repo = component.repositoryContexts[-1]
     base_url = last_ctx_repo.baseUrl
 
-    component_name = component_ref.name
+    component_name = component_ref.name.lower() # oci-spec allows only lowercase
     component_version = component_ref.version
 
     return ci.util.urljoin(
