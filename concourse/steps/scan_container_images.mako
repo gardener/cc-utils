@@ -77,7 +77,7 @@ print_protecode_info_table(
   include_component_names=${filter_cfg.include_component_names()},
   exclude_component_names=${filter_cfg.exclude_component_names()},
 )
-
+ci.util.info('running protecode scan for all components')
 protecode_results, license_report = protecode.util.upload_grouped_images(
   protecode_cfg=protecode_cfg,
   protecode_group_id = protecode_group_id,
@@ -89,7 +89,7 @@ protecode_results, license_report = protecode.util.upload_grouped_images(
   image_reference_filter=filter_function,
   cvss_version = CVSSVersion('${protecode_scan.cvss_version().value}'),
 )
-
+ci.util.info('preparing license report for protecode results')
 print_license_report(license_report)
 
 allowed_licenses = ${protecode_scan.allowed_licenses()}
