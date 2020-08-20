@@ -529,10 +529,12 @@ class GitHubReleaseStep(TransactionalStep):
             component_descriptor_v2 = gci.componentmodel.ComponentDescriptor.from_dict(
                 component_descriptor_dict=cdv2_dict,
             )
-            print('publishing component-descriptor v2')
+            info('publishing component-descriptor v2')
             product.v2.upload_component_descriptor_v2_to_oci_registry(
                 component_descriptor_v2=component_descriptor_v2,
             )
+            info('resolving / importing dependencies')
+            product.v2.resolve_dependencies(component=component_descriptor_v2.component)
 
     def revert(self):
         # Fetch release
