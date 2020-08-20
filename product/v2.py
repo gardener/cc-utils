@@ -203,7 +203,6 @@ def upload_component_descriptor_v2_to_oci_registry(
 def resolve_dependency(
     component: gci.componentmodel.Component,
     component_ref: gci.componentmodel.ComponentReference,
-    repository_ctx_base_url=None, # only required for implicit re-publishing
 ):
     '''
     resolves the given component version. for migration purposes, there is a fallback in place
@@ -255,13 +254,8 @@ def resolve_dependency(
     component_descriptor_v1 = resolver_v1.retrieve_descriptor(component_ref_v1)
 
     # convert and publish
-    # XXX hardcode defaulting to default-ctx-repo as fallback
     if repository_ctx_base_url is None:
-        # this will only work if running in CICD
-        cfg_set = cfg_factory.cfg_set(ci.util.current_config_set_name())
-        ctx_repository_cfg = cfg_set.ctx_repository()
-        repository_ctx_base_url = ctx_repository_cfg.base_url()
-        print(f'defaulting to default-base-url: {repository_ctx_base_url=}')
+        repository_ctx_base_url = component.repositoryContexts[-1].baseUrl
 
     component_v1 = component_descriptor_v1.component(component_ref_v1)
     component_descriptor_v2 = convert_component_to_v2(
@@ -275,6 +269,16 @@ def resolve_dependency(
 
 
 def resolve_dependencies(
-    component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
+    component: gci.componentmodel.Component,
 ):
-    pass
+  component = component_descriptor_v2.component
+  print(f'resolving dependencies for {component.name=} {component.version=}')
+  for component_ref in component.componentReferences:
+    print(f'resolving {component_ref=}')
+    resolved_component_descriptor = resolve_dependency(
+      component=component,
+      component_ref=component_ref,
+    )
+    # XXX consider not resolving recursively, if immediate dependencies are present in ctx
+    resolve_dependencies(component=resolved_component_descriptor.component)
+  # if this line is reached, all dependencies could successfully be resolved
