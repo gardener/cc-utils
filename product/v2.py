@@ -9,6 +9,7 @@ import io
 import gci.componentmodel as cm
 import gci.oci
 
+import ccc.cfg
 import ci.util
 import container.registry
 import product.model
@@ -202,6 +203,7 @@ def upload_component_descriptor_v2_to_oci_registry(
 def resolve_dependency(
     component: gci.componentmodel.Component,
     component_ref: gci.componentmodel.ComponentReference,
+    repository_ctx_base_url=None, # only required for implicit re-publishing
 ):
     '''
     resolves the given component version. for migration purposes, there is a fallback in place
@@ -219,8 +221,57 @@ def resolve_dependency(
     )
 
     # retrieve, if available
-    # fallback: retrieve from github
+    try:
+        manifest = container.registry.retrieve_manifest(
+            image_reference=target_ref,
+        )
+        # by contract, there must be exactly one layer (tar w/ component-descriptor)
+        if not (layers_count := len(manifest.layers) == 1):
+            print(f'XXX unexpected amount of {layers_count=}')
+        layer_digest = manifest.layers[0].digest
+        blob_bytes = container.registry(
+            image_reference=target_ref,
+            digest=layer_digest,
+        )
+        # wrap in fobj
+        blob_fobj = io.BytesIO(blob_bytes)
+        component_descriptor = gci.oci.component_descriptor_from_tarfileobj(
+            fileobj=blob_fobj,
+        )
+        return component_descriptor
+    except:
+        # XXX explicitly handle specific exceptions / define custom exc
+        import traceback
+        traceback.print_exc()
+
+    # fallback: retrieve from github (will only work for github-components, obviously)
+    cfg_factory = ccc.cfg.cfg_factory()
+
+    resolver_v1 = product.util.ComponentDescriptorResolver(
+        cfg_factory=cfg_factory,
+    )
+    component_ref_v1 = component_ref.name, component_ref.version
+
+    component_descriptor_v1 = resolver_v1.retrieve_descriptor(component_ref_v1)
+
     # convert and publish
+    # XXX hardcode defaulting to default-ctx-repo as fallback
+    if repository_ctx_base_url is None:
+        # this will only work if running in CICD
+        cfg_set = cfg_factory.cfg_set(ci.util.current_config_set_name())
+        ctx_repository_cfg = cfg_set.ctx_repository()
+        repository_ctx_base_url = ctx_repository_cfg.base_url()
+        print(f'defaulting to default-base-url: {repository_ctx_base_url=}')
+
+    component_v1 = component_descriptor_v1.component(component_ref_v1)
+    component_descriptor_v2 = convert_component_to_v2(
+        component_descriptor_v1=component_descriptor_v1,
+        component_v1=component_v1,
+        repository_ctx_base_url=repository_ctx_base_url,
+    )
+    upload_component_descriptor_v2_to_oci_registry(component_descriptor_v2)
+    print(f're-published component-descriptor v2 for {component_ref=}')
+    return component_descriptor_v2
 
 
 def resolve_dependencies(
