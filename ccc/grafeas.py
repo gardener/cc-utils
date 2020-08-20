@@ -5,6 +5,7 @@ import grafeas.grafeas_v1
 
 try:
     from grafeas.grafeas_v1.gapic.transports.grafeas_grpc_transport import GrafeasGrpcTransport
+    from grafeas.grafeas_v1.gapic.grafeas_client import GrafeasClient
     from google.cloud.devtools.containeranalysis_v1.gapic.container_analysis_client import (
         ContainerAnalysisClient,
     )
@@ -15,6 +16,7 @@ try:
 except ModuleNotFoundError:
     from google.cloud.devtools.containeranalysis_v1 import ContainerAnalysisClient
     from grafeas.grafeas_v1.services.grafeas.transports import GrafeasGrpcTransport
+    from grafeas.grafeas_v1.services.grafeas.client import GrafeasClient
     from grafeas.grafeas_v1 import (
         DiscoveryOccurrence,
         Severity,
@@ -58,7 +60,7 @@ def grafeas_client(container_registry_cfg: model.container_registry.ContainerReg
             credentials=credentials.service_account_credentials(),
         )
 
-    return grafeas.grafeas_v1.GrafeasClient(transport)
+    return GrafeasClient(transport=transport)
 
 
 def grafeas_client_for_image(image_reference: str):
