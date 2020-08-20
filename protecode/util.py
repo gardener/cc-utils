@@ -109,7 +109,7 @@ def upload_grouped_images(
     results = list(flatten_results())
 
     info('Preparing results')
-    relevant_results = filter_and_display_upload_results(
+    relevant_results, results_below_threshold = filter_and_display_upload_results(
         upload_results=results,
         cvss_version=cvss_version,
         cve_threshold=cve_threshold,
@@ -119,7 +119,7 @@ def upload_grouped_images(
     info('Preparing license report')
     _license_report = license_report(upload_results=results)
 
-    return (relevant_results, _license_report)
+    return (relevant_results, results_below_threshold, _license_report)
 
 
 def download_images(
@@ -283,4 +283,4 @@ def filter_and_display_upload_results(
         warning('The following components have critical vulnerabilities:')
         render_results_table(upload_results=results_above_cve_thresh)
 
-    return results_above_cve_thresh
+    return results_above_cve_thresh, results_below_cve_thresh

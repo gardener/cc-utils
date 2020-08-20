@@ -33,8 +33,9 @@ import product.util
 import protecode.util
 
 
-from protecode.scanning_util import ProcessingMode
+from concourse.model.traits.image_scan import Notify
 from protecode.model import CVSSVersion
+from protecode.scanning_util import ProcessingMode
 
 ${step_lib('scan_container_images')}
 ${step_lib('images')}
@@ -77,8 +78,9 @@ print_protecode_info_table(
   include_component_names=${filter_cfg.include_component_names()},
   exclude_component_names=${filter_cfg.exclude_component_names()},
 )
+
 ci.util.info('running protecode scan for all components')
-protecode_results, license_report = protecode.util.upload_grouped_images(
+results_above_threshold, results_below_threshold, license_report = protecode.util.upload_grouped_images(
   protecode_cfg=protecode_cfg,
   protecode_group_id = protecode_group_id,
   component_descriptor = component_descriptor,
@@ -129,7 +131,17 @@ print(
 )
 % endif
 
-if not protecode_results and not malware_scan_results and not updated_license_report:
+# only include results below threshold if email recipients are explicitly configured
+notification_policy = Notify('${image_scan_trait.notify().value}')
+if notification_policy is not Notify.EMAIL_RECIPIENTS:
+  results_below_threshold = []
+
+if not (
+  results_above_threshold
+  or results_below_threshold
+  or malware_scan_results
+  or updated_license_report
+):
   sys.exit(0)
 
 email_recipients = ${image_scan_trait.email_recipients()}
@@ -151,7 +163,10 @@ email_recipients = tuple(
 )
 
 for email_recipient in email_recipients:
-  email_recipient.add_protecode_results(results=protecode_results)
+  email_recipient.add_protecode_results(
+    relevant_results=results_above_threshold,
+    results_below_threshold=results_below_threshold,
+  )
   email_recipient.add_license_scan_results(results=updated_license_report)
 % if clam_av:
   email_recipient.add_clamav_results(results=malware_scan_results)
