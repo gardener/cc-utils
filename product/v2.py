@@ -229,7 +229,7 @@ def resolve_dependency(
         if not (layers_count := len(manifest.layers) == 1):
             print(f'XXX unexpected amount of {layers_count=}')
         layer_digest = manifest.layers[0].digest
-        blob_bytes = container.registry(
+        blob_bytes = container.registry.retrieve_blob(
             image_reference=target_ref,
             digest=layer_digest,
         )
