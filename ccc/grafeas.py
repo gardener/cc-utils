@@ -1,8 +1,6 @@
 import logging
 import urllib.parse
 
-import grafeas.grafeas_v1
-
 try:
     from grafeas.grafeas_v1.gapic.transports.grafeas_grpc_transport import GrafeasGrpcTransport
     from grafeas.grafeas_v1.gapic.grafeas_client import GrafeasClient
