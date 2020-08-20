@@ -221,10 +221,11 @@ def resolve_dependency(
     )
 
     # retrieve, if available
-    try:
-        manifest = container.registry.retrieve_manifest(
-            image_reference=target_ref,
-        )
+    manifest = container.registry.retrieve_manifest(
+        image_reference=target_ref,
+        absent_ok=True,
+    )
+    if manifest:
         # by contract, there must be exactly one layer (tar w/ component-descriptor)
         if not (layers_count := len(manifest.layers) == 1):
             print(f'XXX unexpected amount of {layers_count=}')
@@ -239,10 +240,6 @@ def resolve_dependency(
             fileobj=blob_fobj,
         )
         return component_descriptor
-    except:
-        # XXX explicitly handle specific exceptions / define custom exc
-        import traceback
-        traceback.print_exc()
 
     # fallback: retrieve from github (will only work for github-components, obviously)
     cfg_factory = ccc.cfg.cfg_factory()

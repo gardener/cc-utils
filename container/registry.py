@@ -53,6 +53,10 @@ _PROCESSOR_ARCHITECTURE = 'amd64'
 _OPERATING_SYSTEM = 'linux'
 
 
+class OciImageNotFoundException(Exception):
+    pass
+
+
 @dataclasses.dataclass
 class OciBlobRef:
     digest: str
@@ -427,8 +431,7 @@ def pulled_image(image_reference: str):
           yield v2_2_img
           return
 
-    print('failed to retrieve image - does it exist?')
-    raise RuntimeError(f'failed to retrieve {image_reference}')
+    raise OciImageNotFoundException('failed to retrieve {image_reference=} - does it exist?')
 
   except Exception as e:
     raise e
@@ -449,15 +452,23 @@ def _pull_image(image_reference: str, outfileobj=None):
       return outfileobj
 
 
-def retrieve_manifest(image_reference: str) -> OciImageManifest:
-  with pulled_image(image_reference=image_reference) as image:
-    raw = json.loads(image.manifest())
-  manifest = dacite.from_dict(
-    data_class=OciImageManifest,
-    data=raw,
-  )
+def retrieve_manifest(
+    image_reference: str,
+    absent_ok: bool=False,
+) -> OciImageManifest:
+  try:
+    with pulled_image(image_reference=image_reference) as image:
+      raw = json.loads(image.manifest())
+    manifest = dacite.from_dict(
+      data_class=OciImageManifest,
+      data=raw,
+    )
 
-  return manifest
+    return manifest
+  except OciImageNotFoundException as oie:
+    if absent_ok:
+      return None
+    raise oie
 
 
 def retrieve_blob(image_reference: str, digest: str) -> bytes:
