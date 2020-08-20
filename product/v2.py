@@ -203,6 +203,7 @@ def upload_component_descriptor_v2_to_oci_registry(
 def resolve_dependency(
     component: gci.componentmodel.Component,
     component_ref: gci.componentmodel.ComponentReference,
+    repository_ctx_base_url=None,
 ):
     '''
     resolves the given component version. for migration purposes, there is a fallback in place
