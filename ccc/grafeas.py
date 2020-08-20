@@ -103,7 +103,7 @@ def scan_available(
 
     filter_str = f'resourceUrl = "https://{hash_reference}" AND kind="DISCOVERY"'
     try:
-        results = list(client.list_occurrences(f'projects/{project_name}', filter=filter_str))
+        results = list(client.list_occurrences(f'projects/{project_name}', filter_=filter_str))
         if (r_count := len(results)) == 0:
             ci.util.warning(f'found no discovery-info for {image_reference}')
             return False
@@ -158,7 +158,7 @@ def retrieve_vulnerabilities(
     filter_str = f'resourceUrl = "https://{hash_reference}" AND kind="VULNERABILITY"'
 
     try:
-        for r in client.list_occurrences(f'projects/{project_name}', filter=filter_str):
+        for r in client.list_occurrences(f'projects/{project_name}', filter_=filter_str):
             yield r
     except Exception as e:
         raise VulnerabilitiesRetrievalFailed(e)
