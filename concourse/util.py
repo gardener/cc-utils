@@ -159,9 +159,26 @@ def get_pipeline_metadata():
     )
 
 
-def own_running_build_url(concourse_cfg):
+def own_concourse_config():
+    if not _running_on_ci():
+        raise RuntimeError('Can only determine own concourse config if running on CI infrastructure')
+
     pipeline_metadata = get_pipeline_metadata()
-    own_build = find_own_running_build()
+    config_set = ctx().cfg_factory().cfg_set(pipeline_metadata.current_config_set_name)
+    return config_set.concourse()
+
+
+def own_running_build_url(
+    concourse_cfg=None,
+):
+    if not _running_on_ci():
+        raise RuntimeError('Can only determine own build url if running on CI infrastructure')
+
+    if concourse_cfg is None:
+        concourse_cfg = own_concourse_config()
+
+    pipeline_metadata = get_pipeline_metadata()
+    own_build = find_own_running_build(concourse_cfg)
     return ConcourseApiRoutesBase.running_build_url(
         concourse_cfg.external_url(),
         pipeline_metadata,
@@ -170,7 +187,9 @@ def own_running_build_url(concourse_cfg):
 
 
 @functools.lru_cache()
-def find_own_running_build():
+def find_own_running_build(
+    concourse_cfg=None,
+):
     '''
     Determines the current build job running on concourse by relying on the "meta" contract (
     see steps/meta), which prints a JSON document containing a UUID. By iterating through all
@@ -180,6 +199,9 @@ def find_own_running_build():
     '''
     if not _running_on_ci():
         raise RuntimeError('Can only find own running build if running on CI infrastructure.')
+
+    if concourse_cfg is None:
+        concourse_cfg = own_concourse_config()
 
     meta_dir = os.path.join(
         os.path.abspath(check_env('CC_ROOT_DIR')),
@@ -196,8 +218,6 @@ def find_own_running_build():
     build_job_uuid = metadata_json['uuid']
 
     pipeline_metadata = get_pipeline_metadata()
-    config_set = ctx().cfg_factory().cfg_set(pipeline_metadata.current_config_set_name)
-    concourse_cfg = config_set.concourse()
     client = concourse.client.from_cfg(concourse_cfg, pipeline_metadata.team_name)
 
     # only consider limited amount of jobs to avoid large number of requests in case we do not
