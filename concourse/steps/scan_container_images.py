@@ -24,6 +24,7 @@ import tabulate
 
 import ccc.clamav
 import ci.util
+import concourse.util
 import mailutil
 import reutil
 
@@ -158,6 +159,10 @@ class MailRecipients(object):
               Note: you receive this E-Mail, because you were configured as a mail recipient
               in repository "{self._root_component_name}" (see .ci/pipeline_definitions)
               To remove yourself, search for your e-mail address in said file and remove it.
+              </p>
+              <p>
+              You can find the Concourse job that generated this e-mail
+              <a href="{concourse.util.own_running_build_url()}">here</a>.
               </p>
             </div>
         ''')
