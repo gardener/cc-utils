@@ -108,6 +108,7 @@ def upload_grouped_images(
 
     results = list(flatten_results())
 
+    info('Preparing results')
     relevant_results = filter_and_display_upload_results(
         upload_results=results,
         cvss_version=cvss_version,
@@ -115,6 +116,7 @@ def upload_grouped_images(
         ignore_if_triaged=ignore_if_triaged,
     )
 
+    info('Preparing license report')
     _license_report = license_report(upload_results=results)
 
     return (relevant_results, _license_report)
