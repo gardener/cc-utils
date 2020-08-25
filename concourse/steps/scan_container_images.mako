@@ -21,6 +21,21 @@ import sys
 import tabulate
 import textwrap
 
+# debugging (find out why execution sometimes suddenly stops)
+ori__exit = os._exit
+ori_exit = os.exit
+
+def exit(*args, **kwargs):
+  print(f'exit was called {args=} {kwargs=}')
+  ori_exit(*args, **kwargs)
+
+def _exit(*args, **kwargs):
+  print(f'exit was called {args=} {kwargs=}')
+  orig__exit(*args, **kwargs)
+
+os.exit = exit
+os._exit = _exit
+
 import ctx
 try:
   ctx.configure_default_logging()
