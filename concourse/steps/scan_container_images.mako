@@ -22,6 +22,8 @@ import tabulate
 import textwrap
 
 # debugging (find out why execution sometimes suddenly stops)
+import faulthandler
+faulthandler.enable() # print stacktraces upon fatal signals
 ori__exit = os._exit
 ori_exit = os.exit
 
@@ -35,6 +37,7 @@ def _exit(*args, **kwargs):
 
 os.exit = exit
 os._exit = _exit
+# end of debugging block
 
 import ctx
 try:
