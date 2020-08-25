@@ -21,22 +21,9 @@ import sys
 import tabulate
 import textwrap
 
-# debugging (find out why execution sometimes suddenly stops)
+# debugging (dump stacktrace on error-signals)
 import faulthandler
 faulthandler.enable() # print stacktraces upon fatal signals
-ori__exit = os._exit
-ori_exit = sys.exit
-
-def exit(*args, **kwargs):
-  print(f'exit was called {args=} {kwargs=}')
-  ori_exit(*args, **kwargs)
-
-def _exit(*args, **kwargs):
-  print(f'_exit was called {args=} {kwargs=}')
-  orig__exit(*args, **kwargs)
-
-sys.exit = exit
-os._exit = _exit
 # end of debugging block
 
 import ctx
