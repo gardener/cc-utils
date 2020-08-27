@@ -465,18 +465,21 @@ class GitHubReleaseStep(TransactionalStep):
         githubrepobranch: GitHubRepoBranch,
         repo_dir: str,
         release_version: str,
-        component_descriptor_file_path:str,
+        component_descriptor_file_path:str = None,
         component_descriptor_v2_path:str = None,
     ):
         self.github_helper = not_none(github_helper)
         self.githubrepobranch = githubrepobranch
         self.release_version = not_empty(release_version)
-        self.component_descriptor_file_path = os.path.abspath(
-            not_empty(component_descriptor_file_path)
-        )
 
         repo_dir_absolute = os.path.abspath(not_empty(repo_dir))
         self.repo_dir = repo_dir_absolute
+        if component_descriptor_file_path:
+            self.component_descriptor_file_path = os.path.abspath(
+                not_empty(component_descriptor_file_path)
+            )
+        else:
+            self.component_descriptor_file_path = None
         self.component_descriptor_v2_path = component_descriptor_v2_path
 
     def name(self):
@@ -490,10 +493,11 @@ class GitHubReleaseStep(TransactionalStep):
             raise RuntimeError(
                 f"Cannot create tag '{self.release_version}' for release: Tag already exists"
             )
-        existing_file(self.component_descriptor_file_path)
-        with open(self.component_descriptor_file_path) as f:
-            # TODO: Proper validation
-            not_empty(f.read().strip())
+        if self.component_descriptor_file_path:
+            existing_file(self.component_descriptor_file_path)
+            with open(self.component_descriptor_file_path) as f:
+                # TODO: Proper validation
+                not_empty(f.read().strip())
 
     def apply(
         self,
@@ -511,14 +515,15 @@ class GitHubReleaseStep(TransactionalStep):
         )
 
         # Upload component descriptor to GitHub-release if one has been calculated
-        with open(self.component_descriptor_file_path) as f:
-            component_descriptor_contents = f.read()
-            release.upload_asset(
-                content_type='application/x-yaml',
-                name=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
-                asset=component_descriptor_contents,
-                label=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
-            )
+        if self.component_descriptor_file_path:
+            with open(self.component_descriptor_file_path) as f:
+                component_descriptor_contents = f.read()
+                release.upload_asset(
+                    content_type='application/x-yaml',
+                    name=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
+                    asset=component_descriptor_contents,
+                    label=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
+                )
         if self.component_descriptor_v2_path:
             cdv2_dict = ci.util.parse_yaml_file(self.component_descriptor_v2_path)
             component_descriptor_v2 = gci.componentmodel.ComponentDescriptor.from_dict(
@@ -738,9 +743,9 @@ def release_and_prepare_next_dev_cycle(
     release_version: str,
     repo_dir: str,
     repository_version_file_path: str,
-    component_descriptor_file_path: str,
     author_email: str="gardener.ci.user@gmail.com",
     author_name: str="gardener-ci",
+    component_descriptor_file_path: str=None,
     component_descriptor_v2_path: str=None,
     next_cycle_commit_message_prefix: str=None,
     next_version_callback: str=None,

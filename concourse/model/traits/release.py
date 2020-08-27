@@ -255,7 +255,7 @@ class ReleaseTraitTransformer(TraitTransformer):
 
     @classmethod
     def dependencies(cls):
-        return {'version', 'component_descriptor'}
+        return {'version'}
 
     @classmethod
     def order_dependencies(cls):
