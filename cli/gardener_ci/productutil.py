@@ -272,10 +272,7 @@ def merge_descriptors(descriptors: [str]):
     for descriptor in map(parse_product_file, descriptors[1:]):
         merged = merge_products(merged, descriptor)
 
-    # workaround snd-issues (TODO: remove snd)
-    cleansed_dict = json.loads(json.dumps(merged.raw))
-
-    print(yaml.dump(cleansed_dict, indent=2))
+    print(yaml.dump(merged.raw, indent=2))
 
 
 def add_dependencies(
