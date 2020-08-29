@@ -150,8 +150,22 @@ def _target_oci_ref(
     component_name = component_ref.name.lower() # oci-spec allows only lowercase
     component_version = component_ref.version
 
+    return _target_oci_ref_from_ctx_base_url(
+        component_name=component_name,
+        component_version=component_version,
+        ctx_repo_base_url=base_url,
+    )
+
+
+def _target_oci_ref_from_ctx_base_url(
+    component_name: str,
+    component_version: str,
+    ctx_repo_base_url: str,
+):
+    component_name = component_name.lower() # oci-spec allows only lowercase
+
     return ci.util.urljoin(
-        base_url,
+        ctx_repo_base_url,
         'component-descriptors',
         f'{component_name}:{component_version}',
     )
@@ -200,6 +214,36 @@ def upload_component_descriptor_v2_to_oci_registry(
     )
 
 
+def retrieve_component_descriptor_from_oci_ref(
+    manifest_oci_image_ref: str,
+    absent_ok=False,
+):
+    manifest = container.registry.retrieve_manifest(
+        image_reference=manifest_oci_image_ref,
+        absent_ok=absent_ok,
+    )
+    if not manifest and absent_ok:
+        return None
+    elif not manifest and not absent_ok:
+        raise ValueError(f'did not find component-descriptor at {manifest_oci_image_ref=}')
+
+    # by contract, there must be exactly one layer (tar w/ component-descriptor)
+    if not (layers_count := len(manifest.layers) == 1):
+        print(f'XXX unexpected amount of {layers_count=}')
+
+    layer_digest = manifest.layers[0].digest
+    blob_bytes = container.registry.retrieve_blob(
+        image_reference=manifest_oci_image_ref,
+        digest=layer_digest,
+    )
+    # wrap in fobj
+    blob_fobj = io.BytesIO(blob_bytes)
+    component_descriptor = gci.oci.component_descriptor_from_tarfileobj(
+        fileobj=blob_fobj,
+    )
+    return component_descriptor
+
+
 def resolve_dependency(
     component: gci.componentmodel.Component,
     component_ref: gci.componentmodel.ComponentReference,
@@ -221,24 +265,11 @@ def resolve_dependency(
     )
 
     # retrieve, if available
-    manifest = container.registry.retrieve_manifest(
-        image_reference=target_ref,
+    component_descriptor = retrieve_component_descriptor_from_oci_ref(
+        manifest_oci_image_ref=target_ref,
         absent_ok=True,
     )
-    if manifest:
-        # by contract, there must be exactly one layer (tar w/ component-descriptor)
-        if not (layers_count := len(manifest.layers) == 1):
-            print(f'XXX unexpected amount of {layers_count=}')
-        layer_digest = manifest.layers[0].digest
-        blob_bytes = container.registry.retrieve_blob(
-            image_reference=target_ref,
-            digest=layer_digest,
-        )
-        # wrap in fobj
-        blob_fobj = io.BytesIO(blob_bytes)
-        component_descriptor = gci.oci.component_descriptor_from_tarfileobj(
-            fileobj=blob_fobj,
-        )
+    if component_descriptor:
         return component_descriptor
 
     # fallback: retrieve from github (will only work for github-components, obviously)
