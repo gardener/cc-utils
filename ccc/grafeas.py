@@ -39,14 +39,26 @@ def grafeas_client(container_registry_cfg: model.container_registry.ContainerReg
     default_oauth_scope = (
         'https://www.googleapis.com/auth/cloud-platform',
     )
-    service_address = ContainerAnalysisClient.DEFAULT_ENDPOINT
-    transport = GrafeasGrpcTransport(
-        host=service_address,
-        credentials=credentials.service_account_credentials().with_scopes(default_oauth_scope),
-    )
-    return GrafeasClient(
-        transport=transport,
-    )
+
+    try:
+        service_address = ContainerAnalysisClient.SERVICE_ADDRESS
+        transport = GrafeasGrpcTransport(
+            address=service_address,
+            scopes=default_oauth_scope, # XXX hard-code for now
+            credentials=credentials.service_account_credentials(),
+        )
+
+    except AttributeError:
+        service_address = ContainerAnalysisClient.DEFAULT_ENDPOINT
+        service_port = 443
+
+        transport = GrafeasGrpcTransport(
+            host=f'{service_address}:{service_port}',
+            scopes=default_oauth_scope, # XXX hard-code for now
+            credentials=credentials.service_account_credentials(),
+        )
+
+    return GrafeasClient(transport=transport)
 
 
 def grafeas_client_for_image(image_reference: str):
@@ -90,16 +102,8 @@ def scan_available(
     ContinuousAnalysis = DiscoveryOccurrence.ContinuousAnalysis
 
     filter_str = f'resourceUrl = "https://{hash_reference}" AND kind="DISCOVERY"'
-
     try:
         results = list(client.list_occurrences(f'projects/{project_name}', filter_=filter_str))
-    except TypeError:
-        results = list(client.list_occurrences(
-            parent=f'projects/{project_name}',
-            filter=filter_str,
-        ))
-
-    try:
         if (r_count := len(results)) == 0:
             ci.util.warning(f'found no discovery-info for {image_reference}')
             return False
@@ -154,16 +158,10 @@ def retrieve_vulnerabilities(
     filter_str = f'resourceUrl = "https://{hash_reference}" AND kind="VULNERABILITY"'
 
     try:
-        occurrences = list(client.list_occurrences(f'projects/{project_name}', filter_=filter_str))
-    except TypeError:
-        occurrences = list(client.list_occurrences(
-            parent=f'projects/{project_name}',
-            filter=filter_str,
-        ))
+        for r in client.list_occurrences(f'projects/{project_name}', filter_=filter_str):
+            yield r
     except Exception as e:
         raise VulnerabilitiesRetrievalFailed(e)
-
-    yield from occurrences
 
 
 # shorten default value
