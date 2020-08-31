@@ -1,4 +1,4 @@
-FROM eu.gcr.io/gardener-project/cc/job-image-base:0.40.0
+FROM eu.gcr.io/gardener-project/cc/job-image-base:0.41.0
 
 COPY . /cc/utils/
 
