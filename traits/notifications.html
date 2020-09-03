@@ -186,7 +186,7 @@
 <p>Used to customise build result notifications (most prominently sending error
 mails upon errors).</p>
 <div class="section" id="trait-notifications">
-<span id="trait-notifications"></span><p class="section-subtitle">Attributes</p>
+<span id="trait-notifications"></span><h2>Attributes<a class="headerlink" href="#trait-notifications" title="Permalink to this headline">¶</a></h2>
 <table class="colwidths-auto docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>name</p></th>
@@ -205,7 +205,7 @@ mails upon errors).</p>
 </tr>
 </tbody>
 </table>
-<p class="section-subtitle">default Attributes</p>
+<h2>default Attributes<a class="headerlink" href="#trait-notifications" title="Permalink to this headline">¶</a></h2>
 <table class="colwidths-auto docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>name</p></th>
@@ -224,7 +224,7 @@ mails upon errors).</p>
 </tr>
 </tbody>
 </table>
-<p class="section-subtitle">default.on_error Attributes</p>
+<h2>default.on_error Attributes<a class="headerlink" href="#trait-notifications" title="Permalink to this headline">¶</a></h2>
 <table class="colwidths-auto docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>name</p></th>
@@ -273,7 +273,7 @@ an environment variables:</p>
 </tr>
 </tbody>
 </table>
-<p class="section-subtitle">default.on_error.triggering_policy Enumeration Values</p>
+<h2>default.on_error.triggering_policy Enumeration Values<a class="headerlink" href="#trait-notifications" title="Permalink to this headline">¶</a></h2>
 <table class="colwidths-auto docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>value</p></th>
@@ -292,7 +292,7 @@ an environment variables:</p>
 </tr>
 </tbody>
 </table>
-<p class="section-subtitle">default.on_error.recipients Enumeration Values</p>
+<h2>default.on_error.recipients Enumeration Values<a class="headerlink" href="#trait-notifications" title="Permalink to this headline">¶</a></h2>
 <table class="colwidths-auto docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>value</p></th>
@@ -300,11 +300,12 @@ an environment variables:</p>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>committers</p></td>
+<tr class="row-even"><td><p>email_addresses</p></td>
 <td><p>notify committers of the last commit</p></td>
 </tr>
-<tr class="row-odd"><td><p>email_addresses</p></td>
-<td><p><p>notifiy specific email addresses</p>
+<tr class="row-odd"><td><p>committers</p></td>
+<td><p><blockquote>
+<div><p>notifiy specific email addresses</p>
 <p>Example:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">recipients</span><span class="p">:</span>
     <span class="p p-Indicator">-</span> <span class="nt">email_addresses</span><span class="p">:</span>
@@ -312,6 +313,7 @@ an environment variables:</p>
         <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">bar.buzz@mycloud.com</span>
 </pre></div>
 </div>
+</div></blockquote>
 </p></td>
 </tr>
 <tr class="row-even"><td><p>component_diff_owners</p></td>
@@ -322,7 +324,7 @@ an environment variables:</p>
 </tr>
 </tbody>
 </table>
-<p class="section-subtitle">Dependencies</p>
+<h2>Dependencies<a class="headerlink" href="#trait-notifications" title="Permalink to this headline">¶</a></h2>
 <p>This trait has <em>no</em> dependencies</p>
 </div>
 <div class="section" id="example">
