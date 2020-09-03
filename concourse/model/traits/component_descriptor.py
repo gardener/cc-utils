@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import enum
 import typing
 
 from ci.util import not_none
@@ -25,8 +24,9 @@ from concourse.model.step import (
     StepNotificationPolicy,
 )
 from concourse.model.base import (
-    AttribSpecMixin,
     AttributeSpec,
+    EnumWithDocumentation,
+    EnumValueWithDocumentation,
     ModelValidationError,
     ScriptType,
     Trait,
@@ -34,32 +34,16 @@ from concourse.model.base import (
 )
 
 
-class ValidationPolicy(AttribSpecMixin, enum.Enum):
-    NOT_EMPTY = "not_empty"
-    FORBID_EXTRA_ATTRIBUTES = "forbid_extra_attributes"
+class ValidationPolicy(EnumWithDocumentation):
+    NOT_EMPTY = EnumValueWithDocumentation(
+        value='not_empty',
+        doc="Every given attribute (e.g.: 'version') must also be given a non-empty value",
+    )
 
-    def __str__(self):
-        return self.value
-
-    @classmethod
-    def _attribute_specs(cls):
-        return (
-            AttributeSpec.optional(
-                name=cls.NOT_EMPTY.value,
-                default=None,
-                doc=(
-                    'Every given attribute (e.g.: "version") must also be given a '
-                    'non-empty value'
-                ),
-                type=str,
-            ),
-            AttributeSpec.optional(
-                name=cls.FORBID_EXTRA_ATTRIBUTES.value,
-                default=None,
-                doc='**only** required attributes are allowed',
-                type=str,
-            ),
-        )
+    FORBID_EXTRA_ATTRIBUTES = EnumValueWithDocumentation(
+        value='forbid_extra_attributes',
+        doc='**only** required attributes are allowed',
+    )
 
 
 ATTRIBUTES = (
