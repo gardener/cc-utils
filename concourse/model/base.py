@@ -14,12 +14,14 @@
 # limitations under the License.
 
 
+import typing
+
 from abc import abstractmethod
 from enum import Enum
-import typing
 from collections import namedtuple
 
 import ci.util
+
 from model.base import (
     ModelValidationError,
     ModelValidationMixin,
