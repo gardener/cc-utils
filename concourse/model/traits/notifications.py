@@ -13,12 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import enum
 import typing
 
 from concourse.model.base import (
   AttributeSpec,
   AttribSpecMixin,
+  EnumWithDocumentation,
+  EnumValueWithDocumentation,
   Trait,
   TraitTransformer,
   ModelBase,
@@ -32,54 +33,30 @@ from model.base import (
 )
 
 
-class NotificationTriggeringPolicy(AttribSpecMixin, enum.Enum):
-    ONLY_FIRST = 'only_first'
-    ALWAYS = 'always'
-    NEVER = 'never'
-
-    @classmethod
-    def _attribute_specs(cls):
-        return (
-            AttributeSpec.optional(
-                name=cls.ONLY_FIRST.value,
-                default=True,
-                doc='notify on first error only',
-                type=str,
-            ),
-            AttributeSpec.optional(
-                name=cls.ALWAYS.value,
-                default=False,
-                doc='notify on every error',
-                type=str,
-            ),
-            AttributeSpec.optional(
-                name=cls.NEVER.value,
-                default=False,
-                doc='notify never in case of errors',
-                type=str,
-            ),
-        )
+class NotificationTriggeringPolicy(EnumWithDocumentation):
+    ONLY_FIRST = EnumValueWithDocumentation(
+        value='only_first',
+        doc='notify on first error only',
+    )
+    ALWAYS = EnumValueWithDocumentation(
+        value='always',
+        doc='notify on every error',
+    )
+    NEVER = EnumValueWithDocumentation(
+        value='never',
+        doc='notify never in case of errors',
+    )
 
 
-class NotificationRecipients(AttribSpecMixin, enum.Enum):
-    EMAIL_ADDRESSES = 'email_addresses'
-    COMMITTERS = 'committers'
-    COMPONENT_DIFF_OWNERS = 'component_diff_owners'
-    CODEOWNERS = 'codeowners'
+class NotificationRecipients(EnumWithDocumentation):
+    EMAIL_ADDRESSES = EnumValueWithDocumentation(
+        value='email_addresses',
+        doc='notify committers of the last commit',
+    )
 
-    @classmethod
-    def _attribute_specs(cls):
-        return (
-            AttributeSpec.optional(
-                name=cls.COMMITTERS.value,
-                default=None,
-                doc='notify committers of the last commit',
-                type=str,
-            ),
-            AttributeSpec.optional(
-                name=cls.EMAIL_ADDRESSES.value,
-                default=None,
-                doc='''
+    COMMITTERS = EnumValueWithDocumentation(
+        value='committers',
+        doc='''
                 notifiy specific email addresses
 
                 Example:
@@ -91,21 +68,17 @@ class NotificationRecipients(AttribSpecMixin, enum.Enum):
                             - foo.bar@mycloud.com
                             - bar.buzz@mycloud.com
                 ''',
-                type=str,
-            ),
-            AttributeSpec.optional(
-                name=cls.COMPONENT_DIFF_OWNERS.value,
-                default=None,
-                doc='notify the codeowners of a component. CODEOWNERS file must exist',
-                type=str,
-            ),
-            AttributeSpec.optional(
-                name=cls.CODEOWNERS.value,
-                default=None,
-                doc='notify the codeowners of the repository. CODEOWNERS file must exist',
-                type=str,
-            ),
-        )
+    )
+
+    COMPONENT_DIFF_OWNERS = EnumValueWithDocumentation(
+        value='component_diff_owners',
+        doc='notify the codeowners of a component. CODEOWNERS file must exist',
+    )
+
+    CODEOWNERS = EnumValueWithDocumentation(
+        value='codeowners',
+        doc='notify the codeowners of the repository. CODEOWNERS file must exist',
+    )
 
 
 NOTIFICATION_CFG_ATTRS = (

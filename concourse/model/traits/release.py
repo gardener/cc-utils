@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import enum
-
 import version
 from concourse.model.job import (
     JobVariant,
@@ -24,8 +22,9 @@ from concourse.model.step import (
     StepNotificationPolicy,
 )
 from concourse.model.base import (
-  AttribSpecMixin,
   AttributeSpec,
+  EnumWithDocumentation,
+  EnumValueWithDocumentation,
   Trait,
   TraitTransformer,
   ScriptType,
@@ -35,82 +34,49 @@ from model.base import(
 )
 
 
-class NextVersion(AttribSpecMixin, enum.Enum):
-    BUMP_MAJOR = 'bump_major'
-    BUMP_MINOR = 'bump_minor'
-    BUMP_PATCH = 'bump_patch'
-    NOOP = 'noop'
+class NextVersion(EnumWithDocumentation):
+    BUMP_MAJOR = EnumValueWithDocumentation(
+        value='bump_major',
+        doc='Increments the major version of the next development cycle',
+    )
 
-    @classmethod
-    def _attribute_specs(cls):
-        return (
-            AttributeSpec.optional(
-                name=cls.BUMP_MAJOR.value,
-                default=None,
-                doc='Increments the major version of the next development cycle',
-                type=str,
-            ),
-            AttributeSpec.optional(
-                name=cls.BUMP_MINOR.value,
-                default=None,
-                doc='Increments the minor version of the next development cycle',
-                type=str,
-            ),
-            AttributeSpec.optional(
-                name=cls.BUMP_PATCH.value,
-                default=None,
-                doc='Increments the patch version of the next development cycle',
-                type=str,
-            ),
-            AttributeSpec.optional(
-                name=cls.NOOP.value,
-                default=None,
-                doc='No change to the next development cycle version done',
-                type=str,
-            ),
-        )
+    BUMP_MINOR = EnumValueWithDocumentation(
+        value='bump_minor',
+        doc='Increments the minor version of the next development cycle',
+    )
+
+    BUMP_PATCH = EnumValueWithDocumentation(
+        value='bump_patch',
+        doc='Increments the patch version of the next development cycle',
+    )
+
+    NOOP = EnumValueWithDocumentation(
+        value='noop',
+        doc='No change to the next development cycle version done',
+    )
 
 
-class ReleaseNotesPolicy(AttribSpecMixin, enum.Enum):
-    DEFAULT = 'default'
-    DISABLED = 'disabled'
-
-    @classmethod
-    def _attribute_specs(cls):
-        return (
-            AttributeSpec.optional(
-                name=cls.DEFAULT.value,
-                default=None,
-                doc='Create release notes and add them to the GitHub release.',
-                type=str,
-            ),
-            AttributeSpec.optional(
-                name=cls.DISABLED.value,
-                default=None,
-                doc='Do not create release notes.',
-                type=str,
-            ),
-        )
+class ReleaseNotesPolicy(EnumWithDocumentation):
+    DEFAULT = EnumValueWithDocumentation(
+        value='default',
+        doc='Create release notes and add them to the GitHub release.',
+    )
+    DISABLED = EnumValueWithDocumentation(
+        value='disabled',
+        doc='Do not create release notes.',
+    )
 
 
-class ReleaseCommitPublishingPolicy(AttribSpecMixin, enum.Enum):
-    TAG_AND_PUSH_TO_BRANCH = 'push_to_branch'
-    TAG_ONLY = 'tag_only'
+class ReleaseCommitPublishingPolicy(EnumWithDocumentation):
+    TAG_AND_PUSH_TO_BRANCH = EnumValueWithDocumentation(
+        value='push_to_branch',
+        doc='publish release tag to branch',
+    )
 
-    @classmethod
-    def _attribute_specs(cls):
-        return (
-            AttributeSpec.optional(
-                name=cls.TAG_AND_PUSH_TO_BRANCH.value,
-                doc='publish release tag to branch',
-                default=None,
-            ),
-            AttributeSpec.optional(
-                name=cls.TAG_ONLY.value,
-                doc='publish release tag to dead-end',
-                default=None,
-            ),
-        )
+    TAG_ONLY = EnumValueWithDocumentation(
+        value='tag_only',
+        doc='publish release tag to dead-end',
+    )
 
 
 ATTRIBUTES = (
