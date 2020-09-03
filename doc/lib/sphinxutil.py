@@ -38,7 +38,7 @@ class SphinxUtilsMixin(object):
 
     def create_subtitle(self, text: str):
         # seems to be no difference between subtitle and title in html
-        subtitle_node = nodes.subtitle(text=text)
+        subtitle_node = nodes.title(text=text)
         return subtitle_node
 
     def add_paragraph(self, contents: str):
