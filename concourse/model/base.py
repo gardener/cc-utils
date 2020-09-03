@@ -17,12 +17,27 @@
 from abc import abstractmethod
 from enum import Enum
 import typing
+from collections import namedtuple
 
 import ci.util
 from model.base import (
     ModelValidationError,
     ModelValidationMixin,
 )
+
+
+class EnumWithDocumentation(Enum):
+    def __new__(cls, value, docstring=None):
+        obj = object.__new__(cls)
+        obj._value_ = value
+        obj.__doc__ = docstring
+        return obj
+
+    def __str__(self):
+        return str(self.value)
+
+
+EnumValueWithDocumentation = namedtuple('EnumValueWithDocumentation', ['value', 'doc'])
 
 
 class AttribSpecMixin(object):
