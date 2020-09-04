@@ -1,8 +1,6 @@
 import product.model
 import product.util
 
-import product_.product_model_test as pmt
-
 v2_dict = {
     'meta':{
         'schemaVersion': 'v2',
@@ -130,22 +128,3 @@ def test_deserialisation_returns_correct_model():
 
     assert effective_image.name() == 'first'
     assert effective_image.image_reference() == 'overwritten-image-ref:version'
-
-
-def test_convert_component_to_v2():
-    component_descriptor_v1 = product.model.ComponentDescriptor.from_dict(
-        raw_dict=pmt.component_descriptor_raw_dict
-    )
-    component_v1 = component_descriptor_v1.component((
-        'example.org/foo/first_component',
-        'first_version',
-    ))
-
-    component_descriptor_v2 = product.v2.convert_component_to_v2(
-        component_descriptor_v1=component_descriptor_v1,
-        component_v1=component_v1,
-        repository_ctx_base_url='some.url',
-    )
-    component_v2 = component_descriptor_v2.component
-
-    assert component_v2.name == 'example.org/foo/first_component'
