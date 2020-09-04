@@ -5,6 +5,7 @@ see: https://github.com/gardener/component-spec
 '''
 
 import io
+import itertools
 
 import gci.componentmodel as cm
 import gci.oci
@@ -75,6 +76,33 @@ def convert_component_to_v2(
     Note that different as done in v1, dependencies are not resolved. Overwrites are
     applied (but not incorporated into the resulting component descriptor v2)
     '''
+    def mk_component_references():
+        # component names must be unique - append version, if required
+        for _, components in itertools.groupby(
+            sorted(
+                component_v1.dependencies().components(),
+                key=lambda c: c.name(),
+            ),
+            key=lambda c: c.name(),
+        ):
+            components = list(components)
+            if len(components) == 1:
+                append_version = False
+            else:
+                append_version = True
+
+            for component in components:
+                if append_version:
+                    name = f'{component.name()}-{component.version()}'
+                else:
+                    name = component.name()
+
+                yield cm.ComponentReference(
+                    name=name,
+                    componentName=component.name(),
+                    version=component.version(),
+                )
+
     component_descriptor = cm.ComponentDescriptor(
         meta=cm.Metadata(
             schemaVersion=cm.SchemaVersion.V2,
@@ -103,8 +131,7 @@ def convert_component_to_v2(
                 )
             ],
             componentReferences=[
-                cm.ComponentReference(component.name(), component.version()) for component
-                in component_v1.dependencies().components()
+                component_ref for component_ref in mk_component_references()
             ],
             localResources=[
                 resource for resource in
