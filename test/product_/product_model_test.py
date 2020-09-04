@@ -25,61 +25,62 @@ import product.util
 
 from model.base import ModelValidationError
 
+component_descriptor_raw_dict = {
+    'components':
+    [
+        # first_component
+        {
+            'name': 'example.org/foo/first_component',
+            'version': 'first_version',
+            'dependencies':
+            {
+                'components':
+                [
+                    {
+                        'name': 'example.org/bar/second_component',
+                        'version': 'second_version',
+                    }
+                ],
+                'container_images':
+                [
+                    {
+                        'name': 'first',
+                        'version': 'version',
+                        'image_reference': 'first_creference:version',
+                    }
+                ],
+                'web':
+                [
+                    {
+                        'name': 'first_web',
+                        'version': 'web_version',
+                        'url': 'https://example.org',
+                    },
+                ],
+                'generic':
+                [
+                    {
+                        'name': 'generic',
+                        'version': 'generic_version',
+                    },
+                ],
+            },
+        },
+        # second_component
+        {
+            'name': 'example.org/bar/second_component',
+            'version': 'second_version',
+            'dependencies': None # no dependencies
+        }
+    ]
+}
+
 
 class ProductModelTest(unittest.TestCase):
-    def setUp(self):
-        self.raw_dict = {
-            'components':
-            [
-                # first_component
-                {
-                    'name': 'example.org/foo/first_component',
-                    'version': 'first_version',
-                    'dependencies':
-                    {
-                        'components':
-                        [
-                            {
-                                'name': 'example.org/bar/second_component',
-                                'version': 'second_version',
-                            }
-                        ],
-                        'container_images':
-                        [
-                            {
-                                'name': 'first',
-                                'version': 'version',
-                                'image_reference': 'first_creference:version',
-                            }
-                        ],
-                        'web':
-                        [
-                            {
-                                'name': 'first_web',
-                                'version': 'web_version',
-                                'url': 'https://example.org',
-                            },
-                        ],
-                        'generic':
-                        [
-                            {
-                                'name': 'generic',
-                                'version': 'generic_version',
-                            },
-                        ],
-                    },
-                },
-                # second_component
-                {
-                    'name': 'example.org/bar/second_component',
-                    'version': 'second_version',
-                    'dependencies': None # no dependencies
-                }
-            ]
-        }
-
     def test_deserialisation_returns_correct_model(self):
-        examinee = product.model.ComponentDescriptor.from_dict(raw_dict=self.raw_dict)
+        examinee = product.model.ComponentDescriptor.from_dict(
+            raw_dict=component_descriptor_raw_dict,
+        )
 
         components = list(examinee.components())
         self.assertEqual(len(components), 2)
@@ -125,8 +126,12 @@ class ProductModelTest(unittest.TestCase):
         self.assertEqual(first_generic_dep.version(), 'generic_version')
 
     def test_merge_identical_products(self):
-        left_model = product.model.ComponentDescriptor.from_dict(raw_dict=self.raw_dict)
-        right_model = product.model.ComponentDescriptor.from_dict(raw_dict=self.raw_dict)
+        left_model = product.model.ComponentDescriptor.from_dict(
+            raw_dict=component_descriptor_raw_dict,
+        )
+        right_model = product.model.ComponentDescriptor.from_dict(
+            raw_dict=component_descriptor_raw_dict,
+        )
 
         merged = product.util.merge_products(left_model, right_model)
 
@@ -134,8 +139,12 @@ class ProductModelTest(unittest.TestCase):
         self.assertEqual(len(components), 2)
 
     def test_merge_conflicting_products_should_raise(self):
-        left_model = product.model.ComponentDescriptor.from_dict(raw_dict=deepcopy(self.raw_dict))
-        right_model = product.model.ComponentDescriptor.from_dict(raw_dict=deepcopy(self.raw_dict))
+        left_model = product.model.ComponentDescriptor.from_dict(
+            raw_dict=deepcopy(component_descriptor_raw_dict)
+        )
+        right_model = product.model.ComponentDescriptor.from_dict(
+            raw_dict=deepcopy(component_descriptor_raw_dict)
+        )
 
         # add a new dependency to create a conflicting definition
         container_image_dep = product.model.ContainerImage.create(
