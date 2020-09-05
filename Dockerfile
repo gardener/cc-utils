@@ -13,7 +13,9 @@ RUN pip3 install --upgrade \
   --find-links /cc/utils/dist \
   gardener-cicd-libs \
   gardener-cicd-cli \
-  gardener-cicd-whd
+  gardener-cicd-whd \
+&& pip3 uninstall gardener-component-model \
+&& pip3 install gardener-component-model
 
 RUN EFFECTIVE_VERSION="$(cat /metadata/VERSION)" REPO_DIR=/cc/utils \
   /cc/utils/.ci/bump_job_image_version.py
