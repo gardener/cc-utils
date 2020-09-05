@@ -14,7 +14,7 @@ RUN pip3 install --upgrade \
   gardener-cicd-libs \
   gardener-cicd-cli \
   gardener-cicd-whd \
-&& pip3 uninstall gardener-component-model \
+&& pip3 uninstall -y gardener-component-model \
 && pip3 install gardener-component-model
 
 RUN EFFECTIVE_VERSION="$(cat /metadata/VERSION)" REPO_DIR=/cc/utils \
