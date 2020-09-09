@@ -19,7 +19,7 @@ import logging
 import tabulate
 import typing
 
-import ccc.grafeas
+import ccc.gcp
 import ccc.protecode
 import ctx
 import container.registry
@@ -234,15 +234,16 @@ def filter_and_display_upload_results(
             try:
                 # XXX HACK: just one any image ref
                 image_ref = container_image.image_reference()
+                grafeas_client = ccc.gcp.GrafeasClient.for_image(image_ref)
                 gcr_cve = -1
-                for r in ccc.grafeas.filter_vulnerabilities(
+                for r in grafeas_client.filter_vulnerabilities(
                     image_ref,
                     cvss_threshold=cve_threshold,
                 ):
-                    gcr_cve = max(gcr_cve, r.vulnerability.cvss_score)
+                    gcr_cve = max(gcr_cve, r.vulnerability.cvssScore)
                 info(f'gcr says max CVSS=={gcr_cve} (-1 means no vulnerability was found)')
                 # TODO: skip if < threshold - just report for now
-            except ccc.grafeas.VulnerabilitiesRetrievalFailed as vrf:
+            except Exception as vrf:
                 warning('failed to retrieve vulnerabilies from gcr')
                 print(vrf)
 

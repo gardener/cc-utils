@@ -7,7 +7,7 @@ import typing
 import requests
 import requests.exceptions
 
-import ccc.grafeas
+import ccc.gcp
 import ci.util
 import protecode.model
 import version
@@ -24,14 +24,12 @@ from concourse.model.base import (
     AttribSpecMixin,
     AttributeSpec,
 )
+from ccc.grafeas_model import (
+    Severity,
+)
 from ci.util import not_none, warning, check_type, info
 from container.registry import retrieve_container_image
 from product.model import ContainerImage, Component, UploadResult, UploadStatus
-
-try:
-    from grafeas.grafeas_v1.gapic.enums import Severity
-except ModuleNotFoundError:
-    from grafeas.grafeas_v1 import Severity
 
 ci.util.ctx().configure_default_logging()
 logger = logging.getLogger(__name__)
@@ -465,7 +463,9 @@ class ProtecodeUtil:
             logging.warning(f'no image-ref-name custom-prop for {scan_result.product_id()}')
             return scan_result
 
-        if not ccc.grafeas.scan_available(image_reference=image_ref):
+        grafeas_client = ccc.gcp.GrafeasClient.for_image(image_ref)
+
+        if not grafeas_client.scan_available(image_reference=image_ref):
             ci.util.warning(f'no scan result available in gcr: {image_ref}')
             return scan_result
 
@@ -474,17 +474,17 @@ class ProtecodeUtil:
         worst_effective_vuln = Severity.SEVERITY_UNSPECIFIED
         try:
             vulnerabilities_from_grafeas = list(
-                ccc.grafeas.filter_vulnerabilities(
+                grafeas_client.filter_vulnerabilities(
                     image_reference=image_ref,
                     cvss_threshold=self.cvss_threshold,
                 )
             )
             for gcr_occ in vulnerabilities_from_grafeas:
-                gcr_score = gcr_occ.vulnerability.cvss_score
+                gcr_score = gcr_occ.vulnerability.cvssScore
                 worst_cvss = max(worst_cvss, gcr_score)
-                effective_sev = Severity(gcr_occ.vulnerability.effective_severity)
+                effective_sev = gcr_occ.vulnerability.effectiveSeverity
                 worst_effective_vuln = max(worst_effective_vuln, effective_sev)
-        except ccc.grafeas.VulnerabilitiesRetrievalFailed as vrf:
+        except ccc.gcp.VulnerabilitiesRetrievalFailed as vrf:
             ci.util.warning(str(vrf))
             # warn, but ignore
             return scan_result
@@ -506,49 +506,46 @@ class ProtecodeUtil:
             component_name = component.name()
             cve_str = vulnerability.cve()
 
-            wurst_cve = -1
-            wurst_eff = Severity.SEVERITY_UNSPECIFIED
+            worst_cve = -1
+            worst_effective_severity = Severity.SEVERITY_UNSPECIFIED
             found_it = False
             for gv in grafeas_vulns:
                 v = gv.vulnerability
-                if v.short_description != cve_str:
+                if v.shortDescription != cve_str: # TODO: could also check the note name
                     continue
 
-                for pi in v.package_issue:
-                    v_name = pi.affected_package
+                for pi in v.packageIssue:
+                    v_name = pi.affectedPackage
                     if not v_name == component_name:
                         # XXX maybe we should be a bit more defensive, and check for CVE equality
                         # (if CVEs match, but compont name differs, a human could/should have a look)
-                        if v.short_description == cve_str:
+                        if v.shortDescription == cve_str:
                             ci.util.warning(
                                 f'XXX check if this is a match: {v_name} / {component_name}'
                             )
                         continue
                     found_it = True
                     # XXX should also check for version
-                    wurst_cve = max(wurst_cve, v.cvss_score)
-                    wurst_eff = max(
-                        wurst_eff,
-                        Severity(getattr(v, 'effective_severity', wurst_eff))
-                    )
+                    worst_cve = max(worst_cve, v.cvssScore)
+                    worst_effective_severity = max(worst_effective_severity, v.effectiveSeverity)
 
-            return found_it, wurst_cve, wurst_eff
+            return found_it, worst_cve, worst_effective_severity
 
         def find_component_version(component_name, occurrences):
             determined_version = None
             for occurrence in occurrences:
-                package_issues = occurrence.vulnerability.package_issue
+                package_issues = occurrence.vulnerability.packageIssue
                 for package_issue in package_issues:
-                    package_name = package_issue.affected_package
+                    package_name = package_issue.affectedPackage
                     if package_name == component_name:
                         if (
                             determined_version is not None and
-                            determined_version != package_issue.affected_version.full_name
+                            determined_version != package_issue.affectedVersion.fullName
                         ):
                             # found more than one possible version. Return None since we cannot
                             # be sure which version is correct
                             return None
-                        determined_version = package_issue.affected_version.full_name
+                        determined_version = package_issue.affectedVersion.fullName
             return determined_version
 
         # if this line is reached, all vulnerabilities are considered to be less severe than
