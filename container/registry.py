@@ -431,7 +431,7 @@ def pulled_image(image_reference: str):
           yield v2_2_img
           return
 
-    raise OciImageNotFoundException('failed to retrieve {image_reference=} - does it exist?')
+    raise OciImageNotFoundException(f'failed to retrieve {image_reference=} - does it exist?')
 
   except Exception as e:
     raise e
