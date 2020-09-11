@@ -1,4 +1,10 @@
+aliyun-python-sdk-core<3
+aliyun-python-sdk-ecs<5
+azure-storage-blob<13
 boto3
 google-api-python-client
+google-auth
 google-cloud-storage
-msal
+msal<2
+oss2<3
+openstacksdk<1
