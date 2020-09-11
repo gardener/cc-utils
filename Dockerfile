@@ -14,6 +14,7 @@ RUN pip3 install --upgrade \
   gardener-cicd-libs \
   gardener-cicd-cli \
   gardener-cicd-whd \
+  gardenlinux \
 && pip3 uninstall -y gardener-component-model \
 && pip3 install gardener-component-model
 
