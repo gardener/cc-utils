@@ -385,7 +385,16 @@ else:
 % elif job_step.name == 'rm_pr_label':
         ${rm_pr_label_step(job_step=job_step, job_variant=job_variant, github_cfg=github, concourse_cfg=concourse_cfg, indent=8)}
 % elif job_step.name == 'component_descriptor':
-        ${component_descriptor_step(job_step=job_step, job_variant=job_variant, output_image_descriptors=output_image_descriptors, indent=8)}
+<%
+  if has_publish_trait(job_variant):
+    image_descriptors_for_variant = {
+      descriptor.name(): descriptor
+      for descriptor in job_variant.trait('publish').dockerimages()
+    }
+  else:
+    image_descriptors_for_variant = {}
+%>
+        ${component_descriptor_step(job_step=job_step, job_variant=job_variant, output_image_descriptors=image_descriptors_for_variant, indent=8)}
 % elif job_step.name == 'update_component_dependencies':
         ${update_component_deps_step(job_step=job_step, job_variant=job_variant, github_cfg_name=github.name(), indent=8)}
 % elif job_step.name == 'publish':
