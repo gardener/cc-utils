@@ -39,6 +39,9 @@ class SecretsServerConfig(NamedModelElement):
             ns=self.namespace(),
         )
 
+    def kubernetes_cluster_config(self):
+        return self.raw.get('kubernetes_cluster_config')
+
     def secrets(self):
         return SecretsServerSecrets(raw_dict=self.raw['secrets'])
 
