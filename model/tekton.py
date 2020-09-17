@@ -43,6 +43,15 @@ class TektonConfig(NamedModelElement):
             return TektonDashboardConfig(raw_cfg)
         return None
 
+    def kubernetes_config_name(self):
+        return self.raw['kubernetes_config_name']
+
+    def _required_attributes(self):
+        yield from super()._required_attributes()
+        yield from [
+            'kubernetes_config_name',
+        ]
+
     def _optional_attributes(self):
         yield from super()._optional_attributes()
         yield from [

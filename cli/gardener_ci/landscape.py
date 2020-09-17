@@ -288,8 +288,9 @@ def deploy_or_upgrade_tekton_dashboard_ingress(
 
     cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(config_set_name)
-    concourse_cfg = cfg_set.concourse()
-    kubernetes_cfg = cfg_factory.kubernetes(concourse_cfg.kubernetes_cluster_config())
+    tekton_cfg = cfg_set.tekton()
+    kubernetes_cfg_name = tekton_cfg.kubernetes_config_name()
+    kubernetes_cfg = cfg_factory.kubernetes(kubernetes_cfg_name)
     oauth2_proxy_cfg = cfg_set.oauth2_proxy()
     tekton_dashboard_ingress_cfg = cfg_set.tekton_dashboard_ingress()
 
@@ -312,13 +313,8 @@ def deploy_tekton(
 ):
     cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(config_set_name)
-
-    concourse_cfg = cfg_set.concourse()
-    kubernetes_cfg = cfg_factory.kubernetes(concourse_cfg.kubernetes_cluster_config())
-
     tekton_cfg = cfg_set.tekton()
 
     setup_tekton.deploy_tekton(
         tekton_config=tekton_cfg,
-        kubernetes_config=kubernetes_cfg,
     )

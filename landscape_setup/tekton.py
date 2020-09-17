@@ -10,12 +10,18 @@ from kubernetes import (
     utils as kubernetes_utils,
 )
 
+from ci.util import ctx
+
 
 def deploy_tekton(
     tekton_config: model.tekton.TektonConfig,
-    kubernetes_config: model.kubernetes.KubernetesConfig,
 ):
-    kube_ctx = kube.ctx.Ctx(kubeconfig_dict=kubernetes_config.kubeconfig())
+    cfg_factory = ctx().cfg_factory()
+
+    kubernetes_config_name = tekton_config.kubernetes_config_name()
+    kubernetes_cfg = cfg_factory.kubernetes(kubernetes_config_name)
+
+    kube_ctx = kube.ctx.Ctx(kubeconfig_dict=kubernetes_cfg.kubeconfig())
     api_client = kubernetes_client.ApiClient(configuration=kube_ctx.kubeconfig)
     namespace_helper = kube_ctx.namespace_helper()
 
