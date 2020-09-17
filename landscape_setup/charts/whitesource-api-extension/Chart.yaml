@@ -1,0 +1,6 @@
+apiVersion: v2
+name: whitesource-api-extension
+description: extends whitesource by providing an endpoint to post to be scanned archives
+type: application
+version: 0.1.0
+appVersion: 1.16.0
