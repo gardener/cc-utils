@@ -14,12 +14,14 @@
 # limitations under the License.
 
 import os
+import typing
 
 import kubernetes.client
 from kubernetes import config, client
 from kubernetes.config.kube_config import KubeConfigLoader
 
 from ci.util import ctx as global_ctx, fail, existing_file, not_none
+import model.kubernetes
 from kube.helper import (
     KubernetesConfigMapHelper,
     KubernetesSecretHelper,
@@ -58,8 +60,10 @@ class Ctx(object):
             fail('KUBECONFIG env var must be set')
         return config.load_kube_config(existing_file(kubeconfig))
 
-    def set_kubecfg(self, kubeconfig_dict: dict):
+    def set_kubecfg(self, kubeconfig_dict: typing.Union[dict, model.kubernetes.KubernetesConfig]):
         not_none(kubeconfig_dict)
+        if isinstance(kubeconfig_dict, model.kubernetes.KubernetesConfig):
+            kubeconfig_dict = kubeconfig_dict.kubeconfig()
 
         configuration = kubernetes.client.Configuration()
         cfg_loader = KubeConfigLoader(dict(kubeconfig_dict))

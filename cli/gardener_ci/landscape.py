@@ -36,6 +36,7 @@ from landscape_setup import (
     tekton as setup_tekton,
     tekton_dashboard_ingress as setup_tekton_dashboard_ingress,
     whd as setup_whd,
+    whitesource_api_extension as wss,
 )
 
 
@@ -235,6 +236,29 @@ def deploy_or_upgrade_webhook_dispatcher(
         webhook_dispatcher_deployment_cfg=webhook_dispatcher_deployment_cfg,
         chart_dir=chart_dir,
         deployment_name=deployment_name,
+    )
+
+
+def deploy_or_upgrade_whitesource_api_extension(
+    config_set_name: CliHint(typehint=str, help=CONFIG_SET_HELP),
+    chart_dir: str = False,
+    deployment_name: str = False,
+):
+    cfg_factory = ctx().cfg_factory()
+    cfg_set = cfg_factory.cfg_set(config_set_name)
+
+    kwargs = {}
+    if deployment_name is not False:
+        kwargs['deployment_name'] = deployment_name
+    if chart_dir is not False:
+        kwargs['chart_dir'] = existing_dir(chart_dir)
+
+    whitesource_cfg = cfg_set.whitesource()
+
+    wss.deploy_whitesource_api_extension(
+        kubernetes_cfg=cfg_set.kubernetes(),
+        whitesource_cfg=whitesource_cfg,
+        **kwargs,
     )
 
 
