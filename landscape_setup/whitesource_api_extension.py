@@ -17,41 +17,39 @@ import os
 
 from ensure import ensure_annotations
 
-from landscape_setup import kube_ctx
+from landscape_setup import (
+    kube_ctx,
+    paths,
+)
 from landscape_setup.utils import (
     execute_helm_deployment,
 )
+from model.kubernetes import (
+    KubernetesConfig
+)
 from model.whitesource import (
-    WhitesourceApiExtensionDeploymentConfig
+    WhitesourceConfig
 )
 from ci.util import (
-    ctx as global_ctx,
     not_empty,
 )
 
 
 @ensure_annotations
-def deploy_webhook_dispatcher_landscape(
-    whitesource_api_extension_deployment_cfg: WhitesourceApiExtensionDeploymentConfig,
-    chart_dir: str,
-    deployment_name: str,
+def deploy_whitesource_api_extension(
+    whitesource_cfg: WhitesourceConfig,
+    kubernetes_cfg: KubernetesConfig,
+    chart_dir: str = os.path.join(paths.chartdirt, 'whitesource-api-extension'),
+    deployment_name: str = 'whitesource-api-extension',
 ):
     not_empty(deployment_name)
 
-    chart_dir = os.path.abspath(chart_dir)
-    cfg_factory = global_ctx().cfg_factory()
-
     # Set the global context to the cluster specified in KubernetesConfig
-    kubernetes_config_name = whitesource_api_extension_deployment_cfg.kubernetes_config_name()
-    kubernetes_config = cfg_factory.kubernetes(kubernetes_config_name)
-    kube_ctx.set_kubecfg(kubernetes_config.kubeconfig())
-
-    kubernetes_cfg_name = whitesource_api_extension_deployment_cfg.kubernetes_config_name()
-    kubernetes_cfg = cfg_factory.kubernetes(kubernetes_cfg_name)
+    kube_ctx.set_kubecfg(kubernetes_cfg)
 
     execute_helm_deployment(
         kubernetes_config=kubernetes_cfg,
-        namespace=deployment_name,
+        namespace=whitesource_cfg.namespace(),
         chart_name=chart_dir,
         release_name=deployment_name,
     )

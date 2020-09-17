@@ -38,11 +38,19 @@ class WhitesourceConfig(NamedModelElement):
     def api_key(self):
         return self.raw.get('api_key')
 
+    def namespace(self):
+        return self.raw.get('namespace')
+
     def extension_endpoint(self):
         return self.raw.get('extension_endpoint')
 
     def credentials(self):
         return WhitesourceCredentials(self.raw.get('credentials'))
+
+    def _defaults_dict(self):
+        return {
+            'namespace': 'whitesource-api-extension',
+        }
 
     def _required_attributes(self):
         return 'credentials', 'wss_endpoint', 'api_key', 'extension_endpoint'
@@ -64,16 +72,3 @@ class DockerImageConfig(ModelBase):
 
     def image_reference(self):
         return f'{self.image_name()}:{self.image_tag()}'
-
-
-class WhitesourceApiExtensionDeploymentConfig(NamedModelElement):
-    def _required_attributes(self):
-        return {
-            'wae_image',
-        }
-
-    def kubernetes_config_name(self):
-        return self.raw.get('kubernetes_config')
-
-    def image_config(self):
-        return DockerImageConfig(self.raw.get('whd_image'))
