@@ -285,7 +285,6 @@ def ensure_resource_pinned(
             logger.info(f'{resource.name=} not pinned - no unpinning necessary')
 
 
-
 def _ensure_resource_unpinned(
     resource: PipelineResource,
     resource_version: ResourceVersion,
