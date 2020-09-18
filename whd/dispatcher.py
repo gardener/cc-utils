@@ -16,9 +16,10 @@
 import datetime
 import functools
 import logging
+import random
+import threading
 import time
 import traceback
-import threading
 
 import ccc.elasticsearch
 import ccc.secrets_server
@@ -167,6 +168,8 @@ class GithubWebhookDispatcher(object):
                     pr_event=pr_event,
                     resources=resources,
                 )
+                # Give concourse a chance to react
+                time.sleep(random.randint(5,10))
                 self.handle_untriggered_jobs(pr_event=pr_event, concourse_api=concourse_api)
 
         thread = threading.Thread(target=_process_pr_event)
