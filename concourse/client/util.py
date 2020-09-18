@@ -281,6 +281,9 @@ def ensure_resource_pinned(
             resource_name=resource.name,
         ):
             logger.info(f'successfully unpinned {resource.name=}')
+        else:
+            logger.info(f'{resource.name=} not pinned - no unpinning necessary')
+
 
 
 def _ensure_resource_unpinned(
