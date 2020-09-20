@@ -1,0 +1,38 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Gardener cc-utils
+Upstream-Contact: The Gardener project <gardener@googlegroups.com>
+Source: https://github.com/gardener/cc-utils
+
+# --------------------------------------------------
+# source code
+
+Files:
+  .github/*
+  .dockerignore
+  .gitignore
+  ci/version
+  *.mako
+  CODEOWNERS
+  Gopkg.lock
+  Gopkg.toml
+  VERSION
+Copyright: 2017-2020 SAP SE or an SAP affiliate company and Gardener contributors
+License: Apache-2.0
+
+# --------------------------------------------------
+# documentation
+
+Files:
+  doc/*
+  CONTRIBUTING.md
+  README.md
+  *.txt
+Copyright: 2017-2020 SAP SE or an SAP affiliate company and Gardener contributors
+License: CC-BY-4.0
+
+# --------------------------------------------------
+# source dependencies
+
+# Files: path/to/3rd-party/lib
+# Copyright: <year> <copyright holder>
+# License: <spdx license id>

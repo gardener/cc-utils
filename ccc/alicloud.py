@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 SAP SE or an SAP affiliate company and Gardener contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import oss2
 from aliyunsdkcore.client import AcsClient
 import ci.util

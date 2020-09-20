@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 SAP SE or an SAP affiliate company and Gardener contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import product.model
 
 comp = product.model.Component.create(name='x.org/foo/bar', version='1.2.3')

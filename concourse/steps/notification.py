@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 SAP SE or an SAP affiliate company and Gardener contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+
 from concourse.model.traits.notifications import NotificationTriggeringPolicy
 from concourse.client import from_cfg
 from concourse.client.model import BuildStatus
