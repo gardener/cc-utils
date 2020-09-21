@@ -374,7 +374,7 @@ class GithubOrganisationDefinitionEnumerator(GithubDefinitionEnumeratorBase):
                 yield from definition_descriptors
 
 
-class DefinitionDescriptor(object):
+class DefinitionDescriptor:
     '''
     Container type holding the result of a pipeline rendering and additional
     metadata required to deploy as concrete Concourse Pipeline.
@@ -389,12 +389,18 @@ class DefinitionDescriptor(object):
         override_definitions=[{},],
         exception=None,
     ):
-        self.pipeline_name = not_empty(pipeline_name)
-        self.pipeline_definition = not_none(pipeline_definition)
-        self.main_repo = not_none(main_repo)
-        self.concourse_target_cfg = not_none(concourse_target_cfg)
-        self.concourse_target_team = not_none(concourse_target_team)
-        self.override_definitions = not_none(override_definitions)
+        try:
+            self.pipeline_name = not_empty(pipeline_name)
+            self.pipeline_definition = not_none(pipeline_definition)
+            self.main_repo = not_none(main_repo)
+            self.concourse_target_cfg = not_none(concourse_target_cfg)
+            self.concourse_target_team = not_none(concourse_target_team)
+            self.override_definitions = not_none(override_definitions)
+        except Exceptions as e:
+            raise ValueError(
+                f'{e=} missing value: {pipeline_name=} {pipeline_definition=} {main_repo=} '
+                f'{concourse_target_cfg=} {concourse_target_team=} {override_definitions=}'
+            )
         self.exception = exception
 
     def template_name(self):
@@ -413,7 +419,7 @@ class DefinitionDescriptor(object):
         return f'{self.__class__}: {self.pipeline_name}'
 
 
-class TemplateRetriever(object):
+class TemplateRetriever:
     '''
     Provides mako templates by name. Templates are cached.
     '''
