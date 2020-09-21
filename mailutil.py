@@ -17,6 +17,7 @@ import git
 import smtplib
 import typing
 
+import mail.model
 from model.email import EmailConfig
 from ci.util import (
     existing_dir,
@@ -87,10 +88,10 @@ def _send_mail(
     recipients: typing.Iterable[str],
     mail_template: str,
     subject: str,
+    attachments: typing.Sequence[mail.model.Attachment],
     replace_tokens: dict={},
     cc_recipients: typing.Iterable[str]=[],
     mimetype='text',
-    pdfs=[],
 ):
     not_none(email_cfg)
     not_empty(recipients)
@@ -125,7 +126,7 @@ def _send_mail(
         cc_recipients=cc_recipients,
         text=mail_body,
         mimetype=mimetype,
-        pdfs=pdfs,
+        attachments=attachments,
     )
 
     recipients.update(cc_recipients)

@@ -73,7 +73,7 @@ class WhitesourceClient:
         return self.request(method="POST",
                             url=self.routes.get_product_risk_report(),
                             headers={"content-type": "application/json"},
-                            data=json.dumps(body))
+                            json=body)
 
     def get_all_projects(self,
                          product_token: str):
@@ -85,7 +85,7 @@ class WhitesourceClient:
         return self.request(method="POST",
                             url=self.routes.get_all_projects(),
                             headers={"content-type": "application/json"},
-                            data=json.dumps(body))
+                            json=body).json()
 
     def get_project_vulnerability_report(self,
                                          project_token: str):
@@ -98,7 +98,7 @@ class WhitesourceClient:
         return self.request(method="POST",
                             url=self.routes.get_project_vulnerability_report(),
                             headers={"content-type": "application/json"},
-                            data=json.dumps(body))
+                            json=body).json()
 
 
 class WhitesourceRoutes:

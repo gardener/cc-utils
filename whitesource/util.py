@@ -1,11 +1,12 @@
 import functools
-import json
 
 import tabulate
+import typing
 
 import ci.util
 import whitesource.client
 import mailutil
+import mail.model
 
 
 @functools.lru_cache()
@@ -31,14 +32,14 @@ def generate_reporting_tables(report,
         else:
             below[lib] = dic
 
-    def _sort_struct(struct):
+    def _sort_cve_list(struct):
         return sorted(struct.items(),
                       key=lambda k_v: k_v[1]['CVSS-V3'],
                       reverse=True)
 
     # sort tables descending by CVSS-V3
-    below = _sort_struct(below)
-    above = _sort_struct(above)
+    below = _sort_cve_list(below)
+    above = _sort_cve_list(above)
 
     ttable_header = ('Component', 'Greatest CVSS-V3', 'Corresponding CVE')
     ttables = []
@@ -67,7 +68,7 @@ def generate_reporting_tables(report,
     return ttables
 
 
-def assemble_mail_body(tables: list,
+def assemble_mail_body(tables: typing.List,
                        threshold: float):
     return f'''
         <div>
@@ -118,22 +119,38 @@ def find_greatest_cve(projects,
         pvr = client.get_project_vulnerability_report(project_token=ptoken)
 
         # find greatest cve per project
-        for vul in json.loads(pvr.content)["vulnerabilities"]:
+        for vul in pvr["vulnerabilities"]:
             try:
-                if report.get(pname) is None or vul["cvss3_score"] > report[pname]["CVSS-V3"]:
-                    report[pname] = {
-                        "CVSS-V3": vul["cvss3_score"],
-                        "CVE": vul["name"],
-                    }
-            except KeyError:
-                # WS are ignored
-                pass
+                report = _add_cve_entry(report=report,
+                                        cvss_key_name="cvss3_score",
+                                        pname=pname,
+                                        vul=vul)
+            except KeyError as e:
+                # https://github.com/gardener/cc-utils/pull/476#discussion_r490231239
+                report = _add_cve_entry(report=report,
+                                        cvss_key_name="score",
+                                        pname=pname,
+                                        vul=vul)
+
+    return report
+
+
+def _add_cve_entry(report: dict,
+                   cvss_key_name: str,
+                   pname: str,
+                   vul: dict,):
+    if report.get(pname) is None or vul[cvss_key_name] > report[pname]["CVSS-V3"]:
+        report[pname] = {
+            "CVSS-V3": vul[cvss_key_name],
+            "CVE": vul["name"],
+        }
+    return report
 
 
 def send_mail(body,
               recipients: list,
-              landscape: str,
-              pdfs=[]):
+              component_name: str,
+              attachments: typing.Sequence[mail.model.Attachment]):
 
     # get standard cfg set for email cfg
     default_cfg_set_name = ci.util.current_config_set_name()
@@ -144,7 +161,7 @@ def send_mail(body,
         email_cfg=cfg_set.email(),
         recipients=recipients,
         mail_template=body,
-        subject=f'[Action Required] ({landscape}) WhiteSource Vulnerability Report',
+        subject=f'[Action Required] ({component_name}) WhiteSource Vulnerability Report',
         mimetype='html',
-        pdfs=pdfs
+        attachments=attachments,
     )
