@@ -88,7 +88,7 @@ class DefinitionEnumerator(object):
             pipeline_definition = deepcopy(definition)
             yield DefinitionDescriptor(
                 pipeline_name=name,
-                pipeline_definition=pipeline_definition,
+                pipeline_definition=pipeline_definition or {},
                 main_repo={'path': repo_path, 'branch': branch, 'hostname': repo_hostname},
                 concourse_target_cfg=self.cfg_set.concourse(),
                 concourse_target_team=self.job_mapping.team_name(),
