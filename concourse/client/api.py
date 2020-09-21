@@ -152,7 +152,6 @@ class ConcourseApiBase:
             body=form_data,
             headers={"content-type": "application/x-www-form-urlencoded"}
         )
-        print(response.json())
         auth_token = response.json()[self.AUTH_TOKEN_ATTRIBUTE_NAME]
         self.request_builder = AuthenticatedRequestBuilder(
             auth_token=auth_token,
