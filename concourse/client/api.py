@@ -85,6 +85,13 @@ class ConcourseApiFactory:
                 request_builder=request_builder,
                 verify_ssl=verify_ssl,
             )
+        elif concourse_api_version is ConcourseApiVersion.V6_5_1:
+            routes = ConcourseApiRoutesV6_3_0(base_url=base_url, team=team_name)
+            return ConcourseApiV6_5_1(
+                routes=routes,
+                request_builder=request_builder,
+                verify_ssl=verify_ssl,
+            )
         else:
             raise NotImplementedError(
                 "Concourse version {v} not supported".format(v=concourse_api_version.value)
@@ -145,6 +152,7 @@ class ConcourseApiBase:
             body=form_data,
             headers={"content-type": "application/x-www-form-urlencoded"}
         )
+        print(response.json())
         auth_token = response.json()[self.AUTH_TOKEN_ATTRIBUTE_NAME]
         self.request_builder = AuthenticatedRequestBuilder(
             auth_token=auth_token,
@@ -394,3 +402,7 @@ class ConcourseApiV5(ConcourseApiBase, SetTeamAPIUpdateMixin):
 class ConcourseApiV6_3_0(ConcourseApiBase, SetTeamAPIUpdateMixin):
 
     AUTH_TOKEN_ATTRIBUTE_NAME = 'id_token'
+
+
+class ConcourseApiV6_5_1(ConcourseApiBase, SetTeamAPIUpdateMixin):
+    pass

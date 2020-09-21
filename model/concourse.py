@@ -33,6 +33,7 @@ class ConcourseApiVersion(Enum):
     '''Enum to define different Concourse versions'''
     V5 = '5'
     V6_3_0 = '6.3.0'
+    V6_5_1 = '6.5.1'
 
 
 CONCOURSE_INFO_API_ENDPOINT = 'api/v1/info'
@@ -104,6 +105,8 @@ class ConcourseConfig(NamedModelElement):
     def compatible_api_version(self) -> ConcourseApiVersion:
         cc_version = semver.VersionInfo.parse(self.concourse_version())
 
+        if cc_version >= semver.VersionInfo.parse('6.5.1'):
+            return ConcourseApiVersion.V6_5_1
         if cc_version >= semver.VersionInfo.parse('6.3.0'):
             return ConcourseApiVersion.V6_3_0
         elif cc_version >= semver.VersionInfo.parse('5.0.0'):
