@@ -396,7 +396,7 @@ class DefinitionDescriptor:
             self.concourse_target_cfg = not_none(concourse_target_cfg)
             self.concourse_target_team = not_none(concourse_target_team)
             self.override_definitions = not_none(override_definitions)
-        except Exceptions as e:
+        except Exception as e:
             raise ValueError(
                 f'{e=} missing value: {pipeline_name=} {pipeline_definition=} {main_repo=} '
                 f'{concourse_target_cfg=} {concourse_target_team=} {override_definitions=}'
