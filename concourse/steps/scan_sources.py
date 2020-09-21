@@ -1,7 +1,6 @@
 import concurrent.futures
 from datetime import datetime
 import functools
-import json
 import tempfile
 import traceback
 import typing
@@ -10,6 +9,7 @@ import ci.util
 import checkmarx.client
 import checkmarx.project
 import checkmarx.util
+import mail.model
 import mailutil
 import product.model
 import product.util
@@ -201,8 +201,8 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
                                     extra_whitesource_config: dict,
                                     requester_mail: str,
                                     cve_threshold: float,
+                                    component_name: str,
                                     notification_recipients=[],
-                                    landscape="landscape-unknown",
                                     send_notificaton=True,):
 
     # create whitesource client
@@ -251,7 +251,7 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
 
         # get all projects
         ci.util.info('retrieving all projects')
-        projects = json.loads(client.get_all_projects(product_token=product_token).content)
+        projects = client.get_all_projects(product_token=product_token)
 
         report = whitesource.util.find_greatest_cve(client=client,
                                                     projects=projects)
@@ -261,7 +261,7 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
                                                             threshold=cve_threshold,
                                                             tablefmt="simple")
 
-        print('\n')
+        print()
         print(''.join(tables))
 
         if send_notificaton:
@@ -281,10 +281,16 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
             # send mail
             ci.util.info('sending notification')
             dto = datetime.now()
-            fname = f"{landscape}-{dto.year}.{dto.month}-{dto.day}-product-risk-report.pdf"
+            fname = f"{component_name}-{dto.year}.{dto.month}-{dto.day}-product-risk-report.pdf"
+
+            attachment = mail.model.Attachment(
+                mimetype_main="application",
+                mimetype_sub="pdf",
+                bytes=prr,
+                filename=fname,
+            )
 
             whitesource.util.send_mail(body=body,
                                        recipients=notification_recipients,
-                                       landscape=landscape,
-                                       pdfs=[{"pdf_bytes": prr,
-                                              "filename": fname}])
+                                       component_name=component_name,
+                                       attachments=(attachment,))

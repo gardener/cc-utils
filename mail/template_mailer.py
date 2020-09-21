@@ -13,10 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from email.mime.application import MIMEApplication
+import email.mime.base
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from html2text import html2text
+import typing
+
+import mail.model
 
 
 def create_body(mail_template: str, replace_tokens: dict):
@@ -31,9 +34,9 @@ def create_mail(
         sender: str,
         recipients: [str],
         text: str,
+        attachments: typing.Sequence[mail.model.Attachment],
         cc_recipients: [str]=[],
         mimetype: str='text',
-        pdfs=[],
     ) -> MIMEMultipart:
     msg = MIMEMultipart('alternative')
 
@@ -59,14 +62,17 @@ def create_mail(
     else:
         raise NotImplementedError()
 
-    for pdf in pdfs:
-        pdf_attachment = MIMEApplication(_data=pdf["pdf_bytes"],
-                                         _subtype='pdf')
+    for attachment_config in attachments:
+        attachment = email.mime.base.MIMEBase(
+            _maintype=attachment_config.mimetype_main,
+            _subtype=attachment_config.mimetype_sub,
+        )
+        attachment.set_payload(attachment_config.bytes)
 
-        pdf_attachment.add_header('Content-Disposition',
-                                  'attachment',
-                                  filename=pdf["filename"],)
-        msg.attach(pdf_attachment)
+        attachment.add_header('Content-Disposition',
+                              'attachment',
+                              filename=attachment_config.filename,)
+        msg.attach(attachment)
 
     msg.attach(msg_plain)
     if msg_html:

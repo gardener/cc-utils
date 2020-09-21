@@ -31,7 +31,7 @@ scan_sources_and_notify(
 % endif
 
 % if whitesource_cfg:
-landscape = "${component_trait.component_name()}"
+component_name = "${component_trait.component_name()}"
 scan_component_with_whitesource(
     whitesource_cfg_name='${whitesource_cfg.cfg_name()}',
     product_token='${whitesource_cfg.product_token()}',
@@ -40,7 +40,7 @@ scan_component_with_whitesource(
     requester_mail='${email_recipients[0]}',
     cve_threshold=,'${whitesource_cfg.cve_threshold()}',
     notification_recipients=${email_recipients},
-    landscape=landscape,
+    component_name=component_name,
 )
 % endif
 

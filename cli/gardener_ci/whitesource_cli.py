@@ -8,7 +8,11 @@ def upload_and_scan_component(
         product_token: str,
         component_descriptor_path: str,
         requester_mail: str,
-        extra_whitesource_config: str):
+        extra_whitesource_config: str,
+        component_name: str,
+        send_notification: bool=True,
+        cve_threshold: float=5.0,
+        ):
     try:
         extra_whitesource_config = json.loads(extra_whitesource_config)
     except JSONDecodeError as e:
@@ -19,4 +23,7 @@ def upload_and_scan_component(
         component_descriptor_path=component_descriptor_path,
         extra_whitesource_config=extra_whitesource_config,
         requester_mail=requester_mail,
-        send_notificaton=send_notification)
+        send_notificaton=send_notification,
+        cve_threshold=cve_threshold,
+        component_name=component_name,
+    )
