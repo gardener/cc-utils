@@ -125,7 +125,7 @@ def find_greatest_cve(projects,
                                         cvss_key_name="cvss3_score",
                                         pname=pname,
                                         vul=vul)
-            except KeyError as e:
+            except KeyError:
                 # https://github.com/gardener/cc-utils/pull/476#discussion_r490231239
                 report = _add_cve_entry(report=report,
                                         cvss_key_name="score",
