@@ -1,7 +1,7 @@
 # Install with: pip(3) install -r requirements.txt --upgrade
 GitPython<3.0.0
 Mako<2.0.0
-Sphinx<3.0.0
+Sphinx
 aliyun-python-sdk-core==2.13.16
 aliyun-python-sdk-ecs==4.19.9
 bcrypt<4.0.0

@@ -65,7 +65,7 @@ extensions = [
 
 
 def setup(app):
-    app.add_stylesheet('css/custom.css')
+    app.add_css_file('css/custom.css')
 
 
 # Set the default role. This is the role used when not specifying any other role in text-markup,
