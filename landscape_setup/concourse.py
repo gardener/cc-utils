@@ -141,7 +141,11 @@ def create_instance_specific_helm_values(
     ingress_cfg = config_factory.ingress(concourse_cfg.ingress_config())
     concourse_api_version = concourse_cfg.compatible_api_version()
 
-    SUPPORTED_API_VERSIONS = [ConcourseApiVersion.V5, ConcourseApiVersion.V6_3_0]
+    SUPPORTED_API_VERSIONS = [
+        ConcourseApiVersion.V5,
+        ConcourseApiVersion.V6_3_0,
+        ConcourseApiVersion.V6_5_1
+    ]
 
     if concourse_api_version in SUPPORTED_API_VERSIONS:
         github_config_name = concourse_cfg.github_enterprise_host()
