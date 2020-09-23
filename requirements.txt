@@ -21,15 +21,7 @@ github3.py<2.0.0
 google-api-core==1.22.1
 google-api-python-client==1.11.0
 google-auth==1.21.0
-google-auth-httplib2==0.0.4
-google-cloud-containeranalysis==2.0.0
-google-cloud-core==1.4.1
 google-cloud-storage==1.31.0
-google-crc32c==1.0.0
-google-resumable-media==1.0.0
-googleapis-common-protos==1.52.0
-grafeas==1.0.1
-grpc-google-iam-v1==0.12.3
 html2text
 jira
 kubernetes<12.0.0
