@@ -24,6 +24,7 @@ class TestWebhookDispatcherConfig(object):
     def required_dict(self):
         return {
                 'concourse_config_names': 'foo',
+
         }
 
     def test_validation_fails_on_missing_required_key(self, required_dict):
@@ -52,7 +53,6 @@ class TestWebhookDispatcherDeploymentConfig(object):
                 'image_name': 'foo',
                 'image_tag': 'bar',
             },
-            'ingress_host': 'foo',
             'ingress_config': 'foo',
             'external_url': 'foo',
             'secrets_server_config': 'foo',
