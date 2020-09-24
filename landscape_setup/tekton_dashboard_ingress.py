@@ -27,7 +27,6 @@ from landscape_setup.utils import (
 )
 from model.tekton_dashboard_ingress import TektonDashboardIngressConfig
 from model.ingress import IngressConfig
-from model.kubernetes import KubernetesConfig
 
 
 @ensure_annotations
@@ -53,7 +52,6 @@ def create_tekton_dashboard_helm_values(
 
 @ensure_annotations
 def deploy_tekton_dashboard_ingress(
-    kubernetes_config: KubernetesConfig,
     tekton_dashboard_ingress_config: TektonDashboardIngressConfig,
     chart_dir: str,
     deployment_name: str,
@@ -63,6 +61,9 @@ def deploy_tekton_dashboard_ingress(
     cfg_factory = global_ctx().cfg_factory()
     chart_dir = os.path.abspath(chart_dir)
 
+    kubernetes_config = cfg_factory.kubernetes(
+        tekton_dashboard_ingress_config.kubernetes_config_name()
+    )
     kube_ctx.set_kubecfg(kubernetes_config.kubeconfig())
 
     ingress_config = cfg_factory.ingress(tekton_dashboard_ingress_config.ingress_config())

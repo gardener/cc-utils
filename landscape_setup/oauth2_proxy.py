@@ -24,7 +24,6 @@ from landscape_setup.utils import (
 )
 from model.oauth2_proxy import Oauth2ProxyConfig
 from model.ingress import IngressConfig
-from model.kubernetes import KubernetesConfig
 
 
 @ensure_annotations
@@ -84,7 +83,6 @@ def create_oauth2_proxy_helm_values(
 
 @ensure_annotations
 def deploy_oauth2_proxy(
-    kubernetes_config: KubernetesConfig,
     oauth2_proxy_config: Oauth2ProxyConfig,
     deployment_name: str,
 ):
@@ -92,6 +90,7 @@ def deploy_oauth2_proxy(
 
     cfg_factory = global_ctx().cfg_factory()
 
+    kubernetes_config = cfg_factory.kubernetes(oauth2_proxy_config.kubernetes_config_name())
     kube_ctx.set_kubecfg(kubernetes_config.kubeconfig())
 
     ingress_config = cfg_factory.ingress(oauth2_proxy_config.ingress_config())
