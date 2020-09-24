@@ -26,6 +26,7 @@ from model.base import (
     NamedModelElement,
 )
 from ci.util import (
+    ctx,
     existing_dir,
     not_empty,
     not_none,
@@ -447,3 +448,13 @@ class ConfigurationSet(NamedModelElement):
         for cfg_type_name in cfg_types:
             for element in self._cfg_elements(cfg_type_name):
                 element.validate()
+
+
+def cluster_domain_from_kubernetes_config(kubernetes_config_name: str):
+    cfg_factory = ctx().cfg_factory()
+    kubernetes_cfg = cfg_factory.kubernetes(kubernetes_config_name)
+    if not (cluster_domain := kubernetes_cfg.cluster_domain()):
+        raise RuntimeError(
+            f"No cluster domain configured in kubernetes config '{kubernetes_config_name}'"
+    )
+    return cluster_domain
