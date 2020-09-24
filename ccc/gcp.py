@@ -212,11 +212,11 @@ class GrafeasClient:
         continuous_analysis = discovery.continuousAnalysis
 
         # XXX hard-code we require continuous scanning to be enabled
-        if continuous_analysis is not ContinuousAnalysis.ACTIVE:
+        if not continuous_analysis or continuous_analysis is not ContinuousAnalysis.ACTIVE:
             logger().warning(f'{continuous_analysis=} for {image_reference=}')
             return False
 
-        if discovery_status is not AnalysisStatus.FINISHED_SUCCESS:
+        if not discovery_status or discovery_status is not AnalysisStatus.FINISHED_SUCCESS:
             logger().warning(f'{discovery_status=} for {image_reference=}')
             return False
 

@@ -75,9 +75,9 @@ class PackageIssue:
 
 @dataclass
 class Discovery:
-    analysisStatus: AnalysisStatus
+    analysisStatus: Optional[AnalysisStatus]
     analysisStatusError: Optional[dict]
-    continuousAnalysis: ContinuousAnalysis
+    continuousAnalysis: Optional[ContinuousAnalysis]
 
 
 @dataclass
