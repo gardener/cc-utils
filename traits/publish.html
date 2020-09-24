@@ -280,6 +280,14 @@ may be changed by defining different logical repository names for <code class="c
 are expected to place their outputs into a directory indicated by an environment variable named
 <code class="code docutils literal notranslate"><span class="pre">&lt;OUTPUT_DIR&gt;_PATH</span></code> (defaults to <code class="code docutils literal notranslate"><span class="pre">BINARY_PATH</span></code>).</p>
 </div>
+<div class="section" id="implicitly-injected-build-steps">
+<h2>implicitly injected build steps<a class="headerlink" href="#implicitly-injected-build-steps" title="Permalink to this headline">¶</a></h2>
+<p>Defining this <code class="code docutils literal notranslate"><span class="pre">trait</span></code> will implicitly add two build steps, named <code class="code docutils literal notranslate"><span class="pre">prepare</span></code>, <code class="code docutils literal notranslate"><span class="pre">publish</span></code>. Thus,
+those step names are not allowed to be used in job definitions with this trait.</p>
+<p>The <code class="code docutils literal notranslate"><span class="pre">publish</span></code> step is guaranteed to always run _after_ the <code class="code docutils literal notranslate"><span class="pre">prepare</span></code> step.</p>
+<p>By default, both <code class="code docutils literal notranslate"><span class="pre">publish</span></code> and <code class="code docutils literal notranslate"><span class="pre">prepare</span></code> steps are run _after_ all other steps, with the
+notable exception of the <code class="code docutils literal notranslate"><span class="pre">release</span></code> step (from the <code class="code docutils literal notranslate"><span class="pre">release</span></code> trait).</p>
+</div>
 <div class="section" id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">steps</span><span class="p">:</span>

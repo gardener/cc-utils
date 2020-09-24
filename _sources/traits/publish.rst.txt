@@ -28,6 +28,17 @@ Build steps that are specified as inputs may declare the optional `output_dir` a
 are expected to place their outputs into a directory indicated by an environment variable named
 `<OUTPUT_DIR>_PATH` (defaults to `BINARY_PATH`).
 
+implicitly injected build steps
+===============================
+
+Defining this `trait` will implicitly add two build steps, named `prepare`, `publish`. Thus,
+those step names are not allowed to be used in job definitions with this trait.
+
+The `publish` step is guaranteed to always run _after_ the `prepare` step.
+
+By default, both `publish` and `prepare` steps are run _after_ all other steps, with the
+notable exception of the `release` step (from the `release` trait).
+
 
 Example
 =======
