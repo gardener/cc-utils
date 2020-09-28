@@ -139,6 +139,7 @@ class ConcourseConfig(NamedModelElement):
             'concourse_uam_config',
             'helm_chart_default_values_config',
             'kubernetes_cluster_config',
+            'concourse_version',
             'job_mapping',
             'imagePullSecret',
             'tls_secret_name',
