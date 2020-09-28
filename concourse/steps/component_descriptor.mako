@@ -61,7 +61,7 @@ dependencies.add_container_image_dependency(
   ContainerImage.create(
     name='${name}',
     version=effective_version,
-    image_reference='${image_descriptor.image_reference()}' + ':' + effective_version
+    image_reference='${image_descriptor.image_reference()}' + ':' + effective_version,
     relation=Relation.LOCAL,
   )
 )
