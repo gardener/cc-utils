@@ -554,9 +554,19 @@ class ContainerImageReference(DependencyBase):
 
 class ContainerImage(ContainerImageReference):
     @staticmethod
-    def create(name, version, image_reference):
+    def create(name, version, image_reference, relation:Relation=Relation.THIRD_PARTY):
+        if isinstance(relation, Relation):
+            relation_str = relation.value
+        else:
+            relation_str = str(relation)
+
         return ContainerImage(
-            raw_dict={'name':name, 'version':version, 'image_reference':image_reference}
+            raw_dict={
+                'name': name,
+                'version': version,
+                'image_reference': image_reference,
+                'relation': relation_str,
+            }
         )
 
     def _required_attributes(self):

@@ -131,6 +131,7 @@ def _parse_dependency_str_func(
         factory_function,
         required_attributes,
         validation_policies,
+        optional_attributes=(),
     ):
     def parse_dependency_str(token):
         try:
@@ -144,7 +145,8 @@ def _parse_dependency_str_func(
             )
         if ValidationPolicy.FORBID_EXTRA_ATTRIBUTES in validation_policies:
             extra_attribs = [
-                    attrib for attrib in parsed.keys() if attrib not in required_attributes
+                    attrib for attrib in parsed.keys()
+                    if attrib not in required_attributes and attrib not in optional_attributes
             ]
             if extra_attribs:
                 raise argparse.ArgumentTypeError(
@@ -197,6 +199,7 @@ def _parse_container_image_dependencies(
     _parse_container_image_deps = _parse_dependency_str_func(
         factory_function=ContainerImage.create,
         required_attributes=('name', 'version', 'image_reference'),
+        optional_attributes=('relation',),
         validation_policies=validation_policies,
     )
     return [_parse_container_image_deps(token) for token in container_image_dependencies]
