@@ -27,7 +27,7 @@ import yaml
 
 import gci.componentmodel
 
-from product.model import ComponentDescriptor, Component, ContainerImage
+from product.model import ComponentDescriptor, Component, ContainerImage, Relation
 from product.util import ComponentDescriptorResolver
 from ci.util import info, fail, parse_yaml_file, ctx
 import product.v2
@@ -62,6 +62,7 @@ dependencies.add_container_image_dependency(
     name='${name}',
     version=effective_version,
     image_reference='${image_descriptor.image_reference()}' + ':' + effective_version
+    relation=Relation.LOCAL,
   )
 )
 % endfor
