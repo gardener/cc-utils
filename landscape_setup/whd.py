@@ -37,17 +37,17 @@ from ci.util import (
 def create_webhook_dispatcher_helm_values(
     cfg_set,
     webhook_dispatcher_deployment_cfg: WebhookDispatcherDeploymentConfig,
-    cfg_factory: ConfigFactory,
+    config_factory: ConfigFactory,
 ):
     # calculate secrets server endpoint
     secrets_server_name = webhook_dispatcher_deployment_cfg.secrets_server_config_name()
-    secrets_server_cfg = cfg_factory.secrets_server(secrets_server_name)
+    secrets_server_cfg = config_factory.secrets_server(secrets_server_name)
     secrets_server_endpoint = secrets_server_cfg.endpoint_url()
     secrets_server_concourse_cfg_name = secrets_server_cfg.secrets().concourse_cfg_name()
     container_port = webhook_dispatcher_deployment_cfg.webhook_dispatcher_container_port()
     image_config = webhook_dispatcher_deployment_cfg.image_config()
     ingress_config_name = webhook_dispatcher_deployment_cfg.ingress_config()
-    ingress_config = cfg_factory.ingress(ingress_config_name)
+    ingress_config = config_factory.ingress(ingress_config_name)
 
     env_vars = []
     env_vars.append({
@@ -65,7 +65,7 @@ def create_webhook_dispatcher_helm_values(
     ]
 
     helm_values = {
-        'ingress_host': webhook_dispatcher_deployment_cfg.ingress_host(),
+        'ingress_host': webhook_dispatcher_deployment_cfg.ingress_host(config_factory),
         'ingress_ttl': str(ingress_config.ttl()),
         'ingress_tls_hosts': ingress_config.tls_host_names(),
         'ingress_issuer_name': ingress_config.issuer_name(),
@@ -103,7 +103,7 @@ def deploy_webhook_dispatcher_landscape(
     whd_helm_values = create_webhook_dispatcher_helm_values(
         cfg_set=cfg_set,
         webhook_dispatcher_deployment_cfg=webhook_dispatcher_deployment_cfg,
-        cfg_factory=cfg_factory,
+        config_factory=cfg_factory,
     )
 
     execute_helm_deployment(

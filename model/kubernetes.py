@@ -26,3 +26,6 @@ class KubernetesConfig(NamedModelElement):
 
     def kubeconfig(self):
         return self.raw.get('kubeconfig')
+
+    def cluster_domain(self):
+        return self.raw.get('cluster_domain')

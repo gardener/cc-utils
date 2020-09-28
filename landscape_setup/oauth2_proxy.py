@@ -24,7 +24,6 @@ from landscape_setup.utils import (
 )
 from model.oauth2_proxy import Oauth2ProxyConfig
 from model.ingress import IngressConfig
-from model.kubernetes import KubernetesConfig
 
 
 @ensure_annotations
@@ -32,11 +31,12 @@ def create_oauth2_proxy_helm_values(
     oauth2_proxy_config: Oauth2ProxyConfig,
     ingress_config: IngressConfig,
     deployment_name: str,
+    config_factory,
 ):
     oauth2_proxy_chart_config = oauth2_proxy_config.oauth2_proxy_chart_config()
     github_oauth_cfg = oauth2_proxy_config.github_oauth_config()
     github_cfg = global_ctx().cfg_factory().github(github_oauth_cfg.github_cfg_name())
-    ingress_host = oauth2_proxy_config.ingress_host()
+    ingress_host = oauth2_proxy_config.ingress_host(config_factory)
 
     helm_values = {
         'config': {
@@ -84,7 +84,6 @@ def create_oauth2_proxy_helm_values(
 
 @ensure_annotations
 def deploy_oauth2_proxy(
-    kubernetes_config: KubernetesConfig,
     oauth2_proxy_config: Oauth2ProxyConfig,
     deployment_name: str,
 ):
@@ -92,6 +91,7 @@ def deploy_oauth2_proxy(
 
     cfg_factory = global_ctx().cfg_factory()
 
+    kubernetes_config = cfg_factory.kubernetes(oauth2_proxy_config.kubernetes_config_name())
     kube_ctx.set_kubecfg(kubernetes_config.kubeconfig())
 
     ingress_config = cfg_factory.ingress(oauth2_proxy_config.ingress_config())
@@ -99,6 +99,7 @@ def deploy_oauth2_proxy(
         oauth2_proxy_config=oauth2_proxy_config,
         ingress_config=ingress_config,
         deployment_name=deployment_name,
+        config_factory=cfg_factory,
     )
 
     execute_helm_deployment(

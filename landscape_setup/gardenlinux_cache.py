@@ -27,19 +27,19 @@ from landscape_setup.utils import (
 )
 from model.gardenlinux_cache import GardenlinuxCacheConfig
 from model.ingress import IngressConfig
-from model.kubernetes import KubernetesConfig
 
 
 @ensure_annotations
 def create_gardenlinux_cache_helm_values(
     gardenlinux_cache_config: GardenlinuxCacheConfig,
     ingress_config: IngressConfig,
+    config_factory,
 ):
     helm_values = {
         'external_url': gardenlinux_cache_config.external_url(),
         'imageReference': gardenlinux_cache_config.image_reference(),
         'imageTag': gardenlinux_cache_config.image_tag(),
-        'ingress_host': gardenlinux_cache_config.ingress_host(),
+        'ingress_host': gardenlinux_cache_config.ingress_host(config_factory),
         'ingress_issuer_name': ingress_config.issuer_name(),
         'ingress_tls_hosts': ingress_config.tls_host_names(),
         'ingress_ttl': str(ingress_config.ttl()),
@@ -53,7 +53,6 @@ def create_gardenlinux_cache_helm_values(
 
 @ensure_annotations
 def deploy_gardenlinux_cache(
-    kubernetes_config: KubernetesConfig,
     gardenlinux_cache_config: GardenlinuxCacheConfig,
     chart_dir: str,
     deployment_name: str,
@@ -63,12 +62,14 @@ def deploy_gardenlinux_cache(
     cfg_factory = global_ctx().cfg_factory()
     chart_dir = os.path.abspath(chart_dir)
 
+    kubernetes_config = cfg_factory.kubernetes(gardenlinux_cache_config.kubernetes_config_name())
     kube_ctx.set_kubecfg(kubernetes_config.kubeconfig())
 
     ingress_config = cfg_factory.ingress(gardenlinux_cache_config.ingress_config())
     helm_values = create_gardenlinux_cache_helm_values(
         gardenlinux_cache_config=gardenlinux_cache_config,
         ingress_config=ingress_config,
+        config_factory=cfg_factory,
     )
 
     execute_helm_deployment(

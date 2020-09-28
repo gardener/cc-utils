@@ -27,20 +27,20 @@ from landscape_setup.utils import (
 )
 from model.tekton_dashboard_ingress import TektonDashboardIngressConfig
 from model.ingress import IngressConfig
-from model.kubernetes import KubernetesConfig
 
 
 @ensure_annotations
 def create_tekton_dashboard_helm_values(
     tekton_dashboard_ingress_config: TektonDashboardIngressConfig,
     ingress_config: IngressConfig,
+    config_factory,
 ):
     oauth2_proxy_config = global_ctx().cfg_factory().oauth2_proxy(
         tekton_dashboard_ingress_config.oauth2_proxy_config_name()
     )
     helm_values = {
         'external_url': tekton_dashboard_ingress_config.external_url(),
-        'ingress_host': tekton_dashboard_ingress_config.ingress_host(),
+        'ingress_host': tekton_dashboard_ingress_config.ingress_host(config_factory),
         'ingress_issuer_name': ingress_config.issuer_name(),
         'ingress_tls_hosts': ingress_config.tls_host_names(),
         'ingress_ttl': str(ingress_config.ttl()),
@@ -53,7 +53,6 @@ def create_tekton_dashboard_helm_values(
 
 @ensure_annotations
 def deploy_tekton_dashboard_ingress(
-    kubernetes_config: KubernetesConfig,
     tekton_dashboard_ingress_config: TektonDashboardIngressConfig,
     chart_dir: str,
     deployment_name: str,
@@ -63,12 +62,16 @@ def deploy_tekton_dashboard_ingress(
     cfg_factory = global_ctx().cfg_factory()
     chart_dir = os.path.abspath(chart_dir)
 
+    kubernetes_config = cfg_factory.kubernetes(
+        tekton_dashboard_ingress_config.kubernetes_config_name()
+    )
     kube_ctx.set_kubecfg(kubernetes_config.kubeconfig())
 
     ingress_config = cfg_factory.ingress(tekton_dashboard_ingress_config.ingress_config())
     helm_values = create_tekton_dashboard_helm_values(
         tekton_dashboard_ingress_config=tekton_dashboard_ingress_config,
         ingress_config=ingress_config,
+        config_factory=cfg_factory,
     )
 
     execute_helm_deployment(

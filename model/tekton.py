@@ -44,12 +44,12 @@ class TektonConfig(NamedModelElement):
         return None
 
     def kubernetes_config_name(self):
-        return self.raw['kubernetes_config_name']
+        return self.raw['kubernetes_config']
 
     def _required_attributes(self):
         yield from super()._required_attributes()
         yield from [
-            'kubernetes_config_name',
+            'kubernetes_config',
         ]
 
     def _optional_attributes(self):

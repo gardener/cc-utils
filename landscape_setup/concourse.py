@@ -137,9 +137,9 @@ def create_instance_specific_helm_values(
     main_team = concourse_uam_cfg.main_team()
     external_url = concourse_cfg.external_url()
     external_host = urlparse(external_url).netloc
-    ingress_host = concourse_cfg.ingress_host()
+    ingress_host = concourse_cfg.ingress_host(config_factory)
     ingress_cfg = config_factory.ingress(concourse_cfg.ingress_config())
-    concourse_api_version = concourse_cfg.compatible_api_version()
+    concourse_api_version = concourse_cfg.compatible_api_version(config_factory)
 
     SUPPORTED_API_VERSIONS = [
         ConcourseApiVersion.V5,

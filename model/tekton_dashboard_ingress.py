@@ -13,7 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from . import cluster_domain_from_kubernetes_config
 from model.base import NamedModelElement
+
+
+TEKTON_INGRESS_SUBDOMAIN_LABEL = 'tekton-dashboard'
 
 
 class TektonDashboardIngressConfig(NamedModelElement):
@@ -29,8 +33,15 @@ class TektonDashboardIngressConfig(NamedModelElement):
     def ingress_config(self):
         return self.raw.get('ingress_config')
 
-    def ingress_host(self):
-        return self.raw.get('ingress_host')
+    def ingress_host(self, cfg_factory):
+        cluster_domain = cluster_domain_from_kubernetes_config(
+            cfg_factory,
+            self.kubernetes_config_name(),
+        )
+        return f'{TEKTON_INGRESS_SUBDOMAIN_LABEL}.{cluster_domain}'
+
+    def kubernetes_config_name(self):
+        return self.raw.get('kubernetes_config')
 
     def service_name(self):
         return self.raw.get('service_name')
@@ -46,7 +57,7 @@ class TektonDashboardIngressConfig(NamedModelElement):
         yield from [
             'external_url',
             'ingress_config',
-            'ingress_host',
+            'kubernetes_config',
             'namespace',
             'service_name',
             'service_port',

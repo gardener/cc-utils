@@ -14,6 +14,7 @@
 # limitations under the License.
 import deprecated
 
+from . import cluster_domain_from_kubernetes_config
 from model.base import (
     NamedModelElement,
     ModelDefaultsMixin,
@@ -47,11 +48,13 @@ class WebhookDispatcherConfig(NamedModelElement, ModelDefaultsMixin):
         return self.raw['concourse_config_names']
 
 
+WHD_DEPLOYMENT_SUBDOMAIN_LABEL = 'webhooks'
+
+
 class WebhookDispatcherDeploymentConfig(NamedModelElement):
     def _required_attributes(self):
         return {
             'whd_image',
-            'ingress_host',
             'ingress_config',
             'external_url',
             'secrets_server_config',
@@ -69,14 +72,18 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
     def external_url(self):
         return self.raw.get('external_url')
 
-    def ingress_host(self):
-        return self.raw.get('ingress_host')
-
     def ingress_config(self):
         return self.raw.get('ingress_config')
 
     def secrets_server_config_name(self):
         return self.raw.get('secrets_server_config')
+
+    def ingress_host(self, cfg_factory):
+        cluster_domain = cluster_domain_from_kubernetes_config(
+            cfg_factory,
+            self.kubernetes_config_name(),
+        )
+        return f'{WHD_DEPLOYMENT_SUBDOMAIN_LABEL}.{cluster_domain}'
 
     def kubernetes_config_name(self):
         return self.raw.get('kubernetes_config')
