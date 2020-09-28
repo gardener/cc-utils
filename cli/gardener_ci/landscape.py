@@ -267,10 +267,13 @@ def deploy_or_upgrade_gardenlinux_cache(
 
     cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(config_set_name)
+    concourse_cfg = cfg_set.concourse()
+    kubernetes_cfg = cfg_factory.kubernetes(concourse_cfg.kubernetes_cluster_config())
     gardenlinux_cache_cfg = cfg_set.gardenlinux_cache()
 
     setup_gardenlinux_cache.deploy_gardenlinux_cache(
         gardenlinux_cache_config=gardenlinux_cache_cfg,
+        kubernetes_config=kubernetes_cfg,
         chart_dir=chart_dir,
         deployment_name=deployment_name,
     )
@@ -285,16 +288,21 @@ def deploy_or_upgrade_tekton_dashboard_ingress(
 
     cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(config_set_name)
+    tekton_cfg = cfg_set.tekton()
+    kubernetes_cfg_name = tekton_cfg.kubernetes_config_name()
+    kubernetes_cfg = cfg_factory.kubernetes(kubernetes_cfg_name)
     oauth2_proxy_cfg = cfg_set.oauth2_proxy()
     tekton_dashboard_ingress_cfg = cfg_set.tekton_dashboard_ingress()
 
     setup_oauth2_proxy.deploy_oauth2_proxy(
         oauth2_proxy_config=oauth2_proxy_cfg,
+        kubernetes_config=kubernetes_cfg,
         deployment_name=f'{deployment_name}-oauth2-proxy',
     )
 
     setup_tekton_dashboard_ingress.deploy_tekton_dashboard_ingress(
         tekton_dashboard_ingress_config=tekton_dashboard_ingress_cfg,
+        kubernetes_config=kubernetes_cfg,
         chart_dir=chart_dir,
         deployment_name=deployment_name,
     )

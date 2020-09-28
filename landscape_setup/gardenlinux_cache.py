@@ -27,6 +27,7 @@ from landscape_setup.utils import (
 )
 from model.gardenlinux_cache import GardenlinuxCacheConfig
 from model.ingress import IngressConfig
+from model.kubernetes import KubernetesConfig
 
 
 @ensure_annotations
@@ -52,6 +53,7 @@ def create_gardenlinux_cache_helm_values(
 
 @ensure_annotations
 def deploy_gardenlinux_cache(
+    kubernetes_config: KubernetesConfig,
     gardenlinux_cache_config: GardenlinuxCacheConfig,
     chart_dir: str,
     deployment_name: str,
@@ -61,7 +63,6 @@ def deploy_gardenlinux_cache(
     cfg_factory = global_ctx().cfg_factory()
     chart_dir = os.path.abspath(chart_dir)
 
-    kubernetes_config = cfg_factory.kubernetes(gardenlinux_cache_config.kubernetes_config_name())
     kube_ctx.set_kubecfg(kubernetes_config.kubeconfig())
 
     ingress_config = cfg_factory.ingress(gardenlinux_cache_config.ingress_config())
