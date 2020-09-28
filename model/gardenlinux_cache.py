@@ -14,11 +14,7 @@
 # limitations under the License.
 import urllib
 
-from . import cluster_domain_from_kubernetes_config
 from model.base import NamedModelElement
-
-
-GARDENLINUX_CACHE_SUBDOMAIN_LABEL = 'snapshot-cache'
 
 
 class GardenlinuxCacheConfig(NamedModelElement):
@@ -41,11 +37,7 @@ class GardenlinuxCacheConfig(NamedModelElement):
         return self.raw.get('ingress_config')
 
     def ingress_host(self):
-        cluster_domain = cluster_domain_from_kubernetes_config(self.kubernetes_config_name())
-        return f'{GARDENLINUX_CACHE_SUBDOMAIN_LABEL}.{cluster_domain}'
-
-    def kubernetes_config_name(self):
-        return self.raw.get('kubernetes_config')
+        return self.raw.get('ingress_host')
 
     def volume_size(self) -> str:
         return self.raw.get('volume_size')

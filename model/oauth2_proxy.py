@@ -14,10 +14,6 @@
 # limitations under the License.
 from model.base import NamedModelElement
 
-from . import cluster_domain_from_kubernetes_config
-
-OAUTH_PROXY_SUBDOMAIN_LABEL = 'tkn-auth'
-
 
 class Oauth2ProxyConfig(NamedModelElement):
     '''Not intended to be instantiated by users of this module
@@ -42,17 +38,10 @@ class Oauth2ProxyConfig(NamedModelElement):
         return self.raw.get('ingress_config')
 
     def ingress_host(self):
-        cluster_domain = cluster_domain_from_kubernetes_config(self.kubernetes_config_name())
-        return f'{self.subdomain_label()}.{cluster_domain}'
+        return self.raw.get('ingress_host')
 
     def namespace(self):
         return self.raw.get('namespace')
-
-    def kubernetes_config_name(self):
-        return self.raw.get('kubernetes_config')
-
-    def subdomain_label(self):
-        return self.raw.get('subdomain_label', OAUTH_PROXY_SUBDOMAIN_LABEL)
 
     def _required_attributes(self):
         yield from super()._required_attributes()
