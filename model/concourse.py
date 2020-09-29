@@ -155,9 +155,11 @@ class ConcourseConfig(NamedModelElement):
 
     def _optional_attributes(self):
         return {
-            'github_enterprise_host',
-            'proxy',
             'clamav_config',
+            'concourse_version', # TODO: Remove
+            'github_enterprise_host',
+            'ingress_host', # TODO: Remove
+            'proxy',
         }
 
     def validate(self):
