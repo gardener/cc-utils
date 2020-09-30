@@ -18,8 +18,11 @@ import subprocess
 import tempfile
 import typing
 
+import gci.componentmodel
+
 import ci.util
 import concourse.model.traits.update_component_deps
+import concourse.steps.component_descriptor_util as cdu
 import gitutil
 import github.util
 import product.model
@@ -36,12 +39,12 @@ from github.release_notes.util import ReleaseNotes
 
 
 def current_product_descriptor():
-    component_descriptor = os.path.join(
+    component_descriptor_v1 = os.path.join(
         ci.util.check_env('COMPONENT_DESCRIPTOR_DIR'),
-        'component_descriptor',
+        cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V1),
     )
     return product.model.ComponentDescriptor.from_dict(
-        ci.util.parse_yaml_file(component_descriptor),
+        ci.util.parse_yaml_file(component_descriptor_v1),
     )
 
 

@@ -10,7 +10,7 @@ def component_descriptor_fname(
     schema_version=gci.componentmodel.SchemaVersion.V1,
 ):
     if schema_version is gci.componentmodel.SchemaVersion.V1:
-      return 'component_descriptor'
+      return 'component_descriptor_v1'
     elif schema_version is gci.componentmodel.SchemaVersion.V2:
       return 'component_descriptor_v2'
     else:

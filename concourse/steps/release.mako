@@ -5,6 +5,8 @@
 <%
 from makoutil import indent_func
 from concourse.steps import step_lib
+import concourse.steps.component_descriptor_util as cdu
+import gci.componentmodel
 import os
 version_file = job_step.input('version_path') + '/version'
 release_trait = job_variant.trait('release')
@@ -27,11 +29,11 @@ repo = job_variant.main_repository()
 
 component_descriptor_file_path = os.path.join(
   job_step.input('component_descriptor_dir'),
-  'component_descriptor'
+  cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V1),
 )
 component_descriptor_v2_path = os.path.join(
   job_step.input('component_descriptor_dir'),
-  'component_descriptor_v2', # XXX deduplicate -> component_descriptor_util.py
+  cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
 )
 
 release_callback_path = release_trait.release_callback_path()

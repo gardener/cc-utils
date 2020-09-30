@@ -18,7 +18,10 @@ import functools
 import os
 import tabulate
 
+import gci.componentmodel
+
 import ci.util
+import concourse.steps.component_descriptor_utils as cdu
 import product.model
 import product.util
 import protecode.util
@@ -41,9 +44,8 @@ print(tabulate.tabulate(
   ),
 ))
 
-component_descriptor_path = os.path.join(
-  ci.util.check_env('COMPONENT_DESCRIPTOR_DIR'),
-  'component_descriptor'
+component_descriptor_path = cdu.component_descriptor_path(
+  gci.componentmodel.SchemaVersion.V1,
 )
 
 component_descriptor = parse_component_descriptor()

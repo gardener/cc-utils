@@ -84,7 +84,7 @@ class ComponentDescriptorStepTest(unittest.TestCase):
             pass
 
         generated_component_descriptor = component_descriptor_dir.joinpath(
-            'component_descriptor'
+            'component_descriptor_v1'
         )
         self.assertTrue(generated_component_descriptor.is_file())
         # todo: parse and validate contents

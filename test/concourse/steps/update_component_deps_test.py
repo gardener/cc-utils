@@ -63,7 +63,7 @@ class UpdateComponentDependenciesStepTest(unittest.TestCase):
 
 def test_current_product_descriptor(tmpdir):
     os.environ['COMPONENT_DESCRIPTOR_DIR'] = str(tmpdir)
-    tmpdir.join('component_descriptor').write('{}')
+    tmpdir.join('component_descriptor_v1').write('{}')
 
     assert current_product_descriptor().raw == {
         'meta': {'schemaVersion': 'v1'},

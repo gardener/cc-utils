@@ -78,14 +78,17 @@ dependencies.add_container_image_dependency(
 )
 % endfor
 
-info('default component descriptor:\n')
+info('default component descriptor (v1):\n')
 print(yaml.dump(base_descriptor.raw, indent=2))
 
 descriptor_out_dir = os.path.abspath('${job_step.output("component_descriptor_dir")}')
-descriptor_path = os.path.join(descriptor_out_dir, 'component_descriptor')
+descriptor_path = os.path.join(
+  descriptor_out_dir,
+  component_descriptor_fname(schema_version=gci.componentmodel.SchemaVersion.V1),
+)
 
 v2_outfile = os.path.join(
-  os.path.dirname(descriptor_path),
+  descriptor_out_dir,
   component_descriptor_fname(schema_version=gci.componentmodel.SchemaVersion.V2),
 )
 
