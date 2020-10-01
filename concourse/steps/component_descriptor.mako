@@ -47,12 +47,12 @@ component_name = '${descriptor_trait.component_name()}'
 ctx_repository_base_url = '${descriptor_trait.ctx_repository_base_url()}'
 
 # create base descriptor filled with default values
-base_descriptor = ComponentDescriptor()
+base_descriptor_v1 = ComponentDescriptor()
 component = Component.create(
   name='${descriptor_trait.component_name()}',
   version=effective_version,
 )
-base_descriptor.add_component(component)
+base_descriptor_v1.add_component(component)
 
 # add own container image references
 dependencies = component.dependencies()
@@ -79,7 +79,7 @@ dependencies.add_container_image_dependency(
 % endfor
 
 info('default component descriptor (v1):\n')
-print(yaml.dump(base_descriptor.raw, indent=2))
+print(yaml.dump(base_descriptor_v1.raw, indent=2))
 
 descriptor_out_dir = os.path.abspath('${job_step.output("component_descriptor_dir")}')
 descriptor_path = os.path.join(
@@ -101,10 +101,10 @@ if not os.path.isfile(descriptor_script):
     )
   )
   with open(descriptor_path, 'w') as f:
-    yaml.dump(base_descriptor.raw, f, indent=2)
+    yaml.dump(base_descriptor_v1.raw, f, indent=2)
   info('wrote component descriptor: ' + descriptor_path)
   component_descriptor_v2 = create_v2_component_descriptor(
-      descriptor=base_descriptor,
+      descriptor=base_descriptor_v1,
       component=component,
       ctx_repository_base_url=ctx_repository_base_url,
   )
@@ -121,10 +121,10 @@ else:
     fail('descriptor script file exists but is not executable: ' + descriptor_script)
 
 
-# dump base_descriptor and pass it to descriptor script via env var
+# dump base_descriptor_v1 and pass it to descriptor script via env var
 base_descriptor_file = os.path.join(descriptor_out_dir, 'base_component_descriptor')
 with open(base_descriptor_file, 'w') as f:
-  json.dump(base_descriptor.raw, f, indent=2)
+  json.dump(base_descriptor_v1.raw, f, indent=2)
 
 # make main repository path absolute
 main_repo_path = os.path.abspath('${main_repo.resource_name()}')
