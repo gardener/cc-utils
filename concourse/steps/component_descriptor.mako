@@ -8,6 +8,7 @@ from concourse.steps import step_lib
 descriptor_trait = job_variant.trait('component_descriptor')
 main_repo = job_variant.main_repository()
 main_repo_path_env_var = main_repo.logical_name().replace('-', '_').upper() + '_PATH'
+ctx_repository_base_url = descriptor_trait.ctx_repository_base_url()
 
 policies = descriptor_trait.validation_policies()
 
@@ -26,6 +27,7 @@ import sys
 import yaml
 
 import gci.componentmodel
+cm = gci.componentmodel
 
 from product.model import ComponentDescriptor, Component, ContainerImage, Relation
 from product.util import ComponentDescriptorResolver
@@ -44,10 +46,17 @@ with open(version_file_path) as f:
   effective_version = f.read().strip()
 
 component_name = '${descriptor_trait.component_name()}'
+component_name_v2 = component_name.lower() # OCI demands lowercase
 ctx_repository_base_url = '${descriptor_trait.ctx_repository_base_url()}'
 
 # create base descriptor filled with default values
 base_descriptor_v1 = ComponentDescriptor()
+base_descriptor_v2 = base_component_descriptor_v2(
+    component_name_v2=component_name_v2,
+    effective_version=effective_version,
+    ctx_repository_base_url=ctx_repository_base_url,
+)
+component_v2 = base_descriptor_v2.component
 component = Component.create(
   name='${descriptor_trait.component_name()}',
   version=effective_version,
@@ -65,6 +74,17 @@ dependencies.add_container_image_dependency(
     relation=Relation.LOCAL,
   )
 )
+component_v2.localResources.append(
+  cm.Resource(
+    name='${name}',
+    version=effective_version, # always inherited from component
+    type=cm.ResourceType.OCI_IMAGE,
+    access=cm.OciAccess(
+      type=cm.AccessType.OCI_REGISTRY,
+      imageReference='${image_descriptor.image_reference()}' + ':' + effective_version,
+    ),
+  ),
+)
 % endfor
 
 # add container image references from patch_images trait
@@ -80,6 +100,11 @@ dependencies.add_container_image_dependency(
 
 info('default component descriptor (v1):\n')
 print(yaml.dump(base_descriptor_v1.raw, indent=2))
+
+print('\n' * 4)
+info('default component descriptor (v2):\n')
+print(dump_component_descriptor_v2(base_descriptor_v2))
+print('\n' * 2)
 
 descriptor_out_dir = os.path.abspath('${job_step.output("component_descriptor_dir")}')
 descriptor_path = os.path.join(

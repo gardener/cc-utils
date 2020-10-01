@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import yaml
+
 
 import ci.util
 from product.util import (
@@ -21,7 +23,63 @@ from product.util import (
 )
 import product.v2
 
-import yaml
+
+def dump_component_descriptor_v2(component_descriptor_v2: cm.ComponentDescriptor):
+    import gci.componentmodel as cm
+    import dataclasses
+    import yaml
+    return yaml.dump(
+        data=dataclasses.asdict(component_descriptor_v2),
+        Dumper=cm.EnumValueYamlDumper,
+    )
+
+
+def base_component_descriptor_v2(
+    component_name_v2: str,
+    effective_version: str,
+    ctx_repository_base_url: str,
+):
+    import gci.componentmodel as cm
+    import version as version_util
+    parsed_version = version_util.parse_to_semver(effective_version)
+    if parsed_version.finalize_version() == parsed_version:
+        # "final" version --> there will be a tag, later (XXX hardcoded hack)
+        src_ref = f'refs/tags/{effective_version}'
+    else:
+        # let's hope the version contains something committish
+        src_ref = f'{parsed_version.prerelease}{parsed_version.build}'
+
+    base_descriptor_v2 = cm.ComponentDescriptor(
+      meta=cm.Metadata(schemaVersion=cm.SchemaVersion.V2),
+      component=cm.Component(
+        name=component_name_v2,
+        version=effective_version,
+        repositoryContexts=[
+          cm.RepositoryContext(
+            baseUrl=ctx_repository_base_url,
+            type=cm.AccessType.OCI_REGISTRY,
+          )
+        ],
+        provider=cm.Provider.INTERNAL,
+        sources=[
+          cm.ComponentSource(
+            name=component_name_v2, # XXX only valid for gardener-components
+            type=cm.SourceType.GIT,
+            access=cm.GithubAccess(
+              type=cm.AccessType.GITHUB,
+              repoUrl=component_name_v2,
+              ref=src_ref,
+            ),
+          )
+        ],
+        componentReferences=[], # added later
+        localResources=[], # added later
+        externalResources=[], # added later
+        labels=[], # added later
+      ),
+    )
+
+    return base_descriptor_v2
 
 
 def component_diff_since_last_release(
