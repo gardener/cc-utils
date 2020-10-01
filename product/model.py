@@ -239,6 +239,7 @@ class DependencyBase(ModelBase):
 
 
 def _convert_v2_component_descriptor_dict_to_v1(d: dict):
+    # XXX rm this entire function (obsolete)
     '''
     translates the given `dict` (which must be a ComponentDescriptor according to v2 spec)
     into a v1-based component descriptor model. This is done as an intermediate step in
