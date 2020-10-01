@@ -119,7 +119,7 @@ if not os.path.isfile(descriptor_script):
   info(f'wrote component descriptor (v1): {descriptor_path=}')
 
   with open(v2_outfile, 'w') as f:
-    f.write(dump_component_descriptor_v2(base_descriptor_v2)
+    f.write(dump_component_descriptor_v2(base_descriptor_v2))
   info(f'wrote component descriptor (v2): {v2_outfile=}')
   sys.exit(0)
 else:
