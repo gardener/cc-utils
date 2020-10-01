@@ -116,18 +116,11 @@ if not os.path.isfile(descriptor_script):
   )
   with open(descriptor_path, 'w') as f:
     yaml.dump(base_descriptor_v1.raw, f, indent=2)
-  info('wrote component descriptor: ' + descriptor_path)
-  component_descriptor_v2 = create_v2_component_descriptor(
-      descriptor=base_descriptor_v1,
-      component=component,
-      ctx_repository_base_url=ctx_repository_base_url,
-  )
-  if not component_descriptor_v2:
-    print('warning: failed to create component-descriptor-v2')
-    sys.exit(0)
+  info(f'wrote component descriptor (v1): {descriptor_path=}')
+
   with open(v2_outfile, 'w') as f:
-    component_descriptor_v2.to_fobj(fileobj=f)
-    print(f'wrote component-descriptor v2 to {v2_outfile=}')
+    f.write(dump_component_descriptor_v2(base_descriptor_v2)
+  info(f'wrote component descriptor (v2): {v2_outfile=}')
   sys.exit(0)
 else:
   is_executable = bool(os.stat(descriptor_script)[stat.ST_MODE] & stat.S_IEXEC)
