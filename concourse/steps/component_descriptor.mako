@@ -50,30 +50,15 @@ component_name_v2 = component_name.lower() # OCI demands lowercase
 ctx_repository_base_url = '${descriptor_trait.ctx_repository_base_url()}'
 
 # create base descriptor filled with default values
-base_descriptor_v1 = ComponentDescriptor()
 base_descriptor_v2 = base_component_descriptor_v2(
     component_name_v2=component_name_v2,
     effective_version=effective_version,
     ctx_repository_base_url=ctx_repository_base_url,
 )
 component_v2 = base_descriptor_v2.component
-component = Component.create(
-  name='${descriptor_trait.component_name()}',
-  version=effective_version,
-)
-base_descriptor_v1.add_component(component)
 
 # add own container image references
-dependencies = component.dependencies()
 % for name, image_descriptor in output_image_descriptors.items():
-dependencies.add_container_image_dependency(
-  ContainerImage.create(
-    name='${name}',
-    version=effective_version,
-    image_reference='${image_descriptor.image_reference()}' + ':' + effective_version,
-    relation=Relation.LOCAL,
-  )
-)
 component_v2.localResources.append(
   cm.Resource(
     name='${name}',
@@ -86,6 +71,10 @@ component_v2.localResources.append(
   ),
 )
 % endfor
+
+base_descriptor_v1 = product.v2.convert_to_v1(component_descriptor_v2=base_descriptor_v2)
+component = base_descriptor_v1.component((component_name, effective_version))
+dependencies = component.dependencies()
 
 # add container image references from patch_images trait
 % for image_alter_cfg in image_alter_cfgs:
