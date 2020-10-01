@@ -17,6 +17,76 @@ import product.model
 import product.util
 
 
+def convert_to_v1(
+    component_descriptor_v2: cm.ComponentDescriptor,
+):
+    component_v2 = component_descriptor_v2.component
+    component_descriptor_v1 = product.model.ComponentDescriptor.from_dict(raw_dict={})
+
+    component_v1 = _convert_component_to_v1(component_v2=component_v2)
+    component_descriptor_v1.add_component(component_v1)
+
+    component_deps = component_v1.dependencies()
+
+    for component_ref in component_v2.componentReferences:
+        component_deps.add_component_dependency(
+            product.model.ComponentReference.create(
+                name=component_ref.componentName,
+                version=component_ref.version,
+            )
+        )
+    # todo: also resolve component references (delegate for now)
+    return component_descriptor_v1
+
+
+def _convert_component_to_v1(
+    component_v2: cm.Component,
+):
+    component_v1 = product.model.Component.create(
+        name=component_v2.name,
+        version=component_v2.version
+    )
+    component_deps = component_v1.dependencies()
+
+    for local_resource in component_v2.localResources:
+        if local_resource.type is cm.ResourceType.OCI_IMAGE:
+            component_deps.add_container_image_dependency(
+                product.model.ContainerImage.create(
+                    name=local_resource.name,
+                    version=local_resource.version,
+                    image_reference=local_resource.access.imageReference,
+                    relation=product.model.Relation.LOCAL,
+                )
+            )
+        elif local_resource.type is cm.ResourceType.GENERIC:
+            component_deps.add_generic_dependency(
+                product.model.GenericDependency.create(
+                    name=local_resource.name,
+                    version=local_resource.version,
+                )
+            )
+
+    for external_resource in component_v2.externalResources:
+        if external_resource.type is cm.ResourceType.OCI_IMAGE:
+            component_deps.add_container_image_dependency(
+                product.model.ContainerImage.create(
+                    name=external_resource.name,
+                    version=external_resource.version,
+                    image_reference=external_resource.access.imageReference,
+                    relation=product.model.Relation.THIRD_PARTY,
+                )
+            )
+        elif external_resource.type is cm.ResourceType.GENERIC:
+            component_deps.add_generic_dependency(
+                product.model.GenericDependency.create(
+                    name=external_resource.name,
+                    version=external_resource.version,
+                )
+            )
+
+    return component_v1
+
+
 def _convert_dependencies_to_v2_resources(
     component_descriptor_v1: product.model.ComponentDescriptor,
     component_v1: product.model.Component,
