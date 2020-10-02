@@ -153,9 +153,6 @@ add_dependencies_cmd = ' '.join((
   '--descriptor-out-file', base_descriptor_file_v2,
   '--component-version', effective_version,
   '--component-name', component_name,
-% for policy in policies:
-  '--validation-policies', '${policy}',
-% endfor
 ))
 
 subproc_env['ADD_DEPENDENCIES_CMD'] = add_dependencies_cmd
