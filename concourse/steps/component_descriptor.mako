@@ -141,6 +141,7 @@ subproc_env['${main_repo_path_env_var}'] = main_repo_path
 subproc_env['MAIN_REPO_DIR'] = main_repo_path
 subproc_env['BASE_DEFINITION_PATH'] = base_descriptor_file_v2
 subproc_env['COMPONENT_DESCRIPTOR_PATH'] = v2_outfile
+subproc_env['COMPONENT_DESCRIPTOR_PATH_V1'] = descriptor_path
 subproc_env['COMPONENT_NAME'] = component_name
 subproc_env['COMPONENT_VERSION'] = effective_version
 
