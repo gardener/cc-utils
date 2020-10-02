@@ -100,6 +100,7 @@ descriptor_path = os.path.join(
   descriptor_out_dir,
   component_descriptor_fname(schema_version=gci.componentmodel.SchemaVersion.V1),
 )
+descriptor_path_force_v1 = f'{descriptor_path}.force' # if output, discard v2 (for lssd)
 
 v2_outfile = os.path.join(
   descriptor_out_dir,
@@ -142,6 +143,7 @@ subproc_env['MAIN_REPO_DIR'] = main_repo_path
 subproc_env['BASE_DEFINITION_PATH'] = base_descriptor_file_v2
 subproc_env['COMPONENT_DESCRIPTOR_PATH'] = v2_outfile
 subproc_env['COMPONENT_DESCRIPTOR_PATH_V1'] = descriptor_path
+subproc_env['COMPONENT_DESCRIPTOR_FORCE_V1_PATH'] = descriptor_path_force_v1
 subproc_env['COMPONENT_NAME'] = component_name
 subproc_env['COMPONENT_VERSION'] = effective_version
 
@@ -178,12 +180,16 @@ descriptor_v2 = cm.ComponentDescriptor.from_dict(
 )
 
 # convert back to v1 for backwards compatibility for now
-descriptor_v1 = product.v2.convert_to_v1(component_descriptor_v2=descriptor_v2)
-with open(descriptor_path, 'w') as f:
-  yaml.dump(descriptor_v1.raw, f)
-info(f'created v1-version of cd at {descriptor_path=}')
+if os.path.isfile(descriptor_path_force_v1):
+  info(f'{descriptor_path_force_v1=} found - discarding v2!')
+else:
+  descriptor_v1 = product.v2.convert_to_v1(component_descriptor_v2=descriptor_v2)
+  with open(descriptor_path, 'w') as f:
+    yaml.dump(descriptor_v1.raw, f)
+  info(f'created v1-version of cd at {descriptor_path=}')
 
 descriptor = ComponentDescriptor.from_dict(parse_yaml_file(descriptor_path))
+
 cfg_factory = ctx().cfg_factory()
 info('resolving dependencies')
 
