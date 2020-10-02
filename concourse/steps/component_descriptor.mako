@@ -147,8 +147,8 @@ subproc_env['COMPONENT_VERSION'] = effective_version
 # pass predefined command to add dependencies for convenience purposes
 add_dependencies_cmd = ' '.join((
   '/cc/utils/cli.py',
-  'productutil',
-  'add_dependencies_v2',
+  'productutil_v2',
+  'add_dependencies',
   '--descriptor-src-file', base_descriptor_file_v2,
   '--descriptor-out-file', base_descriptor_file_v2,
   '--component-version', effective_version,
