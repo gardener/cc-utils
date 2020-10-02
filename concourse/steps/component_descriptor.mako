@@ -175,7 +175,7 @@ if not os.path.isfile(v2_outfile):
 # convert back to v1 for backwards compatibility for now
 descriptor_v1 = product.v2.convert_to_v1(component_descriptor_v2=base_descriptor_v2)
 with open(descriptor_path, 'w') as f:
-  yaml.dump(descriptor_v1.raw)
+  yaml.dump(descriptor_v1.raw, f)
 info(f'created v1-version of cd at {descriptor_path=}')
 
 descriptor = ComponentDescriptor.from_dict(parse_yaml_file(descriptor_path))
