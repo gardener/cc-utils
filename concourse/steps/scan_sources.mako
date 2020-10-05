@@ -18,11 +18,13 @@ component_trait = job_variant.trait('component_descriptor')
 ${step_lib('component_descriptor_util')}
 ${step_lib('scan_sources')}
 
+import gci.componentmodel as vm
+
 % if checkmarx_cfg:
 scan_sources_and_notify(
     checkmarx_cfg_name='${checkmarx_cfg.checkmarx_cfg_name()}',
     team_id='${checkmarx_cfg.team_id()}',
-    component_descriptor=component_descriptor_path(),
+    component_descriptor=component_descriptor_path(schema_version=cm.SchemaVersion.V1),
     email_recipients=${email_recipients},
     threshold=${checkmarx_cfg.severity_threshold()},
 )
@@ -32,7 +34,7 @@ scan_sources_and_notify(
 scan_component_with_whitesource(
     whitesource_cfg_name='${whitesource_cfg.cfg_name()}',
     product_token='${whitesource_cfg.product_token()}',
-    component_descriptor_path=component_descriptor_path(),
+    component_descriptor_path=component_descriptor_path(schema_version=cm.SchemaVersion.V1),
     extra_whitesource_config={},
     requester_mail='${email_recipients[0]}',
 )
