@@ -73,4 +73,10 @@ else:
     else:
         ci.util.info('draft release notes are already up to date')
 
+ci.util.info("Checking for outdated draft releases to delete")
+for release, deletion_successful in github_helper.delete_outdated_draft_releases():
+    if deletion_successful:
+        ci.util.info(f"Deleted release '{release.name}'")
+    else:
+        ci.util.warning(f"Could not delete release '{release.name}'")
 </%def>
