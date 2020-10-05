@@ -21,6 +21,8 @@ import sys
 import tabulate
 import textwrap
 
+import gci.componentmodel as cm
+
 # debugging (dump stacktrace on error-signals)
 import faulthandler
 faulthandler.enable() # print stacktraces upon fatal signals
@@ -49,7 +51,7 @@ ${step_lib('component_descriptor_util')}
 cfg_factory = ci.util.ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
-component_descriptor = parse_component_descriptor()
+component_descriptor = parse_component_descriptor(schema_version=cm.SchemaVersion.V1)
 
 filter_function = create_composite_filter_function(
   include_image_references=${filter_cfg.include_image_references()},
