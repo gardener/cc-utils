@@ -444,4 +444,4 @@ def components(
             component=component,
             component_ref=component_ref
         )
-        yield components(component_descriptor_v2=component_descriptor_v2)
+        yield from components(component_descriptor_v2=component_descriptor_v2)
