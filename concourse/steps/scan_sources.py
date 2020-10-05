@@ -10,15 +10,15 @@ import checkmarx.project
 import checkmarx.util
 import mailutil
 import product.model
-import threading
-
-import checkmarx.project
 import product.util
+import threading
 import whitesource.client
 import whitesource.component
 from whitesource.component import get_post_project_object
 import whitesource.util
+import product.v2
 
+import gci.componentmodel as cm
 
 scans_above_threshold_const = 'scans_above_threshold'
 scans_below_threshold_const = 'scans_below_threshold'
@@ -32,23 +32,23 @@ def _scan_sources(
         threshold: int,
         max_workers: int = 8,
 ):
-    component_descriptor = product.model.ComponentDescriptor.from_dict(
+    component_descriptor = cm.ComponentDescriptor.from_dict(
         ci.util.parse_yaml_file(component_descriptor)
     )
 
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
 
     scan_func = functools.partial(
-            checkmarx.project.upload_and_scan_repo,
-            checkmarx_client=client,
-            team_id=team_id,
+        checkmarx.project.upload_and_scan_repo,
+        checkmarx_client=client,
+        team_id=team_id,
     )
 
     failed_sentinel = object()
-
     success_count = 0
     failed_count = 0
-    components_count = len(tuple(component_descriptor.components()))
+    components = product.v2.components(component_descriptor_v2=component_descriptor)
+    # components_count = components.length
     failed_components = []
     lock = threading.Lock()
 
@@ -62,24 +62,24 @@ def _scan_sources(
             result = scan_func(component)
             lock.acquire()
             success_count += 1
-            ci.util.info(f'remaining: {components_count - (success_count + failed_count)}')
+            # ci.util.info(f'remaining: {components_count - (success_count + failed_count)}')
             lock.release()
             return result
         except:
             lock.acquire()
             failed_count += 1
-            ci.util.info(f'remaining: {components_count - (success_count + failed_count)}')
+            # ci.util.info(f'remaining: {components_count - (success_count + failed_count)}')
             lock.release()
             traceback.print_exc()
             failed_components.append(component)
             return failed_sentinel
 
-    ci.util.info(f'will scan {components_count} component(s)')
+    # ci.util.info(f'will scan {components_count} component(s)')
 
     scan_results_above_threshold = []
     scan_results_below_threshold = []
 
-    for scan_result in executor.map(try_scanning, component_descriptor.components()):
+    for scan_result in executor.map(try_scanning, components):
         if scan_result is not failed_sentinel:
             if scan_result.scan_response.scanRiskSeverity > threshold:
                 scan_results_above_threshold.append(scan_result)
@@ -156,7 +156,7 @@ def _print_scans(
         print('\n')
         failed_components_str = "\n".join(
             (
-                component.name() for component in scans.get(failed_components_const)
+                component.name for component in scans.get(failed_components_const)
             )
         )
         ci.util.info(f'failed components:\n{failed_components_str}')
@@ -197,7 +197,8 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
                                     product_token: str,
                                     component_descriptor_path: str,
                                     extra_whitesource_config: dict,
-                                    requester_mail: str):
+    requester_mail: str
+):
 
     # create whitesource client
     ci.util.info('creating whitesource client...')
@@ -215,7 +216,7 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
     for component in component_descriptor.components():
 
         # create whitesource component
-        ci.util.info('preparing POST project for {}...'.format(component.name()))
+        ci.util.info('preparing POST project for {}...'.format(component.name))
         post_project_object = get_post_project_object(
             whitesource_client=client,
             product_token=product_token,

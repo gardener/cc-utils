@@ -51,7 +51,7 @@ def get_scan_info_table(
     scan_info_data = (
         (
             scan_result.scan_response.id,
-            scan_result.component.name(),
+            scan_result.component.name,
             scan_result.scan_response.status.name,
             started_on(scan_result),
             ended_on(scan_result),
@@ -74,11 +74,11 @@ def get_scan_statistics_tables(
         if tablefmt == 'html':
             return f'''
             <a href="{routes.web_ui_scan_history(scan_id=scan_result.scan_response.id)}">
-                {scan_result.component.name()}
+                {scan_result.component.name}
             </a>
             '''
         else:
-            return scan_result.component.name()
+            return scan_result.component.name
 
     def scan_severity(scan_result: checkmarx.model.ScanResult):
         if tablefmt == 'html':
@@ -190,7 +190,7 @@ def assemble_mail_body(
 
     if len(failed_components) > 0:
         failed_components_str = ''.join((
-            f'<li>{component.name()}</li>' for component in failed_components
+            f'<li>{component.name}</li>' for component in failed_components
         ))
         failed_components_text = textwrap.dedent(
             f'''

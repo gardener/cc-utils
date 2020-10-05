@@ -1,8 +1,9 @@
 import datetime
 import dataclasses
 from enum import Enum
-import product.model
 import typing
+
+import gci.componentmodel as cm
 
 
 class ScanStatusValues(Enum):
@@ -114,6 +115,6 @@ class ScanResult:
     ScanResult is a data container for a scan result for a component version
     """
     project_id: int
-    component: product.model.Component
+    component: cm.Component
     scan_response: ScanResponse
     scan_statistic: ScanStatistic
