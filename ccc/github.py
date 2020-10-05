@@ -246,8 +246,8 @@ class GithubRepo:
 
     @staticmethod
     def from_component(component: cm.Component):
-        _get_single_repo(component)
-        host, org, repo = component.access.repoUrl.split('/')
+        source = _get_single_repo(component)
+        host, org, repo = source.access.repoUrl.split('/')
         return GithubRepo(host,org,repo)
 
 
