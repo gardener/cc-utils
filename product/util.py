@@ -493,9 +493,10 @@ def guess_commit_from_ref(component: Component):
     heuristically guess the appropriate git-ref for the given component's version
     """
     github_api = ccc.github.github_api_from_component(component=component)
+    repo = ccc.github.GithubRepo.from_component(component=component)
     github_repo = github_api.repository(
-        component.github_organisation(),
-        component.github_repo(),
+        repo.org_name,
+        repo.repo_name,
     )
 
     def in_repo(commit_ish):
