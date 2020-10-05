@@ -259,7 +259,7 @@ def _get_single_repo(component: cm.Component):
     if source.type is not cm.SourceType.GIT:
         raise NotImplementedError
 
-    if source.access.type is not cm.AcessType.GITHUB:
+    if source.access.type is not cm.AccessType.GITHUB:
         raise NotImplementedError
 
     return source
