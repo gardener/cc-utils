@@ -431,3 +431,17 @@ def rm_component_descriptor(
             )
 
     container.registry.rm_tag(image_reference=target_ref)
+
+
+def components(
+    component_descriptor_v2: gci.componentmodel.ComponentDescriptor
+):
+    component = component_descriptor_v2.component
+    yield component
+
+    for component_ref in component.componentReferences:
+        component_descriptor_v2 = resolve_dependency(
+            component=component,
+            component_ref=component_ref
+        )
+        yield components(component_descriptor_v2=component_descriptor_v2)

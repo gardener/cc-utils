@@ -14,12 +14,15 @@
 # limitations under the License.
 
 import datetime
+import dataclasses
 import enum
 import functools
 import traceback
+import typing
 import urllib.parse
 
 import cachecontrol
+import gci.componentmodel as cm
 import github3
 import github3.github
 import github3.session
@@ -220,6 +223,43 @@ def log_stack_trace_information_hook(resp, *args, **kwargs):
         ci.util.info(f'Could not log stack trace information: {e}')
 
 
-def github_api_from_component(component: product.model.Component):
-    github_cfg = github_cfg_for_hostname(host_name=component.github_host())
-    return github_api(github_cfg=github_cfg)
+def github_api_from_component(component: typing.Union[cm.Component, product.model.Component]):
+    if isinstance(component, product.model.Component):
+        github_cfg = github_cfg_for_hostname(host_name=component.github_host())
+        return github_api(github_cfg=github_cfg)
+    elif isinstance(component, cm.Component):
+        source = _get_single_repo(component=component)
+
+        host_name = source.access.repoUrl.split('/')[0]
+
+        github_cfg = github_cfg_for_hostname(host_name=host_name)
+        return github_api(github_cfg=github_cfg)
+    else:
+        raise ValueError
+
+
+@dataclasses.dataclass
+class GithubRepo:
+    host_name: str
+    org_name: str
+    repo_name: str
+
+    @staticmethod
+    def from_component(component: cm.Component):
+        _get_single_repo(component)
+        host, org, repo = component.access.repoUrl.split('/')
+        return GithubRepo(host,org,repo)
+
+
+def _get_single_repo(component: cm.Component):
+    if len(component.sources) != 1:
+        raise NotImplementedError
+
+    source = component.sources[0]
+    if source.type is not cm.SourceType.GIT:
+        raise NotImplementedError
+
+    if source.access.type is not cm.AcessType.GITHUB:
+        raise NotImplementedError
+
+    return source
