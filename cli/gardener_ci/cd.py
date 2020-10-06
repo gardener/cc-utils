@@ -23,7 +23,7 @@ def retrieve(
     print(component_descriptor)
 
     if out:
-        outfh = open(outfh)
+        outfh = open(out, 'w')
     else:
         outfh = sys.stdout
 
