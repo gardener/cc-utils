@@ -9,11 +9,14 @@ import requests.exceptions
 
 import ccc.gcp
 import ci.util
+import container.registry
+import gci.componentmodel
 import protecode.model
 import version
 
 from functools import partial
 
+from containerregistry.client import docker_name
 from protecode.client import ProtecodeApi
 from protecode.model import (
     AnalysisResult,
@@ -29,47 +32,51 @@ from ccc.grafeas_model import (
 )
 from ci.util import not_none, warning, check_type, info
 from container.registry import retrieve_container_image
-from product.model import ContainerImage, Component, UploadResult, UploadStatus
+from product.model import UploadResult, UploadStatus
 
 ci.util.ctx().configure_default_logging()
 logger = logging.getLogger(__name__)
 
 
-class ContainerImageGroup:
+class ResourceGroup:
     '''
-    A set of Container Images sharing a common declaring component and a common logical image name.
+    A set of Resources representing an OCI image sharing a common declaring component and a common
+    logical name.
 
-    Container Image Groups are intended to be handled as "virtual Protecode Groups".
+    Resource Groups are intended to be handled as "virtual Protecode Groups".
     This particularly means they share triages.
 
-    As a very common "special case", a container image group may contain exactly one container image.
+    As a very common "special case", a resource group may contain exactly one container image.
 
     @param component: the Component declaring dependency towards the given images
-    @param container_image: iterable of ContainerImages; must share logical name
+    @param resources: iterable of Resources; must share logical name
     '''
     def __init__(
         self,
         component,
-        container_images: typing.Iterable[ContainerImage],
+        resources: typing.Iterable[gci.componentmodel.Resource],
     ):
+        # TODO: Validate resource type?
         self._component = component
 
-        self._container_images = list(container_images)
+        self._resources = list(resources)
 
-        if not len(self._container_images) > 0:
+        if not len(self._resources) > 0:
             raise ValueError('at least one container image must be given')
 
         # do not try to parse in case no sorting is required
-        if len(container_images) > 1:
+        if len(resources) > 1:
             # sort, smallest version first
-            self._container_images = sorted(
-                self._container_images,
-                key=version.parse_to_semver,
+            self._resources = sorted(
+                self._resources,
+                key=lambda r: version.parse_to_semver(r.version),
             )
 
-        image_name = {i.name() for i in self._container_images}
+        image_name = {r.name for r in self._resources}
         if len(image_name) > 1:
-            raise ValueError(f'all images must share same name: {image_name}')
+            raise ValueError(
+                f'All images must share same name. Found more than one name: {image_name}'
+            )
         self._image_name = image_name.pop()
 
         # todo: also validate all images are in fact declared by given component
@@ -80,14 +87,15 @@ class ContainerImageGroup:
     def image_name(self):
         return self._image_name
 
-    def images(self):
+    def resources(self):
         '''
-        @returns sorted iterable containing all images (smallest version first)
+        @returns sorted iterable containing all resources (smallest version first)
         '''
-        return self._container_images
+        return [r for r in self._resources]
 
+    # TODO: why though? Use images() or iterator consistently, remove the other one
     def __iter__(self):
-        return self._container_images.__iter__()
+        return self.resources().__iter__
 
 
 class ProcessingMode(AttribSpecMixin, enum.Enum):
@@ -137,46 +145,63 @@ class ProtecodeUtil:
 
     def _image_group_metadata(
         self,
-        container_image_group: ContainerImageGroup,
+        resource_group: ResourceGroup,
         omit_version=False,
     ):
         metadata = {
-            'IMAGE_REFERENCE_NAME': container_image_group.image_name(),
-            'COMPONENT_NAME': container_image_group.component().name(),
+            'IMAGE_REFERENCE_NAME': resource_group.image_name(),
+            'COMPONENT_NAME': resource_group.component().name,
         }
 
         if not omit_version:
-            metadata['COMPONENT_VERSION'] = container_image_group.component().version()
+            metadata['COMPONENT_VERSION'] = resource_group.component().version
 
         return metadata
 
-    def _image_ref_metadata(self, container_image, omit_version):
+    def _image_ref_metadata(
+        self,
+        resource: gci.componentmodel.Resource,
+        omit_version: bool,
+    ):
         metadata_dict = {
-            'IMAGE_REFERENCE_NAME': container_image.name(),
+            'IMAGE_REFERENCE_NAME': resource.name,
+            'RESOURCE_TYPE': resource.type.value,
         }
         if not omit_version:
-            metadata_dict['IMAGE_REFERENCE'] = container_image.image_reference()
-            metadata_dict['IMAGE_VERSION'] = container_image.version()
-            metadata_dict['IMAGE_DIGEST'] = container_image.image_digest()
-            metadata_dict['DIGEST_IMAGE_REFERENCE'] = container_image.image_reference_with_digest()
+            image_ref_with_digest = docker_name.from_string(container.registry.to_hash_reference(
+                resource.access.imageReference,
+            ))
+            digest = f'@{image_ref_with_digest.digest}'
+            metadata_dict['IMAGE_REFERENCE'] = resource.access.imageReference
+            metadata_dict['IMAGE_VERSION'] = resource.version
+            metadata_dict['IMAGE_DIGEST'] = digest
+            metadata_dict['DIGEST_IMAGE_REFERENCE'] = str(image_ref_with_digest)
 
         return metadata_dict
 
-    def _component_metadata(self, component, omit_version=True):
-        metadata = {'COMPONENT_NAME': component.name()}
+    def _component_metadata(
+        self,
+        component: gci.componentmodel.Component,
+        omit_version=True,
+    ):
+        metadata = {'COMPONENT_NAME': component.name}
         if not omit_version:
-            metadata['COMPONENT_VERSION'] = component.version()
+            metadata['COMPONENT_VERSION'] = component.version
 
         return metadata
 
-    def _upload_name(self, container_image, component):
-        image_reference = container_image.image_reference()
+    def _upload_name(
+        self,
+        resource: gci.componentmodel.Resource,
+        component: gci.componentmodel.Component,
+    ):
+        image_reference = resource.access.imageReference
         image_path, image_tag = image_reference.split(':')
-        image_name = container_image.image_name()
+        image_name = resource.name
         return '{i}_{v}_{c}'.format(
             i=image_name,
             v=image_tag,
-            c=component.name(),
+            c=component.name,
         )
 
     def _update_product_name(self, product_id: int, upload_name: str):
@@ -190,34 +215,34 @@ class ProtecodeUtil:
 
     def _metadata(
             self,
-            container_image: ContainerImage,
-            component: Component,
-            omit_version,
+            resource: gci.componentmodel.Resource,
+            component: gci.componentmodel.Component,
+            omit_version: bool,
         ):
-        metadata = self._image_ref_metadata(container_image, omit_version=omit_version)
+        metadata = self._image_ref_metadata(resource, omit_version=omit_version)
         metadata.update(self._component_metadata(component=component, omit_version=omit_version))
         return metadata
 
     def upload_container_image_group(
         self,
-        container_image_group: ContainerImageGroup,
+        resource_group: ResourceGroup,
     ) -> typing.Iterable[UploadResult]:
         mk_upload_result = partial(
             UploadResult,
-            component=container_image_group.component(),
+            component=resource_group.component(),
         )
 
         # depending on upload-mode, determine an upload-action for each related image
         # - images to upload
         # - protecode-apps to remove
         # - triages to import
-        images_to_upload = set()
+        images_to_upload = list()
         protecode_apps_to_remove = set()
         protecode_apps_to_consider = list() # consider to rescan; return results
         triages_to_import = set()
 
         metadata = self._image_group_metadata(
-            container_image_group=container_image_group,
+            resource_group=resource_group,
             omit_version=True,
         )
 
@@ -251,22 +276,27 @@ class ProtecodeUtil:
 
         if self._processing_mode is ProcessingMode.FORCE_UPLOAD:
             ci.util.info('force-upload - will re-upload all images')
-            images_to_upload |= set(container_image_group.images())
+            images_to_upload += list(resource_group.resources())
             # remove all
             protecode_apps_to_remove = set(existing_products)
         elif self._processing_mode is ProcessingMode.RESCAN:
-            for container_image in container_image_group.images():
+            for resource in resource_group.resources():
                 # find matching protecode product (aka app)
                 for existing_product in existing_products:
                     product_image_digest = existing_product.custom_data().get('IMAGE_DIGEST')
-                    if product_image_digest == container_image.image_digest():
+                    container_image_digest = container.registry.to_hash_reference(
+                        resource.access.imageReference
+                    )
+                    if product_image_digest == container_image_digest:
                         existing_products.remove(existing_product)
                         protecode_apps_to_consider.append(existing_product)
                         break
                 else:
-                    ci.util.info(f'did not find image {container_image} - will upload')
+                    ci.util.info(
+                        f'did not find image {resource.access.imageReference} - will upload'
+                    )
                     # not found -> need to upload
-                    images_to_upload.add(container_image)
+                    images_to_upload.append(resource)
 
             # all existing products that did not match shall be removed
             protecode_apps_to_remove |= set(existing_products)
@@ -287,13 +317,16 @@ class ProtecodeUtil:
                 scan_result = self._api.scan_result(product_id=protecode_app.product_id())
                 image_digest = scan_result.custom_data().get('IMAGE_DIGEST')
                 # there should be at most one matching image (by image digest)
-                for container_image in container_image_group:
-                    if container_image.image_digest() == image_digest:
+                for resource in resource_group:
+                    container_image_digest = container.registry.to_hash_reference(
+                        resource.access.imageReference,
+                    )
+                    if container_image_digest == image_digest:
                         ci.util.info(
-                            f'File for container image "{container_image}" no longer available to '
-                            'protecode - will upload'
+                            f'File for container image "{resource.access.imageReference}" no '
+                            'longer available to protecode - will upload'
                         )
-                        images_to_upload.add(container_image)
+                        images_to_upload.append(resource)
                         protecode_apps_to_consider.remove(protecode_app)
                         # xxx - also add app for removal?
                         break
@@ -301,11 +334,11 @@ class ProtecodeUtil:
                 self._api.rescan(protecode_app.product_id())
 
         # upload new images
-        for container_image in images_to_upload:
+        for resource in images_to_upload:
             try:
                 scan_result = self._upload_image(
-                    component=container_image_group.component(),
-                    container_image=container_image,
+                    component=resource_group.component(),
+                    resource=resource,
                 )
             except requests.exceptions.HTTPError as e:
                 # in case the image is currently being scanned, Protecode will answer with HTTP
@@ -314,8 +347,8 @@ class ProtecodeUtil:
                 if e.response.status_code != requests.codes.conflict:
                     raise e
                 scan_result = self.retrieve_scan_result(
-                    component=container_image_group.component(),
-                    container_image=container_image,
+                    component=resource_group.component(),
+                    resource=resource,
                 )
 
             protecode_apps_to_consider.append(scan_result)
@@ -346,7 +379,7 @@ class ProtecodeUtil:
             yield mk_upload_result(
                 status=UploadStatus.DONE, # XXX remove this
                 result=scan_result,
-                container_image=container_image,
+                resource=resource,
             )
 
         # rm all outdated protecode apps
@@ -357,12 +390,12 @@ class ProtecodeUtil:
 
     def retrieve_scan_result(
             self,
-            container_image: ContainerImage,
-            component: Component,
+            resource: gci.componentmodel.Resource,
+            component: gci.componentmodel.Component,
             group_id: int=None,
         ):
         metadata = self._metadata(
-            container_image=container_image,
+            resource=resource,
             component=component,
             omit_version=True, # omit version when searching for existing app
             # (only one component version must exist per group by our chosen definition)
@@ -378,7 +411,7 @@ class ProtecodeUtil:
             return None # no result existed yet
 
         if len(existing_products) > 1:
-            warning('found more than one product for image {i}'.format(i=container_image))
+            warning(f"found more than one product for image '{resource.access.imageReference}'")
             products_to_rm = existing_products[1:]
             for p in products_to_rm:
                 self._api.delete_product(p.product_id())
@@ -392,7 +425,7 @@ class ProtecodeUtil:
         product_id = product.product_id()
 
         # update upload name to reflect new component version (if changed)
-        upload_name = self._upload_name(container_image, component)
+        upload_name = self._upload_name(resource, component)
         self._update_product_name(product_id, upload_name)
 
         # retrieve existing product's details (list of products contained only subset of data)
@@ -401,17 +434,17 @@ class ProtecodeUtil:
 
     def _upload_image(
         self,
-        component: Component,
-        container_image: ContainerImage,
+        component: gci.componentmodel.Component,
+        resource: gci.componentmodel.Resource,
     ):
         metadata = self._metadata(
-            container_image=container_image,
+            resource=resource,
             component=component,
             omit_version=False,
         )
 
         image_data_fh = retrieve_container_image(
-            container_image.image_reference(),
+            resource.access.imageReference,
             outfileobj=tempfile.NamedTemporaryFile(),
         )
 
@@ -420,7 +453,7 @@ class ProtecodeUtil:
             # by the upload.
             scan_result = self._api.upload(
                 application_name=self._upload_name(
-                    container_image=container_image,
+                    resource=resource,
                     component=component
                 ).replace('/', '_'),
                 group_id=self._group_id,

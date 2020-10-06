@@ -15,15 +15,23 @@
 
 import reutil
 
-import product.model
+import gci.componentmodel
+
+
+def _ensure_resource_is_oci(resource):
+    if resource.type is not gci.componentmodel.ResourceType.OCI_IMAGE:
+        raise NotImplementedError
+    if resource.access.type is not gci.componentmodel.AccessType.OCI_REGISTRY:
+        raise NotImplementedError
 
 
 def image_reference_filter(include_regexes=(), exclude_regexes=()):
     if not include_regexes and not exclude_regexes:
         return lambda container_image: True
 
-    def to_image_reference(container_image: product.model.ContainerImage):
-        return container_image.image_reference()
+    def to_image_reference(resource: gci.componentmodel.Resource):
+        _ensure_resource_is_oci(resource)
+        return resource.access.imageReference
 
     return reutil.re_filter(
         include_regexes=include_regexes,
@@ -36,8 +44,9 @@ def image_name_filter(include_regexes=(), exclude_regexes=()):
     if not include_regexes and not exclude_regexes:
         return lambda container_image: True
 
-    def to_logical_name(container_image: product.model.ContainerImage):
-        return container_image.name()
+    def to_logical_name(resource: gci.componentmodel.Resource):
+        _ensure_resource_is_oci(resource)
+        return resource.name
 
     return reutil.re_filter(
         include_regexes=include_regexes,
@@ -50,8 +59,8 @@ def component_name_filter(include_regexes=(), exclude_regexes=()):
     if not include_regexes and not exclude_regexes:
         return lambda component: True
 
-    def to_component_name(component):
-        return component.name()
+    def to_component_name(component: gci.componentmodel.Component):
+        return component.name
 
     return reutil.re_filter(
         include_regexes=include_regexes,
@@ -81,10 +90,13 @@ def create_composite_filter_function(
         exclude_component_names,
     )
 
-    def filter_function(component, container_image):
+    def filter_function(
+        component: gci.componentmodel.Component,
+        resource: gci.componentmodel.Resource,
+    ):
         return (
-            image_reference_filter_function(container_image)
-            and image_name_filter_function(container_image)
+            image_reference_filter_function(resource)
+            and image_name_filter_function(resource)
             and component_name_filter_function(component)
         )
 

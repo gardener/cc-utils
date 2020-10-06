@@ -37,6 +37,7 @@ import ci.util
 import mailutil
 import product.model
 import product.util
+import product.v2
 import protecode.util
 
 
@@ -51,7 +52,7 @@ ${step_lib('component_descriptor_util')}
 cfg_factory = ci.util.ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
-component_descriptor = parse_component_descriptor(schema_version=cm.SchemaVersion.V1)
+component_descriptor = parse_component_descriptor(schema_version=cm.SchemaVersion.V2)
 
 filter_function = create_composite_filter_function(
   include_image_references=${filter_cfg.include_image_references()},
@@ -115,12 +116,12 @@ malware_scan_results = None
 % if clam_av:
 
 image_references = [
-  container_image.image_reference()
-  for component, container_image
-  in product.util._enumerate_images(
+  resource.access.imageReference
+  for component, resource
+  in product.v2.enumerate_oci_resources(
     component_descriptor=component_descriptor,
   )
-  if filter_function(component, container_image)
+  if filter_function(component, resource)
 ]
 
 ci.util.info('running virus scan for all container images')
@@ -168,7 +169,10 @@ email_recipients = tuple(
 % endif
     cfg_set=cfg_set,
     email_recipients=email_recipients,
-    components=components,
+    components=[
+      product.model.ComponentName(c.name)
+      for c in product.v2.components(component_descriptor)
+    ]
   )
 )
 
