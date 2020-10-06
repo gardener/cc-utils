@@ -47,8 +47,8 @@ def _scan_sources(
     failed_sentinel = object()
     success_count = 0
     failed_count = 0
-    components = product.v2.components(component_descriptor_v2=component_descriptor)
-    # components_count = components.length
+    components = tuple(product.v2.components(component_descriptor_v2=component_descriptor))
+    components_count = len(components)
     failed_components = []
     lock = threading.Lock()
 
@@ -62,19 +62,19 @@ def _scan_sources(
             result = scan_func(component)
             lock.acquire()
             success_count += 1
-            # ci.util.info(f'remaining: {components_count - (success_count + failed_count)}')
+            ci.util.info(f'remaining: {components_count - (success_count + failed_count)}')
             lock.release()
             return result
         except:
             lock.acquire()
             failed_count += 1
-            # ci.util.info(f'remaining: {components_count - (success_count + failed_count)}')
+            ci.util.info(f'remaining: {components_count - (success_count + failed_count)}')
             lock.release()
             traceback.print_exc()
             failed_components.append(component)
             return failed_sentinel
 
-    # ci.util.info(f'will scan {components_count} component(s)')
+    ci.util.info(f'will scan {components_count} component(s)')
 
     scan_results_above_threshold = []
     scan_results_below_threshold = []
@@ -189,8 +189,8 @@ def scan_sources_and_notify(
         email_recipients=email_recipients,
         routes=checkmarx_client.routes,
     )
-    # codeowner recipient:
-    # only send mail if over threshold
+    #TODO codeowner recipient:
+    #TODO only send mail if over threshold
 
 
 def scan_component_with_whitesource(whitesource_cfg_name: str,
