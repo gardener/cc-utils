@@ -752,7 +752,7 @@ class UploadResult(object):
             status: UploadStatus,
             component: Component,
             result: AnalysisResult,
-            container_image: ContainerImageReference=None,
+            resource=None,
     ):
         self.status = not_none(status)
         self.component = not_none(component)
@@ -760,7 +760,7 @@ class UploadResult(object):
             self.result = result
         else:
             self.result = None
-        self.container_image = container_image
+        self.resource = resource
 
     def __str__(self):
         return '{c} - {s}'.format(

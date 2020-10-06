@@ -24,8 +24,21 @@ import ccc.protecode
 import ctx
 import container.registry
 import product.util
-from protecode.scanning_util import ContainerImageGroup, ProtecodeUtil, ProcessingMode
-from ci.util import info, warning, success, urljoin
+
+import gci.componentmodel as cm
+import product.v2
+
+from protecode.scanning_util import (
+    ResourceGroup,
+    ProcessingMode,
+    ProtecodeUtil,
+)
+from ci.util import (
+    info,
+    success,
+    urljoin,
+    warning,
+)
 from product.model import (
     ComponentDescriptor,
     UploadResult,
@@ -48,7 +61,7 @@ def upload_grouped_images(
     cve_threshold=7,
     ignore_if_triaged=True,
     processing_mode=ProcessingMode.RESCAN,
-    image_reference_filter=(lambda component, container_image: True),
+    image_reference_filter=(lambda component, resource: True),
     reference_group_ids=(),
     cvss_version=CVSSVersion.V2,
 ):
@@ -63,17 +76,17 @@ def upload_grouped_images(
         cvss_threshold=cve_threshold,
     )
 
-    def _upload_task(component, image_group):
-        image_group = ContainerImageGroup(
+    def _upload_task(component, resources):
+        resource_group = ResourceGroup(
             component=component,
-            container_images=image_group,
+            resources=resources,
         )
 
         def _task():
             # force executor to actually iterate through generator
             return set(
                 protecode_util.upload_container_image_group(
-                    container_image_group=image_group,
+                    resource_group=resource_group,
                 )
             )
 
@@ -81,23 +94,36 @@ def upload_grouped_images(
 
     def _upload_tasks():
         # group images of same name w/ different versions
-        component_groups = collections.defaultdict(set)
-        for component in component_descriptor.components():
-            component_groups[component.name()].add(component)
+        component_groups = collections.defaultdict(list)
+        components = list(product.v2.components(component_descriptor))
+
+        for component in components:
+            component_groups[component.name].append(component)
+
+        def group_resources(components):
+            # groups resources of components by resource name
+            resource_groups = collections.defaultdict(list)
+            for component in components:
+                for resource in product.v2.resources(
+                    component=component,
+                    resource_types=[cm.ResourceType.OCI_IMAGE],
+                    resource_access_types=[cm.AccessType.OCI_REGISTRY],
+                ):
+                    resource_groups[resource.name].append(resource)
+
+            for resource_name, resources in resource_groups.items():
+                yield resources
 
         for component_name, components in component_groups.items():
-            for image_group in product.util._grouped_effective_images(
-                *components,
-                component_descriptor=component_descriptor,
-            ):
-                # XXX HACK: arbitrarily use first component for filtering
+            for grouped_resources in group_resources(components):
+                # all components in a component group share a name
                 component = next(iter(components))
-                image_group = [
-                    image for image in image_group
-                    if image_reference_filter(component, image)
+                resources = [
+                    r for r in grouped_resources
+                    if image_reference_filter(component, r)
                 ]
-                if image_group:
-                    yield _upload_task(component=component, image_group=image_group)
+                if resources:
+                    yield _upload_task(component=component, resources=resources)
 
     tasks = _upload_tasks()
     results = tuple(executor.map(lambda task: task(), tasks))
@@ -205,7 +231,7 @@ def filter_and_display_upload_results(
     results_above_cve_thresh = []
 
     for upload_result in upload_results:
-        container_image = upload_result.container_image
+        resource = upload_result.resource
 
         if isinstance(upload_result, UploadResult):
             result = upload_result.result
@@ -233,7 +259,7 @@ def filter_and_display_upload_results(
         if greatest_cve >= cve_threshold:
             try:
                 # XXX HACK: just one any image ref
-                image_ref = container_image.image_reference()
+                image_ref = resource.access.imageReference
                 grafeas_client = ccc.gcp.GrafeasClient.for_image(image_ref)
                 gcr_cve = -1
                 for r in grafeas_client.filter_vulnerabilities(
