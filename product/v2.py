@@ -4,8 +4,10 @@ utils used for transitioning to new component-descriptor v2
 see: https://github.com/gardener/component-spec
 '''
 
+import enum
 import io
 import itertools
+import typing
 
 import gci.componentmodel as cm
 import gci.oci
@@ -445,3 +447,59 @@ def components(
             component_ref=component_ref
         )
         yield from components(component_descriptor_v2=component_descriptor_v2)
+
+
+class ResourceFilter(enum.Enum):
+    LOCAL = 'local'
+    EXTERNAL = 'external'
+    ALL = 'all'
+
+
+class ResourcePolicy(enum.Enum):
+    IGNORE_NONMATCHING_ACCESS_TYPES = 'ignore_nonmatching_access_types'
+    WARN_ON_NONMATCHING_ACCESS_TYPES = 'warn_on_nonmatching_access_types'
+    FAIL_ON_NONMATCHING_ACCESS_TYPES = 'fail_on_nonmatching_access_types'
+
+
+def resources(
+    component: gci.componentmodel.Component,
+    resource_access_types: typing.Iterable[gci.componentmodel.AccessType],
+    resource_types: typing.Iterable[gci.componentmodel.ResourceType]=None,
+    resource_filter: ResourceFilter=ResourceFilter.ALL,
+    resource_policy: ResourcePolicy=ResourcePolicy.FAIL_ON_NONMATCHING_ACCESS_TYPES,
+):
+    if resource_filter is ResourceFilter.LOCAL:
+        resources = component.localResources
+    elif resource_filter is ResourceFilter.EXTERNAL:
+        resources = component.externalResources
+    elif resource_filter is ResourceFilter.ALL:
+        resources = component.externalResources + component.localResources
+    else:
+        raise NotImplementedError
+
+    for resource in (r for r in resources if resource_types is None or r.type in resource_types):
+
+        if resource.access.type in resource_access_types:
+            yield resource
+        else:
+            if resource_policy is ResourcePolicy.IGNORE_NONMATCHING_ACCESS_TYPES:
+                continue
+            elif resource_policy is ResourcePolicy.WARN_ON_NONMATCHING_ACCESS_TYPES:
+                ci.util.warning(
+                    f"Skipping resource with unhandled access type '{resource.access.type}'"
+                )
+                continue
+            elif resource_policy is ResourcePolicy.FAIL_ON_NONMATCHING_ACCESS_TYPES:
+                raise ValueError(resource)
+            else:
+                raise NotImplementedError
+
+
+def enumerate_oci_resources(component_descriptor):
+    for component in components(component_descriptor):
+        for resource in resources(
+            component=component,
+            resource_types=[gci.componentmodel.ResourceType.OCI_IMAGE],
+            resource_access_types=[gci.componentmodel.AccessType.OCI_REGISTRY],
+        ):
+            yield (component, resource)
