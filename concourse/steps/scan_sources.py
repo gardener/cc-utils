@@ -197,8 +197,7 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
                                     product_token: str,
                                     component_descriptor_path: str,
                                     extra_whitesource_config: dict,
-    requester_mail: str
-):
+                                    requester_mail: str):
 
     # create whitesource client
     ci.util.info('creating whitesource client...')
