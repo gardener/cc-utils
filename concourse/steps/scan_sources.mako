@@ -18,7 +18,7 @@ component_trait = job_variant.trait('component_descriptor')
 ${step_lib('component_descriptor_util')}
 ${step_lib('scan_sources')}
 
-import gci.componentmodel as vm
+import gci.componentmodel as cm
 
 % if checkmarx_cfg:
 scan_sources_and_notify(
