@@ -34,6 +34,7 @@ from .model import (
     DependencyBase,
     ComponentDescriptor,
 )
+import gci.componentmodel as cm
 import version as ver
 
 
@@ -488,7 +489,7 @@ class RefGuessingFailedError(Exception):
     pass
 
 
-def guess_commit_from_ref(component: Component):
+def guess_commit_from_ref(component: cm.Component):
     """
     heuristically guess the appropriate git-ref for the given component's version
     """
@@ -516,11 +517,11 @@ def guess_commit_from_ref(component: Component):
     if commit:
         return commit
     # also try unmodified version-str
-    if commit := in_repo(component.version()):
+    if commit := in_repo(component.version):
         return commit
 
     # second guess: split commit-hash after last `-` character (inject-commit-hash semantics)
-    if '-' in (version_str := str(component.version())):
+    if '-' in (version_str := str(component.version)):
         last_part = version_str.split('-')[-1]
         commit = in_repo(last_part)
         if commit:
@@ -534,5 +535,5 @@ def guess_commit_from_ref(component: Component):
 
     # still unknown commit-ish throw error
     raise RefGuessingFailedError(
-        f'failed to guess on ref for {component.name()=}{component.version()=}'
+        f'failed to guess on ref for {component.name=}{component.version=}'
     )
