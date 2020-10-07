@@ -12,9 +12,8 @@ import ccc.github
 import ctx
 import checkmarx.client
 import checkmarx.model
-import product.model
-import product.util
 import checkmarx.util
+import product.util
 
 ctx.configure_default_logging()
 logger = logging.getLogger(__name__)
@@ -148,7 +147,7 @@ def _create_or_get_project(
             raise e
 
 
-def _calc_project_name_for_component(component_name: cm.Component):
+def _calc_project_name_for_component(component_name: str):
     return component_name.replace('/', '_')
 
 
