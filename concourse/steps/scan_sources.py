@@ -112,7 +112,7 @@ def _send_mail(
         cfg_factory = ci.util.ctx().cfg_factory()
         cfg_set = cfg_factory.cfg_set(default_cfg_set_name)
 
-        # send mail
+        ci.util.info(f'sending notification emails to: {",".join(email_recipients)}')
         mailutil._send_mail(
             email_cfg=cfg_set.email(),
             recipients=email_recipients,
