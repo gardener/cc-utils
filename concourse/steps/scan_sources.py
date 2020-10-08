@@ -156,7 +156,7 @@ def _print_scans(
 
     if scans.get(failed_components_const):
         print('\n')
-        failed_components_str = "\n".join(
+        failed_components_str = '\n'.join(
             (
                 component.name for component in scans.get(failed_components_const)
             )
@@ -202,8 +202,8 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
                                     requester_mail: str,
                                     cve_threshold: float,
                                     component_name: str,
-                                    notification_recipients=[],
-                                    send_notificaton=True,):
+                                    notification_recipients: list,
+                                    ):
 
     # create whitesource client
     ci.util.info('creating whitesource client')
@@ -215,10 +215,11 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
         ci.util.parse_yaml_file(component_descriptor_path)
     )
 
-    # for component in []: "components matching component_descriptor"
+    # for component in []: 'components matching component_descriptor'
     for component in component_descriptor.components():
 
         # create whitesource component
+        ci.util.info(f'preparing POST project for {component.name()}')
         post_project_object = get_post_project_object(
             whitesource_client=client,
             product_token=product_token,
@@ -253,26 +254,22 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
         ci.util.info('retrieving all projects')
         projects = client.get_all_projects(product_token=product_token)
 
-        report = whitesource.util.find_greatest_cve(client=client,
-                                                    projects=projects)
-
         # generate reporting table for console
-        tables = whitesource.util.generate_reporting_tables(report=report,
+        tables = whitesource.util.generate_reporting_tables(projects=projects,
                                                             threshold=cve_threshold,
-                                                            tablefmt="simple")
+                                                            tablefmt='simple')
 
-        print()
-        print(''.join(tables))
+        whitesource.util.print_cve_tables(tables=tables)
 
-        if send_notificaton:
+        if len(notification_recipients) > 0:
             # generate reporting table for notification
-            tables = whitesource.util.generate_reporting_tables(report=report,
+            tables = whitesource.util.generate_reporting_tables(projects=projects,
                                                                 threshold=cve_threshold,
-                                                                tablefmt="html")
+                                                                tablefmt='html')
 
             # get product risk report
             ci.util.info('retrieving product risk report')
-            prr = client.get_product_risk_report(product_token=product_token).content
+            prr = client.get_product_risk_report(product_token=product_token)
 
             # assemble html body
             body = whitesource.util.assemble_mail_body(tables=tables,
@@ -280,17 +277,18 @@ def scan_component_with_whitesource(whitesource_cfg_name: str,
 
             # send mail
             ci.util.info('sending notification')
-            dto = datetime.now()
-            fname = f"{component_name}-{dto.year}.{dto.month}-{dto.day}-product-risk-report.pdf"
+            now = datetime.now()
+            fname = f'{component_name}-{now.year}.{now.month}-{now.day}-product-risk-report.pdf'
 
             attachment = mail.model.Attachment(
-                mimetype_main="application",
-                mimetype_sub="pdf",
-                bytes=prr,
+                mimetype_main='application',
+                mimetype_sub='pdf',
+                bytes=prr.content,
                 filename=fname,
             )
 
             whitesource.util.send_mail(body=body,
                                        recipients=notification_recipients,
                                        component_name=component_name,
-                                       attachments=(attachment,))
+                                       attachments=(attachment,)
+                                       )
