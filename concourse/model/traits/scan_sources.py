@@ -52,7 +52,7 @@ WHITESOURCE_ATTRIBUTES = (
         doc='whitesource product token',
         type=str,
     ),
-    AttributeSpec.required(
+    AttributeSpec.optional(
         name='cve_threshold',
         default=7.0,
         doc='defines threshold for cve table generation',
