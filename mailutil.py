@@ -88,7 +88,7 @@ def _send_mail(
     recipients: typing.Iterable[str],
     mail_template: str,
     subject: str,
-    attachments: typing.Sequence[mail.model.Attachment],
+    attachments: typing.Sequence[mail.model.Attachment]=(),
     replace_tokens: dict={},
     cc_recipients: typing.Iterable[str]=[],
     mimetype='text',
