@@ -4,56 +4,64 @@ import tabulate
 import typing
 
 import ci.util
-import whitesource.client
 import mailutil
 import mail.model
+import whitesource.client
+import whitesource.model
 
 
 @functools.lru_cache()
-def create_whitesource_client(whitesource_cfg_name: str):
+def create_whitesource_client(whitesource_cfg_name: str
+                              ):
     cfg_fac = ci.util.ctx().cfg_factory()
     return whitesource.client.WhitesourceClient(cfg_fac.whitesource(whitesource_cfg_name))
 
 
-def generate_reporting_tables(report,
+def generate_reporting_tables(projects: typing.List[whitesource.model.WhitesourceProject],
                               threshold: float,
-                              tablefmt):
+                              tablefmt
+                              ):
 
     # monkeypatch: disable html escaping
     tabulate.htmlescape = lambda x: x
 
     # split respecting CVSS-V3 threshold
-    above = {}
-    below = {}
+    above: typing.List[whitesource.model.WhitesourceProject] = []
+    below: typing.List[whitesource.model.WhitesourceProject] = []
 
-    for lib, dic in report.items():
-        if float(dic['CVSS-V3']) > threshold:
-            above[lib] = dic
+    for project in projects:
+        if float(project.max_cve()[1]) > threshold:
+            above.append(project)
         else:
-            below[lib] = dic
+            below.append(project)
 
-    def _sort_cve_list(struct):
-        return sorted(struct.items(),
-                      key=lambda k_v: k_v[1]['CVSS-V3'],
-                      reverse=True)
+    def _sort_projects_by_cve(projects: typing.List[whitesource.model.WhitesourceProject],
+                              descending=True,
+                              ):
+        return sorted(projects,
+                      key=lambda p: p.max_cve()[1],
+                      reverse=descending)
 
     # sort tables descending by CVSS-V3
-    below = _sort_cve_list(below)
-    above = _sort_cve_list(above)
+    below = _sort_projects_by_cve(projects=below)
+    above = _sort_projects_by_cve(projects=above)
 
-    ttable_header = ('Component', 'Greatest CVSS-V3', 'Corresponding CVE')
+    ttable_header = ('Component',
+                     'Greatest CVSS-V3',
+                     'Corresponding CVE'
+                     )
     ttables = []
 
     for source in above, below:
         if len(source) == 0:
-            ttables.append("")
+            ttables.append('')
             continue
         ttable_data = (
             (
-                component,
-                dic["CVSS-V3"],
-                dic["CVE"]
-            ) for component, dic, in source
+                project.name,
+                project.max_cve()[0],
+                project.max_cve()[1],
+            ) for project in projects
         )
 
         ttable = tabulate.tabulate(
@@ -69,7 +77,8 @@ def generate_reporting_tables(report,
 
 
 def assemble_mail_body(tables: typing.List,
-                       threshold: float):
+                       threshold: float
+                       ):
     return f'''
         <div>
             <p>
@@ -99,58 +108,18 @@ def assemble_mail_body(tables: typing.List,
                 <a href="https://saas.whitesourcesoftware.com/Wss/WSS.html#!alertsReport">
                     WhiteSource Alert Reporting
                 </a>
-                page. Appropriate filters have to applied manually, "Gardener" is a matching keyword.
+                page. Appropriate filters have to be applied manually,
+                "Gardener" is a matching keyword.
             </p>
         </div>
     '''
 
 
-def find_greatest_cve(projects,
-                      client):
-    report = {}
-
-    # get all projects for product
-    for project in projects["projects"]:
-        pname = project["projectName"]
-        ptoken = project["projectToken"]
-
-        # get vulnerability report per project
-        ci.util.info(f'retrieving project vulnerability report for {pname}')
-        pvr = client.get_project_vulnerability_report(project_token=ptoken)
-
-        # find greatest cve per project
-        for vul in pvr["vulnerabilities"]:
-            try:
-                report = _add_cve_entry(report=report,
-                                        cvss_key_name="cvss3_score",
-                                        pname=pname,
-                                        vul=vul)
-            except KeyError:
-                # https://github.com/gardener/cc-utils/pull/476#discussion_r490231239
-                report = _add_cve_entry(report=report,
-                                        cvss_key_name="score",
-                                        pname=pname,
-                                        vul=vul)
-
-    return report
-
-
-def _add_cve_entry(report: dict,
-                   cvss_key_name: str,
-                   pname: str,
-                   vul: dict,):
-    if report.get(pname) is None or vul[cvss_key_name] > report[pname]["CVSS-V3"]:
-        report[pname] = {
-            "CVSS-V3": vul[cvss_key_name],
-            "CVE": vul["name"],
-        }
-    return report
-
-
 def send_mail(body,
               recipients: list,
               component_name: str,
-              attachments: typing.Sequence[mail.model.Attachment]):
+              attachments: typing.Sequence[mail.model.Attachment]
+              ):
 
     # get standard cfg set for email cfg
     default_cfg_set_name = ci.util.current_config_set_name()
@@ -165,3 +134,9 @@ def send_mail(body,
         mimetype='html',
         attachments=attachments,
     )
+
+
+def print_cve_tables(tables):
+    print()
+    print('\n\n'.join(tables))
+    print()

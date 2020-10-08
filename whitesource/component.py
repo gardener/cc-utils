@@ -7,7 +7,8 @@ import whitesource.client
 
 def get_post_project_object(whitesource_client: whitesource.client.WhitesourceClient,
                             component: product.model.Component,
-                            product_token: str):
+                            product_token: str
+                            ):
     # get component_name
     if isinstance(component.name(), str):
         component_name = product.model.ComponentName.from_github_repo_url(component.name())
@@ -34,7 +35,8 @@ class PostProjectObject:
                  component: product.model.Component,
                  product_token: str,
                  component_name: product.model.ComponentName,
-                 component_version):
+                 component_version
+                 ):
         self.whitesource_client = whitesource_client
         self.github_api = github_api
         self.component = component
@@ -46,14 +48,22 @@ class PostProjectObject:
 def download_component(github_api,
                        component_name: product.model.ComponentName,
                        dest: tempfile.TemporaryFile,
-                       ref: str):
+                       ref: str
+                       ):
     repo = github_api.repository(
         component_name.github_organisation(),
         component_name.github_repo(),
     )
 
-    url = repo._build_url('tarball', ref, base_url=repo._api)
-    res = repo._get(url, verify=False, allow_redirects=True, stream=True)
+    url = repo._build_url('tarball',
+                          ref,
+                          base_url=repo._api
+                          )
+    res = repo._get(url,
+                    verify=False,
+                    allow_redirects=True,
+                    stream=True
+                    )
     if not res.ok:
         raise RuntimeError(
             f'request to download github zip archive from {url=}'

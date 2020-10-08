@@ -67,11 +67,14 @@ def create_mail(
             _maintype=attachment_config.mimetype_main,
             _subtype=attachment_config.mimetype_sub,
         )
-        attachment.set_payload(attachment_config.bytes)
+        attachment.set_payload(attachment_config.bytes,
+                               charset='utf-8'
+                               )
 
         attachment.add_header('Content-Disposition',
                               'attachment',
-                              filename=attachment_config.filename,)
+                              filename=attachment_config.filename,
+                              )
         msg.attach(attachment)
 
     msg.attach(msg_plain)
