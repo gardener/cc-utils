@@ -24,7 +24,7 @@ import gci.componentmodel as cm
 scan_sources_and_notify(
     checkmarx_cfg_name='${checkmarx_cfg.checkmarx_cfg_name()}',
     team_id='${checkmarx_cfg.team_id()}',
-    component_descriptor=component_descriptor_path(schema_version=cm.SchemaVersion.V2),
+    component_descriptor_path=component_descriptor_path(schema_version=cm.SchemaVersion.V2),
     email_recipients=${email_recipients},
     threshold=${checkmarx_cfg.severity_threshold()},
 )

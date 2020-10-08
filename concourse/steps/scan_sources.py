@@ -28,12 +28,12 @@ failed_components_const = 'failed_components'
 def _scan_sources(
         client: checkmarx.client.CheckmarxClient,
         team_id: str,
-        component_descriptor: str,
+        component_descriptor_path: str,
         threshold: int,
         max_workers: int = 8,
 ):
     component_descriptor = cm.ComponentDescriptor.from_dict(
-        ci.util.parse_yaml_file(component_descriptor)
+        ci.util.parse_yaml_file(component_descriptor_path)
     )
 
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
@@ -165,7 +165,7 @@ def _print_scans(
 def scan_sources_and_notify(
     checkmarx_cfg_name: str,
     team_id: str,
-    component_descriptor: str,
+    component_descriptor_path: str,
     email_recipients,
     threshold: int = 40,
 ):
@@ -174,7 +174,7 @@ def scan_sources_and_notify(
     scans = _scan_sources(
         client=checkmarx_client,
         team_id=team_id,
-        component_descriptor=component_descriptor,
+        component_descriptor_path=component_descriptor_path,
         threshold=threshold,
     )
 
