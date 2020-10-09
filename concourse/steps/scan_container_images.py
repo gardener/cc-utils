@@ -52,7 +52,7 @@ class MalwareScanResult:
         return ('Image Reference', 'File Path', 'Scan Result')
 
 
-class MailRecipients(object):
+class MailRecipients:
     def __init__(
         self,
         root_component_name: str,
