@@ -153,6 +153,10 @@ if not (
 
 email_recipients = ${image_scan_trait.email_recipients()}
 
+components = list(component_descriptor.components())
+for component in components:
+  print(component.name())
+
 email_recipients = tuple(
   mail_recipients(
     notification_policy='${image_scan_trait.notify().value}',
@@ -165,9 +169,11 @@ email_recipients = tuple(
 % endif
     cfg_set=cfg_set,
     email_recipients=email_recipients,
-    components=component_descriptor.components(),
+    components=components,
   )
 )
+
+print(f'Components: {len(components)}   Mail recipients: {len(email_recipients)}')
 
 for email_recipient in email_recipients:
   email_recipient.add_protecode_results(
