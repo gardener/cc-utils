@@ -176,6 +176,7 @@ email_recipients = tuple(
 print(f'Components: {len(components)}   Mail recipients: {len(email_recipients)}')
 
 for email_recipient in email_recipients:
+  print(f'Preparing email recipients for {email_recipients._recipients_component}')
   email_recipient.add_protecode_results(
     relevant_results=results_above_threshold,
     results_below_threshold=results_below_threshold,
