@@ -77,7 +77,7 @@ fi
 
 echo "will cut-off history after: ${cut_commit}"
 
-git checkout --orphan="${CUTOFF_BRANCH}" "${cut_commit}"
+GIT_LFS_SKIP_SMUDGE=1 git checkout --orphan="${CUTOFF_BRANCH}" "${cut_commit}"
 git commit -m "cut-off history"
 
 # import all commits from original history
