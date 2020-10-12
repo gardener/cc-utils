@@ -149,6 +149,7 @@ if not (
   or malware_scan_results
   or updated_license_report
 ):
+  print('nothing to report - early-exiting')
   sys.exit(0)
 
 email_recipients = ${image_scan_trait.email_recipients()}
@@ -196,7 +197,7 @@ for email_recipient in email_recipients:
 
   if not email_addresses:
     ci.util.warning(f'no email addresses could be retrieved for {component_name}')
-    sys.exit(0)
+    continue
 
   import traceback
   # notify about critical vulnerabilities
