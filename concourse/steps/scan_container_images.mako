@@ -209,7 +209,7 @@ for email_recipient in email_recipients:
       mimetype='html',
     )
     ci.util.info('sent notification emails to: ' + ','.join(email_addresses))
-  except Exception as e:
+  except:
     traceback.print_exc()
     ci.util.warning(f'error whilst trying to send notification-mails for {component_name}')
 </%def>
