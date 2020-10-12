@@ -81,7 +81,7 @@ git checkout --orphan="${CUTOFF_BRANCH}" "${cut_commit}"
 git commit -m "cut-off history"
 
 # import all commits from original history
-git rev-list --reverse "${cut_commit}".."${BRANCH}" | git cherry-pick --stdin
+git rev-list --reverse "${cut_commit}".."${BRANCH}" | GIT_LFS_SKIP_SMUDGE=1 git cherry-pick --stdin
 
 # forcefully reset original branch
 git checkout -B "${BRANCH}" "${CUTOFF_BRANCH}"
