@@ -639,7 +639,7 @@ class TryCleanupDraftReleasesStep(TransactionalStep):
 
 class PostSlackReleaseStep(TransactionalStep):
     def name(self):
-        return "Post Slack Release"
+        return f"Post Slack Release ({self.slack_channel})"
 
     def __init__(
         self,
@@ -748,8 +748,7 @@ def release_and_prepare_next_dev_cycle(
     rebase_before_release: bool=False,
     release_commit_callback: str=None,
     release_commit_message_prefix: str=None,
-    slack_cfg_name: str=None,
-    slack_channel: str=None,
+    slack_channel_configs: list=[],
     version_operation: str="bump_minor",
 ):
     transaction_ctx = TransactionContext() # shared between all steps/trxs
@@ -853,22 +852,28 @@ def release_and_prepare_next_dev_cycle(
     if not release_notes_transaction.execute():
         raise RuntimeError('An error occurred while publishing the release notes.')
 
-    if slack_cfg_name and slack_channel:
+    if slack_channel_configs:
         release_notes = transaction_ctx.step_output(
             publish_release_notes_step.name()
             ).get('release notes')
-
-        post_to_slack_step = PostSlackReleaseStep(
-            slack_cfg_name=slack_cfg_name,
-            slack_channel=slack_channel,
-            release_version=release_version,
-            release_notes=release_notes,
-            githubrepobranch=githubrepobranch,
-        )
-        slack_transaction = Transaction(
-            ctx=transaction_ctx,
-            steps=(post_to_slack_step,),
-        )
-        slack_transaction.validate()
-        if not slack_transaction.execute():
+        all_slack_releases_successful = True
+        for slack_cfg in slack_channel_configs:
+            slack_cfg_name = slack_cfg['slack_cfg_name']
+            slack_channel = slack_cfg['channel_name']
+            post_to_slack_step = PostSlackReleaseStep(
+                slack_cfg_name=slack_cfg_name,
+                slack_channel=slack_channel,
+                release_version=release_version,
+                release_notes=release_notes,
+                githubrepobranch=githubrepobranch,
+            )
+            slack_transaction = Transaction(
+                ctx=transaction_ctx,
+                steps=(post_to_slack_step,),
+            )
+            slack_transaction.validate()
+            all_slack_releases_successful = (
+                all_slack_releases_successful and slack_transaction.execute()
+            )
+        if not all_slack_releases_successful:
             raise RuntimeError('An error occurred while posting the release notes to Slack.')

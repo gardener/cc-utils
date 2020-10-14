@@ -20,7 +20,6 @@ from concourse.model.base import (
   Trait,
   TraitTransformer,
   ModelBase,
-  ModelValidationError,
 )
 from concourse.model.job import (
     JobVariant,
@@ -61,13 +60,14 @@ class ChannelConfig(ModelBase):
 ATTRIBUTES = (
     AttributeSpec.required(
         name='channel_cfgs',
-        doc='the slack channel configuration to use',
-        type=typing.Dict[str, ChannelConfig],
+        doc='the slack channel configurations to use',
+        type=typing.Union[typing.List[ChannelConfig], typing.Dict[str, ChannelConfig]],
     ),
-    AttributeSpec.required(
+    AttributeSpec.deprecated(
         name='default_channel',
-        doc='the default channel config',
-    ),
+        doc='**deprecated**',
+        type=str,
+    )
 )
 
 
@@ -80,29 +80,20 @@ class SlackTrait(Trait):
         return ATTRIBUTES
 
     def _children(self):
-       return self.channel_cfgs().values()
+       return self.channel_cfgs()
 
     def channel_cfgs(self):
-        return {
-            name: ChannelConfig(raw_dict=v)
-            for name, v in self.raw.get('channel_cfgs').items()
-        }
-
-    def default_channel(self):
-        return self.raw.get('default_channel')
+        channel_cfgs = self.raw.get('channel_cfgs')
+        if isinstance(channel_cfgs, list):
+            return [ChannelConfig(raw_dict=v) for v in channel_cfgs]
+        else:
+            return [ChannelConfig(raw_dict=v) for _, v in channel_cfgs.items()]
 
     def transformer(self):
         return SlackTraitTransformer()
 
     def validate(self):
         super().validate()
-        default_channel = self.default_channel()
-        if default_channel not in self.channel_cfgs():
-            raise ModelValidationError(
-                'there is no element in channel_cfgs with name {name}'.format(
-                    name=default_channel,
-                )
-            )
 
 
 class SlackTraitTransformer(TraitTransformer):

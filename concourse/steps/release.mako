@@ -18,12 +18,7 @@ next_cycle_commit_message_prefix = release_trait.next_cycle_commit_message_prefi
 has_slack_trait = job_variant.has_trait('slack')
 if has_slack_trait:
   slack_trait = job_variant.trait('slack')
-
-  slack_channel_cfgs = slack_trait.channel_cfgs()
-
-  slack_channel_cfg = slack_channel_cfgs[slack_trait.default_channel()]
-  slack_channel = slack_channel_cfg.channel_name()
-  slack_cfg_name = slack_channel_cfg.slack_cfg_name()
+  slack_channel_cfgs = [cfg.raw for cfg in slack_trait.channel_cfgs()]
 
 repo = job_variant.main_repository()
 
@@ -64,8 +59,7 @@ release_and_prepare_next_dev_cycle(
   component_descriptor_file_path='${component_descriptor_file_path}',
   component_descriptor_v2_path='${component_descriptor_v2_path}',
   % if has_slack_trait:
-  slack_cfg_name='${slack_cfg_name}',
-  slack_channel='${slack_channel}',
+  slack_channel_configs=${slack_channel_cfgs},
   % endif
   % if release_callback_path:
   release_commit_callback='${release_callback_path}',
