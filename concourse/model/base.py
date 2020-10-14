@@ -53,7 +53,8 @@ class AttribSpecMixin(object):
 
     @classmethod
     def _optional_attributes(cls):
-        return set(AttributeSpec.optional_attr_names(cls._attribute_specs()))
+        return set(AttributeSpec.optional_attr_names(cls._attribute_specs())) | \
+            set(AttributeSpec.deprecated_attr_names(cls._attribute_specs()))
 
     @classmethod
     def _required_attributes(cls):
@@ -83,6 +84,7 @@ class ModelBase(AttribSpecMixin, ModelValidationMixin):
 class RequiredPolicy(Enum):
     OPTIONAL = 'optional'
     REQUIRED = 'required'
+    DEPRECATED = 'deprecated'
 
 
 class AttributeSpec(object):
@@ -103,6 +105,16 @@ class AttributeSpec(object):
             name=name,
             doc=doc,
             required=RequiredPolicy.REQUIRED,
+            *args,
+            **kwargs,
+        )
+
+    @staticmethod
+    def deprecated(name, doc, *args, **kwargs):
+        return AttributeSpec(
+            name=name,
+            doc=doc,
+            required=RequiredPolicy.DEPRECATED,
             *args,
             **kwargs,
         )
@@ -142,6 +154,16 @@ class AttributeSpec(object):
             AttributeSpec.select_name,
             AttributeSpec.filter_attrs(attrs=attrs, required=RequiredPolicy.OPTIONAL)
         )
+
+    @staticmethod
+    def deprecated_attr_names(attrs: 'typing.Iterable[AttributeSpec]'):
+        return {
+            name: value for name, value in map(
+                AttributeSpec.select_name_and_default,
+                AttributeSpec.filter_attrs(attrs, required=RequiredPolicy.DEPRECATED,
+                )
+            )
+        }
 
     @staticmethod
     def defaults_dict(attrs: 'typing.Iterable[AttributeSpec]'):
@@ -192,6 +214,8 @@ class AttributeSpec(object):
         if self.required_policy() == RequiredPolicy.REQUIRED:
             return True
         elif self.required_policy() == RequiredPolicy.OPTIONAL:
+            return False
+        elif self.required_policy() == RequiredPolicy.DEPRECATED:
             return False
         raise NotImplementedError
 
