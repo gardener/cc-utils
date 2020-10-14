@@ -201,7 +201,7 @@ class GrafeasClient:
             candidate = None
             for d in discoveries:
                 timestamp = max(timestamp, d.updateTime.timestamp())
-                if timestamp == d.updateTime().timestamp():
+                if timestamp == d.updateTime.timestamp():
                     candidate = d
         else:
             candidate = discoveries[0]
