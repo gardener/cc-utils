@@ -528,10 +528,13 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         draft_releases = [release for release in releases if release.draft]
         greatest_release_version = find_greatest_github_release_version(non_draft_releases)
 
-        draft_releases_to_delete = outdated_draft_releases(
-                draft_releases=draft_releases,
-                greatest_release_version=greatest_release_version,
-        )
+        if greatest_release_version is not None:
+            draft_releases_to_delete = outdated_draft_releases(
+                    draft_releases=draft_releases,
+                    greatest_release_version=greatest_release_version,
+            )
+        else:
+            draft_releases_to_delete = []
 
         for release in draft_releases_to_delete:
             yield release, release.delete()
