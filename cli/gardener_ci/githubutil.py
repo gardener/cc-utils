@@ -183,10 +183,13 @@ def list_draft_releases(
     draft_releases = [release for release in releases if release.draft]
 
     if only_outdated:
-        draft_releases = outdated_draft_releases(
-            draft_releases=draft_releases,
-            greatest_release_version=greatest_release_version,
-        )
+        if greatest_release_version is not None:
+            draft_releases = outdated_draft_releases(
+                draft_releases=draft_releases,
+                greatest_release_version=greatest_release_version,
+            )
+        else:
+            draft_releases = []
     for draft_release in draft_releases:
         print(draft_release.name)
 

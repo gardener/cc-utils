@@ -698,7 +698,11 @@ def find_greatest_github_release_version(
         version.parse_to_semver(release_version)
         for release_version in release_versions
     ]
-    return str(version.find_latest_version(release_version_infos))
+    latest_version = version.find_latest_version(release_version_infos)
+    if latest_version:
+        return str(latest_version)
+    else:
+        return None
 
 
 def outdated_draft_releases(
