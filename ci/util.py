@@ -183,7 +183,7 @@ def error(msg=None):
 def fail(msg=None):
     if msg:
         _print('ERROR: ' + str(msg), colour='red', outfh=sys.stderr)
-    raise RuntimeError()
+    raise Failure(1)
 
 
 def info(msg:str):
