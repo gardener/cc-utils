@@ -501,14 +501,24 @@ class GitHubReleaseStep(TransactionalStep):
         release_commit_step_output = self.context().step_output('Create Release Commit')
         release_commit_sha = release_commit_step_output['release_commit_sha1']
         # Create GitHub-release
-        release = self.github_helper.repository.create_release(
-            tag_name=self.release_version,
-            target_commitish=release_commit_sha,
-            body=None,
-            draft=False,
-            prerelease=False,
-            name=self.release_version,
-        )
+        if release := self.github_helper.draft_release_with_name(f'{self.release_version}-draft'):
+            release.edit(
+                tag_name=self.release_version,
+                target_commitish=release_commit_sha,
+                body=None,
+                draft=False,
+                prerelease=False,
+                name=self.release_version,
+            )
+        else:
+            release = self.github_helper.repository.create_release(
+                tag_name=self.release_version,
+                target_commitish=release_commit_sha,
+                body=None,
+                draft=False,
+                prerelease=False,
+                name=self.release_version,
+            )
 
         # Upload component descriptor to GitHub-release if one has been calculated
         with open(self.component_descriptor_file_path) as f:
