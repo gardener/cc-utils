@@ -270,6 +270,23 @@ def _target_oci_ref_from_ctx_base_url(
     )
 
 
+def download_component_descriptor_v2(
+    component_name: str,
+    component_version: str,
+    ctx_repo_base_url: str,
+):
+    target_ref = _target_oci_ref_from_ctx_base_url(
+        component_name=component_name,
+        component_version=component_version,
+        ctx_repo_base_url=ctx_repo_base_url,
+    )
+
+    return retrieve_component_descriptor_from_oci_ref(
+        manifest_oci_image_ref=target_ref,
+        absent_ok=False,
+    )
+
+
 def upload_component_descriptor_v2_to_oci_registry(
     component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
 ):

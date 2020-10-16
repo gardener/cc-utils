@@ -17,6 +17,7 @@ import functools
 import hashlib
 import json
 import logging
+import os
 import tarfile
 import tempfile
 
@@ -25,6 +26,47 @@ import container.model
 import container.registry
 
 logger = logging.getLogger(__name__)
+
+
+def process_download_request(request: container.model.ContainerImageDownloadRequest):
+    target_file = os.path.abspath(request.target_file)
+
+    if os.path.isfile(request.target_file):
+        logging.info(f'local tar image exists: {request.target_file}')
+        return
+
+    # Download image
+    os.makedirs(os.path.dirname(target_file), exist_ok=True)
+    with open(target_file, 'wb') as out_fh:
+        container.registry.retrieve_container_image(
+            image_reference=request.source_ref,
+            outfileobj=out_fh,
+        )
+
+    ci.util.Checksum().create_file(target_file)
+
+    return
+
+
+def process_upload_request_from_file(request: container.model.ContainerImageUploadRequest):
+    if container.registry._image_exists(request.target_ref):
+        logging.info(f'image exists: {request.target_ref}')
+        return
+
+    ci.util.existing_file(request.source_file)
+
+    publish_img = functools.partial(
+        container.registry.publish_container_image,
+        image_reference=request.target_ref,
+    )
+
+    with open(file=request.source_file, mode='r') as in_fh:
+        if not request.processing_callback:
+            return publish_img(image_file_obj=in_fh)
+
+        with tempfile.NamedTemporaryFile() as out_fh:
+            request.processing_callback(in_fh.name, out_fh.name)
+            return publish_img(image_file_obj=out_fh)
 
 
 def process_upload_request(request: container.model.ContainerImageUploadRequest):
