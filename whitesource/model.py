@@ -1,5 +1,9 @@
+import typing
+
 import dataclasses
 
+cve_name = str
+cvss_score = float
 
 @dataclasses.dataclass
 class WhitesourceProject:
@@ -7,7 +11,7 @@ class WhitesourceProject:
     token: str
     vulnerability_report: dict
 
-    def max_cve(self) -> tuple:
+    def max_cve(self) -> typing.Tuple[cve_name, cvss_score]:
         max_score = 0
         cve_name = None
 
@@ -21,4 +25,4 @@ class WhitesourceProject:
                 max_score = entry[cve_score_key_name]
                 cve_name = entry['name']
 
-        return cve_name, float(max_score)
+        return (cve_name, float(max_score))

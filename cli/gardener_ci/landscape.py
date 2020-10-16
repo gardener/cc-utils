@@ -46,6 +46,7 @@ class LandscapeComponent(enum.Enum):
     WHD = 'webhook_dispatcher'
     CLAMAV = 'clam_av'
     GARDENLINUX_CACHE = 'gardenlinux_cache'
+    WHITESOURCE_BACKEND = 'whitesource_backend'
 
 
 CONFIG_SET_HELP = (
@@ -73,6 +74,17 @@ def deploy_or_upgrade_landscape(
     concourse_deployment_name: CliHint(
         typehint=str, help="namespace and deployment name for Concourse"
     )='concourse',
+    whitesource_backend_chart_dir: CliHint(
+        typehint=str,
+        help="directory of Whitesource Backend chart",
+    )=None,
+    whitesource_backend_deployment_name: CliHint(
+        typehint=str, help="namespace and deployment name for Whitesource"
+    )='whitesource_backend',
+    whitesource_cfg_name: CliHint(
+        typehint=str,
+        help='Whitesource Config',
+    )='gardener',
     timeout_seconds: CliHint(typehint=int, help="how long to wait for concourse startup")=180,
     webhook_dispatcher_deployment_name: str='webhook-dispatcher',
     gardenlinux_cache_deployment_name: str='gardenlinux-cache',
@@ -154,6 +166,21 @@ def deploy_or_upgrade_landscape(
             config_set_name=config_set_name,
             chart_dir=gardenlinux_cache_chart_dir,
             deployment_name=gardenlinux_cache_deployment_name,
+        )
+
+    if LandscapeComponent.WHITESOURCE_BACKEND in components:
+        info ('Deploying Whitesource Backend')
+        extra_args = {}
+        if whitesource_backend_deployment_name:
+            extra_args['deployment_name'] = whitesource_backend_deployment_name
+        if whitesource_cfg_name:
+            extra_args['whitesource_cfg_name'] = whitesource_cfg_name
+        if whitesource_backend_chart_dir:
+            extra_args['chart_dir'] = whitesource_backend_chart_dir
+
+        deploy_or_upgrade_whitesource_api_extension(
+            config_set_name=config_set_name,
+            **extra_args,
         )
 
 
@@ -243,6 +270,7 @@ def deploy_or_upgrade_whitesource_api_extension(
     config_set_name: CliHint(typehint=str, help=CONFIG_SET_HELP),
     chart_dir: str = False,
     deployment_name: str = False,
+    whitesource_cfg_name: str = None,
 ):
     cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(config_set_name)
@@ -253,7 +281,7 @@ def deploy_or_upgrade_whitesource_api_extension(
     if chart_dir is not False:
         kwargs['chart_dir'] = existing_dir(chart_dir)
 
-    whitesource_cfg = cfg_set.whitesource()
+    whitesource_cfg = cfg_set.whitesource(cfg_name=whitesource_cfg_name)
 
     wss.deploy_whitesource_api_extension(
         kubernetes_cfg=cfg_set.kubernetes(),

@@ -11,17 +11,18 @@ import whitesource.model
 
 
 @functools.lru_cache()
-def create_whitesource_client(whitesource_cfg_name: str
-                              ):
+def create_whitesource_client(
+    whitesource_cfg_name: str,
+):
     cfg_fac = ci.util.ctx().cfg_factory()
     return whitesource.client.WhitesourceClient(cfg_fac.whitesource(whitesource_cfg_name))
 
 
-def generate_reporting_tables(projects: typing.List[whitesource.model.WhitesourceProject],
-                              threshold: float,
-                              tablefmt
-                              ):
-
+def generate_reporting_tables(
+    projects: typing.List[whitesource.model.WhitesourceProject],
+    threshold: float,
+    tablefmt,
+):
     # monkeypatch: disable html escaping
     tabulate.htmlescape = lambda x: x
 
@@ -35,21 +36,25 @@ def generate_reporting_tables(projects: typing.List[whitesource.model.Whitesourc
         else:
             below.append(project)
 
-    def _sort_projects_by_cve(projects: typing.List[whitesource.model.WhitesourceProject],
-                              descending=True,
-                              ):
-        return sorted(projects,
-                      key=lambda p: p.max_cve()[1],
-                      reverse=descending)
+    def _sort_projects_by_cve(
+        projects: typing.List[whitesource.model.WhitesourceProject],
+        descending=True,
+    ):
+        return sorted(
+            projects,
+            key=lambda p: p.max_cve()[1],
+            reverse=descending,
+        )
 
     # sort tables descending by CVSS-V3
     below = _sort_projects_by_cve(projects=below)
     above = _sort_projects_by_cve(projects=above)
 
-    ttable_header = ('Component',
-                     'Greatest CVSS-V3',
-                     'Corresponding CVE'
-                     )
+    ttable_header = (
+        'Component',
+        'Greatest CVSS-V3',
+        'Corresponding CVE',
+    )
     ttables = []
 
     for source in above, below:
@@ -68,7 +73,7 @@ def generate_reporting_tables(projects: typing.List[whitesource.model.Whitesourc
             headers=ttable_header,
             tabular_data=ttable_data,
             tablefmt=tablefmt,
-            colalign=('left', 'center', 'center')
+            colalign=('left', 'center', 'center'),
         )
 
         ttables.append(ttable)
@@ -76,9 +81,10 @@ def generate_reporting_tables(projects: typing.List[whitesource.model.Whitesourc
     return ttables
 
 
-def assemble_mail_body(tables: typing.List,
-                       threshold: float
-                       ):
+def assemble_mail_body(
+    tables: typing.List,
+    threshold: float,
+):
     return f'''
         <div>
             <p>
@@ -115,11 +121,12 @@ def assemble_mail_body(tables: typing.List,
     '''
 
 
-def send_mail(body,
-              recipients: list,
-              component_name: str,
-              attachments: typing.Sequence[mail.model.Attachment]
-              ):
+def send_mail(
+    body,
+    recipients: list,
+    component_name: str,
+    attachments: typing.Sequence[mail.model.Attachment],
+):
 
     # get standard cfg set for email cfg
     default_cfg_set_name = ci.util.current_config_set_name()

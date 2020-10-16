@@ -56,7 +56,8 @@ WHITESOURCE_ATTRIBUTES = (
         name='cve_threshold',
         default=7.0,
         doc='defines threshold for cve table generation',
-        type=str,
+        type=float,
+        default=7.0,
     ),
     AttributeSpec.required(
         name='cfg_name',

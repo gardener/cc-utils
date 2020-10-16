@@ -85,7 +85,7 @@ def ensure_helm_setup():
 def create_basic_auth_secret(
     secret_name: str,
     namespace: str,
-    basic_auth_cred: BasicAuthCred=None
+    basic_auth_cred: BasicAuthCred=None,
 ):
     """ Creates a secret with the configured TLS certificates in the K8s cluster.
         Optionally adds credentials for Basic Authentication"""
