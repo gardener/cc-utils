@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import collections
+import hashlib
 import os
 import pathlib
 import shutil
@@ -230,6 +231,65 @@ def none(value):
     return value
 
 
+class Checksum():
+    '''
+    Manage checksum from files
+
+    Args:
+        algo (str): Algorithm to use, default to SHA256
+    '''
+    def __init__(self, algo="sha256"):
+        self.algo = getattr(hashlib, algo)()
+
+    def compute(self, path: str) -> str:
+        buf_size = 1024 * 1024 # 1MB
+
+        with open(path, 'rb') as f:
+            while True:
+                data = f.read(buf_size)
+                if not data:
+                    break
+                self.algo.update(data)
+
+        return self.algo.hexdigest()
+
+    def _build_checksum_path_name(self, path: str) -> str:
+        return '.'.join((path, self.algo.name))
+
+    def _find_checksum(self, checksum_file: str, filename: str) -> str:
+        with open(checksum_file, 'r') as f:
+            content = f.readlines()
+
+        checksums = (x.strip().rsplit(' ', 2) for x in content)
+        for csum, tfile in checksums:
+            if filename == tfile:
+                return csum
+
+        return
+
+    def create_file(self, path: str):
+        checksum = self.compute(path)
+        target_file = os.path.basename(path)
+        checksum_file = self._build_checksum_path_name(path)
+
+        with open(checksum_file, 'w') as out_fh:
+            out_fh.write(f"{checksum} {target_file}")
+
+    def check_file_with_checksum(self, path: str, checksum: str) -> str:
+        return self.compute(path) == checksum
+
+    def check_file_from_sumfile(self, path: str, checksum_file=None) -> str:
+        if checksum_file is None:
+            checksum_file = self._build_checksum_path_name(checksum_file)
+
+        checksum = self._find_checksum(
+            checksum_file,
+            os.path.basename(path),
+        )
+
+        return self.check_file_with_checksum(path, checksum)
+
+
 def is_yaml_file(path):
     with open(path) as f:
         try:
@@ -418,6 +478,10 @@ def urljoin(*parts):
     last = last.lstrip('/')
 
     return '/'.join([first] + middle + [last])
+
+
+def file_extension_join(path: str, extension: str) -> str:
+    return '.'.join((path, extension))
 
 
 def which(cmd_name: str) -> str:
