@@ -5,6 +5,7 @@ import dataclasses
 cve_name = str
 cvss_score = float
 
+
 @dataclasses.dataclass
 class WhitesourceProject:
     name: str

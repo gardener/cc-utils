@@ -1,10 +1,10 @@
 import tempfile
 
 import ccc.github
-import product.model
 import whitesource.client
 
 import gci.componentmodel as cm
+
 
 def get_post_project_object(
     whitesource_client: whitesource.client.WhitesourceClient,
