@@ -1,6 +1,6 @@
-import ci.util
+import dataclasses
 
-from dataclasses import dataclass
+import ci.util
 
 
 class IdentityUploader:
@@ -13,7 +13,7 @@ class IdentityUploader:
         return processing_job._replace(upload_request=upload_request)
 
 
-@dataclass
+@dataclasses.dataclass
 class PrefixUploader:
     prefix: str
     context_url: str
@@ -44,7 +44,7 @@ class PrefixUploader:
         )
 
 
-@dataclass
+@dataclasses.dataclass
 class TagSuffixUploader:
     suffix: str
     separator: str = '-'

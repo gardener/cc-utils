@@ -27,13 +27,21 @@ def test_processor_instantiation(tmpdir):
         },
     }
 
-    processing.processing_pipeline(cfg)
+    processing.processing_pipeline(
+        processing_cfg=cfg,
+        shared_processors={},
+        shared_uploaders={},
+    )
 
     # test shared processor
     shared_proc = {'shared_p': cfg['processor']}
     cfg['processor'] = 'shared_p'
 
-    processing.processing_pipeline(cfg, shared_processors=shared_proc)
+    processing.processing_pipeline(
+        processing_cfg=cfg,
+        shared_processors=shared_proc,
+        shared_uploaders={},
+    )
 
     # revert
     cfg['processor'] = shared_proc['shared_p']
@@ -42,4 +50,8 @@ def test_processor_instantiation(tmpdir):
     shared_upld = {'shared_u': cfg['upload']}
     cfg['upload'] = 'shared_u'
 
-    processing.processing_pipeline(cfg, shared_uploaders=shared_upld)
+    processing.processing_pipeline(
+        processing_cfg=cfg,
+        shared_processors={},
+        shared_uploaders=shared_upld,
+    )
