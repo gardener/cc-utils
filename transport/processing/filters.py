@@ -18,11 +18,11 @@ class MatchAllFilter(FilterBase):
 
 class ImageFilter(FilterBase):
     def __init__(
-        self,
-        include_image_refs=(),
-        exclude_image_refs=(),
-        include_image_names=(),
-        exclude_image_names=(),
+            self,
+            include_image_refs=(),
+            exclude_image_refs=(),
+            include_image_names=(),
+            exclude_image_names=(),
     ):
         self._image_ref_filter = reutil.re_filter(
             include_regexes=include_image_refs,
@@ -42,9 +42,9 @@ class ImageFilter(FilterBase):
 
 class ComponentFilter(FilterBase):
     def __init__(
-        self,
-        include_component_names=(),
-        exclude_component_names=(),
+            self,
+            include_component_names=(),
+            exclude_component_names=(),
     ):
         self._comp_name_filter = reutil.re_filter(
             include_regexes=include_component_names,

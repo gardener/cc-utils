@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
 import argparse
+from distutils.util import strtobool
 import os
 import tarfile
-
-from distutils.util import strtobool
 
 import ci.util
 from processing.processing import Action
@@ -136,6 +135,9 @@ def main():
     processing_cfg = parse_processing_cfg(path=config.PROCESSING_CFG)
 
     if Action.ARCHIVE.value not in config.ACTIONS:
+        if config.DRY_RUN:
+            ci.util.warning('dry-run: not downloading or uploading any images')
+
         if args.component_descriptor_path is not None:
             descriptor = pc.parse_component_descriptor(args.component_descriptor_path)
             component = pc.ComponentTool.new_from_descriptor(descriptor)
@@ -160,7 +162,7 @@ def main():
 
         # run the process on all components
         for comp_obj in component_obj_run:
-            processing.process_resources(
+            processing.ProcessComponent(
                 processing_cfg=processing_cfg,
                 component_obj=comp_obj,
             )

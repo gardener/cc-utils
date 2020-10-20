@@ -21,13 +21,13 @@ class NoOpProcessor(ProcessorBase):
 
 class FileFilter(ProcessorBase):
     def __init__(
-        self,
-        filter_files,
+            self,
+            filter_files,
     ):
         self._remove_entries = []
         for path in filter_files:
-            with open(os.path.join(OWN_DIR, path)) as f:
-                for line in f.readlines():
+            with open(os.path.join(OWN_DIR, path)) as filter_file:
+                for line in filter_file.readlines():
                     line = line.strip()
                     if not line or line.startswith('#'):
                         continue

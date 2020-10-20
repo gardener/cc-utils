@@ -1,4 +1,3 @@
-import collections
 import concurrent.futures
 import enum
 import itertools
@@ -13,14 +12,14 @@ import container.util
 import product.v2
 
 import processing.config as config
-import processing.filters as filters
+import processing.filters as p_filters
 import processing.processing_component as pc
 import processing.processing_model as processing_model
-import processing.processors as processors
-import processing.uploaders as uploaders
-import processing.downloaders as downloaders
+import processing.processors as p_processors
+import processing.uploaders as p_uploaders
+import processing.downloaders as p_downloaders
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class Action(enum.Enum):
@@ -32,19 +31,14 @@ class Action(enum.Enum):
     SYNC = 'sync'
 
 
-class FileExtension(enum.Enum):
-    COMPONENT_DESCRIPTOR = 'yaml'
-    TAR = 'tar'
-
-
 class ProcessingPipeline:
     def __init__(
-        self,
-        name,
-        filters,
-        downloader,
-        processor,
-        uploaders,
+            self,
+            name,
+            filters,
+            downloader,
+            processor,
+            uploaders,
     ):
         self._name = name
         self._filters = filters
@@ -55,7 +49,8 @@ class ProcessingPipeline:
     def matches(self, component, container_image):
         filters_count = len(self._filters)
         return all(
-            map(lambda filtr, component, container_image: filtr.matches(component, container_image),
+            map(
+                lambda filtr, component, container_image: filtr.matches(component, container_image),
                 self._filters,
                 itertools.repeat(component, filters_count),
                 itertools.repeat(container_image, filters_count),
@@ -66,7 +61,7 @@ class ProcessingPipeline:
         if not self.matches(component, container_image):
             return None
 
-        logger.info(
+        LOGGER.info(
             f'{self._name} will process image: '
             f'{component.name}:{container_image.access.imageReference}'
         )
@@ -76,7 +71,7 @@ class ProcessingPipeline:
             config.RESOURCES_DIR,
             ci.util.file_extension_join(
                 container_image.access.imageReference,
-                FileExtension.TAR.value,
+                pc.FileExtension.TAR.value,
             )
         )
 
@@ -108,7 +103,7 @@ class ProcessingPipeline:
 
 
 def _filter(filter_cfg: dict):
-    filter_ctor = getattr(filters, filter_cfg['type'])
+    filter_ctor = getattr(p_filters, filter_cfg['type'])
     filter_ = filter_ctor(**filter_cfg.get('kwargs', {}))
 
     return filter_
@@ -116,7 +111,7 @@ def _filter(filter_cfg: dict):
 
 def _processor(processor_cfg: dict):
     proc_type = processor_cfg['type']
-    proc_ctor = getattr(processors, proc_type, None)
+    proc_ctor = getattr(p_processors, proc_type, None)
     if not proc_ctor:
         ci.util.fail(f'no such image processor: {proc_type}')
     processor = proc_ctor(**processor_cfg.get('kwargs', {}))
@@ -125,7 +120,7 @@ def _processor(processor_cfg: dict):
 
 def _uploader(uploader_cfg: dict):
     upload_type = uploader_cfg['type']
-    upload_ctor = getattr(uploaders, upload_type, None)
+    upload_ctor = getattr(p_uploaders, upload_type, None)
     if not upload_ctor:
         ci.util.fail(f'no such uploader: {upload_type}')
     uploader = upload_ctor(**uploader_cfg.get('kwargs', {}))
@@ -133,9 +128,9 @@ def _uploader(uploader_cfg: dict):
 
 
 def processing_pipeline(
-    processing_cfg: dict,
-    shared_processors: dict={},
-    shared_uploaders: dict={},
+        processing_cfg: dict,
+        shared_processors: dict,
+        shared_uploaders: dict,
 ):
     name = processing_cfg.get('name', '<no name>')
 
@@ -144,7 +139,7 @@ def processing_pipeline(
         filter_cfgs = [filter_cfgs]
     filters = [_filter(filter_cfg=filter_cfg) for filter_cfg in filter_cfgs]
 
-    downloader = downloaders.Downloader()
+    downloader = p_downloaders.Downloader()
 
     if 'processor' in processing_cfg:
         processor_cfg = processing_cfg['processor']
@@ -153,7 +148,7 @@ def processing_pipeline(
         else:
             proc = _processor(processor_cfg=processor_cfg)
     else:
-        proc = processors.NoOpProcessor()
+        proc = p_processors.NoOpProcessor()
 
     upload_cfgs = processing_cfg['upload']
     if not isinstance(upload_cfgs, list):
@@ -178,9 +173,9 @@ def processing_pipeline(
 
 
 def enum_processing_cfgs(
-    processing_cfg: dict,
-    shared_processors: dict,
-    shared_uploaders: dict,
+        processing_cfg: dict,
+        shared_processors: dict,
+        shared_uploaders: dict,
 ):
     cfg_entries = processing_cfg['processing_cfg']
 
@@ -202,9 +197,9 @@ def create_jobs(processing_cfg, component_descriptor):
 
     for component, container_image in _enumerate_oci_resources(component_descriptor):
         for processor in enum_processing_cfgs(
-            processing_cfg,
-            shared_processors,
-            shared_uploaders,
+                processing_cfg,
+                shared_processors,
+                shared_uploaders,
         ):
 
             job = processor.process(component=component, container_image=container_image)
@@ -212,13 +207,15 @@ def create_jobs(processing_cfg, component_descriptor):
                 continue # processor did not want to process
 
             ci.util.info(
-                f'found matching processor: {component.name}:{container_image.access.imageReference}'
+                f'found matching processor: {component.name}: '
+                f'{container_image.access.imageReference}'
             )
             yield job
             break
         else:
             ci.util.warning(
-                f'no matching processor: {component.name}:{container_image.access.imageReference}'
+                f'no matching processor: {component.name}: '
+                f'{container_image.access.imageReference}'
             )
 
 
@@ -232,35 +229,70 @@ def _enumerate_oci_resources(descriptor):
             yield (descriptor.component, resource)
 
 
-def process_resources(processing_cfg, component_obj):
-    if config.DRY_RUN:
-        ci.util.warning('dry-run: not downloading or uploading any images')
+class ProcessComponent:
+    def __init__(self, processing_cfg, component_obj):
+        self.src_component_obj = component_obj
+        self.src_descriptor = component_obj.descriptor
+        self.src_external_resources = self.src_descriptor.component.externalResources
+        self.src_local_resources = self.src_descriptor.component.localResources
 
-    src_descriptor = component_obj.descriptor
-    src_component = src_descriptor.component
-
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=8)
-
-    jobs = create_jobs(
-        processing_cfg=processing_cfg,
-        component_descriptor=src_descriptor,
-    )
-
-    NewResources = collections.namedtuple(
-        'NewResources',
-        ['resources', 'expected']
-    )
-
-    # only modify the OCI_REGISTRY resources
-    def _new_resources(resources: cm.AccessType) -> NewResources:
-        return NewResources(
-            resources=[r for r in resources if r.access.type != cm.AccessType.OCI_REGISTRY],
-            expected=len(resources)
+        self.tgt_external_resources = ProcessComponent.new_processing_resources(
+            src_resources=self.src_external_resources
         )
-    tgt_external_resources = _new_resources(src_component.externalResources)
-    tgt_local_resources = _new_resources(src_component.localResources)
+        self.tgt_local_resources = ProcessComponent.new_processing_resources(
+            src_resources=self.src_local_resources
+        )
 
-    def process_job(processing_job):
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=8)
+
+        jobs = create_jobs(
+            processing_cfg=processing_cfg,
+            component_descriptor=self.src_descriptor,
+        )
+
+        for _ in executor.map(self.process_job, jobs):
+            pass # force execution
+
+    @staticmethod
+    def new_processing_resources(
+            src_resources: cm.Resource
+    ) -> processing_model.ProcessingResources:
+        '''
+        Initiate a ProcessingResources with:
+            resources: only the non OCI_REGISTRY resources are added from the source
+                component descritor, the target modified resources will be added
+                incrementally as they are processed.
+            expected_count: this is based on the total count of resources from the source
+                component descriptor.
+        '''
+        return processing_model.ProcessingResources(
+            resources=[r for r in src_resources if r.access.type != cm.AccessType.OCI_REGISTRY],
+            expected_count=len(src_resources)
+        )
+
+    def all_tgt_resources_processed(self):
+        """ check if the number of processed resources has reached the expected count """
+        return all(
+            [
+                (len(r.resources) == r.expected_count) for r in [
+                    self.tgt_external_resources,
+                    self.tgt_local_resources
+                ]
+            ]
+        )
+
+    def tgt_descriptor_upload(self, tgt_context_url):
+        tgt_component_obj = pc.ComponentTool.new_from_source_descriptor(
+            descriptor=self.src_descriptor,
+            context_url=tgt_context_url,
+            external_resources=self.tgt_external_resources.resources,
+            local_resources=self.tgt_local_resources.resources,
+        )
+
+        tgt_component_obj.write_descriptor_to_file()
+        product.v2.upload_component_descriptor_v2_to_oci_registry(tgt_component_obj.descriptor)
+
+    def process_job(self, processing_job):
         src_img = processing_job.container_image
         tgt_oci_ref = processing_job.upload_request.target_ref
         tgt_img = pc.new_oci_resource_image_ref(
@@ -268,30 +300,16 @@ def process_resources(processing_cfg, component_obj):
             oci_ref=tgt_oci_ref
         )
 
-        if src_img in src_component.externalResources:
-            tgt_external_resources.resources.append(tgt_img)
-
-        if src_img in src_component.localResources:
-            tgt_local_resources.resources.append(tgt_img)
-
-        def _tgt_resources_fully_processed(*resources):
-            return (len(r) == e for r, e in resources)
-
-        def _upload_tgt_component(src_descriptor, context_url, external_resources, local_resources):
-            tgt_component_obj = pc.ComponentTool.new_from_source_descriptor(
-                descriptor=src_descriptor,
-                context_url=context_url,
-                external_resources=external_resources.resources,
-                local_resources=tgt_local_resources.resources,
-            )
-
-            tgt_component_obj.write_descriptor_to_file()
-            product.v2.upload_component_descriptor_v2_to_oci_registry(tgt_component_obj.descriptor)
+        # find if target image resource is external or local
+        if src_img in self.src_external_resources:
+            self.tgt_external_resources.resources.append(tgt_img)
+        if src_img in self.src_local_resources:
+            self.tgt_local_resources.resources.append(tgt_img)
 
         # do actual processing
         if not config.DRY_RUN:
             if Action.DOWNLOAD.value in config.ACTIONS:
-                component_obj.write_descriptor_to_file()
+                self.src_component_obj.write_descriptor_to_file()
                 container.util.process_download_request(processing_job.download_request)
 
             if Action.UPLOAD.value in config.ACTIONS:
@@ -301,20 +319,15 @@ def process_resources(processing_cfg, component_obj):
                     return
 
                 container.util.process_upload_request_from_file(
-                        request=processing_job.upload_request
+                    request=processing_job.upload_request
                 )
 
-                # All images have been processed, we can create the new component descriptor
-                if all(_tgt_resources_fully_processed(
-                    tgt_external_resources,
-                    tgt_local_resources)
-                ):
-                    _upload_tgt_component(
-                            src_descriptor=src_descriptor,
-                            context_url=processing_job.upload_context_url,
-                            external_resources=tgt_external_resources,
-                            local_resources=tgt_local_resources,
+                # All images have been processed, create and upload the new descriptor
+                if self.all_tgt_resources_processed():
+                    self.tgt_descriptor_upload(
+                        tgt_context_url=processing_job.upload_context_url,
                     )
+
         elif config.DRY_RUN:
             if Action.DOWNLOAD.value in config.ACTIONS:
                 ci.util.info(f'download image {processing_job.download_request.source_ref} to '
@@ -325,8 +338,3 @@ def process_resources(processing_cfg, component_obj):
                 if not os.path.isfile(processing_job.upload_request.source_file):
                     ci.util.warning(f'local tar image does not exist: '
                                     f'{processing_job.upload_request.source_file}')
-
-            pass
-
-    for result in executor.map(process_job, jobs):
-        pass # force execution

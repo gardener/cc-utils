@@ -1,20 +1,25 @@
+import dataclasses
+import enum
 import logging
 import os
 import sys
+import typing
 import yaml
-
-from dataclasses import dataclass, field
 
 import gci.componentmodel as cm
 import processing.config as config
-import processing.processing as processing
 
 import ci.util
 import container
 import container.registry
 import product.v2
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
+
+
+class FileExtension(enum.Enum):
+    COMPONENT_DESCRIPTOR = 'yaml'
+    TAR = 'tar'
 
 
 def parse_component_descriptor(path: str):
@@ -22,12 +27,16 @@ def parse_component_descriptor(path: str):
         return cm.ComponentDescriptor.from_dict(yaml.safe_load(desc_file))
 
 
-def _download_descriptor(name: str, version: str, ctx_base_url: str):
+def _download_descriptor(
+        name: str,
+        version: str,
+        ctx_base_url: str,
+) -> cm.ComponentDescriptor:
     try:
         return product.v2.download_component_descriptor_v2(
-                component_name=name,
-                component_version=version,
-                ctx_repo_base_url=ctx_base_url,
+            component_name=name,
+            component_version=version,
+            ctx_repo_base_url=ctx_base_url,
         )
     except container.registry.OciImageNotFoundException as err_not_found:
         ci.util.error(err_not_found)
@@ -39,8 +48,8 @@ def _resolve_cd_from_references(component_descriptor: cm.ComponentDescriptor):
 
     def enumerate_cd_from_references(
             component_descriptor: cm.ComponentDescriptor,
-            ctx_base_url: str
-        ):
+            ctx_base_url: str,
+    ):
         for comp_ref in component_descriptor.component.componentReferences:
             oci_ref = product.v2._target_oci_ref_from_ctx_base_url(
                 component_name=comp_ref.componentName,
@@ -60,13 +69,13 @@ def _resolve_cd_from_references(component_descriptor: cm.ComponentDescriptor):
             yield from _resolve_cd_from_references(cd_from_ref)
 
 
-@dataclass
+@dataclasses.dataclass
 class ComponentTool:
     name: str
     version: str
     ctx_base_url: str
-    descriptor: cm.ComponentDescriptor = None
-    oci_ref: str = field(init=False)
+    descriptor: typing.Optional[cm.ComponentDescriptor] = None
+    oci_ref: str = dataclasses.field(init=False)
 
     def __post_init__(self):
         self.oci_ref = product.v2._target_oci_ref_from_ctx_base_url(
@@ -113,12 +122,12 @@ class ComponentTool:
         )
 
     @staticmethod
-    def gen_yaml_file_path(oci_ref):
+    def gen_yaml_file_path(oci_ref: str):
         return ci.util.urljoin(
             config.RESOURCES_DIR,
             ci.util.file_extension_join(
                 oci_ref,
-                processing.FileExtension.COMPONENT_DESCRIPTOR.value,
+                FileExtension.COMPONENT_DESCRIPTOR.value,
             )
         )
 
@@ -140,7 +149,7 @@ class ComponentTool:
         return ComponentTool.gen_yaml_file_path(self.oci_ref)
 
     def write_descriptor_to_file(self):
-        logger.info(f'Writing descriptor to {self.yaml_file_path}')
+        LOGGER.info(f'Writing descriptor to {self.yaml_file_path}')
         os.makedirs(os.path.dirname(self.yaml_file_path), exist_ok=True)
         with open(file=self.yaml_file_path, mode='w') as desc_file:
             self.descriptor.to_fobj(fileobj=desc_file)
