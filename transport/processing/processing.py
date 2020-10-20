@@ -254,7 +254,7 @@ def process_resources(processing_cfg, component_obj):
     # only modify the OCI_REGISTRY resources
     def _new_resources(resources: cm.AccessType) -> NewResources:
         return NewResources(
-            resources=list(r for r in resources if r.access.type != cm.AccessType.OCI_REGISTRY),
+            resources=[r for r in resources if r.access.type != cm.AccessType.OCI_REGISTRY],
             expected=len(resources)
         )
     tgt_external_resources = _new_resources(src_component.externalResources)
