@@ -239,10 +239,10 @@ class Checksum():
         algo (str): Algorithm to use, default to SHA256
     '''
     def __init__(self, algo="sha256"):
-        self.algo = getattr(hashlib, algo)()
+        self.algo = hashlib.new(name=algo)
 
     def compute(self, path: str) -> str:
-        buf_size = 1024 * 1024 # 1MB
+        buf_size = 1024 * 1024 # 1MiB
 
         with open(path, 'rb') as f:
             while True:
