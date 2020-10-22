@@ -140,4 +140,5 @@ class CheckmarxProject:
             return False
 
     def upload_zip(self, file):
-        self.client.upload_zipped_source_code(self.project_details.id, file)
+        r = self.client.upload_zipped_source_code(self.project_details.id, file)
+        r.raise_for_status()

@@ -43,6 +43,18 @@ CHECKMARX_ATTRIBUTES = (
         doc='config name for checkmarx',
         type=str,
     ),
+    AttributeSpec.optional(
+        name='include_path_regexes',
+        doc='paths which should be included in the scan',
+        default=(),
+        type=typing.List[str],
+    ),
+    AttributeSpec.optional(
+        doc='paths which should be excluded in the scan',
+        default=(),
+        name='exclude_path_regexes',
+        type=typing.List[str],
+    ),
 )
 
 
@@ -94,6 +106,12 @@ class CheckmarxCfg(ModelBase):
 
     def checkmarx_cfg_name(self):
         return self.raw.get('cfg_name')
+
+    def include_path_regexes(self):
+        return self.raw['include_path_regexes']
+
+    def exclude_path_regexes(self):
+        return self.raw['exclude_path_regexes']
 
 
 ATTRIBUTES = (
