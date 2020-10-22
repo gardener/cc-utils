@@ -17,6 +17,7 @@ import ci.util
 import container.registry
 import product.model
 import product.util
+import version
 
 
 def convert_to_v1(
@@ -87,6 +88,10 @@ def _convert_component_to_v1(
             )
 
     return component_v1
+
+
+def _normalise_component_name(component_name:str) -> str:
+    return component_name.lower()  # oci-spec allows only lowercase
 
 
 def _convert_dependencies_to_v2_resources(
@@ -235,25 +240,35 @@ def ensure_is_v2(
         raise RuntimeError(f'unsupported component-descriptor-version: {schema_version=}')
 
 
+def _target_oci_repository_from_component_name(component_name: str, ctx_repo_base_url: str):
+    component_name = _normalise_component_name(component_name)
+    return ci.util.urljoin(
+        ctx_repo_base_url,
+        'component-descriptors',
+        f'{component_name}',
+    )
+
+
 def _target_oci_ref(
     component: gci.componentmodel.Component,
     component_ref: gci.componentmodel.ComponentReference=None,
+    component_version: str=None,
 ):
-    if component_ref is None:
-        component_ref = component
+
+    component_ref = component_ref or component
+    component_version = component_version or component_ref.version
+    component_name = _normalise_component_name(component_ref.name)
 
     # last ctx-repo is target-repository
     last_ctx_repo = component.repositoryContexts[-1]
     base_url = last_ctx_repo.baseUrl
 
-    component_name = component_ref.name.lower() # oci-spec allows only lowercase
-    component_version = component_ref.version
-
-    return _target_oci_ref_from_ctx_base_url(
+    repository = _target_oci_repository_from_component_name(
         component_name=component_name,
-        component_version=component_version,
         ctx_repo_base_url=base_url,
     )
+
+    return f'{repository}:{component_version}'
 
 
 def _target_oci_ref_from_ctx_base_url(
@@ -261,7 +276,7 @@ def _target_oci_ref_from_ctx_base_url(
     component_version: str,
     ctx_repo_base_url: str,
 ):
-    component_name = component_name.lower() # oci-spec allows only lowercase
+    component_name = _normalise_component_name(component_name)
 
     return ci.util.urljoin(
         ctx_repo_base_url,
@@ -520,3 +535,48 @@ def enumerate_oci_resources(component_descriptor):
             resource_access_types=[gci.componentmodel.AccessType.OCI_REGISTRY],
         ):
             yield (component, resource)
+
+
+def greatest_references(
+    references: typing.Iterable[gci.componentmodel.ComponentReference],
+) -> gci.componentmodel.ComponentReference:
+    '''
+    yields the component references from the specified iterable of ComponentReference that
+    have the greates version (grouped by component name).
+    Id est: if the sequence contains exactly one version of each contained component name,
+    the sequence is returned unchanged.
+    '''
+    references = tuple(references)
+    names = [r.name for r in references]
+
+    for name in names:
+        matching_refs = [r for r in references if r.name == name]
+        if len(matching_refs) == 1:
+            # in case reference name was unique, do not bother sorting
+            # (this also works around issues from non-semver versions)
+            yield matching_refs[0]
+        else:
+            # there might be multiple component versions of the same name
+            # --> use the greatest version in that case
+            matching_refs.sort(key=lambda r: version.parse_to_semver(r.version))
+            # greates version comes last
+            yield matching_refs[-1]
+
+
+def latest_component_version(component_name: str, ctx_repo_base_url: str) -> str:
+    oci_image_repo = _target_oci_repository_from_component_name(component_name, ctx_repo_base_url)
+    image_tags = container.registry.ls_image_tags(oci_image_repo)
+    return version.find_latest_version(image_tags)
+
+
+def greatest_component_version_with_matching_minor(
+    component_name: str,
+    ctx_repo_base_url: str,
+    reference_version: str,
+) -> str:
+    oci_image_repo = _target_oci_repository_from_component_name(component_name, ctx_repo_base_url)
+    image_tags = container.registry.ls_image_tags(oci_image_repo)
+    return version.find_latest_version_with_matching_minor(
+        reference_version=reference_version,
+        versions=image_tags,
+    )
