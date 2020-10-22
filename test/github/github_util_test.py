@@ -104,7 +104,7 @@ class UpgradePullRequestTest(unittest.TestCase):
         )
 
         # test validation
-        with self.assertRaises(ValueError):
+        with self.assertRaises(NotImplementedError):
             examinee.target_matches(object()) # object is not of type DependencyBase
 
         # different type, same name and version
