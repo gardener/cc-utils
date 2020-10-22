@@ -3,8 +3,6 @@ import dataclasses
 from enum import Enum
 import typing
 
-import gci.componentmodel as cm
-
 
 class ScanStatusValues(Enum):
     NEW = 1
@@ -115,6 +113,13 @@ class ScanResult:
     ScanResult is a data container for a scan result for a component version
     """
     project_id: int
-    component: cm.Component
+    component_name: str
     scan_response: ScanResponse
     scan_statistic: ScanStatistic
+
+
+@dataclasses.dataclass
+class FinishedScans:
+    scans_above_threshold:ScanResult
+    scans_below_threshold: ScanResult
+    failed_components: ScanResult
