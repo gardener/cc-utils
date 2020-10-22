@@ -3,9 +3,6 @@ import functools
 import tempfile
 import threading
 import traceback
-import typing
-
-from github3.repos import commit
 
 import checkmarx.client
 import checkmarx.model as model
@@ -237,6 +234,7 @@ def _download_zipped_repo(tmp_file, repo, ref: str):
 def create_checkmarx_client(checkmarx_cfg_name: str):
     cfg_fac = ci.util.ctx().cfg_factory()
     return checkmarx.client.CheckmarxClient(cfg_fac.checkmarx(checkmarx_cfg_name))
+
 
 def download_repo_and_create_scan(
     component_name:str,
