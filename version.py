@@ -20,6 +20,7 @@ import semver
 from typing import (
     Iterable,
     Set,
+    Union,
 )
 
 import ci.util
@@ -208,7 +209,7 @@ def process_version(
     return processed_version
 
 
-def find_latest_version(versions):
+def find_latest_version(versions) -> str:
     latest_candidate = None
     latest_candidate_str = None
 
@@ -253,7 +254,10 @@ def find_latest_version_with_matching_major(reference_version: semver.VersionInf
     return latest_candidate_str
 
 
-def find_latest_version_with_matching_minor(reference_version: semver.VersionInfo, versions):
+def find_latest_version_with_matching_minor(
+    reference_version: Union[semver.VersionInfo, str],
+    versions,
+) -> str:
     latest_candidate_semver = None
     latest_candidate_str = None
 
