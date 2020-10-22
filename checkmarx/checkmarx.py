@@ -1,8 +1,12 @@
 import concurrent.futures
 import functools
+import shutil
+import tarfile
 import tempfile
 import threading
 import traceback
+import typing
+import zipfile
 
 import checkmarx.client
 import checkmarx.model as model
@@ -24,6 +28,7 @@ def upload_and_scan_repo(
     component: cm.Component,  # needs to remain at first position (currying)
     checkmarx_client: checkmarx.client.CheckmarxClient,
     team_id: str,
+    path_filter_func: typing.Callable,
 ):
 
     cx_project = checkmarx.project.init_checkmarx_project(
@@ -55,6 +60,7 @@ def upload_and_scan_repo(
             cx_project=cx_project,
             hash=commit_hash,
             repo=repo,
+            path_filter_func=path_filter_func,
         )
         return cx_project.poll_and_retrieve_scan(scan_id=scan_id)
 
@@ -71,6 +77,7 @@ def upload_and_scan_repo(
                 cx_project=cx_project,
                 hash=commit_hash,
                 repo=repo,
+                path_filter_func=path_filter_func,
             )
     else:
         clogger.info(
@@ -86,6 +93,7 @@ def scan_sources(
     team_id: str,
     component_descriptor_path: str,
     threshold: int,
+    path_filter_func: typing.Callable = lambda x: True,
     max_workers: int = 8,
 ):
     component_descriptor = cm.ComponentDescriptor.from_dict(
@@ -98,6 +106,7 @@ def scan_sources(
         upload_and_scan_repo,
         checkmarx_client=client,
         team_id=team_id,
+        path_filter_func=path_filter_func,
     )
 
     failed_sentinel = object()
@@ -218,16 +227,28 @@ def print_scans(
         ci.util.info(f'failed components:\n{failed_components_str}')
 
 
-def _download_zipped_repo(tmp_file, repo, ref: str):
-    url = repo._build_url('zipball', ref, base_url=repo._api)
-    res = repo._get(url, verify=False, allow_redirects=True, stream=True)
-    res.raise_for_status()
+def _download_and_zip_repo(repo, ref: str,path_filter_func: typing.Callable, tmp):
+    url = repo._build_url('tarball', ref, base_url=repo._api)
+    with repo._get(url, stream=True) as r, \
+        tarfile.open(fileobj=r.raw, mode='r|*') as tar, \
+        zipfile.ZipFile(tmp, mode='w', compression=zipfile.ZIP_DEFLATED) as zip_file:
 
-    for chunk in res.iter_content(chunk_size=4096):
-        tmp_file.write(chunk)
+        r.raise_for_status()
+        r.raw.seekable = False
+        max_octets = 128 * 1024 * 1024  # 128 MiB
 
-    tmp_file.flush()
-    tmp_file.seek(0)
+        # valid because first tar entry is root directory and has no trailing \
+        path_offset = len(tar.next().name) + 1
+        for tar_info in tar:
+            if path_filter_func(arcname := tar_info.name[path_offset:]):
+                if tar_info.isfile():
+                    src = tar.extractfile(tar_info)
+                    if tar_info.size <= max_octets:
+                        zip_file.writestr(arcname, src.read())
+                    else:
+                        with tempfile.NamedTemporaryFile() as tmp_file:
+                            shutil.copyfileobj(src, tmp_file)
+                            zip_file.write(filename=tmp_file.name, arcname=arcname)
 
 
 @functools.lru_cache()
@@ -240,17 +261,20 @@ def download_repo_and_create_scan(
     component_name:str,
     hash:str,
     cx_project: checkmarx.project.CheckmarxProject,
+    path_filter_func: typing.Callable,
     repo,
 ):
     clogger = checkmarx.util.component_logger(component_name)
+    clogger.info('downloading sources')
     with tempfile.TemporaryFile() as tmp_file:
-        clogger.info('downloading sources for component.')
-        _download_zipped_repo(
+        _download_and_zip_repo(
             repo=repo,
             ref=hash,
-            tmp_file=tmp_file,
+            tmp=tmp_file,
+            path_filter_func=path_filter_func,
         )
-        clogger.info('uploading sources for component')
+        tmp_file.seek(0)
+        clogger.info('uploading sources')
         cx_project.upload_zip(file=tmp_file)
 
     cx_project.project_details.set_custom_field(

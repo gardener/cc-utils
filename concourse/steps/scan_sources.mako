@@ -27,6 +27,8 @@ scan_sources_and_notify(
     component_descriptor_path=component_descriptor_path(schema_version=cm.SchemaVersion.V2),
     email_recipients=${email_recipients},
     threshold=${checkmarx_cfg.severity_threshold()},
+    include_path_regexes=${checkmarx_cfg.include_path_regexes()},
+    exclude_path_regexes=${checkmarx_cfg.exclude_path_regexes()},
 )
 % endif
 

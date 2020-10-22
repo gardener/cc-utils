@@ -1,5 +1,6 @@
 from datetime import datetime
 import tempfile
+import typing
 
 import ci.util
 import checkmarx.checkmarx as cx
@@ -12,6 +13,8 @@ import whitesource.component
 from whitesource.component import get_post_project_object
 import whitesource.util
 import product.v2
+import reutil
+
 
 import gci.componentmodel as cm
 
@@ -21,15 +24,23 @@ def scan_sources_and_notify(
     team_id: str,
     component_descriptor_path: str,
     email_recipients,
+    include_path_regexes: typing.List[str] = (),
+    exclude_path_regexes: typing.List[str] = (),
     threshold: int = 40,
 ):
     checkmarx_client = checkmarx.util.create_checkmarx_client(checkmarx_cfg_name)
+
+    path_filter_func = reutil.re_filter(
+        include_regexes=include_path_regexes,
+        exclude_regexes=exclude_path_regexes,
+    )
 
     scans = cx.scan_sources(
         client=checkmarx_client,
         team_id=team_id,
         component_descriptor_path=component_descriptor_path,
         threshold=threshold,
+        path_filter_func=path_filter_func,
     )
 
     cx.print_scans(
