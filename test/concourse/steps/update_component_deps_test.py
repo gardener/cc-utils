@@ -3,20 +3,14 @@ import functools
 import unittest
 import os
 import pathlib
-from unittest.mock import MagicMock, Mock
-
-import semver
 
 import test_utils
 
 from concourse.steps import step_def
 from concourse.steps.update_component_deps import (
-    current_product_descriptor,
     determine_reference_versions,
 )
 import concourse.model.traits.update_component_deps as update_component_deps
-import product.util
-import product.model
 
 
 class UpdateComponentDependenciesStepTest(unittest.TestCase):
@@ -61,81 +55,92 @@ class UpdateComponentDependenciesStepTest(unittest.TestCase):
         return compile(step_snippet, 'update_component_deps.mako', 'exec')
 
 
-def test_current_product_descriptor(tmpdir):
-    os.environ['COMPONENT_DESCRIPTOR_DIR'] = str(tmpdir)
-    tmpdir.join('component_descriptor_v1').write('{}')
-
-    assert current_product_descriptor().raw == {
-        'meta': {'schemaVersion': 'v1'},
-        'components': [],
-        'component_overwrites': [],
-    }
-
-
 def test_determine_reference_versions():
+
+    # Case 1: No Upstream
     greatest_version = '2.1.1'
-    component_resolver = product.util.ComponentResolver()
-    component_resolver.latest_component_version = MagicMock(return_value=greatest_version)
-    component_descriptor_resolver = product.util.ComponentDescriptorResolver()
-
     examinee = functools.partial(
         determine_reference_versions,
         component_name='example.org/foo/bar',
-        component_resolver=component_resolver,
-        component_descriptor_resolver=component_descriptor_resolver,
     )
+    with unittest.mock.patch('product.v2') as product_mock:
+        with unittest.mock.patch(
+            'concourse.steps.update_component_deps.current_base_url'
+        ) as base_url_mock:
+            product_mock.latest_component_version.return_value = greatest_version
+            base_url_mock.return_value = "foo"
 
-    # no upstream component -> expect latest version to be returned
-    assert examinee(
-            reference_version='2.1.0',
-            upstream_component_name=None,
-        ) == (greatest_version,)
-    assert examinee(
-            reference_version='2.2.0', # same result, if our version is already greater
-            upstream_component_name=None,
-        ) == (greatest_version,)
+            # no upstream component -> expect latest version to be returned
+            assert examinee(
+                    reference_version='2.1.0',
+                    upstream_component_name=None,
+                ) == (greatest_version,)
 
-    # tests _with_ upstream component
-    def _upstream_ref_comp_mock(*args, **kwargs):
-        mobject = Mock()
-        mobject.dependencies = MagicMock(return_value=())
-        return mobject
+            product_mock.latest_component_version.assert_called()
+            base_url_mock.assert_called()
 
+            product_mock.latest_component_version.reset_mock()
+            base_url_mock.reset_mock()
+
+            assert examinee(
+                    reference_version='2.2.0', # same result, if our version is already greater
+                    upstream_component_name=None,
+                ) == (greatest_version,)
+
+            product_mock.latest_component_version.assert_called()
+            base_url_mock.assert_called()
+
+    # Case 2: Upstream component defined
     examinee = functools.partial(
         determine_reference_versions,
         component_name='example.org/foo/bar',
-        component_resolver=component_resolver,
-        component_descriptor_resolver=component_descriptor_resolver,
         upstream_component_name='example.org/foo/bar',
-        upstream_reference_component=_upstream_ref_comp_mock,
     )
 
-    # upstream component version should be returned
-    upstream_version = '2.2.2'
-    upstream_comp = product.model.Component.create('example.org/foo/bar', upstream_version)
+    with unittest.mock.patch('product.v2') as product_mock:
+        with unittest.mock.patch(
+            'concourse.steps.update_component_deps.current_base_url'
+        ) as base_url_mock:
 
-    UUP = update_component_deps.UpstreamUpdatePolicy
+            upstream_version = '2.2.0'
+            UUP = update_component_deps.UpstreamUpdatePolicy
 
-    # should return upstream version, by default (default to strict-following)
-    assert examinee(
-        reference_version='1.2.3', # does not matter
-        _component=MagicMock(return_value=upstream_comp)
-    ) == (upstream_version,)
-    # same behaviour if explicitly configured
-    assert examinee(
-        reference_version='1.2.3', # does not matter
-        upstream_update_policy=UUP.STRICTLY_FOLLOW,
-        _component=MagicMock(return_value=upstream_comp)
-    ) == (upstream_version,)
+            product_mock.latest_component_version.return_value = upstream_version
+            base_url_mock.return_value = "foo"
 
-    # if not strictly following, should consider hotfix
+            # should return upstream version, by default (default to strict-following)
+            assert examinee(
+                reference_version='1.2.3', # does not matter
+            ) == (upstream_version,)
 
-    # mock away lookup from component-resolver (used to determine hotfix version)
-    component_resolver.greatest_component_version_with_matching_minor = \
-        MagicMock(return_value=upstream_comp)
+            product_mock.latest_component_version.assert_called_once()
+            base_url_mock.assert_called_once()
 
-    assert examinee(
-        reference_version=semver.VersionInfo.parse('1.2.3'), # does not matter
-        upstream_update_policy=UUP.ACCEPT_HOTFIXES,
-        _component=MagicMock(return_value=upstream_comp)
-    ) == (upstream_version, upstream_version)
+            product_mock.latest_component_version.reset_mock()
+            base_url_mock.reset_mock()
+
+            # same behaviour if explicitly configured
+            assert examinee(
+                reference_version='1.2.3', # does not matter
+                upstream_update_policy=UUP.STRICTLY_FOLLOW,
+            ) == (upstream_version,)
+
+            product_mock.latest_component_version.assert_called_once()
+            base_url_mock.assert_called_once()
+
+            product_mock.latest_component_version.reset_mock()
+            base_url_mock.reset_mock()
+
+            # if not strictly following, should consider hotfix
+            upstream_hotfix_version = '2.2.3'
+            product_mock.greatest_component_version_with_matching_minor.return_value = \
+                upstream_hotfix_version
+
+            assert examinee(
+                reference_version='1.2.3', # does not matter
+                upstream_update_policy=UUP.ACCEPT_HOTFIXES,
+            ) == (upstream_hotfix_version, upstream_version)
+
+            product_mock.latest_component_version.assert_called_once()
+            base_url_mock.assert_called_once()
+            product_mock.greatest_component_version_with_matching_minor.assert_called_once()

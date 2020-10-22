@@ -20,6 +20,7 @@ import typing
 
 import gci.componentmodel
 
+import ccc.github
 import ci.util
 import concourse.model.traits.update_component_deps
 import concourse.steps.component_descriptor_util as cdu
@@ -27,6 +28,7 @@ import gitutil
 import github.util
 import product.model
 import product.util
+import product.v2
 import version
 from concourse.model.traits.update_component_deps import (
     MergePolicy,
@@ -38,199 +40,223 @@ from github.util import (
 from github.release_notes.util import ReleaseNotes
 
 
+UpstreamUpdatePolicy = concourse.model.traits.update_component_deps.UpstreamUpdatePolicy
+
+
 def current_product_descriptor():
-    component_descriptor_v1 = os.path.join(
-        ci.util.check_env('COMPONENT_DESCRIPTOR_DIR'),
-        cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V1),
-    )
-    return product.model.ComponentDescriptor.from_dict(
-        ci.util.parse_yaml_file(component_descriptor_v1),
+    return gci.componentmodel.ComponentDescriptor.from_dict(
+        component_descriptor_dict=ci.util.parse_yaml_file(
+            os.path.join(
+                ci.util.check_env('COMPONENT_DESCRIPTOR_DIR'),
+                cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
+            )
+        )
     )
 
 
 def current_component():
-    product = current_product_descriptor()
-    component_name = ci.util.check_env('COMPONENT_NAME')
-    return _component(product, component_name=component_name)
+    return current_product_descriptor().component
 
 
-def _component(
-        product_descriptor: product.model.ComponentDescriptor,
-        component_name: str,
-    ):
-    component = [c for c in product_descriptor.components() if c.name() == component_name]
-    component_count = len(component)
-    try:
-      print('component names:', [c.name() for c in product_descriptor.components()])
-    except:
-      pass
-    if component_count == 1:
-        return component[0]
-    elif component_count < 1:
-        ci.util.fail('Did not find component {cn}'.format(cn=component_name))
-    elif component_count > 1:
-        ci.util.fail('Found more than one component with name ' + component_name)
-    else:
-        raise NotImplementedError # this line should never be reached
+def current_base_url():
+    last_ctx_repo = current_component().repositoryContexts[-1]
+    return last_ctx_repo.baseUrl
 
 
-def upstream_reference_component(
-        component_resolver,
-        component_descriptor_resolver,
-        component_name: str,
-    ):
-    latest_version = component_resolver.latest_component_version(component_name)
+def component_by_ref_and_version(
+    component_reference: gci.componentmodel.ComponentReference,
+    component_version: str,
+):
+    component_descriptor = product.v2.retrieve_component_descriptor_from_oci_ref(
+        product.v2._target_oci_ref(
+            component=current_component(),
+            component_ref=component_reference,
+            component_version=component_version,
+        )
+    )
+    return component_descriptor.component
 
-    component_reference = product.model.ComponentReference.create(
-        name=component_name,
-        version=latest_version,
+
+def github_access_for_component(component, cfg_factory):
+    component_source = ccc.github._get_single_repo(component)
+
+    # existence of access is guaranteed by _get_single_repo
+    repo_url = component_source.access.repoUrl
+    host_name, org, repo_name = repo_url.split('/')
+    github_cfg = ccc.github.github_cfg_for_hostname(
+        host_name=host_name,
+        cfg_factory=cfg_factory,
     )
 
-    reference_product = component_descriptor_resolver.retrieve_descriptor(
-        component_reference=component_reference,
-    )
-
-    reference_component = _component(
-        product_descriptor=reference_product,
-        component_name=component_name,
-    )
-
-    return reference_component
+    return (github_cfg, org, repo_name)
 
 
-def close_obsolete_pull_requests(upgrade_pull_requests, reference_component):
-    open_pull_requests = [
-        pr for pr in upgrade_pull_requests
-        if pr.pull_request.state == 'open'
-    ]
+def close_obsolete_pull_requests(
+    upgrade_pull_requests,
+    reference_component: gci.componentmodel.Component,
+):
     obsolete_upgrade_requests = [
-        pr for pr in open_pull_requests
-        if pr.is_obsolete(reference_component=reference_component)
+        pr for pr in upgrade_pull_requests
+        if pr.pull_request.state == 'open' and pr.is_obsolete(
+            reference_component=reference_component,
+        )
     ]
 
     for obsolete_request in obsolete_upgrade_requests:
         obsolete_request.purge()
 
 
-def upgrade_pr_exists(reference, upgrade_requests):
+def upgrade_pr_exists(
+    component_reference: gci.componentmodel.ComponentReference,
+    upgrade_requests,
+):
     return any(
-        [upgrade_rq.target_matches(reference=reference) for upgrade_rq in upgrade_requests]
+        [
+            upgrade_rq.target_matches(reference=component_reference)
+            for upgrade_rq in upgrade_requests
+        ]
     )
 
 
-def create_upgrade_pr(
-        from_ref,
-        to_ref,
-        pull_request_util,
-        upgrade_script_path,
-        githubrepobranch: GitHubRepoBranch,
-        repo_dir,
-        github_cfg_name,
-        cfg_factory,
-        merge_policy,
-        after_merge_callback=None,
-    ):
-    ls_repo = pull_request_util.repository
+def determine_reference_versions(
+    component_name: str,
+    reference_version: str,
+    upstream_component_name: str=None,
+    upstream_update_policy: UpstreamUpdatePolicy=UpstreamUpdatePolicy.STRICTLY_FOLLOW,
+) -> typing.Sequence[str]:
+    base_url = current_base_url()
+    if upstream_component_name is None:
+        # no upstream component defined - look for greatest released version
+        return (product.v2.latest_component_version(component_name, base_url),)
 
-    # have component create upgradation diff
+    version_candidate = product.v2.latest_component_version(upstream_component_name, base_url)
+
+    if upstream_update_policy is UpstreamUpdatePolicy.STRICTLY_FOLLOW:
+        return (version_candidate,)
+
+    elif upstream_update_policy is UpstreamUpdatePolicy.ACCEPT_HOTFIXES:
+        hotfix_candidate = product.v2.greatest_component_version_with_matching_minor(
+            component_name=component_name,
+            reference_version=reference_version,
+        )
+        return (hotfix_candidate, version_candidate)
+
+    else:
+        raise NotImplementedError
+
+
+def determine_upgrade_prs(
+    upstream_component_name: str,
+    upstream_update_policy: UpstreamUpdatePolicy,
+    upgrade_pull_requests,
+) -> typing.Iterable[typing.Tuple[
+    gci.componentmodel.ComponentReference, gci.componentmodel.ComponentReference, str
+]]:
+    for greatest_component_reference in product.v2.greatest_references(
+        references=current_component().componentReferences,
+    ):
+        for latest_version in determine_reference_versions(
+            component_name=greatest_component_reference.name,
+            reference_version=greatest_component_reference.version,
+            upstream_component_name=upstream_component_name,
+            upstream_update_policy=upstream_update_policy,
+        ):
+            latest_version_semver = version.parse_to_semver(latest_version)
+            print(f'latest_version: {latest_version}, ref: {greatest_component_reference}')
+            if latest_version_semver <= version.parse_to_semver(
+                greatest_component_reference.version
+            ):
+                ci.util.info(
+                    f'skipping outdated component upgrade: {greatest_component_reference.name}; '
+                    f'our version: {greatest_component_reference.version}, '
+                    f'found: {latest_version}'
+                )
+                continue
+            elif upgrade_pr_exists(
+                component_reference=greatest_component_reference,
+                upgrade_requests=upgrade_pull_requests,
+            ):
+                ci.util.info(
+                    f'skipping upgrade (PR already exists): {greatest_component_reference.name}'
+                )
+                continue
+            else:
+                yield(greatest_component_reference, latest_version)
+
+
+def create_upgrade_pr(
+    from_ref: gci.componentmodel.ComponentReference,
+    to_ref: gci.componentmodel.ComponentReference,
+    to_version: str,
+    pull_request_util,
+    upgrade_script_path,
+    githubrepobranch: GitHubRepoBranch,
+    repo_dir,
+    github_cfg_name,
+    cfg_factory,
+    merge_policy,
+    after_merge_callback=None,
+):
+    ls_repo = pull_request_util.repository
+    from_version = from_ref.version
+    from_component = component_by_ref_and_version(
+        component_reference=from_ref,
+        component_version=from_version,
+    )
+
+    # prepare env for upgrade script and after-merge-callback
     cmd_env = os.environ.copy()
-    cmd_env['DEPENDENCY_TYPE'] = to_ref.type_name()
-    cmd_env['DEPENDENCY_NAME'] = to_ref.name()
-    cmd_env['DEPENDENCY_VERSION'] = to_ref.version()
+    # TODO: Handle upgrades for types other than 'component'
+    cmd_env['DEPENDENCY_TYPE'] = product.v2.COMPONENT_TYPE_NAME
+    cmd_env['DEPENDENCY_NAME'] = to_ref.name
+    cmd_env['DEPENDENCY_VERSION'] = to_version
     cmd_env['REPO_DIR'] = repo_dir
     cmd_env['GITHUB_CFG_NAME'] = github_cfg_name
 
-    # pass type-specific attributes
-    if to_ref.type_name() == 'container_image':
-      cmd_env['DEPENDENCY_IMAGE_REFERENCE'] = to_ref.image_reference()
-
+    # create upgrade diff
     subprocess.run(
         [str(upgrade_script_path)],
         check=True,
         env=cmd_env
     )
-    commit_msg = 'Upgrade {cn}\n\nfrom {ov} to {nv}'.format(
-        cn=to_ref.name(),
-        ov=from_ref.version(),
-        nv=to_ref.version(),
-    )
 
-    # mv diff into commit and push it
-    helper = gitutil.GitHelper.from_githubrepobranch(
+    commit_message = f'Upgrade {to_ref.name}\n\nfrom {from_version} to {to_version}'
+
+    upgrade_branch_name = push_upgrade_commit(
+        ls_repo=ls_repo,
+        commit_message=commit_message,
         githubrepobranch=githubrepobranch,
-        repo_path=repo_dir,
+        repo_dir=repo_dir,
     )
-    commit = helper.index_to_commit(message=commit_msg)
-    ci.util.info(f'commit for upgrade-PR: {commit.hexsha}')
 
-    new_branch_name = ci.util.random_str(prefix='ci-', length=12)
-    repo_branch = githubrepobranch.branch()
-    head_sha = ls_repo.ref(f'heads/{repo_branch}').object.sha
-    ls_repo.create_ref(f'refs/heads/{new_branch_name}', head_sha)
+    github_cfg, repo_owner, repo_name = github_access_for_component(from_component, cfg_factory)
+    release_notes = create_release_notes(
+        from_github_cfg=github_cfg,
+        from_repo_owner=repo_owner,
+        from_repo_name=repo_name,
+        from_version=from_version,
+        to_version=to_version,
+    )
 
-    def rm_pr_branch():
-      ls_repo.ref(f'heads/{new_branch_name}').delete()
-
-    try:
-      helper.push(from_ref=commit.hexsha, to_ref=f'refs/heads/{new_branch_name}')
-    except:
-      ci.util.warning('an error occurred - removing now useless pr-branch')
-      rm_pr_branch()
-      raise
-
-    helper.repo.git.checkout('.')
-
-    try:
-      with tempfile.TemporaryDirectory() as temp_dir:
-          from_github_cfg = cfg_factory.github(from_ref.config_name())
-          from_github_helper = GitHubRepositoryHelper(
-              github_cfg=from_github_cfg,
-              owner=from_ref.github_organisation(),
-              name=from_ref.github_repo(),
-          )
-          from_git_helper = gitutil.GitHelper.clone_into(
-              target_directory=temp_dir,
-              github_cfg=from_github_cfg,
-              github_repo_path=from_ref.github_repo_path()
-          )
-          commit_range = '{from_version}..{to_version}'.format(
-              from_version=from_ref.version(),
-              to_version=to_ref.version()
-          )
-          release_note_blocks = ReleaseNotes.create(
-              github_helper=from_github_helper,
-              git_helper=from_git_helper,
-              commit_range=commit_range
-          ).release_note_blocks()
-          if release_note_blocks:
-              text = '*Release Notes*:\n{blocks}'.format(
-                  blocks=release_note_blocks
-              )
-          else:
-              text = pull_request_util.retrieve_pr_template_text()
-    except:
-      ci.util.warning('an error occurred during release notes processing (ignoring)')
-      text = None
-      import traceback
-      ci.util.warning(traceback.format_exc())
+    if not release_notes:
+        release_notes = pull_request_util.retrieve_pr_template_text()
 
     pull_request = ls_repo.create_pull(
-            title=github.util.PullRequestUtil.calculate_pr_title(
-                reference=to_ref,
-                from_version=from_ref.version(),
-                to_version=to_ref.version()
-            ),
-            base=repo_branch,
-            head=new_branch_name,
-            body=text,
+        title=github.util.PullRequestUtil.calculate_pr_title(
+            reference=to_ref,
+            from_version=from_version,
+            to_version=to_version
+        ),
+        base=githubrepobranch.branch(),
+        head=upgrade_branch_name,
+        body=release_notes,
     )
 
     if merge_policy is MergePolicy.MANUAL:
         return
-
     # auto-merge - todo: make configurable (e.g. merge method)
     pull_request.merge()
-    rm_pr_branch()
+    ls_repo.ref(f'heads/{upgrade_branch_name}').delete()
 
     if after_merge_callback:
         subprocess.run(
@@ -240,41 +266,69 @@ def create_upgrade_pr(
         )
 
 
-UpstreamUpdatePolicy = concourse.model.traits.update_component_deps.UpstreamUpdatePolicy
-
-
-def determine_reference_versions(
-        component_name: str,
-        reference_version: str,
-        component_resolver: product.util.ComponentResolver,
-        component_descriptor_resolver: product.util.ComponentDescriptorResolver,
-        upstream_component_name: str=None,
-        upstream_update_policy: UpstreamUpdatePolicy=UpstreamUpdatePolicy.STRICTLY_FOLLOW,
-        _component: callable=_component, # allow easier mocking (for unittests)
-        upstream_reference_component: callable=upstream_reference_component, # allow easier mocking
-) -> typing.Sequence[str]:
-    if upstream_component_name is None:
-        # no upstream component defined - look for greatest released version
-        return (component_resolver.latest_component_version(component_name),)
-
-    version_candidate = _component(
-        upstream_reference_component(
-          component_resolver=component_resolver,
-          component_descriptor_resolver=component_descriptor_resolver,
-          component_name=upstream_component_name,
-        ).dependencies(), component_name).version()
-    version_candidate = version.parse_to_semver(version_candidate)
-    if upstream_update_policy is UpstreamUpdatePolicy.STRICTLY_FOLLOW:
-        return (str(version_candidate),)
-    elif upstream_update_policy is UpstreamUpdatePolicy.ACCEPT_HOTFIXES:
-        pass # continue
-    else:
-        raise NotImplementedError
-
-    # also consider hotfixes
-    hotfix_candidate = component_resolver.greatest_component_version_with_matching_minor(
-      component_name=component_name,
-      reference_version=str(reference_version),
+def push_upgrade_commit(
+    ls_repo,
+    commit_message: str,
+    githubrepobranch,
+    repo_dir: str,
+) -> str:
+    # mv diff into commit and push it
+    helper = gitutil.GitHelper.from_githubrepobranch(
+        githubrepobranch=githubrepobranch,
+        repo_path=repo_dir,
     )
-    hotfix_candidate = version.parse_to_semver(hotfix_candidate)
-    return (str(hotfix_candidate), str(version_candidate))
+    commit = helper.index_to_commit(message=commit_message)
+    ci.util.info(f'commit for upgrade-PR: {commit.hexsha}')
+    new_branch_name = ci.util.random_str(prefix='ci-', length=12)
+    repo_branch = githubrepobranch.branch()
+    head_sha = ls_repo.ref(f'heads/{repo_branch}').object.sha
+    ls_repo.create_ref(f'refs/heads/{new_branch_name}', head_sha)
+
+    try:
+        helper.push(from_ref=commit.hexsha, to_ref=f'refs/heads/{new_branch_name}')
+    except:
+        ci.util.warning('an error occurred - removing now useless pr-branch')
+        ls_repo.ref(f'heads/{new_branch_name}').delete()
+        raise
+
+    helper.repo.git.checkout('.')
+
+    return new_branch_name
+
+
+def create_release_notes(
+    from_github_cfg,
+    from_repo_owner: str,
+    from_repo_name: str,
+    from_version: str,
+    to_version: str,
+):
+    try:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            from_github_helper = GitHubRepositoryHelper(
+                github_cfg=from_github_cfg,
+                owner=from_repo_owner,
+                name=from_repo_name,
+            )
+            from_git_helper = gitutil.GitHelper.clone_into(
+                target_directory=temp_dir,
+                github_cfg=from_github_cfg,
+                github_repo_path=f'{from_repo_owner}/{from_repo_name}'
+            )
+            commit_range = '{from_version}..{to_version}'.format(
+                from_version=from_version,
+                to_version=to_version,
+            )
+            release_note_blocks = ReleaseNotes.create(
+                github_helper=from_github_helper,
+                git_helper=from_git_helper,
+                commit_range=commit_range
+            ).release_note_blocks()
+            if release_note_blocks:
+                return f'**Release Notes*:\n{release_note_blocks}'
+    except:
+        ci.util.warning('an error occurred during release notes processing (ignoring)')
+        import traceback
+        ci.util.warning(traceback.format_exc())
+
+    return None
