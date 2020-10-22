@@ -6,7 +6,7 @@ from dacite import from_dict
 import requests
 
 from ci.util import urljoin
-import checkmarx.model
+import checkmarx.model as cxmodel
 import model.checkmarx
 
 
@@ -99,7 +99,7 @@ class CheckmarxClient:
             },
             verify=False,
         )
-        res = checkmarx.model.AuthResponse(**res.json())
+        res = cxmodel.AuthResponse(**res.json())
         res.expires_at = datetime.datetime.fromtimestamp(
             datetime.datetime.now().timestamp() + res.expires_in - 10
         )
@@ -108,11 +108,11 @@ class CheckmarxClient:
 
     @require_auth
     def request(
-            self,
-            method: str,
-            api_version: str = '1.0',
-            print_error: bool = True,
-            *args, **kwargs
+        self,
+        method: str,
+        api_version: str = '1.0',
+        print_error: bool = True,
+        *args, **kwargs
     ):
         headers = kwargs.pop('headers', {})
         headers['Authorization'] = f'Bearer {self.auth.access_token}'
@@ -172,7 +172,7 @@ class CheckmarxClient:
         )
         return res
 
-    def update_project(self, project_details: checkmarx.model.ProjectDetails):
+    def update_project(self, project_details: cxmodel.ProjectDetails):
         res = self.request(
             method="PUT",
             url=self.routes.project_by_id(project_details.id),
@@ -184,7 +184,7 @@ class CheckmarxClient:
         )
         return res
 
-    def start_scan(self, scan_settings: checkmarx.model.ScanSettings):
+    def start_scan(self, scan_settings: cxmodel.ScanSettings):
         res = self.request(
             method='POST',
             url=self.routes.scan(),
@@ -204,7 +204,7 @@ class CheckmarxClient:
             api_version='application/json;v=1.0',
         )
         return [
-            from_dict(data_class=checkmarx.model.ScanResponse, data=resp)
+            from_dict(data_class=cxmodel.ScanResponse, data=resp)
             for resp in res.json()
         ]
 
@@ -213,11 +213,11 @@ class CheckmarxClient:
             method='GET',
             url=self.routes.scan_by_id(scan_id=scan_id),
         )
-        return from_dict(data_class=checkmarx.model.ScanResponse, data=res.json())
+        return from_dict(data_class=cxmodel.ScanResponse, data=res.json())
 
     def get_scan_statistics(self, scan_id: int):
         res = self.request(
             method='GET',
             url=self.routes.scan_statistics(scan_id=scan_id)
         )
-        return from_dict(data_class=checkmarx.model.ScanStatistic, data=res.json())
+        return from_dict(data_class=cxmodel.ScanStatistic, data=res.json())

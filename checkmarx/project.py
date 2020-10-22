@@ -1,141 +1,48 @@
-import functools
-import hashlib
 import logging
-import tempfile
 import time
 
 import dacite
-import github3.exceptions
 import gci.componentmodel as cm
 
-import ccc.github
 import ctx
 import checkmarx.client
-import checkmarx.model
+import checkmarx.model as model
 import checkmarx.util
-import product.util
 
 ctx.configure_default_logging()
 logger = logging.getLogger(__name__)
 
 
-@functools.lru_cache
-def component_logger(component_name):
-    return logging.getLogger(component_name)
-
-
-def upload_and_scan_repo(
-        component: cm.Component,  # needs to remain at first position (currying)
-        checkmarx_client: checkmarx.client.CheckmarxClient,
-        team_id: str,
-):
-    cx_project = _create_checkmarx_project(
-        checkmarx_client=checkmarx_client,
-        team_id=team_id,
-        component=component,
-    )
-    try:
-        commit_hash = product.util.guess_commit_from_ref(component=component)
-    except github3.exceptions.NotFoundError as e:
-        raise product.util.RefGuessingFailedError(e)
-
-    project = dacite.from_dict(
-        checkmarx.model.ProjectDetails,
-        cx_project.client.get_project_by_id(cx_project.project_id).json()
-    )
-
-    clogger = component_logger(component_name=component.name)
-
-    last_scans = cx_project.client.get_last_scans_of_project(cx_project.project_id)
-
-    if len(last_scans) < 1:
-        clogger.info('No scans found in project history')
-        with tempfile.TemporaryFile() as tmp_file:
-            clogger.info('downloading sources for component.')
-            cx_project.download_zipped_repo(
-                tmp_file=tmp_file,
-                ref=commit_hash,
-            )
-            clogger.info('uploading sources for component')
-            cx_project.upload_zip(file=tmp_file)
-
-        project.set_custom_field(checkmarx.model.CustomFieldKeys.HASH, commit_hash)
-        project.set_custom_field(checkmarx.model.CustomFieldKeys.COMPONENT_NAME, component.name)
-
-        cx_project.client.update_project(project)
-        scan_id = cx_project.start_scan()
-        clogger.info(f'created scan with id {scan_id}')
-
-        return cx_project.poll_and_retrieve_scan(
-            scan_id=scan_id,
-            component=component,
-            project_id=project.id,
-        )
-
-    last_scan = last_scans[0]
-    scan_id = last_scan.id
-
-    if checkmarx.util.is_scan_finished(last_scan):
-        clogger.info('No active scan found for component. Checking for hash')
-
-        if checkmarx.util.is_scan_necessary(project=project, hash=commit_hash):
-            clogger.info('downloading repo')
-            with tempfile.TemporaryFile() as tmp_file:
-                cx_project.download_zipped_repo(
-                    tmp_file=tmp_file,
-                    ref=commit_hash,
-                )
-                clogger.info('uploading sources')
-                cx_project.upload_zip(file=tmp_file)
-
-            project.set_custom_field(
-                checkmarx.model.CustomFieldKeys.HASH,
-                commit_hash,
-            )
-            project.set_custom_field(
-                checkmarx.model.CustomFieldKeys.COMPONENT_NAME,
-                component.name,
-            )
-            cx_project.client.update_project(project)
-
-            scan_id = cx_project.start_scan()
-            clogger.info(f'created scan with id {scan_id}')
-    else:
-        clogger.info(f'scan with id: {last_scan.id} for component {component.name} '
-                     'already running. Polling last scan.'
-                     )
-
-    return cx_project.poll_and_retrieve_scan(
-        project_id=project.id,
-        scan_id=scan_id,
-        component=component,
-    )
-
-
-def _create_checkmarx_project(
+def init_checkmarx_project(
     checkmarx_client: checkmarx.client.CheckmarxClient,
-    team_id: str,
     component: cm.Component,
+    team_id: str,
 ):
-    github_api = ccc.github.github_api_from_component(component=component)
-
     project_name = _calc_project_name_for_component(component_name=component.name)
 
-    project_id = _create_or_get_project(client=checkmarx_client, name=project_name, team_id=team_id)
+    project_id = _create_or_get_project(
+        client=checkmarx_client,
+        name=project_name,
+        team_id=team_id,
+    )
+
+    project_details = dacite.from_dict(
+        model.ProjectDetails,
+        checkmarx_client.get_project_by_id(project_id=project_id).json()
+    )
 
     return CheckmarxProject(
         checkmarx_client=checkmarx_client,
-        project_id=project_id,
-        github_api=github_api,
-        component=component,
+        component_name=component.name,
+        project_details=project_details,
     )
 
 
 def _create_or_get_project(
-        client: checkmarx.client.CheckmarxClient,
-        name: str,
-        team_id: str,
-        is_public: bool = True,
+    client: checkmarx.client.CheckmarxClient,
+    name: str,
+    team_id: str,
+    is_public: bool = True,
 ):
     try:
         project_id = client.get_project_id_by_name(project_name=name, team_id=team_id)
@@ -154,125 +61,48 @@ def _calc_project_name_for_component(component_name: str):
 class CheckmarxProject:
     def __init__(
         self,
+        component_name: str,
         checkmarx_client: checkmarx.client.CheckmarxClient,
-        project_id: str,
-        github_api,
-        component: cm.Component,
+        project_details: model.ProjectDetails,
     ):
+        self.component_name = component_name
         self.client = checkmarx_client
-        self.project_id = int(project_id)
-        self.component = component
-        self.github_api = github_api
+        self.project_details = project_details
 
-    def poll_and_retrieve_scan(
-        self,
-        project_id: int,
-        scan_id: int,
-        component: cm.Component,
-    ):
-        scan_response = self._poll_scan(scan_id=scan_id, component=component)
+    def poll_and_retrieve_scan(self, scan_id: int):
+        scan_response = self._poll_scan(scan_id=scan_id)
 
-        if scan_response.status_value() is not checkmarx.model.ScanStatusValues.FINISHED:
-            logger.error(f'scan for {component.name} failed with {scan_response.status=}')
+        if scan_response.status_value() is not model.ScanStatusValues.FINISHED:
+            logger.error(f'scan for {self.component_name} failed with {scan_response.status=}')
             raise RuntimeError('Scan did not finish successfully')
 
-        clogger = component_logger(component_name=component.name)
+        clogger = checkmarx.util.component_logger(component_name=self.component_name)
         clogger.info('retrieving scan statistics')
         statistics = self.scan_statistics(scan_id=scan_response.id)
 
-        return checkmarx.model.ScanResult(
-            project_id=project_id,
-            component=component,
+        return model.ScanResult(
+            project_id=self.project_details.id,
+            component_name=self.component_name,
             scan_response=scan_response,
             scan_statistic=statistics,
         )
 
-    def download_zipped_repo(self, tmp_file, ref: str):
-        github_repo = ccc.github.GithubRepo.from_component(self.component)
-        repo = self.github_api.repository(
-            github_repo.org_name,
-            github_repo.repo_name,
-        )
+    def get_project(self):
+        return self.client.get_project_by_id(self.project_details.id).json()
 
-        url = repo._build_url('zipball', ref, base_url=repo._api)
-        res = repo._get(url, verify=False, allow_redirects=True, stream=True)
-        if not res.ok:
-            raise RuntimeError(
-                f'request to download github zip archive from {url=}'
-                f' failed with {res.status_code=} {res.reason=}'
-            )
-
-        for chunk in res.iter_content(chunk_size=512):
-            tmp_file.write(chunk)
-
-        tmp_file.flush()
-        tmp_file.seek(0)
-
-    def upload_zip(self, file):
-        self.client.upload_zipped_source_code(self.project_id, file)
-
-    def update_project(self, project: checkmarx.model.ProjectDetails):
-        self.client.update_project(project)
-
-    def upload_source(self, ref: str):
-        github_repo = ccc.github.GithubRepo.from_component(self.component)
-        repo = self.github_api.repository(
-            github_repo.org_name,
-            github_repo.repo_name,
-        )
-
-        url = repo._build_url('zipball', ref, base_url=repo._api)
-        res = repo._get(url, verify=False, allow_redirects=True, stream=True)
-        if not res.ok:
-            raise RuntimeError(
-                f'request to download github zip archive from {url=}'
-                f' failed with {res.status_code=} {res.reason=}')
-
-        sha1 = hashlib.sha1()
-
-        with tempfile.TemporaryFile() as tmp_file:
-            for chunk in res.iter_content(chunk_size=512):
-                tmp_file.write(chunk)
-                sha1.update(chunk)
-
-            tmp_file.flush()
-            tmp_file.seek(0)
-
-            project = dacite.from_dict(
-                checkmarx.model.ProjectDetails,
-                self.client.get_project_by_id(self.project_id).json()
-            )
-            remote_hash = project.get_custom_field(checkmarx.model.CustomFieldKeys.HASH)
-
-            current_hash = f'sha1:{sha1.hexdigest()}'
-            if remote_hash and not remote_hash.startswith('sha1:'):
-                raise NotImplementedError(remote_hash)
-
-            if current_hash != remote_hash:
-                logger.info(f'Uploading changes of repo {repo.name}')
-                self.client.upload_zipped_source_code(self.project_id, tmp_file)
-                project.set_custom_field(checkmarx.model.CustomFieldKeys.HASH, current_hash)
-                project.set_custom_field(checkmarx.model.CustomFieldKeys.VERSION, ref)
-                self.client.update_project(project)
-                return True
-            logger.info(f"given snapshot {ref} already scanned")
-            return False
+    def update_remote_project(self):
+        self.client.update_project(self.project_details)
 
     def start_scan(self):
-        scan_settings = checkmarx.model.ScanSettings(projectId=self.project_id)
+        scan_settings = model.ScanSettings(projectId=self.project_details.id)
         return self.client.start_scan(scan_settings)
 
-    def _poll_scan(
-            self,
-            scan_id: int,
-            component: cm.Component,
-            polling_interval_seconds=60
-    ):
+    def _poll_scan(self, scan_id: int, polling_interval_seconds=60):
         def scan_finished():
             scan = self.client.get_scan_state(scan_id=scan_id)
-            clogger = component_logger(component.name)
+            clogger = checkmarx.util.component_logger(self.component_name)
             clogger.info(f'polling for {scan_id=}. {scan.status.name=}')
-            if checkmarx.util.is_scan_finished(scan):
+            if self.is_scan_finished(scan):
                 return scan
             return False
 
@@ -285,3 +115,29 @@ class CheckmarxProject:
 
     def scan_statistics(self, scan_id: int):
         return self.client.get_scan_statistics(scan_id=scan_id)
+
+    def get_last_scans(self):
+        return self.client.get_last_scans_of_project(project_id=self.project_details.id)
+
+    def is_scan_finished(self, scan: model.ScanResponse):
+        if model.ScanStatusValues(scan.status.id) in (
+                model.ScanStatusValues.FINISHED,
+                model.ScanStatusValues.FAILED,
+                model.ScanStatusValues.CANCELED,
+        ):
+            return True
+        else:
+            return False
+
+    def is_scan_necessary(self, hash: str):
+        remote_hash = self.project_details.get_custom_field(
+            model.CustomFieldKeys.HASH,
+        )
+        if remote_hash != hash:
+            print(f'{remote_hash=} != {hash=} - scan required')
+            return True
+        else:
+            return False
+
+    def upload_zip(self, file):
+        self.client.upload_zipped_source_code(self.project_details.id, file)
