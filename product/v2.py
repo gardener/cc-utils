@@ -20,6 +20,9 @@ import product.util
 import version
 
 
+COMPONENT_TYPE_NAME = 'component'
+
+
 def convert_to_v1(
     component_descriptor_v2: cm.ComponentDescriptor,
 ):

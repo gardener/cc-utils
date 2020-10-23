@@ -24,7 +24,6 @@ import yaml
 
 import ccc.github
 import version
-from github.util import GitHubRepositoryHelper
 from ci.util import not_none, check_type, FluentIterable
 from .model import (
     COMPONENT_DESCRIPTOR_ASSET_NAME,
@@ -58,6 +57,9 @@ class ResolverBase:
         self.cfg_factory = cfg_factory
 
     def _repository_helper(self, component_reference):
+        # late import due to circular dependency
+        from github.util import GitHubRepositoryHelper
+
         if isinstance(component_reference, tuple):
             name, version = component_reference
             component_reference = ComponentReference.create(name=name, version=version)

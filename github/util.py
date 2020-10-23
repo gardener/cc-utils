@@ -35,12 +35,11 @@ import gci.componentmodel
 import ccc.github
 import ci.util
 import product.model
+import product.v2
 import version
 
 from product.model import DependencyBase
 from model.github import GithubConfig
-
-COMPONENT_TYPE_NAME = 'component'
 
 
 class RepoPermission(enum.Enum):
@@ -182,7 +181,7 @@ class UpgradePullRequest(object):
 
             greatest_reference_version = version.parse_to_semver(reference_refs[-1].version())
         elif isinstance(reference_component, gci.componentmodel.Component):
-            if self.reference_type_name == COMPONENT_TYPE_NAME:
+            if self.reference_type_name == product.v2.COMPONENT_TYPE_NAME:
                 reference_refs = sorted(
                     [
                         rc for rc in reference_component.componentReferences
@@ -219,7 +218,7 @@ class UpgradePullRequest(object):
 
         elif isinstance(reference, gci.componentmodel.ComponentReference):
             ci.util.check_type(reference, gci.componentmodel.ComponentReference)
-            if COMPONENT_TYPE_NAME != self.reference_type_name:
+            if product.v2.COMPONENT_TYPE_NAME != self.reference_type_name:
                 return False
             if reference.name != self.ref_name:
                 return False
