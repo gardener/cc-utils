@@ -452,16 +452,34 @@ def _pull_image(image_reference: str, outfileobj=None):
       return outfileobj
 
 
+def _retrieve_raw_manifest(
+    image_reference: str,
+    absent_ok: bool=False,
+):
+  image_reference = normalise_image_reference(image_reference=image_reference)
+  try:
+    with pulled_image(image_reference=image_reference) as image:
+      return image.manifest()
+  except OciImageNotFoundException as oie:
+    if absent_ok:
+      return None
+    raise oie
+
+
 def retrieve_manifest(
     image_reference: str,
     absent_ok: bool=False,
 ) -> OciImageManifest:
   try:
-    with pulled_image(image_reference=image_reference) as image:
-      raw = json.loads(image.manifest())
+    raw_dict = json.loads(
+        _retrieve_raw_manifest(
+            image_reference=image_reference,
+            absent_ok=absent_ok,
+        )
+    )
     manifest = dacite.from_dict(
       data_class=OciImageManifest,
-      data=raw,
+      data=raw_dict,
     )
 
     return manifest
