@@ -77,6 +77,15 @@ def load_config_from_env():
     }
 
 
+def load_config_from_fs():
+    default_cfg_dir = '/cc-config'
+    if os.path.isdir(default_cfg_dir):
+        return {
+            'cfg-dir':  default_cfg_dir,
+        }
+    return {}
+
+
 def load_config_from_user_home():
     config_file = Path.home() / '.cc-utils.cfg'
     if config_file.is_file():
@@ -98,7 +107,11 @@ def add_config_source(config_source: dict):
 def load_config():
     home_config = load_config_from_user_home()
     env_config = load_config_from_env()
+    fs_config = load_config_from_fs()
+
     merged = ci.util.merge_dicts(home_config, env_config)
+    merged = ci.util.merge_dicts(merged, fs_config)
+
     cli_cfg = load_config_from_args()
     merged = ci.util.merge_dicts(merged, cli_cfg)
     add_config_source(merged)
