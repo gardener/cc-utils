@@ -81,7 +81,9 @@ def load_config_from_fs():
     default_cfg_dir = '/cc-config'
     if os.path.isdir(default_cfg_dir):
         return {
-            'cfg-dir':  default_cfg_dir,
+            'ctx': {
+                'cfg-dir':  default_cfg_dir,
+            },
         }
     return {}
 
