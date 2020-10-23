@@ -18,6 +18,7 @@ import contextlib
 import dataclasses
 import functools
 import hashlib
+import io
 import json
 import logging
 import tarfile
@@ -213,12 +214,10 @@ def put_blob(
     return sha256_digest
 
 
-def put_image_manifest(
-    image_reference: str, # including tag
-    manifest: OciImageManifest,
+def _put_raw_image_manifest(
+    image_reference: str,
+    raw_contents: bytes,
 ):
-    contents = json.dumps(dataclasses.asdict(manifest)).encode('utf-8')
-
     image_name = docker_name.from_string(image_reference)
 
     push_sess = docker_session.Push(
@@ -235,7 +234,7 @@ def put_image_manifest(
             return image_name.tag
 
         def manifest(self):
-            return contents
+            return raw_contents
 
         def media_type(self):
             return docker_http.MANIFEST_SCHEMA2_MIME
@@ -243,6 +242,17 @@ def put_image_manifest(
     image_mock = ImageMock()
 
     push_sess._put_manifest(image=image_mock, use_digest=True)
+
+
+def put_image_manifest(
+    image_reference: str, # including tag
+    manifest: OciImageManifest,
+):
+    contents = json.dumps(dataclasses.asdict(manifest)).encode('utf-8')
+    _put_raw_image_manifest(
+        image_reference=image_reference,
+        raw_contents=contents,
+    )
 
 
 def retrieve_container_image(image_reference: str, outfileobj=None):
@@ -403,7 +413,7 @@ def pulled_image(image_reference: str):
   accept = docker_http.SUPPORTED_MANIFEST_MIMES
 
   try:
-    ci.util.info(f'Pulling v2.2 image from {image_reference}..')
+    logger.info(f'Pulling v2.2 image from {image_reference}..')
     with v2_2_image.FromRegistry(image_reference, creds, transport, accept) as v2_2_img:
       if v2_2_img.exists():
         yield v2_2_img
@@ -411,7 +421,7 @@ def pulled_image(image_reference: str):
 
     # XXX TODO: use streaming rather than writing to local FS
     # if outfile is given, we must use it instead of an ano
-    ci.util.verbose(f'Pulling manifest list from {image_reference}..')
+    logger.debug(f'Pulling manifest list from {image_reference}..')
     with image_list.FromRegistry(image_reference, creds, transport) as img_list:
       if img_list.exists():
         platform = image_list.Platform({
@@ -423,11 +433,10 @@ def pulled_image(image_reference: str):
           yield default_child
           return
 
-    ci.util.info(f'Pulling v2 image from {image_reference}..')
+    logger.info(f'Pulling v2 image from {image_reference}..')
     with v2_image.FromRegistry(image_reference, creds, transport) as v2_img:
       if v2_img.exists():
         with v2_compat.V22FromV2(v2_img) as v2_2_img:
-          print('v2')
           yield v2_2_img
           return
 
@@ -435,7 +444,6 @@ def pulled_image(image_reference: str):
 
   except Exception as e:
     raise e
-    ci.util.fail(f'Error pulling and saving image {image_reference}: {e}')
 
 
 def _pull_image(image_reference: str, outfileobj=None):
@@ -506,3 +514,43 @@ def rm_tag(image_reference: str):
     transport=transport,
     )
   logger.info(f'untagged {image_reference=} - note: did not purge blobs!')
+
+
+def cp_oci_artifact(
+    src_image_reference: str,
+    tgt_image_reference: str,
+):
+    '''
+    verbatimly replicate the OCI Artifact from src -> tgt without taking any assumptions
+    about the transported contents. This in particular allows contents to be replicated
+    that are not e.g. "docker-compliant" OCI Images.
+    '''
+    src_image_reference = normalise_image_reference(src_image_reference)
+    tgt_image_reference = normalise_image_reference(tgt_image_reference)
+
+    # we need the unaltered - manifest for verbatim replication
+    raw_manifest = _retrieve_raw_manifest(image_reference=src_image_reference)
+    manifest = dacite.from_dict(
+        data_class=OciImageManifest,
+        data=json.loads(raw_manifest)
+    )
+
+    for layer in manifest.layers + [manifest.config]:
+        # XXX we definitely should _not_ read entire blobs into memory
+        # this is done by the used containerregistry lib, so we do not make things worse
+        # here - however this must not remain so!
+        blob = io.BytesIO(
+            retrieve_blob(
+                image_reference=src_image_reference,
+                digest=layer.digest,
+            )
+        )
+        put_blob(
+            image_name=tgt_image_reference,
+            fileobj=blob,
+        )
+
+    _put_raw_image_manifest(
+        image_reference=tgt_image_reference,
+        raw_contents=raw_manifest.encode('utf-8'),
+    )
