@@ -127,9 +127,17 @@ def determine_reference_versions(
     base_url = current_base_url()
     if upstream_component_name is None:
         # no upstream component defined - look for greatest released version
-        return (product.v2.latest_component_version(component_name, base_url),)
+        return (
+            product.v2.latest_component_version(
+                component_name=component_name,
+                ctx_repo_base_url=base_url,
+            ),
+        )
 
-    version_candidate = product.v2.latest_component_version(upstream_component_name, base_url)
+    version_candidate = product.v2.latest_component_version(
+        component_name=component_name,
+        ctx_repo_base_url=base_url,
+    )
 
     if upstream_update_policy is UpstreamUpdatePolicy.STRICTLY_FOLLOW:
         return (version_candidate,)
