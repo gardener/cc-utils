@@ -137,6 +137,7 @@ def determine_reference_versions(
     elif upstream_update_policy is UpstreamUpdatePolicy.ACCEPT_HOTFIXES:
         hotfix_candidate = product.v2.greatest_component_version_with_matching_minor(
             component_name=component_name,
+            ctx_repo_base_url=base_url,
             reference_version=reference_version,
         )
         return (hotfix_candidate, version_candidate)
