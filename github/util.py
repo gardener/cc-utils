@@ -217,7 +217,6 @@ class UpgradePullRequest(object):
                 return False
 
         elif isinstance(reference, gci.componentmodel.ComponentReference):
-            ci.util.check_type(reference, gci.componentmodel.ComponentReference)
             if product.v2.COMPONENT_TYPE_NAME != self.reference_type_name:
                 return False
             if reference.name != self.ref_name:

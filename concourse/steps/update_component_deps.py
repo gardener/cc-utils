@@ -186,7 +186,8 @@ def determine_upgrade_prs(
                 upgrade_requests=upgrade_pull_requests,
             ):
                 ci.util.info(
-                    f'skipping upgrade (PR already exists): {greatest_component_reference.name}'
+                    f'skipping upgrade (PR already exists): {greatest_component_reference.name} '
+                    f'to version {greatest_component_reference.version}'
                 )
                 continue
             else:
