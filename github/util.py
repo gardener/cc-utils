@@ -206,6 +206,7 @@ class UpgradePullRequest(object):
     def target_matches(
         self,
         reference: Union[DependencyBase, gci.componentmodel.ComponentReference],
+        reference_version: str = None,
     ):
         # TODO: remove CD schema.v1 backwards compatibility once all migrations are done
         if isinstance(reference, DependencyBase):
@@ -221,8 +222,8 @@ class UpgradePullRequest(object):
                 return False
             if reference.name != self.ref_name:
                 return False
-            ci.util.info(f'{reference.version} {self.to_ref.version()}')
-            if reference.version != self.to_ref.version():
+            reference_version = reference_version or reference.version
+            if reference_version != self.to_ref.version():
                 return False
 
         else:

@@ -108,11 +108,15 @@ def close_obsolete_pull_requests(
 
 def upgrade_pr_exists(
     component_reference: gci.componentmodel.ComponentReference,
+    component_version: str,
     upgrade_requests,
 ):
     return any(
         [
-            upgrade_rq.target_matches(reference=component_reference)
+            upgrade_rq.target_matches(
+                reference=component_reference,
+                reference_version=component_version,
+            )
             for upgrade_rq in upgrade_requests
         ]
     )
@@ -183,6 +187,7 @@ def determine_upgrade_prs(
                 continue
             elif upgrade_pr_exists(
                 component_reference=greatest_component_reference,
+                component_version=latest_version,
                 upgrade_requests=upgrade_pull_requests,
             ):
                 ci.util.info(
