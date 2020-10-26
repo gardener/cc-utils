@@ -221,7 +221,7 @@ class UpgradePullRequest(object):
                 return False
             if reference.name != self.ref_name:
                 return False
-            ci.info(f'{reference.version} {self.to_ref.version()}')
+            ci.util.info(f'{reference.version} {self.to_ref.version()}')
             if reference.version != self.to_ref.version():
                 return False
 
