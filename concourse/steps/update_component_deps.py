@@ -150,6 +150,7 @@ def latest_component_version_from_upstream(
         upstream_component_descriptor_v2 = product.v2.convert_component_to_v2(
             component_descriptor_v1=upstream_component_descriptor_v1,
             component_v1=component_v1,
+            repository_ctx_base_url=base_url,
         )
         product.v2.upload_component_descriptor_v2_to_oci_registry(
             upstream_component_descriptor_v2,
