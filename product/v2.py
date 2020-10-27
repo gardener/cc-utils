@@ -129,7 +129,6 @@ def _normalise_component_name(component_name:str) -> str:
 def _convert_dependencies_to_v2_resources(
     component_descriptor_v1: product.model.ComponentDescriptor,
     component_v1: product.model.Component,
-    relation: product.model.Relation,
 ):
     '''
     calculates effective dependencies (for OCI image dependencies, only), and yields
