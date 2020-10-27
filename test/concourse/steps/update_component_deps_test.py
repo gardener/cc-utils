@@ -56,7 +56,6 @@ class UpdateComponentDependenciesStepTest(unittest.TestCase):
 
 
 def test_determine_reference_versions():
-
     # Case 1: No Upstream
     greatest_version = '2.1.1'
     component_name = 'example.org/foo/bar'
@@ -66,37 +65,32 @@ def test_determine_reference_versions():
         component_name=component_name,
     )
     with unittest.mock.patch('product.v2') as product_mock:
-        with unittest.mock.patch(
-            'concourse.steps.update_component_deps.current_base_url'
-        ) as base_url_mock:
-            product_mock.latest_component_version.return_value = greatest_version
-            base_url_mock.return_value = base_url
+        product_mock.latest_component_version.return_value = greatest_version
 
-            # no upstream component -> expect latest version to be returned
-            assert examinee(
-                    reference_version='2.1.0',
-                    upstream_component_name=None,
-                ) == (greatest_version,)
+        # no upstream component -> expect latest version to be returned
+        assert examinee(
+                reference_version='2.1.0',
+                upstream_component_name=None,
+                repository_ctx_base_url=base_url,
+            ) == (greatest_version,)
 
-            product_mock.latest_component_version.assert_called_with(
-                component_name=component_name,
-                ctx_repo_base_url=base_url,
-            )
-            base_url_mock.assert_called()
+        product_mock.latest_component_version.assert_called_with(
+            component_name=component_name,
+            ctx_repo_base_url=base_url,
+        )
 
-            product_mock.latest_component_version.reset_mock()
-            base_url_mock.reset_mock()
+        product_mock.latest_component_version.reset_mock()
 
-            assert examinee(
-                    reference_version='2.2.0', # same result, if our version is already greater
-                    upstream_component_name=None,
-                ) == (greatest_version,)
+        assert examinee(
+                reference_version='2.2.0', # same result, if our version is already greater
+                upstream_component_name=None,
+                repository_ctx_base_url=base_url,
+            ) == (greatest_version,)
 
-            product_mock.latest_component_version.assert_called_with(
-                component_name=component_name,
-                ctx_repo_base_url=base_url,
-            )
-            base_url_mock.assert_called()
+        product_mock.latest_component_version.assert_called_with(
+            component_name=component_name,
+            ctx_repo_base_url=base_url,
+        )
 
     # Case 2: Upstream component defined
     examinee = functools.partial(
@@ -107,8 +101,6 @@ def test_determine_reference_versions():
 
     with unittest.mock.patch('product.v2') as product_mock:
         with unittest.mock.patch(
-            'concourse.steps.update_component_deps.current_base_url'
-        ) as base_url_mock, unittest.mock.patch(
             'concourse.steps.update_component_deps.latest_component_version_from_upstream'
         ) as upstream_version_mock:
 
@@ -116,12 +108,12 @@ def test_determine_reference_versions():
             UUP = update_component_deps.UpstreamUpdatePolicy
 
             product_mock.latest_component_version.return_value = upstream_version
-            base_url_mock.return_value = base_url
             upstream_version_mock.return_value = upstream_version
 
             # should return upstream version, by default (default to strict-following)
             assert examinee(
                 reference_version='1.2.3', # does not matter
+                repository_ctx_base_url=base_url,
             ) == (upstream_version,)
 
             upstream_version_mock.assert_called_once_with(
@@ -129,15 +121,14 @@ def test_determine_reference_versions():
                 upstream_component_name='example.org/foo/bar',
                 base_url=base_url,
             )
-            base_url_mock.assert_called_once()
 
             upstream_version_mock.reset_mock()
-            base_url_mock.reset_mock()
 
             # same behaviour if explicitly configured
             assert examinee(
                 reference_version='1.2.3', # does not matter
                 upstream_update_policy=UUP.STRICTLY_FOLLOW,
+                repository_ctx_base_url=base_url,
             ) == (upstream_version,)
 
             upstream_version_mock.assert_called_once_with(
@@ -145,10 +136,8 @@ def test_determine_reference_versions():
                 upstream_component_name='example.org/foo/bar',
                 base_url=base_url,
             )
-            base_url_mock.assert_called_once()
 
             upstream_version_mock.reset_mock()
-            base_url_mock.reset_mock()
 
             # if not strictly following, should consider hotfix
             reference_version = '1.2.3'
@@ -159,6 +148,7 @@ def test_determine_reference_versions():
             assert examinee(
                 reference_version=reference_version, # does not matter
                 upstream_update_policy=UUP.ACCEPT_HOTFIXES,
+                repository_ctx_base_url=base_url,
             ) == (upstream_hotfix_version, upstream_version)
 
             upstream_version_mock.assert_called_once_with(
@@ -166,7 +156,6 @@ def test_determine_reference_versions():
                 upstream_component_name='example.org/foo/bar',
                 base_url=base_url,
             )
-            base_url_mock.assert_called_once()
             product_mock.greatest_component_version_with_matching_minor.assert_called_once_with(
                 component_name=component_name,
                 ctx_repo_base_url=base_url,
