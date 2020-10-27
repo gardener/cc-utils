@@ -122,6 +122,26 @@ def upgrade_pr_exists(
     )
 
 
+def latest_component_version_from_upstream(
+    component_name: str,
+    upstream_component_name: str,
+    base_url: str,
+):
+    upstream_component_version = product.v2.latest_component_version(
+        component_name=upstream_component_name,
+        ctx_repo_base_url=base_url,
+    )
+    upstream_component_descriptor = product.v2.download_component_descriptor_v2(
+        component_name=upstream_component_name,
+        component_version=upstream_component_version,
+        ctx_repo_base_url=base_url,
+    )
+    upstream_component = upstream_component_descriptor.component
+    for component_ref in upstream_component.componentReferences:
+        if component_ref.name == component_name:
+            return component_ref.version
+
+
 def determine_reference_versions(
     component_name: str,
     reference_version: str,
@@ -138,8 +158,9 @@ def determine_reference_versions(
             ),
         )
 
-    version_candidate = product.v2.latest_component_version(
+    version_candidate = latest_component_version_from_upstream(
         component_name=component_name,
+        upstream_component_name=upstream_component_name,
         ctx_repo_base_url=base_url,
     )
 
