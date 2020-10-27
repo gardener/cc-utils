@@ -99,46 +99,45 @@ def test_determine_reference_versions():
         upstream_component_name='example.org/foo/bar',
     )
 
-    with unittest.mock.patch('product.v2') as product_mock:
-        with unittest.mock.patch(
-            'concourse.steps.update_component_deps.latest_component_version_from_upstream'
-        ) as upstream_version_mock:
+    with unittest.mock.patch(
+        'concourse.steps.update_component_deps.latest_component_version_from_upstream'
+    ) as upstream_version_mock:
 
-            upstream_version = '2.2.0'
-            UUP = update_component_deps.UpstreamUpdatePolicy
+        upstream_version = '2.2.0'
+        UUP = update_component_deps.UpstreamUpdatePolicy
 
-            product_mock.latest_component_version.return_value = upstream_version
-            upstream_version_mock.return_value = upstream_version
+        upstream_version_mock.return_value = upstream_version
 
-            # should return upstream version, by default (default to strict-following)
-            assert examinee(
-                reference_version='1.2.3', # does not matter
-                repository_ctx_base_url=base_url,
-            ) == (upstream_version,)
+        # should return upstream version, by default (default to strict-following)
+        assert examinee(
+            reference_version='1.2.3', # does not matter
+            repository_ctx_base_url=base_url,
+        ) == (upstream_version,)
 
-            upstream_version_mock.assert_called_once_with(
-                component_name=component_name,
-                upstream_component_name='example.org/foo/bar',
-                base_url=base_url,
-            )
+        upstream_version_mock.assert_called_once_with(
+            component_name=component_name,
+            upstream_component_name='example.org/foo/bar',
+            base_url=base_url,
+        )
 
-            upstream_version_mock.reset_mock()
+        upstream_version_mock.reset_mock()
 
-            # same behaviour if explicitly configured
-            assert examinee(
-                reference_version='1.2.3', # does not matter
-                upstream_update_policy=UUP.STRICTLY_FOLLOW,
-                repository_ctx_base_url=base_url,
-            ) == (upstream_version,)
+        # same behaviour if explicitly configured
+        assert examinee(
+            reference_version='1.2.3', # does not matter
+            upstream_update_policy=UUP.STRICTLY_FOLLOW,
+            repository_ctx_base_url=base_url,
+        ) == (upstream_version,)
 
-            upstream_version_mock.assert_called_once_with(
-                component_name=component_name,
-                upstream_component_name='example.org/foo/bar',
-                base_url=base_url,
-            )
+        upstream_version_mock.assert_called_once_with(
+            component_name=component_name,
+            upstream_component_name='example.org/foo/bar',
+            base_url=base_url,
+        )
 
-            upstream_version_mock.reset_mock()
+        upstream_version_mock.reset_mock()
 
+        with unittest.mock.patch('product.v2') as product_mock:
             # if not strictly following, should consider hotfix
             reference_version = '1.2.3'
             upstream_hotfix_version = '2.2.3'
