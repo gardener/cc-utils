@@ -65,7 +65,7 @@ if hasattr(component_v2, 'resources'):
       name='${name}',
       version=effective_version, # always inherited from component
       type=cm.ResourceType.OCI_IMAGE,
-      relation=cm.ResourceRelation.LOCAL,
+      # relation=cm.ResourceRelation.LOCAL,
       access=cm.OciAccess(
         type=cm.AccessType.OCI_REGISTRY,
         imageReference='${image_descriptor.image_reference()}' + ':' + effective_version,
