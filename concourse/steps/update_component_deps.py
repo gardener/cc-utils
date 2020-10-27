@@ -192,7 +192,7 @@ def determine_upgrade_prs(
             ):
                 ci.util.info(
                     f'skipping upgrade (PR already exists): {greatest_component_reference.name} '
-                    f'to version {greatest_component_reference.version}'
+                    f'to version {latest_version}'
                 )
                 continue
             else:
