@@ -59,11 +59,12 @@ component_v2 = base_descriptor_v2.component
 
 # add own container image references
 % for name, image_descriptor in output_image_descriptors.items():
-component_v2.localResources.append(
+component_v2.resources.append(
   cm.Resource(
     name='${name}',
     version=effective_version, # always inherited from component
     type=cm.ResourceType.OCI_IMAGE,
+    relation=cm.ResourceRelation.LOCAL,
     access=cm.OciAccess(
       type=cm.AccessType.OCI_REGISTRY,
       imageReference='${image_descriptor.image_reference()}' + ':' + effective_version,

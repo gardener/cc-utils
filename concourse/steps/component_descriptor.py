@@ -73,8 +73,7 @@ def base_component_descriptor_v2(
           )
         ],
         componentReferences=[], # added later
-        localResources=[], # added later
-        externalResources=[], # added later
+        resources=[], # added later
         labels=[], # added later
       ),
     )
