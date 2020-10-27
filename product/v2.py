@@ -92,12 +92,15 @@ def _convert_component_to_v1(
                 )
     else:
         for resource in component_v2.resources:
-            if resource.relation is cm.ResourceRelation.LOCAL:
-                v1_relation = product.model.Relation.LOCAL
-            elif resource.relation is cm.ResourceRelation.EXTERNAL:
-                v1_relation = product.model.Relation.THIRD_PARTY
+            if hasattr(resource, 'relation'):
+                if resource.relation is cm.ResourceRelation.LOCAL:
+                    v1_relation = product.model.Relation.LOCAL
+                elif resource.relation is cm.ResourceRelation.EXTERNAL:
+                    v1_relation = product.model.Relation.THIRD_PARTY
+                else:
+                    raise NotImplementedError
             else:
-                raise NotImplementedError
+                v1_relation = product.model.Relation.LOCAL
 
             if resource.type is cm.ResourceType.OCI_IMAGE:
                 component_deps.add_container_image_dependency(
