@@ -138,7 +138,7 @@ def latest_component_version_from_upstream(
         cfg_factory = ctx.cfg_factory()
         resolver = product.util.ComponentResolver(cfg_factory)
         greatest_version = resolver.latest_component_version(
-            component_name=component_name
+            component_name=upstream_component_name,
         )
         resolver = product.util.ComponentDescriptorResolver(cfg_factory)
         upstream_component_descriptor_v1 = resolver.retrieve_descriptor(
