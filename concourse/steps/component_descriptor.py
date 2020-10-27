@@ -51,7 +51,7 @@ def base_component_descriptor_v2(
 
     import inspect
     kwargs = {}
-    if 'resources' in inspect.signature(cm.ComponentDescriptor):
+    if 'resources' in inspect.signature(cm.ComponentDescriptor).parameters:
         kwargs['resources'] = []
     else:
         kwargs['localResources'] = []
