@@ -482,7 +482,7 @@ def retrieve_manifest(
     raw_dict = json.loads(
         _retrieve_raw_manifest(
             image_reference=image_reference,
-            absent_ok=absent_ok,
+            absent_ok=False,
         )
     )
     manifest = dacite.from_dict(
