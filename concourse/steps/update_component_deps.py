@@ -161,7 +161,7 @@ def determine_reference_versions(
     version_candidate = latest_component_version_from_upstream(
         component_name=component_name,
         upstream_component_name=upstream_component_name,
-        ctx_repo_base_url=base_url,
+        base_url=base_url,
     )
 
     if upstream_update_policy is UpstreamUpdatePolicy.STRICTLY_FOLLOW:
