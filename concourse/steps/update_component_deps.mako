@@ -98,7 +98,7 @@ for from_ref, to_version in determine_upgrade_prs(
     upstream_component_name=upstream_component_name,
     upstream_update_policy=upstream_update_policy,
     upgrade_pull_requests=upgrade_pull_requests,
-    repository_ctx_base_url=current_base_url(),
+    ctx_repo_base_url=current_base_url(),
 ):
     create_upgrade_pr(
         from_ref=from_ref,
