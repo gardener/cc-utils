@@ -23,6 +23,8 @@ from product.util import (
 )
 import product.v2
 
+import gci.componentmodel as cm
+
 
 def dump_component_descriptor_v2(component_descriptor_v2: cm.ComponentDescriptor):
     import gci.componentmodel as cm
