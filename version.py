@@ -62,6 +62,8 @@ def parse_to_semver(
                 version_str = version.version()
             else:
                 version_str = str(version.version)
+        elif version is None:
+            raise ValueError('version must not be None')
         else:
             ci.util.warning(f'unexpected type for version: {type(version)}')
             version_str = str(version) # fallback
