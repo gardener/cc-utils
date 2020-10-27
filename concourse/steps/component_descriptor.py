@@ -55,7 +55,7 @@ def base_component_descriptor_v2(
         kwargs['resources'] = []
     else:
         kwargs['localResources'] = []
-        kwargs['externalResource'] = []
+        kwargs['externalResources'] = []
 
     base_descriptor_v2 = cm.ComponentDescriptor(
       meta=cm.Metadata(schemaVersion=cm.SchemaVersion.V2),
