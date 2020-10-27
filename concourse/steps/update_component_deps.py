@@ -197,7 +197,9 @@ def determine_upgrade_prs(
         ):
             if not latest_version:
                 # if None is returned, no versions at all were found
-                print(f'Warning: no component versions found for {component_name=}')
+                print(
+                    f'Warning: no component versions found for {greatest_component_reference.name=}'
+                )
                 continue
 
             latest_version_semver = version.parse_to_semver(latest_version)
