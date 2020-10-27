@@ -4,10 +4,14 @@ utils used for transitioning to new component-descriptor v2
 see: https://github.com/gardener/component-spec
 '''
 
+import dataclasses
 import enum
 import io
 import itertools
+import json
 import typing
+
+import dacite
 
 import gci.componentmodel as cm
 import gci.oci
@@ -342,25 +346,32 @@ def upload_component_descriptor_v2_to_oci_registry(
     cd_digest = container.registry.put_blob(
         target_ref,
         fileobj=raw_fobj,
-        mimetype=container.registry.docker_http.MANIFEST_SCHEMA2_MIME,
+        mimetype=gci.oci.component_descriptor_mimetype,
     )
-    dummy_cfg = io.BytesIO(b'{}')
+    cd_digest_with_alg = f'sha256:{cd_digest}'
+
+    cfg = gci.oci.ComponentDescriptorOciCfg(
+        componentDescriptorLayer=gci.oci.ComponentDescriptorOciBlobRef(
+            digest=cd_digest_with_alg,
+            size=raw_fobj.tell(),
+        )
+    )
+    cfg_raw = json.dumps(dataclasses.asdict(cfg)).encode('utf-8')
+    cfg_fobj = io.BytesIO(cfg_raw)
     cfg_digest = container.registry.put_blob(
         target_ref,
-        fileobj=dummy_cfg,
+        fileobj=cfg_fobj,
         mimetype=container.registry.docker_http.OCI_CONFIG_JSON_MIME,
     )
 
     manifest = container.registry.OciImageManifest(
-        config=container.registry.OciBlobRef(
+        config=gci.oci.ComponentDescriptorOciCfgBlobRef(
             digest=f'sha256:{cfg_digest}',
-            mediaType=container.registry.docker_http.OCI_CONFIG_JSON_MIME,
-            size=dummy_cfg.tell(),
+            size=cfg_fobj.tell(),
         ),
         layers=[
-            container.registry.OciBlobRef(
-                digest=f'sha256:{cd_digest}',
-                mediaType='application/tar',
+            gci.oci.ComponentDescriptorOciBlobRef(
+                digest=cd_digest_with_alg,
                 size=raw_fobj.tell(),
             ),
         ],
@@ -385,11 +396,29 @@ def retrieve_component_descriptor_from_oci_ref(
     elif not manifest and not absent_ok:
         raise ValueError(f'did not find component-descriptor at {manifest_oci_image_ref=}')
 
-    # by contract, there must be exactly one layer (tar w/ component-descriptor)
-    if not (layers_count := len(manifest.layers) == 1):
-        print(f'XXX unexpected amount of {layers_count=}')
+    # XXX after "full" migration to v2, rm fallback coding below
+    try:
+        cfg_dict = json.loads(
+            container.registry.retrieve_blob(
+                image_reference=manifest_oci_image_ref,
+                digest=manifest.config.digest,
+            ).decode('utf-8')
+        )
+        cfg = dacite.from_dict(
+            data_class=gci.oci.ComponentDescriptorOciCfg,
+            data=cfg_dict,
+        )
+        layer_digest = cfg.componentDescriptorLayer.digest
+    except Exception as e:
+        print(f'Warning: failed to parse or retrieve component-descriptor-cfg: {e=}')
+        print('falling back to single-layer')
 
-    layer_digest = manifest.layers[0].digest
+        # by contract, there must be exactly one layer (tar w/ component-descriptor)
+        if not (layers_count := len(manifest.layers) == 1):
+            print(f'XXX unexpected amount of {layers_count=}')
+
+        layer_digest = manifest.layers[0].digest
+
     blob_bytes = container.registry.retrieve_blob(
         image_reference=manifest_oci_image_ref,
         digest=layer_digest,
