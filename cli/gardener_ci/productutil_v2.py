@@ -13,7 +13,6 @@ import yaml
 import gci.componentmodel as cm
 
 import ci.util
-import product.model as pm
 
 CliHint = ci.util.CliHint
 
@@ -34,11 +33,13 @@ def _raw_image_dep_to_v2(raw: dict):
   name = raw['name']
   version = raw['version']
   img_ref = raw['image_reference']
+  img_rel = cm.ResourceRelation(raw.get('relation', cm.ResourceRelation.LOCAL))
 
   return cm.Resource(
     name=name,
     version=version,
     type=cm.ResourceType.OCI_IMAGE,
+    relation=img_rel,
     access=cm.OciAccess(
       type=cm.AccessType.OCI_REGISTRY,
       imageReference=img_ref,
@@ -49,11 +50,13 @@ def _raw_image_dep_to_v2(raw: dict):
 def _raw_generic_dep_to_v2(raw: dict):
   name = raw['name']
   version = raw['version']
+  rel = cm.ResourceRelation(raw.get('relation', cm.ResourceRelation.LOCAL))
 
   return cm.Resource(
     name=name,
     version=version,
     type=cm.ResourceType.GENERIC,
+    relation=rel,
     access=None,
   )
 
@@ -84,18 +87,13 @@ def add_dependencies(
   for img_dep in container_image_dependencies:
     img_dep = parse(img_dep)
     img_res = _raw_image_dep_to_v2(img_dep)
-    if (rel := img_dep.get('relation')) and pm.Relation(rel) is pm.Relation.LOCAL:
-      component.localResources.append(img_res)
-    else:
-      component.externalResources.append(img_res)
+
+    component.resources.append(img_res)
 
   for gen_dep in generic_dependencies:
     gen_dep = parse(gen_dep)
     gen_res = _raw_generic_dep_to_v2(gen_dep)
-    if (rel := gen_dep.get('relation')) and pm.Relation(rel) is pm.Relation.LOCAL:
-      component.localResources.append(gen_res)
-    else:
-      component.externalResources.append(gen_res)
+    component.resources.append(gen_res)
 
   if descriptor_out_file:
     outfh = open(descriptor_out_file, 'w')
