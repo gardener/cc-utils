@@ -173,17 +173,46 @@ def latest_component_version_from_upstream(
 def determine_reference_versions(
     component_name: str,
     reference_version: str,
+    repository_ctx_base_url: str,
     upstream_component_name: str=None,
     upstream_update_policy: UpstreamUpdatePolicy=UpstreamUpdatePolicy.STRICTLY_FOLLOW,
 ) -> typing.Sequence[str]:
     base_url = current_base_url()
     if upstream_component_name is None:
         # no upstream component defined - look for greatest released version
-        return (
-            product.v2.latest_component_version(
+        latest_component_version = product.v2.latest_component_version(
                 component_name=component_name,
                 ctx_repo_base_url=base_url,
-            ),
+        )
+        if not latest_component_version:
+            # XXX migration (v1->v2) hack: if not found in ctx-repo, fallback to v1
+            # in the future, this should be handled as an error
+            ctx = ci.util.ctx()
+            cfg_factory = ctx.cfg_factory()
+            resolver = product.util.ComponentResolver(cfg_factory)
+            greatest_version = resolver.latest_component_version(
+                component_name=component_name,
+            )
+            resolver = product.util.ComponentDescriptorResolver(cfg_factory)
+            component_descriptor_v1 = resolver.retrieve_descriptor(
+                (component_name, greatest_version)
+            )
+            component_v1 = component_descriptor_v1.component(
+                (upstream_component_name, greatest_version)
+            )
+            component_descriptor_v2 = product.v2.convert_component_to_v2(
+                component_descriptor_v1=component_descriptor_v1,
+                component_v1=component_v1,
+                repository_ctx_base_url=repository_ctx_base_url,
+            )
+            product.v2.upload_component_descriptor_v2_to_oci_registry(
+                component_descriptor_v2,
+            )
+            product.v2.resolve_dependencies(component=component_descriptor_v2.component)
+            # end of dirty-hack: not, all missing component-descriptors were populated into v2-ctx
+
+        return (
+            latest_component_version,
         )
 
     version_candidate = latest_component_version_from_upstream(
@@ -211,6 +240,7 @@ def determine_upgrade_prs(
     upstream_component_name: str,
     upstream_update_policy: UpstreamUpdatePolicy,
     upgrade_pull_requests,
+    ctx_repo_base_url: str,
 ) -> typing.Iterable[typing.Tuple[
     gci.componentmodel.ComponentReference, gci.componentmodel.ComponentReference, str
 ]]:
@@ -222,6 +252,7 @@ def determine_upgrade_prs(
             reference_version=greatest_component_reference.version,
             upstream_component_name=upstream_component_name,
             upstream_update_policy=upstream_update_policy,
+            ctx_repo_base_url=ctx_repo_base_url,
         ):
             if not latest_version:
                 # if None is returned, no versions at all were found
