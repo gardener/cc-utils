@@ -59,18 +59,31 @@ component_v2 = base_descriptor_v2.component
 
 # add own container image references
 % for name, image_descriptor in output_image_descriptors.items():
-component_v2.resources.append(
-  cm.Resource(
-    name='${name}',
-    version=effective_version, # always inherited from component
-    type=cm.ResourceType.OCI_IMAGE,
-    relation=cm.ResourceRelation.LOCAL,
-    access=cm.OciAccess(
-      type=cm.AccessType.OCI_REGISTRY,
-      imageReference='${image_descriptor.image_reference()}' + ':' + effective_version,
+if hasattr(component_v2, 'resources'):
+  component_v2.resources.append(
+    cm.Resource(
+      name='${name}',
+      version=effective_version, # always inherited from component
+      type=cm.ResourceType.OCI_IMAGE,
+      relation=cm.ResourceRelation.LOCAL,
+      access=cm.OciAccess(
+        type=cm.AccessType.OCI_REGISTRY,
+        imageReference='${image_descriptor.image_reference()}' + ':' + effective_version,
+      ),
     ),
-  ),
-)
+  )
+else:
+  component_v2.localResources.append(
+    cm.Resource(
+      name='${name}',
+      version=effective_version, # always inherited from component
+      type=cm.ResourceType.OCI_IMAGE,
+      access=cm.OciAccess(
+        type=cm.AccessType.OCI_REGISTRY,
+        imageReference='${image_descriptor.image_reference()}' + ':' + effective_version,
+      ),
+    ),
+  )
 % endfor
 
 base_descriptor_v1 = product.v2.convert_to_v1(component_descriptor_v2=base_descriptor_v2)
