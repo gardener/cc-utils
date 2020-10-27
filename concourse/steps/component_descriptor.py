@@ -49,14 +49,6 @@ def base_component_descriptor_v2(
         # let's hope the version contains something committish
         src_ref = f'{parsed_version.prerelease}{parsed_version.build}'
 
-    import inspect
-    kwargs = {}
-    if 'resources' in inspect.signature(cm.ComponentDescriptor).parameters:
-        kwargs['resources'] = []
-    else:
-        kwargs['localResources'] = []
-        kwargs['externalResources'] = []
-
     base_descriptor_v2 = cm.ComponentDescriptor(
       meta=cm.Metadata(schemaVersion=cm.SchemaVersion.V2),
       component=cm.Component(
@@ -81,9 +73,8 @@ def base_component_descriptor_v2(
           )
         ],
         componentReferences=[], # added later
-        #resources=[], # added later
+        resources=[], # added later
         labels=[], # added later
-        **kwargs,
       ),
     )
 
