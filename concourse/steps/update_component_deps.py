@@ -177,12 +177,11 @@ def determine_reference_versions(
     upstream_component_name: str=None,
     upstream_update_policy: UpstreamUpdatePolicy=UpstreamUpdatePolicy.STRICTLY_FOLLOW,
 ) -> typing.Sequence[str]:
-    base_url = current_base_url()
     if upstream_component_name is None:
         # no upstream component defined - look for greatest released version
         latest_component_version = product.v2.latest_component_version(
                 component_name=component_name,
-                ctx_repo_base_url=base_url,
+                ctx_repo_base_url=repository_ctx_base_url,
         )
         if not latest_component_version:
             # XXX migration (v1->v2) hack: if not found in ctx-repo, fallback to v1
@@ -218,7 +217,7 @@ def determine_reference_versions(
     version_candidate = latest_component_version_from_upstream(
         component_name=component_name,
         upstream_component_name=upstream_component_name,
-        base_url=base_url,
+        base_url=repository_ctx_base_url,
     )
 
     if upstream_update_policy is UpstreamUpdatePolicy.STRICTLY_FOLLOW:
@@ -227,7 +226,7 @@ def determine_reference_versions(
     elif upstream_update_policy is UpstreamUpdatePolicy.ACCEPT_HOTFIXES:
         hotfix_candidate = product.v2.greatest_component_version_with_matching_minor(
             component_name=component_name,
-            ctx_repo_base_url=base_url,
+            ctx_repo_base_url=repository_ctx_base_url,
             reference_version=reference_version,
         )
         return (hotfix_candidate, version_candidate)
