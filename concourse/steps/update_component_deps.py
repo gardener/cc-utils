@@ -251,7 +251,7 @@ def determine_upgrade_prs(
             reference_version=greatest_component_reference.version,
             upstream_component_name=upstream_component_name,
             upstream_update_policy=upstream_update_policy,
-            ctx_repo_base_url=ctx_repo_base_url,
+            repository_ctx_base_url=ctx_repo_base_url,
         ):
             if not latest_version:
                 # if None is returned, no versions at all were found
