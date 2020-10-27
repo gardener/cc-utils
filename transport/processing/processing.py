@@ -220,10 +220,12 @@ def create_jobs(processing_cfg, component_descriptor):
 
 
 def _enumerate_oci_resources(descriptor):
-    for resource in itertools.chain(
-            descriptor.component.externalResources,
-            descriptor.component.localResources,
-        ):
+    if not hasattr(descriptor, 'resources'):
+        resources = descriptor.localResources + descriptor.externalResources
+    else:
+        resources = descriptor.resources
+
+    for resource in resources:
         if resource.access.type == cm.AccessType.OCI_REGISTRY and \
            resource.type == cm.ResourceType.OCI_IMAGE:
             yield (descriptor.component, resource)
