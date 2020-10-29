@@ -20,6 +20,9 @@ if has_slack_trait:
   slack_trait = job_variant.trait('slack')
   slack_channel_cfgs = [cfg.raw for cfg in slack_trait.channel_cfgs()]
 
+github_release_tag = release_trait.github_release_tag()
+git_tags = release_trait.git_tags()
+
 repo = job_variant.main_repository()
 
 component_descriptor_file_path = os.path.join(
@@ -81,5 +84,7 @@ release_and_prepare_next_dev_cycle(
   % if next_cycle_commit_message_prefix:
   next_cycle_commit_message_prefix='${next_cycle_commit_message_prefix}',
   % endif
+  github_release_tag=${github_release_tag},
+  git_tags=${git_tags}
 )
 </%def>
