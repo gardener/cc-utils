@@ -286,9 +286,14 @@ def _target_oci_ref(
     component_version: str=None,
 ):
 
-    component_ref = component_ref or component
-    component_version = component_version or component_ref.version
-    component_name = _normalise_component_name(component_ref.componentName)
+    if not component_ref:
+        component_ref = component
+        component_name = component_ref.name
+    else:
+        component_name = component_ref.componentName
+
+    component_name = _normalise_component_name(component_name)
+    component_version = component_ref.version
 
     # last ctx-repo is target-repository
     last_ctx_repo = component.repositoryContexts[-1]
