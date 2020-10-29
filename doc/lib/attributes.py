@@ -18,6 +18,7 @@ import sys
 import textwrap
 import typing
 import enum
+import yaml
 
 
 import ci.util
@@ -26,6 +27,13 @@ import concourse.model.base as base_model
 
 # add repository root to pythonpath
 sys.path.append(os.path.abspath('../..'))
+
+
+class SafeEnumDumper(yaml.SafeDumper):
+    def represent_data(self, data):
+        if isinstance(data, enum.Enum):
+            return super().represent_data(data.value)
+        return super().represent_data(data)
 
 
 class AttributesDocumentation(object):
@@ -75,15 +83,30 @@ class AttributesDocumentation(object):
         else:
             return type_.__name__
 
+    def _default_value(self, default_value):
+        if callable(default_value):
+            return default_value.__name__
+
+        elif isinstance(default_value, enum.Enum):
+            return f'`{default_value.value}`'
+
+        elif isinstance(default_value, str):
+            return default_value
+
+        elif isinstance(default_value, (dict, list)):
+            return (
+                '.. code-block:: yaml\n\n'
+                f'{textwrap.indent(yaml.dump(default_value, Dumper=SafeEnumDumper), "  ")}'
+            )
+
+        # fallback
+        return str(default_value)
+
     def _attr_spec_to_table_row(self, attr_spec, prefix=None):
         name = attr_spec.name()
         required = 'yes' if attr_spec.is_required() else 'no'
 
-        default_value = attr_spec.default_value()
-        if callable(default_value):
-            default_value = default_value.__name__
-        else:
-            default_value = str(default_value)
+        default_value = self._default_value(attr_spec.default_value())
 
         doc = textwrap.dedent(attr_spec.doc())
 
