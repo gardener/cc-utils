@@ -116,7 +116,7 @@ NOTIFICATION_CFG_ATTRS = (
         - `REPO_ROOT`: absolute path to main repository
         - `NOTIFY_CFG_OUT`: absolute path to write notify.cfg to
         ''',
-        type=str,
+        type=typing.List[str],
     ),
 )
 
