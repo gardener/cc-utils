@@ -233,7 +233,10 @@ from a non-default image registry that requires authentication.</p></td>
 </tr>
 <tr class="row-odd"><td><p>inputs</p></td>
 <td><p>no</p></td>
-<td><p>{}</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">{}</span>
+</pre></div>
+</div>
+</p></td>
 <td><p>dict</p></td>
 <td><p>a mapping of inputs produced by other build steps:
 { input_name: output_name }
@@ -252,7 +255,10 @@ e.g.: <code class="code docutils literal notranslate"><span class="pre">output_d
 </tr>
 <tr class="row-odd"><td><p>publish_to</p></td>
 <td><p>no</p></td>
-<td><p>{}</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">{}</span>
+</pre></div>
+</div>
+</p></td>
 <td><p>list</p></td>
 <td><p><p>has two forms:</p>
 <ul class="simple">
@@ -276,7 +282,10 @@ pushing them.</p>
 </tr>
 <tr class="row-even"><td><p>vars</p></td>
 <td><p>no</p></td>
-<td><p>{}</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">{}</span>
+</pre></div>
+</div>
+</p></td>
 <td><p>str</p></td>
 <td><p>pairs of {env_var_name: &lt;python expression&gt;}
 the specified python expressions are evaluated during pipeline replication.
@@ -287,7 +296,7 @@ variable.</p></td>
 </tr>
 <tr class="row-odd"><td><p>privilege_mode</p></td>
 <td><p>no</p></td>
-<td><p>PrivilegeMode.UNPRIVILEGED</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">unprivileged</span></code></p></td>
 <td><p>PrivilegeMode</p></td>
 <td><p>privilege mode for step. Use carefully when running potentially untrusted code.</p></td>
 </tr>

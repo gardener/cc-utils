@@ -197,13 +197,21 @@
 <tbody>
 <tr class="row-even"><td><p>filters</p></td>
 <td><p>no</p></td>
-<td><p>{‘include_image_references’: (), ‘exclude_image_references’: (), ‘include_image_names’: (), ‘exclude_image_names’: (), ‘include_component_names’: (), ‘exclude_component_names’: ()}</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">exclude_component_names</span><span class="p">:</span> <span class="p p-Indicator">[]</span>
+<span class="nt">exclude_image_names</span><span class="p">:</span> <span class="p p-Indicator">[]</span>
+<span class="nt">exclude_image_references</span><span class="p">:</span> <span class="p p-Indicator">[]</span>
+<span class="nt">include_component_names</span><span class="p">:</span> <span class="p p-Indicator">[]</span>
+<span class="nt">include_image_names</span><span class="p">:</span> <span class="p p-Indicator">[]</span>
+<span class="nt">include_image_references</span><span class="p">:</span> <span class="p p-Indicator">[]</span>
+</pre></div>
+</div>
+</p></td>
 <td><p>FilterCfg</p></td>
 <td><p>optional filters to restrict container images to process</p></td>
 </tr>
 <tr class="row-odd"><td><p>notify</p></td>
 <td><p>no</p></td>
-<td><p>Notify.EMAIL_RECIPIENTS</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">email_recipients</span></code></p></td>
 <td><p>Notify</p></td>
 <td><p>whom to notify about found issues</p></td>
 </tr>
@@ -322,7 +330,7 @@ include_component_names.</p></td>
 </tr>
 <tr class="row-even"><td><p>processing_mode</p></td>
 <td><p>no</p></td>
-<td><p>ProcessingMode.RESCAN</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">rescan</span></code></p></td>
 <td><p>ProcessingMode</p></td>
 <td><p>Protecode processing mode</p></td>
 </tr>
@@ -346,19 +354,25 @@ include_component_names.</p></td>
 </tr>
 <tr class="row-even"><td><p>cvss_version</p></td>
 <td><p>no</p></td>
-<td><p>CVSSVersion.V3</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">CVSSv3</span></code></p></td>
 <td><p>CVSSVersion</p></td>
 <td><p>CVSS version used to evaluate the severity of vulnerabilities</p></td>
 </tr>
 <tr class="row-odd"><td><p>allowed_licenses</p></td>
 <td><p>no</p></td>
-<td><p>[]</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span>
+</pre></div>
+</div>
+</p></td>
 <td><p>list</p></td>
 <td><p>A list of regular expressions. If configured, licenses detected by protecode that do not match at least one of regular expressions will result in a report mail being sent. If not configured or empty, <strong>all</strong> licenses will be accepted.</p></td>
 </tr>
 <tr class="row-even"><td><p>prohibited_licenses</p></td>
 <td><p>no</p></td>
-<td><p>[]</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span>
+</pre></div>
+</div>
+</p></td>
 <td><p>list</p></td>
 <td><p>A list of regular expressions. If configured, licenses detected by protecode that match one of the regular expressions will result in a report mail being sent, even if they are included in <code class="code docutils literal notranslate"><span class="pre">allowed_licenses</span></code> (e.g. due to the default value).</p></td>
 </tr>

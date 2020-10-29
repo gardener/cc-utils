@@ -209,13 +209,13 @@
 </tr>
 <tr class="row-even"><td><p>upstream_update_policy</p></td>
 <td><p>no</p></td>
-<td><p>UpstreamUpdatePolicy.STRICTLY_FOLLOW</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">strictly_follow</span></code></p></td>
 <td><p>str</p></td>
 <td><p>configures the upstream component update policy</p></td>
 </tr>
 <tr class="row-odd"><td><p>merge_policy</p></td>
 <td><p>no</p></td>
-<td><p>MergePolicy.MANUAL</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">manual</span></code></p></td>
 <td><p>str</p></td>
 <td><p>whether or not created PRs should be automatically merged</p></td>
 </tr>
@@ -227,7 +227,10 @@
 </tr>
 <tr class="row-odd"><td><p>vars</p></td>
 <td><p>no</p></td>
-<td><p>{}</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">{}</span>
+</pre></div>
+</div>
+</p></td>
 <td><p>dict</p></td>
 <td><p>env vars to pass to after_merge_callback (similar to step’s vars)</p></td>
 </tr>

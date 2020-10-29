@@ -197,13 +197,20 @@
 <tbody>
 <tr class="row-even"><td><p>policies</p></td>
 <td><p>no</p></td>
-<td><p>{‘require-label’: ‘reviewed/ok-to-test’, ‘replacement-label’: ‘needs/ok-to-test’}</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">replacement-label</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">needs/ok-to-test</span>
+<span class="nt">require-label</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">reviewed/ok-to-test</span>
+</pre></div>
+</div>
+</p></td>
 <td><p>PullRequestPolicies</p></td>
 <td><p>configures the policies to apply to pull-requests</p></td>
 </tr>
 <tr class="row-odd"><td><p>disable-status-report</p></td>
 <td><p>no</p></td>
-<td><p>[]</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span>
+</pre></div>
+</div>
+</p></td>
 <td><p>list</p></td>
 <td><p>a list of names of steps which shall not report their status to the pull request.</p></td>
 </tr>

@@ -199,7 +199,12 @@ mails upon errors).</p>
 <tbody>
 <tr class="row-even"><td><p>default</p></td>
 <td><p>no</p></td>
-<td><p>{‘on_error’: {‘triggering_policy’: ‘only_first’, ‘email’: True}}</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">on_error</span><span class="p">:</span>
+  <span class="nt">email</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+  <span class="nt">triggering_policy</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">only_first</span>
+</pre></div>
+</div>
+</p></td>
 <td><p>NotificationCfgSet</p></td>
 <td><p>the default notification cfg (more may be defined)</p></td>
 </tr>
@@ -218,7 +223,10 @@ mails upon errors).</p>
 <tbody>
 <tr class="row-even"><td><p>on_error</p></td>
 <td><p>no</p></td>
-<td><p>{‘triggering_policy’: ‘only_first’}</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">triggering_policy</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">only_first</span>
+</pre></div>
+</div>
+</p></td>
 <td><p>NotificationCfg</p></td>
 <td><p>configures triggering policy in case a step fails with an error</p></td>
 </tr>
@@ -249,7 +257,10 @@ mails upon errors).</p>
 </tr>
 <tr class="row-even"><td><p>inputs</p></td>
 <td><p>no</p></td>
-<td><p>[‘on_error_dir’]</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">on_error_dir</span>
+</pre></div>
+</div>
+</p></td>
 <td><p>List[str]</p></td>
 <td><p>configures the inputs that are made available to the notification</p></td>
 </tr>
@@ -261,8 +272,11 @@ mails upon errors).</p>
 </tr>
 <tr class="row-even"><td><p>cfg_callback</p></td>
 <td><p>no</p></td>
-<td><p>[‘on_error_dir’]</p></td>
-<td><p>str</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">on_error_dir</span>
+</pre></div>
+</div>
+</p></td>
+<td><p>List[str]</p></td>
 <td><p><p>an optional callback (relative to main repository root). Called as subprocess with
 an environment variables:</p>
 <ul class="simple">
