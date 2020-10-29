@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import version
+import ci.util
 from concourse.model.job import (
     JobVariant,
 )
@@ -147,6 +148,19 @@ ATTRIBUTES = (
         immediately after the release-commit
         ''',
         type=str,
+    ),
+    AttributeSpec.optional(
+        name='git_tags',
+        default=[{'ref_template': 'refs/tags/{VERSION}'}],
+        doc='''
+        a list of tags to tag the release commit with, **at least one**. The following
+        placeholders are available:
+
+        - {{VERSION}}: The version to be released (i.e. the 'effective version')
+
+        The first tag will be used to create the GitHub-release.
+        ''',
+        type=list
     )
 )
 
@@ -183,12 +197,37 @@ class ReleaseTrait(Trait):
     def next_cycle_commit_message_prefix(self) -> str:
         return self.raw.get('next_version_commit_message_prefix')
 
+    def git_tags(self):
+        return self.raw.get('git_tags')[1:]
+
+    def github_release_tag(self):
+        if tags := self.raw.get('git_tags'):
+            return tags[0]
+        return None
+
     def validate(self):
         super().validate()
         if self.nextversion() == version.NOOP and self.next_version_callback_path():
             raise ModelValidationError(
                 f'not possible to configure "next_version_callback" if version is "{version.NOOP}"'
             )
+        if not self.github_release_tag():
+            raise ModelValidationError('At least one tag must be configured for the release.')
+
+        # ensure the form of the first tag is as expected - otherwise no release can be created
+        if not self.github_release_tag()['ref_template'].startswith('refs/tags/'):
+            raise ModelValidationError(
+                "The first release-tag must be of the form 'refs/tags/<tagname>'."
+            )
+
+    # by default, all Trait merge list-arg-defaults. Disable to support overriding the default
+    # release-tag
+    def _apply_defaults(self, raw_dict):
+        self.raw = ci.util.merge_dicts(
+            self._defaults_dict(),
+            raw_dict,
+            None,
+        )
 
     def transformer(self):
         return ReleaseTraitTransformer()

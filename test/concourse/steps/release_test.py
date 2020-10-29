@@ -129,8 +129,6 @@ class TestGitHubReleaseStep(object):
             # Create a github_helper mock that always reports a tag as existing/not existing,
             # depending on the passed value
             github_helper_mock = MagicMock(spec=GitHubRepositoryHelper)
-            tag_exists_mock = MagicMock(return_value=tag_helper_return_value)
-            github_helper_mock.tag_exists = tag_exists_mock
             return concourse.steps.release.GitHubReleaseStep(
                 github_helper=github_helper_mock,
                 githubrepobranch=githubrepobranch,
@@ -146,10 +144,6 @@ class TestGitHubReleaseStep(object):
     def test_validation_fails_on_invalid_semver(self, examinee):
         with pytest.raises(ValueError):
             examinee(release_version='invalid_semver').validate()
-
-    def test_validation_fail_on_existing_tag(self, examinee):
-        with pytest.raises(RuntimeError):
-            examinee(tag_helper_return_value=True).validate()
 
     def test_validation_fails_on_missing_component_descriptor(self, examinee, tmp_path):
         test_path = tmp_path.joinpath('no', 'such', 'dir')

@@ -258,17 +258,16 @@ class ReleaseCommitStep(TransactionalStep):
         self.context().release_commit = release_commit # pass to other steps
 
         if self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
-            to_ref = self.repository_branch
+            # push commit to remote
+            self.git_helper.push(
+                from_ref=release_commit.hexsha,
+                to_ref=self.repository_branch
+            )
         elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
-            to_ref = f'refs/tags/{self.release_version}'
+            # handled when creating all release tags
+            pass
         else:
             raise NotImplementedError
-
-        # Push commit to remote
-        self.git_helper.push(
-            from_ref=release_commit.hexsha,
-            to_ref=to_ref
-        )
 
         return {
             'release_commit_sha1': release_commit.hexsha,
@@ -279,26 +278,124 @@ class ReleaseCommitStep(TransactionalStep):
             # push unsuccessful, nothing to do
             return
         else:
-            output = self.context().step_output(self.name())
-            # create revert commit for the release commit and push it, but first
-            # clean repository if required
-            worktree_dirty = bool(self.git_helper._changed_file_paths())
-            if worktree_dirty:
-                self.git_helper.repo.head.reset(working_tree=True)
+            if self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
+                output = self.context().step_output(self.name())
 
-            self.git_helper.repo.git.revert(
-                output['release_commit_sha1'],
-                no_edit=True,
-                no_commit=True,
-            )
-            release_revert_commit = _add_all_and_create_commit(
-                git_helper=self.git_helper,
-                message=f"Revert '{self._release_commit_message(self.release_version)}'"
-            )
-            self.git_helper.push(
-                from_ref=release_revert_commit.hexsha,
-                to_ref=self.repository_branch,
-            )
+                # create revert commit for the release commit and push it, but first
+                # clean repository if required
+                worktree_dirty = bool(self.git_helper._changed_file_paths())
+                if worktree_dirty:
+                    self.git_helper.repo.head.reset(working_tree=True)
+
+                self.git_helper.repo.git.revert(
+                    output['release_commit_sha1'],
+                    no_edit=True,
+                    no_commit=True,
+                )
+                release_revert_commit = _add_all_and_create_commit(
+                    git_helper=self.git_helper,
+                    message=f"Revert '{self._release_commit_message(self.release_version)}'"
+                )
+                self.git_helper.push(
+                    from_ref=release_revert_commit.hexsha,
+                    to_ref=self.repository_branch,
+                )
+            elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
+                # is handled in the step that creates the tags
+                return
+
+            else:
+                raise NotImplementedError
+
+
+class CreateTagsStep(TransactionalStep):
+    def __init__(
+        self,
+        author_email,
+        author_name,
+        github_release_tag,
+        git_tags,
+        github_helper,
+        git_helper,
+        release_version,
+        publishing_policy: ReleaseCommitPublishingPolicy
+    ):
+        self.github_helper = github_helper
+        self.git_helper = git_helper
+
+        self.git_tags = git_tags
+        self.github_release_tag = github_release_tag
+        self.author_name = author_name
+        self.author_email = author_email
+
+        self.publishing_policy = publishing_policy
+
+        self.release_version = release_version
+
+    def name(self):
+        return "Create Tags"
+
+    def validate(self):
+        version.parse_to_semver(self.release_version)
+
+        tag_template_vars = {
+            'VERSION': self.release_version,
+        }
+
+        # prepare tags to create
+        self.github_release_tag_formatted = self.github_release_tag['ref_template'].format(
+            **tag_template_vars
+        )
+        self.git_tags_formatted = [
+            tag_template['ref_template'].format(**tag_template_vars)
+            for tag_template in self.git_tags
+        ]
+
+    def apply(
+        self,
+    ):
+        release_commit_step_output = self.context().step_output('Create Release Commit')
+        release_commit_sha = release_commit_step_output['release_commit_sha1']
+
+        # depending on the publishing policy either push the release commit to all tag-refs or
+        # create tags pointing to the commit on the release-branch
+        self.tags_created = []
+
+        if self.publishing_policy in [
+            ReleaseCommitPublishingPolicy.TAG_ONLY,
+            ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH,
+        ]:
+            def _push_tag(tag):
+                self.git_helper.push(
+                    from_ref=release_commit_sha,
+                    to_ref=tag,
+                )
+                self.tags_created.append(tag)
+
+            _push_tag(self.github_release_tag_formatted)
+            for tag in self.git_tags_formatted:
+                _push_tag(tag)
+
+        else:
+            raise NotImplementedError
+
+        return {
+            'release_tag': self.github_release_tag_formatted,
+            'tags': self.git_tags_formatted,
+        }
+
+    def revert(self):
+        for tag in self.tags_created:
+            if self.publishing_policy in [
+                ReleaseCommitPublishingPolicy.TAG_ONLY,
+                ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH,
+            ]:
+                self.git_helper.push(
+                    from_ref='',
+                    to_ref=tag,
+                )
+            else:
+                raise NotImplementedError
 
 
 class NextDevCycleCommitStep(TransactionalStep):
@@ -484,12 +581,6 @@ class GitHubReleaseStep(TransactionalStep):
 
     def validate(self):
         version.parse_to_semver(self.release_version)
-        # if a tag with the given release version exists, we cannot create another release
-        # pointing to it
-        if self.github_helper.tag_exists(tag_name=self.release_version):
-            raise RuntimeError(
-                f"Cannot create tag '{self.release_version}' for release: Tag already exists"
-            )
         existing_file(self.component_descriptor_file_path)
         with open(self.component_descriptor_file_path) as f:
             # TODO: Proper validation
@@ -498,13 +589,21 @@ class GitHubReleaseStep(TransactionalStep):
     def apply(
         self,
     ):
-        release_commit_step_output = self.context().step_output('Create Release Commit')
-        release_commit_sha = release_commit_step_output['release_commit_sha1']
+        create_tags_step_output = self.context().step_output('Create Tags')
+        release_tag = create_tags_step_output['release_tag']
+
+        # github3.py expects the tags's name, not the whole ref
+        if release_tag.startswith('refs/tags/'):
+            release_tag = release_tag[10:]
+        else:
+            raise RuntimeError(
+                f"Got an uexpected release-tag '{release_tag}'. Expected a ref, e.g. 'refs/tags/foo'"
+        )
+
         # Create GitHub-release
         if release := self.github_helper.draft_release_with_name(f'{self.release_version}-draft'):
             release.edit(
-                tag_name=self.release_version,
-                target_commitish=release_commit_sha,
+                tag_name=release_tag,
                 body=None,
                 draft=False,
                 prerelease=False,
@@ -512,8 +611,7 @@ class GitHubReleaseStep(TransactionalStep):
             )
         else:
             release = self.github_helper.repository.create_release(
-                tag_name=self.release_version,
-                target_commitish=release_commit_sha,
+                tag_name=release_tag,
                 body=None,
                 draft=False,
                 prerelease=False,
@@ -545,6 +643,10 @@ class GitHubReleaseStep(TransactionalStep):
                 import traceback
                 traceback.print_exc()
 
+        return {
+            'release_tag_name': release_tag,
+        }
+
     def revert(self):
         # Fetch release
         try:
@@ -555,13 +657,6 @@ class GitHubReleaseStep(TransactionalStep):
             info(f"Deleting Release {self.release_version}")
             if not release.delete():
                 raise RuntimeError("Release could not be deleted")
-        try:
-            tag = self.github_helper.repository.ref(f"tags/{self.release_version}")
-        except NotFoundError:
-            # Ref wasn't created
-            return
-        if not tag.delete():
-            raise RuntimeError("Tag could not be deleted")
 
 
 class PublishReleaseNotesStep(TransactionalStep):
@@ -584,13 +679,10 @@ class PublishReleaseNotesStep(TransactionalStep):
         version.parse_to_semver(self.release_version)
         existing_dir(self.repo_dir)
 
-        # check whether a release with the given version exists
-        try:
-            self.github_helper.repository.release_from_tag(self.release_version)
-        except NotFoundError:
-            raise RuntimeError(f'No release with tag {self.release_version} found')
-
     def apply(self):
+        create_release_step_output = self.context().step_output('Create Release')
+        release_tag = create_release_step_output['release_tag_name']
+
         release_notes = fetch_release_notes(
             github_repository_owner=self.githubrepobranch.repo_owner(),
             github_repository_name=self.githubrepobranch.repo_name(),
@@ -601,7 +693,7 @@ class PublishReleaseNotesStep(TransactionalStep):
         )
         release_notes_md = release_notes.to_markdown()
         self.github_helper.update_release_notes(
-            tag_name=self.release_version,
+            tag_name=release_tag,
             body=release_notes_md,
         )
         return {
@@ -749,6 +841,8 @@ def release_and_prepare_next_dev_cycle(
     repo_dir: str,
     repository_version_file_path: str,
     component_descriptor_file_path: str,
+    git_tags: list,
+    github_release_tag: dict,
     author_email: str="gardener.ci.user@gmail.com",
     author_name: str="gardener-ci",
     component_descriptor_v2_path: str=None,
@@ -793,6 +887,18 @@ def release_and_prepare_next_dev_cycle(
         publishing_policy=release_commit_publishing_policy,
     )
     step_list.append(release_commit_step)
+
+    create_tag_step = CreateTagsStep(
+        author_email=author_email,
+        author_name=author_name,
+        git_tags=git_tags,
+        github_release_tag=github_release_tag,
+        git_helper=git_helper,
+        github_helper=github_helper,
+        release_version=release_version,
+        publishing_policy=release_commit_publishing_policy,
+    )
+    step_list.append(create_tag_step)
 
     if version_operation != version.NOOP:
         next_cycle_commit_step = NextDevCycleCommitStep(
