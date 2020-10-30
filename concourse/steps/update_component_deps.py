@@ -312,7 +312,7 @@ def create_upgrade_pr(
     cmd_env = os.environ.copy()
     # TODO: Handle upgrades for types other than 'component'
     cmd_env['DEPENDENCY_TYPE'] = product.v2.COMPONENT_TYPE_NAME
-    cmd_env['DEPENDENCY_NAME'] = to_ref.name
+    cmd_env['DEPENDENCY_NAME'] = to_ref.componentName
     cmd_env['DEPENDENCY_VERSION'] = to_version
     cmd_env['REPO_DIR'] = repo_dir
     cmd_env['GITHUB_CFG_NAME'] = github_cfg_name
