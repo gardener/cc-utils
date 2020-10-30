@@ -197,7 +197,7 @@ def determine_reference_versions(
                 (component_name, greatest_version)
             )
             component_v1 = component_descriptor_v1.component(
-                (upstream_component_name, greatest_version)
+                (component_name, greatest_version)
             )
             component_descriptor_v2 = product.v2.convert_component_to_v2(
                 component_descriptor_v1=component_descriptor_v1,
