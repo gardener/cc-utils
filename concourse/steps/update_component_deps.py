@@ -247,7 +247,7 @@ def determine_upgrade_prs(
         references=current_component().componentReferences,
     ):
         for latest_version in determine_reference_versions(
-            component_name=greatest_component_reference.name,
+            component_name=greatest_component_reference.componentName,
             reference_version=greatest_component_reference.version,
             upstream_component_name=upstream_component_name,
             upstream_update_policy=upstream_update_policy,
@@ -256,7 +256,8 @@ def determine_upgrade_prs(
             if not latest_version:
                 # if None is returned, no versions at all were found
                 print(
-                    f'Warning: no component versions found for {greatest_component_reference.name=}'
+                    'Warning: no component versions found for '
+                    f'{greatest_component_reference.componentName=}'
                 )
                 continue
 
@@ -266,7 +267,8 @@ def determine_upgrade_prs(
                 greatest_component_reference.version
             ):
                 ci.util.info(
-                    f'skipping outdated component upgrade: {greatest_component_reference.name}; '
+                    'skipping outdated component upgrade: '
+                    f'{greatest_component_reference.componentName}; '
                     f'our version: {greatest_component_reference.version}, '
                     f'found: {latest_version}'
                 )
@@ -277,7 +279,8 @@ def determine_upgrade_prs(
                 upgrade_requests=upgrade_pull_requests,
             ):
                 ci.util.info(
-                    f'skipping upgrade (PR already exists): {greatest_component_reference.name} '
+                    'skipping upgrade (PR already exists): '
+                    f'{greatest_component_reference.componentName} '
                     f'to version {latest_version}'
                 )
                 continue
