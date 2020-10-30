@@ -92,8 +92,14 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
         prefixes = self.image_reference_prefixes()
         if not prefixes:
             return False
-        if privileges and self.privileges() != privileges:
-            return False
+        if privileges:
+            # credentials have _at least_ read privileges. Therefore we need to check whether
+            # we have READ_WRITE privileges iff the requested credentials are also READ_WRITE
+            if (
+                privileges is Privileges.READ_WRITE
+                and self.privileges() is not Privileges.READ_WRITE
+            ):
+                return False
 
         for prefix in prefixes:
             if image_reference.startswith(prefix):
