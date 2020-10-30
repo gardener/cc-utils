@@ -32,12 +32,17 @@ scan_sources_and_notify(
 
 % if whitesource_cfg:
 component_name = '${component_trait.component_name()}'
+email_recipients = '${email_recipients}'
+if not email_recipients:
+  print('error: no email recipients configured, need at least one!')
+  import sys
+  sys.exit(0)
 scan_component_with_whitesource(
     whitesource_cfg_name='${whitesource_cfg.cfg_name()}',
     product_token='${whitesource_cfg.product_token()}',
     component_descriptor_path=component_descriptor_path(schema_version=cm.SchemaVersion.V2),
     extra_whitesource_config={},
-    requester_mail='${email_recipients[0]}',
+    requester_mail=email_recipients[0],
     cve_threshold=${whitesource_cfg.cve_threshold()},
     notification_recipients=${email_recipients},
 )
