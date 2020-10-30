@@ -40,6 +40,7 @@ from containerregistry.client.v2_2 import docker_image_list as image_list
 from containerregistry.client.v2_2 import docker_session
 from containerregistry.client.v2_2 import save
 from containerregistry.client.v2_2 import v2_compat
+
 from containerregistry.transport import retry
 from containerregistry.transport import transport_pool
 
@@ -163,7 +164,12 @@ def ls_image_tags(image_name: str):
 
     url = f'https://{image_name.registry}/v2/{image_name.repository}/tags/list'
 
-    res, body_bytes = transport.Request(url, (200,))
+    try:
+      res, body_bytes = transport.Request(url, (200,))
+    except docker_http.V2DiagnosticException as e:
+      ci.util.warning(f"An error occurred when fetching tags for image '{image_name}': {e}"
+      return []
+
     parsed = json.loads(body_bytes)
 
     # XXX parsed['manifest'] might be used to e.g. determine stale images, and purge them
