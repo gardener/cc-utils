@@ -470,7 +470,7 @@ def resolve_dependency(
     resolver_v1 = product.util.ComponentDescriptorResolver(
         cfg_factory=cfg_factory,
     )
-    component_ref_v1 = component_ref.name, component_ref.version
+    component_ref_v1 = component_ref.component_name, component_ref.version
 
     component_descriptor_v1 = resolver_v1.retrieve_descriptor(component_ref_v1)
 
