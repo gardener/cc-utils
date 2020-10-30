@@ -7,6 +7,7 @@ Gardener CI/CD Documentation
     :hidden:
     :titlesonly:
     :maxdepth: 2
+    :caption: Contents:
 
     pipeline_contract
 
