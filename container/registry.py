@@ -167,7 +167,7 @@ def ls_image_tags(image_name: str):
     try:
       res, body_bytes = transport.Request(url, (200,))
     except docker_http.V2DiagnosticException as e:
-      ci.util.warning(f"An error occurred when fetching tags for image '{image_name}': {e}"
+      ci.util.warning(f"An error occurred when fetching tags for image '{image_name}': {e}")
       return []
 
     parsed = json.loads(body_bytes)
