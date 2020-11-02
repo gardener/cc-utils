@@ -4,7 +4,7 @@ filter="indent_func(indent),trim">
 <%
 from makoutil import indent_func
 # registry_cfg must be of type ContainerRegistryConfig (cc-utils)
-tag = "1.856.0"
+tag = "1.857.0"
 repository = "eu.gcr.io/gardener-project/cc/job-image"
 %>
 ${task_image_resource(
