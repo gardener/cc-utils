@@ -252,6 +252,21 @@ immediately after the release-commit.</p></td>
 <td><p>an optional prefix for the commit message of the commit bumping the release version
 immediately after the release-commit</p></td>
 </tr>
+<tr class="row-even"><td><p>git_tags</p></td>
+<td><p>no</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span> <span class="nt">ref_template</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">refs/tags/{VERSION}</span>
+</pre></div>
+</div>
+</p></td>
+<td><p>list</p></td>
+<td><p><p>a list of tags to tag the release commit with, <strong>at least one</strong>. The following
+placeholders are available:</p>
+<ul class="simple">
+<li><p>{{VERSION}}: The version to be released (i.e. the ‘effective version’)</p></li>
+</ul>
+<p>The first tag will be used to create the GitHub-release.</p>
+</p></td>
+</tr>
 </tbody>
 </table>
 <h2>nextversion Enumeration Values<a class="headerlink" href="#trait-release" title="Permalink to this headline">¶</a></h2>
