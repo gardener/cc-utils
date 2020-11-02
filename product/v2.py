@@ -491,8 +491,10 @@ def resolve_dependency(
 
 def resolve_dependencies(
     component: gci.componentmodel.Component,
+    include_component=True,
 ):
-  yield component
+  if include_component:
+    yield component
   print(f'resolving dependencies for {component.name=} {component.version=}')
   for component_ref in component.componentReferences:
     print(f'resolving {component_ref=}')
@@ -500,9 +502,12 @@ def resolve_dependencies(
       component=component,
       component_ref=component_ref,
     )
-    yield resolved_component_descriptor
+    yield resolved_component_descriptor.component
     # XXX consider not resolving recursively, if immediate dependencies are present in ctx
-    resolve_dependencies(component=resolved_component_descriptor.component)
+    yield from resolve_dependencies(
+        component=resolved_component_descriptor.component,
+        include_component=False,
+    )
   # if this line is reached, all dependencies could successfully be resolved
 
 
