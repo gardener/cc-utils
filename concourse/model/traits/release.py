@@ -156,7 +156,7 @@ ATTRIBUTES = (
         a list of tags to tag the release commit with, **at least one**. The following
         placeholders are available:
 
-        - {{VERSION}}: The version to be released (i.e. the 'effective version')
+        - {VERSION}: The version to be released (i.e. the 'effective version')
 
         The first tag will be used to create the GitHub-release.
         ''',
