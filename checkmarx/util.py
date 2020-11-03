@@ -9,6 +9,9 @@ import traceback
 import typing
 import zipfile
 
+import github3.exceptions
+
+import ccc.github
 import checkmarx.client
 import checkmarx.model as model
 import checkmarx.project
@@ -16,11 +19,8 @@ import checkmarx.tablefmt
 import ci.util
 import mailutil
 import product.util
-
-import github3.exceptions
-
-import ccc.github
 import product.v2
+
 import gci.componentmodel as cm
 
 
@@ -289,6 +289,7 @@ def download_repo_and_create_scan(
 @functools.lru_cache
 def component_logger(component_name):
     return logging.getLogger(component_name)
+
 
 @functools.lru_cache()
 def create_checkmarx_client(checkmarx_cfg_name: str):
