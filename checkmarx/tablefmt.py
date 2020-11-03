@@ -1,10 +1,9 @@
+import tabulate
+import textwrap
 import typing
 
 import checkmarx.client
 import checkmarx.model as model
-
-import tabulate
-import textwrap
 
 
 def get_scan_info_table(

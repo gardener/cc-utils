@@ -2,12 +2,13 @@ import logging
 import time
 
 import dacite
-import gci.componentmodel as cm
 
 import ctx
 import checkmarx.client
 import checkmarx.model as model
 import checkmarx.util
+
+import gci.componentmodel as cm
 
 ctx.configure_default_logging()
 logger = logging.getLogger(__name__)
