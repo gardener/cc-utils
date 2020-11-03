@@ -120,6 +120,6 @@ class ScanResult:
 
 @dataclasses.dataclass
 class FinishedScans:
-    scans_above_threshold:ScanResult
+    scans_above_threshold: ScanResult
     scans_below_threshold: ScanResult
     failed_components: ScanResult

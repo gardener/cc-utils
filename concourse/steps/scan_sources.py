@@ -3,7 +3,6 @@ import tempfile
 import typing
 
 import ci.util
-import checkmarx.checkmarx as cx
 import checkmarx.util
 import mail.model
 import product.model
@@ -35,7 +34,7 @@ def scan_sources_and_notify(
         exclude_regexes=exclude_path_regexes,
     )
 
-    scans = cx.scan_sources(
+    scans = checkmarx.util.scan_sources(
         client=checkmarx_client,
         team_id=team_id,
         component_descriptor_path=component_descriptor_path,
@@ -43,12 +42,12 @@ def scan_sources_and_notify(
         path_filter_func=path_filter_func,
     )
 
-    cx.print_scans(
+    checkmarx.util.print_scans(
         scans=scans,
         routes=checkmarx_client.routes,
     )
 
-    cx.send_mail(
+    checkmarx.util.send_mail(
         scans=scans,
         threshold=threshold,
         email_recipients=email_recipients,

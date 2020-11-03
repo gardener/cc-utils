@@ -137,6 +137,7 @@ class CheckmarxProject:
             print(f'{remote_hash=} != {hash=} - scan required')
             return True
         else:
+            print(f'{remote_hash=} != {hash=} - scan not required')
             return False
 
     def upload_zip(self, file):
