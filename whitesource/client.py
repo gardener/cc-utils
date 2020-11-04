@@ -38,7 +38,6 @@ class WhitesourceClient:
     def request(self, method: str, print_error: bool = True, *args, **kwargs):
         res = requests.request(
             method=method,
-            verify=False,
             *args, **kwargs,
         )
         if not res.ok:

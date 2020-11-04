@@ -61,7 +61,6 @@ def download_component(
     )
     res = repo._get(
         url,
-        verify=False,
         allow_redirects=True,
         stream=True,
     )

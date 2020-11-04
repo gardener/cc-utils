@@ -90,8 +90,8 @@ class ProtecodeApiRoutes(object):
         return self._rest_url('scans', str(product_id)) + '/'
 
 
-class ProtecodeApi(object):
-    def __init__(self, api_routes, basic_credentials, tls_verify=False):
+class ProtecodeApi:
+    def __init__(self, api_routes, basic_credentials, tls_verify=True):
         self._routes = not_none(api_routes)
         self._credentials = not_none(basic_credentials)
         self._auth = (basic_credentials.username(), basic_credentials.passwd())
