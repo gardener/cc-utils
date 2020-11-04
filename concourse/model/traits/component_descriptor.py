@@ -133,12 +133,18 @@ class ComponentDescriptorTrait(Trait):
 
     def ctx_repository(self) -> model.ctx_repository.CtxRepositoryCfg:
         ctx_repo_name = self.raw.get('ctx_repository')
+        # XXX hack for unittests
+        if not self.cfg_set:
+            return None
         if ctx_repo_name:
             return self.cfg_set.ctx_repository(ctx_repo_name)
         return self.cfg_set.ctx_repository()
 
     def ctx_repository_base_url(self):
         ctx_repo_cfg = self.ctx_repository()
+        # XXX hack for unittsts
+        if ctx_repo_cfg is None:
+            return None
 
         # use default ctx_repository_base_url, if not explicitly configured
         if not (base_url := self.raw.get('ctx_repository_base_url')):

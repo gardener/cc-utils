@@ -55,8 +55,6 @@ def comp(name='a.b/c/e', version='1.2.3'):
                     sources=cm.ComponentSource,
                     componentReferences=cm.ComponentReference,
                     resources=cm.Resource,
-                    externalResources=cm.Resource,
-                    localResources=cm.Resource,
                 )
 
     return _comp

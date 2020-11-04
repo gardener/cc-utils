@@ -220,10 +220,7 @@ def create_jobs(processing_cfg, component_descriptor):
 
 
 def _enumerate_oci_resources(descriptor):
-    if not hasattr(descriptor, 'resources'):
-        resources = descriptor.localResources + descriptor.externalResources
-    else:
-        resources = descriptor.resources
+    resources = descriptor.resources
 
     for resource in resources:
         if resource.access.type == cm.AccessType.OCI_REGISTRY and \
@@ -235,8 +232,8 @@ class ProcessComponent:
     def __init__(self, processing_cfg, component_obj):
         self.src_component_obj = component_obj
         self.src_descriptor = component_obj.descriptor
-        self.src_external_resources = self.src_descriptor.component.externalResources
-        self.src_local_resources = self.src_descriptor.component.localResources
+        self.src_external_resources = self.src_descriptor.component.resources
+        self.src_local_resources = self.src_descriptor.component.resources
 
         self.tgt_external_resources = ProcessComponent.new_processing_resources(
             src_resources=self.src_external_resources
