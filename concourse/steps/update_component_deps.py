@@ -19,6 +19,7 @@ import tempfile
 import typing
 
 import gci.componentmodel
+import github3.exceptions
 
 import ccc.github
 import ci.util
@@ -361,7 +362,10 @@ def create_upgrade_pr(
         return
     # auto-merge - todo: make configurable (e.g. merge method)
     pull_request.merge()
-    ls_repo.ref(f'heads/{upgrade_branch_name}').delete()
+    try:
+        ls_repo.ref(f'heads/{upgrade_branch_name}').delete()
+    except github3.exceptions.NotFoundError:
+        pass
 
     if after_merge_callback:
         subprocess.run(
