@@ -97,7 +97,6 @@ class CheckmarxClient:
                 'scope': creds.scope(),
                 'grant_type': 'password',
             },
-            verify=False,
         )
         res = cxmodel.AuthResponse(**res.json())
         res.expires_at = datetime.datetime.fromtimestamp(
@@ -112,17 +111,18 @@ class CheckmarxClient:
         method: str,
         api_version: str = '1.0',
         print_error: bool = True,
-        *args, **kwargs
+        *args,
+        **kwargs,
     ):
         headers = kwargs.pop('headers', {})
         headers['Authorization'] = f'Bearer {self.auth.access_token}'
         if 'Accept' not in headers:
             headers['Accept'] = f'application/json;v={api_version}'
 
-        res = requests.request(method=method, verify=False, headers=headers, *args, **kwargs)
+        res = requests.request(method=method, headers=headers, *args, **kwargs)
 
         if not res.ok:
-            msg = f'{method} request to url {res.url} failed with {res.status_code=} {res.reason=}'
+            msg = f'{method} request to {res.url=} failed with {res.status_code=} {res.reason=}'
             if print_error:
                 print(msg)
                 print(res.text)
@@ -170,7 +170,7 @@ class CheckmarxClient:
             url=self.routes.project_by_id(project_id=project_id),
             api_version="application/json;v=2.0",
         )
-        return res
+        return from_dict(data_class=model.ProjectDetails, data=res.json())
 
     def update_project(self, project_details: cxmodel.ProjectDetails):
         res = self.request(

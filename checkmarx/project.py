@@ -1,8 +1,6 @@
 import logging
 import time
 
-import dacite
-
 import ctx
 import checkmarx.client
 import checkmarx.model as model
@@ -27,10 +25,7 @@ def init_checkmarx_project(
         team_id=team_id,
     )
 
-    project_details = dacite.from_dict(
-        model.ProjectDetails,
-        checkmarx_client.get_project_by_id(project_id=project_id).json()
-    )
+    project_details = checkmarx_client.get_project_by_id(project_id=project_id)
 
     return CheckmarxProject(
         checkmarx_client=checkmarx_client,
@@ -88,9 +83,6 @@ class CheckmarxProject:
             scan_statistic=statistics,
         )
 
-    def get_project(self):
-        return self.client.get_project_by_id(self.project_details.id).json()
-
     def update_remote_project(self):
         self.client.update_project(self.project_details)
 
@@ -141,6 +133,8 @@ class CheckmarxProject:
             print(f'{remote_hash=} != {hash=} - scan not required')
             return False
 
-    def upload_zip(self, file):
-        r = self.client.upload_zipped_source_code(self.project_details.id, file)
-        r.raise_for_status()
+    def upload_zip(self, file, raise_on_error: bool = True):
+        res = self.client.upload_zipped_source_code(self.project_details.id, file)
+        if raise_on_error:
+            res.raise_for_status()
+        return res

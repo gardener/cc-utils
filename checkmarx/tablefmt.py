@@ -12,13 +12,17 @@ def get_scan_info_table(
 ):
     scan_info_header = ('ScanId', 'ComponentName', 'ScanState', 'Start', 'End')
 
-    def started_on(scan_result):
-        return scan_result.scan_response.dateAndTime.startedOn if \
-            scan_result.scan_response else 'unknown'
+    def started_on(scan_result: model.ScanResult):
+        if scan_result.scan_response:
+            return scan_result.scan_response.dateAndTime.startedOn
+        else:
+            return 'unknown'
 
-    def ended_on(scan_result):
-        return scan_result.scan_response.dateAndTime.finishedOn if \
-            scan_result.scan_response else 'unknown'
+    def ended_on(scan_result: model.ScanResult):
+        if scan_result.scan_response:
+            return scan_result.scan_response.dateAndTime.finishedOn
+        else:
+            return 'unkown'
 
     scan_info_data = (
         (
