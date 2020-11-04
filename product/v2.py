@@ -58,70 +58,33 @@ def _convert_component_to_v1(
     )
     component_deps = component_v1.dependencies()
 
-    if not hasattr(component_v2, 'resources'): # XXX rm after migration to "final v2" is done
-        for local_resource in component_v2.localResources:
-            if local_resource.type is cm.ResourceType.OCI_IMAGE:
-                component_deps.add_container_image_dependency(
-                    product.model.ContainerImage.create(
-                        name=local_resource.name,
-                        version=local_resource.version,
-                        image_reference=local_resource.access.imageReference,
-                        relation=product.model.Relation.LOCAL,
-                    )
-                )
-            elif local_resource.type is cm.ResourceType.GENERIC:
-                component_deps.add_generic_dependency(
-                    product.model.GenericDependency.create(
-                        name=local_resource.name,
-                        version=local_resource.version,
-                    )
-                )
-
-        for external_resource in component_v2.externalResources:
-            if external_resource.type is cm.ResourceType.OCI_IMAGE:
-                component_deps.add_container_image_dependency(
-                    product.model.ContainerImage.create(
-                        name=external_resource.name,
-                        version=external_resource.version,
-                        image_reference=external_resource.access.imageReference,
-                        relation=product.model.Relation.THIRD_PARTY,
-                    )
-                )
-            elif external_resource.type is cm.ResourceType.GENERIC:
-                component_deps.add_generic_dependency(
-                    product.model.GenericDependency.create(
-                        name=external_resource.name,
-                        version=external_resource.version,
-                    )
-                )
-    else:
-        for resource in component_v2.resources:
-            if hasattr(resource, 'relation'):
-                if resource.relation is cm.ResourceRelation.LOCAL:
-                    v1_relation = product.model.Relation.LOCAL
-                elif resource.relation is cm.ResourceRelation.EXTERNAL:
-                    v1_relation = product.model.Relation.THIRD_PARTY
-                else:
-                    raise NotImplementedError
-            else:
+    for resource in component_v2.resources:
+        if hasattr(resource, 'relation'):
+            if resource.relation is cm.ResourceRelation.LOCAL:
                 v1_relation = product.model.Relation.LOCAL
+            elif resource.relation is cm.ResourceRelation.EXTERNAL:
+                v1_relation = product.model.Relation.THIRD_PARTY
+            else:
+                raise NotImplementedError
+        else:
+            v1_relation = product.model.Relation.LOCAL
 
-            if resource.type is cm.ResourceType.OCI_IMAGE:
-                component_deps.add_container_image_dependency(
-                    product.model.ContainerImage.create(
-                        name=resource.name,
-                        version=resource.version,
-                        image_reference=resource.access.imageReference,
-                        relation=v1_relation,
-                    )
+        if resource.type is cm.ResourceType.OCI_IMAGE:
+            component_deps.add_container_image_dependency(
+                product.model.ContainerImage.create(
+                    name=resource.name,
+                    version=resource.version,
+                    image_reference=resource.access.imageReference,
+                    relation=v1_relation,
                 )
-            elif resource.type is cm.ResourceType.GENERIC:
-                component_deps.add_generic_dependency(
-                    product.model.GenericDependency.create(
-                        name=resource.name,
-                        version=resource.version,
-                    )
+            )
+        elif resource.type is cm.ResourceType.GENERIC:
+            component_deps.add_generic_dependency(
+                product.model.GenericDependency.create(
+                    name=resource.name,
+                    version=resource.version,
                 )
+            )
 
     return component_v1
 
@@ -569,20 +532,11 @@ def resources(
     resource_policy: ResourcePolicy=ResourcePolicy.FAIL_ON_NONMATCHING_ACCESS_TYPES,
 ):
     if resource_filter is ResourceFilter.LOCAL:
-        if not hasattr(component, 'resources'): # XXX rm after migration to "final v2"
-          resources = component.localResources
-        else:
-          resources = [r for r in component.resources if r.relation is cm.ResourceRelation.LOCAL]
+        resources = [r for r in component.resources if r.relation is cm.ResourceRelation.LOCAL]
     elif resource_filter is ResourceFilter.EXTERNAL:
-        if not hasattr(component, 'resources'): # XXX rm after migration to "final v2"
-          resources = component.externalResources
-        else:
-          resources = [r for r in component.resources if r.relation is cm.ResourceRelation.EXTERNAL]
+        resources = [r for r in component.resources if r.relation is cm.ResourceRelation.EXTERNAL]
     elif resource_filter is ResourceFilter.ALL:
-        if not hasattr(component, 'resources'): # XXX rm after migration to "final v2"
-            resources = component.externalResources + component.localResources
-        else:
-            resources = component.resources
+        resources = component.resources
     else:
         raise NotImplementedError
 
