@@ -32,6 +32,7 @@ from concourse.model.base import (
     Trait,
     TraitTransformer,
 )
+import model.ctx_repository
 
 
 class ValidationPolicy(EnumWithDocumentation):
@@ -78,12 +79,21 @@ ATTRIBUTES = (
             'the component descriptor'
         ),
     ),
-    AttributeSpec.optional(
+    AttributeSpec.deprecated(
         name='ctx_repository_base_url',
         type=str,
         default=None, # if not explicitly configured, will be injected from cicd-default
         doc='''
             the component descriptor context repository base_url (for component descriptor v2).
+            If not configured, the CICD-landscape's default ctx will be used.
+        '''
+    ),
+    AttributeSpec.optional(
+        name='ctx_repository',
+        type=str,
+        default=None, # if not explicitly configured, will be injected from cicd-default
+        doc='''
+            the component descriptor context repository cfg name (for component descriptor v2).
             If not configured, the CICD-landscape's default ctx will be used.
         '''
     ),
@@ -121,15 +131,21 @@ class ComponentDescriptorTrait(Trait):
             for v in self.raw['validation_policies']
         ]
 
+    def ctx_repository(self) -> model.ctx_repository.CtxRepositoryCfg:
+        ctx_repo_name = self.raw.get('ctx_repository')
+        if ctx_repo_name:
+            return self.cfg_set.ctx_repository(ctx_repo_name)
+        return self.cfg_set.ctx_repository()
+
     def ctx_repository_base_url(self):
+        ctx_repo_cfg = self.ctx_repository()
+
         # use default ctx_repository_base_url, if not explicitly configured
         if not (base_url := self.raw.get('ctx_repository_base_url')):
-            if not self.cfg_set:
-                return None
-            ctx_repo_cfg = self.cfg_set.ctx_repository()
-            base_url = ctx_repo_cfg.base_url()
-            self.raw['ctx_repository_base_url'] = base_url
-        return base_url
+            return ctx_repo_cfg.base_url()
+        else:
+            # XXX warn or even forbid, at least if different from ctx-repo-cfg?
+            return base_url
 
     def transformer(self):
         return ComponentDescriptorTraitTransformer(trait=self)
