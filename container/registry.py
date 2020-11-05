@@ -271,9 +271,18 @@ def publish_container_image(image_reference: str, image_file_obj, threads=8):
   image_file_obj.seek(0)
 
 
-def _mk_transport_pool(size=8):
+def _mk_transport_pool(
+    size=8,
+    disable_ssl_certificate_validation=False,
+):
+  # XXX: should cache transport-pools iff image-references refer to same oauth-domain
+  # XXX: pass `disable_ssl_certificate_validation`-arg from calling functions
+  Http_ctor = functools.partial(
+    httplib2.Http,
+    disable_ssl_certificate_validation=disable_ssl_certificate_validation
+  )
   retry_factory = retry.Factory()
-  retry_factory = retry_factory.WithSourceTransportCallable(httplib2.Http)
+  retry_factory = retry_factory.WithSourceTransportCallable(Http_ctor)
   transport = transport_pool.Http(retry_factory.Build, size=size)
   return transport
 
