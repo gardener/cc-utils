@@ -301,12 +301,31 @@ def download_component_descriptor_v2(
     )
 
 
+class UploadMode(enum.Enum):
+    SKIP = 'skip'
+    FAIL = 'fail'
+    OVERWRITE = 'overwrite'
+
+
 def upload_component_descriptor_v2_to_oci_registry(
     component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
+    on_exist=UploadMode.SKIP,
 ):
     ensure_is_v2(component_descriptor_v2)
 
     target_ref = _target_oci_ref(component_descriptor_v2.component)
+
+    if on_exist in (UploadMode.SKIP, UploadMode.FAIL):
+        image_exists = container.registry._image_exists(image_reference=target_ref)
+        if on_exist is UploadMode.SKIP or not image_exists:
+            return
+        else:
+            # XXX: we might still ignore it, if the to-be-uploaded CD is equal to the existing one
+            raise ValueError(f'{target_ref=} already existed')
+    elif on_exist is UploadMode.OVERWRITE:
+        pass
+    else:
+        raise NotImplementedError(on_exist)
 
     raw_fobj = gci.oci.component_descriptor_to_tarfileobj(component_descriptor_v2)
 
