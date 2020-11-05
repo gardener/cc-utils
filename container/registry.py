@@ -288,6 +288,8 @@ def _mk_transport_pool(
 
 
 def _mk_credentials(image_reference, privileges: Privileges=None):
+  if isinstance(image_reference, str):
+    image_reference = docker_name.from_string(name=image_reference)
   try:
     # first try container_registry cfgs from available cfg
     creds = _credentials(image_reference=str(image_reference), privileges=privileges)
