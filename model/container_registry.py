@@ -32,6 +32,45 @@ class Privileges(enum.Enum):
     READ_ONLY = 'readonly'
     READ_WRITE = 'readwrite'
 
+    def _asint(self, privileges):
+        '''
+        make privileges comparable - ro < rw
+        '''
+        if privileges is None:
+            return 2 # unspecified credentials should be used as last resort
+
+        p = Privileges(privileges)
+        if p is self.READ_ONLY:
+            return 0
+        elif p is self.READ_WRITE:
+            return 1
+        else:
+            raise NotImplementedError
+
+    def __lt__(self, other):
+        o = self._asint(other)
+        return self._asint(self).__lt__(o)
+
+    def __le__(self, other):
+        o = self._asint(other)
+        return self._asint(self).__le__(o)
+
+    def __eq__(self, other):
+        o = self._asint(other)
+        return self._asint(self).__eq__(o)
+
+    def __ne__(self, other):
+        o = self._asint(other)
+        return self._asint(self).__ne__(o)
+
+    def __gt__(self, other):
+        o = self._asint(other)
+        return self._asint(self).__gt__(o)
+
+    def __ge__(self, other):
+        o = self._asint(other)
+        return self._asint(self).__ge__(o)
+
 
 class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
     '''
@@ -93,12 +132,8 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
         if not prefixes:
             return False
         if privileges:
-            # credentials have _at least_ read privileges. Therefore we need to check whether
-            # we have READ_WRITE privileges iff the requested credentials are also READ_WRITE
-            if (
-                privileges is Privileges.READ_WRITE
-                and self.privileges() is not Privileges.READ_WRITE
-            ):
+            # if privileges were specified, ours must be "great enough" (greater means more privs)
+            if self.privileges() < privileges:
                 return False
 
         for prefix in prefixes:
@@ -142,14 +177,16 @@ def find_config(image_reference: str, privileges:Privileges=None) -> 'GcrCredent
     ci.util.check_type(image_reference, str)
     cfg_factory = ci.util.ctx().cfg_factory()
 
-    matching_cfgs = [
+    matching_cfgs = sorted((
         cfg for cfg in
         cfg_factory._cfg_elements('container_registry')
         if cfg.image_ref_matches(image_reference, privileges=privileges)
-    ]
+        ),
+        key=lambda c:c.privileges(),
+    )
 
     if not matching_cfgs:
         return None
 
-    # return first match
+    # return first match (because they are sorted, this will be the one with least privileges)
     return matching_cfgs[0]
