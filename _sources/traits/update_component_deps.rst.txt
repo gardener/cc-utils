@@ -36,17 +36,19 @@ it may be assumed that a Python3 runtime is available, along with all tools from
 Passed Environment Variables
 ============================
 
-+--------------------+-------------------------------------------------------------+
-| name               | explanation                                                 |
-+====================+=============================================================+
-| DEPENDENCY_TYPE    | one of: 'component', 'container_image', 'web', 'generic'    |
-+--------------------+-------------------------------------------------------------+
-| DEPENDENCY_NAME    | the dependency name as declared in component desscriptor    |
-+--------------------+-------------------------------------------------------------+
-| DEPENDENCY_VERSION | the discovered target component version (e.g. 1.2.3)        |
-+--------------------+-------------------------------------------------------------+
-| REPO_DIR           | the absolute path to component repo work tree               |
-+--------------------+-------------------------------------------------------------+
++-----------------------+--------------------------------------------------------------------+
+| name                  | explanation                                                        |
++=======================+====================================================================+
+| DEPENDENCY_TYPE       | one of: 'component', 'container_image', 'web', 'generic'           |
++-----------------------+--------------------------------------------------------------------+
+| DEPENDENCY_NAME       | the dependency name as declared in component descriptor            |
++-----------------------+--------------------------------------------------------------------+
+| LOCAL_DEPENDENCY_NAME | the logical name of the dependency within the component descriptor |
++-----------------------+--------------------------------------------------------------------+
+| DEPENDENCY_VERSION    | the discovered target component version (e.g. 1.2.3)               |
++-----------------------+--------------------------------------------------------------------+
+| REPO_DIR              | the absolute path to component repo work tree                      |
++-----------------------+--------------------------------------------------------------------+
 
 Behavioural Contract
 ====================
