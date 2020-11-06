@@ -320,7 +320,8 @@ def upload_component_descriptor_v2_to_oci_registry(
             if on_exist is UploadMode.SKIP:
                 return
             if on_exist is UploadMode.FAIL:
-                # XXX: we might still ignore it, if the to-be-uploaded CD is equal to the existing one
+                # XXX: we might still ignore it, if the to-be-uploaded CD is equal to the existing
+                # one
                 raise ValueError(f'{target_ref=} already existed')
     elif on_exist is UploadMode.OVERWRITE:
         pass
