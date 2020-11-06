@@ -316,12 +316,12 @@ def upload_component_descriptor_v2_to_oci_registry(
     target_ref = _target_oci_ref(component_descriptor_v2.component)
 
     if on_exist in (UploadMode.SKIP, UploadMode.FAIL):
-        image_exists = container.registry._image_exists(image_reference=target_ref)
-        if on_exist is UploadMode.SKIP or not image_exists:
-            return
-        else:
-            # XXX: we might still ignore it, if the to-be-uploaded CD is equal to the existing one
-            raise ValueError(f'{target_ref=} already existed')
+        if container.registry._image_exists(image_reference=target_ref):
+            if on_exist is UploadMode.SKIP:
+                return
+            if on_exist is UploadMode.FAIL:
+                # XXX: we might still ignore it, if the to-be-uploaded CD is equal to the existing one
+                raise ValueError(f'{target_ref=} already existed')
     elif on_exist is UploadMode.OVERWRITE:
         pass
     else:
