@@ -47,6 +47,9 @@ class Privileges(enum.Enum):
         else:
             raise NotImplementedError
 
+    def __hash__(self):
+        return self._asint(self).__hash__()
+
     def __lt__(self, other):
         o = self._asint(other)
         return self._asint(self).__lt__(o)
