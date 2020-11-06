@@ -300,7 +300,8 @@ def _mk_credentials(image_reference, privileges: Privileges=None):
 
     return creds
   except Exception as e:
-    ci.util.fail(f'Error resolving credentials for {image_reference}: {e}')
+    ci.util.warning(f'Error resolving credentials for {image_reference}: {e}')
+    raise e
 
 
 def _image_exists(image_reference: str) -> bool:
