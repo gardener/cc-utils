@@ -235,7 +235,7 @@ class RepositoryConfig(Resource):
         else:
             type_name = ResourceType.GIT.value
 
-        base_name = kwargs['raw_dict']['path'].replace('/', '_')
+        base_name = kwargs['raw_dict']['path'].replace('/', '.')
 
         # hack: use branch name as qualifier to support referencing the same repo
         #       multiple times (if branch differs)
@@ -270,7 +270,7 @@ class RepositoryConfig(Resource):
 
     def resource_name(self):
         # TODO: replace usages with access to resource_id
-        return self._resource_identifier.name() + '_' + self.branch()
+        return self._resource_identifier.name() + '.' + self.branch()
 
     def name(self):
         # TODO: replace usages with access to resource_id
