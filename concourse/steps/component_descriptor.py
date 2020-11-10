@@ -72,7 +72,7 @@ def base_component_descriptor_v2(
               type=cm.AccessType.GITHUB,
               repoUrl=component_name_v2,
               ref=src_ref,
-              commit=commit,
+              # commit=commit,
             ),
           )
         ],
