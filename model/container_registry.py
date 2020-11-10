@@ -176,7 +176,11 @@ class GcrCredentials(BasicCredentials):
         )
 
 
-def find_config(image_reference: str, privileges:Privileges=None) -> 'GcrCredentials':
+def find_config(
+    image_reference: str,
+    privileges:Privileges=None,
+    _normalised_image_reference=False,
+) -> 'GcrCredentials':
     ci.util.check_type(image_reference, str)
     cfg_factory = ci.util.ctx().cfg_factory()
 
@@ -189,7 +193,16 @@ def find_config(image_reference: str, privileges:Privileges=None) -> 'GcrCredent
     )
 
     if not matching_cfgs:
-        return None
+        # finally give up - did not match anything, even after normalisation
+        if _normalised_image_reference:
+            return None
+        else:
+            import container.registry as cr
+            return find_config(
+                image_reference=cr.normalise_image_reference(image_reference=image_reference),
+                privileges=privileges,
+                _normalised_image_reference=True,
+            )
 
     # return first match (because they are sorted, this will be the one with least privileges)
     return matching_cfgs[0]
