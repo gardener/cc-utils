@@ -43,7 +43,9 @@ class ComponentDescriptorStepTest(unittest.TestCase):
         for step in self.component_descriptor_transformer.inject_steps():
             self.job_variant._steps_dict[step.name] = step
 
-        self.component_descriptor_step = self.job_variant.step('component_descriptor')
+        self.component_descriptor_step = self.job_variant.step(
+            component_descriptor.DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME,
+        )
         self.component_descriptor_step.add_input('version_path', 'version_path')
 
         self.old_cwd = os.getcwd()

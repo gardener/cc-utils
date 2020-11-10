@@ -3,12 +3,14 @@
 import itertools
 import os
 
+import model.container_registry
+
 from ci.util import urljoin
 from makoutil import indent_func
 from concourse.factory import DefinitionFactory
 from concourse.model.base import ScriptType
 from concourse.model.step import StepNotificationPolicy, PrivilegeMode
-import model.container_registry
+from concourse.model.traits.component_descriptor import DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME
 
 # use pipeline_name for debugging / tracing purposes
 pipeline_name = pipeline.get('name')
@@ -381,7 +383,7 @@ else:
         ${meta_step(job_step=job_step, job_variant=job_variant, indent=8)}
 % elif job_step.name == 'rm_pr_label':
         ${rm_pr_label_step(job_step=job_step, job_variant=job_variant, github_cfg=github, concourse_cfg=concourse_cfg, indent=8)}
-% elif job_step.name == 'component_descriptor':
+% elif job_step.name == DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME:
 <%
   if has_publish_trait(job_variant):
     image_descriptors_for_variant = {

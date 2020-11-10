@@ -141,7 +141,9 @@ class UpdateComponentDependenciesTraitTransformer(TraitTransformer):
 
     def process_pipeline_args(self, pipeline_args: JobVariant):
         # our step depends on dependendency descriptor step
-        component_descriptor_step = pipeline_args.step('component_descriptor')
+        component_descriptor_step = pipeline_args.step(
+            concourse.model.traits.component_descriptor.DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME
+        )
         self.update_component_deps_step._add_dependency(component_descriptor_step)
 
         upstream_component_name = self.trait.upstream_component_name()

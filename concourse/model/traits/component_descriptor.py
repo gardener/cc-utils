@@ -47,10 +47,13 @@ class ValidationPolicy(EnumWithDocumentation):
     )
 
 
+DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME = 'component_descriptor'
+
+
 ATTRIBUTES = (
     AttributeSpec.optional(
         name='step',
-        default={'name': 'component_descriptor'},
+        default={'name': DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME},
         doc='The build step name injected by this trait',
         type=dict,
     ),
@@ -106,8 +109,10 @@ class ComponentDescriptorTrait(Trait):
 
         # todo: make step name actually configurable (need concept to express
         # step-specific behaviour, first)
-        if not self.step_name() == 'component_descriptor':
-            raise ModelValidationError('component_descriptor step name must be component_descriptor')
+        if not self.step_name() == DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME:
+            raise ModelValidationError(
+                f"component-descriptor step name must be '{DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME}'"
+            )
 
     @classmethod
     def _attribute_specs(cls):
