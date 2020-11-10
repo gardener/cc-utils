@@ -52,13 +52,17 @@ ctx_repository_base_url = '${descriptor_trait.ctx_repository_base_url()}'
 
 main_repo_path = os.path.abspath('${main_repo.resource_name()}')
 main_git_repo = git.Repo(main_repo_path)
+if not main_git_repo.head.ref.is_valid():
+  commit_hash = None
+else:
+  commit_hash = main_git_repo.head.commit.hexsha
 
 # create base descriptor filled with default values
 base_descriptor_v2 = base_component_descriptor_v2(
     component_name_v2=component_name_v2,
     effective_version=effective_version,
     ctx_repository_base_url=ctx_repository_base_url,
-    commit=main_git_repo.head.commit.hexsha,
+    commit=commit_hash,
 )
 component_v2 = base_descriptor_v2.component
 

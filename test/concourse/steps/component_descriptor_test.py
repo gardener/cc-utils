@@ -1,3 +1,4 @@
+import git
 import tempfile
 import unittest
 import os
@@ -33,6 +34,7 @@ class ComponentDescriptorStepTest(unittest.TestCase):
 
         repo_dir = pathlib.Path(self.tmp_dir.name, self.main_repo.resource_name())
         repo_dir.mkdir()
+        git.Repo.init(path=repo_dir)
 
         self.job_variant = test_utils.job(self.main_repo)
 
