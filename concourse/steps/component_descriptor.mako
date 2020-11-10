@@ -55,7 +55,10 @@ main_git_repo = git.Repo(main_repo_path)
 if not main_git_repo.head.ref.is_valid():
   commit_hash = None
 else:
-  commit_hash = main_git_repo.head.commit.hexsha
+  try:
+    commit_hash = main_git_repo.head.commit.hexsha
+  except:
+    commit_hash = None
 
 # create base descriptor filled with default values
 base_descriptor_v2 = base_component_descriptor_v2(
