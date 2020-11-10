@@ -14,7 +14,7 @@ import concourse.steps
 notification_step = concourse.steps.step_def('notification')
 from makoutil import indent_func
 %>
-- task: '${job_step.name}_failed'
+- task: '${job_step.name}.failed'
   config:
     inputs:
 % for input in inputs:
