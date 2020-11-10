@@ -200,7 +200,9 @@ class SourceScanTraitTransformer(TraitTransformer):
 
     def process_pipeline_args(self, pipeline_args: JobVariant):
         # our step depends on dependency descriptor step
-        component_descriptor_step = pipeline_args.step('component_descriptor')
+        component_descriptor_step = pipeline_args.step(
+            concourse.model.traits.component_descriptor.DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME
+        )
         self.source_scan_step._add_dependency(component_descriptor_step)
 
     @classmethod
