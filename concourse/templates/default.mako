@@ -2,11 +2,13 @@
 <%
 import itertools
 import os
+
 from ci.util import urljoin
 from makoutil import indent_func
 from concourse.factory import DefinitionFactory
 from concourse.model.base import ScriptType
 from concourse.model.step import StepNotificationPolicy, PrivilegeMode
+import model.container_registry
 
 # use pipeline_name for debugging / tracing purposes
 pipeline_name = pipeline.get('name')
@@ -216,18 +218,13 @@ if job_step.registry():
 else:
   ## No containerregistry configured. Attempt to find a matching one on our side by looking
   ## at the configured prefixes of the container-registries.
-  matching_cfgs = [
-    cfg for cfg in
-    config_set._cfg_elements('container_registry')
-    if cfg.image_ref_matches(image_reference)
-  ]
-  if not matching_cfgs:
-    container_registry = None
-  else:
-    container_registry = matching_cfgs[0]
+  registry_cfg = model.container_registry.find_config(
+    image_reference=image_reference,
+    privileges=model.container_registry.Privileges.READ_ONLY,
+  )
 %>
     ${task_image_resource(
-        registry_cfg=container_registry,
+        registry_cfg=registry_cfg,
         image_repository=image_reference,
         image_tag=tag,
         indent=4,
