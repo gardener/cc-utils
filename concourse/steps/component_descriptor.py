@@ -40,6 +40,7 @@ def base_component_descriptor_v2(
     component_name_v2: str,
     effective_version: str,
     ctx_repository_base_url: str,
+    commit: str,
 ):
     import gci.componentmodel as cm
     import version as version_util
@@ -71,6 +72,7 @@ def base_component_descriptor_v2(
               type=cm.AccessType.GITHUB,
               repoUrl=component_name_v2,
               ref=src_ref,
+              commit=commit,
             ),
           )
         ],

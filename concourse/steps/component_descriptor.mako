@@ -18,6 +18,7 @@ else:
   image_alter_cfgs = ()
 %>
 import dataclasses
+import git
 import json
 import os
 import shutil
@@ -49,11 +50,15 @@ component_name = '${descriptor_trait.component_name()}'
 component_name_v2 = component_name.lower() # OCI demands lowercase
 ctx_repository_base_url = '${descriptor_trait.ctx_repository_base_url()}'
 
+main_repo_path = os.path.abspath('${main_repo.resource_name()}')
+main_git_repo = git.Repo(main_repo_path)
+
 # create base descriptor filled with default values
 base_descriptor_v2 = base_component_descriptor_v2(
     component_name_v2=component_name_v2,
     effective_version=effective_version,
     ctx_repository_base_url=ctx_repository_base_url,
+    commit=main_git_repo.head.commit.hexsha,
 )
 component_v2 = base_descriptor_v2.component
 
@@ -135,8 +140,6 @@ base_descriptor_file_v2 = os.path.join(descriptor_out_dir, 'base_component_descr
 with open(base_descriptor_file_v2, 'w') as f:
   f.write(dump_component_descriptor_v2(base_descriptor_v2))
 
-# make main repository path absolute
-main_repo_path = os.path.abspath('${main_repo.resource_name()}')
 
 subproc_env = os.environ.copy()
 subproc_env['${main_repo_path_env_var}'] = main_repo_path
