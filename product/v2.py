@@ -519,17 +519,29 @@ def rm_component_descriptor(
 
 
 def components(
-    component_descriptor_v2: gci.componentmodel.ComponentDescriptor
+    component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
+    _visited_component_versions: typing.Tuple[str, str]=(),
 ):
     component = component_descriptor_v2.component
     yield component
 
+    new_visited_component_versions = _visited_component_versions + \
+        (component.name, component.version) + \
+        tuple((cref.componentName, cref.version) for cref in component.componentReferences)
+
     for component_ref in component.componentReferences:
+        cref_version = (component_ref.componentName, component_ref.version)
+        if cref_version in _visited_component_versions:
+            continue
+
         component_descriptor_v2 = resolve_dependency(
             component=component,
             component_ref=component_ref
         )
-        yield from components(component_descriptor_v2=component_descriptor_v2)
+        yield from components(
+            component_descriptor_v2=component_descriptor_v2,
+            _visited_component_versions=new_visited_component_versions,
+        )
 
 
 class ResourceFilter(enum.Enum):
