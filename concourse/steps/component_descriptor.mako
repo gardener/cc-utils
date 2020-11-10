@@ -52,7 +52,7 @@ ctx_repository_base_url = '${descriptor_trait.ctx_repository_base_url()}'
 
 main_repo_path = os.path.abspath('${main_repo.resource_name()}')
 main_git_repo = git.Repo(main_repo_path)
-if not main_git_repo.head.ref.is_valid():
+if not main_git_repo.head.is_valid():
   commit_hash = None
 else:
   try:
