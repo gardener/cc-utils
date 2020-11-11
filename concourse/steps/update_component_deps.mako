@@ -16,6 +16,8 @@ update_component_deps_trait = job_variant.trait('update_component_deps')
 set_dependency_version_script_path = update_component_deps_trait.set_dependency_version_script_path()
 after_merge_callback = update_component_deps_trait.after_merge_callback()
 upstream_update_policy = update_component_deps_trait.upstream_update_policy()
+component_descriptor_trait = job_variant.trait('component_descriptor')
+ctx_repo_base_url = component_descriptor_trait.ctx_repository_base_url()
 %>
 
 import os
@@ -98,7 +100,7 @@ for from_ref, to_version in determine_upgrade_prs(
     upstream_component_name=upstream_component_name,
     upstream_update_policy=upstream_update_policy,
     upgrade_pull_requests=upgrade_pull_requests,
-    ctx_repo_base_url=current_base_url(),
+    ctx_repo_base_url='${ctx_repo_base_url}',
 ):
     create_upgrade_pr(
         from_ref=from_ref,

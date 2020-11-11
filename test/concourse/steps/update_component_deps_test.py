@@ -11,6 +11,7 @@ from concourse.steps.update_component_deps import (
     determine_reference_versions,
 )
 import concourse.model.traits.update_component_deps as update_component_deps
+import concourse.model.traits.component_descriptor as component_descriptor
 
 
 class UpdateComponentDependenciesStepTest(unittest.TestCase):
@@ -28,13 +29,24 @@ class UpdateComponentDependenciesStepTest(unittest.TestCase):
             },
         )
 
+        self.component_descriptor_trait = component_descriptor.ComponentDescriptorTrait(
+            name='component_descriptor',
+            variant_name='don\'t_care',
+            raw_dict={
+                'component_name': 'github.com/org/repo_name',
+            },
+        )
+
         self.main_repo = test_utils.repository()
 
         repo_dir = pathlib.Path(self.tmp_dir.name, self.main_repo.resource_name())
         repo_dir.mkdir()
 
         self.job_variant = test_utils.job(self.main_repo)
-        self.job_variant._traits_dict = {'update_component_deps': self.update_component_deps_trait}
+        self.job_variant._traits_dict = {
+            'update_component_deps': self.update_component_deps_trait,
+            'component_descriptor': self.component_descriptor_trait,
+        }
 
         self.old_cwd = os.getcwd()
 

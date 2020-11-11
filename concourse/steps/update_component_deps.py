@@ -59,11 +59,6 @@ def current_component():
     return current_product_descriptor().component
 
 
-def current_base_url():
-    last_ctx_repo = current_component().repositoryContexts[-1]
-    return last_ctx_repo.baseUrl
-
-
 def component_by_ref_and_version(
     component_reference: gci.componentmodel.ComponentReference,
     component_version: str,
