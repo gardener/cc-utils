@@ -266,22 +266,22 @@ def determine_upgrade_prs(
                     'skipping outdated component upgrade: '
                     f'{greatest_component_reference.componentName}; '
                     f'our version: {greatest_component_reference.version}, '
-                    f'found: {latest_version}'
+                    f'found: {greatest_version}'
                 )
                 continue
             elif upgrade_pr_exists(
                 component_reference=greatest_component_reference,
-                component_version=latest_version,
+                component_version=greatest_version,
                 upgrade_requests=upgrade_pull_requests,
             ):
                 ci.util.info(
                     'skipping upgrade (PR already exists): '
                     f'{greatest_component_reference.componentName} '
-                    f'to version {latest_version}'
+                    f'to version {greatest_version}'
                 )
                 continue
             else:
-                yield(greatest_component_reference, latest_version)
+                yield(greatest_component_reference, greatest_version)
 
 
 def create_upgrade_pr(
