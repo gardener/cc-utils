@@ -247,14 +247,14 @@ def determine_upgrade_prs(
     for greatest_component_reference in product.v2.greatest_references(
         references=current_component().componentReferences,
     ):
-        for latest_version in determine_reference_versions(
+        for greatest_version in determine_reference_versions(
             component_name=greatest_component_reference.componentName,
             reference_version=greatest_component_reference.version,
             upstream_component_name=upstream_component_name,
             upstream_update_policy=upstream_update_policy,
             repository_ctx_base_url=ctx_repo_base_url,
         ):
-            if not latest_version:
+            if not greatest_version:
                 # if None is returned, no versions at all were found
                 print(
                     'Warning: no component versions found for '
@@ -262,9 +262,9 @@ def determine_upgrade_prs(
                 )
                 continue
 
-            latest_version_semver = version.parse_to_semver(latest_version)
-            print(f'latest_version: {latest_version}, ref: {greatest_component_reference}')
-            if latest_version_semver <= version.parse_to_semver(
+            greatest_version_semver = version.parse_to_semver(greatest_version)
+            print(f'{greatest_version=}, ours: {greatest_component_reference} {ctx_repo_base_url=}')
+            if greatest_version_semver <= version.parse_to_semver(
                 greatest_component_reference.version
             ):
                 ci.util.info(
