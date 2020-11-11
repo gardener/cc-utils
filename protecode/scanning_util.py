@@ -284,10 +284,12 @@ class ProtecodeUtil:
                 # find matching protecode product (aka app)
                 for existing_product in existing_products:
                     product_image_digest = existing_product.custom_data().get('IMAGE_DIGEST')
-                    container_image_digest = container.registry.to_hash_reference(
-                        resource.access.imageReference
+                    container_image_digest = docker_name.from_string(
+                        container.registry.to_hash_reference(
+                            resource.access.imageReference,
+                        )
                     )
-                    if product_image_digest == container_image_digest:
+                    if product_image_digest == f'@{container_image_digest.digest}':
                         existing_products.remove(existing_product)
                         protecode_apps_to_consider.append(existing_product)
                         break
@@ -318,10 +320,12 @@ class ProtecodeUtil:
                 image_digest = scan_result.custom_data().get('IMAGE_DIGEST')
                 # there should be at most one matching image (by image digest)
                 for resource in resource_group:
-                    container_image_digest = container.registry.to_hash_reference(
-                        resource.access.imageReference,
+                    container_image_digest = docker_name.from_string(
+                        container.registry.to_hash_reference(
+                            resource.access.imageReference,
+                        )
                     )
-                    if container_image_digest == image_digest:
+                    if image_digest == f'@{container_image_digest.digest}':
                         ci.util.info(
                             f'File for container image "{resource.access.imageReference}" no '
                             'longer available to protecode - will upload'
