@@ -189,6 +189,7 @@ if not os.path.isfile(v2_outfile):
 descriptor_v2 = cm.ComponentDescriptor.from_dict(
   ci.util.parse_yaml_file(v2_outfile)
 )
+print(f'found component-descriptor (v2) at {v2_outfile=}')
 
 # convert back to v1 for backwards compatibility for now
 if os.path.isfile(descriptor_path_force_v1):
@@ -233,19 +234,4 @@ else:
   )
   with open(dependencies_path) as f:
     print(f.read())
-
-component_descriptor_v2 = create_v2_component_descriptor(
-    descriptor=descriptor,
-    component=descriptor.component(component),
-    ctx_repository_base_url=ctx_repository_base_url,
-)
-
-if not component_descriptor_v2:
-  print('xxx failed to create component-descriptor-v2 - will not propagate')
-  import sys;
-  sys.exit(0)
-
-with open(v2_outfile, 'w') as f:
-  component_descriptor_v2.to_fobj(fileobj=f)
-  print(f'wrote component-descriptor v2 to {v2_outfile=}')
 </%def>

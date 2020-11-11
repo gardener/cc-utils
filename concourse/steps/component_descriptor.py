@@ -136,29 +136,6 @@ def write_component_diff(component_diff, out_path):
         yaml.dump(diff_dict, f)
 
 
-def create_v2_component_descriptor(
-    descriptor,
-    component,
-    ctx_repository_base_url,
-):
-    try:
-      ci.util.info('trying to convert to component-descriptor v2')
-      component_descriptor_v2 = product.v2.convert_component_to_v2(
-        component_descriptor_v1=descriptor,
-        component_v1=component,
-        repository_ctx_base_url=ctx_repository_base_url,
-      )
-      ci.util.info('successfully converted to v2')
-      return component_descriptor_v2
-    except:
-      print(
-        'XXX something went wrong whilst trying to convert component-descriptor (ignoring)'
-      )
-      import traceback
-      traceback.print_exc()
-      return
-
-
 def publish_component_descriptor_v2(
     component_descriptor_v2,
 ):
