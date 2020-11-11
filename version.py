@@ -232,6 +232,10 @@ def find_latest_version(versions) -> str:
     return latest_candidate_str
 
 
+# alias with a more expressive (and correct..) name
+greatest_version = find_latest_version
+
+
 def find_latest_version_with_matching_major(reference_version: semver.VersionInfo, versions):
     latest_candidate_semver = None
     latest_candidate_str = None
