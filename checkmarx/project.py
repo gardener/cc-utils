@@ -43,7 +43,7 @@ class CheckmarxProject:
 
         if scan_response.status_value() is not model.ScanStatusValues.FINISHED:
             logger.error(f'scan for {self.artifact_name} failed with {scan_response.status=}')
-            raise RuntimeError('Scan of artifact {artifact_name} finished with errors')
+            raise RuntimeError(f'Scan of artifact "{self.artifact_name}" finished with errors')
 
         clogger = checkmarx.util.component_logger(artifact_name=self.artifact_name)
         clogger.info('scan finished. Retrieving scan statistics')
