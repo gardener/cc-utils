@@ -4,12 +4,13 @@ import logging
 import shutil
 import tarfile
 import tempfile
-import threading
 import traceback
 import typing
 import zipfile
 
+import dacite
 import github3.exceptions
+import github3.repos
 
 import ccc.github
 import checkmarx.client
@@ -20,46 +21,170 @@ import ci.util
 import mailutil
 import product.util
 import product.v2
+import reutil
+import sdo.labels
 
 import gci.componentmodel as cm
 
 
-def upload_and_scan_repo(
-    component: cm.Component,  # needs to remain at first position (currying)
-    checkmarx_client: checkmarx.client.CheckmarxClient,
+def scan_sources(
+    component_descriptor_path: str,
+    cx_client: checkmarx.client.CheckmarxClient,
     team_id: str,
-    path_filter_func: typing.Callable,
-):
-
-    cx_project = checkmarx.project.init_checkmarx_project(
-        checkmarx_client=checkmarx_client,
-        team_id=team_id,
-        component=component,
+    threshold: int,
+    max_workers: int = 8,
+    exclude_paths: typing.Sequence[str] = [],
+    include_paths: typing.Sequence[str] = [],
+) -> model.FinishedScans:
+    component_descriptor = cm.ComponentDescriptor.from_dict(
+        ci.util.parse_yaml_file(component_descriptor_path)
     )
 
-    clogger = component_logger(component_name=component.name)
+    components = tuple(product.v2.components(component_descriptor_v2=component_descriptor))
+
+    # identify scan artifacts and collect them in a sequence
+    artifacts_gen = _get_scan_artifacts_from_components(
+        components=components,
+    )
+
+    return scan_artifacts(
+        cx_client=cx_client,
+        exclude_paths=exclude_paths,
+        include_paths=include_paths,
+        max_workers=max_workers,
+        scan_artifacts=artifacts_gen,
+        team_id=team_id,
+        threshold=threshold,
+    )
+
+
+def _get_scan_artifacts_from_components(
+    components: typing.List[cm.Component],
+) -> typing.Generator:
+    for component in components:
+        for source in component.sources:
+            if source.type is not cm.SourceType.GIT:
+                raise NotImplementedError
+
+            if source.access.type is not cm.AccessType.GITHUB:
+                raise NotImplementedError
+
+            cx_label = get_source_scan_label_from_labels(source.labels)
+
+            if not cx_label or cx_label.policy is sdo.labels.ScanPolicy.SCAN:
+                yield model.ScanArtifact(
+                    access=source.access,
+                    # name=f'{component.name}_{str(source.identity())}',
+                    name=f'{source.access.repoUrl}',
+                    label=cx_label,
+                )
+            elif cx_label.policy is sdo.labels.ScanPolicy.SKIP:
+                continue
+            else:
+                raise NotImplementedError
+
+
+def get_source_scan_label_from_labels(labels: typing.Sequence[cm.Label]):
+    for label in labels:
+        if sdo.labels.ScanLabelName(label.name) is sdo.labels.ScanLabelName.SOURCE_SCAN:
+            return dacite.from_dict(
+                sdo.labels.SourceScanHint,
+                data=label.value,
+                config=dacite.Config(cast=[sdo.labels.ScanPolicy])
+            )
+
+
+def scan_artifacts(
+    cx_client: checkmarx.client.CheckmarxClient,
+    max_workers: int,
+    scan_artifacts: typing.Tuple[model.ScanArtifact],
+    team_id: str,
+    threshold: int,
+    exclude_paths: typing.Sequence[str] = [],
+    include_paths: typing.Sequence[str] = [],
+) -> model.FinishedScans:
+
+    finished_scans = model.FinishedScans()
+
+    artifacts = tuple(scan_artifacts)
+    artifact_count = len(artifacts)
+    finished = 0
+
+    ci.util.info(f'will scan {artifact_count} artifacts')
+
+    scan_func = functools.partial(
+        scan_gh_artifact,
+        exclude_paths=exclude_paths,
+        include_paths=include_paths,
+    )
+
+    def init_scan(
+        scan_artifact: model.ScanArtifact,
+    ) -> typing.Union[model.ScanResult, model.FailedScan]:
+        nonlocal cx_client
+        nonlocal scan_func
+        nonlocal team_id
+
+        cx_project = checkmarx.project.init_checkmarx_project(
+            checkmarx_client=cx_client,
+            source_name=scan_artifact.name,
+            team_id=team_id,
+        )
+
+        if scan_artifact.access.type is cm.AccessType.GITHUB:
+            try:
+                return scan_func(
+                    cx_project=cx_project,
+                    scan_artifact=scan_artifact,
+                )
+            except:
+                traceback.print_exc()
+                return model.FailedScan(scan_artifact.name)
+        else:
+            raise NotImplementedError
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = []
+        for artifact in artifacts:
+            futures.append(
+                executor.submit(init_scan, artifact)
+            )
+        for future in concurrent.futures.as_completed(futures):
+            scan_result = future.result()
+            if isinstance(scan_result, model.FailedScan):
+                finished_scans.failed_scans.append(scan_result.artifact_name)
+            else:
+                if scan_result.scan_response.scanRiskSeverity > threshold:
+                    finished_scans.scans_above_threshold.append(scan_result)
+                else:
+                    finished_scans.scans_below_threshold.append(scan_result)
+
+            finished += 1
+            ci.util.info(f'remaining: {artifact_count - finished}')
+
+    return finished_scans
+
+
+def upload_and_scan_gh_artifact(
+    artifact_name: str,
+    gh_repo: github3.repos.repo.Repository,
+    cx_project: checkmarx.project.CheckmarxProject,
+    path_filter_func: typing.Callable,
+    source_commit_hash,
+) -> model.ScanResult:
+
+    clogger = component_logger(artifact_name=artifact_name)
 
     last_scans = cx_project.get_last_scans()
 
-    try:
-        commit_hash = product.util.guess_commit_from_ref(component=component)
-    except github3.exceptions.NotFoundError as e:
-        raise product.util.RefGuessingFailedError(e)
-
-    github_api = ccc.github.github_api_from_component(component=component)
-    github_repo = ccc.github.GithubRepo.from_component(component=component)
-    repo = github_api.repository(
-        github_repo.org_name,
-        github_repo.repo_name,
-    )
-
     if len(last_scans) < 1:
-        clogger.info('No scans found in project history')
+        clogger.info('no scans found in project history. '
+                     f'Starting new scan hash={source_commit_hash}')
         scan_id = download_repo_and_create_scan(
-            component_name=component.name,
+            artifact_name=artifact_name,
             cx_project=cx_project,
-            hash=commit_hash,
-            repo=repo,
+            hash=source_commit_hash,
+            repo=gh_repo,
             path_filter_func=path_filter_func,
         )
         return cx_project.poll_and_retrieve_scan(scan_id=scan_id)
@@ -68,108 +193,81 @@ def upload_and_scan_repo(
     scan_id = last_scan.id
 
     if cx_project.is_scan_finished(last_scan):
-        clogger.info('No active scan found for component. Checking for hash')
+        clogger.info('no running scan found. Comparing hashes')
 
-        if cx_project.is_scan_necessary(hash=commit_hash):
-            clogger.info('downloading repo')
+        if cx_project.is_scan_necessary(hash=source_commit_hash):
+            clogger.info('current hash differs from remote hash in cx. '
+                         f'New scan started hash={source_commit_hash}')
             scan_id = download_repo_and_create_scan(
-                component_name=component.name,
+                artifact_name=artifact_name,
                 cx_project=cx_project,
-                hash=commit_hash,
-                repo=repo,
+                hash=source_commit_hash,
+                repo=gh_repo,
                 path_filter_func=path_filter_func,
             )
+        else:
+            clogger.info('version of hash has already been scanned. Getting results of last scan')
     else:
-        clogger.info(
-            f'scan with id: {last_scan.id} for component {component.name} '
-            'already running. Polling last scan.'
-        )
+        clogger.info(f'found a running scan id={last_scan.id}. Polling it')
 
     return cx_project.poll_and_retrieve_scan(scan_id=scan_id)
 
 
-def scan_sources(
-    client: checkmarx.client.CheckmarxClient,
-    team_id: str,
-    component_descriptor_path: str,
-    threshold: int,
-    path_filter_func: typing.Callable = lambda x: True,
-    max_workers: int = 8,
-):
-    component_descriptor = cm.ComponentDescriptor.from_dict(
-        ci.util.parse_yaml_file(component_descriptor_path)
+def scan_gh_artifact(
+    cx_project: checkmarx.project.CheckmarxProject,
+    scan_artifact: model.ScanArtifact,
+    exclude_paths: typing.Sequence[str] = [],
+    include_paths: typing.Sequence[str] = [],
+) -> model.ScanResult:
+
+    github_api = ccc.github.github_api_from_gh_access(access=scan_artifact.access)
+    repo = ccc.github.GithubRepo.from_gh_access(access=scan_artifact.access)
+    gh_repo = github_api.repository(
+        owner=repo.org_name,
+        repository=repo.repo_name,
     )
+    try:
+        commit_hash = product.util.guess_commit_from_source(
+            artifact_name=scan_artifact.name,
+            commit_hash=scan_artifact.access.commit,
+            github_repo=gh_repo,
+            ref=scan_artifact.access.ref,
+        )
+    except github3.exceptions.NotFoundError as e:
+        raise product.util.RefGuessingFailedError(e)
 
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
+    if scan_artifact.label.path_config:
+        include_paths += scan_artifact.label.path_config.include_paths
+        exclude_paths += scan_artifact.label.path_config.exclude_paths
 
-    scan_func = functools.partial(
-        upload_and_scan_repo,
-        checkmarx_client=client,
-        team_id=team_id,
+    # if the scan_artifact has no label we will implicitly scan everything
+    # since all images have to specify a label in order to be scanned
+    # only github access types can occour here without the label
+    path_filter_func = reutil.re_filter(
+        include_regexes=set(include_paths),
+        exclude_regexes=set(exclude_paths),
+    )
+    return upload_and_scan_gh_artifact(
+        artifact_name=scan_artifact.name,
+        cx_project=cx_project,
+        gh_repo=gh_repo,
+        source_commit_hash=commit_hash,
         path_filter_func=path_filter_func,
-    )
-
-    failed_sentinel = object()
-    success_count = 0
-    failed_count = 0
-    components = tuple(product.v2.components(component_descriptor_v2=component_descriptor))
-    components_count = len(components)
-    failed_components = []
-    lock = threading.Lock()
-
-    def try_scanning(component: cm.Component):
-        nonlocal failed_count
-        nonlocal success_count
-        nonlocal failed_sentinel
-        nonlocal failed_components
-
-        try:
-            result = scan_func(component)
-            lock.acquire()
-            success_count += 1
-            ci.util.info(f'remaining: {components_count - (success_count + failed_count)}')
-            lock.release()
-            return result
-        except:
-            lock.acquire()
-            failed_count += 1
-            ci.util.info(f'remaining: {components_count - (success_count + failed_count)}')
-            lock.release()
-            traceback.print_exc()
-            failed_components.append(component.name)
-            return failed_sentinel
-
-    ci.util.info(f'will scan {components_count} component(s)')
-
-    scan_results_above_threshold = []
-    scan_results_below_threshold = []
-
-    for scan_result in executor.map(try_scanning, components):
-        if scan_result is not failed_sentinel:
-            if scan_result.scan_response.scanRiskSeverity > threshold:
-                scan_results_above_threshold.append(scan_result)
-            else:
-                scan_results_below_threshold.append(scan_result)
-
-    return model.FinishedScans(
-        scans_above_threshold=scan_results_above_threshold,
-        scans_below_threshold=scan_results_below_threshold,
-        failed_components=failed_components,
     )
 
 
 def send_mail(
-    scans: model.FinishedScans,
-    threshold: int,
     email_recipients,
     routes: checkmarx.client.CheckmarxRoutes,
+    scans: model.FinishedScans,
+    threshold: int,
 ):
     body = checkmarx.tablefmt.assemble_mail_body(
+        failed_artifacts=scans.failed_scans,
+        routes=routes,
         scans_above_threshold=scans.scans_above_threshold,
         scans_below_threshold=scans.scans_below_threshold,
-        failed_components=scans.failed_components,
         threshold=threshold,
-        routes=routes,
     )
     try:
         # get standard cfg set for email cfg
@@ -199,39 +297,44 @@ def print_scans(
     # XXX raise if an error occurred?
     if scans.scans_above_threshold:
         print('\n')
-        ci.util.info('Critical scans above threshold')
+        ci.util.info('critical scans above threshold')
         checkmarx.tablefmt.print_scan_result(
             scan_results=scans.scans_above_threshold,
             routes=routes,
         )
     else:
-        ci.util.info('no critical components above threshold found')
+        ci.util.info('no critical artifacts above threshold')
 
     if scans.scans_below_threshold:
         print('\n')
-        ci.util.info('Clean scans below threshold')
+        ci.util.info('clean scans below threshold')
         checkmarx.tablefmt.print_scan_result(
             scan_results=scans.scans_below_threshold,
             routes=routes,
         )
     else:
-        ci.util.info('no scans below threshold to print')
+        ci.util.info('no scans below threshold')
 
-    if scans.failed_components:
+    if scans.failed_scans:
         print('\n')
-        failed_components_str = '\n'.join(
+        failed_artifacts_str = '\n'.join(
             (
-                component_name for component_name in scans.failed_components
+                f'- {artifact_name}' for artifact_name in scans.failed_scans
             )
         )
-        ci.util.info(f'failed components:\n{failed_components_str}')
+        ci.util.warning(f'failed scan artifacts:\n\n{failed_artifacts_str}\n')
 
 
-def _download_and_zip_repo(repo, ref: str,path_filter_func: typing.Callable, tmp):
+def _download_and_zip_repo(
+    path_filter_func: typing.Callable,
+    ref: str,
+    repo: github3.repos.repo.Repository,
+    tmp_file
+):
     url = repo._build_url('tarball', ref, base_url=repo._api)
     with repo._get(url, stream=True) as r, \
         tarfile.open(fileobj=r.raw, mode='r|*') as tar, \
-        zipfile.ZipFile(tmp, mode='w', compression=zipfile.ZIP_DEFLATED) as zip_file:
+        zipfile.ZipFile(tmp_file, mode='w', compression=zipfile.ZIP_DEFLATED) as zip_file:
 
         r.raise_for_status()
         max_octets = 128 * 1024 * 1024  # 128 MiB
@@ -245,29 +348,29 @@ def _download_and_zip_repo(repo, ref: str,path_filter_func: typing.Callable, tmp
                     if tar_info.size <= max_octets:
                         zip_file.writestr(arcname, src.read())
                     else:
-                        with tempfile.NamedTemporaryFile() as tmp_file:
-                            shutil.copyfileobj(src, tmp_file)
-                            zip_file.write(filename=tmp_file.name, arcname=arcname)
+                        with tempfile.NamedTemporaryFile() as tmp:
+                            shutil.copyfileobj(src, tmp)
+                            zip_file.write(filename=tmp.name, arcname=arcname)
 
 
 def download_repo_and_create_scan(
-    component_name:str,
+    artifact_name: str,
     hash:str,
     cx_project: checkmarx.project.CheckmarxProject,
     path_filter_func: typing.Callable,
-    repo,
+    repo: github3.repos.repo.Repository,
 ):
-    clogger = component_logger(component_name)
-    clogger.info('downloading sources')
+    clogger = component_logger(artifact_name=artifact_name)
+    clogger.info('downloading sources from github')
     with tempfile.TemporaryFile() as tmp_file:
         _download_and_zip_repo(
             repo=repo,
             ref=hash,
-            tmp=tmp_file,
+            tmp_file=tmp_file,
             path_filter_func=path_filter_func,
         )
         tmp_file.seek(0)
-        clogger.info('uploading sources')
+        clogger.info('uploading sources to checkmarx')
         cx_project.upload_zip(file=tmp_file)
 
     cx_project.project_details.set_custom_field(
@@ -276,19 +379,19 @@ def download_repo_and_create_scan(
     )
     cx_project.project_details.set_custom_field(
         attribute_key=model.CustomFieldKeys.COMPONENT_NAME,
-        value=component_name,
+        value=artifact_name,
     )
 
     cx_project.update_remote_project()
     scan_id = cx_project.start_scan()
-    clogger.info(f'created scan with id {scan_id}')
+    clogger.info(f'started scan id={scan_id} project id={cx_project.project_details.id}')
 
     return scan_id
 
 
 @functools.lru_cache
-def component_logger(component_name):
-    return logging.getLogger(component_name)
+def component_logger(artifact_name: str):
+    return logging.getLogger(artifact_name)
 
 
 @functools.lru_cache()

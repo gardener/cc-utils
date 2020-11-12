@@ -3,6 +3,10 @@ import dataclasses
 from enum import Enum
 import typing
 
+import sdo.labels
+
+import gci.componentmodel as cm
+
 
 class ScanStatusValues(Enum):
     NEW = 1
@@ -112,14 +116,33 @@ class ScanResult:
     """
     ScanResult is a data container for a scan result for a component version
     """
+    artifact_name: str
     project_id: int
-    component_name: str
     scan_response: ScanResponse
     scan_statistic: ScanStatistic
 
 
 @dataclasses.dataclass
 class FinishedScans:
-    scans_above_threshold: ScanResult
-    scans_below_threshold: ScanResult
-    failed_components: ScanResult
+    failed_scans: typing.List[str] = dataclasses.field(default_factory=list)
+    scans_above_threshold: typing.List[ScanResult] = dataclasses.field(default_factory=list)
+    scans_below_threshold: typing.List[ScanResult] = dataclasses.field(default_factory=list)
+
+
+# abstraction of component model v2 source and resource
+@dataclasses.dataclass
+class ScanArtifact:
+    name: str
+    access: typing.Union[
+        cm.OciAccess,
+        cm.GithubAccess,
+        cm.HttpAccess,
+        cm.ResourceAccess,
+        None
+    ]
+    label: sdo.labels.ScanLabelValue
+
+
+@dataclasses.dataclass
+class FailedScan:
+    artifact_name: str

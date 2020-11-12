@@ -23,9 +23,9 @@ import gci.componentmodel as cm
 % if checkmarx_cfg:
 scan_sources_and_notify(
     checkmarx_cfg_name='${checkmarx_cfg.checkmarx_cfg_name()}',
-    team_id='${checkmarx_cfg.team_id()}',
     component_descriptor_path=component_descriptor_path(schema_version=cm.SchemaVersion.V2),
     email_recipients=${email_recipients},
+    team_id='${checkmarx_cfg.team_id()}',
     threshold=${checkmarx_cfg.severity_threshold()},
     include_path_regexes=${checkmarx_cfg.include_path_regexes()},
     exclude_path_regexes=${checkmarx_cfg.exclude_path_regexes()},

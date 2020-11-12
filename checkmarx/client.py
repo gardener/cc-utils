@@ -5,7 +5,7 @@ import urllib.parse
 from dacite import from_dict
 import requests
 
-from ci.util import urljoin
+import ci.util
 import checkmarx.model as cxmodel
 import model.checkmarx
 
@@ -38,10 +38,10 @@ class CheckmarxRoutes:
         self.base_url = base_url
 
     def _api_url(self, *parts):
-        return urljoin(self.base_url, 'cxrestapi', *parts)
+        return ci.util.urljoin(self.base_url, 'cxrestapi', *parts)
 
     def _web_url(self, *parts):
-        return urljoin(self.base_url, 'CxWebClient', *parts)
+        return ci.util.urljoin(self.base_url, 'CxWebClient', *parts)
 
     def auth(self):
         return self._api_url('auth', 'identity', 'connect', 'token')
@@ -50,30 +50,30 @@ class CheckmarxRoutes:
         return self._api_url('projects')
 
     def project_by_id(self, project_id: int):
-        return urljoin(self.projects(), str(project_id))
+        return ci.util.urljoin(self.projects(), str(project_id))
 
     def scan(self):
         return self._api_url('sast', 'scans')
 
     def scan_by_id(self, scan_id: int):
-        return urljoin(self.scan(), str(scan_id))
+        return ci.util.urljoin(self.scan(), str(scan_id))
 
     def scan_statistics(self, scan_id: int):
-        return urljoin(self.scan(), str(scan_id), 'resultsStatistics')
+        return ci.util.urljoin(self.scan(), str(scan_id), 'resultsStatistics')
 
     def upload_zipped_source(self, project_id: int):
-        return urljoin(str(self.project_by_id(project_id)), 'sourceCode', 'attachments')
+        return ci.util.urljoin(str(self.project_by_id(project_id)), 'sourceCode', 'attachments')
 
     def remote_settings_git(self, project_id: int):
-        return urljoin(self.scan_by_id(project_id), 'sourceCode', 'remoteSettings', 'git')
+        return ci.util.urljoin(self.scan_by_id(project_id), 'sourceCode', 'remoteSettings', 'git')
 
     def web_ui_scan_history(self, scan_id: int):
         query = urllib.parse.urlencode({'id': scan_id, 'ProjectState': 'true'})
-        return urljoin(self._web_url(), 'projectscans.aspx?' + query)
+        return ci.util.urljoin(self._web_url(), 'projectscans.aspx?' + query)
 
     def web_ui_scan_viewer(self, scan_id: int, project_id: int):
         query = urllib.parse.urlencode({'scanId': scan_id, 'ProjectID': project_id})
-        return urljoin(self._web_url(), 'ViewerMain.aspx?' + query)
+        return ci.util.urljoin(self._web_url(), 'ViewerMain.aspx?' + query)
 
 
 class CheckmarxClient:
@@ -124,8 +124,8 @@ class CheckmarxClient:
         if not res.ok:
             msg = f'{method} request to {res.url=} failed with {res.status_code=} {res.reason=}'
             if print_error:
-                print(msg)
-                print(res.text)
+                ci.util.error(f'Request failed {msg=} {res.text=}')
+
             raise CXNotOkayException(res=res, msg=msg)
         return res
 
@@ -170,7 +170,7 @@ class CheckmarxClient:
             url=self.routes.project_by_id(project_id=project_id),
             api_version="application/json;v=2.0",
         )
-        return from_dict(data_class=model.ProjectDetails, data=res.json())
+        return from_dict(data_class=cxmodel.ProjectDetails, data=res.json())
 
     def update_project(self, project_details: cxmodel.ProjectDetails):
         res = self.request(
