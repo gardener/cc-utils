@@ -120,6 +120,16 @@ class Job:
                 return True
         return False
 
+    def is_paused(self):
+        return self.raw['paused']
+
+    def next_build(self):
+        # Build class requires the Concourse-API, which we do not have here. Return the dict
+        # instead
+        if build_raw := self.raw.get('next_build'):
+            return build_raw
+        return None
+
 
 class Plan:
     '''
