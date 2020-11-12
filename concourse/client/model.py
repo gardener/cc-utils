@@ -72,7 +72,7 @@ class ResourceVersion(ModelBase):
         return self.raw['enabled']
 
 
-class PipelineConfig(object):
+class PipelineConfig:
     '''
     Wrapper around the dictionary received from invoking the concourse
     `pipelines/<pipeline>/config` REST API
@@ -91,7 +91,7 @@ class PipelineConfig(object):
         self.resources = [PipelineConfigResource(r, self) for r in resources]
 
     def jobs(self):
-        return [Job(job, self) for job in self.raw.get('jobs')]
+        return [Job(job) for job in self.raw.get('jobs')]
 
     def resources_of_types(self, types):
         return [r for r in self.resources if r.type in types]
@@ -105,10 +105,9 @@ class Job:
     Not intended to be instantiated by users of this module
     '''
     @ensure_annotations
-    def __init__(self, raw: dict, pipeline: PipelineConfig):
-        self.pipeline = pipeline
-        self.concourse_api = pipeline.concourse_api
+    def __init__(self, raw: dict):
         self.raw = raw
+        self.pipeline = raw['pipeline_name']
         self.name = raw['name']
 
     def plan(self):
@@ -136,7 +135,7 @@ class Plan:
         return [step for step in self.raw if 'get' in step]
 
 
-class PipelineConfigResource(object):
+class PipelineConfigResource:
     '''
     Wrapper around the dictionary representing a resource as part of a
     concourse.client.model.PipelineConfig
@@ -175,7 +174,7 @@ class PipelineConfigResource(object):
         )
 
 
-class GithubSource(object):
+class GithubSource:
     '''
     Wrapper around the source attribute of a concourse.client.model.PipelineConfigResource
     instance in the special case said resource is a "githubby" resource (either a git
@@ -299,7 +298,7 @@ class BuildPlan(ModelBase):
         return has_version_ref(self.raw.get('plan'))
 
 
-class BuildEvents(object):
+class BuildEvents:
     '''
     Wrapper around the event stream returned by concourse when querying the events for a
     certain build execution. The event stream is consumed using the `process_events`
