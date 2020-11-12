@@ -138,7 +138,6 @@ class ScanArtifact:
         cm.GithubAccess,
         cm.HttpAccess,
         cm.ResourceAccess,
-        None
     ]
     label: sdo.labels.ScanLabelValue
 

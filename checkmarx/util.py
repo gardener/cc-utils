@@ -74,8 +74,7 @@ def _get_scan_artifacts_from_components(
             if not cx_label or cx_label.policy is sdo.labels.ScanPolicy.SCAN:
                 yield model.ScanArtifact(
                     access=source.access,
-                    # name=f'{component.name}_{str(source.identity())}',
-                    name=f'{source.access.repoUrl}',
+                    name=f'{component.name}_{source.identity(peers=component.sources)}',
                     label=cx_label,
                 )
             elif cx_label.policy is sdo.labels.ScanPolicy.SKIP:

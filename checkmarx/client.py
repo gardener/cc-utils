@@ -124,7 +124,7 @@ class CheckmarxClient:
         if not res.ok:
             msg = f'{method} request to {res.url=} failed with {res.status_code=} {res.reason=}'
             if print_error:
-                ci.util.error(f'Request failed {msg=} {res.text=}')
+                ci.util.error(f'Request failed {res.status_code=} {res.text=} {msg=}')
 
             raise CXNotOkayException(res=res, msg=msg)
         return res

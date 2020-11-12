@@ -92,8 +92,17 @@ class CheckmarxProject:
                 model.ScanStatusValues.CANCELED,
         ):
             return True
-        else:
+        elif model.ScanStatusValues(scan.status.id) in (
+            model.ScanStatusValues.NEW,
+            model.ScanStatusValues.PRE_SCAN,
+            model.ScanStatusValues.QUEUED,
+            model.ScanStatusValues.SCANNING,
+            model.ScanStatusValues.POST_SCAN,
+            model.ScanStatusValues.SOURCE_PULLING_AND_DEPLOYMENT,
+        ):
             return False
+        else:
+            raise NotImplementedError
 
     def is_scan_necessary(
         self,
