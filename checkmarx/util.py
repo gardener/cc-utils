@@ -197,7 +197,7 @@ def upload_and_scan_gh_artifact(
 
         if cx_project.is_scan_necessary(hash=source_commit_hash):
             clogger.info('current hash differs from remote hash in cx. '
-                         f'New scan started hash={source_commit_hash}')
+                         f'New scan started for hash={source_commit_hash}')
             scan_id = download_repo_and_create_scan(
                 artifact_name=artifact_name,
                 cx_project=cx_project,
