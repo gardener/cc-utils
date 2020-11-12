@@ -27,8 +27,9 @@ from .routes import (
 )
 from .model import (
     Build,
-    BuildPlan,
     BuildEvents,
+    BuildPlan,
+    Job,
     PipelineConfig,
     PipelineConfigResource,
     PipelineResource,
@@ -367,6 +368,10 @@ class ConcourseApiBase:
         url = self.routes.pin_comment(pipeline_name, resource_name)
         pin_comment = json.dumps({'pin_comment': comment})
         self._put(url, pin_comment)
+
+    def get_job(self, pipeline_name:str, job_name:str):
+        url = self.routes.job(pipeline_name, job_name)
+        return Job(self._get(url))
 
 
 class SetTeamAPIUpdateMixin:
