@@ -10,7 +10,7 @@ def get_scan_info_table(
     scan_results: typing.Iterable[model.ScanResult],
     tablefmt: str = 'simple',
 ):
-    scan_info_header = ('ScanId', 'ArtifactName', 'ScanState', 'Start', 'End')
+    scan_info_header = ('Scan ID', 'Artifact Name', 'Scan State', 'Start', 'End')
 
     def started_on(scan_result: model.ScanResult):
         if scan_result.scan_response:
