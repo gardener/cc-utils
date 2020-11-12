@@ -29,7 +29,7 @@ from .model import (
     Build,
     BuildEvents,
     BuildPlan,
-    Job,
+    ConcourseJob,
     PipelineConfig,
     PipelineConfigResource,
     PipelineResource,
@@ -371,7 +371,7 @@ class ConcourseApiBase:
 
     def get_job(self, pipeline_name:str, job_name:str):
         url = self.routes.job(pipeline_name, job_name)
-        return Job(self._get(url))
+        return ConcourseJob(self._get(url))
 
 
 class SetTeamAPIUpdateMixin:

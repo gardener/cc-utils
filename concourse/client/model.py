@@ -91,7 +91,7 @@ class PipelineConfig:
         self.resources = [PipelineConfigResource(r, self) for r in resources]
 
     def jobs(self):
-        return [Job(job) for job in self.raw.get('jobs')]
+        return [Job(job, self) for job in self.raw.get('jobs')]
 
     def resources_of_types(self, types):
         return [r for r in self.resources if r.type in types]
@@ -105,10 +105,9 @@ class Job:
     Not intended to be instantiated by users of this module
     '''
     @ensure_annotations
-    def __init__(self, raw: dict):
-        self.raw = raw
-        self.pipeline = raw['pipeline_name']
-        self.name = raw['name']
+    def __init__(self, raw: dict, pipeline: PipelineConfig):
+        self.pipeline = pipeline
+        self.concourse_api = pipeline.concourse_api
 
     def plan(self):
         return Plan(self.raw.get('plan'), self)
@@ -119,6 +118,17 @@ class Job:
             if get_step['get'] == resource_name and get_step['trigger']:
                 return True
         return False
+
+
+class ConcourseJob:
+    '''Wrapper around the dictionary representing a job as returned when
+    querying the Concourse REST API for a single Job configuration.
+
+    Not intended to be instantiated by users of this module
+    '''
+    @ensure_annotations
+    def __init__(self, raw: dict):
+        self.raw = raw
 
     def is_paused(self):
         return self.raw['paused']
