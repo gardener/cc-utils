@@ -70,11 +70,11 @@ def get_scan_statistics_tables(
 
     scan_statistics_header = (
         'Artifact Name',
-        'Overall severity',
-        'high',
-        'medium',
-        'low',
-        'info'
+        'Overall Severity',
+        'High',
+        'Medium',
+        'Low',
+        'Info',
     )
 
     scan_statistics_data = [
