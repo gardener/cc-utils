@@ -258,23 +258,15 @@ class GithubRepo:
         return GithubRepo(host,org,repo)
 
     @staticmethod
-    def from_gh_access(access):
+    def from_gh_access(access: cm.GithubAccess):
         if access.type is not cm.AccessType.GITHUB:
             raise ValueError
 
-        host, org, repo = access.repoUrl.split('/')
-        return GithubRepo(host,org,repo)
-
-    @staticmethod
-    def from_source(source: cm.ComponentSource):
-        if source.type is not cm.SourceType.GIT:
-            raise NotImplementedError
-
-        if source.access.type is not cm.AccessType.GITHUB:
-            raise NotImplementedError
-
-        host, org, repo = source.access.repoUrl.split('/')
-        return GithubRepo(host,org,repo)
+        return GithubRepo(
+            host_name=access.hostname(),
+            org_name=access.org_name(),
+            repo_name=access.repository_name(),
+        )
 
 
 # TODO: remove this if whitesource is on component descriptor v2
