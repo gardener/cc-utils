@@ -9,7 +9,11 @@ import enum
 import io
 import itertools
 import json
+import os
+import shutil
+import tempfile
 import typing
+import yaml
 
 import dacite
 
@@ -288,6 +292,7 @@ def download_component_descriptor_v2(
     component_name: str,
     component_version: str,
     ctx_repo_base_url: str,
+    cache_dir: str=None,
 ):
     target_ref = _target_oci_ref_from_ctx_base_url(
         component_name=component_name,
@@ -295,10 +300,41 @@ def download_component_descriptor_v2(
         ctx_repo_base_url=ctx_repo_base_url,
     )
 
-    return retrieve_component_descriptor_from_oci_ref(
+    if cache_dir:
+        descriptor_path = os.path.join(
+            cache_dir,
+            ctx_repo_base_url.replace('/', '-'),
+            f'{component_name}-{component_version}',
+        )
+        if os.path.isfile(descriptor_path):
+            return cm.ComponentDescriptor.from_dict(
+                ci.util.parse_yaml_file(descriptor_path)
+            )
+        else:
+            base_dir = os.path.dirname(descriptor_path)
+            os.makedirs(name=base_dir, exist_ok=True)
+
+    component_descriptor =  retrieve_component_descriptor_from_oci_ref(
         manifest_oci_image_ref=target_ref,
         absent_ok=False,
     )
+
+    if cache_dir:
+        try:
+            f = tempfile.NamedTemporaryFile(mode='w', delete=False)
+            # write to tempfile, followed by a mv to avoid collisions through concurrent
+            # processes or threads (assuming mv is an atomic operation)
+            yaml.dump(
+                data=dataclasses.asdict(component_descriptor),
+                Dumper=cm.EnumValueYamlDumper,
+                stream=f.file,
+            )
+            shutil.move(f.name, descriptor_path)
+        except:
+            os.unlink(f.name)
+            raise
+
+    return component_descriptor
 
 
 class UploadMode(enum.Enum):
