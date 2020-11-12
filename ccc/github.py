@@ -223,6 +223,7 @@ def log_stack_trace_information_hook(resp, *args, **kwargs):
         ci.util.info(f'Could not log stack trace information: {e}')
 
 
+# TODO: remove this if whitesource is on component descriptor v2
 def github_api_from_component(component: typing.Union[cm.Component, product.model.Component]):
     if isinstance(component, product.model.Component):
         github_cfg = github_cfg_for_hostname(host_name=component.github_host())
@@ -230,36 +231,56 @@ def github_api_from_component(component: typing.Union[cm.Component, product.mode
     elif isinstance(component, cm.Component):
         source = _get_single_repo(component=component)
 
-        host_name = source.access.repoUrl.split('/')[0]
-
-        github_cfg = github_cfg_for_hostname(host_name=host_name)
-        return github_api(github_cfg=github_cfg)
+        return github_api_from_gh_access(source.access)
     else:
         raise ValueError
 
 
-@dataclasses.dataclass
+def github_api_from_gh_access(access: cm.GithubAccess):
+    if access.type is not cm.AccessType.GITHUB:
+        raise ValueError
+
+    github_cfg = github_cfg_for_hostname(host_name=access.hostname())
+    return github_api(github_cfg=github_cfg)
+
+
+@dataclasses.dataclass(frozen=True)
 class GithubRepo:
     host_name: str
     org_name: str
     repo_name: str
 
+    # TODO: replace method with from_sources when whitesource has adapted cd v2
     @staticmethod
     def from_component(component: cm.Component):
         source = _get_single_repo(component)
         host, org, repo = source.access.repoUrl.split('/')
         return GithubRepo(host,org,repo)
 
+    @staticmethod
+    def from_gh_access(access):
+        if access.type is not cm.AccessType.GITHUB:
+            raise ValueError
 
+        host, org, repo = access.repoUrl.split('/')
+        return GithubRepo(host,org,repo)
+
+    @staticmethod
+    def from_source(source: cm.ComponentSource):
+        if source.type is not cm.SourceType.GIT:
+            raise NotImplementedError
+
+        if source.access.type is not cm.AccessType.GITHUB:
+            raise NotImplementedError
+
+        host, org, repo = source.access.repoUrl.split('/')
+        return GithubRepo(host,org,repo)
+
+
+# TODO: remove this if whitesource is on component descriptor v2
 def _get_single_repo(component: cm.Component):
     if len(component.sources) != 1:
         raise NotImplementedError
-
     source = component.sources[0]
-    if source.type is not cm.SourceType.GIT:
-        raise NotImplementedError
-
-    if source.access.type is not cm.AccessType.GITHUB:
-        raise NotImplementedError
 
     return source

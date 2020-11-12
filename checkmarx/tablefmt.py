@@ -10,7 +10,7 @@ def get_scan_info_table(
     scan_results: typing.Iterable[model.ScanResult],
     tablefmt: str = 'simple',
 ):
-    scan_info_header = ('ScanId', 'ComponentName', 'ScanState', 'Start', 'End')
+    scan_info_header = ('ScanId', 'ArtifactName', 'ScanState', 'Start', 'End')
 
     def started_on(scan_result: model.ScanResult):
         if scan_result.scan_response:
@@ -27,7 +27,7 @@ def get_scan_info_table(
     scan_info_data = (
         (
             scan_result.scan_response.id,
-            scan_result.component_name,
+            scan_result.artifact_name,
             scan_result.scan_response.status.name,
             started_on(scan_result),
             ended_on(scan_result),
@@ -46,15 +46,15 @@ def get_scan_statistics_tables(
         routes: checkmarx.client.CheckmarxRoutes,
         tablefmt: str = 'simple',
 ):
-    def component_name(scan_result: model.ScanResult):
+    def artifact_name(scan_result: model.ScanResult):
         if tablefmt == 'html':
             return f'''
             <a href="{routes.web_ui_scan_history(scan_id=scan_result.scan_response.id)}">
-                {scan_result.component_name}
+                {scan_result.artifact_name}
             </a>
             '''
         else:
-            return scan_result.component_name
+            return scan_result.artifact_name
 
     def scan_severity(scan_result: model.ScanResult):
         if tablefmt == 'html':
@@ -69,7 +69,7 @@ def get_scan_statistics_tables(
             return scan_result.scan_response.scanRiskSeverity
 
     scan_statistics_header = (
-        'ComponentName',
+        'Artifact Name',
         'Overall severity',
         'high',
         'medium',
@@ -79,7 +79,7 @@ def get_scan_statistics_tables(
 
     scan_statistics_data = [
         (
-            component_name(scan_result),
+            artifact_name(scan_result),
             scan_severity(scan_result),
             scan_result.scan_statistic.highSeverity,
             scan_result.scan_statistic.mediumSeverity,
@@ -131,7 +131,7 @@ def _mail_disclaimer():
 def assemble_mail_body(
     scans_above_threshold: typing.Dict,
     scans_below_threshold: typing.Dict,
-    failed_components: typing.Dict,
+    failed_artifacts: typing.Dict,
     threshold: int,
     routes: checkmarx.client.CheckmarxRoutes,
 ):
@@ -140,7 +140,7 @@ def assemble_mail_body(
     if len(scans_above_threshold) > 0:
         above_threshold_text = textwrap.dedent(f'''
             <p>
-              The following components in checkmarx were found to
+              The following scan artifacts in checkmarx were found to
               contain critical vulnerabilities (applying threshold {threshold})
             </p>
         ''')
@@ -154,7 +154,7 @@ def assemble_mail_body(
     if len(scans_below_threshold) > 0:
         below_threshold_text = textwrap.dedent('''
             <p>
-              The following components were found to be below the configured threshold:
+              The following scan artifacts were found to be below the configured threshold:
             </p>
         ''')
         scan_statistics_below_threshold = get_scan_statistics_tables(
@@ -164,18 +164,18 @@ def assemble_mail_body(
         )
         body_parts.append(below_threshold_text + scan_statistics_below_threshold)
 
-    if len(failed_components) > 0:
-        failed_components_str = ''.join((
-            f'<li>{component_name}</li>' for component_name in failed_components
+    if len(failed_artifacts) > 0:
+        failed_artifacts_str = ''.join((
+            f'<li>{artifact_name}</li>' for artifact_name in failed_artifacts
         ))
-        failed_components_text = textwrap.dedent(
+        failed_artifacts_text = textwrap.dedent(
             f'''
                 <p>
-                  The following components finished in an erroneous state:
-                    <ul>{failed_components_str})</ul>
+                  The following artifacts finished in an erroneous state:
+                    <ul>{failed_artifacts_str})</ul>
                 </p>
             '''
         )
-        body_parts.append(failed_components_text)
+        body_parts.append(failed_artifacts_text)
 
     return ''.join(body_parts)

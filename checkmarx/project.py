@@ -6,32 +6,9 @@ import checkmarx.client
 import checkmarx.model as model
 import checkmarx.util
 
-import gci.componentmodel as cm
 
 ctx.configure_default_logging()
 logger = logging.getLogger(__name__)
-
-
-def init_checkmarx_project(
-    checkmarx_client: checkmarx.client.CheckmarxClient,
-    component: cm.Component,
-    team_id: str,
-):
-    project_name = _calc_project_name_for_component(component_name=component.name)
-
-    project_id = _create_or_get_project(
-        client=checkmarx_client,
-        name=project_name,
-        team_id=team_id,
-    )
-
-    project_details = checkmarx_client.get_project_by_id(project_id=project_id)
-
-    return CheckmarxProject(
-        checkmarx_client=checkmarx_client,
-        component_name=component.name,
-        project_details=project_details,
-    )
 
 
 def _create_or_get_project(
@@ -50,18 +27,14 @@ def _create_or_get_project(
             raise e
 
 
-def _calc_project_name_for_component(component_name: str):
-    return component_name.replace('/', '_')
-
-
 class CheckmarxProject:
     def __init__(
         self,
-        component_name: str,
+        artifact_name: str,
         checkmarx_client: checkmarx.client.CheckmarxClient,
         project_details: model.ProjectDetails,
     ):
-        self.component_name = component_name
+        self.artifact_name = artifact_name
         self.client = checkmarx_client
         self.project_details = project_details
 
@@ -69,16 +42,16 @@ class CheckmarxProject:
         scan_response = self._poll_scan(scan_id=scan_id)
 
         if scan_response.status_value() is not model.ScanStatusValues.FINISHED:
-            logger.error(f'scan for {self.component_name} failed with {scan_response.status=}')
-            raise RuntimeError('Scan did not finish successfully')
+            logger.error(f'scan for {self.artifact_name} failed with {scan_response.status=}')
+            raise RuntimeError('Scan of artifact {artifact_name} finished with errors')
 
-        clogger = checkmarx.util.component_logger(component_name=self.component_name)
-        clogger.info('retrieving scan statistics')
+        clogger = checkmarx.util.component_logger(artifact_name=self.artifact_name)
+        clogger.info('scan finished. Retrieving scan statistics')
         statistics = self.scan_statistics(scan_id=scan_response.id)
 
         return model.ScanResult(
             project_id=self.project_details.id,
-            component_name=self.component_name,
+            artifact_name=self.artifact_name,
             scan_response=scan_response,
             scan_statistic=statistics,
         )
@@ -93,7 +66,7 @@ class CheckmarxProject:
     def _poll_scan(self, scan_id: int, polling_interval_seconds=60):
         def scan_finished():
             scan = self.client.get_scan_state(scan_id=scan_id)
-            clogger = checkmarx.util.component_logger(self.component_name)
+            clogger = checkmarx.util.component_logger(artifact_name=self.artifact_name)
             clogger.info(f'polling for {scan_id=}. {scan.status.name=}')
             if self.is_scan_finished(scan):
                 return scan
@@ -122,15 +95,16 @@ class CheckmarxProject:
         else:
             return False
 
-    def is_scan_necessary(self, hash: str):
+    def is_scan_necessary(
+        self,
+        hash: str,
+    ):
         remote_hash = self.project_details.get_custom_field(
             model.CustomFieldKeys.HASH,
         )
         if remote_hash != hash:
-            print(f'{remote_hash=} != {hash=} - scan required')
             return True
         else:
-            print(f'{remote_hash=} != {hash=} - scan not required')
             return False
 
     def upload_zip(self, file, raise_on_error: bool = True):
@@ -138,3 +112,26 @@ class CheckmarxProject:
         if raise_on_error:
             res.raise_for_status()
         return res
+
+
+def init_checkmarx_project(
+    checkmarx_client: checkmarx.client.CheckmarxClient,
+    source_name: str,
+    team_id: str,
+) -> CheckmarxProject:
+
+    project_name = source_name.replace('/', '_')
+
+    project_id = _create_or_get_project(
+        client=checkmarx_client,
+        name=project_name,
+        team_id=team_id,
+    )
+
+    project_details = checkmarx_client.get_project_by_id(project_id=project_id)
+
+    return CheckmarxProject(
+        checkmarx_client=checkmarx_client,
+        artifact_name=source_name,
+        project_details=project_details,
+    )
