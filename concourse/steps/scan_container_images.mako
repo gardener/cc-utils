@@ -155,7 +155,10 @@ if not (
 
 email_recipients = ${image_scan_trait.email_recipients()}
 
-components = list(component_descriptor.components())
+components = [
+  product.model.ComponentName(c.name)
+  for c in product.v2.components(component_descriptor)
+]
 
 email_recipients = tuple(
   mail_recipients(
@@ -169,10 +172,7 @@ email_recipients = tuple(
 % endif
     cfg_set=cfg_set,
     email_recipients=email_recipients,
-    components=[
-      product.model.ComponentName(c.name)
-      for c in product.v2.components(component_descriptor)
-    ]
+    components=components
   )
 )
 
