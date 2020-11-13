@@ -23,6 +23,7 @@ from concourse.model.base import (
     ModelBase
 )
 from ci.util import not_none
+import model.github
 
 
 def sane_env_var_name(name):
@@ -214,6 +215,12 @@ REPO_ATTRS = (
         default=None,
         doc='do not use',
     ),
+    AttributeSpec.optional(
+        name='preferred_protocol',
+        default=None,
+        doc='optionally overwrites the preferred protocol to use',
+        type=model.github.Protocol,
+    ),
 )
 
 
@@ -320,6 +327,13 @@ class RepositoryConfig(Resource):
 
     def disable_ci_skip(self):
         return self._disable_ci_skip
+
+    def preferred_protocol(self):
+        protocol_str = self.raw.get('preferred_protocol')
+        if protocol_str:
+            return model.github.Protocol(protocol_str)
+        else:
+            return None
 
     def head_sha_path(self):
         if self._is_pull_request:

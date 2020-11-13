@@ -19,7 +19,13 @@ else:
 credentials = github_cfg.credentials()
 disable_tls_validation = not github_cfg.tls_validation()
 have_http = Protocol.HTTPS in github_cfg.available_protocols()
+have_ssh = Protocol.SSH in github_cfg.available_protocols()
 token_or_passwd = credentials.auth_token() or credentials.passwd()
+
+preferred_protocol = github_cfg.preferred_protocol()
+# repo-specific cfg "wins"
+if (overwrite_preferred_protocol := repo_cfg.preferred_protocol()):
+  preferred_protocol = overwrite_preferred_protocol
 %>
 - name: ${repo_cfg.resource_name()}
 % if configure_webhook:
@@ -27,9 +33,9 @@ token_or_passwd = credentials.auth_token() or credentials.passwd()
 % endif
   type: ${ResourceType.GIT.value}
   source:
-% if github_cfg.preferred_protocol() is Protocol.SSH:
+% if preferred_protocol is Protocol.SSH:
     uri: ${github_cfg.ssh_url()}/${repo_cfg.repo_path()}
-% elif github_cfg.preferred_protocol() is Protocol.HTTPS:
+% elif preferred_protocol is Protocol.HTTPS:
     uri: ${github_cfg.http_url()}/${repo_cfg.repo_path()}
 % else:
   <% raise NotImplementedError %>
