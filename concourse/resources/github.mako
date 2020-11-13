@@ -18,6 +18,7 @@ else:
   github_cfg = cfg_set.github()
 credentials = github_cfg.credentials()
 disable_tls_validation = not github_cfg.tls_validation()
+have_http = Protocol.HTTPS in github_cfg.available_protocols()
 %>
 - name: ${repo_cfg.resource_name()}
 % if configure_webhook:
@@ -43,6 +44,13 @@ disable_tls_validation = not github_cfg.tls_validation()
     git_config:
     - name: 'protocol.version'
       value: '2'
+% if have_http:
+## TODO: make submodule-cfgs configurable (might not be same host)
+    submodule_credentials:
+    - host: '${github_cfg.hostname()}'
+      username: '${credentials.username()}'
+      password: '${credentials.passwd()}'
+% endif
 ${git_ignore_paths(repo_cfg)}
 </%def>
 <%def name="github_pr(repo_cfg, cfg_set, require_label=None, configure_webhook=True)">
