@@ -365,11 +365,14 @@ class ProtecodeUtil:
             protecode_apps_to_consider.append(
                 self._api.wait_for_scan_result(protecode_app.product_id())
             )
+            ci.util.info(f'finished waiting for {protecode_app.product_id()}')
 
         # apply imported triages for all protecode apps
         for protecode_app in protecode_apps_to_consider:
             product_id = protecode_app.product_id()
+            ci.util.info(f'transporting triages for {protecode_app.product_id()}')
             self._transport_triages(triages_to_import, product_id)
+            ci.util.info(f'done with transporting triages for {protecode_app.product_id()}')
 
         # apply triages from GCR
         protecode_apps_to_consider = [
