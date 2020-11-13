@@ -19,6 +19,7 @@ else:
 credentials = github_cfg.credentials()
 disable_tls_validation = not github_cfg.tls_validation()
 have_http = Protocol.HTTPS in github_cfg.available_protocols()
+token_or_passwd = credentials.auth_token() or credentials.passwd()
 %>
 - name: ${repo_cfg.resource_name()}
 % if configure_webhook:
@@ -40,7 +41,7 @@ have_http = Protocol.HTTPS in github_cfg.available_protocols()
     private_key: |
       ${indent_func(6)(credentials.private_key()).strip()}
     username: "${credentials.username()}"
-    password: "${credentials.passwd()}"
+    password: "${token_or_passwd}"
     git_config:
     - name: 'protocol.version'
       value: '2'
@@ -49,7 +50,7 @@ have_http = Protocol.HTTPS in github_cfg.available_protocols()
     submodule_credentials:
     - host: '${github_cfg.hostname()}'
       username: '${credentials.username()}'
-      password: '${credentials.passwd()}'
+      password: '${token_or_passwd}'
 % endif
 ${git_ignore_paths(repo_cfg)}
 </%def>
