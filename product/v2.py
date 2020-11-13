@@ -9,7 +9,11 @@ import enum
 import io
 import itertools
 import json
+import os
+import shutil
+import tempfile
 import typing
+import yaml
 
 import dacite
 
@@ -288,6 +292,8 @@ def download_component_descriptor_v2(
     component_name: str,
     component_version: str,
     ctx_repo_base_url: str,
+    absent_ok: bool=False,
+    cache_dir: str=None,
 ):
     target_ref = _target_oci_ref_from_ctx_base_url(
         component_name=component_name,
@@ -295,10 +301,44 @@ def download_component_descriptor_v2(
         ctx_repo_base_url=ctx_repo_base_url,
     )
 
-    return retrieve_component_descriptor_from_oci_ref(
+    if cache_dir:
+        descriptor_path = os.path.join(
+            cache_dir,
+            ctx_repo_base_url.replace('/', '-'),
+            f'{component_name}-{component_version}',
+        )
+        if os.path.isfile(descriptor_path):
+            return cm.ComponentDescriptor.from_dict(
+                ci.util.parse_yaml_file(descriptor_path)
+            )
+        else:
+            base_dir = os.path.dirname(descriptor_path)
+            os.makedirs(name=base_dir, exist_ok=True)
+
+    component_descriptor =  retrieve_component_descriptor_from_oci_ref(
         manifest_oci_image_ref=target_ref,
-        absent_ok=False,
+        absent_ok=absent_ok,
     )
+
+    if absent_ok and not component_descriptor:
+        return None
+
+    if cache_dir:
+        try:
+            f = tempfile.NamedTemporaryFile(mode='w', delete=False)
+            # write to tempfile, followed by a mv to avoid collisions through concurrent
+            # processes or threads (assuming mv is an atomic operation)
+            yaml.dump(
+                data=dataclasses.asdict(component_descriptor),
+                Dumper=cm.EnumValueYamlDumper,
+                stream=f.file,
+            )
+            shutil.move(f.name, descriptor_path)
+        except:
+            os.unlink(f.name)
+            raise
+
+    return component_descriptor
 
 
 class UploadMode(enum.Enum):
@@ -423,6 +463,7 @@ def resolve_dependency(
     component: gci.componentmodel.Component,
     component_ref: gci.componentmodel.ComponentReference,
     repository_ctx_base_url=None,
+    cache_dir: str=None,
 ):
     '''
     resolves the given component version. for migration purposes, there is a fallback in place
@@ -434,16 +475,22 @@ def resolve_dependency(
     - if it is found in github, it is retrieved, converted to v2, published to the component's
       current ctx-repository, and then returned
     '''
-    target_ref = _target_oci_ref(
-        component=component,
-        component_ref=component_ref,
-    )
+    if component_ref:
+        cname = component_ref.componentName
+        cversion = component_ref.version
+    else:
+        cname = component.name
+        cversion = component.version
 
     # retrieve, if available
-    component_descriptor = retrieve_component_descriptor_from_oci_ref(
-        manifest_oci_image_ref=target_ref,
-        absent_ok=True,
+    component_descriptor = download_component_descriptor_v2(
+        component_name=cname,
+        component_version=cversion,
+        ctx_repo_base_url=repository_ctx_base_url or component.current_repository_ctx().baseUrl,
+        cache_dir=cache_dir,
+        absent_ok=True, # XXX rm this after full migration to v2
     )
+
     if component_descriptor:
         return component_descriptor
 
@@ -475,6 +522,7 @@ def resolve_dependency(
 def resolve_dependencies(
     component: gci.componentmodel.Component,
     include_component=True,
+    cache_dir=None,
 ):
   if include_component:
     yield component
@@ -484,12 +532,14 @@ def resolve_dependencies(
     resolved_component_descriptor = resolve_dependency(
       component=component,
       component_ref=component_ref,
+      cache_dir=cache_dir,
     )
     yield resolved_component_descriptor.component
     # XXX consider not resolving recursively, if immediate dependencies are present in ctx
     yield from resolve_dependencies(
         component=resolved_component_descriptor.component,
         include_component=False,
+        cache_dir=cache_dir,
     )
   # if this line is reached, all dependencies could successfully be resolved
 
@@ -520,6 +570,7 @@ def rm_component_descriptor(
 
 def components(
     component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
+    cache_dir: str=None,
     _visited_component_versions: typing.Tuple[str, str]=(),
 ):
     component = component_descriptor_v2.component
@@ -536,10 +587,12 @@ def components(
 
         component_descriptor_v2 = resolve_dependency(
             component=component,
-            component_ref=component_ref
+            component_ref=component_ref,
+            cache_dir=cache_dir,
         )
         yield from components(
             component_descriptor_v2=component_descriptor_v2,
+            cache_dir=cache_dir,
             _visited_component_versions=new_visited_component_versions,
         )
 
@@ -590,8 +643,11 @@ def resources(
                 raise NotImplementedError
 
 
-def enumerate_oci_resources(component_descriptor):
-    for component in components(component_descriptor):
+def enumerate_oci_resources(
+    component_descriptor,
+    cache_dir: str=None,
+):
+    for component in components(component_descriptor, cache_dir=cache_dir):
         for resource in resources(
             component=component,
             resource_types=[gci.componentmodel.ResourceType.OCI_IMAGE],

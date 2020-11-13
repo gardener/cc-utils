@@ -72,7 +72,7 @@ class ResourceVersion(ModelBase):
         return self.raw['enabled']
 
 
-class PipelineConfig(object):
+class PipelineConfig:
     '''
     Wrapper around the dictionary received from invoking the concourse
     `pipelines/<pipeline>/config` REST API
@@ -108,8 +108,6 @@ class Job:
     def __init__(self, raw: dict, pipeline: PipelineConfig):
         self.pipeline = pipeline
         self.concourse_api = pipeline.concourse_api
-        self.raw = raw
-        self.name = raw['name']
 
     def plan(self):
         return Plan(self.raw.get('plan'), self)
@@ -120,6 +118,27 @@ class Job:
             if get_step['get'] == resource_name and get_step['trigger']:
                 return True
         return False
+
+
+class ConcourseJob:
+    '''Wrapper around the dictionary representing a job as returned when
+    querying the Concourse REST API for a single Job configuration.
+
+    Not intended to be instantiated by users of this module
+    '''
+    @ensure_annotations
+    def __init__(self, raw: dict):
+        self.raw = raw
+
+    def is_paused(self):
+        return self.raw['paused']
+
+    def next_build(self):
+        # Build class requires the Concourse-API, which we do not have here. Return the dict
+        # instead
+        if build_raw := self.raw.get('next_build'):
+            return build_raw
+        return None
 
 
 class Plan:
@@ -136,7 +155,7 @@ class Plan:
         return [step for step in self.raw if 'get' in step]
 
 
-class PipelineConfigResource(object):
+class PipelineConfigResource:
     '''
     Wrapper around the dictionary representing a resource as part of a
     concourse.client.model.PipelineConfig
@@ -175,7 +194,7 @@ class PipelineConfigResource(object):
         )
 
 
-class GithubSource(object):
+class GithubSource:
     '''
     Wrapper around the source attribute of a concourse.client.model.PipelineConfigResource
     instance in the special case said resource is a "githubby" resource (either a git
@@ -299,7 +318,7 @@ class BuildPlan(ModelBase):
         return has_version_ref(self.raw.get('plan'))
 
 
-class BuildEvents(object):
+class BuildEvents:
     '''
     Wrapper around the event stream returned by concourse when querying the events for a
     certain build execution. The event stream is consumed using the `process_events`

@@ -80,8 +80,11 @@ class GithubConfig(NamedModelElement):
 
         return random.choice(technical_users)
 
+    def hostname(self):
+        return urlparse(self.http_url()).hostname.lower()
+
     def matches_hostname(self, host_name):
-        return host_name.lower() == urlparse(self.http_url()).hostname.lower()
+        return host_name.lower() == self.hostname()
 
     def _optional_attributes(self):
         return (
