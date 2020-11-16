@@ -106,6 +106,7 @@ class Job:
     '''
     @ensure_annotations
     def __init__(self, raw: dict, pipeline: PipelineConfig):
+        self.raw = raw
         self.pipeline = pipeline
         self.concourse_api = pipeline.concourse_api
 
