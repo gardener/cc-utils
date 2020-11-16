@@ -203,6 +203,9 @@ class Triage(ModelBase):
             return False
         return True
 
+    def __hash__(self):
+        return hash((self.vulnerability_id(), self.component_name(), self.description()))
+
 
 # --- wrappers for inofficial protecode API responses
 
