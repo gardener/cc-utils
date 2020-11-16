@@ -505,7 +505,7 @@ class ProtecodeUtil:
                 for vulnerability in component.vulnerabilities():
                     yield from vulnerability.triages()
 
-        scan_result_triages = list(_extract_triages())
+        scan_result_triages = list(_extract_triages(scan_result))
 
         if not image_ref:
             logging.warning(f'no image-ref-name custom-prop for {scan_result.product_id()}')
