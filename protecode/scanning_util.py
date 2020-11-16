@@ -670,7 +670,7 @@ class ProtecodeUtil:
                         )
                         triaged_due_to_absent_count += 1
                         description = \
-                            f'[ci] vulnerability was not reported by GCR at {image_ref}'
+                            '[ci] vulnerability was not reported by GCR'
                     elif worst_cve >= self.cvss_threshold:
                         triaged_due_to_gcr_optimism += 1
                         ci.util.info(
@@ -679,11 +679,11 @@ class ProtecodeUtil:
                         continue
                     else:
                         description = \
-                            f'[ci] vulnerability was assessed by GCR at {image_ref} with {worst_cve}'
+                            f'[ci] vulnerability was assessed by GCR with {worst_cve}'
                 else:
                     triaged_due_to_max_count += 1
                     description = \
-                        f'[ci] vulnerability was not found by GCR at: {image_ref}'
+                        '[ci] vulnerability was not found by GCR'
 
                 triage_dict = {
                     'component': component.name(),
