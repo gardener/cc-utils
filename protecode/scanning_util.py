@@ -370,8 +370,14 @@ class ProtecodeUtil:
         # apply imported triages for all protecode apps
         for protecode_app in protecode_apps_to_consider:
             product_id = protecode_app.product_id()
+            scan_result = self._api.scan_result(product_id)
+            existing_triages = list(self._existing_triages([scan_result]))
+            new_triages = [
+                t for t in triages_to_import
+                if t not in existing_triages
+            ]
             ci.util.info(f'transporting triages for {protecode_app.product_id()}')
-            self._transport_triages(triages_to_import, product_id)
+            self._transport_triages(new_triages, product_id)
             ci.util.info(f'done with transporting triages for {protecode_app.product_id()}')
 
         # apply triages from GCR

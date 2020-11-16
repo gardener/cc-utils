@@ -192,6 +192,17 @@ class Triage(ModelBase):
             f'({self.component_name()} {self.component_version()}, {self.vulnerability_id()})'
         )
 
+    def __eq__(self, other):
+        if not isinstance(other, Triage):
+            return False
+        if self.vulnerability_id() != other.vulnerability_id():
+            return False
+        if self.component_name() != other.component_name():
+            return False
+        if self.description() != other.description():
+            return False
+        return True
+
 
 # --- wrappers for inofficial protecode API responses
 
