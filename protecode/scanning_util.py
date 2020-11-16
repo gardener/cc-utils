@@ -499,13 +499,7 @@ class ProtecodeUtil:
 
     def _import_triages_from_gcr(self, scan_result: AnalysisResult):
         image_ref = scan_result.custom_data().get('IMAGE_REFERENCE', None)
-
-        def _extract_triages(scan_result):
-            for component in scan_result.components():
-                for vulnerability in component.vulnerabilities():
-                    yield from vulnerability.triages()
-
-        scan_result_triages = list(_extract_triages(scan_result))
+        scan_result_triages = list(self._existing_triages([scan_result]))
 
         if not image_ref:
             logging.warning(f'no image-ref-name custom-prop for {scan_result.product_id()}')
