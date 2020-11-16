@@ -499,6 +499,14 @@ class ProtecodeUtil:
 
     def _import_triages_from_gcr(self, scan_result: AnalysisResult):
         image_ref = scan_result.custom_data().get('IMAGE_REFERENCE', None)
+
+        def _extract_triages(scan_result):
+            for component in scan_result.components():
+                for vulnerability in component.vulnerabilities():
+                    yield from vulnerability.triages()
+
+        scan_result_triages = list(_extract_triages())
+
         if not image_ref:
             logging.warning(f'no image-ref-name custom-prop for {scan_result.product_id()}')
             return scan_result
@@ -598,6 +606,18 @@ class ProtecodeUtil:
         triaged_due_to_gcr_optimism = 0
         triaged_due_to_absent_count = 0
 
+        # helper functon to avoid duplicating triages later
+        def _triage_already_present(triage_dict, triages):
+            for triage in triages:
+                if triage.vulnerability_id() != triage_dict['vulns'][0]:
+                    continue
+                if triage.component_name() != triage_dict['component']:
+                    continue
+                if triage.description() != triage_dict['description']:
+                    continue
+                return True
+            return False
+
         for component in scan_result.components():
             components_count += 1
 
@@ -694,6 +714,10 @@ class ProtecodeUtil:
                     'description': description,
                     'product_id': scan_result.product_id(),
                 }
+
+                if _triage_already_present(triage_dict, scan_result_triages):
+                    ci.util.info(f'triage {component.name()}:{vulnerability.cve()} already present.')
+                    continue
 
                 try:
                     self._api.add_triage_raw(triage_dict=triage_dict)
