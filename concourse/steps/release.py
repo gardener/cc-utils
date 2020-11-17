@@ -7,7 +7,7 @@ import typing
 
 from github3.exceptions import NotFoundError
 
-import gci.componentmodel
+import gci.componentmodel as cm
 
 import ci.util
 from ci.util import (
@@ -563,7 +563,7 @@ class GitHubReleaseStep(TransactionalStep):
         repo_dir: str,
         release_version: str,
         component_descriptor_file_path:str,
-        component_descriptor_v2_path:str = None,
+        component_descriptor_v2_path:str,
     ):
         self.github_helper = not_none(github_helper)
         self.githubrepobranch = githubrepobranch
@@ -585,6 +585,11 @@ class GitHubReleaseStep(TransactionalStep):
         with open(self.component_descriptor_file_path) as f:
             # TODO: Proper validation
             not_empty(f.read().strip())
+        component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
+            ci.util.parse_yaml_file(self.component_descriptor_v2_path),
+        )
+        product.v2.resolve_dependencies(component=component_descriptor_v2.component)
+        # TODO: more validation (e.g. check for uniqueness of names)
 
     def apply(
         self,
@@ -597,8 +602,8 @@ class GitHubReleaseStep(TransactionalStep):
             release_tag = release_tag[10:]
         else:
             raise RuntimeError(
-                f"Got an uexpected release-tag '{release_tag}'. Expected a ref, e.g. 'refs/tags/foo'"
-        )
+                f'unexpected {release_tag=}. Expected a ref, e.g. `refs/tags/foo`'
+            )
 
         # Create GitHub-release
         if release := self.github_helper.draft_release_with_name(f'{self.release_version}-draft'):
@@ -627,21 +632,15 @@ class GitHubReleaseStep(TransactionalStep):
                 asset=component_descriptor_contents,
                 label=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
             )
-        if self.component_descriptor_v2_path:
-            cdv2_dict = ci.util.parse_yaml_file(self.component_descriptor_v2_path)
-            component_descriptor_v2 = gci.componentmodel.ComponentDescriptor.from_dict(
-                component_descriptor_dict=cdv2_dict,
-            )
-            info('publishing component-descriptor v2')
-            product.v2.upload_component_descriptor_v2_to_oci_registry(
-                component_descriptor_v2=component_descriptor_v2,
-            )
-            info('resolving / importing dependencies')
-            try:
-                product.v2.resolve_dependencies(component=component_descriptor_v2.component)
-            except:
-                import traceback
-                traceback.print_exc()
+
+        # cd-v2 (todo: rm v1-parts above)
+        component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
+            component_descriptor_dict=ci.util.parse_yaml_file(self.component_descriptor_v2_path),
+        )
+        info('publishing component-descriptor v2')
+        product.v2.upload_component_descriptor_v2_to_oci_registry(
+            component_descriptor_v2=component_descriptor_v2,
+        )
 
         return {
             'release_tag_name': release_tag,

@@ -1,12 +1,16 @@
+import dataclasses
 import pytest
 from unittest.mock import MagicMock
 from github.util import GitHubRepositoryHelper, GitHubRepoBranch
 from github.release_notes.util import ReleaseNotes
+import os
+import yaml
 
 import concourse.steps.release
 from concourse.model.traits.release import (
     ReleaseCommitPublishingPolicy,
 )
+import gci.componentmodel as cm
 
 
 class TestReleaseCommitStep(object):
@@ -114,6 +118,26 @@ class TestGitHubReleaseStep(object):
         component_descriptor_file = tmp_path.joinpath('test_descriptor').resolve()
         component_descriptor_file.write_text('component descriptor test content')
 
+        component_descriptor_v2 = os.path.join(tmp_path, 'component_descriptor_v2')
+        cd_v2 = cm.ComponentDescriptor(
+            component=cm.Component(
+                name='a_name',
+                version='1.2.3',
+                repositoryContexts=[],
+                provider=cm.Provider.INTERNAL,
+                sources=[],
+                componentReferences=[],
+                resources=[],
+            ),
+            meta=cm.Metadata(),
+        )
+        with open(component_descriptor_v2, 'w') as f:
+            yaml.dump(
+                data=dataclasses.asdict(cd_v2),
+                stream=f,
+                Dumper=cm.EnumValueYamlDumper,
+            )
+
         def _examinee(
             githubrepobranch=GitHubRepoBranch(
                 github_config='test_config',
@@ -135,6 +159,7 @@ class TestGitHubReleaseStep(object):
                 repo_dir=repo_dir,
                 release_version=release_version,
                 component_descriptor_file_path=component_descriptor_file_path,
+                component_descriptor_v2_path=component_descriptor_v2,
             )
         return _examinee
 
