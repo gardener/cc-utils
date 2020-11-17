@@ -411,7 +411,7 @@ class ProtecodeUtil:
             resource: gci.componentmodel.Resource,
             component: gci.componentmodel.Component,
             group_id: int=None,
-        ):
+    ):
         metadata = self._metadata(
             resource=resource,
             component=component,
