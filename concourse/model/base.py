@@ -189,7 +189,7 @@ class AttributeSpec(object):
 
         # validate
         if default:
-            if required and required != RequiredPolicy.OPTIONAL:
+            if required and required not in (RequiredPolicy.OPTIONAL, RequiredPolicy.DEPRECATED):
                 raise ValueError()
 
         self._required_policy = required

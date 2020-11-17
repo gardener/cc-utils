@@ -12,25 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import argparse
 import itertools
 import github3.exceptions
-import json
 import os
 import yaml
-
-from typing import Iterable
 
 import ccc.protecode
 import container.registry
 from ci.util import CliHints, CliHint, parse_yaml_file, ctx, fail, info
-from concourse.model.traits.component_descriptor import ValidationPolicy
 from product.model import (
-    Component,
     ComponentReference,
-    ContainerImage,
-    DependencyBase,
-    GenericDependency,
     ComponentDescriptor,
 )
 from product.util import (
@@ -127,41 +118,6 @@ def upload_grouped_product_images(
     )
 
 
-def _parse_dependency_str_func(
-        factory_function,
-        required_attributes,
-        validation_policies,
-        optional_attributes=(),
-    ):
-    def parse_dependency_str(token):
-        try:
-            parsed = json.loads(token)
-        except json.decoder.JSONDecodeError as jde:
-            raise argparse.ArgumentTypeError('Invalid JSON document: ' + '\n'.join(jde.args))
-        missing_attribs = [attrib for attrib in required_attributes if attrib not in parsed]
-        if missing_attribs:
-            raise argparse.ArgumentTypeError(
-                f"missing required attributes: {', '.join(missing_attribs)}",
-            )
-        if ValidationPolicy.FORBID_EXTRA_ATTRIBUTES in validation_policies:
-            extra_attribs = [
-                    attrib for attrib in parsed.keys()
-                    if attrib not in required_attributes and attrib not in optional_attributes
-            ]
-            if extra_attribs:
-                raise argparse.ArgumentTypeError(
-                    f"unknown attributes: {', '.join(extra_attribs)}",
-                )
-        if ValidationPolicy.NOT_EMPTY in validation_policies:
-            empty_attribs = [attrib for attrib in parsed.keys() if not parsed[attrib]]
-            if empty_attribs:
-                raise argparse.ArgumentTypeError(
-                    f"no values given for attributes: {', '.join(empty_attribs)}",
-                )
-        return factory_function(**parsed)
-    return parse_dependency_str
-
-
 def component_descriptor_to_xml(
     component_descriptor: CliHints.existing_file(),
     out_file: str,
@@ -180,89 +136,6 @@ def component_descriptor_to_xml(
     result_xml.write(out_file)
 
 
-def _parse_component_dependencies(
-    component_dependencies,
-    validation_policies,
-):
-    _parse_component_deps = _parse_dependency_str_func(
-        factory_function=ComponentReference.create,
-        required_attributes=('name', 'version'),
-        validation_policies=validation_policies,
-    )
-    return [_parse_component_deps(token) for token in component_dependencies]
-
-
-def _parse_container_image_dependencies(
-    container_image_dependencies,
-    validation_policies,
-):
-    _parse_container_image_deps = _parse_dependency_str_func(
-        factory_function=ContainerImage.create,
-        required_attributes=('name', 'version', 'image_reference'),
-        optional_attributes=('relation',),
-        validation_policies=validation_policies,
-    )
-    return [_parse_container_image_deps(token) for token in container_image_dependencies]
-
-
-def _parse_generic_dependencies(
-    generic_dependencies,
-    validation_policies,
-):
-    _parse_generic_deps = _parse_dependency_str_func(
-        factory_function=GenericDependency.create,
-        required_attributes=('name', 'version'),
-        validation_policies=validation_policies,
-    )
-    return [_parse_generic_deps(token) for token in generic_dependencies]
-
-
-def _parse_dependencies(
-    component_dependencies: [str],
-    container_image_dependencies: [str],
-    generic_dependencies: [str],
-    validation_policies: [ValidationPolicy],
-) -> Iterable[DependencyBase]:
-    '''Return a generator that yields all parsed dependencies'''
-    yield from _parse_component_dependencies(component_dependencies, validation_policies)
-
-    yield from _parse_container_image_dependencies(
-        container_image_dependencies,
-        validation_policies,
-    )
-
-    yield from _parse_generic_dependencies(generic_dependencies, validation_policies)
-
-
-def component_descriptor(
-    name: str,
-    version: str,
-    component_dependencies: CliHint(action='append')=[],
-    container_image_dependencies: CliHint(action='append')=[],
-    generic_dependencies: CliHint(action='append')=[],
-    validation_policies: CliHint(
-        type=ValidationPolicy,
-        typehint=[ValidationPolicy],
-        choices=[policy for policy in ValidationPolicy],
-    )=[],
-):
-    component = Component.create(name=name, version=version)
-    # maintain old behaviour
-    if not validation_policies:
-        validation_policies = [ValidationPolicy.FORBID_EXTRA_ATTRIBUTES]
-
-    dependencies = _parse_dependencies(
-        component_dependencies=component_dependencies,
-        container_image_dependencies=container_image_dependencies,
-        generic_dependencies=generic_dependencies,
-        validation_policies=validation_policies,
-    )
-    component.add_dependencies(dependencies)
-
-    product_dict = {'components': [component.raw]}
-    print(yaml.dump(product_dict, indent=2))
-
-
 def merge_descriptors(descriptors: [str]):
     if len(descriptors) < 2:
         fail('at least two descriptors are required for merging')
@@ -276,55 +149,6 @@ def merge_descriptors(descriptors: [str]):
         merged = merge_products(merged, descriptor)
 
     print(yaml.dump(merged.raw, indent=2))
-
-
-def add_dependencies(
-    descriptor_src_file: CliHints.existing_file(),
-    component_name: str,
-    component_version: str,
-    descriptor_out_file: str=None,
-    component_dependencies: CliHint(action='append')=[],
-    container_image_dependencies: CliHint(action='append')=[],
-    generic_dependencies: CliHint(action='append')=[],
-    validation_policies: CliHint(
-        type=ValidationPolicy,
-        typehint=[ValidationPolicy],
-        choices=[policy for policy in ValidationPolicy],
-    )=[],
-):
-    product = ComponentDescriptor.from_dict(parse_yaml_file(descriptor_src_file))
-
-    component = product.component(
-        ComponentReference.create(name=component_name, version=component_version)
-    )
-    if not component:
-        fail('component {c}:{v} was not found in {f}'.format(
-            c=component_name,
-            v=component_version,
-            f=descriptor_src_file
-        ))
-
-    # maintain old behaviour
-    if not validation_policies:
-        validation_policies = [ValidationPolicy.FORBID_EXTRA_ATTRIBUTES]
-
-    dependencies = _parse_dependencies(
-        component_dependencies=component_dependencies,
-        container_image_dependencies=container_image_dependencies,
-        generic_dependencies=generic_dependencies,
-        validation_policies=validation_policies,
-    )
-    component.add_dependencies(dependencies)
-
-    product_dict = {'components': [component.raw]}
-    print(yaml.dump(product_dict, indent=2))
-
-    product_dict = json.loads(json.dumps({'components': [component.raw]}))
-    if not descriptor_out_file:
-        print(yaml.dump(product_dict, indent=2))
-    else:
-        with open(descriptor_out_file, 'w') as f:
-            yaml.dump(product_dict, f, indent=2)
 
 
 def retrieve_component_descriptor(

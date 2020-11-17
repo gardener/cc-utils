@@ -25,26 +25,12 @@ from concourse.model.step import (
 )
 from concourse.model.base import (
     AttributeSpec,
-    EnumWithDocumentation,
-    EnumValueWithDocumentation,
     ModelValidationError,
     ScriptType,
     Trait,
     TraitTransformer,
 )
 import model.ctx_repository
-
-
-class ValidationPolicy(EnumWithDocumentation):
-    NOT_EMPTY = EnumValueWithDocumentation(
-        value='not_empty',
-        doc="Every given attribute (e.g.: 'version') must also be given a non-empty value",
-    )
-
-    FORBID_EXTRA_ATTRIBUTES = EnumValueWithDocumentation(
-        value='forbid_extra_attributes',
-        doc='**only** required attributes are allowed',
-    )
 
 
 DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME = 'component_descriptor'
@@ -73,14 +59,11 @@ ATTRIBUTES = (
         default={},
         doc='Specifies additional environment variables passed to .ci/component_descriptor script',
     ),
-    AttributeSpec.optional(
+    AttributeSpec.deprecated(
         name='validation_policies',
-        type=typing.List[ValidationPolicy],
-        default=[ValidationPolicy.FORBID_EXTRA_ATTRIBUTES],
-        doc=(
-            'The validation policies that should be applied to arguments of components added to '
-            'the component descriptor'
-        ),
+        type=typing.List[str],
+        default=['ignore-me'],
+        doc='obsolete',
     ),
     AttributeSpec.deprecated(
         name='ctx_repository_base_url',
@@ -131,10 +114,7 @@ class ComponentDescriptorTrait(Trait):
         return self.raw['callback_env']
 
     def validation_policies(self):
-        return [
-            ValidationPolicy(v)
-            for v in self.raw['validation_policies']
-        ]
+        return ()
 
     def ctx_repository(self) -> model.ctx_repository.CtxRepositoryCfg:
         ctx_repo_name = self.raw.get('ctx_repository')

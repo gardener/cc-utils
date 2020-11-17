@@ -10,8 +10,6 @@ main_repo = job_variant.main_repository()
 main_repo_path_env_var = main_repo.logical_name().replace('-', '_').upper() + '_PATH'
 ctx_repository_base_url = descriptor_trait.ctx_repository_base_url()
 
-policies = descriptor_trait.validation_policies()
-
 if job_variant.has_trait('image_alter'):
   image_alter_cfgs = job_variant.trait('image_alter').image_alter_cfgs()
 else:
