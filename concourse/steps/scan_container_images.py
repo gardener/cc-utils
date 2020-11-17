@@ -262,8 +262,8 @@ def mail_recipients(
     elif notification_policy == Notify.COMPONENT_OWNERS:
         def make_comp_filter(own_component):
             def comp_filter(component):
-                print(f'filter: component: {own_component.name()} - other: {component.name()}')
-                return own_component.name() == component.name() # only care about matching results
+                print(f'filter: component: {own_component.name} - other: {component.name}')
+                return own_component.name == component.name # only care about matching results
             return comp_filter
 
         for comp in components:
