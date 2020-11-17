@@ -675,7 +675,7 @@ def resources(
     for resource in (r for r in resources if resource_types is None or r.type in resource_types):
         if resource.access is None and None in resource_access_types:
             yield resource
-        elif resource.access.type in resource_access_types:
+        elif resource.access and resource.access.type in resource_access_types:
             yield resource
         else:
             if resource_policy is ResourcePolicy.IGNORE_NONMATCHING_ACCESS_TYPES:
