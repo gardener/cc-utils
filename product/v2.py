@@ -20,7 +20,6 @@ import dacite
 import gci.componentmodel as cm
 import gci.oci
 
-import ccc.cfg
 import ci.util
 import container.registry
 import product.model
@@ -535,35 +534,9 @@ def resolve_dependency(
         component_version=cversion,
         ctx_repo_base_url=repository_ctx_base_url or component.current_repository_ctx().baseUrl,
         cache_dir=cache_dir,
-        absent_ok=True, # XXX rm this after full migration to v2
+        absent_ok=False,
     )
-
-    if component_descriptor:
-        return component_descriptor
-
-    # fallback: retrieve from github (will only work for github-components, obviously)
-    cfg_factory = ccc.cfg.cfg_factory()
-
-    resolver_v1 = product.util.ComponentDescriptorResolver(
-        cfg_factory=cfg_factory,
-    )
-    component_ref_v1 = component_ref.componentName, component_ref.version
-
-    component_descriptor_v1 = resolver_v1.retrieve_descriptor(component_ref_v1)
-
-    # convert and publish
-    if repository_ctx_base_url is None:
-        repository_ctx_base_url = component.repositoryContexts[-1].baseUrl
-
-    component_v1 = component_descriptor_v1.component(component_ref_v1)
-    component_descriptor_v2 = convert_component_to_v2(
-        component_descriptor_v1=component_descriptor_v1,
-        component_v1=component_v1,
-        repository_ctx_base_url=repository_ctx_base_url,
-    )
-    upload_component_descriptor_v2_to_oci_registry(component_descriptor_v2)
-    print(f're-published component-descriptor v2 for {component_ref=}')
-    return component_descriptor_v2
+    return component_descriptor
 
 
 def resolve_dependencies(
