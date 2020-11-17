@@ -59,7 +59,7 @@ class ResourceGroup:
         # TODO: Validate resource type?
         self._component = component
 
-        self._resources = list(resources)
+        self._resources = set(resources)
 
         if not len(self._resources) > 0:
             raise ValueError('at least one container image must be given')
