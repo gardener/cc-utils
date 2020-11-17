@@ -98,10 +98,6 @@ dependencies.add_container_image_dependency(
 )
 % endfor
 
-info('default component descriptor (v1):\n')
-print(yaml.dump(base_descriptor_v1.raw, indent=2))
-
-print('\n' * 4)
 info('default component descriptor (v2):\n')
 print(dump_component_descriptor_v2(base_descriptor_v2))
 print('\n' * 2)
