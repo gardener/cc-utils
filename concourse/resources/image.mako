@@ -28,4 +28,5 @@ credentials = registry_cfg.credentials()
 % endif
     repository: '${image_repository}'
     tag: '${image_tag}'
+    registry_mirror: 'https://mirror.gcr.io'
 </%def>
