@@ -103,7 +103,7 @@ class ResourceGroup:
 
     # TODO: why though? Use images() or iterator consistently, remove the other one
     def __iter__(self):
-        return self.resources().__iter__
+        return self.resources().__iter__()
 
 
 class ProcessingMode(AttribSpecMixin, enum.Enum):
