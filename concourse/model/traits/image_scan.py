@@ -252,26 +252,45 @@ class ImageScanTraitTransformer(TraitTransformer):
         super().__init__(*args, **kwargs)
 
     def inject_steps(self):
-        self.image_scan_step = PipelineStep(
-                name='scan_container_images',
-                raw_dict={},
-                is_synthetic=True,
-                notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
-                script_type=ScriptType.PYTHON3
-        )
-        self.image_scan_step.add_input(
-            name=concourse.model.traits.component_descriptor.DIR_NAME,
-            variable_name=concourse.model.traits.component_descriptor.ENV_VAR_NAME,
-        )
-        self.image_scan_step.set_timeout(duration_string='12h')
-        yield self.image_scan_step
+        if self.trait.protecode():
+            self.image_scan_step = PipelineStep(
+                    name='scan_container_images',
+                    raw_dict={},
+                    is_synthetic=True,
+                    notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
+                    script_type=ScriptType.PYTHON3
+            )
+            self.image_scan_step.add_input(
+                name=concourse.model.traits.component_descriptor.DIR_NAME,
+                variable_name=concourse.model.traits.component_descriptor.ENV_VAR_NAME,
+            )
+            self.image_scan_step.set_timeout(duration_string='12h')
+            yield self.image_scan_step
+
+        if self.trait.clam_av():
+            self.malware_scan_step = PipelineStep(
+                    name='malware-scan',
+                    raw_dict={},
+                    is_synthetic=True,
+                    notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
+                    script_type=ScriptType.PYTHON3
+            )
+            self.malware_scan_step.add_input(
+                name=concourse.model.traits.component_descriptor.DIR_NAME,
+                variable_name=concourse.model.traits.component_descriptor.ENV_VAR_NAME,
+            )
+            self.malware_scan_step.set_timeout(duration_string='12h')
+            yield self.malware_scan_step
 
     def process_pipeline_args(self, pipeline_args: JobVariant):
-        # our step depends on dependency descriptor step
+        # our steps depends on dependency descriptor step
         component_descriptor_step = pipeline_args.step(
             concourse.model.traits.component_descriptor.DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME
         )
-        self.image_scan_step._add_dependency(component_descriptor_step)
+        if self.trait.protecode():
+            self.image_scan_step._add_dependency(component_descriptor_step)
+        if self.trait.clam_av():
+            self.malware_scan_step._add_dependency(component_descriptor_step)
 
         for trait_name in self.trait.trait_depends():
             if not pipeline_args.has_trait(trait_name):
@@ -286,10 +305,17 @@ class ImageScanTraitTransformer(TraitTransformer):
             for step in pipeline_args.steps():
                 if not step.name in depended_on_step_names:
                     continue
-                self.image_scan_step._add_dependency(step)
-                # prevent cyclic dependencies (from auto-injected depends)
-                if self.image_scan_step.name in step.depends():
-                    step._remove_dependency(self.image_scan_step)
+                if self.trait.protecode():
+                    self.image_scan_step._add_dependency(step)
+                    # prevent cyclic dependencies (from auto-injected depends)
+                    if self.image_scan_step.name in step.depends():
+                        step._remove_dependency(self.image_scan_step)
+
+                if self.trait.clam_av():
+                    self.malware_scan_step._add_dependency(step)
+                    # prevent cyclic dependencies (from auto-injected depends)
+                    if self.malware_scan_step.name in step.depends():
+                        step._remove_dependency(self.malware_scan_step)
 
     @classmethod
     def dependencies(cls):
