@@ -27,8 +27,8 @@ scan_sources_and_notify(
     email_recipients=${email_recipients},
     team_id='${checkmarx_cfg.team_id()}',
     threshold=${checkmarx_cfg.severity_threshold()},
-    include_path_regexes=${checkmarx_cfg.include_path_regexes()},
-    exclude_path_regexes=${checkmarx_cfg.exclude_path_regexes()},
+    include_paths=${checkmarx_cfg.include_path_regexes()},
+    exclude_paths=${checkmarx_cfg.exclude_path_regexes()},
 )
 % endif
 
