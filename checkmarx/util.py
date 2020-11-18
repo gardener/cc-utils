@@ -36,6 +36,13 @@ def scan_sources(
     exclude_paths: typing.Sequence[str] = [],
     include_paths: typing.Sequence[str] = [],
 ) -> model.FinishedScans:
+
+    # prevent passed NoneType argument
+    if exclude_paths is None:
+        exclude_paths = []
+    if include_paths is None:
+        include_paths = []
+
     component_descriptor = cm.ComponentDescriptor.from_dict(
         ci.util.parse_yaml_file(component_descriptor_path)
     )
@@ -235,9 +242,10 @@ def scan_gh_artifact(
     except github3.exceptions.NotFoundError as e:
         raise product.util.RefGuessingFailedError(e)
 
-    if scan_artifact.label.path_config:
-        include_paths += scan_artifact.label.path_config.include_paths
-        exclude_paths += scan_artifact.label.path_config.exclude_paths
+    if scan_artifact.label is not None:
+        if scan_artifact.label.path_config is not None:
+            include_paths += scan_artifact.label.path_config.include_paths
+            exclude_paths += scan_artifact.label.path_config.exclude_paths
 
     # if the scan_artifact has no label we will implicitly scan everything
     # since all images have to specify a label in order to be scanned
