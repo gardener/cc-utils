@@ -80,7 +80,7 @@ def deploy_or_upgrade_landscape(
     )=None,
     whitesource_backend_deployment_name: CliHint(
         typehint=str, help="namespace and deployment name for Whitesource"
-    )='whitesource_backend',
+    )='whitesource-backend',
     whitesource_cfg_name: CliHint(
         typehint=str,
         help='Whitesource Config',
