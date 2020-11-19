@@ -153,6 +153,9 @@ class Renderer(object):
         pipeline_metadata['target_team'] = definition_descriptor.concourse_target_team
         generated_model = pipeline_metadata.get('definition')
 
+        if bg := effective_definition.get('background_image'):
+            pipeline_metadata['background_image'] = bg
+
         # determine pipeline name (if there is main-repo, append the configured branch name)
         for variant in pipeline_metadata.get('definition').variants():
             # hack: take the first "main_repository" we find
