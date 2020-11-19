@@ -32,16 +32,10 @@ def scan_sources(
     cx_client: checkmarx.client.CheckmarxClient,
     team_id: str,
     threshold: int,
-    max_workers: int = 8,
-    exclude_paths: typing.Sequence[str] = [],
-    include_paths: typing.Sequence[str] = [],
+    max_workers: int = 4, # only two scan will be run per user
+    exclude_paths: typing.Sequence[str] = (),
+    include_paths: typing.Sequence[str] = (),
 ) -> model.FinishedScans:
-
-    # prevent passed NoneType argument
-    if exclude_paths is None:
-        exclude_paths = []
-    if include_paths is None:
-        include_paths = []
 
     component_descriptor = cm.ComponentDescriptor.from_dict(
         ci.util.parse_yaml_file(component_descriptor_path)
@@ -106,8 +100,8 @@ def scan_artifacts(
     scan_artifacts: typing.Tuple[model.ScanArtifact],
     team_id: str,
     threshold: int,
-    exclude_paths: typing.Sequence[str] = [],
-    include_paths: typing.Sequence[str] = [],
+    exclude_paths: typing.Sequence[str] = (),
+    include_paths: typing.Sequence[str] = (),
 ) -> model.FinishedScans:
 
     finished_scans = model.FinishedScans()
@@ -222,8 +216,8 @@ def upload_and_scan_gh_artifact(
 def scan_gh_artifact(
     cx_project: checkmarx.project.CheckmarxProject,
     scan_artifact: model.ScanArtifact,
-    exclude_paths: typing.Sequence[str] = [],
-    include_paths: typing.Sequence[str] = [],
+    exclude_paths: typing.Sequence[str] = (),
+    include_paths: typing.Sequence[str] = (),
 ) -> model.ScanResult:
 
     github_api = ccc.github.github_api_from_gh_access(access=scan_artifact.access)
@@ -244,15 +238,15 @@ def scan_gh_artifact(
 
     if scan_artifact.label is not None:
         if scan_artifact.label.path_config is not None:
-            include_paths += scan_artifact.label.path_config.include_paths
-            exclude_paths += scan_artifact.label.path_config.exclude_paths
+            include_paths = set((*include_paths, *scan_artifact.label.path_config.include_paths))
+            exclude_paths = set((*exclude_paths, *scan_artifact.label.path_config.exclude_paths))
 
     # if the scan_artifact has no label we will implicitly scan everything
     # since all images have to specify a label in order to be scanned
     # only github access types can occour here without the label
     path_filter_func = reutil.re_filter(
-        include_regexes=set(include_paths),
-        exclude_regexes=set(exclude_paths),
+        include_regexes=include_paths,
+        exclude_regexes=exclude_paths,
     )
     return upload_and_scan_gh_artifact(
         artifact_name=scan_artifact.name,

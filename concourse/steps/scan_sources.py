@@ -23,8 +23,8 @@ def scan_sources_and_notify(
     email_recipients,
     team_id: str,
     threshold: int = 40,
-    exclude_paths: typing.Sequence[str] = [],
-    include_paths: typing.Sequence[str] = [],
+    exclude_paths: typing.Sequence[str] = (),
+    include_paths: typing.Sequence[str] = (),
 ):
     checkmarx_client = checkmarx.util.create_checkmarx_client(checkmarx_cfg_name)
 
