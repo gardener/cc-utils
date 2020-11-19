@@ -43,6 +43,7 @@ def deploy_whitesource_api_extension(
     deployment_name: str = 'whitesource-api-extension',
 ):
     not_empty(deployment_name)
+    chart_dir = os.path.abspath(chart_dir)
 
     # Set the global context to the cluster specified in KubernetesConfig
     kube_ctx.set_kubecfg(kubernetes_cfg)
