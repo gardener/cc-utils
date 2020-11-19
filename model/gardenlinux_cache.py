@@ -43,7 +43,7 @@ class GardenlinuxCacheConfig(NamedModelElement):
     def ingress_host(self, cfg_factory):
         cluster_domain = cluster_domain_from_kubernetes_config(
             cfg_factory,
-            self.kubernetes_cluster_config(),
+            self.kubernetes_config_name(),
         )
         return f'{GARDENLINUX_CACHE_SUBDOMAIN_LABEL}.{cluster_domain}'
 
