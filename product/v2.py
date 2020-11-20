@@ -371,10 +371,10 @@ def write_component_descriptor_to_dir(
             return component_descriptor,
         elif on_exist is UploadMode.FAIL:
             raise ValueError(f'already exists: {descriptor_path=}, but overwrite not allowed')
-        elif on_exist is OVERWRITE:
+        elif on_exist is UploadMode.OVERWRITE:
             pass
         else:
-            raise NotImplementedError(on_exit)
+            raise NotImplementedError(on_exist)
 
     if not os.path.isdir((pdir := os.path.dirname(descriptor_path))):
         os.makedirs(pdir, exist_ok=True)
