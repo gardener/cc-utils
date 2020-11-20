@@ -9,6 +9,7 @@ from containerregistry.client import docker_name
 from containerregistry.client.v2 import docker_image as v2_image
 from containerregistry.client.v2_2 import docker_http
 from containerregistry.client.v2_2 import docker_image as v2_2_image
+from containerregistry.client.v2_2 import docker_session
 from containerregistry.client.v2_2 import v2_compat
 from containerregistry.transport import retry
 from containerregistry.transport import transport_pool
@@ -207,3 +208,35 @@ def pulled_image(
 
   except Exception as e:
     raise e
+
+
+def _put_raw_image_manifest(
+    image_reference: str,
+    raw_contents: bytes,
+    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
+):
+    image_name = docker_name.from_string(image_reference)
+
+    push_sess = docker_session.Push(
+        name=image_name,
+        creds=_mk_credentials(
+            image_reference=image_reference,
+            credentials_lookup=credentials_lookup,
+            privileges=oa.Privileges.READWRITE,
+        ),
+        transport=_mk_transport_pool(),
+    )
+
+    class ImageMock:
+        def digest(self):
+            return image_name.tag
+
+        def manifest(self):
+            return raw_contents
+
+        def media_type(self):
+            return docker_http.MANIFEST_SCHEMA2_MIME
+
+    image_mock = ImageMock()
+
+    push_sess._put_manifest(image=image_mock, use_digest=True)

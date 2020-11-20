@@ -13,23 +13,16 @@
 # limitations under the License.
 """This package pulls images from a Docker Registry."""
 
-import dataclasses
 import functools
-import hashlib
-import io
-import json
 import logging
 import tarfile
 import tempfile
-import typing
 
-import dacite
 import oci.util
 
 import ci.util
 import oci
 import oci.auth as oa
-import oci.model as om
 import model.container_registry
 from model.container_registry import Privileges
 
@@ -106,8 +99,10 @@ def _inject_credentials_lookup(inner_function: callable):
       ):
         if image_reference:
             kwargs['image_reference'] = image_reference
+        if image_name:
+            kwargs['image_name'] = image_name
 
-        if not image_reference and not image_name:
+        if not image_reference and not image_name and args:
             image_reference = args[0]
 
         if image_reference and image_name:
@@ -129,6 +124,10 @@ def _inject_credentials_lookup(inner_function: callable):
 _image_exists = _inject_credentials_lookup(inner_function=oci.image_exists)
 retrieve_manifest = _inject_credentials_lookup(inner_function=oci.retrieve_manifest)
 ls_image_tags = _inject_credentials_lookup(inner_function=oci.tags)
+put_blob = _inject_credentials_lookup(inner_function=oci.put_blob)
+retrieve_blob = _inject_credentials_lookup(inner_function=oci.get_blob)
+cp_oci_artifact = _inject_credentials_lookup(inner_function=oci.replicate_artifact)
+put_image_manifest = _inject_credentials_lookup(inner_function=oci.put_image_manifest)
 
 
 @functools.lru_cache()
@@ -141,90 +140,6 @@ def _credentials(image_reference: str, privileges:Privileges=None):
         return None
     credentials = registry_cfg.credentials()
     return docker_creds.Basic(username=credentials.username(), password=credentials.passwd())
-
-
-def put_blob(
-    image_name: str,
-    fileobj: typing.BinaryIO,
-    mimetype: str='application/octet-stream',
-):
-    '''
-    uploads the given blob to the specified namespace / target OCI registry
-
-    Note that the blob will be read into main memory; not suitable for larget contents.
-    '''
-    fileobj.seek(0)
-    sha256_hash = hashlib.sha256()
-    while (chunk := fileobj.read(4096)):
-        sha256_hash.update(chunk)
-    sha256_digest = sha256_hash.hexdigest()
-    fileobj.seek(0)
-    print(f'{sha256_digest=}')
-
-    image_ref = image_name
-    image_name = docker_name.from_string(image_name)
-    contents = fileobj.read()
-
-    push_sess = docker_session.Push(
-        name=image_name,
-        creds=_mk_credentials(
-            image_reference=image_ref,
-            privileges=Privileges.READ_WRITE,
-        ),
-        transport=_mk_transport_pool(),
-    )
-
-    print(f'{len(contents)=}')
-    # XXX superdirty hack - force usage of our blob :(
-    push_sess._get_blob = lambda a,b: contents
-    push_sess._patch_upload(
-        image_name,
-        f'sha256:{sha256_digest}',
-    )
-    print(f'successfully pushed {image_name=} {sha256_digest=}')
-
-    return sha256_digest
-
-
-def _put_raw_image_manifest(
-    image_reference: str,
-    raw_contents: bytes,
-):
-    image_name = docker_name.from_string(image_reference)
-
-    push_sess = docker_session.Push(
-        name=image_name,
-        creds=_mk_credentials(
-            image_reference=image_reference,
-            privileges=Privileges.READ_WRITE,
-        ),
-        transport=_mk_transport_pool(),
-    )
-
-    class ImageMock:
-        def digest(self):
-            return image_name.tag
-
-        def manifest(self):
-            return raw_contents
-
-        def media_type(self):
-            return docker_http.MANIFEST_SCHEMA2_MIME
-
-    image_mock = ImageMock()
-
-    push_sess._put_manifest(image=image_mock, use_digest=True)
-
-
-def put_image_manifest(
-    image_reference: str, # including tag
-    manifest: om.OciImageManifest,
-):
-    contents = json.dumps(dataclasses.asdict(manifest)).encode('utf-8')
-    _put_raw_image_manifest(
-        image_reference=image_reference,
-        raw_contents=contents,
-    )
 
 
 def retrieve_container_image(image_reference: str, outfileobj=None):
@@ -360,11 +275,6 @@ def _pull_image(image_reference: str, outfileobj=None):
       return outfileobj
 
 
-def retrieve_blob(image_reference: str, digest: str) -> bytes:
-  with pulled_image(image_reference=image_reference) as image:
-      return image.blob(digest)
-
-
 def rm_tag(image_reference: str):
   transport = _mk_transport_pool()
   image_reference = normalise_image_reference(image_reference)
@@ -377,43 +287,3 @@ def rm_tag(image_reference: str):
     transport=transport,
     )
   logger.info(f'untagged {image_reference=} - note: did not purge blobs!')
-
-
-def cp_oci_artifact(
-    src_image_reference: str,
-    tgt_image_reference: str,
-):
-    '''
-    verbatimly replicate the OCI Artifact from src -> tgt without taking any assumptions
-    about the transported contents. This in particular allows contents to be replicated
-    that are not e.g. "docker-compliant" OCI Images.
-    '''
-    src_image_reference = normalise_image_reference(src_image_reference)
-    tgt_image_reference = normalise_image_reference(tgt_image_reference)
-
-    # we need the unaltered - manifest for verbatim replication
-    raw_manifest = _retrieve_raw_manifest(image_reference=src_image_reference)
-    manifest = dacite.from_dict(
-        data_class=om.OciImageManifest,
-        data=json.loads(raw_manifest)
-    )
-
-    for layer in manifest.layers + [manifest.config]:
-        # XXX we definitely should _not_ read entire blobs into memory
-        # this is done by the used containerregistry lib, so we do not make things worse
-        # here - however this must not remain so!
-        blob = io.BytesIO(
-            retrieve_blob(
-                image_reference=src_image_reference,
-                digest=layer.digest,
-            )
-        )
-        put_blob(
-            image_name=tgt_image_reference,
-            fileobj=blob,
-        )
-
-    _put_raw_image_manifest(
-        image_reference=tgt_image_reference,
-        raw_contents=raw_manifest.encode('utf-8'),
-    )
