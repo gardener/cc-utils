@@ -30,6 +30,7 @@ def modules():
     module_names.remove('ctx')
     module_names.remove('setup.base')
     module_names.remove('setup.gardenlinux')
+    module_names.remove('setup.oci')
     module_names.remove('setup.whd')
     return module_names
 
@@ -40,6 +41,7 @@ def packages():
     # remove packages already contained in gardener-cicd-base
     package_names.remove('ci')
     package_names.remove('model')
+    package_names.remove('oci')
     # remove whd (released in separate module)
     package_names.remove('whd')
     return package_names
