@@ -88,7 +88,7 @@ image_reference = str
 
 def mk_credentials_lookup(
     cfgs: typing.Union[OciCredentials, typing.Sequence[OciCredentials]],
-) -> typing.Callable[[image_reference, Privileges], OciConfig]:
+) -> typing.Callable[[image_reference, Privileges, bool], OciConfig]:
     '''
     returns a callable that can be queried for matching OciCredentials for requested
     privileges and image-references
@@ -99,6 +99,7 @@ def mk_credentials_lookup(
     def lookup_credentials(
         image_reference: str,
         privileges: Privileges=Privileges.READONLY,
+        absent_ok: bool=False,
     ):
         valid_cfgs = sorted(
           (
@@ -107,6 +108,9 @@ def mk_credentials_lookup(
           ),
           key=operator.attrgetter('privileges'),
         )
+
+        if not valid_cfgs and absent_ok:
+            return None
 
         if not valid_cfgs:
             raise ValueError(f'no valid cfg found: {image_reference=}, {privileges=}')

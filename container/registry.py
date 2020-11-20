@@ -29,6 +29,8 @@ import dacite
 import oci.util
 
 import ci.util
+import oci
+import oci.auth as oa
 import oci.model as om
 import model.container_registry
 from model.container_registry import Privileges
@@ -77,6 +79,53 @@ def _make_tag_if_digest(
 
 # keep for backwards-compat (XXX rm eventually)
 normalise_image_reference = oci.util.normalise_image_reference
+
+
+def _mk_credentials_lookup(
+    image_reference: str,
+    privileges: oa.Privileges=oa.Privileges.READONLY,
+):
+    # translate enum
+    if privileges is oa.Privileges.READONLY:
+        privileges = model.container_registry.Privileges.READ_ONLY
+    elif privileges is oa.Privileges.READWRITE:
+        privileges = model.container_registry.Privileges.READ_WRITE
+    else:
+        raise NotImplementedError
+
+    def find_credentials(image_reference, privileges, absent_ok):
+        registry_cfg = model.container_registry.find_config(
+            image_reference,
+            privileges,
+        )
+        creds = registry_cfg.credentials()
+        return oa.OciBasicAuthCredentials(
+            username=creds.username(),
+            password=creds.passwd(),
+        )
+
+    return find_credentials
+
+
+def _inject_credentials_lookup(inner_function: callable):
+    def outer_function(*args, image_reference=None, privileges=oa.Privileges.READONLY, **kwargs):
+        if not image_reference:
+            image_reference = args[0]
+
+        return inner_function(
+            *args,
+            **kwargs,
+            credentials_lookup=_mk_credentials_lookup(
+                image_reference=image_reference,
+                privileges=privileges,
+            ),
+        )
+
+    return outer_function
+
+
+# kept for backwards-compatibility - todo: rm
+_image_exists = _inject_credentials_lookup(inner_function=oci.image_exists)
 
 
 @functools.lru_cache()
@@ -265,28 +314,6 @@ def _mk_credentials(image_reference, privileges: Privileges=None):
   except Exception as e:
     ci.util.warning(f'Error resolving credentials for {image_reference}: {e}')
     raise e
-
-
-def _image_exists(image_reference: str) -> bool:
-  transport = _mk_transport_pool(size=1)
-
-  image_reference = normalise_image_reference(image_reference)
-  image_reference = docker_name.from_string(image_reference)
-  creds = _mk_credentials(image_reference=image_reference)
-  accept = docker_http.SUPPORTED_MANIFEST_MIMES
-
-  with image_list.FromRegistry(image_reference, creds, transport) as img_list:
-      if img_list.exists():
-          return True
-      logger.debug('no manifest found')
-
-  # look for image
-  with v2_2_image.FromRegistry(image_reference, creds, transport, accept) as v2_2_img:
-      if v2_2_img.exists():
-          return True
-      logger.debug('no img v2.2 found')
-
-  return False
 
 
 def to_hash_reference(image_name: str):
