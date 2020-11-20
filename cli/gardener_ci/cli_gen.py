@@ -117,7 +117,12 @@ def add_module(module_name, parser):
     # skip if module defines a symbol 'main'
     if hasattr(module, 'main'):
         return
-    module_parser = parser.add_parser(module_name, formatter_class=FORMATTER_CLASS)
+    if hasattr(module, '__cmd_name__'):
+        cmd_name = module.__cmd_name__
+    else:
+        cmd_name = module_name
+
+    module_parser = parser.add_parser(cmd_name, formatter_class=FORMATTER_CLASS)
     module_parser.set_defaults(
       func=display_usage_function(module_parser),
       module=module

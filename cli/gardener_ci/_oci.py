@@ -1,5 +1,7 @@
 import container.registry as cr
 
+__cmd_name__ = 'oci'
+
 
 def cp(src:str, tgt:str):
     cr.cp_oci_artifact(
