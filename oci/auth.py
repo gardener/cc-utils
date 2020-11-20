@@ -1,5 +1,6 @@
 import dataclasses
 import enum
+import operator
 import typing
 
 import oci.util
