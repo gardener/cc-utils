@@ -104,6 +104,9 @@ def _inject_credentials_lookup(inner_function: callable):
         privileges=model.container_registry.Privileges.READ_ONLY,
         **kwargs
       ):
+        if image_reference:
+            kwargs['image_reference'] = image_reference
+
         if not image_reference and not image_name:
             image_reference = args[0]
 
