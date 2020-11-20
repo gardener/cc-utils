@@ -13,8 +13,6 @@
 # limitations under the License.
 """This package pulls images from a Docker Registry."""
 
-
-import contextlib
 import dataclasses
 import functools
 import hashlib
@@ -43,7 +41,6 @@ from containerregistry.client.v2_2 import docker_image as v2_2_image
 from containerregistry.client.v2_2 import docker_image_list as image_list
 from containerregistry.client.v2_2 import docker_session
 from containerregistry.client.v2_2 import save
-from containerregistry.client.v2_2 import v2_compat
 from containerregistry.transport import retry
 from containerregistry.transport import transport_pool
 
@@ -53,24 +50,8 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_TAG = 'i-was-a-digest'
 
-_PROCESSOR_ARCHITECTURE = 'amd64'
 
-_OPERATING_SYSTEM = 'linux'
-
-
-# Today save.tarball expects a tag, which is emitted into one or more files
-# in the resulting tarball.  If we don't translate the digest into a tag then
-# the tarball format leaves us no good way to represent this information and
-# folks are left having to tag the resulting image ID (yuck).  As a datapoint
-# `docker save -o /tmp/foo.tar bar@sha256:deadbeef` omits the v1 "repositories"
-# file and emits `null` for the `RepoTags` key in "manifest.json".  By doing
-# this we leave a trivial breadcrumb of what the image was named (and the digest
-# is recoverable once the image is loaded), which is a strictly better UX IMO.
-# We do not need to worry about collisions by doing this here because this tool
-# only packages a single image, so this is preferable to doing something similar
-# in save.py itself.
-def _make_tag_if_digest(
-    name):
+def _make_tag_if_digest(name):
   if isinstance(name, docker_name.Tag):
     return name
   return docker_name.Tag('{repo}:{tag}'.format(
@@ -81,19 +62,27 @@ def _make_tag_if_digest(
 normalise_image_reference = oci.util.normalise_image_reference
 
 
+def _convert_privileges(privileges):
+    if isinstance(privileges, oa.Privileges):
+        if privileges is oa.Privileges.READONLY:
+            privileges = model.container_registry.Privileges.READ_ONLY
+        elif privileges is oa.Privileges.READWRITE:
+            privileges = model.container_registry.Privileges.READ_WRITE
+        else:
+            raise NotImplementedError
+
+    return privileges
+
+
 def _mk_credentials_lookup(
     image_reference: str,
-    privileges: oa.Privileges=oa.Privileges.READONLY,
+    privileges: oa.Privileges=model.container_registry.Privileges.READ_ONLY,
 ):
-    # translate enum
-    if privileges is oa.Privileges.READONLY:
-        privileges = model.container_registry.Privileges.READ_ONLY
-    elif privileges is oa.Privileges.READWRITE:
-        privileges = model.container_registry.Privileges.READ_WRITE
-    else:
-        raise NotImplementedError
+    privileges = _convert_privileges(privileges=privileges)
 
     def find_credentials(image_reference, privileges, absent_ok):
+        if privileges:
+            privileges = _convert_privileges(privileges)
         registry_cfg = model.container_registry.find_config(
             image_reference,
             privileges,
@@ -108,9 +97,18 @@ def _mk_credentials_lookup(
 
 
 def _inject_credentials_lookup(inner_function: callable):
-    def outer_function(*args, image_reference=None, privileges=oa.Privileges.READONLY, **kwargs):
-        if not image_reference:
+    def outer_function(
+        *args,
+        image_reference=None,
+        image_name=None,
+        privileges=model.container_registry.Privileges.READ_ONLY,
+        **kwargs
+      ):
+        if not image_reference and not image_name:
             image_reference = args[0]
+
+        if image_reference and image_name:
+            raise ValueError('image_reference and image_name must not both be set')
 
         return inner_function(
             *args,
@@ -126,61 +124,20 @@ def _inject_credentials_lookup(inner_function: callable):
 
 # kept for backwards-compatibility - todo: rm
 _image_exists = _inject_credentials_lookup(inner_function=oci.image_exists)
+retrieve_manifest = _inject_credentials_lookup(inner_function=oci.retrieve_manifest)
+ls_image_tags = _inject_credentials_lookup(inner_function=oci.tags)
 
 
 @functools.lru_cache()
 def _credentials(image_reference: str, privileges:Privileges=None):
-    ci.util.check_type(image_reference, str)
+    if privileges:
+        privileges = _convert_privileges(privileges=privileges)
+
     registry_cfg = model.container_registry.find_config(image_reference, privileges)
     if not registry_cfg:
         return None
     credentials = registry_cfg.credentials()
     return docker_creds.Basic(username=credentials.username(), password=credentials.passwd())
-
-
-def _mk_transport(
-    image_name: str,
-    action: str=docker_http.PULL,
-    privileges: Privileges=Privileges.READ_ONLY,
-):
-    if isinstance(image_name, str):
-        image_name = normalise_image_reference(image_name)
-    credentials = _mk_credentials(
-        image_reference=str(image_name),
-        privileges=privileges,
-    )
-    if isinstance(image_name, str):
-        image_name = docker_name.from_string(name=image_name)
-
-    transport_pool = _mk_transport_pool(size=1)
-
-    transport = docker_http.Transport(
-        name=image_name,
-        creds=credentials,
-        transport=transport_pool,
-        action=docker_http.PULL,
-    )
-
-    return transport
-
-
-def ls_image_tags(image_name: str):
-    transport = _mk_transport(
-        image_name=image_name,
-        action=docker_http.PULL,
-    )
-
-    if isinstance(image_name, str):
-        image_name = docker_name.from_string(image_name)
-
-    url = f'https://{image_name.registry}/v2/{image_name.repository}/tags/list'
-
-    res, body_bytes = transport.Request(url, (200,))
-    parsed = json.loads(body_bytes)
-
-    # XXX parsed['manifest'] might be used to e.g. determine stale images, and purge them
-    tags = parsed['tags']
-    return tags
 
 
 def put_blob(
@@ -386,68 +343,6 @@ def _push_image(image_reference: str, image_file: str, threads=8):
       raise e
 
 
-def _tag_or_digest_reference(image_reference):
-  if isinstance(image_reference, str):
-    image_reference = docker_name.from_string(image_reference)
-  ref_type = type(image_reference)
-  if ref_type in (docker_name.Tag, docker_name.Digest):
-    return True
-  raise ValueError(f'{image_reference=} is does not contain a symbolic or hash tag')
-
-
-@contextlib.contextmanager
-def pulled_image(image_reference: str):
-  ci.util.not_none(image_reference)
-  _tag_or_digest_reference(image_reference)
-
-  transport = _mk_transport_pool()
-  image_reference = normalise_image_reference(image_reference)
-  image_reference = docker_name.from_string(image_reference)
-  creds = _mk_credentials(image_reference=image_reference)
-
-  # OCI Image Manifest is compatible with Docker Image Manifest Version 2,
-  # Schema 2. We indicate support for both formats by passing both media types
-  # as 'Accept' headers.
-  #
-  # For reference:
-  #   OCI: https://github.com/opencontainers/image-spec
-  #   Docker: https://docs.docker.com/registry/spec/manifest-v2-2/
-  accept = docker_http.SUPPORTED_MANIFEST_MIMES
-
-  try:
-    logger.info(f'Pulling v2.2 image from {image_reference}..')
-    with v2_2_image.FromRegistry(image_reference, creds, transport, accept) as v2_2_img:
-      if v2_2_img.exists():
-        yield v2_2_img
-        return
-
-    # XXX TODO: use streaming rather than writing to local FS
-    # if outfile is given, we must use it instead of an ano
-    logger.debug(f'Pulling manifest list from {image_reference}..')
-    with image_list.FromRegistry(image_reference, creds, transport) as img_list:
-      if img_list.exists():
-        platform = image_list.Platform({
-            'architecture': _PROCESSOR_ARCHITECTURE,
-            'os': _OPERATING_SYSTEM,
-        })
-        # pytype: disable=wrong-arg-types
-        with img_list.resolve(platform) as default_child:
-          yield default_child
-          return
-
-    logger.info(f'Pulling v2 image from {image_reference}..')
-    with v2_image.FromRegistry(image_reference, creds, transport) as v2_img:
-      if v2_img.exists():
-        with v2_compat.V22FromV2(v2_img) as v2_2_img:
-          yield v2_2_img
-          return
-
-    raise om.OciImageNotFoundException(f'failed to retrieve {image_reference=} - does it exist?')
-
-  except Exception as e:
-    raise e
-
-
 def _pull_image(image_reference: str, outfileobj=None):
   import ci.util
   ci.util.not_none(image_reference)
@@ -460,43 +355,6 @@ def _pull_image(image_reference: str, outfileobj=None):
       image_reference = docker_name.from_string(image_reference)
       save.tarball(_make_tag_if_digest(image_reference), image, tar)
       return outfileobj
-
-
-def _retrieve_raw_manifest(
-    image_reference: str,
-    absent_ok: bool=False,
-):
-  image_reference = normalise_image_reference(image_reference=image_reference)
-  try:
-    with pulled_image(image_reference=image_reference) as image:
-      return image.manifest()
-  except om.OciImageNotFoundException as oie:
-    if absent_ok:
-      return None
-    raise oie
-
-
-def retrieve_manifest(
-    image_reference: str,
-    absent_ok: bool=False,
-) -> om.OciImageManifest:
-  try:
-    raw_dict = json.loads(
-        _retrieve_raw_manifest(
-            image_reference=image_reference,
-            absent_ok=False,
-        )
-    )
-    manifest = dacite.from_dict(
-      data_class=om.OciImageManifest,
-      data=raw_dict,
-    )
-
-    return manifest
-  except om.OciImageNotFoundException as oie:
-    if absent_ok:
-      return None
-    raise oie
 
 
 def retrieve_blob(image_reference: str, digest: str) -> bytes:

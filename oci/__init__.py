@@ -15,7 +15,7 @@ image_reference = str
 
 def image_exists(
     image_reference: str,
-    credentials_lookup: typing.Callable[[image_reference, oa.Privileges], oa.OciConfig],
+    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
 ) -> bool:
     '''
     returns a boolean value indicating whether or not the given OCI Artifact exists
@@ -49,12 +49,18 @@ def image_exists(
 
 def retrieve_manifest(
     image_reference: str,
+    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
     absent_ok: bool=False,
 ) -> om.OciImageManifest:
+  '''
+  retrieves the OCI Artifact manifest for the specified reference, and returns it in a
+  deserialised form.
+  '''
   try:
     raw_dict = json.loads(
-        _retrieve_raw_manifest(
+        _ou._retrieve_raw_manifest(
             image_reference=image_reference,
+            credentials_lookup=credentials_lookup,
             absent_ok=False,
         )
     )
@@ -68,3 +74,31 @@ def retrieve_manifest(
     if absent_ok:
       return None
     raise oie
+
+
+def tags(
+    image_name: str,
+    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
+) -> typing.Sequence[str]:
+    '''
+    returns a sequence of all `tags` for the given image_name
+    '''
+    from containerregistry.client.v2_2 import docker_http
+    transport = _ou._mk_transport(
+        image_name=image_name,
+        credentials_lookup=credentials_lookup,
+        action=docker_http.PULL,
+    )
+
+    if isinstance(image_name, str):
+        from containerregistry.client import docker_name
+        image_name = docker_name.from_string(image_name)
+
+    url = f'https://{image_name.registry}/v2/{image_name.repository}/tags/list'
+
+    res, body_bytes = transport.Request(url, (200,))
+    parsed = json.loads(body_bytes)
+
+    # XXX parsed['manifest'] might be used to e.g. determine stale images, and purge them
+    tags = parsed['tags']
+    return tags

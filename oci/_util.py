@@ -1,3 +1,4 @@
+import contextlib
 import functools
 import httplib2
 import logging
@@ -5,11 +6,16 @@ import typing
 
 from containerregistry.client import docker_creds
 from containerregistry.client import docker_name
+from containerregistry.client.v2 import docker_image as v2_image
 from containerregistry.client.v2_2 import docker_http
+from containerregistry.client.v2_2 import docker_image as v2_2_image
+from containerregistry.client.v2_2 import v2_compat
 from containerregistry.transport import retry
 from containerregistry.transport import transport_pool
 
 import oci.auth as oa
+import oci.model as om
+import oci.util as ou
 
 logger = logging.getLogger(__name__)
 
@@ -72,14 +78,15 @@ def _mk_credentials(
 
 def _mk_transport(
     image_name: str,
-    credentials_lookup: typing.Callable[[image_reference, oa.Privileges], oa.OciConfig],
+    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
     action: str=docker_http.PULL,
     privileges: oa.Privileges=oa.Privileges.READONLY,
 ):
     if isinstance(image_name, str):
-        image_name = normalise_image_reference(image_name)
+        image_name = ou.normalise_image_reference(image_name)
     credentials = _mk_credentials(
         image_reference=str(image_name),
+        credentials_lookup=credentials_lookup,
         privileges=privileges,
     )
     if isinstance(image_name, str):
@@ -111,3 +118,92 @@ def _mk_transport_pool(
   retry_factory = retry_factory.WithSourceTransportCallable(Http_ctor)
   transport = transport_pool.Http(retry_factory.Build, size=size)
   return transport
+
+
+def _retrieve_raw_manifest(
+    image_reference: str,
+    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
+    absent_ok: bool=False,
+):
+  image_reference = ou.normalise_image_reference(image_reference=image_reference)
+  try:
+    with pulled_image(
+        image_reference=image_reference,
+        credentials_lookup=credentials_lookup,
+    ) as image:
+      return image.manifest()
+  except om.OciImageNotFoundException as oie:
+    if absent_ok:
+      return None
+    raise oie
+
+
+def _tag_or_digest_reference(image_reference):
+  if isinstance(image_reference, str):
+    image_reference = docker_name.from_string(image_reference)
+  ref_type = type(image_reference)
+  if ref_type in (docker_name.Tag, docker_name.Digest):
+    return True
+  raise ValueError(f'{image_reference=} is does not contain a symbolic or hash tag')
+
+
+_PROCESSOR_ARCHITECTURE = 'amd64'
+_OPERATING_SYSTEM = 'linux'
+
+
+@contextlib.contextmanager
+def pulled_image(
+    image_reference: str,
+    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
+):
+  _tag_or_digest_reference(image_reference)
+
+  transport = _mk_transport_pool()
+  image_reference = ou.normalise_image_reference(image_reference)
+  image_reference = docker_name.from_string(image_reference)
+  creds = _mk_credentials(
+      image_reference=image_reference,
+      credentials_lookup=credentials_lookup,
+  )
+
+  # OCI Image Manifest is compatible with Docker Image Manifest Version 2,
+  # Schema 2. We indicate support for both formats by passing both media types
+  # as 'Accept' headers.
+  #
+  # For reference:
+  #   OCI: https://github.com/opencontainers/image-spec
+  #   Docker: https://docs.docker.com/registry/spec/manifest-v2-2/
+  accept = docker_http.SUPPORTED_MANIFEST_MIMES
+
+  try:
+    logger.info(f'Pulling v2.2 image from {image_reference}..')
+    with v2_2_image.FromRegistry(image_reference, creds, transport, accept) as v2_2_img:
+      if v2_2_img.exists():
+        yield v2_2_img
+        return
+
+    # XXX TODO: use streaming rather than writing to local FS
+    # if outfile is given, we must use it instead of an ano
+    logger.debug(f'Pulling manifest list from {image_reference}..')
+    with image_list.FromRegistry(image_reference, creds, transport) as img_list:
+      if img_list.exists():
+        platform = image_list.Platform({
+            'architecture': _PROCESSOR_ARCHITECTURE,
+            'os': _OPERATING_SYSTEM,
+        })
+        # pytype: disable=wrong-arg-types
+        with img_list.resolve(platform) as default_child:
+          yield default_child
+          return
+
+    logger.info(f'Pulling v2 image from {image_reference}..')
+    with v2_image.FromRegistry(image_reference, creds, transport) as v2_img:
+      if v2_img.exists():
+        with v2_compat.V22FromV2(v2_img) as v2_2_img:
+          yield v2_2_img
+          return
+
+    raise om.OciImageNotFoundException(f'failed to retrieve {image_reference=} - does it exist?')
+
+  except Exception as e:
+    raise e
