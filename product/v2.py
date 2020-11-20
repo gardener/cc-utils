@@ -19,6 +19,7 @@ import dacite
 
 import gci.componentmodel as cm
 import gci.oci
+import oci.model as om
 
 import ci.util
 import container.registry
@@ -438,7 +439,7 @@ def upload_component_descriptor_v2_to_oci_registry(
         mimetype=container.registry.docker_http.OCI_CONFIG_JSON_MIME,
     )
 
-    manifest = container.registry.OciImageManifest(
+    manifest = om.OciImageManifest(
         config=gci.oci.ComponentDescriptorOciCfgBlobRef(
             digest=f'sha256:{cfg_digest}',
             size=cfg_fobj.tell(),

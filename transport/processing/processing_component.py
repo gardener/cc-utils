@@ -7,11 +7,10 @@ import typing
 import yaml
 
 import gci.componentmodel as cm
+import oci.model as om
 import processing.config as config
 
 import ci.util
-import container
-import container.registry
 import product.v2
 
 LOGGER = logging.getLogger(__name__)
@@ -38,7 +37,7 @@ def _download_descriptor(
             component_version=version,
             ctx_repo_base_url=ctx_base_url,
         )
-    except container.registry.OciImageNotFoundException as err_not_found:
+    except om.OciImageNotFoundException as err_not_found:
         ci.util.error(err_not_found)
         sys.exit(1)
 

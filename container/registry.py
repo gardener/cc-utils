@@ -26,8 +26,10 @@ import tempfile
 import typing
 
 import dacite
+import oci.util
 
 import ci.util
+import oci.model as om
 import model.container_registry
 from model.container_registry import Privileges
 
@@ -54,25 +56,6 @@ _PROCESSOR_ARCHITECTURE = 'amd64'
 _OPERATING_SYSTEM = 'linux'
 
 
-class OciImageNotFoundException(Exception):
-    pass
-
-
-@dataclasses.dataclass
-class OciBlobRef:
-    digest: str
-    mediaType: str
-    size: int
-
-
-@dataclasses.dataclass
-class OciImageManifest:
-    config: OciBlobRef
-    layers: typing.Sequence[OciBlobRef]
-    mediaType: str = docker_http.MANIFEST_SCHEMA2_MIME
-    schemaVersion: int = 2
-
-
 # Today save.tarball expects a tag, which is emitted into one or more files
 # in the resulting tarball.  If we don't translate the digest into a tag then
 # the tarball format leaves us no good way to represent this information and
@@ -92,28 +75,8 @@ def _make_tag_if_digest(
       repo=str(name.as_repository()), tag=_DEFAULT_TAG))
 
 
-def normalise_image_reference(image_reference):
-  ci.util.check_type(image_reference, str)
-  if '@' in image_reference:
-    return image_reference
-
-  parts = image_reference.split('/')
-
-  left_part = parts[0]
-  # heuristically check if we have a (potentially) valid hostname
-  if '.' not in left_part.split(':')[0]:
-    # insert 'library' if only image name was given
-    if len(parts) == 1:
-      parts.insert(0, 'library')
-
-    # probably, the first part is not a hostname; inject default registry host
-    parts.insert(0, 'registry-1.docker.io')
-
-  # of course, docker.io gets special handling
-  if parts[0] == 'docker.io':
-      parts[0] = 'registry-1.docker.io'
-
-  return '/'.join(parts)
+# keep for backwards-compat (XXX rm eventually)
+normalise_image_reference = oci.util.normalise_image_reference
 
 
 @functools.lru_cache()
@@ -246,7 +209,7 @@ def _put_raw_image_manifest(
 
 def put_image_manifest(
     image_reference: str, # including tag
-    manifest: OciImageManifest,
+    manifest: om.OciImageManifest,
 ):
     contents = json.dumps(dataclasses.asdict(manifest)).encode('utf-8')
     _put_raw_image_manifest(
@@ -452,7 +415,7 @@ def pulled_image(image_reference: str):
           yield v2_2_img
           return
 
-    raise OciImageNotFoundException(f'failed to retrieve {image_reference=} - does it exist?')
+    raise om.OciImageNotFoundException(f'failed to retrieve {image_reference=} - does it exist?')
 
   except Exception as e:
     raise e
@@ -480,7 +443,7 @@ def _retrieve_raw_manifest(
   try:
     with pulled_image(image_reference=image_reference) as image:
       return image.manifest()
-  except OciImageNotFoundException as oie:
+  except om.OciImageNotFoundException as oie:
     if absent_ok:
       return None
     raise oie
@@ -489,7 +452,7 @@ def _retrieve_raw_manifest(
 def retrieve_manifest(
     image_reference: str,
     absent_ok: bool=False,
-) -> OciImageManifest:
+) -> om.OciImageManifest:
   try:
     raw_dict = json.loads(
         _retrieve_raw_manifest(
@@ -498,12 +461,12 @@ def retrieve_manifest(
         )
     )
     manifest = dacite.from_dict(
-      data_class=OciImageManifest,
+      data_class=om.OciImageManifest,
       data=raw_dict,
     )
 
     return manifest
-  except OciImageNotFoundException as oie:
+  except om.OciImageNotFoundException as oie:
     if absent_ok:
       return None
     raise oie
@@ -543,7 +506,7 @@ def cp_oci_artifact(
     # we need the unaltered - manifest for verbatim replication
     raw_manifest = _retrieve_raw_manifest(image_reference=src_image_reference)
     manifest = dacite.from_dict(
-        data_class=OciImageManifest,
+        data_class=om.OciImageManifest,
         data=json.loads(raw_manifest)
     )
 
