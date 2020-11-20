@@ -2,6 +2,8 @@ import contextlib
 import functools
 import httplib2
 import logging
+import tarfile
+import tempfile
 import typing
 
 from containerregistry.client import docker_creds
@@ -10,6 +12,7 @@ from containerregistry.client.v2 import docker_image as v2_image
 from containerregistry.client.v2_2 import docker_http
 from containerregistry.client.v2_2 import docker_image as v2_2_image
 from containerregistry.client.v2_2 import docker_session
+from containerregistry.client.v2_2 import save
 from containerregistry.client.v2_2 import v2_compat
 from containerregistry.transport import retry
 from containerregistry.transport import transport_pool
@@ -240,3 +243,35 @@ def _put_raw_image_manifest(
     image_mock = ImageMock()
 
     push_sess._put_manifest(image=image_mock, use_digest=True)
+
+
+def _pull_image(
+    image_reference: str,
+    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
+    outfileobj=None,
+):
+  if not image_reference:
+      raise ValueError(image_reference)
+
+  image_reference = ou.normalise_image_reference(image_reference=image_reference)
+
+  outfileobj = outfileobj if outfileobj else tempfile.TemporaryFile()
+
+  with tarfile.open(fileobj=outfileobj, mode='w:') as tar:
+    with pulled_image(
+        image_reference=image_reference,
+        credentials_lookup=credentials_lookup,
+    ) as image:
+      image_reference = docker_name.from_string(image_reference)
+      save.tarball(_make_tag_if_digest(image_reference), image, tar)
+      return outfileobj
+
+
+_DEFAULT_TAG = 'i-was-a-digest'
+
+
+def _make_tag_if_digest(name):
+  if isinstance(name, docker_name.Tag):
+    return name
+  return docker_name.Tag('{repo}:{tag}'.format(
+      repo=str(name.as_repository()), tag=_DEFAULT_TAG))

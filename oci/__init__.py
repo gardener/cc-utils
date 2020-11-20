@@ -224,3 +224,17 @@ def put_image_manifest(
         raw_contents=contents,
         credentials_lookup=credentials_lookup,
     )
+
+
+def retrieve_container_image(
+    image_reference: str,
+    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
+    outfileobj=None,
+):
+  tmp_file = _ou._pull_image(
+      image_reference=image_reference,
+      outfileobj=outfileobj,
+      credentials_lookup=credentials_lookup,
+  )
+  tmp_file.seek(0)
+  return tmp_file
