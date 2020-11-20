@@ -1,3 +1,4 @@
+import dataclasses
 import hashlib
 import io
 import json
