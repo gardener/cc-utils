@@ -327,11 +327,16 @@ def print_scans(
 
 
 def _download_and_zip_repo(
+    clogger,
     path_filter_func: typing.Callable,
     ref: str,
     repo: github3.repos.repo.Repository,
     tmp_file
 ):
+
+    files_to_scan = 0
+    filtered_out_files = 0
+
     url = repo._build_url('tarball', ref, base_url=repo._api)
     with repo._get(url, stream=True) as r, \
         tarfile.open(fileobj=r.raw, mode='r|*') as tar, \
@@ -345,6 +350,7 @@ def _download_and_zip_repo(
         for tar_info in tar:
             if path_filter_func(arcname := tar_info.name[path_offset:]):
                 if tar_info.isfile():
+                    files_to_scan += 1
                     src = tar.extractfile(tar_info)
                     if tar_info.size <= max_octets:
                         zip_file.writestr(arcname, src.read())
@@ -352,6 +358,10 @@ def _download_and_zip_repo(
                         with tempfile.NamedTemporaryFile() as tmp:
                             shutil.copyfileobj(src, tmp)
                             zip_file.write(filename=tmp.name, arcname=arcname)
+            else:
+                filtered_out_files += 1
+
+    clogger.info(f'{files_to_scan=}, {filtered_out_files=}')
 
 
 def download_repo_and_create_scan(
@@ -365,6 +375,7 @@ def download_repo_and_create_scan(
     clogger.info('downloading sources from github')
     with tempfile.TemporaryFile() as tmp_file:
         _download_and_zip_repo(
+            clogger=clogger,
             repo=repo,
             ref=hash,
             tmp_file=tmp_file,
