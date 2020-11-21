@@ -64,7 +64,7 @@ class OciConfig:
     url_prefixes: typing.Sequence[str] = dataclasses.field(default_factory=tuple)
 
     def valid_for(self, image_reference: str, privileges: Privileges=Privileges.READONLY):
-        if privileges > self.privileges:
+        if privileges and privileges > self.privileges:
             return False
 
         if not self.url_prefixes:
