@@ -11,6 +11,7 @@ from containerregistry.client import docker_name
 from containerregistry.client.v2 import docker_image as v2_image
 from containerregistry.client.v2_2 import docker_http
 from containerregistry.client.v2_2 import docker_image as v2_2_image
+from containerregistry.client.v2_2 import docker_image_list as image_list
 from containerregistry.client.v2_2 import docker_session
 from containerregistry.client.v2_2 import save
 from containerregistry.client.v2_2 import v2_compat
