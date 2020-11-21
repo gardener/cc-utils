@@ -88,6 +88,9 @@ def tags(
     '''
     returns a sequence of all `tags` for the given image_name
     '''
+    if isinstance(image_name, str):
+        image_name = ou.normalise_image_reference(image_name)
+
     from containerregistry.client.v2_2 import docker_http
     transport = _ou._mk_transport(
         image_name=image_name,
