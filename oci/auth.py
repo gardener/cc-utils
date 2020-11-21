@@ -19,6 +19,8 @@ class Privileges(enum.Enum):
             return 0
         elif privileges is self.READWRITE:
             return 1
+        elif privileges is None:
+            return 2
         else:
             raise NotImplementedError
 
