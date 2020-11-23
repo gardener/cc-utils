@@ -68,6 +68,8 @@ def _mk_credentials_lookup(
             image_reference,
             privileges,
         )
+        if not registry_cfg:
+            return None # fallback to docker-cfg
         creds = registry_cfg.credentials()
         return oa.OciBasicAuthCredentials(
             username=creds.username(),
