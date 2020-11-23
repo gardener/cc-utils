@@ -127,32 +127,11 @@ def latest_component_version_from_upstream(
         component_name=upstream_component_name,
         ctx_repo_base_url=base_url,
     )
+
     if not upstream_component_version:
-        # XXX migration (v1->v2) hack: if not found in ctx-repo, fallback to v1
-        # in the future, this should be handled as an error
-        ctx = ci.util.ctx()
-        cfg_factory = ctx.cfg_factory()
-        resolver = product.util.ComponentResolver(cfg_factory)
-        greatest_version = resolver.latest_component_version(
-            component_name=upstream_component_name,
+        raise RuntimeError(
+            f'did not find any versions for {upstream_component_name=}, {base_url=}'
         )
-        resolver = product.util.ComponentDescriptorResolver(cfg_factory)
-        upstream_component_descriptor_v1 = resolver.retrieve_descriptor(
-            (upstream_component_name, greatest_version)
-        )
-        component_v1 = upstream_component_descriptor_v1.component(
-            (upstream_component_name, greatest_version)
-        )
-        upstream_component_descriptor_v2 = product.v2.convert_component_to_v2(
-            component_descriptor_v1=upstream_component_descriptor_v1,
-            component_v1=component_v1,
-            repository_ctx_base_url=base_url,
-        )
-        product.v2.upload_component_descriptor_v2_to_oci_registry(
-            upstream_component_descriptor_v2,
-        )
-        product.v2.resolve_dependencies(component=upstream_component_descriptor_v2.component)
-        # end of dirty-hack: not, all missing component-descriptors were populated into v2-ctx
 
     upstream_component_descriptor = product.v2.download_component_descriptor_v2(
         component_name=upstream_component_name,
@@ -180,31 +159,9 @@ def determine_reference_versions(
                 ctx_repo_base_url=repository_ctx_base_url,
         )
         if not latest_component_version:
-            # XXX migration (v1->v2) hack: if not found in ctx-repo, fallback to v1
-            # in the future, this should be handled as an error
-            ctx = ci.util.ctx()
-            cfg_factory = ctx.cfg_factory()
-            resolver = product.util.ComponentResolver(cfg_factory)
-            greatest_version = resolver.latest_component_version(
-                component_name=component_name,
+            raise RuntimeError(
+                f'did not find any versions of {component_name=} {repository_ctx_base_url=}'
             )
-            resolver = product.util.ComponentDescriptorResolver(cfg_factory)
-            component_descriptor_v1 = resolver.retrieve_descriptor(
-                (component_name, greatest_version)
-            )
-            component_v1 = component_descriptor_v1.component(
-                (component_name, greatest_version)
-            )
-            component_descriptor_v2 = product.v2.convert_component_to_v2(
-                component_descriptor_v1=component_descriptor_v1,
-                component_v1=component_v1,
-                repository_ctx_base_url=repository_ctx_base_url,
-            )
-            product.v2.upload_component_descriptor_v2_to_oci_registry(
-                component_descriptor_v2,
-            )
-            product.v2.resolve_dependencies(component=component_descriptor_v2.component)
-            # end of dirty-hack: not, all missing component-descriptors were populated into v2-ctx
 
         return (
             latest_component_version,
