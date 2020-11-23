@@ -33,6 +33,7 @@ from github.release_notes.renderer import (
     TARGET_GROUP_DEVELOPER_ID,
     TARGET_GROUP_OPERATOR_ID,
     TARGET_GROUP_USER_ID,
+    TARGET_GROUP_DEPENDENCY_ID,
 )
 from test.github.release_notes.default_util import (
     release_note_block_with_defaults,
@@ -412,6 +413,13 @@ class RendererTest(unittest.TestCase):
                 user_login=None,
             ),
             release_note_block_with_defaults(
+                target_group_id=TARGET_GROUP_DEPENDENCY_ID,
+                text='dependency release note',
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+            ),
+            release_note_block_with_defaults(
                 target_group_id=TARGET_GROUP_DEVELOPER_ID,
                 text='developer release note',
                 reference_type=None,
@@ -426,7 +434,8 @@ class RendererTest(unittest.TestCase):
             '## 🏃 Others\n'\
             '* *[USER]* user release note\n'\
             '* *[OPERATOR]* operator release note\n'\
-            '* *[DEVELOPER]* developer release note'
+            '* *[DEVELOPER]* developer release note\n'\
+            '* *[DEPENDENCY]* dependency release note'
         self.assertEqual(expected_md_str, actual_md_str)
 
     def test_get_or_call(self):

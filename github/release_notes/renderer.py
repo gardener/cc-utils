@@ -49,7 +49,19 @@ TARGET_GROUP_DEVELOPER = TitleNode(
     nodes=None,
     matches_rls_note_field_path='target_group_id'
 )
-TARGET_GROUPS = [TARGET_GROUP_USER, TARGET_GROUP_OPERATOR, TARGET_GROUP_DEVELOPER]
+TARGET_GROUP_DEPENDENCY_ID = 'dependency'
+TARGET_GROUP_DEPENDENCY = TitleNode(
+    identifiers=[TARGET_GROUP_DEPENDENCY_ID],
+    title='DEPENDENCY',
+    nodes=None,
+    matches_rls_note_field_path='target_group_id'
+)
+TARGET_GROUPS = [
+  TARGET_GROUP_USER,
+  TARGET_GROUP_OPERATOR,
+  TARGET_GROUP_DEVELOPER,
+  TARGET_GROUP_DEPENDENCY
+]
 
 CATEGORY_ACTION_ID = 'action'
 CATEGORY_BREAKING_ID = 'breaking'
