@@ -22,7 +22,7 @@ uses for building the release notes. ::
 
 Possible values:
 
-  - category: improvement\|noteworthy\|action
+  - category: breaking\|feature\|bugfix\|doc\|other
   - target\_group: user\|operator\|developer
 
 Example: ::
