@@ -27,24 +27,24 @@ def get_or_call(obj, path):
     return value
 
 
-TitleNode = namedtuple("TitleNode", ["identifier", "title", "nodes", "matches_rls_note_field_path"])
+TitleNode = namedtuple("TitleNode", ["identifiers", "title", "nodes", "matches_rls_note_field_path"])
 TARGET_GROUP_USER_ID = 'user'
 TARGET_GROUP_USER = TitleNode(
-    identifier=TARGET_GROUP_USER_ID,
+    identifiers=[TARGET_GROUP_USER_ID],
     title='USER',
     nodes=None,
     matches_rls_note_field_path='target_group_id'
 )
 TARGET_GROUP_OPERATOR_ID = 'operator'
 TARGET_GROUP_OPERATOR = TitleNode(
-    identifier=TARGET_GROUP_OPERATOR_ID,
+    identifiers=[TARGET_GROUP_OPERATOR_ID],
     title='OPERATOR',
     nodes=None,
     matches_rls_note_field_path='target_group_id'
 )
 TARGET_GROUP_DEVELOPER_ID = 'developer'
 TARGET_GROUP_DEVELOPER = TitleNode(
-    identifier=TARGET_GROUP_DEVELOPER_ID,
+    identifiers=[TARGET_GROUP_DEVELOPER_ID],
     title='DEVELOPER',
     nodes=None,
     matches_rls_note_field_path='target_group_id'
@@ -52,27 +52,57 @@ TARGET_GROUP_DEVELOPER = TitleNode(
 TARGET_GROUPS = [TARGET_GROUP_USER, TARGET_GROUP_OPERATOR, TARGET_GROUP_DEVELOPER]
 
 CATEGORY_ACTION_ID = 'action'
-CATEGORY_ACTION = TitleNode(
-    identifier=CATEGORY_ACTION_ID,
-    title='Action Required',
+CATEGORY_BREAKING_ID = 'breaking'
+CATEGORY_BREAKING = TitleNode(
+    identifiers=[CATEGORY_BREAKING_ID, CATEGORY_ACTION_ID],
+    title='⚠️ Breaking Changes',
     nodes=TARGET_GROUPS,
     matches_rls_note_field_path='category_id'
 )
 CATEGORY_NOTEWORTHY_ID = 'noteworthy'
 CATEGORY_NOTEWORTHY = TitleNode(
-    identifier=CATEGORY_NOTEWORTHY_ID,
-    title='Most notable changes',
+    identifiers=[CATEGORY_NOTEWORTHY_ID],
+    title='📰 Noteworthy',
     nodes=TARGET_GROUPS,
     matches_rls_note_field_path='category_id'
 )
 CATEGORY_IMPROVEMENT_ID = 'improvement'
-CATEGORY_IMPROVEMENT = TitleNode(
-    identifier=CATEGORY_IMPROVEMENT_ID,
-    title='Improvements',
+CATEGORY_OTHER_ID = 'other'
+CATEGORY_OTHER = TitleNode(
+    identifiers=[CATEGORY_OTHER_ID, CATEGORY_IMPROVEMENT_ID],
+    title='🏃 Others',
     nodes=TARGET_GROUPS,
     matches_rls_note_field_path='category_id'
 )
-CATEGORIES = [CATEGORY_ACTION, CATEGORY_NOTEWORTHY, CATEGORY_IMPROVEMENT]
+CATEGORY_FEATURE_ID = 'feature'
+CATEGORY_FEATURE = TitleNode(
+    identifiers=[CATEGORY_FEATURE_ID],
+    title='✨ New Features',
+    nodes=TARGET_GROUPS,
+    matches_rls_note_field_path='category_id'
+)
+CATEGORY_BUGFIX_ID = 'bugfix'
+CATEGORY_BUGFIX = TitleNode(
+    identifiers=[CATEGORY_BUGFIX_ID],
+    title='🐛 Bug Fixes',
+    nodes=TARGET_GROUPS,
+    matches_rls_note_field_path='category_id'
+)
+CATEGORY_DOC_ID = 'doc'
+CATEGORY_DOC = TitleNode(
+    identifiers=[CATEGORY_DOC_ID],
+    title='📖 Documentation',
+    nodes=TARGET_GROUPS,
+    matches_rls_note_field_path='category_id'
+)
+CATEGORIES = [
+  CATEGORY_BREAKING,
+  CATEGORY_FEATURE,
+  CATEGORY_BUGFIX,
+  CATEGORY_DOC,
+  CATEGORY_OTHER,
+  CATEGORY_NOTEWORTHY,
+]
 
 
 class Renderer(object):
@@ -86,7 +116,7 @@ class Renderer(object):
             .sort_by(lambda rls_note_obj: rls_note_obj.is_current_repo, reverse=True)\
             .uniq_by(lambda rls_note_obj: rls_note_obj.cn_source_repo.name())\
             .map(lambda rls_note_obj: TitleNode(
-                identifier=rls_note_obj.cn_source_repo.name(),
+                identifiers=[rls_note_obj.cn_source_repo.name()],
                 title='[{origin_name}]'.format(
                     origin_name=rls_note_obj.cn_source_repo.github_repo()
                 ),
@@ -116,7 +146,7 @@ class Renderer(object):
             filtered_rls_note_objects = _.filter(
                 rls_note_objs,
                 lambda rls_note_obj:
-                    node.identifier == get_or_call(rls_note_obj, node.matches_rls_note_field_path)
+                    get_or_call(rls_note_obj, node.matches_rls_note_field_path) in node.identifiers
             )
             if not filtered_rls_note_objects:
                 continue

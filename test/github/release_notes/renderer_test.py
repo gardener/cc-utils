@@ -23,11 +23,16 @@ from github.release_notes.renderer import (
     MarkdownRenderer,
     get_or_call,
     CATEGORY_ACTION_ID,
-    CATEGORY_NOTEWORTHY_ID,
+    CATEGORY_BUGFIX_ID,
+    CATEGORY_BREAKING_ID,
+    CATEGORY_DOC_ID,
+    CATEGORY_FEATURE_ID,
     CATEGORY_IMPROVEMENT_ID,
-    TARGET_GROUP_USER_ID,
-    TARGET_GROUP_OPERATOR_ID,
+    CATEGORY_OTHER_ID,
+    CATEGORY_NOTEWORTHY_ID,
     TARGET_GROUP_DEVELOPER_ID,
+    TARGET_GROUP_OPERATOR_ID,
+    TARGET_GROUP_USER_ID,
 )
 from test.github.release_notes.default_util import (
     release_note_block_with_defaults,
@@ -50,7 +55,7 @@ class RendererTest(unittest.TestCase):
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
             '# [current-repo]\n'\
-            '## Improvements\n'\
+            '## 🏃 Others\n'\
             '* *[USER]* first line with header (#42, @foo)\n'\
             '  * second line\n'\
             '  * third line'
@@ -67,7 +72,7 @@ class RendererTest(unittest.TestCase):
         expected_md_str = \
             '\n'.join((
                 '# [s]',
-                '## Improvements',
+                '## 🏃 Others',
                 '* *[USER]* default release note text '
                 '([o/s#42](https://madeup.enterprise.github.corp/o/s/pull/42), '
                 '[@foo](https://madeup.enterprise.github.corp/foo))'
@@ -92,10 +97,10 @@ class RendererTest(unittest.TestCase):
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
             '# [current-repo]\n'\
-            '## Improvements\n'\
+            '## 🏃 Others\n'\
             '* *[USER]* default release note text (#42, @foo)\n'\
             '# [a-foo-bar]\n'\
-            '## Improvements\n'\
+            '## 🏃 Others\n'\
             '* *[USER]* other component, same github instance rls note (madeup/a-foo-bar#1, @foo)'
         self.assertEqual(expected_md_str, actual_md_str)
 
@@ -132,14 +137,14 @@ class RendererTest(unittest.TestCase):
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = ''\
             '# [current-repo]\n'\
-            '## Improvements\n'\
+            '## 🏃 Others\n'\
             '* *[USER]* rls note 1 (commit-id-1, @foo)\n'\
             '# [a-foo-bar]\n'\
-            '## Improvements\n'\
+            '## 🏃 Others\n'\
             '* *[USER]* other component rls note ' \
             '(madeup/a-foo-bar@very-long-commit-id-that-will-not-be-shortened, @bar)\n'\
             '# [s]\n'\
-            '## Improvements\n'\
+            '## 🏃 Others\n'\
             '* *[USER]* release note from different github instance ' \
             '([o/s@very-long-co](https://madeup.enterprise.github.corp/o/s/commit/'\
             'very-long-commit-id-that-will-be-shortened), '\
@@ -165,10 +170,10 @@ class RendererTest(unittest.TestCase):
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
             '# [current-repo]\n'\
-            '## Improvements\n'\
+            '## 🏃 Others\n'\
             '* *[USER]* default release note text (@foo)\n'\
             '# [a-foo-bar]\n'\
-            '## Improvements\n'\
+            '## 🏃 Others\n'\
             '* *[USER]* default release note text (@bar)'
         self.assertEqual(expected_md_str, actual_md_str)
 
@@ -191,10 +196,10 @@ class RendererTest(unittest.TestCase):
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
             '# [current-repo]\n'\
-            '## Improvements\n'\
+            '## 🏃 Others\n'\
             '* *[USER]* default release note text\n'\
             '# [a-foo-bar]\n'\
-            '## Improvements\n'\
+            '## 🏃 Others\n'\
             '* *[USER]* default release note text'
         self.assertEqual(expected_md_str, actual_md_str)
 
@@ -219,7 +224,7 @@ class RendererTest(unittest.TestCase):
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
             '# [current-repo]\n'\
-            '## Improvements\n'\
+            '## 🏃 Others\n'\
             '* *[USER]* duplicate'
         self.assertEqual(expected_md_str, actual_md_str)
 
@@ -251,7 +256,7 @@ class RendererTest(unittest.TestCase):
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
             '# [current-repo]\n'\
-            '## Improvements\n'\
+            '## 🏃 Others\n'\
             '* *[USER]* first line1\n'\
             '  * second line1\n'\
             '* *[USER]* first line2\n'\
@@ -289,7 +294,7 @@ class RendererTest(unittest.TestCase):
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
             '# [current-repo]\n'\
-            '## Improvements\n'\
+            '## 🏃 Others\n'\
             '* *[USER]* first line1\n'\
             '  * second line1\n'\
             '* *[USER]* first line2\n'\
@@ -303,8 +308,69 @@ class RendererTest(unittest.TestCase):
     def test_render_categories(self):
         release_note_objs = [
             release_note_block_with_defaults(
+                category_id=CATEGORY_OTHER_ID,
+                text='other release note',
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+            ),
+            release_note_block_with_defaults(
+                category_id=CATEGORY_DOC_ID,
+                text='documentation release note',
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+            ),
+            release_note_block_with_defaults(
+                category_id=CATEGORY_BREAKING_ID,
+                text='breaking change release note',
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+            ),
+            release_note_block_with_defaults(
+                category_id=CATEGORY_BUGFIX_ID,
+                text='bug fix release note',
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+            ),
+            release_note_block_with_defaults(
+                category_id=CATEGORY_FEATURE_ID,
+                text='new feature release note',
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+            ),
+        ]
+
+        actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
+        expected_md_str = \
+            '# [current-repo]\n'\
+            '## ⚠️ Breaking Changes\n'\
+            '* *[USER]* breaking change release note\n'\
+            '## ✨ New Features\n'\
+            '* *[USER]* new feature release note\n'\
+            '## 🐛 Bug Fixes\n'\
+            '* *[USER]* bug fix release note\n'\
+            '## 📖 Documentation\n'\
+            '* *[USER]* documentation release note\n'\
+            '## 🏃 Others\n'\
+            '* *[USER]* other release note'
+        self.assertEqual(expected_md_str, actual_md_str)
+
+    def test_render_deprecated_categories(self):
+        release_note_objs = [
+            release_note_block_with_defaults(
                 category_id=CATEGORY_IMPROVEMENT_ID,
-                text='improvement release note',
+                text='improvement / other release note',
+                reference_type=None,
+                reference_id=None,
+                user_login=None,
+            ),
+            release_note_block_with_defaults(
+                category_id=CATEGORY_ACTION_ID,
+                text='action / breaking change release note',
                 reference_type=None,
                 reference_id=None,
                 user_login=None,
@@ -316,24 +382,17 @@ class RendererTest(unittest.TestCase):
                 reference_id=None,
                 user_login=None,
             ),
-            release_note_block_with_defaults(
-                category_id=CATEGORY_ACTION_ID,
-                text='action required release note',
-                reference_type=None,
-                reference_id=None,
-                user_login=None,
-            ),
         ]
 
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
             '# [current-repo]\n'\
-            '## Action Required\n'\
-            '* *[USER]* action required release note\n'\
-            '## Most notable changes\n'\
-            '* *[USER]* noteworthy release note\n'\
-            '## Improvements\n'\
-            '* *[USER]* improvement release note'
+            '## ⚠️ Breaking Changes\n'\
+            '* *[USER]* action / breaking change release note\n'\
+            '## 🏃 Others\n'\
+            '* *[USER]* improvement / other release note\n'\
+            '## 📰 Noteworthy\n'\
+            '* *[USER]* noteworthy release note'
         self.assertEqual(expected_md_str, actual_md_str)
 
     def test_render_target_group(self):
@@ -364,7 +423,7 @@ class RendererTest(unittest.TestCase):
         actual_md_str = MarkdownRenderer(release_note_objs=release_note_objs).render()
         expected_md_str = \
             '# [current-repo]\n'\
-            '## Improvements\n'\
+            '## 🏃 Others\n'\
             '* *[USER]* user release note\n'\
             '* *[OPERATOR]* operator release note\n'\
             '* *[DEVELOPER]* developer release note'
