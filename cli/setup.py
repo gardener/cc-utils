@@ -1,4 +1,4 @@
-import setuptools
+#import setuptools
 import os
 
 own_dir = os.path.abspath(os.path.dirname(__file__))
@@ -18,8 +18,14 @@ def modules():
 
 
 def version():
-    with open(os.path.join(own_dir, os.pardir, 'ci','version')) as f:
-        return f.read().strip()
+    d = own_dir
+    while True:
+        candidate = os.path.join(d, 'VERSION')
+        if os.path.isfile(candidate):
+            with open(candidate) as f:
+                return f.read().strip()
+        d = os.path.abspath(os.path.join(d, os.pardir))
+    raise RuntimeError(f'did not find VERSION file in {own_dir} and all pardirs')
 
 
 setuptools.setup(
