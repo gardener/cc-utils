@@ -14,11 +14,8 @@
 # limitations under the License.
 import itertools
 import github3.exceptions
-import os
-import yaml
 
 import ccc.protecode
-import container.registry
 from ci.util import CliHints, CliHint, parse_yaml_file, ctx, fail, info
 from product.model import (
     ComponentReference,
@@ -26,7 +23,6 @@ from product.model import (
 )
 from product.util import (
     _enumerate_effective_images,
-    merge_products,
     ComponentDescriptorResolver,
 )
 from protecode.util import (
@@ -136,21 +132,6 @@ def component_descriptor_to_xml(
     result_xml.write(out_file)
 
 
-def merge_descriptors(descriptors: [str]):
-    if len(descriptors) < 2:
-        fail('at least two descriptors are required for merging')
-
-    def parse_product_file(f):
-        return ComponentDescriptor.from_dict(parse_yaml_file(f))
-
-    merged = parse_product_file(descriptors[0])
-
-    for descriptor in map(parse_product_file, descriptors[1:]):
-        merged = merge_products(merged, descriptor)
-
-    print(yaml.dump(merged.raw, indent=2))
-
-
 def retrieve_component_descriptor(
     name: str,
     version: str,
@@ -168,46 +149,3 @@ def retrieve_component_descriptor(
         fail('no component descriptor found: {n}:{v}'.format(n=name, v=version))
 
     print(resolved_descriptor)
-
-
-def resolve_component_descriptor(
-    component_descriptor: CliHints.existing_file(),
-):
-    cfg_factory = ctx().cfg_factory()
-
-    resolver = ComponentDescriptorResolver(
-        cfg_factory=cfg_factory,
-    )
-
-    component_descriptor = ComponentDescriptor.from_dict(parse_yaml_file(component_descriptor))
-
-    resolved_descriptor = resolver.resolve_component_references(product=component_descriptor)
-
-    print(yaml.dump(resolved_descriptor.raw))
-
-
-def download_dependencies(
-    component_descriptor: CliHints.existing_file(),
-    out_dir: str,
-):
-    if not os.path.isdir(out_dir):
-        os.mkdir(out_dir)
-
-    component_descriptor = ComponentDescriptor.from_dict(parse_yaml_file(component_descriptor))
-    image_references = [
-        container_image.image_reference() for _, container_image
-        in _enumerate_effective_images(component_descriptor=component_descriptor)
-    ]
-
-    def mangled_outfile_name(image_reference):
-        mangled_fname = image_reference.replace(':', '_').replace('/', '_')
-        return os.path.join(out_dir, mangled_fname + '.tar')
-
-    for image_ref in image_references:
-        fname = mangled_outfile_name(image_ref)
-        with open(fname, 'wb') as f:
-            container.registry.retrieve_container_image(
-                image_reference=image_ref,
-                outfileobj=f,
-            )
-        print(fname)
