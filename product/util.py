@@ -25,13 +25,12 @@ import yaml
 
 import ccc.github
 import version
-from ci.util import not_none, check_type, FluentIterable
+from ci.util import not_none, FluentIterable
 from .model import (
     COMPONENT_DESCRIPTOR_ASSET_NAME,
     Component,
     ComponentReference,
     ContainerImage,
-    DependencyBase,
     ComponentDescriptor,
 )
 import gci.componentmodel as cm
@@ -127,34 +126,6 @@ class ComponentDescriptorResolver(ResolverBase):
 
 
 class ComponentResolver(ResolverBase):
-    def latest_component_version(self, component_name: str):
-        component_reference = ComponentReference.create(name=component_name, version=None)
-        repo_helper = self._repository_helper(component_reference)
-        latest_version = version.find_latest_version(repo_helper.release_versions())
-        if not latest_version:
-            raise ValueError(
-                f'Component {component_name} has no valid release'
-            )
-        return latest_version
-
-    def greatest_component_version_with_matching_minor(
-            self,
-            component_name: str,
-            reference_version: str,
-        ):
-        component_reference = ComponentReference.create(name=component_name, version=None)
-        repo_helper = self._repository_helper(component_reference)
-        latest_version = version.find_latest_version_with_matching_minor(
-                reference_version=ver.parse_to_semver(reference_version),
-                versions=repo_helper.release_versions(),
-        )
-        if not latest_version:
-            raise ValueError(
-                f'Component {component_name} has no valid release. '
-                f'Given reference version: {reference_version}'
-            )
-        return latest_version
-
     def greatest_release_before(self, component_name: str, version: str):
         component_reference = ComponentReference.create(name=component_name, version=version)
         repo_helper = self._repository_helper(component_reference)
@@ -376,54 +347,6 @@ def diff_images(
             img_diff.irefs_only_right.add(i)
 
     return img_diff
-
-
-def greatest_references(references: typing.Iterable[DependencyBase]):
-    '''
-    yields the component references from the specified iterable of ComponentReference that
-    have the greates version (grouped by component name).
-    Id est: if the sequence contains exactly one version of each contained component name,
-    the sequence is returned unchanged.
-    '''
-    not_none(references)
-    references = list(references)
-    for ref in references:
-        check_type(ref, DependencyBase)
-
-    names = [
-        ref.name() for ref
-        in references
-    ]
-
-    for name in names:
-        matching_refs = [r for r in references if r.name() == name]
-        if len(matching_refs) == 1:
-            # in case reference name was unique, do not bother sorting
-            # (this also works around issues from non-semver versions)
-            yield matching_refs[0]
-            continue
-
-        # there might be multiple component versions of the same name
-        # --> use the greatest version in that case
-        matching_refs = sorted(
-            matching_refs,
-            key=lambda r: ver.parse_to_semver(r.version()),
-        )
-        # greates version comes last
-        yield matching_refs[-1]
-
-
-def _enumerate_images(
-    component_descriptor: ComponentDescriptor,
-    image_reference_filter=lambda _: True,
-) -> typing.Iterable[typing.Tuple[Component, ContainerImage]]:
-    for component in component_descriptor.components():
-        component_dependencies = component.dependencies()
-        for container_image in filter(
-                image_reference_filter,
-                component_dependencies.container_images()
-        ):
-            yield (component, container_image)
 
 
 def _dep_overwrites_for_component(
