@@ -21,7 +21,6 @@ from product.util import (
     ComponentDescriptorResolver,
     diff_components,
 )
-import product.v2
 
 import gci.componentmodel as cm
 
@@ -134,19 +133,3 @@ def write_component_diff(component_diff, out_path):
 
     with open(out_path, 'w') as f:
         yaml.dump(diff_dict, f)
-
-
-def publish_component_descriptor_v2(
-    component_descriptor_v2,
-):
-    try:
-      ci.util.info('trying to upload the component-descriptor to oci registry')
-      product.v2.upload_component_descriptor_v2_to_oci_registry(
-        component_descriptor_v2=component_descriptor_v2,
-      )
-    except:
-      print(
-        'XXX something went wrong whilst trying to convert component-descriptor (ignoring)'
-      )
-      import traceback
-      traceback.print_exc()
