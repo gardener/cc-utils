@@ -210,6 +210,7 @@ bom_diff = component_diff_since_last_release(
     component_name=component_name,
     component_version=effective_version,
     component_descriptor=descriptor,
+    ctx_repo_url=ctx_repository_base_url,
     cfg_factory=cfg_factory,
 )
 if not bom_diff:

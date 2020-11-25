@@ -34,7 +34,6 @@ from .model import (
     ComponentDescriptor,
 )
 import gci.componentmodel as cm
-import version as ver
 
 
 class ComponentResolutionException(Exception):
@@ -123,21 +122,6 @@ class ComponentDescriptorResolver(ResolverBase):
             merged = merge_products(merged, resolved_descriptor)
 
         return merged
-
-
-class ComponentResolver(ResolverBase):
-    def greatest_release_before(self, component_name: str, version: str):
-        component_reference = ComponentReference.create(name=component_name, version=version)
-        repo_helper = self._repository_helper(component_reference)
-        version = ver.parse_to_semver(version)
-
-        # greatest version comes last
-        versions = sorted(repo_helper.release_versions(), key=ver.parse_to_semver)
-        versions = [v for v in versions if ver.parse_to_semver(v) < version]
-
-        if len(versions) == 0:
-            return None # no release before current was found
-        return versions[-1]
 
 
 def merge_products(left_product, right_product):

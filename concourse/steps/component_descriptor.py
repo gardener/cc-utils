@@ -17,10 +17,10 @@ import yaml
 
 import ci.util
 from product.util import (
-    ComponentResolver,
     ComponentDescriptorResolver,
     diff_components,
 )
+import product.v2
 
 import gci.componentmodel as cm
 
@@ -88,14 +88,15 @@ def component_diff_since_last_release(
     component_name,
     component_version,
     component_descriptor,
+    ctx_repo_url,
     cfg_factory,
 ):
     component = ci.util.not_none(component_descriptor.component((component_name, component_version)))
 
-    resolver = ComponentResolver(cfg_factory=cfg_factory)
-    last_release_version = resolver.greatest_release_before(
+    last_release_version = product.v2.greatest_version_before(
         component_name=component_name,
-        version=component_version
+        component_version=component_version,
+        ctx_repo_base_url=ctx_repo_url,
     )
 
     if not last_release_version:
