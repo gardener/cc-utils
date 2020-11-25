@@ -578,6 +578,25 @@ def greatest_component_version(component_name: str, ctx_repo_base_url: str) -> s
     return version.find_latest_version(image_tags)
 
 
+def greatest_version_before(
+    component_name: str,
+    component_version: str,
+    ctx_repo_base_url: str,
+):
+    versions = component_versions(
+        component_name=component_name,
+        ctx_repo_base_url=ctx_repo_base_url,
+    )
+    versions = sorted(versions, key=version.parse_to_semver)
+    versions = [
+        v for v in versions
+        if v < version.parse_to_semver(component_version)
+    ]
+    if len(versions) == 0:
+        return None # no release before current was found
+    return versions[-1]
+
+
 # keep for backwards-compatibility for now
 latest_component_version = greatest_component_version
 
