@@ -590,7 +590,7 @@ def greatest_version_before(
     versions = sorted(versions, key=version.parse_to_semver)
     versions = [
         v for v in versions
-        if v < version.parse_to_semver(component_version)
+        if version.parse_to_semver(v) < version.parse_to_semver(component_version)
     ]
     if len(versions) == 0:
         return None # no release before current was found
