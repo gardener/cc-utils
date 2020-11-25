@@ -571,13 +571,21 @@ def greatest_references(
 
 
 def greatest_component_version(component_name: str, ctx_repo_base_url: str) -> str:
-    oci_image_repo = _target_oci_repository_from_component_name(component_name, ctx_repo_base_url)
-    image_tags = container.registry.ls_image_tags(oci_image_repo)
+    image_tags = component_versions(
+        component_name=component_name,
+        ctx_repo_base_url=ctx_repo_base_url,
+    )
     return version.find_latest_version(image_tags)
 
 
 # keep for backwards-compatibility for now
 latest_component_version = greatest_component_version
+
+
+def component_versions(component_name: str, ctx_repo_base_url: str) -> typing.Sequence[str]:
+    oci_ref = _target_oci_repository_from_component_name(component_name, ctx_repo_base_url)
+    image_tags = container.registry.ls_image_tags(oci_ref)
+    return image_tags
 
 
 def greatest_component_version_with_matching_minor(
