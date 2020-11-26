@@ -141,6 +141,9 @@ def github_api(
     github_cfg: 'model.GithubConfig',
     session_adapter: SessionAdapter=SessionAdapter.RETRY,
 ):
+    if isinstance(github_cfg, str):
+        github_cfg = ci.util.ctx().cfg_factory().github(github_cfg)
+
     github_url = github_cfg.http_url()
     github_auth_token = github_cfg.credentials().auth_token()
 
