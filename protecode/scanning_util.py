@@ -241,9 +241,9 @@ class ProtecodeUtil:
         )
 
         ci.util.info(
-            f'Processing resource group for component {resource_group.component().name} '
-            f'and image {resource_group.image_name()} with {len(resource_group.resources())} '
-            f'resources: {", ".join([str(r) for r in resource_group.resources()])}')
+            f'Processing resource group for component {resource_group.component().name} and image '
+            f'{resource_group.image_name()} with {len(resource_group.resources())} resources'
+        )
 
         # depending on upload-mode, determine an upload-action for each related image
         # - images to upload
