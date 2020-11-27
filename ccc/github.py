@@ -239,7 +239,9 @@ def github_api_from_component(component: typing.Union[cm.Component, product.mode
         raise ValueError
 
 
-def github_api_from_gh_access(access: cm.GithubAccess):
+def github_api_from_gh_access(
+    access: cm.GithubAccess,
+) -> typing.Union[github3.github.GitHub, github3.github.GitHubEnterprise]:
     if access.type is not cm.AccessType.GITHUB:
         raise ValueError
 
@@ -247,6 +249,7 @@ def github_api_from_gh_access(access: cm.GithubAccess):
     return github_api(github_cfg=github_cfg)
 
 
+# TODO Check if this class is really needed. Maybe use access method instead of this
 @dataclasses.dataclass(frozen=True)
 class GithubRepo:
     host_name: str

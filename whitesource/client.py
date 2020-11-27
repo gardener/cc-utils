@@ -1,11 +1,11 @@
 import dataclasses
+import json
 import typing
 
 import requests
 from requests_toolbelt import MultipartEncoder
 
 from ci.util import urljoin
-import model.whitesource
 import whitesource.model
 
 
@@ -26,14 +26,19 @@ class WhitesourceClient:
 
     def __init__(
         self,
-        whitesource_cfg: model.whitesource.WhitesourceConfig,
+        api_key: str,
+        extension_endpoint: str,
+        wss_api_endpoint: str,
+        wss_endpoint: str,
+        ws_creds,
     ):
         self.routes = WhitesourceRoutes(
-            extension_endpoint=whitesource_cfg.extension_endpoint(),
-            wss_api_endpoint=whitesource_cfg.wss_api_endpoint(),
+            extension_endpoint=extension_endpoint,
+            wss_api_endpoint=wss_api_endpoint,
         )
-        self.config = whitesource_cfg
-        self.creds = self.config.credentials()
+        self.api_key = api_key
+        self.wss_endpoint = wss_endpoint
+        self.creds = ws_creds
 
     def request(self, method: str, print_error: bool = True, *args, **kwargs):
         res = requests.request(
@@ -48,26 +53,43 @@ class WhitesourceClient:
             raise WSNotOkayException(res=res, msg=msg)
         return res
 
-    def post_product(
+    def save_project_tag(self, projectToken: str, key: str, value: str):
+        body = {
+            'requestType': 'saveProjectTag',
+            'userKey': self.creds.user_key(),
+            'projectToken': projectToken,
+            'tagKey': key,
+            'tagValue': value,
+        }
+
+        return self.request(
+            method='POST',
+            url=self.routes.wss_api_endpoint,
+            headers={'content-type': 'application/json'},
+            json=body,
+        )
+
+    def post_project(
         self,
-        product_token: str,
-        component_name: str,
-        requester_email: str,
-        component_version: str,
         extra_whitesource_config: typing.Dict,
         file,
+        filename: str,
+        product_token: str,
+        project_name: str,
+        requester_email: str,
     ):
 
         fields = {
-            'projectName': component_name,
-            'requesterEmail': requester_email,
-            'productToken': product_token,
-            'userKey': self.creds.user_key(),
-            'apiKey': self.config.api_key(),
-            'wss.url': self.config.wss_endpoint(),
-            'projectVersion': component_version,
-            'includes': '*',
-            'component': ('component.tar.gz', file, 'text/plain'),
+            'component': (f'{filename}.tar', file, 'application/zip'),
+            'wsConfig': json.dumps({
+                'apiKey': self.api_key,
+                'projectName': project_name,
+                'productToken': product_token,
+                'requesterEmail': requester_email,
+                'userKey': self.creds.user_key(),
+                'wssUrl': self.wss_endpoint,
+                'extraWsConfig': extra_whitesource_config,
+            })
         }
 
         # add extra whitesource config
@@ -100,10 +122,10 @@ class WhitesourceClient:
             json=body,
         )
 
-    def get_all_projects(
+    def get_all_projects_of_product(
         self,
         product_token: str,
-    ):
+    ) -> typing.List[whitesource.model.WhitesourceProject]:
         body = {
             'requestType': 'getAllProjects',
             'userKey': self.creds.user_key(),

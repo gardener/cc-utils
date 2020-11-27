@@ -399,6 +399,7 @@ class RefGuessingFailedError(Exception):
     pass
 
 
+# TODO change params add access instead of ref and commit_hash
 def guess_commit_from_source(
     github_repo: github3.repos.repo.Repository,
     ref: str,

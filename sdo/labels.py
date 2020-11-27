@@ -37,6 +37,5 @@ class BinaryScanHint(ScanLabelValue):
 
 
 @dataclasses.dataclass(frozen=True)
-class ScanLabel:
-    name: str
-    value: ScanLabelValue
+class SourceIdHint(ScanLabelValue):
+    pass

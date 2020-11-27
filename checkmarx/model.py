@@ -3,10 +3,6 @@ import dataclasses
 from enum import Enum
 import typing
 
-import sdo.labels
-
-import gci.componentmodel as cm
-
 
 class ScanStatusValues(Enum):
     NEW = 1
@@ -127,19 +123,6 @@ class FinishedScans:
     failed_scans: typing.List[str] = dataclasses.field(default_factory=list)
     scans_above_threshold: typing.List[ScanResult] = dataclasses.field(default_factory=list)
     scans_below_threshold: typing.List[ScanResult] = dataclasses.field(default_factory=list)
-
-
-# abstraction of component model v2 source and resource
-@dataclasses.dataclass
-class ScanArtifact:
-    name: str
-    access: typing.Union[
-        cm.OciAccess,
-        cm.GithubAccess,
-        cm.HttpAccess,
-        cm.ResourceAccess,
-    ]
-    label: sdo.labels.ScanLabelValue
 
 
 @dataclasses.dataclass

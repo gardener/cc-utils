@@ -13,9 +13,17 @@ import whitesource.model
 @functools.lru_cache()
 def create_whitesource_client(
     whitesource_cfg_name: str,
-):
+) -> whitesource.client.WhitesourceClient:
     cfg_fac = ci.util.ctx().cfg_factory()
-    return whitesource.client.WhitesourceClient(cfg_fac.whitesource(whitesource_cfg_name))
+    ws_config = cfg_fac.whitesource(whitesource_cfg_name)
+
+    return whitesource.client.WhitesourceClient(
+        api_key=ws_config.api_key(),
+        extension_endpoint=ws_config.extension_endpoint(),
+        wss_api_endpoint=ws_config.wss_api_endpoint(),
+        wss_endpoint=ws_config.wss_endpoint(),
+        ws_creds=ws_config.credentials()
+    )
 
 
 def generate_reporting_tables(
@@ -124,7 +132,7 @@ def assemble_mail_body(
 def send_mail(
     body,
     recipients: list,
-    component_name: str,
+    product_name: str,
     attachments: typing.Sequence[mail.model.Attachment],
 ):
 
@@ -137,7 +145,7 @@ def send_mail(
         email_cfg=cfg_set.email(),
         recipients=recipients,
         mail_template=body,
-        subject=f'[Action Required] ({component_name}) WhiteSource Vulnerability Report',
+        subject=f'[Action Required] ({product_name}) WhiteSource Vulnerability Report',
         mimetype='html',
         attachments=attachments,
     )
