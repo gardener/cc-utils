@@ -2,6 +2,7 @@ import contextlib
 import functools
 import httplib2
 import logging
+import os
 import tarfile
 import tempfile
 import typing
@@ -212,6 +213,46 @@ def pulled_image(
 
   except Exception as e:
     raise e
+
+
+def _push_image(
+    image_reference: str,
+    image_file: str,
+    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
+    threads=8
+):
+    if not image_reference:
+        raise ValueError(image_reference)
+    if not os.path.isfile(image_file):
+        raise ValueError(f'not an exiting file: {image_file=}')
+
+    transport = _mk_transport_pool()
+
+    image_reference = ou.normalise_image_reference(image_reference)
+    image_reference = docker_name.from_string(image_reference)
+
+    creds = _mk_credentials(
+        image_reference=image_reference,
+        credentials_lookup=credentials_lookup,
+        privileges=oa.Privileges.READWRITE,
+    )
+    # XXX fail if no creds were found
+
+    with v2_2_image.FromTarball(image_file) as v2_2_img:
+      try:
+        with docker_session.Push(
+            image_reference,
+            creds,
+            transport,
+            threads=threads,
+        ) as session:
+          session.upload(v2_2_img)
+          digest = v2_2_img.digest()
+          logger.info(f'{image_reference} was uploaded - digest: {digest}')
+      except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise e
 
 
 def _put_raw_image_manifest(

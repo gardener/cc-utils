@@ -119,6 +119,7 @@ retrieve_blob = _inject_credentials_lookup(inner_function=oci.get_blob)
 cp_oci_artifact = _inject_credentials_lookup(inner_function=oci.replicate_artifact)
 put_image_manifest = _inject_credentials_lookup(inner_function=oci.put_image_manifest)
 retrieve_container_image = _inject_credentials_lookup(inner_function=oci.retrieve_container_image)
+publish_container_image = _inject_credentials_lookup(inner_function=oci.publish_container_image)
 
 
 @functools.lru_cache()
@@ -131,16 +132,6 @@ def _credentials(image_reference: str, privileges:Privileges=None):
         return None
     credentials = registry_cfg.credentials()
     return docker_creds.Basic(username=credentials.username(), password=credentials.passwd())
-
-
-def publish_container_image(image_reference: str, image_file_obj, threads=8):
-  image_file_obj.seek(0)
-  _push_image(
-        image_reference=image_reference,
-        image_file=image_file_obj.name,
-        threads=threads,
-    )
-  image_file_obj.seek(0)
 
 
 def _mk_transport_pool(
@@ -210,40 +201,6 @@ def to_hash_reference(image_name: str):
 
   name = image_name.rsplit(':', 1)[0]
   return f'{name}@{digest}'
-
-
-def _push_image(image_reference: str, image_file: str, threads=8):
-  import ci.util
-  ci.util.not_none(image_reference)
-  ci.util.existing_file(image_file)
-
-  transport = _mk_transport_pool()
-
-  image_reference = normalise_image_reference(image_reference)
-  image_reference = docker_name.from_string(image_reference)
-
-  creds = _mk_credentials(
-    image_reference=image_reference,
-    privileges=Privileges.READ_WRITE,
-  )
-
-  # XXX fail if no creds were found
-
-  with v2_2_image.FromTarball(image_file) as v2_2_img:
-    try:
-      with docker_session.Push(
-          image_reference,
-          creds,
-          transport,
-          threads=threads,
-      ) as session:
-        session.upload(v2_2_img)
-        digest = v2_2_img.digest()
-        logger.info(f'{image_reference} was uploaded - digest: {digest}')
-    except Exception as e:
-      import traceback
-      traceback.print_exc()
-      raise e
 
 
 def rm_tag(image_reference: str):

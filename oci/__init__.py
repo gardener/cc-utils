@@ -242,3 +242,19 @@ def retrieve_container_image(
   )
   tmp_file.seek(0)
   return tmp_file
+
+
+def publish_container_image(
+    image_reference: str,
+    image_file_obj,
+    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
+    threads=8
+):
+  image_file_obj.seek(0)
+  _ou._push_image(
+        image_reference=image_reference,
+        image_file=image_file_obj.name,
+        credentials_lookup=credentials_lookup,
+        threads=threads,
+    )
+  image_file_obj.seek(0)
