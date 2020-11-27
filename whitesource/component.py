@@ -5,10 +5,8 @@ import github3.github
 import github3.repos
 import dacite
 
-import ccc.github
 import sdo.labels
 import sdo.model
-import whitesource.client
 
 import gci.componentmodel as cm
 
@@ -47,24 +45,6 @@ def _get_scan_artifacts_from_components(
                     continue
                 else:
                     raise NotImplementedError
-
-
-class PostProjectObject:
-    def __init__(
-        self,
-        whitesource_client: whitesource.client.WhitesourceClient,
-        github_api,
-        scan_artifact: sdo.model.ScanArtifact,
-        product_token: str,
-        github_repo: ccc.github.GithubRepo,
-        component_version,
-    ):
-        self.whitesource_client = whitesource_client
-        self.github_api = github_api
-        self.scan_artifact = scan_artifact
-        self.product_token = product_token
-        self.github_repo = github_repo
-        self.component_version = component_version
 
 
 def download_component(

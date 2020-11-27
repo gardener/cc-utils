@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import datetime
-import dataclasses
 import enum
 import functools
 import traceback
@@ -32,7 +31,6 @@ import ci.util
 import github.util
 import http_requests
 import model
-import product.model
 
 if ci.util._running_on_ci():
     log_github_access = False
@@ -226,19 +224,6 @@ def log_stack_trace_information_hook(resp, *args, **kwargs):
         ci.util.info(f'Could not log stack trace information: {e}')
 
 
-# TODO: remove this if whitesource is on component descriptor v2
-def github_api_from_component(component: typing.Union[cm.Component, product.model.Component]):
-    if isinstance(component, product.model.Component):
-        github_cfg = github_cfg_for_hostname(host_name=component.github_host())
-        return github_api(github_cfg=github_cfg)
-    elif isinstance(component, cm.Component):
-        source = _get_single_repo(component=component)
-
-        return github_api_from_gh_access(source.access)
-    else:
-        raise ValueError
-
-
 def github_api_from_gh_access(
     access: cm.GithubAccess,
 ) -> typing.Union[github3.github.GitHub, github3.github.GitHubEnterprise]:
@@ -247,38 +232,3 @@ def github_api_from_gh_access(
 
     github_cfg = github_cfg_for_hostname(host_name=access.hostname())
     return github_api(github_cfg=github_cfg)
-
-
-# TODO Check if this class is really needed. Maybe use access method instead of this
-@dataclasses.dataclass(frozen=True)
-class GithubRepo:
-    host_name: str
-    org_name: str
-    repo_name: str
-
-    # TODO: replace method with from_sources when whitesource has adapted cd v2
-    @staticmethod
-    def from_component(component: cm.Component):
-        source = _get_single_repo(component)
-        host, org, repo = source.access.repoUrl.split('/')
-        return GithubRepo(host,org,repo)
-
-    @staticmethod
-    def from_gh_access(access: cm.GithubAccess):
-        if access.type is not cm.AccessType.GITHUB:
-            raise ValueError
-
-        return GithubRepo(
-            host_name=access.hostname(),
-            org_name=access.org_name(),
-            repo_name=access.repository_name(),
-        )
-
-
-# TODO: remove this if whitesource is on component descriptor v2
-def _get_single_repo(component: cm.Component):
-    if len(component.sources) != 1:
-        raise NotImplementedError
-    source = component.sources[0]
-
-    return source

@@ -24,7 +24,6 @@ import typing
 import yaml
 
 import ccc.github
-import version
 from ci.util import not_none, FluentIterable
 from .model import (
     COMPONENT_DESCRIPTOR_ASSET_NAME,
@@ -33,7 +32,6 @@ from .model import (
     ContainerImage,
     ComponentDescriptor,
 )
-import gci.componentmodel as cm
 
 
 class ComponentResolutionException(Exception):
@@ -399,11 +397,10 @@ class RefGuessingFailedError(Exception):
     pass
 
 
-# TODO change params add access instead of ref and commit_hash
 def guess_commit_from_source(
+    artifact_name: str,
     github_repo: github3.repos.repo.Repository,
     ref: str,
-    artifact_name: str,
     commit_hash: str=None,
 ):
     def in_repo(commit_ish):
@@ -443,55 +440,4 @@ def guess_commit_from_source(
     # still unknown commit-ish throw error
     raise RefGuessingFailedError(
         f'failed to guess on ref for {artifact_name=} with {ref=}'
-    )
-
-
-# TODO: remove this if checkmarx is on component descriptor v2
-def guess_commit_from_ref(component: cm.Component):
-    """
-    heuristically guess the appropriate git-ref for the given component's version
-    """
-    github_api = ccc.github.github_api_from_component(component=component)
-    repo = ccc.github.GithubRepo.from_component(component=component)
-    github_repo = github_api.repository(
-        repo.org_name,
-        repo.repo_name,
-    )
-
-    def in_repo(commit_ish):
-        try:
-            return github_repo.ref(commit_ish).object.sha
-        except github3.exceptions.NotFoundError:
-            pass
-
-        try:
-            return github_repo.commit(commit_ish).sha
-        except (github3.exceptions.UnprocessableEntity, github3.exceptions.NotFoundError):
-            return None
-
-    # first guess: component version could already be a valid "Gardener-relaxed-semver"
-    version_str = str(version.parse_to_semver(component))
-    commit = in_repo(version_str)
-    if commit:
-        return commit
-    # also try unmodified version-str
-    if commit := in_repo(component.version):
-        return commit
-
-    # second guess: split commit-hash after last `-` character (inject-commit-hash semantics)
-    if '-' in (version_str := str(component.version)):
-        last_part = version_str.split('-')[-1]
-        commit = in_repo(last_part)
-        if commit:
-            return commit
-
-    # third guess: branch
-    try:
-        return github_repo.branch(version_str).commit.sha
-    except github3.exceptions.NotFoundError:
-        pass
-
-    # still unknown commit-ish throw error
-    raise RefGuessingFailedError(
-        f'failed to guess on ref for {component.name=}{component.version=}'
     )
