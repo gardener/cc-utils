@@ -22,3 +22,17 @@ def normalise_image_reference(image_reference: str):
       parts[0] = 'registry-1.docker.io'
 
   return '/'.join(parts)
+
+
+def urljoin(*parts):
+    if len(parts) == 1:
+        return parts[0]
+    first = parts[0]
+    last = parts[-1]
+    middle = parts[1:-1]
+
+    first = first.rstrip('/')
+    middle = list(map(lambda s: s.strip('/'), middle))
+    last = last.lstrip('/')
+
+    return '/'.join([first] + middle + [last])
