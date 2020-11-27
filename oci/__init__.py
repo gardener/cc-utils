@@ -3,9 +3,12 @@ import hashlib
 import io
 import json
 import logging
+import tempfile
 import typing
 
 import dacite
+
+import containerregistry.client.v2.docker_http_
 
 import oci._util as _ou
 import oci.auth as oa
@@ -162,12 +165,18 @@ def get_blob(
     image_reference: str,
     digest: str,
     credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
+    absent_ok=False,
 ) -> bytes:
-  with _ou.pulled_image(
-        image_reference=image_reference,
-        credentials_lookup=credentials_lookup,
-) as image:
-      return image.blob(digest)
+    try:
+        with _ou.pulled_image(
+            image_reference=image_reference,
+            credentials_lookup=credentials_lookup,
+        ) as image:
+            return image.blob(digest)
+    except containerregistry.client.v2.docker_http_.V2DiagnosticException as ve:
+        if absent_ok and ve.status == 404:
+            return None
+        raise ve
 
 
 def replicate_artifact(
@@ -193,20 +202,41 @@ def replicate_artifact(
         data=json.loads(raw_manifest)
     )
 
-    for layer in manifest.layers + [manifest.config]:
+    for idx, layer in enumerate([manifest.config] + manifest.layers):
+        # need to specially handle manifest (may be absent for v2 / legacy images)
+        is_manifest = idx == 0
+
         # XXX we definitely should _not_ read entire blobs into memory
         # this is done by the used containerregistry lib, so we do not make things worse
         # here - however this must not remain so!
-        blob = io.BytesIO(
-            get_blob(
-                image_reference=src_image_reference,
-                digest=layer.digest,
-                credentials_lookup=credentials_lookup,
-            )
+        blob_bytes = get_blob(
+            image_reference=src_image_reference,
+            digest=layer.digest,
+            credentials_lookup=credentials_lookup,
+            absent_ok=is_manifest,
         )
+        if not blob_bytes:
+            # fallback to non-verbatim replication
+            logger.warning(
+                'falling back to non-verbatim replication '
+                '{src_image_reference=} {tgt_image_reference=}'
+            )
+            with tempfile.NamedTemporaryFile() as tmp_fh:
+                retrieve_container_image(
+                    image_reference=src_image_reference,
+                    credentials_lookup=credentials_lookup,
+                    outfileobj=tmp_fh,
+                )
+                publish_container_image(
+                    image_reference=tgt_image_reference,
+                    image_file_obj=tmp_fh,
+                    credentials_lookup=credentials_lookup,
+                )
+            return
+
         put_blob(
             image_name=tgt_image_reference,
-            fileobj=blob,
+            fileobj=io.BytesIO(blob_bytes),
             credentials_lookup=credentials_lookup,
         )
 
