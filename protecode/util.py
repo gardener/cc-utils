@@ -27,6 +27,7 @@ import product.util
 
 import gci.componentmodel as cm
 import product.v2
+import sdo.labels
 
 from protecode.scanning_util import (
     ResourceGroup,
@@ -104,6 +105,7 @@ def upload_grouped_images(
             # groups resources of components by resource name
             resource_groups = collections.defaultdict(list)
             for component in components:
+                # TODO: Handle other resource types
                 for resource in product.v2.resources(
                     component=component,
                     resource_types=[cm.ResourceType.OCI_IMAGE],
@@ -114,13 +116,25 @@ def upload_grouped_images(
             for resource_name, resources in resource_groups.items():
                 yield resources
 
+        def _filter_resources_to_scan(component, resource):
+            # check whether the trait was configured to filter out the resource
+            configured_image_reference_filter_response = image_reference_filter(component, resource)
+            if not configured_image_reference_filter_response:
+                return False
+
+            # check for scanning labels on resource in cd
+            if label := resource.find_label(name=sdo.labels.ScanLabelName.BINARY_SCAN.value):
+                return label.value.policy is sdo.labels.ScanPolicy.SCAN
+            else:
+                return True
+
         for component_name, components in component_groups.items():
             for grouped_resources in group_resources(components):
                 # all components in a component group share a name
                 component = next(iter(components))
                 resources = [
                     r for r in grouped_resources
-                    if image_reference_filter(component, r)
+                    if _filter_resources_to_scan(component, r)
                 ]
                 if resources:
                     yield _upload_task(component=component, resources=resources)
