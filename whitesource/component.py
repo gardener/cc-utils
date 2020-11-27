@@ -1,27 +1,52 @@
-import tempfile
+import tarfile
+import typing
+
+import github3.github
+import github3.repos
+import dacite
 
 import ccc.github
+import sdo.labels
+import sdo.model
 import whitesource.client
 
 import gci.componentmodel as cm
 
 
-def get_post_project_object(
-    whitesource_client: whitesource.client.WhitesourceClient,
-    component: cm.Component,
-    product_token: str,
-):
-    github_api = ccc.github.github_api_from_component(component=component)
-    github_repo = ccc.github.GithubRepo.from_component(component)
+def _get_ws_label_from_source(labels: typing.List[cm.Label]) -> sdo.labels.SourceIdHint:
+    for label in labels:
+        if sdo.labels.ScanLabelName(label.name) is sdo.labels.ScanLabelName.SOURCE_ID:
+            return dacite.from_dict(
+                data_class=sdo.labels.SourceIdHint,
+                data=label.value,
+                config=dacite.Config(cast=[sdo.labels.ScanPolicy]),
+            )
 
-    return PostProjectObject(
-        whitesource_client=whitesource_client,
-        github_api=github_api,
-        product_token=product_token,
-        component=component,
-        github_repo=github_repo,
-        component_version=component.version,
-    )
+
+def _get_scan_artifacts_from_components(
+    components: typing.Sequence[cm.Component],
+) -> typing.Generator:
+    for component in components:
+        for source in component.sources:
+            if source.type is not cm.SourceType.GIT:
+                raise NotImplementedError
+
+            if source.access.type is not cm.AccessType.GITHUB:
+                raise NotImplementedError
+
+            ws_hint = _get_ws_label_from_source(source.labels)
+
+            if ws_hint is not None:
+                if ws_hint.policy and ws_hint.policy is sdo.labels.ScanPolicy.SCAN:
+                    yield sdo.model.ScanArtifact(
+                        access=source.access,
+                        label=ws_hint,
+                        name=f'{component.name}_{source.identity(component.sources)}'
+                    )
+                elif ws_hint.policy is sdo.labels.ScanPolicy.SKIP:
+                    continue
+                else:
+                    raise NotImplementedError
 
 
 class PostProjectObject:
@@ -29,49 +54,51 @@ class PostProjectObject:
         self,
         whitesource_client: whitesource.client.WhitesourceClient,
         github_api,
-        component: cm.Component,
+        scan_artifact: sdo.model.ScanArtifact,
         product_token: str,
         github_repo: ccc.github.GithubRepo,
         component_version,
     ):
         self.whitesource_client = whitesource_client
         self.github_api = github_api
-        self.component = component
+        self.scan_artifact = scan_artifact
         self.product_token = product_token
         self.github_repo = github_repo
         self.component_version = component_version
 
 
 def download_component(
-    github_api,
-    github_repo: ccc.github.GithubRepo,
-    dest: tempfile.TemporaryFile,
+    clogger,
+    github_repo: github3.repos.repo.Repository,
+    path_filter_func: typing.Callable,
     ref: str,
+    target: typing.IO,
 ):
-
-    repo = github_api.repository(
-        github_repo.org_name,
-        github_repo.repo_name,
-    )
-
-    url = repo._build_url(
+    url = github_repo._build_url(
         'tarball',
         ref,
-        base_url=repo._api,
+        base_url=github_repo._api,
     )
-    res = repo._get(
-        url,
-        allow_redirects=True,
-        stream=True,
-    )
-    if not res.ok:
-        raise RuntimeError(
-            f'request to download github zip archive from {url=}'
-            f' failed with {res.status_code=} {res.reason=}'
-        )
 
-    for chunk in res.iter_content(chunk_size=512):
-        dest.write(chunk)
+    files_to_scan = 0
+    filtered_out_files = 0
 
-    dest.flush()
-    dest.seek(0)
+    with tarfile.open(fileobj=target, mode='w|') as target, \
+        github_repo._get(url, allow_redirects=True, stream=True,) as res, \
+        tarfile.open(fileobj=res.raw, mode='r|*') as src:
+
+        res.raise_for_status()
+        # valid because first tar entry is root directory and has no trailing \
+        component_filename = src.next().name
+        path_offset = len(component_filename) + 1
+
+        for tar_info in src:
+            if path_filter_func(tar_info.name[path_offset:]):
+                target.addfile(tarinfo=tar_info, fileobj=src.fileobj)
+                files_to_scan += 1
+            else:
+                filtered_out_files += 1
+
+    clogger.info(f'{files_to_scan=}, {filtered_out_files=}')
+
+    return component_filename

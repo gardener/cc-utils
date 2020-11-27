@@ -23,6 +23,7 @@ import product.util
 import product.v2
 import reutil
 import sdo.labels
+import sdo.model
 
 import gci.componentmodel as cm
 
@@ -73,7 +74,7 @@ def _get_scan_artifacts_from_components(
             cx_label = get_source_scan_label_from_labels(source.labels)
 
             if not cx_label or cx_label.policy is sdo.labels.ScanPolicy.SCAN:
-                yield model.ScanArtifact(
+                yield sdo.model.ScanArtifact(
                     access=source.access,
                     name=f'{component.name}_{source.identity(peers=component.sources)}',
                     label=cx_label,
@@ -97,7 +98,7 @@ def get_source_scan_label_from_labels(labels: typing.Sequence[cm.Label]):
 def scan_artifacts(
     cx_client: checkmarx.client.CheckmarxClient,
     max_workers: int,
-    scan_artifacts: typing.Tuple[model.ScanArtifact],
+    scan_artifacts: typing.Tuple[sdo.model.ScanArtifact],
     team_id: str,
     threshold: int,
     exclude_paths: typing.Sequence[str] = (),
@@ -119,7 +120,7 @@ def scan_artifacts(
     )
 
     def init_scan(
-        scan_artifact: model.ScanArtifact,
+        scan_artifact: sdo.model.ScanArtifact,
     ) -> typing.Union[model.ScanResult, model.FailedScan]:
         nonlocal cx_client
         nonlocal scan_func
@@ -215,7 +216,7 @@ def upload_and_scan_gh_artifact(
 
 def scan_gh_artifact(
     cx_project: checkmarx.project.CheckmarxProject,
-    scan_artifact: model.ScanArtifact,
+    scan_artifact: sdo.model.ScanArtifact,
     exclude_paths: typing.Sequence[str] = (),
     include_paths: typing.Sequence[str] = (),
 ) -> model.ScanResult:
@@ -333,7 +334,6 @@ def _download_and_zip_repo(
     repo: github3.repos.repo.Repository,
     tmp_file
 ):
-
     files_to_scan = 0
     filtered_out_files = 0
 
