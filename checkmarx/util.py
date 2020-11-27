@@ -222,10 +222,11 @@ def scan_gh_artifact(
 ) -> model.ScanResult:
 
     github_api = ccc.github.github_api_from_gh_access(access=scan_artifact.access)
-    repo = ccc.github.GithubRepo.from_gh_access(access=scan_artifact.access)
+
+    # access type has to be github thus we can call these methods
     gh_repo = github_api.repository(
-        owner=repo.org_name,
-        repository=repo.repo_name,
+        owner=scan_artifact.access.org_name(),
+        repository=scan_artifact.access.repository_name(),
     )
     try:
         commit_hash = product.util.guess_commit_from_source(
@@ -296,7 +297,6 @@ def print_scans(
     scans: model.FinishedScans,
     routes: checkmarx.client.CheckmarxRoutes,
 ):
-    # XXX raise if an error occurred?
     if scans.scans_above_threshold:
         print('\n')
         ci.util.info('critical scans above threshold')

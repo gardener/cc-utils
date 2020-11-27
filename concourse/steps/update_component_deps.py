@@ -21,7 +21,6 @@ import typing
 import gci.componentmodel
 import github3.exceptions
 
-import ccc.github
 import ci.util
 import concourse.model.traits.update_component_deps
 import concourse.steps.component_descriptor_util as cdu
@@ -71,20 +70,6 @@ def component_by_ref_and_version(
         )
     )
     return component_descriptor.component
-
-
-def github_access_for_component(component, cfg_factory):
-    component_source = ccc.github._get_single_repo(component)
-
-    # existence of access is guaranteed by _get_single_repo
-    repo_url = component_source.access.repoUrl
-    host_name, org, repo_name = repo_url.split('/')
-    github_cfg = ccc.github.github_cfg_for_hostname(
-        host_name=host_name,
-        cfg_factory=cfg_factory,
-    )
-
-    return (github_cfg, org, repo_name)
 
 
 def close_obsolete_pull_requests(
@@ -256,10 +241,6 @@ def create_upgrade_pr(
 ):
     ls_repo = pull_request_util.repository
     from_version = from_ref.version
-    from_component = component_by_ref_and_version(
-        component_reference=from_ref,
-        component_version=from_version,
-    )
 
     # prepare env for upgrade script and after-merge-callback
     cmd_env = os.environ.copy()
@@ -286,8 +267,10 @@ def create_upgrade_pr(
         githubrepobranch=githubrepobranch,
         repo_dir=repo_dir,
     )
+    repo_owner = githubrepobranch.repo_owner
+    repo_name = githubrepobranch.repo_name
+    github_cfg = cfg_factory.github(github_cfg_name)
 
-    github_cfg, repo_owner, repo_name = github_access_for_component(from_component, cfg_factory)
     release_notes = create_release_notes(
         from_github_cfg=github_cfg,
         from_repo_owner=repo_owner,
