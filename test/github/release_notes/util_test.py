@@ -28,11 +28,17 @@ from github.release_notes.util import (
 )
 from github.release_notes.renderer import (
     CATEGORY_ACTION_ID,
-    CATEGORY_NOTEWORTHY_ID,
+    CATEGORY_BUGFIX_ID,
+    CATEGORY_BREAKING_ID,
+    CATEGORY_DOC_ID,
+    CATEGORY_FEATURE_ID,
     CATEGORY_IMPROVEMENT_ID,
-    TARGET_GROUP_USER_ID,
-    TARGET_GROUP_OPERATOR_ID,
+    CATEGORY_OTHER_ID,
+    CATEGORY_NOTEWORTHY_ID,
     TARGET_GROUP_DEVELOPER_ID,
+    TARGET_GROUP_OPERATOR_ID,
+    TARGET_GROUP_USER_ID,
+    TARGET_GROUP_DEPENDENCY_ID,
 )
 from test.github.release_notes.default_util import (
     release_note_block_with_defaults,
@@ -53,22 +59,6 @@ class ReleaseNotesTest(unittest.TestCase):
             text='',
         )
         self.assertEqual(0, len(actual_release_notes))
-
-    def test_rls_note_extraction_improvement(self):
-        text = \
-            '``` improvement user\n'\
-            'this is a release note text\n'\
-            '```'
-        actual_release_notes = extract_release_notes_with_defaults(
-            text=text,
-        )
-
-        exp_release_note = release_note_block_with_defaults(
-            category_id=CATEGORY_IMPROVEMENT_ID,
-            target_group_id=TARGET_GROUP_USER_ID,
-            text='this is a release note text',
-        )
-        self.assertEqual([exp_release_note], actual_release_notes)
 
     def test_rls_note_extraction_ignore_noise_in_header(self):
         def verify_noise_ignored(text):
@@ -102,53 +92,128 @@ class ReleaseNotesTest(unittest.TestCase):
             '```'
         verify_noise_ignored(text)
 
-    def test_rls_note_extraction_noteworthy(self):
+    def test_rls_note_extraction_categories(self):
         text = \
-            '``` noteworthy operator\n'\
-            'notew-text\n'\
+            '``` breaking operator\n'\
+            'breaking-text\n'\
+            '```\n'\
+            '``` feature operator\n'\
+            'feature-text\n'\
+            '```\n'\
+            '``` bugfix operator\n'\
+            'bugfix-text\n'\
+            '```\n'\
+            '``` doc operator\n'\
+            'doc-text\n'\
+            '```\n'\
+            '``` other operator\n'\
+            'other-text\n'\
             '```'
         actual_release_notes = extract_release_notes_with_defaults(
             text=text,
         )
 
-        exp_release_note = release_note_block_with_defaults(
-            category_id=CATEGORY_NOTEWORTHY_ID,
-            target_group_id=TARGET_GROUP_OPERATOR_ID,
-            text='notew-text',
-        )
-        self.assertEqual([exp_release_note], actual_release_notes)
+        self.assertEqual([
+            release_note_block_with_defaults(
+              category_id=CATEGORY_BREAKING_ID,
+              target_group_id=TARGET_GROUP_OPERATOR_ID,
+              text='breaking-text',
+            ),
+            release_note_block_with_defaults(
+              category_id=CATEGORY_FEATURE_ID,
+              target_group_id=TARGET_GROUP_OPERATOR_ID,
+              text='feature-text',
+            ),
+            release_note_block_with_defaults(
+              category_id=CATEGORY_BUGFIX_ID,
+              target_group_id=TARGET_GROUP_OPERATOR_ID,
+              text='bugfix-text',
+            ),
+            release_note_block_with_defaults(
+              category_id=CATEGORY_DOC_ID,
+              target_group_id=TARGET_GROUP_OPERATOR_ID,
+              text='doc-text',
+            ),
+            release_note_block_with_defaults(
+              category_id=CATEGORY_OTHER_ID,
+              target_group_id=TARGET_GROUP_OPERATOR_ID,
+              text='other-text',
+            ),
+        ], actual_release_notes)
 
-    def test_rls_note_extraction_developer(self):
+    def test_rls_note_extraction_deprecated_categories(self):
         text = \
-            '``` noteworthy developer\n'\
-            'rls-note-for-developer\n'\
-            '```'
-        actual_release_notes = extract_release_notes_with_defaults(
-            text=text,
-        )
-
-        exp_release_note = release_note_block_with_defaults(
-            category_id=CATEGORY_NOTEWORTHY_ID,
-            target_group_id=TARGET_GROUP_DEVELOPER_ID,
-            text='rls-note-for-developer',
-        )
-        self.assertEqual([exp_release_note], actual_release_notes)
-
-    def test_rls_note_extraction_action(self):
-        text = \
+            '``` improvement operator\n'\
+            'improvement-text\n'\
+            '```\n'\
             '``` action operator\n'\
             'action-text\n'\
+            '```\n'\
+            '``` noteworthy operator\n'\
+            'noteworthy-text\n'\
             '```'
         actual_release_notes = extract_release_notes_with_defaults(
             text=text,
         )
 
-        exp_release_note = release_note_block_with_defaults(
-            category_id=CATEGORY_ACTION_ID,
-            target_group_id=TARGET_GROUP_OPERATOR_ID,
-            text='action-text',
+        self.assertEqual([
+            release_note_block_with_defaults(
+              category_id=CATEGORY_IMPROVEMENT_ID,
+              target_group_id=TARGET_GROUP_OPERATOR_ID,
+              text='improvement-text',
+            ),
+            release_note_block_with_defaults(
+              category_id=CATEGORY_ACTION_ID,
+              target_group_id=TARGET_GROUP_OPERATOR_ID,
+              text='action-text',
+            ),
+            release_note_block_with_defaults(
+              category_id=CATEGORY_NOTEWORTHY_ID,
+              target_group_id=TARGET_GROUP_OPERATOR_ID,
+              text='noteworthy-text',
+            ),
+        ], actual_release_notes)
+
+    def test_rls_note_extraction_target_groups(self):
+        text = \
+            '``` feature user\n'\
+            'rls-note-for-user\n'\
+            '```\n'\
+            '``` feature operator\n'\
+            'rls-note-for-operator\n'\
+            '```\n'\
+            '``` feature developer\n'\
+            'rls-note-for-developer\n'\
+            '```\n'\
+            '``` feature dependency\n'\
+            'rls-note-for-dependency\n'\
+            '```'
+        actual_release_notes = extract_release_notes_with_defaults(
+            text=text,
         )
-        self.assertEqual([exp_release_note], actual_release_notes)
+
+        self.assertEqual([
+            release_note_block_with_defaults(
+              category_id=CATEGORY_FEATURE_ID,
+              target_group_id=TARGET_GROUP_USER_ID,
+              text='rls-note-for-user',
+            ),
+            release_note_block_with_defaults(
+              category_id=CATEGORY_FEATURE_ID,
+              target_group_id=TARGET_GROUP_OPERATOR_ID,
+              text='rls-note-for-operator',
+            ),
+            release_note_block_with_defaults(
+              category_id=CATEGORY_FEATURE_ID,
+              target_group_id=TARGET_GROUP_DEVELOPER_ID,
+              text='rls-note-for-developer',
+            ),
+            release_note_block_with_defaults(
+              category_id=CATEGORY_FEATURE_ID,
+              target_group_id=TARGET_GROUP_DEPENDENCY_ID,
+              text='rls-note-for-dependency',
+            ),
+        ], actual_release_notes)
 
     def test_rls_note_extraction_src_repo(self):
         def source_repo_test(

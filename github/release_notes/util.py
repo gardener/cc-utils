@@ -29,7 +29,11 @@ from github.release_notes.model import (
     REF_TYPE_PULL_REQUEST,
     REF_TYPE_COMMIT
 )
-from github.release_notes.renderer import MarkdownRenderer
+from github.release_notes.renderer import (
+    MarkdownRenderer,
+    CATEGORIES,
+    TARGET_GROUPS
+)
 from gitutil import GitHelper
 from ci.util import info, warning, fail, verbose, ctx
 from product.model import ComponentName
@@ -429,8 +433,22 @@ def extract_release_notes(
     if not text:
         return release_notes
 
+    CATEGORY_IDS_LIST = _ \
+        .chain(CATEGORIES) \
+        .map(lambda category: category.identifiers) \
+        .flatten() \
+        .value()
+    CATEGORY_IDS = "|".join(CATEGORY_IDS_LIST)
+
+    TARGET_GROUP_IDS_LIST = _ \
+        .chain(TARGET_GROUPS) \
+        .map(lambda target_group: target_group.identifiers) \
+        .flatten() \
+        .value()
+    TARGET_GROUP_IDS = "|".join(TARGET_GROUP_IDS_LIST)
+
     r = re.compile(
-        r"``` *(?P<category>improvement|noteworthy|action) (?P<target_group>user|operator|developer)"
+        rf"``` *(?P<category>{CATEGORY_IDS}) (?P<target_group>{TARGET_GROUP_IDS})"
         r"( (?P<source_repo>\S+/\S+/\S+)(( (?P<reference_type>#|\$)(?P<reference_id>\S+))?"
         r"( @(?P<user>\S+))?)( .*?)?|( .*?)?)\r?\n(?P<text>.*?)\n```",
         re.MULTILINE | re.DOTALL
