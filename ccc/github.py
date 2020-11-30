@@ -228,7 +228,7 @@ def github_api_from_gh_access(
     access: cm.GithubAccess,
 ) -> typing.Union[github3.github.GitHub, github3.github.GitHubEnterprise]:
     if access.type is not cm.AccessType.GITHUB:
-        raise ValueError
+        raise ValueError(f'{access=}')
 
     github_cfg = github_cfg_for_hostname(host_name=access.hostname())
     return github_api(github_cfg=github_cfg)

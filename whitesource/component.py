@@ -11,14 +11,16 @@ import sdo.model
 import gci.componentmodel as cm
 
 
-def _get_ws_label_from_source(labels: typing.List[cm.Label]) -> sdo.labels.SourceIdHint:
-    for label in labels:
-        if sdo.labels.ScanLabelName(label.name) is sdo.labels.ScanLabelName.SOURCE_ID:
-            return dacite.from_dict(
-                data_class=sdo.labels.SourceIdHint,
-                data=label.value,
-                config=dacite.Config(cast=[sdo.labels.ScanPolicy]),
-            )
+def _get_ws_label_from_source(source: cm.ComponentSource) -> sdo.labels.SourceIdHint:
+    try:
+        label = source.find_label(sdo.labels.ScanLabelName.SOURCE_ID.value)
+        return dacite.from_dict(
+            data_class=sdo.labels.SourceIdHint,
+            data=label.value,
+            config=dacite.Config(cast=[sdo.labels.ScanPolicy]),
+        )
+    except ValueError:
+        pass
 
 
 def _get_scan_artifacts_from_components(
@@ -32,7 +34,7 @@ def _get_scan_artifacts_from_components(
             if source.access.type is not cm.AccessType.GITHUB:
                 raise NotImplementedError
 
-            ws_hint = _get_ws_label_from_source(source.labels)
+            ws_hint = _get_ws_label_from_source(source)
 
             if ws_hint is not None:
                 if ws_hint.policy and ws_hint.policy is sdo.labels.ScanPolicy.SCAN:
