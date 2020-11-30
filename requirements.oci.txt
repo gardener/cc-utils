@@ -1,2 +1,3 @@
 containerregistry-ccwienk==0.2.5
 dacite==1.4.0 # bug in 1.5.0
+www-authenticate
