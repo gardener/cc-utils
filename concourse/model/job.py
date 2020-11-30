@@ -81,21 +81,39 @@ class JobVariant(ModelBase):
         try:
             result = list(toposort.toposort(dependencies))
         except toposort.CircularDependencyError as de:
-            # remove cirular dependencies caused by synthetic steps
-            # (custom steps' dependencies should "win")
-            for step_name, step_dependencies in de.data.items():
-                step = self.step(step_name)
-                if not step.is_synthetic:
-                    continue # only patch away synthetic steps' dependencies
-                for step_dependency_name in step_dependencies:
-                    step_dependency = self.step(step_dependency_name)
-                    if step_dependency.is_synthetic:
-                        continue # leave dependencies between synthetic steps
-                    # patch out dependency from synthetic step to custom step
-                    dependencies[step_name].remove(step_dependency_name)
-            # try again - if there is still a cyclic dependency, this is probably caused
-            # by a user error - so let it propagate
-            result = toposort.toposort(dependencies)
+            cycle_info = de.data
+
+            # handle circular dependencies caused by depending on the publish step, e.g.:
+            # test -> publish -> prepare -> test.
+            custom_steps_depending_on_publish = [
+                step_name for step_name, step_dependencies in cycle_info.items()
+                if 'publish' in step_dependencies and not self.step(step_name).is_synthetic
+            ]
+            if (
+                'prepare' in cycle_info
+                and 'publish' in cycle_info
+                and custom_steps_depending_on_publish
+            ):
+                for step_name in custom_steps_depending_on_publish:
+                    dependencies['prepare'].remove(step_name)
+                result = list(toposort.toposort(dependencies))
+
+            else:
+                # remove cirular dependencies caused by synthetic steps
+                # (custom steps' dependencies should "win")
+                for step_name, step_dependencies in cycle_info.items():
+                    step = self.step(step_name)
+                    if not step.is_synthetic:
+                        continue # only patch away synthetic steps' dependencies
+                    for step_dependency_name in step_dependencies:
+                        step_dependency = self.step(step_dependency_name)
+                        if step_dependency.is_synthetic:
+                            continue # leave dependencies between synthetic steps
+                        # patch out dependency from synthetic step to custom step
+                        dependencies[step_name].remove(step_dependency_name)
+                # try again - if there is still a cyclic dependency, this is probably caused
+                # by a user error - so let it propagate
+                result = list(toposort.toposort(dependencies))
 
         # result contains a generator yielding tuples of step name in the correct execution order.
         # each tuple can/should be parallelised
