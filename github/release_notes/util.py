@@ -433,19 +433,19 @@ def extract_release_notes(
     if not text:
         return release_notes
 
-    CATEGORY_IDS_LIST = _ \
+    CATEGORY_IDS = _ \
         .chain(CATEGORIES) \
         .map(lambda category: category.identifiers) \
         .flatten() \
+        .join('|') \
         .value()
-    CATEGORY_IDS = "|".join(CATEGORY_IDS_LIST)
 
-    TARGET_GROUP_IDS_LIST = _ \
+    TARGET_GROUP_IDS = _ \
         .chain(TARGET_GROUPS) \
         .map(lambda target_group: target_group.identifiers) \
         .flatten() \
+        .join('|') \
         .value()
-    TARGET_GROUP_IDS = "|".join(TARGET_GROUP_IDS_LIST)
 
     r = re.compile(
         rf"``` *(?P<category>{CATEGORY_IDS}) (?P<target_group>{TARGET_GROUP_IDS})"
