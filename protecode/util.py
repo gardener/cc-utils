@@ -123,9 +123,11 @@ def upload_grouped_images(
                 return False
 
             # check for scanning labels on resource in cd
-            if label := resource.find_label(name=sdo.labels.ScanLabelName.BINARY_SCAN.value):
+            try:
+                label = resource.find_label(name=sdo.labels.ScanLabelName.BINARY_SCAN.value)
                 return label.value.policy is sdo.labels.ScanPolicy.SCAN
-            else:
+            except ValueError:
+                # label was not present, return default
                 return True
 
         for component_name, components in component_groups.items():
