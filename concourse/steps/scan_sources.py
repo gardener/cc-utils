@@ -43,7 +43,7 @@ def scan_sources_and_notify(
         email_recipients=email_recipients,
         routes=checkmarx_client.routes,
     )
-    #TODO codeowner recipient:
+    #TODO codeowner recipient
 
 
 def scan_component_with_whitesource(
@@ -56,13 +56,11 @@ def scan_component_with_whitesource(
     notification_recipients: list,
 ):
 
-    # create whitesource client
     ci.util.info('creating whitesource client')
     ws_client = whitesource.util.create_whitesource_client(
         whitesource_cfg_name=whitesource_cfg_name,
     )
 
-    # parse component_descriptor
     ci.util.info('parsing component descriptor')
     component_descriptor = cm.ComponentDescriptor.from_dict(
         ci.util.parse_yaml_file(component_descriptor_path)

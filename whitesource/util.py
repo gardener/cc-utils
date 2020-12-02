@@ -191,7 +191,6 @@ def notify_users(
             threshold=cve_threshold,
             tablefmt='html',
         )
-
         ci.util.info('retrieving product risk report')
         prr = ws_client.get_product_risk_report(product_token=product_token)
 
@@ -202,7 +201,6 @@ def notify_users(
 
         ci.util.info('sending notification')
         attachment_file_name = datetime.datetime.now().strftime('%Y-%m-%d-product-risk-report.pdf')
-        print(attachment_file_name)
         attachment = mail.model.Attachment(
             mimetype_main='application',
             mimetype_sub='pdf',
