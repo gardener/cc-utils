@@ -35,7 +35,7 @@ class CustomField:
 @dataclasses.dataclass
 class ProjectDetails:
     id: int
-    teamId: str
+    teamId: int
     name: str
     customFields: typing.List[CustomField] = dataclasses.field(default_factory=list)
 
