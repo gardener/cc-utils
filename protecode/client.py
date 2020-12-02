@@ -25,6 +25,7 @@ from ci.util import not_empty, not_none, urljoin
 from http_requests import check_http_code, mount_default_adapter
 from .model import (
     AnalysisResult,
+    CVSSVersion,
     ProcessingStatus,
     ScanResult,
     Triage,
@@ -62,6 +63,9 @@ class ProtecodeApiRoutes(object):
 
     def login(self):
         return self._url('login') + '/'
+
+    def pdf_report(self, product_id: int):
+        return self._url('products', str(product_id), 'pdf-report')
 
     def groups(self):
         return self._api_url('groups')
@@ -427,3 +431,23 @@ class ProtecodeApi:
             url=url,
             json=[override_dict],
         ).json()
+
+    def pdf_report(self, product_id: int, cvss_version: CVSSVersion=CVSSVersion.V3):
+        if not self._csrf_token:
+            self.login()
+
+        url = self._routes.pdf_report(product_id)
+
+        if cvss_version is CVSSVersion.V2:
+            cvss_version_number = 2
+        elif cvss_version is CVSSVersion.V3:
+            cvss_version_number = 3
+        else:
+            raise NotImplementedError(cvss_version)
+
+        response = self._get(
+            url=url,
+            params={'cvss_version': cvss_version_number},
+        )
+
+        return response.content
