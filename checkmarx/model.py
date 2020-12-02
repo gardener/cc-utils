@@ -85,7 +85,7 @@ class ScanResponse:
     scanRiskSeverity: int
     status: ScanStatus
     isIncremental: bool
-    owningTeamId: str
+    owningTeamId: int
     dateAndTime: typing.Optional[ScanDateAndTime] = None
 
     def status_value(self):
