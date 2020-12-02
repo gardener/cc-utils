@@ -5,7 +5,7 @@ import typing
 import requests
 from requests_toolbelt import MultipartEncoder
 
-from ci.util import urljoin
+import ci.util
 import whitesource.model
 
 
@@ -48,8 +48,8 @@ class WhitesourceClient:
         if not res.ok:
             msg = f'{method} request to url {res.url} failed with {res.status_code=} {res.reason=}'
             if print_error:
-                print(msg)
-                print(res.text)
+                ci.util.error(msg)
+                ci.util.error(res.text)
             raise WSNotOkayException(res=res, msg=msg)
         return res
 
@@ -182,13 +182,13 @@ class WhitesourceRoutes:
         self.wss_api_endpoint = wss_api_endpoint
 
     def post_component(self):
-        return urljoin(self.extension_endpoint, 'component')
+        return ci.util.urljoin(self.extension_endpoint, 'component')
 
     def get_product_risk_report(self):
-        return urljoin(self.wss_api_endpoint)
+        return ci.util.urljoin(self.wss_api_endpoint)
 
     def get_all_projects(self):
-        return urljoin(self.wss_api_endpoint)
+        return ci.util.urljoin(self.wss_api_endpoint)
 
     def get_project_vulnerability_report(self):
-        return urljoin(self.wss_api_endpoint)
+        return ci.util.urljoin(self.wss_api_endpoint)
