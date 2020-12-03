@@ -27,3 +27,10 @@ class WhitesourceProject:
                 cve_name = entry['name']
 
         return (cve_name, float(max_score))
+
+
+@dataclasses.dataclass
+class WssDisplayProject:
+    name: str
+    highest_cve_name: str
+    highest_cve_score: float
