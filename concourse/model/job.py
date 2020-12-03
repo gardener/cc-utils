@@ -74,6 +74,29 @@ class JobVariant(ModelBase):
     def step_names(self):
         return map(select_attr('name'), self.steps())
 
+    def _step_depends_on(self, step_name, step_dependency_name, dependencies, max_depth=5):
+        '''return whether `step_name` depends on `step_dependency_name` given the passed
+        dependencies-dictionary.
+
+        Only considers steps defined by users.
+        '''
+        # avoid recursion-error
+        if max_depth == 0:
+            return False
+        if self.step(step_name).is_synthetic:
+            return False
+        # if step is not present in dependencies-dict, he has no dependencies and therefore
+        # cannot depend on any step.
+        if not step_name in dependencies:
+            return False
+        if step_dependency_name in dependencies[step_name]:
+            return True
+        # recursively check for all steps our step depends on.
+        return any([
+            self._step_depends_on(s, step_dependency_name, dependencies, max_depth-1)
+            for s in dependencies[step_name]
+        ])
+
     def ordered_steps(self):
         dependencies = {
             step.name: step.depends() for step in self.steps()
@@ -82,12 +105,11 @@ class JobVariant(ModelBase):
             result = list(toposort.toposort(dependencies))
         except toposort.CircularDependencyError as de:
             cycle_info = de.data
-
             # handle circular dependencies caused by depending on the publish step, e.g.:
-            # test -> publish -> prepare -> test.
+            # test -> publish -> ... -> prepare -> test, up to a circle-length of 5
             custom_steps_depending_on_publish = [
-                step_name for step_name, step_dependencies in cycle_info.items()
-                if 'publish' in step_dependencies and not self.step(step_name).is_synthetic
+                step_name for step_name in cycle_info
+                if self._step_depends_on(step_name, 'publish', cycle_info, 5)
             ]
             if (
                 'prepare' in cycle_info
