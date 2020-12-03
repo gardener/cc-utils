@@ -763,6 +763,6 @@ class UploadResult(object):
 
     def __str__(self):
         return '{c} - {s}'.format(
-            c=self.component.name(),
+            c=self.component.name,
             s=self.status
         )
