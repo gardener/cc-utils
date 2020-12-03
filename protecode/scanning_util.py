@@ -402,10 +402,18 @@ class ProtecodeUtil:
         # yield results
         for protecode_app in protecode_apps_to_consider:
             scan_result = self._api.scan_result(protecode_app.product_id())
+
+            # create closure for pdf retrieval to avoid actually having to store
+            # all the pdf-reports in memory. Will be called when preparing to send
+            # the notification emails if reports are to be included
+            def pdf_retrieval_function():
+                return self._api.pdf_report(protecode_app.product_id())
+
             yield mk_upload_result(
                 status=UploadStatus.DONE, # XXX remove this
                 result=scan_result,
                 resource=resource,
+                pdf_report_retrieval_func=pdf_retrieval_function,
             )
 
         # rm all outdated protecode apps
