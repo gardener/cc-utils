@@ -43,58 +43,74 @@ def generate_reporting_tables(
     tabulate.htmlescape = lambda x: x
 
     # split respecting CVSS-V3 threshold
-    above: typing.List[whitesource.model.WhitesourceProject] = []
-    below: typing.List[whitesource.model.WhitesourceProject] = []
+    above: typing.List[whitesource.model.WssDisplayProject] = []
+    below: typing.List[whitesource.model.WssDisplayProject] = []
 
     for project in projects:
-        if float(project.max_cve()[1]) > threshold:
-            above.append(project)
-        else:
-            below.append(project)
-
-    def _sort_projects_by_cve(
-        projects: typing.List[whitesource.model.WhitesourceProject],
-        descending=True,
-    ):
-        return sorted(
-            projects,
-            key=lambda p: p.max_cve()[1],
-            reverse=descending,
+        max_cve = project.max_cve()
+        display_project = whitesource.model.WssDisplayProject(
+            name=project.name,
+            highest_cve_name=max_cve[0],
+            highest_cve_score=float(max_cve[1]),
         )
+        if display_project.highest_cve_score > threshold:
+            above.append(display_project)
+        else:
+            below.append(display_project)
 
     # sort tables descending by CVSS-V3
-    below = _sort_projects_by_cve(projects=below)
-    above = _sort_projects_by_cve(projects=above)
+    below = sorted(
+        below,
+        key=lambda p: p.highest_cve_score,
+        reverse=True,
+    )
+    above = sorted(
+        above,
+        key=lambda p: p.highest_cve_score,
+        reverse=True,
+    )
 
     ttable_header = (
         'Component',
         'Greatest CVSS-V3',
         'Corresponding CVE',
     )
-    ttables = []
+    above_table = _gen_table_from_list(
+        table_headers=ttable_header,
+        tablefmt=tablefmt,
+        data=above,
+    )
 
-    for source in above, below:
-        if len(source) == 0:
-            ttables.append('')
-            continue
-        ttable_data = (
-            (
-                project.name,
-                project.max_cve()[0],
-                project.max_cve()[1],
-            ) for project in projects
-        )
+    below_table = _gen_table_from_list(
+        table_headers=ttable_header,
+        tablefmt=tablefmt,
+        data=below,
+    )
 
-        ttable = tabulate.tabulate(
-            headers=ttable_header,
-            tabular_data=ttable_data,
-            tablefmt=tablefmt,
-            colalign=('left', 'center', 'center'),
-        )
-
-        ttables.append(ttable)
+    ttables = [above_table, below_table]
 
     return ttables
+
+
+def _gen_table_from_list(
+    table_headers,
+    tablefmt,
+    data: typing.List[whitesource.model.WssDisplayProject],
+):
+    table_data = (
+        (
+            project.name,
+            project.highest_cve_name,
+            project.highest_cve_score,
+        ) for project in data
+    )
+    table = tabulate.tabulate(
+        headers=table_headers,
+        tabular_data=table_data,
+        tablefmt=tablefmt,
+        colalign=('left', 'center', 'center'),
+    )
+    return table
 
 
 def assemble_mail_body(
@@ -141,7 +157,7 @@ def send_mail(
     body,
     recipients: list,
     product_name: str,
-    attachments: typing.Sequence[mail.model.Attachment],
+    # attachments: typing.Sequence[mail.model.Attachment],
 ):
 
     # get standard cfg set for email cfg
@@ -155,7 +171,7 @@ def send_mail(
         mail_template=body,
         subject=f'[Action Required] ({product_name}) WhiteSource Vulnerability Report',
         mimetype='html',
-        attachments=attachments,
+        # attachments=attachments,
     )
 
 
@@ -175,7 +191,7 @@ def notify_users(
     ci.util.info('retrieving all projects')
     projects = ws_client.get_all_projects_of_product(product_token=product_token)
 
-    # generate simple reporting table for console output
+    ci.util.info('generate simple reporting table for console output')
     tables = generate_reporting_tables(
         projects=projects,
         threshold=cve_threshold,
@@ -191,8 +207,18 @@ def notify_users(
             threshold=cve_threshold,
             tablefmt='html',
         )
-        ci.util.info('retrieving product risk report')
-        prr = ws_client.get_product_risk_report(product_token=product_token)
+        # TODO add line break after 72 lines to avoid line too long error
+        # ci.util.info('retrieving product risk report')
+        # prr = ws_client.get_product_risk_report(product_token=product_token)
+
+        # ci.util.info('creating risk report')
+        # attachment_file_name = datetime.datetime.now().strftime('%Y-%m-%d-product-risk-report.pdf')
+        # attachment = mail.model.Attachment(
+        #     mimetype_main='application',
+        #     mimetype_sub='pdf',
+        #     bytes=prr.content,
+        #     filename=attachment_file_name,
+        # )
 
         body = assemble_mail_body(
             tables=tables,
@@ -200,19 +226,11 @@ def notify_users(
         )
 
         ci.util.info('sending notification')
-        attachment_file_name = datetime.datetime.now().strftime('%Y-%m-%d-product-risk-report.pdf')
-        attachment = mail.model.Attachment(
-            mimetype_main='application',
-            mimetype_sub='pdf',
-            bytes=prr.content,
-            filename=attachment_file_name,
-        )
-
         send_mail(
             body=body,
             recipients=notification_recipients,
             product_name=product_name,
-            attachments=[attachment],
+            # attachments=[attachment],
         )
 
 
@@ -259,7 +277,7 @@ def scan_artifact_with_ws(
         # sets the file position at the offset 0 == start of the file
         tmp_file.seek(0)
 
-        clogger.info('POST project')
+        clogger.info('sending component to scan backend...')
         ws_client.post_project(
             extra_whitesource_config=extra_whitesource_config,
             file=tmp_file,
@@ -268,6 +286,7 @@ def scan_artifact_with_ws(
             project_name=scan_artifact.name,
             requester_email=requester_mail,
         )
+        clogger.info('scan complete')
         # TODO save scanned commit hash or tag in project tag show scanned version
         # version for agent will create a new project
         # https://whitesource.atlassian.net/wiki/spaces/WD/pages/34046170/HTTP+API+v1.1#HTTPAPIv1.1-ProjectTags

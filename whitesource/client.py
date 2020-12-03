@@ -1,4 +1,3 @@
-import dataclasses
 import json
 import typing
 
@@ -7,12 +6,6 @@ from requests_toolbelt import MultipartEncoder
 
 import ci.util
 import whitesource.model
-
-
-@dataclasses.dataclass
-class WhitesourceProjectRating:
-    project_name: str
-    cve_score: float
 
 
 class WSNotOkayException(Exception):
