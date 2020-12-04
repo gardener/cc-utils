@@ -29,6 +29,9 @@ class WhitesourceCredentials(BasicCredentials):
 
 
 class WhitesourceConfig(NamedModelElement):
+    def product_token(self):
+        return self.raw.get('product_token')
+
     def wss_endpoint(self):
         return self.raw.get('wss_endpoint')
 
@@ -54,6 +57,9 @@ class WhitesourceConfig(NamedModelElement):
 
     def _required_attributes(self):
         return 'credentials', 'wss_endpoint', 'api_key', 'extension_endpoint'
+
+    def _optional_attributes(self):
+        return ('product_token',)
 
 
 class DockerImageConfig(ModelBase):
