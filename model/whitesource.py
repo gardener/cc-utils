@@ -29,6 +29,9 @@ class WhitesourceCredentials(BasicCredentials):
 
 
 class WhitesourceConfig(NamedModelElement):
+    def base_url(self):
+        return self.raw.get('base_url')
+
     def product_token(self):
         return self.raw.get('product_token')
 
@@ -56,7 +59,14 @@ class WhitesourceConfig(NamedModelElement):
         }
 
     def _required_attributes(self):
-        return 'credentials', 'wss_endpoint', 'api_key', 'extension_endpoint'
+        return (
+            'credentials',
+            'wss_endpoint',
+            'api_key',
+            'extension_endpoint',
+            'wss_api_endpoint',
+            'base_url',
+        )
 
     def _optional_attributes(self):
         return ('product_token',)
