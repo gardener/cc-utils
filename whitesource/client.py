@@ -100,14 +100,11 @@ class WhitesourceClient:
             data=m,
         )
 
-    def get_product_risk_report(
-        self,
-        product_token: str,
-    ):
+    def get_product_risk_report(self):
         body = {
             'requestType': 'getProductRiskReport',
             'userKey': self.creds.user_key(),
-            'productToken': product_token,
+            'productToken': self.product_token,
         }
         return self.request(
             method='POST',
@@ -118,12 +115,11 @@ class WhitesourceClient:
 
     def get_all_projects_of_product(
         self,
-        product_token: str,
     ) -> typing.List[whitesource.model.WhitesourceProject]:
         body = {
             'requestType': 'getAllProjects',
             'userKey': self.creds.user_key(),
-            'productToken': product_token,
+            'productToken': self.product_token,
         }
         res = self.request(
             method='POST',

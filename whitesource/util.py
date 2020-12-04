@@ -180,13 +180,12 @@ def print_cve_tables(tables):
 
 def notify_users(
     ws_client: whitesource.client.WhitesourceClient,
-    product_token: str,
     cve_threshold: float,
     notification_recipients: typing.List[str],
     product_name: str
 ):
     ci.util.info('retrieving all projects')
-    projects = ws_client.get_all_projects_of_product(product_token=product_token)
+    projects = ws_client.get_all_projects_of_product()
 
     ci.util.info('generate simple reporting table for console output')
     tables = generate_reporting_tables(
