@@ -59,11 +59,6 @@ CHECKMARX_ATTRIBUTES = (
 
 
 WHITESOURCE_ATTRIBUTES = (
-    AttributeSpec.required(
-        name='product_token',
-        doc='whitesource product token',
-        type=str,
-    ),
     AttributeSpec.optional(
         name='cve_threshold',
         doc='defines threshold for cve table generation',
@@ -82,9 +77,6 @@ class WhitesourceCfg(ModelBase):
     @classmethod
     def _attribute_specs(cls):
         return WHITESOURCE_ATTRIBUTES
-
-    def product_token(self):
-        return self.raw['product_token']
 
     def cve_threshold(self):
         return self.raw['cve_threshold']
