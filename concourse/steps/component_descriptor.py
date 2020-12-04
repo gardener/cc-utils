@@ -73,6 +73,7 @@ def base_component_descriptor_v2(
               ref=src_ref,
               commit=commit,
             ),
+            version=effective_version,
           )
         ],
         componentReferences=[], # added later
