@@ -49,7 +49,10 @@ def base_component_descriptor_v2(
         src_ref = f'refs/tags/{effective_version}'
     else:
         # let's hope the version contains something committish
-        src_ref = f'{parsed_version.prerelease}{parsed_version.build}'
+        if parsed_version.build:
+            src_ref = f'{parsed_version.prerelease}{parsed_version.build}'
+        else:
+            src_ref = f'{parsed_version.prerelease}'
 
     base_descriptor_v2 = cm.ComponentDescriptor(
       meta=cm.Metadata(schemaVersion=cm.SchemaVersion.V2),
