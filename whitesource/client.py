@@ -21,6 +21,7 @@ class WhitesourceClient:
         self,
         api_key: str,
         extension_endpoint: str,
+        product_token: str,
         wss_api_endpoint: str,
         wss_endpoint: str,
         ws_creds,
@@ -32,6 +33,7 @@ class WhitesourceClient:
         self.api_key = api_key
         self.wss_endpoint = wss_endpoint
         self.creds = ws_creds
+        self.product_token = product_token
 
     def request(self, method: str, print_error: bool = True, *args, **kwargs):
         res = requests.request(
@@ -67,7 +69,6 @@ class WhitesourceClient:
         extra_whitesource_config: typing.Dict,
         file,
         filename: str,
-        product_token: str,
         project_name: str,
         requester_email: str,
     ):
@@ -77,7 +78,7 @@ class WhitesourceClient:
             'wsConfig': json.dumps({
                 'apiKey': self.api_key,
                 'projectName': project_name,
-                'productToken': product_token,
+                'productToken': self.product_token,
                 'requesterEmail': requester_email,
                 'userKey': self.creds.user_key(),
                 'wssUrl': self.wss_endpoint,

@@ -48,7 +48,6 @@ def scan_sources_and_notify(
 
 def scan_component_with_whitesource(
     whitesource_cfg_name: str,
-    product_token: str,
     component_descriptor_path: str,
     extra_whitesource_config: dict,
     requester_mail: str,
@@ -77,7 +76,6 @@ def scan_component_with_whitesource(
     for scan_artifact in scan_artifacts:
         whitesource.util.scan_artifact_with_ws(
             extra_whitesource_config=extra_whitesource_config,
-            product_token=product_token,
             requester_mail=requester_mail,
             scan_artifact=scan_artifact,
             ws_client=ws_client,
@@ -88,5 +86,4 @@ def scan_component_with_whitesource(
         cve_threshold=cve_threshold,
         ws_client=ws_client,
         product_name=product_name,
-        product_token=product_token,
     )

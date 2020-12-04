@@ -28,7 +28,8 @@ def create_whitesource_client(
         extension_endpoint=ws_config.extension_endpoint(),
         wss_api_endpoint=ws_config.wss_api_endpoint(),
         wss_endpoint=ws_config.wss_endpoint(),
-        ws_creds=ws_config.credentials()
+        ws_creds=ws_config.credentials(),
+        product_token=ws_config.product_token(),
     )
 
 
@@ -221,7 +222,6 @@ def notify_users(
 
 def scan_artifact_with_ws(
     extra_whitesource_config: typing.Dict,
-    product_token: str,
     requester_mail: str,
     scan_artifact: sdo.model.ScanArtifact,
     ws_client: whitesource.client.WhitesourceClient,
@@ -267,7 +267,6 @@ def scan_artifact_with_ws(
             extra_whitesource_config=extra_whitesource_config,
             file=tmp_file,
             filename=component_filename,
-            product_token=product_token,
             project_name=scan_artifact.name,
             requester_email=requester_mail,
         )
