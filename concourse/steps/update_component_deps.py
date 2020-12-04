@@ -267,8 +267,8 @@ def create_upgrade_pr(
         githubrepobranch=githubrepobranch,
         repo_dir=repo_dir,
     )
-    repo_owner = githubrepobranch.repo_owner
-    repo_name = githubrepobranch.repo_name
+    repo_owner = githubrepobranch.repo_owner()
+    repo_name = githubrepobranch.repo_name()
     github_cfg = cfg_factory.github(github_cfg_name)
 
     release_notes = create_release_notes(
