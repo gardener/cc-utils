@@ -72,7 +72,7 @@ def scan_component_with_whitesource(
     # get scan artifacts with configured label
     scan_artifacts_gen = whitesource.component._get_scan_artifacts_from_components(components)
     scan_artifacts = tuple(scan_artifacts_gen)
-    ci.util.info(f'will scan {len(scan_artifacts)} artifact')
+    ci.util.info(f'will scan {len(scan_artifacts)} artifacts')
 
     for scan_artifact in scan_artifacts:
         whitesource.util.scan_artifact_with_ws(

@@ -1,4 +1,3 @@
-import datetime
 import functools
 import tempfile
 import typing
@@ -8,7 +7,6 @@ import tabulate
 import ccc.github
 import ci.util
 import mailutil
-import mail.model
 import product.util
 import reutil
 import sdo.util
@@ -157,7 +155,6 @@ def send_mail(
     body,
     recipients: list,
     product_name: str,
-    # attachments: typing.Sequence[mail.model.Attachment],
 ):
 
     # get standard cfg set for email cfg
@@ -171,7 +168,6 @@ def send_mail(
         mail_template=body,
         subject=f'[Action Required] ({product_name}) WhiteSource Vulnerability Report',
         mimetype='html',
-        # attachments=attachments,
     )
 
 
@@ -207,30 +203,19 @@ def notify_users(
             threshold=cve_threshold,
             tablefmt='html',
         )
-        # TODO add line break after 72 lines to avoid line too long error
-        # ci.util.info('retrieving product risk report')
-        # prr = ws_client.get_product_risk_report(product_token=product_token)
-
-        # ci.util.info('creating risk report')
-        # attachment_file_name = datetime.datetime.now().strftime('%Y-%m-%d-product-risk-report.pdf')
-        # attachment = mail.model.Attachment(
-        #     mimetype_main='application',
-        #     mimetype_sub='pdf',
-        #     bytes=prr.content,
-        #     filename=attachment_file_name,
-        # )
 
         body = assemble_mail_body(
             tables=tables,
             threshold=cve_threshold,
         )
 
+        # TODO fix mail pdf attachment
+        # add line break after 72 lines to avoid line too long error
         ci.util.info('sending notification')
         send_mail(
             body=body,
             recipients=notification_recipients,
             product_name=product_name,
-            # attachments=[attachment],
         )
 
 
