@@ -139,6 +139,10 @@ v2_outfile = os.path.join(
   component_descriptor_fname(schema_version=gci.componentmodel.SchemaVersion.V2),
 )
 
+ctf_out_path = os.path.abspath(
+  os.path.join(descriptor_out_dir, 'cnudie-transport-format.out')
+)
+
 descriptor_script = os.path.abspath(
   '${job_variant.main_repository().resource_name()}/.ci/${job_step.name}'
 )
@@ -173,6 +177,7 @@ subproc_env['MAIN_REPO_DIR'] = main_repo_path
 subproc_env['BASE_DEFINITION_PATH'] = base_descriptor_file_v2
 subproc_env['COMPONENT_DESCRIPTOR_PATH'] = v2_outfile
 subproc_env['COMPONENT_DESCRIPTOR_PATH_V1'] = descriptor_path
+subproc_env['CTF_PATH'] = ctf_out_path
 subproc_env['COMPONENT_NAME'] = component_name
 subproc_env['COMPONENT_VERSION'] = effective_version
 
@@ -200,22 +205,30 @@ subprocess.run(
   env=subproc_env
 )
 
-# ensure the script actually created an output
-if not os.path.isfile(v2_outfile):
-  fail(f'no descriptor file was found at: {v2_outfile=}')
+have_ctf = os.path.exists(ctf_out_path)
+have_cd = os.path.exists(v2_outfile)
 
-descriptor_v2 = cm.ComponentDescriptor.from_dict(
-  ci.util.parse_yaml_file(v2_outfile)
-)
-print(f'found component-descriptor (v2) at {v2_outfile=}')
+if not have_ctf ^ have_cd:
+    fail(f'exactly one of {ctf_out_path=}, {v2_outfile=} must exist')
+elif have_cd:
+  # ensure the script actually created an output
+  if not os.path.isfile(v2_outfile):
+    fail(f'no descriptor file was found at: {v2_outfile=}')
 
-# convert back to v1 for backwards compatibility for now
-descriptor_v1 = product.v2.convert_to_v1(component_descriptor_v2=descriptor_v2)
-with open(descriptor_path, 'w') as f:
-  yaml.dump(descriptor_v1.raw, f)
-info(f'created v1-version of cd at {descriptor_path=} from v2-descriptor')
+  descriptor_v2 = cm.ComponentDescriptor.from_dict(
+    ci.util.parse_yaml_file(v2_outfile)
+  )
+  print(f'found component-descriptor (v2) at {v2_outfile=}')
 
-descriptor = ComponentDescriptor.from_dict(parse_yaml_file(descriptor_path))
+  # convert back to v1 for backwards compatibility for now
+  descriptor_v1 = product.v2.convert_to_v1(component_descriptor_v2=descriptor_v2)
+  with open(descriptor_path, 'w') as f:
+    yaml.dump(descriptor_v1.raw, f)
+  info(f'created v1-version of cd at {descriptor_path=} from v2-descriptor')
+
+  descriptor = ComponentDescriptor.from_dict(parse_yaml_file(descriptor_path))
+elif have_ctf:
+  fail('CTF not yet supported')
 
 cfg_factory = ctx().cfg_factory()
 info('resolving dependencies')
