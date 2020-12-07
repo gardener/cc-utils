@@ -81,6 +81,7 @@ component_v2.resources.append(
       type=cm.AccessType.OCI_REGISTRY,
       imageReference='${image_descriptor.image_reference()}' + ':' + effective_version,
     ),
+    labels=${image_descriptor.resource_labels()}
   ),
 )
 % endfor
