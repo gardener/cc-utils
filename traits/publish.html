@@ -299,8 +299,8 @@ notable exception of the <code class="code docutils literal notranslate"><span c
   <span class="nt">build</span><span class="p">:</span>
     <span class="nt">output_dir</span><span class="p">:</span> <span class="s">&#39;build_result&#39;</span>  <span class="c1"># &#39;build&#39; must cp to ${BUILD_RESULT_PATH}</span>
 <span class="nt">traits</span><span class="p">:</span>
-  <span class="l l-Scalar l-Scalar-Plain">publish</span>
-    <span class="l l-Scalar l-Scalar-Plain">dockerimages</span><span class="p p-Indicator">:</span>
+  <span class="nt">publish</span><span class="p">:</span>
+    <span class="nt">dockerimages</span><span class="p">:</span>
       <span class="nt">first_image</span><span class="p">:</span> <span class="c1"># logical image name</span>
         <span class="nt">image</span><span class="p">:</span> <span class="s">&#39;eu.grc.io/gardener-project/example/image&#39;</span>
         <span class="nt">dockerfile</span><span class="p">:</span> <span class="s">&#39;Dockerfile&#39;</span>
