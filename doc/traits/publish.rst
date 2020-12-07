@@ -49,7 +49,7 @@ Example
     build:
       output_dir: 'build_result'  # 'build' must cp to ${BUILD_RESULT_PATH}
   traits:
-    publish
+    publish:
       dockerimages:
         first_image: # logical image name
           image: 'eu.grc.io/gardener-project/example/image'
