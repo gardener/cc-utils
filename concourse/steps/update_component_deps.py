@@ -21,6 +21,7 @@ import typing
 import gci.componentmodel
 import github3.exceptions
 
+import ccc.github
 import ci.util
 import concourse.model.traits.update_component_deps
 import concourse.steps.component_descriptor_util as cdu
@@ -100,6 +101,24 @@ def upgrade_pr_exists(
             )
             for upgrade_rq in upgrade_requests
         ]
+    )
+
+
+def get_source_repo_config_for_component_reference(
+    component_reference: gci.componentmodel.ComponentReference,
+    component_version: str,
+):
+    component = component_by_ref_and_version(
+        component_reference=component_reference,
+        component_version=component_version,
+    )
+    if not component.sources or len(component.sources) > 1:
+        raise NotImplementedError(f'Cannot determine source repository of {component.name}')
+    access = component.sources[0].access
+    return (
+        ccc.github.github_cfg_for_hostname(access.hostname()),
+        access.org_name(),
+        access.repository_name(),
     )
 
 
@@ -267,9 +286,11 @@ def create_upgrade_pr(
         githubrepobranch=githubrepobranch,
         repo_dir=repo_dir,
     )
-    repo_owner = githubrepobranch.repo_owner()
-    repo_name = githubrepobranch.repo_name()
-    github_cfg = cfg_factory.github(github_cfg_name)
+
+    github_cfg, repo_owner, repo_name = get_source_repo_config_for_component_reference(
+        component_reference=from_ref,
+        component_version=from_version,
+    )
 
     release_notes = create_release_notes(
         from_github_cfg=github_cfg,
