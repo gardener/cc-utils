@@ -3,6 +3,7 @@
 import itertools
 import os
 
+import oci.auth as oa
 import model.container_registry
 
 from ci.util import urljoin
@@ -224,7 +225,7 @@ else:
   ## at the configured prefixes of the container-registries.
   registry_cfg = model.container_registry.find_config(
     image_reference=image_reference,
-    privileges=model.container_registry.Privileges.READ_ONLY,
+    privileges=oa.Privileges.READONLY,
   )
 %>
     ${task_image_resource(

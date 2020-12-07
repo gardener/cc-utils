@@ -22,7 +22,7 @@ class Privileges(enum.Enum):
         elif privileges is None:
             return 2
         else:
-            raise NotImplementedError
+            raise NotImplementedError(privileges)
 
     def __hash__(self):
         return self._asint(self).__hash__()
