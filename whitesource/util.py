@@ -173,9 +173,9 @@ def send_mail(
 
 
 def print_cve_tables(tables):
-    print()
-    print('\n\n'.join(tables))
-    print()
+    ci.util.info('\n')
+    ci.util.info('\n\n'.join(tables))
+    ci.util.info('\n')
 
 
 def notify_users(
@@ -186,6 +186,12 @@ def notify_users(
 ):
     ci.util.info('retrieving all projects')
     projects = ws_client.get_all_projects_of_product()
+
+    if len(projects) == 0:
+        ci.util.warning(
+            f'No projects found in product {product_name}. No data to report. Exiting...',
+        )
+        return
 
     ci.util.info('generate simple reporting table for console output')
     tables = generate_reporting_tables(
