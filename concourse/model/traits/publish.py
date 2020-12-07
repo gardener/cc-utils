@@ -14,8 +14,11 @@
 # limitations under the License.
 import typing
 
+import dacite
+
 from ci.util import not_none
 from model import NamedModelElement
+import gci.componentmodel as cm
 
 from concourse.model.job import (
     JobVariant,
@@ -33,6 +36,7 @@ from concourse.model.base import (
 )
 from model.base import (
   ModelDefaultsMixin,
+  ModelValidationError,
 )
 
 
@@ -78,6 +82,12 @@ IMG_DESCRIPTOR_ATTRIBS = (
         default=None,
         doc='only for multistage builds: the target up to which to build',
     ),
+    AttributeSpec.optional(
+        name='resource_labels',
+        default=[],
+        type=typing.List[cm.Label],
+        doc='labels to add to the resource declaration for this image in base-component-descriptor'
+    )
 )
 
 
@@ -126,6 +136,9 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
     def builddir_relpath(self):
         return self.raw['dir']
 
+    def resource_labels(self):
+        return self.raw['resource_labels']
+
     def resource_name(self):
         parts = self.image_reference().split('/')
         # image references are lengthy (e.g. gcr.eu/<org>/<path>/../<name>)
@@ -136,6 +149,20 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
 
     def _children(self):
         return ()
+
+    def validate(self):
+        super().validate()
+        for label in self.resource_labels():
+            try:
+                dacite.from_dict(
+                    data_class=cm.Label,
+                    data=label,
+                    config=dacite.Config(strict=True),
+                )
+            except dacite.DaciteError as e:
+                raise ModelValidationError(
+                    f"Invalid '{label=}'."
+                ) from e
 
 
 ATTRIBUTES = (
