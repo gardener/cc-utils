@@ -25,8 +25,8 @@ import ccc.github
 import ci.util
 import concourse.model.traits.update_component_deps
 import concourse.steps.component_descriptor_util as cdu
-import gitutil
 import github.util
+import gitutil
 import product.model
 import product.util
 import product.v2
