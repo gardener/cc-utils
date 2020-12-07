@@ -153,10 +153,10 @@ class Client:
         if self.token_cache.token(scope=scope):
             return # no re-auth required, yet
 
-        if scope == 'pull':
-            privileges = oa.Privileges.READONLY,
-        elif scope == 'push':
-            privileges = oa.Privileges.READWRITE,
+        if 'push' in scope:
+            privileges = oa.Privileges.READWRITE
+        elif 'pull' in scope:
+            privileges = oa.Privileges.READONLY
         else:
             privileges = None
 
@@ -264,6 +264,7 @@ class Client:
         image_reference: str,
         digest: str,
         stream=True,
+        absent_ok=False,
     ) -> requests.models.Response:
         scope = _scope(image_reference=image_reference, action='pull')
 
@@ -275,6 +276,10 @@ class Client:
             stream=stream,
             timeout=None,
         )
+
+        if absent_ok and res.status_code == requests.codes.NOT_FOUND:
+            return None
+        res.raise_for_status()
 
         return res
 

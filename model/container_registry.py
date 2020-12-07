@@ -13,11 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import enum
-
 import json
 
 import ci.util
+import oci.auth as oa
 
 from model.base import (
     BasicCredentials,
@@ -26,53 +25,6 @@ from model.base import (
 )
 
 from ci.util import check_type
-
-
-class Privileges(enum.Enum):
-    READ_ONLY = 'readonly'
-    READ_WRITE = 'readwrite'
-
-    def _asint(self, privileges):
-        '''
-        make privileges comparable - ro < rw
-        '''
-        if privileges is None:
-            return 2 # unspecified credentials should be used as last resort
-
-        p = Privileges(privileges)
-        if p is self.READ_ONLY:
-            return 0
-        elif p is self.READ_WRITE:
-            return 1
-        else:
-            raise NotImplementedError
-
-    def __hash__(self):
-        return self._asint(self).__hash__()
-
-    def __lt__(self, other):
-        o = self._asint(other)
-        return self._asint(self).__lt__(o)
-
-    def __le__(self, other):
-        o = self._asint(other)
-        return self._asint(self).__le__(o)
-
-    def __eq__(self, other):
-        o = self._asint(other)
-        return self._asint(self).__eq__(o)
-
-    def __ne__(self, other):
-        o = self._asint(other)
-        return self._asint(self).__ne__(o)
-
-    def __gt__(self, other):
-        o = self._asint(other)
-        return self._asint(self).__gt__(o)
-
-    def __ge__(self, other):
-        o = self._asint(other)
-        return self._asint(self).__ge__(o)
 
 
 class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
@@ -85,7 +37,7 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
 
     def _defaults_dict(self):
         return {
-            'privileges': Privileges.READ_ONLY.value,
+            'privileges': oa.Privileges.READONLY.value,
         }
 
     def _optional_attributes(self):
@@ -108,8 +60,8 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
     def has_service_account_credentials(self):
         return GcrCredentials(self.raw).has_service_account_credentials()
 
-    def privileges(self) -> Privileges:
-        return Privileges(self.raw['privileges'])
+    def privileges(self) -> oa.Privileges:
+        return oa.Privileges(self.raw['privileges'])
 
     def image_reference_prefixes(self):
         prefixes = self.raw.get('image_reference_prefixes', ())
@@ -120,7 +72,7 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
     def image_ref_matches(
         self,
         image_reference: str,
-        privileges: Privileges=None,
+        privileges: oa.Privileges=None,
     ):
         '''
         returns a boolean indicating whether a given container image reference matches any
@@ -178,7 +130,7 @@ class GcrCredentials(BasicCredentials):
 
 def find_config(
     image_reference: str,
-    privileges:Privileges=None,
+    privileges:oa.Privileges=None,
     _normalised_image_reference=False,
 ) -> 'GcrCredentials':
     ci.util.check_type(image_reference, str)

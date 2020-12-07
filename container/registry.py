@@ -22,7 +22,6 @@ import ci.util
 import oci
 import oci.auth as oa
 import model.container_registry
-from model.container_registry import Privileges
 
 from containerregistry.client import docker_creds
 from containerregistry.client import docker_name
@@ -43,27 +42,11 @@ logger = logging.getLogger(__name__)
 normalise_image_reference = oci.util.normalise_image_reference
 
 
-def _convert_privileges(privileges):
-    if isinstance(privileges, oa.Privileges):
-        if privileges is oa.Privileges.READONLY:
-            privileges = model.container_registry.Privileges.READ_ONLY
-        elif privileges is oa.Privileges.READWRITE:
-            privileges = model.container_registry.Privileges.READ_WRITE
-        else:
-            raise NotImplementedError
-
-    return privileges
-
-
 def _mk_credentials_lookup(
     image_reference: str,
-    privileges: oa.Privileges=model.container_registry.Privileges.READ_ONLY,
+    privileges: oa.Privileges=oa.Privileges.READONLY,
 ):
-    privileges = _convert_privileges(privileges=privileges)
-
     def find_credentials(image_reference, privileges, absent_ok):
-        if privileges:
-            privileges = _convert_privileges(privileges)
         registry_cfg = model.container_registry.find_config(
             image_reference,
             privileges,
@@ -84,7 +67,7 @@ def _inject_credentials_lookup(inner_function: callable):
         *args,
         image_reference=None,
         image_name=None,
-        privileges=model.container_registry.Privileges.READ_ONLY,
+        privileges=oa.Privileges.READONLY,
         **kwargs
       ):
         if image_reference:
@@ -123,10 +106,7 @@ publish_container_image = _inject_credentials_lookup(inner_function=oci.publish_
 
 
 @functools.lru_cache()
-def _credentials(image_reference: str, privileges:Privileges=None):
-    if privileges:
-        privileges = _convert_privileges(privileges=privileges)
-
+def _credentials(image_reference: str, privileges: oa.Privileges=None):
     registry_cfg = model.container_registry.find_config(image_reference, privileges)
     if not registry_cfg:
         return None
@@ -150,7 +130,7 @@ def _mk_transport_pool(
   return transport
 
 
-def _mk_credentials(image_reference, privileges: Privileges=None):
+def _mk_credentials(image_reference, privileges: oa.Privileges=None):
   if isinstance(image_reference, str):
     image_reference = docker_name.from_string(name=image_reference)
   try:

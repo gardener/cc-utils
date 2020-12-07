@@ -1,6 +1,5 @@
 import dataclasses
 import hashlib
-import io
 import json
 import logging
 import tempfile
@@ -12,6 +11,7 @@ import containerregistry.client.v2.docker_http_
 
 import oci._util as _ou
 import oci.auth as oa
+import oci.client as oc
 import oci.model as om
 import oci.util as ou
 
@@ -192,11 +192,12 @@ def replicate_artifact(
     src_image_reference = ou.normalise_image_reference(src_image_reference)
     tgt_image_reference = ou.normalise_image_reference(tgt_image_reference)
 
+    client = oc.Client(credentials_lookup=credentials_lookup)
+
     # we need the unaltered - manifest for verbatim replication
-    raw_manifest = _ou._retrieve_raw_manifest(
+    raw_manifest = client.manifest_raw(
         image_reference=src_image_reference,
-        credentials_lookup=credentials_lookup,
-    )
+    ).text
     manifest = dacite.from_dict(
         data_class=om.OciImageManifest,
         data=json.loads(raw_manifest)
@@ -209,13 +210,12 @@ def replicate_artifact(
         # XXX we definitely should _not_ read entire blobs into memory
         # this is done by the used containerregistry lib, so we do not make things worse
         # here - however this must not remain so!
-        blob_bytes = get_blob(
+        blob_res = client.blob(
             image_reference=src_image_reference,
             digest=layer.digest,
-            credentials_lookup=credentials_lookup,
             absent_ok=is_manifest,
         )
-        if not blob_bytes:
+        if not blob_res:
             # fallback to non-verbatim replication
             logger.warning(
                 'falling back to non-verbatim replication '
@@ -234,16 +234,16 @@ def replicate_artifact(
                 )
             return
 
-        put_blob(
-            image_name=tgt_image_reference,
-            fileobj=io.BytesIO(blob_bytes),
-            credentials_lookup=credentials_lookup,
+        client.put_blob(
+            image_reference=tgt_image_reference,
+            digest=layer.digest,
+            octets_count=layer.size,
+            data=blob_res,
         )
 
-    _ou._put_raw_image_manifest(
+    client.put_manifest(
         image_reference=tgt_image_reference,
-        raw_contents=raw_manifest.encode('utf-8'),
-        credentials_lookup=credentials_lookup,
+        manifest=raw_manifest,
     )
 
 
