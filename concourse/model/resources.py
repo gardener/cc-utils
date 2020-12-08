@@ -14,15 +14,21 @@
 # limitations under the License.
 
 import os
+import typing
 
+import dacite
+
+import gci.componentmodel as cm
+
+from ci.util import not_none
 from concourse.client.model import (
     ResourceType,
 )
 from concourse.model.base import (
     AttributeSpec,
-    ModelBase
+    ModelBase,
+    ModelValidationError,
 )
-from ci.util import not_none
 import model.github
 
 
@@ -31,7 +37,7 @@ def sane_env_var_name(name):
     return name.replace('-', '_').upper()
 
 
-class ResourceIdentifier(object):
+class ResourceIdentifier:
     def __init__(
         self,
         type_name,
@@ -109,7 +115,7 @@ class Resource(ModelBase):
         return self._resource_identifier.__hash__()
 
 
-class ResourceRegistry(object):
+class ResourceRegistry:
     def __init__(self):
         self.resources_dict = {}
 
@@ -221,6 +227,12 @@ REPO_ATTRS = (
         doc='optionally overwrites the preferred protocol to use',
         type=model.github.Protocol,
     ),
+    AttributeSpec.optional(
+        name='source_labels',
+        default=[],
+        type=typing.List[cm.Label],
+        doc='labels to add to the corresponding source declaration in base-component-descriptor'
+    )
 )
 
 
@@ -322,6 +334,9 @@ class RepositoryConfig(Resource):
         paths = self._trigger_paths()
         return paths['exclude']
 
+    def source_labels(self):
+        return self.raw['source_labels']
+
     def is_main_repo(self):
         return self._is_main_repo
 
@@ -367,3 +382,16 @@ class RepositoryConfig(Resource):
             rp=self.repo_path(),
             b=self.branch()
         )
+
+    def validate(self):
+        super().validate()
+
+        for label in self.source_labels():
+            try:
+                dacite.from_dict(
+                    data_class=cm.Label,
+                    data=label,
+                    config=dacite.Config(strict=True),
+                )
+            except dacite.DaciteError as e:
+                raise ModelValidationError(f'Invalid {label=}') from e
