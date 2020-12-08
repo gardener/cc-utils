@@ -265,10 +265,17 @@ def scan_artifact_with_ws(
         ref=scan_artifact.access.ref,
         github_repo=github_repo,
     )
+    exclude_regexes = ''
+    include_regexes = ''
+
+    if scan_artifact.label is not None:
+        if scan_artifact.label.path_config is not None:
+            exclude_regexes = scan_artifact.label.path_config.exclude_paths
+            include_regexes = scan_artifact.label.path_config.include_paths
 
     path_filter_func = reutil.re_filter(
-        exclude_regexes=scan_artifact.label.path_config.exclude_paths,
-        include_regexes=scan_artifact.label.path_config.include_paths,
+        exclude_regexes=exclude_regexes,
+        include_regexes=include_regexes
     )
 
     with tempfile.TemporaryFile() as tmp_file:
