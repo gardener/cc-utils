@@ -41,6 +41,7 @@ def base_component_descriptor_v2(
     component_name_v2: str,
     component_labels: typing.Iterable[cm.Label],
     effective_version: str,
+    source_labels: tuple,
     ctx_repository_base_url: str,
     commit: str,
 ):
@@ -80,6 +81,7 @@ def base_component_descriptor_v2(
               commit=commit,
             ),
             version=effective_version,
+            labels=source_labels,
           )
         ],
         componentReferences=[], # added later
