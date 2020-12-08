@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import typing
 import yaml
 
 
@@ -37,6 +39,7 @@ def dump_component_descriptor_v2(component_descriptor_v2: cm.ComponentDescriptor
 
 def base_component_descriptor_v2(
     component_name_v2: str,
+    component_labels: typing.Iterable[cm.Label],
     effective_version: str,
     ctx_repository_base_url: str,
     commit: str,
@@ -81,7 +84,7 @@ def base_component_descriptor_v2(
         ],
         componentReferences=[], # added later
         resources=[], # added later
-        labels=[], # added later
+        labels=list(component_labels),
       ),
     )
 
