@@ -12,9 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import dacite
 import typing
 
 from ci.util import not_none
+from gci.componentmodel import Label
 
 from concourse.model.job import (
     JobVariant,
@@ -83,6 +85,12 @@ ATTRIBUTES = (
             If not configured, the CICD-landscape's default ctx will be used.
         '''
     ),
+    AttributeSpec.optional(
+        name='component_labels',
+        default=[],
+        type=typing.List[Label],
+        doc="a list of labels to add to the component in the base Component Descriptor",
+    )
 )
 
 
@@ -138,8 +146,25 @@ class ComponentDescriptorTrait(Trait):
             # XXX warn or even forbid, at least if different from ctx-repo-cfg?
             return base_url
 
+    def component_labels(self):
+        return self.raw['component_labels']
+
     def transformer(self):
         return ComponentDescriptorTraitTransformer(trait=self)
+
+    def validate(self):
+        super().validate()
+        for label in self.component_descriptor_labels():
+            try:
+                dacite.from_dict(
+                    data_class=Label,
+                    data=label,
+                    config=dacite.Config(strict=True),
+                )
+            except dacite.DaciteError as e:
+                raise ModelValidationError(
+                    f"Invalid label '{label}'."
+                ) from e
 
 
 DIR_NAME = 'component_descriptor_dir'

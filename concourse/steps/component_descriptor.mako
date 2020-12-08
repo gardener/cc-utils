@@ -45,6 +45,7 @@ with open(version_file_path) as f:
   effective_version = f.read().strip()
 
 component_name = '${descriptor_trait.component_name()}'
+component_labels = ${descriptor_trait.component_labels()}
 component_name_v2 = component_name.lower() # OCI demands lowercase
 ctx_repository_base_url = '${descriptor_trait.ctx_repository_base_url()}'
 
@@ -61,6 +62,7 @@ else:
 # create base descriptor filled with default values
 base_descriptor_v2 = base_component_descriptor_v2(
     component_name_v2=component_name_v2,
+    component_labels=component_labels,
     effective_version=effective_version,
     ctx_repository_base_url=ctx_repository_base_url,
     commit=commit_hash,
