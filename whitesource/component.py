@@ -37,8 +37,6 @@ def _get_scan_artifacts_from_components(
             ws_hint = _get_ws_label_from_source(source)
 
             if not ws_hint or ws_hint.policy is sdo.labels.ScanPolicy.SCAN:
-                if not ws_hint:
-                    print(ws_hint)
                 yield sdo.model.ScanArtifact(
                     access=source.access,
                     label=ws_hint,
