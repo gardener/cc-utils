@@ -14,7 +14,7 @@ class WhitesourceProject:
 
     def max_cve(self) -> typing.Tuple[cve_name, cvss_score]:
         max_score = 0
-        cve_name = None
+        cve_name = 'None'
 
         for entry in self.vulnerability_report['vulnerabilities']:
             cve_score_key_name = 'cvss3_score'

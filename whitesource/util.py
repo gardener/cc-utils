@@ -57,41 +57,51 @@ def generate_reporting_tables(
         else:
             below.append(display_project)
 
-    # sort tables descending by CVSS-V3
-    below = sorted(
-        below,
-        key=lambda p: p.highest_cve_score,
-        reverse=True,
-    )
-    above = sorted(
-        above,
-        key=lambda p: p.highest_cve_score,
-        reverse=True,
-    )
-
     ttable_header = (
         'Component',
         'Greatest CVSS-V3',
         'Corresponding CVE',
     )
-    above_table = _gen_table_from_list(
-        table_headers=ttable_header,
-        tablefmt=tablefmt,
-        data=above,
+    if above:
+        above_table = _create_table(
+            data=above,
+            table_header=ttable_header,
+            tablefmt=tablefmt,
+        )
+    else:
+        above_table = ''
+
+    if below:
+        below_table = _create_table(
+            data=below,
+            table_header=ttable_header,
+            tablefmt=tablefmt,
+        )
+    else:
+        below_table = ''
+
+    return [above_table, below_table]
+
+
+def _create_table(
+    data: typing.List[whitesource.model.WssDisplayProject],
+    table_header,
+    tablefmt,
+):
+    sorted_data = sorted(
+        data,
+        key=lambda p: p.highest_cve_score,
+        reverse=True,
     )
-
-    below_table = _gen_table_from_list(
-        table_headers=ttable_header,
+    table = _gen_table_from_data(
+        table_headers=table_header,
         tablefmt=tablefmt,
-        data=below,
+        data=sorted_data,
     )
-
-    ttables = [above_table, below_table]
-
-    return ttables
+    return table
 
 
-def _gen_table_from_list(
+def _gen_table_from_data(
     table_headers,
     tablefmt,
     data: typing.List[whitesource.model.WssDisplayProject],
@@ -116,6 +126,27 @@ def assemble_mail_body(
     tables: typing.List,
     threshold: float,
 ):
+    if tables[0] == '':
+        above_table_part = ''
+    else:
+        above_table_part = f'''
+        <p>
+            The following component(s) have a CVSS-V3 greater than the configured threshold of
+            {threshold}.
+        </p>
+        {tables[0]}
+        <br></br>
+        '''
+    if tables[1] == '':
+        below_table_part = ''
+    else:
+        below_table_part = f'''
+        <p>
+            These component(s) have a CVSS-V3 score lower than {threshold}
+        </p>
+        {tables[1]}
+        <br></br>
+        '''
     return f'''
         <div>
             <p>
@@ -124,22 +155,8 @@ def assemble_mail_body(
                 To remove yourself, search for your e-mail address in said file and remove it.
             </p>
             <br></br>
-            <p>
-                The following component(s) have a CVSS-V3 greater than the configured threshold of
-                {threshold}. It is configured at the
-                <a href="https://github.wdf.sap.corp/kubernetes/cc-config">
-                    pipeline definition
-                </a>.
-            </p>
-            {tables[0]}
-            <br></br>
-            <br></br>
-            <p>
-                These are the remaining component(s) with a CVSS-V3 lower than {threshold}
-            </p>
-            {tables[1]}
-            <br></br>
-            <br></br>
+            {above_table_part}
+            {below_table_part}
             <p>
                 WhiteSource triage has to be done on the
                 <a href="https://saas.whitesourcesoftware.com/Wss/WSS.html#!alertsReport">
