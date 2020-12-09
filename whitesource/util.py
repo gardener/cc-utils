@@ -190,9 +190,7 @@ def send_mail(
 
 
 def print_cve_tables(tables):
-    ci.util.info('\n')
-    ci.util.info('\n\n'.join(tables))
-    ci.util.info('\n')
+    print('\n' + '\n\n'.join(tables) + '\n')
 
 
 def notify_users(
@@ -240,6 +238,8 @@ def notify_users(
             recipients=notification_recipients,
             product_name=product_name,
         )
+    else:
+        ci.util.warning('No recipients defined. No emails will be sent...')
 
 
 def scan_artifact_with_ws(
