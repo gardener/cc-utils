@@ -20,6 +20,9 @@ cc-utils:
             inputs:
               steps:
                 release_to_pypi: ~
+            resource_labels:
+              - name: 'cloud.cnudie/examples'
+              - value: 'this is an example label (btw: value may be also e.g. a dict)'
       release:
         nextversion: 'bump_minor'
         release_callback: '.ci/bump_job_image_version.py'
