@@ -302,6 +302,110 @@
 <li><p><a class="reference internal" href="component_descriptor.html#trait-component-descriptor"><span class="std std-ref">component_descriptor trait</span></a></p></li>
 </ul>
 </div>
+<p>This trait enables different compliance scans for sources and resources of your component descriptor.</p>
+<div class="section" id="path-filtering-semantics">
+<h2>Path filtering semantics<a class="headerlink" href="#path-filtering-semantics" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>no paths specified: no filtering, all files will be scanned</p></li>
+<li><p>only exclude paths: scan everything except excplicitly excluded</p></li>
+<li><p>only include paths: scan only excplicitly included</p></li>
+<li><p>include and exclude paths specified: only included then filter out excluded</p></li>
+</ul>
+</div>
+<div class="section" id="supported-labels">
+<h2>Supported labels<a class="headerlink" href="#supported-labels" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="checkmarx">
+<h3>checkmarx<a class="headerlink" href="#checkmarx" title="Permalink to this headline">¶</a></h3>
+<p>The checkmarx scan will be triggered when the <code class="code docutils literal notranslate"><span class="pre">source_analysis</span></code> label is absent or the source defines the label with the policy set to ‘scan’.</p>
+<p>If the checkmarx scan should be skipped define the label with the policy attribute set to <code class="code docutils literal notranslate"><span class="pre">skip</span></code>.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 12%" />
+<col style="width: 72%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>policy</p></td>
+<td><p>enum</p></td>
+<td><p>whether to scan source or not. Must either be ‘scan’ or ‘skip’</p></td>
+</tr>
+<tr class="row-odd"><td><p>exclude_paths</p></td>
+<td><p>list[str]</p></td>
+<td><p>(optional) regex paths of your source to exclude from the scan</p></td>
+</tr>
+<tr class="row-even"><td><p>include_paths</p></td>
+<td><p>list[str]</p></td>
+<td><p>(optional) regex paths of your source to include from the scan</p></td>
+</tr>
+</tbody>
+</table>
+<p>Example label:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="s">&#39;cloud.gardener.cnudie/sdo/scanning-hints/source_analysis/v1&#39;</span>
+  <span class="nt">value</span><span class="p">:</span>
+    <span class="nt">policy</span><span class="p">:</span> <span class="s">&#39;scan&#39;</span> <span class="c1"># | &#39;skip&#39;</span>
+    <span class="nt">path_config</span><span class="p">:</span>
+      <span class="nt">include_paths</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="s">&#39;src/.*</span>
+      <span class="s">-</span><span class="nv"> </span><span class="s">&#39;</span><span class="l l-Scalar l-Scalar-Plain">pgk/.*&#39;</span>
+      <span class="nt">exclude_paths</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="s">&#39;src/test.*&#39;</span>
+      <span class="p p-Indicator">-</span> <span class="s">&#39;pkg/hack.*&#39;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="whitesource">
+<h3>whitesource<a class="headerlink" href="#whitesource" title="Permalink to this headline">¶</a></h3>
+<p>The whitesource scan will be triggered if the <code class="code docutils literal notranslate"><span class="pre">source_id</span></code> label is absent or defined with the policy set to <code class="code docutils literal notranslate"><span class="pre">scan</span></code>.</p>
+<p>To skip the whitesource scan the source_id label has to be set with the policy: ‘skip’.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 12%" />
+<col style="width: 72%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>policy</p></td>
+<td><p>enum</p></td>
+<td><p>whether to scan source or not. Must either be ‘scan’ or ‘skip’</p></td>
+</tr>
+<tr class="row-odd"><td><p>exclude_paths</p></td>
+<td><p>list[str]</p></td>
+<td><p>(optional) regex paths of your source to exclude from the scan</p></td>
+</tr>
+<tr class="row-even"><td><p>include_paths</p></td>
+<td><p>list[str]</p></td>
+<td><p>(optional) regex paths of your source to include from the scan</p></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="s">&#39;cloud.gardener.cnudie/sdo/scanning-hints/source_id/v1&#39;</span>
+  <span class="nt">value</span><span class="p">:</span>
+    <span class="nt">policy</span><span class="p">:</span> <span class="s">&#39;scan&#39;</span> <span class="c1"># | &#39;skip&#39; | &#39;scan_source&#39;</span>
+    <span class="nt">path_config</span><span class="p">:</span>
+      <span class="nt">exclude_paths</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="s">&#39;test.*&#39;</span>
+      <span class="p p-Indicator">-</span> <span class="s">&#39;foo.*&#39;</span>
+      <span class="p p-Indicator">-</span> <span class="s">&#39;.*bar.*&#39;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="protecode">
+<h3>protecode<a class="headerlink" href="#protecode" title="Permalink to this headline">¶</a></h3>
+<p>TBD</p>
+</div>
+</div>
 </div>
 
 
