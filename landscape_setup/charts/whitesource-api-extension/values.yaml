@@ -6,7 +6,7 @@ replicaCount: 1
 
 image:
   repository: eu.gcr.io/gardener-project/cc/whitesource-api-extension
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tag: latest
 
@@ -29,8 +29,8 @@ podSecurityContext: {}
   # fsGroup: 2000
 
 securityContext:
-  runAsNonRoot: true
-  runAsUser: 1000
+  runAsNonRoot: false
+  # runAsUser: 1000
   # capabilities:
   #   drop:
   #   - ALL
@@ -44,10 +44,10 @@ service:
 resources:
   requests:
     cpu: 500m
-    memory: 500Mi
+    memory: 1Gi
   limits:
     cpu: 1000m
-    memory: 1Gi
+    memory: 2Gi
 
 nodeSelector: {}
 
