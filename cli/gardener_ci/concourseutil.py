@@ -40,16 +40,33 @@ from concourse.replicator import (
     Renderer,
 )
 
+own_dir = os.path.abspath(os.path.dirname(__file__))
+repo_root = os.path.abspath(
+    os.path.join(
+        own_dir,
+        os.pardir,
+        os.pardir,
+    )
+)
+
+
+def _template_path():
+    return os.path.join(
+        repo_root,
+        'concourse',
+    )
+
 
 def render_pipeline(
     definition_file: CliHints.existing_file(),
-    template_path: CliHints.existing_dir(),
     cfg_name: str,
     out_dir: CliHints.existing_dir(),
+    template_path: str=_template_path(),
     template_include_dir: str=None,
 ):
     cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(cfg_name=cfg_name)
+    print(template_path)
 
     def_enumerators = [
         SimpleFileDefinitionEnumerator(
@@ -86,9 +103,9 @@ def render_pipeline(
 
 
 def render_pipelines(
-        template_path: str,
         config_name: str,
         out_dir: str,
+        template_path: str=_template_path(),
         template_include_dir: str = None,
 ):
     if not os.path.isdir(out_dir):
