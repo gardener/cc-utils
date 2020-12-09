@@ -12,8 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import dacite
+
+import dataclasses
 import typing
+
+import dacite
 
 from ci.util import not_none
 from gci.componentmodel import Label
@@ -35,8 +38,14 @@ from concourse.model.base import (
 import model.ctx_repository
 
 
-DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME = 'component_descriptor'
+@dataclasses.dataclass(frozen=True)
+class StepInput:
+    step_name: str
+    output_name: str = None # if absent, use only output
+    type: str = 'step'
 
+
+DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME = 'component_descriptor'
 
 ATTRIBUTES = (
     AttributeSpec.optional(
@@ -89,7 +98,13 @@ ATTRIBUTES = (
         name='component_labels',
         default=[],
         type=typing.List[Label],
-        doc="a list of labels to add to the component in the base Component Descriptor",
+        doc='a list of labels to add to the component in the base Component Descriptor',
+    ),
+    AttributeSpec.optional(
+        name='inputs',
+        default=[],
+        type=typing.List[StepInput],
+        doc='inputs to expose to component-descriptor step',
     )
 )
 
@@ -148,6 +163,12 @@ class ComponentDescriptorTrait(Trait):
 
     def component_labels(self):
         return self.raw['component_labels']
+
+    def inputs(self) -> typing.List[StepInput]:
+        return [
+            dacite.from_dict(data_class=StepInput, data=raw_input)
+            for raw_input in self.raw['inputs']
+        ]
 
     def transformer(self):
         return ComponentDescriptorTraitTransformer(trait=self)
@@ -210,6 +231,39 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
                 main_repo.repo_path(),
             ))
             self.trait.raw['component_name'] = component_name
+
+        # add configured (step-)inputs
+        for step_input in self.trait.inputs():
+            if not step_input.type == 'step':
+                raise NotImplementedError(step_input.type)
+
+            try:
+                step: PipelineStep = pipeline_args.step(step_input.step_name)
+            except KeyError as ke:
+                raise ValueError(f'no such step: {step_input.step_name=}') from ke
+
+            self.descriptor_step._add_dependency(step)
+
+            if step_input.output_name:
+                output_name = step_input.output_name
+            else:
+                # choose only output if omitted
+                outputs = {
+                    name: v for name,v in step.outputs().items()
+                    if not name == 'on_error_dir' # XXX hack hack hack
+                }
+                if len(outputs) < 1:
+                    raise ValueError(f'{step.name=} does not have any outputs')
+                elif len(outputs) > 1:
+                    raise ValueError(
+                        f'{step.name=} has more than one output (need to tell step_name)'
+                    )
+                output_name = next(outputs.keys().__iter__())
+
+            self.descriptor_step.add_input(
+                name=output_name,
+                variable_name=output_name,
+            )
 
     @classmethod
     def dependencies(cls):
