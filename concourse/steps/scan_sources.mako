@@ -35,12 +35,12 @@ scan_sources_and_notify(
 % if whitesource_cfg:
 component_name = '${component_trait.component_name()}'
 scan_component_with_whitesource(
-    whitesource_cfg_name='${whitesource_cfg.cfg_name()}',
     component_descriptor_path=component_descriptor_path(schema_version=cm.SchemaVersion.V2),
-    extra_whitesource_config={},
-    requester_mail=email_recipients[0],
     cve_threshold=${whitesource_cfg.cve_threshold()},
+    extra_whitesource_config={},
     notification_recipients=${email_recipients},
+    requester_mail='no-reply@example.org',
+    whitesource_cfg_name='${whitesource_cfg.cfg_name()}',
 )
 % endif
 
