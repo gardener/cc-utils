@@ -154,7 +154,7 @@ class ComponentDescriptorTrait(Trait):
 
     def validate(self):
         super().validate()
-        for label in self.component_descriptor_labels():
+        for label in self.component_labels():
             try:
                 dacite.from_dict(
                     data_class=Label,
