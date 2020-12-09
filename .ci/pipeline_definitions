@@ -28,6 +28,7 @@ cc-utils:
         release_callback: '.ci/bump_job_image_version.py'
         release_notes_policy: disabled
 
+  background_image: https://media1.giphy.com/media/VkMV9TldsPd28/giphy.gif
   template: 'default'
   base_definition:
     repo:
