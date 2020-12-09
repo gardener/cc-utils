@@ -163,8 +163,11 @@ class Client:
         oci_creds = self.credentials_lookup(
             image_reference=image_reference,
             privileges=privileges,
-            absent_ok=False,
+            absent_ok=True,
         )
+
+        if not oci_creds:
+            logger.info(f'no credentials for {image_reference=} - attempting anonymous-auth')
 
         url = base_api_url(image_reference=image_reference)
         res = self.session.get(url)
@@ -178,12 +181,17 @@ class Client:
             'service': service,
         })
 
-        res = self.session.get(
-            realm,
-            auth=requests.auth.HTTPBasicAuth(
+        if oci_creds:
+            auth = requests.auth.HTTPBasicAuth(
               username=oci_creds.username,
               password=oci_creds.password,
-            ),
+            )
+        else:
+            auth = None
+
+        res = self.session.get(
+            realm,
+            auth=auth,
         )
 
         res.raise_for_status()
