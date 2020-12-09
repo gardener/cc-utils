@@ -186,6 +186,8 @@ class Client:
             ),
         )
 
+        res.raise_for_status()
+
         token_dict = res.json()
         token_dict['scope'] = scope
 
