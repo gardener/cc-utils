@@ -153,7 +153,7 @@ class JobVariant(ModelBase):
             )
         self._steps_dict[step.name] = step
 
-    def step(self, name):
+    def step(self, name) -> 'PipelineStep':
         return self._steps_dict[name]
 
     def has_step(self, step_name):
