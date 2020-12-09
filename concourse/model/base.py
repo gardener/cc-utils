@@ -42,7 +42,7 @@ class EnumWithDocumentation(Enum):
 EnumValueWithDocumentation = namedtuple('EnumValueWithDocumentation', ['value', 'doc'])
 
 
-class AttribSpecMixin(object):
+class AttribSpecMixin:
     @classmethod
     def _attribute_specs(cls):
         raise NotImplementedError
@@ -87,7 +87,7 @@ class RequiredPolicy(Enum):
     DEPRECATED = 'deprecated'
 
 
-class AttributeSpec(object):
+class AttributeSpec:
     @staticmethod
     def optional(name, doc, default, *args, **kwargs):
         return AttributeSpec(
@@ -241,7 +241,7 @@ class Trait(ModelBase):
         return 'Trait: {n}'.format(n=self.name)
 
 
-class TraitTransformer(object):
+class TraitTransformer:
     name = None # subclasses must overwrite
 
     def __init__(self):

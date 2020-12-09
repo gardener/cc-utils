@@ -54,7 +54,7 @@ TRAITS = {
 }
 
 
-class TraitsFactory(object):
+class TraitsFactory:
     @staticmethod
     def create(
         name: str,

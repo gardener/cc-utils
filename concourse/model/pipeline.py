@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-class PipelineDefinition(object):
+class PipelineDefinition:
     def __init__(self):
         self._variants_dict = {}
         self._resource_registry = None
