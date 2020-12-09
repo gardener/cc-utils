@@ -84,7 +84,7 @@ component_v2.sources.append(
       type=cm.AccessType.GITHUB,
       repoUrl='${repository.repo_hostname()}/${repository.repo_path()}',
       ref='${repository.branch()}',
-      commit=commit,
+      commit=commit_hash,
     ),
     version=effective_version,
     labels=${repository.source_labels()},
