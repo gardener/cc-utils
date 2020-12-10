@@ -456,7 +456,7 @@ def rm_component_descriptor(
 
 
 def components(
-    component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
+    component_descriptor_v2: cm.ComponentDescriptor,
     cache_dir: str=None,
     _visited_component_versions: typing.Tuple[str, str]=(),
 ):
