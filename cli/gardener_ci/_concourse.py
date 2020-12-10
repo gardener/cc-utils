@@ -108,7 +108,6 @@ def render_pipelines(
         config_name: str,
         out_dir: str,
         template_path: str=_template_path(),
-        template_include_dir: str = None,
 ):
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
@@ -119,8 +118,7 @@ def render_pipelines(
     concourse_cfg = config_set.concourse()
     job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
 
-    if not template_include_dir:
-        template_include_dir = template_path
+    template_include_dir = template_path
 
     def_enumerators = []
     for job_mapping in job_mapping_set.job_mappings().values():
