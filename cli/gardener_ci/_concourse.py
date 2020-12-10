@@ -39,6 +39,7 @@ from concourse.replicator import (
     PipelineReplicator,
     Renderer,
 )
+import concourse.model as ccm
 
 own_dir = os.path.abspath(os.path.dirname(__file__))
 repo_root = os.path.abspath(
@@ -105,15 +106,16 @@ def render_pipeline(
 
 
 def render_pipelines(
-        config_name: str,
+        cfg_name: str,
         out_dir: str,
         template_path: str=_template_path(),
+        org: str=None, # if set, filter for org
 ):
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
 
     cfg_factory = ctx().cfg_factory()
-    config_set = cfg_factory.cfg_set(cfg_name=config_name)
+    config_set = cfg_factory.cfg_set(cfg_name=cfg_name)
 
     concourse_cfg = config_set.concourse()
     job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
@@ -122,6 +124,11 @@ def render_pipelines(
 
     def_enumerators = []
     for job_mapping in job_mapping_set.job_mappings().values():
+        job_mapping: ccm.JobMapping
+
+        if org and not org in {oc.name() for oc in job_mapping.github_organisations()}:
+            continue
+
         def_enumerators.append(
             GithubOrganisationDefinitionEnumerator(
                 job_mapping=job_mapping,
