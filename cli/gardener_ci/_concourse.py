@@ -49,6 +49,8 @@ repo_root = os.path.abspath(
     )
 )
 
+__cmd_name__ = 'concourse'
+
 
 def _template_path():
     return os.path.join(
