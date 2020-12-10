@@ -6,6 +6,8 @@ publish_trait = job_variant.trait('publish')
 % for descriptor in publish_trait.dockerimages():
 <%
 import os
+import concourse.model.traits.publish as pubtrait
+descriptor: pubtrait.PublishDockerImageDescriptor
 build_dir = job_step.input('image_path')
 if descriptor.builddir_relpath():
   build_dir = os.path.join(build_dir, descriptor.builddir_relpath())
@@ -16,6 +18,7 @@ dockerfile = os.path.join(build_dir, descriptor.dockerfile_relpath())
       build: ${build_dir}
       dockerfile: ${dockerfile}
       tag_file: ${job_step.input('version_path')}/version
+      build_args: ${descriptor.build_args()}
 % if descriptor.target_name():
       target_name: ${descriptor.target_name()}
 % endif

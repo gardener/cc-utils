@@ -87,7 +87,13 @@ IMG_DESCRIPTOR_ATTRIBS = (
         default=[],
         type=typing.List[cm.Label],
         doc='labels to add to the resource declaration for this image in base-component-descriptor'
-    )
+    ),
+    AttributeSpec.optional(
+        name='build_args',
+        default={},
+        type=typing.Dict[str, str],
+        doc='build-time arguments to pass to docker-build',
+    ),
 )
 
 
@@ -126,6 +132,9 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
 
     def tag_as_latest(self):
         return self.raw['tag_as_latest']
+
+    def build_args(self):
+        return self.raw['build_args']
 
     def target_name(self):
         return self.raw.get('target')

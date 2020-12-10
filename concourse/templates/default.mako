@@ -117,7 +117,7 @@ ${render_repositories(pipeline_definition=pipeline_definition, cfg_set=config_se
 ${container_registry_image_resource(
   name=descriptor.resource_name(),
   image_reference=descriptor.image_reference(),
-  registry_cfg=registry_cfg
+  registry_cfg=registry_cfg,
 )}
 % endfor
 % for variant in pipeline_definition.variants():
