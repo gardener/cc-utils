@@ -7,31 +7,31 @@ if [ -z "$SOURCE_PATH" ]; then
   echo "setting SOURCE_PATH to: ${SOURCE_PATH}"
 fi
 
-cc_utils_dir="${SOURCE_PATH}"
+export repo_dir="${SOURCE_PATH}"
 
-if [ ! -d ${cc_utils_dir} ]; then
-  echo "not a directory: ${cc_utils_dir}"
+if [ ! -d "${repo_dir}" ]; then
+  echo "not a directory: ${repo_dir}"
   exit 1
 fi
 
 if [ -z "$GH_PAGES_PATH" ]; then
-  echo "GH_PAGES_PATH must be set (out-dir)"
-  exit 1
+  export GH_PAGES_PATH="${repo_dir}/documentation.out"
+  mkdir -p "${GH_PAGES_PATH}"
 fi
 
 out_dir="${GH_PAGES_PATH}"
 
 if [ ! -d ${out_dir} ]; then
-  echo "not a directory: ${cc_utils_dir}"
+  echo "not a directory: ${out_dir}"
   exit 1
 fi
 
-echo "cc-utils from: ${cc_utils_dir}"
+echo "cc-utils from: ${repo_dir}"
 echo "out-dir: ${out_dir}"
 
-export SOURCE_DIR="${cc_utils_dir}/doc"
+export SOURCE_DIR="${repo_dir}/doc"
 export OUT_DIR="${out_dir}"
-export PYTHONPATH="${cc_utils_dir}"
+export PYTHONPATH="${repo_dir}"
 sphinx-build -E -a "${SOURCE_DIR}" "${OUT_DIR}"
 
 # disable github's theme
