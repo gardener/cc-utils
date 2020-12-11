@@ -230,8 +230,8 @@ elif have_cd:
 elif have_ctf:
   argv = [
     'component-cli',
-    'ctf'
-    'push'
+    'ctf',
+    'push',
     ctf_out_path,
   ]
   subprocess.run(
