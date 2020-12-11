@@ -1,4 +1,4 @@
-FROM eu.gcr.io/gardener-project/component/cli:latest component-cli
+FROM eu.gcr.io/gardener-project/component/cli:latest AS component-cli
 FROM eu.gcr.io/gardener-project/cc/job-image-base:0.46.0
 
 COPY . /cc/utils/
