@@ -140,7 +140,6 @@ class AttributesDocumentation(object):
             return (name, required, default_value, type_str, doc)
 
     def fill_table(self, table_builder):
-
         if issubclass(self._model_element_type, base_model.EnumWithDocumentation):
             table_builder.add_table_header(['value', 'explanation'])
             for e in self._model_element_type:
@@ -154,6 +153,6 @@ class AttributesDocumentation(object):
             for attr_spec in self._model_element_type._attribute_specs():
                 table_builder.add_table_row(self._attr_spec_to_table_row(attr_spec))
         else:
-            raise NotImplementedError
+            raise NotImplementedError(f'{self.__dict__}:{self._model_element_type}')
 
         return table_builder
