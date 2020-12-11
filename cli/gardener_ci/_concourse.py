@@ -110,6 +110,7 @@ def render_pipelines(
         out_dir: str,
         template_path: str=_template_path(),
         org: str=None, # if set, filter for org
+        repo: str=None, # if set, filter for repo
 ):
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
@@ -122,6 +123,11 @@ def render_pipelines(
 
     template_include_dir = template_path
 
+    if repo:
+        repository_filter = lambda repo_name: repo_name == repo
+    else:
+        repository_filter = None
+
     def_enumerators = []
     for job_mapping in job_mapping_set.job_mappings().values():
         job_mapping: ccm.JobMapping
@@ -132,7 +138,8 @@ def render_pipelines(
         def_enumerators.append(
             GithubOrganisationDefinitionEnumerator(
                 job_mapping=job_mapping,
-                cfg_set=config_set
+                cfg_set=config_set,
+                repository_filter=repository_filter,
             )
         )
 

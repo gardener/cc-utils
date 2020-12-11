@@ -239,6 +239,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
         repository,
         github_cfg,
         org_name,
+        repository_filter: callable=None,
     ) -> RawPipelineDefinitionDescriptor:
 
         repo_hostname = urlparse(github_cfg.http_url()).hostname
@@ -303,7 +304,11 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
 
 
 class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
-    def __init__(self, repository_url:str, cfg_set):
+    def __init__(
+        self,
+        repository_url:str,
+        cfg_set,
+    ):
         self._repository_url = urlparse(not_none(repository_url))
         self._repo_host = self._repository_url.hostname
         self.cfg_set = not_none(cfg_set)
@@ -342,9 +347,15 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
 
 
 class GithubOrganisationDefinitionEnumerator(GithubDefinitionEnumeratorBase):
-    def __init__(self, job_mapping, cfg_set):
+    def __init__(
+        self,
+        job_mapping,
+        cfg_set,
+        repository_filter: callable=None,
+    ):
         self.job_mapping = not_none(job_mapping)
         self.cfg_set = not_none(cfg_set)
+        self.repository_filter = repository_filter
 
     def enumerate_definition_descriptors(self):
         executor = ThreadPoolExecutor(max_workers=16)
@@ -364,12 +375,15 @@ class GithubOrganisationDefinitionEnumerator(GithubDefinitionEnumeratorBase):
                 org_name=github_org_name,
             )
 
+            matching_repositories = (
+                repo for repo in github_org.repositories()
+                if github_org_cfg.repository_matches(repo.name)
+                   and (not self.repository_filter or self.repository_filter(repo.name))
+            )
+
             for definition_descriptors in executor.map(
                 scan_repository_for_definitions,
-                (
-                    repo for repo in github_org.repositories()
-                    if github_org_cfg.repository_matches(repo.name)
-                ),
+                matching_repositories,
             ):
                 yield from definition_descriptors
 
