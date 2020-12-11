@@ -228,7 +228,19 @@ elif have_cd:
 
   descriptor = ComponentDescriptor.from_dict(parse_yaml_file(descriptor_path))
 elif have_ctf:
-  fail('CTF not yet supported')
+  argv = [
+    'component-cli',
+    'ctf'
+    'push'
+    ctf_out_path,
+  ]
+  subprocess.run(
+    argv,
+    check=True,
+    env=subproc_env,
+  )
+  print('processed ctf-archive at {ctf_out_path=} - exiting')
+  exit(0)
 
 cfg_factory = ctx().cfg_factory()
 info('resolving dependencies')
