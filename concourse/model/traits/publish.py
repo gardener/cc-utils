@@ -96,8 +96,7 @@ IMG_DESCRIPTOR_ATTRIBS = (
     AttributeSpec.optional(
         name='build_args',
         default={},
-        # type=typing.Dict[str, str],
-        type=dict,
+        type=typing.Dict[str, str],
         doc='build-time arguments to pass to docker-build',
     ),
 )

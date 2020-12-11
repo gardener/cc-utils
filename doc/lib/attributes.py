@@ -116,10 +116,11 @@ class AttributesDocumentation(object):
             if type_.__origin__ is dict:
                 # assumption: type is typing.Dict[T1, T2]
                 _, val_type = type_.__args__
-                self.add_child(
-                    model_element_type=val_type,
-                    element_name=f'{name}.<user-chosen>'
-                )
+                if not issubclass(val_type, (str, int, bool, float)):
+                    self.add_child(
+                        model_element_type=val_type,
+                        element_name=f'{name}.<user-chosen>'
+                    )
             elif type_.__origin__ in (list, set):
                 # Also check type to support list of enum values
                 if (
@@ -146,12 +147,12 @@ class AttributesDocumentation(object):
                 table_builder.add_table_row((e.value, e.__doc__))
 
         elif issubclass(self._model_element_type, base_model.AttribSpecMixin):
-
             table_builder.add_table_header(
                 ['name', 'required?', 'default', 'type', 'explanation']
             )
             for attr_spec in self._model_element_type._attribute_specs():
                 table_builder.add_table_row(self._attr_spec_to_table_row(attr_spec))
+
         else:
             raise NotImplementedError(f'{self.__dict__}:{self._model_element_type}')
 
