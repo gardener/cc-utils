@@ -68,6 +68,11 @@ IMG_DESCRIPTOR_ATTRIBS = (
         type=bool,
     ),
     AttributeSpec.optional(
+        name='tag_template',
+        default='${EFFECTIVE_VERSION}',
+        doc='the template to use for the image-tag (only variable: EFFECTIVE_VERSION)',
+    ),
+    AttributeSpec.optional(
         name='dockerfile',
         default='Dockerfile',
         doc='the file to use for building the container image',
@@ -130,8 +135,11 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
     def image_reference(self):
         return self.raw['image']
 
-    def tag_as_latest(self):
+    def tag_as_latest(self) -> bool:
         return self.raw['tag_as_latest']
+
+    def tag_template(self):
+        return self.raw['tag_template']
 
     def build_args(self):
         return self.raw['build_args']
