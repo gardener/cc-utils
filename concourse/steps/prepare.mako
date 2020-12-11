@@ -3,10 +3,14 @@
 from makoutil import indent_func
 # TODO: actually, we would require dedicated prepare steps for each image
 input_step_names = set()
-for image_descriptor in job_variant.trait('publish').dockerimages():
+tag_dir = job_step.output('tag_path')
+publish_trait = job_variant.trait('publish')
+
+for image_descriptor in publish_trait.dockerimages():
   input_step_names.update(image_descriptor.input_steps())
 
 main_repo = job_variant.main_repository()
+
 
 input_dirs = set()
 for input_step_name in input_step_names:
@@ -34,5 +38,9 @@ cp "${job_step.input('version_path')}/version" \
 % for input_dir in input_dirs:
     find "${input_dir}"
     cp -Tfr "${input_dir}" "${job_step.output('image_path')}"
+% endfor
+% for image_descriptor in publish_trait.dockerimages():
+cp "${job_step.input('version_path')}/version" \
+"${tag_dir}/${image_descriptor.name()}.tag"
 % endfor
 </%def>
