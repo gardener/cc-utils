@@ -112,9 +112,13 @@ def get_source_repo_config_for_component_reference(
         component_reference=component_reference,
         component_version=component_version,
     )
-    if not component.sources or len(component.sources) > 1:
+    if not component.sources:
         raise NotImplementedError(f'Cannot determine source repository of {component.name}')
+
+    # heuristic: use first source available
+    # TODO: Use cd-v2 label
     access = component.sources[0].access
+
     return (
         ccc.github.github_cfg_for_hostname(access.hostname()),
         access.org_name(),
