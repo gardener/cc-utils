@@ -159,17 +159,23 @@ else:
   if not is_executable:
     fail('descriptor script file exists but is not executable: ' + descriptor_script)
 
+# dump base_ctf_v2 as valid component archive and pass it to descriptor script
+base_ctf_dir = os.path.join(descriptor_out_dir, 'base_component_ctf')
+os.makedirs(base_ctf_dir, exist_ok=False)
 
 # dump base_descriptor_v2 and pass it to descriptor script
-base_descriptor_file_v2 = os.path.join(descriptor_out_dir, 'base_component_descriptor_v2')
+base_descriptor_file_v2 = os.path.join(
+  descriptor_out_dir,
+  component_descriptor_fname(schema_version=gci.componentmodel.SchemaVersion.V2)
+)
 with open(base_descriptor_file_v2, 'w') as f:
   f.write(dump_component_descriptor_v2(base_descriptor_v2))
-
 
 subproc_env = os.environ.copy()
 subproc_env['${main_repo_path_env_var}'] = main_repo_path
 subproc_env['MAIN_REPO_DIR'] = main_repo_path
 subproc_env['BASE_DEFINITION_PATH'] = base_descriptor_file_v2
+subproc_env['BASE_CTF_PATH'] = base_ctf_dir
 subproc_env['COMPONENT_DESCRIPTOR_PATH'] = v2_outfile
 subproc_env['CTF_PATH'] = ctf_out_path
 subproc_env['COMPONENT_NAME'] = component_name
