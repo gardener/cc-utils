@@ -17,7 +17,7 @@ from concourse.model.traits.component_descriptor import DEFAULT_COMPONENT_DESCRI
 pipeline_name = pipeline.get('name')
 pipeline_definition = pipeline.get('definition')
 target_team = pipeline.get('target_team')
-background_image = pipeline.get('background_image')
+background_image = pipeline.get('background_image', 'https://i.imgur.com/raPlg21.png')
 resource_registry = pipeline_definition._resource_registry
 
 github = config_set.github()
