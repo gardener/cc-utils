@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import enum
 import toposort
 
 from concourse.model.base import (
@@ -21,6 +22,12 @@ from concourse.model.base import (
 )
 from ci.util import not_none
 from concourse.model.resources import RepositoryConfig, ResourceIdentifier
+
+
+class AbortObsoleteJobs(enum.Enum):
+    ALWAYS = 'always'
+    ON_FORCE_PUSH_ONLY = 'on_force_push_only'
+    NEVER = 'never'
 
 
 class JobVariant(ModelBase):
@@ -36,10 +43,11 @@ class JobVariant(ModelBase):
 
     def _known_attributes(self):
         return {
-            'steps',
-            'traits',
+            'abort_obsolete_jobs',
             'repo',
             'repos',
+            'steps',
+            'traits',
         }
 
     def _children(self):

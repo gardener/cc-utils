@@ -13,9 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
 import enum
 import urllib.parse
 
+import dacite
+
+from concourse.model.job import AbortObsoleteJobs
 from model.base import ModelBase
 
 
@@ -115,3 +119,23 @@ class PullRequestEvent(EventBase):
         the user who performed the event
         '''
         return self.raw['sender']
+
+
+@dataclasses.dataclass
+class Pipeline:
+    pipeline_name: str
+    target_team: str
+    effective_definition: dict
+
+
+@dataclasses.dataclass
+class AbortConfig:
+    abort_obsolete_jobs: AbortObsoleteJobs
+
+    @staticmethod
+    def from_dict(d: dict):
+        return dacite.from_dict(
+            data_class=AbortConfig,
+            data=d,
+            config=dacite.Config(cast=[AbortObsoleteJobs]),
+        )
