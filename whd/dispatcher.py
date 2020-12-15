@@ -273,7 +273,6 @@ class GithubWebhookDispatcher(object):
             if isinstance(event, PushEvent):
                 if not event.ref().endswith(ghs.branch_name()):
                     continue
-            if isinstance(event, PushEvent):
                 if msg := event.commit_message():
                     if (
                         not ghs.disable_ci_skip()
