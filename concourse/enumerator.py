@@ -420,6 +420,9 @@ class DefinitionDescriptor:
     def template_name(self):
         return self.pipeline_definition.get('template', 'default')
 
+    def effective_pipeline_name(self):
+        return '-'.join((self.pipeline_name, self.main_repo['branch']))
+
     def concourse_target(self):
         return (self.concourse_target_cfg, self.concourse_target_team)
 

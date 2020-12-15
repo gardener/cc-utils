@@ -156,20 +156,12 @@ class Renderer(object):
         if bg := effective_definition.get('background_image'):
             pipeline_metadata['background_image'] = bg
 
-        # determine pipeline name (if there is main-repo, append the configured branch name)
         for variant in pipeline_metadata.get('definition').variants():
-            # hack: take the first "main_repository" we find
             if not variant.has_main_repository():
-                continue
-            main_repo = variant.main_repository()
-            pipeline_metadata['pipeline_name'] = '-'.join(
-                [pipeline_definition.name, main_repo.branch()]
-            )
-            break
-        else:
-            # fallback in case no main_repository was found
-            pipeline_metadata['pipeline_name'] = pipeline_definition.name
-            main_repo = None
+                raise RuntimeError(
+                    f"No main repository for pipeline definition {pipeline_definition.name}."
+                )
+            pipeline_metadata['pipeline_name'] = definition_descriptor.effective_pipeline_name()
 
         t = mako.template.Template(template_contents, lookup=self.lookup)
 
