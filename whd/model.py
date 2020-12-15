@@ -73,6 +73,12 @@ class PushEvent(EventBase):
             return head_commit.get('message')
         return None
 
+    def is_forced_push(self):
+        return self.raw['forced']
+
+    def previous_ref(self):
+        return self.raw['before']
+
 
 class PullRequestAction(enum.Enum):
     ASSIGNED = 'assigned'
