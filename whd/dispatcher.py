@@ -19,6 +19,7 @@ import logging
 import random
 import threading
 import time
+import typing
 import traceback
 
 import ccc.elasticsearch
@@ -33,6 +34,7 @@ from model import ConfigFactory
 from model.webhook_dispatcher import WebhookDispatcherConfig
 
 from concourse.client.util import (
+    determine_jobs_to_be_triggered,
     jobs_not_triggered,
     pin_resource_and_trigger_build,
     PinningFailedError,
@@ -41,10 +43,13 @@ from concourse.client.util import (
 from concourse.client.model import (
     ResourceType,
 )
+from concourse.model.job import AbortObsoleteJobs
 from .model import (
-    PushEvent,
-    PullRequestEvent,
+    AbortConfig,
+    Pipeline,
     PullRequestAction,
+    PullRequestEvent,
+    PushEvent,
     RefType,
 )
 
@@ -88,6 +93,8 @@ class GithubWebhookDispatcher(object):
             self._update_pipeline_definition(push_event)
 
         logger.debug('before push-event dispatching')
+
+        self.abort_running_jobs_if_configured(push_event)
 
         def _check_resources():
             for concourse_api in self.concourse_clients():
@@ -138,6 +145,81 @@ class GithubWebhookDispatcher(object):
         if '.ci/pipeline_definitions' in push_event.modified_paths():
             return True
         return False
+
+    def determine_affected_pipelines(self, push_event) -> typing.Generator[Pipeline, None, None]:
+        '''yield each concourse pipeline that may be affected by the given push-event.
+        '''
+        repo_enumerator = concourse.enumerator.GithubRepositoryDefinitionEnumerator(
+            repository_url=push_event.repository().repository_url(),
+            cfg_set=self.cfg_set,
+        )
+
+        for descriptor in repo_enumerator.enumerate_definition_descriptors():
+            # need to merge and consider the effective definition
+            effective_definition = descriptor.pipeline_definition
+            for override in descriptor.override_definitions:
+                effective_definition = ci.util.merge_dicts(effective_definition, override)
+
+            yield Pipeline(
+                pipeline_name=descriptor.effective_pipeline_name(),
+                target_team=descriptor.concourse_target_team,
+                effective_definition=effective_definition,
+            )
+
+    def matching_client(self, team):
+        for c in self.concourse_clients():
+            if c.routes.team == team:
+                return c
+
+    def abort_running_jobs_if_configured(self, push_event):
+        builds_to_consider = 5
+        for pipeline in self.determine_affected_pipelines(
+            push_event
+        ):
+            if not (client := self.matching_client(pipeline.target_team)):
+                raise RuntimeError(
+                    f"No matching Concourse client found for team '{pipeline.target_team}'"
+                )
+
+            pipeline_config = client.pipeline_cfg(pipeline.pipeline_name)
+
+            resources = [
+                r for r in pipeline_config.resources
+                if ResourceType(r.type) in (ResourceType.GIT, ResourceType.PULL_REQUEST)
+            ]
+            for job in determine_jobs_to_be_triggered(*resources):
+                if (
+                    not pipeline.effective_definition['jobs'].get(job.name)
+                    or not 'abort_outdated_jobs' in pipeline.effective_definition['jobs'][job.name]
+                ):
+                    continue
+                abort_cfg = AbortConfig.from_dict(
+                    pipeline.effective_definition['jobs'][job.name]
+                )
+
+                if abort_cfg.abort_obsolete_jobs is AbortObsoleteJobs.NEVER:
+                    continue
+                elif (
+                    abort_cfg.abort_obsolete_jobs is AbortObsoleteJobs.ON_FORCE_PUSH_ONLY
+                    and not push_event.is_forced_push()
+                ):
+                    continue
+                elif abort_cfg.abort_obsolete_jobs is AbortObsoleteJobs.ALWAYS:
+                    pass
+                else:
+                    raise NotImplementedError(abort_cfg.abort_obsolete_jobs)
+
+                running_builds = [
+                    b for b in client.job_builds(pipeline.pipeline_name, job.name)
+                    if b.status() is concourse.client.model.BuildStatus.RUNNING
+                ][:builds_to_consider]
+
+                for build in running_builds:
+                    if build.plan().contains_version_ref(push_event.previous_ref()):
+                        logger.info(
+                            f"Aborting obsolete build '{build.build_number()}' for job '{job.name}'"
+                        )
+                        client.abort_build(build.id())
 
     def dispatch_pullrequest_event(self, pr_event):
         if not pr_event.action() in (
