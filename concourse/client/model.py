@@ -117,7 +117,7 @@ class Job:
     def is_triggered_by_resource(self, resource_name: str):
         get_steps = self.plan().get_steps()
         for get_step in get_steps:
-            if get_step['get'] == resource_name and get_step['trigger']:
+            if get_step['get'] == resource_name and get_step.get('trigger', False):
                 return True
         return False
 
