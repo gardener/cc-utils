@@ -239,7 +239,7 @@ elif have_ctf:
     check=True,
     env=subproc_env,
   )
-  print('processed ctf-archive at {ctf_out_path=} - exiting')
+  print(f'processed ctf-archive at {ctf_out_path=} - exiting')
   exit(0)
 
 cfg_factory = ctx().cfg_factory()
