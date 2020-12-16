@@ -583,13 +583,13 @@ class GitHubReleaseStep(TransactionalStep):
 
     def validate(self):
         version.parse_to_semver(self.release_version)
-        existing_file(self.component_descriptor_file_path)
         # either cds _OR_ ctf must exist
         have_ctf = os.path.exists(self.ctf_path)
         have_cd = os.path.exists(self.component_descriptor_v2_path)
         if have_ctf and have_cd:
             ci.util.fail('Both CTF and Component Descriptor are defined. Only one may be defined.')
         elif have_cd:
+            existing_file(self.component_descriptor_file_path)
             with open(self.component_descriptor_file_path) as f:
                 # TODO: Proper validation
                 not_empty(f.read().strip())
