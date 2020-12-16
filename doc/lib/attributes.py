@@ -71,9 +71,9 @@ class AttributesDocumentation(object):
         if isinstance(type_, typing._GenericAlias):
             if type_.__origin__ is dict:
                 key_type, val_type = type_.__args__
-                return type_._name + f'[{self._type_name(key_type)}, {self._type_name(val_type)}]'
+                return f'Dict[{self._type_name(key_type)}, {self._type_name(val_type)}]'
             elif type_.__origin__ in (list, set):
-                return type_._name + f'[{self._type_name(type_.__args__[0])}]'
+                return f'List[{self._type_name(type_.__args__[0])}]'
             elif type_.__origin__ is typing.Union:
                 type_str = "One of: \n \n"
                 type_str += '\n'.join([f'- {self._type_name(a)}' for a in type_.__args__])
