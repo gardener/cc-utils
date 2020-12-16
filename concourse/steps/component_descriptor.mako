@@ -140,7 +140,7 @@ v2_outfile = os.path.join(
 )
 
 ctf_out_path = os.path.abspath(
-  os.path.join(descriptor_out_dir, 'cnudie-transport-format.out')
+  os.path.join(descriptor_out_dir, product.v2.CTF_OUT_DIR_NAME)
 )
 
 descriptor_script = os.path.abspath(

@@ -8,6 +8,7 @@ from concourse.steps import step_lib
 import concourse.steps.component_descriptor_util as cdu
 import gci.componentmodel
 import os
+import product.v2
 version_file = job_step.input('version_path') + '/version'
 release_trait = job_variant.trait('release')
 version_trait = job_variant.trait('version')
@@ -32,6 +33,11 @@ component_descriptor_file_path = os.path.join(
 component_descriptor_v2_path = os.path.join(
   job_step.input('component_descriptor_dir'),
   cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
+)
+ctf_path = os.path.abspath(
+  os.path.join(
+    job_step.input('component_descriptor_dir'),
+    product.v2.CTF_OUT_DIR_NAME),
 )
 
 release_callback_path = release_trait.release_callback_path()
@@ -61,6 +67,7 @@ githubrepobranch = GitHubRepoBranch(
 release_and_prepare_next_dev_cycle(
   component_descriptor_file_path='${component_descriptor_file_path}',
   component_descriptor_v2_path='${component_descriptor_v2_path}',
+  ctf_path='${ctf_path}',
   % if has_slack_trait:
   slack_channel_configs=${slack_channel_cfgs},
   % endif
