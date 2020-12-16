@@ -27,6 +27,9 @@ import product.util
 import version
 
 
+CTF_OUT_DIR_NAME = 'cnudie-transport-format.out'
+
+
 COMPONENT_TYPE_NAME = 'component'
 
 
