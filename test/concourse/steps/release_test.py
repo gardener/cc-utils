@@ -7,6 +7,7 @@ import os
 import yaml
 
 import concourse.steps.release
+import product.v2
 from concourse.model.traits.release import (
     ReleaseCommitPublishingPolicy,
 )
@@ -119,6 +120,7 @@ class TestGitHubReleaseStep(object):
         component_descriptor_file.write_text('component descriptor test content')
 
         component_descriptor_v2 = os.path.join(tmp_path, 'component_descriptor_v2')
+        ctf_path = os.path.join(tmp_path, product.v2.CTF_OUT_DIR_NAME)
         cd_v2 = cm.ComponentDescriptor(
             component=cm.Component(
                 name='a_name',
@@ -160,6 +162,7 @@ class TestGitHubReleaseStep(object):
                 release_version=release_version,
                 component_descriptor_file_path=component_descriptor_file_path,
                 component_descriptor_v2_path=component_descriptor_v2,
+                ctf_path=ctf_path,
             )
         return _examinee
 
