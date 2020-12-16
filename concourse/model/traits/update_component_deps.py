@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import enum
+import typing
 
 from concourse.model.step import (
     PipelineStep,
@@ -21,13 +22,15 @@ from concourse.model.step import (
 )
 from concourse.model.base import (
     AttributeSpec,
+    ModelBase,
+    ScriptType,
     Trait,
     TraitTransformer,
-    ScriptType,
 )
 from concourse.model.job import (
     JobVariant,
 )
+from model.base import ModelValidationError
 
 import concourse.model.traits.component_descriptor
 
@@ -40,6 +43,43 @@ class MergePolicy(enum.Enum):
 class UpstreamUpdatePolicy(enum.Enum):
     STRICTLY_FOLLOW = 'strictly_follow'
     ACCEPT_HOTFIXES = 'accept_hotfixes'
+
+
+MERGE_POLICY_CONFIG_ATTRIBUTES = (
+    AttributeSpec.optional(
+        name='component_names',
+        default=[],
+        type=typing.List[str],
+        doc=(
+            'a sequence of regular expressions. This merge policy will be applied to matching '
+            'component names. Matches all component names by default'
+        )
+    ),
+    AttributeSpec.optional(
+        name='merge_mode',
+        default='manual',
+        type=MergePolicy,
+        doc='whether or not created PRs should be automatically merged',
+    ),
+)
+
+
+class MergePolicyConfig(ModelBase):
+    @classmethod
+    def _attribute_specs(cls):
+        return MERGE_POLICY_CONFIG_ATTRIBUTES
+
+    def component_names(self):
+        # handle default here
+        # TODO: refactor default arg handling. User-given values should *replace* defaults, not
+        #       add to them
+        if not self.raw['component_names']:
+            return ['.*']
+
+        return self.raw['component_names']
+
+    def merge_mode(self):
+        return MergePolicy(self.raw['merge_mode'])
 
 
 ATTRIBUTES = (
@@ -58,10 +98,20 @@ ATTRIBUTES = (
         default=UpstreamUpdatePolicy.STRICTLY_FOLLOW,
         doc='configures the upstream component update policy',
     ),
-    AttributeSpec.optional(
+    AttributeSpec.deprecated(
         name='merge_policy',
-        default=MergePolicy.MANUAL,
-        doc='whether or not created PRs should be automatically merged',
+        default=None,
+        doc='whether or not created PRs should be automatically merged. **deprecated**',
+        type=MergePolicy,
+    ),
+    AttributeSpec.optional(
+        name='merge_policies',
+        default=(),
+        doc=(
+            'merge policies to apply to detected component upgrades. By default, upgrade '
+            'pull-requests must be merged manually'
+        ),
+        type=typing.List[MergePolicyConfig],
     ),
     AttributeSpec.optional(
         name='after_merge_callback',
@@ -91,8 +141,32 @@ class UpdateComponentDependenciesTrait(Trait):
     def upstream_update_policy(self):
         return UpstreamUpdatePolicy(self.raw.get('upstream_update_policy'))
 
-    def merge_policy(self) -> MergePolicy:
-        return MergePolicy(self.raw['merge_policy'])
+    def merge_policies(self):
+        # handle default here
+        # TODO: refactor default arg handling. User-given values should *replace* defaults, not
+        #       add to them
+        if not self.raw.get('merge_policies'):
+            if not self.raw.get('merge_policy'):
+                return [
+                    MergePolicyConfig({
+                        'component_names': ['.*'],
+                        'merge_mode': 'manual',
+                    })]
+
+            # preserve legacy behaviour
+            # TODO rm
+            else:
+                return [
+                    MergePolicyConfig({
+                        'component_names': ['.*'],
+                        'merge_mode': self.raw['merge_policy'],
+                    })
+                ]
+
+        else:
+            return [
+                MergePolicyConfig(cfg) for cfg in self.raw['merge_policies']
+            ]
 
     def after_merge_callback(self):
         return self.raw.get('after_merge_callback')
@@ -102,6 +176,13 @@ class UpdateComponentDependenciesTrait(Trait):
 
     def transformer(self):
         return UpdateComponentDependenciesTraitTransformer(trait=self)
+
+    def validate(self):
+        super().validate()
+        if self.raw.get('merge_policy') and  self.raw.get('merge_policies'):
+            raise ModelValidationError(
+                "Only one of 'merge_policy' and 'merge_policies' is allowed."
+            )
 
 
 class UpdateComponentDependenciesTraitTransformer(TraitTransformer):

@@ -41,6 +41,8 @@ from github.util import (
 from ci.util import check_env
 
 ${step_lib('update_component_deps')}
+${step_lib('images')}
+
 
 # must point to this repository's root directory
 REPO_ROOT = os.path.abspath('${repo_relpath}')
@@ -58,7 +60,16 @@ githubrepobranch = GitHubRepoBranch(
     repo_name=REPO_NAME,
     branch=REPO_BRANCH,
 )
-
+merge_policy_configs = [
+    concourse.model.traits.update_component_deps.MergePolicyConfig(cfg)
+    for cfg in ${[p.raw for p in update_component_deps_trait.merge_policies()]}
+]
+merge_policy_and_filters = {
+    p: component_name_filter(
+        include_regexes=p.component_names(),
+        exclude_regexes=(),
+    ) for p in merge_policy_configs
+}
 # indicates whether or not an upstream component was defined as a reference
 upstream_component_name = os.environ.get('UPSTREAM_COMPONENT_NAME', None)
 UPGRADE_TO_UPSTREAM = bool(upstream_component_name)
@@ -102,6 +113,21 @@ for from_ref, to_version in determine_upgrade_prs(
     upgrade_pull_requests=upgrade_pull_requests,
     ctx_repo_base_url='${ctx_repo_base_url}',
 ):
+    applicable_merge_policy = [
+        policy for policy, filter_func in merge_policy_and_filters.items() if filter_func(from_ref)
+    ]
+    if len(applicable_merge_policy) > 1:
+        if any([
+            p.merge_mode() is not applicable_merge_policy[0].merge_mode()
+            for p in applicable_merge_policy
+        ]):
+            raise RuntimeError(f'Conflicting merge policies found to apply to {from_ref.name}')
+        merge_policy = applicable_merge_policy[0].merge_mode()
+    elif len(applicable_merge_policy) == 0:
+        merge_policy = MergePolicy.MANUAL
+    else:
+        merge_policy = applicable_merge_policy[0].merge_mode()
+
     create_upgrade_pr(
         from_ref=from_ref,
         to_ref=from_ref,
@@ -112,7 +138,7 @@ for from_ref, to_version in determine_upgrade_prs(
         repo_dir=REPO_ROOT,
         github_cfg_name=github_cfg_name,
         cfg_factory=cfg_factory,
-        merge_policy=MergePolicy('${update_component_deps_trait.merge_policy().value}'),
+        merge_policy=merge_policy,
 % if after_merge_callback:
         after_merge_callback='${after_merge_callback}',
 % endif
