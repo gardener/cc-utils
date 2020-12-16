@@ -564,7 +564,6 @@ class GitHubReleaseStep(TransactionalStep):
         release_version: str,
         component_descriptor_file_path:str,
         component_descriptor_v2_path:str,
-        ctf_path:str,
     ):
         self.github_helper = not_none(github_helper)
         self.githubrepobranch = githubrepobranch
@@ -576,7 +575,6 @@ class GitHubReleaseStep(TransactionalStep):
         repo_dir_absolute = os.path.abspath(not_empty(repo_dir))
         self.repo_dir = repo_dir_absolute
         self.component_descriptor_v2_path = component_descriptor_v2_path
-        self.ctf_path = ctf_path
 
     def name(self):
         return "Create Release"
@@ -584,23 +582,14 @@ class GitHubReleaseStep(TransactionalStep):
     def validate(self):
         version.parse_to_semver(self.release_version)
         existing_file(self.component_descriptor_file_path)
-        # either cds _OR_ ctf must exist
-        have_ctf = os.path.exists(self.ctf_path)
-        have_cd = os.path.exists(self.component_descriptor_v2_path)
-        if have_ctf and have_cd:
-            ci.util.fail('Both CTF and Component Descriptor are defined. Only one may be defined.')
-        elif have_cd:
-            with open(self.component_descriptor_file_path) as f:
-                # TODO: Proper validation
-                not_empty(f.read().strip())
-            component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
-                ci.util.parse_yaml_file(self.component_descriptor_v2_path),
-            )
-            product.v2.resolve_dependencies(component=component_descriptor_v2.component)
-            # TODO: more validation (e.g. check for uniqueness of names)
-        elif have_ctf:
-            # nothing to do, already uploaded in component_descriptor step.
-            pass
+        with open(self.component_descriptor_file_path) as f:
+            # TODO: Proper validation
+            not_empty(f.read().strip())
+        component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
+            ci.util.parse_yaml_file(self.component_descriptor_v2_path),
+        )
+        product.v2.resolve_dependencies(component=component_descriptor_v2.component)
+        # TODO: more validation (e.g. check for uniqueness of names)
 
     def apply(
         self,
@@ -634,25 +623,24 @@ class GitHubReleaseStep(TransactionalStep):
                 name=self.release_version,
             )
 
-        if os.path.exists(self.component_descriptor_v2_path):
-            # TODO: rm v1-parts
-            # Upload component descriptor to GitHub-release if one has been calculated
-            with open(self.component_descriptor_file_path) as f:
-                component_descriptor_contents = f.read()
-                release.upload_asset(
-                    content_type='application/x-yaml',
-                    name=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
-                    asset=component_descriptor_contents,
-                    label=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
-                )
+        # Upload component descriptor to GitHub-release if one has been calculated
+        with open(self.component_descriptor_file_path) as f:
+            component_descriptor_contents = f.read()
+            release.upload_asset(
+                content_type='application/x-yaml',
+                name=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
+                asset=component_descriptor_contents,
+                label=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
+            )
 
-            component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
-                component_descriptor_dict=ci.util.parse_yaml_file(self.component_descriptor_v2_path),
-            )
-            info('publishing component-descriptor v2')
-            product.v2.upload_component_descriptor_v2_to_oci_registry(
-                component_descriptor_v2=component_descriptor_v2,
-            )
+        # cd-v2 (todo: rm v1-parts above)
+        component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
+            component_descriptor_dict=ci.util.parse_yaml_file(self.component_descriptor_v2_path),
+        )
+        info('publishing component-descriptor v2')
+        product.v2.upload_component_descriptor_v2_to_oci_registry(
+            component_descriptor_v2=component_descriptor_v2,
+        )
 
         return {
             'release_tag_name': release_tag,
@@ -857,7 +845,6 @@ def release_and_prepare_next_dev_cycle(
     author_email: str="gardener.ci.user@gmail.com",
     author_name: str="gardener-ci",
     component_descriptor_v2_path: str=None,
-    ctf_path: str=None,
     next_cycle_commit_message_prefix: str=None,
     next_version_callback: str=None,
     prerelease_suffix: str="dev",
@@ -934,7 +921,6 @@ def release_and_prepare_next_dev_cycle(
         release_version=release_version,
         component_descriptor_file_path=component_descriptor_file_path,
         component_descriptor_v2_path=component_descriptor_v2_path,
-        ctf_path=ctf_path,
     )
     step_list.append(github_release_step)
 

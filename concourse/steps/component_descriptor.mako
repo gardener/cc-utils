@@ -140,7 +140,7 @@ v2_outfile = os.path.join(
 )
 
 ctf_out_path = os.path.abspath(
-  os.path.join(descriptor_out_dir, product.v2.CTF_OUT_DIR_NAME)
+  os.path.join(descriptor_out_dir, 'cnudie-transport-format.out')
 )
 
 descriptor_script = os.path.abspath(
@@ -239,7 +239,7 @@ elif have_ctf:
     check=True,
     env=subproc_env,
   )
-  print(f'processed ctf-archive at {ctf_out_path=} - exiting')
+  print('processed ctf-archive at {ctf_out_path=} - exiting')
   exit(0)
 
 cfg_factory = ctx().cfg_factory()
