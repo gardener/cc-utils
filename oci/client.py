@@ -21,12 +21,12 @@ urljoin = oci.util.urljoin
 logger = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class OauthToken:
     expires_in: int
-    issued_at: str
     token: str
     scope: str
+    issued_at: str = None
 
     def valid(self):
         issued_at = dateutil.parser.isoparse(self.issued_at)
@@ -35,6 +35,10 @@ class OauthToken:
 
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         return now < expiry_date
+
+    def __post_init__(self):
+        if not self.issued_at:
+            self.issued_at = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
 
 
 class OauthTokenCache:
