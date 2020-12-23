@@ -112,7 +112,7 @@ def _target_oci_repository_from_component_name(component_name: str, ctx_repo_bas
     return ci.util.urljoin(
         ctx_repo_base_url,
         'component-descriptors',
-        f'{component_name}',
+        component_name,
     )
 
 
