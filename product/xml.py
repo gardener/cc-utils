@@ -16,7 +16,7 @@
 import typing
 from xml.etree import ElementTree as ET
 
-import container.registry
+import oci.util
 import product.model
 
 
@@ -39,7 +39,7 @@ def container_image_refs_to_xml(
 
     for id, img_ref in enumerate([c.image_reference() for c in container_images]):
         di = ET.SubElement(root, 'Dockerimage', id=str(id))
-        normalised_ref = container.registry.normalise_image_reference(img_ref)
+        normalised_ref = oci.util.normalise_image_reference(img_ref)
 
         host, path_and_tag = normalised_ref.split('/', 1)
         path, tag = path_and_tag.rsplit(':', 1)

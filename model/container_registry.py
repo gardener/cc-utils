@@ -16,6 +16,7 @@
 import json
 
 import ci.util
+import oci.util
 import oci.auth as oa
 
 from model.base import (
@@ -149,9 +150,8 @@ def find_config(
         if _normalised_image_reference:
             return None
         else:
-            import container.registry as cr
             return find_config(
-                image_reference=cr.normalise_image_reference(image_reference=image_reference),
+                image_reference=oci.util.normalise_image_reference(image_reference=image_reference),
                 privileges=privileges,
                 _normalised_image_reference=True,
             )

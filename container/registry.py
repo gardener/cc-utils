@@ -21,6 +21,7 @@ import oci.util
 import ci.util
 import oci
 import oci.auth as oa
+import oci.util as ou
 import model.container_registry
 
 from containerregistry.client import docker_creds
@@ -36,10 +37,6 @@ from containerregistry.transport import transport_pool
 import httplib2
 
 logger = logging.getLogger(__name__)
-
-
-# keep for backwards-compat (XXX rm eventually)
-normalise_image_reference = oci.util.normalise_image_reference
 
 
 def _mk_credentials_lookup(
@@ -150,7 +147,7 @@ def _mk_credentials(image_reference, privileges: oa.Privileges=None):
 def to_hash_reference(image_name: str):
   transport = _mk_transport_pool(size=1)
 
-  image_name = normalise_image_reference(image_name)
+  image_name = ou.normalise_image_reference(image_name)
   image_reference = docker_name.from_string(image_name)
   creds = _mk_credentials(image_reference=image_reference)
   accept = docker_http.SUPPORTED_MANIFEST_MIMES
@@ -185,7 +182,7 @@ def to_hash_reference(image_name: str):
 
 def rm_tag(image_reference: str):
   transport = _mk_transport_pool()
-  image_reference = normalise_image_reference(image_reference)
+  image_reference = ou.normalise_image_reference(image_reference)
   image_reference = docker_name.from_string(image_reference)
   creds = _mk_credentials(image_reference=image_reference)
 

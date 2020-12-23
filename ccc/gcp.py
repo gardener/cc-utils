@@ -10,6 +10,7 @@ import container.registry
 import model.container_registry
 
 import ci.util
+import oci.util
 from .grafeas_model import (
     AnalysisStatus,
     ContinuousAnalysis,
@@ -91,7 +92,7 @@ class GrafeasClient:
         NOTE: Will determine credentials to use from image reference. The created client's methods
         will *not* work for other images to which the determined credentials have no access to.
         '''
-        image_reference = container.registry.normalise_image_reference(image_reference)
+        image_reference = oci.util.normalise_image_reference(image_reference)
         registry_config = model.container_registry.find_config(image_reference=image_reference)
 
         if not registry_config:
@@ -179,7 +180,7 @@ class GrafeasClient:
         self,
         image_reference: str,
     ):
-        image_reference = container.registry.normalise_image_reference(image_reference)
+        image_reference = oci.util.normalise_image_reference(image_reference)
 
         # XXX / HACK: assuming we always handle GCRs (we should rather check!), the first URL path
         # element is the GCR project name
