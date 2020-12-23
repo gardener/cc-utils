@@ -382,14 +382,10 @@ def resolve_dependency(
     cache_dir: str=None,
 ):
     '''
-    resolves the given component version. for migration purposes, there is a fallback in place
+    resolves the given component version.
 
     - the component version is searched in the component's current ctx-repo
       if it is found, it is retrieved and returned
-    - otherwise (not found), the component version is looked-up using v1-schema semantics
-      (i.e. retrieve from github)
-    - if it is found in github, it is retrieved, converted to v2, published to the component's
-      current ctx-repository, and then returned
     '''
     if component_ref:
         cname = component_ref.componentName
@@ -398,15 +394,13 @@ def resolve_dependency(
         cname = component.name
         cversion = component.version
 
-    # retrieve, if available
-    component_descriptor = download_component_descriptor_v2(
+    return download_component_descriptor_v2(
         component_name=cname,
         component_version=cversion,
         ctx_repo_base_url=repository_ctx_base_url or component.current_repository_ctx().baseUrl,
         cache_dir=cache_dir,
         absent_ok=False,
     )
-    return component_descriptor
 
 
 def resolve_dependencies(
@@ -416,9 +410,7 @@ def resolve_dependencies(
 ):
   if include_component:
     yield component
-  print(f'resolving dependencies for {component.name=} {component.version=}')
   for component_ref in component.componentReferences:
-    print(f'resolving {component_ref=}')
     resolved_component_descriptor = resolve_dependency(
       component=component,
       component_ref=component_ref,
@@ -431,7 +423,6 @@ def resolve_dependencies(
         include_component=False,
         cache_dir=cache_dir,
     )
-  # if this line is reached, all dependencies could successfully be resolved
 
 
 def rm_component_descriptor(
