@@ -43,7 +43,7 @@ Example label:
       policy: 'scan' # | 'skip'
       path_config:
         include_paths:
-        - 'src/.*
+        - 'src/.*'
         - 'pgk/.*'
         exclude_paths:
         - 'src/test.*'
