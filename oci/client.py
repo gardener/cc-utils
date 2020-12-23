@@ -43,7 +43,7 @@ class OauthToken:
 
 class OauthTokenCache:
     def __init__(self):
-        self.tokens = {}
+        self.tokens = {} # {scope: token}
 
     def token(self, scope: str):
         # purge expired tokens
