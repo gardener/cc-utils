@@ -256,12 +256,45 @@ class Client:
         return res
 
     def manifest(self, image_reference: str):
-        res = self.manifest_raw(image_reference=image_reference)
+        manifest_dict = self.manifest_raw(image_reference=image_reference).json()
 
-        return dacite.from_dict(
-            data_class=om.OciImageManifest,
-            data=res.json(),
-        )
+        if (schema_version := int(manifest_dict['schemaVersion'])) == 1:
+            manifest = dacite.from_dict(
+                data_class=om.OciImageManifestV1,
+                data=manifest_dict,
+            )
+            scope = _scope(image_reference=image_reference, action='pull')
+
+            def fs_layer_to_oci_blob_ref(fs_layer: om.OciBlobRefV1):
+                digest = fs_layer.blobSum
+
+                res = self._request(
+                    url=blob_url(image_reference=image_reference, digest=digest),
+                    image_reference=image_reference,
+                    scope=scope,
+                    method='HEAD',
+                    stream=False,
+                    timeout=None,
+                )
+                return om.OciBlobRef(
+                    digest=digest,
+                    mediaType=res.headers['Content-Type'],
+                    size=int(res.headers['Content-Length']),
+                )
+
+            manifest.layers = [
+                fs_layer_to_oci_blob_ref(fs_layer) for fs_layer
+                in manifest.fsLayers
+            ]
+
+            return manifest
+        elif schema_version == 2:
+            return dacite.from_dict(
+                data_class=om.OciImageManifest,
+                data=manifest_dict,
+            )
+        else:
+            raise NotImplementedError(schema_version)
 
     def put_manifest(self, image_reference: str, manifest: bytes):
         scope = _scope(image_reference=image_reference, action='push,pull')

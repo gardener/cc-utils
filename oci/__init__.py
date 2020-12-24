@@ -189,17 +189,19 @@ def replicate_artifact(
     ).text
     manifest = json.loads(raw_manifest)
     schema_version = int(manifest['schemaVersion'])
-    if not schema_version == 2:
-        print(raw_manifest)
-        raise RuntimeError(f'unsupported oci-manifest {schema_version=} - expected: 2')
+    if schema_version == 1:
+        manifest = dacite.from_dict(
+            data_class=om.OciImageManifestV1,
+            data=json.loads(raw_manifest)
+        )
+        manifest = client.manifest(src_image_reference)
+    elif schema_version == 2:
+        manifest = dacite.from_dict(
+            data_class=om.OciImageManifest,
+            data=json.loads(raw_manifest)
+        )
 
-    # XXX add support also for v1-schema
-    manifest = dacite.from_dict(
-        data_class=om.OciImageManifest,
-        data=json.loads(raw_manifest)
-    )
-
-    for idx, layer in enumerate([manifest.config] + manifest.layers):
+    for idx, layer in enumerate(manifest.blobs()):
         # need to specially handle manifest (may be absent for v2 / legacy images)
         is_manifest = idx == 0
 
