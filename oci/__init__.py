@@ -64,20 +64,9 @@ def retrieve_manifest(
   retrieves the OCI Artifact manifest for the specified reference, and returns it in a
   deserialised form.
   '''
+  client = oc.Client(credentials_lookup=credentials_lookup)
   try:
-    raw_dict = json.loads(
-        _ou._retrieve_raw_manifest(
-            image_reference=image_reference,
-            credentials_lookup=credentials_lookup,
-            absent_ok=False,
-        )
-    )
-    manifest = dacite.from_dict(
-      data_class=om.OciImageManifest,
-      data=raw_dict,
-    )
-
-    return manifest
+    return client.manifest(image_reference=image_reference)
   except om.OciImageNotFoundException as oie:
     if absent_ok:
       return None

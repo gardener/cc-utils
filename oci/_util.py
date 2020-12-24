@@ -126,24 +126,6 @@ def _mk_transport_pool(
   return transport
 
 
-def _retrieve_raw_manifest(
-    image_reference: str,
-    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
-    absent_ok: bool=False,
-):
-  image_reference = ou.normalise_image_reference(image_reference=image_reference)
-  try:
-    with pulled_image(
-        image_reference=image_reference,
-        credentials_lookup=credentials_lookup,
-    ) as image:
-      return image.manifest()
-  except om.OciImageNotFoundException as oie:
-    if absent_ok:
-      return None
-    raise oie
-
-
 def _tag_or_digest_reference(image_reference):
   if isinstance(image_reference, str):
     image_reference = docker_name.from_string(image_reference)
