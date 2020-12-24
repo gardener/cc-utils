@@ -187,6 +187,13 @@ def replicate_artifact(
     raw_manifest = client.manifest_raw(
         image_reference=src_image_reference,
     ).text
+    manifest = json.loads(raw_manifest)
+    schema_version = int(manifest['schemaVersion'])
+    if not schema_version == 2:
+        print(raw_manifest)
+        raise RuntimeError(f'unsupported oci-manifest {schema_version=} - expected: 2')
+
+    # XXX add support also for v1-schema
     manifest = dacite.from_dict(
         data_class=om.OciImageManifest,
         data=json.loads(raw_manifest)
@@ -196,9 +203,6 @@ def replicate_artifact(
         # need to specially handle manifest (may be absent for v2 / legacy images)
         is_manifest = idx == 0
 
-        # XXX we definitely should _not_ read entire blobs into memory
-        # this is done by the used containerregistry lib, so we do not make things worse
-        # here - however this must not remain so!
         blob_res = client.blob(
             image_reference=src_image_reference,
             digest=layer.digest,
@@ -206,6 +210,9 @@ def replicate_artifact(
         )
         if not blob_res:
             # fallback to non-verbatim replication
+            # XXX we definitely should _not_ read entire blobs into memory
+            # this is done by the used containerregistry lib, so we do not make things worse
+            # here - however this must not remain so!
             logger.warning(
                 'falling back to non-verbatim replication '
                 '{src_image_reference=} {tgt_image_reference=}'
