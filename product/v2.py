@@ -20,6 +20,7 @@ import gci.componentmodel as cm
 import gci.oci
 import oci.model as om
 
+import ccc.oci
 import ci.util
 import container.registry
 import product.model
@@ -331,10 +332,13 @@ def retrieve_component_descriptor_from_oci_ref(
     manifest_oci_image_ref: str,
     absent_ok=False,
 ):
-    manifest = container.registry.retrieve_manifest(
+    client = ccc.oci.oci_client()
+
+    manifest = client.manifest(
         image_reference=manifest_oci_image_ref,
         absent_ok=absent_ok,
     )
+
     if not manifest and absent_ok:
         return None
     elif not manifest and not absent_ok:
