@@ -1,11 +1,13 @@
 import dataclasses
 import typing
 
+import requests
+
 # XXX rm dependencies towards containerregistry package
 from containerregistry.client.v2_2 import docker_http
 
 
-class OciImageNotFoundException(Exception):
+class OciImageNotFoundException(requests.exceptions.HTTPError):
     pass
 
 

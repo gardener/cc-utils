@@ -243,12 +243,15 @@ class Client:
     def manifest_raw(self, image_reference: str):
         scope = _scope(image_reference=image_reference, action='pull')
 
-        res = self._request(
-            url=manifest_url(image_reference=image_reference),
-            image_reference=image_reference,
-            scope=scope,
-        )
-        res.raise_for_status()
+        try:
+            res = self._request(
+                url=manifest_url(image_reference=image_reference),
+                image_reference=image_reference,
+                scope=scope,
+            )
+        except requests.exceptions.HTTPError as he:
+            if he.response.status_code == 404:
+                raise om.OciImageNotFoundException(he.response) from he
 
         return res
 
