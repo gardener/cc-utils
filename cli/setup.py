@@ -1,4 +1,5 @@
 import setuptools
+import shutil
 import os
 
 own_dir = os.path.abspath(os.path.dirname(__file__))
@@ -28,6 +29,12 @@ def version():
     raise RuntimeError(f'did not find VERSION file in {own_dir} and all pardirs')
 
 
+# cp scripts
+src_bin_dir = os.path.join(own_dir, os.pardir, 'bin')
+tgt_bin_dir = os.path.join(own_dir, 'bin')
+shutil.copytree(src_bin_dir, tgt_bin_dir)
+
+
 setuptools.setup(
     name='gardener-cicd-cli',
     version=version(),
@@ -36,6 +43,7 @@ setuptools.setup(
     py_modules=modules(),
     packages=setuptools.find_packages(),
     install_requires=list(requirements()),
+    scripts=[os.path.join(tgt_bin_dir, 'purge_history')],
     entry_points={
         'console_scripts': [
             'gardener-ci = gardener_ci.cli_gen:main',
