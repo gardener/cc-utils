@@ -240,7 +240,11 @@ class Client:
         res.raise_for_status()
         return res
 
-    def manifest_raw(self, image_reference: str):
+    def manifest_raw(
+        self,
+        image_reference: str,
+        absent_ok: bool=False,
+    ):
         scope = _scope(image_reference=image_reference, action='pull')
 
         try:
@@ -251,12 +255,26 @@ class Client:
             )
         except requests.exceptions.HTTPError as he:
             if he.response.status_code == 404:
+                if absent_ok:
+                    return None
                 raise om.OciImageNotFoundException(he.response) from he
 
         return res
 
-    def manifest(self, image_reference: str):
-        manifest_dict = self.manifest_raw(image_reference=image_reference).json()
+    def manifest(
+        self,
+        image_reference: str,
+        absent_ok: bool=False,
+    ):
+        res = self.manifest_raw(
+            image_reference=image_reference,
+            absent_ok=absent_ok,
+        )
+
+        if not res and absent_ok:
+            return None
+
+        manifest_dict = res.json()
 
         if (schema_version := int(manifest_dict['schemaVersion'])) == 1:
             manifest = dacite.from_dict(
