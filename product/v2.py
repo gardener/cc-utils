@@ -347,10 +347,10 @@ def retrieve_component_descriptor_from_oci_ref(
     # XXX after "full" migration to v2, rm fallback coding below
     try:
         cfg_dict = json.loads(
-            container.registry.retrieve_blob(
+            client.blob(
                 image_reference=manifest_oci_image_ref,
                 digest=manifest.config.digest,
-            ).decode('utf-8')
+            ).text
         )
         cfg = dacite.from_dict(
             data_class=gci.oci.ComponentDescriptorOciCfg,
