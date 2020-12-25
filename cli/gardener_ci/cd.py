@@ -22,8 +22,6 @@ def retrieve(
         absent_ok=False,
     )
 
-    print(component_descriptor)
-
     if out:
         outfh = open(out, 'w')
     else:
