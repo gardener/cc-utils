@@ -7,8 +7,6 @@ import typing
 
 import dacite
 
-import containerregistry.client.v2.docker_http_
-
 import oci._util as _ou
 import oci.auth as oa
 import oci.client as oc
@@ -148,24 +146,6 @@ def put_blob(
     logger.debug(f'successfully pushed {image_name=} {sha256_digest=}')
 
     return sha256_digest
-
-
-def get_blob(
-    image_reference: str,
-    digest: str,
-    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
-    absent_ok=False,
-) -> bytes:
-    try:
-        with _ou.pulled_image(
-            image_reference=image_reference,
-            credentials_lookup=credentials_lookup,
-        ) as image:
-            return image.blob(digest)
-    except containerregistry.client.v2.docker_http_.V2DiagnosticException as ve:
-        if absent_ok and ve.status == 404:
-            return None
-        raise ve
 
 
 def replicate_artifact(
