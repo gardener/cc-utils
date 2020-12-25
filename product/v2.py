@@ -357,6 +357,7 @@ def retrieve_component_descriptor_from_oci_ref(
             data=cfg_dict,
         )
         layer_digest = cfg.componentDescriptorLayer.digest
+        layer_mimetype = cfg.componentDescriptorLayer.mediaType
     except Exception as e:
         print(f'Warning: failed to parse or retrieve component-descriptor-cfg: {e=}')
         print('falling back to single-layer')
@@ -366,13 +367,19 @@ def retrieve_component_descriptor_from_oci_ref(
             print(f'XXX unexpected amount of {layers_count=}')
 
         layer_digest = manifest.layers[0].digest
+        layer_mimetype = manifest.layers[0].mediaType
 
-    blob_bytes = container.registry.retrieve_blob(
+    if not layer_mimetype == gci.oci.component_descriptor_mimetype:
+        print(f'warning: {layer_mimetype=} was unexpected')
+        # XXX: check for non-tar-variant
+
+    blob_res = client.blob(
         image_reference=manifest_oci_image_ref,
         digest=layer_digest,
+        stream=False, # manifests are typically small - do not bother w/ streaming
     )
     # wrap in fobj
-    blob_fobj = io.BytesIO(blob_bytes)
+    blob_fobj = io.BytesIO(blob_res.content)
     component_descriptor = gci.oci.component_descriptor_from_tarfileobj(
         fileobj=blob_fobj,
     )
