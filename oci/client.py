@@ -403,12 +403,17 @@ class Client:
         data: requests.models.Response,
         max_chunk=1024 * 1024 * 1, # 1 MiB
     ):
-        if octets_count < max_chunk:
+        data_is_requests_response = isinstance(data, requests.models.Response)
+
+        if octets_count < max_chunk or not data_is_requests_response:
+            if data_is_requests_response:
+                data = data.content
+
             return self._put_blob_single_post(
                 image_reference=image_reference,
                 digest=digest,
                 octets_count=octets_count,
-                data=data.content,
+                data=data,
             )
         else:
             with data:
