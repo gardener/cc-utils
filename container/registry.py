@@ -94,9 +94,7 @@ def _inject_credentials_lookup(inner_function: callable):
 _image_exists = _inject_credentials_lookup(inner_function=oci.image_exists)
 retrieve_manifest = _inject_credentials_lookup(inner_function=oci.retrieve_manifest)
 ls_image_tags = _inject_credentials_lookup(inner_function=oci.tags)
-put_blob = _inject_credentials_lookup(inner_function=oci.put_blob)
 cp_oci_artifact = _inject_credentials_lookup(inner_function=oci.replicate_artifact)
-put_image_manifest = _inject_credentials_lookup(inner_function=oci.put_image_manifest)
 retrieve_container_image = _inject_credentials_lookup(inner_function=oci.retrieve_container_image)
 publish_container_image = _inject_credentials_lookup(inner_function=oci.publish_container_image)
 

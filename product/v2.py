@@ -6,6 +6,7 @@ see: https://github.com/gardener/component-spec
 
 import dataclasses
 import enum
+import hashlib
 import io
 import json
 import os
@@ -289,44 +290,61 @@ def upload_component_descriptor_v2_to_oci_registry(
 
     raw_fobj = gci.oci.component_descriptor_to_tarfileobj(component_descriptor_v2)
 
-    # upload cd-blob
-    cd_digest = container.registry.put_blob(
-        target_ref,
-        fileobj=raw_fobj,
-        mimetype=gci.oci.component_descriptor_mimetype,
-    )
+    cd_digest = hashlib.sha256()
+    while (chunk := raw_fobj.read(4096)):
+        cd_digest.update(chunk)
+
+    cd_octets = raw_fobj.tell()
+    cd_digest = cd_digest.hexdigest()
     cd_digest_with_alg = f'sha256:{cd_digest}'
+    raw_fobj.seek(0)
+
+    client.put_blob(
+        image_reference=target_ref,
+        digest=cd_digest_with_alg,
+        octets_count=cd_octets,
+        data=raw_fobj,
+        # mimetype=gci.oci.component_descriptor_mimetype,
+    )
 
     cfg = gci.oci.ComponentDescriptorOciCfg(
         componentDescriptorLayer=gci.oci.ComponentDescriptorOciBlobRef(
             digest=cd_digest_with_alg,
-            size=raw_fobj.tell(),
+            size=cd_octets,
         )
     )
     cfg_raw = json.dumps(dataclasses.asdict(cfg)).encode('utf-8')
-    cfg_fobj = io.BytesIO(cfg_raw)
-    cfg_digest = container.registry.put_blob(
-        target_ref,
-        fileobj=cfg_fobj,
-        mimetype=container.registry.docker_http.OCI_CONFIG_JSON_MIME,
+    cfg_octets = len(cfg_raw)
+    cfg_digest = hashlib.sha256(cfg_raw).hexdigest()
+    cfg_digest_with_alg = f'sha256:{cfg_digest}'
+
+    client.put_blob(
+        image_reference=target_ref,
+        digest=cfg_digest_with_alg,
+        octets_count=cfg_octets,
+        data=cfg_raw,
+        # mimetype=container.registry.docker_http.OCI_CONFIG_JSON_MIME,
     )
 
     manifest = om.OciImageManifest(
         config=gci.oci.ComponentDescriptorOciCfgBlobRef(
             digest=f'sha256:{cfg_digest}',
-            size=cfg_fobj.tell(),
+            size=cfg_octets,
         ),
         layers=[
             gci.oci.ComponentDescriptorOciBlobRef(
                 digest=cd_digest_with_alg,
-                size=raw_fobj.tell(),
+                size=cd_octets,
             ),
         ],
     )
 
-    container.registry.put_image_manifest(
+    manifest_dict = dataclasses.asdict(manifest)
+    manifest_bytes = json.dumps(manifest_dict).encode('utf-8')
+
+    client.put_manifest(
         image_reference=target_ref,
-        manifest=manifest,
+        manifest=manifest_bytes,
     )
 
 
