@@ -217,6 +217,7 @@ class Client:
         scope: str,
         method: str='GET',
         headers: dict=None,
+        raise_for_status=True,
         **kwargs,
     ):
         self._authenticate(
@@ -237,7 +238,9 @@ class Client:
         if not res.ok:
             logger.warning(f'rq against {url=} failed {res.status_code=} {res.reason=}')
 
-        res.raise_for_status()
+        if raise_for_status:
+            res.raise_for_status()
+
         return res
 
     def manifest_raw(
@@ -313,6 +316,47 @@ class Client:
             )
         else:
             raise NotImplementedError(schema_version)
+
+    def head_manifest(
+        self,
+        image_reference: str,
+        absent_ok=False,
+    ) -> typing.Optional[om.OciBlobRef]:
+        '''
+        issues an HTTP-HEAD request for the specified oci-artifact's manifest and returns
+        the thus-retrieved metadata if it exists.
+
+        Note that the hash digest may be absent, or incorrect, as defined by the OCI
+        distribution-spec.
+
+        if `absent_ok` is truthy, `None` is returned in case the requested manifest does not
+        exist; otherwise, requests.exceptions.HTTPError is raised in this case.
+
+        To retrieve the actual manifest, use `self.manifest` or `self.manifest_raw`
+        '''
+        scope = _scope(image_reference=image_reference, action='pull')
+
+        res = self._request(
+            url=manifest_url(image_reference=image_reference),
+            image_reference=image_reference,
+            method='HEAD',
+            scope=scope,
+            stream=False,
+            raise_for_status=not absent_ok,
+        )
+        if not res.ok and absent_ok:
+            return None
+
+        headers = res.headers
+
+        # XXX Docker-Content-Digest header may be absent or incorrect
+        # -> it would be preferrable to retrieve the manifest and calculate the hash manually
+
+        return om.OciBlobRef(
+            digest=headers.get('Docker-Content-Digest', None),
+            mediaType=headers['Content-Type'],
+            size=int(headers['Content-Length']),
+        )
 
     def put_manifest(self, image_reference: str, manifest: bytes):
         scope = _scope(image_reference=image_reference, action='push,pull')
