@@ -269,11 +269,13 @@ def upload_component_descriptor_v2_to_oci_registry(
     on_exist=UploadMode.SKIP,
 ):
     ensure_is_v2(component_descriptor_v2)
+    client = ccc.oci.oci_client()
 
     target_ref = _target_oci_ref(component_descriptor_v2.component)
 
     if on_exist in (UploadMode.SKIP, UploadMode.FAIL):
-        if container.registry._image_exists(image_reference=target_ref):
+        # check whether manifest exists (head_manifest does not return None)
+        if client.head_manifest(image_reference=target_ref, absent_ok=True):
             if on_exist is UploadMode.SKIP:
                 return
             if on_exist is UploadMode.FAIL:
