@@ -29,7 +29,7 @@ with open(docker_cfg_path, 'w') as f:
   json.dump(${docker_cfg}, f)
 
 subproc_env = os.environ.copy()
-subproc_enf['HOME'] = home
+subproc_env['HOME'] = home
 
 res = subprocess.run(
   [
