@@ -266,8 +266,11 @@ class PublishTraitTransformer(TraitTransformer):
         if self.trait.oci_builder() is OciBuilder.KANIKO:
             build_step = PipelineStep(
                 name='build_oci_image',
-                raw_dict={},
+                raw_dict={
+                    'image': 'eu.gcr.io/gardener-project/cc/job-image-kaniko:0.1.0',
+                },
                 is_synthetic=True,
+                notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
                 script_type=ScriptType.PYTHON3,
             )
             build_step._add_dependency(prepare_step)
@@ -305,7 +308,7 @@ class PublishTraitTransformer(TraitTransformer):
         # prepare-step depdends on every other step, except publish and release
         # TODO: do not hard-code knowledge about 'release' step
         for step in pipeline_args.steps():
-            if step.name in ['publish', 'release']:
+            if step.name in ['publish', 'release', 'build_oci_image']:
                 continue
             prepare_step._add_dependency(step)
 
