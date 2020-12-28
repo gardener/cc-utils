@@ -139,6 +139,40 @@ class UtilTest(unittest.TestCase):
             {1: [3, 1, 0, 2, 4]},
         )
 
+    def test_merge_dicts_does_not_modify_args(self):
+        from copy import deepcopy
+        first = {1: {2: 3}}
+        second = {1: {4: 5}, 6: 7}
+        first_arg = deepcopy(first)
+        second_arg = deepcopy(second)
+
+        merged = examinee.merge_dicts(first_arg, second_arg)
+
+        self.assertEqual(
+            merged,
+            {
+                1: {2: 3, 4: 5},
+                6: 7,
+            }
+        )
+        self.assertEqual(first, first_arg)
+        self.assertEqual(second, second_arg)
+
+    def test_merge_dicts_three_way_merge(self):
+        first = {1: [3, 1, 0]}
+        second = {1: [1, 2, 4]}
+        third = {1: [1, 2, 5], 2: [1, 2, 3]}
+
+        merged = examinee.merge_dicts(first, second, third, list_semantics='merge')
+
+        self.assertEqual(
+            merged,
+            {
+                1: [3, 1, 0, 2, 4, 5],
+                2: [1, 2, 3],
+            }
+        )
+
 
 def test_count_elements():
     count = ci.util._count_elements
