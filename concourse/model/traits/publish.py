@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import enum
 import typing
 
 import dacite
@@ -182,11 +184,22 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
                 ) from e
 
 
+class OciBuilder(enum.Enum):
+    CONCOURSE_IMAGE_RESOURCE = 'concourse-image-resource'
+    KANIKO = 'kaniko'
+
+
 ATTRIBUTES = (
     AttributeSpec.required(
         name='dockerimages',
         doc='specifies the container images to be built',
         type=typing.Dict[str, PublishDockerImageDescriptor],
+    ),
+    AttributeSpec.optional(
+        name='oci-builder',
+        doc='specifies the container image builder to use',
+        type=OciBuilder,
+        default=OciBuilder.CONCOURSE_IMAGE_RESOURCE,
     ),
 )
 
@@ -208,6 +221,9 @@ class PublishTrait(Trait):
             for name, args
             in self.raw['dockerimages'].items()
         ]
+
+    def oci_builder(self) -> OciBuilder:
+        return OciBuilder(self.raw['oci-builder'])
 
     def transformer(self):
         return PublishTraitTransformer(trait=self)
@@ -246,6 +262,16 @@ class PublishTraitTransformer(TraitTransformer):
         prepare_step.set_timeout(duration_string='30m')
 
         publish_step._add_dependency(prepare_step)
+
+        if self.trait.oci_builder() is OciBuilder.KANIKO:
+            build_step = PipelineStep(
+                name='build_oci_image',
+                raw_dict={},
+                is_synthetic=True,
+                script_type=ScriptType.PYTHON3,
+            )
+            build_step._add_dependency(prepare_step)
+            yield build_step
 
         yield prepare_step
         yield publish_step

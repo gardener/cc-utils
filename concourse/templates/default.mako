@@ -79,6 +79,7 @@ version_step = concourse.steps.step_def('version')
 prepare_step = concourse.steps.step_def('prepare')
 release_step = concourse.steps.step_def('release')
 publish_step = concourse.steps.step_def('publish')
+build_oci_image_step = concourse.steps.step_def('build_oci_image')
 meta_step = concourse.steps.step_def('meta')
 rm_pr_label_step = concourse.steps.step_def('rm_pr_label')
 component_descriptor_step = concourse.steps.step_def('component_descriptor')
@@ -401,6 +402,8 @@ else:
         ${update_component_deps_step(job_step=job_step, job_variant=job_variant, github_cfg_name=github.name(), indent=8)}
 % elif job_step.name == 'publish':
 ${publish_step(job_step=job_step, job_variant=job_variant)}
+% elif job_step.name == 'build_oci_image':
+${build_oci_image_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
 % elif job_step.name == 'create_draft_release_notes':
         ${draft_release_step(job_step=job_step, job_variant=job_variant, github_cfg=github, indent=8)}
 % elif job_step.name == 'scan_container_images':
