@@ -403,7 +403,7 @@ else:
 % elif job_step.name == 'publish':
 ${publish_step(job_step=job_step, job_variant=job_variant)}
 % elif job_step.name == 'build_oci_image':
-${build_oci_image_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
+        ${build_oci_image_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
 % elif job_step.name == 'create_draft_release_notes':
         ${draft_release_step(job_step=job_step, job_variant=job_variant, github_cfg=github, indent=8)}
 % elif job_step.name == 'scan_container_images':
