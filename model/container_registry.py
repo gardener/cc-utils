@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import base64
 import json
 
 import ci.util
@@ -60,6 +61,21 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
 
     def has_service_account_credentials(self):
         return GcrCredentials(self.raw).has_service_account_credentials()
+
+    def as_docker_auths(self):
+        '''
+        returns a representation of the credentials from this registry-cfg as "docker-auths",
+        which can be used to populate a docker-cfg file ($HOME/.docker/config.json) below the
+        `auths` attr
+        '''
+        auth_str = f'{self.credentials().username()}:{self.credentials().passwd()}'
+        auth_str = base64.b64encode(auth_str.encode('utf-8'))
+
+        auths = {
+            host: {'auth': auth_str} for host in self.image_reference_prefixes()
+        }
+
+        return auths
 
     def privileges(self) -> oa.Privileges:
         return oa.Privileges(self.raw['privileges'])
