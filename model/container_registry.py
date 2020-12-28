@@ -69,7 +69,7 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
         `auths` attr
         '''
         auth_str = f'{self.credentials().username()}:{self.credentials().passwd()}'
-        auth_str = base64.b64encode(auth_str.encode('utf-8'))
+        auth_str = base64.b64encode(auth_str.encode('utf-8')).decode('utf-8')
 
         auths = {
             host: {'auth': auth_str} for host in self.image_reference_prefixes()
