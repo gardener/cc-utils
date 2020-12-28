@@ -215,7 +215,7 @@ class PublishTrait(Trait):
     def _children(self):
        return self.dockerimages()
 
-    def dockerimages(self):
+    def dockerimages(self) -> typing.List[PublishDockerImageDescriptor]:
         return [
             PublishDockerImageDescriptor(name, args)
             for name, args
@@ -239,6 +239,7 @@ class PublishTraitTransformer(TraitTransformer):
     def __init__(self, trait: PublishTrait, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.trait = not_none(trait)
+        self._build_steps = []
 
     def inject_steps(self):
         # 'publish' step
@@ -264,17 +265,22 @@ class PublishTraitTransformer(TraitTransformer):
         publish_step._add_dependency(prepare_step)
 
         if self.trait.oci_builder() is OciBuilder.KANIKO:
-            build_step = PipelineStep(
-                name='build_oci_image',
-                raw_dict={
-                    'image': 'eu.gcr.io/gardener-project/cc/job-image-kaniko:0.1.0',
-                },
-                is_synthetic=True,
-                notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
-                script_type=ScriptType.PYTHON3,
-            )
-            build_step._add_dependency(prepare_step)
-            yield build_step
+            for img in self.trait.dockerimages():
+                build_step = PipelineStep(
+                    name=f'build_oci_image_{img.name()}',
+                    raw_dict={
+                        'image': 'eu.gcr.io/gardener-project/cc/job-image-kaniko:0.1.0',
+                    },
+                    is_synthetic=True,
+                    notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
+                    script_type=ScriptType.PYTHON3,
+                    extra_args={
+                        'image_descriptor': img,
+                    }
+                )
+                build_step._add_dependency(prepare_step)
+                self._build_steps.append(build_step)
+                yield build_step
 
         yield prepare_step
         yield publish_step
@@ -295,6 +301,9 @@ class PublishTraitTransformer(TraitTransformer):
         publish_step.add_input(variable_name=IMAGE_ENV_VAR_NAME, name=image_name)
         publish_step.add_input(variable_name=TAG_ENV_VAR_NAME, name=tag_name)
 
+        for build_step in self._build_steps:
+            build_step.add_input(variable_name=IMAGE_ENV_VAR_NAME, name=image_name)
+
         input_step_names = set()
         for image_descriptor in self.trait.dockerimages():
             # todo: image-specific prepare steps
@@ -309,6 +318,8 @@ class PublishTraitTransformer(TraitTransformer):
         # TODO: do not hard-code knowledge about 'release' step
         for step in pipeline_args.steps():
             if step.name in ['publish', 'release', 'build_oci_image']:
+                continue
+            if step.name.startswith('build_oci_image'):
                 continue
             prepare_step._add_dependency(step)
 

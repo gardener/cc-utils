@@ -198,6 +198,7 @@ class PipelineStep(ModelBase):
         is_synthetic,
         notification_policy,
         script_type,
+        extra_args=None,
         *args,
         **kwargs
     ):
@@ -208,6 +209,7 @@ class PipelineStep(ModelBase):
         self._inputs_dict = {}
         self._publish_to_dict = {}
         self._notification_policy = notification_policy
+        self._extra_args = extra_args
         super().__init__(*args, **kwargs)
 
     @classmethod
