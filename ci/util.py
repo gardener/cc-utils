@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import collections
+import functools
 import hashlib
 import os
 import pathlib
@@ -496,7 +497,7 @@ def which(cmd_name: str) -> str:
     return cmd_path
 
 
-def merge_dicts(base: dict, other: dict, list_semantics='merge'):
+def merge_dicts(base: dict, *other: dict, list_semantics='merge'):
     '''
     merges copies of the given dict instances and returns the merge result.
     The arguments remain unmodified. However, it must be possible to copy them
@@ -508,10 +509,10 @@ def merge_dicts(base: dict, other: dict, list_semantics='merge'):
     By default, different from the original implementation, a merge will be applied to
     lists. This results in deduplication retaining element order. The elements from `other` are
     appended to those from `base`.
-
     '''
+
     not_none(base)
-    not_none(other)
+    not_empty(other)
 
     from deepmerge import Merger
 
@@ -530,8 +531,12 @@ def merge_dicts(base: dict, other: dict, list_semantics='merge'):
         raise NotImplementedError
 
     from copy import deepcopy
-    # copy dicts, so they remain unmodified
-    return merger.merge(deepcopy(base), deepcopy(other))
+
+    return functools.reduce(
+        lambda b, o: merger.merge(b, deepcopy(o)),
+        [base, *other],
+        {},
+    )
 
 
 class FluentIterable(object):

@@ -226,7 +226,7 @@ class ReleaseTrait(Trait):
         self.raw = ci.util.merge_dicts(
             self._defaults_dict(),
             raw_dict,
-            None,
+            list_semantics=None,
         )
 
     def transformer(self):
