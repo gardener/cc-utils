@@ -15,13 +15,14 @@ docker_cfg = {'auths': docker_cfg_auths}
 %>
 import json
 import os
-import subproccess
+import subprocess
 
 ${step_lib('build_oci_image')}
 
 home = os.path.abspath(os.path.join('docker-home'))
-os.mkdirs(home)
-docker_cfg_path = os.path.join(home, '.docker', 'docker.cfg')
+docker_cfg_dir = os.path.join(home, '.docker')
+os.makedirs(docker_cfg_dir)
+docker_cfg_path = os.path.join(docker_cfg_dir, 'config.json')
 
 ## dump docker_cfg
 with open(docker_cfg_path, 'w') as f:
