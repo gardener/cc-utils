@@ -92,3 +92,7 @@ cc-utils:
           output_dir: 'pypi'
       traits:
         <<: *release_traits
+
+    create_upgrade_prs:
+      traits:
+        update_component_deps: ~
