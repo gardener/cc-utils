@@ -11,6 +11,7 @@ cc-utils:
         inject_effective_version: True
         versionfile: 'ci/version'
       publish:
+        oci-builder: 'kaniko'
         dockerimages:
           job-image:
             registry: 'gcr-readwrite'
