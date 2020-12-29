@@ -9,7 +9,6 @@ cc-utils:
       version:
         preprocess: 'finalize'
         inject_effective_version: True
-        versionfile: 'ci/version'
       publish:
         oci-builder: 'kaniko'
         dockerimages:
@@ -40,8 +39,7 @@ cc-utils:
     repo:
       disable_ci_skip: True
     traits:
-      version:
-        versionfile: 'ci/version'
+      version: ~
       component_descriptor: ~
   jobs:
     head-update:
