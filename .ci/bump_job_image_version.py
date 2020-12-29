@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-import pathlib
-import fileinput
+import os
 
 from ci.util import (
     check_env,
@@ -11,17 +10,7 @@ from ci.util import (
 repo_dir = check_env('REPO_DIR')
 effective_version = check_env('EFFECTIVE_VERSION')
 
-template_file = existing_file(pathlib.Path(repo_dir, 'concourse', 'resources', 'defaults.mako'))
+last_tag_file = existing_file(os.path.join(repo_dir, 'concourse', 'resources', 'LAST_RELEASED_TAG'))
 
-lines_replaced = 0
-string_to_match = 'tag = '
-
-for line in fileinput.FileInput(str(template_file), inplace=True):
-    if string_to_match in line:
-        if lines_replaced != 0:
-            raise RuntimeError('More than one image tag found in template file')
-        leading_spaces = line.index(string_to_match)
-        print(f'{leading_spaces * " "}{string_to_match}"{effective_version}"')
-        lines_replaced = 1
-    else:
-        print(line, end='')
+with open(last_tag_file, 'w') as f:
+    f.write(effective_version)
