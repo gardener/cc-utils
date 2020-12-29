@@ -13,6 +13,7 @@ COPY ci/version /metadata/VERSION
 ENV PATH /cc/utils/:/cc/utils/bin:$PATH
 
 RUN pip3 install --upgrade \
+  pip \
   wheel \
 && pip3 install --upgrade \
   --find-links /cc/utils/dist \
