@@ -1,6 +1,6 @@
 import sys
 
-import container.registry as cr
+import ccc.oci
 import product.v2
 import version
 
@@ -41,7 +41,8 @@ def ls(
         component_name=name,
         ctx_repo_base_url=ctx_base_url,
     )
-    tags = cr.ls_image_tags(image_name=oci_name)
+    client = ccc.oci.oci_client()
+    tags = client.tags(image_reference=oci_name)
     if greatest:
         print(version.greatest_version(tags))
     else:

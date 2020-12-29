@@ -628,8 +628,8 @@ latest_component_version = greatest_component_version
 
 def component_versions(component_name: str, ctx_repo_base_url: str) -> typing.Sequence[str]:
     oci_ref = _target_oci_repository_from_component_name(component_name, ctx_repo_base_url)
-    image_tags = container.registry.ls_image_tags(oci_ref)
-    return image_tags
+    client = ccc.oci.oci_client()
+    return client.tags(image_reference=oci_ref)
 
 
 def greatest_component_version_with_matching_minor(
@@ -638,7 +638,8 @@ def greatest_component_version_with_matching_minor(
     reference_version: str,
 ) -> str:
     oci_image_repo = _target_oci_repository_from_component_name(component_name, ctx_repo_base_url)
-    image_tags = container.registry.ls_image_tags(oci_image_repo)
+    client = ccc.oci.oci_client()
+    image_tags = client.tags(image_reference=oci_image_repo)
     return version.find_latest_version_with_matching_minor(
         reference_version=reference_version,
         versions=image_tags,
