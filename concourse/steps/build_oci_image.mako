@@ -28,10 +28,16 @@ for cr_cfg in container_registry_cfgs:
   docker_cfg_auths.update(cr_cfg.as_docker_auths())
 
 docker_cfg = {'auths': docker_cfg_auths}
+
+version_path = os.path.join(job_step.input('version_path'), 'version')
+
+eff_version_replace_token = '${EFFECTIVE_VERSION}'
 %>
 import json
 import os
 import subprocess
+
+import container.registry as cr
 
 ${step_lib('build_oci_image')}
 
@@ -47,13 +53,35 @@ with open(docker_cfg_path, 'w') as f:
 subproc_env = os.environ.copy()
 subproc_env['HOME'] = home
 
+image_outfile = '${image_descriptor.name()}.oci-image.tar'
+
+with open('${version_path}') as f:
+  effective_version = f.read().strip()
+
+image_tag = '${image_descriptor.tag_template()}'.replace(
+  '${eff_version_replace_token}',
+   effective_version
+)
+
+image_ref = f'${image_descriptor.image_reference()}:{image_tag}'
+
 res = subprocess.run(
   [
     '/bin/kaniko',
     '--no-push',
     '--dockerfile', '${dockerfile_relpath}',
     '--context', '${build_ctx_dir}',
+    '--tarPath', image_outfile,
+    '--destination', image_ref,
   ],
   env=subproc_env,
+)
+
+print(f'wrote image {image_ref=} to {image_outfile=} attempting to push')
+
+fh = open(image_outfile)
+cr.publish_container_image(
+  image_reference=image_ref,
+  image_file_obj=fh,
 )
 </%def>
