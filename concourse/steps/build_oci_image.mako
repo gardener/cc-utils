@@ -65,9 +65,15 @@ image_tag = '${image_descriptor.tag_template()}'.replace(
 
 image_ref = f'${image_descriptor.image_reference()}:{image_tag}'
 
+# XXX rm migration-code again
+if os.path.exists('/kaniko/executor'):
+  kaniko_executor = '/kaniko/executor'
+else:
+  kaniko_executor = '/bin/kaniko'
+
 res = subprocess.run(
   [
-    '/bin/kaniko',
+    kaniko_executor,
     '--no-push',
     '--dockerfile', '${dockerfile_relpath}',
     '--context', '${build_ctx_dir}',

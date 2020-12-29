@@ -270,7 +270,7 @@ class PublishTraitTransformer(TraitTransformer):
                 build_step = PipelineStep(
                     name=f'build_oci_image_{img.name()}',
                     raw_dict={
-                        'image': 'eu.gcr.io/gardener-project/cc/job-image-kaniko:0.1.0',
+                        'image': 'eu.gcr.io/gardener-project/cc/job-image-kaniko:0.2.0',
                     },
                     is_synthetic=True,
                     notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
