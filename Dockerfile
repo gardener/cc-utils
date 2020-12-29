@@ -7,7 +7,7 @@ COPY --from=component-cli /component-cli /bin/component-cli
 
 # place version file into container's filesystem to make it easier to
 # determine the image version during runtime
-COPY ci/version /metadata/VERSION
+COPY VERSION /metadata/VERSION
 
 # XXX backards compatibility (remove eventually)
 ENV PATH /cc/utils/:/cc/utils/bin:$PATH
