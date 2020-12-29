@@ -12,6 +12,7 @@ from concourse.factory import DefinitionFactory
 from concourse.model.base import ScriptType
 from concourse.model.step import StepNotificationPolicy, PrivilegeMode
 from concourse.model.traits.component_descriptor import DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME
+from concourse.model.traits.publish import OciBuilder
 
 # use pipeline_name for debugging / tracing purposes
 pipeline_name = pipeline.get('name')
@@ -59,9 +60,14 @@ def suppress_parallel_execution(variant):
   return False
 
 output_image_descriptors = {}
-for variant in filter(has_publish_trait, pipeline_definition.variants()):
-  for image_descriptor in variant.trait('publish').dockerimages():
+need_image_resources = False # XXX migration-code - rm once fully switched to kaniko
 
+for variant in filter(has_publish_trait, pipeline_definition.variants()):
+  publish_trait = variant.trait('publish')
+  if publish_trait.oci_builder() is OciBuilder.CONCOURSE_IMAGE_RESOURCE:
+    need_image_resources = True
+
+  for image_descriptor in publish_trait.dockerimages():
     if image_descriptor.name() in output_image_descriptors:
       known_ref = output_image_descriptors[image_descriptor.name()].image_reference()
       if known_ref != image_descriptor.image_reference():
@@ -107,6 +113,7 @@ ${include_pull_request_resource_type()}
 resources:
 ${render_repositories(pipeline_definition=pipeline_definition, cfg_set=config_set)}
 
+% if need_image_resources:
 % for descriptor in output_image_descriptors.values():
 <%
   custom_registry_cfg_name = descriptor.registry_name()
@@ -121,6 +128,7 @@ ${container_registry_image_resource(
   registry_cfg=registry_cfg,
 )}
 % endfor
+% endif
 % for variant in pipeline_definition.variants():
 % if has_cron_trait(variant):
 <%
@@ -400,7 +408,7 @@ else:
         ${component_descriptor_step(job_step=job_step, job_variant=job_variant, output_image_descriptors=image_descriptors_for_variant, indent=8)}
 % elif job_step.name == 'update_component_dependencies':
         ${update_component_deps_step(job_step=job_step, job_variant=job_variant, github_cfg_name=github.name(), indent=8)}
-% elif job_step.name == 'publish':
+% elif job_step.name == 'publish' and job_variant.trait('publish').oci_builder() is OciBuilder.CONCOURSE_IMAGE_RESOURCE:
 ${publish_step(job_step=job_step, job_variant=job_variant)}
 % elif job_step.name.startswith('build_oci_image'):
         ${build_oci_image_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
