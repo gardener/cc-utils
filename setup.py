@@ -63,6 +63,7 @@ setuptools.setup(
     package_data={
         '':['*.mako'],
         'ci':['version'],
+        'concourse':['resources/LAST_RELEASED_TAG'],
     },
     install_requires=list(requirements()),
     entry_points={
