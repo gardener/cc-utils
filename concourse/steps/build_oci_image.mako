@@ -73,6 +73,12 @@ res = subprocess.run(
     '--context', '${build_ctx_dir}',
     '--tarPath', image_outfile,
     '--destination', image_ref,
+% for k,v in image_descriptor.build_args().items():
+    '--build-arg', '${k}=${v}',
+% endfor
+% if (target := image_descriptor.target_name()):
+    '--target', '${target}',
+% endif
   ],
   env=subproc_env,
 )
