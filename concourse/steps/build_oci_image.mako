@@ -87,6 +87,7 @@ res = subprocess.run(
 % endif
   ],
   env=subproc_env,
+  check=True,
 )
 
 print(f'wrote image {image_ref=} to {image_outfile=} attempting to push')
