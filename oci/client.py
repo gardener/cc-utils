@@ -99,6 +99,14 @@ def blobs_url(image_reference: str) -> str:
     )
 
 
+def ls_tags_url(image_reference: str) -> str:
+    return urljoin(
+        artifact_base_url(image_reference),
+        'tags',
+        'list',
+    )
+
+
 def uploads_url(image_reference: str) -> str:
     return urljoin(
         blobs_url(image_reference),
@@ -357,6 +365,18 @@ class Client:
             mediaType=headers['Content-Type'],
             size=int(headers['Content-Length']),
         )
+
+    def tags(self, image_reference: str):
+        scope = _scope(image_reference=image_reference, action='pull')
+
+        res = self._request(
+            url=ls_tags_url(image_reference=image_reference),
+            image_reference=image_reference,
+            scope=scope,
+            method='GET'
+        )
+
+        return res.json()['tags']
 
     def put_manifest(self, image_reference: str, manifest: bytes):
         scope = _scope(image_reference=image_reference, action='push,pull')
