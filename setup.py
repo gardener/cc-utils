@@ -61,8 +61,7 @@ setuptools.setup(
     py_modules=modules(),
     packages=packages(),
     package_data={
-        '':['*.mako'],
-        'ci':['version'],
+        '':['*.mako', 'VERSION'],
         'concourse':['resources/LAST_RELEASED_TAG'],
     },
     install_requires=list(requirements()),
