@@ -53,6 +53,14 @@ cc-utils:
           default:
             on_error:
               triggering_policy: 'only_first'
+        publish:
+          oci-builder: 'kaniko'
+          dockerimages:
+            kaniko-image:
+              registry: 'gcr-readwrite'
+              image: 'eu.gcr.io/gardener-project/cc/job-image-kaniko'
+              dockerfile: 'Dockerfile.kaniko'
+              tag_as_latest: True
 
     pull-request:
       steps:
