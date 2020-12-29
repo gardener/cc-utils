@@ -24,6 +24,11 @@ cc-utils:
             resource_labels:
               - name: 'cloud.cnudie/examples'
                 value: 'this is an example label (btw: value may be also e.g. a dict)'
+          kaniko-image:
+            registry: 'gcr-readwrite'
+            image: 'eu.gcr.io/gardener-project/cc/job-image-kaniko'
+            dockerfile: 'Dockerfile.kaniko'
+            tag_as_latest: True
       release:
         nextversion: 'bump_minor'
         release_callback: '.ci/bump_job_image_version.py'

@@ -1,0 +1,4 @@
+FROM gcr.io/kaniko-project/executor as kaniko
+
+FROM eu.gcr.io/gardener-project/cc/job-image:latest
+COPY --from=kaniko /kaniko/executor /bin/kaniko
