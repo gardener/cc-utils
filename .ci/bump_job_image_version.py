@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import os
+
 from ci.util import (
     check_env,
     existing_file,
