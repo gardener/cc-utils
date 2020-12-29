@@ -20,6 +20,7 @@ import dacite
 
 from ci.util import not_none
 from model import NamedModelElement
+import concourse.paths
 import gci.componentmodel as cm
 
 from concourse.model.job import (
@@ -266,11 +267,15 @@ class PublishTraitTransformer(TraitTransformer):
         publish_step._add_dependency(prepare_step)
 
         if self.trait.oci_builder() is OciBuilder.KANIKO:
+            with open(concourse.paths.last_released_tag_file) as f:
+                last_tag = f.read().strip()
+            kaniko_image_ref = f'eu.gcr.io/gardener-project/cc/job-image-kaniko:{last_tag}'
+
             for img in self.trait.dockerimages():
                 build_step = PipelineStep(
                     name=f'build_oci_image_{img.name()}',
                     raw_dict={
-                        'image': 'eu.gcr.io/gardener-project/cc/job-image-kaniko:0.2.0',
+                        'image': kaniko_image_ref,
                     },
                     is_synthetic=True,
                     notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
