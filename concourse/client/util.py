@@ -99,12 +99,13 @@ def determine_pr_resource_versions(
 
 
 def determine_jobs_to_be_triggered(
-    resource: PipelineConfigResource,
+    *resources: PipelineConfigResource,
 ) -> typing.Iterator[Job]:
 
-    yield from (
-        job for job in resource.pipeline.jobs() if job.is_triggered_by_resource(resource.name)
-    )
+    for resource in resources:
+        yield from (
+            job for job in resource.pipeline.jobs() if job.is_triggered_by_resource(resource.name)
+        )
 
 
 def wait_for_job_to_be_triggered(
