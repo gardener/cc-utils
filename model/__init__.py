@@ -63,6 +63,7 @@ class ConfigFactory:
     '''
 
     CFG_TYPES = 'cfg_types'
+    _cfg_type_cache = {} # <name>:<type>
 
     @staticmethod
     def from_cfg_dir(cfg_dir: str, cfg_types_file='config_types.yaml'):
@@ -171,10 +172,15 @@ class ConfigFactory:
             element_type = getattr(module, cfg_type.cfg_type())
             if not type(element_type) == type:
                 raise ValueError()
-            # found it
+            # found it (write to cache as part of crazy workaround for kaniko)
+            self._cfg_type_cache[cfg_type_name] = element_type
             break
         else:
-            raise ValueError('failed to find cfg type: ' + str(cfg_type.cfg_type()))
+            # workaround for kaniko, which will purge our poor modules on multi-stage-builds
+            if cfg_type_name in self._cfg_type_cache:
+                element_type = self._cfg_type_cache[cfg_type_name]
+            else:
+                raise ValueError(f'failed to find cfg type: {cfg_type.cfg_type()=}')
 
         # for now, let's assume all of our model element types are subtypes of NamedModelElement
         # (with the exception of ConfigurationSet)
