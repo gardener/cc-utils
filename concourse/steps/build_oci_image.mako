@@ -23,14 +23,6 @@ build_ctx_dir = os.path.join(
   image_descriptor.builddir_relpath() or '',
 )
 
-docker_cfg_auths = {}
-#for cr_cfg in container_registry_cfgs:
-#  docker_cfg_auths.update(cr_cfg.as_docker_auths())
-import model.container_registry as mc
-docker_cfg_auths = mc.find_config('eu.gcr.io/sap-se-gcp-scp-k8s/landscape').as_docker_auths()
-
-docker_cfg = {'auths': docker_cfg_auths}
-
 version_path = os.path.join(job_step.input('version_path'), 'version')
 
 eff_version_replace_token = '${EFFECTIVE_VERSION}'
@@ -48,9 +40,10 @@ docker_cfg_dir = os.path.join(home, '.docker')
 os.makedirs(docker_cfg_dir, exist_ok=True)
 docker_cfg_path = os.path.join(docker_cfg_dir, 'config.json')
 
-## dump docker_cfg
-with open(docker_cfg_path, 'w') as f:
-  json.dump(${docker_cfg}, f)
+write_docker_cfg(
+    dockerfile_path='${dockerfile_relpath}',
+    docker_cfg_path=docker_cfg_path,
+)
 
 subproc_env = os.environ.copy()
 subproc_env['HOME'] = home
