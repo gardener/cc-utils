@@ -73,6 +73,10 @@ print(f'{subproc_env=}')
 import ccc.secrets_server
 import model.container_registry
 
+# XXX another hack: save truststore from being purged by kaniko's multistage-build
+import certifi
+os.link((ca_cert_path := certifi.where()), (ca_bak := os.path.join('/', 'kaniko', 'cacert.pem')))
+
 res = subprocess.run(
   [
     kaniko_executor,
@@ -93,6 +97,9 @@ res = subprocess.run(
 )
 
 print(f'wrote image {image_ref=} to {image_outfile=} attempting to push')
+
+os.makedirs(os.path.dirname(ca_cert_path), exist_ok=True)
+os.link(ca_bak, ca_cert_path)
 
 fh = open(image_outfile)
 cr.publish_container_image(
