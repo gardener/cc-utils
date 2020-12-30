@@ -108,6 +108,10 @@ IMG_DESCRIPTOR_ATTRIBS = (
 class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, AttribSpecMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if not isinstance(self.raw, dict):
+            raise ModelValidationError(
+                f'{self.__class__.__name__} expects a dict - got: {self.raw=}'
+            )
         self._apply_defaults(raw_dict=self.raw)
 
     @classmethod
@@ -218,10 +222,12 @@ class PublishTrait(Trait):
        return self.dockerimages()
 
     def dockerimages(self) -> typing.List[PublishDockerImageDescriptor]:
+        image_dict = self.raw['dockerimages']
+
         return [
             PublishDockerImageDescriptor(name, args)
             for name, args
-            in self.raw['dockerimages'].items()
+            in image_dict.items()
         ]
 
     def oci_builder(self) -> OciBuilder:
