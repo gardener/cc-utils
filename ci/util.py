@@ -27,6 +27,8 @@ import termcolor
 
 from urllib.parse import urlunparse
 
+import ci.paths
+
 
 class Failure(RuntimeError, ValueError):
     pass
@@ -111,8 +113,7 @@ def check_type(instance, type):
 
 
 def gardener_cicd_libs_version():
-    p = os.path.abspath(os.path.realpath(__file__))
-    versionfile_file_path = os.path.join(os.path.dirname(p), 'version')
+    versionfile_file_path = ci.paths.version_file
     with open(versionfile_file_path, 'rt') as f:
         return f.readline()
 
