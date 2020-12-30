@@ -59,20 +59,6 @@ def current_component():
     return current_product_descriptor().component
 
 
-def component_by_ref_and_version(
-    component_reference: gci.componentmodel.ComponentReference,
-    component_version: str,
-):
-    component_descriptor = product.v2.retrieve_component_descriptor_from_oci_ref(
-        product.v2._target_oci_ref(
-            component=current_component(),
-            component_ref=component_reference,
-            component_version=component_version,
-        )
-    )
-    return component_descriptor.component
-
-
 def close_obsolete_pull_requests(
     upgrade_pull_requests,
     reference_component: gci.componentmodel.Component,
@@ -105,19 +91,24 @@ def upgrade_pr_exists(
 
 
 def get_source_repo_config_for_component_reference(
+    component: gci.componentmodel.Component,
     component_reference: gci.componentmodel.ComponentReference,
     component_version: str,
 ):
-    component = component_by_ref_and_version(
-        component_reference=component_reference,
-        component_version=component_version,
+    component_descriptor = product.v2.retrieve_component_descriptor_from_oci_ref(
+        product.v2._target_oci_ref(
+            component=component,
+            component_ref=component_reference,
+            component_version=component_version,
+        )
     )
-    if not component.sources:
-        raise NotImplementedError(f'Cannot determine source repository of {component.name}')
+    resolved_component = component_descriptor.component
+    if not resolved_component.sources:
+        raise ValueError(f'{resolved_component.name=} has no sources')
 
-    # heuristic: use first source available
+    # heuristic: use first source
     # TODO: Use cd-v2 label
-    access = component.sources[0].access
+    access = resolved_component.sources[0].access
 
     return (
         ccc.github.github_cfg_for_hostname(access.hostname()),
@@ -250,6 +241,7 @@ def determine_upgrade_prs(
 
 
 def create_upgrade_pr(
+    component: gci.componentmodel.Component,
     from_ref: gci.componentmodel.ComponentReference,
     to_ref: gci.componentmodel.ComponentReference,
     to_version: str,
@@ -292,6 +284,7 @@ def create_upgrade_pr(
     )
 
     github_cfg, repo_owner, repo_name = get_source_repo_config_for_component_reference(
+        component=component,
         component_reference=from_ref,
         component_version=from_version,
     )

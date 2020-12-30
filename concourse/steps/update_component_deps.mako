@@ -96,6 +96,7 @@ git_helper.rebase(
 upgrade_pull_requests = pull_request_util.enumerate_upgrade_pull_requests(state_filter='all')
 
 own_component = current_component()
+print('{own_component=}')
 
 close_obsolete_pull_requests(
     upgrade_pull_requests=upgrade_pull_requests,
@@ -129,6 +130,7 @@ for from_ref, to_version in determine_upgrade_prs(
         merge_policy = applicable_merge_policy[0].merge_mode()
 
     create_upgrade_pr(
+        component=own_component,
         from_ref=from_ref,
         to_ref=from_ref,
         to_version=to_version,
