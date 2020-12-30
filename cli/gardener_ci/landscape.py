@@ -330,10 +330,12 @@ def deploy_or_upgrade_gardenlinux_cache(
 
 def deploy_or_upgrade_tekton_dashboard_ingress(
     config_set_name: CliHint(typehint=str, help=CONFIG_SET_HELP),
-    chart_dir: CliHints.existing_dir(help="directory of tekton-dashboard-ingress chart"),
+    tekton_chart_dir: CliHints.existing_dir(help="directory of tekton-dashboard-ingress chart"),
+    oauth_proxy_chart_dir: CliHints.existing_dir(help="directory of oauth2-proxy chart"),
     deployment_name: str='tekton-dashboard-ingress',
 ):
-    chart_dir = os.path.abspath(chart_dir)
+    oauth2_proxy_chart_dir = os.path.abspath(oauth_proxy_chart_dir)
+    tekton_chart_dir = os.path.abspath(tekton_chart_dir)
 
     cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(config_set_name)
@@ -342,12 +344,13 @@ def deploy_or_upgrade_tekton_dashboard_ingress(
 
     setup_oauth2_proxy.deploy_oauth2_proxy(
         oauth2_proxy_config=oauth2_proxy_cfg,
+        chart_dir=oauth2_proxy_chart_dir,
         deployment_name=f'{deployment_name}-oauth2-proxy',
     )
 
     setup_tekton_dashboard_ingress.deploy_tekton_dashboard_ingress(
         tekton_dashboard_ingress_config=tekton_dashboard_ingress_cfg,
-        chart_dir=chart_dir,
+        chart_dir=tekton_chart_dir,
         deployment_name=deployment_name,
     )
 

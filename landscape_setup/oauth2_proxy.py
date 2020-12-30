@@ -85,6 +85,7 @@ def create_oauth2_proxy_helm_values(
 @ensure_annotations
 def deploy_oauth2_proxy(
     oauth2_proxy_config: Oauth2ProxyConfig,
+    chart_dir: str,
     deployment_name: str,
 ):
     not_empty(deployment_name)
@@ -105,7 +106,7 @@ def deploy_oauth2_proxy(
     execute_helm_deployment(
         kubernetes_config,
         oauth2_proxy_config.namespace(),
-        'stable/oauth2-proxy',
+        chart_dir,
         deployment_name,
         helm_values,
     )
