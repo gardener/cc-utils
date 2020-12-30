@@ -41,9 +41,9 @@ import container.registry as cr
 
 ${step_lib('build_oci_image')}
 
-home = os.path.abspath(os.path.join('docker-home'))
+home = os.path.join('/', 'kaniko')
 docker_cfg_dir = os.path.join(home, '.docker')
-os.makedirs(docker_cfg_dir)
+os.makedirs(docker_cfg_dir, exist_ok=True)
 docker_cfg_path = os.path.join(docker_cfg_dir, 'config.json')
 
 ## dump docker_cfg
