@@ -72,6 +72,8 @@ print(f'{subproc_env=}')
 # XXX ugly hack: early-import so we survive kaniko's rampage (will purge container during build)
 import ccc.secrets_server
 import model.container_registry
+import concurrent.futures
+import concurrent.futures.thread
 
 # XXX another hack: save truststore from being purged by kaniko's multistage-build
 import certifi
