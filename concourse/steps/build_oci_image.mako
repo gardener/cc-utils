@@ -72,6 +72,8 @@ if os.path.exists('/kaniko/executor'):
 else:
   kaniko_executor = '/bin/kaniko'
 
+print(f'{subproc_env=}')
+
 res = subprocess.run(
   [
     kaniko_executor,
