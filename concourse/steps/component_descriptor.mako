@@ -251,8 +251,6 @@ resolver = ComponentDescriptorResolver(
 descriptor = resolver.resolve_component_references(descriptor)
 descriptor_str = yaml.dump(json.loads(json.dumps(descriptor.raw)))
 
-info('effective component descriptor with resolved dependencies:')
-print(descriptor_str)
 with open(descriptor_path, 'w') as f:
   f.write(descriptor_str)
 
