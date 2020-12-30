@@ -24,8 +24,10 @@ build_ctx_dir = os.path.join(
 )
 
 docker_cfg_auths = {}
-for cr_cfg in container_registry_cfgs:
-  docker_cfg_auths.update(cr_cfg.as_docker_auths())
+#for cr_cfg in container_registry_cfgs:
+#  docker_cfg_auths.update(cr_cfg.as_docker_auths())
+import model.container_registry as mc
+docker_cfg_auths = mc.find_config('eu.gcr.io/sap-se-gcp-scp-k8s/landscape').as_docker_auths()
 
 docker_cfg = {'auths': docker_cfg_auths}
 
@@ -73,6 +75,10 @@ else:
   kaniko_executor = '/bin/kaniko'
 
 print(f'{subproc_env=}')
+
+# XXX ugly hack: early-import so we survive kaniko's rampage (will purge container during build)
+import ccc.secrets_server
+import model.container_registry
 
 res = subprocess.run(
   [
