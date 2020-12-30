@@ -52,6 +52,7 @@ with open(docker_cfg_path, 'w') as f:
 
 subproc_env = os.environ.copy()
 subproc_env['HOME'] = home
+subproc_env['GOOGLE_APPLICATION_CREDENTIALS'] = docker_cfg_path
 
 image_outfile = '${image_descriptor.name()}.oci-image.tar'
 
