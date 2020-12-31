@@ -79,6 +79,15 @@ import concurrent.futures.thread
 import certifi
 os.link((ca_cert_path := certifi.where()), (ca_bak := os.path.join('/', 'kaniko', 'cacert.pem')))
 
+# XXX final hack (I hope): cp entire python-dir
+import sys
+import shutil
+lib_dir = os.path.join(sys.prefix, sys.platlibdir)
+python_lib_dir = os.path.join(lib_dir, f'python{sys.version_info.major}.{sys.version_info.minor}')
+python_bak_dir = os.path.join('/', 'kaniko', 'python.bak')
+if os.path.isdir(python_lib_dir):
+   shutil.copytree(python_lib_dir, python_bak_dir)
+
 res = subprocess.run(
   [
     kaniko_executor,
@@ -101,7 +110,10 @@ res = subprocess.run(
 print(f'wrote image {image_ref=} to {image_outfile=} attempting to push')
 
 os.makedirs(os.path.dirname(ca_cert_path), exist_ok=True)
-os.link(ca_bak, ca_cert_path)
+if not os.path.exists(ca_cert_path):
+  os.link(ca_bak, ca_cert_path)
+if not os.path.exists(python_lib_dir):
+  os.symlink(python_bak_dir, python_lib_dir)
 
 fh = open(image_outfile)
 cr.publish_container_image(
