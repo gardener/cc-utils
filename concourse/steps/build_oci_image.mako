@@ -82,8 +82,12 @@ os.link((ca_cert_path := certifi.where()), (ca_bak := os.path.join('/', 'kaniko'
 # XXX final hack (I hope): cp entire python-dir
 import sys
 import shutil
-lib_dir = os.path.join(sys.prefix, sys.platlibdir)
-python_lib_dir = os.path.join(lib_dir, f'python{sys.version_info.major}.{sys.version_info.minor}')
+if sys.version_info.minor >= 9 or sys.version_info.major > 3:
+  lib_dir = os.path.join(sys.prefix, sys.platlibdir)
+else:
+  lib_dir = os.path.join(sys.prefix, 'lib')
+
+python_lib_dir = os.path.join(lib_dir, f'python{sys.version_info.major}.{sys.version_info.minor}'
 python_bak_dir = os.path.join('/', 'kaniko', 'python.bak')
 if os.path.isdir(python_lib_dir):
    shutil.copytree(python_lib_dir, python_bak_dir)
