@@ -87,7 +87,7 @@ if sys.version_info.minor >= 9 or sys.version_info.major > 3:
 else:
   lib_dir = os.path.join(sys.prefix, 'lib')
 
-python_lib_dir = os.path.join(lib_dir, f'python{sys.version_info.major}.{sys.version_info.minor}'
+python_lib_dir = os.path.join(lib_dir, f'python{sys.version_info.major}.{sys.version_info.minor}')
 python_bak_dir = os.path.join('/', 'kaniko', 'python.bak')
 if os.path.isdir(python_lib_dir):
    shutil.copytree(python_lib_dir, python_bak_dir)
