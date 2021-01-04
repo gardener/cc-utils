@@ -68,6 +68,11 @@ base_descriptor_v2 = base_component_descriptor_v2(
 )
 component_v2 = base_descriptor_v2.component
 
+# label main repo as main repo
+main_repo_labels = ${repository.source_labels()}
+if not 'cloud.gardener/cicd/source' in main_repo_labels:
+    main_repo_labels['cloud.gardener/cicd/source'] = {'repository-classification': 'main'}
+
 ## XXX unify w/ injection-method used for main-repository
 % for repository in other_repos:
 if not (repo_commit_hash := head_commit_hexsha(os.path.abspath('${repository.resource_name()}'))):
@@ -83,7 +88,7 @@ component_v2.sources.append(
       commit=repo_commit_hash,
     ),
     version=effective_version,
-    labels=${repository.source_labels()},
+    labels=main_repo_labels,
   )
 )
 % endfor
