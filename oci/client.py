@@ -244,7 +244,9 @@ class Client:
             **kwargs,
         )
         if not res.ok:
-            logger.warning(f'rq against {url=} failed {res.status_code=} {res.reason=}')
+            logger.warning(
+                f'rq against {url=} failed {res.status_code=} {res.reason=} {method=} {res.content}'
+            )
 
         if raise_for_status:
             res.raise_for_status()
