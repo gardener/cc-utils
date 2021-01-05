@@ -179,10 +179,12 @@ class UpdateComponentDependenciesTrait(Trait):
 
     def validate(self):
         super().validate()
-        if self.raw.get('merge_policy') and  self.raw.get('merge_policies'):
+        if self.raw.get('merge_policy') and self.raw.get('merge_policies'):
             raise ModelValidationError(
                 "Only one of 'merge_policy' and 'merge_policies' is allowed."
             )
+        for config in self.merge_policies():
+            config.validate()
 
 
 class UpdateComponentDependenciesTraitTransformer(TraitTransformer):
