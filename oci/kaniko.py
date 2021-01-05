@@ -88,6 +88,9 @@ class _KanikoBlob(io.BytesIO):
     elif '.' in self.name:
       return self.name.split('.')[0]
 
+  def digest_str(self):
+    return f'{self.hash_algorithm}:{self.digest_hash()}'.strip()
+
 
 class _KanikoImageReadCtx:
   def __init__(
@@ -141,18 +144,22 @@ class _KanikoImageReadCtx:
         hash_algorithm='sha256', # XXX hardcode for now
       )
 
+  def blobs(self):
+    yield self.cfg_blob()
+    yield from self.layer_blobs()
+
   def oci_manifest(self):
     cfg = self.cfg_blob()
 
     return oci.model.OciImageManifest(
       config=oci.model.OciBlobRef(
-        digest=cfg.digest_hash,
+        digest=cfg.digest_str(),
         mediaType='application/json',
         size=cfg.size,
       ),
       layers=[
         oci.model.OciBlobRef(
-          digest=layer.digest_hash,
+          digest=layer.digest_str(),
           mediaType='application/data', # XXX actually, it is tar
           size=layer.size,
         ) for layer in self.layer_blobs()
