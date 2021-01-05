@@ -505,6 +505,10 @@ class Client:
             data = next(data_iterator)
             sha256.update(data)
 
+            if not len(data) == octets_to_send:
+                # sanity check to detect programming errors
+                raise ValueError(f'{len(data)=} vs {octets_to_send=}')
+
             logger.debug(f'{octets_to_send=} {octets_left=} {len(data)=}')
             logger.debug(f'{octets_sent + offset}-{octets_sent + octets_to_send + offset}')
 
