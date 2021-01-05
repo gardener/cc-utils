@@ -426,10 +426,20 @@ class Client:
         max_chunk=1024 * 1024 * 1, # 1 MiB
     ):
         data_is_requests_response = isinstance(data, requests.models.Response)
+        data_is_generator = isinstance(data, typing.Generator)
+        data_is_filelike = hasattr(data, 'read')
 
-        if octets_count < max_chunk or not data_is_requests_response:
+        if octets_count < max_chunk or data_is_filelike:
             if data_is_requests_response:
                 data = data.content
+            elif data_is_generator:
+                # at least GCR does not like chunked-uploads; if small enough, workaround this
+                # and create one (not-that-big) bytes-obj
+                _data = bytes()
+                for chunk in data:
+                    _data += chunk
+            elif data_is_filelike:
+                pass # if filelike, http.client will handle streaming for us
 
             return self._put_blob_single_post(
                 image_reference=image_reference,
