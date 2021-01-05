@@ -7,6 +7,7 @@ see:
 
 import contextlib
 import dataclasses
+import io
 import json
 import tarfile
 import threading
@@ -25,12 +26,46 @@ class KanikoManifest:
 
 
 @dataclasses.dataclass
-class _KanikoBlob:
+class _KanikoBlob(io.BytesIO):
   read_chunk: typing.Callable[[int, int], bytes] # see _KanikoImageReadCtx._read_chunk
   offset: int
   name: str
   size: int
   hash_algorithm: str = 'sha256'
+  seek_pos = 0
+
+  def __post_init__(self):
+    self.__iter__ = self.iter_contents
+
+  def __len__(self):
+    return self.size
+
+  def read(self, size: int=-1):
+    if size == -1:
+      offset = self.seek_pos + self.offset
+      self.seek_pos = size - 1
+
+      return self.read_chunk(
+        offset=offset,
+        length=self.size,
+      )
+
+    if self.seek_pos + 1 == self.size:
+        return b''
+
+    offset = self.offset + self.seek_pos
+    length = min(size, self.size - self.seek_pos)
+    self.seek_pos += size
+    if self.seek_pos + 1 > self.size:
+        self.seek_pos = self.size - 1
+
+    return self.read_chunk(
+        offset=offset,
+        length=length,
+    )
+
+  def tell(self):
+    return self.seek_pos
 
   def iter_contents(self, chunk_size=1024 * 1024):
     remaining = self.size
