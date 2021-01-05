@@ -448,7 +448,16 @@ class Client:
                 data=data,
             )
         else:
-            with data:
+            if data_is_requests_response:
+                with data:
+                  return self._put_blob_chunked(
+                      image_reference=image_reference,
+                      digest=digest,
+                      octets_count=octets_count,
+                      data_iterator=data.iter_content(chunk_size=max_chunk),
+                      chunk_size=max_chunk,
+                  )
+            elif data_is_generator:
               return self._put_blob_chunked(
                   image_reference=image_reference,
                   digest=digest,
@@ -456,6 +465,8 @@ class Client:
                   data_iterator=data.iter_content(chunk_size=max_chunk),
                   chunk_size=max_chunk,
               )
+            else:
+              raise NotImplementedError
 
     def _put_blob_chunked(
         self,
