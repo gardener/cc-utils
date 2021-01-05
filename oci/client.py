@@ -512,6 +512,9 @@ class Client:
             logger.debug(f'{octets_to_send=} {octets_left=} {len(data)=}')
             logger.debug(f'{octets_sent + offset}-{octets_sent + octets_to_send + offset}')
 
+            crange_from = octets_sent
+            crange_to = crange_from + len(data) - 1
+
             res = self._request(
                 url=upload_url,
                 image_reference=image_reference,
@@ -519,12 +522,12 @@ class Client:
                 method='PATCH',
                 data=data,
                 headers={
-                 'content-length': str(octets_to_send),
-                 'content-type': 'application/octet-stream',
-                 'content-range': f'{octets_sent + offset}-{octets_sent + octets_to_send + offset}',
+                 'Content-Length': str(octets_to_send),
+                 'Content-Type': 'application/octet-stream',
+                 'Content-Range': f'{crange_from}-{crange_to}',
+                 'Range': f'{crange_from}-{crange_to}',
                 }
             )
-            offset = 1
             res.raise_for_status()
 
             # XXX interestingly, "the spec" [0] recommends that clients use the `location` URL as
