@@ -10,6 +10,7 @@ import dacite
 import oci._util as _ou
 import oci.auth as oa
 import oci.client as oc
+import oci.kaniko as ok
 import oci.model as om
 import oci.util as ou
 
@@ -266,3 +267,39 @@ def publish_container_image(
         threads=threads,
     )
   image_file_obj.seek(0)
+
+
+def publish_container_image_from_kaniko_tarfile(
+    image_tarfile_path: str,
+    oci_client: oc.Client,
+    image_reference: str,
+    additional_tags: typing.List[str]=(),
+):
+    image_reference = ou.normalise_image_reference(image_reference=image_reference)
+
+    with ok.read_kaniko_image_tar(tar_path=image_tarfile_path) as image:
+        chunk_size = 1024 * 1024
+        for kaniko_blob in image.blobs():
+            oci_client.put_blob(
+                image_reference=image_reference,
+                digest=kaniko_blob.digest_str(),
+                octets_count=kaniko_blob.size,
+                data=kaniko_blob,
+                max_chunk=chunk_size,
+            )
+
+            print(oci_client.blob(
+                image_reference=image_reference,
+                digest=kaniko_blob.digest_str(),
+                absent_ok=True,
+            ))
+
+        manifest_bytes = json.dumps(
+            dataclasses.asdict(image.oci_manifest())
+        ).encode('utf-8')
+
+        for tgt_ref in (image_reference,) + tuple(additional_tags):
+            oci_client.put_manifest(
+                image_reference=tgt_ref,
+                manifest=manifest_bytes,
+            )
