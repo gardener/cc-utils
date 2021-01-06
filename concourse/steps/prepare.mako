@@ -43,6 +43,6 @@ cp "${job_step.input('version_path')}/version" \
 <%
   effective_version=f'$(cat "{job_step.input("version_path")}/version")'
   out_path = f'{tag_dir}/{image_descriptor.name()}.tag' %>
-EFFECTIVE_VERSION="${effective_version}" echo "${effective_version}" > "${out_path}"
+export EFFECTIVE_VERSION="${effective_version}"; echo "${effective_version}" > "${out_path}"
 % endfor
 </%def>
