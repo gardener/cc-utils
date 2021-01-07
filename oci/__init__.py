@@ -290,11 +290,11 @@ def publish_container_image_from_kaniko_tarfile(
                 max_chunk=chunk_size,
             )
 
-            print(oci_client.blob(
+            oci_client.blob(
                 image_reference=image_reference,
                 digest=kaniko_blob.digest_str(),
                 absent_ok=True,
-            ))
+            )
 
         manifest_bytes = json.dumps(
             dataclasses.asdict(image.oci_manifest())
