@@ -41,8 +41,10 @@ cp "${job_step.input('version_path')}/version" \
 % endfor
 % for image_descriptor in publish_trait.dockerimages():
 <%
-  effective_version=f'$(cat "{job_step.input("version_path")}/version")'
-  out_path = f'{tag_dir}/{image_descriptor.name()}.tag' %>
-export EFFECTIVE_VERSION="${effective_version}"; echo "${effective_version}" > "${out_path}"
+  effective_version = f'$(cat "{job_step.input("version_path")}/version")'
+  out_path = f'{tag_dir}/{image_descriptor.name()}.tag'
+  tag_template = image_descriptor.tag_template()
+%>
+export EFFECTIVE_VERSION="${effective_version}"; eval "echo "${tag_template}"" > "${out_path}"
 % endfor
 </%def>
