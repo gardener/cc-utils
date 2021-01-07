@@ -530,27 +530,11 @@ class Client:
             )
             res.raise_for_status()
 
-            # XXX interestingly, "the spec" [0] recommends that clients use the `location` URL as
-            # indicated from each PATCH-response for each subsequent request. However, doing so
-            # will reproducibly lead to a BrokenPipe-error upon the second request.
-            # leaving the code in along with this warning to ensure this be not changed e.g.
-            # if discovering this implementation does not the spec.
+            upload_url = res.headers['location']
 
-            # upload_url = res.headers['location'] # DO NOT use location header - see above
-
-            octets_sent += octets_to_send
+            octets_sent += len(data)
 
         sha256_digest = f'sha256:{sha256.hexdigest()}'
-
-        # XXX according to spec [0], the chunked upload MUST be finalised with a PUT, optionally
-        # containing the last chunk (or empty body otherwise). However, for some reason,
-        # GCR will always return a HTTP-400 if doing so. Also, according to some test-uploads,
-        # the uploads will actually succeed w/o the final HTTP-PUT.
-        # will still leave the (dead) HTTP-PUT for reference, but early-exit before issueing it.
-        # [0]
-        # https://github.com/opencontainers/distribution-spec/blob/master/spec.md
-
-        return sha256_digest
 
         # close uploading session
         query = urllib.parse.urlencode({'digest': sha256_digest})
@@ -564,6 +548,7 @@ class Client:
                  'Content-Length': '0',
             },
         )
+        return res
 
     def _put_blob_single_post(
         self,
@@ -588,6 +573,7 @@ class Client:
                 'content-length': str(octets_count),
             },
             data=data,
+            raise_for_status=False,
         )
 
         res.raise_for_status()
