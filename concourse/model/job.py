@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import enum
 import toposort
 
@@ -109,6 +110,41 @@ class JobVariant(ModelBase):
             for s in dependencies[step_name]
         ])
 
+    def _find_and_resolve_publish_trait_circular_dependencies(self, dependencies, cycle_info):
+        # handle circular dependencies caused by depending on the publish step, e.g.:
+        # test -> publish -> ... -> prepare -> test
+        updated_dependencies = copy.deepcopy(dependencies)
+        custom_steps_depending_on_publish = [
+            step_name for step_name in cycle_info
+            if self._step_depends_on(step_name, 'publish', cycle_info)
+        ]
+        if (
+            'prepare' in cycle_info
+            and 'publish' in cycle_info
+            and custom_steps_depending_on_publish
+        ):
+            for step_name in custom_steps_depending_on_publish:
+                if step_name in updated_dependencies['prepare']:
+                    updated_dependencies['prepare'].remove(step_name)
+
+        return updated_dependencies
+
+    def _find_and_resolve_release_trait_circular_dependencies(self, dependencies, cycle_info):
+        updated_dependencies = copy.deepcopy(dependencies)
+        for step_name, step_dependencies in cycle_info.items():
+            step = self.step(step_name)
+            if not step.is_synthetic:
+                continue # only patch away synthetic steps' dependencies
+            for step_dependency_name in step_dependencies:
+                step_dependency = self.step(step_dependency_name)
+                if step_dependency.is_synthetic:
+                    continue # leave dependencies between synthetic steps
+                # patch out dependency from synthetic step to custom step
+                if step_dependency_name in updated_dependencies[step_name]:
+                    updated_dependencies[step_name].remove(step_dependency_name)
+
+        return updated_dependencies
+
     def ordered_steps(self):
         dependencies = {
             step.name: step.depends() for step in self.steps()
@@ -116,38 +152,18 @@ class JobVariant(ModelBase):
         try:
             result = list(toposort.toposort(dependencies))
         except toposort.CircularDependencyError as de:
-            cycle_info = de.data
-            # handle circular dependencies caused by depending on the publish step, e.g.:
-            # test -> publish -> ... -> prepare -> test
-            custom_steps_depending_on_publish = [
-                step_name for step_name in cycle_info
-                if self._step_depends_on(step_name, 'publish', cycle_info)
-            ]
-            if (
-                'prepare' in cycle_info
-                and 'publish' in cycle_info
-                and custom_steps_depending_on_publish
-            ):
-                for step_name in custom_steps_depending_on_publish:
-                    dependencies['prepare'].remove(step_name)
-                result = list(toposort.toposort(dependencies))
 
-            else:
-                # remove cirular dependencies caused by synthetic steps
-                # (custom steps' dependencies should "win")
-                for step_name, step_dependencies in cycle_info.items():
-                    step = self.step(step_name)
-                    if not step.is_synthetic:
-                        continue # only patch away synthetic steps' dependencies
-                    for step_dependency_name in step_dependencies:
-                        step_dependency = self.step(step_dependency_name)
-                        if step_dependency.is_synthetic:
-                            continue # leave dependencies between synthetic steps
-                        # patch out dependency from synthetic step to custom step
-                        dependencies[step_name].remove(step_dependency_name)
-                # try again - if there is still a cyclic dependency, this is probably caused
-                # by a user error - so let it propagate
-                result = list(toposort.toposort(dependencies))
+            dependencies = self._find_and_resolve_publish_trait_circular_dependencies(
+                dependencies,
+                cycle_info=de.data,
+            )
+            dependencies = self._find_and_resolve_release_trait_circular_dependencies(
+                dependencies,
+                cycle_info=de.data,
+            )
+            # try again - if there is still a cyclic dependency, this is probably caused
+            # by a user error - so let it propagate
+            result = list(toposort.toposort(dependencies))
 
         # result contains a generator yielding tuples of step name in the correct execution order.
         # each tuple can/should be parallelised
