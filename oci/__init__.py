@@ -276,6 +276,8 @@ def publish_container_image_from_kaniko_tarfile(
     additional_tags: typing.List[str]=(),
 ):
     image_reference = ou.normalise_image_reference(image_reference=image_reference)
+    image_name = image_reference.rsplit(':', 1)[0]
+    image_references = (image_reference,) + tuple([f'{image_name}:{tag}' for tag in additional_tags])
 
     with ok.read_kaniko_image_tar(tar_path=image_tarfile_path) as image:
         chunk_size = 1024 * 1024
@@ -298,7 +300,7 @@ def publish_container_image_from_kaniko_tarfile(
             dataclasses.asdict(image.oci_manifest())
         ).encode('utf-8')
 
-        for tgt_ref in (image_reference,) + tuple(additional_tags):
+        for tgt_ref in image_references:
             oci_client.put_manifest(
                 image_reference=tgt_ref,
                 manifest=manifest_bytes,
