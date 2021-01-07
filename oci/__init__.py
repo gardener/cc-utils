@@ -301,6 +301,7 @@ def publish_container_image_from_kaniko_tarfile(
         ).encode('utf-8')
 
         for tgt_ref in image_references:
+            logger.info(f'publishing manifest {tgt_ref=}')
             oci_client.put_manifest(
                 image_reference=tgt_ref,
                 manifest=manifest_bytes,
