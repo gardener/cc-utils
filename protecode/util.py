@@ -126,7 +126,7 @@ def upload_grouped_images(
             try:
                 label = resource.find_label(name=sdo.labels.ScanLabelName.BINARY_SCAN.value)
                 return label.value.policy is sdo.labels.ScanPolicy.SCAN
-            except ValueError:
+            except AttributeError:
                 # label was not present, return default
                 return True
 
