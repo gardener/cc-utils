@@ -9,8 +9,9 @@ descriptor_trait = job_variant.trait('component_descriptor')
 main_repo = job_variant.main_repository()
 main_repo_labels = main_repo.source_labels()
 main_repo_path_env_var = main_repo.logical_name().replace('-', '_').upper() + '_PATH'
-other_repos = [r for r in job_variant.repositories()
- if not r.is_main_repo()
+other_repos = [
+  r for r in job_variant.repositories()
+  if not r.is_main_repo()
 ]
 ctx_repository_base_url = descriptor_trait.ctx_repository_base_url()
 
@@ -34,7 +35,7 @@ cm = gci.componentmodel
 
 from product.model import ComponentDescriptor, Component, ContainerImage, Relation
 from product.util import ComponentDescriptorResolver
-from ci.util import info, fail, parse_yaml_file, ctx
+from ci.util import info, fail, parse_yaml_file, ctx, warning
 import product.v2
 
 ${step_lib('component_descriptor')}
@@ -54,14 +55,7 @@ component_name_v2 = component_name.lower() # OCI demands lowercase
 ctx_repository_base_url = '${descriptor_trait.ctx_repository_base_url()}'
 
 main_repo_path = os.path.abspath('${main_repo.resource_name()}')
-main_git_repo = git.Repo(main_repo_path)
-if not main_git_repo.head.is_valid():
-  commit_hash = None
-else:
-  try:
-    commit_hash = main_git_repo.head.commit.hexsha
-  except:
-    commit_hash = None
+commit_hash = head_commit_hexsha(main_repo_path)
 
 # create base descriptor filled with default values
 base_descriptor_v2 = base_component_descriptor_v2(
@@ -76,6 +70,8 @@ component_v2 = base_descriptor_v2.component
 
 ## XXX unify w/ injection-method used for main-repository
 % for repository in other_repos:
+if not (repo_commit_hash := head_commit_hexsha(os.path.abspath('${repository.resource_name()}'))):
+  warning('Could not determine commit hash')
 component_v2.sources.append(
   cm.ComponentSource(
     name='${repository.name()}',
@@ -84,7 +80,7 @@ component_v2.sources.append(
       type=cm.AccessType.GITHUB,
       repoUrl='${repository.repo_hostname()}/${repository.repo_path()}',
       ref='${repository.branch()}',
-      commit=commit_hash,
+      commit=repo_commit_hash,
     ),
     version=effective_version,
     labels=${repository.source_labels()},
