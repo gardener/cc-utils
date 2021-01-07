@@ -31,7 +31,9 @@ import json
 import os
 import subprocess
 
+import ccc.oci
 import container.registry as cr
+import oci
 
 ${step_lib('build_oci_image')}
 
@@ -119,9 +121,13 @@ if not os.path.exists(ca_cert_path):
 if not os.path.exists(python_lib_dir):
   os.symlink(python_bak_dir, python_lib_dir)
 
-fh = open(image_outfile)
-cr.publish_container_image(
+additional_tags = ${image_descriptor.additional_tags()}
+print(f'publishing to {image_ref=}, {additional_tags=}')
+
+oci.publish_container_image_from_kaniko_tarfile(
+  image_tarfile_path=image_outfile,
+  oci_client=ccc.oci.oci_client(),
   image_reference=image_ref,
-  image_file_obj=fh,
+  additional_tags=additional_tags,
 )
 </%def>
