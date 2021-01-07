@@ -148,6 +148,7 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
     def additional_tags(self) -> typing.Tuple[str]:
         if self.tag_as_latest():
             return ('latest',)
+        return ()
 
     def tag_template(self):
         return self.raw['tag_template']
