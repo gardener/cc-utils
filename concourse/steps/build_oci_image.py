@@ -17,6 +17,7 @@ def write_docker_cfg(
     container_registry_cfgs = {
         c.name(): c for c
         in (mc.find_config(img_ref) for img_ref in relevant_image_refs)
+        if c is not None
     }.values()
 
     docker_cfg_auths = {}
