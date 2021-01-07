@@ -14,8 +14,9 @@
 # limitations under the License.
 
 import typing
-import yaml
 
+import git
+import yaml
 
 import ci.util
 from product.util import (
@@ -143,3 +144,16 @@ def write_component_diff(component_diff, out_path):
 
     with open(out_path, 'w') as f:
         yaml.dump(diff_dict, f)
+
+
+def head_commit_hexsha(repo_path):
+    git_repo = git.Repo(repo_path)
+    if not git_repo.head.is_valid():
+        commit_hash = None
+    else:
+        try:
+            commit_hash = git_repo.head.commit.hexsha
+        except:
+            commit_hash = None
+
+    return commit_hash
