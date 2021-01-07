@@ -94,7 +94,6 @@ draft_release_step = concourse.steps.step_def('draft_release')
 scan_container_images_step = concourse.steps.step_def('scan_container_images')
 malware_scan_step = concourse.steps.step_def('malware_scan')
 alter_container_images_step = concourse.steps.step_def('alter_container_images')
-upload_container_images_step = concourse.steps.step_def('upload_container_images')
 scan_sources_step = concourse.steps.step_def('scan_sources')
 %>
 
@@ -420,8 +419,6 @@ ${publish_step(job_step=job_step, job_variant=job_variant)}
         ${malware_scan_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
 % elif job_step.name == 'alter_container_images':
         ${alter_container_images_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
-% elif job_step.name == 'upload_container_images':
-        ${upload_container_images_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
 % elif job_step.name == 'scan_sources':
         ${scan_sources_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
 % endif

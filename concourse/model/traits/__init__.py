@@ -22,7 +22,6 @@ from .cronjob import CronTrait
 from .draft_release import DraftReleaseTrait
 from .image_alter import ImageAlterTrait
 from .image_scan import ImageScanTrait
-from .image_upload import ImageUploadTrait
 from .notifications import NotificationsTrait
 from .options import OptionsTrait
 from .publish import PublishTrait
@@ -40,7 +39,6 @@ TRAITS = {
     'draft_release': DraftReleaseTrait,
     'image_alter': ImageAlterTrait,
     'image_scan': ImageScanTrait,
-    'image_upload': ImageUploadTrait,
     'notifications': NotificationsTrait,
     'options': OptionsTrait,
     'publish': PublishTrait,
