@@ -12,15 +12,12 @@ import gci.componentmodel as cm
 
 
 def _get_ws_label_from_source(source: cm.ComponentSource) -> sdo.labels.SourceIdHint:
-    try:
-        label = source.find_label(sdo.labels.ScanLabelName.SOURCE_ID.value)
+    if label := source.find_label(sdo.labels.ScanLabelName.SOURCE_ID.value):
         return dacite.from_dict(
             data_class=sdo.labels.SourceIdHint,
             data=label.value,
             config=dacite.Config(cast=[sdo.labels.ScanPolicy]),
         )
-    except ValueError:
-        pass
 
 
 def _get_scan_artifacts_from_components(
