@@ -74,7 +74,7 @@ if not (repo_commit_hash := head_commit_hexsha(os.path.abspath('${repository.res
   warning('Could not determine commit hash')
 component_v2.sources.append(
   cm.ComponentSource(
-    name='${repository.name()}',
+    name='${repository.logical_name().replace('/', '_').replace('.', '_')}',
     type=cm.SourceType.GIT,
     access=cm.GithubAccess(
       type=cm.AccessType.GITHUB,
