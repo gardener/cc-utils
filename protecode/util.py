@@ -116,18 +116,16 @@ def upload_grouped_images(
             for resource_name, resources in resource_groups.items():
                 yield resources
 
-        def _filter_resources_to_scan(component, resource):
+        def _filter_resources_to_scan(component: cm.Component, resource: cm.Resource):
             # check whether the trait was configured to filter out the resource
             configured_image_reference_filter_response = image_reference_filter(component, resource)
             if not configured_image_reference_filter_response:
                 return False
 
             # check for scanning labels on resource in cd
-            try:
-                label = resource.find_label(name=sdo.labels.ScanLabelName.BINARY_SCAN.value)
+            if label := resource.find_label(name=sdo.labels.ScanLabelName.BINARY_SCAN.value):
                 return label.value.policy is sdo.labels.ScanPolicy.SCAN
-            except AttributeError:
-                # label was not present, return default
+            else:
                 return True
 
         for component_name, components in component_groups.items():
