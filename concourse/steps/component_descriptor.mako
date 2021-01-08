@@ -5,15 +5,25 @@
 <%
 from makoutil import indent_func
 from concourse.steps import step_lib
+import gci.componentmodel as cm
+
 descriptor_trait = job_variant.trait('component_descriptor')
 main_repo = job_variant.main_repository()
 main_repo_labels = main_repo.source_labels()
 main_repo_path_env_var = main_repo.logical_name().replace('-', '_').upper() + '_PATH'
-other_repos = [
-  r for r in job_variant.repositories()
-  if not r.is_main_repo()
-]
+other_repos = [r for r in job_variant.repositories() if not r.is_main_repo()]
 ctx_repository_base_url = descriptor_trait.ctx_repository_base_url()
+
+
+# label main repo as main
+if not 'cloud.gardener/cicd/source' in [label.name for label in main_repo_labels]:
+  main_repo_labels.append(
+    cm.Label(
+      name='cloud.gardener/cicd/source',
+      value={'repository-classification': 'main'},
+    )
+  )
+
 
 if job_variant.has_trait('image_alter'):
   image_alter_cfgs = job_variant.trait('image_alter').image_alter_cfgs()
@@ -30,8 +40,9 @@ import subprocess
 import sys
 import yaml
 
-import gci.componentmodel
-cm = gci.componentmodel
+import gci.componentmodel as cm
+# required for deserializing labels
+Label = cm.Label
 
 from product.model import ComponentDescriptor, Component, ContainerImage, Relation
 from product.util import ComponentDescriptorResolver
@@ -68,13 +79,17 @@ base_descriptor_v2 = base_component_descriptor_v2(
 )
 component_v2 = base_descriptor_v2.component
 
-# label main repo as main repo
-main_repo_labels = ${repository.source_labels()}
-if not 'cloud.gardener/cicd/source' in main_repo_labels:
-    main_repo_labels['cloud.gardener/cicd/source'] = {'repository-classification': 'main'}
-
 ## XXX unify w/ injection-method used for main-repository
 % for repository in other_repos:
+repo_labels = ${repository.source_labels()}
+if not 'cloud.gardener/cicd/source' in [label.name for label in repo_labels]:
+  repo_labels.append(
+    cm.Label(
+      name='cloud.gardener/cicd/source',
+      value={'repository-classification': 'auxiliary'},
+    ),
+  )
+
 if not (repo_commit_hash := head_commit_hexsha(os.path.abspath('${repository.resource_name()}'))):
   warning('Could not determine commit hash')
 component_v2.sources.append(
@@ -88,7 +103,7 @@ component_v2.sources.append(
       commit=repo_commit_hash,
     ),
     version=effective_version,
-    labels=main_repo_labels,
+    labels=repo_labels,
   )
 )
 % endfor
