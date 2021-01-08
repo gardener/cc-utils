@@ -60,7 +60,7 @@ class ComponentDescriptorStepTest(unittest.TestCase):
             job_step=self.job_variant.step('component_descriptor'),
             job_variant=self.job_variant,
             output_image_descriptors={},
-            indent=0
+            indent=0,
         )
 
         # try to compile (-> basic syntax check)
