@@ -1,5 +1,8 @@
 import unittest
 
+import model
+import model.github
+
 from model.base import ModelValidationError
 from concourse.factory import (
     RawPipelineDefinitionDescriptor as DefDescriptor,
@@ -87,9 +90,17 @@ class DefinitionFactoryTest(unittest.TestCase):
             },
         }
         descriptor = DefDescriptor(name='foo', base_definition=base_def, variants=variants)
+
+        cfg_set = model.ConfigurationSet('dummy','dummy', raw_dict={})
+        cfg_set.github = unittest.mock.MagicMock(
+            return_value=model.github.GithubConfig(
+                name='dontcare',
+                raw_dict={'available_protocols': ('https',)}
+                ),
+            )
         factory = DefinitionFactory(
             raw_definition_descriptor=descriptor,
-            cfg_set=None,
+            cfg_set=cfg_set,
         )
 
         result = factory.create_pipeline_definition()

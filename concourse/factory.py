@@ -223,13 +223,13 @@ class DefinitionFactory:
             script_type=ScriptType.BOURNE_SHELL,
         )
 
-    def _create_repos(self, pipeline_def, raw_dict):
+    def _create_repos(self, pipeline_def: JobVariant, raw_dict):
         pipeline_def._repos_dict = {}
         if 'repo' in raw_dict:
             # special case: repo singleton (will vanish once we mv definitions into component-repos)
             repo_dict = raw_dict['repo']
             name = 'source' if 'name' not in repo_dict else repo_dict['name']
-            pipeline_def._repos_dict[name] =  RepositoryConfig(
+            pipeline_def._repos_dict[name] = RepositoryConfig(
                 raw_dict=repo_dict,
                 logical_name=name,
                 qualifier=None,
@@ -237,13 +237,21 @@ class DefinitionFactory:
             )
             pipeline_def._main_repository_name = name
         if 'repos' in raw_dict:
-            pipeline_def._repos_dict.update({
-                cfg_dict['name']: RepositoryConfig(
-                    logical_name=cfg_dict['name'],
-                    raw_dict=cfg_dict, is_main_repo=False
-                )
-                for cfg_dict in raw_dict['repos']
-            })
+            for repo_dict in raw_dict['repos']:
+                if not 'cfg_name' in repo_dict:
+                    github_cfg = self.cfg_set.github()
+                else:
+                    github_cfg = self.cfg_set.github(repo_dict['cfg_name'])
+
+                hostname = github_cfg.hostname()
+                repo_dict['hostname'] = hostname
+
+                pipeline_def._repos_dict.update({
+                    repo_dict['name']: RepositoryConfig(
+                        logical_name=repo_dict['name'],
+                        raw_dict=repo_dict, is_main_repo=False
+                    )
+                })
 
     def _inject_publish_repos(self, pipeline_def):
         # synthesise "put-repositories"
