@@ -59,6 +59,9 @@ def base_component_descriptor_v2(
         else:
             src_ref = f'{parsed_version.prerelease}'
 
+    # logical names must not contain slashes or dots
+    logical_name = component_name_v2.replace('/', '_').replace('.', '_')
+
     base_descriptor_v2 = cm.ComponentDescriptor(
       meta=cm.Metadata(schemaVersion=cm.SchemaVersion.V2),
       component=cm.Component(
@@ -73,7 +76,7 @@ def base_component_descriptor_v2(
         provider=cm.Provider.INTERNAL,
         sources=[
           cm.ComponentSource(
-            name=component_name_v2, # XXX only valid for gardener-components
+            name=logical_name,
             type=cm.SourceType.GIT,
             access=cm.GithubAccess(
               type=cm.AccessType.GITHUB,
