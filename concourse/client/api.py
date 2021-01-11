@@ -14,11 +14,9 @@
 # limitations under the License.
 
 import json
-import warnings
 import typing
 
 from ensure import ensure_annotations
-from urllib3.exceptions import InsecureRequestWarning
 
 from .routes import (
     ConcourseApiRoutesBase,
@@ -46,8 +44,6 @@ from model.concourse import (
 )
 from http_requests import AuthenticatedRequestBuilder
 from ci.util import not_empty
-
-warnings.filterwarnings('ignore', 'Unverified HTTPS request is being made.*', InsecureRequestWarning)
 
 
 # Hard coded oauth user and password
