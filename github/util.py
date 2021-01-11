@@ -252,7 +252,7 @@ class PullRequestUtil(RepositoryHelperBase):
             reference_name = reference.name()
         elif isinstance(reference, gci.componentmodel.ComponentReference):
             type_name = 'component'
-            reference_name = reference.name
+            reference_name = reference.componentName
         else:
             raise NotImplementedError
 
