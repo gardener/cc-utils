@@ -19,6 +19,8 @@ import unittest
 import github.util as ghu
 import product.model as pm
 
+import gci.componentmodel as cm
+
 
 # test gear
 pull_request_mock = object() # keep this as simple as possible for now
@@ -32,30 +34,50 @@ class UpgradePullRequestTest(unittest.TestCase):
     def test_ctor(self):
         # upgrade component
         create_upgrade_pr(
-            from_ref=pm.ComponentReference.create(name='a.b/c/d', version='1.2.3'),
-            to_ref=pm.ComponentReference.create(name='a.b/c/d', version='2.0.0'),
-        )
-        # same, but use Component + ComponentReference
-        create_upgrade_pr(
-            from_ref=pm.Component.create(name='a.b/c/d', version='1.2.3'),
-            to_ref=pm.ComponentReference.create(name='a.b/c/d', version='2.0.0'),
+            from_ref=cm.ComponentReference(
+                name='abcd', componentName='a.b/c1', version='1.2.3'
+            ),
+            to_ref=cm.ComponentReference(
+                name='abcd', componentName='a.b/c1', version='2.0.0'
+            ),
         )
         # upgrade web dependency
         create_upgrade_pr(
-            from_ref=pm.WebDependencyReference.create(name='dep_red', version='1.2.3'),
-            to_ref=pm.WebDependencyReference.create(name='dep_red', version='2.0.0'),
+            from_ref=cm.Resource(
+                name='dep_red',
+                version='1.2.3',
+                type=cm.ResourceType.GENERIC,
+                access=None,
+            ),
+            to_ref=cm.Resource(
+                name='dep_red',
+                version='2.0.0',
+                type=cm.ResourceType.GENERIC,
+                access=None,
+            ),
         )
         # error: mismatch in dependency name
-        with self.assertRaisesRegex(ValueError, 'names do not match'):
+        with self.assertRaisesRegex(ValueError, 'reference name mismatch'):
             create_upgrade_pr(
-                from_ref=pm.GenericDependencyReference.create(name='foo', version='1.2.3'),
-                to_ref=pm.GenericDependencyReference.create(name='bar', version='1.2.3'),
+                from_ref=cm.ComponentReference(
+                    name='foo', componentName='a.b/c1', version='1.2.3'
+                ),
+                to_ref=cm.ComponentReference(
+                    name='bar', componentName='a.b/c1', version='2.0.0'
+                ),
             )
         # error: mismatch in dependency types
-        with self.assertRaisesRegex(ValueError, 'type names do not match'):
+        with self.assertRaisesRegex(ValueError, 'reference types do not match'):
             create_upgrade_pr(
-                from_ref=pm.GenericDependencyReference.create(name='foo', version='1.2.3'),
-                to_ref=pm.WebDependencyReference.create(name='foo', version='1.2.3'),
+                from_ref=cm.ComponentReference(
+                    name='dep_red', componentName='a.b/c1', version='1.2.3'
+                ),
+                to_ref=cm.Resource(
+                    name='dep_red',
+                    version='2.0.0',
+                    type=cm.ResourceType.GENERIC,
+                    access=None,
+                ),
             )
 
     def test_is_obsolete(self):
@@ -98,13 +120,32 @@ class UpgradePullRequestTest(unittest.TestCase):
         self.assertTrue(examinee.is_obsolete(reference_component=reference_component))
 
     def test_target_matches(self):
+        old_resource = cm.Resource(
+            name='res1',
+            version='1.2.3',
+            type=cm.ResourceType.GENERIC,
+            access=cm.HttpAccess(
+                url='made-up-url',
+                type=cm.AccessType.HTTP,
+            ),
+        )
+        new_resource = cm.Resource(
+            name='res1',
+            version='2.0.0',
+            type=cm.ResourceType.GENERIC,
+            access=cm.HttpAccess(
+                url='made-up-url.2',
+                type=cm.AccessType.HTTP,
+            ),
+        )
+
         examinee = create_upgrade_pr(
-            from_ref=pm.WebDependency.create(name='red', version='1.2.3', url='made-up.url'),
-            to_ref=pm.WebDependency.create(name='red', version='2.0.0', url='made-up.url'),
+            from_ref=old_resource,
+            to_ref=new_resource,
         )
 
         # test validation
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(TypeError):
             examinee.target_matches(object()) # object is not of type DependencyBase
 
         # different type, same name and version

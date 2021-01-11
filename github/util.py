@@ -20,7 +20,8 @@ import io
 import re
 import sys
 
-from typing import Iterable, Tuple, Union
+import typing
+from typing import Iterable, Tuple
 from pydash import _
 
 import requests
@@ -32,13 +33,13 @@ from github3.exceptions import NotFoundError, ForbiddenError
 from github3.orgs import Team
 
 import gci.componentmodel
+import gci.componentmodel as cm
 import ccc.github
 import ci.util
 import product.model
 import product.v2
 import version
 
-from product.model import DependencyBase
 from model.github import GithubConfig
 
 
@@ -135,28 +136,36 @@ class RepositoryHelperBase(object):
             )
 
 
-class UpgradePullRequest(object):
+class UpgradePullRequest:
     def __init__(self,
             pull_request,
-            from_ref: DependencyBase,
-            to_ref: DependencyBase,
+            from_ref: typing.Union[cm.Resource, cm.ComponentReference],
+            to_ref: typing.Union[cm.Resource, cm.ComponentReference],
         ):
         self.pull_request = ci.util.not_none(pull_request)
 
-        if from_ref.name() != to_ref.name():
-            raise ValueError('reference names do not match')
-        if from_ref.type_name() != to_ref.type_name():
-            raise ValueError('reference type names do not match')
+        if from_ref.name != to_ref.name:
+            raise ValueError(f'reference name mismatch {from_ref.name=} {to_ref.name=}')
+        if (isinstance(from_ref, cm.Resource) and isinstance(to_ref, cm.Resource) and
+            from_ref.type != to_ref.type
+            ) or \
+            type(from_ref) != type(to_ref):
+            raise ValueError(f'reference types do not match: {from_ref=} {to_ref=}')
 
-        self.ref_name = from_ref.name()
+        self.ref_name = from_ref.name
 
         self.from_ref = from_ref
         self.to_ref = to_ref
-        self.reference_type_name = from_ref.type_name()
+        if isinstance(from_ref, cm.Resource):
+            self.reference_type_name = from_ref.type.value
+        elif isinstance(from_ref, cm.ComponentReference):
+            self.reference_type_name = product.v2.COMPONENT_TYPE_NAME
+        else:
+            raise NotImplementedError(from_ref.type)
 
     def is_obsolete(
         self,
-        reference_component: Union[product.model.Component, gci.componentmodel.Component],
+        reference_component: gci.componentmodel.Component,
     ):
         '''returns a boolean indicating whether or not this Upgrade PR is "obsolete"
 
@@ -165,69 +174,45 @@ class UpgradePullRequest(object):
         - the destination version is greater than the greatest reference component version
         '''
         # find matching component versions
-        # TODO: remove CD schema.v1 backwards compatibility once all migrations are done
-        if isinstance(reference_component, product.model.Component):
+        if not isinstance(reference_component, gci.componentmodel.Component):
+            raise TypeError(reference_component)
+
+        if self.reference_type_name == product.v2.COMPONENT_TYPE_NAME:
             reference_refs = sorted(
                 [
-                    rc for rc in
-                    reference_component.dependencies().references(type_name=self.reference_type_name)
-                    if rc.name() == self.ref_name
+                    rc for rc in reference_component.componentReferences
+                    if rc.name == self.ref_name
                 ],
-                key=lambda r: version.parse_to_semver(r.version())
+                key=lambda r: version.parse_to_semver(r.version)
             )
 
             if not reference_refs:
                 return False # special case: we have a new reference
 
-            greatest_reference_version = version.parse_to_semver(reference_refs[-1].version())
-        elif isinstance(reference_component, gci.componentmodel.Component):
-            if self.reference_type_name == product.v2.COMPONENT_TYPE_NAME:
-                reference_refs = sorted(
-                    [
-                        rc for rc in reference_component.componentReferences
-                        if rc.name == self.ref_name
-                    ],
-                    key=lambda r: version.parse_to_semver(r.version)
-                )
+            greatest_reference_version = version.parse_to_semver(reference_refs[-1].version)
 
-                if not reference_refs:
-                    return False # special case: we have a new reference
-
-                greatest_reference_version = version.parse_to_semver(reference_refs[-1].version)
-
-            else:
-                raise NotImplementedError
         else:
             raise NotImplementedError
 
         # PR is obsolete if same or newer component version is already configured in reference
-        return greatest_reference_version >= version.parse_to_semver(self.to_ref.version())
+        return greatest_reference_version >= version.parse_to_semver(self.to_ref.version)
 
     def target_matches(
         self,
-        reference: Union[DependencyBase, gci.componentmodel.ComponentReference],
+        reference: typing.Tuple[cm.ComponentReference, cm.Resource],
         reference_version: str = None,
     ):
-        # TODO: remove CD schema.v1 backwards compatibility once all migrations are done
-        if isinstance(reference, DependencyBase):
-            if reference.type_name() != self.reference_type_name:
-                return False
-            if reference.name() != self.ref_name:
-                return False
-            if reference.version() != self.to_ref.version():
-                return False
+        if not isinstance(reference, cm.ComponentReference) and not \
+                isinstance(reference, cm.Resource):
+            raise TypeError(reference)
 
-        elif isinstance(reference, gci.componentmodel.ComponentReference):
-            if product.v2.COMPONENT_TYPE_NAME != self.reference_type_name:
-                return False
-            if reference.componentName != self.ref_name:
-                return False
-            reference_version = reference_version or reference.version
-            if reference_version != self.to_ref.version():
-                return False
-
-        else:
-            raise NotImplementedError
+        if product.v2.COMPONENT_TYPE_NAME != self.reference_type_name:
+            return False
+        if reference.componentName != self.ref_name:
+            return False
+        reference_version = reference_version or reference.version
+        if reference_version != self.to_ref.version():
+            return False
 
         return True
 
@@ -242,19 +227,15 @@ class PullRequestUtil(RepositoryHelperBase):
 
     @staticmethod
     def calculate_pr_title(
-            reference: Union[DependencyBase, gci.componentmodel.ComponentReference],
+            reference: gci.componentmodel.ComponentReference,
             from_version: str,
             to_version: str,
     ) -> str:
-        # TODO: remove CD schema.v1 backwards compatibility once all migrations are done
-        if isinstance(reference, DependencyBase):
-            type_name = reference.type_name()
-            reference_name = reference.name()
-        elif isinstance(reference, gci.componentmodel.ComponentReference):
-            type_name = 'component'
-            reference_name = reference.componentName
-        else:
-            raise NotImplementedError
+        if not isinstance(reference, gci.componentmodel.ComponentReference):
+            raise TypeError(reference)
+
+        type_name == product.v2.COMPONENT_TYPE_NAME
+        reference_name = reference.componentName
 
         return f'[ci:{type_name}:{reference_name}:{from_version}->{to_version}]'
 
