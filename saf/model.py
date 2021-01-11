@@ -43,7 +43,7 @@ class MalwarescanEvidenceData:
     component_name: str
     scanning_endpoint: str
     scanning_cfg: str
-    scan_results: typing.List[MalwareScanResult]
+    scan_results: typing.List[MalwarescanResult]
 
 
 @dc
