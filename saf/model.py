@@ -31,16 +31,17 @@ class MalwareScanState(enum.Enum):
 
 @dc
 class MalwarescanResult:
-    component_name: str
     resource: cm.Resource
     scan_state: MalwareScanState
     findings: typing.List[str]
+    scan_log: str
 
 
 @dc
 class MalwarescanEvidenceData:
     pipeline_url: str
     component_name: str
+    component_version: str
     scanning_endpoint: str
     scanning_cfg: str
     scan_results: typing.List[MalwarescanResult]
