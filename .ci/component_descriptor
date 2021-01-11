@@ -65,7 +65,7 @@ def add_component_dependency(
 component_descriptor = parse_component_descriptor()
 component = component_descriptor.component
 
-logical_name = COMPONENT_SPEC_COMPONENT_NAME.replace('/', '_')
+logical_name = COMPONENT_SPEC_COMPONENT_NAME.replace('/', '_').replace('.', '_')
 
 component.componentReferences.append(
     gci.componentmodel.ComponentReference(
