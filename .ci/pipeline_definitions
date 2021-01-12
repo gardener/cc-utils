@@ -93,4 +93,6 @@ cc-utils:
 
     create_upgrade_prs:
       traits:
+        cronjob:
+          interval: '2.5m'
         update_component_deps: ~
