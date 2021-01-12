@@ -149,6 +149,12 @@ class JobVariant(ModelBase):
         dependencies = {
             step.name: step.depends() for step in self.steps()
         }
+        # add dependencies on trait-defined steps
+        for step in self.steps():
+            dependencies[step.name] |= {
+                s.name for s in self.steps()
+                if s.injected_by_trait() in step.trait_depends()
+            }
         try:
             result = list(toposort.toposort(dependencies))
         except toposort.CircularDependencyError as de:
