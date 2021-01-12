@@ -243,6 +243,7 @@ class ReleaseTraitTransformer(TraitTransformer):
             raw_dict={},
             is_synthetic=True,
             notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
+            injected_by_trait=self.name,
             script_type=ScriptType.PYTHON3,
         )
         yield self.release_step

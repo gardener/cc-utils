@@ -60,6 +60,15 @@ def attrs(pipeline_step):
             type=set,
         ),
         AttributeSpec.optional(
+            name='trait_depends',
+            default=set(),
+            doc=(
+                'names of traits this step declares a dependency towards. This will result in a '
+                'dependency towards all steps defined by these traits'
+            ),
+            type=set,
+        ),
+        AttributeSpec.optional(
             name='execute',
             default=from_instance(attr_name='name', value_doc='step name'),
             doc='''
@@ -199,6 +208,7 @@ class PipelineStep(ModelBase):
         notification_policy,
         script_type,
         extra_args=None,
+        injected_by_trait=None,
         *args,
         **kwargs
     ):
@@ -209,6 +219,7 @@ class PipelineStep(ModelBase):
         self._inputs_dict = {}
         self._publish_to_dict = {}
         self._notification_policy = notification_policy
+        self._injected_by_trait = injected_by_trait
         self._extra_args = extra_args
         super().__init__(*args, **kwargs)
 
@@ -352,6 +363,12 @@ class PipelineStep(ModelBase):
 
     def depends(self):
         return set(self.raw['depends'])
+
+    def trait_depends(self):
+        return set(self.raw['trait_depends'])
+
+    def injected_by_trait(self):
+        return self._injected_by_trait
 
     def timeout(self):
         return self.raw['timeout']
