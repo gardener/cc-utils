@@ -195,7 +195,7 @@ class UpgradePullRequest:
             raise NotImplementedError
 
         # PR is obsolete if same or newer component version is already configured in reference
-        return greatest_reference_version >= version.parse_to_semver(self.to_ref.version())
+        return greatest_reference_version >= version.parse_to_semver(self.to_ref.version)
 
     def target_matches(
         self,
