@@ -27,8 +27,6 @@ import concourse.model.traits.update_component_deps
 import concourse.steps.component_descriptor_util as cdu
 import github.util
 import gitutil
-import product.model
-import product.util
 import product.v2
 import version
 from concourse.model.traits.update_component_deps import (
