@@ -1,3 +1,4 @@
+import asyncio
 import functools
 import tempfile
 import typing
@@ -247,6 +248,7 @@ def scan_artifact_with_ws(
     requester_mail: str,
     scan_artifact: sdo.model.ScanArtifact,
     ws_client: whitesource.client.WhitesourceClient,
+    chunk_size: int,
 ):
     clogger = sdo.util.component_logger(scan_artifact.name)
 
@@ -280,24 +282,28 @@ def scan_artifact_with_ws(
 
     with tempfile.TemporaryFile() as tmp_file:
         clogger.info('downloading component for scan')
-        component_filename = whitesource.component.download_component(
+        whitesource.component.download_component(
             clogger=clogger,
             github_repo=github_repo,
             path_filter_func=path_filter_func,
             ref=commit_hash,
             target=tmp_file,
         )
+        file_size = tmp_file.tell()
         # don't change the following line, lest things no longer work
         # sets the file position at the offset 0 == start of the file
         tmp_file.seek(0)
 
         clogger.info('sending component to scan backend...')
-        ws_client.post_project(
-            extra_whitesource_config=extra_whitesource_config,
-            file=tmp_file,
-            filename=component_filename,
-            project_name=scan_artifact.name,
-            requester_email=requester_mail,
+        asyncio.get_event_loop().run_until_complete(
+            ws_client.ws_project(
+                extra_whitesource_config=extra_whitesource_config,
+                file=tmp_file,
+                project_name=scan_artifact.name,
+                requester_email=requester_mail,
+                chunk_size=chunk_size,
+                length=file_size,
+            )
         )
         clogger.info('scan complete')
         # TODO save scanned commit hash or tag in project tag show scanned version
