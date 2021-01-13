@@ -2,8 +2,6 @@
 
 set -e
 
-exit 0
-
 if [ -z "$SOURCE_PATH" ]; then
   export SOURCE_PATH="$(readlink -f "$(dirname $0)/..")"
   echo "setting SOURCE_PATH to: ${SOURCE_PATH}"
