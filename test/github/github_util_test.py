@@ -16,10 +16,8 @@
 import dataclasses
 import functools
 import pytest
-import unittest
 
 import github.util as ghu
-import product.model as pm
 
 import gci.componentmodel as cm
 
@@ -146,19 +144,74 @@ def test_is_obsolete():
     assert examinee.is_obsolete(reference_component=reference_component)
 
 
-class UpgradePullRequestTest(unittest.TestCase):
+def test_target_matches():
+    old_resource = cm.Resource(
+        name='res1',
+        version='1.2.3',
+        type=cm.ResourceType.GENERIC,
+        access=cm.HttpAccess(
+            url='made-up-url',
+            type=cm.AccessType.HTTP,
+        ),
+    )
+    new_resource = cm.Resource(
+        name='res1',
+        version='2.0.0',
+        type=cm.ResourceType.GENERIC,
+        access=cm.HttpAccess(
+            url='made-up-url.2',
+            type=cm.AccessType.HTTP,
+        ),
+    )
 
-    def test_target_matches(self):
-        old_resource = cm.Resource(
+    examinee = create_upgrade_pr(
+        from_ref=old_resource,
+        to_ref=new_resource,
+    )
+
+    # test validation
+    with pytest.raises(TypeError):
+        examinee.target_matches(object()) # object is not of type DependencyBase
+
+    # different type, same name and version
+    assert not examinee.target_matches(
+        cm.Resource(
             name='res1',
-            version='1.2.3',
+            version='2.0.0',
+            type=cm.ResourceType.OCI_IMAGE,
+            access=None,
+        )
+    )
+
+    # same type, and version, different name
+    assert not examinee.target_matches(
+        cm.Resource(
+            name='different-name',
+            version='2.0.0',
             type=cm.ResourceType.GENERIC,
             access=cm.HttpAccess(
-                url='made-up-url',
+                url='made-up-url.2',
                 type=cm.AccessType.HTTP,
             ),
         )
-        new_resource = cm.Resource(
+    )
+
+    # same type, and name, different version
+    assert not examinee.target_matches(
+        cm.Resource(
+            name='res1',
+            version='8.7.9',
+            type=cm.ResourceType.GENERIC,
+            access=cm.HttpAccess(
+                url='made-up-url.2',
+                type=cm.AccessType.HTTP,
+            ),
+        )
+    )
+
+    # all matches
+    assert examinee.target_matches(
+        cm.Resource(
             name='res1',
             version='2.0.0',
             type=cm.ResourceType.GENERIC,
@@ -167,40 +220,4 @@ class UpgradePullRequestTest(unittest.TestCase):
                 type=cm.AccessType.HTTP,
             ),
         )
-
-        examinee = create_upgrade_pr(
-            from_ref=old_resource,
-            to_ref=new_resource,
-        )
-
-        # test validation
-        with self.assertRaises(TypeError):
-            examinee.target_matches(object()) # object is not of type DependencyBase
-
-        # different type, same name and version
-        self.assertFalse(
-            examinee.target_matches(
-                pm.GenericDependencyReference.create(name='red', version='2.0.0')
-            )
-        )
-
-        # same type, and version, different name
-        self.assertFalse(
-            examinee.target_matches(
-                pm.WebDependency.create(name='xxx', version='2.0.0', url='made-up.url')
-            )
-        )
-
-        # same type, and name, different version
-        self.assertFalse(
-            examinee.target_matches(
-                pm.WebDependency.create(name='red', version='5.5.5', url='made-up.url')
-            )
-        )
-
-        # all matches
-        self.assertTrue(
-            examinee.target_matches(
-                pm.WebDependency.create(name='red', version='2.0.0', url='made-up.url')
-            )
-        )
+    )
