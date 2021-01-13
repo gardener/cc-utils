@@ -53,12 +53,18 @@ class LoggingRetry(Retry):
         return retry
 
 
+_allowed_methods = getattr(
+    Retry, 'DEFAULT_ALLOWED_METHODS',
+    getattr(Retry, 'DEFAULT_METHOD_WHITELIST')
+)
+
+
 def mount_default_adapter(
     session: requests.Session,
     connection_pool_cache_size=32, # requests-library default
     max_pool_size=32, # requests-library default
     flags=AdapterFlag.CACHE|AdapterFlag.RETRY,
-    retryable_methods_whitelist=Retry.DEFAULT_ALLOWED_METHODS,
+    retryable_methods_whitelist=_allowed_methods,
 ):
     if AdapterFlag.CACHE in flags:
         adapter_constructor = cachecontrol.CacheControlAdapter
