@@ -103,6 +103,7 @@ class WhitesourceClient:
                 if not chunk:
                     break
                 await websocket.send(chunk)
+
             return await websocket.recv()
 
     def get_product_risk_report(self):
