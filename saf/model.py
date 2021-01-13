@@ -34,7 +34,6 @@ class MalwarescanResult:
     resource: cm.Resource
     scan_state: MalwareScanState
     findings: typing.List[str]
-    scan_log: str
 
 
 @dc
@@ -45,6 +44,7 @@ class MalwarescanEvidenceData:
     scanning_endpoint: str
     scanning_cfg: str
     scan_results: typing.List[MalwarescanResult]
+    scan_log: str
 
 
 @dc
