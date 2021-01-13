@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import functools
+import pytest
 import unittest
 
 import github.util as ghu
@@ -30,24 +31,46 @@ create_upgrade_pr = functools.partial(
 )
 
 
-class UpgradePullRequestTest(unittest.TestCase):
-    def test_ctor(self):
-        # upgrade component
+def test_ctor():
+    # upgrade component
+    create_upgrade_pr(
+        from_ref=cm.ComponentReference(
+            name='abcd', componentName='a.b/c1', version='1.2.3'
+        ),
+        to_ref=cm.ComponentReference(
+            name='abcd', componentName='a.b/c1', version='2.0.0'
+        ),
+    )
+    # upgrade web dependency
+    create_upgrade_pr(
+        from_ref=cm.Resource(
+            name='dep_red',
+            version='1.2.3',
+            type=cm.ResourceType.GENERIC,
+            access=None,
+        ),
+        to_ref=cm.Resource(
+            name='dep_red',
+            version='2.0.0',
+            type=cm.ResourceType.GENERIC,
+            access=None,
+        ),
+    )
+    # error: mismatch in dependency name
+    with pytest.raises(ValueError, match='reference name mismatch'):
         create_upgrade_pr(
             from_ref=cm.ComponentReference(
-                name='abcd', componentName='a.b/c1', version='1.2.3'
+                name='foo', componentName='a.b/c1', version='1.2.3'
             ),
             to_ref=cm.ComponentReference(
-                name='abcd', componentName='a.b/c1', version='2.0.0'
+                name='bar', componentName='a.b/c1', version='2.0.0'
             ),
         )
-        # upgrade web dependency
+    # error: mismatch in dependency types
+    with pytest.raises(ValueError, match='reference types do not match'):
         create_upgrade_pr(
-            from_ref=cm.Resource(
-                name='dep_red',
-                version='1.2.3',
-                type=cm.ResourceType.GENERIC,
-                access=None,
+            from_ref=cm.ComponentReference(
+                name='dep_red', componentName='a.b/c1', version='1.2.3'
             ),
             to_ref=cm.Resource(
                 name='dep_red',
@@ -56,29 +79,9 @@ class UpgradePullRequestTest(unittest.TestCase):
                 access=None,
             ),
         )
-        # error: mismatch in dependency name
-        with self.assertRaisesRegex(ValueError, 'reference name mismatch'):
-            create_upgrade_pr(
-                from_ref=cm.ComponentReference(
-                    name='foo', componentName='a.b/c1', version='1.2.3'
-                ),
-                to_ref=cm.ComponentReference(
-                    name='bar', componentName='a.b/c1', version='2.0.0'
-                ),
-            )
-        # error: mismatch in dependency types
-        with self.assertRaisesRegex(ValueError, 'reference types do not match'):
-            create_upgrade_pr(
-                from_ref=cm.ComponentReference(
-                    name='dep_red', componentName='a.b/c1', version='1.2.3'
-                ),
-                to_ref=cm.Resource(
-                    name='dep_red',
-                    version='2.0.0',
-                    type=cm.ResourceType.GENERIC,
-                    access=None,
-                ),
-            )
+
+
+class UpgradePullRequestTest(unittest.TestCase):
 
     def test_is_obsolete(self):
         examinee = create_upgrade_pr(
