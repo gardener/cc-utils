@@ -58,7 +58,7 @@ def mount_default_adapter(
     connection_pool_cache_size=32, # requests-library default
     max_pool_size=32, # requests-library default
     flags=AdapterFlag.CACHE|AdapterFlag.RETRY,
-    retryable_methods_whitelist=Retry.DEFAULT_METHOD_WHITELIST,
+    retryable_methods_whitelist=Retry.DEFAULT_ALLOWED_METHODS,
 ):
     if AdapterFlag.CACHE in flags:
         adapter_constructor = cachecontrol.CacheControlAdapter
