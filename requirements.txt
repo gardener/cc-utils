@@ -45,4 +45,5 @@ tabulate<1.0.0
 termcolor<2.0.0
 toposort
 urllib3<2.0.0
+websockets
 yamllint<2
