@@ -30,9 +30,6 @@ import ctx
 import gci.componentmodel
 import github.util
 import gitutil
-import product.model
-import product.util
-import version
 
 
 from github.util import (
