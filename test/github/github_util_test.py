@@ -82,69 +82,71 @@ def test_ctor():
         )
 
 
-class UpgradePullRequestTest(unittest.TestCase):
-    def test_is_obsolete(self):
-        examinee = create_upgrade_pr(
-            from_ref=cm.ComponentReference(
-                name='c1',
-                componentName='c1',
-                version='1.2.3',
-            ),
-            to_ref=cm.ComponentReference(
-                name='c1',
-                componentName='c1',
-                version='2.0.0',
-            ),
-        )
-
-        cref = cm.ComponentReference(
+def test_is_obsolete():
+    examinee = create_upgrade_pr(
+        from_ref=cm.ComponentReference(
             name='c1',
             componentName='c1',
-            version='6.0.0',
-        )
-
-        reference_component = cm.Component(
+            version='1.2.3',
+        ),
+        to_ref=cm.ComponentReference(
             name='c1',
-            version='6.6.6',
-            repositoryContexts=(),
-            provider=None,
-            sources=(),
-            resources=(),
-            componentReferences=()
-        )
+            componentName='c1',
+            version='2.0.0',
+        ),
+    )
 
-        # test with reference component not declaring this dependency
-        assert not examinee.is_obsolete(reference_component=reference_component)
+    cref = cm.ComponentReference(
+        name='c1',
+        componentName='c1',
+        version='6.0.0',
+    )
 
-        # add differently-named dependency with greater version
-        reference_component.componentReferences = (
-            dataclasses.replace(cref, name='other-name'),
-        )
-        assert not examinee.is_obsolete(reference_component=reference_component)
+    reference_component = cm.Component(
+        name='c1',
+        version='6.6.6',
+        repositoryContexts=(),
+        provider=None,
+        sources=(),
+        resources=(),
+        componentReferences=()
+    )
 
-        # add same-named web dependency with lesser version
-        reference_component.componentReferences = (
-            dataclasses.replace(cref, version='0.0.1'),
-        )
-        assert not examinee.is_obsolete(reference_component=reference_component)
+    # test with reference component not declaring this dependency
+    assert not examinee.is_obsolete(reference_component=reference_component)
 
-        # add same-named resource of greater version but different type
-        # todo: we should actually also test dependencies towards resources of two different types
-        reference_component.resources = (
-            cm.Resource(
-                name='c1',
-                version='6.0.0',
-                type=cm.ResourceType.GENERIC,
-                access=None,
-            ),
-        )
-        assert not examinee.is_obsolete(reference_component=reference_component)
+    # add differently-named dependency with greater version
+    reference_component.componentReferences = (
+        dataclasses.replace(cref, name='other-name'),
+    )
+    assert not examinee.is_obsolete(reference_component=reference_component)
 
-        # finally, add greater dependency of matching type and name
-        reference_component.componentReferences = (
-            dataclasses.replace(cref, version='9.9.9'),
-        )
-        assert examinee.is_obsolete(reference_component=reference_component)
+    # add same-named web dependency with lesser version
+    reference_component.componentReferences = (
+        dataclasses.replace(cref, version='0.0.1'),
+    )
+    assert not examinee.is_obsolete(reference_component=reference_component)
+
+    # add same-named resource of greater version but different type
+    # todo: we should actually also test dependencies towards resources of two different types
+    reference_component.resources = (
+        cm.Resource(
+            name='c1',
+            version='6.0.0',
+            type=cm.ResourceType.GENERIC,
+            access=None,
+        ),
+    )
+    assert not examinee.is_obsolete(reference_component=reference_component)
+
+    # finally, add greater dependency of matching type and name
+    reference_component.componentReferences = (
+        dataclasses.replace(cref, version='9.9.9'),
+    )
+    assert examinee.is_obsolete(reference_component=reference_component)
+
+
+class UpgradePullRequestTest(unittest.TestCase):
 
     def test_target_matches(self):
         old_resource = cm.Resource(
