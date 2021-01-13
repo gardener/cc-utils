@@ -164,21 +164,22 @@ def diff_resources(
 
     left_names_to_resource = {r.name: r for r in left_component.resources}
     right_names_to_resource = {r.name: r for r in right_component.resources}
-    # get left exclisive resources
+    # get left exclusive resources
     for resource in left_resource_identities.values():
         if not resource.name in right_names_to_resource:
             _add_if_not_duplicate(resource_diff.resource_refs_only_left, resource)
 
-    # get right exclusive images
+    # get right exclusive resources
     for resource in right_resource_identities_to_resource.values():
         if not resource.name in left_names_to_resource:
             _add_if_not_duplicate(resource_diff.resource_refs_only_right, resource)
 
+    # groups the resources by name. The version will be used at a later point
     def enumerate_group_pairs(
         left_resources: typing.List[cm.Resource],
         right_resources: typing.List[cm.Resource]
     ) -> typing.Tuple[typing.List[cm.Resource], typing.List[cm.Resource]]:
-        # group the images with the same name on both sides
+        # group the resources with the same name on both sides
         for key in left_names_to_resource.keys():
             left_resource_group = [r for r in left_resources if r.name == key]
             right_resource_group = [r for r in right_resources if r.name == key]
@@ -216,7 +217,7 @@ def diff_resources(
         left_resources = [left_identities.get(id) for id in left_resource_ids]
         right_resources = [right_identities.get(id) for id in right_resource_ids]
 
-        # remove all images present in both
+        # remove all resources present in both
         versions_in_both = {
             r.version for r in left_resources
         } & {
