@@ -58,7 +58,7 @@ cc-utils:
               registry: 'gcr-readwrite'
               image: 'eu.gcr.io/gardener-project/cc/job-image-kaniko'
               dockerfile: 'Dockerfile.kaniko'
-              tag_as_latest: True
+              tag_as_latest: False
 
     pull-request:
       steps:
