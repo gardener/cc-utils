@@ -65,24 +65,24 @@ def diff_components(
     right_components: typing.Tuple[cm.Component],
     ignore_component_names=(),
 ) -> ComponentDiff:
-    left_identities = {
+    left_component_identities = {
         c.identity() for c in left_components if c.name not in ignore_component_names
     }
-    right_identities = {
+    right_component_identities = {
         c.identity() for c in right_components if c.name not in ignore_component_names
     }
 
-    left_only_identities = left_identities - right_identities
-    right_only_identities = right_identities - left_identities
+    left_only_component_identities = left_component_identities - right_component_identities
+    right_only_component_identities = right_component_identities - left_component_identities
 
-    if left_only_identities == right_only_identities:
+    if left_only_component_identities == right_only_component_identities:
         return None # no diff
 
     left_components = tuple((
-        c for c in left_components if c.identity() in left_only_identities
+        c for c in left_components if c.identity() in left_only_component_identities
     ))
     right_components = tuple((
-        c for c in right_components if c.identity() in right_only_identities
+        c for c in right_components if c.identity() in right_only_component_identities
     ))
 
     def find_changed_component(
@@ -100,20 +100,20 @@ def diff_components(
         .as_list()
     # pairs of components (left:right-version)
 
-    left_names = {i.name for i in left_identities}
-    right_names = {i.name for i in right_identities}
+    left_component_names = {i.name for i in left_component_identities}
+    right_component_names = {i.name for i in right_component_identities}
     names_version_changed = {c[0].name for c in components_with_changed_versions}
 
-    both_names = left_names & right_names
-    left_names -= both_names
-    right_names -= both_names
+    both_names = left_component_names & right_component_names
+    left_component_names -= both_names
+    right_component_names -= both_names
 
     return ComponentDiff(
-        cidentities_only_left=left_only_identities,
-        cidentities_only_right=right_only_identities,
+        cidentities_only_left=left_only_component_identities,
+        cidentities_only_right=right_only_component_identities,
         cpairs_version_changed=components_with_changed_versions,
-        names_only_left=left_names,
-        names_only_right=right_names,
+        names_only_left=left_component_names,
+        names_only_right=right_component_names,
         names_version_changed=names_version_changed,
     )
 
@@ -138,11 +138,11 @@ def diff_resources(
 ) -> ResourceDiff:
     if type(left_component) is not cm.Component:
         raise NotImplementedError(
-            f'unsupported {type(left_component)=}. Only cm.Component is supported',
+            f'unsupported {type(left_component)=}',
         )
     if type(right_component) is not cm.Component:
         raise NotImplementedError(
-            f'unsupported {type(right_component)=}. Only cm.Component is supported',
+            f'unsupported {type(right_component)=}',
         )
 
     left_resource_identities = {
