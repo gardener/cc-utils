@@ -1,8 +1,8 @@
 import json
 import typing
+import websockets
 
 import requests
-from requests_toolbelt import MultipartEncoder
 
 import ci.util
 import whitesource.model
@@ -64,41 +64,45 @@ class WhitesourceClient:
             json=body,
         )
 
-    def post_project(
+    def ws_project(
         self,
         extra_whitesource_config: typing.Dict,
         file,
-        filename: str,
         project_name: str,
         requester_email: str,
+        length: int,
+        chunk_size=1024,
     ):
 
-        fields = {
-            'component': (f'{filename}.tar', file, 'application/zip'),
-            'wsConfig': json.dumps({
-                'apiKey': self.api_key,
-                'projectName': project_name,
-                'productToken': self.product_token,
-                'requesterEmail': requester_email,
-                'userKey': self.creds.user_key(),
-                'wssUrl': self.wss_endpoint,
-                'extraWsConfig': extra_whitesource_config,
-            })
+        meta_data = {
+            'chunkSize': chunk_size,
+            'length': length
         }
 
-        # add extra whitesource config
-        for key, value in extra_whitesource_config.items():
-            fields[key] = value
+        ws_config = {
+            'apiKey': self.api_key,
+            'extraWsConfig': extra_whitesource_config,
+            'productToken': self.product_token,
+            'projectName': project_name,
+            'requesterEmail': requester_email,
+            'userKey': self.creds.user_key(),
+            'wssUrl': self.wss_endpoint,
+        }
 
-        m = MultipartEncoder(
-            fields=fields,
-        )
-        return self.request(
-            method='POST',
-            url=self.routes.post_component(),
-            headers={'Content-Type': m.content_type},
-            data=m,
-        )
+        async with websockets.connect(
+            uri=self.routes.ws_component(),
+            ping_interval=1000,
+            ping_timeout=1000,
+            ) as websocket:
+            await websocket.send(json.dumps(meta_data))
+            await websocket.send(json.dumps(ws_config))
+            with open(file, 'rb') as f:
+                while True:
+                    chunk = f.read(chunk_size)
+                    if not chunk:
+                        break
+                    await websocket.send(chunk)
+            return await websocket.recv()
 
     def get_product_risk_report(self):
         body = {
@@ -171,7 +175,7 @@ class WhitesourceRoutes:
         self.extension_endpoint = extension_endpoint
         self.wss_api_endpoint = wss_api_endpoint
 
-    def post_component(self):
+    def ws_component(self):
         return ci.util.urljoin(self.extension_endpoint, 'component')
 
     def get_product_risk_report(self):

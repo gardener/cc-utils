@@ -79,6 +79,7 @@ def scan_component_with_whitesource(
             requester_mail=requester_mail,
             scan_artifact=scan_artifact,
             ws_client=ws_client,
+            chunk_size=1024,
         )
 
     whitesource.util.notify_users(
