@@ -69,8 +69,6 @@ if os.path.exists('/kaniko/executor'):
 else:
   kaniko_executor = '/bin/kaniko'
 
-print(f'{subproc_env=}')
-
 # XXX ugly hack: early-import so we survive kaniko's rampage (will purge container during build)
 import ccc.secrets_server
 import model.container_registry
