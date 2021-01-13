@@ -206,12 +206,19 @@ class UpgradePullRequest:
                 isinstance(reference, cm.Resource):
             raise TypeError(reference)
 
-        if product.v2.COMPONENT_TYPE_NAME != self.reference_type_name:
-            return False
-        if reference.componentName != self.ref_name:
-            return False
+        if isinstance(reference, cm.ComponentReference):
+            if product.v2.COMPONENT_TYPE_NAME != self.reference_type_name:
+                return False
+            if reference.componentName != self.ref_name:
+                return False
+        else: # cm.Resource, already checked above
+            if reference.name != self.ref_name:
+                return False
+            if reference.type.value != self.reference_type_name:
+                return False
+
         reference_version = reference_version or reference.version
-        if reference_version != self.to_ref.version():
+        if reference_version != self.to_ref.version:
             return False
 
         return True
