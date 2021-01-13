@@ -64,7 +64,7 @@ class WhitesourceClient:
             json=body,
         )
 
-    def ws_project(
+    async def ws_project(
         self,
         extra_whitesource_config: typing.Dict,
         file,
