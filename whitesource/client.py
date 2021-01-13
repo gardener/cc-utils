@@ -98,12 +98,11 @@ class WhitesourceClient:
             ) as websocket:
             await websocket.send(json.dumps(meta_data))
             await websocket.send(json.dumps(ws_config))
-            with open(file, 'rb') as f:
-                while True:
-                    chunk = f.read(chunk_size)
-                    if not chunk:
-                        break
-                    await websocket.send(chunk)
+            while True:
+                chunk = file.read(chunk_size)
+                if not chunk:
+                    break
+                await websocket.send(chunk)
             return await websocket.recv()
 
     def get_product_risk_report(self):
