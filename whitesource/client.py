@@ -71,7 +71,9 @@ class WhitesourceClient:
         project_name: str,
         requester_email: str,
         length: int,
-        chunk_size=1024,
+        chunk_size: int,
+        ping_interval: int,
+        ping_timeout: int,
     ):
 
         meta_data = {
@@ -91,8 +93,8 @@ class WhitesourceClient:
 
         async with websockets.connect(
             uri=self.routes.ws_component(),
-            ping_interval=1000,
-            ping_timeout=1000,
+            ping_interval=ping_interval,
+            ping_timeout=ping_timeout,
             ) as websocket:
             await websocket.send(json.dumps(meta_data))
             await websocket.send(json.dumps(ws_config))

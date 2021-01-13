@@ -249,6 +249,8 @@ def scan_artifact_with_ws(
     scan_artifact: sdo.model.ScanArtifact,
     ws_client: whitesource.client.WhitesourceClient,
     chunk_size: int,
+    ping_interval: int,
+    ping_timeout: int,
 ):
     clogger = sdo.util.component_logger(scan_artifact.name)
 
@@ -303,6 +305,8 @@ def scan_artifact_with_ws(
                 requester_email=requester_mail,
                 chunk_size=chunk_size,
                 length=file_size,
+                ping_timeout=ping_timeout,
+                ping_interval=ping_interval,
             )
         )
         clogger.info('scan complete')

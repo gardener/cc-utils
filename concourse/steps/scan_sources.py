@@ -53,6 +53,9 @@ def scan_component_with_whitesource(
     requester_mail: str,
     cve_threshold: float,
     notification_recipients: list,
+    chunk_size=1024,
+    ping_interval=1000,
+    ping_timeout=1000,
 ):
 
     ci.util.info('creating whitesource client')
@@ -79,7 +82,9 @@ def scan_component_with_whitesource(
             requester_mail=requester_mail,
             scan_artifact=scan_artifact,
             ws_client=ws_client,
-            chunk_size=1024,
+            chunk_size=chunk_size,
+            ping_interval=ping_interval,
+            ping_timeout=ping_timeout,
         )
 
     whitesource.util.notify_users(
