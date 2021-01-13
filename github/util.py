@@ -36,7 +36,6 @@ import gci.componentmodel
 import gci.componentmodel as cm
 import ccc.github
 import ci.util
-import product.model
 import product.v2
 import version
 
@@ -263,14 +262,23 @@ class PullRequestUtil(RepositoryHelperBase):
             # backwards compatibility hack
             reference_type_name = 'component'
 
-        reference_type = product.model.reference_type(reference_type_name)
+        if not reference_type_name == 'component':
+            raise NotImplementedError(reference_type_name) # todo: support all resources
 
         ref_name = match.group(2)
         from_version = match.group(3)
         to_version = match.group(4)
 
-        from_ref = reference_type.create(name=ref_name, version=from_version)
-        to_ref = reference_type.create(name=ref_name, version=to_version)
+        from_ref = cm.ComponentReference(
+            name=ref_name,
+            componentName=ref_name,
+            version=from_version,
+        )
+        to_ref = cm.ComponentReference(
+            name=ref_name,
+            componentName=ref_name,
+            version=to_version,
+        )
 
         return UpgradePullRequest(
             pull_request=pull_request,
@@ -284,14 +292,7 @@ class PullRequestUtil(RepositoryHelperBase):
         @param state_filter: all|open|closed (as defined by github api)
         '''
         def pr_to_upgrade_pr(pull_request):
-            try:
-                return self._pr_to_upgrade_pull_request(pull_request=pull_request)
-            except product.model.InvalidComponentReferenceError:
-                if pull_request.state == 'closed':
-                    # silently ignore invalid component names in "old" PRs
-                    pass
-                else:
-                    raise
+            return self._pr_to_upgrade_pull_request(pull_request=pull_request)
 
         parsed_prs = ci.util.FluentIterable(self.repository.pull_requests(state=state_filter)) \
             .filter(self._has_upgrade_pr_title) \
