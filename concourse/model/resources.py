@@ -335,6 +335,15 @@ class RepositoryConfig(Resource):
         return paths['exclude']
 
     def source_labels(self):
+        return [
+            dacite.from_dict(
+                data_class=cm.Label,
+                data=label_dict,
+            ) for label_dict
+            in self.source_label_dicts()
+        ]
+
+    def source_label_dicts(self):
         return self.raw['source_labels']
 
     def is_main_repo(self):
@@ -386,12 +395,8 @@ class RepositoryConfig(Resource):
     def validate(self):
         super().validate()
 
-        for label in self.source_labels():
-            try:
-                dacite.from_dict(
-                    data_class=cm.Label,
-                    data=label,
-                    config=dacite.Config(strict=True),
-                )
-            except dacite.DaciteError as e:
-                raise ModelValidationError(f'Invalid {label=}') from e
+        try:
+            for label in self.source_labels():
+                pass # source_labels converts into cm.Label
+        except dacite.DaciteError as e:
+            raise ModelValidationError(f'Invalid {label=}') from e

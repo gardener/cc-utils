@@ -3,6 +3,7 @@
   filter="indent_func(indent),trim"
 >
 <%
+import dataclasses
 from makoutil import indent_func
 from concourse.steps import step_lib
 import gci.componentmodel as cm
@@ -13,7 +14,6 @@ main_repo_labels = main_repo.source_labels()
 main_repo_path_env_var = main_repo.logical_name().replace('-', '_').upper() + '_PATH'
 other_repos = [r for r in job_variant.repositories() if not r.is_main_repo()]
 ctx_repository_base_url = descriptor_trait.ctx_repository_base_url()
-
 
 # label main repo as main
 if not 'cloud.gardener/cicd/source' in [label.name for label in main_repo_labels]:
@@ -73,7 +73,7 @@ base_descriptor_v2 = base_component_descriptor_v2(
     component_name_v2=component_name_v2,
     component_labels=component_labels,
     effective_version=effective_version,
-    source_labels=${main_repo_labels},
+    source_labels=${[dataclasses.asdict(label) for label in main_repo_labels]},
     ctx_repository_base_url=ctx_repository_base_url,
     commit=commit_hash,
 )
