@@ -195,3 +195,94 @@ def test_diff_resources(iref):
     assert len(resource_diff.resource_refs_only_left) == 2
     assert len(resource_diff.resource_refs_only_right) == 1
     assert len(resource_diff.resourcepairs_version_changed) == 2
+
+
+def test_label_usage():
+    component_name = 'c'
+    component_version = '1.2.3'
+    sources = [
+        cm.ComponentSource(
+            name='repo_aux_source',
+            access=cm.GithubAccess(
+                type=cm.AccessType.GITHUB,
+                ref='refs/heads/master',
+                repoUrl='github.com/otherOrg/otherRepo'
+            ),
+            labels=[
+                cm.Label(
+                    name='cloud.gardener/cicd/source',
+                    value={'repository-classification': 'auxiliary'},
+                ),
+            ],
+        ),
+        cm.ComponentSource(
+            name='repo_main_source',
+            access=cm.GithubAccess(
+                type=cm.AccessType.GITHUB,
+                ref='refs/heads/master',
+                repoUrl='github.com/org/repo'
+            ),
+            labels=[
+                cm.Label(
+                    name='cloud.gardener/cicd/source',
+                    value={'repository-classification': 'main'},
+                ),
+            ],
+        ),
+    ]
+    component_with_source_label = cm.Component(
+        name=component_name,
+        version=component_version,
+        sources=sources,
+        componentReferences=[],
+        labels=[],
+        repositoryContexts=[
+            cm.RepositoryContext(
+                baseUrl='eu.gcr.io/sap-se-gcr-k8s-private/cnudie/gardener/landscapes',
+                type='ociRegistry',
+            ),
+        ],
+        resources=[],
+        provider=[],
+    )
+
+    main_source = cnudie.util.get_main_source_for_component(component_with_source_label,)
+    assert main_source.labels[0].value == {'repository-classification': 'main'}
+    assert main_source.name == 'repo_main_source'
+
+    component_without_source_label = cm.Component(
+        name=component_name,
+        version=component_version,
+        sources=[
+            cm.ComponentSource(
+                name='repo_main_source',
+                access=cm.GithubAccess(
+                    type=cm.AccessType.GITHUB,
+                    ref='refs/heads/master',
+                    repoUrl='github.com/org/repo'
+                ),
+            ),
+            cm.ComponentSource(
+                name='repo_aux_source',
+                access=cm.GithubAccess(
+                    type=cm.AccessType.GITHUB,
+                    ref='refs/heads/master',
+                    repoUrl='github.com/otherOrg/otherRepo'
+                ),
+            ),
+        ],
+        componentReferences=[],
+        labels=[],
+        repositoryContexts=[
+            cm.RepositoryContext(
+                baseUrl='eu.gcr.io/sap-se-gcr-k8s-private/cnudie/gardener/landscapes',
+                type='ociRegistry',
+            ),
+        ],
+        resources=[],
+        provider=[],
+    )
+
+    main_source = cnudie.util.get_main_source_for_component(component_without_source_label)
+
+    assert main_source.name == 'repo_main_source'
