@@ -7,7 +7,7 @@ cvss_score = float
 
 
 @dataclasses.dataclass
-class WhitesourceProject:
+class WhiteSrcProject:
     name: str
     token: str
     vulnerability_report: dict
@@ -30,7 +30,7 @@ class WhitesourceProject:
 
 
 @dataclasses.dataclass
-class WssDisplayProject:
+class WhiteSrcDisplayProject:
     name: str
     highest_cve_name: str
     highest_cve_score: float

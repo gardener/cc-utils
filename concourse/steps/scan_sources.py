@@ -4,10 +4,11 @@ import ci.util
 import checkmarx.util
 import product.model
 import product.util
+import product.v2
+import sdo.util
 import whitesource.client
 import whitesource.component
 import whitesource.util
-import product.v2
 
 import gci.componentmodel as cm
 
@@ -54,13 +55,13 @@ def scan_component_with_whitesource(
     cve_threshold: float,
     notification_recipients: list,
 ):
-
-    ci.util.info('creating whitesource client')
+    clogger = sdo.util.component_logger(__name__)
+    clogger.info('creating whitesource client')
     ws_client = whitesource.util.create_whitesource_client(
         whitesource_cfg_name=whitesource_cfg_name,
     )
 
-    ci.util.info('parsing component descriptor')
+    clogger.info('parsing component descriptor')
     component_descriptor = cm.ComponentDescriptor.from_dict(
         ci.util.parse_yaml_file(component_descriptor_path)
     )
@@ -71,10 +72,10 @@ def scan_component_with_whitesource(
     # get scan artifacts with configured label
     scan_artifacts_gen = whitesource.component._get_scan_artifacts_from_components(components)
     scan_artifacts = tuple(scan_artifacts_gen)
-    ci.util.info(f'will scan {len(scan_artifacts)} artifacts')
+    clogger.info(f'will scan {len(scan_artifacts)} artifacts')
 
     for scan_artifact in scan_artifacts:
-        whitesource.util.scan_artifact_with_ws(
+        whitesource.util.scan_artifact_with_white_src(
             extra_whitesource_config=extra_whitesource_config,
             requester_mail=requester_mail,
             scan_artifact=scan_artifact,

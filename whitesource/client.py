@@ -1,8 +1,8 @@
 import json
 import typing
+import websockets
 
 import requests
-from requests_toolbelt import MultipartEncoder
 
 import ci.util
 import whitesource.model
@@ -64,41 +64,49 @@ class WhitesourceClient:
             json=body,
         )
 
-    def post_project(
+    async def upload_to_project(
         self,
         extra_whitesource_config: typing.Dict,
-        file,
-        filename: str,
+        file: typing.IO,
         project_name: str,
         requester_email: str,
+        length: int,
+        chunk_size=1024,
+        ping_interval=1000,
+        ping_timeout=1000,
     ):
-
-        fields = {
-            'component': (f'{filename}.tar', file, 'application/zip'),
-            'wsConfig': json.dumps({
-                'apiKey': self.api_key,
-                'projectName': project_name,
-                'productToken': self.product_token,
-                'requesterEmail': requester_email,
-                'userKey': self.creds.user_key(),
-                'wssUrl': self.wss_endpoint,
-                'extraWsConfig': extra_whitesource_config,
-            })
+        meta_data = {
+            'chunkSize': chunk_size,
+            'length': length
         }
 
-        # add extra whitesource config
-        for key, value in extra_whitesource_config.items():
-            fields[key] = value
+        ws_config = {
+            'apiKey': self.api_key,
+            'extraWsConfig': extra_whitesource_config,
+            'productToken': self.product_token,
+            'projectName': project_name,
+            'requesterEmail': requester_email,
+            'userKey': self.creds.user_key(),
+            'wssUrl': self.wss_endpoint,
+        }
 
-        m = MultipartEncoder(
-            fields=fields,
-        )
-        return self.request(
-            method='POST',
-            url=self.routes.post_component(),
-            headers={'Content-Type': m.content_type},
-            data=m,
-        )
+        async with websockets.connect(
+            uri=self.routes.upload_to_project(),
+            ping_interval=ping_interval,
+            ping_timeout=ping_timeout,
+            ) as websocket:
+            await websocket.send(json.dumps(meta_data))
+            await websocket.send(json.dumps(ws_config))
+            sent = 0
+            while sent < length:
+                chunk = file.read(chunk_size)
+                if len(chunk) == 0:
+                    await websocket.close()
+                    raise OSError('Desired length does not fit actual file length')
+                await websocket.send(chunk)
+                sent += len(chunk)
+
+            return json.loads(await websocket.recv())
 
     def get_product_risk_report(self):
         body = {
@@ -115,7 +123,7 @@ class WhitesourceClient:
 
     def get_all_projects_of_product(
         self,
-    ) -> typing.List[whitesource.model.WhitesourceProject]:
+    ) -> typing.List[whitesource.model.WhiteSrcProject]:
         body = {
             'requestType': 'getAllProjects',
             'userKey': self.creds.user_key(),
@@ -132,9 +140,9 @@ class WhitesourceClient:
         if errorCode := res.get('errorCode'):
             raise requests.HTTPError(f'Error {errorCode}: {res.get("errorMessage")}')
 
-        projects: typing.List[whitesource.model.WhitesourceProject] = []
+        projects: typing.List[whitesource.model.WhiteSrcProject] = []
         for element in res['projects']:
-            projects.append(whitesource.model.WhitesourceProject(
+            projects.append(whitesource.model.WhiteSrcProject(
                 name=element['projectName'],
                 token=element['projectName'],
                 vulnerability_report=self.get_project_vulnerability_report(
@@ -171,7 +179,7 @@ class WhitesourceRoutes:
         self.extension_endpoint = extension_endpoint
         self.wss_api_endpoint = wss_api_endpoint
 
-    def post_component(self):
+    def upload_to_project(self):
         return ci.util.urljoin(self.extension_endpoint, 'component')
 
     def get_product_risk_report(self):

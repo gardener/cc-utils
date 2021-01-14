@@ -1,7 +1,6 @@
 import tarfile
 import typing
 
-import github3.github
 import github3.repos
 import dacite
 
@@ -61,7 +60,7 @@ def download_component(
     files_to_scan = 0
     filtered_out_files = 0
 
-    with tarfile.open(fileobj=target, mode='w|') as target, \
+    with tarfile.open(fileobj=target, mode='w|') as tar_out, \
         github_repo._get(url, allow_redirects=True, stream=True,) as res, \
         tarfile.open(fileobj=res.raw, mode='r|*') as src:
 
@@ -72,11 +71,12 @@ def download_component(
 
         for tar_info in src:
             if path_filter_func(tar_info.name[path_offset:]):
-                target.addfile(tarinfo=tar_info, fileobj=src.fileobj)
+                tar_out.addfile(tarinfo=tar_info, fileobj=src.fileobj)
                 files_to_scan += 1
             else:
                 filtered_out_files += 1
 
     clogger.info(f'{files_to_scan=}, {filtered_out_files=}')
+    tar_out_size = target.tell()
 
-    return component_filename
+    return tar_out_size

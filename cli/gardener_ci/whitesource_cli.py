@@ -1,5 +1,4 @@
-import json
-from json.decoder import JSONDecodeError as JSONDecodeError
+import typing
 
 import concourse.steps.scan_sources
 
@@ -8,15 +7,10 @@ def upload_and_scan_component(
     whitesource_cfg_name: str,
     component_descriptor_path: str,
     requester_mail: str,
-    component_name: str,
-    extra_whitesource_config: str = {},
-    notification_recipients: [str] = [],
+    notification_recipients: typing.List[str] = [],
     cve_threshold: float = 5.0,
+    extra_whitesource_config: typing.Dict = {},
 ):
-    try:
-        extra_whitesource_config = json.loads(extra_whitesource_config)
-    except JSONDecodeError as e:
-        raise e
 
     concourse.steps.scan_sources.scan_component_with_whitesource(
         whitesource_cfg_name=whitesource_cfg_name,
