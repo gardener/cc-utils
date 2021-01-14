@@ -17,6 +17,9 @@ import whitesource.component
 import whitesource.model
 
 
+clogger = sdo.util.component_logger(__name__)
+
+
 @functools.lru_cache()
 def create_whitesource_client(
     whitesource_cfg_name: str,
@@ -35,7 +38,7 @@ def create_whitesource_client(
 
 
 def generate_reporting_tables(
-    projects: typing.List[whitesource.model.WhitesourceProject],
+    projects: typing.List[whitesource.model.WhiteSrcProject],
     threshold: float,
     tablefmt,
 ):
@@ -43,12 +46,12 @@ def generate_reporting_tables(
     tabulate.htmlescape = lambda x: x
 
     # split respecting CVSS-V3 threshold
-    above: typing.List[whitesource.model.WssDisplayProject] = []
-    below: typing.List[whitesource.model.WssDisplayProject] = []
+    above: typing.List[whitesource.model.WhiteSrcDisplayProject] = []
+    below: typing.List[whitesource.model.WhiteSrcDisplayProject] = []
 
     for project in projects:
         max_cve = project.max_cve()
-        display_project = whitesource.model.WssDisplayProject(
+        display_project = whitesource.model.WhiteSrcDisplayProject(
             name=project.name,
             highest_cve_name=max_cve[0],
             highest_cve_score=float(max_cve[1]),
@@ -85,7 +88,7 @@ def generate_reporting_tables(
 
 
 def _create_table(
-    data: typing.List[whitesource.model.WssDisplayProject],
+    data: typing.List[whitesource.model.WhiteSrcDisplayProject],
     table_header,
     tablefmt,
 ):
@@ -105,7 +108,7 @@ def _create_table(
 def _gen_table_from_data(
     table_headers,
     tablefmt,
-    data: typing.List[whitesource.model.WssDisplayProject],
+    data: typing.List[whitesource.model.WhiteSrcDisplayProject],
 ):
     table_data = (
         (
@@ -200,7 +203,7 @@ def notify_users(
     notification_recipients: typing.List[str],
     product_name: str
 ):
-    ci.util.info('retrieving all projects')
+    clogger.info('retrieving all projects')
     projects = ws_client.get_all_projects_of_product()
 
     if len(projects) == 0:
@@ -209,7 +212,7 @@ def notify_users(
         )
         return
 
-    ci.util.info('generate simple reporting table for console output')
+    clogger.info('generate simple reporting table for console output')
     tables = generate_reporting_tables(
         projects=projects,
         threshold=cve_threshold,
@@ -233,24 +236,21 @@ def notify_users(
 
         # TODO fix mail pdf attachment
         # add line break after 72 lines to avoid line too long error
-        ci.util.info('sending notification')
+        clogger.info('sending notification')
         send_mail(
             body=body,
             recipients=notification_recipients,
             product_name=product_name,
         )
     else:
-        ci.util.warning('No recipients defined. No emails will be sent...')
+        clogger.warning('No recipients defined. No emails will be sent...')
 
 
-def scan_artifact_with_ws(
+def scan_artifact_with_white_src(
     extra_whitesource_config: typing.Dict,
     requester_mail: str,
     scan_artifact: sdo.model.ScanArtifact,
     ws_client: whitesource.client.WhitesourceClient,
-    chunk_size: int,
-    ping_interval: int,
-    ping_timeout: int,
 ):
     clogger = sdo.util.component_logger(scan_artifact.name)
 
@@ -284,31 +284,30 @@ def scan_artifact_with_ws(
 
     with tempfile.TemporaryFile() as tmp_file:
         clogger.info('downloading component for scan')
-        whitesource.component.download_component(
+        file_size = whitesource.component.download_component(
             clogger=clogger,
             github_repo=github_repo,
             path_filter_func=path_filter_func,
             ref=commit_hash,
             target=tmp_file,
         )
-        file_size = tmp_file.tell()
+
         # don't change the following line, lest things no longer work
         # sets the file position at the offset 0 == start of the file
         tmp_file.seek(0)
 
         clogger.info('sending component to scan backend...')
-        asyncio.get_event_loop().run_until_complete(
-            ws_client.ws_project(
+
+        res = asyncio.run(
+            ws_client.upload_to_project(
                 extra_whitesource_config=extra_whitesource_config,
                 file=tmp_file,
                 project_name=scan_artifact.name,
                 requester_email=requester_mail,
-                chunk_size=chunk_size,
                 length=file_size,
-                ping_timeout=ping_timeout,
-                ping_interval=ping_interval,
             )
         )
+        clogger.info(res['message'])
         clogger.info('scan complete')
         # TODO save scanned commit hash or tag in project tag show scanned version
         # version for agent will create a new project

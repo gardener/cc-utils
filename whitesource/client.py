@@ -64,18 +64,17 @@ class WhitesourceClient:
             json=body,
         )
 
-    async def ws_project(
+    async def upload_to_project(
         self,
         extra_whitesource_config: typing.Dict,
-        file,
+        file: typing.IO,
         project_name: str,
         requester_email: str,
         length: int,
-        chunk_size: int,
-        ping_interval: int,
-        ping_timeout: int,
+        chunk_size=1024,
+        ping_interval=1000,
+        ping_timeout=1000,
     ):
-
         meta_data = {
             'chunkSize': chunk_size,
             'length': length
@@ -92,19 +91,22 @@ class WhitesourceClient:
         }
 
         async with websockets.connect(
-            uri=self.routes.ws_component(),
+            uri=self.routes.upload_to_project(),
             ping_interval=ping_interval,
             ping_timeout=ping_timeout,
             ) as websocket:
             await websocket.send(json.dumps(meta_data))
             await websocket.send(json.dumps(ws_config))
-            while True:
+            sent = 0
+            while sent < length:
                 chunk = file.read(chunk_size)
-                if not chunk:
-                    break
+                if len(chunk) == 0:
+                    await websocket.close()
+                    raise OSError('Desired length does not fit actual file length')
                 await websocket.send(chunk)
+                sent += len(chunk)
 
-            return await websocket.recv()
+            return json.loads(await websocket.recv())
 
     def get_product_risk_report(self):
         body = {
@@ -121,7 +123,7 @@ class WhitesourceClient:
 
     def get_all_projects_of_product(
         self,
-    ) -> typing.List[whitesource.model.WhitesourceProject]:
+    ) -> typing.List[whitesource.model.WhiteSrcProject]:
         body = {
             'requestType': 'getAllProjects',
             'userKey': self.creds.user_key(),
@@ -138,9 +140,9 @@ class WhitesourceClient:
         if errorCode := res.get('errorCode'):
             raise requests.HTTPError(f'Error {errorCode}: {res.get("errorMessage")}')
 
-        projects: typing.List[whitesource.model.WhitesourceProject] = []
+        projects: typing.List[whitesource.model.WhiteSrcProject] = []
         for element in res['projects']:
-            projects.append(whitesource.model.WhitesourceProject(
+            projects.append(whitesource.model.WhiteSrcProject(
                 name=element['projectName'],
                 token=element['projectName'],
                 vulnerability_report=self.get_project_vulnerability_report(
@@ -177,7 +179,7 @@ class WhitesourceRoutes:
         self.extension_endpoint = extension_endpoint
         self.wss_api_endpoint = wss_api_endpoint
 
-    def ws_component(self):
+    def upload_to_project(self):
         return ci.util.urljoin(self.extension_endpoint, 'component')
 
     def get_product_risk_report(self):
