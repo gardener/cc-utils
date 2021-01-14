@@ -105,7 +105,7 @@ def get_source_repo_config_for_component_reference(
     if not resolved_component.sources:
         raise ValueError(f'{resolved_component.name=} has no sources')
 
-    main_source = cnudie.util.get_main_source_for_component(resolved_component)
+    main_source = cnudie.util.determine_main_source_for_component(resolved_component)
 
     return (
         ccc.github.github_cfg_for_hostname(main_source.access.hostname()),

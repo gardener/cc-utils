@@ -8,12 +8,11 @@ import product.v2
 import gci.componentmodel as cm
 
 
-def get_main_source_for_component(component: cm.Component) -> cm.ComponentSource:
+def determine_main_source_for_component(component: cm.Component) -> cm.ComponentSource:
     for source in component.sources:
-        for label in source.labels:
-            if label.name == 'cloud.gardener/cicd/source':
-                if label.value.get('repository-classification') == 'main':
-                    return source
+        if label := source.find_label('cloud.gardener/cicd/source'):
+            if label.value.get('repository-classification') == 'main':
+                return source
 
     # if no label was found use heuristic approach
     # heuristic: use first source

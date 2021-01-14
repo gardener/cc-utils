@@ -246,7 +246,7 @@ def test_label_usage():
         provider=[],
     )
 
-    main_source = cnudie.util.get_main_source_for_component(component_with_source_label,)
+    main_source = cnudie.util.determine_main_source_for_component(component_with_source_label,)
     assert main_source.labels[0].value == {'repository-classification': 'main'}
     assert main_source.name == 'repo_main_source'
 
@@ -283,6 +283,6 @@ def test_label_usage():
         provider=[],
     )
 
-    main_source = cnudie.util.get_main_source_for_component(component_without_source_label)
+    main_source = cnudie.util.determine_main_source_for_component(component_without_source_label)
 
     assert main_source.name == 'repo_main_source'
