@@ -23,6 +23,7 @@ import github3.exceptions
 
 import ccc.github
 import ci.util
+import cnudie.util
 import concourse.model.traits.update_component_deps
 import concourse.steps.component_descriptor_util as cdu
 import github.util
@@ -104,14 +105,12 @@ def get_source_repo_config_for_component_reference(
     if not resolved_component.sources:
         raise ValueError(f'{resolved_component.name=} has no sources')
 
-    # heuristic: use first source
-    # TODO: Use cd-v2 label
-    access = resolved_component.sources[0].access
+    main_source = cnudie.util.get_main_source_for_component(resolved_component)
 
     return (
-        ccc.github.github_cfg_for_hostname(access.hostname()),
-        access.org_name(),
-        access.repository_name(),
+        ccc.github.github_cfg_for_hostname(main_source.access.hostname()),
+        main_source.access.org_name(),
+        main_source.access.repository_name(),
     )
 
 
