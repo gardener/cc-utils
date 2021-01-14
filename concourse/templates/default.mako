@@ -60,12 +60,12 @@ def suppress_parallel_execution(variant):
   return False
 
 output_image_descriptors = {}
-need_image_resources = False # XXX migration-code - rm once fully switched to kaniko
+needed_image_resources = []  # XXX migration-code - rm once fully switched to kaniko
 
 for variant in filter(has_publish_trait, pipeline_definition.variants()):
   publish_trait = variant.trait('publish')
   if publish_trait.oci_builder() is OciBuilder.CONCOURSE_IMAGE_RESOURCE:
-    need_image_resources = True
+    needed_image_resources.extend((d.name() for d in publish_trait.dockerimages()))
 
   for image_descriptor in publish_trait.dockerimages():
     if image_descriptor.name() in output_image_descriptors:
@@ -112,8 +112,8 @@ ${include_pull_request_resource_type()}
 resources:
 ${render_repositories(pipeline_definition=pipeline_definition, cfg_set=config_set)}
 
-% if need_image_resources:
 % for descriptor in output_image_descriptors.values():
+% if descriptor.name() in needed_image_resources:
 <%
   custom_registry_cfg_name = descriptor.registry_name()
   if not custom_registry_cfg_name:
@@ -126,8 +126,8 @@ ${container_registry_image_resource(
   image_reference=descriptor.image_reference(),
   registry_cfg=registry_cfg,
 )}
-% endfor
 % endif
+% endfor
 % for variant in pipeline_definition.variants():
 % if has_cron_trait(variant):
 <%
