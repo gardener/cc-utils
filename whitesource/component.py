@@ -6,7 +6,6 @@ import dacite
 
 import sdo.labels
 import sdo.model
-import whitesource.model
 
 import gci.componentmodel as cm
 
