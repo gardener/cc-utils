@@ -264,6 +264,7 @@ def create_upgrade_pr(
     cmd_env['DEPENDENCY_VERSION'] = to_version
     cmd_env['REPO_DIR'] = repo_dir
     cmd_env['GITHUB_CFG_NAME'] = github_cfg_name
+    cmd_env['CTX_REPO_URL'] = component.current_repository_ctx().baseUrl
 
     # create upgrade diff
     subprocess.run(
