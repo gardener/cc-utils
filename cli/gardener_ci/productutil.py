@@ -12,24 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import itertools
-import github3.exceptions
 
 import ccc.protecode
-from ci.util import CliHints, CliHint, parse_yaml_file, ctx, fail, info
+from ci.util import CliHints, CliHint, parse_yaml_file, ctx
 from product.model import (
-    ComponentReference,
     ComponentDescriptor,
-)
-from product.util import (
-    _enumerate_effective_images,
-    ComponentDescriptorResolver,
 )
 from protecode.util import (
     upload_grouped_images,
     ProcessingMode
 )
-import product.xml
 
 
 def transport_triages(
@@ -112,40 +106,3 @@ def upload_grouped_product_images(
         processing_mode=processing_mode,
         reference_group_ids=reference_group_ids,
     )
-
-
-def component_descriptor_to_xml(
-    component_descriptor: CliHints.existing_file(),
-    out_file: str,
-):
-    component_descriptor = ComponentDescriptor.from_dict(parse_yaml_file(component_descriptor))
-
-    image_references = [
-        container_image for _, container_image
-        in _enumerate_effective_images(component_descriptor=component_descriptor)
-    ]
-
-    result_xml = product.xml.container_image_refs_to_xml(
-        image_references,
-    )
-
-    result_xml.write(out_file)
-
-
-def retrieve_component_descriptor(
-    name: str,
-    version: str,
-):
-    cfg_factory = ctx().cfg_factory()
-
-    resolver = ComponentDescriptorResolver(
-        cfg_factory=cfg_factory,
-    )
-
-    component_reference = ComponentReference.create(name=name, version=version)
-    try:
-        resolved_descriptor = resolver.retrieve_raw_descriptor(component_reference)
-    except github3.exceptions.NotFoundError:
-        fail('no component descriptor found: {n}:{v}'.format(n=name, v=version))
-
-    print(resolved_descriptor)
