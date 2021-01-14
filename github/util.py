@@ -240,7 +240,7 @@ class PullRequestUtil(RepositoryHelperBase):
         if not isinstance(reference, gci.componentmodel.ComponentReference):
             raise TypeError(reference)
 
-        type_name == product.v2.COMPONENT_TYPE_NAME
+        type_name = product.v2.COMPONENT_TYPE_NAME
         reference_name = reference.componentName
 
         return f'[ci:{type_name}:{reference_name}:{from_version}->{to_version}]'

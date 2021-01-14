@@ -39,6 +39,7 @@ class MetaTraitTransformer(TraitTransformer):
             raw_dict={},
             is_synthetic=True,
             notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
+            injected_by_trait=self.name,
             script_type=ScriptType.PYTHON3,
         )
         self.meta_step.add_output(name=DIR_NAME, variable_name=ENV_VAR_NAME)

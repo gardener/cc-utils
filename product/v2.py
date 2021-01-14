@@ -102,10 +102,10 @@ def _normalise_component_name(component_name:str) -> str:
 
 
 def ensure_is_v2(
-    component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
+    component_descriptor_v2: cm.ComponentDescriptor,
 ):
     schema_version = component_descriptor_v2.meta.schemaVersion
-    if not schema_version is gci.componentmodel.SchemaVersion.V2:
+    if not schema_version is cm.SchemaVersion.V2:
         raise RuntimeError(f'unsupported component-descriptor-version: {schema_version=}')
 
 
@@ -165,6 +165,7 @@ def download_component_descriptor_v2(
     ctx_repo_base_url: str,
     absent_ok: bool=False,
     cache_dir: str=None,
+    validation_mode: cm.ValidationMode=cm.ValidationMode.WARN,
 ):
     target_ref = _target_oci_ref_from_ctx_base_url(
         component_name=component_name,
@@ -180,7 +181,8 @@ def download_component_descriptor_v2(
         )
         if os.path.isfile(descriptor_path):
             return cm.ComponentDescriptor.from_dict(
-                ci.util.parse_yaml_file(descriptor_path)
+                ci.util.parse_yaml_file(descriptor_path),
+                validation_mode=validation_mode,
             )
         else:
             base_dir = os.path.dirname(descriptor_path)
@@ -351,6 +353,7 @@ def upload_component_descriptor_v2_to_oci_registry(
 def retrieve_component_descriptor_from_oci_ref(
     manifest_oci_image_ref: str,
     absent_ok=False,
+    validation_mode: cm.ValidationMode=cm.ValidationMode.WARN,
 ):
     client = ccc.oci.oci_client()
 
@@ -431,6 +434,7 @@ def resolve_dependency(
         ctx_repo_base_url=repository_ctx_base_url or component.current_repository_ctx().baseUrl,
         cache_dir=cache_dir,
         absent_ok=False,
+        validation_mode=cm.ValidationMode.NONE,
     )
 
 
