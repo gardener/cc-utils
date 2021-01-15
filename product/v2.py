@@ -392,7 +392,7 @@ def retrieve_component_descriptor_from_oci_ref(
         layer_mimetype = manifest.layers[0].mediaType
 
     if not layer_mimetype == gci.oci.component_descriptor_mimetype:
-        print(f'warning: {layer_mimetype=} was unexpected')
+        print(f'warning: {manifest_oci_image_ref=} {layer_mimetype=} was unexpected')
         # XXX: check for non-tar-variant
 
     blob_res = client.blob(
