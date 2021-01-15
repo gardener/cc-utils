@@ -10,14 +10,14 @@ import ci.util
 import mailutil
 import product.util
 import reutil
-import sdo.util
-import sdo.model
+import dso.util
+import dso.model
 import whitesource.client
 import whitesource.component
 import whitesource.model
 
 
-clogger = sdo.util.component_logger(__name__)
+clogger = dso.util.component_logger(__name__)
 
 
 @functools.lru_cache()
@@ -249,10 +249,10 @@ def notify_users(
 def scan_artifact_with_white_src(
     extra_whitesource_config: typing.Dict,
     requester_mail: str,
-    scan_artifact: sdo.model.ScanArtifact,
+    scan_artifact: dso.model.ScanArtifact,
     ws_client: whitesource.client.WhitesourceClient,
 ):
-    clogger = sdo.util.component_logger(scan_artifact.name)
+    clogger = dso.util.component_logger(scan_artifact.name)
 
     clogger.info('init scan')
     github_api = ccc.github.github_api_from_gh_access(access=scan_artifact.access)

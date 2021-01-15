@@ -27,7 +27,7 @@ import product.util
 
 import gci.componentmodel as cm
 import product.v2
-import sdo.labels
+import dso.labels
 
 from protecode.scanning_util import (
     ResourceGroup,
@@ -123,8 +123,8 @@ def upload_grouped_images(
                 return False
 
             # check for scanning labels on resource in cd
-            if label := resource.find_label(name=sdo.labels.ScanLabelName.BINARY_SCAN.value):
-                return label.value.policy is sdo.labels.ScanPolicy.SCAN
+            if label := resource.find_label(name=dso.labels.ScanLabelName.BINARY_SCAN.value):
+                return label.value.policy is dso.labels.ScanPolicy.SCAN
             else:
                 return True
 

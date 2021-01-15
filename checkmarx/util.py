@@ -22,8 +22,8 @@ import mailutil
 import product.util
 import product.v2
 import reutil
-import sdo.labels
-import sdo.model
+import dso.labels
+import dso.model
 
 import gci.componentmodel as cm
 
@@ -73,13 +73,13 @@ def _get_scan_artifacts_from_components(
 
             cx_label = get_source_scan_label_from_labels(source.labels)
 
-            if not cx_label or cx_label.policy is sdo.labels.ScanPolicy.SCAN:
-                yield sdo.model.ScanArtifact(
+            if not cx_label or cx_label.policy is dso.labels.ScanPolicy.SCAN:
+                yield dso.model.ScanArtifact(
                     access=source.access,
                     name=f'{component.name}_{source.identity(peers=component.sources)}',
                     label=cx_label,
                 )
-            elif cx_label.policy is sdo.labels.ScanPolicy.SKIP:
+            elif cx_label.policy is dso.labels.ScanPolicy.SKIP:
                 continue
             else:
                 raise NotImplementedError
@@ -87,18 +87,18 @@ def _get_scan_artifacts_from_components(
 
 def get_source_scan_label_from_labels(labels: typing.Sequence[cm.Label]):
     for label in labels:
-        if sdo.labels.ScanLabelName(label.name) is sdo.labels.ScanLabelName.SOURCE_SCAN:
+        if dso.labels.ScanLabelName(label.name) is dso.labels.ScanLabelName.SOURCE_SCAN:
             return dacite.from_dict(
-                sdo.labels.SourceScanHint,
+                dso.labels.SourceScanHint,
                 data=label.value,
-                config=dacite.Config(cast=[sdo.labels.ScanPolicy])
+                config=dacite.Config(cast=[dso.labels.ScanPolicy])
             )
 
 
 def scan_artifacts(
     cx_client: checkmarx.client.CheckmarxClient,
     max_workers: int,
-    scan_artifacts: typing.Tuple[sdo.model.ScanArtifact],
+    scan_artifacts: typing.Tuple[dso.model.ScanArtifact],
     team_id: str,
     threshold: int,
     exclude_paths: typing.Sequence[str] = (),
@@ -120,7 +120,7 @@ def scan_artifacts(
     )
 
     def init_scan(
-        scan_artifact: sdo.model.ScanArtifact,
+        scan_artifact: dso.model.ScanArtifact,
     ) -> typing.Union[model.ScanResult, model.FailedScan]:
         nonlocal cx_client
         nonlocal scan_func
@@ -216,7 +216,7 @@ def upload_and_scan_gh_artifact(
 
 def scan_gh_artifact(
     cx_project: checkmarx.project.CheckmarxProject,
-    scan_artifact: sdo.model.ScanArtifact,
+    scan_artifact: dso.model.ScanArtifact,
     exclude_paths: typing.Sequence[str] = (),
     include_paths: typing.Sequence[str] = (),
 ) -> model.ScanResult:

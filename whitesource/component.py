@@ -4,18 +4,18 @@ import typing
 import github3.repos
 import dacite
 
-import sdo.labels
-import sdo.model
+import dso.labels
+import dso.model
 
 import gci.componentmodel as cm
 
 
-def _get_ws_label_from_source(source: cm.ComponentSource) -> sdo.labels.SourceIdHint:
-    if label := source.find_label(sdo.labels.ScanLabelName.SOURCE_ID.value):
+def _get_ws_label_from_source(source: cm.ComponentSource) -> dso.labels.SourceIdHint:
+    if label := source.find_label(dso.labels.ScanLabelName.SOURCE_ID.value):
         return dacite.from_dict(
-            data_class=sdo.labels.SourceIdHint,
+            data_class=dso.labels.SourceIdHint,
             data=label.value,
-            config=dacite.Config(cast=[sdo.labels.ScanPolicy]),
+            config=dacite.Config(cast=[dso.labels.ScanPolicy]),
         )
 
 
@@ -32,13 +32,13 @@ def _get_scan_artifacts_from_components(
 
             ws_hint = _get_ws_label_from_source(source)
 
-            if not ws_hint or ws_hint.policy is sdo.labels.ScanPolicy.SCAN:
-                yield sdo.model.ScanArtifact(
+            if not ws_hint or ws_hint.policy is dso.labels.ScanPolicy.SCAN:
+                yield dso.model.ScanArtifact(
                     access=source.access,
                     label=ws_hint,
                     name=f'{component.name}_{source.identity(component.sources)}'
                 )
-            elif ws_hint.policy is sdo.labels.ScanPolicy.SKIP:
+            elif ws_hint.policy is dso.labels.ScanPolicy.SKIP:
                 continue
             else:
                 raise NotImplementedError

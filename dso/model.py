@@ -3,7 +3,7 @@ import typing
 
 import gci.componentmodel as cm
 
-import sdo.labels
+import dso.labels
 
 
 # abstraction of component model v2 source and resource
@@ -16,4 +16,4 @@ class ScanArtifact:
         cm.HttpAccess,
         cm.ResourceAccess,
     ]
-    label: sdo.labels.ScanLabelValue
+    label: dso.labels.ScanLabelValue

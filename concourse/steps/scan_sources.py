@@ -5,7 +5,7 @@ import checkmarx.util
 import product.model
 import product.util
 import product.v2
-import sdo.util
+import dso.util
 import whitesource.client
 import whitesource.component
 import whitesource.util
@@ -55,7 +55,7 @@ def scan_component_with_whitesource(
     cve_threshold: float,
     notification_recipients: list,
 ):
-    clogger = sdo.util.component_logger(__name__)
+    clogger = dso.util.component_logger(__name__)
     clogger.info('creating whitesource client')
     ws_client = whitesource.util.create_whitesource_client(
         whitesource_cfg_name=whitesource_cfg_name,
