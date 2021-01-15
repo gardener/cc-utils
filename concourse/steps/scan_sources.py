@@ -74,13 +74,16 @@ def scan_component_with_whitesource(
     scan_artifacts = tuple(scan_artifacts_gen)
     clogger.info(f'will scan {len(scan_artifacts)} artifacts')
 
+    i = 1
     for scan_artifact in scan_artifacts:
+        clogger.info(f'artifact {i} / {len(scan_artifacts)}')
         whitesource.util.scan_artifact_with_white_src(
             extra_whitesource_config=extra_whitesource_config,
             requester_mail=requester_mail,
             scan_artifact=scan_artifact,
             ws_client=ws_client,
         )
+        i += 1
 
     whitesource.util.notify_users(
         notification_recipients=notification_recipients,
