@@ -16,6 +16,7 @@ main_repo_relpath = main_repo.resource_name()
 
 dockerfile_relpath = os.path.join(
   job_step.input('image_path'),
+  image_descriptor.builddir_relpath() or '',
   image_descriptor.dockerfile_relpath()
 )
 build_ctx_dir = os.path.join(
