@@ -367,7 +367,6 @@ def retrieve_component_descriptor_from_oci_ref(
     elif not manifest and not absent_ok:
         raise ValueError(f'did not find component-descriptor at {manifest_oci_image_ref=}')
 
-    # XXX after "full" migration to v2, rm fallback coding below
     try:
         cfg_dict = json.loads(
             client.blob(
