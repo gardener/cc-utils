@@ -31,7 +31,7 @@ class ComponentDiff:
     names_version_changed: set = dataclasses.field(default_factory=set)
 
 
-def diff_component_desscriptor(
+def diff_component_descriptors(
     left_component: cm.ComponentDescriptor,
     right_component: cm.ComponentDescriptor,
     ignore_component_names=(),
