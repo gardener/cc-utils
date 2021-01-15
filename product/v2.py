@@ -191,6 +191,7 @@ def download_component_descriptor_v2(
     component_descriptor =  retrieve_component_descriptor_from_oci_ref(
         manifest_oci_image_ref=target_ref,
         absent_ok=absent_ok,
+        validation_mode=validation_mode,
     )
 
     if absent_ok and not component_descriptor:
