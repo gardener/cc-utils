@@ -36,6 +36,9 @@ def diff_component_descriptors(
     right_component: cm.ComponentDescriptor,
     ignore_component_names=(),
     cache_dir=None,
+    components_resolv_func: typing.Callable[
+        [cm.ComponentDescriptor, str], typing.Sequence[cm.Component]
+    ]=product.v2.components,
 ) -> ComponentDiff:
     if not isinstance(left_component, cm.ComponentDescriptor):
         raise TypeError(
@@ -49,11 +52,11 @@ def diff_component_descriptors(
         )
     # only take component references into account for now and assume
     # that component versions are always identical content-wise
-    left_components: typing.Generator[cm.Component] = product.v2.components(
+    left_components: typing.Generator[cm.Component] = components_resolv_func(
         component_descriptor_v2=left_component,
         cache_dir=cache_dir,
     )
-    right_components: typing.Generator[cm.Component] = product.v2.components(
+    right_components: typing.Generator[cm.Component] = components_resolv_func(
         component_descriptor_v2=right_component,
         cache_dir=cache_dir,
     )
