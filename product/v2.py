@@ -489,7 +489,9 @@ def components(
     cache_dir: str=None,
     _visited_component_versions: typing.Tuple[str, str]=(),
 ):
-    component = component_descriptor_v2.component
+    if isinstance(component_descriptor_v2, cm.ComponentDescriptor):
+        component = component_descriptor_v2.component
+
     yield component
 
     new_visited_component_versions = _visited_component_versions + \

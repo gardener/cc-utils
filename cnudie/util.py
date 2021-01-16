@@ -32,23 +32,26 @@ class ComponentDiff:
 
 
 def diff_component_descriptors(
-    left_component: cm.ComponentDescriptor,
-    right_component: cm.ComponentDescriptor,
+    left_component: typing.Union[cm.ComponentDescriptor, cm.Component],
+    right_component: typing.Union[cm.ComponentDescriptor, cm.Component],
     ignore_component_names=(),
     cache_dir=None,
     components_resolv_func: typing.Callable[
         [cm.ComponentDescriptor, str], typing.Sequence[cm.Component]
     ]=product.v2.components,
 ) -> ComponentDiff:
-    if not isinstance(left_component, cm.ComponentDescriptor):
+    if isinstance(left_component, cm.ComponentDescriptor):
+        left_component = left_component.component
+    if isinstance(right_component, cm.ComponentDescriptor):
+        right_component = right_component.component
+
+    if not isinstance(left_component, cm.Component):
         raise TypeError(
             f'left product unsupported type {type(left_component)=}.'
-            ' Only ComponentDesciptorV2 is supported',
         )
-    if not isinstance(right_component, cm.ComponentDescriptor):
+    if not isinstance(right_component, cm.Component):
         raise TypeError(
             f'unsupported type {type(right_component)=}.'
-            ' Only ComponentDesciptorV2 is supported',
         )
     # only take component references into account for now and assume
     # that component versions are always identical content-wise
