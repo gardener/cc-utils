@@ -10,7 +10,7 @@ cc-utils:
         preprocess: 'finalize'
         inject_effective_version: True
       publish:
-        oci-builder: 'kaniko'
+        # oci-builder: 'kaniko'
         dockerimages:
           job-image:
             registry: 'gcr-readwrite'
