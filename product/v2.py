@@ -491,6 +491,10 @@ def components(
 ):
     if isinstance(component_descriptor_v2, cm.ComponentDescriptor):
         component = component_descriptor_v2.component
+    elif isinstance(component_descriptor_v2, cm.Component):
+        component = component_descriptor_v2
+    else:
+        raise TypeErrror(component_descriptor_v2)
 
     yield component
 
