@@ -26,10 +26,6 @@ git_tags = release_trait.git_tags()
 
 repo = job_variant.main_repository()
 
-component_descriptor_file_path = os.path.join(
-  job_step.input('component_descriptor_dir'),
-  cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V1),
-)
 component_descriptor_v2_path = os.path.join(
   job_step.input('component_descriptor_dir'),
   cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
@@ -65,7 +61,6 @@ githubrepobranch = GitHubRepoBranch(
 )
 
 release_and_prepare_next_dev_cycle(
-  component_descriptor_file_path='${component_descriptor_file_path}',
   component_descriptor_v2_path='${component_descriptor_v2_path}',
   ctf_path='${ctf_path}',
   % if has_slack_trait:

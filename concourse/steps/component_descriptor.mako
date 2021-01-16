@@ -44,8 +44,6 @@ import gci.componentmodel as cm
 # required for deserializing labels
 Label = cm.Label
 
-from product.model import ComponentDescriptor, Component, ContainerImage, Relation
-from product.util import ComponentDescriptorResolver
 from ci.util import info, fail, parse_yaml_file, ctx, warning
 import product.v2
 
@@ -125,30 +123,11 @@ component_v2.resources.append(
 )
 % endfor
 
-base_descriptor_v1 = product.v2.convert_to_v1(component_descriptor_v2=base_descriptor_v2)
-component = base_descriptor_v1.component((component_name, effective_version))
-dependencies = component.dependencies()
-
-# add container image references from patch_images trait
-% for image_alter_cfg in image_alter_cfgs:
-dependencies.add_container_image_dependency(
-  ContainerImage.create(
-    name='${image_alter_cfg.name()}',
-    version='${image_alter_cfg.tgt_ref().rsplit(':', 1)[-1]}',
-    image_reference='${image_alter_cfg.tgt_ref()}',
-  )
-)
-% endfor
-
 info('default component descriptor (v2):\n')
 print(dump_component_descriptor_v2(base_descriptor_v2))
 print('\n' * 2)
 
 descriptor_out_dir = os.path.abspath('${job_step.output("component_descriptor_dir")}')
-descriptor_path = os.path.join(
-  descriptor_out_dir,
-  component_descriptor_fname(schema_version=gci.componentmodel.SchemaVersion.V1),
-)
 
 v2_outfile = os.path.join(
   descriptor_out_dir,
@@ -167,9 +146,6 @@ if not os.path.isfile(descriptor_script):
     s=descriptor_script
     )
   )
-  with open(descriptor_path, 'w') as f:
-    yaml.dump(base_descriptor_v1.raw, f, indent=2)
-  info(f'wrote component descriptor (v1): {descriptor_path=}')
 
   with open(v2_outfile, 'w') as f:
     f.write(dump_component_descriptor_v2(base_descriptor_v2))
@@ -192,7 +168,6 @@ subproc_env['${main_repo_path_env_var}'] = main_repo_path
 subproc_env['MAIN_REPO_DIR'] = main_repo_path
 subproc_env['BASE_DEFINITION_PATH'] = base_descriptor_file_v2
 subproc_env['COMPONENT_DESCRIPTOR_PATH'] = v2_outfile
-subproc_env['COMPONENT_DESCRIPTOR_PATH_V1'] = descriptor_path
 subproc_env['CTF_PATH'] = ctf_out_path
 subproc_env['COMPONENT_NAME'] = component_name
 subproc_env['COMPONENT_VERSION'] = effective_version
@@ -235,48 +210,27 @@ elif have_cd:
     ci.util.parse_yaml_file(v2_outfile)
   )
   print(f'found component-descriptor (v2) at {v2_outfile=}')
-
-  # convert back to v1 for backwards compatibility for now
-  descriptor_v1 = product.v2.convert_to_v1(component_descriptor_v2=descriptor_v2)
-  with open(descriptor_path, 'w') as f:
-    yaml.dump(descriptor_v1.raw, f)
-  info(f'created v1-version of cd at {descriptor_path=} from v2-descriptor')
-
-  descriptor = ComponentDescriptor.from_dict(parse_yaml_file(descriptor_path))
 elif have_ctf:
-  argv = [
-    'component-cli',
-    'ctf',
-    'push',
-    ctf_out_path,
-  ]
   subprocess.run(
-    argv,
+    [
+      'component-cli',
+      'ctf',
+      'push',
+      ctf_out_path,
+    ],
     check=True,
     env=subproc_env,
   )
   print(f'processed ctf-archive at {ctf_out_path=} - exiting')
+  # XXX TODO: also calculate bom-diff!
   exit(0)
 
-cfg_factory = ctx().cfg_factory()
 info('resolving dependencies')
-
-resolver = ComponentDescriptorResolver(
-  cfg_factory=cfg_factory,
-)
-descriptor = resolver.resolve_component_references(descriptor)
-descriptor_str = yaml.dump(json.loads(json.dumps(descriptor.raw)))
-
-with open(descriptor_path, 'w') as f:
-  f.write(descriptor_str)
 
 # determine "bom-diff" (changed component references)
 bom_diff = component_diff_since_last_release(
-    component_name=component_name,
-    component_version=effective_version,
-    component_descriptor=descriptor,
+    component_descriptor=descriptor_v2,
     ctx_repo_url=ctx_repository_base_url,
-    cfg_factory=cfg_factory,
 )
 if not bom_diff:
   info('no differences in referenced components found since last release')

@@ -19,10 +19,6 @@ import git
 import yaml
 
 import ci.util
-from product.util import (
-    ComponentDescriptorResolver,
-    diff_components,
-)
 import product.v2
 
 import gci.componentmodel as cm
@@ -98,45 +94,40 @@ def base_component_descriptor_v2(
 
 
 def component_diff_since_last_release(
-    component_name,
-    component_version,
     component_descriptor,
     ctx_repo_url,
-    cfg_factory,
 ):
-    component = ci.util.not_none(component_descriptor.component((component_name, component_version)))
+    component = ci.util.not_none(
+        component_descriptor.component,
+    )
 
-    last_release_version = product.v2.greatest_version_before(
-        component_name=component_name,
-        component_version=component_version,
+    greatest_release_version = product.v2.greatest_version_before(
+        component_name=component.name,
+        component_version=component.version,
         ctx_repo_base_url=ctx_repo_url,
     )
 
-    if not last_release_version:
+    if not greatest_release_version:
         ci.util.warning('could not determine last release version')
         return None
-    last_release_version = str(last_release_version)
-    ci.util.info('last released version: ' + str(last_release_version))
+    greatest_release_version = str(greatest_release_version)
+    ci.util.info('last released version: ' + str(greatest_release_version))
 
-    descriptor_resolver = ComponentDescriptorResolver(cfg_factory=cfg_factory)
-    last_released_component_descriptor = descriptor_resolver.retrieve_descriptor(
-            (component_name, last_release_version)
+    greatest_released_cd = product.v2.download_component_descriptor_v2(
+        component_name=component.name,
+        component_version=greatest_release_version,
+        ctx_repo_base_url=ctx_repo_url,
     )
-    last_released_component = last_released_component_descriptor.component(
-        (component_name, last_release_version)
-    )
+    greatest_released_component = greatest_released_cd.component
 
-    if not last_released_component:
-        ci.util.fail(
-            f"Component '{component_name}' not found in the component "
-            f"descriptor of the last release ({last_release_version})."
-        )
+    if not greatest_released_component:
+        ci.util.fail(f'could not find {component=}')
 
-    diff = diff_components(
-        left_components=component.dependencies().components(),
-        right_components=last_released_component.dependencies().components(),
+    return cnudie.util.diff_component_descriptors(
+        left_component=component,
+        right_component=greatest_released_component,
+        ignore_component_names=(component.name,),
     )
-    return diff
 
 
 def write_component_diff(component_diff, out_path):

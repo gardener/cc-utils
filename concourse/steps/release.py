@@ -23,7 +23,6 @@ from github.util import (
     GitHubRepositoryHelper,
     GitHubRepoBranch,
 )
-import product.model
 import product.v2
 from github.release_notes.util import (
     delete_file_from_slack,
@@ -37,7 +36,7 @@ from concourse.model.traits.release import (
 )
 
 
-class TransactionContext(object):
+class TransactionContext:
     def __init__(self):
         self._step_outputs = {}
 
@@ -562,16 +561,12 @@ class GitHubReleaseStep(TransactionalStep):
         githubrepobranch: GitHubRepoBranch,
         repo_dir: str,
         release_version: str,
-        component_descriptor_file_path:str,
         component_descriptor_v2_path:str,
         ctf_path:str,
     ):
         self.github_helper = not_none(github_helper)
         self.githubrepobranch = githubrepobranch
         self.release_version = not_empty(release_version)
-        self.component_descriptor_file_path = os.path.abspath(
-            not_empty(component_descriptor_file_path)
-        )
 
         repo_dir_absolute = os.path.abspath(not_empty(repo_dir))
         self.repo_dir = repo_dir_absolute
@@ -589,10 +584,6 @@ class GitHubReleaseStep(TransactionalStep):
         if have_ctf and have_cd:
             ci.util.fail('Both CTF and Component Descriptor are defined. Only one may be defined.')
         elif have_cd:
-            existing_file(self.component_descriptor_file_path)
-            with open(self.component_descriptor_file_path) as f:
-                # TODO: Proper validation
-                not_empty(f.read().strip())
             component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
                 ci.util.parse_yaml_file(self.component_descriptor_v2_path),
             )
@@ -635,23 +626,22 @@ class GitHubReleaseStep(TransactionalStep):
             )
 
         if os.path.exists(self.component_descriptor_v2_path):
-            # TODO: rm v1-parts
-            # Upload component descriptor to GitHub-release if one has been calculated
-            with open(self.component_descriptor_file_path) as f:
-                component_descriptor_contents = f.read()
-                release.upload_asset(
-                    content_type='application/x-yaml',
-                    name=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
-                    asset=component_descriptor_contents,
-                    label=product.model.COMPONENT_DESCRIPTOR_ASSET_NAME,
-                )
-
             component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
                 component_descriptor_dict=ci.util.parse_yaml_file(self.component_descriptor_v2_path),
             )
             info('publishing component-descriptor v2')
             product.v2.upload_component_descriptor_v2_to_oci_registry(
                 component_descriptor_v2=component_descriptor_v2,
+            )
+
+            with open(self.component_descriptor_v2_path) as f:
+                descriptor_v2_contents = f.read()
+
+            release.upload_asset(
+                content_type='application/x-yaml',
+                name='component_descriptor.cnudie.yaml', # XXX extract into define
+                asset=descriptor_v2_contents,
+                label='component_descriptor.cnudie.yaml',
             )
 
         return {
@@ -851,7 +841,6 @@ def release_and_prepare_next_dev_cycle(
     release_version: str,
     repo_dir: str,
     repository_version_file_path: str,
-    component_descriptor_file_path: str,
     git_tags: list,
     github_release_tag: dict,
     author_email: str="gardener.ci.user@gmail.com",
@@ -932,7 +921,6 @@ def release_and_prepare_next_dev_cycle(
         githubrepobranch=githubrepobranch,
         repo_dir=repo_dir,
         release_version=release_version,
-        component_descriptor_file_path=component_descriptor_file_path,
         component_descriptor_v2_path=component_descriptor_v2_path,
         ctf_path=ctf_path,
     )
