@@ -12,6 +12,10 @@ def send_mail(
     if not ci.util._running_on_ci():
         raise RuntimeError('This command can only be used from within our CI-infrastructure.')
 
+    if component_names:
+        # todo: resolve components using product.v2
+        raise NotImplementedError
+
     pipeline_metadata = concourse.util.get_pipeline_metadata()
     cfg_factory = ci.util.ctx().cfg_factory()
     current_cfg_set = cfg_factory.cfg_set(pipeline_metadata.current_cfg_setname)

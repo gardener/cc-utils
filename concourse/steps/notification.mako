@@ -27,6 +27,11 @@ if job_variant.has_trait('component_descriptor'):
   component_name = job_variant.trait('component_descriptor').component_name()
 else:
   component_name = None # todo: fallback to main repository
+if (component_descriptor_trait := job_variant.has_trait('component_descriptor', None)):
+  ctx_repo_url = component_descriptor_trait.ctx_repository_base_url()
+else:
+  # fallback to default ctx-repo
+  ctx_repo_url = cfg_set.ctx_repository().base_url()
 %>
 import sys
 import os
@@ -35,6 +40,7 @@ import ccc.github
 import ci.util
 import github
 import mailutil
+import product.v2
 
 
 from ci.util import ctx
@@ -162,8 +168,25 @@ if not email_cfg.get('mail_body'):
     )
 
 ## Finally, determine recipients for all component names gathered
+def retr_component(component_name: str):
+  greatest_version = product.v2.greatest_component_version(
+    component_name=component_name,
+    ctx_repo_base_url='${ctx_repo_url}',
+  )
+  comp_descr = product.v2.download_component_descriptor_v2(
+    component_name=component_name,
+    component_version=greatest_version,
+    ctx_repo_base_url='${ctx_repo_url}',
+  )
+  return comp_descr.component
+
+
+components = [
+  retr_component(component_name=cname) for cname in email_cfg.get('component_name_recipients', ())
+]
+
 recipients = resolve_recipients_by_component_name(
-    component_names=email_cfg.get('component_name_recipients', ()),
+    components=email_cfg.get('component_name_recipients', ()),
     github_cfg_name="${default_github_cfg_name}",
 )
 email_cfg['recipients'] = email_cfg['recipients'] | set(recipients)
