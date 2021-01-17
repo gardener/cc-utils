@@ -51,7 +51,6 @@ repo_dir = existing_dir('${repo.resource_name()}')
 repository_branch = '${repo.branch()}'
 
 github_cfg = ccc.github.github_cfg_for_hostname('${repo.repo_hostname()}')
-github_repo_path = '${repo.repo_owner()}/${repo.repo_name()}'
 
 githubrepobranch = GitHubRepoBranch(
     github_config=github_cfg,
