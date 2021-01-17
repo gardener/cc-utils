@@ -198,6 +198,9 @@ class ReleaseTrait(Trait):
         return self.raw.get('next_version_commit_message_prefix')
 
     def git_tags(self):
+        '''
+        all tags to be created in addition to the "github-release-tag" (without the gh-release-tag)
+        '''
         return self.raw.get('git_tags')[1:]
 
     def github_release_tag(self):

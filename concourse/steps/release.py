@@ -125,7 +125,7 @@ class Transaction:
         executed_steps = list()
         for step in self._steps:
             step_name = step.name()
-            info(f"Applying step '{step_name}'")
+            info(f'executing {step_name=}')
             executed_steps.append(step)
             try:
                 output = step.apply()
@@ -144,15 +144,15 @@ class Transaction:
         all_reverted = True
         for step in steps:
             step_name = step.name()
-            info(f"Reverting step {step_name}")
+            info(f'Reverting {step_name=}')
             try:
                 step.revert()
             except BaseException as e:
                 all_reverted = False
-                warning(f"An error occured while reverting step '{step_name}': {e}")
+                warning(f'An error occured while reverting step {step_name=}: {e=}')
                 traceback.print_exc()
         if not all_reverted:
-            raise RuntimeError("Unable to revert all steps.")
+            raise RuntimeError('Unable to revert all steps.')
 
 
 class RebaseStep(TransactionalStep):
@@ -187,11 +187,10 @@ class ReleaseCommitStep(TransactionalStep):
     ):
         self.git_helper = not_none(git_helper)
         self.repository_branch = not_empty(repository_branch)
-        repo_dir_absolute = os.path.abspath(not_empty(repo_dir))
-        self.repo_dir = repo_dir_absolute
+        self.repo_dir = os.path.abspath(repo_dir)
         self.release_version = not_empty(release_version)
         self.repository_version_file_path = os.path.join(
-            repo_dir_absolute,
+            self.repo_dir,
             repository_version_file_path,
         )
         self.release_commit_message_prefix = release_commit_message_prefix
@@ -199,7 +198,7 @@ class ReleaseCommitStep(TransactionalStep):
 
         if release_commit_callback:
             self.release_commit_callback = os.path.join(
-                repo_dir_absolute,
+                self.repo_dir,
                 release_commit_callback,
             )
         else:
@@ -322,8 +321,6 @@ class CreateTagsStep(TransactionalStep):
         self.github_helper = github_helper
         self.git_helper = git_helper
 
-        self.git_tags = git_tags
-        self.github_release_tag = github_release_tag
         self.author_name = author_name
         self.author_email = author_email
 
@@ -331,24 +328,22 @@ class CreateTagsStep(TransactionalStep):
 
         self.release_version = release_version
 
+        tag_template_vars = {'VERSION': self.release_version}
+
+        # render tag-templates
+        self.github_release_tag = github_release_tag['ref_template'].format(
+            **tag_template_vars
+        )
+        self.git_tags = [
+            tag_template['ref_template'].format(**tag_template_vars)
+            for tag_template in git_tags
+        ]
+
     def name(self):
-        return "Create Tags"
+        return 'Create Tags'
 
     def validate(self):
         version.parse_to_semver(self.release_version)
-
-        tag_template_vars = {
-            'VERSION': self.release_version,
-        }
-
-        # prepare tags to create
-        self.github_release_tag_formatted = self.github_release_tag['ref_template'].format(
-            **tag_template_vars
-        )
-        self.git_tags_formatted = [
-            tag_template['ref_template'].format(**tag_template_vars)
-            for tag_template in self.git_tags
-        ]
 
     def apply(
         self,
@@ -371,16 +366,15 @@ class CreateTagsStep(TransactionalStep):
                 )
                 self.tags_created.append(tag)
 
-            _push_tag(self.github_release_tag_formatted)
-            for tag in self.git_tags_formatted:
+            for tag in [self.github_release_tag] + self.git_tags:
                 _push_tag(tag)
 
         else:
             raise NotImplementedError
 
         return {
-            'release_tag': self.github_release_tag_formatted,
-            'tags': self.git_tags_formatted,
+            'release_tag': self.github_release_tag,
+            'tags': self.git_tags,
         }
 
     def revert(self):
@@ -413,8 +407,7 @@ class NextDevCycleCommitStep(TransactionalStep):
     ):
         self.git_helper = not_none(git_helper)
         self.repository_branch = not_empty(repository_branch)
-        repo_dir_absolute = os.path.abspath(not_empty(repo_dir))
-        self.repo_dir = repo_dir_absolute
+        self.repo_dir = os.path.abspath(repo_dir)
         self.release_version = not_empty(release_version)
         self.version_operation = not_empty(version_operation)
         self.prerelease_suffix = not_empty(prerelease_suffix)
@@ -422,20 +415,20 @@ class NextDevCycleCommitStep(TransactionalStep):
         self.next_cycle_commit_message_prefix = next_cycle_commit_message_prefix
 
         self.repository_version_file_path = os.path.join(
-            repo_dir_absolute,
+            self.repo_dir,
             repository_version_file_path,
         )
 
         if next_version_callback:
             self.next_version_callback = os.path.join(
-                repo_dir_absolute,
+                self.repo_dir,
                 next_version_callback,
             )
         else:
             self.next_version_callback = None
 
     def _next_dev_cycle_commit_message(self, version: str, message_prefix: str):
-        message = f'Prepare Next Dev Cycle {version}'
+        message = f'Prepare next Dev Cycle {version}'
         if message_prefix:
             message = f'{message_prefix} {message}'
         return message
@@ -568,8 +561,7 @@ class GitHubReleaseStep(TransactionalStep):
         self.githubrepobranch = githubrepobranch
         self.release_version = not_empty(release_version)
 
-        repo_dir_absolute = os.path.abspath(not_empty(repo_dir))
-        self.repo_dir = repo_dir_absolute
+        self.repo_dir = repo_dir
         self.component_descriptor_v2_path = component_descriptor_v2_path
         self.ctf_path = ctf_path
 
@@ -578,11 +570,11 @@ class GitHubReleaseStep(TransactionalStep):
 
     def validate(self):
         version.parse_to_semver(self.release_version)
-        # either cds _OR_ ctf must exist
+        # either cds _XOR_ ctf must exist
         have_ctf = os.path.exists(self.ctf_path)
         have_cd = os.path.exists(self.component_descriptor_v2_path)
-        if have_ctf and have_cd:
-            ci.util.fail('Both CTF and Component Descriptor are defined. Only one may be defined.')
+        if not have_ctf ^ have_cd:
+            ci.util.fail('exactly one of component-descriptor, or ctf-archive must exist')
         elif have_cd:
             component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
                 ci.util.parse_yaml_file(self.component_descriptor_v2_path),
@@ -730,9 +722,9 @@ class TryCleanupDraftReleasesStep(TransactionalStep):
     def apply(self):
         for release, deletion_successful in self.github_helper.delete_outdated_draft_releases():
             if deletion_successful:
-                ci.util.info(f"Deleted release '{release.name}'")
+                ci.util.info(f'Deleted {release.name=}')
             else:
-                ci.util.warning(f"Could not delete release '{release.name}'")
+                ci.util.warning(f'Could not delete {release.name=}')
         return
 
     def revert(self):
@@ -773,9 +765,9 @@ class PostSlackReleaseStep(TransactionalStep):
         for response in responses:
             if response and response.get('file', None):
                 uploaded_file_id = response.get('file').get('id')
-                info(f'uploaded file id {uploaded_file_id} to slack')
+                info(f'uploaded {uploaded_file_id=} to slack')
             else:
-                raise RuntimeError("Unable to get file id from Slack response")
+                raise RuntimeError('Unable to get file id from Slack response')
         info('successfully posted contents to slack')
 
     def revert(self):
@@ -794,9 +786,6 @@ def _invoke_callback(
     repo_dir: str,
     effective_version: str,
 ):
-    '''This invokes the callback script with the REPO_DIR and EFFECTIVE_VERSION
-    env variable set to the given values.
-    '''
     callback_env = os.environ.copy()
     callback_env['REPO_DIR'] = repo_dir
     callback_env['EFFECTIVE_VERSION'] = effective_version
