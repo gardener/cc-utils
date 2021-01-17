@@ -17,6 +17,9 @@ import git
 import smtplib
 import typing
 
+import gci.componentmodel as cm
+
+import cnudie.util
 import mail.model
 from model.email import EmailConfig
 from ci.util import (
@@ -234,7 +237,10 @@ def determine_mail_recipients(
         yield from resolver.resolve_email_addresses(codeowner_entries)
 
 
-def _codeowners_parser_from_component_name(component_name: str, branch_name='master'):
+def _codeowners_parser_from_component_name(
+    component_name: str,
+    branch_name='master'
+):
     component_name = product.model.ComponentName(component_name)
     github_cfg = ccc.github.github_cfg_for_hostname(
         cfg_factory=ctx().cfg_factory(),
@@ -247,6 +253,32 @@ def _codeowners_parser_from_component_name(component_name: str, branch_name='mas
         org=component_name.github_organisation(),
         repo=component_name.github_repo(),
         branch=branch_name,
+    )
+
+    resolver = CodeOwnerEntryResolver(github_api=github_api)
+    enumerator = CodeownersEnumerator()
+
+    return resolver, enumerator.enumerate_remote_repo(github_repo_helper=repo_helper)
+
+
+def codeowners_parser_from_component(
+    component: cm.Component,
+):
+    main_source = cnudie.util.determine_main_source_for_component(
+        component=component,
+        absent_ok=False,
+    )
+    if not main_source.access.type is cm.AccessType.GITHUB:
+        raise NotImplementedError(main_source.access.type)
+
+    access = main_source.access
+    github_api = ccc.github.github_api_from_gh_access(access=access)
+
+    repo_helper = ccc.github.repo_helper(
+        host=access.hostname(),
+        org=access.org_name(),
+        repo=access.repository_name(),
+        branch=access.ref,
     )
 
     resolver = CodeOwnerEntryResolver(github_api=github_api)
