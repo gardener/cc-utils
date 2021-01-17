@@ -35,7 +35,6 @@ except:
   pass
 import ci.util
 import mailutil
-import product.model
 import product.util
 import product.v2
 import protecode.util
