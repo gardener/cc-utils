@@ -726,7 +726,7 @@ def find_greatest_github_release_version(
             return True
         except ValueError:
             if warn_for_unparseable_releases:
-                ci.util.warning(f"Skipping release with non semver-parseable name {release_name}")
+                ci.util.warning(f'ignoring release {release_name=} (not semver)')
             return False
 
     release_versions = [
