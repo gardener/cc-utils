@@ -22,6 +22,8 @@ import typing
 import requests.exceptions
 import tabulate
 
+import gci.componentmodel as cm
+
 import ccc.clamav
 import ci.util
 import concourse.util
@@ -30,7 +32,7 @@ import mailutil
 import reutil
 
 from concourse.model.traits.image_scan import Notify
-from product.model import ComponentName, UploadResult
+from product.model import UploadResult
 from protecode.model import CVSSVersion, License
 
 logger = logging.getLogger()
@@ -64,7 +66,7 @@ class MailRecipients:
         cvss_version: CVSSVersion=None,
         result_filter=None,
         recipients: typing.List[str]=[],
-        recipients_component: ComponentName=None,
+        recipients_component: cm.Component=None,
     ):
         self._root_component_name = root_component_name
         self._result_filter = result_filter
@@ -92,7 +94,7 @@ class MailRecipients:
         # XXX it should not be necessary to pass github_cfg
         return mailutil.determine_mail_recipients(
             github_cfg_name=self._cfg_set.github().name(),
-            component_names=(self._recipients_component.name(),),
+            components=(self._recipients_component,),
         )
 
     def add_protecode_results(
@@ -247,7 +249,7 @@ class MailRecipients:
 
     def __repr__(self):
         if self._recipients_component:
-            descr = f'component {self._recipients_component.name()}'
+            descr = f'component {self._recipients_component.name}'
         else:
             descr = 'for all results'
 
@@ -263,7 +265,7 @@ def mail_recipients(
     protecode_group_url: str=None,
     cvss_version: CVSSVersion=None,
     email_recipients: typing.Iterable[str]=(),
-    components: typing.Iterable[ComponentName]=(),
+    components: typing.Iterable[cm.Component]=(),
 ):
     mail_recps_ctor = functools.partial(
         MailRecipients,
