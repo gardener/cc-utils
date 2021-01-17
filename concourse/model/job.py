@@ -25,6 +25,9 @@ from ci.util import not_none
 from concourse.model.resources import RepositoryConfig, ResourceIdentifier
 
 
+_not_set = object() # sentinel
+
+
 class AbortObsoleteJobs(enum.Enum):
     ALWAYS = 'always'
     ON_FORCE_PUSH_ONLY = 'on_force_push_only'
@@ -59,8 +62,11 @@ class JobVariant(ModelBase):
     def traits(self):
         return self._traits_dict
 
-    def trait(self, name):
-        return self._traits_dict[name]
+    def trait(self, name, default=_not_set):
+        trait =  self._traits_dict.get(name, default)
+        if trait is _not_set:
+            raise KeyError(f'trait {name=} not present for {self.job_name()=}')
+        return trait
 
     def has_trait(self, name):
         return name in self.traits()
