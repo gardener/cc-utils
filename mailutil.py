@@ -192,6 +192,7 @@ def determine_codeowner_file_recipients(
 def determine_mail_recipients(
     github_cfg_name,
     src_dirs=(),
+    components: typing.Sequence[cm.Component]=(),
     component_names=(),
     codeowners_files=(),
     branch_name='master',
@@ -206,8 +207,11 @@ def determine_mail_recipients(
 
     [0] https://help.github.com/articles/about-codeowners/
     '''
-    if not any((component_names, src_dirs, codeowners_files)):
+    if not any((components, component_names, src_dirs, codeowners_files)):
         return # nothing to do
+
+    if components and component_names:
+        raise ValueError('only one of components, component_names must be set')
 
     cfg_factory = ctx().cfg_factory()
 
@@ -226,12 +230,20 @@ def determine_mail_recipients(
         codeowners_files=codeowners_files,
     )
 
-    entries_and_resolvers = [
-        _codeowners_parser_from_component_name(
-            component_name=component_name,
-            branch_name=branch_name
-        ) for component_name in component_names
-    ]
+    if components_names:
+        entries_and_resolvers = [
+            _codeowners_parser_from_component_name(
+                component_name=component_name,
+                branch_name=branch_name
+            ) for component_name in component_names
+        ]
+    elif components:
+        entries_and_resolvers = [
+            _codeowners_parser_from_component(
+                component=component,
+                branch_name=branch_name
+            ) for component in components
+        ]
 
     for resolver, codeowner_entries in entries_and_resolvers:
         yield from resolver.resolve_email_addresses(codeowner_entries)
@@ -261,8 +273,9 @@ def _codeowners_parser_from_component_name(
     return resolver, enumerator.enumerate_remote_repo(github_repo_helper=repo_helper)
 
 
-def codeowners_parser_from_component(
+def _codeowners_parser_from_component(
     component: cm.Component,
+    branch_name: str='master',
 ):
     main_source = cnudie.util.determine_main_source_for_component(
         component=component,
@@ -278,7 +291,7 @@ def codeowners_parser_from_component(
         host=access.hostname(),
         org=access.org_name(),
         repo=access.repository_name(),
-        branch=access.ref,
+        branch=branch_name,
     )
 
     resolver = CodeOwnerEntryResolver(github_api=github_api)
