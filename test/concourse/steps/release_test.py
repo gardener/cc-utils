@@ -116,8 +116,6 @@ class TestGitHubReleaseStep(object):
     @pytest.fixture()
     def examinee(self, tmp_path):
         # prepare test component descriptor file and fill it with test content
-        component_descriptor_file = tmp_path.joinpath('test_descriptor').resolve()
-        component_descriptor_file.write_text('component descriptor test content')
 
         component_descriptor_v2 = os.path.join(tmp_path, 'component_descriptor_v2')
         ctf_path = os.path.join(tmp_path, product.v2.CTF_OUT_DIR_NAME)
@@ -150,7 +148,6 @@ class TestGitHubReleaseStep(object):
             repo_dir=str(tmp_path),
             release_version='1.0.0',
             tag_helper_return_value=False,
-            component_descriptor_file_path=str(component_descriptor_file),
         ):
             # Create a github_helper mock that always reports a tag as existing/not existing,
             # depending on the passed value
@@ -160,7 +157,6 @@ class TestGitHubReleaseStep(object):
                 githubrepobranch=githubrepobranch,
                 repo_dir=repo_dir,
                 release_version=release_version,
-                component_descriptor_file_path=component_descriptor_file_path,
                 component_descriptor_v2_path=component_descriptor_v2,
                 ctf_path=ctf_path,
             )
@@ -172,17 +168,6 @@ class TestGitHubReleaseStep(object):
     def test_validation_fails_on_invalid_semver(self, examinee):
         with pytest.raises(ValueError):
             examinee(release_version='invalid_semver').validate()
-
-    def test_validation_fails_on_missing_component_descriptor(self, examinee, tmp_path):
-        test_path = tmp_path.joinpath('no', 'such', 'dir')
-        with pytest.raises(ValueError):
-            examinee(component_descriptor_file_path=str(test_path)).validate()
-
-    def test_validation_fails_on_empty_component_descriptor(self, examinee, tmp_path):
-        test_path = tmp_path.joinpath('empty_component_descriptor')
-        test_path.touch()
-        with pytest.raises(ValueError):
-            examinee(component_descriptor_file_path=str(test_path)).validate()
 
 
 class TestPublishReleaseNotesStep(object):
