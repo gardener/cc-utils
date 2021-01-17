@@ -78,6 +78,9 @@ class NotificationStepTest(unittest.TestCase):
         self.email_cfg.name = MagicMock(return_value='email_cfg')
         self.cfg_set.github = MagicMock(return_value=self.github_cfg)
         self.cfg_set.email = MagicMock(return_value=self.email_cfg)
+        ctx_repo_mock = MagicMock(return_value='repo_url')
+        ctx_repo_mock.base_url = MagicMock(return_value='repo_url')
+        self.cfg_set.ctx_repository = MagicMock(return_value=ctx_repo_mock)
 
         self.render_step = step_def('notification')
 
