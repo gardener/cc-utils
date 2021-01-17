@@ -2,8 +2,6 @@ import typing
 
 import ci.util
 import checkmarx.util
-import product.model
-import product.util
 import product.v2
 import dso.util
 import whitesource.client

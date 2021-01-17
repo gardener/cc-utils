@@ -16,17 +16,11 @@
 import pytest
 import cnudie.util
 
-import product.model as model
-
 import gci.componentmodel as cm
 
 # functions under test
 diff_components = cnudie.util.diff_components
 diff_resources = cnudie.util.diff_resources
-
-
-def component_ref(name, version, prefix='gh.com/o/'):
-    return model.ComponentReference.create(name=prefix + name, version=version)
 
 
 def component_id_v2(name: str, version: str):

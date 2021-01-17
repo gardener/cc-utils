@@ -24,8 +24,6 @@ import oci.model as om
 import ccc.oci
 import ci.util
 import container.registry
-import product.model
-import product.util
 import version
 
 
@@ -33,68 +31,6 @@ CTF_OUT_DIR_NAME = 'cnudie-transport-format.out'
 
 
 COMPONENT_TYPE_NAME = 'component'
-
-
-def convert_to_v1(
-    component_descriptor_v2: cm.ComponentDescriptor,
-):
-    component_v2 = component_descriptor_v2.component
-    component_descriptor_v1 = product.model.ComponentDescriptor.from_dict(raw_dict={})
-
-    component_v1 = _convert_component_to_v1(component_v2=component_v2)
-    component_descriptor_v1.add_component(component_v1)
-
-    component_deps = component_v1.dependencies()
-
-    for component_ref in component_v2.componentReferences:
-        component_deps.add_component_dependency(
-            product.model.ComponentReference.create(
-                name=component_ref.componentName,
-                version=component_ref.version,
-            )
-        )
-    # todo: also resolve component references (delegate for now)
-    return component_descriptor_v1
-
-
-def _convert_component_to_v1(
-    component_v2: cm.Component,
-):
-    component_v1 = product.model.Component.create(
-        name=component_v2.name,
-        version=component_v2.version
-    )
-    component_deps = component_v1.dependencies()
-
-    for resource in component_v2.resources:
-        if hasattr(resource, 'relation'):
-            if resource.relation is cm.ResourceRelation.LOCAL:
-                v1_relation = product.model.Relation.LOCAL
-            elif resource.relation is cm.ResourceRelation.EXTERNAL:
-                v1_relation = product.model.Relation.THIRD_PARTY
-            else:
-                raise NotImplementedError
-        else:
-            v1_relation = product.model.Relation.LOCAL
-
-        if resource.type is cm.ResourceType.OCI_IMAGE:
-            component_deps.add_container_image_dependency(
-                product.model.ContainerImage.create(
-                    name=resource.name,
-                    version=resource.version,
-                    image_reference=resource.access.imageReference,
-                    relation=v1_relation,
-                )
-            )
-        elif resource.type is cm.ResourceType.GENERIC:
-            component_deps.add_generic_dependency(
-                product.model.GenericDependency.create(
-                    name=resource.name,
-                    version=resource.version,
-                )
-            )
-
-    return component_v1
 
 
 def _normalise_component_name(component_name:str) -> str:
