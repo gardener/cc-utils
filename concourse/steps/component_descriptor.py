@@ -19,6 +19,7 @@ import git
 import yaml
 
 import ci.util
+import cnudie.util
 import product.v2
 
 import gci.componentmodel as cm
