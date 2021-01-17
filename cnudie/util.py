@@ -8,11 +8,19 @@ import product.v2
 import gci.componentmodel as cm
 
 
-def determine_main_source_for_component(component: cm.Component) -> cm.ComponentSource:
+def determine_main_source_for_component(
+    component: cm.Component,
+    absent_ok: bool=True,
+) -> cm.ComponentSource:
     for source in component.sources:
         if label := source.find_label('cloud.gardener/cicd/source'):
             if label.value.get('repository-classification') == 'main':
                 return source
+
+    if not component.sources:
+        if absent_ok:
+            return None
+        raise ValueError(f'no sources defined by {component=}')
 
     # if no label was found use heuristic approach
     # heuristic: use first source
