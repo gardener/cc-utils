@@ -27,7 +27,7 @@ if job_variant.has_trait('component_descriptor'):
   component_name = job_variant.trait('component_descriptor').component_name()
 else:
   component_name = None # todo: fallback to main repository
-if (component_descriptor_trait := job_variant.has_trait('component_descriptor', None)):
+if (component_descriptor_trait := job_variant.trait('component_descriptor', None)):
   ctx_repo_url = component_descriptor_trait.ctx_repository_base_url()
 else:
   # fallback to default ctx-repo
