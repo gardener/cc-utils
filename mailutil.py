@@ -230,7 +230,7 @@ def determine_mail_recipients(
         codeowners_files=codeowners_files,
     )
 
-    if components_names:
+    if component_names:
         entries_and_resolvers = [
             _codeowners_parser_from_component_name(
                 component_name=component_name,

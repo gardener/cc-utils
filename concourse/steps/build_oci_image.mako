@@ -76,9 +76,16 @@ import model.container_registry
 import concurrent.futures
 import concurrent.futures.thread
 
-# XXX another hack: save truststore from being purged by kaniko's multistage-build
+# XXX another hack: save truststores from being purged by kaniko's multistage-build
 import certifi
-os.link((ca_cert_path := certifi.where()), (ca_bak := os.path.join('/', 'kaniko', 'cacert.pem')))
+os.link(
+  (certifi_certs_path := certifi.where()),
+  (certifi_bak := os.path.join('/', 'kaniko', 'cacert.pem'))
+)
+os.link(
+  (ca_certs_path := os.path.join('/', 'etc', 'ssl', 'certs', 'ca-certificates.crt')),
+  (ca_certs_bak := os.path.join('/', 'kaniko', 'ca-certificates.crt')),
+)
 
 # XXX final hack (I hope): cp entire python-dir
 import sys
@@ -114,9 +121,14 @@ res = subprocess.run(
 
 print(f'wrote image {image_ref=} to {image_outfile=} attempting to push')
 
-os.makedirs(os.path.dirname(ca_cert_path), exist_ok=True)
-if not os.path.exists(ca_cert_path):
-  os.link(ca_bak, ca_cert_path)
+os.makedirs(os.path.dirname(certifi_certs_path), exist_ok=True)
+if not os.path.exists(certifi_certs_path):
+  os.link(certifi_bak, certifi_certs_path)
+
+os.makedirs(os.path.dirname(ca_certs_path), exist_ok=True)
+if not os.path.exists(ca_certs_path):
+  os.link(ca_certs_bak, ca_certs_path)
+
 if not os.path.exists(python_lib_dir):
   os.symlink(python_bak_dir, python_lib_dir)
 
