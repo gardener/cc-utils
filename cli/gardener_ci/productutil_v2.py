@@ -13,6 +13,7 @@ import yaml
 import gci.componentmodel as cm
 
 import ci.util
+import product.v2
 
 CliHint = ci.util.CliHint
 
@@ -24,7 +25,7 @@ def _raw_component_dep_to_v2(raw: dict):
 
   return cm.ComponentReference(
     componentName=name,
-    name=name,
+    name=product.v2.mangle_name(name),
     version=raw['version'],
   )
 
