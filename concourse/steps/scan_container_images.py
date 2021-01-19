@@ -342,7 +342,6 @@ def protecode_results_table(
     show_cve: bool=True,
 ):
     def result_to_tuple(upload_result: UploadResult):
-        # upload_result tuple of product.model.UploadResult and CVE Score
         upload_result, greatest_cve = upload_result
         # protecode.model.AnalysisResult
         analysis_result = upload_result.result
