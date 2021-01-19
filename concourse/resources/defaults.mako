@@ -3,11 +3,13 @@
 filter="indent_func(indent),trim">
 <%
 from makoutil import indent_func
+import model.container_registry as mcr
 import concourse.paths
 with open(concourse.paths.last_released_tag_file) as f:
   last_tag = f.read().strip()
 # registry_cfg must be of type ContainerRegistryConfig (cc-utils)
-repository = "eu.gcr.io/gardener-project/cc/job-image"
+repository = 'registry-1.docker.io/gardenerci/cc-job-image'
+registry_cfg = mcr.find_config(image_reference=repository)
 %>
 ${task_image_resource(
   registry_cfg,
