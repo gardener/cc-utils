@@ -13,23 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import dataclasses
 import functools
 import logging
 import textwrap
 import typing
 
-import requests.exceptions
 import tabulate
 
 import gci.componentmodel as cm
 
-import ccc.clamav
-import ci.util
 import concourse.util
 import mail.model
 import mailutil
 import reutil
+import saf.model
 
 from concourse.model.traits.image_scan import Notify
 from protecode.model import CVSSVersion, License, UploadResult
@@ -38,20 +35,6 @@ logger = logging.getLogger()
 
 # monkeypatch: disable html escaping
 tabulate.htmlescape = lambda x: x
-
-
-@dataclasses.dataclass
-class MalwareScanResult:
-    image_reference: str
-    file_path: str
-    finding: str
-
-    @staticmethod
-    def headers():
-        ''' Return a list of headers to be used when rendering this dataclass
-        using tabular.tabulate()
-        '''
-        return ('Image Reference', 'File Path', 'Scan Result')
 
 
 class MailRecipients:
@@ -125,7 +108,7 @@ class MailRecipients:
                 if not self._result_filter or self._result_filter(component=r[0])
             ])
 
-    def add_clamav_results(self, results: MalwareScanResult):
+    def add_clamav_results(self, results: saf.model.MalwarescanResult):
         if self._clamav_results is None:
             self._clamav_results = []
 
@@ -241,8 +224,11 @@ class MailRecipients:
     def _clamav_report(self):
         result = '<p><div>Virus Scanning Results:</div>'
         return result + tabulate.tabulate(
-            map(lambda dc: dataclasses.astuple(dc), self._clamav_results),
-            headers=MalwareScanResult.headers(),
+            map(
+                lambda sr: (sr.resource.name, sr.scan_state,'\n'.join(sr.findings)),
+                self._clamav_results,
+            ),
+            headers=('Resource Name', 'Scan State', 'Findings'),
             tablefmt='html',
         )
 
@@ -300,40 +286,6 @@ def mail_recipients(
             )
     else:
         raise NotImplementedError()
-
-
-def virus_scan_images(image_references: typing.Iterable[str], clamav_config_name: str):
-    clamav_client = ccc.clamav.client_from_config_name(clamav_config_name)
-    for image_reference in image_references:
-        try:
-            scan_results = [
-                MalwareScanResult(
-                    image_reference=image_reference,
-                    file_path=path.split(':')[1],
-                    finding=scan_result.virus_signature(),
-                )
-                for scan_result, path in clamav_client.scan_container_image(
-                    image_reference=image_reference
-                )
-            ]
-            if scan_results:
-                yield from scan_results
-            else:
-                yield MalwareScanResult(
-                    image_reference=image_reference,
-                    file_path='-',
-                    finding='No malware detected.',
-                )
-        except requests.exceptions.RequestException as e:
-            ci.util.warning(
-                f'A connection error occurred while scanning the image "{image_reference}" '
-                f'for viruses: {e}'
-            )
-            yield MalwareScanResult(
-                image_reference=image_reference,
-                file_path='-',
-                finding=f'A connection error occurred while scanning the image: {e}'
-            )
 
 
 def protecode_results_table(
@@ -474,3 +426,20 @@ def print_protecode_info_table(
         ('Component name filter (exclude)', exclude_component_names),
     )
     print(tabulate.tabulate(entries, headers=headers))
+
+
+def retrieve_buildlog(uuid):
+    concourse_cfg = concourse.util.own_concourse_config()
+    pipeline_metadata = concourse.util.get_pipeline_metadata()
+    client = concourse.client.from_cfg(concourse_cfg, pipeline_metadata.team_name)
+    build = concourse.util.find_own_running_build()
+    build_id = build.id()
+    task_id = client.build_plan(build_id=build_id).task_id(task_name='malware-scan')
+    build_events = client.build_events(build_id=build_id)
+    log = build_events.iter_buildlog(task_id=task_id)
+    log = ''
+    for line in log:
+        log += f'{line}'
+        if uuid in line:
+            break
+    return log

@@ -1,10 +1,18 @@
 import io
 import tarfile
 import typing
+import logging
 
-import oci.client as oc
+import requests.exceptions
 
 import ccc.oci
+import gci.componentmodel
+import oci.client as oc
+import product
+import saf.model
+
+
+logger = logging.getLogger(__name__)
 
 
 class _FilelikeProxy(io.BytesIO):
@@ -65,4 +73,45 @@ def iter_image_files(
                 yield (
                     layer_tarfile.extractfile(tar_info),
                     f'{layer_blob.digest}:{tar_info.name}',
+                )
+
+
+def virus_scan_images(
+    component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
+    filter_function,
+    clamav_client,
+) -> typing.Generator[saf.model.MalwarescanResult, None, None]:
+    '''Scans components of the given Component Descriptor using ClamAV
+
+    Used by image-scan-trait
+    '''
+    for component, resource in product.v2.enumerate_oci_resources(
+            component_descriptor=component_descriptor_v2,
+    ):
+        if not filter_function(component, resource):
+            continue
+
+        try:
+            clamav_findings = list(
+                clamav_client.scan_container_image(
+                    image_reference=resource.access.imageReference
+                )
+            )
+            yield saf.model.MalwarescanResult(
+                    resource=resource,
+                    scan_state=saf.model.MalwareScanState.FINISHED_SUCCESSFULLY,
+                    findings=[
+                        f'{path.split(":")[1]}: {scan_result.virus_signature()}'
+                        for scan_result, path in clamav_findings
+                    ],
+                )
+        except requests.exceptions.RequestException as e:
+            logger.warning(
+                'A connection error occurred while scanning the image '
+                f'"{resource.access.imageReference} for viruses: {e}'
+            )
+            yield saf.model.MalwarescanResult(
+                    resource=resource,
+                    scan_state=saf.model.MalwareScanState.FINISHED_WITH_ERRORS,
+                    findings=[],
                 )
