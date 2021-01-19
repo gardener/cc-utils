@@ -38,6 +38,7 @@ def create_whitesource_client(
         wss_endpoint=ws_config.wss_endpoint(),
         ws_creds=ws_config.credentials(),
         product_token=ws_config.product_token(),
+        requester_mail=ws_config.requester_mail(),
     )
 
 
@@ -223,7 +224,6 @@ def notify_users(
 
 def scan_artifact_with_white_src(
     extra_whitesource_config: typing.Dict,
-    requester_mail: str,
     scan_artifact: dso.model.ScanArtifact,
     white_src_client: whitesource.client.WhitesourceClient,
 ):
@@ -279,7 +279,6 @@ def scan_artifact_with_white_src(
                 extra_whitesource_config=extra_whitesource_config,
                 file=tmp_file,
                 project_name=scan_artifact.name,
-                requester_email=requester_mail,
                 length=file_size,
             )
         )
@@ -293,7 +292,6 @@ def scan_artifact_with_white_src(
 def _scan_artifact(
     artifact,
     extra_whitesource_config,
-    requester_mail,
     white_src_client,
     len_artifacts: int,
     get: typing.Callable,
@@ -304,7 +302,6 @@ def _scan_artifact(
     append(1)
     whitesource.util.scan_artifact_with_white_src(
         extra_whitesource_config=extra_whitesource_config,
-        requester_mail=requester_mail,
         scan_artifact=artifact,
         white_src_client=white_src_client,
     )
@@ -314,7 +311,6 @@ def scan_sources(
     white_src_client: whitesource.client.WhitesourceClient,
     component_descriptor_path: str,
     extra_whitesource_config: dict,
-    requester_mail: str,
     max_workers: int,
 ) -> typing.Tuple[str, typing.List[whitesource.model.WhiteSrcProject]]:
 
@@ -340,7 +336,6 @@ def scan_sources(
         executor.map(functools.partial(
             _scan_artifact,
             extra_whitesource_config=extra_whitesource_config,
-            requester_mail=requester_mail,
             white_src_client=white_src_client,
             len_artifacts=len(scan_artifacts),
             get=get,

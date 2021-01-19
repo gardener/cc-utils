@@ -25,6 +25,7 @@ class WhitesourceClient:
         product_token: str,
         wss_api_endpoint: str,
         wss_endpoint: str,
+        requester_mail: str,
         ws_creds,
     ):
         self.routes = WhitesourceRoutes(
@@ -35,6 +36,7 @@ class WhitesourceClient:
         self.wss_endpoint = wss_endpoint
         self.creds = ws_creds
         self.product_token = product_token
+        self.requester_mail = requester_mail
 
     def request(self, method: str, print_error: bool = True, *args, **kwargs):
         res = requests.request(
@@ -70,7 +72,6 @@ class WhitesourceClient:
         extra_whitesource_config: typing.Dict,
         file: typing.IO,
         project_name: str,
-        requester_email: str,
         length: int,
         chunk_size=1024,
         ping_interval=1000,
@@ -86,7 +87,7 @@ class WhitesourceClient:
             'extraWsConfig': extra_whitesource_config,
             'productToken': self.product_token,
             'projectName': project_name,
-            'requesterEmail': requester_email,
+            'requesterEmail': self.requester_mail,
             'userKey': self.creds.user_key(),
             'wssUrl': self.wss_endpoint,
         }

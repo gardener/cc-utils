@@ -84,6 +84,9 @@ class WhitesourceCfg(ModelBase):
     def cfg_name(self):
         return self.raw['cfg_name']
 
+    def requester_mail(self):
+        return self.raw['requester_mail']
+
 
 class CheckmarxCfg(ModelBase):
     @classmethod
@@ -120,12 +123,6 @@ ATTRIBUTES = (
         type=typing.List[str],
     ),
     AttributeSpec.optional(
-        name='requester_mail',
-        default=(),
-        doc='e-mail of requester for whitesource scan',
-        type=typing.List[str],
-    ),
-    AttributeSpec.optional(
         name='checkmarx',
         type=CheckmarxCfg,
         default=(),
@@ -154,9 +151,6 @@ class SourceScanTrait(Trait):
 
     def email_recipients(self):
         return self.raw['email_recipients']
-
-    def white_src_scan_requester(self):
-        return self.raw['requester_mail']
 
     def checkmarx(self):
         if checkmarx := self.raw.get('checkmarx'):

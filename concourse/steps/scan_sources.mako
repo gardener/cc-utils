@@ -12,7 +12,6 @@ source_scan_trait = job_variant.trait('scan_sources')
 checkmarx_cfg = source_scan_trait.checkmarx()
 whitesource_cfg = source_scan_trait.whitesource()
 email_recipients = source_scan_trait.email_recipients()
-requester_mail = source_scan_trait.white_src_scan_requester()
 component_trait = job_variant.trait('component_descriptor')
 
 %>
@@ -40,7 +39,6 @@ scan_component_with_whitesource(
     cve_threshold=${whitesource_cfg.cve_threshold()},
     extra_whitesource_config={},
     notification_recipients=${email_recipients},
-    requester_mail=${requester_mail},
     whitesource_cfg_name='${whitesource_cfg.cfg_name()}',
 )
 % endif

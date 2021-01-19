@@ -44,7 +44,6 @@ def scan_component_with_whitesource(
     whitesource_cfg_name: str,
     component_descriptor_path: str,
     extra_whitesource_config: dict,
-    requester_mail: str,
     cve_threshold: float,
     notification_recipients: list,
     max_workers=4,
@@ -57,7 +56,6 @@ def scan_component_with_whitesource(
         white_src_client=white_src_client,
         component_descriptor_path=component_descriptor_path,
         extra_whitesource_config=extra_whitesource_config,
-        requester_mail=requester_mail,
         max_workers=max_workers,
     )
 
