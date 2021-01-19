@@ -1,4 +1,5 @@
 import asyncio
+import concurrent.futures
 import functools
 import tempfile
 import typing
@@ -7,8 +8,10 @@ import tabulate
 
 import ccc.github
 import ci.util
+import gci.componentmodel as cm
 import mailutil
 import product.util
+import product.v2
 import reutil
 import dso.util
 import dso.model
@@ -17,13 +20,14 @@ import whitesource.component
 import whitesource.model
 
 
-clogger = dso.util.component_logger(__name__)
-
-
 @functools.lru_cache()
 def create_whitesource_client(
     whitesource_cfg_name: str,
 ) -> whitesource.client.WhitesourceClient:
+
+    clogger = dso.util.component_logger(__name__)
+    clogger.info('creating whitesource client')
+
     cfg_fac = ci.util.ctx().cfg_factory()
     ws_config = cfg_fac.whitesource(whitesource_cfg_name)
 
@@ -35,6 +39,19 @@ def create_whitesource_client(
         ws_creds=ws_config.credentials(),
         product_token=ws_config.product_token(),
     )
+
+
+def _mk_ctx():
+    scanned = 1
+
+    def append(v):
+        nonlocal scanned
+        scanned += v
+
+    def get():
+        return scanned
+
+    return get, append
 
 
 def generate_reporting_tables(
@@ -173,27 +190,7 @@ def assemble_mail_body(
     '''
 
 
-def send_mail(
-    body,
-    recipients: list,
-    product_name: str,
-):
-
-    # get standard cfg set for email cfg
-    default_cfg_set_name = ci.util.current_config_set_name()
-    cfg_factory = ci.util.ctx().cfg_factory()
-    cfg_set = cfg_factory.cfg_set(default_cfg_set_name)
-
-    mailutil._send_mail(
-        email_cfg=cfg_set.email(),
-        recipients=recipients,
-        mail_template=body,
-        subject=f'[Action Required] ({product_name}) WhiteSource Vulnerability Report',
-        mimetype='html',
-    )
-
-
-def print_cve_tables(tables):
+def _print_cve_tables(tables):
     print('\n' + '\n\n'.join(tables) + '\n')
 
 
@@ -201,8 +198,10 @@ def notify_users(
     ws_client: whitesource.client.WhitesourceClient,
     cve_threshold: float,
     notification_recipients: typing.List[str],
-    product_name: str
+    product_name: str,
 ):
+
+    clogger = dso.util.component_logger(__name__)
     clogger.info('retrieving all projects')
     projects = ws_client.get_all_projects_of_product()
 
@@ -219,42 +218,19 @@ def notify_users(
         tablefmt='simple',
     )
 
-    print_cve_tables(tables=tables)
-
-    if len(notification_recipients) > 0:
-        # generate html reporting table for email notifications
-        tables = generate_reporting_tables(
-            projects=projects,
-            threshold=cve_threshold,
-            tablefmt='html',
-        )
-
-        body = assemble_mail_body(
-            tables=tables,
-            threshold=cve_threshold,
-        )
-
-        # TODO fix mail pdf attachment
-        # add line break after 72 lines to avoid line too long error
-        clogger.info('sending notification')
-        send_mail(
-            body=body,
-            recipients=notification_recipients,
-            product_name=product_name,
-        )
-    else:
-        clogger.warning('No recipients defined. No emails will be sent...')
+    _print_cve_tables(tables=tables)
 
 
 def scan_artifact_with_white_src(
     extra_whitesource_config: typing.Dict,
     requester_mail: str,
     scan_artifact: dso.model.ScanArtifact,
-    ws_client: whitesource.client.WhitesourceClient,
+    white_src_client: whitesource.client.WhitesourceClient,
 ):
-    clogger = dso.util.component_logger(scan_artifact.name)
 
+    clogger = dso.util.component_logger(scan_artifact.name)
     clogger.info('init scan')
+
     github_api = ccc.github.github_api_from_gh_access(access=scan_artifact.access)
     github_repo = github_api.repository(
         owner=scan_artifact.access.org_name(),
@@ -299,7 +275,7 @@ def scan_artifact_with_white_src(
         clogger.info('sending component to scan backend...')
 
         res = asyncio.run(
-            ws_client.upload_to_project(
+            white_src_client.upload_to_project(
                 extra_whitesource_config=extra_whitesource_config,
                 file=tmp_file,
                 project_name=scan_artifact.name,
@@ -312,3 +288,130 @@ def scan_artifact_with_white_src(
         # TODO save scanned commit hash or tag in project tag show scanned version
         # version for agent will create a new project
         # https://whitesource.atlassian.net/wiki/spaces/WD/pages/34046170/HTTP+API+v1.1#HTTPAPIv1.1-ProjectTags
+
+
+def _scan_artifact(
+    artifact,
+    extra_whitesource_config,
+    requester_mail,
+    white_src_client,
+    len_artifacts: int,
+    get: typing.Callable,
+    append: typing.Callable,
+):
+    clogger = dso.util.component_logger(__name__)
+    clogger.info(f'scanning {get()}/{len_artifacts}')
+    append(1)
+    whitesource.util.scan_artifact_with_white_src(
+        extra_whitesource_config=extra_whitesource_config,
+        requester_mail=requester_mail,
+        scan_artifact=artifact,
+        white_src_client=white_src_client,
+    )
+
+
+def scan_sources(
+    white_src_client: whitesource.client.WhitesourceClient,
+    component_descriptor_path: str,
+    extra_whitesource_config: dict,
+    requester_mail: str,
+    max_workers: int,
+) -> typing.Tuple[str, typing.List[whitesource.model.WhiteSrcProject]]:
+
+    clogger = dso.util.component_logger(__name__)
+    clogger.info(f'parsing component descriptor ({component_descriptor_path})')
+
+    component_descriptor = cm.ComponentDescriptor.from_dict(
+        ci.util.parse_yaml_file(component_descriptor_path)
+    )
+    components = product.v2.components(component_descriptor_v2=component_descriptor)
+
+    product_name = component_descriptor.component.name
+
+    # get scan artifacts with configured label
+    scan_artifacts_gen = whitesource.component.get_scan_artifacts_from_components(components)
+    scan_artifacts = tuple(scan_artifacts_gen)
+
+    get, append = _mk_ctx()
+
+    clogger.info(f'{len(scan_artifacts)} artifacts to scan')
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        executor.map(functools.partial(
+            _scan_artifact,
+            extra_whitesource_config=extra_whitesource_config,
+            requester_mail=requester_mail,
+            white_src_client=white_src_client,
+            len_artifacts=len(scan_artifacts),
+            get=get,
+            append=append,
+        ), scan_artifacts)
+
+    projects = white_src_client.get_all_projects_of_product()
+
+    return product_name, projects
+
+
+def print_scans(
+    projects: typing.List[whitesource.model.WhiteSrcProject],
+    cve_threshold: float,
+    product_name: str,
+):
+    clogger = dso.util.component_logger(__name__)
+    clogger.info('retrieving all projects')
+
+    if len(projects) == 0:
+        ci.util.warning(
+            f'No projects found in product {product_name}. No data to report. Exiting...',
+        )
+        return
+
+    clogger.info('generate simple reporting table for console output')
+    tables = generate_reporting_tables(
+        projects=projects,
+        threshold=cve_threshold,
+        tablefmt='simple',
+    )
+
+    _print_cve_tables(tables=tables)
+
+
+def send_mail(
+    notification_recipients: typing.List[str],
+    cve_threshold: float,
+    product_name: str,
+    projects: typing.List[whitesource.model.WhiteSrcProject],
+):
+
+    clogger = dso.util.component_logger(__name__)
+    if len(notification_recipients) > 0:
+
+        # generate html reporting table for email notifications
+        tables = generate_reporting_tables(
+            projects=projects,
+            threshold=cve_threshold,
+            tablefmt='html',
+        )
+
+        body = assemble_mail_body(
+            tables=tables,
+            threshold=cve_threshold,
+        )
+
+        clogger.info('sending notification')
+
+        # get standard cfg set for email cfg
+        default_cfg_set_name = ci.util.current_config_set_name()
+        cfg_factory = ci.util.ctx().cfg_factory()
+        cfg_set = cfg_factory.cfg_set(default_cfg_set_name)
+
+        mailutil._send_mail(
+            email_cfg=cfg_set.email(),
+            recipients=notification_recipients,
+            mail_template=body,
+            subject=f'[Action Required] ({product_name}) WhiteSource Vulnerability Report',
+            mimetype='html',
+        )
+
+    else:
+        clogger.warning('No recipients defined. No emails will be sent...')

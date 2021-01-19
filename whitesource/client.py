@@ -5,6 +5,7 @@ import websockets
 import requests
 
 import ci.util
+import dso.util
 import whitesource.model
 
 
@@ -94,7 +95,7 @@ class WhitesourceClient:
             uri=self.routes.upload_to_project(),
             ping_interval=ping_interval,
             ping_timeout=ping_timeout,
-            ) as websocket:
+        ) as websocket:
             await websocket.send(json.dumps(meta_data))
             await websocket.send(json.dumps(ws_config))
             sent = 0
@@ -109,6 +110,8 @@ class WhitesourceClient:
             return json.loads(await websocket.recv())
 
     def get_product_risk_report(self):
+        clogger = dso.util.component_logger(__name__)
+        clogger.info('retrieving product risk report')
         body = {
             'requestType': 'getProductRiskReport',
             'userKey': self.creds.user_key(),
