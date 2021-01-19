@@ -1,4 +1,6 @@
 import dataclasses
+import enum
+import json
 
 import requests
 
@@ -20,7 +22,7 @@ class SafClient:
             headers={
                 'Authorization': f'Bearer {self._saf_cfg.credentials().bearer_token}',
             },
-            json=raw,
+            data=json.dumps(raw, cls=EnumJSONEncoder),
         )
 
         res.raise_for_status()
@@ -31,3 +33,13 @@ class SafClient:
         raw = dataclasses.asdict(evidence)
 
         return self._post_evidence_dict(raw=raw)
+
+
+class EnumJSONEncoder(json.JSONEncoder):
+    '''
+    a json.JSONEncoder that will encode enum objects using their values
+    '''
+    def default(self, o):
+        if isinstance(o, enum.Enum):
+            return o.value
+        return super().default(o)
