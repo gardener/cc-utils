@@ -21,6 +21,8 @@ from protecode.client import ProtecodeApi
 from protecode.model import (
     AnalysisResult,
     TriageScope,
+    UploadResult,
+    UploadStatus,
     VersionOverrideScope,
 )
 from concourse.model.base import (
@@ -32,7 +34,6 @@ from ccc.grafeas_model import (
 )
 from ci.util import not_none, warning, check_type, info
 from container.registry import retrieve_container_image
-from product.model import UploadResult, UploadStatus
 
 ci.util.ctx().configure_default_logging()
 logger = logging.getLogger(__name__)

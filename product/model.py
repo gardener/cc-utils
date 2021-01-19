@@ -23,7 +23,6 @@ from enum import Enum
 import dacite
 
 from model.base import ModelBase, ModelValidationError
-from protecode.model import AnalysisResult
 from ci.util import not_none, urljoin, check_type
 
 import container.registry
@@ -734,40 +733,3 @@ def reference_type(name: str):
     if name == 'web':
         return WebDependencyReference
     raise ValueError('unknown dependency type name: ' + str(name))
-
-
-#############################################################################
-## upload result model
-
-class UploadStatus(Enum):
-    SKIPPED = 1
-    PENDING = 2
-    DONE = 4
-
-
-class UploadResult(object):
-    def __init__(
-            self,
-            status: UploadStatus,
-            component: Component,
-            result: AnalysisResult,
-            pdf_report_retrieval_func,
-            resource=None,
-    ):
-        self.status = not_none(status)
-        self.component = not_none(component)
-        if result:
-            self.result = result
-        else:
-            self.result = None
-        self.resource = resource
-        self._pdf_report_retrieval_func = pdf_report_retrieval_func
-
-    def __str__(self):
-        return '{c} - {s}'.format(
-            c=self.component.name,
-            s=self.status
-        )
-
-    def pdf_report(self):
-        return self._pdf_report_retrieval_func()

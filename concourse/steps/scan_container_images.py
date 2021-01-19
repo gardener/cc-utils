@@ -32,8 +32,7 @@ import mailutil
 import reutil
 
 from concourse.model.traits.image_scan import Notify
-from product.model import UploadResult
-from protecode.model import CVSSVersion, License
+from protecode.model import CVSSVersion, License, UploadResult
 
 logger = logging.getLogger()
 

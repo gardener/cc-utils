@@ -241,3 +241,40 @@ def highest_major_cve_severity(
         )
     except ValueError:
         return -1
+
+
+#############################################################################
+## upload result model
+
+class UploadStatus(Enum):
+    SKIPPED = 1
+    PENDING = 2
+    DONE = 4
+
+
+class UploadResult:
+    def __init__(
+            self,
+            status: UploadStatus,
+            component: Component,
+            result: AnalysisResult,
+            pdf_report_retrieval_func,
+            resource=None,
+    ):
+        self.status = not_none(status)
+        self.component = not_none(component)
+        if result:
+            self.result = result
+        else:
+            self.result = None
+        self.resource = resource
+        self._pdf_report_retrieval_func = pdf_report_retrieval_func
+
+    def __str__(self):
+        return '{c} - {s}'.format(
+            c=self.component.name,
+            s=self.status
+        )
+
+    def pdf_report(self):
+        return self._pdf_report_retrieval_func()

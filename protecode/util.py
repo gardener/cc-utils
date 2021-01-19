@@ -22,7 +22,6 @@ import typing
 import ccc.gcp
 import ccc.protecode
 import ctx
-import container.registry
 import product.util
 
 import gci.componentmodel as cm
@@ -36,18 +35,13 @@ from protecode.scanning_util import (
 )
 from ci.util import (
     info,
-    success,
-    urljoin,
     warning,
-)
-from product.model import (
-    ComponentDescriptor,
-    UploadResult,
 )
 from protecode.model import (
     License,
     highest_major_cve_severity,
     CVSSVersion,
+    UploadResult,
 )
 ctx.configure_default_logging()
 
@@ -160,57 +154,6 @@ def upload_grouped_images(
     _license_report = license_report(upload_results=results)
 
     return (relevant_results, results_below_threshold, _license_report)
-
-
-def download_images(
-    component_descriptor: ComponentDescriptor,
-    upload_registry_prefix: str,
-    image_reference_filter=(lambda component, container_image: True),
-    parallel_jobs=8, # eight is a good number
-):
-    '''
-    downloads all matching container images, discarding the retrieved contents afterwards.
-    While this may seem pointless, this actually does server a purpose. Namely, we use the
-    vulnerability scanning service offered by GCR. However, said scanning service will only
-    continue to run (and thus update vulnerability reports) for images that keep being
-    retrieved occasionally (relevant timeout being roughly 4w).
-    '''
-    image_refs = [
-        container_image.image_reference()
-        for component, container_image
-        in product.util._enumerate_effective_images(
-            component_descriptor=component_descriptor,
-        )
-        if image_reference_filter(component, container_image)
-    ]
-
-    # XXX deduplicate this again (copied from product/scanning.py)
-    def upload_image_ref(image_reference):
-        image_name, tag = image_reference.rsplit(':', 1)
-        mangled_reference = ':'.join((
-            image_name.replace('.', '_'),
-            tag
-        ))
-        return urljoin(upload_registry_prefix, mangled_reference)
-
-    image_refs = [upload_image_ref(ref) for ref in image_refs]
-
-    info(f'downloading {len(image_refs)} container images to simulate consumption')
-
-    executor = ThreadPoolExecutor(max_workers=parallel_jobs)
-
-    def retrieve_image(image_reference: str):
-        try:
-            container.registry.retrieve_container_image(image_reference=image_reference)
-            info(f'downloaded {image_reference}')
-        except Exception:
-            warning(f'failed to retrieve {image_reference}')
-            import traceback
-            traceback.print_exc()
-
-    # force generator to be exhausted
-    tuple(executor.map(retrieve_image, image_refs))
-    success(f'successfully retrieved {len(image_refs)} container images')
 
 
 def license_report(
