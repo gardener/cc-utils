@@ -36,6 +36,8 @@ import ccc.oci
 import container.registry as cr
 import oci
 
+import shutil
+
 ${step_lib('build_oci_image')}
 
 home = os.path.join('/', 'kaniko')
@@ -51,6 +53,7 @@ write_docker_cfg(
 subproc_env = os.environ.copy()
 subproc_env['HOME'] = home
 subproc_env['GOOGLE_APPLICATION_CREDENTIALS'] = docker_cfg_path
+subproc_env['PATH'] = os.path.join('/', 'kaniko', 'bin')
 
 image_outfile = '${image_descriptor.name()}.oci-image.tar'
 
@@ -86,6 +89,10 @@ os.link(
   (ca_certs_path := os.path.join('/', 'etc', 'ssl', 'certs', 'ca-certificates.crt')),
   (ca_certs_bak := os.path.join('/', 'kaniko', 'ca-certificates.crt')),
 )
+
+# HACK remove '/usr/lib' and '/cc/utils' to avoid pip from failing in the first stage of builds
+shutil.rmtree(os.path.join('/', 'usr', 'lib'))
+shutil.rmtree(os.path.join('/', 'cc', 'utils'))
 
 # XXX final hack (I hope): cp entire python-dir
 import sys
