@@ -45,9 +45,9 @@ def create_whitesource_client(
 def _mk_ctx():
     scanned = 1
 
-    def increment(v):
+    def increment():
         nonlocal scanned
-        scanned += v
+        scanned += 1
 
     def get():
         return scanned
@@ -193,33 +193,6 @@ def assemble_mail_body(
 
 def _print_cve_tables(tables):
     print('\n' + '\n\n'.join(tables) + '\n')
-
-
-def notify_users(
-    ws_client: whitesource.client.WhitesourceClient,
-    cve_threshold: float,
-    notification_recipients: typing.List[str],
-    product_name: str,
-):
-
-    clogger = dso.util.component_logger(__name__)
-    clogger.info('retrieving all projects')
-    projects = ws_client.get_all_projects_of_product()
-
-    if len(projects) == 0:
-        ci.util.warning(
-            f'No projects found in product {product_name}. No data to report. Exiting...',
-        )
-        return
-
-    clogger.info('generate simple reporting table for console output')
-    tables = generate_reporting_tables(
-        projects=projects,
-        threshold=cve_threshold,
-        tablefmt='simple',
-    )
-
-    _print_cve_tables(tables=tables)
 
 
 def scan_artifact_with_white_src(
