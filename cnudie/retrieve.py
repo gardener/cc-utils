@@ -39,7 +39,7 @@ def _component_descriptor(
     ctx_repo_url: str,
     delivery_client: delivery.client.DeliveryServiceClient=None,
     cache_dir=None,
-    validation_mode=validation_mode,
+    validation_mode=cm.ValidationMode.NONE,
 ):
     if not delivery_client:
         delivery_client = ccc.delivery.default_client_if_available()
