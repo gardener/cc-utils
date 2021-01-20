@@ -270,7 +270,7 @@ class Client:
             if he.response.status_code == 404:
                 if absent_ok:
                     return None
-                raise om.OciImageNotFoundException(he.response) from he
+            raise om.OciImageNotFoundException(he.response) from he
 
         return res
 
