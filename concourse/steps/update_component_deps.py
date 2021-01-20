@@ -95,12 +95,10 @@ def get_source_repo_config_for_component_reference(
     component_reference: gci.componentmodel.ComponentReference,
     component_version: str,
 ):
-    component_descriptor = product.v2.retrieve_component_descriptor_from_oci_ref(
-        product.v2._target_oci_ref(
-            component=component,
-            component_ref=component_reference,
-            component_version=component_version,
-        )
+    component_descriptor = cnudie.retrieve.component_descriptor(
+        name=component_reference.componentName,
+        version=component_reference.version,
+        ctx_repo_url=component.current_repository_ctx().baseUrl,
     )
     resolved_component = component_descriptor.component
     if not resolved_component.sources:
