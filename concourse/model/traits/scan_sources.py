@@ -84,6 +84,9 @@ class WhitesourceCfg(ModelBase):
     def cfg_name(self):
         return self.raw['cfg_name']
 
+    def requester_mail(self):
+        return self.raw['requester_mail']
+
 
 class CheckmarxCfg(ModelBase):
     @classmethod

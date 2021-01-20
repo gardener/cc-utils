@@ -32,6 +32,9 @@ class WhitesourceConfig(NamedModelElement):
     def base_url(self):
         return self.raw.get('base_url')
 
+    def requester_mail(self):
+        return self.raw.get('requester_mail')
+
     def product_token(self):
         return self.raw.get('product_token')
 
@@ -66,6 +69,7 @@ class WhitesourceConfig(NamedModelElement):
             'extension_endpoint',
             'wss_api_endpoint',
             'base_url',
+            'requester_mail',
         )
 
     def _optional_attributes(self):

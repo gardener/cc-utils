@@ -39,7 +39,6 @@ scan_component_with_whitesource(
     cve_threshold=${whitesource_cfg.cve_threshold()},
     extra_whitesource_config={},
     notification_recipients=${email_recipients},
-    requester_mail='no-reply@example.org',
     whitesource_cfg_name='${whitesource_cfg.cfg_name()}',
 )
 % endif

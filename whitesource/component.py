@@ -19,7 +19,7 @@ def _get_ws_label_from_source(source: cm.ComponentSource) -> dso.labels.SourceId
         )
 
 
-def _get_scan_artifacts_from_components(
+def get_scan_artifacts_from_components(
     components: typing.Sequence[cm.Component],
 ) -> typing.Generator:
     for component in components:

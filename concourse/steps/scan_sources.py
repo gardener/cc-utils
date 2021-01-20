@@ -1,14 +1,9 @@
 import typing
 
-import ci.util
 import checkmarx.util
-import product.v2
-import dso.util
 import whitesource.client
 import whitesource.component
 import whitesource.util
-
-import gci.componentmodel as cm
 
 
 def scan_sources_and_notify(
@@ -49,43 +44,30 @@ def scan_component_with_whitesource(
     whitesource_cfg_name: str,
     component_descriptor_path: str,
     extra_whitesource_config: dict,
-    requester_mail: str,
     cve_threshold: float,
     notification_recipients: list,
+    max_workers=4,
 ):
-    clogger = dso.util.component_logger(__name__)
-    clogger.info('creating whitesource client')
-    ws_client = whitesource.util.create_whitesource_client(
+    whitesource_client = whitesource.util.create_whitesource_client(
         whitesource_cfg_name=whitesource_cfg_name,
     )
 
-    clogger.info('parsing component descriptor')
-    component_descriptor = cm.ComponentDescriptor.from_dict(
-        ci.util.parse_yaml_file(component_descriptor_path)
+    product_name, projects = whitesource.util.scan_sources(
+        whitesource_client=whitesource_client,
+        component_descriptor_path=component_descriptor_path,
+        extra_whitesource_config=extra_whitesource_config,
+        max_workers=max_workers,
     )
-    components = product.v2.components(component_descriptor_v2=component_descriptor)
 
-    product_name = component_descriptor.component.name
+    whitesource.util.print_scans(
+        cve_threshold=cve_threshold,
+        projects=projects,
+        product_name=product_name,
+    )
 
-    # get scan artifacts with configured label
-    scan_artifacts_gen = whitesource.component._get_scan_artifacts_from_components(components)
-    scan_artifacts = tuple(scan_artifacts_gen)
-    clogger.info(f'will scan {len(scan_artifacts)} artifacts')
-
-    i = 1
-    for scan_artifact in scan_artifacts:
-        clogger.info(f'artifact {i} / {len(scan_artifacts)}')
-        whitesource.util.scan_artifact_with_white_src(
-            extra_whitesource_config=extra_whitesource_config,
-            requester_mail=requester_mail,
-            scan_artifact=scan_artifact,
-            ws_client=ws_client,
-        )
-        i += 1
-
-    whitesource.util.notify_users(
+    whitesource.util.send_mail(
         notification_recipients=notification_recipients,
         cve_threshold=cve_threshold,
-        ws_client=ws_client,
         product_name=product_name,
+        projects=projects,
     )
