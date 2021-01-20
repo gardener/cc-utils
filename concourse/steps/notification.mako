@@ -37,6 +37,7 @@ import sys
 import os
 
 import ccc.github
+import cnudie.retrieve
 import ci.util
 import github
 import mailutil
@@ -173,10 +174,10 @@ def retr_component(component_name: str):
     component_name=component_name,
     ctx_repo_base_url='${ctx_repo_url}',
   )
-  comp_descr = product.v2.download_component_descriptor_v2(
-    component_name=component_name,
-    component_version=greatest_version,
-    ctx_repo_base_url='${ctx_repo_url}',
+  comp_descr = cnudie.retrieve.component_descriptor(
+    name=component_name,
+    version=greatest_version,
+    ctx_repo_url='${ctx_repo_url}',
   )
   return comp_descr.component
 

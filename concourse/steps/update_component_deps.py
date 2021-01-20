@@ -24,6 +24,7 @@ import github3.exceptions
 import ccc.github
 import ci.util
 import cnudie.util
+import cnudie.retrieve
 import concourse.model.traits.update_component_deps
 import concourse.steps.component_descriptor_util as cdu
 import github.util
@@ -129,10 +130,10 @@ def latest_component_version_from_upstream(
             f'did not find any versions for {upstream_component_name=}, {base_url=}'
         )
 
-    upstream_component_descriptor = product.v2.download_component_descriptor_v2(
-        component_name=upstream_component_name,
-        component_version=upstream_component_version,
-        ctx_repo_base_url=base_url,
+    upstream_component_descriptor = cnudie.retrieve.component_descriptor(
+        name=upstream_component_name,
+        version=upstream_component_version,
+        ctx_repo_url=base_url,
     )
     upstream_component = upstream_component_descriptor.component
     for component_ref in upstream_component.componentReferences:

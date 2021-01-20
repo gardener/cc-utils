@@ -20,6 +20,7 @@ import yaml
 
 import ci.util
 import cnudie.util
+import cnudie.retrieve
 import product.v2
 
 import gci.componentmodel as cm
@@ -114,10 +115,10 @@ def component_diff_since_last_release(
     greatest_release_version = str(greatest_release_version)
     ci.util.info('last released version: ' + str(greatest_release_version))
 
-    greatest_released_cd = product.v2.download_component_descriptor_v2(
-        component_name=component.name,
-        component_version=greatest_release_version,
-        ctx_repo_base_url=ctx_repo_url,
+    greatest_released_cd = cnudie.retrieve.component_descriptor(
+        name=component.name,
+        version=greatest_release_version,
+        ctx_repo_url=ctx_repo_url,
     )
     greatest_released_component = greatest_released_cd.component
 
