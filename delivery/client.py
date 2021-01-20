@@ -26,6 +26,7 @@ class DeliveryServiceClient:
         name: str,
         version: str,
         ctx_repo_url: str,
+        validation_mode: cm.ValidationMode=cm.ValidationMode.NONE,
     ):
         res = requests.get(
             url=self._routes.component_descriptor(),
@@ -38,4 +39,7 @@ class DeliveryServiceClient:
 
         res.raise_for_status()
 
-        return cm.ComponentDescriptor.from_dict(res.json())
+        return cm.ComponentDescriptor.from_dict(
+            res.json(),
+            valdation_mode=validation_mode,
+        )
