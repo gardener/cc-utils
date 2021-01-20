@@ -137,7 +137,7 @@ def latest_component_version_from_upstream(
     upstream_component = upstream_component_descriptor.component
     for component_ref in upstream_component.componentReferences:
         # TODO: Validate that component_name is unique
-        if component_ref.name == component_name:
+        if component_ref.componentName == component_name:
             return component_ref.version
 
 
