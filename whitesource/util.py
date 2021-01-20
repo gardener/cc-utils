@@ -45,14 +45,14 @@ def create_whitesource_client(
 def _mk_ctx():
     scanned = 1
 
-    def append(v):
+    def increment(v):
         nonlocal scanned
         scanned += v
 
     def get():
         return scanned
 
-    return get, append
+    return get, increment
 
 
 def generate_reporting_tables(
@@ -225,7 +225,7 @@ def notify_users(
 def scan_artifact_with_white_src(
     extra_whitesource_config: typing.Dict,
     scan_artifact: dso.model.ScanArtifact,
-    white_src_client: whitesource.client.WhitesourceClient,
+    whitesource_client: whitesource.client.WhitesourceClient,
 ):
 
     clogger = dso.util.component_logger(scan_artifact.name)
@@ -275,7 +275,7 @@ def scan_artifact_with_white_src(
         clogger.info('sending component to scan backend...')
 
         res = asyncio.run(
-            white_src_client.upload_to_project(
+            whitesource_client.upload_to_project(
                 extra_whitesource_config=extra_whitesource_config,
                 file=tmp_file,
                 project_name=scan_artifact.name,
@@ -292,23 +292,23 @@ def scan_artifact_with_white_src(
 def _scan_artifact(
     artifact,
     extra_whitesource_config,
-    white_src_client,
+    whitesource_client,
     len_artifacts: int,
-    get: typing.Callable,
-    append: typing.Callable,
+    get_scanned_count: typing.Callable,
+    increment_scanned_count: typing.Callable[[], int],
 ):
     clogger = dso.util.component_logger(__name__)
-    clogger.info(f'scanning {get()}/{len_artifacts}')
-    append(1)
+    clogger.info(f'scanning {get_scanned_count()}/{len_artifacts}')
+    increment_scanned_count()
     whitesource.util.scan_artifact_with_white_src(
         extra_whitesource_config=extra_whitesource_config,
         scan_artifact=artifact,
-        white_src_client=white_src_client,
+        whitesource_client=whitesource_client,
     )
 
 
 def scan_sources(
-    white_src_client: whitesource.client.WhitesourceClient,
+    whitesource_client: whitesource.client.WhitesourceClient,
     component_descriptor_path: str,
     extra_whitesource_config: dict,
     max_workers: int,
@@ -328,7 +328,7 @@ def scan_sources(
     scan_artifacts_gen = whitesource.component.get_scan_artifacts_from_components(components)
     scan_artifacts = tuple(scan_artifacts_gen)
 
-    get, append = _mk_ctx()
+    get_scanned_count, increment_scanned_count = _mk_ctx()
 
     clogger.info(f'{len(scan_artifacts)} artifacts to scan')
 
@@ -336,13 +336,13 @@ def scan_sources(
         executor.map(functools.partial(
             _scan_artifact,
             extra_whitesource_config=extra_whitesource_config,
-            white_src_client=white_src_client,
+            whitesource_client=whitesource_client,
             len_artifacts=len(scan_artifacts),
-            get=get,
-            append=append,
+            get_scanned_count=get_scanned_count,
+            increment_scanned_count=increment_scanned_count,
         ), scan_artifacts)
 
-    projects = white_src_client.get_all_projects_of_product()
+    projects = whitesource_client.get_all_projects_of_product()
 
     return product_name, projects
 

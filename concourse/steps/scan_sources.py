@@ -48,12 +48,12 @@ def scan_component_with_whitesource(
     notification_recipients: list,
     max_workers=4,
 ):
-    white_src_client = whitesource.util.create_whitesource_client(
+    whitesource_client = whitesource.util.create_whitesource_client(
         whitesource_cfg_name=whitesource_cfg_name,
     )
 
     product_name, projects = whitesource.util.scan_sources(
-        white_src_client=white_src_client,
+        whitesource_client=whitesource_client,
         component_descriptor_path=component_descriptor_path,
         extra_whitesource_config=extra_whitesource_config,
         max_workers=max_workers,
