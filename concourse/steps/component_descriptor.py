@@ -125,7 +125,7 @@ def component_diff_since_last_release(
     if not greatest_released_component:
         ci.util.fail(f'could not find {component=}')
 
-    return cnudie.util.diff_component_descriptors(
+    return cnudie.retrieve.component_diff(
         left_component=component,
         right_component=greatest_released_component,
         ignore_component_names=(component.name,),
