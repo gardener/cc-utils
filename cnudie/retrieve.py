@@ -90,7 +90,8 @@ def _component_descriptor(
             ctx_repo_url=ctx_repo_url,
         )
     except:
-        pass
+        import traceback
+        traceback.print_exc()
 
     # fallback to resolving from oci-registry
     if delivery_client:
