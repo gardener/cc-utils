@@ -234,6 +234,23 @@ class Client:
         )
         headers = headers or {}
 
+        try:
+            import ccc.elasticsearch
+            import traceback
+            ccc.elasticsearch.dump_elastic_search_document(
+                es_config_name='sap_internal',
+                index='component_descriptor_pull',
+                body={
+                    'method': method,
+                    'url': url,
+                    'stacktrace': traceback.format_stack(),
+                }
+            )
+        except:
+            import traceback
+            logger.error(traceback.format_exc())
+            logger.error('could not send elastic search dump')
+
         res = requests.request(
             method=method,
             url=url,
