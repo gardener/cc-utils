@@ -41,5 +41,5 @@ class DeliveryServiceClient:
 
         return cm.ComponentDescriptor.from_dict(
             res.json(),
-            valdation_mode=validation_mode,
+            validation_mode=validation_mode,
         )
