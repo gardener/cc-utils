@@ -119,15 +119,17 @@ def _component_descriptor(
     if not delivery_client:
         delivery_client = ccc.delivery.default_client_if_available()
 
-    try:
-        return delivery_client.component_descriptor(
-            name=name,
-            version=version,
-            ctx_repo_url=ctx_repo_url,
-        )
-    except:
-        import traceback
-        traceback.print_exc()
+    # delivery-client may still be None
+    if delivery_client:
+        try:
+            return delivery_client.component_descriptor(
+                name=name,
+                version=version,
+                ctx_repo_url=ctx_repo_url,
+            )
+        except:
+            import traceback
+            traceback.print_exc()
 
     # fallback to resolving from oci-registry
     if delivery_client:
