@@ -82,6 +82,8 @@ def _component_descriptor(
 ):
     if not delivery_client:
         delivery_client = ccc.delivery.default_client_if_available()
+        if not delivery_client:
+            print('xxx failed to determine delivery-client')
 
     try:
         return delivery_client.component_descriptor(
