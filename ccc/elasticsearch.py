@@ -25,6 +25,17 @@ import concourse.util
 import model.elasticsearch
 
 
+def default_client_if_available():
+    if not ci.util._running_on_ci():
+        return None
+
+    cfg_factory = ci.util.ctx().cfg_factory()
+    cfg_set = cfg_factory.cfg_set(ci.util.current_config_set_name())
+    es_config = cfg_set.elasticsearch()
+
+    return from_cfg(elasticsearch_cfg=es_config)
+
+
 def from_cfg(
     elasticsearch_cfg:model.elasticsearch.ElasticSearchConfig
 ):
@@ -173,14 +184,3 @@ class ElasticSearchClient(object):
             *args,
             **kwargs,
         )
-
-
-def dump_elastic_search_document(es_config_name, index, body):
-    ctx = ci.util.ctx()
-    cfg_factory = ctx.cfg_factory()
-    es_config = cfg_factory.elasticsearch(es_config_name)
-    es_client: ElasticSearchClient = from_cfg(es_config)
-    es_client.store_document(
-        index=index,
-        body=body,
-    )
