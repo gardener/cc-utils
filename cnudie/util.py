@@ -8,6 +8,18 @@ import product.v2
 import gci.componentmodel as cm
 
 
+def to_component(*args, **kwargs) -> cm.Component:
+    if not kwargs and len(args) == 1:
+        component = args[0]
+        if isinstance(component, cm.Component):
+            return component
+        elif isinstance(component, cm.ComponentDescriptor):
+            return component.component
+        else:
+            raise ValueError(args)
+    raise NotImplementedError
+
+
 def determine_main_source_for_component(
     component: cm.Component,
     absent_ok: bool=True,
