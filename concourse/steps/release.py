@@ -18,6 +18,7 @@ from ci.util import (
     info,
     warning,
 )
+import cnudie.retrieve
 from gitutil import GitHelper
 from github.util import (
     GitHubRepositoryHelper,
@@ -579,7 +580,8 @@ class GitHubReleaseStep(TransactionalStep):
             component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
                 ci.util.parse_yaml_file(self.component_descriptor_v2_path),
             )
-            product.v2.resolve_dependencies(component=component_descriptor_v2.component)
+            # resolve all referenced components (thus ensure all dependencies are available)
+            tuple(cnudie.retrieve.components(component=component_descriptor_v2))
             # TODO: more validation (e.g. check for uniqueness of names)
         elif have_ctf:
             # nothing to do, already uploaded in component_descriptor step.
