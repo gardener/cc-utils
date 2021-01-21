@@ -16,6 +16,7 @@
 from enum import Enum
 from typing import Iterable
 
+import ci.util
 from model.base import ModelBase
 
 
@@ -261,8 +262,8 @@ class UploadResult:
             pdf_report_retrieval_func,
             resource=None,
     ):
-        self.status = not_none(status)
-        self.component = not_none(component)
+        self.status = ci.util.not_none(status)
+        self.component = ci.util.not_none(component)
         if result:
             self.result = result
         else:
