@@ -34,9 +34,9 @@ try:
 except:
   pass
 import ci.util
+import cnudie.retrieve
 import mailutil
 import product.util
-import product.v2
 import protecode.util
 
 
@@ -51,7 +51,7 @@ ${step_lib('component_descriptor_util')}
 cfg_factory = ci.util.ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
-component_descriptor = parse_component_descriptor(schema_version=cm.SchemaVersion.V2)
+component_descriptor = parse_component_descriptor()
 
 filter_function = create_composite_filter_function(
   include_image_references=${filter_cfg.include_image_references()},
@@ -121,7 +121,7 @@ if not (
 
 email_recipients = ${image_scan_trait.email_recipients()}
 
-components = tuple(product.v2.components(component_descriptor))
+components = tuple(cnudie.retrieve.components(component=component_descriptor))
 
 email_recipients = tuple(
   mail_recipients(

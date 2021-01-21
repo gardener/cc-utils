@@ -7,11 +7,11 @@ import typing
 import tabulate
 
 import ccc.github
+import cnudie.retrieve
 import ci.util
 import gci.componentmodel as cm
 import mailutil
 import product.util
-import product.v2
 import reutil
 import dso.util
 import dso.model
@@ -293,7 +293,7 @@ def scan_sources(
     component_descriptor = cm.ComponentDescriptor.from_dict(
         ci.util.parse_yaml_file(component_descriptor_path)
     )
-    components = product.v2.components(component_descriptor_v2=component_descriptor)
+    components = cnudie.retrieve.components(component=component_descriptor)
 
     product_name = component_descriptor.component.name
 

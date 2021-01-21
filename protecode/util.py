@@ -21,11 +21,12 @@ import typing
 
 import ccc.gcp
 import ccc.protecode
+import cnudie.retrieve
 import ctx
 import product.util
+import product.v2
 
 import gci.componentmodel as cm
-import product.v2
 import dso.labels
 
 from protecode.scanning_util import (
@@ -90,7 +91,7 @@ def upload_grouped_images(
     def _upload_tasks():
         # group images of same name w/ different versions
         component_groups = collections.defaultdict(list)
-        components = list(product.v2.components(component_descriptor))
+        components = list(cnudie.retrieve.components(component=component_descriptor))
 
         for component in components:
             component_groups[component.name].append(component)

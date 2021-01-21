@@ -13,6 +13,7 @@ import github3.exceptions
 import github3.repos
 
 import ccc.github
+import cnudie.retrieve
 import checkmarx.client
 import checkmarx.model as model
 import checkmarx.project
@@ -20,7 +21,6 @@ import checkmarx.tablefmt
 import ci.util
 import mailutil
 import product.util
-import product.v2
 import reutil
 import dso.labels
 import dso.model
@@ -42,7 +42,7 @@ def scan_sources(
         ci.util.parse_yaml_file(component_descriptor_path)
     )
 
-    components = tuple(product.v2.components(component_descriptor_v2=component_descriptor))
+    components = tuple(cnudie.retrieve.components(component=component_descriptor))
 
     # identify scan artifacts and collect them in a sequence
     artifacts_gen = _get_scan_artifacts_from_components(
