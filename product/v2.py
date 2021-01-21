@@ -16,6 +16,7 @@ import typing
 import yaml
 
 import dacite
+import deprecated
 
 import gci.componentmodel as cm
 import gci.oci
@@ -432,6 +433,7 @@ def rm_component_descriptor(
     container.registry.rm_tag(image_reference=target_ref)
 
 
+@deprecated.deprecated
 def components(
     component_descriptor_v2: cm.ComponentDescriptor,
     cache_dir: str=None,

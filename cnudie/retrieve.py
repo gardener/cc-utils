@@ -1,9 +1,11 @@
 import functools
 import logging
+import typing
 
 import gci.componentmodel as cm
 
 import ccc.delivery
+import cnudie.util
 import delivery.client
 import product.v2
 
@@ -30,6 +32,43 @@ def component_descriptor(
         cache_dir=cache_dir,
         validation_mode=validation_mode,
     )
+
+
+def components(
+    component: typing.Union[cm.ComponentDescriptor, cm.Component],
+    delivery_client: delivery.client.DeliveryServiceClient=None,
+    cache_dir: str=None,
+    validation_mode: cm.ValidationMode=cm.ValidationMode.NONE,
+    _visited_component_versions: typing.Tuple[str, str]=(),
+):
+    component = cnudie.util.to_component(component)
+
+    yield component
+
+    new_visited_component_versions = _visited_component_versions + \
+        (component.name, component.version) + \
+        tuple((cref.componentName, cref.version) for cref in component.componentReferences)
+
+    for component_ref in component.componentReferences:
+        cref_version = (component_ref.componentName, component_ref.version)
+        if cref_version in _visited_component_versions:
+            continue
+
+        resolved_component = component_descriptor(
+            name=component_ref.componentName,
+            version=component_ref.version,
+            ctx_repo_url=component.current_repository_ctx().baseUrl,
+            delivery_client=delivery_client,
+            cache_dir=cache_dir,
+            validation_mode=validation_mode,
+        )
+
+        yield from components(
+            component=resolved_component,
+            delivery_client=delivery_client,
+            cache_dir=cache_dir,
+            _visited_component_versions=new_visited_component_versions,
+        )
 
 
 @functools.lru_cache(maxsize=2048)
