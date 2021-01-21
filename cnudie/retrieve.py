@@ -71,6 +71,42 @@ def components(
         )
 
 
+def component_diff(
+    left_component: typing.Union[cm.Component, cm.ComponentDescriptor],
+    right_component: typing.Union[cm.Component, cm.ComponentDescriptor],
+    ignore_component_names=(),
+    delivery_client: delivery.client.DeliveryServiceClient=None,
+    cache_dir: str=None,
+):
+    left_component = cnudie.util.to_component(left_component)
+    right_component = cnudie.util.to_component(right_component)
+
+    left_components = tuple(
+        c for c in
+        components(
+            component=left_component,
+            delivery_client=delivery_client,
+            cache_dir=cache_dir,
+        )
+        if c.name not in ignore_component_names
+    )
+    right_components = tuple(
+        c for c in
+        components(
+            component=right_component,
+            delivery_client=delivery_client,
+            cache_dir=cache_dir,
+        )
+        if c.name not in ignore_component_names
+    )
+
+    return cnudie.util.diff_components(
+        left_components=left_components,
+        right_components=right_components,
+        ignore_component_names=ignore_component_names,
+    )
+
+
 @functools.lru_cache(maxsize=2048)
 def _component_descriptor(
     name: str,

@@ -2,6 +2,8 @@ import typing
 import dataclasses
 import functools
 
+import deprecated
+
 from ci.util import FluentIterable
 import product.v2
 
@@ -51,6 +53,7 @@ class ComponentDiff:
     names_version_changed: set = dataclasses.field(default_factory=set)
 
 
+@deprecated.deprecated
 def diff_component_descriptors(
     left_component: typing.Union[cm.ComponentDescriptor, cm.Component],
     right_component: typing.Union[cm.ComponentDescriptor, cm.Component],
