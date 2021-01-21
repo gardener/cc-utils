@@ -113,7 +113,7 @@ def download_component_descriptor_v2(
     ctx_repo_base_url: str,
     absent_ok: bool=False,
     cache_dir: str=None,
-    validation_mode: cm.ValidationMode=cm.ValidationMode.WARN,
+    validation_mode: cm.ValidationMode=cm.ValidationMode.NONE,
 ):
     target_ref = _target_oci_ref_from_ctx_base_url(
         component_name=component_name,
