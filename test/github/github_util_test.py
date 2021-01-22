@@ -115,7 +115,7 @@ def test_is_obsolete():
 
     # add differently-named dependency with greater version
     reference_component.componentReferences = (
-        dataclasses.replace(cref, name='other-name'),
+        dataclasses.replace(cref, componentName='other-name'),
     )
     assert not examinee.is_obsolete(reference_component=reference_component)
 
