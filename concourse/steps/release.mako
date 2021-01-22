@@ -30,11 +30,10 @@ component_descriptor_v2_path = os.path.join(
   job_step.input('component_descriptor_dir'),
   cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
 )
-ctf_path = os.path.abspath(
-  os.path.join(
+ctf_path = os.path.join(
     job_step.input('component_descriptor_dir'),
-    product.v2.CTF_OUT_DIR_NAME),
-)
+    product.v2.CTF_OUT_DIR_NAME
+  )
 
 release_callback_path = release_trait.release_callback_path()
 next_version_callback_path = release_trait.next_version_callback_path()
