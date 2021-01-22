@@ -62,7 +62,7 @@ merge_policy_configs = [
     for cfg in ${[p.raw for p in update_component_deps_trait.merge_policies()]}
 ]
 merge_policy_and_filters = {
-    p: component_name_filter(
+    p: component_ref_component_name_filter(
         include_regexes=p.component_names(),
         exclude_regexes=(),
     ) for p in merge_policy_configs

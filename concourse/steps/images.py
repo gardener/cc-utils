@@ -69,6 +69,20 @@ def component_name_filter(include_regexes=(), exclude_regexes=()):
     )
 
 
+def component_ref_component_name_filter(include_regexes=(), exclude_regexes=()):
+    if not include_regexes and not exclude_regexes:
+        return lambda component: True
+
+    def to_component_name(component: gci.componentmodel.ComponentReference):
+        return component.componentName
+
+    return reutil.re_filter(
+        include_regexes=include_regexes,
+        exclude_regexes=exclude_regexes,
+        value_transformation=to_component_name,
+    )
+
+
 def create_composite_filter_function(
   include_image_references,
   exclude_image_references,
