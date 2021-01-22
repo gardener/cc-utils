@@ -15,6 +15,8 @@
 
 import enum
 import functools
+import logging
+import logging.config
 import os
 
 from pathlib import Path
@@ -203,13 +205,8 @@ def cfg_factory():
     return factory
 
 
-def configure_default_logging(stdout_level=None):
-    import logging
-    import logging.config
-    if not stdout_level:
-        stdout_level = logging.INFO
-
-    cfg = {
+def _default_logging_config(stdout_level):
+    return {
         'version': 1,
         'formatters': {
             'default': {
@@ -228,6 +225,15 @@ def configure_default_logging(stdout_level=None):
             'level': logging.DEBUG,
             'handlers': ['console',],
         },
+    }
+
+
+def configure_default_logging(stdout_level=None):
+    if not stdout_level:
+        stdout_level = logging.INFO
+
+    cfg = _default_logging_config(stdout_level)
+    cfg.update({
         'loggers': {
             'github3': {
                 'level': logging.WARNING,
@@ -236,6 +242,5 @@ def configure_default_logging(stdout_level=None):
                 'level': logging.WARNING,
             },
         }
-    }
-
+    })
     logging.config.dictConfig(cfg)
