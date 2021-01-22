@@ -212,6 +212,7 @@ notification_env_vars = {
 <%def name="execute(indent, job_step, job_variant)" filter="indent_func(indent),trim">
 <%
 source_repo = job_variant.main_repository()
+source_repo_github_cfg_name = source_repo.cfg_name() or github.name()
 %>
 % if job_step.execute():
 - task: '${job_step.name}'
@@ -406,7 +407,7 @@ else:
 %>
         ${component_descriptor_step(job_step=job_step, job_variant=job_variant, output_image_descriptors=image_descriptors_for_variant, indent=8)}
 % elif job_step.name == 'update_component_dependencies':
-        ${update_component_deps_step(job_step=job_step, job_variant=job_variant, github_cfg_name=github.name(), indent=8)}
+        ${update_component_deps_step(job_step=job_step, job_variant=job_variant, github_cfg_name=source_repo_github_cfg_name, indent=8)}
 % elif job_step.name == 'publish' and job_variant.trait('publish').oci_builder() is OciBuilder.CONCOURSE_IMAGE_RESOURCE:
 ${publish_step(job_step=job_step, job_variant=job_variant)}
 % elif job_step.name.startswith('build_oci_image'):
