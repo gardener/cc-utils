@@ -294,7 +294,12 @@ class PullRequestUtil(RepositoryHelperBase):
         def pr_to_upgrade_pr(pull_request):
             return self._pr_to_upgrade_pull_request(pull_request=pull_request)
 
+        def strip_title(pull_request):
+            pull_request.title = pull_request.title.strip()
+            return pull_request
+
         parsed_prs = ci.util.FluentIterable(self.repository.pull_requests(state=state_filter)) \
+            .map(strip_title) \
             .filter(self._has_upgrade_pr_title) \
             .map(pr_to_upgrade_pr) \
             .filter(lambda e: e) \
