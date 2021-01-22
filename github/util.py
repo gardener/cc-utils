@@ -180,7 +180,7 @@ class UpgradePullRequest:
             reference_refs = sorted(
                 [
                     rc for rc in reference_component.componentReferences
-                    if rc.name == self.ref_name
+                    if rc.componentName == self.ref_name
                 ],
                 key=lambda r: version.parse_to_semver(r.version)
             )
