@@ -154,7 +154,8 @@ for email_recipient in email_recipients:
   body = email_recipient.mail_body()
   email_addresses = set(email_recipient.resolve_recipients())
 
-  if notification_policy is Notify.COMPONENT_OWNERS:
+  # XXX disable pdf-attachments for now
+  if False and notification_policy is Notify.COMPONENT_OWNERS:
     attachments = email_recipient.pdf_report_attachments()
   else:
     attachments = []
