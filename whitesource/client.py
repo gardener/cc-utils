@@ -1,12 +1,19 @@
+import dataclasses
 import json
 import typing
 import websockets
 
+import dacite
 import requests
+from whitesource_common import protocol
 
 import ci.util
 import dso.util
 import whitesource.model
+
+
+class WebsocketException(Exception):
+    pass
 
 
 class WSNotOkayException(Exception):
@@ -77,38 +84,43 @@ class WhitesourceClient:
         ping_interval=1000,
         ping_timeout=1000,
     ):
-        meta_data = {
-            'chunkSize': chunk_size,
-            'length': length
-        }
+        md = dacite.from_dict(
+            data_class=protocol.WhiteSourceApiExtensionWebsocketMetadata,
+            data={
+                'chunkSize': chunk_size,
+                'length': length
+            }
+        )
+        wsc = dacite.from_dict(
+            data_class=protocol.WhiteSourceApiExtensionWebsocketWSConfig,
+            data={
+                'apiKey': self.api_key,
+                'extraWsConfig': extra_whitesource_config,
+                'productToken': self.product_token,
+                'projectName': project_name,
+                'requesterEmail': self.requester_mail,
+                'userKey': self.creds.user_key(),
+                'wssUrl': self.wss_endpoint,
+            }
+        )
+        contract = protocol.WhiteSourceApiExtensionWebsocketContract(
+            metadata=md,
+            wsConfig=wsc,
+        )
 
-        ws_config = {
-            'apiKey': self.api_key,
-            'extraWsConfig': extra_whitesource_config,
-            'productToken': self.product_token,
-            'projectName': project_name,
-            'requesterEmail': self.requester_mail,
-            'userKey': self.creds.user_key(),
-            'wssUrl': self.wss_endpoint,
-        }
-
-        async with websockets.connect(
-            uri=self.routes.upload_to_project(),
-            ping_interval=ping_interval,
-            ping_timeout=ping_timeout,
-        ) as websocket:
-            await websocket.send(json.dumps(meta_data))
-            await websocket.send(json.dumps(ws_config))
-            sent = 0
-            while sent < length:
-                chunk = file.read(chunk_size)
-                if len(chunk) == 0:
-                    await websocket.close()
-                    raise OSError('Desired length does not fit actual file length')
-                await websocket.send(chunk)
-                sent += len(chunk)
-
-            return json.loads(await websocket.recv())
+        try:
+            async with websockets.connect(
+                    uri=self.routes.upload_to_project(),
+                    ping_interval=ping_interval,
+                    ping_timeout=ping_timeout,
+            ) as websocket:
+                return await _upload_to_project(
+                    websocket=websocket,
+                    contract=contract,
+                    file=file
+                )
+        except OSError:
+            raise WebsocketException('unable to connect to ws endpoint')
 
     def get_product_risk_report(self):
         clogger = dso.util.component_logger(__name__)
@@ -194,3 +206,34 @@ class WhitesourceRoutes:
 
     def get_project_vulnerability_report(self):
         return ci.util.urljoin(self.wss_api_endpoint)
+
+
+async def _upload_to_project(
+        websocket: websockets.client,
+        file: typing.IO,
+        contract: protocol.WhiteSourceApiExtensionWebsocketContract,
+):
+    try:
+        await websocket.send(json.dumps(dataclasses.asdict(contract.metadata)))
+        await websocket.send(json.dumps(dataclasses.asdict(contract.wsConfig)))
+
+        sent = 0
+        while sent < contract.metadata.length:
+            chunk = file.read(contract.metadata.chunkSize)
+            if len(chunk) == 0:
+                await websocket.close()
+                raise OSError('Desired length does not fit actual file length')
+            await websocket.send(chunk)
+            sent += len(chunk)
+
+        return json.loads(await websocket.recv())
+    except websockets.exceptions.ConnectionClosedError as e:
+        # Falcon, which is the ASGI framework of choice for the backend, does not support a reason
+        # string as of today even though its defined in the standard
+        # (https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent).
+        # This might be due to the early state of developement (beta, 01.2020).
+        # Therefore the status code is resolved manually and exeption is raised.
+        raise websockets.exceptions.ConnectionClosedError(
+            websocket.close_code,
+            protocol.WhiteSourceApiExtensionStatusCodeReasons(websocket.close_code).name
+        ) from e

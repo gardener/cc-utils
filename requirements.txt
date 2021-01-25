@@ -46,4 +46,5 @@ termcolor<2.0.0
 toposort
 urllib3<2.0.0
 websockets
+whitesource_common
 yamllint<2
