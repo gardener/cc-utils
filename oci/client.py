@@ -1,7 +1,9 @@
+import base64
 import dataclasses
 import datetime
 import enum
 import hashlib
+import json
 import logging
 import typing
 
@@ -9,8 +11,8 @@ import dacite
 import dateutil.parser
 import requests
 import requests.auth
-import urllib.parse
 import urllib
+import urllib.parse
 import www_authenticate
 
 import oci.auth as oa
@@ -30,9 +32,9 @@ class AuthMethod(enum.Enum):
 
 @dataclasses.dataclass
 class OauthToken:
-    expires_in: int
     token: str
     scope: str
+    expires_in: int = None
     issued_at: str = None
 
     def valid(self):
@@ -46,6 +48,21 @@ class OauthToken:
     def __post_init__(self):
         if not self.issued_at:
             self.issued_at = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+        if not self.expires_in:
+            payload = self.token.split('.')[1]
+            # add padding (JWT by convention has unpadded base64)
+            if not payload[-1] == '=' and (m := len(payload) % 3) == 1:
+                payload += '=='
+            elif m == 2:
+                payload += '='
+            parsed = json.loads(base64.b64decode(payload.encode('utf-8')))
+
+            exp = parsed['exp']
+            iat = parsed['iat']
+
+            self.expires_in = exp - iat
+            self.issued_at = datetime.datetime.fromtimestamp(iat, tz=datetime.timezone.utc)\
+                .isoformat()
 
 
 class OauthTokenCache:
