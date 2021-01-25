@@ -19,6 +19,7 @@ import oci.util
 urljoin = oci.util.urljoin
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 @dataclasses.dataclass
