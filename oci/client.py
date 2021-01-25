@@ -440,7 +440,6 @@ class Client:
         self,
         image_reference: str,
         digest: str,
-        octets_count: int,
         absent_ok=True,
     ):
         scope = _scope(image_reference=image_reference, action='pull')
@@ -469,10 +468,8 @@ class Client:
         head_res = self.head_blob(
             image_reference=image_reference,
             digest=digest,
-            octets_count=octets_count,
         )
         if head_res.ok:
-            print('skipping')
             logger.info(f'skipping blob upload {digest=} - already exists')
             return
 
