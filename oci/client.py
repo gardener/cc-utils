@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import enum
 import hashlib
 import logging
 import typing
@@ -20,6 +21,11 @@ urljoin = oci.util.urljoin
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+class AuthMethod(enum.Enum):
+    BEARER = 'bearer'
+    BASIC = 'basic'
 
 
 @dataclasses.dataclass
@@ -45,6 +51,7 @@ class OauthToken:
 class OauthTokenCache:
     def __init__(self):
         self.tokens = {} # {scope: token}
+        self.auth_methods = {} # {netloc: method}
 
     def token(self, scope: str):
         # purge expired tokens
@@ -59,6 +66,14 @@ class OauthTokenCache:
         # if the new one has a later expiry date
 
         self.tokens[token.scope] = token
+
+    def set_auth_method(self, image_reference: str, auth_method: AuthMethod):
+        netloc = parse_image_reference(image_reference=image_reference).netloc
+        self.auth_methods[netloc] = auth_method
+
+    def auth_method(self, image_reference: str) -> typing.Optional[AuthMethod]:
+        netloc = parse_image_reference(image_reference=image_reference).netloc
+        return self.auth_methods.get(netloc)
 
 
 def parse_image_reference(image_reference: str):
@@ -165,6 +180,8 @@ class Client:
     ):
         if self.token_cache.token(scope=scope):
             return # no re-auth required, yet
+        if self.token_cache.auth_method(image_reference=image_reference) is AuthMethod.BASIC:
+            return # basic-auth does not require any additional preliminary steps
 
         if 'push' in scope:
             privileges = oa.Privileges.READWRITE
@@ -180,14 +197,22 @@ class Client:
         )
 
         if not oci_creds:
-            logger.info(f'no credentials for {image_reference=} - attempting anonymous-auth')
+            logger.warning(f'no credentials for {image_reference=} - attempting anonymous-auth')
 
         url = base_api_url(image_reference=image_reference)
         res = self.session.get(url)
 
         auth_challenge = www_authenticate.parse(res.headers['www-authenticate'])
-        bearer = auth_challenge['bearer']
-        service = bearer['service']
+
+        if 'basic' in auth_challenge:
+            self.token_cache.set_auth_method(
+                image_reference=image_reference,
+                auth_method=AuthMethod.BASIC,
+            )
+            return # no additional preliminary steps required for basic-auth
+        elif 'bearer' in auth_challenge:
+            bearer = auth_challenge['bearer']
+            service = bearer['service']
 
         realm = bearer['realm'] + '?' + urllib.parse.urlencode({
             'scope': scope,
@@ -234,6 +259,7 @@ class Client:
             scope=scope,
         )
         headers = headers or {}
+        auth_method = self.token_cache.auth_method(image_reference=image_reference)
 
         try:
             import ccc.elasticsearch
@@ -253,13 +279,34 @@ class Client:
             logger.error(traceback.format_exc())
             logger.error('could not send elastic search dump')
 
+        auth = None
+
+        if auth_method is AuthMethod.BASIC:
+            actions = scope.split(':')[-1]
+            if 'push' in actions:
+                privileges = oa.Privileges.READWRITE
+            else:
+                privileges = oa.Privileges.READONLY
+
+            if oci_creds := self.credentials_lookup(
+                image_reference=image_reference,
+                privileges=privileges,
+                absent_ok=True,
+            ):
+                auth = oci_creds.username, oci_creds.password
+            else:
+                logger.warning(f'did not find any matching credentials for {image_reference=}')
+        else:
+            headers = {
+              'Authorization': f'Bearer {self.token_cache.token(scope=scope).token}',
+              **headers,
+            }
+
         res = requests.request(
             method=method,
             url=url,
-            headers={
-              'Authorization': f'Bearer {self.token_cache.token(scope=scope).token}',
-              **headers,
-            },
+            auth=auth,
+            headers=headers,
             **kwargs,
         )
         if not res.ok:
