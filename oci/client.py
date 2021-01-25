@@ -479,7 +479,7 @@ class Client:
         data_is_generator = isinstance(data, typing.Generator)
         data_is_filelike = hasattr(data, 'read')
 
-        if octets_count < max_chunk or data_is_filelike:
+        if octets_count < max_chunk or data_is_filelike or data_is_requests_response:
             if data_is_requests_response:
                 data = data.content
             elif data_is_generator:
