@@ -465,6 +465,16 @@ class Client:
         data: requests.models.Response,
         max_chunk=1024 * 1024 * 1, # 1 MiB
     ):
+        head_res = self.head_blob(
+            image_reference=image_reference,
+            digest=digest,
+            octets_count=octets_count,
+        )
+        if head_res.ok:
+            print('skipping')
+            logger.info(f'skipping blob upload {digest=} - already exists')
+            return
+
         data_is_requests_response = isinstance(data, requests.models.Response)
         data_is_generator = isinstance(data, typing.Generator)
         data_is_filelike = hasattr(data, 'read')
