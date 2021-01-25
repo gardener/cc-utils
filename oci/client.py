@@ -435,6 +435,28 @@ class Client:
 
         return res
 
+    def head_blob(
+        self,
+        image_reference: str,
+        digest: str,
+        octets_count: int,
+        absent_ok=True,
+    ):
+        scope = _scope(image_reference=image_reference, action='pull')
+
+        res = self._request(
+            url=blob_url(
+                image_reference=image_reference,
+                digest=digest,
+            ),
+            method='HEAD',
+            scope=scope,
+            image_reference=image_reference,
+            raise_for_status=not absent_ok,
+        )
+
+        return res
+
     def put_blob(
         self,
         image_reference: str,
