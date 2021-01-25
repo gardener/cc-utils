@@ -186,6 +186,14 @@ def replicate_artifact(
         # need to specially handle manifest (may be absent for v2 / legacy images)
         is_manifest = idx == 0
 
+        head_res = client.head_blob(
+            image_reference=tgt_image_reference,
+            digest=layer.digest,
+        )
+        if head_res.ok:
+            logger.info(f'skipping blob download {layer.digest=} - already exists in tgt')
+            continue # no need to download if blob already exists in tgt
+
         blob_res = client.blob(
             image_reference=src_image_reference,
             digest=layer.digest,
