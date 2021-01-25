@@ -177,7 +177,6 @@ class Client:
     def __init__(
         self,
         credentials_lookup: typing.Callable,
-        base_api_url_lookup: typing.Callable[[str], str]=base_api_url,
         routes: OciRoutes=OciRoutes(),
     ):
         self.credentials_lookup = credentials_lookup
