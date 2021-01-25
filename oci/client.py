@@ -92,72 +92,78 @@ def _image_name(image_reference: str):
     return image_name
 
 
-def base_api_url(image_reference: str) -> str:
+def base_api_url(
+    image_reference: str,
+) -> str:
     parsed_url = parse_image_reference(image_reference=image_reference)
     base_url = f'https://{parsed_url.netloc}'
 
     return urljoin(base_url, 'v2') + '/'
 
 
-def artifact_base_url(image_reference: str) -> str:
-    image_name = _image_name(image_reference=image_reference)
+class OciRoutes:
+    def __init__(
+        self,
+        base_api_url_lookup: typing.Callable[[str], str]=base_api_url,
+    ):
+        self.base_api_url_lookup = base_api_url_lookup
 
-    return urljoin(
-        base_api_url(image_reference=image_reference),
-        image_name,
-    )
+    def artifact_base_url(
+        self,
+        image_reference: str,
+    ) -> str:
+        image_name = _image_name(image_reference=image_reference)
 
+        return urljoin(
+            self.base_api_url_lookup(image_reference=image_reference),
+            image_name,
+        )
 
-def blobs_url(image_reference: str) -> str:
-    return urljoin(
-        artifact_base_url(image_reference),
-        'blobs',
-    )
+    def _blobs_url(self, image_reference: str) -> str:
+        return urljoin(
+            self.artifact_base_url(image_reference),
+            'blobs',
+        )
 
+    def ls_tags_url(self, image_reference: str) -> str:
+        return urljoin(
+            self.artifact_base_url(image_reference),
+            'tags',
+            'list',
+        )
 
-def ls_tags_url(image_reference: str) -> str:
-    return urljoin(
-        artifact_base_url(image_reference),
-        'tags',
-        'list',
-    )
+    def uploads_url(self, image_reference: str) -> str:
+        return urljoin(
+            self._blobs_url(image_reference),
+            'uploads',
+        ) + '/'
 
+    def put_blob_url(self, image_reference: str, digest: str) -> str:
+        query = urllib.parse.urlencode({
+            'digest': digest,
+        })
+        return self.uploads_url(image_reference=image_reference) + '?' + query
 
-def uploads_url(image_reference: str) -> str:
-    return urljoin(
-        blobs_url(image_reference),
-        'uploads',
-    ) + '/'
+    def blob_url(self, image_reference: str, digest: str):
+        return urljoin(
+            self._blobs_url(image_reference=image_reference),
+            digest
+        )
 
+    def manifest_url(self, image_reference: str) -> str:
+        last_part = image_reference.split('/')[-1]
+        if ':' in last_part:
+            tag = last_part.split(':')[-1]
+        elif '@' in last_part:
+            tag = last_part.split('@')[-1]
+        else:
+            raise ValueError(f'{image_reference=} does not seem to contain a tag')
 
-def put_blob_url(image_reference: str, digest: str) -> str:
-    query = urllib.parse.urlencode({
-        'digest': digest,
-    })
-    return uploads_url(image_reference=image_reference) + '?' + query
-
-
-def blob_url(image_reference: str, digest: str):
-    return urljoin(
-        blobs_url(image_reference=image_reference),
-        digest
-    )
-
-
-def manifest_url(image_reference: str) -> str:
-    last_part = image_reference.split('/')[-1]
-    if ':' in last_part:
-        tag = last_part.split(':')[-1]
-    elif '@' in last_part:
-        tag = last_part.split('@')[-1]
-    else:
-        raise ValueError(f'{image_reference=} does not seem to contain a tag')
-
-    return urljoin(
-        artifact_base_url(image_reference=image_reference),
-        'manifests',
-        tag,
-    )
+        return urljoin(
+            self.artifact_base_url(image_reference=image_reference),
+            'manifests',
+            tag,
+        )
 
 
 def _scope(image_reference: str, action: str):
@@ -168,10 +174,16 @@ def _scope(image_reference: str, action: str):
 
 
 class Client:
-    def __init__(self, credentials_lookup: callable):
+    def __init__(
+        self,
+        credentials_lookup: typing.Callable,
+        base_api_url_lookup: typing.Callable[[str], str]=base_api_url,
+        routes: OciRoutes=OciRoutes(),
+    ):
         self.credentials_lookup = credentials_lookup
         self.token_cache = OauthTokenCache()
         self.session = requests.Session()
+        self.routes = routes
 
     def _authenticate(
         self,
@@ -199,7 +211,9 @@ class Client:
         if not oci_creds:
             logger.warning(f'no credentials for {image_reference=} - attempting anonymous-auth')
 
-        url = base_api_url(image_reference=image_reference)
+        url = base_api_url(
+            image_reference=image_reference,
+        )
         res = self.session.get(url)
 
         auth_challenge = www_authenticate.parse(res.headers['www-authenticate'])
@@ -328,7 +342,7 @@ class Client:
 
         try:
             res = self._request(
-                url=manifest_url(image_reference=image_reference),
+                url=self.routes.manifest_url(image_reference=image_reference),
                 image_reference=image_reference,
                 scope=scope,
             )
@@ -366,7 +380,7 @@ class Client:
                 digest = fs_layer.blobSum
 
                 res = self._request(
-                    url=blob_url(image_reference=image_reference, digest=digest),
+                    url=self.routes.blob_url(image_reference=image_reference, digest=digest),
                     image_reference=image_reference,
                     scope=scope,
                     method='HEAD',
@@ -413,7 +427,7 @@ class Client:
         scope = _scope(image_reference=image_reference, action='pull')
 
         res = self._request(
-            url=manifest_url(image_reference=image_reference),
+            url=self.routes.manifest_url(image_reference=image_reference),
             image_reference=image_reference,
             method='HEAD',
             scope=scope,
@@ -438,7 +452,7 @@ class Client:
         scope = _scope(image_reference=image_reference, action='pull')
 
         res = self._request(
-            url=ls_tags_url(image_reference=image_reference),
+            url=self.routes.ls_tags_url(image_reference=image_reference),
             image_reference=image_reference,
             scope=scope,
             method='GET'
@@ -450,7 +464,7 @@ class Client:
         scope = _scope(image_reference=image_reference, action='push,pull')
 
         res = self._request(
-            url=manifest_url(image_reference=image_reference),
+            url=self.routes.manifest_url(image_reference=image_reference),
             image_reference=image_reference,
             scope=scope,
             method='PUT',
@@ -469,7 +483,7 @@ class Client:
         scope = _scope(image_reference=image_reference, action='pull')
 
         res = self._request(
-            url=blob_url(image_reference=image_reference, digest=digest),
+            url=self.routes.blob_url(image_reference=image_reference, digest=digest),
             image_reference=image_reference,
             scope=scope,
             method='GET',
@@ -492,7 +506,7 @@ class Client:
         scope = _scope(image_reference=image_reference, action='pull')
 
         res = self._request(
-            url=blob_url(
+            url=self.routes.blob_url(
                 image_reference=image_reference,
                 digest=digest,
             ),
@@ -576,7 +590,7 @@ class Client:
 
         # start uploading session
         res = self._request(
-            url=uploads_url(image_reference=image_reference),
+            url=self.routes.uploads_url(image_reference=image_reference),
             image_reference=image_reference,
             scope=scope,
             method='POST',
@@ -656,7 +670,7 @@ class Client:
         scope = _scope(image_reference=image_reference, action='push,pull')
 
         res = self._request(
-            url=put_blob_url(
+            url=self.routes.put_blob_url(
                 image_reference=image_reference,
                 digest=digest,
             ),
