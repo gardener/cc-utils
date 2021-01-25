@@ -153,6 +153,7 @@ def replicate_artifact(
     src_image_reference: str,
     tgt_image_reference: str,
     credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
+    routes: oc.OciRoutes=oc.OciRoutes(),
 ):
     '''
     verbatimly replicate the OCI Artifact from src -> tgt without taking any assumptions
@@ -162,7 +163,10 @@ def replicate_artifact(
     src_image_reference = ou.normalise_image_reference(src_image_reference)
     tgt_image_reference = ou.normalise_image_reference(tgt_image_reference)
 
-    client = oc.Client(credentials_lookup=credentials_lookup)
+    client = oc.Client(
+        credentials_lookup=credentials_lookup,
+        routes=routes,
+    )
 
     # we need the unaltered - manifest for verbatim replication
     raw_manifest = client.manifest_raw(
