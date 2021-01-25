@@ -2,14 +2,15 @@ import dataclasses
 import hashlib
 import json
 import logging
-import tempfile
 import typing
 
 import dacite
+import deprecated
 
 import oci._util as _ou
 import oci.auth as oa
 import oci.client as oc
+import oci.docker as od
 import oci.kaniko as ok
 import oci.model as om
 import oci.util as ou
@@ -203,27 +204,24 @@ def replicate_artifact(
             digest=layer.digest,
             absent_ok=is_manifest,
         )
-        if not blob_res:
-            # fallback to non-verbatim replication
-            # XXX we definitely should _not_ read entire blobs into memory
-            # this is done by the used containerregistry lib, so we do not make things worse
-            # here - however this must not remain so!
+        if not blob_res and is_manifest:
+            # fallback to non-verbatim replication; synthesise cfg
             logger.warning(
                 'falling back to non-verbatim replication '
                 '{src_image_reference=} {tgt_image_reference=}'
             )
-            with tempfile.NamedTemporaryFile() as tmp_fh:
-                retrieve_container_image(
-                    image_reference=src_image_reference,
-                    credentials_lookup=credentials_lookup,
-                    outfileobj=tmp_fh,
-                )
-                publish_container_image(
-                    image_reference=tgt_image_reference,
-                    image_file_obj=tmp_fh,
-                    credentials_lookup=credentials_lookup,
-                )
-            return
+
+            fake_cfg = od.docker_cfg() # TODO: check whether we need to pass-in cfg
+            fake_cfg_dict = dataclasses.asdict(fake_cfg)
+            fake_cfg_raw = json.dumps(fake_cfg_dict).encode('utf-8')
+
+            client.put_blob(
+                image_reference=tgt_image_reference,
+                digest=f'sha256:{hashlib.sha256(fake_cfg_raw).hexdigest()}',
+                octets_count=len(fake_cfg_raw),
+                data=fake_cfg_raw,
+            )
+            continue
 
         client.put_blob(
             image_reference=tgt_image_reference,
@@ -251,6 +249,7 @@ def put_image_manifest(
     )
 
 
+@deprecated.deprecated
 def retrieve_container_image(
     image_reference: str,
     credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
