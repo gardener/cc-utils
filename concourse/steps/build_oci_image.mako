@@ -33,7 +33,6 @@ import os
 import subprocess
 
 import ccc.oci
-import container.registry as cr
 import oci
 
 import shutil
