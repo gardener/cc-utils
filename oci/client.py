@@ -104,7 +104,10 @@ def parse_image_reference(image_reference: str):
 
 def _image_name(image_reference: str):
     image_name = parse_image_reference(image_reference=image_reference).path.lstrip('/')
-    image_name = image_name.rsplit(':', 1)[0]
+    if '@' in image_name:
+        image_name = image_name.rsplit('@', 1)[0]
+    else:
+        image_name = image_name.rsplit(':', 1)[0]
 
     return image_name
 
@@ -169,10 +172,10 @@ class OciRoutes:
 
     def manifest_url(self, image_reference: str) -> str:
         last_part = image_reference.split('/')[-1]
-        if ':' in last_part:
-            tag = last_part.split(':')[-1]
-        elif '@' in last_part:
+        if '@' in last_part:
             tag = last_part.split('@')[-1]
+        elif ':' in last_part:
+            tag = last_part.split(':')[-1]
         else:
             raise ValueError(f'{image_reference=} does not seem to contain a tag')
 
