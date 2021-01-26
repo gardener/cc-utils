@@ -21,12 +21,10 @@ import oci.util
 import ci.util
 import oci
 import oci.auth as oa
-import oci.util as ou
 import model.container_registry
 
 from containerregistry.client import docker_creds
 from containerregistry.client import docker_name
-from containerregistry.client.v2_2 import docker_session
 from containerregistry.transport import retry
 from containerregistry.transport import transport_pool
 
@@ -134,17 +132,3 @@ def _mk_credentials(image_reference, privileges: oa.Privileges=None):
   except Exception as e:
     ci.util.warning(f'Error resolving credentials for {image_reference}: {e}')
     raise e
-
-
-def rm_tag(image_reference: str):
-  transport = _mk_transport_pool()
-  image_reference = ou.normalise_image_reference(image_reference)
-  image_reference = docker_name.from_string(image_reference)
-  creds = _mk_credentials(image_reference=image_reference)
-
-  docker_session.Delete(
-    name=image_reference,
-    creds=creds,
-    transport=transport,
-    )
-  logger.info(f'untagged {image_reference=} - note: did not purge blobs!')
