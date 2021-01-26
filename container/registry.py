@@ -16,15 +16,12 @@
 import functools
 import logging
 
-import oci.util
-
-import ci.util
 import oci
 import oci.auth as oa
+import oci.util
 import model.container_registry
 
 from containerregistry.client import docker_creds
-from containerregistry.client import docker_name
 from containerregistry.transport import retry
 from containerregistry.transport import transport_pool
 
@@ -114,20 +111,3 @@ def _mk_transport_pool(
   retry_factory = retry_factory.WithSourceTransportCallable(Http_ctor)
   transport = transport_pool.Http(retry_factory.Build, size=size)
   return transport
-
-
-def _mk_credentials(image_reference, privileges: oa.Privileges=None):
-  if isinstance(image_reference, str):
-    image_reference = docker_name.from_string(name=image_reference)
-  try:
-    # first try container_registry cfgs from available cfg
-    creds = _credentials(image_reference=str(image_reference), privileges=privileges)
-    if not creds:
-      logger.warning(f'could not find rw-creds for {image_reference}')
-      # fall-back to default docker lookup
-      creds = docker_creds.DefaultKeychain.Resolve(image_reference)
-
-    return creds
-  except Exception as e:
-    ci.util.warning(f'Error resolving credentials for {image_reference}: {e}')
-    raise e
