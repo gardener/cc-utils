@@ -26,10 +26,6 @@ import model.container_registry
 
 from containerregistry.client import docker_creds
 from containerregistry.client import docker_name
-from containerregistry.client.v2 import docker_image as v2_image
-from containerregistry.client.v2_2 import docker_http
-from containerregistry.client.v2_2 import docker_image as v2_2_image
-from containerregistry.client.v2_2 import docker_image_list as image_list
 from containerregistry.client.v2_2 import docker_session
 from containerregistry.transport import retry
 from containerregistry.transport import transport_pool
@@ -138,42 +134,6 @@ def _mk_credentials(image_reference, privileges: oa.Privileges=None):
   except Exception as e:
     ci.util.warning(f'Error resolving credentials for {image_reference}: {e}')
     raise e
-
-
-def to_hash_reference(image_name: str):
-  transport = _mk_transport_pool(size=1)
-
-  image_name = ou.normalise_image_reference(image_name)
-  image_reference = docker_name.from_string(image_name)
-  creds = _mk_credentials(image_reference=image_reference)
-  accept = docker_http.SUPPORTED_MANIFEST_MIMES
-
-  digest = None
-
-  with image_list.FromRegistry(image_reference, creds, transport) as img_list:
-      if img_list.exists():
-          digest = img_list.digest()
-      else:
-          logger.debug('no manifest found')
-
-  # look for image
-  with v2_2_image.FromRegistry(image_reference, creds, transport, accept) as v2_2_img:
-      if v2_2_img.exists():
-          digest = v2_2_img.digest()
-      else:
-          logger.debug('no img v2.2 found')
-
-  if not digest:
-      # fallback to v2
-      with v2_image.FromRegistry(image_reference, creds, transport) as v2_img:
-          if v2_img.exists():
-              digest = v2_img.digest()
-          else:
-              logger.debug('no img v2 found')
-              raise RuntimeError(f'could not access img-metadata for {image_name}')
-
-  name = image_name.rsplit(':', 1)[0]
-  return f'{name}@{digest}'
 
 
 def rm_tag(image_reference: str):

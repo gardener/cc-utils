@@ -8,15 +8,14 @@ import requests
 import requests.exceptions
 
 import ccc.gcp
+import ccc.oci
 import ci.util
-import container.registry
 import gci.componentmodel
 import protecode.model
 import version
 
 from functools import partial
 
-from containerregistry.client import docker_name
 from protecode.client import ProtecodeApi
 from protecode.model import (
     AnalysisResult,
@@ -177,10 +176,11 @@ class ProtecodeUtil:
             'RESOURCE_TYPE': resource.type.value,
         }
         if not omit_version:
-            image_ref_with_digest = docker_name.from_string(container.registry.to_hash_reference(
-                resource.access.imageReference,
-            ))
-            digest = f'@{image_ref_with_digest.digest}'
+            oci_client = ccc.oci.oci_client()
+            img_ref_with_digest = oci_client.to_digest_hash(
+                image_reference=resource.access.imageReference,
+            )
+            digest = img_ref_with_digest.split('@')[-1]
             metadata_dict['IMAGE_REFERENCE'] = resource.access.imageReference
             metadata_dict['IMAGE_VERSION'] = resource.version
             metadata_dict['IMAGE_DIGEST'] = digest
@@ -298,12 +298,12 @@ class ProtecodeUtil:
                 # find matching protecode product (aka app)
                 for existing_product in existing_products:
                     product_image_digest = existing_product.custom_data().get('IMAGE_DIGEST')
-                    container_image_digest = docker_name.from_string(
-                        container.registry.to_hash_reference(
-                            resource.access.imageReference,
-                        )
+                    oci_client = ccc.oci.oci_client()
+                    img_ref_with_digest = oci_client.to_digest_hash(
+                        image_reference=resource.access.imageReference,
                     )
-                    if product_image_digest == f'@{container_image_digest.digest}':
+                    digest = img_ref_with_digest.split('@')[-1]
+                    if product_image_digest == digest:
                         existing_products.remove(existing_product)
                         protecode_apps_to_consider.append(existing_product)
                         break
@@ -333,15 +333,14 @@ class ProtecodeUtil:
                 scan_result = self._api.scan_result(product_id=protecode_app.product_id())
                 image_digest = scan_result.custom_data().get('IMAGE_DIGEST')
                 # there should be at most one matching image (by image digest)
+                oci_client = ccc.oci.oci_client()
                 for resource in resource_group:
-                    container_image_digest = docker_name.from_string(
-                        container.registry.to_hash_reference(
-                            resource.access.imageReference,
-                        )
-                    )
-                    if image_digest == f'@{container_image_digest.digest}':
+                    digest = oci_client.to_digest_hash(
+                        image_reference=resource.access.imageReference,
+                    ).split('@')[-1]
+                    if image_digest == digest:
                         ci.util.info(
-                            f'File for container image "{resource.access.imageReference}" no '
+                            f'{resource.access.imageReference=} no '
                             'longer available to protecode - will upload'
                         )
                         images_to_upload.append(resource)

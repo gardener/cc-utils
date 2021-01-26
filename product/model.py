@@ -22,10 +22,10 @@ from enum import Enum
 
 import dacite
 
+import ccc.oci
 from model.base import ModelBase, ModelValidationError
 from ci.util import not_none, urljoin, check_type
 
-import container.registry
 import version as ver
 
 #############################################################################
@@ -471,7 +471,8 @@ class ContainerImage(ContainerImageReference):
 
     @functools.lru_cache
     def image_reference_with_digest(self):
-        return container.registry.to_hash_reference(self.image_reference())
+        oci_client = ccc.oci.oci_client()
+        return oci_client.to_digest_hash(self.image_reference())
 
     def image_digest(self):
         return f'@{self.image_reference_with_digest().split("@")[1]}'

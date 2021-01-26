@@ -1,5 +1,5 @@
+import ccc.oci
 import ci.util
-import container.registry
 import container.util
 
 
@@ -48,4 +48,5 @@ def filter_image(
 
 
 def to_digest_ref(image_ref:str):
-    print(container.registry.to_hash_reference(image_name=image_ref))
+    oci_client = ccc.oci.oci_client()
+    print(oci_client.to_digest_hash(image_reference=image_ref))

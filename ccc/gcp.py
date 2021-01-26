@@ -126,7 +126,7 @@ class GrafeasClient:
         project_name = urllib.parse.urlparse(image_reference).path.split('/')[1]
         oci_client = ccc.oci.oci_client()
         try:
-            hash_reference = oci_client.to_hash_reference(image_reference=image_reference)
+            hash_reference = oci_client.to_digest_hash(image_reference=image_reference)
         except Exception as e:
             raise VulnerabilitiesRetrievalFailed(e) from e
 
