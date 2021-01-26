@@ -6,7 +6,7 @@ import google.oauth2.service_account as service_account
 import googleapiclient.discovery
 import google.cloud.storage
 
-import container.registry
+import ccc.oci
 import model.container_registry
 
 import ci.util
@@ -124,10 +124,11 @@ class GrafeasClient:
 
     def _parse_gcr_parameters(self, image_reference):
         project_name = urllib.parse.urlparse(image_reference).path.split('/')[1]
+        oci_client = ccc.oci.oci_client()
         try:
-            hash_reference = container.registry.to_hash_reference(image_reference)
+            hash_reference = oci_client.to_hash_reference(image_reference=image_reference)
         except Exception as e:
-            raise VulnerabilitiesRetrievalFailed(e)
+            raise VulnerabilitiesRetrievalFailed(e) from e
 
         return project_name, hash_reference
 

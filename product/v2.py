@@ -20,11 +20,11 @@ import deprecated
 
 import gci.componentmodel as cm
 import gci.oci
-import oci.model as om
 
 import ccc.oci
 import ci.util
-import container.registry
+import oci.model as om
+import oci.client as oc
 import version
 
 
@@ -275,7 +275,7 @@ def upload_component_descriptor_v2_to_oci_registry(
         digest=cfg_digest_with_alg,
         octets_count=cfg_octets,
         data=cfg_raw,
-        # mimetype=container.registry.docker_http.OCI_CONFIG_JSON_MIME,
+        mimetype='application/vnd.docker.container.image.v1+json',
     )
 
     manifest = om.OciImageManifest(
@@ -412,7 +412,11 @@ def resolve_dependencies(
 def rm_component_descriptor(
     component: gci.componentmodel.Component,
     recursive=True,
+    oci_client: oc.Client=None,
 ):
+    if not oci_client:
+        oci_client = ccc.oci.oci_client()
+
     target_ref = _target_oci_ref(
         component=component,
         component_ref=component,
@@ -430,7 +434,7 @@ def rm_component_descriptor(
                 recursive=recursive,
             )
 
-    container.registry.rm_tag(image_reference=target_ref)
+    oci_client.delete_manifest(image_reference=target_ref)
 
 
 @deprecated.deprecated
