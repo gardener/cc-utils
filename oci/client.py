@@ -467,6 +467,12 @@ class Client:
             size=int(headers['Content-Length']),
         )
 
+    def to_digest_hash(self, image_reference: str):
+        # TODO: we might early-exit if img_ref already has a "hashtag"
+        manifest_hash_digest = hashlib.sha256(self.manifest_raw(image_reference=image_reference))\
+            .hexdigest()
+        return f'{_image_name(image_reference)}@sha256:{manifest_hash_digest}'
+
     def tags(self, image_reference: str):
         scope = _scope(image_reference=image_reference, action='pull')
 
