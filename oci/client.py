@@ -497,7 +497,19 @@ class Client:
             data=manifest,
         )
 
-        res.raise_for_status()
+        return res
+
+    def delete_manifest(self, image_reference: str):
+        scope = _scope(image_reference=image_reference, action='push,pull')
+
+        res = self._request(
+            url=self.routes.manifest_url(image_reference=image_reference),
+            image_reference=image_reference,
+            scope=scope,
+            method='DELETE',
+        )
+
+        return res
 
     def blob(
         self,
