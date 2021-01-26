@@ -527,6 +527,7 @@ class Client:
             method='GET',
             stream=stream,
             timeout=None,
+            raise_for_status=False,
         )
 
         if absent_ok and res.status_code == requests.codes.NOT_FOUND:
