@@ -563,6 +563,7 @@ class Client:
         octets_count: int,
         data: requests.models.Response,
         max_chunk=1024 * 1024 * 1, # 1 MiB
+        mimetype: str='application/data',
     ):
         head_res = self.head_blob(
             image_reference=image_reference,
