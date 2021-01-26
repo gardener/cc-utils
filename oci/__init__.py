@@ -55,24 +55,6 @@ def image_exists(
     return False
 
 
-def retrieve_manifest(
-    image_reference: str,
-    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
-    absent_ok: bool=False,
-) -> om.OciImageManifest:
-  '''
-  retrieves the OCI Artifact manifest for the specified reference, and returns it in a
-  deserialised form.
-  '''
-  client = oc.Client(credentials_lookup=credentials_lookup)
-  try:
-    return client.manifest(image_reference=image_reference)
-  except om.OciImageNotFoundException as oie:
-    if absent_ok:
-      return None
-    raise oie
-
-
 def tags(
     image_name: str,
     credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],

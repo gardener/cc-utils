@@ -86,7 +86,6 @@ def _inject_credentials_lookup(inner_function: callable):
 
 # kept for backwards-compatibility - todo: rm
 _image_exists = _inject_credentials_lookup(inner_function=oci.image_exists)
-retrieve_manifest = _inject_credentials_lookup(inner_function=oci.retrieve_manifest)
 cp_oci_artifact = _inject_credentials_lookup(inner_function=oci.replicate_artifact)
 retrieve_container_image = _inject_credentials_lookup(inner_function=oci.retrieve_container_image)
 publish_container_image = _inject_credentials_lookup(inner_function=oci.publish_container_image)
