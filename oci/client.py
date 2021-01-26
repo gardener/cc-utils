@@ -469,8 +469,9 @@ class Client:
 
     def to_digest_hash(self, image_reference: str):
         # TODO: we might early-exit if img_ref already has a "hashtag"
-        manifest_hash_digest = hashlib.sha256(self.manifest_raw(image_reference=image_reference))\
-            .hexdigest()
+        manifest_hash_digest = hashlib.sha256(
+            self.manifest_raw(image_reference=image_reference).content
+        ).hexdigest()
         return f'{_image_name(image_reference)}@sha256:{manifest_hash_digest}'
 
     def tags(self, image_reference: str):
