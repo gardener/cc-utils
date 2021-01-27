@@ -123,7 +123,7 @@ def _image_name(image_reference: str):
     if ':' in image_reference or '@' in image_reference:
         return _split_image_reference(image_reference=image_reference)[1]
     else:
-        return image_referece
+        return image_reference
 
 
 def base_api_url(
