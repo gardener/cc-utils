@@ -308,6 +308,8 @@ class Client:
                         'stacktrace': traceback.format_stack(),
                     }
                 )
+        except ImportError:
+            pass # silently ignore if running outside gardener-cicd
         except:
             import traceback
             logger.error(traceback.format_exc())
