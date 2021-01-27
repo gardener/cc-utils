@@ -123,7 +123,10 @@ def _image_name(image_reference: str):
     if ':' in image_reference or '@' in image_reference:
         return _split_image_reference(image_reference=image_reference)[1]
     else:
-        return image_reference
+        if not image_reference.startswith('https://'):
+            image_reference = 'https://' + image_reference
+        parsed = urllib.parse.urlparse(image_reference)
+        return parsed.path.lstrip('/')
 
 
 def base_api_url(
