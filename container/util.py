@@ -21,11 +21,17 @@ import os
 import tarfile
 import tempfile
 
+import ccc.oci
 import ci.util
 import container.model
 import container.registry
 
 logger = logging.getLogger(__name__)
+
+
+def image_exists(image_reference: str):
+    oci_client = ccc.oci.oci_client()
+    return bool(oci_client.head_manifest(image_reference=image_reference, absent_ok=True))
 
 
 def process_download_request(request: container.model.ContainerImageDownloadRequest):
@@ -49,7 +55,7 @@ def process_download_request(request: container.model.ContainerImageDownloadRequ
 
 
 def process_upload_request_from_file(request: container.model.ContainerImageUploadRequest):
-    if container.registry._image_exists(request.target_ref):
+    if image_exists(request.target_ref):
         logging.info(f'image exists: {request.target_ref}')
         return
 
@@ -70,7 +76,7 @@ def process_upload_request_from_file(request: container.model.ContainerImageUplo
 
 
 def process_upload_request(request: container.model.ContainerImageUploadRequest):
-    if container.registry._image_exists(request.target_ref):
+    if image_exists(request.target_ref):
         logging.info(f'image exists: {request.target_ref}')
         return
 
