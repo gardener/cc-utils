@@ -13,19 +13,12 @@
 # limitations under the License.
 """This package pulls images from a Docker Registry."""
 
-import functools
 import logging
 
 import oci
 import oci.auth as oa
 import oci.util
 import model.container_registry
-
-from containerregistry.client import docker_creds
-from containerregistry.transport import retry
-from containerregistry.transport import transport_pool
-
-import httplib2
 
 logger = logging.getLogger(__name__)
 
@@ -84,28 +77,3 @@ def _inject_credentials_lookup(inner_function: callable):
 # kept for backwards-compatibility - todo: rm
 retrieve_container_image = _inject_credentials_lookup(inner_function=oci.retrieve_container_image)
 publish_container_image = _inject_credentials_lookup(inner_function=oci.publish_container_image)
-
-
-@functools.lru_cache()
-def _credentials(image_reference: str, privileges: oa.Privileges=None):
-    registry_cfg = model.container_registry.find_config(image_reference, privileges)
-    if not registry_cfg:
-        return None
-    credentials = registry_cfg.credentials()
-    return docker_creds.Basic(username=credentials.username(), password=credentials.passwd())
-
-
-def _mk_transport_pool(
-    size=8,
-    disable_ssl_certificate_validation=False,
-):
-  # XXX: should cache transport-pools iff image-references refer to same oauth-domain
-  # XXX: pass `disable_ssl_certificate_validation`-arg from calling functions
-  Http_ctor = functools.partial(
-    httplib2.Http,
-    disable_ssl_certificate_validation=disable_ssl_certificate_validation
-  )
-  retry_factory = retry.Factory()
-  retry_factory = retry_factory.WithSourceTransportCallable(Http_ctor)
-  transport = transport_pool.Http(retry_factory.Build, size=size)
-  return transport
