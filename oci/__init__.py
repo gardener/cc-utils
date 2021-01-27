@@ -135,21 +135,28 @@ def put_blob(
 def replicate_artifact(
     src_image_reference: str,
     tgt_image_reference: str,
-    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
+    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig]=None,
     routes: oc.OciRoutes=oc.OciRoutes(),
+    oci_client: oc.Client=None,
 ):
     '''
     verbatimly replicate the OCI Artifact from src -> tgt without taking any assumptions
     about the transported contents. This in particular allows contents to be replicated
     that are not e.g. "docker-compliant" OCI Images.
     '''
+    if not (bool(credentials_lookup) ^ bool(oci_client)):
+        raise ValueError('either credentials-lookup + routes, xor client must be passed')
+
     src_image_reference = ou.normalise_image_reference(src_image_reference)
     tgt_image_reference = ou.normalise_image_reference(tgt_image_reference)
 
-    client = oc.Client(
-        credentials_lookup=credentials_lookup,
-        routes=routes,
-    )
+    if not oci_client:
+        client = oc.Client(
+            credentials_lookup=credentials_lookup,
+            routes=routes,
+        )
+    else:
+        client = oci_client
 
     # we need the unaltered - manifest for verbatim replication
     raw_manifest = client.manifest_raw(
