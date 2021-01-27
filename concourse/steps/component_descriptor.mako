@@ -228,10 +228,17 @@ elif have_ctf:
 info('resolving dependencies')
 
 # determine "bom-diff" (changed component references)
-bom_diff = component_diff_since_last_release(
-    component_descriptor=descriptor_v2,
-    ctx_repo_url=ctx_repository_base_url,
-)
+try:
+  bom_diff = component_diff_since_last_release(
+      component_descriptor=descriptor_v2,
+      ctx_repo_url=ctx_repository_base_url,
+  )
+except:
+  print('warning: failed to determine component-diff')
+  import traceback
+  traceback.print_exc()
+  bom_diff = None
+
 if not bom_diff:
   info('no differences in referenced components found since last release')
 else:
