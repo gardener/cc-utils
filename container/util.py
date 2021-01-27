@@ -51,29 +51,6 @@ def process_download_request(request: container.model.ContainerImageDownloadRequ
 
     ci.util.Checksum().create_file(target_file)
 
-    return
-
-
-def process_upload_request_from_file(request: container.model.ContainerImageUploadRequest):
-    if image_exists(request.target_ref):
-        logging.info(f'image exists: {request.target_ref}')
-        return
-
-    ci.util.existing_file(request.source_file)
-
-    publish_img = functools.partial(
-        container.registry.publish_container_image,
-        image_reference=request.target_ref,
-    )
-
-    with open(file=request.source_file, mode='r') as in_fh:
-        if not request.processing_callback:
-            return publish_img(image_file_obj=in_fh)
-
-        with tempfile.NamedTemporaryFile() as out_fh:
-            request.processing_callback(in_fh.name, out_fh.name)
-            return publish_img(image_file_obj=out_fh)
-
 
 def process_upload_request(request: container.model.ContainerImageUploadRequest):
     if image_exists(request.target_ref):

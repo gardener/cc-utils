@@ -317,9 +317,7 @@ class ProcessComponent:
                                   f'{processing_job.upload_request.source_file}')
                     return
 
-                container.util.process_upload_request_from_file(
-                    request=processing_job.upload_request
-                )
+                raise NotImplementedError
 
                 # All images have been processed, create and upload the new descriptor
                 if self.all_tgt_resources_processed():
