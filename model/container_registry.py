@@ -47,6 +47,7 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
             'image_reference_prefixes',
             'host',
             'email',
+            'api_base_url',
         }
 
     def _required_attributes(self):
@@ -54,6 +55,9 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
             'username',
             'password',
         }
+
+    def api_base_url(self):
+        return self.raw.get('api_base_url')
 
     def credentials(self):
         # XXX handle different container registry types

@@ -28,4 +28,17 @@ def oci_cfg_lookup():
 
 
 def oci_client(credentials_lookup=oci_cfg_lookup()):
-    return oc.Client(credentials_lookup=credentials_lookup)
+    def base_api_lookup(image_reference):
+        registry_cfg = model.container_registry.find_config(
+            image_reference=image_reference,
+            privileges=None,
+        )
+        if registry_cfg and (base_url := registry_cfg.api_base_url()):
+            return base_url
+        return oc.base_api_url(image_reference)
+
+    routes = oc.OciRoutes(base_api_lookup)
+    return oc.Client(
+        credentials_lookup=credentials_lookup,
+        routes=routes,
+    )
