@@ -103,14 +103,24 @@ def parse_image_reference(image_reference: str):
     return parsed_url
 
 
-def _image_name(image_reference: str):
-    image_name = parse_image_reference(image_reference=image_reference).path.lstrip('/')
-    if '@' in image_name:
-        image_name = image_name.rsplit('@', 1)[0]
-    else:
-        image_name = image_name.rsplit(':', 1)[0]
+def _split_image_reference(image_reference: str):
+    image_reference = oci.util.normalise_image_reference(image_reference)
 
-    return image_name
+    image_url = parse_image_reference(image_reference=image_reference)
+    image_name_and_tag = image_url.path.lstrip('/')
+
+    prefix = image_url.netloc
+
+    if '@' in image_name_and_tag:
+        image_name, image_tag = image_name_and_tag.rsplit('@', 1)
+    else:
+        image_name, image_tag = image_name_and_tag.rsplit(':', 1)
+
+    return prefix, image_name, image_tag
+
+
+def _image_name(image_reference: str):
+    return _split_image_reference(image_reference=image_reference)[1]
 
 
 def base_api_url(
@@ -475,7 +485,9 @@ class Client:
         manifest_hash_digest = hashlib.sha256(
             self.manifest_raw(image_reference=image_reference).content
         ).hexdigest()
-        return f'{_image_name(image_reference)}@sha256:{manifest_hash_digest}'
+        prefix, image_name, _ = _split_image_reference(image_reference=image_reference)
+
+        return f'{prefix}/{image_name}@sha256:{manifest_hash_digest}'
 
     def tags(self, image_reference: str):
         scope = _scope(image_reference=image_reference, action='pull')
