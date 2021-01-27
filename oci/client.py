@@ -246,9 +246,10 @@ class Client:
         )
         res = self.session.get(url)
 
-        auth_challenge = www_authenticate.parse(res.headers['www-authenticate'])
+        auth_challenge = www_authenticate.parse(res.headers.get('www-authenticate'))
 
-        if 'basic' in auth_challenge:
+        # XXX HACK HACK: fallback to basic-auth if endpoints does not state what it wants
+        if 'basic' in auth_challenge or not auth_challenge:
             self.token_cache.set_auth_method(
                 image_reference=image_reference,
                 auth_method=AuthMethod.BASIC,
