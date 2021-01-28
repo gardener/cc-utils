@@ -184,7 +184,7 @@ class ProtecodeUtil:
             metadata_dict['IMAGE_REFERENCE'] = resource.access.imageReference
             metadata_dict['IMAGE_VERSION'] = resource.version
             metadata_dict['IMAGE_DIGEST'] = digest
-            metadata_dict['DIGEST_IMAGE_REFERENCE'] = str(image_ref_with_digest)
+            metadata_dict['DIGEST_IMAGE_REFERENCE'] = str(img_ref_with_digest)
 
         return metadata_dict
 
