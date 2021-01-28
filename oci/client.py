@@ -574,8 +574,13 @@ class Client:
             method='HEAD',
             scope=scope,
             image_reference=image_reference,
-            raise_for_status=not absent_ok,
+            raise_for_status=False,
         )
+
+        if absent_ok and res.status_code == 404:
+            return res
+
+        res.raise_for_status()
 
         return res
 
