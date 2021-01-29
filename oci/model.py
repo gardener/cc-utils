@@ -4,6 +4,7 @@ import typing
 import requests
 
 OCI_MANIFEST_SCHEMA_V2_MIME = 'application/vnd.docker.distribution.manifest.v2+json'
+empty_dict = dataclasses.field(default_factory=dict)
 
 
 class OciImageNotFoundException(requests.exceptions.HTTPError):
@@ -49,7 +50,7 @@ class OciImageManifestV1:
     architecture: str
     fsLayers: typing.List[OciBlobRefV1]
     history: typing.List[typing.Dict] # don't care about details
-    signatures: typing.List[typing.Dict] # don't care about details
+    signatures: typing.List[typing.Dict] = empty_dict # don't care about details
     schemaVersion: int = 1
     layers = None # to be initialised by factory-function
 
