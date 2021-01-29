@@ -620,3 +620,21 @@ def greatest_component_version_with_matching_minor(
         reference_version=reference_version,
         versions=image_tags,
     )
+
+
+def greatest_component_version_by_name(
+    component_name: str,
+    ctx_repo_base_url: str,
+    cache_dir: str=None,
+):
+    greatest_version = greatest_component_version(
+        component_name=component_name,
+        ctx_repo_base_url=ctx_repo_base_url,
+    )
+    component_descriptor = download_component_descriptor_v2(
+        component_name,
+        greatest_version,
+        ctx_repo_base_url=ctx_repo_base_url,
+        cache_dir=cache_dir,
+    )
+    return component_descriptor.component
