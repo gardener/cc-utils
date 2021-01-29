@@ -23,7 +23,7 @@ image_reference = str
 
 def image_exists(
     image_reference: str,
-    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
+    credentials_lookup: oa.credentials_lookup,
 ) -> bool:
     '''
     returns a boolean value indicating whether or not the given OCI Artifact exists
@@ -57,7 +57,7 @@ def image_exists(
 
 def tags(
     image_name: str,
-    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
+    credentials_lookup: oa.credentials_lookup,
 ) -> typing.Sequence[str]:
     '''
     returns a sequence of all `tags` for the given image_name
@@ -89,7 +89,7 @@ def tags(
 def put_blob(
     image_name: str,
     fileobj: typing.BinaryIO,
-    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
+    credentials_lookup: oa.credentials_lookup,
     mimetype: str='application/octet-stream',
 ):
     '''
@@ -135,7 +135,7 @@ def put_blob(
 def replicate_artifact(
     src_image_reference: str,
     tgt_image_reference: str,
-    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig]=None,
+    credentials_lookup: oa.credentials_lookup=None,
     routes: oc.OciRoutes=oc.OciRoutes(),
     oci_client: oc.Client=None,
 ):
@@ -228,7 +228,7 @@ def replicate_artifact(
 def put_image_manifest(
     image_reference: str, # including tag
     manifest: om.OciImageManifest,
-    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
+    credentials_lookup: oa.credentials_lookup,
 ):
     contents = json.dumps(dataclasses.asdict(manifest)).encode('utf-8')
     _ou._put_raw_image_manifest(
@@ -241,7 +241,7 @@ def put_image_manifest(
 @deprecated.deprecated
 def retrieve_container_image(
     image_reference: str,
-    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
+    credentials_lookup: oa.credentials_lookup,
     outfileobj=None,
 ):
   tmp_file = _ou._pull_image(
@@ -256,7 +256,7 @@ def retrieve_container_image(
 def publish_container_image(
     image_reference: str,
     image_file_obj,
-    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
+    credentials_lookup: oa.credentials_lookup,
     threads=8
 ):
   image_file_obj.seek(0)

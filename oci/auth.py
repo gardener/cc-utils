@@ -94,6 +94,7 @@ class OciBasicAuthCredentials(OciCredentials):
 
 # typehint-alias
 image_reference = str
+credentials_lookup = typing.Callable[[image_reference, Privileges, bool], OciCredentials]
 
 
 def mk_credentials_lookup(
