@@ -17,3 +17,27 @@ class ScanArtifact:
         cm.ResourceAccess,
     ]
     label: dso.labels.ScanLabelValue
+
+
+@dataclasses.dataclass(frozen=True)
+class DependabotCoverageReportRepo:
+    repo: str
+    dependabot: bool
+
+
+@dataclasses.dataclass(frozen=False)
+class DependabotCoverageReport:
+    coverage: float
+    github: str
+    details: typing.List[DependabotCoverageReportRepo]
+
+    def calculate_overall_percentage(self):
+        t = 0
+        for rr in self.details:
+            if rr.dependabot:
+                t += 1
+
+        try:
+            self.coverage = t / (len(self.details) / 100)
+        except ZeroDivisionError:
+            self.coverage = 0
