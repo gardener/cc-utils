@@ -12,12 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import gci
 from pydash import _
 
-from product.model import ComponentName
-from ci.util import check_type
+import ci.util
+import cnudie.util
 
 
 @dataclass
@@ -71,7 +71,7 @@ class ReleaseNote:
     user_login: str
     is_current_repo: bool
     from_same_github_instance: str
-    cn_source_repo: str
+    source_component: gci.componentmodel.Component = field(compare=False)
 
 
 class ReleaseNoteBlock(ReleaseNote):
@@ -83,17 +83,29 @@ class ReleaseNoteBlock(ReleaseNote):
         reference_type: ReferenceType,
         reference_id: str,
         user_login: str,
-        source_repo: str,
-        cn_current_repo: ComponentName,
+        current_component: gci.componentmodel.Component,
+        source_component: gci.componentmodel.Component,
     ):
         if reference_id:
-            check_type(reference_id, str)
+            ci.util.check_type(reference_id, str)
+
+        ci.util.not_none(source_component)
 
         reference = Reference(type=reference_type, identifier=reference_id)
 
-        cn_source_repo = ComponentName(name=source_repo)
-        is_current_repo = cn_current_repo == cn_source_repo
-        from_same_github_instance = cn_current_repo.github_host() == cn_source_repo.github_host()
+        source_component_access = cnudie.util.determine_main_source_for_component(
+            source_component
+        ).access
+        current_component_access = cnudie.util.determine_main_source_for_component(
+            current_component
+        ).access
+
+        is_current_repo = current_component.name == source_component.name
+
+        current_hostname = current_component_access.hostname()
+        source_hostname = source_component_access.hostname()
+        from_same_github_instance = current_hostname in source_hostname
+
         super().__init__(
             category_id,
             target_group_id,
@@ -102,7 +114,7 @@ class ReleaseNoteBlock(ReleaseNote):
             user_login,
             is_current_repo,
             from_same_github_instance,
-            cn_source_repo
+            source_component,
         )
 
     def ref(self):
@@ -124,7 +136,7 @@ class ReleaseNoteBlock(ReleaseNote):
             '```'.format(
                 cat=self.category_id,
                 t_grp=self.target_group_id,
-                src_repo=self.cn_source_repo.name(),
+                src_repo=self.source_component.name,
                 ref=self.ref(),
                 user=self.user(),
                 text=self.text
