@@ -70,10 +70,17 @@ class OciConfig:
         if not self.url_prefixes:
             return True
 
+        unmodified_ref = image_reference.lower()
         image_reference = oci.util.normalise_image_reference(image_reference=image_reference).lower()
 
         for prefix in self.url_prefixes:
-            if image_reference.startswith(oci.util.normalise_image_reference(prefix.lower())):
+            prefix = prefix.lower()
+
+            if image_reference.startswith(oci.util.normalise_image_reference(prefix)):
+                return True
+            if image_reference.startswith(prefix.lower()):
+                return True
+            if unmodified_ref.startswith(prefix):
                 return True
 
         return False
