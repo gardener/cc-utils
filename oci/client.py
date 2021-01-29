@@ -215,11 +215,13 @@ class Client:
         self,
         credentials_lookup: typing.Callable,
         routes: OciRoutes=OciRoutes(),
+        disable_tls_validation=False,
     ):
         self.credentials_lookup = credentials_lookup
         self.token_cache = OauthTokenCache()
         self.session = requests.Session()
         self.routes = routes
+        self.disable_tls_validation = disable_tls_validation
 
     def _authenticate(
         self,
@@ -250,7 +252,10 @@ class Client:
         url = base_api_url(
             image_reference=image_reference,
         )
-        res = self.session.get(url)
+        res = self.session.get(
+            url=url,
+            verify=not self.disable_tls_validation,
+        )
 
         auth_challenge = www_authenticate.parse(res.headers.get('www-authenticate'))
 
@@ -279,7 +284,8 @@ class Client:
             auth = None
 
         res = self.session.get(
-            realm,
+            url=realm,
+            verify=not self.disable_tls_validation,
             auth=auth,
         )
 
@@ -305,6 +311,7 @@ class Client:
         raise_for_status=True,
         **kwargs,
     ):
+        kwargs['verify'] = False
         self._authenticate(
             image_reference=image_reference,
             scope=scope,
@@ -354,6 +361,9 @@ class Client:
               'Authorization': f'Bearer {self.token_cache.token(scope=scope).token}',
               **headers,
             }
+
+        if self.disable_tls_validation and 'verify' in kwargs:
+            kwargs['verify'] = False
 
         res = requests.request(
             method=method,
