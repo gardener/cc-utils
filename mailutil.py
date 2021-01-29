@@ -21,6 +21,7 @@ import gci.componentmodel as cm
 
 import cnudie.util
 import mail.model
+import product.v2
 from model.email import EmailConfig
 from ci.util import (
     existing_dir,
@@ -35,7 +36,6 @@ from ci.util import (
 from mail import template_mailer as mailer
 import ccc.github
 from github.codeowners import CodeownersEnumerator, CodeOwnerEntryResolver
-import product.model
 
 
 def send_mail(
@@ -196,6 +196,7 @@ def determine_mail_recipients(
     component_names=(),
     codeowners_files=(),
     branch_name='master',
+    ctx_repo_url=None,
 ):
     '''
     returns a generator yielding all email addresses for the given (git) repository work tree
@@ -212,6 +213,9 @@ def determine_mail_recipients(
 
     if components and component_names:
         raise ValueError('only one of components, component_names must be set')
+
+    if component_names and not ctx_repo_url:
+        raise ValueError('If component_names is given, ctx_repo_url must also be given')
 
     cfg_factory = ctx().cfg_factory()
 
@@ -244,6 +248,8 @@ def determine_mail_recipients(
                 branch_name=branch_name
             ) for component in components
         ]
+    else:
+        raise ValueError('One of components and component_names must be given')
 
     for resolver, codeowner_entries in entries_and_resolvers:
         yield from resolver.resolve_email_addresses(codeowner_entries)
@@ -251,26 +257,17 @@ def determine_mail_recipients(
 
 def _codeowners_parser_from_component_name(
     component_name: str,
-    branch_name='master'
+    ctx_repo_url: str,
+    branch_name='master',
 ):
-    component_name = product.model.ComponentName(component_name)
-    github_cfg = ccc.github.github_cfg_for_hostname(
-        cfg_factory=ctx().cfg_factory(),
-        host_name=component_name.github_host(),
+    component = product.v2.greatest_component_version_by_name(
+        component_name=component_name,
+        ctx_repo_url=ctx_repo_url,
     )
-    github_api = ccc.github.github_api(github_cfg=github_cfg)
-
-    repo_helper = ccc.github.repo_helper(
-        host=component_name.github_host(),
-        org=component_name.github_organisation(),
-        repo=component_name.github_repo(),
-        branch=branch_name,
+    return _codeowners_parser_from_component(
+        component=component,
+        branch_name=branch_name,
     )
-
-    resolver = CodeOwnerEntryResolver(github_api=github_api)
-    enumerator = CodeownersEnumerator()
-
-    return resolver, enumerator.enumerate_remote_repo(github_repo_helper=repo_helper)
 
 
 def _codeowners_parser_from_component(
