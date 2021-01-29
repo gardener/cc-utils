@@ -527,9 +527,6 @@ class Client:
             scope=scope,
             method='PUT',
             data=manifest,
-            headers={
-                'Content-Type': 'application/vnd.oci.image.manifest.v1+json',
-            }
         )
 
         return res
