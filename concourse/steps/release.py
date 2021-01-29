@@ -531,7 +531,7 @@ class NextDevCycleCommitStep(TransactionalStep):
             )
             commit_message = self._next_dev_cycle_commit_message(
                 version=next_cycle_dev_version,
-                message_prefix=self.self.next_cycle_commit_message_prefix,
+                message_prefix=self.next_cycle_commit_message_prefix,
             )
             self.git_helper.repo.git.revert(
                 output['next cycle commit sha'],
