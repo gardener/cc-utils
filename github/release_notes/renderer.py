@@ -15,7 +15,10 @@
 
 from abc import abstractmethod
 from collections import namedtuple
+import typing
 from pydash import _
+
+import cnudie.util
 
 from github.release_notes.model import ReleaseNote, REF_TYPE_COMMIT
 
@@ -117,23 +120,27 @@ CATEGORIES = [
 ]
 
 
+def _access(component):
+    return cnudie.util.determine_main_source_for_component(component, False).access
+
+
 class Renderer(object):
-    def __init__(self, release_note_objs: [ReleaseNote]):
+    def __init__(self, release_note_objs: typing.List[ReleaseNote]):
         self.rls_note_objs = _.uniq(release_note_objs)
 
     def render(self) -> str:
         origin_nodes = _\
             .chain(self.rls_note_objs)\
-            .sort_by(lambda rls_note_obj: rls_note_obj.cn_source_repo.github_repo())\
+            .sort_by(lambda rls_note_obj: _access(rls_note_obj.source_component).repository_name())\
             .sort_by(lambda rls_note_obj: rls_note_obj.is_current_repo, reverse=True)\
-            .uniq_by(lambda rls_note_obj: rls_note_obj.cn_source_repo.name())\
+            .uniq_by(lambda rls_note_obj: rls_note_obj.source_component.name)\
             .map(lambda rls_note_obj: TitleNode(
-                identifiers=[rls_note_obj.cn_source_repo.name()],
+                identifiers=[rls_note_obj.source_component.name],
                 title='[{origin_name}]'.format(
-                    origin_name=rls_note_obj.cn_source_repo.github_repo()
+                    origin_name=_access(rls_note_obj.source_component).repository_name(),
                 ),
                 nodes=CATEGORIES,
-                matches_rls_note_field_path='cn_source_repo.name' # path points to a function
+                matches_rls_note_field_path='source_component.name',
             ))\
             .value()
 
@@ -149,10 +156,10 @@ class Renderer(object):
 
     def _to_release_note_lines(
         self,
-        nodes: [TitleNode],
+        nodes: typing.List[TitleNode],
         level: int,
-        rls_note_objs: [ReleaseNote]
-    ) -> [str]:
+        rls_note_objs: typing.List[ReleaseNote],
+    ) -> typing.List[str]:
         lines = list()
         for node in nodes:
             filtered_rls_note_objects = _.filter(
@@ -216,20 +223,16 @@ class Renderer(object):
             if should_generate_link:
                 reference_id_text = rls_note_obj.reference.identifier[0:12] # short commit hash
 
-        reference = '{reference_prefix}{ref_id}'.format(
-            reference_prefix=reference_prefix,
-            ref_id=reference_id_text,
-        )
-
+        reference = f'{reference_prefix}{reference_id_text}'
         if is_reference_auto_linked:
             return reference
 
         if not should_generate_link:
             # returns e.g. gardener/cc-utils#42 or g. gardener/cc-utils@commit-hash
-            return '{repo_path}{reference}'.format(
-                    repo_path=rls_note_obj.cn_source_repo.github_repo_path(),
-                    reference=reference
-                )
+            return (
+                f'{_access(rls_note_obj.source_component).org_name()}/'
+                f'{_access(rls_note_obj.source_component).repository_name()}{reference}'
+            )
 
         return self._github_reference_link(
             rls_note_obj=rls_note_obj,
@@ -248,7 +251,7 @@ class Renderer(object):
 
         return self._github_user_profile_link(
             user=rls_note_obj.user_login,
-            github_url=rls_note_obj.cn_source_repo.github_url()
+            github_url=f'https://{_access(rls_note_obj.source_component).hostname()}',
         )
 
     def _github_reference_link(
@@ -256,15 +259,15 @@ class Renderer(object):
         rls_note_obj: ReleaseNote,
         reference: str
     ) -> str:
-        reference_link = '{source_repo_url}/{github_api_resource_type}/{ref_id}'.format(
-            source_repo_url=rls_note_obj.cn_source_repo.github_repo_url(),
-            ref_id=rls_note_obj.reference.identifier,
-            github_api_resource_type=rls_note_obj.reference.type.github_api_resource_type
+        reference_link = (
+            f'https://{rls_note_obj.source_component.name}/'
+            f'{rls_note_obj.reference.type.github_api_resource_type}/'
+            f'{rls_note_obj.reference.identifier}'
         )
 
-        link_text = '{repo_path}{reference}'.format(
-            repo_path=rls_note_obj.cn_source_repo.github_repo_path(),
-            reference=reference
+        link_text = (
+            f'{_access(rls_note_obj.source_component).org_name()}/'
+            f'{_access(rls_note_obj.source_component).repository_name()}{reference}'
         )
         return self._build_link(url=reference_link, text=link_text)
 
@@ -283,7 +286,7 @@ class Renderer(object):
     def _to_bullet_points(
         self,
         tag: str,
-        rls_note_objs: [ReleaseNote],
+        rls_note_objs: typing.List[ReleaseNote],
     ):
         bullet_points = list()
         for rls_note_obj in rls_note_objs:
@@ -345,7 +348,7 @@ class Renderer(object):
 class MarkdownRenderer(Renderer):
     def __init__(
         self,
-        release_note_objs: [ReleaseNote],
+        release_note_objs: typing.List[ReleaseNote],
         force_link_generation:bool=False
     ):
         super().__init__(release_note_objs)
@@ -381,5 +384,5 @@ class MarkdownRenderer(Renderer):
     def _build_link(self, url: str, text) -> str:
         return '[{text}]({url})'.format(
             url=url,
-            text=text
+            text=text,
         )

@@ -19,6 +19,8 @@ from ci.util import (
     warning,
 )
 import cnudie.retrieve
+import cnudie.util
+
 from gitutil import GitHelper
 from github.util import (
     GitHubRepositoryHelper,
@@ -555,7 +557,7 @@ class GitHubReleaseStep(TransactionalStep):
         githubrepobranch: GitHubRepoBranch,
         repo_dir: str,
         release_version: str,
-        component_descriptor_v2_path:str,
+        component_descriptor_v2_path: str,
         ctf_path:str,
     ):
         self.github_helper = not_none(github_helper)
@@ -662,28 +664,49 @@ class PublishReleaseNotesStep(TransactionalStep):
         self,
         githubrepobranch: GitHubRepoBranch,
         github_helper: GitHubRepositoryHelper,
+        component_descriptor_v2_path: str,
         release_version: str,
+        ctf_path: str,
         repo_dir: str,
     ):
         self.githubrepobranch = not_none(githubrepobranch)
         self.github_helper = not_none(github_helper)
         self.release_version = not_empty(release_version)
         self.repo_dir = os.path.abspath(not_empty(repo_dir))
+        self.component_descriptor_v2_path = component_descriptor_v2_path
+        self.ctf_path = ctf_path
 
     def validate(self):
         version.parse_to_semver(self.release_version)
         existing_dir(self.repo_dir)
+
+        have_ctf = os.path.exists(self.ctf_path)
+        have_cd = os.path.exists(self.component_descriptor_v2_path)
+        if not have_ctf ^ have_cd:
+            ci.util.fail('exactly one of component-descriptor, or ctf-archive must exist')
+        elif have_cd:
+            self.component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
+            ci.util.parse_yaml_file(self.component_descriptor_v2_path),
+        )
+        elif have_ctf:
+            component_descriptors = list(cnudie.util.component_descriptors_from_ctf_archive(
+                self.ctf_path,
+            ))
+            if not component_descriptors:
+                ci.util.fail(f'No component descriptor found in CTF archive at {self.ctf_path}')
+            if len(component_descriptors) > 1:
+                ci.util.fail(
+                    f'More than one component descriptor found in CTF archive at {self.ctf_path}'
+                )
+            self.component_descriptor_v2 = component_descriptors[0]
 
     def apply(self):
         create_release_step_output = self.context().step_output('Create Release')
         release_tag = create_release_step_output['release_tag_name']
 
         release_notes = fetch_release_notes(
-            github_repository_owner=self.githubrepobranch.repo_owner(),
-            github_repository_name=self.githubrepobranch.repo_name(),
-            github_cfg=self.githubrepobranch.github_config(),
+            self.component_descriptor_v2.component,
             repo_dir=self.repo_dir,
-            github_helper=self.github_helper,
             repository_branch=self.githubrepobranch.branch(),
         )
         release_notes_md = release_notes.to_markdown()
@@ -930,6 +953,8 @@ def release_and_prepare_next_dev_cycle(
         githubrepobranch=githubrepobranch,
         github_helper=github_helper,
         release_version=release_version,
+        component_descriptor_v2_path=component_descriptor_v2_path,
+        ctf_path=ctf_path,
         repo_dir=repo_dir,
     )
 
