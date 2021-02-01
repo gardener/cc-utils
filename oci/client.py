@@ -25,6 +25,20 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+def _append_b64_padding_if_missing(b64_str: str):
+    if b64_str[-1] == '=':
+        return b64_str
+
+    if (mod4 := len(b64_str) % 4) == 2:
+        return b64_str + '=' * 2
+    elif mod4 == 3:
+        return b64_str + '='
+    elif mod4 == 0:
+        return b64_str
+    else:
+        raise ValueError('this is a bug')
+
+
 class AuthMethod(enum.Enum):
     BEARER = 'bearer'
     BASIC = 'basic'
@@ -51,7 +65,15 @@ class OauthToken:
         if not self.expires_in:
             payload = self.token.split('.')[1]
             # add padding (JWT by convention has unpadded base64)
-            payload += (len(payload) % 4) * '='
+            payload = _append_b64_padding_if_missing(b64_str=payload)
+
+            if (mod3 := len(payload) % 3) == 0:
+                pass
+            elif mod3 == 1:
+                payload += '=='
+            elif mod3 == 2:
+                payload += '='
+
             parsed = json.loads(base64.b64decode(payload.encode('utf-8')))
 
             exp = parsed['exp']
