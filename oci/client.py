@@ -51,11 +51,7 @@ class OauthToken:
         if not self.expires_in:
             payload = self.token.split('.')[1]
             # add padding (JWT by convention has unpadded base64)
-            if not payload[-1] == '=':
-                if (m := len(payload) % 3) == 1:
-                    payload += '=='
-                elif m == 2:
-                    payload += '='
+            payload += (len(payload) % 4) * '='
             parsed = json.loads(base64.b64decode(payload.encode('utf-8')))
 
             exp = parsed['exp']
