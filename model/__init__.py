@@ -1,23 +1,11 @@
-# Copyright (c) 2019-2020 SAP SE or an SAP affiliate company. All rights reserved. This file is
-# licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
+import dataclasses
 import functools
 import json
 import os
 import pkgutil
 import sys
+
+import dacite
 
 from model.base import (
     ConfigElementNotFoundError,
@@ -32,6 +20,8 @@ from ci.util import (
     parse_yaml_file,
     warning,
 )
+
+dc = dataclasses.dataclass
 
 '''
 Configuration model and retrieval handling.
@@ -74,14 +64,21 @@ class ConfigFactory:
         raw[ConfigFactory.CFG_TYPES] = cfg_types_dict
 
         def parse_cfg(cfg_type):
-            # assume for now that there is exactly one cfg source (file)
-            cfg_sources = list(cfg_type.sources())
-            if not len(cfg_sources) == 1:
-                raise ValueError('currently, only exactly one cfg file is supported per type')
+            cfg_dict = {}
 
-            cfg_file = cfg_sources[0].file()
-            parsed_cfg =  parse_yaml_file(os.path.join(cfg_dir, cfg_file))
-            return parsed_cfg
+            for cfg_src in cfg_type.sources():
+                if not isinstance(cfg_src, LocalFileCfgSrc):
+                    # XXX: implement different cfg-src-types
+                    raise NotImplementedError(cfg_src)
+
+                cfg_file = cfg_src.file
+                parsed_cfg =  parse_yaml_file(os.path.join(cfg_dir, cfg_file))
+                for k,v in parsed_cfg.items():
+                    if k in cfg_dict and cfg_dict[k] != v:
+                        raise ValueError(f'conflicting definition for {k=}')
+                    cfg_dict[k] = v
+
+            return cfg_dict
 
         # parse all configurations
         for cfg_type in map(ConfigType, cfg_types_dict.values()):
@@ -291,7 +288,18 @@ class ConfigType(ModelBase):
         return {'src'}
 
     def sources(self):
-        return map(ConfigTypeSource, self.raw.get('src'))
+        def parse_best_match(src_dict: dict):
+            for data_class in LocalFileCfgSrc, GithubRepoFileSrc:
+                try:
+                    return dacite.from_dict(
+                            data=src_dict,
+                            data_class=data_class,
+                    )
+                except TypeError:
+                    pass
+            raise ValueError(f'failed to parse {src_dict=}')
+
+        return (parse_best_match(src_dict=src_dict) for src_dict in self.raw.get('src'))
 
     def factory_method(self):
         return self.raw.get('model').get('factory_method')
@@ -303,12 +311,20 @@ class ConfigType(ModelBase):
         return self.raw.get('model').get('type')
 
 
-class ConfigTypeSource(ModelBase):
-    def _optional_attributes(self):
-        return {'file'}
+@dc
+class CfgTypeSrc: # just a marker class
+    pass
 
-    def file(self):
-        return self.raw.get('file')
+
+@dc
+class LocalFileCfgSrc(CfgTypeSrc):
+    file: str
+
+
+@dc
+class GithubRepoFileSrc(CfgTypeSrc):
+    repository_url: str
+    relpath: str
 
 
 class ConfigSetSerialiser(object):
