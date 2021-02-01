@@ -14,10 +14,10 @@
 # limitations under the License.
 
 import functools
-import os
-import sys
 import json
+import os
 import pkgutil
+import sys
 
 from model.base import (
     ConfigElementNotFoundError,
