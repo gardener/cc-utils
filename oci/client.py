@@ -314,27 +314,6 @@ class Client:
         )
         headers = headers or {}
         auth_method = self.token_cache.auth_method(image_reference=image_reference)
-
-        try:
-            import ccc.elasticsearch
-            import traceback
-
-            if es_client := ccc.elasticsearch.default_client_if_available():
-                es_client.store_document(
-                    index='component_descriptor_pull',
-                    body={
-                        'method': method,
-                        'url': url,
-                        'stacktrace': traceback.format_stack(),
-                    }
-                )
-        except ImportError:
-            pass # silently ignore if running outside gardener-cicd
-        except:
-            import traceback
-            logger.error(traceback.format_exc())
-            logger.error('could not send elastic search dump')
-
         auth = None
 
         if auth_method is AuthMethod.BASIC:
