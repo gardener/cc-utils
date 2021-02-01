@@ -12,3 +12,9 @@ def cp(src:str, tgt:str):
         tgt_image_reference=tgt,
         oci_client=oci_client,
     )
+
+
+def ls(image: str):
+    oci_client = ccc.oci.oci_client()
+
+    print(oci_client.tags(image_reference=image))
