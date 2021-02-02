@@ -4,8 +4,10 @@ import json
 import os
 import pkgutil
 import sys
+import urllib.parse
 
 import dacite
+import yaml
 
 from model.base import (
     ConfigElementNotFoundError,
@@ -56,7 +58,30 @@ class ConfigFactory:
     _cfg_type_cache = {} # <name>:<type>
 
     @staticmethod
-    def from_cfg_dir(cfg_dir: str, cfg_types_file='config_types.yaml'):
+    def from_cfg_dir(
+        cfg_dir: str,
+        cfg_types_file='config_types.yaml',
+    ):
+        bootstrap_cfg_factory = ConfigFactory._from_cfg_dir(
+            cfg_dir=cfg_dir,
+            cfg_types_file=cfg_types_file,
+            cfg_src_types=(LocalFileCfgSrc,),
+        )
+
+        return ConfigFactory._from_cfg_dir(
+            cfg_dir=cfg_dir,
+            cfg_types_file=cfg_types_file,
+            cfg_src_types=None, # all
+            lookup_cfg_factory=bootstrap_cfg_factory,
+        )
+
+    @staticmethod
+    def _from_cfg_dir(
+        cfg_dir: str,
+        cfg_types_file='config_types.yaml',
+        cfg_src_types=None,
+        lookup_cfg_factory=None,
+    ):
         cfg_dir = existing_dir(os.path.abspath(cfg_dir))
         cfg_types_dict = parse_yaml_file(os.path.join(cfg_dir, cfg_types_file))
         raw = {}
@@ -66,13 +91,47 @@ class ConfigFactory:
         def parse_cfg(cfg_type):
             cfg_dict = {}
 
+            def parse_local_file(cfg_src: LocalFileCfgSrc):
+                cfg_file = cfg_src.file
+                return parse_yaml_file(os.path.join(cfg_dir, cfg_file))
+
+            def parse_repo_file(cfg_src: GithubRepoFileSrc):
+                import ccc.github
+                repo_url = cfg_src.repository_url
+                if not '://' in repo_url:
+                    repo_url = 'https://' + repo_url
+                repo_url = urllib.parse.urlparse(repo_url)
+
+                if not lookup_cfg_factory:
+                    raise RuntimeError('cannot resolve non-local cfg w/o bootstrap-cfg-factory')
+
+                gh_api = ccc.github.github_api(
+                    ccc.github.github_cfg_for_hostname(
+                        repo_url.hostname,
+                        cfg_factory=lookup_cfg_factory,
+                    ),
+                    cfg_factory=lookup_cfg_factory,
+                )
+                org, repo = repo_url.path.strip('/').split('/')
+                gh_repo = gh_api.repository(org, repo)
+
+                file_contents = gh_repo.file_contents(
+                    path=cfg_src.relpath,
+                    ref=gh_repo.default_branch,
+                ).decoded.decode('utf-8')
+                return yaml.safe_load(file_contents)
+
             for cfg_src in cfg_type.sources():
-                if not isinstance(cfg_src, LocalFileCfgSrc):
-                    # XXX: implement different cfg-src-types
+                if cfg_src_types and type(cfg_src) not in cfg_src_types:
+                    continue
+
+                if isinstance(cfg_src, LocalFileCfgSrc):
+                    parsed_cfg = parse_local_file(cfg_src=cfg_src)
+                elif isinstance(cfg_src, GithubRepoFileSrc):
+                    parsed_cfg = parse_repo_file(cfg_src=cfg_src)
+                else:
                     raise NotImplementedError(cfg_src)
 
-                cfg_file = cfg_src.file
-                parsed_cfg =  parse_yaml_file(os.path.join(cfg_dir, cfg_file))
                 for k,v in parsed_cfg.items():
                     if k in cfg_dict and cfg_dict[k] != v:
                         raise ValueError(f'conflicting definition for {k=}')
@@ -295,7 +354,7 @@ class ConfigType(ModelBase):
                             data=src_dict,
                             data_class=data_class,
                     )
-                except TypeError:
+                except dacite.exceptions.MissingValueError:
                     pass
             raise ValueError(f'failed to parse {src_dict=}')
 
