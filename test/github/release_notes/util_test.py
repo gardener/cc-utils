@@ -43,7 +43,7 @@ from github.release_notes.renderer import (
 from test.github.release_notes.default_util import (
     release_note_block_with_defaults,
     extract_release_notes_with_defaults,
-    CURRENT_REPO
+    CURRENT_COMPONENT,
 )
 
 
@@ -216,6 +216,8 @@ class ReleaseNotesTest(unittest.TestCase):
         ], actual_release_notes)
 
     def test_rls_note_extraction_src_repo(self):
+        self.maxDiff = None
+
         def source_repo_test(
             code_block,
             exp_reference_id,
@@ -224,12 +226,17 @@ class ReleaseNotesTest(unittest.TestCase):
         ):
             actual_release_notes = extract_release_notes_with_defaults(
                 text=code_block,
+                source_component_hostname='github.com',
+                source_component_org_name='madeup',
+                source_component_repo_name='source-component',
             )
             exp_release_note = release_note_block_with_defaults(
                 reference_type=exp_ref_type,
                 reference_id=exp_reference_id,
                 user_login=exp_usr,
-                source_repo='github.com/madeup/source-component',
+                source_component_hostname='github.com',
+                source_component_org_name='madeup',
+                source_component_repo_name='source-component',
             )
             self.assertEqual([exp_release_note], actual_release_notes)
 
@@ -409,7 +416,9 @@ default release note text
     def test_rls_note_obj_to_block(self):
         try:
             rn_block = release_note_block_with_defaults(
-                source_repo=None,
+            source_component_hostname=None,
+            source_component_org_name=None,
+            source_component_repo_name=None,
             )
             self.fail(
                 'a ReleaseNoteBlock always has a source repository, '
@@ -418,11 +427,17 @@ default release note text
         except RuntimeError:
             pass
 
+        hostname = 'github.com'
+        org_name = 'madeup'
+        repo_name = 'a-foo-bar'
+
         rn_block = release_note_block_with_defaults(
             reference_type=None,
             reference_id=None,
             user_login=None,
-            source_repo='github.com/madeup/a-foo-bar',
+            source_component_hostname=hostname,
+            source_component_org_name=org_name,
+            source_component_repo_name=repo_name,
         )
         exp_release_note_block = \
         '``` improvement user github.com/madeup/a-foo-bar\n'\
@@ -434,7 +449,9 @@ default release note text
             reference_type=None,
             reference_id=None,
             user_login='a-user',
-            source_repo='github.com/madeup/a-foo-bar',
+            source_component_hostname=hostname,
+            source_component_org_name=org_name,
+            source_component_repo_name=repo_name,
         )
         exp_release_note_block = \
         '``` improvement user github.com/madeup/a-foo-bar @a-user\n'\
@@ -446,7 +463,9 @@ default release note text
             reference_type=REF_TYPE_PULL_REQUEST,
             reference_id='123456',
             user_login=None,
-            source_repo='github.com/madeup/a-foo-bar',
+            source_component_hostname=hostname,
+            source_component_org_name=org_name,
+            source_component_repo_name=repo_name,
         )
         exp_release_note_block = \
         '``` improvement user github.com/madeup/a-foo-bar #123456\n'\
@@ -458,8 +477,9 @@ default release note text
             reference_type=REF_TYPE_COMMIT,
             reference_id='commit-id',
             user_login='foo',
-            source_repo='github.com/madeup/a-foo-bar',
-            cn_current_repo=CURRENT_REPO
+            source_component_hostname=hostname,
+            source_component_org_name=org_name,
+            source_component_repo_name=repo_name,
         )
         exp_release_note_block = \
         '``` improvement user github.com/madeup/a-foo-bar $commit-id @foo\n'\
@@ -473,7 +493,9 @@ default release note text
             reference_type=None,
             reference_id=None,
             user_login=None,
-            source_repo='github.com/madeup/a-foo-bar',
+            source_component_hostname=hostname,
+            source_component_org_name=org_name,
+            source_component_repo_name=repo_name,
         )
         exp_release_note_block = \
         '``` noteworthy operator github.com/madeup/a-foo-bar\n'\
@@ -484,11 +506,21 @@ default release note text
     def test_no_release_note_obj_to_block_str(self):
         rls_note_objs = []
         exp_release_note_block = ''
-        self.assertEqual(exp_release_note_block, ReleaseNotes(rls_note_objs).release_note_blocks())
+        empty_notes = ReleaseNotes(
+            CURRENT_COMPONENT, ''
+        )
+        empty_notes.release_note_objs = rls_note_objs
+        self.assertEqual(
+            exp_release_note_block,
+            empty_notes.release_note_blocks(),
+        )
 
-        rls_note_objs = None
+        empty_notes.release_note_objs = None
         exp_release_note_block = ''
-        self.assertEqual(exp_release_note_block, ReleaseNotes(rls_note_objs).release_note_blocks())
+        self.assertEqual(
+            exp_release_note_block,
+            empty_notes.release_note_blocks(),
+        )
 
     def test_single_release_note_obj_to_block_str(self):
         rls_note_objs = [
@@ -498,16 +530,28 @@ default release note text
         '``` improvement user github.com/madeup/current-repo #42 @foo\n'\
         'default release note text'\
         '\n```'
-        self.assertEqual(exp_release_note_block, ReleaseNotes(rls_note_objs).release_note_blocks())
+        release_notes = ReleaseNotes(
+            component=CURRENT_COMPONENT,
+            repo_dir='',
+        )
+        release_notes.release_note_objs = rls_note_objs
+
+        self.assertEqual(exp_release_note_block, release_notes.release_note_blocks())
 
     def test_multiple_release_note_objs_to_block_str(self):
+        hostname = 'github.com'
+        org_name = 's'
+        repo_name = 'repo'
+
         rls_note_objs = [
             release_note_block_with_defaults(),
             release_note_block_with_defaults(
                 reference_type=REF_TYPE_COMMIT,
                 reference_id='commit-id',
                 text='another one',
-                source_repo='github.com/s/repo',
+                source_component_hostname=hostname,
+                source_component_org_name=org_name,
+                source_component_repo_name=repo_name,
             ),
         ]
         exp_release_note_block = \
@@ -516,10 +560,18 @@ default release note text
         '\n```'\
         '\n'\
         '\n'\
-        '``` improvement user github.com/s/repo $commit-id @foo\n'\
+        f'``` improvement user {hostname}/{org_name}/{repo_name} $commit-id @foo\n'\
         'another one'\
         '\n```'
-        self.assertEqual(exp_release_note_block, ReleaseNotes(rls_note_objs).release_note_blocks())
+        release_notes = ReleaseNotes(
+            component=CURRENT_COMPONENT,
+            repo_dir='',
+        )
+        release_notes.release_note_objs = rls_note_objs
+        self.assertEqual(
+            exp_release_note_block,
+            release_notes.release_note_blocks(),
+        )
 
     def test_pr_number_from_subject(self):
         self.assertEqual('42', pr_number_from_subject('Merge pull request #42'))
@@ -565,7 +617,10 @@ default release note text
                 message='foo\n```improvement user\nrelease note text in commit 2\n```\nbar'
             )
         ]
-        actual_rls_note_objs = fetch_release_notes_from_commits(commits, CURRENT_REPO)
+        actual_rls_note_objs = fetch_release_notes_from_commits(
+            commits=commits,
+            current_component=CURRENT_COMPONENT,
+        )
         expected_rls_note_objs = [
             release_note_block_with_defaults(
                 category_id=CATEGORY_IMPROVEMENT_ID,
@@ -574,8 +629,7 @@ default release note text
                 reference_type=REF_TYPE_COMMIT,
                 reference_id='commit-id2',
                 user_login=None,
-                source_repo=CURRENT_REPO.name(),
-                cn_current_repo=CURRENT_REPO),
+            ),
             release_note_block_with_defaults(
                 category_id=CATEGORY_IMPROVEMENT_ID,
                 target_group_id=TARGET_GROUP_USER_ID,
@@ -583,8 +637,7 @@ default release note text
                 reference_type=REF_TYPE_COMMIT,
                 reference_id='commit-id3',
                 user_login=None,
-                source_repo=CURRENT_REPO.name(),
-                cn_current_repo=CURRENT_REPO),
+            ),
         ]
 
         self.assertEqual(expected_rls_note_objs, actual_rls_note_objs)

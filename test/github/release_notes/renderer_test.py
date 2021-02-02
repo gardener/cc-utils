@@ -37,7 +37,9 @@ from github.release_notes.renderer import (
 )
 from test.github.release_notes.default_util import (
     release_note_block_with_defaults,
-    CURRENT_REPO_NAME,
+    CURRENT_COMPONENT_HOSTNAME,
+    CURRENT_COMPONENT_ORG_NAME,
+    CURRENT_COMPONENT_REPO_NAME,
 )
 
 
@@ -65,7 +67,9 @@ class RendererTest(unittest.TestCase):
     def test_render_from_other_github_should_auto_link(self):
         release_note_objs = [
             release_note_block_with_defaults(
-                source_repo='madeup.enterprise.github.corp/o/s',
+                source_component_hostname='madeup.enterprise.github.corp',
+                source_component_org_name='o',
+                source_component_repo_name='s',
             )
         ]
 
@@ -85,13 +89,17 @@ class RendererTest(unittest.TestCase):
             release_note_block_with_defaults(
                 reference_type=REF_TYPE_PULL_REQUEST,
                 reference_id='42',
-                source_repo=CURRENT_REPO_NAME,
+                source_component_hostname=CURRENT_COMPONENT_HOSTNAME,
+                source_component_org_name=CURRENT_COMPONENT_ORG_NAME,
+                source_component_repo_name=CURRENT_COMPONENT_REPO_NAME,
             ),
             release_note_block_with_defaults(
                 reference_type=REF_TYPE_PULL_REQUEST,
                 reference_id='1',
                 text='other component, same github instance rls note',
-                source_repo='github.com/madeup/a-foo-bar',
+                source_component_hostname=CURRENT_COMPONENT_HOSTNAME,
+                source_component_org_name='madeup',
+                source_component_repo_name='a-foo-bar',
             )
         ]
 
@@ -111,7 +119,6 @@ class RendererTest(unittest.TestCase):
                 text='rls note 1',
                 reference_type=REF_TYPE_COMMIT,
                 reference_id='commit-id-1',
-                source_repo=CURRENT_REPO_NAME,
             ),
             # As the source repository is on the same github instance as the current repository
             # it can be auto linked by github, hence we do not need to build a link to the commit
@@ -121,7 +128,7 @@ class RendererTest(unittest.TestCase):
                 reference_type=REF_TYPE_COMMIT,
                 reference_id='very-long-commit-id-that-will-not-be-shortened',
                 user_login='bar',
-                source_repo='github.com/madeup/a-foo-bar',
+                source_component_repo_name='a-foo-bar',
             ),
             # the source repository is on a different github instance as the current repository.
             # It can not be auto linked by github, hence we need to build a link to the commit
@@ -131,7 +138,9 @@ class RendererTest(unittest.TestCase):
                 reference_type=REF_TYPE_COMMIT,
                 reference_id='very-long-commit-id-that-will-be-shortened',
                 user_login='bar',
-                source_repo='madeup.enterprise.github.corp/o/s',
+                source_component_hostname='madeup.enterprise.github.corp',
+                source_component_org_name='o',
+                source_component_repo_name='s',
             )
         ]
 
@@ -158,13 +167,18 @@ class RendererTest(unittest.TestCase):
                 reference_type=None,
                 reference_id=None,
                 user_login='bar',
-                source_repo='github.com/madeup/a-foo-bar',
+                # TODO: why change org/repo?
+                source_component_hostname=CURRENT_COMPONENT_HOSTNAME,
+                source_component_org_name='madeup',
+                source_component_repo_name='a-foo-bar',
             ),
             release_note_block_with_defaults(
                 reference_type=None,
                 reference_id=None,
                 user_login='foo',
-                source_repo=CURRENT_REPO_NAME,
+                source_component_hostname=CURRENT_COMPONENT_HOSTNAME,
+                source_component_org_name=CURRENT_COMPONENT_ORG_NAME,
+                source_component_repo_name=CURRENT_COMPONENT_REPO_NAME,
             )
         ]
 
@@ -184,13 +198,17 @@ class RendererTest(unittest.TestCase):
                 reference_type=None,
                 reference_id=None,
                 user_login=None,
-                source_repo='github.com/madeup/a-foo-bar',
+                source_component_hostname=CURRENT_COMPONENT_HOSTNAME,
+                source_component_org_name='madeup',
+                source_component_repo_name='a-foo-bar',
             ),
             release_note_block_with_defaults(
                 reference_type=None,
                 reference_id=None,
                 user_login=None,
-                source_repo=CURRENT_REPO_NAME,
+                source_component_hostname=CURRENT_COMPONENT_HOSTNAME,
+                source_component_org_name=CURRENT_COMPONENT_ORG_NAME,
+                source_component_repo_name=CURRENT_COMPONENT_REPO_NAME,
             )
         ]
 
@@ -211,14 +229,12 @@ class RendererTest(unittest.TestCase):
                 reference_type=None,
                 reference_id=None,
                 user_login=None,
-                source_repo=CURRENT_REPO_NAME,
             ),
             release_note_block_with_defaults(
                 text='duplicate',
                 reference_type=None,
                 reference_id=None,
                 user_login=None,
-                source_repo=CURRENT_REPO_NAME,
             )
         ]
 
