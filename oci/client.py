@@ -24,6 +24,9 @@ urljoin = oci.util.urljoin
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+oci_request_logger = logging.getLogger('oci.client.request_logger')
+oci_request_logger.setLevel(logging.DEBUG)
+
 
 def _append_b64_padding_if_missing(b64_str: str):
     if b64_str[-1] == '=':
@@ -361,6 +364,17 @@ class Client:
 
         if self.disable_tls_validation and 'verify' in kwargs:
             kwargs['verify'] = False
+
+        oci_request_logger.debug(
+            msg=f'oci request sent {method=} {url=}',
+            extra={
+                'method': method,
+                'url': url,
+                'auth': auth,
+                'headers': headers,
+                **kwargs,
+            },
+        )
 
         res = requests.request(
             method=method,

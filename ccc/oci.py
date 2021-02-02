@@ -45,42 +45,44 @@ def oci_client(credentials_lookup=oci_cfg_lookup()):
 
     routes = oc.OciRoutes(base_api_lookup)
 
-    client = oc.Client(
+    add_oci_request_logging_handler()
+
+    return oc.Client(
         credentials_lookup=credentials_lookup,
         routes=routes,
     )
 
-    client_request = client._request
 
-    def wrap_request(
-        url: str,
-        method: str='GET',
+def add_oci_request_logging_handler():
+    if es_client := ccc.elasticsearch.default_client_if_available():
+        logger = logging.getLogger('oci.client.request_logger')
+        handler = _OciRequestHandler(level=logging.DEBUG, es_client=es_client)
+        logger.addHandler(handler)
+
+
+class _OciRequestHandler(logging.Handler):
+    def __init__(
+        self,
+        level,
+        es_client: ccc.elasticsearch.ElasticSearchClient,
         *args,
         **kwargs,
-    ):
-        result = None
+    ) -> None:
+        self.es_client = es_client
+        super().__init__(level=level, *args, **kwargs)
+
+    def emit(self, record: logging.LogRecord) -> None:
+        method = record.__dict__.get('method')
+        url = record.__dict__.get('url')
         try:
-            log_to_es(method=method, url=url)
+            self.es_client.store_document(
+                index='component_descriptor_pull',
+                body={
+                    'method': method,
+                    'url': url,
+                    'stacktrace': traceback.format_stack(),
+                }
+            )
         except:
             logger.warning(traceback.format_exc())
-            logger.warning('could not send log info to elastic search')
-
-        try:
-            result = client_request(url=url, method=method, *args, **kwargs)
-        finally:
-            return result
-
-    client._request = wrap_request
-    return client
-
-
-def log_to_es(method, url):
-    if es_client := ccc.elasticsearch.default_client_if_available():
-        es_client.store_document(
-            index='component_descriptor_pull',
-            body={
-                'method': method,
-                'url': url,
-                'stacktrace': traceback.format_stack(),
-            }
-        )
+            logger.warning('could not sent oci request log to elastic search')
