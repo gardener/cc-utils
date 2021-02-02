@@ -138,9 +138,13 @@ github_repo_helper = repo_helper
 def github_api(
     github_cfg: 'model.GithubConfig',
     session_adapter: SessionAdapter=SessionAdapter.RETRY,
+    cfg_factory=None,
 ):
+    if not cfg_factory:
+        cfg_factory = ci.util.ctx().cfg_factory()
+
     if isinstance(github_cfg, str):
-        github_cfg = ci.util.ctx().cfg_factory().github(github_cfg)
+        github_cfg = cfg_factory().github(github_cfg)
 
     github_url = github_cfg.http_url()
     github_auth_token = github_cfg.credentials().auth_token()
