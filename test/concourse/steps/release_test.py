@@ -173,6 +173,27 @@ class TestGitHubReleaseStep(object):
 class TestPublishReleaseNotesStep(object):
     @pytest.fixture()
     def examinee(self, tmp_path):
+        component_descriptor_v2 = os.path.join(tmp_path, 'component_descriptor_v2')
+        ctf_path = os.path.join(tmp_path, product.v2.CTF_OUT_DIR_NAME)
+        cd_v2 = cm.ComponentDescriptor(
+            component=cm.Component(
+                name='a_name',
+                version='1.2.3',
+                repositoryContexts=[],
+                provider=cm.Provider.INTERNAL,
+                sources=[],
+                componentReferences=[],
+                resources=[],
+            ),
+            meta=cm.Metadata(),
+        )
+        with open(component_descriptor_v2, 'w') as f:
+            yaml.dump(
+                data=dataclasses.asdict(cd_v2),
+                stream=f,
+                Dumper=cm.EnumValueYamlDumper,
+            )
+
         def _examinee(
             github_helper=MagicMock(),
             githubrepobranch=GitHubRepoBranch(
@@ -189,6 +210,8 @@ class TestPublishReleaseNotesStep(object):
                 githubrepobranch=githubrepobranch,
                 repo_dir=repo_dir,
                 release_version=release_version,
+                component_descriptor_v2_path=component_descriptor_v2,
+                ctf_path=ctf_path,
             )
         return _examinee
 
