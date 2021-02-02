@@ -36,39 +36,55 @@ def component_descriptor(
 
 def components(
     component: typing.Union[cm.ComponentDescriptor, cm.Component],
-    delivery_client: delivery.client.DeliveryServiceClient=None,
     cache_dir: str=None,
+    delivery_client: delivery.client.DeliveryServiceClient=None,
     validation_mode: cm.ValidationMode=cm.ValidationMode.NONE,
-    _visited_component_versions: typing.Tuple[str, str]=(),
 ):
-    component = cnudie.util.to_component(component)
+    if isinstance(component, cm.ComponentDescriptor):
+        component = component.component
+    elif isinstance(component, cm.Component):
+        component = component
+    else:
+        raise TypeError(component)
 
-    yield component
+    _visited_component_versions = [
+        (component.name, component.version)
+    ]
 
-    new_visited_component_versions = _visited_component_versions + \
-        (component.name, component.version) + \
-        tuple((cref.componentName, cref.version) for cref in component.componentReferences)
+    def resolve_component_dependencies(
+        component: cm.Component,
+    ):
+        nonlocal cache_dir
+        nonlocal delivery_client
+        nonlocal validation_mode
+        nonlocal _visited_component_versions
 
-    for component_ref in component.componentReferences:
-        cref_version = (component_ref.componentName, component_ref.version)
-        if cref_version in _visited_component_versions:
-            continue
+        yield component
 
-        resolved_component = component_descriptor(
-            name=component_ref.componentName,
-            version=component_ref.version,
-            ctx_repo_url=component.current_repository_ctx().baseUrl,
-            delivery_client=delivery_client,
-            cache_dir=cache_dir,
-            validation_mode=validation_mode,
-        )
+        for component_ref in component.componentReferences:
+            cref = (component_ref.componentName, component_ref.version)
 
-        yield from components(
-            component=resolved_component,
-            delivery_client=delivery_client,
-            cache_dir=cache_dir,
-            _visited_component_versions=new_visited_component_versions,
-        )
+            if cref in _visited_component_versions:
+                continue
+            else:
+                _visited_component_versions.append(cref)
+
+            resolved_component = component_descriptor(
+                name=component_ref.componentName,
+                version=component_ref.version,
+                ctx_repo_url=component.current_repository_ctx().baseUrl,
+                delivery_client=delivery_client,
+                cache_dir=cache_dir,
+                validation_mode=validation_mode,
+            )
+
+            yield from resolve_component_dependencies(
+                component=resolved_component.component,
+            )
+
+    yield from resolve_component_dependencies(
+        component=component,
+    )
 
 
 def component_diff(

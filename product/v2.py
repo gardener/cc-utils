@@ -439,38 +439,50 @@ def rm_component_descriptor(
 
 @deprecated.deprecated
 def components(
-    component_descriptor_v2: cm.ComponentDescriptor,
+    component_descriptor_v2: typing.Union[cm.ComponentDescriptor],
     cache_dir: str=None,
-    _visited_component_versions: typing.Tuple[str, str]=(),
 ):
     if isinstance(component_descriptor_v2, cm.ComponentDescriptor):
         component = component_descriptor_v2.component
     elif isinstance(component_descriptor_v2, cm.Component):
         component = component_descriptor_v2
     else:
-        raise TypeErrror(component_descriptor_v2)
+        raise TypeError(component_descriptor_v2)
 
-    yield component
+    _visited_component_versions = [
+        (component.name, component.version)
+    ]
 
-    new_visited_component_versions = _visited_component_versions + \
-        (component.name, component.version) + \
-        tuple((cref.componentName, cref.version) for cref in component.componentReferences)
+    def resolve_component_dependencies(
+        component: cm.Component,
+    ):
+        nonlocal _visited_component_versions
+        nonlocal cache_dir
 
-    for component_ref in component.componentReferences:
-        cref_version = (component_ref.componentName, component_ref.version)
-        if cref_version in _visited_component_versions:
-            continue
+        yield component
 
-        component_descriptor_v2 = resolve_dependency(
-            component=component,
-            component_ref=component_ref,
-            cache_dir=cache_dir,
-        )
-        yield from components(
-            component_descriptor_v2=component_descriptor_v2,
-            cache_dir=cache_dir,
-            _visited_component_versions=new_visited_component_versions,
-        )
+        for component_ref in component.componentReferences:
+            cref = (component_ref.componentName, component_ref.version)
+
+            if cref in _visited_component_versions:
+                continue
+            else:
+                _visited_component_versions.append(cref)
+
+            resolved_component_descriptor = download_component_descriptor_v2(
+                cache_dir=cache_dir,
+                component_name=component_ref.componentName,
+                component_version=component_ref.version,
+                ctx_repo_base_url=component.current_repository_ctx().baseUrl,
+            )
+
+            yield from resolve_component_dependencies(
+                component=resolved_component_descriptor.component,
+            )
+
+    yield from resolve_component_dependencies(
+        component=component,
+    )
 
 
 class ResourceFilter(enum.Enum):
