@@ -83,10 +83,9 @@ def _generate_report_tables_from_repo_status(
         colalign=('left', 'center'),
     ))
 
-    host, _ = full_org_name.split('/')
-    table_data = ((host, f'{_calculate_coverage_rate(repo_status=repo_status)}%'),)
+    table_data = ((full_org_name, f'{_calculate_coverage_rate(repo_status=repo_status)}%'),)
     tables.append(tabulate.tabulate(
-        headers=('Overall Coverage', 'Percentage'),
+        headers=('Full org name', 'Coverage in percentage'),
         tabular_data=table_data,
         tablefmt='simple',
         colalign=('left', 'center'),
