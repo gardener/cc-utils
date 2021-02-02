@@ -232,3 +232,13 @@ def github_api_from_gh_access(
 
     github_cfg = github_cfg_for_hostname(host_name=access.hostname())
     return github_api(github_cfg=github_cfg)
+
+
+def github_api_from_host(
+    host: str,
+) -> typing.Union[github3.github.GitHub, github3.github.GitHubEnterprise]:
+    github_cfg = ccc.github.github_cfg_for_hostname(
+        cfg_factory=ci.util.ctx().cfg_factory(),
+        host_name=host,
+    )
+    return ccc.github.github_api(github_cfg)
