@@ -2,7 +2,6 @@ import logging
 import functools
 import traceback
 
-import ccc.elasticsearch
 import oci.auth as oa
 import oci.client as oc
 import model.container_registry
@@ -54,6 +53,7 @@ def oci_client(credentials_lookup=oci_cfg_lookup()):
 
 
 def add_oci_request_logging_handler():
+    import ccc.elasticsearch
     if es_client := ccc.elasticsearch.default_client_if_available():
         logger = logging.getLogger('oci.client.request_logger')
         handler = _OciRequestHandler(level=logging.DEBUG, es_client=es_client)
@@ -64,7 +64,7 @@ class _OciRequestHandler(logging.Handler):
     def __init__(
         self,
         level,
-        es_client: ccc.elasticsearch.ElasticSearchClient,
+        es_client,
         *args,
         **kwargs,
     ) -> None:
