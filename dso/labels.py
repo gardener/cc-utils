@@ -24,6 +24,7 @@ class ScanLabelName(enum.Enum):
 class ScanningHint:
     policy: ScanPolicy
     path_config: typing.Optional[PathRegexes]
+    comment: typing.Optional[str]
 
 
 @dataclasses.dataclass(frozen=True)
