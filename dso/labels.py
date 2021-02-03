@@ -21,21 +21,21 @@ class ScanLabelName(enum.Enum):
 
 
 @dataclasses.dataclass(frozen=True)
-class ScanLabelValue:
+class ScanningHint:
     policy: ScanPolicy
     path_config: typing.Optional[PathRegexes]
 
 
 @dataclasses.dataclass(frozen=True)
-class SourceScanHint(ScanLabelValue):
+class SourceScanHint(ScanningHint):
     pass
 
 
 @dataclasses.dataclass(frozen=True)
-class BinaryScanHint(ScanLabelValue):
+class BinaryScanHint(ScanningHint):
     pass
 
 
 @dataclasses.dataclass(frozen=True)
-class SourceIdHint(ScanLabelValue):
+class SourceIdHint(ScanningHint):
     pass
