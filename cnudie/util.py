@@ -4,10 +4,9 @@ import functools
 
 import deprecated
 
-from ci.util import FluentIterable
-import product.v2
-
+import ci.util
 import gci.componentmodel as cm
+import product.v2
 
 
 def to_component(*args, **kwargs) -> cm.Component:
@@ -134,7 +133,7 @@ def diff_components(
                 return (changed_component, c)
         return (changed_component, None) # no pair component found
 
-    components_with_changed_versions = FluentIterable(items=left_components) \
+    components_with_changed_versions = ci.util.FluentIterable(items=left_components) \
         .map(functools.partial(find_changed_component, components=right_components)) \
         .filter(lambda cs: cs[1] is not None) \
         .as_list()
