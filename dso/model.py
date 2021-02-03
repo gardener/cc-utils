@@ -16,4 +16,4 @@ class ScanArtifact:
         cm.HttpAccess,
         cm.ResourceAccess,
     ]
-    label: dso.labels.ScanLabelValue
+    label: dso.labels.ScanningHint
