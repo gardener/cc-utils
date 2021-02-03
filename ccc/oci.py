@@ -22,7 +22,12 @@ def oci_cfg_lookup():
             privileges=privileges,
         )
         if not registry_cfg:
-            return None # fallback to docker-cfg (or try w/o auth)
+            if absent_ok:
+                return None # fallback to docker-cfg (or try w/o auth)
+            else:
+                raise RuntimeError(
+                f'No credentials found for {image_reference} with {privileges=}'
+            )
         creds = registry_cfg.credentials()
         return oa.OciBasicAuthCredentials(
             username=creds.username(),
