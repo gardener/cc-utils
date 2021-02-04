@@ -49,7 +49,12 @@ def oci_client(credentials_lookup=oci_cfg_lookup()):
 
     routes = oc.OciRoutes(base_api_lookup)
 
-    add_oci_request_logging_handler()
+    try:
+        add_oci_request_logging_handler()
+    except:
+        # do not fail just because of logging-issue
+        import traceback
+        traceback.print_exc()
 
     return oc.Client(
         credentials_lookup=credentials_lookup,
