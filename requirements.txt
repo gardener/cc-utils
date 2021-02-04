@@ -17,7 +17,7 @@ docutils<0.16.0
 elasticsearch<8.0.0
 ensure<1.0.0
 flake8==3.8.0a2
-gardener-component-model==v0.0.31
+gardener-component-model==v0.0.32
 gardener-oci
 github3.py<2.0.0
 google-api-core==1.22.1
