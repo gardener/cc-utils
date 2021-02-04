@@ -2,11 +2,13 @@ import dependabot.status
 
 
 def coverage_report(
-    full_org_name: str,
+    github_hostname: str,
+    org: str,
     outfile_path: str,
 ):
 
     dependabot.status.status_for_org(
-        full_org_name=full_org_name,
+        github_hostname=github_hostname,
+        org=org,
         outfile_path=outfile_path,
     )
