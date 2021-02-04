@@ -296,7 +296,7 @@ def diff_resources(
     return resource_diff
 
 
-def component_descriptor_from_ctf_archive(
+def component_descriptors_from_ctf_archive(
     ctf_archive: typing.Union[str, typing.IO[bytes]],
 ) -> typing.Generator[cm.ComponentDescriptor, None, None]:
     if isinstance(ctf_archive, str):
