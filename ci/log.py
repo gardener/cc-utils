@@ -16,9 +16,6 @@ class CCFormatter(logging.Formatter):
         f'{Bcolors.BOLD}{Bcolors.RED}{level_name}{Bcolors.RESET_ALL}',
     }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def color_level_name(self, level_name, level_number):
         def default(level_name):
             return str(level_name)
