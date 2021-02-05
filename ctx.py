@@ -228,7 +228,7 @@ def _default_logging_config(stdout_level):
     }
 
 
-@deprecated.deprecated()
+@deprecated.deprecated
 def configure_default_logging(stdout_level=None):
     if not stdout_level:
         stdout_level = logging.INFO
