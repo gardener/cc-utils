@@ -36,7 +36,7 @@ processed_version = version.process_version(
     operation='${version_operation}',
 )
 
-github_cfg = ci.util.ctx().cfg_factory().github('${github_cfg.name()}')
+github_cfg = ccc.github.github_cfg_for_hostname('${repo.repo_hostname()}')
 
 githubrepobranch = GitHubRepoBranch(
     github_config=github_cfg,
