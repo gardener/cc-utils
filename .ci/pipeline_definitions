@@ -32,6 +32,7 @@ cc-utils:
         nextversion: 'bump_minor'
         release_callback: '.ci/bump_job_image_version.py'
         release_notes_policy: disabled
+        release_commit_publishing_policy: tag_only
 
   background_image: https://media1.giphy.com/media/VkMV9TldsPd28/giphy.gif
   template: 'default'
