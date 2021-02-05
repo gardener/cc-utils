@@ -56,3 +56,7 @@ def configure_default_logging(stdout_level=None):
     sh.setFormatter(CCFormatter(fmt='%(asctime)s [%(levelprefix)s] %(name)s: %(message)s'))
     logging.root.addHandler(hdlr=sh)
     logging.root.setLevel(level=stdout_level)
+
+    # both too verbose ...
+    logging.getLogger('github3').setLevel(logging.WARNING)
+    logging.getLogger('elasticsearch').setLevel(logging.WARNING)
