@@ -13,6 +13,7 @@ import version
 import pathlib
 
 import ci.util
+import ccc.github
 
 from gitutil import GitHelper
 from github.release_notes.util import (
