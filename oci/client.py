@@ -418,7 +418,7 @@ class Client:
         self,
         image_reference: str,
         absent_ok: bool=False,
-    ):
+    ) -> om.OciImageManifest:
         res = self.manifest_raw(
             image_reference=image_reference,
             absent_ok=absent_ok,
