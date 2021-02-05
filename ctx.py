@@ -19,10 +19,10 @@ import logging
 import logging.config
 import os
 
+import deprecated
 from pathlib import Path
 
 import ci.util
-
 from model.base import ModelBase
 '''
 Execution context. Filled upon invocation of cli.py, read by submodules
@@ -228,6 +228,7 @@ def _default_logging_config(stdout_level):
     }
 
 
+@deprecated.deprecated()
 def configure_default_logging(stdout_level=None):
     if not stdout_level:
         stdout_level = logging.INFO

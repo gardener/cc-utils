@@ -24,8 +24,8 @@ import yaml
 import yamllint
 import yamllint.config
 
+import deprecated
 import termcolor
-
 from urllib.parse import urlunparse
 
 import ci.paths
@@ -176,6 +176,7 @@ def _print(msg, colour, outfh=sys.stdout):
     outfh.flush()
 
 
+@deprecated.deprecated
 def error(msg=None):
     if _quiet():
         return
@@ -183,12 +184,14 @@ def error(msg=None):
         _print('ERROR: ' + str(msg), colour='red', outfh=sys.stderr)
 
 
+@deprecated.deprecated
 def fail(msg=None):
     if msg:
         _print('ERROR: ' + str(msg), colour='red', outfh=sys.stderr)
     raise Failure(1)
 
 
+@deprecated.deprecated
 def info(msg:str):
     if _quiet():
         return
@@ -196,6 +199,7 @@ def info(msg:str):
         _print('INFO: ' + str(msg), colour='cyan', outfh=sys.stdout)
 
 
+@deprecated.deprecated
 def warning(msg:str):
     if _quiet():
         return
@@ -203,6 +207,7 @@ def warning(msg:str):
         _print('WARNING: ' + str(msg), colour='yellow', outfh=sys.stderr)
 
 
+@deprecated.deprecated
 def verbose(msg:str):
     if not _verbose():
         return
@@ -210,6 +215,7 @@ def verbose(msg:str):
         _print('VERBOSE: ' + msg, colour=None, outfh=sys.stdout)
 
 
+@deprecated.deprecated
 def success(msg:str):
     if msg:
         _print('SUCCESS: ' + msg, colour='green', outfh=sys.stdout)
