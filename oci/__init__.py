@@ -2,6 +2,7 @@ import dataclasses
 import hashlib
 import json
 import logging
+import tarfile
 import typing
 
 import dacite
@@ -300,3 +301,46 @@ def publish_container_image_from_kaniko_tarfile(
                 image_reference=tgt_ref,
                 manifest=manifest_bytes,
             )
+
+
+def image_layers_as_tarfile_generator(
+    image_reference: str,
+    oci_client: oc.Client,
+    chunk_size=tarfile.RECORDSIZE,
+) -> typing.Generator[bytes, None, None]:
+    '''
+    returns a generator yielding a tar-archive with the passed oci-image's layer-blobs as
+    members. This is somewhat similar to the result of a `docker save` with the notable difference
+    that the cfg-blob is discarded.
+    This function is useful to e.g. upload file system contents of an oci-container-image to some
+    scanning-tool (provided it supports the extraction of tar-archives)
+    '''
+    manifest = oci_client.manifest(image_reference=image_reference)
+    offset = 0
+    for blob in manifest.blobs():
+        tarinfo = tarfile.TarInfo(name=blob.digest + '.tar') # note: may be gzipped
+        tarinfo.size = blob.size
+        tarinfo.offset = offset
+        tarinfo.offset_data = offset + tarfile.BLOCKSIZE
+
+        offset += blob.size + tarfile.BLOCKSIZE
+
+        tarinfo_bytes = tarinfo.tobuf()
+        yield tarinfo_bytes
+
+        uploaded_bytes = len(tarinfo_bytes)
+        for chunk in oci_client.blob(
+            image_reference=image_reference,
+            digest=blob.digest,
+            stream=True,
+            ).iter_content(chunk_size=chunk_size):
+            uploaded_bytes += len(chunk)
+            yield chunk
+
+        # need to pad full blocks w/ NUL-bytes
+        if (missing := tarfile.BLOCKSIZE - (uploaded_bytes % tarfile.BLOCKSIZE)):
+            offset += missing
+            yield tarfile.NUL * missing
+
+    # tarchives should be terminated w/ two empty blocks
+    yield tarfile.NUL * tarfile.BLOCKSIZE * 2
