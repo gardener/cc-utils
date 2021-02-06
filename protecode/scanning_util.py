@@ -1,11 +1,12 @@
 import enum
 import logging
-import tempfile
 import textwrap
 import typing
 
 import requests
 import requests.exceptions
+
+import oci
 
 import ccc.gcp
 import ccc.oci
@@ -32,7 +33,6 @@ from ccc.grafeas_model import (
     Severity,
 )
 from ci.util import not_none, warning, check_type, info
-from container.registry import retrieve_container_image
 
 ci.util.ctx().configure_default_logging()
 logger = logging.getLogger(__name__)
@@ -477,9 +477,10 @@ class ProtecodeUtil:
             omit_version=False,
         )
 
-        image_data_fh = retrieve_container_image(
-            resource.access.imageReference,
-            outfileobj=tempfile.NamedTemporaryFile(),
+        oci_client = ccc.oci.oci_client()
+        image_data = oci.image_layers_as_tarfile_generator(
+            image_reference=image_reference,
+            oci_client=oci_client
         )
 
         try:
@@ -491,12 +492,12 @@ class ProtecodeUtil:
                     component=component
                 ).replace('/', '_'),
                 group_id=self._group_id,
-                data=image_data_fh,
+                data=image_data,
                 custom_attribs=metadata,
             )
             return scan_result
         finally:
-            image_data_fh.close()
+            pass # TODO: should deal w/ closing the streaming-rq on oci-client-side
 
     def _transport_triages(self, triages, product_id):
         for triage in triages:
