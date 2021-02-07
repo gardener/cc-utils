@@ -1,3 +1,6 @@
+import dataclasses
+import pprint
+
 import ccc.oci
 import oci
 
@@ -18,3 +21,11 @@ def ls(image: str):
     oci_client = ccc.oci.oci_client()
 
     print(oci_client.tags(image_reference=image))
+
+
+def manifest(image_reference: str):
+    oci_client = ccc.oci.oci_client()
+
+    manifest = oci_client.manifest(image_reference=image_reference)
+
+    pprint.pprint(dataclasses.asdict(manifest))
