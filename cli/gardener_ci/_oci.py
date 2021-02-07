@@ -29,3 +29,17 @@ def manifest(image_reference: str):
     manifest = oci_client.manifest(image_reference=image_reference)
 
     pprint.pprint(dataclasses.asdict(manifest))
+
+
+def cfg(image_reference: str):
+    oci_client = ccc.oci.oci_client()
+
+    manifest = oci_client.manifest(image_reference=image_reference)
+
+    pprint.pprint(
+        oci_client.blob(
+            image_reference=image_reference,
+            digest=manifest.config.digest,
+            stream=False,
+        ).json(),
+    )
