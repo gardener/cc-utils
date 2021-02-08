@@ -23,7 +23,7 @@ class _FilelikeProxy:
 def filtered_tarfile_generator(
     src_tf: tarfile.TarFile,
     filter_func: typing.Callable[[tarfile.TarInfo], bool]=lambda tarinfo: True,
-    chunk_size=tarfile.RECORDSIZE,
+    chunk_size=tarfile.BLOCKSIZE,
     chunk_callback: typing.Callable[[bytes], None]=None,
 ) -> typing.Generator[bytes, None, None]:
     '''
@@ -48,11 +48,17 @@ def filtered_tarfile_generator(
 
         # need to create a cp (to patch offsets w/o modifying original members, which would
         # break accessing file-contents)
+        member_raw = member.tobuf()
+        if len(member_raw) > tarfile.BLOCKSIZE:
+            print(f'xxx: {len(member_raw)}')
+            member_raw = member_raw[:512]
+
         member_cp = tarfile.TarInfo.frombuf(
-            member.tobuf(),
+            member_raw,
             encoding=tarfile.ENCODING,
             errors='surrogateescape',
         )
+
         member_cp.offset = offset
         member_cp.offset_data = offset + tarfile.BLOCKSIZE
 
@@ -74,7 +80,10 @@ def filtered_tarfile_generator(
                     if chunk_callback:
                         chunk_callback(chunk)
                     yield chunk
-                # pad to full 512-blocks
+
+                # pad to full 512-blocks if member is not "aligned"
+                if member.size % tarfile.BLOCKSIZE == 0:
+                    continue
                 if (missing := tarfile.BLOCKSIZE - (octets_sent % tarfile.BLOCKSIZE)):
                     padding = tarfile.NUL * missing
                     if chunk_callback:

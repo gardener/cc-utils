@@ -13,18 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
 import functools
 import hashlib
 import json
 import logging
-import os
 import tarfile
 import tempfile
+import typing
+
+import deprecated
 
 import ccc.oci
 import ci.util
 import container.model
 import container.registry
+import oci
+import oci.client as oc
+import oci.model as om
+import tarutil
 
 logger = logging.getLogger(__name__)
 
@@ -34,22 +41,9 @@ def image_exists(image_reference: str):
     return bool(oci_client.head_manifest(image_reference=image_reference, absent_ok=True))
 
 
+@deprecated.deprecated
 def process_download_request(request: container.model.ContainerImageDownloadRequest):
-    target_file = os.path.abspath(request.target_file)
-
-    if os.path.isfile(request.target_file):
-        logging.info(f'local tar image exists: {request.target_file}')
-        return
-
-    # Download image
-    os.makedirs(os.path.dirname(target_file), exist_ok=True)
-    with open(target_file, 'wb') as out_fh:
-        container.registry.retrieve_container_image(
-            image_reference=request.source_ref,
-            outfileobj=out_fh,
-        )
-
-    ci.util.Checksum().create_file(target_file)
+    raise NotImplementedError # if re-implementing: should write oci-image into target-file
 
 
 def process_upload_request(request: container.model.ContainerImageUploadRequest):
@@ -79,25 +73,105 @@ def process_upload_request(request: container.model.ContainerImageUploadRequest)
 def filter_image(
     source_ref:str,
     target_ref:str,
-    remove_files:[str]=[],
+    remove_files: typing.Sequence[str]=(),
+    oci_client: oc.Client=None,
 ):
-    with tempfile.NamedTemporaryFile() as in_fh:
-        container.registry.retrieve_container_image(image_reference=source_ref, outfileobj=in_fh)
+    if not oci_client:
+        oci_client = ccc.oci.oci_client()
 
-        # XXX enable filter_image_file / filter_container_image to work w/o named files
-        with tempfile.NamedTemporaryFile() as out_fh:
-            filter_container_image(
-                image_file=in_fh.name,
-                out_file=out_fh.name,
-                remove_entries=remove_files
+    # shortcut in case there are no filtering-rules
+    if not remove_files:
+        return oci.replicate_artifact(
+            src_image_reference=source_ref,
+            tgt_image_reference=target_ref,
+            oci_client=oci_client,
+        )
+
+    manifest = oci_client.manifest(image_reference=source_ref)
+
+    if not isinstance(manifest, om.OciImageManifest):
+        raise NotImplementedError(manifest)
+
+    # allow / ignore leading '/'
+    remove_files = [p.lstrip('/') for p in remove_files]
+
+    def tarmember_filter(tar_info: tarfile.TarInfo):
+        if tar_info.name in remove_files:
+            return False # rm member
+        return True # keep member
+
+    for layer in manifest.layers:
+        layer_hash = hashlib.sha256()
+        leng = 0
+
+        # unfortunately, GCR (our most important oci-registry) does not support chunked uploads,
+        # so we have to resort to writing the streaming result into a local tempfile to be able
+        # to calculate digest-hash prior to upload to tgt; XXX: we might use streaming
+        # when interacting w/ oci-registries that support chunked-uploads
+        with tempfile.TemporaryFile() as f:
+            src_tar_stream = oci_client.blob(
+                image_reference=source_ref,
+                digest=layer.digest,
+                stream=True,
+            ).iter_content(chunk_size=tarfile.BLOCKSIZE)
+            src_tar_fobj = tarutil._FilelikeProxy(generator=src_tar_stream)
+            filtered_stream = tarutil.filtered_tarfile_generator(
+                src_tf=tarfile.open(fileobj=src_tar_fobj, mode='r|*'),
+                filter_func=tarmember_filter,
             )
 
-            container.registry.publish_container_image(
+            for chunk in filtered_stream:
+                layer_hash.update(chunk)
+                leng += len(chunk)
+                f.write(chunk)
+
+            f.seek(0)
+
+            oci_client.put_blob(
                 image_reference=target_ref,
-                image_file_obj=out_fh,
+                digest=(layer_digest := 'sha256:' + layer_hash.hexdigest()),
+                octets_count=leng,
+                data=f,
             )
 
+            # patch layer in manifest to announce changes w/ manifest-upload
+            layer.digest = layer_digest
+            layer.size = leng
 
+    # need to patch cfg-object, in case layer-digests changed
+    cfg_blob = oci_client.blob(
+        image_reference=source_ref,
+        digest=manifest.config.digest,
+        stream=False,
+    ).json() # cfg-blobs are small - no point in streaming
+    if not 'rootfs' in cfg_blob:
+        raise ValueError('expected attr `rootfs` not present on cfg-blob')
+
+    cfg_blob['rootfs'] = {
+        'diff_ids': [
+            layer.digest for layer in manifest.layers
+        ],
+        'type': 'layers',
+    }
+    cfg_blob = json.dumps(cfg_blob).encode('utf-8')
+    cfg_digest = f'sha256:{hashlib.sha256(cfg_blob).hexdigest()}'
+    cfg_leng = len(cfg_blob)
+    oci_client.put_blob(
+        image_reference=target_ref,
+        digest=cfg_digest,
+        octets_count=cfg_leng,
+        data=cfg_blob,
+    )
+
+    manifest.config.digest = cfg_digest
+    manifest.config.size = cfg_leng
+
+    manifest_raw = json.dumps(dataclasses.asdict(manifest)).encode('utf-8')
+
+    oci_client.put_manifest(image_reference=target_ref, manifest=manifest_raw)
+
+
+@deprecated.deprecated
 def filter_container_image(
     image_file,
     out_file,
@@ -126,6 +200,7 @@ def filter_container_image(
         )
 
 
+@deprecated.deprecated
 def _filter_files(
     manifest,
     cfg_name,
