@@ -389,6 +389,8 @@ class Client:
             )
 
         if raise_for_status:
+            if res.status_code != 404 and not res.ok:
+                logger.debug(f'{url=} {res.content=} {res.headers=}')
             res.raise_for_status()
 
         return res
