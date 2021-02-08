@@ -223,6 +223,12 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
                 name=DIR_NAME,
                 variable_name=ENV_VAR_NAME,
             )
+        if pipeline_args.has_trait('draft_release'):
+            draft_release_step = pipeline_args.step('create_draft_release_notes')
+            draft_release_step.add_input(
+                name=DIR_NAME,
+                variable_name=ENV_VAR_NAME,
+            )
 
         # inject component_name if not configured
         if not self.trait.raw.get('component_name'):
