@@ -38,6 +38,7 @@ class ComponentDescriptorTraitTransformerTest(unittest.TestCase):
             resource_registry=object(),
         )
         self.pipeline_args._steps_dict = {}
+        self.pipeline_args._traits_dict = {}
         self.repo_mock = MagicMock()
         self.repo_mock.repo_hostname = MagicMock(return_value='github.com')
         self.repo_mock.repo_path = MagicMock(return_value='org/repo')
