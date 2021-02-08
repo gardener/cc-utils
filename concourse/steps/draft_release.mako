@@ -4,14 +4,16 @@
 <%
 from makoutil import indent_func
 import os
+import concourse.steps.component_descriptor_util as cdu
+import gci.componentmodel
 version_file = job_step.input('version_path') + '/version'
 repo = job_variant.main_repository()
 draft_release_trait = job_variant.trait('draft_release')
 version_operation = draft_release_trait._preprocess()
 try:
     component_descriptor_v2_path = os.path.join(
-    job_step.input('component_descriptor_dir'),
-    cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
+        job_step.input('component_descriptor_dir'),
+        cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
     )
 except KeyError:
     component_descriptor_v2_path = ''
