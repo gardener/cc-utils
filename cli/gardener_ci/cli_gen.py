@@ -40,7 +40,7 @@ except ModuleNotFoundError:
     )
     sys.path.insert(1, repo_dir)
     import ci.util
-import ctx
+import ctx  # noqa: E402
 
 import_errs = []
 
