@@ -23,6 +23,11 @@ import inspect
 import itertools
 import sys
 
+
+import ci.log
+ci.log.configure_default_logging()
+
+
 try:
     import ci.util
 except ModuleNotFoundError:
@@ -35,7 +40,7 @@ except ModuleNotFoundError:
     )
     sys.path.insert(1, repo_dir)
     import ci.util
-import ctx
+import ctx  # noqa: E402
 
 import_errs = []
 

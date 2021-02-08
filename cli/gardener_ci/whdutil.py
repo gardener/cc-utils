@@ -13,11 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import multiprocessing
 
 import ci.util
-ci.util.ctx().configure_default_logging(stdout_level=logging.INFO)
 
 
 def start_whd(
@@ -26,7 +24,6 @@ def start_whd(
     production: bool=False,
     workers: int=4,
 ):
-    import whd
     import whd.server
 
     cfg_factory = ci.util.ctx().cfg_factory()

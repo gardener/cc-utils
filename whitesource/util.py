@@ -1,6 +1,7 @@
 import asyncio
 import concurrent.futures
 import functools
+import logging
 import tempfile
 import typing
 
@@ -13,11 +14,13 @@ import gci.componentmodel as cm
 import mailutil
 import product.util
 import reutil
-import dso.util
 import dso.model
 import whitesource.client
 import whitesource.component
 import whitesource.model
+
+
+logger = logging.getLogger(__name__)
 
 
 @functools.lru_cache()
@@ -25,8 +28,7 @@ def create_whitesource_client(
     whitesource_cfg_name: str,
 ) -> whitesource.client.WhitesourceClient:
 
-    clogger = dso.util.component_logger(__name__)
-    clogger.info('creating whitesource client')
+    logger.info('creating whitesource client')
 
     cfg_fac = ci.util.ctx().cfg_factory()
     ws_config = cfg_fac.whitesource(whitesource_cfg_name)
@@ -201,8 +203,7 @@ def scan_artifact_with_white_src(
     whitesource_client: whitesource.client.WhitesourceClient,
 ):
 
-    clogger = dso.util.component_logger(scan_artifact.name)
-    clogger.info('init scan')
+    logger.info('init scan')
 
     github_api = ccc.github.github_api_from_gh_access(access=scan_artifact.access)
     github_repo = github_api.repository(
@@ -210,7 +211,7 @@ def scan_artifact_with_white_src(
         repository=scan_artifact.access.repository_name(),
     )
 
-    clogger.info('guessing commit hash')
+    logger.info('guessing commit hash')
     # guess git-ref for the given version
     commit_hash = product.util.guess_commit_from_source(
         artifact_name=scan_artifact.name,
@@ -232,9 +233,9 @@ def scan_artifact_with_white_src(
     )
 
     with tempfile.TemporaryFile() as tmp_file:
-        clogger.info('downloading component for scan')
+        logger.info('downloading component for scan')
         file_size = whitesource.component.download_component(
-            clogger=clogger,
+            logger=logger,
             github_repo=github_repo,
             path_filter_func=path_filter_func,
             ref=commit_hash,
@@ -245,7 +246,7 @@ def scan_artifact_with_white_src(
         # sets the file position at the offset 0 == start of the file
         tmp_file.seek(0)
 
-        clogger.info('sending component to scan backend...')
+        logger.info('sending component to scan backend...')
 
         res = asyncio.run(
             whitesource_client.upload_to_project(
@@ -255,8 +256,8 @@ def scan_artifact_with_white_src(
                 length=file_size,
             )
         )
-        clogger.info(res['message'])
-        clogger.info('scan complete')
+        logger.info(res['message'])
+        logger.info('scan complete')
         # TODO save scanned commit hash or tag in project tag show scanned version
         # version for agent will create a new project
         # https://whitesource.atlassian.net/wiki/spaces/WD/pages/34046170/HTTP+API+v1.1#HTTPAPIv1.1-ProjectTags
@@ -270,8 +271,7 @@ def _scan_artifact(
     get_scanned_count: typing.Callable,
     increment_scanned_count: typing.Callable[[], int],
 ):
-    clogger = dso.util.component_logger(__name__)
-    clogger.info(f'scanning {get_scanned_count()}/{len_artifacts}')
+    logger.info(f'scanning {get_scanned_count()}/{len_artifacts}')
     increment_scanned_count()
     whitesource.util.scan_artifact_with_white_src(
         extra_whitesource_config=extra_whitesource_config,
@@ -287,8 +287,7 @@ def scan_sources(
     max_workers: int,
 ) -> typing.Tuple[str, typing.List[whitesource.model.WhiteSrcProject]]:
 
-    clogger = dso.util.component_logger(__name__)
-    clogger.info(f'parsing component descriptor ({component_descriptor_path})')
+    logger.info(f'parsing component descriptor ({component_descriptor_path})')
 
     component_descriptor = cm.ComponentDescriptor.from_dict(
         ci.util.parse_yaml_file(component_descriptor_path)
@@ -303,7 +302,7 @@ def scan_sources(
 
     get_scanned_count, increment_scanned_count = _mk_ctx()
 
-    clogger.info(f'{len(scan_artifacts)} artifacts to scan')
+    logger.info(f'{len(scan_artifacts)} artifacts to scan')
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         executor.map(functools.partial(
@@ -325,8 +324,7 @@ def print_scans(
     cve_threshold: float,
     product_name: str,
 ):
-    clogger = dso.util.component_logger(__name__)
-    clogger.info('retrieving all projects')
+    logger.info('retrieving all projects')
 
     if len(projects) == 0:
         ci.util.warning(
@@ -334,7 +332,7 @@ def print_scans(
         )
         return
 
-    clogger.info('generate simple reporting table for console output')
+    logger.info('generate simple reporting table for console output')
     tables = generate_reporting_tables(
         projects=projects,
         threshold=cve_threshold,
@@ -351,7 +349,6 @@ def send_mail(
     projects: typing.List[whitesource.model.WhiteSrcProject],
 ):
 
-    clogger = dso.util.component_logger(__name__)
     if len(notification_recipients) > 0:
 
         # generate html reporting table for email notifications
@@ -366,7 +363,7 @@ def send_mail(
             threshold=cve_threshold,
         )
 
-        clogger.info('sending notification')
+        logger.info('sending notification')
 
         # get standard cfg set for email cfg
         default_cfg_set_name = ci.util.current_config_set_name()
@@ -382,4 +379,4 @@ def send_mail(
         )
 
     else:
-        clogger.warning('No recipients defined. No emails will be sent...')
+        logger.warning('No recipients defined. No emails will be sent...')

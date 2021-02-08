@@ -48,6 +48,9 @@ def configure_default_logging(stdout_level=None):
     if not stdout_level:
         stdout_level = logging.INFO
 
+    # make sure to have a clean root logger (in case setup is called multiple times)
+    logging.root.handlers.clear()
+
     sh = logging.StreamHandler(stream=sys.stdout)
     sh.setLevel(stdout_level)
     sh.setFormatter(CCFormatter(fmt='%(asctime)s [%(levelprefix)s] %(name)s: %(message)s'))

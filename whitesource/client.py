@@ -1,5 +1,6 @@
 import dataclasses
 import json
+import logging
 import typing
 import websockets
 
@@ -8,8 +9,10 @@ import requests
 from whitesource_common import protocol
 
 import ci.util
-import dso.util
 import whitesource.model
+
+
+logger = logging.getLogger(__name__)
 
 
 class WebsocketException(Exception):
@@ -123,8 +126,7 @@ class WhitesourceClient:
             raise WebsocketException('unable to connect to ws endpoint')
 
     def get_product_risk_report(self):
-        clogger = dso.util.component_logger(__name__)
-        clogger.info('retrieving product risk report')
+        logger.info('retrieving product risk report')
         body = {
             'requestType': 'getProductRiskReport',
             'userKey': self.creds.user_key(),
