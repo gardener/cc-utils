@@ -237,12 +237,22 @@ class ReleaseNotes:
 
     def release_tags(
         self,
-        release_tags: typing.List[str],
     ) -> typing.List[str]:
+
+        def is_valid_semver(tag_name):
+            try:
+                version.parse_to_semver(tag_name)
+                return True
+            except ValueError:
+                warning('{tag} is not a valid SemVer string'.format(tag=tag_name))
+                return False
+
+        release_tags = self.github_helper.release_tags()
         tags = _ \
             .chain(self.git_helper.repo.tags) \
             .map(lambda tag: {"tag": tag.name, "commit": tag.commit.hexsha}) \
             .filter(lambda item: _.find(release_tags, lambda el: el == item['tag'])) \
+            .filter(lambda item: is_valid_semver(item['tag'])) \
             .key_by('commit') \
             .map_values('tag') \
             .value()
@@ -257,8 +267,7 @@ class ReleaseNotes:
 
         The returned list is sorted in descending order, putting the greatest reachable tag first.
         '''
-        release_versions = self.github_helper.release_versions()
-        tags = self.release_tags(release_tags=release_versions)
+        tags = self.release_tags()
 
         visited = set()
         queue = list()
