@@ -45,7 +45,7 @@ def get_scan_artifacts_from_components(
 
 
 def download_component(
-    clogger,
+    logger,
     github_repo: github3.repos.repo.Repository,
     path_filter_func: typing.Callable,
     ref: str,
@@ -76,7 +76,7 @@ def download_component(
             else:
                 filtered_out_files += 1
 
-    clogger.info(f'{files_to_scan=}, {filtered_out_files=}')
+    logger.info(f'{files_to_scan=}, {filtered_out_files=}')
     tar_out_size = target.tell()
 
     return tar_out_size

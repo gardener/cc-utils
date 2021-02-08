@@ -23,6 +23,11 @@ import inspect
 import itertools
 import sys
 
+
+import ci.log
+ci.log.configure_default_logging()
+
+
 try:
     import ci.util
 except ModuleNotFoundError:

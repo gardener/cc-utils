@@ -1,13 +1,11 @@
 import logging
 import time
 
-import ctx
 import checkmarx.client
 import checkmarx.model as model
 import checkmarx.util
 
 
-ctx.configure_default_logging()
 logger = logging.getLogger(__name__)
 
 

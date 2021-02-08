@@ -22,7 +22,6 @@ import typing
 import ccc.gcp
 import ccc.protecode
 import cnudie.retrieve
-import ctx
 import product.util
 import product.v2
 
@@ -44,7 +43,6 @@ from protecode.model import (
     CVSSVersion,
     UploadResult,
 )
-ctx.configure_default_logging()
 
 logger = logging.getLogger(__name__)
 

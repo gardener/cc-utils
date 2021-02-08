@@ -34,7 +34,7 @@ from ccc.grafeas_model import (
 )
 from ci.util import not_none, warning, check_type, info
 
-ci.util.ctx().configure_default_logging()
+
 logger = logging.getLogger(__name__)
 
 
