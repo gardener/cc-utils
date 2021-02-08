@@ -76,12 +76,13 @@ github_helper = GitHubRepositoryHelper.from_githubrepobranch(
     githubrepobranch=githubrepobranch,
 )
 
-release_notes_md = ReleaseNotes(
+release_notes = ReleaseNotes(
     component=component_descriptor_v2.component,
     repo_dir=repo_dir,
 ).create(
     start_ref='${repo.branch()}'
-).to_markdown()
+)
+release_notes_md = release_notes.to_markdown()
 
 draft_name = draft_release_name_for_version(processed_version)
 draft_release = github_helper.draft_release_with_name(draft_name)
