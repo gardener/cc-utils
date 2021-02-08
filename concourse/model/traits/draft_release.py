@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import concourse.model.traits.component_descriptor
 from concourse.model.step import (
     PipelineStep,
     StepNotificationPolicy,
@@ -76,7 +76,10 @@ class DraftReleaseTraitTransformer(TraitTransformer):
         yield self.release_step
 
     def process_pipeline_args(self, pipeline_args: JobVariant):
-        pass
+        if pipeline_args.has_trait('component_descriptor'):
+            cd_trait = pipeline_args.trait('component_descriptor')
+            cd_step = pipeline_args.step(cd_trait.step_name())
+            self.release_step._add_dependency(cd_step)
 
     @classmethod
     def dependencies(cls):
