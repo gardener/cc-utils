@@ -21,6 +21,7 @@ import pathlib
 
 import ci.util
 import ccc.github
+import gci.componentmodel as cm
 
 from gitutil import GitHelper
 from github.release_notes.util import (
@@ -45,7 +46,7 @@ processed_version = version.process_version(
     operation='${version_operation}',
 )
 
-repo_dir = existing_dir('${repo.resource_name()}')
+repo_dir = ci.util.existing_dir('${repo.resource_name()}')
 component_descriptor_v2_path = '${component_descriptor_v2_path}'
 if not component_descriptor_v2_path:
     ci.util.warning('Creation of draft release notes depends on component descriptor')
