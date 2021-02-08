@@ -329,8 +329,11 @@ else:
         CC_ROOT_DIR = os.path.abspath('.')
         os.environ['CC_ROOT_DIR'] = CC_ROOT_DIR
         del os
-        # init logging
-        import ci.util; ci.util.ctx().configure_default_logging(); del ci
+        import ci.log
+        import logging
+        ci.log.configure_default_logging(stdout_level=logging.INFO)
+        del ci
+        del logging
 % else:
   <% raise ValueError('unsupported script type') %>
 % endif
