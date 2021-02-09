@@ -65,9 +65,11 @@ def oci_client(credentials_lookup=oci_cfg_lookup()):
 def add_oci_request_logging_handler():
     import ccc.elasticsearch
     if es_client := ccc.elasticsearch.default_client_if_available():
-        logger = logging.getLogger('oci.client.request_logger')
-        handler = _OciRequestHandler(level=logging.DEBUG, es_client=es_client)
-        logger.addHandler(handler)
+        es_logger = logging.getLogger('oci.client.request_logger')
+        es_logger.setLevel(logging.DEBUG)
+
+        es_handler = _OciRequestHandler(level=logging.DEBUG, es_client=es_client)
+        es_logger.addHandler(es_handler)
 
 
 class _OciRequestHandler(logging.Handler):
