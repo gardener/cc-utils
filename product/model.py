@@ -740,6 +740,7 @@ class DependencyOverwrites(ModelBase):
             return False
         return self.raw == other.raw
 
+
 @deprecated.deprecated
 def reference_type(name: str):
     check_type(name, str)
