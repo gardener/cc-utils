@@ -31,6 +31,7 @@ from .pipelines import update_repository_pipelines
 from concourse.enumerator import JobMappingNotFoundError
 from github.util import GitHubRepositoryHelper
 from model import ConfigFactory
+from model.base import ConfigElementNotFoundError
 from model.webhook_dispatcher import WebhookDispatcherConfig
 
 from concourse.client.util import (
@@ -117,11 +118,11 @@ class GithubWebhookDispatcher(object):
                     cfg_set=self.cfg_set,
                     whd_cfg=self.whd_cfg,
                 )
-            except JobMappingNotFoundError as je:
-                # No JobMapping for the given repository was present. Print warning, reload and try
-                # again
+            except (JobMappingNotFoundError, ConfigElementNotFoundError) as e:
+                # A config element was missing or o JobMapping for the given repository was present.
+                # Print warning, reload and try again
                 logger.warning(
-                    f'failed to update pipeline definition: {je}. Will reload config and try again.'
+                    f'failed to update pipeline definition: {e}. Will reload config and try again.'
                 )
                 # Attempt to fetch latest cfg from SS and replace it
                 raw_dict = ccc.secrets_server.SecretsServerClient.default().retrieve_secrets()
