@@ -249,10 +249,11 @@ class Client:
         image_reference: str,
         scope: str,
     ):
-        if self.token_cache.token(scope=scope):
-            return # no re-auth required, yet
-        if self.token_cache.auth_method(image_reference=image_reference) is AuthMethod.BASIC:
+        cached_auth_method = self.token_cache.auth_method(image_reference=image_reference)
+        if cached_auth_method is AuthMethod.BASIC:
             return # basic-auth does not require any additional preliminary steps
+        if cached_auth_method is AuthMethod.BEARER and self.token_cache.token(scope=scope):
+            return # no re-auth required, yet
 
         if 'push' in scope:
             privileges = oa.Privileges.READWRITE
@@ -290,6 +291,12 @@ class Client:
         elif 'bearer' in auth_challenge:
             bearer = auth_challenge['bearer']
             service = bearer['service']
+            self.token_cache.set_auth_method(
+                image_reference=image_reference,
+                auth_method=AuthMethod.BEARER,
+            )
+        else:
+            logger.warning(f'did not understand {auth_challenge=} - pbly a bug')
 
         realm = bearer['realm'] + '?' + urllib.parse.urlencode({
             'scope': scope,
