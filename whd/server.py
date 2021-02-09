@@ -23,7 +23,7 @@ def webhook_dispatcher_app(
     cfg_set,
     whd_cfg: WebhookDispatcherConfig,
 ):
-    app = falcon.API(
+    app = falcon.App(
         middleware=[],
     )
 

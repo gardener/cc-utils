@@ -44,19 +44,29 @@ class Bcolors:
     BLUE = '\033[34m'
 
 
-def configure_default_logging(stdout_level=None):
+def configure_default_logging(
+    stdout_level=None,
+    force=True,
+):
     if not stdout_level:
         stdout_level = logging.INFO
 
     # make sure to have a clean root logger (in case setup is called multiple times)
-    logging.root.handlers.clear()
+    if force:
+        for h in logging.root.handlers:
+            logging.root.removeHandler(h)
+            h.close()
 
     sh = logging.StreamHandler(stream=sys.stdout)
     sh.setLevel(stdout_level)
-    sh.setFormatter(CCFormatter(fmt='%(asctime)s [%(levelprefix)s] %(name)s: %(message)s'))
+    sh.setFormatter(CCFormatter(fmt=get_default_fmt_string()))
     logging.root.addHandler(hdlr=sh)
     logging.root.setLevel(level=stdout_level)
 
     # both too verbose ...
     logging.getLogger('github3').setLevel(logging.WARNING)
     logging.getLogger('elasticsearch').setLevel(logging.WARNING)
+
+
+def get_default_fmt_string():
+    return '%(asctime)s [%(levelprefix)s] %(name)s: %(message)s'

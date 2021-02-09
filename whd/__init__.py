@@ -16,30 +16,18 @@
 import logging
 import os
 
-import ctx
+import ci.log
 
 
-def configure_whd_logging(stdout_level=None):
-    if not stdout_level:
-        stdout_level = logging.INFO
-
-    cfg = ctx._default_logging_config(stdout_level)
-    cfg['handlers'].update({
-        'rotating_file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'formatter': 'default',
-            'level': stdout_level,
-            'filename': os.path.join('/', 'tmp', 'whd_log'),
-            'backupCount': 1,
-            'maxBytes': 50*1024*1024,  # 50 MiB
-        },
-    })
-    cfg.update({
-        'loggers': {
-            'whd': {
-                'level': logging.DEBUG,
-                'handlers': ['rotating_file',],
-            },
-        },
-    })
-    logging.config.dictConfig(cfg)
+def configure_whd_logging():
+    whd = logging.getLogger('whd')
+    whd.setLevel(logging.DEBUG)
+    whd_handler = logging.handlers.RotatingFileHandler(
+        filename=os.path.join('/', 'tmp', 'whd_log'),
+        backupCount=1,
+        maxBytes=50 * 1024 * 1024,  # 50 MiB
+    )
+    whd_handler.setFormatter(ci.log.CCFormatter(
+        fmt=ci.log.get_default_fmt_string()),
+    )
+    whd.addHandler(whd_handler)
