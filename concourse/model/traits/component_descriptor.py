@@ -212,7 +212,7 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
             name=DIR_NAME,
             variable_name=ENV_VAR_NAME,
         )
-        self.descriptor_step.set_timeout(duration_string='30m')
+        self.descriptor_step.set_timeout(duration_string='45m')
 
         yield self.descriptor_step
 
