@@ -243,4 +243,5 @@ def configure_default_logging(stdout_level=None):
             },
         }
     })
+    import logging.config
     logging.config.dictConfig(cfg)
