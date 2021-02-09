@@ -24,6 +24,8 @@ def start_whd(
     production: bool=False,
     workers: int=4,
 ):
+    import whd
+    whd.configure_whd_logging()
     import whd.server
 
     cfg_factory = ci.util.ctx().cfg_factory()
@@ -39,7 +41,7 @@ def start_whd(
     any_interface = '0.0.0.0'
 
     if production:
-        whd.configure_whd_logging()
+
         import bjoern
         multiprocessing.set_start_method('fork')
 
@@ -50,6 +52,7 @@ def start_whd(
             p.start()
         serve()
     else:
+
         import werkzeug.serving
         werkzeug.serving.run_simple(
             hostname=any_interface,

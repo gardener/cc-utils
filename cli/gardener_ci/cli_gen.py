@@ -23,9 +23,8 @@ import inspect
 import itertools
 import sys
 
-
 import ci.log
-ci.log.configure_default_logging()
+ci.log.configure_default_logging(force=True)
 
 
 try:

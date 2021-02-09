@@ -14,12 +14,11 @@
 # limitations under the License.
 
 import enum
+from deprecated import deprecated
 import functools
 import logging
-import logging.config
 import os
 
-import deprecated
 from pathlib import Path
 
 import ci.util
@@ -228,7 +227,7 @@ def _default_logging_config(stdout_level):
     }
 
 
-@deprecated.deprecated
+@deprecated
 def configure_default_logging(stdout_level=None):
     if not stdout_level:
         stdout_level = logging.INFO
