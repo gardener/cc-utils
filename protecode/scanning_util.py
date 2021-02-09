@@ -477,6 +477,9 @@ class ProtecodeUtil:
             omit_version=False,
         )
 
+        # XXX need to check whether resource is actually a oci-resource
+        image_reference = resource.access.imageReference
+
         oci_client = ccc.oci.oci_client()
         image_data = oci.image_layers_as_tarfile_generator(
             image_reference=image_reference,
