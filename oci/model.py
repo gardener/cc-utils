@@ -1,10 +1,16 @@
 import dataclasses
+import enum
 import typing
 
 import requests
 
 OCI_MANIFEST_SCHEMA_V2_MIME = 'application/vnd.docker.distribution.manifest.v2+json'
 empty_dict = dataclasses.field(default_factory=dict)
+
+
+class OciManifestSchemaVersion(enum.Enum):
+    V1 = 1
+    V2 = 2
 
 
 class OciImageNotFoundException(requests.exceptions.HTTPError):

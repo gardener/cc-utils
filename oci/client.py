@@ -531,14 +531,39 @@ class Client:
 
         return res.json()['tags']
 
-    def put_manifest(self, image_reference: str, manifest: bytes):
+    def put_manifest(
+        self,
+        image_reference: str,
+        manifest: bytes,
+        schema_version: om.OciManifestSchemaVersion=None,
+    ):
         scope = _scope(image_reference=image_reference, action='push,pull')
+
+        if not schema_version:
+            parsed = json.loads(manifest)
+            schema_version = om.OciManifestSchemaVersion(int(parsed['schemaVersion']))
+
+        if schema_version is om.OciManifestSchemaVersion.V1:
+            # according to https://docs.docker.com/registry/spec/manifest-v2-1/
+            # it is okay to use application/json (GCR also accepts it)
+            # however, it would be more specific to use either ..+json (unsigned), or +prettyjws
+            # (if manifest contains signature)
+            # content_type = 'application/vnd.oci.image.manifest.v1+json'
+            # content_type = 'application/vnd.docker.distribution.manifest.v1+prettyjws'
+            content_type = 'application/json'
+        elif schema_version is om.OciManifestSchemaVersion.V2:
+            content_type = om.OCI_MANIFEST_SCHEMA_V2_MIME
+        else:
+            raise NotImplementedError(schema_version)
 
         res = self._request(
             url=self.routes.manifest_url(image_reference=image_reference),
             image_reference=image_reference,
             scope=scope,
             method='PUT',
+            headers={
+                'Content-Type': content_type,
+            },
             data=manifest,
         )
 
