@@ -52,7 +52,6 @@ def start_whd(
             p.start()
         serve()
     else:
-
         import werkzeug.serving
         werkzeug.serving.run_simple(
             hostname=any_interface,

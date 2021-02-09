@@ -46,14 +46,14 @@ class Bcolors:
 
 def configure_default_logging(
     stdout_level=None,
-    force=False,
+    force=True,
 ):
     if not stdout_level:
         stdout_level = logging.INFO
 
     # make sure to have a clean root logger (in case setup is called multiple times)
     if force:
-        for h in logging.root.handlers[:]:
+        for h in logging.root.handlers:
             logging.root.removeHandler(h)
             h.close()
 
@@ -63,7 +63,7 @@ def configure_default_logging(
     logging.root.addHandler(hdlr=sh)
     logging.root.setLevel(level=stdout_level)
 
-    # configure loggers
+    # both too verbose ...
     logging.getLogger('github3').setLevel(logging.WARNING)
     logging.getLogger('elasticsearch').setLevel(logging.WARNING)
 
