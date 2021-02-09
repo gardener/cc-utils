@@ -75,11 +75,10 @@ class DraftReleaseTraitTransformer(TraitTransformer):
         yield self.release_step
 
     def process_pipeline_args(self, pipeline_args: JobVariant):
-        if pipeline_args.has_trait('component_descriptor'):
-            cd_trait = pipeline_args.trait('component_descriptor')
-            cd_step = pipeline_args.step(cd_trait.step_name())
-            self.release_step._add_dependency(cd_step)
+        cd_trait = pipeline_args.trait('component_descriptor')
+        cd_step = pipeline_args.step(cd_trait.step_name())
+        self.release_step._add_dependency(cd_step)
 
     @classmethod
     def dependencies(cls):
-        return {'version'}
+        return {'version', 'component_descriptor'}

@@ -10,13 +10,10 @@ version_file = job_step.input('version_path') + '/version'
 repo = job_variant.main_repository()
 draft_release_trait = job_variant.trait('draft_release')
 version_operation = draft_release_trait._preprocess()
-try:
-    component_descriptor_v2_path = os.path.join(
-        job_step.input('component_descriptor_dir'),
-        cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
-    )
-except KeyError:
-    component_descriptor_v2_path = ''
+component_descriptor_v2_path = os.path.join(
+    job_step.input('component_descriptor_dir'),
+    cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
+)
 %>
 import version
 import pathlib
@@ -49,19 +46,9 @@ processed_version = version.process_version(
 )
 
 repo_dir = ci.util.existing_dir('${repo.resource_name()}')
-component_descriptor_v2_path = '${component_descriptor_v2_path}'
-if not component_descriptor_v2_path:
-    ci.util.warning('Creation of draft release notes depends on component descriptor')
-    exit(0)
-
-try:
-    component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
-        ci.util.parse_yaml_file('${component_descriptor_v2_path}'),
-    )
-except Exception:
-    ci.util.warning('Error creating component descriptor')
-    exit(0)
-
+component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
+    ci.util.parse_yaml_file('${component_descriptor_v2_path}'),
+)
 
 github_cfg = ccc.github.github_cfg_for_hostname('${repo.repo_hostname()}')
 
