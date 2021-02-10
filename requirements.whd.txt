@@ -1,3 +1,2 @@
-bjoern
+uvicorn
 falcon
-werkzeug
