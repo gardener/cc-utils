@@ -219,7 +219,6 @@ def upload_and_scan_gh_artifact(
     return cx_project.poll_and_retrieve_scan(scan_id=scan_id)
 
 
-
 def scan_gh_artifact(
     cx_project: checkmarx.project.CheckmarxProject,
     scan_artifact: dso.model.ScanArtifact,
