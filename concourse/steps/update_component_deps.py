@@ -35,7 +35,6 @@ from concourse.model.traits.update_component_deps import (
     MergePolicy,
 )
 from github.util import (
-    GitHubRepositoryHelper,
     GitHubRepoBranch,
 )
 from github.release_notes.util import ReleaseNotes
@@ -287,6 +286,7 @@ def create_upgrade_pr(
     )
 
     release_notes = create_release_notes(
+        component=component,
         from_github_cfg=github_cfg,
         from_repo_owner=repo_owner,
         from_repo_name=repo_name,
@@ -356,6 +356,7 @@ def push_upgrade_commit(
 
 
 def create_release_notes(
+    component,
     from_github_cfg,
     from_repo_owner: str,
     from_repo_name: str,
@@ -364,12 +365,7 @@ def create_release_notes(
 ):
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
-            from_github_helper = GitHubRepositoryHelper(
-                github_cfg=from_github_cfg,
-                owner=from_repo_owner,
-                name=from_repo_name,
-            )
-            from_git_helper = gitutil.GitHelper.clone_into(
+            gitutil.GitHelper.clone_into(
                 target_directory=temp_dir,
                 github_cfg=from_github_cfg,
                 github_repo_path=f'{from_repo_owner}/{from_repo_name}'
@@ -378,11 +374,14 @@ def create_release_notes(
                 from_version=from_version,
                 to_version=to_version,
             )
-            release_note_blocks = ReleaseNotes.create(
-                github_helper=from_github_helper,
-                git_helper=from_git_helper,
+            release_notes = ReleaseNotes(
+                component=component,
+                repo_dir=temp_dir,
+            )
+            release_notes.create(
                 commit_range=commit_range
-            ).release_note_blocks()
+            )
+            release_note_blocks = release_notes.release_note_blocks()
             if release_note_blocks:
                 return f'**Release Notes*:\n{release_note_blocks}'
     except:
