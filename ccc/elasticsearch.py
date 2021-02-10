@@ -26,8 +26,8 @@ import model.elasticsearch
 
 
 def default_client_if_available():
-    # if not ci.util._running_on_ci():
-    #     return None
+    if not ci.util._running_on_ci():
+        return None
 
     cfg_factory = ci.util.ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(ci.util.current_config_set_name())
