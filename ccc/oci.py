@@ -2,6 +2,7 @@ import logging
 import functools
 import traceback
 
+import ccc.elasticsearch
 import oci.auth as oa
 import oci.client as oc
 import model.container_registry
@@ -50,7 +51,7 @@ def oci_client(credentials_lookup=oci_cfg_lookup()):
     routes = oc.OciRoutes(base_api_lookup)
 
     try:
-        add_oci_request_logging_handler()
+        _add_oci_request_logging_handler_unless_already_registered()
     except:
         # do not fail just because of logging-issue
         import traceback
@@ -78,7 +79,7 @@ class _OciRequestHandler(logging.Handler):
         url = record.__dict__.get('url')
         try:
             self.es_client.store_document(
-                index='component_descriptor_pull',
+                index='oci_request',
                 body={
                     'method': method,
                     'url': url,
@@ -90,15 +91,26 @@ class _OciRequestHandler(logging.Handler):
             logger.warning('could not sent oci request log to elastic search')
 
 
-def add_oci_request_logging_handler():
-    import ccc.elasticsearch
-    if es_client := ccc.elasticsearch.default_client_if_available():
-        es_logger = logging.getLogger('oci.client.request_logger')
-        es_logger.setLevel(logging.DEBUG)
+_client_sentinel = object()
+_es_client = _client_sentinel # init by first caller
+_es_handler = None
 
-        for h in es_logger.handlers:
-            if isinstance(h, _OciRequestHandler):
-                return
 
-        es_handler = _OciRequestHandler(level=logging.DEBUG, es_client=es_client)
-        es_logger.addHandler(es_handler)
+def _add_oci_request_logging_handler_unless_already_registered():
+    global _es_client
+    global _es_handler
+
+    if _es_client is _client_sentinel:
+        _es_client = ccc.elasticsearch.default_client_if_available()
+
+    if not _es_client:
+        return
+
+    if not _es_handler:
+        _es_handler = _OciRequestHandler(level=logging.DEBUG, es_client=_es_client)
+
+    es_logger = logging.getLogger('oci.client.request_logger')
+    es_logger.setLevel(logging.DEBUG)
+
+    if not _es_handler in es_logger.handlers:
+        es_logger.addHandler(_es_handler)
