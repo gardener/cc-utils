@@ -85,14 +85,19 @@ def _get_scan_artifacts_from_components(
                 raise NotImplementedError
 
 
+scan_label_names = set(item.value for item in dso.labels.ScanLabelName)
+
+
 def get_source_scan_label_from_labels(labels: typing.Sequence[cm.Label]):
+    global scan_label_names
     for label in labels:
-        if dso.labels.ScanLabelName(label.name) is dso.labels.ScanLabelName.SOURCE_SCAN:
-            return dacite.from_dict(
-                dso.labels.SourceScanHint,
-                data=label.value,
-                config=dacite.Config(cast=[dso.labels.ScanPolicy])
-            )
+        if label.name in scan_label_names:
+            if dso.labels.ScanLabelName(label.name) is dso.labels.ScanLabelName.SOURCE_SCAN:
+                return dacite.from_dict(
+                    dso.labels.SourceScanHint,
+                    data=label.value,
+                    config=dacite.Config(cast=[dso.labels.ScanPolicy])
+                )
 
 
 def scan_artifacts(
@@ -212,6 +217,7 @@ def upload_and_scan_gh_artifact(
         clogger.info(f'found a running scan id={last_scan.id}. Polling it')
 
     return cx_project.poll_and_retrieve_scan(scan_id=scan_id)
+
 
 
 def scan_gh_artifact(
