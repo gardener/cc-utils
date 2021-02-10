@@ -144,3 +144,17 @@ class BasicCredentials(ModelBase):
 
     def _required_attributes(self):
         return ['username', 'password']
+
+
+class TokenCredentials(ModelBase):
+    '''
+    Base class for configuration objects that use token-based authentication
+
+    Not intended to be instantiated
+    '''
+
+    def token(self):
+        return self.raw['token']
+
+    def _required_attributes(self):
+        return ['token']

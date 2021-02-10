@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from functools import partial
-from urllib.parse import urlencode, quote_plus
 import json
 import time
+
+from functools import partial
 from typing import List
+from urllib.parse import urlencode, quote_plus
 
 import requests
-
 from ci.util import not_empty, not_none, urljoin
 from http_requests import check_http_code, mount_default_adapter
 from .model import (
@@ -32,6 +32,7 @@ from .model import (
     TriageScope,
     VersionOverrideScope,
 )
+from model.protecode import ProtecodeAuthScheme
 
 
 class ProtecodeApiRoutes(object):
@@ -95,11 +96,16 @@ class ProtecodeApiRoutes(object):
 
 
 class ProtecodeApi:
-    def __init__(self, api_routes, basic_credentials, tls_verify=True):
+    def __init__(
+        self,
+        api_routes,
+        protecode_cfg,
+    ):
         self._routes = not_none(api_routes)
-        self._credentials = not_none(basic_credentials)
-        self._auth = (basic_credentials.username(), basic_credentials.passwd())
-        self._tls_verify = tls_verify
+        not_none(protecode_cfg)
+        self._credentials = protecode_cfg.credentials()
+        self._auth_scheme = protecode_cfg.auth_scheme()
+        self._tls_verify = protecode_cfg.tls_verify()
         self._session_id = None
         self._session = requests.Session()
         mount_default_adapter(
@@ -138,14 +144,21 @@ class ProtecodeApi:
         else:
             cookies = None
 
-        auth = self._auth
+        if (auth_scheme := self._auth_scheme) is ProtecodeAuthScheme.BEARER_TOKEN:
+            headers['Authorization'] = f"Bearer {self._credentials.token()}"
+        elif auth_scheme is ProtecodeAuthScheme.BASIC_AUTH:
+            method = partial(
+                method,
+                auth=self._credentials.as_tuple(),
+            )
+        else:
+            raise NotImplementedError(auth_scheme)
 
         return partial(
             method,
             verify=self._tls_verify,
-            auth=auth,
-            headers=headers,
             cookies=cookies,
+            headers=headers,
         )(*args, **kwargs)
 
     @check_http_code
@@ -336,6 +349,14 @@ class ProtecodeApi:
     # --- "rest" routes (undocumented API)
 
     def login(self):
+
+        if (auth_scheme := self._auth_scheme) is ProtecodeAuthScheme.BASIC_AUTH:
+            pass
+        elif auth_scheme is ProtecodeAuthScheme.BEARER_TOKEN:
+            return
+        else:
+            raise NotImplementedError(auth_scheme)
+
         url = self._routes.login()
 
         result = self._post(
@@ -397,7 +418,7 @@ class ProtecodeApi:
         self,
         component_name:str,
         component_version:str,
-        objects:[str],
+        objects: List[str],
         scope:VersionOverrideScope=VersionOverrideScope.APP,
         app_id:int = None,
         group_id:int = None,
