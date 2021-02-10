@@ -69,6 +69,6 @@ def configure_default_logging(
     logging.getLogger('elasticsearch').setLevel(logging.WARNING)
 
 
-def default_fmt_string(print_thread_id: False):
+def default_fmt_string(print_thread_id: bool=False):
     return f'%(asctime)s [%(levelprefix)s] {"TID:%(thread)d " if print_thread_id else ""}' \
     '%(name)s: %(message)s'
