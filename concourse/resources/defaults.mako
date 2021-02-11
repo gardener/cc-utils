@@ -2,11 +2,15 @@
 <%def name='task_image_defaults(registry_cfg, indent=0)'
 filter="indent_func(indent),trim">
 <%
+import os
 from makoutil import indent_func
 import model.container_registry as mcr
 import concourse.paths
-with open(concourse.paths.last_released_tag_file) as f:
-  job_image_tag = f.read().strip()
+
+if not (job_image_tag := os.environ.get('CC_JOB_IMAGE_TAG', '')):
+  with open(concourse.paths.last_released_tag_file) as f:
+    job_image_tag = f.read().strip()
+
 # registry_cfg must be of type ContainerRegistryConfig (cc-utils)
 repository = 'registry-1.docker.io/gardenerci/cc-job-image'
 registry_cfg = mcr.find_config(image_reference=repository)
