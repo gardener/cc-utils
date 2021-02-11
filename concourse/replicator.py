@@ -289,7 +289,7 @@ class ConcourseDeployer(DefinitionDeployer):
             )
 
 
-class ReplicationResultProcessor(object):
+class ReplicationResultProcessor:
     def __init__(
         self,
         cfg_set,
