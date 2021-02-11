@@ -229,6 +229,7 @@ def _default_logging_config(stdout_level):
 
 @deprecated
 def configure_default_logging(stdout_level=None):
+    import logging
     if not stdout_level:
         stdout_level = logging.INFO
 
