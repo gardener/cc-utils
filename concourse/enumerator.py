@@ -41,6 +41,7 @@ from ci.util import (
 from model.base import ModelBase, NamedModelElement
 from concourse.factory import RawPipelineDefinitionDescriptor
 import ccc.github
+import concourse.paths
 
 
 class JobMappingNotFoundError(ValueError):
@@ -441,7 +442,7 @@ class TemplateRetriever:
     Provides mako templates by name. Templates are cached.
     '''
 
-    def __init__(self, template_path):
+    def __init__(self, template_path=concourse.paths.template_dir):
         if type(template_path) == str:
             self.template_path = (template_path,)
         else:
