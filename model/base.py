@@ -28,7 +28,7 @@ class ConfigElementNotFoundError(ValueError):
     pass
 
 
-class ModelValidationMixin(object):
+class ModelValidationMixin:
     def _required_attributes(self):
         return ()
 
@@ -73,7 +73,7 @@ class ModelValidationMixin(object):
             )
 
 
-class ModelDefaultsMixin(object):
+class ModelDefaultsMixin:
     def _defaults_dict(self):
         return {}
 
