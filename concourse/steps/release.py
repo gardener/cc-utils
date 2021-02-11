@@ -1,9 +1,10 @@
 import abc
+import logging
 import os
-import version
 import subprocess
 import traceback
 import typing
+import version
 
 from github3.exceptions import NotFoundError
 
@@ -37,6 +38,8 @@ from concourse.model.traits.release import (
     ReleaseNotesPolicy,
     ReleaseCommitPublishingPolicy,
 )
+
+logger = logging.getLogger('step.release')
 
 
 class TransactionContext:
@@ -747,9 +750,9 @@ class TryCleanupDraftReleasesStep(TransactionalStep):
     def apply(self):
         for release, deletion_successful in self.github_helper.delete_outdated_draft_releases():
             if deletion_successful:
-                ci.util.info(f'Deleted {release.name=}')
+                logger.info(f'Deleted {release.name=}')
             else:
-                ci.util.warning(f'Could not delete {release.name=}')
+                logger.warning(f'Could not delete {release.name=}')
         return
 
     def revert(self):
@@ -968,7 +971,7 @@ def release_and_prepare_next_dev_cycle(
     )
 
     if not cleanup_draft_releases_transaction.execute():
-        ci.util.warning('An error occured while cleaning up draft releases')
+        logger.warning('An error occured while cleaning up draft releases')
 
     if release_notes_policy == ReleaseNotesPolicy.DISABLED:
         return info('release notes were disabled - skipping')
