@@ -47,6 +47,7 @@ class Bcolors:
 def configure_default_logging(
     stdout_level=None,
     force=True,
+    print_thread_id=False,
 ):
     if not stdout_level:
         stdout_level = logging.INFO
@@ -59,7 +60,7 @@ def configure_default_logging(
 
     sh = logging.StreamHandler(stream=sys.stdout)
     sh.setLevel(stdout_level)
-    sh.setFormatter(CCFormatter(fmt=get_default_fmt_string()))
+    sh.setFormatter(CCFormatter(fmt=default_fmt_string(print_thread_id=print_thread_id)))
     logging.root.addHandler(hdlr=sh)
     logging.root.setLevel(level=stdout_level)
 
@@ -68,5 +69,5 @@ def configure_default_logging(
     logging.getLogger('elasticsearch').setLevel(logging.WARNING)
 
 
-def get_default_fmt_string():
-    return '%(asctime)s [%(levelprefix)s] %(name)s: %(message)s'
+def default_fmt_string(print_thread_id: False):
+    return f'%(asctime)s [%(levelprefix)s] {"TID:%(thread)d " if print_thread_id else ""}%(name)s: %(message)s'

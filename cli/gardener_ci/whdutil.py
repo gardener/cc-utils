@@ -50,6 +50,18 @@ def app():
     return app
 
 
+def _logging_config_dict(stdout_level):
+    return {
+     "version": 1,
+        "disable_existing_loggers": False,
+        "loggers": {
+            "uvicorn": {"level": stdout_level},
+            "uvicorn.error": {"level": stdout_level},
+            "uvicorn.access": {"level": stdout_level},
+        },
+    }
+
+
 def start_whd(
     cfg_set_name: str,
     port: int=5000,
@@ -57,7 +69,7 @@ def start_whd(
     workers: int=4,
 ):
     import whd
-    whd.configure_whd_logging()
+    whd.configure_whd_logging(logging.INFO)
 
     # allow external connections
     any_interface = '0.0.0.0'
@@ -68,7 +80,7 @@ def start_whd(
             host=any_interface,
             port=port,
             log_level='info',
-            log_config=LOGGING_CONFIG,
+            log_config=_logging_config_dict(stdout_level=logging.INFO),
             workers=workers,
             debug=False,
             reload=False,
@@ -77,10 +89,10 @@ def start_whd(
     else:
         uvicorn.run(
             'whdutil:app',
-            host=any_interface,
+            host='0.0.0.0',
             port=port,
             log_level='info',
-            log_config=LOGGING_CONFIG,
+            log_config=_logging_config_dict(stdout_level=logging.DEBUG),
             workers=workers,
             debug=True,
             reload=True,

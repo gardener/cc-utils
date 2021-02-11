@@ -19,15 +19,15 @@ import os
 import ci.log
 
 
-def configure_whd_logging():
+def configure_whd_logging(stdout_level=logging.INFO):
     whd = logging.getLogger('whd')
-    whd.setLevel(logging.DEBUG)
+    whd.setLevel(stdout_level)
     whd_handler = logging.handlers.RotatingFileHandler(
         filename=os.path.join('/', 'tmp', 'whd_log'),
         backupCount=1,
         maxBytes=50 * 1024 * 1024,  # 50 MiB
     )
     whd_handler.setFormatter(ci.log.CCFormatter(
-        fmt=ci.log.get_default_fmt_string()),
+        fmt=ci.log.default_fmt_string(print_thread_id=True)),
     )
     whd.addHandler(whd_handler)
