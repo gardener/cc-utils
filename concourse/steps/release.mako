@@ -39,7 +39,6 @@ release_callback_path = release_trait.release_callback_path()
 next_version_callback_path = release_trait.next_version_callback_path()
 %>
 import ccc.github
-import ci.util
 
 ${step_lib('release')}
 
