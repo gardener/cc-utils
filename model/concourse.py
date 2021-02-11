@@ -265,6 +265,11 @@ class ConcourseTeam(NamedModelElement):
             )
 
 
+class PipelineCleanupPolicy(Enum):
+    CLEANUP_EXTRA_PIPELINES = 'cleanup_extra_pipelines'
+    NO_CLEANUP = 'no_cleanup'
+
+
 class JobMappingSet(NamedModelElement):
     def job_mappings(self):
         return {name: JobMapping(name=name, raw_dict=raw) for name, raw in self.raw.items()}
@@ -274,6 +279,11 @@ class JobMapping(NamedModelElement):
     def team_name(self) -> str:
         return self.raw.get('concourse_target_team')
 
+    def cleanup_policy(self) -> PipelineCleanupPolicy:
+        return PipelineCleanupPolicy(
+            self.raw.get('cleanup_policy', PipelineCleanupPolicy.CLEANUP_EXTRA_PIPELINES)
+        )
+
     def github_organisations(self):
         return [
             GithubOrganisationConfig(name, raw)
@@ -281,7 +291,15 @@ class JobMapping(NamedModelElement):
         ]
 
     def _required_attributes(self):
-        return ['concourse_target_team']
+        return [
+            'concourse_target_team',
+        ]
+
+    def _defaults_dict(self):
+        # XXX find out why this is not honoured
+        return {
+            'cleanup_policy': PipelineCleanupPolicy.CLEANUP_EXTRA_PIPELINES,
+        }
 
 
 class GithubOrganisationConfig(NamedModelElement):
