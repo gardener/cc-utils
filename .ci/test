@@ -12,6 +12,7 @@ pip3 install --upgrade whitesource_common
 # usage: $1: <src-dir>
 
 src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
+pip3 install --upgrade -r "${src_dir}/requirements.whd.txt"
 
 if PYTHONPATH="${src_dir}:${PYTHONPATH:-}" pytest "${src_dir}" "${@}"; then
     echo 'Unittest executions succeeded'
