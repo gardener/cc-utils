@@ -14,6 +14,7 @@
 # limitations under the License.
 import enum
 import functools
+import logging
 
 import cachecontrol
 import requests
@@ -22,7 +23,7 @@ from requests.adapters import HTTPAdapter
 from requests.auth import HTTPBasicAuth
 from urllib3.util.retry import Retry
 
-from ci.util import warning
+logger = logging.getLogger(__name__)
 
 
 class AdapterFlag(enum.Flag):
@@ -44,11 +45,8 @@ class LoggingRetry(Retry):
         retry = super().increment(method, url, response, error, _pool, _stacktrace)
         # Use the Retry history to determine the number of retries.
         num_retries = len(self.history) if self.history else 0
-        # Retrieve host from underlying connection pool and
-        host = _pool.host
-        warning(
-            f'HTTP request (host: {host}, url: {url}, method: {method}) unsuccessful. '
-            f'Retries so far: {num_retries}. Retrying ...'
+        logger.warning(
+            f'{method=} {url=} returned {response=} {error=} {num_retries=} - trying again'
         )
         return retry
 
@@ -112,13 +110,13 @@ def check_http_code(function):
         result = function(*args, **kwargs)
         if result.status_code < 200 or result.status_code >= 300:
             url = kwargs.get('url', None)
-            warning('{c} - {m}: {u}'.format(c=result.status_code, m=result.content, u=url))
+            logger.warning('{c} - {m}: {u}'.format(c=result.status_code, m=result.content, u=url))
         result.raise_for_status()
         return result
     return http_checker
 
 
-class AuthenticatedRequestBuilder(object):
+class AuthenticatedRequestBuilder:
     '''
     Wrapper around the 'requests' library, handling concourse-specific
     http headers and also checking for http response codes.
@@ -151,9 +149,11 @@ class AuthenticatedRequestBuilder(object):
         self.verify_ssl = verify_ssl
 
     def _check_http_code(self, result, url):
-        if result.status_code < 200 or result.status_code >= 300:
-            warning('{c} - {m}: {u}'.format(c=result.status_code, m=result.content, u=url))
-            raise RuntimeError()
+        if not result.ok:
+            logger.warning(
+                f'rq against {url=} returned {result.status_code=} {result.content=}'
+            )
+            result.raise_for_status()
 
     def _request(self,
             method, url: str,
