@@ -286,7 +286,8 @@ def create_upgrade_pr(
     )
 
     release_notes = create_release_notes(
-        component=component,
+        from_component_ref=from_ref,
+        ctx_repo_base_url=component.current_repository_ctx().baseUrl,
         from_github_cfg=github_cfg,
         from_repo_owner=repo_owner,
         from_repo_name=repo_name,
@@ -356,7 +357,8 @@ def push_upgrade_commit(
 
 
 def create_release_notes(
-    component,
+    from_component_ref,
+    ctx_repo_base_url,
     from_github_cfg,
     from_repo_owner: str,
     from_repo_name: str,
@@ -370,12 +372,17 @@ def create_release_notes(
                 github_cfg=from_github_cfg,
                 github_repo_path=f'{from_repo_owner}/{from_repo_name}'
             )
+            from_cd = product.v2.download_component_descriptor_v2(
+                component_name=from_component_ref.componentName,
+                component_version=from_component_ref.version,
+                ctx_repo_base_url=ctx_repo_base_url,
+            )
             commit_range = '{from_version}..{to_version}'.format(
                 from_version=from_version,
                 to_version=to_version,
             )
             release_notes = ReleaseNotes(
-                component=component,
+                component=from_cd.component,
                 repo_dir=temp_dir,
             )
             release_notes.create(
