@@ -70,4 +70,5 @@ def configure_default_logging(
 
 
 def default_fmt_string(print_thread_id: False):
-    return f'%(asctime)s [%(levelprefix)s] {"TID:%(thread)d " if print_thread_id else ""}%(name)s: %(message)s'
+    return f'%(asctime)s [%(levelprefix)s] {"TID:%(thread)d " if print_thread_id else ""}' \
+    '%(name)s: %(message)s'
