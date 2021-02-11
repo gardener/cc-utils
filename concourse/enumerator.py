@@ -49,7 +49,7 @@ class JobMappingNotFoundError(ValueError):
     pass
 
 
-class DefinitionDescriptorPreprocessor(object):
+class DefinitionDescriptorPreprocessor:
     def process_definition_descriptor(self, descriptor):
         self._add_branch_to_pipeline_name(descriptor)
         return self._inject_main_repo(descriptor)
@@ -72,7 +72,7 @@ class DefinitionDescriptorPreprocessor(object):
         return descriptor
 
 
-class DefinitionEnumerator(object):
+class DefinitionEnumerator:
     def enumerate_definition_descriptors(self):
         raise NotImplementedError('subclasses must override')
 
