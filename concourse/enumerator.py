@@ -84,7 +84,11 @@ class DefinitionEnumerator:
         branch,
         raw_definitions,
         override_definitions={},
+        target_team: str=None,
     ) -> 'DefinitionDescriptor':
+        if not target_team:
+            target_team = self.job_mapping.team_name()
+
         for name, definition in raw_definitions.items():
             pipeline_definition = deepcopy(definition)
             yield DefinitionDescriptor(
@@ -92,7 +96,7 @@ class DefinitionEnumerator:
                 pipeline_definition=pipeline_definition or {},
                 main_repo={'path': repo_path, 'branch': branch, 'hostname': repo_hostname},
                 concourse_target_cfg=self.cfg_set.concourse(),
-                concourse_target_team=self.job_mapping.team_name(),
+                concourse_target_team=target_team,
                 override_definitions=[override_definitions.get(name,{}),],
             )
 
@@ -241,10 +245,14 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
         github_cfg,
         org_name,
         repository_filter: callable=None,
+        target_team: str=None,
     ) -> RawPipelineDefinitionDescriptor:
 
         repo_hostname = urlparse(github_cfg.http_url()).hostname
         repo_path = f'{org_name}/{repository.name}'
+
+        if not target_team:
+            target_team = self.job_mapping.team_name()
 
         try:
             branches_and_cfg_entries = [
@@ -256,7 +264,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                 pipeline_definition=None,
                 main_repo={'path': repo_path, 'branch': 'refs/meta/ci', 'hostname': repo_hostname},
                 concourse_target_cfg=self.cfg_set.concourse(),
-                concourse_target_team=self.job_mapping.team_name(),
+                concourse_target_team=target_team,
                 override_definitions=(),
                 exception=e,
             )
@@ -286,7 +294,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                     pipeline_definition={},
                     main_repo={'path': repo_path, 'branch': branch_name, 'hostname': repo_hostname},
                     concourse_target_cfg=self.cfg_set.concourse(),
-                    concourse_target_team=self.job_mapping.team_name(),
+                    concourse_target_team=target_team,
                     override_definitions=(),
                     exception=e,
                 )
@@ -295,12 +303,16 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
             # handle inheritance
             definitions = merge_dicts(definitions, override_definitions)
 
+            # hacky: only set from GithubRepositoryDefinitionEnumerator
+            target_team = getattr(self, '_target_team', None)
+
             yield from self._wrap_into_descriptors(
                 repo_path='/'.join([org_name, repository.name]),
                 repo_hostname=repo_hostname,
                 branch=branch_name,
                 raw_definitions=definitions,
                 override_definitions=override_definitions,
+                target_team=target_team,
             )
 
 
@@ -309,14 +321,19 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
         self,
         repository_url:str,
         cfg_set,
+        target_team: str=None,
     ):
         self._repository_url = urlparse(not_none(repository_url))
         self._repo_host = self._repository_url.hostname
         self.cfg_set = not_none(cfg_set)
+        self._target_team = target_team
         concourse_cfg = cfg_set.concourse()
         job_mapping_set = cfg_set.job_mapping(concourse_cfg.job_mapping_cfg_name())
 
         org_name, repo_name = self._repository_url.path.lstrip('/').split('/')
+
+        if target_team:
+            return # if tgt-team is explicitly configured, we do not need to look it up
 
         for job_mapping in job_mapping_set.job_mappings().values():
             for org in job_mapping.github_organisations():
@@ -344,6 +361,7 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
             repository=repository,
             github_cfg=github_cfg,
             org_name=github_org,
+            target_team=self._target_team,
         )
 
 
