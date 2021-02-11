@@ -45,6 +45,7 @@ from concourse.enumerator import (
 from concourse import client
 import ccc.github
 import concourse.client.model
+import model.concourse
 
 
 def replicate_pipelines(
@@ -80,6 +81,7 @@ def replicate_pipelines(
     result_processor = ReplicationResultProcessor(
         cfg_set=cfg_set,
         unpause_new_pipelines=unpause_new_pipelines,
+        job_mapping=job_mapping,
     )
 
     replicator = PipelineReplicator(
@@ -296,11 +298,19 @@ class ReplicationResultProcessor:
         unpause_new_pipelines: bool=True,
         remove_pipelines: bool=True,
         reorder_pipelines: bool=True,
+        job_mapping=None,
     ):
         self._cfg_set = cfg_set
+        self._job_mapping = job_mapping
         self.unpause_new_pipelines = unpause_new_pipelines
         self.remove_pipelines = remove_pipelines
         self.reorder_pipelines = reorder_pipelines
+
+        CleanupPolicy = model.concourse.PipelineCleanupPolicy
+        if self._job_mapping and \
+                self._job_mapping.cleanup_policy() is CleanupPolicy.NO_CLEANUP:
+            self.remove_pipelines = False
+            print('will not cleanup extra pipelines due to policy')
 
     def process_results(self, results):
         # collect pipelines by concourse target (concourse_cfg, team_name) as key
@@ -321,6 +331,7 @@ class ReplicationResultProcessor:
                 concourse_cfg=concourse_cfg,
                 team_name=concourse_team,
             )
+
             # find pipelines to remove
             if self.remove_pipelines:
                 deployed_pipeline_names = set(map(
