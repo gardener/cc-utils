@@ -93,7 +93,7 @@ def replicate_pipelines(
     return replicator.replicate()
 
 
-class Renderer(object):
+class Renderer:
     def __init__(self, template_retriever, template_include_dir, cfg_set):
         self.template_retriever = template_retriever
         if template_include_dir:
@@ -179,7 +179,7 @@ class RenderStatus(Enum):
     FAILED = 1
 
 
-class RenderResult(object):
+class RenderResult:
     def __init__(
         self,
         definition_descriptor:DefinitionDescriptor,
@@ -198,7 +198,7 @@ class DeployStatus(IntEnum):
     CREATED = 8
 
 
-class DeployResult(object):
+class DeployResult:
     def __init__(
         self,
         definition_descriptor,
@@ -210,7 +210,7 @@ class DeployResult(object):
         self.error_details = error_details
 
 
-class DefinitionDeployer(object):
+class DefinitionDeployer:
     def deploy(self, definition_descriptor, pipeline):
         raise NotImplementedError('subclasses must overwrite')
 
@@ -457,7 +457,7 @@ class ReplicationResultProcessor(object):
             .as_list()
 
 
-class PipelineReplicator(object):
+class PipelineReplicator:
     def __init__(
             self,
             definition_enumerators,
