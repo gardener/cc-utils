@@ -27,7 +27,9 @@ def configure_whd_logging():
         backupCount=1,
         maxBytes=50 * 1024 * 1024,  # 50 MiB
     )
-    whd_handler.setFormatter(ci.log.CCFormatter(
-        fmt=ci.log.get_default_fmt_string(tid=True)),
+    whd_handler.setFormatter(
+        ci.log.CCFormatter(
+            fmt=ci.log.default_fmt_string(print_thread_id=True)
+        ),
     )
     whd.addHandler(whd_handler)
