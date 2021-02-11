@@ -379,6 +379,7 @@ def create_release_notes(
                 repo_dir=temp_dir,
             )
             release_notes.create(
+                start_ref=None, # the repo's default branch
                 commit_range=commit_range
             )
             release_note_blocks = release_notes.release_note_blocks()
