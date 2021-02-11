@@ -90,8 +90,8 @@ os.link(
 )
 
 # HACK remove '/usr/lib' and '/cc/utils' to avoid pip from failing in the first stage of builds
-shutil.rmtree(os.path.join('/', 'usr', 'lib'))
-shutil.rmtree(os.path.join('/', 'cc', 'utils'))
+shutil.rmtree(path=os.path.join('/', 'usr', 'lib'), ignore_errors=True)
+shutil.rmtree(path=os.path.join('/', 'cc', 'utils'), ignore_errors=True)
 
 # XXX final hack (I hope): cp entire python-dir
 import sys
