@@ -323,6 +323,9 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
         cfg_set,
         target_team: str=None,
     ):
+        if not '://' in repository_url:
+            repository_url = 'x://' + repository_url
+
         self._repository_url = urlparse(not_none(repository_url))
         self._repo_host = self._repository_url.hostname
         self.cfg_set = not_none(cfg_set)
