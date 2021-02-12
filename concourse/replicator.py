@@ -541,9 +541,11 @@ class PipelineReplicator:
         )
 
     def replicate(self):
-        results = []
-        for result in self._replicate():
-            results.append(result)
+        results = [
+            result for result in self._replicate()
+        ]
 
         if self.result_processor:
             return self.result_processor.process_results(results)
+        else:
+            return results
