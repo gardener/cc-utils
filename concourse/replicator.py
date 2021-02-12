@@ -311,8 +311,8 @@ class ReplicationResultProcessor:
             definition_descriptor = result.definition_descriptor
             concourse_target_key = definition_descriptor.concourse_target_key()
             if concourse_target_key not in concourse_target_results:
-                concourse_target_results[concourse_target_key] = set()
-            concourse_target_results[concourse_target_key].add(result)
+                concourse_target_results[concourse_target_key] = []
+            concourse_target_results[concourse_target_key].append(result)
 
         for concourse_target_key, concourse_results in concourse_target_results.items():
             # TODO: implement eq for concourse_cfg
