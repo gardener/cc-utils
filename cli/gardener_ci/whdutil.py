@@ -21,17 +21,6 @@ import uvicorn
 import ci.util
 
 
-LOGGING_CONFIG = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "loggers": {
-        "uvicorn": {"level": logging.INFO},
-        "uvicorn.error": {"level": logging.INFO},
-        "uvicorn.access": {"level": logging.INFO},
-    },
-}
-
-
 def app():
     import whd.server
 
@@ -52,12 +41,12 @@ def app():
 
 def _logging_config_dict(stdout_level):
     return {
-     "version": 1,
-        "disable_existing_loggers": False,
-        "loggers": {
-            "uvicorn": {"level": stdout_level},
-            "uvicorn.error": {"level": stdout_level},
-            "uvicorn.access": {"level": stdout_level},
+     'version': 1,
+        'disable_existing_loggers': False,
+        'loggers': {
+            'uvicorn': {'level': stdout_level},
+            'uvicorn.error': {'level': stdout_level},
+            'uvicorn.access': {'level': stdout_level},
         },
     }
 
