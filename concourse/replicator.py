@@ -187,7 +187,7 @@ class DeployStatus(IntEnum):
     CREATED = 8
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class DeployResult:
     definition_descriptor: DefinitionDescriptor
     deploy_status: DeployStatus
