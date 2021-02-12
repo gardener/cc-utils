@@ -1,18 +1,4 @@
-# Copyright (c) 2019-2020 SAP SE or an SAP affiliate company. All rights reserved. This file is
-# licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
+import logging
 import os
 import subprocess
 import tempfile
@@ -38,6 +24,8 @@ from github.util import (
     GitHubRepoBranch,
 )
 from github.release_notes.util import ReleaseNotes
+
+logger = logging.getLogger('step.update_component_deps')
 
 
 UpstreamUpdatePolicy = concourse.model.traits.update_component_deps.UpstreamUpdatePolicy
@@ -213,11 +201,10 @@ def determine_upgrade_prs(
             if greatest_version_semver <= version.parse_to_semver(
                 greatest_component_reference.version
             ):
-                ci.util.info(
-                    'skipping outdated component upgrade: '
-                    f'{greatest_component_reference.componentName}; '
-                    f'our version: {greatest_component_reference.version}, '
-                    f'found: {greatest_version}'
+                logger.info(
+                    f'skipping (outdated) {greatest_component_reference=}; '
+                    f'our {greatest_component_reference.version=}, '
+                    f'found: {greatest_version=}'
                 )
                 continue
             elif upgrade_pr_exists(
@@ -225,10 +212,10 @@ def determine_upgrade_prs(
                 component_version=greatest_version,
                 upgrade_requests=upgrade_pull_requests,
             ):
-                ci.util.info(
+                logger.info(
                     'skipping upgrade (PR already exists): '
-                    f'{greatest_component_reference.componentName} '
-                    f'to version {greatest_version}'
+                    f'{greatest_component_reference=} '
+                    f'to {greatest_version=}'
                 )
                 continue
             else:
@@ -338,7 +325,7 @@ def push_upgrade_commit(
         repo_path=repo_dir,
     )
     commit = helper.index_to_commit(message=commit_message)
-    ci.util.info(f'commit for upgrade-PR: {commit.hexsha}')
+    logger.info(f'commit for upgrade-PR: {commit.hexsha=}')
     new_branch_name = ci.util.random_str(prefix='ci-', length=12)
     repo_branch = githubrepobranch.branch()
     head_sha = ls_repo.ref(f'heads/{repo_branch}').object.sha
@@ -347,7 +334,7 @@ def push_upgrade_commit(
     try:
         helper.push(from_ref=commit.hexsha, to_ref=f'refs/heads/{new_branch_name}')
     except:
-        ci.util.warning('an error occurred - removing now useless pr-branch')
+        logger.warning('an error occurred - removing now useless pr-branch')
         ls_repo.ref(f'heads/{new_branch_name}').delete()
         raise
 
@@ -393,8 +380,6 @@ def create_release_notes(
             if release_note_blocks:
                 return f'**Release Notes*:\n{release_note_blocks}'
     except:
-        ci.util.warning('an error occurred during release notes processing (ignoring)')
+        logger.warning('an error occurred during release notes processing (ignoring)')
         import traceback
-        ci.util.warning(traceback.format_exc())
-
-    return None
+        logger.warning(traceback.format_exc())
