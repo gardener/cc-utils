@@ -19,7 +19,7 @@ import os
 import ci.log
 
 
-def configure_whd_logging():
+def configure_whd_logging(print_thread_id: bool=True):
     whd = logging.getLogger('whd')
     whd.setLevel(logging.DEBUG)
     whd_handler = logging.handlers.RotatingFileHandler(
@@ -29,7 +29,7 @@ def configure_whd_logging():
     )
     whd_handler.setFormatter(
         ci.log.CCFormatter(
-            fmt=ci.log.default_fmt_string(print_thread_id=True)
+            fmt=ci.log.default_fmt_string(print_thread_id=print_thread_id)
         ),
     )
     whd.addHandler(whd_handler)

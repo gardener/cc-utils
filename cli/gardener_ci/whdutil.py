@@ -13,9 +13,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import multiprocessing
+import argparse
+import logging
+
+import uvicorn
 
 import ci.util
+
+
+def _logging_config(stdout_level=logging.INFO):
+    return {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'loggers': {
+            'uvicorn': {'level': stdout_level},
+            'uvicorn.error': {'level': stdout_level},
+            'uvicorn.access': {'level': stdout_level},
+        }
+    }
+
+
+def app():
+    import whd.server
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--cfg-set-name', action='store', dest='cfg_set_name', type=str)
+    args, _ = parser.parse_known_args()
+
+    cfg_factory = ci.util.ctx().cfg_factory()
+    cfg_set = cfg_factory.cfg_set(args.cfg_set_name)
+    webhook_dispatcher_cfg = cfg_set.webhook_dispatcher()
+
+    app = whd.server.webhook_dispatcher_app(
+        cfg_set=cfg_set,
+        whd_cfg=webhook_dispatcher_cfg,
+    )
+    return app
 
 
 def start_whd(
@@ -26,37 +59,30 @@ def start_whd(
 ):
     import whd
     whd.configure_whd_logging()
-    import whd.server
-
-    cfg_factory = ci.util.ctx().cfg_factory()
-    cfg_set = cfg_factory.cfg_set(cfg_set_name)
-    webhook_dispatcher_cfg = cfg_set.webhook_dispatcher()
-
-    app = whd.server.webhook_dispatcher_app(
-        cfg_set=cfg_set,
-        whd_cfg=webhook_dispatcher_cfg
-    )
 
     # allow external connections
     any_interface = '0.0.0.0'
 
     if production:
-
-        import bjoern
-        multiprocessing.set_start_method('fork')
-
-        def serve():
-            bjoern.run(app, any_interface, port, reuse_port=True)
-        for _ in range(workers - 1):
-            p = multiprocessing.Process(target=serve)
-            p.start()
-        serve()
-    else:
-        import werkzeug.serving
-        werkzeug.serving.run_simple(
-            hostname=any_interface,
+        uvicorn.run(
+            'whdutil:app',
+            host=any_interface,
             port=port,
-            application=app,
-            use_reloader=True,
-            use_debugger=True,
+            log_level='info',
+            log_config=_logging_config(),
+            workers=workers,
+            debug=False,
+            reload=False,
+        )
+
+    else:
+        uvicorn.run(
+            'whdutil:app',
+            host='127.0.0.1',
+            port=port,
+            log_level='debug',
+            log_config=_logging_config(stdout_level=logging.DEBUG),
+            workers=workers,
+            debug=True,
+            reload=True,
         )
