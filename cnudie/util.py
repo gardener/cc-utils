@@ -136,11 +136,11 @@ def diff_components(
                 return (changed_component, c)
         return (changed_component, None) # no pair component found
 
-    components_with_changed_versions = ci.util.FluentIterable(items=left_components) \
-        .map(functools.partial(find_changed_component, components=right_components)) \
-        .filter(lambda cs: cs[1] is not None) \
-        .as_list()
-    # pairs of components (left:right-version)
+    components_with_changed_versions = []
+    for component in left_components:
+        changed_component = find_changed_component(component, right_components)
+        if changed_component[1] is not None:
+            components_with_changed_versions.append(changed_component)
 
     left_component_names = {i.name for i in left_component_identities}
     right_component_names = {i.name for i in right_component_identities}
