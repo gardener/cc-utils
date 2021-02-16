@@ -67,6 +67,8 @@ def start_whd(
         uvicorn.run(
             'whdutil:app',
             host=any_interface,
+            interface='wsgi',
+            factory=True,
             port=port,
             log_level='info',
             log_config=_logging_config(),
@@ -79,6 +81,8 @@ def start_whd(
         uvicorn.run(
             'whdutil:app',
             host='127.0.0.1',
+            interface='wsgi',
+            factory=True,
             port=port,
             log_level='debug',
             log_config=_logging_config(stdout_level=logging.DEBUG),
