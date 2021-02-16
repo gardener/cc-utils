@@ -1,5 +1,4 @@
 import dataclasses
-import functools
 import io
 import os
 import tarfile
