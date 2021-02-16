@@ -196,7 +196,10 @@ class OciRoutes:
             'uploads',
         ) + '/'
 
-    def put_blob_url(self, image_reference: str, digest: str) -> str:
+    def single_post_blob_url(self, image_reference: str, digest: str) -> str:
+        '''
+        used for "single-post" monolithic upload (not supported e.g. by registry-1.docker.io)
+        '''
         query = urllib.parse.urlencode({
             'digest': digest,
         })
@@ -794,14 +797,33 @@ class Client:
         logger.debug(f'single-post {image_reference=} {octets_count=}')
         scope = _scope(image_reference=image_reference, action='push,pull')
 
+        # XXX according to distribution-spec, single-POST should also work - however
+        # this seems not to be true for registry-1.docker.io. To keep the code simple(r),
+        # always do a two-step upload; we might add a cfg-option (or maybe even discovery) for
+        # using single-post uploads for registries that support it (such as GCR or artifactory)
         res = self._request(
-            url=self.routes.put_blob_url(
+            url=self.routes.uploads_url(
                 image_reference=image_reference,
-                digest=digest,
             ),
             image_reference=image_reference,
             scope=scope,
             method='POST',
+        )
+
+        upload_url = res.headers.get('Location')
+
+        if '?' in upload_url:
+            prefix = '&'
+        else:
+            prefix = '?'
+
+        upload_url += prefix + urllib.parse.urlencode({'digest': digest})
+
+        res = self._request(
+            url=upload_url,
+            image_reference=image_reference,
+            scope=scope,
+            method='PUT',
             headers={
                 'content-type': 'application/octet-stream',
                 'content-length': str(octets_count),
