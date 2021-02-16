@@ -337,6 +337,7 @@ class Client:
         method: str='GET',
         headers: dict=None,
         raise_for_status=True,
+        warn_if_not_ok=True,
         **kwargs,
     ):
         kwargs['verify'] = False
@@ -390,7 +391,7 @@ class Client:
             headers=headers,
             **kwargs,
         )
-        if not res.ok:
+        if not res.ok and warn_if_not_ok:
             logger.warning(
                 f'rq against {url=} failed {res.status_code=} {res.reason=} {method=} {res.content}'
             )
@@ -502,6 +503,7 @@ class Client:
             scope=scope,
             stream=False,
             raise_for_status=not absent_ok,
+            warn_if_not_ok=not absent_ok,
         )
         if not res.ok and absent_ok:
             return None
@@ -630,6 +632,7 @@ class Client:
             scope=scope,
             image_reference=image_reference,
             raise_for_status=False,
+            warn_if_not_ok=not absent_ok,
         )
 
         if absent_ok and res.status_code == 404:
