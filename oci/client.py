@@ -560,9 +560,20 @@ class Client:
             # it is okay to use application/json (GCR also accepts it)
             # however, it would be more specific to use either ..+json (unsigned), or +prettyjws
             # (if manifest contains signature)
-            # content_type = 'application/vnd.oci.image.manifest.v1+json'
-            # content_type = 'application/vnd.docker.distribution.manifest.v1+prettyjws'
-            content_type = 'application/json'
+            try:
+                # XXX it would be less cumbersome to pass-in the tgt-mimetype, rather
+                # than parsing the manifest twice
+                parsed_manifest = json.loads(manifest)
+                if parsed_manifest.get('signatures', None):
+                    content_type = 'application/vnd.docker.distribution.manifest.v1+prettyjws'
+                else:
+                    content_type = 'application/vnd.oci.image.manifest.v1+json'
+            except:
+                import traceback
+                logger.warning(traceback.format_exc())
+                # fallback to application/json, which is however not allowed by all registries
+                # e.g. registry-1.docker.io (aka docker-hub) does not seem to like it
+                content_type = 'application/json'
         elif schema_version is om.OciManifestSchemaVersion.V2:
             content_type = om.OCI_MANIFEST_SCHEMA_V2_MIME
         else:
