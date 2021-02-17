@@ -43,6 +43,13 @@ def determine_main_source_for_component(
 
 
 @dataclasses.dataclass
+class LabelDiff:
+    labels_only_left: typing.List[cm.Label] = dataclasses.field(default_factory=list)
+    labels_only_right: typing.List[cm.Label] = dataclasses.field(default_factory=list)
+    label_pairs_changed: typing.List[typing.Tuple[cm.Label, cm.Label]] = dataclasses.field(default_factory=list) # noqa:E501
+
+
+@dataclasses.dataclass
 class ComponentDiff:
     cidentities_only_left: set = dataclasses.field(default_factory=set)
     cidentities_only_right: set = dataclasses.field(default_factory=set)
@@ -99,6 +106,40 @@ def diff_component_descriptors(
         right_components=right_components,
         ignore_component_names=ignore_component_names,
     )
+
+
+def label_diff(
+    left_labels: typing.List[cm.Label],
+    right_labels: typing.List[cm.Label],
+) -> LabelDiff:
+
+    label_diff = LabelDiff()
+
+    left_label_name_to_label = {l.name: l for l in left_labels}
+    right_label_name_to_label = {l.name: l for l in right_labels}
+
+    label_diff.labels_only_left = [
+        l for l in left_labels if l.name not in right_label_name_to_label.keys()
+    ]
+    label_diff.labels_only_right = [
+        l for l in right_labels if l.name not in left_label_name_to_label.keys()
+    ]
+
+    for left_group, right_group in _enumerate_group_pairs(
+        left_artifacts=left_labels,
+        right_artifacts=right_labels,
+    ):
+        if len(left_group) == 1 and len(right_group) == 1:
+            if left_group[0].value == right_group[0].value:
+                continue
+            else:
+                label_diff.label_pairs_changed.append(
+                    (left_group[0], right_group[0]),
+                )
+        else:
+            raise ValueError('only one label with the same name is allowed')
+
+    return label_diff
 
 
 def diff_components(
@@ -159,6 +200,23 @@ def diff_components(
     )
 
 
+def _enumerate_group_pairs(
+    left_artifacts: typing.List[typing.Union[cm.Resource, cm.ComponentSource, cm.Label]],
+    right_artifacts: typing.List[typing.Union[cm.Resource, cm.ComponentSource, cm.Label]],
+) -> typing.Tuple[typing.List[cm.Resource], typing.List[cm.Resource]]:
+    # group the resources with the same name on both sides
+    for artifact in left_artifacts:
+        right_resource_group = [r for r in right_artifacts if r.name == artifact.name]
+        # get resources for one resource via name
+
+        # key is always in left group so we only have to check the length of the right group
+        if len(right_resource_group) == 0:
+            continue
+        else:
+            left_resource_group = [r for r in left_artifacts if r.name == artifact.name]
+            yield (left_resource_group, right_resource_group)
+
+
 @dataclasses.dataclass
 class ResourceDiff:
     left_component: cm.Component
@@ -186,7 +244,7 @@ def diff_resources(
             f'unsupported {type(right_component)=}',
         )
 
-    left_resource_identities = {
+    left_resource_identities_to_resource = {
         r.identity(left_component.resources + right_component.resources): r
         for r in left_component.resources
     }
@@ -200,13 +258,13 @@ def diff_resources(
         right_component=right_component,
     )
 
-    if left_resource_identities.keys() == right_resource_identities_to_resource.keys():
+    if left_resource_identities_to_resource.keys() == right_resource_identities_to_resource.keys():
         return resource_diff
 
     left_names_to_resource = {r.name: r for r in left_component.resources}
     right_names_to_resource = {r.name: r for r in right_component.resources}
     # get left exclusive resources
-    for resource in left_resource_identities.values():
+    for resource in left_resource_identities_to_resource.values():
         if not resource.name in right_names_to_resource:
             _add_if_not_duplicate(resource_diff.resource_refs_only_left, resource)
 
@@ -221,14 +279,14 @@ def diff_resources(
         right_resources: typing.List[cm.Resource]
     ) -> typing.Tuple[typing.List[cm.Resource], typing.List[cm.Resource]]:
         # group the resources with the same name on both sides
-        for key in left_names_to_resource.keys():
-            left_resource_group = [r for r in left_resources if r.name == key]
-            right_resource_group = [r for r in right_resources if r.name == key]
+        for name in left_names_to_resource.keys():
+            right_resource_group = [r for r in right_resources if r.name == name]
 
-            # key is always in left group
+            # key is always in left group so we only have to check the length of the right group
             if len(right_resource_group) == 0:
                 continue
             else:
+                left_resource_group = [r for r in left_resources if r.name == name]
                 yield (left_resource_group, right_resource_group)
 
     for left_resource_group, right_resource_group in enumerate_group_pairs(
@@ -255,6 +313,7 @@ def diff_resources(
         left_resource_ids = sorted(left_identities.keys())
         right_resource_ids = sorted(right_identities.keys())
 
+        # sort resources. Important because down/upgrades depend on position in list
         left_resources = [left_identities.get(id) for id in left_resource_ids]
         right_resources = [right_identities.get(id) for id in right_resource_ids]
 
@@ -273,6 +332,7 @@ def diff_resources(
             if not i.version in versions_in_both
         ]
 
+        # at this point we got left and right resources with the same name but different versions
         i = 0
         for i, left_resource in enumerate(left_resources):
             if i >= len(right_resources):
