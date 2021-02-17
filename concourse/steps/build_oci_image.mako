@@ -101,6 +101,10 @@ if sys.version_info.minor >= 9 or sys.version_info.major > 3:
 else:
   lib_dir = os.path.join(sys.prefix, 'lib')
 
+# Initialise oci client before kaniko removes _everything_, otherwise cfg-element-retrieval will
+# fail
+oci_client = ccc.oci.oci_client()
+
 python_lib_dir = os.path.join(lib_dir, f'python{sys.version_info.major}.{sys.version_info.minor}')
 python_bak_dir = os.path.join('/', 'kaniko', 'python.bak')
 if os.path.isdir(python_lib_dir):
@@ -143,7 +147,7 @@ print(f'publishing to {image_ref=}, {additional_tags=}')
 
 oci.publish_container_image_from_kaniko_tarfile(
   image_tarfile_path=image_outfile,
-  oci_client=ccc.oci.oci_client(),
+  oci_client=oci_client,
   image_reference=image_ref,
   additional_tags=additional_tags,
 )
