@@ -320,6 +320,11 @@ class Client:
             auth=auth,
         )
 
+        if not res.ok:
+            logger.warning(
+                f'rq against {realm=} failed: {res.status_code=} {res.reason=} {res.content=}'
+            )
+
         res.raise_for_status()
 
         token_dict = res.json()
