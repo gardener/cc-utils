@@ -33,7 +33,7 @@ else:
 import dataclasses
 import git
 import json
-import logger
+import logging
 import os
 import shutil
 import stat
