@@ -116,7 +116,10 @@ def upload_grouped_images(
                 return False
 
             # check for scanning labels on resource in cd
-            if label := resource.find_label(name=dso.labels.ScanLabelName.BINARY_SCAN.value):
+            if label := resource.find_label(name=dso.labels.ScanLabelName.BINARY_ID.value):
+                return label.value.policy is dso.labels.ScanPolicy.SCAN
+            elif label := resource.find_label(name=dso.labels.ScanLabelName.BINARY_SCAN.value):
+                logger.warning(f'deprecated {label.name=}')
                 return label.value.policy is dso.labels.ScanPolicy.SCAN
             else:
                 return True
