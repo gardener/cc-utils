@@ -33,10 +33,6 @@ from protecode.scanning_util import (
     ProcessingMode,
     ProtecodeUtil,
 )
-from ci.util import (
-    info,
-    warning,
-)
 from protecode.model import (
     License,
     highest_major_cve_severity,
@@ -144,7 +140,7 @@ def upload_grouped_images(
 
     results = list(flatten_results())
 
-    info('Preparing results')
+    logger.info('Preparing results')
     relevant_results, results_below_threshold = filter_and_display_upload_results(
         upload_results=results,
         cvss_version=cvss_version,
@@ -152,7 +148,7 @@ def upload_grouped_images(
         ignore_if_triaged=ignore_if_triaged,
     )
 
-    info('Preparing license report')
+    logger.info('Preparing license report')
     _license_report = license_report(upload_results=results)
 
     return (relevant_results, results_below_threshold, _license_report)
@@ -226,11 +222,13 @@ def filter_and_display_upload_results(
                     cvss_threshold=cve_threshold,
                 ):
                     gcr_cve = max(gcr_cve, r.vulnerability.cvssScore)
-                info(f'gcr says max CVSS=={gcr_cve} (-1 means no vulnerability was found)')
+                logger.debug(f'gcr says max CVSS=={gcr_cve} (-1 means no vulnerability was found)')
                 # TODO: skip if < threshold - just report for now
-            except Exception as vrf:
-                warning('failed to retrieve vulnerabilies from gcr')
-                print(vrf)
+            except Exception:
+                import traceback
+                logger.warning(
+                    f'failed to retrieve vulnerabilies from gcr {traceback.format_exc()}'
+                )
 
             results_above_cve_thresh.append((upload_result, greatest_cve))
             continue
@@ -239,7 +237,9 @@ def filter_and_display_upload_results(
             continue
 
     if results_without_components:
-        warning(f'Protecode did not identify components for {len(results_without_components)}:\n')
+        logger.warning(
+            f'Protecode did not identify components for {len(results_without_components)=}:\n'
+        )
         for result in results_without_components:
             print(result.result.display_name())
         print('')
@@ -261,12 +261,12 @@ def filter_and_display_upload_results(
         print(result)
 
     if results_below_cve_thresh:
-        info(f'The following components were below configured cve threshold {cve_threshold}')
+        logger.info(f'The following components were below configured cve threshold {cve_threshold}')
         render_results_table(upload_results=results_below_cve_thresh)
         print('')
 
     if results_above_cve_thresh:
-        warning('The following components have critical vulnerabilities:')
+        logger.warning('The following components have critical vulnerabilities:')
         render_results_table(upload_results=results_above_cve_thresh)
 
     return results_above_cve_thresh, results_below_cve_thresh
