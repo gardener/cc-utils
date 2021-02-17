@@ -33,6 +33,7 @@ else:
 import dataclasses
 import git
 import json
+import logger
 import os
 import shutil
 import stat
@@ -44,8 +45,10 @@ import gci.componentmodel as cm
 # required for deserializing labels
 Label = cm.Label
 
-from ci.util import info, fail, parse_yaml_file, ctx, warning
+from ci.util import fail, parse_yaml_file, ctx
 import product.v2
+
+logger = logging.getLogger('step.component_descriptor')
 
 ${step_lib('component_descriptor')}
 ${step_lib('component_descriptor_util')}
@@ -89,7 +92,7 @@ if not 'cloud.gardener/cicd/source' in [label.name for label in repo_labels]:
   )
 
 if not (repo_commit_hash := head_commit_hexsha(os.path.abspath('${repository.resource_name()}'))):
-  warning('Could not determine commit hash')
+  logger.warning('Could not determine commit hash')
 component_v2.sources.append(
   cm.ComponentSource(
     name='${repository.logical_name().replace('/', '_').replace('.', '_')}',
@@ -123,7 +126,7 @@ component_v2.resources.append(
 )
 % endfor
 
-info('default component descriptor (v2):\n')
+logger.info('default component descriptor (v2):\n')
 print(dump_component_descriptor_v2(base_descriptor_v2))
 print('\n' * 2)
 
@@ -142,14 +145,14 @@ descriptor_script = os.path.abspath(
   '${job_variant.main_repository().resource_name()}/.ci/${job_step.name}'
 )
 if not os.path.isfile(descriptor_script):
-  info('no component_descriptor script found at {s} - will use default'.format(
+  logger.info('no component_descriptor script found at {s} - will use default'.format(
     s=descriptor_script
     )
   )
 
   with open(v2_outfile, 'w') as f:
     f.write(dump_component_descriptor_v2(base_descriptor_v2))
-  info(f'wrote component descriptor (v2): {v2_outfile=}')
+  logger.info(f'wrote component descriptor (v2): {v2_outfile=}')
   sys.exit(0)
 else:
   is_executable = bool(os.stat(descriptor_script)[stat.ST_MODE] & stat.S_IEXEC)
@@ -225,8 +228,6 @@ elif have_ctf:
   # XXX TODO: also calculate bom-diff!
   exit(0)
 
-info('resolving dependencies')
-
 # determine "bom-diff" (changed component references)
 try:
   bom_diff = component_diff_since_last_release(
@@ -234,15 +235,15 @@ try:
       ctx_repo_url=ctx_repository_base_url,
   )
 except:
-  print('warning: failed to determine component-diff')
+  logger.warning('failed to determine component-diff')
   import traceback
   traceback.print_exc()
   bom_diff = None
 
 if not bom_diff:
-  info('no differences in referenced components found since last release')
+  logger.info('no differences in referenced components found since last release')
 else:
-  info('component dependencies diff was written to dependencies.diff')
+  logger.info('component dependencies diff was written to dependencies.diff')
   dependencies_path = os.path.join(descriptor_out_dir, 'dependencies.diff')
   write_component_diff(
     component_diff=bom_diff,

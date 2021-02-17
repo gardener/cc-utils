@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import typing
 
 import git
@@ -24,6 +25,8 @@ import cnudie.retrieve
 import product.v2
 
 import gci.componentmodel as cm
+
+logger = logging.getLogger('step.component_descriptor')
 
 
 def dump_component_descriptor_v2(component_descriptor_v2: cm.ComponentDescriptor):
@@ -110,10 +113,10 @@ def component_diff_since_last_release(
     )
 
     if not greatest_release_version:
-        ci.util.warning('could not determine last release version')
+        logger.warning('could not determine last release version')
         return None
     greatest_release_version = str(greatest_release_version)
-    ci.util.info('last released version: ' + str(greatest_release_version))
+    logger.info('last released version: ' + str(greatest_release_version))
 
     greatest_released_cd = cnudie.retrieve.component_descriptor(
         name=component.name,
