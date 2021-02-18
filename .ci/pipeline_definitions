@@ -80,7 +80,7 @@ cc-utils:
         release_to_pypi:
           trait_depends: ['release']
           inputs:
-            'pypi': 'pypi'
+            'PYPI': 'pypi'
         generate_documentation:
           publish_to: ['gh_pages']
       traits:
