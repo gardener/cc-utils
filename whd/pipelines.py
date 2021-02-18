@@ -13,8 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 import concourse.enumerator
 import concourse.replicator
+
+logger = logging.getLogger(__name__)
 
 
 def update_repository_pipelines(
@@ -22,6 +26,8 @@ def update_repository_pipelines(
     cfg_set,
     whd_cfg,
 ):
+    logger.info(f'replicating pipeline for {repo_url=}')
+
     repo_enumerator = concourse.enumerator.GithubRepositoryDefinitionEnumerator(
         repository_url=repo_url,
         cfg_set=cfg_set,
@@ -39,6 +45,7 @@ def update_repository_pipelines(
         unpause_pipelines=False,
         expose_pipelines=True,
     )
+
     results_processor = concourse.replicator.ReplicationResultProcessor(
         cfg_set=cfg_set,
         unpause_new_pipelines=True,
@@ -54,4 +61,6 @@ def update_repository_pipelines(
         result_processor=results_processor,
     )
 
-    replicator.replicate()
+    logger.info('awaiting replication-results')
+    result = replicator.replicate()
+    logger.infor(f'{result=}')
