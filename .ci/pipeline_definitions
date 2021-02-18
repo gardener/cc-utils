@@ -76,7 +76,6 @@ cc-utils:
         test: ~
         lint: ~
         build_python_packages:
-          depends: ['test', 'lint']
           output_dir: 'pypi'
         release_to_pypi:
           trait_depends: ['release']
