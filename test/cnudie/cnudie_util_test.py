@@ -292,37 +292,39 @@ def test_diff_label():
         label_foo
     ]
 
+    # check identical label in both lists
     label_diff = cnudie.util.diff_labels(left_labels=left_labels, right_labels=right_labels)
     assert len(label_diff.label_pairs_changed) == 0
     assert len(label_diff.labels_only_left) == 0
     assert len(label_diff.labels_only_right) == 0
 
+    # check left exclusive label
     label_only_left = cm.Label(name='left', value='only')
     left_labels.append(label_only_left)
-
     label_diff = cnudie.util.diff_labels(left_labels=left_labels, right_labels=right_labels)
     assert len(label_diff.label_pairs_changed) == 0
     assert len(label_diff.labels_only_left) == 1
     assert label_diff.labels_only_left[0] == label_only_left
     assert len(label_diff.labels_only_right) == 0
 
+    # check right exclusive label
     label_only_right = cm.Label(name='right', value='only')
     right_labels.append(label_only_right)
-
     label_diff = cnudie.util.diff_labels(left_labels=left_labels, right_labels=right_labels)
     assert len(label_diff.label_pairs_changed) == 0
     assert len(label_diff.labels_only_left) == 1
     assert len(label_diff.labels_only_right) == 1
     assert label_diff.labels_only_right[0] == label_only_right
 
+    # check removal of one label
     right_labels.remove(label_foo)
-
     label_diff = cnudie.util.diff_labels(left_labels=left_labels, right_labels=right_labels)
     assert len(label_diff.label_pairs_changed) == 0
     assert len(label_diff.labels_only_left) == 2
     assert label_diff.labels_only_left[0] == label_foo
     assert len(label_diff.labels_only_right) == 1
 
+    # check different label value with the same name
     label_foo_updated = cm.Label(name='foo', value='bar v2')
     right_labels.append(label_foo_updated)
     label_diff = cnudie.util.diff_labels(left_labels=left_labels, right_labels=right_labels)
@@ -330,3 +332,9 @@ def test_diff_label():
     assert label_diff.label_pairs_changed[0] == (label_foo, label_foo_updated)
     assert len(label_diff.labels_only_left) == 1
     assert len(label_diff.labels_only_right) == 1
+
+    # check that duplicate label name in one list cause exception
+    right_labels.append(label_foo_updated)
+    with pytest.raises(RuntimeError) as re:
+        label_diff = cnudie.util.diff_labels(left_labels=left_labels, right_labels=right_labels)
+    assert re != None
