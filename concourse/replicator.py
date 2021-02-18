@@ -4,6 +4,7 @@ import os
 from enum import Enum, IntEnum
 from concurrent.futures import ThreadPoolExecutor
 import functools
+import logging
 import textwrap
 import threading
 import traceback
@@ -11,10 +12,8 @@ import traceback
 import mako.template
 
 from ci.util import (
-    warning,
     existing_dir,
     not_none,
-    info,
     merge_dicts,
     FluentIterable
 )
@@ -33,6 +32,8 @@ from concourse import client
 import ccc.github
 import concourse.client.model
 import model.concourse
+
+logger = logging.getLogger(__name__)
 
 
 def replicate_pipelines(
@@ -95,13 +96,13 @@ class Renderer:
     def render(self, definition_descriptor):
         try:
             definition_descriptor = self._render(definition_descriptor)
-            info('rendered pipeline {pn}'.format(pn=definition_descriptor.pipeline_name))
+            logger.info('rendered pipeline {pn}'.format(pn=definition_descriptor.pipeline_name))
             return RenderResult(
                 definition_descriptor,
                 render_status=RenderStatus.SUCCEEDED,
             )
         except Exception:
-            warning(
+            logger.warning(
                 f"erroneous pipeline definition '{definition_descriptor.pipeline_name}' "
                 f"in repository '{definition_descriptor.main_repo.get('path')}' on branch "
                 f"'{definition_descriptor.main_repo.get('branch')}'"
@@ -222,7 +223,7 @@ class FilesystemDeployer(DefinitionDeployer):
                 deploy_status=DeployStatus.SUCCEEDED,
             )
         except Exception as e:
-            warning(e)
+            logger.warning(e)
             return DeployResult(
                 definition_descriptor=definition_descriptor,
                 deploy_status=DeployStatus.FAILED,
@@ -250,12 +251,12 @@ class ConcourseDeployer(DefinitionDeployer):
                 name=pipeline_name,
                 pipeline_definition=pipeline_definition
             )
-            info(
+            logger.info(
                 'Deployed pipeline: ' + pipeline_name +
                 ' to team: ' + definition_descriptor.concourse_target_team
             )
             if self.unpause_pipelines:
-                info(f'Unpausing pipeline {pipeline_name}')
+                logger.info(f'Unpausing pipeline {pipeline_name}')
                 api.unpause_pipeline(pipeline_name=pipeline_name)
             if self.expose_pipelines:
                 api.expose_pipeline(pipeline_name=pipeline_name)
@@ -275,7 +276,7 @@ class ConcourseDeployer(DefinitionDeployer):
         except Exception as e:
             import traceback
             traceback.print_exc()
-            warning(e)
+            logger.warning(e)
             return DeployResult(
                 definition_descriptor=definition_descriptor,
                 deploy_status=DeployStatus.FAILED,
@@ -333,7 +334,7 @@ class ReplicationResultProcessor:
                 pipelines_to_remove = set(concourse_api.pipelines()) - deployed_pipeline_names
 
                 for pipeline_name in pipelines_to_remove:
-                    info('removing pipeline: {p}'.format(p=pipeline_name))
+                    logger.info('removing pipeline: {p}'.format(p=pipeline_name))
                     concourse_api.delete_pipeline(pipeline_name)
 
             # trigger resource checks in new pipelines
@@ -352,23 +353,20 @@ class ReplicationResultProcessor:
 
         failed_count = len(failed_descriptors)
 
-        info('Successfully replicated {d} pipeline(s)'.format(d=len(results) - failed_count))
+        logger.info('Successfully replicated {d} pipeline(s)'.format(d=len(results) - failed_count))
 
         if failed_count == 0:
             return True
 
-        warning('Errors occurred whilst replicating {d} pipeline(s):'.format(
-            d=failed_count,
-        )
-        )
+        logger.warning(f'Errors occurred whilst replicating pipeline(s): {failed_count=}')
 
         all_notifications_succeeded = True
         for failed_descriptor in failed_descriptors:
-            warning(failed_descriptor.definition_descriptor.pipeline_name)
+            logger.warning(failed_descriptor.definition_descriptor.pipeline_name)
             try:
                 self._notify_broken_definition_owners(failed_descriptor)
             except Exception:
-                warning('an error occurred whilst trying to send error notifications')
+                logger.warning('an error occurred whilst trying to send error notifications')
                 traceback.print_exc()
                 all_notifications_succeeded = False
 
@@ -411,7 +409,7 @@ class ReplicationResultProcessor:
 
         # if there are still no recipients available print a warning
         if not recipients:
-            warning(textwrap.dedent(
+            logger.warning(textwrap.dedent(
                 f"""
                 Unable to determine recipient for pipeline '{definition_descriptor.pipeline_name}'
                 found in branch '{main_repo['branch']}' ({main_repo['path']}). Please make sure that
@@ -419,7 +417,7 @@ class ReplicationResultProcessor:
                 """
             ))
         else:
-            info(f'Sending notification e-mail to {recipients} ({main_repo["path"]})')
+            logger.info(f'Sending notification e-mail to {recipients} ({main_repo["path"]})')
             email_cfg = self._cfg_set.email("ses_gardener_cloud_sap")
             _send_mail(
                 email_cfg=email_cfg,
@@ -444,10 +442,10 @@ class ReplicationResultProcessor:
         )
         for pipeline_name in newly_deployed_pipeline_names:
             if self.unpause_new_pipelines:
-                info('unpausing new pipeline {p}'.format(p=pipeline_name))
+                logger.info(f'unpausing new {pipeline_name=}')
                 concourse_api.unpause_pipeline(pipeline_name)
 
-            info('triggering initial resource check for pipeline {p}'.format(p=pipeline_name))
+            logger.info(f'triggering initial resource check for {pipeline_name=}')
 
             trigger_pipeline_resource_check = functools.partial(
                 concourse_api.trigger_resource_check,
@@ -508,7 +506,7 @@ class PipelineReplicator:
         ):
             # early exit upon pipeline name conflict
             pipeline_name = result.definition_descriptor.pipeline_name
-            warning(f'duplicate pipeline name: {pipeline_name}')
+            logger.warning(f'duplicate pipeline name: {pipeline_name}')
             return DeployResult(
                 definition_descriptor=definition_descriptor,
                 deploy_status=DeployStatus.SKIPPED,
