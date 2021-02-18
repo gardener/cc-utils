@@ -7,7 +7,7 @@ out_dir="$(readlink -f "${repo_dir}/../${PYPI_PATH:-}/dist")"
 mkdir "${out_dir}"
 
 if [ ! -z "${VERSION_PATH}" ]; then
-  effective_version="$(cat "${VERSION_PATH}")"
+  effective_version="$(cat "${VERSION_PATH}/version")"
   last_release_tag_path="${repo_dir}/concourse/resources/LAST_RELEASED_TAG"
   if [ ! -f "${last_release_tag_path}" ]; then
     echo "ERROR: no such file ${last_release_tag_path}"
