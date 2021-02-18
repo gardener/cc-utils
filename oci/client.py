@@ -584,6 +584,8 @@ class Client:
         else:
             raise NotImplementedError(schema_version)
 
+        logger.info(f'manifest-mimetype: {content_type=}')
+
         res = self._request(
             url=self.routes.manifest_url(image_reference=image_reference),
             image_reference=image_reference,
