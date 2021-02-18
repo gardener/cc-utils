@@ -42,7 +42,7 @@ def determine_main_source_for_component(
     return component.sources[0]
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class LabelDiff:
     labels_only_left: typing.List[cm.Label] = dataclasses.field(default_factory=list)
     labels_only_right: typing.List[cm.Label] = dataclasses.field(default_factory=list)
@@ -108,36 +108,40 @@ def diff_component_descriptors(
     )
 
 
-def label_diff(
+def diff_labels(
     left_labels: typing.List[cm.Label],
     right_labels: typing.List[cm.Label],
 ) -> LabelDiff:
 
-    label_diff = LabelDiff()
-
     left_label_name_to_label = {l.name: l for l in left_labels}
     right_label_name_to_label = {l.name: l for l in right_labels}
 
-    label_diff.labels_only_left = [
+    labels_only_left = [
         l for l in left_labels if l.name not in right_label_name_to_label.keys()
     ]
-    label_diff.labels_only_right = [
+    labels_only_right = [
         l for l in right_labels if l.name not in left_label_name_to_label.keys()
     ]
-
+    label_pairs_changed = []
     for left_group, right_group in _enumerate_group_pairs(
-        left_artifacts=left_labels,
-        right_artifacts=right_labels,
+        left_elements=left_labels,
+        right_elements=right_labels,
     ):
         if len(left_group) == 1 and len(right_group) == 1:
             if left_group[0].value == right_group[0].value:
                 continue
             else:
-                label_diff.label_pairs_changed.append(
+                label_pairs_changed.append(
                     (left_group[0], right_group[0]),
                 )
         else:
             raise ValueError('only one label with the same name is allowed')
+
+    label_diff = LabelDiff(
+        labels_only_left=labels_only_left,
+        labels_only_right=labels_only_right,
+        label_pairs_changed=label_pairs_changed,
+    )
 
     return label_diff
 
@@ -201,20 +205,20 @@ def diff_components(
 
 
 def _enumerate_group_pairs(
-    left_artifacts: typing.List[typing.Union[cm.Resource, cm.ComponentSource, cm.Label]],
-    right_artifacts: typing.List[typing.Union[cm.Resource, cm.ComponentSource, cm.Label]],
+    left_elements: typing.List[typing.Union[cm.Resource, cm.ComponentSource, cm.Label]],
+    right_elements: typing.List[typing.Union[cm.Resource, cm.ComponentSource, cm.Label]],
 ) -> typing.Tuple[typing.List[cm.Resource], typing.List[cm.Resource]]:
     # group the resources with the same name on both sides
-    for artifact in left_artifacts:
-        right_resource_group = [r for r in right_artifacts if r.name == artifact.name]
+    for element in left_elements:
+        right_elements_group = [e for e in right_elements if e.name == element.name]
         # get resources for one resource via name
 
         # key is always in left group so we only have to check the length of the right group
-        if len(right_resource_group) == 0:
+        if len(right_elements_group) == 0:
             continue
         else:
-            left_resource_group = [r for r in left_artifacts if r.name == artifact.name]
-            yield (left_resource_group, right_resource_group)
+            left_elements_group = [e for e in left_elements if e.name == element.name]
+            yield (left_elements_group, right_elements_group)
 
 
 @dataclasses.dataclass
