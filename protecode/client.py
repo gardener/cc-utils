@@ -392,12 +392,13 @@ class ProtecodeApi:
             raise RuntimeError('authentication failed: ' + str(relevant_response.text))
 
     def scan_result_short(self, product_id: int):
-        url = self._routes.scans(product_id)
+        url = self._routes.product(product_id=product_id)
 
         result = self._get(
             url=url,
-        )
-        return ScanResult(raw_dict=result.json())
+        ).json()['results']
+
+        return ScanResult(raw_dict=result)
 
     def set_product_name(self, product_id: int, name: str):
         url = self._routes.scans(product_id)

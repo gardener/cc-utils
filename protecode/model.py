@@ -213,7 +213,7 @@ class Triage(ModelBase):
 
 class ScanResult(ModelBase):
     def name(self):
-        return self.raw.get('name')
+        return self.raw.get('filename', '<None>')
 
     def is_stale(self) -> bool:
         '''
@@ -221,7 +221,7 @@ class ScanResult(ModelBase):
         has become "stale" (meaning that a rescan would potentially return different
         results).
         '''
-        return self.raw.get('is_stale')
+        return self.raw.get('stale')
 
     def has_binary(self) -> bool:
         '''
@@ -229,7 +229,7 @@ class ScanResult(ModelBase):
         In case the uploaded file is no longer present, it needs to be re-uploaded prior to
         rescanning.
         '''
-        return self.raw.get('has_binary')
+        return self.raw.get('rescan-possible')
 
 
 def highest_major_cve_severity(
