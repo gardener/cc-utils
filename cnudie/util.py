@@ -205,9 +205,9 @@ def diff_components(
 
 
 def _enumerate_group_pairs(
-    left_elements: typing.List[typing.Union[cm.Resource, cm.ComponentSource, cm.Label]],
-    right_elements: typing.List[typing.Union[cm.Resource, cm.ComponentSource, cm.Label]],
-) -> typing.Tuple[typing.List[cm.Resource], typing.List[cm.Resource]]:
+    left_elements: typing.Sequence[typing.Union[cm.Resource, cm.ComponentSource, cm.Label]],
+    right_elements: typing.Sequence[typing.Union[cm.Resource, cm.ComponentSource, cm.Label]],
+) -> typing.Generator[typing.Tuple[typing.List[cm.Resource], typing.List[cm.Resource]], None, None]:
     # group the resources with the same name on both sides
     for element in left_elements:
         right_elements_group = [e for e in right_elements if e.name == element.name]
