@@ -1,4 +1,4 @@
-FROM registry-1.docker.io/gardenerci/cc-job-image-base:0.49.0
+FROM registry-1.docker.io/gardenerci/cc-job-image-base:0.50.0
 COPY --from=gcr.io/kaniko-project/executor:latest /kaniko/executor /kaniko/executor.tmp
 
 RUN pip3 install --upgrade \
