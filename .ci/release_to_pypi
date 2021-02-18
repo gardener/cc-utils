@@ -11,6 +11,7 @@ username="$(${model_element_cmd} --key credentials.username)"
 passwd="$(${model_element_cmd} --key credentials.passwd)"
 
 set -x
+pip3 install --upgrade twine
 
 # upload to pypi
 twine upload --user "${username}" --password "${passwd}" "${out_dir}"/*
