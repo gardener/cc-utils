@@ -3,12 +3,14 @@
 set -e
 
 out_dir="$(readlink -f "${repo_dir}/../${PYPI_PATH}/dist")"
+echo "out-dir: ${out_dir}"
 
 model_element_cmd="cli.py config model_element --cfg-type pypi --cfg-name gardener"
 
 username="$(${model_element_cmd} --key credentials.username)"
 passwd="$(${model_element_cmd} --key credentials.passwd)"
 
+set -x
 
 # upload to pypi
 twine upload --user "${username}" --password "${passwd}" "${out_dir}"/*
