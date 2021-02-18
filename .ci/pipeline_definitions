@@ -19,7 +19,7 @@ cc-utils:
             tag_as_latest: True
             inputs:
               steps:
-                release_to_pypi: ~
+                build_python_packages: ~
             resource_labels:
               - name: 'cloud.cnudie/examples'
                 value: 'this is an example label (btw: value may be also e.g. a dict)'
@@ -75,19 +75,15 @@ cc-utils:
       steps:
         test: ~
         lint: ~
-        release_to_pypi:
+        build_python_packages:
           depends: ['test', 'lint']
           output_dir: 'pypi'
+        release_to_pypi:
+          trait_depends: ['release']
+          inputs:
+            'pypi': 'pypi'
         generate_documentation:
           publish_to: ['gh_pages']
-      traits:
-        <<: *release_traits
-
-    force_release_job_image:
-      <<: *gh_pages_repo
-      steps:
-        release_to_pypi:
-          output_dir: 'pypi'
       traits:
         <<: *release_traits
 

@@ -2,21 +2,7 @@
 
 set -e
 
-repo_dir="$(readlink -f "$(dirname "$0")/..")"
 out_dir="$(readlink -f "${repo_dir}/../${PYPI_PATH}/dist")"
-mkdir "${out_dir}"
-
-cd $repo_dir
-
-# install build-only dependencies (no need to include in image)
-pip3 install --upgrade pip twine wheel setuptools
-
-# build into "${repo_dir}/dist"
-python3 "${repo_dir}/setup.oci.py" sdist bdist_wheel
-python3 "${repo_dir}/setup.base.py" sdist bdist_wheel
-python3 "${repo_dir}/setup.py" sdist bdist_wheel
-python3 "${repo_dir}/setup.whd.py" sdist bdist_wheel
-python3 "${repo_dir}/setup.gardenlinux.py" sdist bdist_wheel
 
 model_element_cmd="cli.py config model_element --cfg-type pypi --cfg-name gardener"
 
@@ -25,19 +11,4 @@ passwd="$(${model_element_cmd} --key credentials.passwd)"
 
 
 # upload to pypi
-twine upload --user "${username}" --password "${passwd}" dist/*
-# keep for subsequent docker build
-cp dist/* ${out_dir}
-
-
-###############################
-# gardener-cicd-cli
-
-cli_dir="${repo_dir}/cli"
-cd "${cli_dir}"
-python3 "${cli_dir}/setup.py" sdist bdist_wheel
-
-# upload to pypi
-twine upload --user "${username}" --password "${passwd}" dist/*
-# keep for subsequent docker build
-cp dist/* ${out_dir}
+twine upload --user "${username}" --password "${passwd}" "${out_dir}"/*
