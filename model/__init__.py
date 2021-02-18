@@ -236,6 +236,7 @@ class ConfigFactory:
             if cfg_type_name in self._cfg_type_cache:
                 element_type = self._cfg_type_cache[cfg_type_name]
             else:
+                print(f'{self._cfg_type_cache=}')
                 raise ValueError(f'failed to find cfg type: {cfg_type.cfg_type()=}')
 
         # for now, let's assume all of our model element types are subtypes of NamedModelElement
