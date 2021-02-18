@@ -123,27 +123,21 @@ def diff_labels(
         l for l in right_labels if l.name not in left_label_name_to_label.keys()
     ]
     label_pairs_changed = []
-    for left_group, right_group in _enumerate_group_pairs(
+    for left_label, right_label in _enumerate_group_pairs(
         left_elements=left_labels,
         right_elements=right_labels,
+        unique_name=True,
     ):
-        if len(left_group) == 1 and len(right_group) == 1:
-            if left_group[0].value == right_group[0].value:
-                continue
-            else:
-                label_pairs_changed.append(
-                    (left_group[0], right_group[0]),
-                )
+        if left_label.value == right_label.value:
+            continue
         else:
-            raise ValueError('only one label with the same name is allowed')
+            label_pairs_changed.append((left_label, right_label))
 
-    label_diff = LabelDiff(
+    return LabelDiff(
         labels_only_left=labels_only_left,
         labels_only_right=labels_only_right,
         label_pairs_changed=label_pairs_changed,
     )
-
-    return label_diff
 
 
 def diff_components(
@@ -207,7 +201,11 @@ def diff_components(
 def _enumerate_group_pairs(
     left_elements: typing.Sequence[typing.Union[cm.Resource, cm.ComponentSource, cm.Label]],
     right_elements: typing.Sequence[typing.Union[cm.Resource, cm.ComponentSource, cm.Label]],
-) -> typing.Generator[typing.Tuple[typing.List[cm.Resource], typing.List[cm.Resource]], None, None]:
+    unique_name: bool = False,
+) -> typing.Union[
+        typing.Generator[typing.Tuple[typing.List, typing.List], None, None],
+        typing.Generator[typing.Tuple, None, None],
+]:
     # group the resources with the same name on both sides
     for element in left_elements:
         right_elements_group = [e for e in right_elements if e.name == element.name]
@@ -218,7 +216,16 @@ def _enumerate_group_pairs(
             continue
         else:
             left_elements_group = [e for e in left_elements if e.name == element.name]
-            yield (left_elements_group, right_elements_group)
+
+            if unique_name:
+                if len(left_elements_group) == 1 and len(right_elements_group) == 1:
+                    yield (left_elements_group[0], right_elements_group[0])
+                else:
+                    raise RuntimeError(
+                        f'Element name "{element.name}"" is not unique at least one list. '
+                        f'{len(left_elements_group)=} {len(right_elements_group)=}')
+            else:
+                yield (left_elements_group, right_elements_group)
 
 
 @dataclasses.dataclass
