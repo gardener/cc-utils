@@ -75,6 +75,7 @@ else:
 # XXX ugly hack: early-import so we survive kaniko's rampage (will purge container during build)
 import ccc.secrets_server
 import model.container_registry
+import model.elasticsearch
 import concurrent.futures
 import concurrent.futures.thread
 
