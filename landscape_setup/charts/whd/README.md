@@ -1,1 +1,0 @@
-Helm chart for our webhook-dispatcher component.

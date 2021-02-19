@@ -16,7 +16,6 @@
 import os
 
 import kube.ctx
-import landscape_setup.concourse as setup_concourse
 
 from ci.util import (
     ctx,
@@ -194,16 +193,6 @@ def trigger_resource_check(
         pipeline_name=pipeline_name,
         resource_name=resource_name,
     )
-
-
-def set_teams(
-    config_name: CliHint(typehint=str, help='the cfg_set name to use'),
-):
-    config_factory = ctx().cfg_factory()
-    config_set = config_factory.cfg_set(cfg_name=config_name)
-    config = config_set.concourse()
-
-    setup_concourse.set_teams(config=config)
 
 
 def start_worker_resurrector(
