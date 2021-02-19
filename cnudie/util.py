@@ -206,6 +206,10 @@ def _enumerate_group_pairs(
         typing.Generator[typing.Tuple[typing.List, typing.List], None, None],
         typing.Generator[typing.Tuple, None, None],
 ]:
+    '''Groups elements of two sequences with the same name.
+
+    Can be used for Resources, Sources and Label
+    '''
     # group the resources with the same name on both sides
     for element in left_elements:
         right_elements_group = [e for e in right_elements if e.name == element.name]
