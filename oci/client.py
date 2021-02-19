@@ -423,6 +423,9 @@ class Client:
                 url=self.routes.manifest_url(image_reference=image_reference),
                 image_reference=image_reference,
                 scope=scope,
+                headers={
+                    'Accept': 'application/vnd.docker.distribution.manifest.v2+json',
+                },
             )
         except requests.exceptions.HTTPError as he:
             if he.response.status_code == 404:
