@@ -19,6 +19,8 @@ import logging
 import tabulate
 import typing
 
+import dacite
+
 import ccc.gcp
 import ccc.protecode
 import cnudie.retrieve
@@ -112,11 +114,19 @@ def upload_grouped_images(
                 return False
 
             # check for scanning labels on resource in cd
-            if label := resource.find_label(name=dso.labels.ScanLabelName.BINARY_ID.value):
-                return label.value['policy'] is dso.labels.ScanPolicy.SCAN
-            elif label := resource.find_label(name=dso.labels.ScanLabelName.BINARY_SCAN.value):
-                logger.warning(f'deprecated {label.name=}')
-                return label.value['policy'] is dso.labels.ScanPolicy.SCAN
+            if (
+                (label := resource.find_label(name=dso.labels.ScanLabelName.BINARY_ID.value))
+                or (label := resource.find_label(name=dso.labels.ScanLabelName.BINARY_SCAN.value))
+            ):
+                if label.name == dso.labels.ScanLabelName.BINARY_SCAN.value:
+                    logger.warning(f'deprecated {label.name=}')
+                else:
+                    scanning_hint = dacite.from_dict(
+                        data_class=dso.labels.BinaryScanHint,
+                        data=label.value,
+                        config=dacite.Config(cast=[dso.labels.ScanPolicy]),
+                    )
+                    return scanning_hint.policy is dso.labels.ScanPolicy.SCAN
             else:
                 return True
 
