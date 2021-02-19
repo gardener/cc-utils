@@ -90,10 +90,6 @@ os.link(
   (ca_certs_bak := os.path.join('/', 'kaniko', 'ca-certificates.crt')),
 )
 
-# HACK remove '/usr/lib' and '/cc/utils' to avoid pip from failing in the first stage of builds
-shutil.rmtree(path=os.path.join('/', 'usr', 'lib'), ignore_errors=True)
-shutil.rmtree(path=os.path.join('/', 'cc', 'utils'), ignore_errors=True)
-
 # XXX final hack (I hope): cp entire python-dir
 import sys
 import shutil
@@ -110,6 +106,11 @@ python_lib_dir = os.path.join(lib_dir, f'python{sys.version_info.major}.{sys.ver
 python_bak_dir = os.path.join('/', 'kaniko', 'python.bak')
 if os.path.isdir(python_lib_dir):
    shutil.copytree(python_lib_dir, python_bak_dir)
+
+# HACK remove '/usr/lib' and '/cc/utils' to avoid pip from failing in the first stage of builds
+shutil.rmtree(path=os.path.join('/', 'usr', 'lib'), ignore_errors=True)
+shutil.rmtree(path=os.path.join('/', 'cc', 'utils'), ignore_errors=True)
+
 
 res = subprocess.run(
   [
