@@ -226,19 +226,6 @@ def replicate_artifact(
     )
 
 
-def put_image_manifest(
-    image_reference: str, # including tag
-    manifest: om.OciImageManifest,
-    credentials_lookup: oa.credentials_lookup,
-):
-    contents = json.dumps(dataclasses.asdict(manifest)).encode('utf-8')
-    _ou._put_raw_image_manifest(
-        image_reference=image_reference,
-        raw_contents=contents,
-        credentials_lookup=credentials_lookup,
-    )
-
-
 @deprecated.deprecated
 def retrieve_container_image(
     image_reference: str,

@@ -237,38 +237,6 @@ def _push_image(
         raise e
 
 
-def _put_raw_image_manifest(
-    image_reference: str,
-    raw_contents: bytes,
-    credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
-):
-    image_name = docker_name.from_string(image_reference)
-
-    push_sess = docker_session.Push(
-        name=image_name,
-        creds=_mk_credentials(
-            image_reference=image_reference,
-            credentials_lookup=credentials_lookup,
-            privileges=oa.Privileges.READWRITE,
-        ),
-        transport=_mk_transport_pool(),
-    )
-
-    class ImageMock:
-        def digest(self):
-            return image_name.tag
-
-        def manifest(self):
-            return raw_contents
-
-        def media_type(self):
-            return docker_http.MANIFEST_SCHEMA2_MIME
-
-    image_mock = ImageMock()
-
-    push_sess._put_manifest(image=image_mock, use_digest=True)
-
-
 def _pull_image(
     image_reference: str,
     credentials_lookup: typing.Callable[[image_reference, oa.Privileges, bool], oa.OciConfig],
