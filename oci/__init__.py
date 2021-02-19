@@ -223,7 +223,6 @@ def replicate_artifact(
     client.put_manifest(
         image_reference=tgt_image_reference,
         manifest=raw_manifest,
-        schema_version=om.OciManifestSchemaVersion(schema_version),
     )
 
 
