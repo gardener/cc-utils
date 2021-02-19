@@ -1,5 +1,7 @@
+FROM gcr.io/kaniko-project/executor:latest as kaniko
+COPY --from=kaniko /kaniko/executor /kaniko/executor.tmp
+
 FROM registry-1.docker.io/gardenerci/cc-job-image-base:0.50.0
-COPY --from=gcr.io/kaniko-project/executor:latest /kaniko/executor /kaniko/executor.tmp
 
 COPY . /cc/utils/
 
