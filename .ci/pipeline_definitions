@@ -62,6 +62,9 @@ cc-utils:
               image: 'eu.gcr.io/gardener-project/cc/job-image-kaniko'
               dockerfile: 'Dockerfile.kaniko'
               tag_as_latest: False
+              inputs:
+                steps:
+                  build_python_packages: ~
 
     pull-request:
       steps:
