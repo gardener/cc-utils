@@ -4,7 +4,8 @@ import typing
 
 import requests
 
-OCI_MANIFEST_SCHEMA_V2_MIME = 'application/vnd.docker.distribution.manifest.v2+json'
+OCI_MANIFEST_SCHEMA_V2_MIME = 'application/vnd.oci.image.manifest.v1+json'
+DOCKER_MANIFEST_SCHEMA_V2_MIME = 'application/vnd.docker.distribution.manifest.v2+json'
 empty_dict = dataclasses.field(default_factory=dict)
 
 

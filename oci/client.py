@@ -418,13 +418,16 @@ class Client:
     ):
         scope = _scope(image_reference=image_reference, action='pull')
 
+        # be backards-compatible, and also accept (legacy) docker-mimetype
+        accept = f'{om.OCI_MANIFEST_SCHEMA_V2_MIME}, {om.DOCKER_MANIFEST_SCHEMA_V2_MIME}'
+
         try:
             res = self._request(
                 url=self.routes.manifest_url(image_reference=image_reference),
                 image_reference=image_reference,
                 scope=scope,
                 headers={
-                    'Accept': 'application/vnd.docker.distribution.manifest.v2+json',
+                    'Accept': accept,
                 },
             )
         except requests.exceptions.HTTPError as he:
