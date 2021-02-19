@@ -49,6 +49,8 @@ cc-utils:
       steps:
         test: ~
         lint: ~
+        build_python_packages:
+          output_dir: 'pypi'
       traits:
         notifications:
           default:
