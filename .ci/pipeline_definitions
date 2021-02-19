@@ -28,6 +28,9 @@ cc-utils:
             image: 'eu.gcr.io/gardener-project/cc/job-image-kaniko'
             dockerfile: 'Dockerfile.kaniko'
             tag_as_latest: True
+            inputs:
+              steps:
+                build_python_packages: ~
       release:
         nextversion: 'bump_minor'
         release_callback: '.ci/bump_job_image_version.py'
