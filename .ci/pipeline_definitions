@@ -59,6 +59,14 @@ cc-utils:
         publish:
           oci-builder: 'kaniko'
           dockerimages:
+            job-image:
+              registry: 'docker_io_write'
+              image: 'registry-1.docker.io/gardenerci/cc-job-image'
+              dockerfile: 'Dockerfile'
+              tag_as_latest: False
+              inputs:
+                steps:
+                  build_python_packages: ~
             kaniko-image:
               registry: 'gcr-readwrite'
               image: 'eu.gcr.io/gardener-project/cc/job-image-kaniko'
