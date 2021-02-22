@@ -151,6 +151,7 @@ def publish_container_image_from_kaniko_tarfile(
     oci_client: oc.Client,
     image_reference: str,
     additional_tags: typing.List[str]=(),
+    manifest_mimetype: str=om.OCI_MANIFEST_SCHEMA_V2_MIME,
 ):
     image_reference = ou.normalise_image_reference(image_reference=image_reference)
     image_name = image_reference.rsplit(':', 1)[0]
@@ -167,8 +168,12 @@ def publish_container_image_from_kaniko_tarfile(
                 max_chunk=chunk_size,
             )
 
+        # optionally patch manifest's mimetype (e.g. required for docker-hub)
+        manifest_dict = dataclasses.asdict(image.oci_manifest())
+        manifest_dict['mediaType'] = manifest_mimetype
+
         manifest_bytes = json.dumps(
-            dataclasses.asdict(image.oci_manifest())
+            manifest_dict,
         ).encode('utf-8')
 
         for tgt_ref in image_references:
