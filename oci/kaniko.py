@@ -154,7 +154,7 @@ class _KanikoImageReadCtx:
     return oci.model.OciImageManifest(
       config=oci.model.OciBlobRef(
         digest=cfg.digest_str(),
-        mediaType='application/json',
+        mediaType='application/vnd.docker.container.image.v1+json',
         size=cfg.size,
       ),
       layers=[
