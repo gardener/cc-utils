@@ -34,6 +34,8 @@ import subprocess
 
 import ccc.oci
 import oci
+import oci.model as om
+import oci.util as ou
 
 import shutil
 
@@ -147,10 +149,16 @@ if not os.path.exists(python_lib_dir):
 additional_tags = ${image_descriptor.additional_tags()}
 print(f'publishing to {image_ref=}, {additional_tags=}')
 
+if ou.normalise_image_reference(image_reference=image_ref).startswith('registry-1.docker'):
+  manifest_mimetype = om.DOCKER_MANIFEST_SCHEMA_V2_MIME
+else:
+  manifest_mimetype = om.OCI_MANIFEST_SCHEMA_V2_MIME
+
 oci.publish_container_image_from_kaniko_tarfile(
   image_tarfile_path=image_outfile,
   oci_client=oci_client,
   image_reference=image_ref,
   additional_tags=additional_tags,
+  manifest_mimetype=manifest_mimetype,
 )
 </%def>
