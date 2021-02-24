@@ -14,10 +14,12 @@
 # limitations under the License.
 
 import json
+import logging
 import typing
 
 from ensure import ensure_annotations
 
+import ci.log
 from .routes import (
     ConcourseApiRoutesBase,
     ConcourseApiRoutesV5,
@@ -45,6 +47,8 @@ from model.concourse import (
 from http_requests import AuthenticatedRequestBuilder
 from ci.util import not_empty
 
+ci.log.configure_default_logging()
+logger = logging.getLogger(__name__)
 
 # Hard coded oauth user and password
 # https://github.com/concourse/fly/blob/f4592bb32fe38f54018c2f9b1f30266713882c54/commands/login.go#L143
@@ -62,6 +66,8 @@ class ConcourseApiFactory:
         verify_ssl: str,
         concourse_api_version: ConcourseApiVersion,
     ):
+        logger.info(f'created client w/ {base_url=}')
+
         request_builder = AuthenticatedRequestBuilder(
             basic_auth_username=AUTH_TOKEN_REQUEST_USER,
             basic_auth_passwd=AUTH_TOKEN_REQUEST_PWD,
