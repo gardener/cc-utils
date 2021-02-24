@@ -572,12 +572,14 @@ def greatest_references(
             yield matching_refs[-1]
 
 
-def greatest_component_version(component_name: str, ctx_repo_base_url: str) -> str:
+def greatest_component_version(
+    component_name: str, ctx_repo_base_url: str, ignore_dev_versions: bool=False,
+) -> str:
     image_tags = component_versions(
         component_name=component_name,
         ctx_repo_base_url=ctx_repo_base_url,
     )
-    return version.find_latest_version(image_tags)
+    return version.find_latest_version(image_tags, ignore_dev_versions)
 
 
 def greatest_version_before(

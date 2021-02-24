@@ -89,6 +89,7 @@ def test_determine_reference_versions():
         product_mock.latest_component_version.assert_called_with(
             component_name=component_name,
             ctx_repo_base_url=base_url,
+            ignore_dev_versions=False,
         )
 
         product_mock.latest_component_version.reset_mock()
@@ -102,6 +103,7 @@ def test_determine_reference_versions():
         product_mock.latest_component_version.assert_called_with(
             component_name=component_name,
             ctx_repo_base_url=base_url,
+            ignore_dev_versions=False,
         )
 
     # Case 2: Upstream component defined
@@ -130,6 +132,7 @@ def test_determine_reference_versions():
             component_name=component_name,
             upstream_component_name='example.org/foo/bar',
             base_url=base_url,
+            ignore_dev_versions=False,
         )
 
         upstream_version_mock.reset_mock()
@@ -145,6 +148,7 @@ def test_determine_reference_versions():
             component_name=component_name,
             upstream_component_name='example.org/foo/bar',
             base_url=base_url,
+            ignore_dev_versions=False,
         )
 
         upstream_version_mock.reset_mock()
@@ -166,6 +170,7 @@ def test_determine_reference_versions():
                 component_name=component_name,
                 upstream_component_name='example.org/foo/bar',
                 base_url=base_url,
+                ignore_dev_versions=False,
             )
             product_mock.greatest_component_version_with_matching_minor.assert_called_once_with(
                 component_name=component_name,

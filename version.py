@@ -211,7 +211,7 @@ def process_version(
     return processed_version
 
 
-def find_latest_version(versions) -> str:
+def find_latest_version(versions, ignore_dev_versions=False) -> str:
     latest_candidate = None
     latest_candidate_str = None
 
@@ -221,6 +221,8 @@ def find_latest_version(versions) -> str:
         else:
             candidate_semver = candidate
 
+        if ignore_dev_versions and candidate_semver.prerelease != None:
+            continue
         if not latest_candidate:
             latest_candidate = candidate_semver
             latest_candidate_str = candidate
