@@ -14,12 +14,17 @@ component_descriptor_v2_path = os.path.join(
     job_step.input('component_descriptor_dir'),
     cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
 )
+ctf_path = os.path.join(
+  job_step.input('component_descriptor_dir'),
+  product.v2.CTF_OUT_DIR_NAME,
+)
 %>
 import version
 import pathlib
 
 import ci.util
 import ccc.github
+import cnudie.util
 import gci.componentmodel as cm
 
 from gitutil import GitHelper
@@ -46,9 +51,26 @@ processed_version = version.process_version(
 )
 
 repo_dir = ci.util.existing_dir('${repo.resource_name()}')
-component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
-    ci.util.parse_yaml_file('${component_descriptor_v2_path}'),
-)
+
+have_ctf = os.path.exists('${ctf_path}')
+have_cd = os.path.exists('${component_descriptor_v2_path}')
+if not have_ctf ^ have_cd:
+    ci.util.fail('exactly one of component-descriptor, or ctf-archive must exist')
+elif have_cd:
+    component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
+        ci.util.parse_yaml_file('${component_descriptor_v2_path}'),
+    )
+elif have_ctf:
+    component_descriptors = list(cnudie.util.component_descriptors_from_ctf_archive(
+        '${ctf_path}',
+    ))
+    if not component_descriptors:
+        ci.util.fail(f'No component descriptor found in CTF archive at ${ctf_path})
+    if len(component_descriptors) > 1:
+        ci.util.fail(
+            f'More than one component descriptor found in CTF archive at ${ctf_path}'
+        )
+    component_descriptor_v2 = component_descriptors[0]
 
 github_cfg = ccc.github.github_cfg_for_hostname('${repo.repo_hostname()}')
 
