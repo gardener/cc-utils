@@ -170,6 +170,53 @@ class UploadMode(enum.Enum):
     OVERWRITE = 'overwrite'
 
 
+def write_component_descriptor_to_dir(
+    component_descriptor: gci.componentmodel.ComponentDescriptor,
+    cache_dir: str,
+    on_exist=UploadMode.SKIP,
+    ctx_repo_base_url: str=None, # if none, use current from component-descriptor
+):
+    if not os.path.isdir(cache_dir):
+        raise ValueError(f'not a directory: {cache_dir=}')
+
+    if not ctx_repo_base_url:
+        ctx_repo_base_url = component_descriptor.component.current_repository_ctx().baseUrl
+
+    component = component_descriptor.component
+    descriptor_path = os.path.join(
+        cache_dir,
+        ctx_repo_base_url.replace('/', '-'),
+        f'{component.name}-{component.version}',
+    )
+
+    if os.path.isfile(descriptor_path):
+        if on_exist is UploadMode.SKIP:
+            return component_descriptor,
+        elif on_exist is UploadMode.FAIL:
+            raise ValueError(f'already exists: {descriptor_path=}, but overwrite not allowed')
+        elif on_exist is UploadMode.OVERWRITE:
+            pass
+        else:
+            raise NotImplementedError(on_exist)
+
+    if not os.path.isdir((pdir := os.path.dirname(descriptor_path))):
+        os.makedirs(pdir, exist_ok=True)
+
+    try:
+        f = tempfile.NamedTemporaryFile(mode='w', delete=False)
+        # write to tempfile, followed by a mv to avoid collisions through concurrent
+        # processes or threads (assuming mv is an atomic operation)
+        yaml.dump(
+            data=dataclasses.asdict(component_descriptor),
+            Dumper=cm.EnumValueYamlDumper,
+            stream=f.file,
+        )
+        shutil.move(f.name, descriptor_path)
+    except:
+        os.unlink(f.name)
+        raise
+
+
 def upload_component_descriptor_v2_to_oci_registry(
     component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
     on_exist=UploadMode.SKIP,
