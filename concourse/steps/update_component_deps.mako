@@ -19,7 +19,7 @@ upstream_update_policy = update_component_deps_trait.upstream_update_policy()
 component_descriptor_trait = job_variant.trait('component_descriptor')
 ctx_repo_base_url = component_descriptor_trait.ctx_repository_base_url()
 %>
-
+import logging
 import os
 import subprocess
 import sys
@@ -30,6 +30,8 @@ import ctx
 import gci.componentmodel
 import github.util
 import gitutil
+
+logger = logging.getLogger('step.update_component_deps')
 
 
 from github.util import (
@@ -71,7 +73,7 @@ merge_policy_and_filters = {
 upstream_component_name = os.environ.get('UPSTREAM_COMPONENT_NAME', None)
 UPGRADE_TO_UPSTREAM = bool(upstream_component_name)
 
-ci.util.info(f'{UPGRADE_TO_UPSTREAM=}')
+logger.info(f'{UPGRADE_TO_UPSTREAM=}')
 
 pull_request_util = github.util.PullRequestUtil(
     owner=REPO_OWNER,
@@ -93,7 +95,7 @@ git_helper.rebase(
 upgrade_pull_requests = pull_request_util.enumerate_upgrade_pull_requests(state_filter='all')
 
 own_component = current_component()
-print('{own_component=}')
+logger.info(f'{own_component=}')
 
 close_obsolete_pull_requests(
     upgrade_pull_requests=upgrade_pull_requests,
