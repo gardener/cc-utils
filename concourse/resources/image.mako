@@ -9,7 +9,6 @@ credentials = registry_cfg.credentials()
     username: '${credentials.username()}'
     password: '${credentials.passwd()}'
     repository: ${image_reference}
-    registry_mirror: 'https://mirror.gcr.io'
 </%def>
 <%def name="task_image_resource(registry_cfg, image_repository, image_tag, indent=0)"
 filter="indent_func(indent),trim">
