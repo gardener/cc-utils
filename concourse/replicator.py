@@ -303,7 +303,7 @@ class ReplicationResultProcessor:
         if self._job_mapping and \
                 self._job_mapping.cleanup_policy() is CleanupPolicy.NO_CLEANUP:
             self.remove_pipelines = False
-            print('will not cleanup extra pipelines due to policy')
+            logging.info(f'{job_mapping=} will not cleanup extra pipelines due to policy')
 
     def process_results(self, results):
         # collect pipelines by concourse target (concourse_cfg, team_name) as key
