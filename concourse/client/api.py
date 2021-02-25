@@ -66,7 +66,8 @@ class ConcourseApiFactory:
         verify_ssl: str,
         concourse_api_version: ConcourseApiVersion,
     ):
-        logger.info(f'created client w/ {base_url=}')
+        # disable logging output for now (breaks template in lss)
+        # logger.info(f'created client w/ {base_url=}')
 
         request_builder = AuthenticatedRequestBuilder(
             basic_auth_username=AUTH_TOKEN_REQUEST_USER,
