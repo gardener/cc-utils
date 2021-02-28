@@ -31,7 +31,7 @@ Run `.ci/install_git_hooks` to register recommended git hooks.
 
 `pip install gardener-cicd-cli` - install CLI
 
-`pip install gardener-cicd-whd` - install Webhook-Dispatcher (not supported on NT)
+`pip install gardener-cicd-whd` - install Webhook-Dispatcher
 
 ### Consume from Container Image
 
