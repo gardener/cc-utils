@@ -33,7 +33,9 @@ pydash<5.0.0
 pymongo
 pytest
 python-dateutil
+python-keystoneclient
 python-magic
+python-swiftclient
 pyyaml<6.0.0
 requests<3.0.0
 requests_toolbelt<1
