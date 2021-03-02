@@ -13,35 +13,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import re
-
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from urllib.parse import urlparse
 import functools
-
-import yaml
+import logging
+import os
+import re
 
 from github3.exceptions import NotFoundError
+import yaml
 
 from ci.util import (
     LintingError,
     fail,
-    info,
     lint_yaml,
     load_yaml,
     merge_dicts,
     not_empty,
     not_none,
     parse_yaml_file,
-    warning,
-    verbose,
 )
 from model.base import ModelBase, NamedModelElement
 from concourse.factory import RawPipelineDefinitionDescriptor
 import ccc.github
+import ci.log
 import concourse.paths
+
+ci.log.configure_default_logging()
+logger = logging.getLogger(__name__)
 
 
 class JobMappingNotFoundError(ValueError):
@@ -115,7 +115,7 @@ class SimpleFileDefinitionEnumerator(DefinitionEnumerator):
         )
 
     def enumerate_definition_descriptors(self):
-        info('enumerating explicitly specified definition file')
+        logger.info('enumerating explicitly specified definition file')
 
         try:
             definitions = parse_yaml_file(self.definition_file)
@@ -208,7 +208,6 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                 path='branch.cfg',
                 ref='refs/meta/ci',
             ).decoded.decode('utf-8')
-            info(f'Linting branch cfg for {repository}')
             lint_yaml(branch_cfg)
         except NotFoundError:
             return None # no branch cfg present
@@ -223,7 +222,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
             branch_cfg = self._branch_cfg_or_none(repository=repository)
         except LintingError as e:
             # some linting errors (and possibly warnings) present. Print warning and continue
-            warning(e)
+            logger.warning(e)
             return
         if not branch_cfg:
             # fallback for components w/o branch_cfg: use default branch
@@ -281,10 +280,8 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
 
             override_definitions = cfg_entry.override_definitions() if cfg_entry else {}
 
-            verbose('from repo: ' + repository.name + ':' + branch_name)
             try:
                 decoded_definitions = definitions.decoded.decode('utf-8')
-                info(f'Linting pipeline_definitions for {repository} on branch {branch_name}')
                 lint_yaml(decoded_definitions)
                 definitions = load_yaml(decoded_definitions)
 
@@ -386,7 +383,7 @@ class GithubOrganisationDefinitionEnumerator(GithubDefinitionEnumeratorBase):
         for github_org_cfg in self.job_mapping.github_organisations():
             github_cfg = self.cfg_set.github(github_org_cfg.github_cfg_name())
             github_org_name = github_org_cfg.org_name()
-            info('scanning github organisation {gho}'.format(gho=github_org_name))
+            logger.info('scanning github organisation {gho}'.format(gho=github_org_name))
 
             github_api = ccc.github.github_api(github_cfg)
             github_org = github_api.organization(github_org_name)
