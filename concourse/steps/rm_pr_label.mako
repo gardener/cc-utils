@@ -12,10 +12,15 @@ main_repo = job_variant.main_repository()
 pr_id_path = main_repo.pr_id_path()
 %>
 % if require_label:
-from ci.util import ctx, info, warning
+import logging
+
 from github3.exceptions import NotFoundError
 import ccc.github
+import ci.log
 import ci.util
+
+ci.log.configure_default_logging()
+logger = logging.getLogger('step.rm_pr_label')
 
 concourse_cfg = ci.util.ctx().cfg_factory().concourse('${concourse_cfg.name()}')
 github_cfg = ccc.github.github_cfg_for_hostname('${main_repo.repo_hostname()}')
@@ -33,12 +38,12 @@ issue = pull_request.issue()
 try:
   issue.remove_label('${require_label}')
 except NotFoundError:
-  warning("label '${require_label}' was not found on the pull request")
+  logger.warning("label '${require_label}' was not found on the pull request")
 else:
-  info("removed pr-label '${require_label}'")
+  logger.info("removed pr-label '${require_label}'")
 % if replacement_label is not None:
 issue.add_labels('${replacement_label}')
-info("added pr-label '${replacement_label}'")
+logger.info("added pr-label '${replacement_label}'")
 % endif
 % endif
 </%def>
