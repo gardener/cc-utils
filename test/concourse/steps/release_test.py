@@ -177,7 +177,7 @@ class TestPublishReleaseNotesStep(object):
         ctf_path = os.path.join(tmp_path, product.v2.CTF_OUT_DIR_NAME)
         cd_v2 = cm.ComponentDescriptor(
             component=cm.Component(
-                name='a_name',
+                name='example.com/a_name',
                 version='1.2.3',
                 repositoryContexts=[],
                 provider=cm.Provider.INTERNAL,
@@ -202,12 +202,16 @@ class TestPublishReleaseNotesStep(object):
                 repo_name='test_name',
                 branch='master',
             ),
+            repository_hostname="example.com",
+            repository_path="a_name",
             repo_dir=str(tmp_path),
             release_version='1.0.0',
         ):
             return concourse.steps.release.PublishReleaseNotesStep(
                 github_helper=github_helper,
                 githubrepobranch=githubrepobranch,
+                repository_hostname=repository_hostname,
+                repository_path=repository_path,
                 repo_dir=repo_dir,
                 release_version=release_version,
                 component_descriptor_v2_path=component_descriptor_v2,

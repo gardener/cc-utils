@@ -71,6 +71,8 @@ release_and_prepare_next_dev_cycle(
   % endif
   rebase_before_release=${release_trait.rebase_before_release()},
   githubrepobranch=githubrepobranch,
+  repo_hostname='${repo.repo_hostname()}',
+  repo_path='${repo.repo_path()}',
   repo_dir=repo_dir,
   repository_version_file_path='${version_trait.versionfile_relpath()}',
   release_version=version_str,

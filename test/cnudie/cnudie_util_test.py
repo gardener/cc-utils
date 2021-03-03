@@ -13,10 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
 import pytest
-import cnudie.util
+import tarfile
+import typing
 
+import cnudie.util
 import gci.componentmodel as cm
+import gci.oci
 
 # functions under test
 diff_components = cnudie.util.diff_components
@@ -33,7 +37,46 @@ def cid():
 
 
 def comp(name, version) -> cm.Component:
-    return cm.Component(name, version, [],[],[],[],[],[])
+    return cm.Component(
+        name=name,
+        version=version,
+        provider=cm.Provider.INTERNAL,
+        repositoryContexts=[],
+        componentReferences=[],
+        sources=[],
+        resources=[],
+        labels=[],
+    )
+
+
+def comp_desc(name, version) -> cm.ComponentDescriptor:
+    return cm.ComponentDescriptor(
+        meta=cm.Metadata(),
+        component=comp(name, version),
+    )
+
+
+def create_ctf(
+    output_filename: str,
+    component_descriptors: typing.List[cm.ComponentDescriptor],
+):
+
+    with tarfile.open(output_filename, 'w|') as ctf_tar:
+
+        for component_descriptor in component_descriptors:
+            cd_filename = component_descriptor.component.name.replace('/', '_')
+            comp_fileobj = gci.oci.component_descriptor_to_tarfileobj(component_descriptor)
+
+            tinfo = tarfile.TarInfo(cd_filename)
+            comp_fileobj.seek(0, io.SEEK_END)
+            tinfo.size = comp_fileobj.tell()
+            comp_fileobj.seek(0)
+            ctf_tar.addfile(
+                tarinfo=tinfo,
+                fileobj=comp_fileobj
+            )
+
+        ctf_tar.close()
 
 
 def image_ref(name, version):
@@ -338,3 +381,129 @@ def test_diff_label():
     with pytest.raises(RuntimeError) as re:
         label_diff = cnudie.util.diff_labels(left_labels=left_labels, right_labels=right_labels)
     assert re != None
+
+
+def test_determine_component_name():
+    component_name = cnudie.util.determine_component_name(
+        repository_hostname='example.com',
+        repository_path='comp_a',
+    )
+    assert component_name == 'example.com/comp_a'
+
+    component_name = cnudie.util.determine_component_name(
+        repository_hostname='example.com',
+        repository_path='Comp_A',
+    )
+    assert component_name == 'example.com/comp_a'
+
+
+def test_main_component_for_single_component_v2(tmpdir):
+    comp_a = comp_desc('example.com/comp_a', 'v0.0.1')
+    v2_path = tmpdir.join('comp_v2')
+    with open(str(v2_path), 'w') as f:
+        comp_a.to_fobj(f)
+        f.close()
+
+    # should return the one component from the component descriptor v2
+    res_comp = cnudie.util.determine_main_component(
+        repository_hostname='example.com',
+        repository_path='comp_a',
+        component_descriptor_v2_path=str(v2_path),
+        ctf_path='',
+    )
+    assert res_comp.component.name == comp_a.component.name
+
+
+def test_main_component_for_single_component_in_ctf(tmpdir):
+    comp_a = comp_desc('example.com/comp_a', 'v0.0.1')
+    ctf_path = tmpdir.join('ctf.tar')
+
+    create_ctf(
+        output_filename=str(ctf_path),
+        component_descriptors=[comp_a],
+    )
+
+    res_comp = cnudie.util.determine_main_component(
+        repository_hostname='example.com',
+        repository_path='comp_a',
+        component_descriptor_v2_path='',
+        ctf_path=str(ctf_path),
+    )
+    assert res_comp.component.name == comp_a.component.name
+
+
+def test_main_component_for_multiple_commponents_in_ctf(tmpdir):
+    comp_a = comp_desc('example.com/comp_a', 'v0.0.1')
+    comp_b = comp_desc('example.com/comp_b', 'v0.0.1')
+    ctf_path = tmpdir.join('ctf.tar')
+
+    create_ctf(
+        output_filename=str(ctf_path),
+        component_descriptors=[comp_a, comp_b],
+    )
+
+    res_comp = cnudie.util.determine_main_component(
+        repository_hostname='example.com',
+        repository_path='comp_b',
+        component_descriptor_v2_path='',
+        ctf_path=str(ctf_path),
+    )
+    assert res_comp.component.name == comp_b.component.name
+
+    res_comp = cnudie.util.determine_main_component(
+        repository_hostname='example.com',
+        repository_path='comp_a',
+        component_descriptor_v2_path='',
+        ctf_path=str(ctf_path),
+    )
+    assert res_comp.component.name == comp_a.component.name
+
+
+def test_components_for_single_component_v2(tmpdir):
+    comp_a = comp_desc('example.com/comp_a', 'v0.0.1')
+    v2_path = tmpdir.join('comp_v2')
+    with open(str(v2_path), 'w') as f:
+        comp_a.to_fobj(f)
+        f.close()
+
+    # should return the one component from the component descriptor v2
+    res_comp = cnudie.util.determine_components(
+        component_descriptor_v2_path=str(v2_path),
+        ctf_path='',
+    )
+    assert len(res_comp) == 1
+    assert res_comp[0].component.name == comp_a.component.name
+
+
+def test_components_for_single_component_in_ctf(tmpdir):
+    comp_a = comp_desc('example.com/comp_a', 'v0.0.1')
+    ctf_path = tmpdir.join('ctf.tar')
+
+    create_ctf(
+        output_filename=str(ctf_path),
+        component_descriptors=[comp_a],
+    )
+
+    res_comp = cnudie.util.determine_components(
+        component_descriptor_v2_path='',
+        ctf_path=str(ctf_path),
+    )
+    assert len(res_comp) == 1
+    assert res_comp[0].component.name == comp_a.component.name
+
+
+def test_components_for_multiple_commponents_in_ctf(tmpdir):
+    comp_a = comp_desc('example.com/comp_a', 'v0.0.1')
+    comp_b = comp_desc('example.com/comp_b', 'v0.0.1')
+    ctf_path = tmpdir.join('ctf.tar')
+
+    create_ctf(
+        output_filename=str(ctf_path),
+        component_descriptors=[comp_a, comp_b],
+    )
+
+    res_comp = cnudie.util.determine_components(
+        component_descriptor_v2_path='',
+        ctf_path=str(ctf_path),
+    )
+    assert len(res_comp) == 2

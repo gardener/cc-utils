@@ -1,4 +1,5 @@
 import abc
+import collections
 import logging
 import os
 import subprocess
@@ -576,21 +577,28 @@ class GitHubReleaseStep(TransactionalStep):
 
     def validate(self):
         version.parse_to_semver(self.release_version)
+
         # either cds _XOR_ ctf must exist
         have_ctf = os.path.exists(self.ctf_path)
         have_cd = os.path.exists(self.component_descriptor_v2_path)
         if not have_ctf ^ have_cd:
             ci.util.fail('exactly one of component-descriptor, or ctf-archive must exist')
         elif have_cd:
-            component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
+            self.components = [cm.ComponentDescriptor.from_dict(
                 ci.util.parse_yaml_file(self.component_descriptor_v2_path),
-            )
-            # resolve all referenced components (thus ensure all dependencies are available)
-            tuple(cnudie.retrieve.components(component=component_descriptor_v2))
-            # TODO: more validation (e.g. check for uniqueness of names)
+            )]
         elif have_ctf:
-            # nothing to do, already uploaded in component_descriptor step.
-            pass
+            self.components = tuple(component_descriptors_from_ctf_archive(
+                self.ctf_path,
+            ))
+            if not component_descriptors:
+                ci.util.fail(f'No component descriptor found in CTF archive at {self.ctf_path=}')
+
+        for component_descriptor_v2 in self.components:
+            collections.deque(
+                cnudie.retrieve.components(component=component_descriptor_v2),
+                maxlen=0,
+            )
 
     def apply(
         self,
@@ -633,13 +641,16 @@ class GitHubReleaseStep(TransactionalStep):
                 component_descriptor_v2=component_descriptor_v2,
             )
 
-            with open(self.component_descriptor_v2_path) as f:
-                descriptor_v2_contents = f.read()
+        for component_descriptor_v2 in self.components:
+            descriptor_v2_bytes = io.BytesIO()
+            component_descriptor_v2.to_fobj(descriptor_v2_bytes)
 
+            normalized_component_name = component_descriptor_v2.component.name.replace('/', '_')
+            asset_name = f'{normalized_component_name}.component_descriptor.cnudie.yaml'
             release.upload_asset(
                 content_type='application/x-yaml',
-                name='component_descriptor.cnudie.yaml', # XXX extract into define
-                asset=descriptor_v2_contents,
+                name=asset_name, # XXX extract into define
+                asset=descriptor_v2_bytes.getvalue(),
                 label='component_descriptor.cnudie.yaml',
             )
 
@@ -667,11 +678,15 @@ class PublishReleaseNotesStep(TransactionalStep):
         self,
         githubrepobranch: GitHubRepoBranch,
         github_helper: GitHubRepositoryHelper,
+        repository_hostname: str,
+        repository_path: str,
         component_descriptor_v2_path: str,
         release_version: str,
         ctf_path: str,
         repo_dir: str,
     ):
+        self.repository_hostname = repository_hostname
+        self.repository_path = repository_path
         self.githubrepobranch = not_none(githubrepobranch)
         self.github_helper = not_none(github_helper)
         self.release_version = not_empty(release_version)
@@ -683,25 +698,15 @@ class PublishReleaseNotesStep(TransactionalStep):
         version.parse_to_semver(self.release_version)
         existing_dir(self.repo_dir)
 
-        have_ctf = os.path.exists(self.ctf_path)
-        have_cd = os.path.exists(self.component_descriptor_v2_path)
-        if not have_ctf ^ have_cd:
-            ci.util.fail('exactly one of component-descriptor, or ctf-archive must exist')
-        elif have_cd:
-            self.component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
-            ci.util.parse_yaml_file(self.component_descriptor_v2_path),
-        )
-        elif have_ctf:
-            component_descriptors = list(cnudie.util.component_descriptors_from_ctf_archive(
-                self.ctf_path,
-            ))
-            if not component_descriptors:
-                ci.util.fail(f'No component descriptor found in CTF archive at {self.ctf_path}')
-            if len(component_descriptors) > 1:
-                ci.util.fail(
-                    f'More than one component descriptor found in CTF archive at {self.ctf_path}'
-                )
-            self.component_descriptor_v2 = component_descriptors[0]
+        try:
+            self.component_descriptor_v2 = cnudie.util.determine_main_component(
+                repository_hostname=self.repository_hostname,
+                repository_path=self.repository_path,
+                component_descriptor_v2_path=self.component_descriptor_v2_path,
+                ctf_path=self.ctf_path,
+            )
+        except ValueError as err:
+            ci.util.fail(str(err))
 
     def apply(self):
         create_release_step_output = self.context().step_output('Create Release')
@@ -856,6 +861,8 @@ def release_and_prepare_next_dev_cycle(
     release_commit_publishing_policy: str,
     release_notes_policy: str,
     release_version: str,
+    repository_hostname: str,
+    repository_path: str,
     repo_dir: str,
     repository_version_file_path: str,
     git_tags: list,
@@ -955,6 +962,8 @@ def release_and_prepare_next_dev_cycle(
     publish_release_notes_step = PublishReleaseNotesStep(
         githubrepobranch=githubrepobranch,
         github_helper=github_helper,
+        repository_hostname=repository_hostname,
+        repository_path=repository_path,
         release_version=release_version,
         component_descriptor_v2_path=component_descriptor_v2_path,
         ctf_path=ctf_path,
