@@ -6,6 +6,7 @@ from makoutil import indent_func
 import os
 import concourse.steps.component_descriptor_util as cdu
 import gci.componentmodel
+import product.v2
 version_file = job_step.input('version_path') + '/version'
 repo = job_variant.main_repository()
 draft_release_trait = job_variant.trait('draft_release')
@@ -52,25 +53,13 @@ processed_version = version.process_version(
 
 repo_dir = ci.util.existing_dir('${repo.resource_name()}')
 
-have_ctf = os.path.exists('${ctf_path}')
-have_cd = os.path.exists('${component_descriptor_v2_path}')
-if not have_ctf ^ have_cd:
-    ci.util.fail('exactly one of component-descriptor, or ctf-archive must exist')
-elif have_cd:
-    component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
-        ci.util.parse_yaml_file('${component_descriptor_v2_path}'),
-    )
-elif have_ctf:
-    component_descriptors = list(cnudie.util.component_descriptors_from_ctf_archive(
-        '${ctf_path}',
-    ))
-    if not component_descriptors:
-        ci.util.fail(f'No component descriptor found in CTF archive at ${ctf_path})
-    if len(component_descriptors) > 1:
-        ci.util.fail(
-            f'More than one component descriptor found in CTF archive at ${ctf_path}'
-        )
-    component_descriptor_v2 = component_descriptors[0]
+
+component_descriptor_v2 = cnudie.util.determine_main_component(
+    repository_hostname='${repo.repo_hostname()}',
+    repository_path='${repo.repo_path()}',
+    component_descriptor_v2_path='${component_descriptor_v2_path}',
+    ctf_path='${ctf_path}',
+)
 
 github_cfg = ccc.github.github_cfg_for_hostname('${repo.repo_hostname()}')
 
