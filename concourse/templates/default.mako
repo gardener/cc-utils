@@ -66,7 +66,8 @@ for variant in filter(has_publish_trait, pipeline_definition.variants()):
   publish_trait = variant.trait('publish')
   if publish_trait.oci_builder() is OciBuilder.CONCOURSE_IMAGE_RESOURCE:
     needed_image_resources.extend((d.name() for d in publish_trait.dockerimages()))
-    output_image_descriptors[image_descriptor.name()] = image_descriptor
+    for image_descriptor in publish_trait.dockerimages():
+      output_image_descriptors[image_descriptor.name()] = image_descriptor
 
 # import build steps from cc-utils
 # TODO: make this generic
