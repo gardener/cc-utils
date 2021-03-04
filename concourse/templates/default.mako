@@ -59,7 +59,7 @@ def suppress_parallel_execution(variant):
     return True
   return False
 
-output_image_descriptors = {}
+output_image_descriptors = {} # {variant.name : {'logical-name': descriptor}}
 needed_image_resources = []  # XXX migration-code - rm once fully switched to kaniko
 
 for variant in filter(has_publish_trait, pipeline_definition.variants()):
@@ -68,15 +68,20 @@ for variant in filter(has_publish_trait, pipeline_definition.variants()):
     needed_image_resources.extend((d.name() for d in publish_trait.dockerimages()))
 
   for image_descriptor in publish_trait.dockerimages():
-    if image_descriptor.name() in output_image_descriptors:
-      known_ref = output_image_descriptors[image_descriptor.name()].image_reference()
+    variant_image_descriptors = output_image_descriptors.get(variant.variant_name)
+    if not variant_image_descriptors:
+      output_image_descriptors[variant.variant_name] = {}
+      variant_image_descriptors = output_image_descriptors[variant.variant_name]
+
+    if image_descriptor.name() in variant_image_descriptors:
+      known_ref = variant_image_descriptors[image_descriptor.name()].image_reference()
       if known_ref != image_descriptor.image_reference():
         raise RuntimeError(
           f"Redefinition of image with logical name '{image_descriptor.name()}' in publish trait. "
           f"Expected '{known_ref}' but found '{image_descriptor.image_reference()}'."
         )
 
-    output_image_descriptors[image_descriptor.name()] = image_descriptor
+    variant_image_descriptors[image_descriptor.name()] = image_descriptor
 
 # import build steps from cc-utils
 # TODO: make this generic
@@ -112,8 +117,9 @@ ${include_pull_request_resource_type()}
 resources:
 ${render_repositories(pipeline_definition=pipeline_definition, cfg_set=config_set)}
 
-% for descriptor in output_image_descriptors.values():
-% if descriptor.name() in needed_image_resources:
+% for variant_image_descriptors in output_image_descriptors.values():
+  % for descriptor in variant_image_descriptors.values():
+    % if descriptor.name() in needed_image_resources:
 <%
   custom_registry_cfg_name = descriptor.registry_name()
   if not custom_registry_cfg_name:
@@ -126,7 +132,8 @@ ${container_registry_image_resource(
   image_reference=descriptor.image_reference(),
   registry_cfg=registry_cfg,
 )}
-% endif
+    % endif
+  % endfor
 % endfor
 % for variant in pipeline_definition.variants():
 % if has_cron_trait(variant):
