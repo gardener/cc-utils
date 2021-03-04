@@ -5,36 +5,6 @@ cc-utils:
       - name: 'gh_pages'
         path: 'gardener/cc-utils'
         branch: 'gh-pages'
-    release_traits: &release_traits
-      version:
-        preprocess: 'finalize'
-        inject_effective_version: True
-      publish:
-        oci-builder: 'kaniko'
-        dockerimages:
-          job-image:
-            registry: 'docker_io_write'
-            image: 'registry-1.docker.io/gardenerci/cc-job-image'
-            dockerfile: 'Dockerfile'
-            tag_as_latest: True
-            inputs:
-              steps:
-                build_python_packages: ~
-            resource_labels:
-              - name: 'cloud.cnudie/examples'
-                value: 'this is an example label (btw: value may be also e.g. a dict)'
-          kaniko-image:
-            registry: 'gcr-readwrite'
-            image: 'eu.gcr.io/gardener-project/cc/job-image-kaniko'
-            dockerfile: 'Dockerfile.kaniko'
-            tag_as_latest: True
-            inputs:
-              steps:
-                build_python_packages: ~
-      release:
-        nextversion: 'bump_minor'
-        release_callback: '.ci/bump_job_image_version.py'
-        release_notes_policy: disabled
 
   background_image: https://media1.giphy.com/media/VkMV9TldsPd28/giphy.gif
   template: 'default'
@@ -100,7 +70,35 @@ cc-utils:
         generate_documentation:
           publish_to: ['gh_pages']
       traits:
-        <<: *release_traits
+        version:
+          preprocess: 'finalize'
+          inject_effective_version: True
+        publish:
+          oci-builder: 'kaniko'
+          dockerimages:
+            job-image:
+              registry: 'docker_io_write'
+              image: 'registry-1.docker.io/gardenerci/cc-job-image'
+              dockerfile: 'Dockerfile'
+              tag_as_latest: True
+              inputs:
+                steps:
+                  build_python_packages: ~
+              resource_labels:
+                - name: 'cloud.cnudie/examples'
+                  value: 'this is an example label (btw: value may be also e.g. a dict)'
+            kaniko-image:
+              registry: 'gcr-readwrite'
+              image: 'eu.gcr.io/gardener-project/cc/job-image-kaniko'
+              dockerfile: 'Dockerfile.kaniko'
+              tag_as_latest: True
+              inputs:
+                steps:
+                  build_python_packages: ~
+        release:
+          nextversion: 'bump_minor'
+          release_callback: '.ci/bump_job_image_version.py'
+          release_notes_policy: disabled
 
     create_upgrade_prs:
       traits:
