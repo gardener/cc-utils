@@ -63,4 +63,4 @@ def update_repository_pipelines(
 
     logger.info('awaiting replication-results')
     result = replicator.replicate()
-    logger.infor(f'{result=}')
+    logger.info(f'{result=}')
