@@ -66,16 +66,6 @@ for variant in filter(has_publish_trait, pipeline_definition.variants()):
   publish_trait = variant.trait('publish')
   if publish_trait.oci_builder() is OciBuilder.CONCOURSE_IMAGE_RESOURCE:
     needed_image_resources.extend((d.name() for d in publish_trait.dockerimages()))
-
-  for image_descriptor in publish_trait.dockerimages():
-    if image_descriptor.name() in output_image_descriptors:
-      known_ref = output_image_descriptors[image_descriptor.name()].image_reference()
-      if known_ref != image_descriptor.image_reference():
-        raise RuntimeError(
-          f"Redefinition of image with logical name '{image_descriptor.name()}' in publish trait. "
-          f"Expected '{known_ref}' but found '{image_descriptor.image_reference()}'."
-        )
-
     output_image_descriptors[image_descriptor.name()] = image_descriptor
 
 # import build steps from cc-utils
