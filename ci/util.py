@@ -416,10 +416,8 @@ def lint_yaml(input, config={'extends': 'relaxed'}):
     if not linting_result.has_problems():
         return
 
-    if linting_result.max_level() <= yamllint.linter.PROBLEM_LEVELS['warning']:
-        warning(f'Found some problems while linting:\n{linting_result}')
-    else:
-        raise LintingError(f'Found some errors while linting. \n{linting_result}')
+    if linting_result.max_level() > yamllint.linter.PROBLEM_LEVELS['warning']:
+        raise LintingError(f'linter found errors {linting_result=}')
 
 
 def random_str(prefix=None, length=12):
