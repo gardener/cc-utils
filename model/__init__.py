@@ -7,6 +7,7 @@ import sys
 import urllib.parse
 
 import dacite
+import deprecated
 import yaml
 
 from model.base import (
@@ -155,9 +156,13 @@ class ConfigFactory:
     def __init__(self, raw_dict: dict):
         self.raw = not_none(raw_dict)
         if self.CFG_TYPES not in self.raw:
-            raise ValueError('missing required attribute: {ct}'.format(ct=self.CFG_TYPES))
+            raise ValueError(f'missing required attribute: {self.CFG_TYPES}')
 
+    @deprecated.deprecated
     def _configs(self, cfg_name: str):
+        '''
+        returns all known cfg-element-names
+        '''
         return self.raw[cfg_name]
 
     def _cfg_types(self):
@@ -197,21 +202,9 @@ class ConfigFactory:
         # TODO: switch to fully-qualified type names
         own_module = sys.modules[__name__]
 
-        # python3.5 returns a three-tuple; python3.6+ returns a ModuleInfo
-        if sys.version_info.minor <= 5:
-            class ModuleInfo(object):
-                def __init__(self, module_tuple):
-                    self.path, self.name, _ = module_tuple
-
-            def to_module_info(mi):
-                return ModuleInfo(mi)
-        else:
-            def to_module_info(mi):
-                return mi
-
         submodule_names = [
             own_module.__name__ + '.' + m.name
-            for m in map(to_module_info, pkgutil.iter_modules(own_module.__path__))
+            for m in pkgutil.iter_modules(own_module.__path__)
         ]
         for module_name in [__name__] + submodule_names:
             submodule_name = module_name.split('.')[-1]
