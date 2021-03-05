@@ -23,9 +23,7 @@ def write_docker_cfg(
     docker_cfg_auths = {}
 
     for container_registry_cfg in container_registry_cfgs:
-        docker_cfg_auths.update(
-            mc.find_config('eu.gcr.io/sap-se-gcp-scp-k8s/landscape').as_docker_auths()
-        )
+        docker_cfg_auths.update(container_registry_cfg.as_docker_auths())
 
     docker_cfg = {'auths': docker_cfg_auths}
 
