@@ -531,7 +531,5 @@ class ConfigurationSet(NamedModelElement):
 def cluster_domain_from_kubernetes_config(cfg_factory, kubernetes_config_name: str):
     kubernetes_cfg = cfg_factory.kubernetes(kubernetes_config_name)
     if not (cluster_domain := kubernetes_cfg.cluster_domain()):
-        raise RuntimeError(
-            f"No cluster domain configured in kubernetes config '{kubernetes_config_name}'"
-    )
+        raise ValueError(f'No cluster domain configured in {kubernetes_config_name=}')
     return cluster_domain
