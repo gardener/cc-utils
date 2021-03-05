@@ -146,6 +146,9 @@ class ConfigFactory:
                 dacite.from_dict(
                     data_class=ConfigType,
                     data=cfg_dict,
+                    config=dacite.Config(
+                        cast=[tuple],
+                    ),
                 ) for cfg_dict in cfg_types_dict.values()
         ):
             cfg_name = cfg_type.cfg_type_name()
@@ -178,6 +181,9 @@ class ConfigFactory:
                 dacite.from_dict(
                     data_class=ConfigType,
                     data=cfg_dict,
+                    config=dacite.Config(
+                        cast=[tuple],
+                    ),
                 ) for cfg_dict in self.raw[self.CFG_TYPES].values()
             )
         }
@@ -345,31 +351,31 @@ class CfgTypeSrc: # just a marker class
     pass
 
 
-@dc
+@dc(frozen=True)
 class LocalFileCfgSrc(CfgTypeSrc):
     file: str
 
 
-@dc
+@dc(frozen=True)
 class GithubRepoFileSrc(CfgTypeSrc):
     repository_url: str
     relpath: str
 
 
-@dc
+@dc(frozen=True)
 class ConfigTypeModel:
     factory_method: typing.Optional[str]
     cfg_type_name: str
     type: str
 
 
-@dc
+@dc(frozen=True)
 class ConfigType:
     '''
     represents a configuration type (used for serialisation and deserialisation)
     '''
     model: ConfigTypeModel
-    src: typing.List[typing.Union[LocalFileCfgSrc, GithubRepoFileSrc]] = empty_list
+    src: typing.Tuple[typing.Union[LocalFileCfgSrc, GithubRepoFileSrc]] = ()
 
     def sources(self):
         return self.src
