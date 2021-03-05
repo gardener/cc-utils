@@ -4,6 +4,7 @@ import json
 import os
 import pkgutil
 import sys
+import typing
 import urllib.parse
 
 import dacite
@@ -12,7 +13,6 @@ import yaml
 
 from model.base import (
     ConfigElementNotFoundError,
-    ModelBase,
     ModelValidationError,
     NamedModelElement,
 )
@@ -25,6 +25,7 @@ from ci.util import (
 )
 
 dc = dataclasses.dataclass
+empty_list = dataclasses.field(default_factory=list)
 
 '''
 Configuration model and retrieval handling.
@@ -141,7 +142,12 @@ class ConfigFactory:
             return cfg_dict
 
         # parse all configurations
-        for cfg_type in map(ConfigType, cfg_types_dict.values()):
+        for cfg_type in (
+                dacite.from_dict(
+                    data_class=ConfigType,
+                    data=cfg_dict,
+                ) for cfg_dict in cfg_types_dict.values()
+        ):
             cfg_name = cfg_type.cfg_type_name()
             raw[cfg_name] = parse_cfg(cfg_type)
 
@@ -168,7 +174,12 @@ class ConfigFactory:
     def _cfg_types(self):
         return {
             cfg.cfg_type_name(): cfg for
-            cfg in map(ConfigType, self.raw[self.CFG_TYPES].values())
+            cfg in (
+                dacite.from_dict(
+                    data_class=ConfigType,
+                    data=cfg_dict,
+                ) for cfg_dict in self.raw[self.CFG_TYPES].values()
+            )
         }
 
     def _cfg_types_raw(self):
@@ -329,41 +340,6 @@ class ConfigFactory:
         return functools.partial(self._cfg_element, cfg_type_name)
 
 
-class ConfigType(ModelBase):
-    '''
-    represents a configuration type (used for serialisation and deserialisation)
-    '''
-
-    def _required_attributes(self):
-        return {'model'}
-
-    def _optional_attributes(self):
-        return {'src'}
-
-    def sources(self):
-        def parse_best_match(src_dict: dict):
-            for data_class in LocalFileCfgSrc, GithubRepoFileSrc:
-                try:
-                    return dacite.from_dict(
-                            data=src_dict,
-                            data_class=data_class,
-                    )
-                except dacite.exceptions.MissingValueError:
-                    pass
-            raise ValueError(f'failed to parse {src_dict=}')
-
-        return (parse_best_match(src_dict=src_dict) for src_dict in self.raw.get('src'))
-
-    def factory_method(self):
-        return self.raw.get('model').get('factory_method')
-
-    def cfg_type_name(self):
-        return self.raw.get('model').get('cfg_type_name')
-
-    def cfg_type(self):
-        return self.raw.get('model').get('type')
-
-
 @dc
 class CfgTypeSrc: # just a marker class
     pass
@@ -380,7 +356,35 @@ class GithubRepoFileSrc(CfgTypeSrc):
     relpath: str
 
 
-class ConfigSetSerialiser(object):
+@dc
+class ConfigTypeModel:
+    factory_method: typing.Optional[str]
+    cfg_type_name: str
+    type: str
+
+
+@dc
+class ConfigType:
+    '''
+    represents a configuration type (used for serialisation and deserialisation)
+    '''
+    model: ConfigTypeModel
+    src: typing.List[typing.Union[LocalFileCfgSrc, GithubRepoFileSrc]] = empty_list
+
+    def sources(self):
+        return self.src
+
+    def factory_method(self):
+        return self.model.factory_method
+
+    def cfg_type_name(self):
+        return self.model.cfg_type_name
+
+    def cfg_type(self):
+        return self.model.type
+
+
+class ConfigSetSerialiser:
     def __init__(self, cfg_sets: 'ConfigurationSet', cfg_factory: ConfigFactory):
         self.cfg_sets = not_none(cfg_sets)
         self.cfg_factory = not_none(cfg_factory)
