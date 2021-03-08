@@ -40,6 +40,50 @@ instantiated by users of this module.
 '''
 
 
+@dc
+class CfgTypeSrc: # just a marker class
+    pass
+
+
+@dc(frozen=True)
+class LocalFileCfgSrc(CfgTypeSrc):
+    file: str
+
+
+@dc(frozen=True)
+class GithubRepoFileSrc(CfgTypeSrc):
+    repository_url: str
+    relpath: str
+
+
+@dc(frozen=True)
+class ConfigTypeModel:
+    factory_method: typing.Optional[str]
+    cfg_type_name: str
+    type: str
+
+
+@dc(frozen=True)
+class ConfigType:
+    '''
+    represents a configuration type (used for serialisation and deserialisation)
+    '''
+    model: ConfigTypeModel
+    src: typing.Tuple[typing.Union[LocalFileCfgSrc, GithubRepoFileSrc]] = ()
+
+    def sources(self):
+        return self.src
+
+    def factory_method(self):
+        return self.model.factory_method
+
+    def cfg_type_name(self):
+        return self.model.cfg_type_name
+
+    def cfg_type(self):
+        return self.model.type
+
+
 class ConfigFactory:
     '''Creates configuration model element instances from the underlying configuration source
 
@@ -58,6 +102,38 @@ class ConfigFactory:
 
     CFG_TYPES = 'cfg_types'
     _cfg_type_cache = {} # <name>:<type>
+
+    @staticmethod
+    def _parse_local_file(cfg_dir: str, cfg_src: LocalFileCfgSrc):
+        cfg_file = cfg_src.file
+        return parse_yaml_file(os.path.join(cfg_dir, cfg_file))
+
+    @staticmethod
+    def _parse_repo_file(cfg_src: GithubRepoFileSrc):
+        import ccc.github
+        repo_url = cfg_src.repository_url
+        if not '://' in repo_url:
+            repo_url = 'https://' + repo_url
+        repo_url = urllib.parse.urlparse(repo_url)
+
+        if not lookup_cfg_factory:
+            raise RuntimeError('cannot resolve non-local cfg w/o bootstrap-cfg-factory')
+
+        gh_api = ccc.github.github_api(
+            ccc.github.github_cfg_for_hostname(
+                repo_url.hostname,
+                cfg_factory=lookup_cfg_factory,
+            ),
+            cfg_factory=lookup_cfg_factory,
+        )
+        org, repo = repo_url.path.strip('/').split('/')
+        gh_repo = gh_api.repository(org, repo)
+
+        file_contents = gh_repo.file_contents(
+            path=cfg_src.relpath,
+            ref=gh_repo.default_branch,
+        ).decoded.decode('utf-8')
+        return yaml.safe_load(file_contents)
 
     @staticmethod
     def from_cfg_dir(
@@ -93,44 +169,17 @@ class ConfigFactory:
         def parse_cfg(cfg_type):
             cfg_dict = {}
 
-            def parse_local_file(cfg_src: LocalFileCfgSrc):
-                cfg_file = cfg_src.file
-                return parse_yaml_file(os.path.join(cfg_dir, cfg_file))
-
-            def parse_repo_file(cfg_src: GithubRepoFileSrc):
-                import ccc.github
-                repo_url = cfg_src.repository_url
-                if not '://' in repo_url:
-                    repo_url = 'https://' + repo_url
-                repo_url = urllib.parse.urlparse(repo_url)
-
-                if not lookup_cfg_factory:
-                    raise RuntimeError('cannot resolve non-local cfg w/o bootstrap-cfg-factory')
-
-                gh_api = ccc.github.github_api(
-                    ccc.github.github_cfg_for_hostname(
-                        repo_url.hostname,
-                        cfg_factory=lookup_cfg_factory,
-                    ),
-                    cfg_factory=lookup_cfg_factory,
-                )
-                org, repo = repo_url.path.strip('/').split('/')
-                gh_repo = gh_api.repository(org, repo)
-
-                file_contents = gh_repo.file_contents(
-                    path=cfg_src.relpath,
-                    ref=gh_repo.default_branch,
-                ).decoded.decode('utf-8')
-                return yaml.safe_load(file_contents)
-
             for cfg_src in cfg_type.sources():
                 if cfg_src_types and type(cfg_src) not in cfg_src_types:
                     continue
 
                 if isinstance(cfg_src, LocalFileCfgSrc):
-                    parsed_cfg = parse_local_file(cfg_src=cfg_src)
+                    parsed_cfg = ConfigFactory._parse_local_file(
+                        cfg_dir=cfg_dir,
+                        cfg_src=cfg_src,
+                    )
                 elif isinstance(cfg_src, GithubRepoFileSrc):
-                    parsed_cfg = parse_repo_file(cfg_src=cfg_src)
+                    parsed_cfg = ConfigFactory._parse_repo_file(cfg_src=cfg_src)
                 else:
                     raise NotImplementedError(cfg_src)
 
@@ -162,7 +211,10 @@ class ConfigFactory:
 
         return ConfigFactory(raw_dict=raw)
 
-    def __init__(self, raw_dict: dict):
+    def __init__(
+        self,
+        raw_dict: dict
+    ):
         self.raw = not_none(raw_dict)
         if self.CFG_TYPES not in self.raw:
             raise ValueError(f'missing required attribute: {self.CFG_TYPES}')
@@ -344,50 +396,6 @@ class ConfigFactory:
             raise AttributeError(cfg_type_name)
 
         return functools.partial(self._cfg_element, cfg_type_name)
-
-
-@dc
-class CfgTypeSrc: # just a marker class
-    pass
-
-
-@dc(frozen=True)
-class LocalFileCfgSrc(CfgTypeSrc):
-    file: str
-
-
-@dc(frozen=True)
-class GithubRepoFileSrc(CfgTypeSrc):
-    repository_url: str
-    relpath: str
-
-
-@dc(frozen=True)
-class ConfigTypeModel:
-    factory_method: typing.Optional[str]
-    cfg_type_name: str
-    type: str
-
-
-@dc(frozen=True)
-class ConfigType:
-    '''
-    represents a configuration type (used for serialisation and deserialisation)
-    '''
-    model: ConfigTypeModel
-    src: typing.Tuple[typing.Union[LocalFileCfgSrc, GithubRepoFileSrc]] = ()
-
-    def sources(self):
-        return self.src
-
-    def factory_method(self):
-        return self.model.factory_method
-
-    def cfg_type_name(self):
-        return self.model.cfg_type_name
-
-    def cfg_type(self):
-        return self.model.type
 
 
 class ConfigSetSerialiser:
