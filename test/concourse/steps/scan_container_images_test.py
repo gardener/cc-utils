@@ -14,7 +14,9 @@
 # limitations under the License.
 
 import dacite
+import functools
 import pytest
+import typing
 
 import concourse.steps.images as images
 import gci.componentmodel
@@ -45,6 +47,16 @@ def resource():
                     gci.componentmodel.ResourceType,
                     gci.componentmodel.AccessType,
                 ],
+                type_hooks={
+                    typing.Union[gci.componentmodel.AccessType, str]: functools.partial(
+                        gci.componentmodel.enum_or_string,
+                        enum_type=gci.componentmodel.AccessType,
+                    ),
+                    typing.Union[gci.componentmodel.ResourceType, str]: functools.partial(
+                        gci.componentmodel.enum_or_string,
+                        enum_type=gci.componentmodel.ResourceType,
+                    ),
+                },
             ),
         )
     return _resource
