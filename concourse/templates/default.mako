@@ -104,7 +104,7 @@ resources:
 ${render_repositories(pipeline_definition=pipeline_definition, cfg_set=config_set)}
 
 % for descriptor in output_image_descriptors.values():
-% if descriptor.name() in needed_image_resources:
+  % if descriptor.name() in needed_image_resources:
 <%
   custom_registry_cfg_name = descriptor.registry_name()
   if not custom_registry_cfg_name:
@@ -117,7 +117,7 @@ ${container_registry_image_resource(
   image_reference=descriptor.image_reference(),
   registry_cfg=registry_cfg,
 )}
-% endif
+  % endif
 % endfor
 % for variant in pipeline_definition.variants():
 % if has_cron_trait(variant):
@@ -219,7 +219,7 @@ source_repo_github_cfg_name = source_repo.cfg_name() or github.name()
 <%
 image_reference, tag = job_step.image().split(':', 1)
 if job_step.registry():
-  container_registry = config_set.container_registry(job_step.registry())
+  registry_cfg = config_set.container_registry(job_step.registry())
 else:
   ## No containerregistry configured. Attempt to find a matching one on our side by looking
   ## at the configured prefixes of the container-registries.
