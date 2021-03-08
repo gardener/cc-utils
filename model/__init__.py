@@ -236,6 +236,7 @@ class ConfigFactory:
         self._retrieve_cfg_elements(cfg_type_name=cfg_name)
         return self.raw[cfg_name]
 
+    @functools.lru_cache
     def _cfg_types(self):
         return {
             cfg.cfg_type_name(): cfg for
