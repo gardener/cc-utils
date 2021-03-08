@@ -109,7 +109,10 @@ class ConfigFactory:
         return parse_yaml_file(os.path.join(cfg_dir, cfg_file))
 
     @staticmethod
-    def _parse_repo_file(cfg_src: GithubRepoFileSrc):
+    def _parse_repo_file(
+        cfg_src: GithubRepoFileSrc,
+        lookup_cfg_factory,
+    ):
         import ccc.github
         repo_url = cfg_src.repository_url
         if not '://' in repo_url:
@@ -166,7 +169,7 @@ class ConfigFactory:
 
         raw[ConfigFactory.CFG_TYPES] = cfg_types_dict
 
-        def parse_cfg(cfg_type):
+        def retrieve_cfg(cfg_type):
             cfg_dict = {}
 
             for cfg_src in cfg_type.sources():
@@ -179,7 +182,10 @@ class ConfigFactory:
                         cfg_src=cfg_src,
                     )
                 elif isinstance(cfg_src, GithubRepoFileSrc):
-                    parsed_cfg = ConfigFactory._parse_repo_file(cfg_src=cfg_src)
+                    parsed_cfg = ConfigFactory._parse_repo_file(
+                        cfg_src=cfg_src,
+                        lookup_cfg_factory=lookup_cfg_factory,
+                    )
                 else:
                     raise NotImplementedError(cfg_src)
 
@@ -190,20 +196,10 @@ class ConfigFactory:
 
             return cfg_dict
 
-        # parse all configurations
-        for cfg_type in (
-                dacite.from_dict(
-                    data_class=ConfigType,
-                    data=cfg_dict,
-                    config=dacite.Config(
-                        cast=[tuple],
-                    ),
-                ) for cfg_dict in cfg_types_dict.values()
-        ):
-            cfg_name = cfg_type.cfg_type_name()
-            raw[cfg_name] = parse_cfg(cfg_type)
-
-        return ConfigFactory(raw_dict=raw)
+        return ConfigFactory(
+            raw_dict=raw,
+            retrieve_cfg=retrieve_cfg,
+        )
 
     @staticmethod
     def from_dict(raw_dict: dict):
@@ -213,17 +209,31 @@ class ConfigFactory:
 
     def __init__(
         self,
-        raw_dict: dict
+        raw_dict: dict,
+        retrieve_cfg: typing.Callable[[ConfigType], dict]=None,
     ):
         self.raw = not_none(raw_dict)
         if self.CFG_TYPES not in self.raw:
             raise ValueError(f'missing required attribute: {self.CFG_TYPES}')
+        self.retrieve_cfg = retrieve_cfg
+
+    def _retrieve_cfg_elements(self, cfg_type_name: str):
+        if not cfg_type_name in self.raw:
+            cfg_type = self._cfg_type(cfg_type_name=cfg_type_name)
+            if self.retrieve_cfg:
+                cfg_dict = self.retrieve_cfg(cfg_type)
+            else:
+                cfg_dict = {}
+                # XXX hacky: use empty-dict if there is no retrieval-callable
+
+            self.raw[cfg_type_name] = cfg_dict
 
     @deprecated.deprecated
     def _configs(self, cfg_name: str):
         '''
         returns all known cfg-element-names
         '''
+        self._retrieve_cfg_elements(cfg_type_name=cfg_name)
         return self.raw[cfg_name]
 
     def _cfg_types(self):
@@ -239,6 +249,12 @@ class ConfigFactory:
                 ) for cfg_dict in self.raw[self.CFG_TYPES].values()
             )
         }
+
+    def _cfg_type(self, cfg_type_name: str):
+        cfg_type = self._cfg_types().get(cfg_type_name, None)
+        if not cfg_type:
+            raise ValueError('unknown cfg_type: ' + str(cfg_type_name))
+        return cfg_type
 
     def _cfg_types_raw(self):
         return self.raw[self.CFG_TYPES]
@@ -263,9 +279,7 @@ class ConfigFactory:
         )
 
     def _cfg_element(self, cfg_type_name: str, cfg_name: str):
-        cfg_type = self._cfg_types().get(cfg_type_name, None)
-        if not cfg_type:
-            raise ValueError('unknown cfg_type: ' + str(cfg_type_name))
+        cfg_type = self._cfg_type(cfg_type_name=cfg_type_name)
 
         # retrieve model class c'tor - search module and sub-modules
         # TODO: switch to fully-qualified type names
@@ -345,6 +359,7 @@ class ConfigFactory:
             If the specified cfg_type is unknown.
         '''
         not_empty(cfg_type_name)
+        self._retrieve_cfg_elements(cfg_type_name=cfg_type_name)
 
         for element_name in self._cfg_element_names(cfg_type_name):
             yield self._cfg_element(cfg_type_name, element_name)
@@ -368,6 +383,7 @@ class ConfigFactory:
             If the specified cfg_type is unknown.
         '''
         not_empty(cfg_type_name)
+        self._retrieve_cfg_elements(cfg_type_name=cfg_type_name)
 
         known_types = self._cfg_types()
         if cfg_type_name not in known_types:
