@@ -1,12 +1,13 @@
 import abc
 import collections
-import io
 import logging
 import os
 import subprocess
 import traceback
 import typing
 import version
+
+import yaml
 
 from github3.exceptions import NotFoundError
 
@@ -643,15 +644,17 @@ class GitHubReleaseStep(TransactionalStep):
             )
 
         for component_descriptor_v2 in self.components:
-            descriptor_v2_bytes = io.BytesIO()
-            component_descriptor_v2.to_fobj(descriptor_v2_bytes)
+            descriptor_str = yaml.dump(
+                data=dataclasses.asdict(component_descriptor_v2),
+                Dumper=cm.EnumValueYamlDumper,
+            )
 
             normalized_component_name = component_descriptor_v2.component.name.replace('/', '_')
             asset_name = f'{normalized_component_name}.component_descriptor.cnudie.yaml'
             release.upload_asset(
                 content_type='application/x-yaml',
-                name=asset_name, # XXX extract into define
-                asset=descriptor_v2_bytes.getvalue(),
+                name=asset_name,
+                asset=descriptor_str.encode('utf-8'),
                 label='component_descriptor.cnudie.yaml',
             )
 
