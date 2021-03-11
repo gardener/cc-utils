@@ -591,10 +591,10 @@ class GitHubReleaseStep(TransactionalStep):
                 ci.util.parse_yaml_file(self.component_descriptor_v2_path),
             )]
         elif have_ctf:
-            self.components = tuple(component_descriptors_from_ctf_archive(
+            self.components = tuple(cnudie.util.component_descriptors_from_ctf_archive(
                 self.ctf_path,
             ))
-            if not component_descriptors:
+            if not self.components:
                 ci.util.fail(f'No component descriptor found in CTF archive at {self.ctf_path=}')
 
         for component_descriptor_v2 in self.components:
