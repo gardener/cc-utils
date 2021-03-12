@@ -18,10 +18,10 @@ import json
 import sseclient
 import typing
 
-from model import ModelBase
+import model.base
 
 
-class ClamAVInfo(ModelBase):
+class ClamAVInfo(model.base.ModelBase):
     def max_scan_size_octets(self) -> int:
         return self.raw['maxScanSize']
 
@@ -32,7 +32,7 @@ class ClamAVInfo(ModelBase):
         return self.raw['engineVersion']
 
 
-class ClamAVMemoryInfo(ModelBase):
+class ClamAVMemoryInfo(model.base.ModelBase):
     def resident_set_size_octets(self) -> int:
         return self.raw['rss']
 
@@ -46,7 +46,7 @@ class ClamAVMemoryInfo(ModelBase):
         return self.raw['external']
 
 
-class ClamAVAggregateLoad(ModelBase):
+class ClamAVAggregateLoad(model.base.ModelBase):
     def load(self) -> float:
         return self.raw['load']
 
@@ -54,7 +54,7 @@ class ClamAVAggregateLoad(ModelBase):
         return self.raw['scanned_MB']
 
 
-class ClamAVRequestLoad(ModelBase):
+class ClamAVRequestLoad(model.base.ModelBase):
     def current(self) -> int:
         return self.raw['current']
 
@@ -71,7 +71,7 @@ class ClamAVRequestLoad(ModelBase):
         return ClamAVAggregateLoad(self.raw['last_1_min'])
 
 
-class ClamAVMonitoringInfo(ModelBase):
+class ClamAVMonitoringInfo(model.base.ModelBase):
     def memory(self) -> ClamAVMemoryInfo:
         return ClamAVMemoryInfo(self.raw['memory'])
 
@@ -90,7 +90,7 @@ class ClamAVMonitoringInfo(ModelBase):
         return self.raw['kernelInfo']
 
 
-class ClamAVScanResult(ModelBase):
+class ClamAVScanResult(model.base.ModelBase):
     def malware_detected(self) -> bool:
         return self.raw['malwareDetected']
 
@@ -117,7 +117,7 @@ class ClamAVHealthState(enum.Enum):
     WARNING = 'WARNING'
 
 
-class ClamAVHealth(ModelBase):
+class ClamAVHealth(model.base.ModelBase):
     def age_hours(self) -> int:
         '''Return hours since last signature update
         '''
