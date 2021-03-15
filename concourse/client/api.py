@@ -22,7 +22,6 @@ from ensure import ensure_annotations
 import ci.log
 from .routes import (
     ConcourseApiRoutesBase,
-    ConcourseApiRoutesV5,
     ConcourseApiRoutesV6_3_0,
 )
 from .model import (
@@ -75,21 +74,7 @@ class ConcourseApiFactory:
             verify_ssl=verify_ssl
         )
 
-        if concourse_api_version is ConcourseApiVersion.V5:
-            routes = ConcourseApiRoutesV5(base_url=base_url, team=team_name)
-            return ConcourseApiV5(
-                routes=routes,
-                request_builder=request_builder,
-                verify_ssl=verify_ssl,
-            )
-        elif concourse_api_version is ConcourseApiVersion.V6_3_0:
-            routes = ConcourseApiRoutesV6_3_0(base_url=base_url, team=team_name)
-            return ConcourseApiV6_3_0(
-                routes=routes,
-                request_builder=request_builder,
-                verify_ssl=verify_ssl,
-            )
-        elif concourse_api_version is ConcourseApiVersion.V6_5_1:
+        if concourse_api_version is ConcourseApiVersion.V6_5_1:
             routes = ConcourseApiRoutesV6_3_0(base_url=base_url, team=team_name)
             return ConcourseApiV6_5_1(
                 routes=routes,
@@ -376,10 +361,6 @@ class ConcourseApiBase:
         url = self.routes.job(pipeline_name, job_name)
         return ConcourseJob(self._get(url))
 
-
-class SetTeamAPIUpdateMixin:
-    '''Mixin for 'set team' API changed in Concourse 5.0.0
-    '''
     def set_team(self, concourse_team: ConcourseTeam):
         role = concourse_team.role() if concourse_team.role() else "member"
         body = {
@@ -402,14 +383,5 @@ class SetTeamAPIUpdateMixin:
         self._put(team_url, json.dumps(body))
 
 
-class ConcourseApiV5(ConcourseApiBase, SetTeamAPIUpdateMixin):
-    pass
-
-
-class ConcourseApiV6_3_0(ConcourseApiBase, SetTeamAPIUpdateMixin):
-
-    AUTH_TOKEN_ATTRIBUTE_NAME = 'id_token'
-
-
-class ConcourseApiV6_5_1(ConcourseApiBase, SetTeamAPIUpdateMixin):
+class ConcourseApiV6_5_1(ConcourseApiBase):
     pass

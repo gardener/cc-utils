@@ -21,7 +21,7 @@ import ci.util
 CONCOURSE_API_SUFFIX = 'api/v1'
 
 
-class ConcourseApiRoutesBase(object):
+class ConcourseApiRoutesBase:
     '''
     Constructs concourse REST API endpoint URLs for the given concourse base URL and
     team name.
@@ -163,10 +163,6 @@ class ConcourseApiRoutesBase(object):
     @ensure_annotations
     def pin_comment(self, pipeline_name: str, resource_name: str):
         return self._api_url('pipelines', pipeline_name, 'resources', resource_name, 'pin_comment')
-
-
-class ConcourseApiRoutesV5(ConcourseApiRoutesBase):
-    '''Routes for Concourse V5'''
 
 
 class ConcourseApiRoutesV6_3_0(ConcourseApiRoutesBase):
