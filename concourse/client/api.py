@@ -18,6 +18,7 @@ import logging
 import typing
 
 from ensure import ensure_annotations
+import requests
 
 import ci.log
 from .routes import (
@@ -109,37 +110,58 @@ class ConcourseApiBase:
     def __init__(
         self,
         routes: ConcourseApiRoutesBase,
-        request_builder: AuthenticatedRequestBuilder,
+        request_builder: AuthenticatedRequestBuilder=None,
         verify_ssl=False,
     ):
+        if requests_builder:
+            logger.warning('passing-in requests-builder is deprecated')
+
         self.routes = routes
-        self.request_builder = request_builder
+        self.request_builder = None
         self.verify_ssl = verify_ssl
 
     @ensure_annotations
     def _get(self, url: str):
+        if not self.request_builder:
+            raise ValueError('login first')
+
         return self.request_builder.get(url, return_type='json')
 
     @ensure_annotations
     def _put(self, url: str, body: str, headers={}, use_auth_token=True):
+        if not self.request_builder:
+            raise ValueError('login first')
+
         return self.request_builder.put(url, body=body, headers=headers)
 
     @ensure_annotations
     def _post(self, url: str, body: str="", headers={}):
+        if not self.request_builder:
+            raise ValueError('login first')
+
         return self.request_builder.post(url, body=body, headers=headers)
 
     @ensure_annotations
     def _delete(self, url: str):
+        if not self.request_builder:
+            raise ValueError('login first')
+
         return self.request_builder.delete(url)
 
     def login(self, username: str, passwd: str):
         login_url = self.routes.login()
-        form_data = "grant_type=password&password=" + passwd + \
-                    "&scope=openid+profile+email+federated%3Aid+groups&username=" + username
-        response = self._post(
+        form_data = {
+            'grant_type': 'password',
+            'password': passwd,
+            'scope': 'openid profile email federated:id groups',
+            'username': username,
+        }
+
+        response = requests.post(
             url=login_url,
-            body=form_data,
-            headers={"content-type": "application/x-www-form-urlencoded"}
+            data=form_data,
+            auth=(AUTH_TOKEN_REQUEST_USER, AUTH_TOKEN_REQUEST_PWD),
+            headers={'content-type': 'application/x-www-form-urlencoded'}
         )
         auth_token = response.json()[self.AUTH_TOKEN_ATTRIBUTE_NAME]
         self.request_builder = AuthenticatedRequestBuilder(
