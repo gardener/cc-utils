@@ -97,6 +97,7 @@ ${configure_webhook(webhook_token=github.webhook_secret())}
 resource_types:
 ${include_pull_request_resource_type()}
 
+% if len(resource_registry) > 0:
 resources:
 ${render_repositories(pipeline_definition=pipeline_definition, cfg_set=config_set)}
 
@@ -117,15 +118,16 @@ ${container_registry_image_resource(
   % endif
 % endfor
 % for variant in pipeline_definition.variants():
-% if has_cron_trait(variant):
+  % if has_cron_trait(variant):
 <%
 trait = variant.trait('cronjob')
 interval = trait.interval()
 resource_name = trait.resource_name()
 %>
 ${time_resource(name=resource_name, interval=interval)}
-% endif
+  % endif
 % endfor
+% endif
 
 <%def name="update_pr_status(indent, job_variant, job_step, status)" filter="indent_func(indent),trim">
 <%
