@@ -141,7 +141,6 @@ class Renderer:
         pipeline_metadata['definition'] = factory.create_pipeline_definition()
         pipeline_metadata['name'] = pipeline_definition.name
         pipeline_metadata['target_team'] = definition_descriptor.concourse_target_team
-        generated_model = pipeline_metadata.get('definition')
 
         if bg := effective_definition.get('background_image'):
             pipeline_metadata['background_image'] = bg
@@ -156,7 +155,6 @@ class Renderer:
         t = mako.template.Template(template_contents, lookup=self.lookup)
 
         definition_descriptor.pipeline = t.render(
-                instance_args=generated_model,
                 config_set=self.cfg_set,
                 pipeline=pipeline_metadata,
         )
