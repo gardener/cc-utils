@@ -1,6 +1,5 @@
 ---
 <%
-import itertools
 import os
 
 import oci.auth as oa
@@ -8,7 +7,6 @@ import model.container_registry
 
 from ci.util import urljoin
 from makoutil import indent_func
-from concourse.factory import DefinitionFactory
 from concourse.model.base import ScriptType
 from concourse.model.step import StepNotificationPolicy, PrivilegeMode
 from concourse.model.traits.component_descriptor import DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME
