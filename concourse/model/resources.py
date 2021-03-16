@@ -137,6 +137,9 @@ class ResourceRegistry:
             id = item
         return self.resources_dict[id]
 
+    def __len__(self):
+        return len(self.resources_dict)
+
     def add_resource(self, resource, discard_duplicates=True):
         if not isinstance(resource, Resource):
             raise ValueError('not an instance of Resource')
