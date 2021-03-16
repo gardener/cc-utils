@@ -13,11 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import concourse.model.resources
+
 
 class PipelineDefinition:
     def __init__(self):
         self._variants_dict = {}
-        self._resource_registry = None
+        self._resource_registry = concourse.model.resources.ResourceRegistry()
 
     def resource_registry(self):
         return self._resource_registry
