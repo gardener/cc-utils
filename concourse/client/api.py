@@ -17,15 +17,16 @@ import json
 import logging
 import typing
 
-from ensure import ensure_annotations
 import requests
+from ensure import ensure_annotations
 
 import ci.log
-from .routes import (
-    ConcourseApiRoutesBase,
-    ConcourseApiRoutesV6_3_0,
-)
-from .model import (
+from ci.util import not_empty
+from concourse.client.model import ResourceType
+from http_requests import AuthenticatedRequestBuilder
+from model.concourse import ConcourseApiVersion, ConcourseTeam
+
+from concourse.client.model import (
     Build,
     BuildEvents,
     BuildPlan,
@@ -37,15 +38,8 @@ from .model import (
     SetPipelineResult,
     Worker,
 )
-from concourse.client.model import (
-    ResourceType,
-)
-from model.concourse import (
-    ConcourseApiVersion,
-    ConcourseTeam,
-)
-from http_requests import AuthenticatedRequestBuilder
-from ci.util import not_empty
+from .routes import ConcourseApiRoutesBase, ConcourseApiRoutesV6_3_0
+
 
 ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
