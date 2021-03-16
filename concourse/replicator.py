@@ -129,7 +129,7 @@ class Renderer:
         pipeline_definition = RawPipelineDefinitionDescriptor(
             name=pipeline_name,
             base_definition=effective_definition.get('base_definition', {}),
-            variants=effective_definition.get('jobs', {}),
+            jobs=effective_definition.get('jobs', {}),
             template=template_name,
         )
 

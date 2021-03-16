@@ -43,13 +43,13 @@ class RawPipelineDefinitionDescriptor:
         self,
         name,
         base_definition,
-        variants,
+        jobs,
         exception=None,
         template='default'
     ):
         self.name = not_none(name)
         self.base_definition = ensure_dict(base_definition, allow_empty=True)
-        self.variants = ensure_dict(variants, allow_empty=False)
+        self.jobs = ensure_dict(jobs, allow_empty=False)
         self.template = not_none(template)
         self.exception = exception
 
@@ -62,9 +62,9 @@ class DefinitionFactory:
     declaring components and are typically maintained by (human) component owners.
 
     Definitions feature an (optional) two-level inheritance hierarchy: A base definition and
-    an arbitrary set of variants. At least one variant is required. Variants represent concrete
+    an arbitrary set of jobs. At least one variant is required. Jobs represent concrete
     single job definitions. Attributes defined in a base definition are inherited into each
-    variant. Variants may overwrite inherited attributes.
+    variant. Jobs may overwrite inherited attributes.
     '''
 
     def __init__(
@@ -79,7 +79,7 @@ class DefinitionFactory:
         merged_variants_dict = self._create_variants_dict(self.raw_definition_descriptor)
 
         resource_registry = ResourceRegistry()
-        variants = {}
+        jobs = {}
 
         for variant_name, variant_dict in merged_variants_dict.items():
             variant = self._create_variant(
@@ -95,15 +95,15 @@ class DefinitionFactory:
                     existing_repo = resource_registry.resource(repo)
                     # hack: patch-in should-trigger (the proper way to implement this
                     # would be to separate (effective) resource-definitions from additional
-                    # resource-specialisations as contained in variants
+                    # resource-specialisations as contained in jobs
                     existing_repo._trigger |= repo.should_trigger()
                 else:
                     resource_registry.add_resource(deepcopy(repo), discard_duplicates=False)
 
-            variants[variant_name] = variant
+            jobs[variant_name] = variant
 
         pipeline_definition = PipelineDefinition()
-        pipeline_definition._variants_dict = variants
+        pipeline_definition._variants_dict = jobs
         pipeline_definition._resource_registry = resource_registry
 
         validator = PipelineDefinitionValidator(pipeline_definition=pipeline_definition)
@@ -112,7 +112,7 @@ class DefinitionFactory:
         return pipeline_definition
 
     def _create_variants_dict(self, raw_definition_descriptor):
-        variants_dict = normalise_to_dict(deepcopy(raw_definition_descriptor.variants))
+        variants_dict = normalise_to_dict(deepcopy(raw_definition_descriptor.jobs))
 
         base_dict = deepcopy(raw_definition_descriptor.base_definition)
 
