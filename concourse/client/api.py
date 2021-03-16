@@ -62,17 +62,10 @@ class ConcourseApiFactory:
         # disable logging output for now (breaks template in lss)
         # logger.info(f'created client w/ {base_url=}')
 
-        request_builder = AuthenticatedRequestBuilder(
-            basic_auth_username=AUTH_TOKEN_REQUEST_USER,
-            basic_auth_passwd=AUTH_TOKEN_REQUEST_PWD,
-            verify_ssl=verify_ssl
-        )
-
         if concourse_api_version is ConcourseApiVersion.V6_5_1:
             routes = ConcourseApiRoutesV6_3_0(base_url=base_url, team=team_name)
             return ConcourseApiV6_5_1(
                 routes=routes,
-                request_builder=request_builder,
                 verify_ssl=verify_ssl,
             )
         else:
