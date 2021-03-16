@@ -106,7 +106,7 @@ class ConcourseApiBase:
         request_builder: AuthenticatedRequestBuilder=None,
         verify_ssl=False,
     ):
-        if requests_builder:
+        if request_builder:
             logger.warning('passing-in requests-builder is deprecated')
 
         self.routes = routes
