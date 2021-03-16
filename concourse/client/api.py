@@ -21,7 +21,6 @@ import requests
 from ensure import ensure_annotations
 
 import ci.log
-from ci.util import not_empty
 from concourse.client.model import ResourceType
 from http_requests import AuthenticatedRequestBuilder
 from model.concourse import ConcourseApiVersion, ConcourseTeam
@@ -191,7 +190,6 @@ class ConcourseApiBase:
     def pipeline_cfg(self, pipeline_name: str):
         pipeline_cfg_url = self.routes.pipeline_cfg(pipeline_name)
         response = self._get(pipeline_cfg_url)
-        not_empty(response)
         return PipelineConfig(response, concourse_api=self, name=pipeline_name)
 
     def pipeline_resources(
