@@ -77,7 +77,7 @@ class ConcourseApiFactory:
             )
         else:
             raise NotImplementedError(
-                "Concourse version {v} not supported".format(v=concourse_api_version.value)
+                f'not supported: {concourse_api_version=}',
             )
 
 
