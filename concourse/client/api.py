@@ -200,7 +200,7 @@ class ConcourseApiBase:
         if isinstance(pipeline_names, str):
             pipeline_names = [pipeline_names]
 
-        resources = map(lambda name: self.pipeline_cfg(pipeline_name=name).resources, pipeline_names)
+        resources = (self.pipeline_cfg(pipeline_name=name).resources for name in pipeline_names)
         for resource_list in resources:
             for resource in resource_list:
                 # resource is of type concourse.client.model.PipelineConfigResource
