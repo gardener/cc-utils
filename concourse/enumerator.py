@@ -482,6 +482,6 @@ class TemplateRetriever:
         )
 
     @functools.lru_cache()
-    def template_contents(self, template_name):
+    def template_contents(self, template_name='default'):
         with open(self.template_file(template_name=template_name)) as f:
             return f.read()
