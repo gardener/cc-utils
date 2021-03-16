@@ -21,7 +21,6 @@ resource_registry = pipeline_definition._resource_registry
 
 github = config_set.github()
 concourse_cfg = config_set.concourse()
-disable_tls_validation = "false" if github.tls_validation() else "true"
 
 default_container_registry = config_set.container_registry()
 
