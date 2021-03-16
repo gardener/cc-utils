@@ -13,19 +13,19 @@ from concourse.factory import (
 class RawPipelineDefinitionDescriptorTest(unittest.TestCase):
     def test_basic_validation(self):
         # "OK case"
-        DefDescriptor(name='a_name', base_definition=None, variants={'foo': 42})
+        DefDescriptor(name='a_name', base_definition=None, jobs={'foo': 42})
 
         # error cases
         with self.assertRaises(ValueError):
-            DefDescriptor(name=None, base_definition=None, variants={'foo': 42})
+            DefDescriptor(name=None, base_definition=None, jobs={'foo': 42})
         with self.assertRaises(ModelValidationError):
-            DefDescriptor(name='a_name', base_definition=None, variants={})
+            DefDescriptor(name='a_name', base_definition=None, jobs={})
 
 
 class DefinitionFactoryTest(unittest.TestCase):
     def test_valid_validation(self):
         # "OK case"
-        descriptor = DefDescriptor(name='a_name', base_definition=None, variants={'foo': 42})
+        descriptor = DefDescriptor(name='a_name', base_definition=None, jobs={'foo': 42})
         DefinitionFactory(
             raw_definition_descriptor=descriptor,
             cfg_set=None,
@@ -39,11 +39,11 @@ class DefinitionFactoryTest(unittest.TestCase):
 
     def test_inheritance(self):
         base_def = {'foo': 'bar', 123: 555}
-        variants = {
+        jobs = {
             'variant_a': {'foo': 42},
             'variant_b': {'xxx': 31}
         }
-        descriptor = DefDescriptor(name='x_name', base_definition=base_def, variants=variants)
+        descriptor = DefDescriptor(name='x_name', base_definition=base_def, jobs=jobs)
         factory = DefinitionFactory(
             raw_definition_descriptor=descriptor,
             cfg_set=None,
@@ -56,10 +56,10 @@ class DefinitionFactoryTest(unittest.TestCase):
         variant_a = merged_variants['variant_a']
         variant_b = merged_variants['variant_b']
 
-        # variants may overwrite values
+        # jobs may overwrite values
         self.assertEqual(variant_a, {'foo': 42, 123: 555})
 
-        # variants may add attributes
+        # jobs may add attributes
         self. assertEqual(variant_b, {'foo': 'bar', 123: 555, 'xxx': 31})
 
     def test_repository_triggers_logic(self):
@@ -71,7 +71,7 @@ class DefinitionFactoryTest(unittest.TestCase):
         for the same repository will be honoured properly for each variant.
         '''
         base_def = {'repo': {'name': 'main_repo', 'branch': 'dontcare', 'path': 'foo/bar'}}
-        variants = {
+        jobs = {
             'variant2':
             {
                 'repo': {'name': 'main_repo', 'trigger': False},
@@ -89,7 +89,7 @@ class DefinitionFactoryTest(unittest.TestCase):
                 'repo': {'name': 'main_repo', 'trigger': False}
             },
         }
-        descriptor = DefDescriptor(name='foo', base_definition=base_def, variants=variants)
+        descriptor = DefDescriptor(name='foo', base_definition=base_def, jobs=jobs)
 
         cfg_set = model.ConfigurationSet('dummy','dummy', raw_dict={})
         cfg_set.github = unittest.mock.MagicMock(
