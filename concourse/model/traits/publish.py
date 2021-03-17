@@ -261,7 +261,7 @@ class PublishTraitTransformer(TraitTransformer):
             raw_dict={},
             is_synthetic=True,
             notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
-            injected_by_trait=self.name,
+            injecting_trait_name=self.name,
             script_type=ScriptType.BOURNE_SHELL,
         )
         publish_step.set_timeout(duration_string='4h')
@@ -272,7 +272,7 @@ class PublishTraitTransformer(TraitTransformer):
             raw_dict={},
             is_synthetic=True,
             notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
-            injected_by_trait=self.name,
+            injecting_trait_name=self.name,
             script_type=ScriptType.BOURNE_SHELL,
         )
         prepare_step.set_timeout(duration_string='30m')
@@ -292,7 +292,7 @@ class PublishTraitTransformer(TraitTransformer):
                     },
                     is_synthetic=True,
                     notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
-                    injected_by_trait=self.name,
+                    injecting_trait_name=self.name,
                     script_type=ScriptType.PYTHON3,
                     extra_args={
                         'image_descriptor': img,

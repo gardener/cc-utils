@@ -163,7 +163,7 @@ class JobVariant(ModelBase):
         for step in self.steps():
             dependencies[step.name] |= {
                 s.name for s in self.steps()
-                if s.injected_by_trait() in step.trait_depends()
+                if s.injecting_trait_name() in step.trait_depends()
             }
         try:
             result = list(toposort.toposort(dependencies))

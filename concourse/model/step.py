@@ -208,7 +208,7 @@ class PipelineStep(ModelBase):
         notification_policy: StepNotificationPolicy,
         script_type,
         extra_args=None,
-        injected_by_trait=None,
+        injecting_trait_name=None,
         *args,
         **kwargs
     ):
@@ -219,7 +219,7 @@ class PipelineStep(ModelBase):
         self._inputs_dict = {}
         self._publish_to_dict = {}
         self._notification_policy = notification_policy
-        self._injected_by_trait = injected_by_trait
+        self._injecting_trait_name = injecting_trait_name
         self._extra_args = extra_args
         super().__init__(*args, **kwargs)
 
@@ -367,8 +367,8 @@ class PipelineStep(ModelBase):
     def trait_depends(self):
         return set(self.raw['trait_depends'])
 
-    def injected_by_trait(self):
-        return self._injected_by_trait
+    def injecting_trait_name(self):
+        return self._injecting_trait_name
 
     def timeout(self):
         return self.raw['timeout']

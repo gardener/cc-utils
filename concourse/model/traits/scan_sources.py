@@ -184,7 +184,7 @@ class SourceScanTraitTransformer(TraitTransformer):
             raw_dict={},
             is_synthetic=True,
             notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
-            injected_by_trait=self.name,
+            injecting_trait_name=self.name,
             script_type=ScriptType.PYTHON3
         )
         self.source_scan_step.add_input(
