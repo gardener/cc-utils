@@ -439,8 +439,6 @@ if not publish_options:
 
 <%def name="step(indent, job_variant, job_step)" filter="indent_func(indent),trim">
 <%
-job_type = job_variant.variant_name
-source_repo = job_variant.main_repository()
 notification_policy = job_step.notification_policy()
 if (
     notification_policy is not StepNotificationPolicy.NOTIFY_PULL_REQUESTS
@@ -464,10 +462,6 @@ notify_pull_requests = (
 </%def>
 
 <%def name="job(job_variant)">
-<%
-job_type = job_variant.variant_name
-repo = job_variant.main_repository()
-%>
 - name: ${job_variant.job_name()}
   serial: ${'true' if suppress_parallel_execution(job_variant) else 'false'}
   build_logs_to_retain: ${job_variant.trait('options').build_logs_to_retain()}
