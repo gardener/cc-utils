@@ -163,12 +163,22 @@ on_failure:
 % if send_email_notification:
 <%
 import concourse.model.traits.meta
-repo = job_variant.main_repository()
-subject = 'Step {s} for {p}:{b} failed!'.format(s=job_step.name, p=pipeline.get('name'), b=repo.branch())
+if job_variant.has_main_repository():
+  repo = job_variant.main_repository()
+  branch = repo.branch()
+else:
+  branch = 'n/a'
+
+subject = 'Step {s} for {p}:{b} failed!'.format(
+  s=job_step.name,
+   p=pipeline.get('name'),
+   b=branch,
+)
 def repos():
-  yield job_variant.main_repository()
-  if job_variant.has_publish_repository(job_variant.main_repository().logical_name()):
-    yield job_variant.publish_repository(job_variant.main_repository().logical_name())
+  if job_variant.has_main_repository():
+    yield job_variant.main_repository()
+    if job_variant.has_publish_repository(job_variant.main_repository().logical_name()):
+      yield job_variant.publish_repository(job_variant.main_repository().logical_name())
 
 repo_cfgs = list(repos())
 src_dirs = [repo_cfg.resource_name() for repo_cfg in repo_cfgs]
@@ -204,8 +214,12 @@ notification_env_vars = {
 
 <%def name="execute(indent, job_step, job_variant)" filter="indent_func(indent),trim">
 <%
-source_repo = job_variant.main_repository()
-source_repo_github_cfg_name = source_repo.cfg_name() or github.name()
+if job_variant.has_main_repository():
+  source_repo = job_variant.main_repository()
+  source_repo_github_cfg_name = source_repo.cfg_name() or github.name()
+else:
+  source_repo = None
+  source_repo_github_cfg_name = github.name()
 %>
 % if job_step.execute():
 - task: '${job_step.name}'
