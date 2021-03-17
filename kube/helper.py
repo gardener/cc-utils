@@ -32,6 +32,8 @@ from kubernetes.client import (
     V1Service,
     V1ServiceAccount,
     ExtensionsV1beta1Ingress as V1beta1Ingress,
+    V1StatefulSet,
+    V1PodList,
 )
 from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
@@ -321,6 +323,23 @@ class KubernetesDeploymentHelper(object):
             except ProtocolError:
                 info('http connection error - ignored')
 
+    def get_stateful_set(self, namespace: str, name: str) -> V1StatefulSet:
+        '''Return the `V1StatefulSet` with the given name in the given namespace, or `None` if
+        no such stateful set exists.'''
+        not_empty(namespace)
+        not_empty(name)
+
+        try:
+            stateful_set = self.apps_api.read_namespaced_stateful_set(
+                name=name,
+                namespace=namespace,
+            )
+        except ApiException as ae:
+            if ae.status == 404:
+                return None
+            raise ae
+        return stateful_set
+
 
 class KubernetesIngressHelper(object):
     def __init__(self, extensions_v1beta1_api: ExtensionsV1beta1Api):
@@ -428,7 +447,7 @@ class KubernetesPodHelper(object):
     def __init__(self, core_api: CoreV1Api):
         self.core_api = core_api
 
-    def list_pods(self, namespace: str, label_selector: str='', field_selector: str=''):
+    def list_pods(self, namespace: str, label_selector: str='', field_selector: str='') -> V1PodList:
         '''Find all pods matching given labels and/or fields in the given namespace'''
         not_empty(namespace)
 
