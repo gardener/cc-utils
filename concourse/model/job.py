@@ -39,6 +39,7 @@ class JobVariant(ModelBase):
         self._main_repository_name = None
         self._resource_registry = not_none(resource_registry)
         self.variant_name = name
+        self._publish_repos_dict = {}
         super().__init__(raw_dict=raw_dict, *args, **kwargs)
 
     @classmethod
@@ -72,10 +73,13 @@ class JobVariant(ModelBase):
         return name in self.traits()
 
     def job_name(self):
-        return '{b}-{n}-job'.format(
-            b=self.main_repository().branch(),
-            n=self.variant_name,
-        )
+        parts = []
+        if self.has_main_repository():
+            parts.append(self.main_repository().branch())
+        parts.append(self.variant_name)
+        parts.append('job')
+
+        return '-'.join(parts)
 
     def meta_resource_name(self):
         meta_res = self._resource_registry.resource(
