@@ -203,9 +203,9 @@ class StepNotificationPolicy(enum.Enum):
 class PipelineStep(ModelBase):
     def __init__(
         self,
-        name,
-        is_synthetic,
-        notification_policy,
+        name: str,
+        is_synthetic: bool,
+        notification_policy: StepNotificationPolicy,
         script_type,
         extra_args=None,
         injected_by_trait=None,
