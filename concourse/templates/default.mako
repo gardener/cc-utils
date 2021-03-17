@@ -321,11 +321,11 @@ else:
       path: /bin/sh
       args:
       - -exc
-% if job_step.name != 'publish':
+  % if job_step.name != 'publish':
       - |
-% else:
+  % else:
       - "echo this is a dummy step"
-% endif
+  % endif
 % elif job_step.script_type() == ScriptType.PYTHON3:
     run:
       path: /usr/bin/python3
