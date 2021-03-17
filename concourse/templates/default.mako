@@ -46,6 +46,9 @@ def has_publish_trait(model_with_traits):
 def has_component_descriptor_trait(model_with_traits):
   return model_with_traits.has_trait('component_descriptor')
 
+def has_options_trait(model_with_traits):
+  return model_with_traits.has_trait('options')
+
 def suppress_parallel_execution(variant):
   if variant.has_trait('scheduling'):
     if variant.trait('scheduling').suppress_parallel_execution() is not None:
@@ -464,8 +467,10 @@ notify_pull_requests = (
 <%def name="job(job_variant)">
 - name: ${job_variant.job_name()}
   serial: ${'true' if suppress_parallel_execution(job_variant) else 'false'}
+% if has_options_trait(job_variant):
   build_logs_to_retain: ${job_variant.trait('options').build_logs_to_retain()}
   public: ${'true' if job_variant.trait('options').public_build_logs() else 'false'}
+% endif
   plan:
 % for repository in job_variant.repositories():
   - get: ${repository.resource_name()}
