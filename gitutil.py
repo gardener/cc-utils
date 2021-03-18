@@ -47,7 +47,7 @@ def _ssh_auth_env(github_cfg):
     return (cmd_env, tmp_id)
 
 
-class GitHelper(object):
+class GitHelper:
     def __init__(self, repo, github_cfg, github_repo_path):
         not_none(repo)
         if not isinstance(repo, git.Repo):

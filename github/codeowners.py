@@ -21,7 +21,7 @@ from github.util import GitHubRepositoryHelper
 from ci.util import existing_dir, existing_file, not_none, warning
 
 
-class CodeownersEnumerator(object):
+class CodeownersEnumerator:
     '''
     Parses GitHub CODEOWNSERS files [0] from the documented default locations for a given
     (git) repository work tree into a stream of codeowners entries.
@@ -78,7 +78,7 @@ def _first(iterable):
         return None
 
 
-class CodeOwnerEntryResolver(object):
+class CodeOwnerEntryResolver:
     '''
     Resolves GitHub CODEOWNERS entries [0] into email addresses.
 

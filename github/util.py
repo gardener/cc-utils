@@ -48,7 +48,7 @@ class RepoPermission(enum.Enum):
     ADMIN = "admin"
 
 
-class GitHubRepoBranch(object):
+class GitHubRepoBranch:
     '''Instances of this class represent a specific branch of a given GitHub repository.
     '''
     def __init__(
@@ -79,7 +79,7 @@ class GitHubRepoBranch(object):
         return self._branch
 
 
-class RepositoryHelperBase(object):
+class RepositoryHelperBase:
     GITHUB_TIMESTAMP_UTC_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
     def __init__(

@@ -19,7 +19,7 @@ import model.webhook_dispatcher as examinee
 from model.base import ModelValidationError
 
 
-class TestWebhookDispatcherConfig(object):
+class TestWebhookDispatcherConfig:
     @pytest.fixture
     def required_dict(self):
         return {
@@ -45,7 +45,7 @@ class TestWebhookDispatcherConfig(object):
         element.validate()
 
 
-class TestWebhookDispatcherDeploymentConfig(object):
+class TestWebhookDispatcherDeploymentConfig:
     @pytest.fixture
     def deployment_required_dict(self):
         return {

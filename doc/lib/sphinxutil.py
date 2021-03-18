@@ -20,7 +20,7 @@ from docutils.statemachine import ViewList
 from sphinx.util.docutils import switch_source_input
 
 
-class SphinxUtilsMixin(object):
+class SphinxUtilsMixin:
     '''
     helper methods for creating document elements, such as titles, sections, etc.
 
@@ -89,7 +89,7 @@ class SphinxUtilsMixin(object):
         self._node += table_node
 
 
-class TableBuilder(object):
+class TableBuilder:
     def __init__(
         self,
         state,

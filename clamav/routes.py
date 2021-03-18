@@ -17,7 +17,7 @@ from ensure import ensure_annotations
 from ci.util import urljoin
 
 
-class ClamAVRoutes(object):
+class ClamAVRoutes:
     '''ClamAV REST API endpoint URLs for the ClamAV base URL.
 
     Not intended to be instantiated by users of this module.

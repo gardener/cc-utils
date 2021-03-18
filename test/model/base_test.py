@@ -19,7 +19,7 @@ import model.base as examinee
 from model.base import ModelValidationError
 
 
-class ModelBaseTest(object):
+class ModelBaseTest:
     def test_raw_dict_values_are_stored(self):
         empty_dict = dict()
         model_base = examinee.ModelBase(raw_dict=empty_dict)
@@ -27,7 +27,7 @@ class ModelBaseTest(object):
         self.assertIs(model_base.raw, empty_dict)
 
 
-class BasicCredentialsTest(object):
+class BasicCredentialsTest:
     @pytest.fixture
     def credentials_dict(self):
         return {

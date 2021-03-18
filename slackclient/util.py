@@ -19,7 +19,7 @@ from ci.util import info, warning
 from model.slack import SlackConfig
 
 
-class SlackHelper(object):
+class SlackHelper:
     def __init__(
             self,
             slack_cfg: SlackConfig

@@ -95,7 +95,7 @@ def _metadata_dict():
     return meta_dict
 
 
-class ElasticSearchClient(object):
+class ElasticSearchClient:
     def __init__(
         self,
         elasticsearch: elasticsearch.Elasticsearch,

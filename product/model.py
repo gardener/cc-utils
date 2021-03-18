@@ -313,7 +313,7 @@ class ComponentDescriptorV1(ComponentDescriptor):
     pass
 
 
-class ComponentName(object):
+class ComponentName:
     @staticmethod
     @deprecated.deprecated
     def validate_component_name(name: str):

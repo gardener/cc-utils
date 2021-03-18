@@ -24,7 +24,7 @@ from ci.util import Failure
 from model import ConfigFactory
 
 
-class ConfigFactorySmokeTestsMixin(object):
+class ConfigFactorySmokeTestsMixin:
     '''
     smoke-tests shared by different factory creator methods (from_dict, from_cfg_dir) intended
     to ensure both deserialisation methods result in the same cfg factory.

@@ -42,7 +42,7 @@ from ensure import ensure_annotations
 from ci.util import info, not_empty, not_none, fail
 
 
-class KubernetesSecretHelper(object):
+class KubernetesSecretHelper:
     '''Helper class for handling kubernetes secret objects'''
     @ensure_annotations
     def __init__(self, core_api: CoreV1Api):
@@ -129,7 +129,7 @@ class KubernetesSecretHelper(object):
         return secret
 
 
-class KubernetesServiceAccountHelper(object):
+class KubernetesServiceAccountHelper:
     '''Helper class for kubernetes service-account objects'''
 
     def __init__(self, core_api: CoreV1Api):
@@ -152,7 +152,7 @@ class KubernetesServiceAccountHelper(object):
         )
 
 
-class KubernetesNamespaceHelper(object):
+class KubernetesNamespaceHelper:
     '''Helper class for kubernetes namespace objects'''
 
     @ensure_annotations
@@ -190,7 +190,7 @@ class KubernetesNamespaceHelper(object):
         return None
 
 
-class KubernetesServiceHelper(object):
+class KubernetesServiceHelper:
     def __init__(self, core_api: CoreV1Api):
         self.core_api = core_api
 
@@ -238,7 +238,7 @@ class KubernetesServiceHelper(object):
         return service
 
 
-class KubernetesDeploymentHelper(object):
+class KubernetesDeploymentHelper:
     def __init__(self, apps_api: AppsV1Api):
         self.apps_api = apps_api
 
@@ -341,7 +341,7 @@ class KubernetesDeploymentHelper(object):
         return stateful_set
 
 
-class KubernetesIngressHelper(object):
+class KubernetesIngressHelper:
     def __init__(self, extensions_v1beta1_api: ExtensionsV1beta1Api):
         self.extensions_v1beta1_api = extensions_v1beta1_api
 
@@ -388,7 +388,7 @@ class KubernetesIngressHelper(object):
         return ingress
 
 
-class KubernetesConfigMapHelper(object):
+class KubernetesConfigMapHelper:
     def __init__(self, core_api: CoreV1Api):
         self.core_api = core_api
 
@@ -443,7 +443,7 @@ class KubernetesConfigMapHelper(object):
         return config_map
 
 
-class KubernetesPodHelper(object):
+class KubernetesPodHelper:
     def __init__(self, core_api: CoreV1Api):
         self.core_api = core_api
 

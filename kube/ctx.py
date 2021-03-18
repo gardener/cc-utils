@@ -34,7 +34,7 @@ from kube.helper import (
 )
 
 
-class Ctx(object):
+class Ctx:
     '''
     handles the execution context of kubernetes-api calls.
     Most prominently the retrieval of the 'kubeconfig' to use, which is

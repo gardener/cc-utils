@@ -34,7 +34,7 @@ def test_info():
 
 
 def test_info_with_quiet():
-    class Args(object):
+    class Args:
         pass
     args = Args()
     args.quiet = True

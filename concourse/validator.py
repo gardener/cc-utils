@@ -17,7 +17,7 @@ from concourse.model.pipeline import PipelineDefinition
 from concourse.model.job import JobVariant
 
 
-class PipelineDefinitionValidator(object):
+class PipelineDefinitionValidator:
     def __init__(self, pipeline_definition):
         if not isinstance(pipeline_definition, PipelineDefinition):
             raise ValueError('not a PipelineDefinition: ' + str(pipeline_definition))

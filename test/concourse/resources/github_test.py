@@ -9,7 +9,7 @@ from model.github import GithubConfig
 from resources import mako_resource_dir
 
 
-class TestGithubMakoResource(object):
+class TestGithubMakoResource:
     test_file = os.path.join(mako_resource_dir(), 'github.mako')
 
     @pytest.fixture()

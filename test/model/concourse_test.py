@@ -19,7 +19,7 @@ import model.concourse as examinee
 from model.base import ModelValidationError
 
 
-class ConcourseTeamTest(object):
+class ConcourseTeamTest:
     @pytest.fixture
     def concourse_team_dict(self):
         return {
@@ -76,7 +76,7 @@ class ConcourseTeamTest(object):
                     element.validate()
 
 
-class ConcourseConfigTest(object):
+class ConcourseConfigTest:
     @pytest.fixture
     def required_dict(self):
         return {

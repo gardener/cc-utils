@@ -33,7 +33,7 @@ from .model import (
 logger = logging.getLogger(__name__)
 
 
-class ClamAVClient(object):
+class ClamAVClient:
     @ensure_annotations
     def __init__(
         self,

@@ -35,7 +35,7 @@ from .model import (
 from model.protecode import ProtecodeAuthScheme
 
 
-class ProtecodeApiRoutes(object):
+class ProtecodeApiRoutes:
     '''
     calculates API routes (URLs) for a subset of the URL endpoints exposed by
     "Protecode" (https://protecode.mo.sap.corp)

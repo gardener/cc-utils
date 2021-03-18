@@ -48,7 +48,7 @@ def replace_modules(modules:dict):
             sys.modules[name] = module
 
 
-class AssertMixin(object):
+class AssertMixin:
     def assertEmpty(self, iterable, msg=None):
         if issubclass(type(iterable), typing.Sequence):
             leng = len(iterable)

@@ -14,7 +14,7 @@ from concourse.model.traits.release import (
 import gci.componentmodel as cm
 
 
-class TestReleaseCommitStep(object):
+class TestReleaseCommitStep:
     @pytest.fixture()
     def examinee(self, tmp_path):
         # create required temporary file relative to the provided temporary directory
@@ -62,7 +62,7 @@ class TestReleaseCommitStep(object):
             examinee(release_version='invalid_semver').validate()
 
 
-class NextDevCycleCommitStep(object):
+class NextDevCycleCommitStep:
     @pytest.fixture()
     def examinee(self, tmp_path):
         # create required temporary file relative to the provided temporary directory
@@ -112,7 +112,7 @@ class NextDevCycleCommitStep(object):
             examinee(release_version='invalid_semver').validate()
 
 
-class TestGitHubReleaseStep(object):
+class TestGitHubReleaseStep:
     @pytest.fixture()
     def examinee(self, tmp_path):
         # prepare test component descriptor file and fill it with test content
@@ -170,7 +170,7 @@ class TestGitHubReleaseStep(object):
             examinee(release_version='invalid_semver').validate()
 
 
-class TestPublishReleaseNotesStep(object):
+class TestPublishReleaseNotesStep:
     @pytest.fixture()
     def examinee(self, tmp_path):
         component_descriptor_v2 = os.path.join(tmp_path, 'component_descriptor_v2')
@@ -233,7 +233,7 @@ class TestPublishReleaseNotesStep(object):
             examinee(release_version='invalid_semver').validate()
 
 
-class TestTryCleanupDraftReleaseStep(object):
+class TestTryCleanupDraftReleaseStep:
     @pytest.fixture()
     def examinee(self):
         def _examinee(
@@ -248,7 +248,7 @@ class TestTryCleanupDraftReleaseStep(object):
         examinee().validate()
 
 
-class TestSlackReleaseStep(object):
+class TestSlackReleaseStep:
     @pytest.fixture()
     def examinee(self):
         def _examinee(

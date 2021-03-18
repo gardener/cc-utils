@@ -39,7 +39,7 @@ class SetPipelineResult(Enum):
     CREATED = 1
 
 
-class ModelBase(object):
+class ModelBase:
     '''
     Base class for Concourse model classes
 

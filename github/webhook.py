@@ -26,7 +26,7 @@ DEFAULT_ORG_HOOK_CONTENT_TYPE = 'json'
 DEFAULT_ORG_HOOK_QUERY_KEY = 'whd_config_name'
 
 
-class GithubWebHookSyncer(object):
+class GithubWebHookSyncer:
     '''
     Synchronises web hooks for repositories hosted on a github instance.
     '''

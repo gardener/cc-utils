@@ -153,7 +153,7 @@ class ClamAVError(Exception):
         return self._error_message
 
 
-class ClamAVScanEventClient(object):
+class ClamAVScanEventClient:
     '''Client to handle SSE events sent by our k8s ClamAV installation
 
     Due to the quick timeout in our Infrastructure and the limited functionality our k8s ClamAV

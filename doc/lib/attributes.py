@@ -36,7 +36,7 @@ class SafeEnumDumper(yaml.SafeDumper):
         return super().represent_data(data)
 
 
-class AttributesDocumentation(object):
+class AttributesDocumentation:
     def __init__(
         self,
         model_element_type,

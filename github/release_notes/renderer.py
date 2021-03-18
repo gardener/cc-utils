@@ -124,7 +124,7 @@ def _access(component):
     return cnudie.util.determine_main_source_for_component(component, False).access
 
 
-class Renderer(object):
+class Renderer:
     def __init__(self, release_note_objs: typing.List[ReleaseNote]):
         self.rls_note_objs = _.uniq(release_note_objs)
 
