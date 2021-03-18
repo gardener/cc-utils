@@ -109,7 +109,7 @@ class ConcourseConfig(NamedModelElement):
         try:
             response = session.get(concourse_url)
             response.raise_for_status()
-        except requests.exceptions.HTTPError:
+        except requests.exceptions.RequestException:
             ci.util.warning(f'Could not determine version of Concourse running at {concourse_url}')
             return None
 
