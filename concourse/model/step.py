@@ -219,6 +219,7 @@ class PipelineStep(ModelBase):
         self._inputs_dict = {}
         self._publish_to_dict = {}
         self._notification_policy = notification_policy
+        self._notifications_cfg = None
         self._injecting_trait_name = injecting_trait_name
         self._extra_args = extra_args
         super().__init__(*args, **kwargs)
