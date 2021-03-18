@@ -13,10 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import warnings
-
 from ensure import ensure_annotations
-from urllib3.exceptions import InsecureRequestWarning
 
 import functools
 
@@ -25,8 +22,6 @@ import ci.util
 from .api import ConcourseApiFactory
 from model.concourse import ConcourseConfig
 
-
-warnings.filterwarnings('ignore', 'Unverified HTTPS request is being made.*', InsecureRequestWarning)
 
 '''
 An implementation of the (undocumented [0]) RESTful HTTP API offered by concourse
