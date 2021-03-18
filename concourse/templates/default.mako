@@ -457,11 +457,13 @@ if not publish_options:
 <%def name="step(indent, job_variant, job_step)" filter="indent_func(indent),trim">
 <%
 notification_policy = job_step.notification_policy()
-if (
-    notification_policy is not StepNotificationPolicy.NOTIFY_PULL_REQUESTS
-    and notification_policy is not StepNotificationPolicy.NO_NOTIFICATION
-):
-  raise ValueError(f'unsupported StepNotificationPolicy: {job_step.notification_policy()}')
+if notification_policy is StepNotificationPolicy.NO_NOTIFICATION:
+  render_notification_step = False
+elif notification_policy is StepNotificationPolicy.NOTIFY_PULL_REQUESTS:
+  render_notification_step = True
+else:
+  raise NotImplementedError(notification_policy)
+
 notify_pull_requests = (
   has_pr_trait(job_variant)
   and job_step.notification_policy() is StepNotificationPolicy.NOTIFY_PULL_REQUESTS
