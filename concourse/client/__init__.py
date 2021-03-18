@@ -20,7 +20,7 @@ import functools
 import ci.util
 
 from .api import ConcourseApiFactory
-from model.concourse import ConcourseConfig
+from model.concourse import ConcourseConfig, ConcourseUAMConfig
 
 
 '''
@@ -47,17 +47,15 @@ Other types defined in this module are not intended to be instantiated by users.
 @ensure_annotations
 def from_cfg(
     concourse_cfg: ConcourseConfig,
+    concourse_uam_cfg: ConcourseUAMConfig,
     team_name: str,
     verify_ssl=True,
     concourse_api_version=None,
 ):
-    '''
-    Helper method to get Concourse API object
-    '''
+    # XXX rm last dependency towards cfg-factory
     cfg_factory = ci.util.ctx().cfg_factory()
     base_url = concourse_cfg.ingress_url(cfg_factory)
-    concourse_uam_cfg_name = concourse_cfg.concourse_uam_config()
-    concourse_uam_cfg = cfg_factory.concourse_uam(concourse_uam_cfg_name)
+
     concourse_team = concourse_uam_cfg.team(team_name)
     team_name = concourse_team.teamname()
     username = concourse_team.username()

@@ -22,11 +22,18 @@ from ensure import ensure_annotations
 
 @functools.lru_cache()
 @ensure_annotations
-def client_from_cfg_name(concourse_cfg_name: str, team_name: str):
+def client_from_cfg_name(
+    concourse_cfg_name: str,
+    team_name: str
+):
     cfg_factory = ci.util.ctx().cfg_factory()
+
     cc_cfg = cfg_factory.concourse(concourse_cfg_name)
+    uam_cfg = cfg_factory.concourse_uam(cc_cfg.concourse_uam_config())
+
     return concourse.client.from_cfg(
         concourse_cfg=cc_cfg,
+        concourse_uam_cfg=uam_cfg,
         team_name=team_name,
         verify_ssl=True,
     )
