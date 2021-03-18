@@ -59,7 +59,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class GithubWebhookDispatcher(object):
+class GithubWebhookDispatcher:
     def __init__(
         self,
         cfg_set,
