@@ -79,6 +79,7 @@ publish_step = concourse.steps.step_def('publish')
 build_oci_image_step = concourse.steps.step_def('build_oci_image')
 meta_step = concourse.steps.step_def('meta')
 rm_pr_label_step = concourse.steps.step_def('rm_pr_label')
+replicate_pipelines_step = concourse.steps.step_def('replicate_pipelines')
 component_descriptor_step = concourse.steps.step_def('component_descriptor')
 update_component_deps_step = concourse.steps.step_def('update_component_deps')
 draft_release_step = concourse.steps.step_def('draft_release')
@@ -432,6 +433,8 @@ ${publish_step(job_step=job_step, job_variant=job_variant)}
         ${alter_container_images_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
 % elif job_step.name == 'scan_sources':
         ${scan_sources_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
+% elif job_step.name == 'replicate_pipelines':
+        ${replicate_pipelines_step(step=job_step, job=job_variant, indent=8)}
 % endif
 % endif
 % if job_step.publish_repository_names() and not job_variant.has_trait('pull-request'):

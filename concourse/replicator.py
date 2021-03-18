@@ -28,8 +28,8 @@ from concourse.enumerator import (
     GithubOrganisationDefinitionEnumerator,
 )
 
-from concourse import client
 import ccc.github
+import concourse.client
 import concourse.client.model
 import model.concourse
 
@@ -62,6 +62,7 @@ def replicate_pipelines(
     )
 
     deployer = ConcourseDeployer(
+        cfg_set=cfg_set,
         unpause_pipelines=unpause_pipelines,
         expose_pipelines=expose_pipelines,
     )
@@ -231,9 +232,11 @@ class FilesystemDeployer(DefinitionDeployer):
 class ConcourseDeployer(DefinitionDeployer):
     def __init__(
         self,
+        cfg_set,
         unpause_pipelines: bool,
-        expose_pipelines: bool=True
+        expose_pipelines: bool=True,
     ):
+        self.cfg_set = cfg_set
         self.unpause_pipelines = unpause_pipelines
         self.expose_pipelines = expose_pipelines
 
@@ -241,8 +244,12 @@ class ConcourseDeployer(DefinitionDeployer):
         pipeline_definition = definition_descriptor.pipeline
         pipeline_name = definition_descriptor.pipeline_name
         try:
-            api = client.from_cfg(
-                concourse_cfg=definition_descriptor.concourse_target_cfg,
+            concourse_cfg = definition_descriptor.concourse_target_cfg
+            concourse_uam_cfg = self.cfg_set.concourse_uam_cfg(concourse_cfg.concourse_uam_config())
+
+            api = concourse.client.from_cfg(
+                concourse_cfg=concourse_cfg,
+                concourse_uam_cfg=concourse_uam_cfg,
                 team_name=definition_descriptor.concourse_target_team,
             )
             response = api.set_pipeline(
@@ -317,9 +324,12 @@ class ReplicationResultProcessor:
             # TODO: implement eq for concourse_cfg
             concourse_cfg, concourse_team = next(iter(
                 concourse_results)).definition_descriptor.concourse_target()
+            concourse_uam_cfg = self._cfg_set.concourse_uam(concourse_cfg.concourse_uam_cfg())
+
             concourse_results = concourse_target_results[concourse_target_key]
-            concourse_api = client.from_cfg(
+            concourse_api = concourse.client.from_cfg(
                 concourse_cfg=concourse_cfg,
+                concourse_uam_cfg=concourse_uam_cfg,
                 team_name=concourse_team,
             )
 
