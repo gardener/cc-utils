@@ -119,13 +119,13 @@ def gardener_cicd_libs_version():
         return f.readline()
 
 
-class CliHint(object):
+class CliHint:
     def __init__(self, typehint=str, *args, **kwargs):
         self.argparse_args = dict(*args, **kwargs)
         self.typehint = typehint
 
 
-class CliHints(object):
+class CliHints:
     '''
     predefined cli hint instances
     '''
@@ -543,7 +543,7 @@ def merge_dicts(base: dict, *other: dict, list_semantics='merge'):
     )
 
 
-class FluentIterable(object):
+class FluentIterable:
     ''' a fluent object stream processing chain builder inspired by guava's FluentIterable
 
     Example:
