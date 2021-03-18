@@ -477,7 +477,9 @@ notify_pull_requests = (
 % if notify_pull_requests:
   ${update_pr_status(2, job_variant, job_step, 'success')}
 % endif
+% if render_notification_step:
   ${notification(2, job_variant, job_step, 'error')}
+% endif
 </%def>
 
 <%def name="job(job_variant)">
