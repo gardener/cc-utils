@@ -23,6 +23,7 @@ import typing
 import traceback
 
 import ccc.elasticsearch
+import ccc.github
 import ccc.secrets_server
 import ci.util
 import concourse.client
@@ -286,7 +287,10 @@ class GithubWebhookDispatcher:
         repository_path = repo.repository_path()
         pr_number = pr_event.number()
 
-        github_cfg = self.cfg_set.github()
+        github_cfg = ccc.github.github_cfg_for_hostname(
+            cfg_factory=self.cfg_set,
+            host_name=repo.github_host(),
+        )
         owner, name = repository_path.split('/')
         github_helper = GitHubRepositoryHelper(
             owner,
