@@ -25,8 +25,11 @@ import traceback
 import ccc.elasticsearch
 import ccc.github
 import ccc.secrets_server
+import ccc.github
 import ci.util
 import concourse.client
+
+from github3.exceptions import NotFoundError
 
 from .pipelines import update_repository_pipelines
 from concourse.enumerator import JobMappingNotFoundError
@@ -153,12 +156,24 @@ class GithubWebhookDispatcher:
     def determine_affected_pipelines(self, push_event) -> typing.Generator[Pipeline, None, None]:
         '''yield each concourse pipeline that may be affected by the given push-event.
         '''
+        repo = push_event.repository()
+        repo_url = repo.repository_url()
         repo_enumerator = concourse.enumerator.GithubRepositoryDefinitionEnumerator(
-            repository_url=push_event.repository().repository_url(),
+            repository_url=repo_url,
             cfg_set=self.cfg_set,
         )
 
-        for descriptor in repo_enumerator.enumerate_definition_descriptors():
+        try:
+            definition_descriptors = [d for d in repo_enumerator.enumerate_definition_descriptors()]
+        except NotFoundError:
+            logger.warning(
+                f"Unable to access repository '{repo_url}' on github '{repo.github_host()}'. "
+                "Please make sure the repository exists and the technical user has the necessary "
+                "permissions to access it."
+            )
+            definition_descriptors = []
+
+        for descriptor in definition_descriptors:
             # need to merge and consider the effective definition
             effective_definition = descriptor.pipeline_definition
             for override in descriptor.override_definitions:
@@ -244,8 +259,16 @@ class GithubWebhookDispatcher:
                 if len(resources) == 0:
                     continue
 
-                if pr_event.action() in [PullRequestAction.OPENED, PullRequestAction.SYNCHRONIZE]:
-                    self._set_pr_labels(pr_event, resources)
+                if (
+                    pr_event.action() in [PullRequestAction.OPENED, PullRequestAction.SYNCHRONIZE]
+                    and not self._set_pr_labels(pr_event, resources)
+                ):
+                    logger.warning(
+                        f'Unable to set required labels for PR #{pr_event.number()} for '
+                        f'repository {pr_event.repository().repository_path()}. Will not trigger '
+                        'resource check.'
+                    )
+                    continue
 
                 logger.info(f'triggering resource check for PR number: {pr_event.number()}')
                 self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
@@ -282,21 +305,33 @@ class GithubWebhookDispatcher:
             for resource in resources if resource.source.get('label') is not None
         }
         if not required_labels:
-            return False
+            return True
+
         repo = pr_event.repository()
+        github_host = repo.github_host()
         repository_path = repo.repository_path()
         pr_number = pr_event.number()
 
         github_cfg = ccc.github.github_cfg_for_hostname(
             cfg_factory=self.cfg_set,
-            host_name=repo.github_host(),
+            host_name=github_host,
         )
         owner, name = repository_path.split('/')
-        github_helper = GitHubRepositoryHelper(
-            owner,
-            name,
-            github_cfg=github_cfg,
-        )
+
+        try:
+            github_helper = GitHubRepositoryHelper(
+                owner=owner,
+                name=name,
+                github_cfg=github_cfg,
+            )
+        except NotFoundError:
+            logger.warning(
+                f"Unable to access repository '{repository_path}' on github '{github_host}'. "
+                "Please make sure the repository exists and the technical user has the necessary "
+                "permissions to access it."
+            )
+            return False
+
         sender_login = pr_event.sender()['login']
         if pr_event.action() is PullRequestAction.OPENED:
             if github_helper.is_pr_created_by_org_member(pr_number):
