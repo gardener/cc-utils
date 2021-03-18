@@ -13,17 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import urllib.parse
-
 from enum import Enum
 
-import requests
-import requests.exceptions
 import reutil
-import semver
-
-import ci.util
-import http_requests
 
 from . import cluster_domain_from_kubernetes_config
 
@@ -31,17 +23,6 @@ from model.base import (
     NamedModelElement,
     ModelValidationError,
 )
-
-
-class ConcourseApiVersion(Enum):
-    '''Enum to define different Concourse versions'''
-    V5 = '5.0.0'
-    V6_3_0 = '6.3.0'
-    V6_5_1 = '6.5.1'
-
-
-CONCOURSE_INFO_API_ENDPOINT = 'api/v1/info'
-CONCOURSE_SUBDOMAIN_LABEL = 'concourse'
 
 
 class ConcourseConfig(NamedModelElement):
@@ -88,7 +69,7 @@ class ConcourseConfig(NamedModelElement):
             config_factory,
             self.kubernetes_cluster_config(),
         )
-        return f'{CONCOURSE_SUBDOMAIN_LABEL}.{cluster_domain}'
+        return f'concourse.{cluster_domain}'
 
     def ingress_config(self):
         return self.raw.get('ingress_config')
@@ -98,40 +79,6 @@ class ConcourseConfig(NamedModelElement):
 
     def helm_chart_version(self):
         return self.raw.get('helm_chart_version')
-
-    def _concourse_version(self, config_factory):
-        session = requests.Session()
-        http_requests.mount_default_adapter(session)
-        concourse_url = urllib.parse.urljoin(
-            self.ingress_url(config_factory),
-            CONCOURSE_INFO_API_ENDPOINT,
-        )
-        try:
-            response = session.get(concourse_url)
-            response.raise_for_status()
-        except requests.exceptions.RequestException:
-            ci.util.warning(f'Could not determine version of Concourse running at {concourse_url}')
-            return None
-
-        return response.json()['version']
-
-    def compatible_api_version(self, config_factory) -> ConcourseApiVersion:
-        # query concourse for its version. If that fails, use the greatest known version instead.
-        if not (parsed_cc_version := self._concourse_version(config_factory)):
-            parsed_cc_version = max(
-                [v.value for v in ConcourseApiVersion],
-                key=lambda x:semver.VersionInfo.parse(x)
-            )
-            ci.util.info(f"Defaulting to version '{parsed_cc_version}'")
-
-        if parsed_cc_version >= semver.VersionInfo.parse('6.5.1'):
-            return ConcourseApiVersion.V6_5_1
-        if parsed_cc_version >= semver.VersionInfo.parse('6.3.0'):
-            return ConcourseApiVersion.V6_3_0
-        elif parsed_cc_version >= semver.VersionInfo.parse('5.0.0'):
-            return ConcourseApiVersion.V5
-        else:
-            raise NotImplementedError
 
     def github_enterprise_host(self):
         return self.raw.get('github_enterprise_host')

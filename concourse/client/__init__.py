@@ -45,7 +45,12 @@ Other types defined in this module are not intended to be instantiated by users.
 
 @functools.lru_cache()
 @ensure_annotations
-def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
+def from_cfg(
+    concourse_cfg: ConcourseConfig,
+    team_name: str,
+    verify_ssl=True,
+    concourse_api_version=None,
+):
     '''
     Helper method to get Concourse API object
     '''
@@ -57,7 +62,6 @@ def from_cfg(concourse_cfg: ConcourseConfig, team_name: str, verify_ssl=False):
     team_name = concourse_team.teamname()
     username = concourse_team.username()
     password = concourse_team.password()
-    concourse_api_version = concourse_cfg.compatible_api_version(cfg_factory)
 
     concourse_api = ConcourseApiFactory.create_api(
         base_url=base_url,

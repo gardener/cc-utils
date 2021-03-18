@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import enum
 import json
 import logging
 import typing
@@ -23,7 +24,7 @@ from ensure import ensure_annotations
 import ci.log
 from concourse.client.model import ResourceType
 from http_requests import AuthenticatedRequestBuilder
-from model.concourse import ConcourseApiVersion, ConcourseTeam
+from model.concourse import ConcourseTeam
 
 from concourse.client.model import (
     Build,
@@ -49,6 +50,14 @@ AUTH_TOKEN_REQUEST_USER = 'fly'
 AUTH_TOKEN_REQUEST_PWD = 'Zmx5'
 
 
+class ConcourseApiVersion(enum.Enum):
+    V6_3_0 = '6.3.0'
+    V6_5_1 = '6.5.1'
+
+
+latest_concourse_api_version = ConcourseApiVersion.V6_5_1
+
+
 class ConcourseApiFactory:
     '''Factory for ConcourseApi objects
     '''
@@ -57,10 +66,13 @@ class ConcourseApiFactory:
         base_url: str,
         team_name: str,
         verify_ssl: str,
-        concourse_api_version: ConcourseApiVersion,
+        concourse_api_version: latest_concourse_api_version,
     ):
         # disable logging output for now (breaks template in lss)
         # logger.info(f'created client w/ {base_url=}')
+
+        if not concourse_api_version:
+            concourse_api_version = latest_concourse_api_version
 
         if concourse_api_version is ConcourseApiVersion.V6_5_1:
             routes = ConcourseApiRoutesV6_3_0(base_url=base_url, team=team_name)
