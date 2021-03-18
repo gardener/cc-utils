@@ -354,6 +354,7 @@ class Client:
             scope=scope,
         )
         headers = headers or {}
+        headers['User-Agent'] = 'gardener-oci (python3; github.com/gardener/cc-utils)'
         auth_method = self.token_cache.auth_method(image_reference=image_reference)
         auth = None
 
