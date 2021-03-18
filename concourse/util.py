@@ -218,7 +218,10 @@ def find_own_running_build(
     build_job_uuid = metadata_json['uuid']
 
     pipeline_metadata = get_pipeline_metadata()
-    client = concourse.client.from_cfg(concourse_cfg, pipeline_metadata.team_name)
+    client = concourse.client.from_cfg(
+        concourse_cfg,
+        pipeline_metadata.team_name
+    )
 
     # only consider limited amount of jobs to avoid large number of requests in case we do not
     # find ourself (assumption: there are only few running jobs in parallel at a given time)
