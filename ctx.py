@@ -204,6 +204,15 @@ def cfg_factory():
     return factory
 
 
+@functools.lru_cache()
+def cfg_set(name: str=None):
+    if not name:
+        if not ci.util._running_on_ci():
+            raise RuntimeError('current cfg set only available for "central builds"')
+        name = ci.util.current_config_set_name()
+    return cfg_factory().cfg_set(name)
+
+
 def _default_logging_config(stdout_level):
     return {
         'version': 1,
