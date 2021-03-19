@@ -16,6 +16,7 @@
 import dataclasses
 import functools
 import json
+import logging
 import os
 
 import concourse.client
@@ -35,11 +36,13 @@ from ci.util import (
     check_env,
     create_url_from_attributes,
     ctx,
-    info,
-    warning,
 )
 import ccc.concourse
 import ccc.github
+import ci.log
+
+logger = logging.getLogger()
+ci.log.configure_default_logging()
 
 
 @dataclasses.dataclass
@@ -64,13 +67,13 @@ def sync_org_webhooks(whd_deployment_cfg: WebhookDispatcherDeploymentConfig,):
                 webhook_url=webhook_url,
                 skip_ssl_validation=False,
             )
-            info(f'Created/updated organization hook for organization "{organization_name}"')
+            logger.info(f'Created/updated organization hook for {organization_name=}')
         except Exception as e:
             failed_hooks += 1
-            warning(f'org: {organization_name} - error: {e}')
+            logger.warning(f'{organization_name=} - error: {e}')
 
     if failed_hooks != 0:
-        warning('Some webhooks could not be set - for more details see above.')
+        logger.warning('Some webhooks could not be set - see above')
 
 
 def _enumerate_required_org_webhooks(
@@ -126,14 +129,14 @@ def resurrect_pods(
     concourse pods tend to crash and need to be pruned to help with the self-healing
     '''
 
-    info('Checking for not running concourse workers')
+    logger.info('Checking for not running concourse workers')
     worker_list = concourse_client.list_workers()
     pruned_workers = []
     for worker in worker_list:
         worker_name = worker.name()
-        info(f'Worker {worker_name}: {worker.state()}')
+        logger.info(f'Worker {worker_name}: {worker.state()}')
         if worker.state() != "running":
-            warning(f'Prune worker {worker_name} and restart pod')
+            logger.warning(f'Prune {worker_name=} and restart pod')
             pruned_workers.append(worker_name)
             concourse_client.prune_worker(worker_name)
             kubernetes_client.pod_helper().delete_pod(
