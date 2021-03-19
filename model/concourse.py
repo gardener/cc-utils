@@ -39,6 +39,9 @@ class ConcourseConfig(NamedModelElement):
     def concourse_uam_config(self):
         return self.raw.get('concourse_uam_config')
 
+    def concourse_uam_cfg(self): # alias for convenience
+        return self.concourse_uam_config()
+
     def helm_chart_default_values_config(self):
         return self.raw.get('helm_chart_default_values_config')
 
