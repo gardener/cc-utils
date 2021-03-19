@@ -20,8 +20,6 @@ from ci.util import (
     existing_dir,
     not_empty,
     not_none,
-    info,
-    warning,
 )
 import cnudie.retrieve
 import cnudie.util
@@ -128,20 +126,20 @@ class Transaction:
 
     def validate(self):
         for step in self._steps:
-            info(f"Validating step '{step.name()}'")
+            logger.info(f'validating {step.name()=}')
             step.validate()
 
     def execute(self):
         executed_steps = list()
         for step in self._steps:
             step_name = step.name()
-            info(f'executing {step_name=}')
+            logger.info(f'executing {step_name=}')
             executed_steps.append(step)
             try:
                 output = step.apply()
                 self._context.set_step_output(step_name, output)
             except BaseException as e:
-                warning(f"An error occured while applying step '{step_name}': {e}")
+                logger.warning(f'An error occured while applying {step_name=} {e=}')
                 traceback.print_exc()
                 # revert the changes attempted, in reverse order
                 self._revert(reversed(executed_steps))
@@ -154,12 +152,12 @@ class Transaction:
         all_reverted = True
         for step in steps:
             step_name = step.name()
-            info(f'Reverting {step_name=}')
+            logger.info(f'reverting {step_name=}')
             try:
                 step.revert()
             except BaseException as e:
                 all_reverted = False
-                warning(f'An error occured while reverting step {step_name=}: {e=}')
+                logger.warning(f'An error occured while reverting step {step_name=}: {e=}')
                 traceback.print_exc()
         if not all_reverted:
             raise RuntimeError('Unable to revert all steps.')
@@ -484,7 +482,7 @@ class NextDevCycleCommitStep(TransactionalStep):
             version_operation=self.version_operation,
             prerelease_suffix=self.prerelease_suffix,
         )
-        info(f'next version: {next_version}')
+        logger.info(f'{next_version=}')
 
         with open(self.repository_version_file_path, 'w') as f:
             f.write(next_version)
@@ -637,9 +635,12 @@ class GitHubReleaseStep(TransactionalStep):
 
         if os.path.exists(self.component_descriptor_v2_path):
             component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
-                component_descriptor_dict=ci.util.parse_yaml_file(self.component_descriptor_v2_path),
+                component_descriptor_dict=ci.util.parse_yaml_file(
+                    self.component_descriptor_v2_path
+                ),
             )
-            info('publishing component-descriptor v2')
+
+            logger.info('publishing CNUDIE-Component-Descriptor')
             product.v2.upload_component_descriptor_v2_to_oci_registry(
                 component_descriptor_v2=component_descriptor_v2,
             )
@@ -670,7 +671,7 @@ class GitHubReleaseStep(TransactionalStep):
         except NotFoundError:
             release = None
         if release:
-            info(f"Deleting Release {self.release_version}")
+            logger.info(f'Deleting {self.release_version=}')
             if not release.delete():
                 raise RuntimeError("Release could not be deleted")
 
@@ -803,10 +804,10 @@ class PostSlackReleaseStep(TransactionalStep):
         for response in responses:
             if response and response.get('file', None):
                 uploaded_file_id = response.get('file').get('id')
-                info(f'uploaded {uploaded_file_id=} to slack')
+                logger.info(f'uploaded {uploaded_file_id=} to slack')
             else:
                 raise RuntimeError('Unable to get file id from Slack response')
-        info('successfully posted contents to slack')
+        logger.info('successfully posted contents to slack')
 
     def revert(self):
         if not self.context().has_output(self.name()):
@@ -988,7 +989,7 @@ def release_and_prepare_next_dev_cycle(
         logger.warning('An error occured while cleaning up draft releases')
 
     if release_notes_policy == ReleaseNotesPolicy.DISABLED:
-        return info('release notes were disabled - skipping')
+        return logger.info('release notes were disabled - skipping')
     elif release_notes_policy == ReleaseNotesPolicy.DEFAULT:
         pass
     else:

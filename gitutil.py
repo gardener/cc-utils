@@ -15,6 +15,7 @@
 
 import contextlib
 import functools
+import logging
 import os
 import subprocess
 import tempfile
@@ -24,16 +25,20 @@ import git
 import git.objects.util
 
 from github.util import GitHubRepoBranch
-from ci.util import not_empty, not_none, existing_dir, fail, info, random_str, urljoin
+import ci.log
+from ci.util import not_empty, not_none, existing_dir, fail, random_str, urljoin
 from model.github import (
     GithubConfig,
     Protocol,
 )
 
+logger = logging.getLogger(__name__)
+ci.log.configure_default_logging()
+
 
 def _ssh_auth_env(github_cfg):
     credentials = github_cfg.credentials()
-    info(f'using github-credentials with uid: {credentials.username()}')
+    logger.info(f'using github-credentials with {credentials.username()=}')
 
     tmp_id = tempfile.NamedTemporaryFile(mode='w', delete=False) # attention: callers must unlink
     tmp_id.write(credentials.private_key())
@@ -128,7 +133,7 @@ class GitHelper:
             name=random_str(),
             url=url,
         )
-        info(f'autenticated remote {remote.name} using {protocol}')
+        logger.info(f'autenticated {remote.name=} using {protocol=}')
 
         try:
             yield (cmd_env, remote)
