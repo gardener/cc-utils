@@ -88,7 +88,7 @@ class _OciRequestHandler(logging.Handler):
             )
         except:
             logger.warning(traceback.format_exc())
-            logger.warning('could not sent oci request log to elastic search')
+            logger.warning('could not send oci request log to elastic search')
 
 
 _client_sentinel = object()
