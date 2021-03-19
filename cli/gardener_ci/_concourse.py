@@ -185,8 +185,11 @@ def trigger_resource_check(
     cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(cfg_name)
     concourse_cfg = cfg_set.concourse()
+    concourse_uam = cfg_set.concourse_uam(concourse_cfg.concourse_uam_cfg())
+
     api = client.from_cfg(
         concourse_cfg=concourse_cfg,
+        concourse_uam_cfg=concourse_uam,
         team_name=team_name,
     )
     api.trigger_resource_check(
@@ -206,7 +209,12 @@ def start_worker_resurrector(
     kube_client.set_kubecfg(kubernetes_cfg.kubeconfig())
 
     concourse_cfg = config_set.concourse()
-    concourse_client = client.from_cfg(concourse_cfg=concourse_cfg, team_name='main')
+    concourse_uam = cfg_set.concourse_uam(concourse_cfg.concourse_uam_cfg())
+    concourse_client = client.from_cfg(
+        concourse_cfg=concourse_cfg,
+        concourse_uam_cfg=concourse_uam,
+        team_name='main',
+    )
 
     resurrect_pods(
         namespace=concourse_namespace,

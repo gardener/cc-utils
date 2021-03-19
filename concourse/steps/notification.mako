@@ -37,6 +37,7 @@ import sys
 import os
 
 import ccc.github
+import concourse.client
 import cnudie.retrieve
 import ci.util
 import github
@@ -65,7 +66,14 @@ if meta_build_job_name != env_build_job_name:
         f'Job name in META resource: {meta_build_job_name}'
     )
 
-concourse_api = from_cfg(cfg_set.concourse(), team_name=meta_vars_dict['build-team-name'])
+cc_cfg = cfg_set.concourse()
+cc_uam = cfg_set.concourse_uam(cc_cfg.concourse_uam_cfg())
+
+concourse_api = concourse.client.from_cfg(
+  concourse_cfg=cc_cfg,
+  concourse_uam_cfg=cc_uam,
+  team_name=meta_vars_dict['build-team-name'],
+)
 ## TODO: Replace with MAIN_REPO_DIR once it is available in synthetic steps
 path_to_main_repository = "${job_variant.main_repository().resource_name()}"
 
