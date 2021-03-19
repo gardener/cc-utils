@@ -348,7 +348,6 @@ class Client:
         warn_if_not_ok=True,
         **kwargs,
     ):
-        kwargs['verify'] = False
         self._authenticate(
             image_reference=image_reference,
             scope=scope,
