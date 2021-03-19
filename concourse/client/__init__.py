@@ -47,14 +47,19 @@ Other types defined in this module are not intended to be instantiated by users.
 @ensure_annotations
 def from_cfg(
     concourse_cfg: ConcourseConfig,
-    concourse_uam_cfg: ConcourseUAMConfig,
     team_name: str,
+    concourse_uam_cfg: ConcourseUAMConfig=None,
     verify_ssl=True,
     concourse_api_version=None,
 ):
     # XXX rm last dependency towards cfg-factory
     cfg_factory = ci.util.ctx().cfg_factory()
     base_url = concourse_cfg.ingress_url(cfg_factory)
+
+    if not concourse_uam_cfg:
+        concourse_uam_cfg = cfg_factory.concourse_uam_cfg(concourse_cfg.concourse_uam_cfg())
+        import sys
+        print('warning: omitting concourse_uam_cfg is deprecated!', file=sys.stderr)
 
     concourse_team = concourse_uam_cfg.team(team_name)
     team_name = concourse_team.teamname()
