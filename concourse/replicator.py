@@ -245,7 +245,7 @@ class ConcourseDeployer(DefinitionDeployer):
         pipeline_name = definition_descriptor.pipeline_name
         try:
             concourse_cfg = definition_descriptor.concourse_target_cfg
-            concourse_uam_cfg = self.cfg_set.concourse_uam_cfg(concourse_cfg.concourse_uam_config())
+            concourse_uam_cfg = self.cfg_set.concourse_uam(concourse_cfg.concourse_uam_config())
 
             api = concourse.client.from_cfg(
                 concourse_cfg=concourse_cfg,

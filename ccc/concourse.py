@@ -54,7 +54,7 @@ def client_from_env(
     '''
     cfg_set = ctx.cfg_set()
     cc_cfg = cfg_set.concourse()
-    cc_uam = cfg_set.concourse_uam_cfg(cc_cfg.concourse_uam_config())
+    cc_uam = cfg_set.concourse_uam(cc_cfg.concourse_uam_config())
     if not team_name:
         team_name = ci.util.check_env('CONCOURSE_CURRENT_TEAM')
 

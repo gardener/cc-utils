@@ -57,7 +57,7 @@ def from_cfg(
     base_url = concourse_cfg.ingress_url(cfg_factory)
 
     if not concourse_uam_cfg:
-        concourse_uam_cfg = cfg_factory.concourse_uam_cfg(concourse_cfg.concourse_uam_cfg())
+        concourse_uam_cfg = cfg_factory.concourse_uam(concourse_cfg.concourse_uam_cfg())
         import sys
         print('warning: omitting concourse_uam_cfg is deprecated!', file=sys.stderr)
 
