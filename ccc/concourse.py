@@ -16,6 +16,7 @@ import functools
 
 import ci.util
 import concourse.client
+import ctx
 
 from ensure import ensure_annotations
 
@@ -36,4 +37,29 @@ def client_from_cfg_name(
         concourse_uam_cfg=uam_cfg,
         team_name=team_name,
         verify_ssl=True,
+    )
+
+
+def client_from_env(
+    team_name: str=None,
+):
+    '''
+    returns a concourse-client w/ the credentials valid for the current execution environment.
+    Note that this function must only be called if running in a "central" cicd-job.
+    The returned client is authorised to perform operations in the same concourse-team as the
+    job calling this function.
+
+    if the (optional) team_name is specified, the returned client is not guaranteed to have the
+    required authorisation.
+    '''
+    cfg_set = ctx.cfg_set()
+    cc_cfg = cfg_set.concourse()
+    cc_uam = cfg_set.concourse_uam_cfg(cc_cfg.concourse_uam_config())
+    if not team_name:
+        team_name = ci.util.check_env('CONCOURSE_CURRENT_TEAM')
+
+    return concourse.client.from_cfg(
+        concourse_cfg=cc_cfg,
+        concourse_uam_cfg=cc_uam,
+        team_name=team_name,
     )
