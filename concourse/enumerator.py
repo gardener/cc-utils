@@ -346,7 +346,9 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
                     self.job_mapping = job_mapping
                     return
         else:
-            raise JobMappingNotFoundError(f'could not find matching job-mapping for org {org}')
+            raise JobMappingNotFoundError(
+                f"could not find matching job-mapping for repo '{repo_name}' in org '{org_name}'"
+            )
 
     def enumerate_definition_descriptors(self):
         github_cfg = ccc.github.github_cfg_for_hostname(
