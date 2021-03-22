@@ -211,7 +211,10 @@ def process_version(
     return processed_version
 
 
-def find_latest_version(versions) -> str:
+def find_latest_version(
+    versions: Iterable[Union[semver.VersionInfo, str]],
+    ignore_prerelease_versions: bool=False,
+) -> str:
     latest_candidate = None
     latest_candidate_str = None
 
@@ -220,6 +223,9 @@ def find_latest_version(versions) -> str:
             candidate_semver = parse_to_semver(candidate)
         else:
             candidate_semver = candidate
+
+        if ignore_prerelease_versions and candidate_semver.prerelease:
+            continue
 
         if not latest_candidate:
             latest_candidate = candidate_semver
@@ -236,7 +242,11 @@ def find_latest_version(versions) -> str:
 greatest_version = find_latest_version
 
 
-def find_latest_version_with_matching_major(reference_version: semver.VersionInfo, versions):
+def find_latest_version_with_matching_major(
+    reference_version: Union[semver.VersionInfo, str],
+    versions: Iterable[Union[semver.VersionInfo, str]],
+    ignore_prerelease_versions: bool=False,
+) -> str:
     latest_candidate_semver = None
     latest_candidate_str = None
 
@@ -252,6 +262,10 @@ def find_latest_version_with_matching_major(reference_version: semver.VersionInf
         # skip if major version does not match
         if candidate_semver.major != reference_version.major:
             continue
+
+        if ignore_prerelease_versions and candidate_semver.prerelease:
+            continue
+
         if candidate_semver > reference_version:
             if not latest_candidate_semver or latest_candidate_semver < candidate_semver:
                 latest_candidate_semver = candidate_semver
@@ -262,7 +276,8 @@ def find_latest_version_with_matching_major(reference_version: semver.VersionInf
 
 def find_latest_version_with_matching_minor(
     reference_version: Union[semver.VersionInfo, str],
-    versions,
+    versions: Iterable[Union[semver.VersionInfo, str]],
+    ignore_prerelease_versions: bool=False,
 ) -> str:
     latest_candidate_semver = None
     latest_candidate_str = None
@@ -281,6 +296,9 @@ def find_latest_version_with_matching_minor(
             continue
         # skip if minor version does not match
         if candidate_semver.minor != reference_version.minor:
+            continue
+
+        if ignore_prerelease_versions and candidate_semver.prerelease:
             continue
 
         if candidate_semver >= reference_version:

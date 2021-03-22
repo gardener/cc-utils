@@ -31,6 +31,17 @@ class Version_find_latest_version(unittest.TestCase):
         result = examinee.find_latest_version(versions)
         self.assertEqual(str(result), '3.0.1')
 
+    def test_ignore_prerelease_versions(self):
+        versions = (semver.VersionInfo.parse(v) for v in (
+                '0.0.10',
+                '3.0.1',
+                '1.0.0',
+                '3.1.0-foo-bar',
+        )
+        )
+        result = examinee.find_latest_version(versions, ignore_prerelease_versions=True)
+        self.assertEqual(str(result), '3.0.1')
+
 
 class Version_process_version_Test(unittest.TestCase):
     # def test_invalid_version_operation(self):

@@ -119,6 +119,15 @@ ATTRIBUTES = (
         doc='callback to be invoked after auto-merge',
     ),
     AttributeSpec.optional(
+        name='ignore_prerelease_versions',
+        default=False,
+        doc=(
+            'ignores prerelease versions like "0.1.0-dev-abc" and '
+            'only creates upgrade pr\'s for finalized versions.'
+        ),
+        type=bool,
+    ),
+    AttributeSpec.optional(
         name='vars',
         default={},
         doc='env vars to pass to after_merge_callback (similar to step\'s vars)',
@@ -170,6 +179,9 @@ class UpdateComponentDependenciesTrait(Trait):
 
     def after_merge_callback(self):
         return self.raw.get('after_merge_callback')
+
+    def ignore_prerelease_versions(self):
+        return self.raw.get('ignore_prerelease_versions')
 
     def vars(self):
         return self.raw['vars']
