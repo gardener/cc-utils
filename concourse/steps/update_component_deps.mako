@@ -16,6 +16,7 @@ update_component_deps_trait = job_variant.trait('update_component_deps')
 set_dependency_version_script_path = update_component_deps_trait.set_dependency_version_script_path()
 after_merge_callback = update_component_deps_trait.after_merge_callback()
 upstream_update_policy = update_component_deps_trait.upstream_update_policy()
+ignore_prerelease_versions=update_component_deps_trait.ignore_prerelease_versions()
 component_descriptor_trait = job_variant.trait('component_descriptor')
 ctx_repo_base_url = component_descriptor_trait.ctx_repository_base_url()
 %>
@@ -112,6 +113,7 @@ for from_ref, to_version in determine_upgrade_prs(
     upstream_update_policy=upstream_update_policy,
     upgrade_pull_requests=upgrade_pull_requests,
     ctx_repo_base_url='${ctx_repo_base_url}',
+    ignore_prerelease_versions=${ignore_prerelease_versions},
 ):
     applicable_merge_policy = [
         policy for policy, filter_func in merge_policy_and_filters.items() if filter_func(from_ref)

@@ -572,12 +572,16 @@ def greatest_references(
             yield matching_refs[-1]
 
 
-def greatest_component_version(component_name: str, ctx_repo_base_url: str) -> str:
+def greatest_component_version(
+    component_name: str,
+    ctx_repo_base_url: str,
+    ignore_prerelease_versions: bool=False,
+) -> str:
     image_tags = component_versions(
         component_name=component_name,
         ctx_repo_base_url=ctx_repo_base_url,
     )
-    return version.find_latest_version(image_tags)
+    return version.find_latest_version(image_tags, ignore_prerelease_versions)
 
 
 def greatest_version_before(
@@ -613,6 +617,7 @@ def greatest_component_version_with_matching_minor(
     component_name: str,
     ctx_repo_base_url: str,
     reference_version: str,
+    ignore_prerelease_versions: bool=False,
 ) -> str:
     oci_image_repo = _target_oci_repository_from_component_name(component_name, ctx_repo_base_url)
     client = ccc.oci.oci_client()
@@ -620,6 +625,7 @@ def greatest_component_version_with_matching_minor(
     return version.find_latest_version_with_matching_minor(
         reference_version=reference_version,
         versions=image_tags,
+        ignore_prerelease_versions=ignore_prerelease_versions,
     )
 
 
