@@ -24,13 +24,14 @@ from ci.util import ctx as global_ctx, fail, existing_file, not_none
 import model.kubernetes
 from kube.helper import (
     KubernetesConfigMapHelper,
-    KubernetesSecretHelper,
-    KubernetesServiceAccountHelper,
-    KubernetesNamespaceHelper,
-    KubernetesServiceHelper,
     KubernetesDeploymentHelper,
     KubernetesIngressHelper,
+    KubernetesNamespaceHelper,
     KubernetesPodHelper,
+    KubernetesSecretHelper,
+    KubernetesServiceAccountHelper,
+    KubernetesServiceHelper,
+    KubernetesStorageClassHelper
 )
 
 
@@ -97,26 +98,30 @@ class Ctx:
     def config_map_helper(self) -> 'KubernetesConfigMapHelper':
         return KubernetesConfigMapHelper(self.create_core_api())
 
-    def create_core_api(self):
+    def storage_class_helper(self) -> 'KubernetesStorageClassHelper':
+        return KubernetesStorageClassHelper(self.create_storage_api())
+
+    def _create_api(self, api_constructor):
         cfg = self.get_kubecfg()
-        return client.CoreV1Api(cfg)
+        return api_constructor(cfg)
+
+    def create_core_api(self):
+        return self._create_api(client.CoreV1Api)
 
     def create_rbac_api(self):
-        cfg = self.get_kubecfg()
-        return client.RbacAuthorizationV1beta1Api(cfg)
+        return self._create_api(client.RbacAuthorizationV1beta1Api)
 
     def create_custom_api(self):
-        cfg = self.get_kubecfg()
-        return client.CustomObjectsApi(cfg)
+        return self._create_api(client.CustomObjectsApi)
 
     def create_apps_api(self):
-        cfg = self.get_kubecfg()
-        return client.AppsV1Api(cfg)
+        return self._create_api(client.AppsV1Api)
 
     def create_extensions_v1beta1_api(self):
-        cfg = self.get_kubecfg()
-        return client.ExtensionsV1beta1Api(cfg)
+        return self._create_api(client.ExtensionsV1beta1Api)
 
     def create_version_api(self):
-        cfg = self.get_kubecfg()
-        return client.VersionApi(cfg)
+        return self._create_api(client.VersionApi)
+
+    def create_storage_api(self):
+        return self._create_api(client.StorageV1Api)

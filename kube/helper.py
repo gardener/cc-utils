@@ -15,6 +15,8 @@
 import base64
 import json
 import time
+import typing
+
 from urllib3.exceptions import ProtocolError
 
 import kubernetes
@@ -23,17 +25,19 @@ from kubernetes.client import (
     AppsV1Api,
     CoreV1Api,
     ExtensionsV1beta1Api,
+    ExtensionsV1beta1Ingress as V1beta1Ingress,
+    StorageV1Api,
     V1ConfigMap,
     V1Deployment,
     V1LocalObjectReference,
     V1Namespace,
     V1ObjectMeta,
+    V1PodList,
     V1Secret,
     V1Service,
     V1ServiceAccount,
-    ExtensionsV1beta1Ingress as V1beta1Ingress,
     V1StatefulSet,
-    V1PodList,
+    V1StorageClass,
 )
 from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
@@ -484,7 +488,7 @@ class KubernetesPodHelper:
         self,
         name: str,
         namespace: str,
-        command:[str],
+        command: typing.List[str],
         container:str='',
         stderr:bool=True,
         stdout:bool=True,
@@ -518,3 +522,40 @@ class KubernetesPodHelper:
                 return None
             raise ae
         return response
+
+
+class KubernetesStorageClassHelper:
+    def __init__(self, storage_api: StorageV1Api):
+        self.storage_api = storage_api
+
+    def create_or_replace_storage_class(self, name: str, body: V1StorageClass):
+        '''Replace an existing StorageClass. Create it, if it does not yet exist
+
+        Note that the values under 'parameters' of existing StorageClasses cannot be changed.
+        '''
+        if self.read_storage_class(name):
+            self.replace_storage_class(name, body)
+        else:
+            self.create_storage_class(body)
+
+    def replace_storage_class(self, name: str, body: V1StorageClass):
+        '''Replace an existing StorageClass with the given one
+        '''
+        self.storage_api.replace_storage_class(name=name, body=body)
+
+    def create_storage_class(self, body: V1StorageClass):
+        ''' Create a new StorageClass
+        '''
+        self.storage_api.create_storage_class(body)
+
+    def read_storage_class(self, name:str) -> V1StorageClass:
+        '''Get the given StorageClass
+        '''
+        try:
+            storage_class = self.storage_api.read_storage_class(name)
+        except ApiException as ae:
+            if ae.status == 404:
+                return None
+            raise ae
+
+        return storage_class
