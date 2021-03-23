@@ -164,9 +164,12 @@ base_ctf_dir = os.path.join(descriptor_out_dir, 'base_component_ctf')
 os.makedirs(base_ctf_dir, exist_ok=False)
 
 # dump base_descriptor_v2 and pass it to descriptor script
+base_component_descriptor_fname = (
+  f'base_{component_descriptor_fname(schema_version=gci.componentmodel.SchemaVersion.V2)}'
+)
 base_descriptor_file_v2 = os.path.join(
   descriptor_out_dir,
-  component_descriptor_fname(schema_version=gci.componentmodel.SchemaVersion.V2)
+  base_component_descriptor_fname,
 )
 with open(base_descriptor_file_v2, 'w') as f:
   f.write(dump_component_descriptor_v2(base_descriptor_v2))
