@@ -528,20 +528,21 @@ class KubernetesStorageClassHelper:
     def __init__(self, storage_api: StorageV1Api):
         self.storage_api = storage_api
 
-    def create_or_replace_storage_class(self, name: str, body: V1StorageClass):
+    def create_or_replace_storage_class(self, body: V1StorageClass):
         '''Replace an existing StorageClass. Create it, if it does not yet exist
-
-        Note that the values under 'parameters' of existing StorageClasses cannot be changed.
         '''
-        if self.read_storage_class(name):
-            self.replace_storage_class(name, body)
-        else:
-            self.create_storage_class(body)
+        if not 'metadata' in body and not 'name' in body['metadata']:
+            raise RuntimeError("Given storage class manifest must provide 'name' metadata.")
 
-    def replace_storage_class(self, name: str, body: V1StorageClass):
-        '''Replace an existing StorageClass with the given one
-        '''
-        self.storage_api.replace_storage_class(name=name, body=body)
+        storage_class_name = body['metadata']['name']
+
+        if self.read_storage_class(storage_class_name):
+            self.delete_storage_class(storage_class_name)
+
+        self.create_storage_class(body)
+
+    def delete_storage_class(self, name: str):
+        self.storage_api.delete_storage_class(name)
 
     def create_storage_class(self, body: V1StorageClass):
         ''' Create a new StorageClass
