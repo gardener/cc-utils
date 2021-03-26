@@ -295,6 +295,9 @@ class ProtecodeUtil:
             protecode_apps_to_remove = set(existing_products)
         elif self._processing_mode is ProcessingMode.RESCAN:
             for resource in resource_group.resources():
+                ci.util.info(
+                    f'Checking whether a product for {resource.access.imageReference} exists.'
+                )
                 # find matching protecode product (aka app)
                 for existing_product in existing_products:
                     product_image_digest = existing_product.custom_data().get('IMAGE_DIGEST')
@@ -306,6 +309,10 @@ class ProtecodeUtil:
                     if product_image_digest == digest:
                         existing_products.remove(existing_product)
                         protecode_apps_to_consider.append(existing_product)
+                        ci.util.info(
+                            f"found product for '{resource.access.imageReference}': "
+                            f'{existing_product.product_id()}'
+                        )
                         break
                 else:
                     ci.util.info(
@@ -340,14 +347,15 @@ class ProtecodeUtil:
                     ).split('@')[-1]
                     if image_digest == digest:
                         ci.util.info(
-                            f'{resource.access.imageReference=} no '
-                            'longer available to protecode - will upload'
+                            f'{resource.access.imageReference=} no longer available to protecode '
+                            f'- will upload. Corresponding product: {protecode_app.product_id()}'
                         )
                         images_to_upload.append(resource)
                         protecode_apps_to_consider.remove(protecode_app)
                         # xxx - also add app for removal?
                         break
             else:
+                ci.util.info(f'triggering rescan for {protecode_app.product_id()}')
                 self._api.rescan(protecode_app.product_id())
 
         # upload new images
@@ -752,7 +760,7 @@ class ProtecodeUtil:
                     ci.util.warning(f'failed to add triage: {http_err}')
 
         ci.util.info(textwrap.dedent(f'''
-            Product: {scan_result.display_name()}
+            Product: {scan_result.display_name()} (ID: {scan_result.product_id()})
             Statistics: {components_count=} {vulnerabilities_count=}
             {skipped_due_to_historicalness=} {skipped_due_to_existing_triages=}
             {triaged_due_to_max_count=} {triaged_due_to_gcr_optimism=}
