@@ -89,6 +89,9 @@ class ConcourseConfig(NamedModelElement):
     def proxy(self):
         return self.raw.get('proxy')
 
+    def deploy_storage_class(self):
+        return self.raw.get('deploy_storage_class', False)
+
     def _required_attributes(self):
         return [
             'externalUrl',
@@ -107,6 +110,7 @@ class ConcourseConfig(NamedModelElement):
         return {
             'clamav_config',
             'concourse_version', # TODO: Remove
+            'deploy_storage_class',
             'github_enterprise_host',
             'ingress_host', # TODO: Remove
             'proxy',
