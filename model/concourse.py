@@ -231,9 +231,20 @@ class JobMappingSet(NamedModelElement):
     def __iter__(self):
         return self.job_mappings().values().__iter__()
 
+    def __getitem__(self, name: str):
+        return self.raw.__getitem__(name)
+
+    def validate(self):
+        tgt_team_names = {jm.team_name() for jm in self}
+        for team_name in (jm.team_name() for jm in self):
+            if not team_name in tgt_team_names:
+                raise ModelValidationError(f'{team_name=} must only be specified once')
+            tgt_team_names.remove(team_name)
+
 
 class JobMapping(NamedModelElement):
     def team_name(self) -> str:
+        # todo: use `name` attr for that (thus enforce unique mappings)
         return self.raw.get('concourse_target_team')
 
     def cleanup_policy(self) -> PipelineCleanupPolicy:
