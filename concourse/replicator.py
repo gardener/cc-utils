@@ -139,10 +139,11 @@ class Renderer:
             raw_definition_descriptor=pipeline_definition,
             cfg_set=self.cfg_set,
         )
-        pipeline_metadata = dict()
-        pipeline_metadata['definition'] = factory.create_pipeline_definition()
-        pipeline_metadata['name'] = pipeline_definition.name
-        pipeline_metadata['target_team'] = definition_descriptor.concourse_target_team
+        pipeline_metadata = {
+            'definition': factory.create_pipeline_definition(),
+            'name': pipeline_definition.name,
+            'target_team': definition_descriptor.concourse_target_team,
+        }
 
         if bg := effective_definition.get('background_image'):
             pipeline_metadata['background_image'] = bg
