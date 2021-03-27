@@ -232,7 +232,7 @@ class JobMappingSet(NamedModelElement):
         return self.job_mappings().values().__iter__()
 
     def __getitem__(self, name: str):
-        return self.raw.__getitem__(name)
+        return JobMapping(name=name, raw_dict=self.raw.__getitem__(name))
 
     def validate(self):
         tgt_team_names = {jm.team_name() for jm in self}
