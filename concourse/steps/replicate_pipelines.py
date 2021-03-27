@@ -23,7 +23,7 @@ def replicate_pipelines(
         cfg_set=cfg_set,
         concourse_cfg=concourse_cfg,
         job_mapping=job_mapping,
-        unpause_pipeline=False,
+        unpause_pipelines=False,
         unpause_new_pipelines=True,
         expose_pipelines=True,
         remove_pipelines_filter=filter_own_pipeline,
