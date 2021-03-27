@@ -228,6 +228,9 @@ class JobMappingSet(NamedModelElement):
     def job_mappings(self):
         return {name: JobMapping(name=name, raw_dict=raw) for name, raw in self.raw.items()}
 
+    def __iter__(self):
+        return self.job_mappings().values().__iter__()
+
 
 class JobMapping(NamedModelElement):
     def team_name(self) -> str:
