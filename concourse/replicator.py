@@ -8,6 +8,7 @@ import logging
 import textwrap
 import threading
 import traceback
+import typing
 
 import mako.template
 
@@ -46,7 +47,11 @@ def replicate_pipelines(
     unpause_pipelines: bool=True,
     expose_pipelines: bool=True,
     unpause_new_pipelines: bool=True,
+    remove_pipelines_filter: typing.Callable[[str], bool]=None,
 ):
+    '''
+    @param remove_pipelines_filter: pipeline-names the filter does not match are never removed
+    '''
     definition_enumerators = [
         GithubOrganisationDefinitionEnumerator(
             job_mapping=job_mapping,
@@ -72,6 +77,7 @@ def replicate_pipelines(
         cfg_set=cfg_set,
         unpause_new_pipelines=unpause_new_pipelines,
         job_mapping=job_mapping,
+        remove_pipelines_filter=remove_pipelines_filter,
     )
 
     replicator = PipelineReplicator(
@@ -297,13 +303,18 @@ class ReplicationResultProcessor:
         cfg_set,
         unpause_new_pipelines: bool=True,
         remove_pipelines: bool=True,
+        remove_pipelines_filter: typing.Callable[[str], bool]=None,
         reorder_pipelines: bool=True,
         job_mapping=None,
     ):
+        '''
+        @param remove_pipelines_filter: pipeline-names the filter does not match are never removed
+        '''
         self._cfg_set = cfg_set
         self._job_mapping = job_mapping
         self.unpause_new_pipelines = unpause_new_pipelines
         self.remove_pipelines = remove_pipelines
+        self.remove_pipelines_filter = remove_pipelines_filter
         self.reorder_pipelines = reorder_pipelines
 
         CleanupPolicy = model.concourse.PipelineCleanupPolicy
@@ -342,6 +353,12 @@ class ReplicationResultProcessor:
                 ))
 
                 pipelines_to_remove = set(concourse_api.pipelines()) - deployed_pipeline_names
+
+                if self.remove_pipelines_filter:
+                    pipelines_to_remove = {
+                        name for name in pipelines_to_remove
+                        if self.remove_pipelines_filter(name)
+                    }
 
                 for pipeline_name in pipelines_to_remove:
                     logger.info('removing pipeline: {p}'.format(p=pipeline_name))
