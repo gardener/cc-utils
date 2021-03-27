@@ -67,7 +67,7 @@ class ConcourseApiFactory:
         team_name: str,
         verify_ssl: str,
         concourse_api_version: latest_concourse_api_version,
-    ):
+    ) -> 'ConcourseApiBase':
         # disable logging output for now (breaks template in lss)
         # logger.info(f'created client w/ {base_url=}')
 
