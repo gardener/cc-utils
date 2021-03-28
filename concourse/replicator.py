@@ -355,10 +355,12 @@ class ReplicationResultProcessor:
                 pipelines_to_remove = set(concourse_api.pipelines()) - deployed_pipeline_names
 
                 if self.remove_pipelines_filter:
+                    logger.info(f'before applying filter: {pipelines_to_remove=}')
                     pipelines_to_remove = {
                         name for name in pipelines_to_remove
                         if self.remove_pipelines_filter(name)
                     }
+                    logger.info(f'after applying filter: {pipelines_to_remove=}')
 
                 for pipeline_name in pipelines_to_remove:
                     logger.info('removing pipeline: {p}'.format(p=pipeline_name))
