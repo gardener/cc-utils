@@ -462,13 +462,11 @@ class ReplicationResultProcessor:
             )
 
     def _initialise_new_pipeline_resources(self, concourse_api, results):
-        newly_deployed_pipeline_names = map(
-            lambda result: result.definition_descriptor.pipeline_name,
-            filter(
-                lambda result: result.deploy_status & DeployStatus.CREATED,
-                results,
-            )
-        )
+        newly_deployed_pipeline_names = [
+            result.definition_descriptor.pipeline_name for result in results
+            if result.deploy_status & DeployStatus.CREATED
+        ]
+
         for pipeline_name in newly_deployed_pipeline_names:
             if self.unpause_new_pipelines:
                 logger.info(f'unpausing new {pipeline_name=}')
