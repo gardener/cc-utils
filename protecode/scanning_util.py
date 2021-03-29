@@ -572,7 +572,7 @@ class ProtecodeUtil:
 
         if worst_cvss >= self.cvss_threshold:
             ci.util.info(f'GCR\'s worst CVSS rating is above threshold: {worst_cvss}')
-            ci.util.info(f'however, consider: {worst_effective_vuln=}')
+            ci.util.info(f'however, consider: {worst_effective_vuln=}  ({scan_result.product_id()})')
             triage_remainder = False
         else:
             # worst finding below our threshold -> we may safely triage everything
