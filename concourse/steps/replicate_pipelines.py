@@ -17,7 +17,7 @@ def replicate_pipelines(
 ):
     # prevent own replication pipeline from being removed
     def filter_own_pipeline(pipeline_name: str):
-        return pipeline_name != own_pipeline_name
+        return pipeline_name == own_pipeline_name
 
     result = concourse.replicator.replicate_pipelines(
         cfg_set=cfg_set,
