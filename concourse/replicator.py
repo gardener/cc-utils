@@ -70,6 +70,7 @@ def replicate_pipelines(
     deployer = ConcourseDeployer(
         cfg_set=cfg_set,
         unpause_pipelines=unpause_pipelines,
+        unpause_new_pipelines=unpause_new_pipelines,
         expose_pipelines=expose_pipelines,
     )
 
@@ -242,10 +243,12 @@ class ConcourseDeployer(DefinitionDeployer):
         self,
         cfg_set,
         unpause_pipelines: bool,
+        unpause_new_pipelines: bool=False,
         expose_pipelines: bool=True,
     ):
         self.cfg_set = cfg_set
         self.unpause_pipelines = unpause_pipelines
+        self.unpause_new_pipelines = unpause_new_pipelines
         self.expose_pipelines = expose_pipelines
 
     def deploy(self, definition_descriptor):
@@ -268,16 +271,22 @@ class ConcourseDeployer(DefinitionDeployer):
                 'Deployed pipeline: ' + pipeline_name +
                 ' to team: ' + definition_descriptor.concourse_target_team
             )
+
+            SetPipelineResult = concourse.client.model.SetPipelineResult
             if self.unpause_pipelines:
                 logger.info(f'Unpausing pipeline {pipeline_name}')
                 api.unpause_pipeline(pipeline_name=pipeline_name)
+            elif self.unpause_new_pipelines and response is SetPipelineResult.CREATED:
+                logger.info(f'Unpausing new {pipeline_name=}')
+                api.unpause_pipeline(pipeline_name=pipeline_name)
+
             if self.expose_pipelines:
                 api.expose_pipeline(pipeline_name=pipeline_name)
 
             deploy_status = DeployStatus.SUCCEEDED
-            if response is concourse.client.model.SetPipelineResult.CREATED:
+            if response is SetPipelineResult.CREATED:
                 deploy_status |= DeployStatus.CREATED
-            elif response is concourse.client.model.SetPipelineResult.UPDATED:
+            elif response is SetPipelineResult.UPDATED:
                 pass
             else:
                 raise NotImplementedError
