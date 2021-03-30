@@ -29,15 +29,20 @@ version_path = os.path.join(job_step.input('version_path'), 'version')
 eff_version_replace_token = '${EFFECTIVE_VERSION}'
 %>
 import json
+import logging
 import os
 import subprocess
 
 import ccc.oci
+import ci.log
 import oci
 import oci.model as om
 import oci.util as ou
 
 import shutil
+
+ci.log.configure_default_logging()
+logger = logging.getLogger('kaniko-build.step')
 
 ${step_lib('build_oci_image')}
 
@@ -113,22 +118,25 @@ if os.path.isdir(python_lib_dir):
 shutil.rmtree(path=os.path.join('/', 'usr', 'lib'), ignore_errors=True)
 shutil.rmtree(path=os.path.join('/', 'cc', 'utils'), ignore_errors=True)
 
-
-res = subprocess.run(
-  [
-    kaniko_executor,
-    '--no-push',
-    '--dockerfile', '${dockerfile_relpath}',
-    '--context', '${build_ctx_dir}',
-    '--tarPath', image_outfile,
-    '--destination', image_ref,
+kaniko_argv = (
+  kaniko_executor,
+  '--no-push',
+  '--dockerfile', '${dockerfile_relpath}',
+  '--context', '${build_ctx_dir}',
+  '--tarPath', image_outfile,
+  '--destination', image_ref,
 % for k,v in image_descriptor.build_args().items():
-    '--build-arg', '${k}=${v}',
+  '--build-arg', '${k}=${v}',
 % endfor
 % if (target := image_descriptor.target_name()):
     '--target', '${target}',
 % endif
-  ],
+)
+
+logger.info(f'running kaniko-build {kaniko_argv=}')
+
+res = subprocess.run(
+  kaniko_argv,
   env=subproc_env,
   check=True,
 )
