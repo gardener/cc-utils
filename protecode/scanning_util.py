@@ -298,25 +298,35 @@ class ProtecodeUtil:
                 ci.util.info(
                     f'Checking whether a product for {resource.access.imageReference} exists.'
                 )
+                component_version = resource_group.component().version
                 # find matching protecode product (aka app)
                 for existing_product in existing_products:
                     product_image_digest = existing_product.custom_data().get('IMAGE_DIGEST')
+                    product_component_version = existing_product.custom_data().get(
+                        'COMPONENT_VERSION'
+                    )
+
                     oci_client = ccc.oci.oci_client()
                     img_ref_with_digest = oci_client.to_digest_hash(
                         image_reference=resource.access.imageReference,
                     )
                     digest = img_ref_with_digest.split('@')[-1]
-                    if product_image_digest == digest:
+                    if (
+                        product_image_digest == digest
+                        and product_component_version == component_version
+                    ):
                         existing_products.remove(existing_product)
                         protecode_apps_to_consider.append(existing_product)
                         ci.util.info(
-                            f"found product for '{resource.access.imageReference}': "
+                            f"found product for '{resource.access.imageReference}' for "
+                            f"component version '{component_version}': "
                             f'{existing_product.product_id()}'
                         )
                         break
                 else:
                     ci.util.info(
-                        f'did not find image {resource.access.imageReference} - will upload'
+                        f'did not find product for image {resource.access.imageReference} and '
+                        f'version {component_version} - will upload'
                     )
                     # not found -> need to upload
                     images_to_upload.append(resource)
