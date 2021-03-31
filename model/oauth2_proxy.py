@@ -57,6 +57,7 @@ class Oauth2ProxyConfig(NamedModelElement):
     def subdomain_label(self):
         return self.raw.get('subdomain_label', OAUTH_PROXY_SUBDOMAIN_LABEL)
 
+
     def _required_attributes(self):
         yield from super()._required_attributes()
         yield from [
@@ -76,6 +77,12 @@ class Oauth2ProxyChartConfig(NamedModelElement):
     def cookie_name(self):
         return self.raw.get('cookie_name')
 
+    def whitelist_domains(self):
+        return self.raw.get('whitelist_domains')
+
+    def cookie_domain(self):
+        return self.raw.get('cookie_domain')
+
     def _required_attributes(self):
         yield from super()._required_attributes()
         yield from [
@@ -85,7 +92,9 @@ class Oauth2ProxyChartConfig(NamedModelElement):
     def _optional_attributes(self):
         yield from super()._optional_attributes()
         yield from [
+            'cookie_domain',
             'cookie_name',
+            'whitelist_domains',
         ]
 
 
