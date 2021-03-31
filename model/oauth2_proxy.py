@@ -57,7 +57,6 @@ class Oauth2ProxyConfig(NamedModelElement):
     def subdomain_label(self):
         return self.raw.get('subdomain_label', OAUTH_PROXY_SUBDOMAIN_LABEL)
 
-
     def _required_attributes(self):
         yield from super()._required_attributes()
         yield from [
