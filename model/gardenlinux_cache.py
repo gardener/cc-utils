@@ -28,11 +28,11 @@ class GardenlinuxCacheConfig(NamedModelElement):
     def namespace(self):
         return self.raw.get('namespace')
 
-    def external_url(self):
-        return self.raw.get('external_url')
-
     def image_reference(self):
         return self.raw.get('image_reference')
+
+    def external_url(self, cfg_factory):
+        return self.ingress_host(cfg_factory)
 
     def image_tag(self):
         return self.raw.get('image_tag')
@@ -45,7 +45,10 @@ class GardenlinuxCacheConfig(NamedModelElement):
             cfg_factory,
             self.kubernetes_config_name(),
         )
-        return f'{GARDENLINUX_CACHE_SUBDOMAIN_LABEL}.{cluster_domain}'
+        return f'{self.subdomain_label()}.{cluster_domain}'
+
+    def subdomain_label(self):
+        return self.raw.get('subdomain_label', GARDENLINUX_CACHE_SUBDOMAIN_LABEL)
 
     def kubernetes_config_name(self):
         return self.raw.get('kubernetes_config')
@@ -75,7 +78,6 @@ class GardenlinuxCacheConfig(NamedModelElement):
     def _required_attributes(self):
         yield from super()._required_attributes()
         yield from [
-            'external_url',
             'image_reference',
             'image_tag',
             'ingress_config',
@@ -85,4 +87,10 @@ class GardenlinuxCacheConfig(NamedModelElement):
             'service_name',
             'service_port',
             'volume_size',
+        ]
+
+    def _optional_attributes(self):
+        yield from super()._optional_attributes()
+        yield from [
+            'subdomain_label',
         ]

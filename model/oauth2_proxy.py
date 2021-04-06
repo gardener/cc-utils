@@ -35,8 +35,8 @@ class Oauth2ProxyConfig(NamedModelElement):
             self.raw.get('github_oauth_config')
         )
 
-    def external_url(self):
-        return self.raw.get('external_url')
+    def external_url(self, cfg_factory):
+        return self.ingress_host(cfg_factory)
 
     def ingress_config(self):
         return self.raw.get('ingress_config')
@@ -60,12 +60,17 @@ class Oauth2ProxyConfig(NamedModelElement):
     def _required_attributes(self):
         yield from super()._required_attributes()
         yield from [
-            'external_url',
             'github_oauth_config',
             'ingress_config',
             'kubernetes_config',
             'namespace',
             'oauth2_proxy_chart_config',
+        ]
+
+    def _optional_attributes(self):
+        yield from super()._optional_attributes()
+        yield from [
+            'subdomain_label',
         ]
 
 

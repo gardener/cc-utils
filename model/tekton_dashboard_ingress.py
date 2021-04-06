@@ -27,8 +27,8 @@ class TektonDashboardIngressConfig(NamedModelElement):
     def namespace(self):
         return self.raw.get('namespace')
 
-    def external_url(self):
-        return self.raw.get('external_url')
+    def external_url(self, cfg_factory):
+        return self.ingress_host(cfg_factory)
 
     def ingress_config(self):
         return self.raw.get('ingress_config')
@@ -38,7 +38,10 @@ class TektonDashboardIngressConfig(NamedModelElement):
             cfg_factory,
             self.kubernetes_config_name(),
         )
-        return f'{TEKTON_INGRESS_SUBDOMAIN_LABEL}.{cluster_domain}'
+        return f'{self.subdomain_label()}.{cluster_domain}'
+
+    def subdomain_label(self):
+        return self.raw.get('subdomain_label', TEKTON_INGRESS_SUBDOMAIN_LABEL)
 
     def kubernetes_config_name(self):
         return self.raw.get('kubernetes_config')
@@ -55,10 +58,15 @@ class TektonDashboardIngressConfig(NamedModelElement):
     def _required_attributes(self):
         yield from super()._required_attributes()
         yield from [
-            'external_url',
             'ingress_config',
             'kubernetes_config',
             'namespace',
             'service_name',
             'service_port',
+        ]
+
+    def _optional_attributes(self):
+        yield from super()._optional_attributes()
+        yield from [
+            'subdomain_label',
         ]
