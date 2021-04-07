@@ -50,19 +50,25 @@ def filtered_tarfile_generator(
         # break accessing file-contents)
         member_raw = member.tobuf()
         if len(member_raw) > tarfile.BLOCKSIZE:
-            print(f'xxx: {len(member_raw)}')
-            member_raw = member_raw[:512]
+            member_info = member.get_info()
+            member_info['offset'] = offset
+            member_info['offset_data'] = offset + len(member_raw)
 
-        member_cp = tarfile.TarInfo.frombuf(
-            member_raw,
-            encoding=tarfile.ENCODING,
-            errors='surrogateescape',
-        )
+            member_buf = member.create_pax_header(
+                info=member.get_info(),
+                encoding=tarfile.ENCODING
+            )
+        else:
+            member_cp = tarfile.TarInfo.frombuf(
+                member_raw,
+                encoding=tarfile.ENCODING,
+                errors='surrogateescape',
+            )
+            member_cp.offset = offset
+            member_cp.offset_data = offset + len(member_raw)
 
-        member_cp.offset = offset
-        member_cp.offset_data = offset + tarfile.BLOCKSIZE
+            member_buf = member_cp.tobuf()
 
-        member_buf = member_cp.tobuf()
         if chunk_callback:
             chunk_callback(member_buf)
         yield member_buf
