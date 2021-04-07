@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import dataclasses
-import functools
 import hashlib
 import json
 import logging
@@ -27,7 +26,6 @@ import deprecated
 import ccc.oci
 import ci.util
 import container.model
-import container.registry
 import oci
 import oci.client as oc
 import oci.model as om
@@ -44,30 +42,6 @@ def image_exists(image_reference: str):
 @deprecated.deprecated
 def process_download_request(request: container.model.ContainerImageDownloadRequest):
     raise NotImplementedError # if re-implementing: should write oci-image into target-file
-
-
-def process_upload_request(request: container.model.ContainerImageUploadRequest):
-    if image_exists(request.target_ref):
-        logging.info(f'image exists: {request.target_ref}')
-        return
-
-    publish_img = functools.partial(
-        container.registry.publish_container_image,
-        image_reference=request.target_ref,
-    )
-
-    with tempfile.NamedTemporaryFile() as in_fh:
-        container.registry.retrieve_container_image(
-            image_reference=request.source_ref,
-            outfileobj=in_fh
-        )
-
-        if not request.processing_callback:
-            return publish_img(image_file_obj=in_fh)
-
-        with tempfile.NamedTemporaryFile() as out_fh:
-            request.processing_callback(in_fh.name, out_fh.name)
-            return publish_img(image_file_obj=out_fh)
 
 
 def filter_image(

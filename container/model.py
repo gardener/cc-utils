@@ -1,14 +1,15 @@
 import collections
 
+'''
+this module is deprecated - do not use
+'''
+
 ContainerImageDownloadRequest = collections.namedtuple(
     'ContainerImageDownloadRequest',
     ['source_ref', 'target_file'],
     defaults=[None]
 )
 
-'''
-processing_callback: callable; called with (in_fh, out_fh)
-'''
 
 ContainerImageUploadRequest = collections.namedtuple(
     'ContainerImageUploadRequest',

@@ -6,9 +6,7 @@ import tarfile
 import typing
 
 import dacite
-import deprecated
 
-import oci._util as _ou
 import oci.auth as oa
 import oci.client as oc
 import oci.docker as od
@@ -113,37 +111,6 @@ def replicate_artifact(
         image_reference=tgt_image_reference,
         manifest=raw_manifest,
     )
-
-
-@deprecated.deprecated
-def retrieve_container_image(
-    image_reference: str,
-    credentials_lookup: oa.credentials_lookup,
-    outfileobj=None,
-):
-  tmp_file = _ou._pull_image(
-      image_reference=image_reference,
-      outfileobj=outfileobj,
-      credentials_lookup=credentials_lookup,
-  )
-  tmp_file.seek(0)
-  return tmp_file
-
-
-def publish_container_image(
-    image_reference: str,
-    image_file_obj,
-    credentials_lookup: oa.credentials_lookup,
-    threads=8
-):
-  image_file_obj.seek(0)
-  _ou._push_image(
-        image_reference=image_reference,
-        image_file=image_file_obj.name,
-        credentials_lookup=credentials_lookup,
-        threads=threads,
-    )
-  image_file_obj.seek(0)
 
 
 def publish_container_image_from_kaniko_tarfile(
