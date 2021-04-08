@@ -187,6 +187,14 @@
             
   <div class="section" id="image-scan-trait">
 <h1><em>image_scan</em> Trait<a class="headerlink" href="#image-scan-trait" title="Permalink to this headline">¶</a></h1>
+<p>If defined, OCI-Images declared as resources in the current component’s <code class="code docutils literal notranslate"><span class="pre">Component</span> <span class="pre">Descriptor</span></code>
+are scanned using the configured scanning tools (see attributes documentation).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Unless mentioned otherwise, all OCI-Layers will be scanned. This means that files that are
+“logically” removed by a later layer will be included in scans. In case a file is overwritten
+with different contents, all variants are subject to being scanned.</p>
+</div>
 <div class="section" id="trait-image-scan">
 <span id="trait-image-scan"></span><h2>Attributes<a class="headerlink" href="#trait-image-scan" title="Permalink to this headline">¶</a></h2>
 <table class="colwidths-auto docutils align-default">
