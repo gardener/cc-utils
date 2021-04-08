@@ -66,7 +66,7 @@ class SecretsServerClient:
         )
 
     @staticmethod
-    def default():
+    def default(encryption:bool=False):
         # hardcode default endpoint name (usually injected via env (see above))
         default_secrets_server_hostname = 'secrets-server.concourse.svc.cluster.local'
         try:
@@ -74,7 +74,10 @@ class SecretsServerClient:
         except socket.gaierror:
             raise ValueError('secrets-server not accessible (are you running in ci-cluster?)')
         # also hardcode default url path (usually injected via env)
-        default_secrets_path = 'concourse-secrets/concourse_cfg'
+        if encryption:
+            default_secrets_path = 'concourse-secrets/encrypted_concourse_cfg'
+        else:
+            default_secrets_path = 'concourse-secrets/concourse_cfg'
 
         secret = get_secret_cfg_from_env_if_available()
 
