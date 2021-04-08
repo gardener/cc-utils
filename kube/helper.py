@@ -89,22 +89,26 @@ class KubernetesSecretHelper:
 
         self.core_api.create_namespaced_secret(namespace=namespace, body=secret)
 
-    def put_secret(self, name: str, data: dict, namespace: str='default'):
+    def put_secret(self, name: str, data: dict = None, namespace: str='default', raw_data: dict = None):
         '''creates or updates (replaces) the specified secret.
         the secret's contents are expected in a dictionary containing only scalar values.
         In particular, each value is converted into a str; the result returned from
         to-str conversion is encoded as a utf-8 byte array. Thus such a conversion must
         not have done before.
         '''
+        if not bool(data) ^ bool(raw_data):
+            raise ValueError('Exactly one data or raw data has to be set')
+
         ne = not_empty
         metadata = V1ObjectMeta(name=ne(name), namespace=ne(namespace))
 
-        secret_data = {
-            k: base64.b64encode(str(v).encode('utf-8')).decode('utf-8')
-            for k,v in data.items()
-        }
+        if data:
+            raw_data = {
+                k: base64.b64encode(str(v).encode('utf-8')).decode('utf-8')
+                for k,v in data.items()
+            }
 
-        secret = V1Secret(metadata=metadata, data=secret_data)
+        secret = V1Secret(metadata=metadata, data=raw_data)
 
         # find out whether we have to replace or to create
         try:

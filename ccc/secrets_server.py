@@ -13,13 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import base64
 import json
 import os
 import socket
+import typing
 
+import Crypto.Util.Padding
 import requests
 
 from ci.util import urljoin
+import model.secret
+
+
+def get_secret_cfg_from_env_if_available(
+    key_env_var='SECRET_KEY',
+    cipher_algorithm='SECRET_CIPHER_ALGORITHM',
+) -> typing.Optional[model.secret.SecretData]:
+    if key_env_var in os.environ and cipher_algorithm in os.environ:
+        secret_key = base64.b64decode(os.environ.get(key_env_var).encode('utf-8'))
+        cipher_algorithm = model.secret.Cipher(os.environ.get(cipher_algorithm))
+
+        secret = model.secret.SecretData(key=secret_key, cipher_algorithm=cipher_algorithm)
+
+        return secret
 
 
 class SecretsServerClient:
@@ -39,10 +56,13 @@ class SecretsServerClient:
                 ))
         cache_file = os.environ.get(cache_file, None)
 
+        secret = get_secret_cfg_from_env_if_available()
+
         return SecretsServerClient(
-                endpoint_url=os.environ.get(endpoint_env_var),
-                concourse_secret_name=os.environ.get(concourse_secret_env_var),
-                cache_file=cache_file
+            endpoint_url=os.environ.get(endpoint_env_var),
+            concourse_secret_name=os.environ.get(concourse_secret_env_var),
+            cache_file=cache_file,
+            secret=secret,
         )
 
     @staticmethod
@@ -56,21 +76,38 @@ class SecretsServerClient:
         # also hardcode default url path (usually injected via env)
         default_secrets_path = 'concourse-secrets/concourse_cfg'
 
+        secret = get_secret_cfg_from_env_if_available()
+
         return SecretsServerClient(
             endpoint_url=f'http://{default_secrets_server_hostname}',
             concourse_secret_name=default_secrets_path,
             cache_file=None,
+            secret=secret,
         )
 
-    def __init__(self, endpoint_url, concourse_secret_name, cache_file=None):
+    def __init__(
+        self,
+        endpoint_url,
+        concourse_secret_name,
+        cache_file=None,
+        secret: model.secret.SecretData = None,
+    ):
         self.url = endpoint_url
         self.concourse_secret_name = concourse_secret_name
         self.cache_file = cache_file
+        self.secret = secret
 
     def retrieve_secrets(self):
         if self.cache_file and os.path.isfile(self.cache_file):
             with open(self.cache_file) as f:
-                return json.load(f)
+                if self.secret:
+                    raw_data = _decrypt_cipher_text(
+                        encrypted_cipher_text=f.read().encode('utf-8'),
+                        secret=self.secret,
+                    )
+                    return json.loads(raw_data)
+                else:
+                    return json.load(f)
 
         request_url = urljoin(self.url, self.concourse_secret_name)
         response = requests.get(request_url)
@@ -84,6 +121,37 @@ class SecretsServerClient:
 
         if self.cache_file:
             with open(self.cache_file, 'w') as f:
-                json.dump(response.json(), f)
+                if self.secret:
+                    raw_data = _decrypt_cipher_text(
+                        encrypted_cipher_text=response.text,
+                        secret_key=self.secret.key(),
+                    )
+                    f.write(raw_data)
+                else:
+                    json.dump(response.json(), f)
 
-        return response.json()
+        if self.secret:
+            raw_data = _decrypt_cipher_text(
+                encrypted_cipher_text=response.text,
+                secret_key=self.secret.key(),
+            )
+            return json.loads(raw_data)
+        else:
+            return response.json()
+
+
+def _decrypt_cipher_text(encrypted_cipher_text: bytes, secret: model.secret.SecretData):
+    from Crypto.Cipher import AES
+
+    if not (cipher_alg := secret.cipher_algorithm) is model.secret.Cipher.AES_ECB:
+        raise NotImplementedError(cipher_alg)
+
+    cipher = AES.new(key=secret.key, mode=AES.MODE_ECB)
+
+    encrypted_cipher_text = base64.b64decode(encrypted_cipher_text)
+
+    decrypted_cipher = cipher.decrypt(encrypted_cipher_text)
+    return Crypto.Util.Padding.unpad(
+        padded_data=decrypted_cipher,
+        block_size=AES.block_size,
+    )
