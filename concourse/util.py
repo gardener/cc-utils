@@ -120,32 +120,6 @@ def _enumerate_github_org_configs(job_mapping_set: JobMappingSet,):
             yield (github_org_config.org_name(), github_org_config.github_cfg_name())
 
 
-def resurrect_pods(
-    namespace: str,
-    concourse_client,
-    kubernetes_client,
-):
-    '''
-    concourse pods tend to crash and need to be pruned to help with the self-healing
-    '''
-
-    logger.info('Checking for not running concourse workers')
-    worker_list = concourse_client.list_workers()
-    pruned_workers = []
-    for worker in worker_list:
-        worker_name = worker.name()
-        logger.info(f'Worker {worker_name}: {worker.state()}')
-        if worker.state() != "running":
-            logger.warning(f'Prune {worker_name=} and restart pod')
-            pruned_workers.append(worker_name)
-            concourse_client.prune_worker(worker_name)
-            kubernetes_client.pod_helper().delete_pod(
-                name=worker_name,
-                namespace=namespace
-            )
-    return pruned_workers
-
-
 def get_pipeline_metadata():
     if not _running_on_ci():
         raise RuntimeError('Pipeline-metadata is only available if running on CI infrastructure')

@@ -15,18 +15,13 @@
 
 import os
 
-import kube.ctx
 
 from ci.util import (
     ctx,
     CliHints,
-    CliHint,
 )
 from concourse import client
-from concourse.util import (
-    sync_org_webhooks,
-    resurrect_pods,
-)
+from concourse.util import sync_org_webhooks
 from concourse.enumerator import (
     DefinitionDescriptorPreprocessor,
     GithubOrganisationDefinitionEnumerator,
@@ -195,29 +190,4 @@ def trigger_resource_check(
     api.trigger_resource_check(
         pipeline_name=pipeline_name,
         resource_name=resource_name,
-    )
-
-
-def start_worker_resurrector(
-    config_name: CliHint(typehint=str, help='the config set name to use'),
-    concourse_namespace='concourse',
-):
-    config_factory = ctx().cfg_factory()
-    config_set = config_factory.cfg_set(cfg_name=config_name)
-    kubernetes_cfg = config_set.kubernetes()
-    kube_client = kube.ctx.Ctx()
-    kube_client.set_kubecfg(kubernetes_cfg.kubeconfig())
-
-    concourse_cfg = config_set.concourse()
-    concourse_uam = cfg_set.concourse_uam(concourse_cfg.concourse_uam_cfg())
-    concourse_client = client.from_cfg(
-        concourse_cfg=concourse_cfg,
-        concourse_uam_cfg=concourse_uam,
-        team_name='main',
-    )
-
-    resurrect_pods(
-        namespace=concourse_namespace,
-        concourse_client=concourse_client,
-        kubernetes_client=kube_client
     )
