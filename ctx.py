@@ -146,7 +146,7 @@ def _cfg_factory_from_dir():
     return factory
 
 
-def _secrets_server_client():
+def _secrets_server_client(encryption:bool=False):
     import ccc.secrets_server
     try:
         if bool(args.server_endpoint) ^ bool(args.concourse_cfg_name):
@@ -172,7 +172,7 @@ def _secrets_server_client():
     # one last try: use hardcoded default client (will only work if running in
     # CI-cluster)
     try:
-        return ccc.secrets_server.SecretsServerClient.default()
+        return ccc.secrets_server.SecretsServerClient.default(encryption=encryption)
     except ValueError:
         pass
 
@@ -180,21 +180,21 @@ def _secrets_server_client():
     raise exception
 
 
-def _cfg_factory_from_secrets_server():
+def _cfg_factory_from_secrets_server(encryption:bool=False):
     import model
-    raw_dict = _secrets_server_client().retrieve_secrets()
+    raw_dict = _secrets_server_client(encryption).retrieve_secrets()
     factory = model.ConfigFactory.from_dict(raw_dict)
     return factory
 
 
 @functools.lru_cache()
-def cfg_factory():
+def cfg_factory(encryption:bool=False):
     from ci.util import fail
 
     factory = _cfg_factory_from_dir()
     # fallback to secrets-server
     if not factory:
-        factory = _cfg_factory_from_secrets_server()
+        factory = _cfg_factory_from_secrets_server(encryption)
 
     if not factory:
         fail('cfg_factory is required. configure using the global --cfg-dir option or via env')
