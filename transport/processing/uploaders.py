@@ -7,10 +7,14 @@ class IdentityUploader:
     def process(self, processing_job, target_as_source=False):
         upload_request = processing_job.upload_request
         if not target_as_source:
-            upload_request = processing_job.upload_request._replace(
+            upload_request = dataclasses.replace(
+                processing_job.upload_request,
                 target_ref=processing_job.upload_request.source_ref,
             )
-        return processing_job._replace(upload_request=upload_request)
+        return dataclasses.replace(
+            processing_job,
+            upload_request=upload_request,
+        )
 
 
 @dataclasses.dataclass
@@ -34,13 +38,15 @@ class PrefixUploader:
 
         tgt_ref = ci.util.urljoin(self.prefix, src_ref)
 
-        upload_request = processing_job.upload_request._replace(
+        upload_request = dataclasses.replace(
+            processing_job.upload_request,
             target_ref=tgt_ref,
         )
 
-        return processing_job._replace(
+        return dataclasses.replace(
+            processing_job,
             upload_request=upload_request,
-            upload_context_url=self.context_url
+            upload_context_url=self.context_url,
         )
 
 
@@ -59,8 +65,12 @@ class TagSuffixUploader:
         tgt_tag = self.separator.join((src_tag, self.suffix))
         tgt_ref = ':'.join((src_name, tgt_tag))
 
-        upload_request = processing_job.upload_request._replace(
+        upload_request = dataclasses.replace(
+            processing_job.upload_request,
             target_ref=tgt_ref,
         )
 
-        return processing_job._replace(upload_request=upload_request)
+        return dataclasses.replace(
+            processing_job,
+            upload_request=upload_request,
+        )

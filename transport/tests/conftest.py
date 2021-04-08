@@ -1,6 +1,6 @@
 import pytest
 
-import container.model
+import processing.model
 import gci.componentmodel as cm
 import processing.processing_model as processing_model
 
@@ -12,7 +12,7 @@ def job(oci_img=cm.Resource):
             component=None,
             container_image=oci_img,
             download_request=None,
-            upload_request=container.model.ContainerImageUploadRequest(
+            upload_request=processing.model.ContainerImageUploadRequest(
                 source_file='file:path',
                 source_ref='source:ref',
                 target_ref='target:ref',

@@ -1,6 +1,6 @@
 import pytest
 
-import container.model
+import processing.model
 
 import processing.processors as processors
 import processing.processing_model as processing_model
@@ -12,7 +12,7 @@ def job():
         component=None,
         container_image=None,
         download_request=None,
-        upload_request=container.model.ContainerImageUploadRequest(
+        upload_request=processing.model.ContainerImageUploadRequest(
             source_file='file:path',
             source_ref='source:ref',
             target_ref='target:ref',

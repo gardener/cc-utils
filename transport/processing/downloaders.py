@@ -1,11 +1,13 @@
+import dataclasses
+
 import gci.componentmodel as cm
-import container.model
+import processing.model
 
 
 class Downloader:
     def _create_download_request(self, container_image, target_file: str):
         if container_image.access.type == cm.AccessType.OCI_REGISTRY:
-            return container.model.ContainerImageDownloadRequest(
+            return processing.model.ContainerImageDownloadRequest(
                 source_ref=container_image.access.imageReference,
                 target_file=target_file,
             )
@@ -22,4 +24,7 @@ class Downloader:
             target_file=target_file,
         )
 
-        return processing_job._replace(download_request=download_request)
+        return dataclasses.replace(
+            processing_job,
+            download_request=download_request,
+        )

@@ -1,17 +1,17 @@
-import collections
+import dataclasses
+dc = dataclasses.dataclass
 
-ProcessingJob = collections.namedtuple(
-    'ProcessingJob',
-    [
-        'component',
-        'container_image',
-        'download_request',
-        'upload_request',
-        'upload_context_url',
-    ]
-)
 
-ProcessingResources = collections.namedtuple(
-    'ProcessingResources',
-    ['resources', 'expected_count']
-)
+@dc
+class ProcessingJob:
+    component: object
+    container_image: object
+    download_request: object
+    upload_request: object
+    upload_context_url: object
+
+
+@dc
+class ProcessingResources:
+    resources: object
+    expected_count: int

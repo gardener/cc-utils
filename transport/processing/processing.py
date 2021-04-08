@@ -7,7 +7,7 @@ import os
 import gci.componentmodel as cm
 
 import ci.util
-import container.model
+import processing.model
 import container.util
 import product.v2
 
@@ -79,7 +79,7 @@ class ProcessingPipeline:
             component=component,
             container_image=container_image,
             download_request=None, # will be set by process based on AccessType
-            upload_request=container.model.ContainerImageUploadRequest(
+            upload_request=processing.model.ContainerImageUploadRequest(
                 source_ref=container_image.access.imageReference,
                 source_file=image_tar_path,
                 target_ref=None, # must be set by a later step

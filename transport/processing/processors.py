@@ -1,8 +1,8 @@
 import abc
+import dataclasses
 import functools
 import os
 
-import container.model
 import container.util
 
 OWN_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -41,8 +41,12 @@ class FileFilter(ProcessorBase):
         )
 
     def process(self, processing_job):
-        upload_request = processing_job.upload_request._replace(
+        upload_request = dataclasses.replace(
+            processing_job.upload_request,
             processing_callback=self._processing_callback(),
         )
 
-        return processing_job._replace(upload_request=upload_request)
+        return dataclasses.replace(
+            processing_job,
+            upload_request=upload_request,
+        )

@@ -25,7 +25,6 @@ import deprecated
 
 import ccc.oci
 import ci.util
-import container.model
 import oci
 import oci.client as oc
 import oci.model as om
@@ -37,11 +36,6 @@ logger = logging.getLogger(__name__)
 def image_exists(image_reference: str):
     oci_client = ccc.oci.oci_client()
     return bool(oci_client.head_manifest(image_reference=image_reference, absent_ok=True))
-
-
-@deprecated.deprecated
-def process_download_request(request: container.model.ContainerImageDownloadRequest):
-    raise NotImplementedError # if re-implementing: should write oci-image into target-file
 
 
 def filter_image(
