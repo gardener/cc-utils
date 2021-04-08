@@ -89,7 +89,13 @@ class KubernetesSecretHelper:
 
         self.core_api.create_namespaced_secret(namespace=namespace, body=secret)
 
-    def put_secret(self, name: str, data: dict = None, namespace: str='default', raw_data: dict = None):
+    def put_secret(
+        self,
+        name: str,
+        data: dict = None,
+        namespace: str='default',
+        raw_data: dict = None,
+    ):
         '''creates or updates (replaces) the specified secret.
         the secret's contents are expected in a dictionary containing only scalar values.
         In particular, each value is converted into a str; the result returned from
