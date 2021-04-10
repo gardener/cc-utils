@@ -194,7 +194,9 @@ class JobVariant(ModelBase):
         self._steps_dict[step.name] = step
 
     def step(self, name) -> 'PipelineStep':
-        return self._steps_dict[name]
+        if not (step := self._steps_dict.get(name)):
+            raise ValueError(f'no such step: {name=}')
+        return step
 
     def has_step(self, step_name):
         return step_name in self.step_names()
