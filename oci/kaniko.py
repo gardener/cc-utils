@@ -160,7 +160,8 @@ class _KanikoImageReadCtx:
       layers=[
         oci.model.OciBlobRef(
           digest=layer.digest_str(),
-          mediaType='application/data', # XXX actually, it is tar
+          # hard-code kaniko's output mimetype for now
+          mediaType='application/vnd.docker.image.rootfs.diff.tar.gzip',
           size=layer.size,
         ) for layer in self.layer_blobs()
       ],
