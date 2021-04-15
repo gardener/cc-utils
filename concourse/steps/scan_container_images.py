@@ -429,7 +429,7 @@ def print_protecode_info_table(
 
 
 def retrieve_buildlog(uuid):
-    concourse_cfg = concourse.util.own_concourse_config()
+    concourse_cfg = concourse.util._current_concourse_config()
     pipeline_metadata = concourse.util.get_pipeline_metadata()
     client = concourse.client.from_cfg(concourse_cfg, pipeline_metadata.team_name)
     build = concourse.util.find_own_running_build()
