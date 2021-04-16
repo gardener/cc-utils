@@ -241,35 +241,36 @@ def replicate_oci_artefact_and_patch_component_descriptor(
     # else:
     #     raise NotImplementedError(on_exist)
 
-    #download source oci artefakt
     src_image_reference = _target_oci_ref_from_ctx_base_url(src_name, src_version_tag, src_base_url)
     target_image_reference = _target_oci_ref_from_ctx_base_url(
         patched_component_descriptor.component.name, 
         patched_component_descriptor.component.version, 
         patched_component_descriptor.component.repositoryContexts[-1].baseUrl)
 
+    #download source oci artefakt
     manifest = client.manifest(
         image_reference=src_image_reference
     )
 
-    #download blobs
+    #download and reupload all layers except component descriptor layers
     blobs = []
-    for layer in manifest.layers[1:]:
-        blob_resp = client.blob(
-            image_reference=src_image_reference,
-            digest=layer.digest
-        )
+    for layer in manifest.layers:
+        if not layer.mediaType == gci.oci.component_descriptor_mimetype:
+            blob_resp = client.blob(
+                image_reference=src_image_reference,
+                digest=layer.digest
+            )
 
-        client.put_blob(
-            image_reference=target_image_reference,
-            digest=layer.digest,
-            octets_count=layer.size,
-            data=blob_resp.content
-        )
+            client.put_blob(
+                image_reference=target_image_reference,
+                digest=layer.digest,
+                octets_count=layer.size,
+                data=blob_resp.content
+            )
 
-        blobs.append((layer, blob_resp))
+            blobs.append((layer, blob_resp))
 
-    #override component_descriptor
+    #upload patched component descriptor
     raw_fobj = gci.oci.component_descriptor_to_tarfileobj(patched_component_descriptor)
 
     cd_digest = hashlib.sha256()
@@ -289,6 +290,7 @@ def replicate_oci_artefact_and_patch_component_descriptor(
         # mimetype=gci.oci.component_descriptor_mimetype,
     )
 
+    #build and upload config
     cfg = gci.oci.ComponentDescriptorOciCfg(
         componentDescriptorLayer=gci.oci.ComponentDescriptorOciBlobRef(
             digest=cd_digest_with_alg,
@@ -305,10 +307,10 @@ def replicate_oci_artefact_and_patch_component_descriptor(
         digest=cfg_digest_with_alg,
         octets_count=cfg_octets,
         data=cfg_raw,
-        mimetype='application/vnd.docker.container.image.v1+json',
+        mimetype='application/vnd.docker.container.image.v1+json', #TODO: correct mimetyp
     )
 
-    #upload
+    #upload manifest
     layers = [gci.oci.ComponentDescriptorOciBlobRef(
                 digest=cd_digest_with_alg,
                 size=cd_octets,
@@ -396,49 +398,17 @@ def upload_component_descriptor_v2_to_oci_registry(
         mimetype='application/vnd.docker.container.image.v1+json',
     )
 
-    #get the old oci registry
-    if len(component_descriptor_v2.component.repositoryContexts) == 0:
-        #TODO: should not happen
-        raise NotImplemented("Sould not habben #TODO")
-    elif len(component_descriptor_v2.component.repositoryContexts) == 1:
-        src_oci_url = component_descriptor_v2.component.repositoryContexts[0].baseUrl
-    else:
-        #take the second last repository context since the target context has already been appended
-        src_oci_url = component_descriptor_v2.component.repositoryContexts[-2].baseUrl
-
-    print("Usingup to date version")
-    blobs = []
-    # relicate the localBlobs like blueprints etc.
-    for resource in component_descriptor_v2.component.resources:
-        #is the resource a LocalFileSystemBlobAccess
-        if resource.access.type == cm.AccessType.LOCAL_FILESYSTEM_BLOB:
-
-            blob_resp = client.blob(src_oci_url + "/component-descriptors/" + component_descriptor_v2.component.name, resource.access.filename)
-
-            client.put_blob(
-                image_reference=component_descriptor_v2.component.repositoryContexts[-1].baseUrl + "/component-descriptors/" + component_descriptor_v2.component.name,
-                digest=resource.access.filename,
-                octets_count=len(blob_resp.content),
-                data=blob_resp.content,
-                #mimetype='application/vnd.docker.container.image.v1+json' #TODO
-            )
-            blobs.append((resource.access.filename, len(blob_resp.content), "application/vnd.gardener.landscaper.blueprint.v1+tar+gzip"))
-    
-    layers = [gci.oci.ComponentDescriptorOciBlobRef(
-                digest=cd_digest_with_alg,
-                size=cd_octets,
-            )]
-    layers.extend([gci.oci.OciBlobRef(
-                    digest=b[0],
-                    size=b[1],
-                    mediaType=b[2]) for b in blobs]
-                )
     manifest = om.OciImageManifest(
         config=gci.oci.ComponentDescriptorOciCfgBlobRef(
             digest=f'sha256:{cfg_digest}',
             size=cfg_octets,
         ),
-        layers=layers,
+        layers=[
+            gci.oci.ComponentDescriptorOciBlobRef(
+                digest=cd_digest_with_alg,
+                size=cd_octets,
+            ),
+        ],
     )
 
     manifest_dict = dataclasses.asdict(manifest)
