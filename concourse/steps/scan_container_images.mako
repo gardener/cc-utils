@@ -16,6 +16,7 @@ filter_cfg = image_scan_trait.filters()
 component_trait = job_variant.trait('component_descriptor')
 %>
 import functools
+import logging
 import os
 import sys
 import tabulate
@@ -28,9 +29,9 @@ import faulthandler
 faulthandler.enable() # print stacktraces upon fatal signals
 # end of debugging block
 
-import ctx
+import ci.log
 try:
-  ctx.configure_default_logging()
+  ci.log.configure_default_logging()
 except:
   pass
 import ci.util
@@ -43,6 +44,8 @@ import protecode.util
 from concourse.model.traits.image_scan import Notify
 from protecode.model import CVSSVersion
 from protecode.scanning_util import ProcessingMode
+
+logger = logging.getLogger('scan_container_images.step')
 
 ${step_lib('scan_container_images')}
 ${step_lib('images')}
@@ -84,7 +87,7 @@ print_protecode_info_table(
   exclude_component_names=${filter_cfg.exclude_component_names()},
 )
 
-ci.util.info('running protecode scan for all components')
+logger.info('running protecode scan for all components')
 results_above_threshold, results_below_threshold, license_report = protecode.util.upload_grouped_images(
   protecode_cfg=protecode_cfg,
   protecode_group_id = protecode_group_id,
@@ -96,7 +99,7 @@ results_above_threshold, results_below_threshold, license_report = protecode.uti
   image_reference_filter=filter_function,
   cvss_version = CVSSVersion('${protecode_scan.cvss_version().value}'),
 )
-ci.util.info('preparing license report for protecode results')
+logger.info('preparing license report for protecode results')
 print_license_report(license_report)
 
 allowed_licenses = ${protecode_scan.allowed_licenses()}
@@ -148,7 +151,7 @@ for email_recipient in email_recipients:
   email_recipient.add_license_scan_results(results=updated_license_report)
 
   if not email_recipient.has_results():
-    ci.util.info(f'skipping {email_recipient}, since there are no relevant results')
+    logger.info(f'skipping {email_recipient=}, since there are no relevant results')
     continue
 
   body = email_recipient.mail_body()
@@ -164,7 +167,7 @@ for email_recipient in email_recipients:
   component_name = "${component_trait.component_name()}"
 
   if not email_addresses:
-    ci.util.warning(f'no email addresses could be retrieved for {component_name}')
+    logger.warning(f'no email addresses could be determined for {component_name=}')
     continue
 
   import traceback
@@ -178,8 +181,8 @@ for email_recipient in email_recipients:
       subject=f'[Action Required] landscape {component_name} has critical Vulnerabilities',
       mimetype='html',
     )
-    ci.util.info('sent notification emails to: ' + ','.join(email_addresses))
+    logger.info(f'sent notification emails to: {email_addresses=}')
   except:
     traceback.print_exc()
-    ci.util.warning(f'error whilst trying to send notification-mails for {component_name}')
+    logger.warning(f'error whilst trying to send notification-mails for {component_name=}')
 </%def>
