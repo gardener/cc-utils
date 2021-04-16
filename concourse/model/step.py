@@ -170,6 +170,16 @@ def attrs(pipeline_step):
             ''',
         ),
         AttributeSpec.optional(
+            name='cache_paths',
+            default=[],
+            doc='''
+            .. warning::
+                EXPERIMENTAL - this attr might be removed or changed
+
+            a list of paths (relative to initial PWD) that should be cached.
+            ''',
+        ),
+        AttributeSpec.optional(
             name='privilege_mode',
             default=PrivilegeMode.UNPRIVILEGED,
             type=PrivilegeMode,
@@ -346,6 +356,9 @@ class PipelineStep(ModelBase):
         if not name in self._inputs_dict:
             raise ValueError(f'input does not exist: {name}')
         self._inputs_dict.pop(name)
+
+    def cache_paths(self):
+        return self.raw['cache_paths']
 
     def variables(self):
         return self.raw.get('vars')

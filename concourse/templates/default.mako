@@ -270,6 +270,12 @@ else:
 % for output in job_step.outputs().values():
     - name: ${output}
 % endfor
+% if (cache_paths := job_step.cache_paths()):
+    caches:
+% for cache_path in cache_paths:
+      - path: "${cache_path}"
+% endfor
+% endif
     params:
 <%
 # collect repositores that need to be cloned
