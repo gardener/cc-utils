@@ -227,19 +227,19 @@ def replicate_oci_artefact_and_patch_component_descriptor(
 
     target_ref = _target_oci_ref(patched_component_descriptor.component)
 
-    # if on_exist in (UploadMode.SKIP, UploadMode.FAIL):
-    #     # check whether manifest exists (head_manifest does not return None)
-    #     if client.head_manifest(image_reference=target_ref, absent_ok=True):
-    #         if on_exist is UploadMode.SKIP:
-    #             return
-    #         if on_exist is UploadMode.FAIL:
-    #             # XXX: we might still ignore it, if the to-be-uploaded CD is equal to the existing
-    #             # one
-    #             raise ValueError(f'{target_ref=} already existed')
-    # elif on_exist is UploadMode.OVERWRITE:
-    #     pass
-    # else:
-    #     raise NotImplementedError(on_exist)
+    if on_exist in (UploadMode.SKIP, UploadMode.FAIL):
+        # check whether manifest exists (head_manifest does not return None)
+        if client.head_manifest(image_reference=target_ref, absent_ok=True):
+            if on_exist is UploadMode.SKIP:
+                return
+            if on_exist is UploadMode.FAIL:
+                # XXX: we might still ignore it, if the to-be-uploaded CD is equal to the existing
+                # one
+                raise ValueError(f'{target_ref} already existed')
+    elif on_exist is UploadMode.OVERWRITE:
+        pass
+    else:
+        raise NotImplementedError(on_exist)
 
     src_image_reference = _target_oci_ref_from_ctx_base_url(src_name, src_version_tag, src_base_url)
     target_image_reference = _target_oci_ref_from_ctx_base_url(
@@ -268,7 +268,7 @@ def replicate_oci_artefact_and_patch_component_descriptor(
                 data=blob_resp.content
             )
 
-            blobs.append((layer, blob_resp))
+            blobs.append(layer)
 
     #upload patched component descriptor
     raw_fobj = gci.oci.component_descriptor_to_tarfileobj(patched_component_descriptor)
@@ -287,7 +287,6 @@ def replicate_oci_artefact_and_patch_component_descriptor(
         digest=cd_digest_with_alg,
         octets_count=cd_octets,
         data=raw_fobj,
-        # mimetype=gci.oci.component_descriptor_mimetype,
     )
 
     #build and upload config
@@ -307,7 +306,7 @@ def replicate_oci_artefact_and_patch_component_descriptor(
         digest=cfg_digest_with_alg,
         octets_count=cfg_octets,
         data=cfg_raw,
-        mimetype='application/vnd.docker.container.image.v1+json', #TODO: correct mimetyp
+        mimetype='application/vnd.docker.container.image.v1+json',
     )
 
     #upload manifest
@@ -316,9 +315,9 @@ def replicate_oci_artefact_and_patch_component_descriptor(
                 size=cd_octets,
             )]
     layers.extend([gci.oci.OciBlobRef(
-                    digest=b[0].digest,
-                    size=b[0].size,
-                    mediaType=b[0].mediaType) for b in blobs]
+                    digest=b.digest,
+                    size=b.size,
+                    mediaType=b.mediaType) for b in blobs]
                 )
     manifest = om.OciImageManifest(
         config=gci.oci.ComponentDescriptorOciCfgBlobRef(
