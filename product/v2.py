@@ -220,9 +220,26 @@ def replicate_oci_artefact_and_patch_component_descriptor(
     src_base_url: str,
     src_name: str,
     src_version_tag: str,
-    patched_component_descriptor: gci.componentmodel.ComponentDescriptor
+    patched_component_descriptor: gci.componentmodel.ComponentDescriptor,
+    on_exist=UploadMode.SKIP
 ):
     client = ccc.oci.oci_client()
+
+    target_ref = _target_oci_ref(patched_component_descriptor.component)
+
+    # if on_exist in (UploadMode.SKIP, UploadMode.FAIL):
+    #     # check whether manifest exists (head_manifest does not return None)
+    #     if client.head_manifest(image_reference=target_ref, absent_ok=True):
+    #         if on_exist is UploadMode.SKIP:
+    #             return
+    #         if on_exist is UploadMode.FAIL:
+    #             # XXX: we might still ignore it, if the to-be-uploaded CD is equal to the existing
+    #             # one
+    #             raise ValueError(f'{target_ref=} already existed')
+    # elif on_exist is UploadMode.OVERWRITE:
+    #     pass
+    # else:
+    #     raise NotImplementedError(on_exist)
 
     #download source oci artefakt
     src_image_reference = _target_oci_ref_from_ctx_base_url(src_name, src_version_tag, src_base_url)
@@ -307,6 +324,14 @@ def replicate_oci_artefact_and_patch_component_descriptor(
             size=cfg_octets,
         ),
         layers=layers,
+    )
+
+    manifest_dict = dataclasses.asdict(manifest)
+    manifest_bytes = json.dumps(manifest_dict).encode('utf-8')
+
+    client.put_manifest(
+        image_reference=target_ref,
+        manifest=manifest_bytes,
     )
 
 
