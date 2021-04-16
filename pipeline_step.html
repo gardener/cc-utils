@@ -305,19 +305,33 @@ An instance of the current pipeline_model is accessible through the
 The evaluation result is exposed to this build step via the specified environment
 variable.</p></td>
 </tr>
-<tr class="row-even"><td><p>privilege_mode</p></td>
+<tr class="row-even"><td><p>cache_paths</p></td>
+<td><p>no</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span>
+</pre></div>
+</div>
+</p></td>
+<td><p>str</p></td>
+<td><p><div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>EXPERIMENTAL - this attr might be removed or changed</p>
+</div>
+<p>a list of paths (relative to initial PWD) that should be cached.</p>
+</p></td>
+</tr>
+<tr class="row-odd"><td><p>privilege_mode</p></td>
 <td><p>no</p></td>
 <td><p><code class="code docutils literal notranslate"><span class="pre">unprivileged</span></code></p></td>
 <td><p>PrivilegeMode</p></td>
 <td><p>privilege mode for step. Use carefully when running potentially untrusted code.</p></td>
 </tr>
-<tr class="row-odd"><td><p>timeout</p></td>
+<tr class="row-even"><td><p>timeout</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>go-style time interval (e.g.: ‘1h30m’) after which the step will be interrupted and fail.</p></td>
 </tr>
-<tr class="row-even"><td><p>retries</p></td>
+<tr class="row-odd"><td><p>retries</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
