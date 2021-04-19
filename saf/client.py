@@ -21,6 +21,7 @@ class SafClient:
             ),
             headers={
                 'Authorization': f'Bearer {self._saf_cfg.credentials().bearer_token}',
+                'Content-Type': 'application/json',
             },
             data=json.dumps(raw, cls=EnumJSONEncoder),
         )
