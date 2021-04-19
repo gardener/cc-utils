@@ -216,16 +216,36 @@ def write_component_descriptor_to_dir(
         os.unlink(f.name)
         raise
 
-def replicate_oci_artefact_and_patch_component_descriptor(
+
+def replicate_oci_artifact_and_patch_component_descriptor(
     src_base_url: str,
     src_name: str,
-    src_version_tag: str,
+    src_version: str,
     patched_component_descriptor: gci.componentmodel.ComponentDescriptor,
     on_exist=UploadMode.SKIP
 ):
+    source_ref = _target_oci_ref_from_ctx_base_url(
+        component_name=src_name,
+        component_version=src_version,
+        ctx_repo_base_url=src_base_url,
+    )
+
+    _upload_component(
+        component_descriptor_v2=patched_component_descriptor,
+        source_ref=source_ref,
+        on_exist=on_exist,
+    )
+
+
+def _upload_component(
+    component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
+    source_ref: str,
+    on_exist=UploadMode.SKIP,
+):
+    ensure_is_v2(component_descriptor_v2)
     client = ccc.oci.oci_client()
 
-    target_ref = _target_oci_ref(patched_component_descriptor.component)
+    target_ref = _target_oci_ref(component_descriptor_v2.component)
 
     if on_exist in (UploadMode.SKIP, UploadMode.FAIL):
         # check whether manifest exists (head_manifest does not return None)
@@ -235,43 +255,37 @@ def replicate_oci_artefact_and_patch_component_descriptor(
             if on_exist is UploadMode.FAIL:
                 # XXX: we might still ignore it, if the to-be-uploaded CD is equal to the existing
                 # one
-                raise ValueError(f'{target_ref} already existed')
+                raise ValueError(f'{target_ref=} already existed')
     elif on_exist is UploadMode.OVERWRITE:
         pass
     else:
         raise NotImplementedError(on_exist)
 
-    src_image_reference = _target_oci_ref_from_ctx_base_url(src_name, src_version_tag, src_base_url)
-    target_image_reference = _target_oci_ref_from_ctx_base_url(
-        patched_component_descriptor.component.name, 
-        patched_component_descriptor.component.version, 
-        patched_component_descriptor.component.repositoryContexts[-1].baseUrl)
-
-    #download source oci artefakt
-    manifest = client.manifest(
-        image_reference=src_image_reference
-    )
-
-    #download and reupload all layers except component descriptor layers
     blobs = []
-    for layer in manifest.layers:
-        if not layer.mediaType == gci.oci.component_descriptor_mimetype:
-            blob_resp = client.blob(
-                image_reference=src_image_reference,
-                digest=layer.digest
-            )
+    if source_ref:
+        manifest = client.manifest(
+            image_reference=source_ref
+        )
 
-            client.put_blob(
-                image_reference=target_image_reference,
-                digest=layer.digest,
-                octets_count=layer.size,
-                data=blob_resp.content
-            )
+        # download and reupload all layers except component descriptor layer
+        for layer in manifest.layers:
+            if not layer.mediaType == gci.oci.component_descriptor_mimetype:
+                blob_resp = client.blob(
+                    image_reference=source_ref,
+                    digest=layer.digest
+                )
 
-            blobs.append(layer)
+                client.put_blob(
+                    image_reference=target_ref,
+                    digest=layer.digest,
+                    octets_count=layer.size,
+                    data=blob_resp.content
+                )
 
-    #upload patched component descriptor
-    raw_fobj = gci.oci.component_descriptor_to_tarfileobj(patched_component_descriptor)
+                blobs.append(layer)
+
+    # upload component descriptor
+    raw_fobj = gci.oci.component_descriptor_to_tarfileobj(component_descriptor_v2)
 
     cd_digest = hashlib.sha256()
     while (chunk := raw_fobj.read(4096)):
@@ -283,13 +297,14 @@ def replicate_oci_artefact_and_patch_component_descriptor(
     raw_fobj.seek(0)
 
     client.put_blob(
-        image_reference=target_image_reference,
+        image_reference=target_ref,
         digest=cd_digest_with_alg,
         octets_count=cd_octets,
         data=raw_fobj,
+        # mimetype=gci.oci.component_descriptor_mimetype,
     )
 
-    #build and upload config
+    # build and upload config
     cfg = gci.oci.ComponentDescriptorOciCfg(
         componentDescriptorLayer=gci.oci.ComponentDescriptorOciBlobRef(
             digest=cd_digest_with_alg,
@@ -302,14 +317,14 @@ def replicate_oci_artefact_and_patch_component_descriptor(
     cfg_digest_with_alg = f'sha256:{cfg_digest}'
 
     client.put_blob(
-        image_reference=target_image_reference,
+        image_reference=target_ref,
         digest=cfg_digest_with_alg,
         octets_count=cfg_octets,
         data=cfg_raw,
         mimetype='application/vnd.docker.container.image.v1+json',
     )
 
-    #upload manifest
+    # upload manifest
     layers = [gci.oci.ComponentDescriptorOciBlobRef(
                 digest=cd_digest_with_alg,
                 size=cd_octets,
@@ -340,82 +355,9 @@ def upload_component_descriptor_v2_to_oci_registry(
     component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
     on_exist=UploadMode.SKIP,
 ):
-    ensure_is_v2(component_descriptor_v2)
-    client = ccc.oci.oci_client()
-
-    target_ref = _target_oci_ref(component_descriptor_v2.component)
-
-    if on_exist in (UploadMode.SKIP, UploadMode.FAIL):
-        # check whether manifest exists (head_manifest does not return None)
-        if client.head_manifest(image_reference=target_ref, absent_ok=True):
-            if on_exist is UploadMode.SKIP:
-                return
-            if on_exist is UploadMode.FAIL:
-                # XXX: we might still ignore it, if the to-be-uploaded CD is equal to the existing
-                # one
-                raise ValueError(f'{target_ref=} already existed')
-    elif on_exist is UploadMode.OVERWRITE:
-        pass
-    else:
-        raise NotImplementedError(on_exist)
-
-    raw_fobj = gci.oci.component_descriptor_to_tarfileobj(component_descriptor_v2)
-
-    cd_digest = hashlib.sha256()
-    while (chunk := raw_fobj.read(4096)):
-        cd_digest.update(chunk)
-
-    cd_octets = raw_fobj.tell()
-    cd_digest = cd_digest.hexdigest()
-    cd_digest_with_alg = f'sha256:{cd_digest}'
-    raw_fobj.seek(0)
-
-    client.put_blob(
-        image_reference=target_ref,
-        digest=cd_digest_with_alg,
-        octets_count=cd_octets,
-        data=raw_fobj,
-        # mimetype=gci.oci.component_descriptor_mimetype,
-    )
-
-    cfg = gci.oci.ComponentDescriptorOciCfg(
-        componentDescriptorLayer=gci.oci.ComponentDescriptorOciBlobRef(
-            digest=cd_digest_with_alg,
-            size=cd_octets,
-        )
-    )
-    cfg_raw = json.dumps(dataclasses.asdict(cfg)).encode('utf-8')
-    cfg_octets = len(cfg_raw)
-    cfg_digest = hashlib.sha256(cfg_raw).hexdigest()
-    cfg_digest_with_alg = f'sha256:{cfg_digest}'
-
-    client.put_blob(
-        image_reference=target_ref,
-        digest=cfg_digest_with_alg,
-        octets_count=cfg_octets,
-        data=cfg_raw,
-        mimetype='application/vnd.docker.container.image.v1+json',
-    )
-
-    manifest = om.OciImageManifest(
-        config=gci.oci.ComponentDescriptorOciCfgBlobRef(
-            digest=f'sha256:{cfg_digest}',
-            size=cfg_octets,
-        ),
-        layers=[
-            gci.oci.ComponentDescriptorOciBlobRef(
-                digest=cd_digest_with_alg,
-                size=cd_octets,
-            ),
-        ],
-    )
-
-    manifest_dict = dataclasses.asdict(manifest)
-    manifest_bytes = json.dumps(manifest_dict).encode('utf-8')
-
-    client.put_manifest(
-        image_reference=target_ref,
-        manifest=manifest_bytes,
+    _upload_component(
+        component_descriptor_v2=component_descriptor_v2,
+        on_exist=on_exist,
     )
 
 
