@@ -118,8 +118,8 @@ def replicate_blobs(
     src_oci_manifest: om.OciImageManifest,
     tgt_ref: str,
     oci_client: oc.Client,
-    blob_overwrites: typing.Dict[om.OciBlobRef, bytes],
-):
+    blob_overwrites: typing.Dict[om.OciBlobRef, typing.Union[bytes, typing.BinaryIO]],
+) -> om.OciImageManifest:
     '''
     replicates blobs from given oci-image-ref to the specified target-ref, optionally replacing
     the specified blobs. This is particularly useful for replacing some "special" blobs, such
@@ -127,27 +127,59 @@ def replicate_blobs(
 
     Note that the uploaded artifact must be finalised after the upload by a "manifest-put".
     '''
-    for blob in src_oci_manifest.blobs():
+    def replicate_blob(blob: om.OciBlobRef) -> om.OciBlobRef:
         if (blob_overwrite_bytes := blob_overwrites.get(blob)):
+            if hasattr(blob_overwrite_bytes, 'read'):
             logger.info(f'overwriting {blob=}')
+                digest = hashlib.sha256()
+                blob_overwrite_bytes.seek(0)
+                while (chunk := blob_overwrite_bytes.read(4096)):
+                    digest.update(chunk)
+                digest = f'sha256:{digest.hexdigest()}'
+                octets_count = blob_overwrite_bytes.tell()
+                blob_overwrite_bytes.seek(0)
+            else:
+                digest = f'sha256:{hashlib.sha256(blob_overwrite_bytes).hexdigest()}'
+                octets_count = len(blob_overwrite_bytes)
+            
             oci_client.put_blob(
                 image_reference=tgt_ref,
-                digest=f'sha256:{hashlib.sha256(blob_overwrite_bytes).hexdigest()}',
-                octets_count=len(blob_overwrite_bytes),
+                digest=digest,
+                octets_count=octets_count,
                 data=blob_overwrite_bytes,
             )
+            return om.OciBlobRef(
+                digest=digest,
+                mediaType=blob.mediaType, #XXX: pass-in new media type?
+                size=octets_count,
+            )
         else:
+            digest = blob.digest
+
             src_blob: requests.models.Response = oci_client.blob(
                 image_reference=src_ref,
-                digest=blob.digest,
+                digest=digest,
             )
+
+            octets_count = int(src_blob.headers['Content-Length'])
 
             oci_client.put_blob(
                 image_reference=tgt_ref,
-                digest=blob.digest,
-                octets_count=int(src_blob.headers['Content-Length']),
+                digest=digest,
+                octets_count=octets_count,
                 data=src_blob,
             )
+            return om.OciBlobRef(
+                digest=digest,
+                mediaType=blob.mediaType,
+                size=octets_count,
+            )
+
+    return om.OciImageManifest(
+        config=replicate_blob(src_oci_manifest.config),
+        layers=[replicate_blob(blob) for blob in src_oci_manifest.layers],
+    )
+        
 
 
 def publish_container_image_from_kaniko_tarfile(
