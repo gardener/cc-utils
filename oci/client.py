@@ -660,12 +660,13 @@ class Client:
             logger.info(f'skipping blob upload {digest=} - already exists')
             return
 
-        data_is_requests_response = isinstance(data, requests.models.Response)
+        data_is_requests_resp = isinstance(data, requests.models.Response)
         data_is_generator = isinstance(data, typing.Generator)
         data_is_filelike = hasattr(data, 'read')
+        data_is_bytes = isinstance(data, bytes)
 
-        if octets_count < max_chunk or data_is_filelike or data_is_requests_response:
-            if data_is_requests_response:
+        if octets_count < max_chunk or data_is_filelike or data_is_requests_resp or data_is_bytes:
+            if data_is_requests_resp:
                 data = data.content
             elif data_is_generator:
                 # at least GCR does not like chunked-uploads; if small enough, workaround this
@@ -683,7 +684,7 @@ class Client:
                 data=data,
             )
         else:
-            if data_is_requests_response:
+            if data_is_requests_resp:
                 with data:
                   return self._put_blob_chunked(
                       image_reference=image_reference,
