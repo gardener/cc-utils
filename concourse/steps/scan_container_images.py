@@ -23,6 +23,7 @@ import tabulate
 import gci.componentmodel as cm
 
 import concourse.util
+import ctx
 import mail.model
 import mailutil
 import reutil
@@ -430,8 +431,15 @@ def print_protecode_info_table(
 
 def retrieve_buildlog(uuid):
     concourse_cfg = concourse.util._current_concourse_config()
+    uam_cfg_name = concourse_cfg.concourse_uam_cfg()
+    concourse_uam_cfg = ctx.cfg_factory().concourse_uam(uam_cfg_name)
+
     pipeline_metadata = concourse.util.get_pipeline_metadata()
-    client = concourse.client.from_cfg(concourse_cfg, pipeline_metadata.team_name)
+    client = concourse.client.from_cfg(
+        concourse_cfg=concourse_cfg,
+        concourse_uam_cfg=concourse_uam_cfg,
+        team_name=pipeline_metadata.team_name,
+    )
     build = concourse.util.find_own_running_build()
     build_id = build.id()
     task_id = client.build_plan(build_id=build_id).task_id(task_name='malware-scan')
