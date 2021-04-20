@@ -18,7 +18,7 @@ class OciImageNotFoundException(requests.exceptions.HTTPError):
     pass
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class OciBlobRef:
     digest: str
     mediaType: str
