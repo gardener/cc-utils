@@ -113,6 +113,43 @@ def replicate_artifact(
     )
 
 
+def replicate_blobs(
+    src_ref: str,
+    src_oci_manifest: om.OciImageManifest,
+    tgt_ref: str,
+    oci_client: oc.Client,
+    blob_overwrites: typing.Dict[om.OciBlobRef, bytes],
+):
+    '''
+    replicates blobs from given oci-image-ref to the specified target-ref, optionally replacing
+    the specified blobs. This is particularly useful for replacing some "special" blobs, such
+    as a component-descriptor layer blob of the config-blob.
+
+    Note that the uploaded artifact must be finalised after the upload by a "manifest-put".
+    '''
+    for blob in src_oci_manifest.blobs():
+        if (blob_overwrite_bytes := blob_overwrites.get(blob)):
+            logger.info(f'overwriting {blob=}')
+            oci_client.put_blob(
+                image_reference=tgt_ref,
+                digest=f'sha256:{hashlib.sha256(blob_overwrite_bytes).hexdigest()}',
+                octets_count=len(blob_overwrite_bytes),
+                data=blob_overwrite_bytes,
+            )
+        else:
+            src_blob: requests.models.Response = oci_client.blob(
+                image_reference=src_ref,
+                digest=blob.digest,
+            )
+
+            oci_client.put_blob(
+                image_reference=tgt_ref,
+                digest=blob.digest,
+                octets_count=int(src_blob.headers['Content-Length']),
+                data=src_blob,
+            )
+
+
 def publish_container_image_from_kaniko_tarfile(
     image_tarfile_path: str,
     oci_client: oc.Client,
