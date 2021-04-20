@@ -280,7 +280,9 @@ def _upload_component(
 
     #old component descriptor OciBlobRef for patching
     src_config_dict = json.loads(client.blob(src_ref, src_manifest.config.digest).content)
-    src_component_descriptor_oci_blob_ref = om.OciBlobRef(**src_config_dict['componentDescriptorLayer'])
+    src_component_descriptor_oci_blob_ref = om.OciBlobRef(
+        **src_config_dict['componentDescriptorLayer']
+    )
 
     #config OciBlobRef
     cfg = gci.oci.ComponentDescriptorOciCfg(
@@ -290,9 +292,6 @@ def _upload_component(
         )
     )
     cfg_raw = json.dumps(dataclasses.asdict(cfg)).encode('utf-8')
-    cfg_octets = len(cfg_raw)
-    cfg_digest = hashlib.sha256(cfg_raw).hexdigest()
-    cfg_digest_with_alg = f'sha256:{cfg_digest}'
 
     #replicate all blobs except override
     target_manifest = oci.replicate_blobs(
@@ -301,7 +300,7 @@ def _upload_component(
         tgt_ref=target_ref,
         oci_client=client,
         blob_overwrites={
-            src_component_descriptor_oci_blob_ref: raw_fobj, 
+            src_component_descriptor_oci_blob_ref: raw_fobj,
             src_manifest.config: cfg_raw,
         }
     )
