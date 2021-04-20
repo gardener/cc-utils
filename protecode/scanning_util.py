@@ -333,6 +333,13 @@ class ProtecodeUtil:
 
             # all existing products that did not match shall be removed
             protecode_apps_to_remove |= set(existing_products)
+            ci.util.info(
+                'Marked existing product(s) with ID(s) '
+                f"'{','.join([str(p.product_id()) for p in protecode_apps_to_remove])}'"
+                'that had no match in the current group '
+                f"'{resource_group.component().name}, {resource_group.image_name()}' for removal "
+                'after triage transport.'
+            )
 
         else:
             raise NotImplementedError()
