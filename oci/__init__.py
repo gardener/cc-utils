@@ -129,8 +129,9 @@ def replicate_blobs(
     '''
     def replicate_blob(blob: om.OciBlobRef) -> om.OciBlobRef:
         if (blob_overwrite_bytes := blob_overwrites.get(blob)):
-            if hasattr(blob_overwrite_bytes, 'read'):
             logger.info(f'overwriting {blob=}')
+
+            if hasattr(blob_overwrite_bytes, 'read'):
                 digest = hashlib.sha256()
                 blob_overwrite_bytes.seek(0)
                 while (chunk := blob_overwrite_bytes.read(4096)):
@@ -141,7 +142,7 @@ def replicate_blobs(
             else:
                 digest = f'sha256:{hashlib.sha256(blob_overwrite_bytes).hexdigest()}'
                 octets_count = len(blob_overwrite_bytes)
-            
+
             oci_client.put_blob(
                 image_reference=tgt_ref,
                 digest=digest,
@@ -179,7 +180,6 @@ def replicate_blobs(
         config=replicate_blob(src_oci_manifest.config),
         layers=[replicate_blob(blob) for blob in src_oci_manifest.layers],
     )
-        
 
 
 def publish_container_image_from_kaniko_tarfile(
