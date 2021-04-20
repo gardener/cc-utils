@@ -25,6 +25,7 @@ import ccc.oci
 import ci.util
 import oci.model as om
 import oci.client as oc
+import oci
 import version
 
 
@@ -224,7 +225,7 @@ def replicate_oci_artifact_and_patch_component_descriptor(
     patched_component_descriptor: gci.componentmodel.ComponentDescriptor,
     on_exist=UploadMode.SKIP
 ):
-    source_ref = _target_oci_ref_from_ctx_base_url(
+    src_ref = _target_oci_ref_from_ctx_base_url(
         component_name=src_name,
         component_version=src_version,
         ctx_repo_base_url=src_base_url,
@@ -232,14 +233,14 @@ def replicate_oci_artifact_and_patch_component_descriptor(
 
     _upload_component(
         component_descriptor_v2=patched_component_descriptor,
-        source_ref=source_ref,
+        src_ref=src_ref,
         on_exist=on_exist,
     )
 
 
 def _upload_component(
     component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
-    source_ref: str,
+    src_ref: str,
     on_exist=UploadMode.SKIP,
 ):
     ensure_is_v2(component_descriptor_v2)
@@ -261,30 +262,11 @@ def _upload_component(
     else:
         raise NotImplementedError(on_exist)
 
-    blobs = []
-    if source_ref:
-        manifest = client.manifest(
-            image_reference=source_ref
-        )
+    src_manifest = client.manifest(
+        image_reference=src_ref
+    )
 
-        # download and reupload all layers except component descriptor layer
-        for layer in manifest.layers:
-            if not layer.mediaType == gci.oci.component_descriptor_mimetype:
-                blob_resp = client.blob(
-                    image_reference=source_ref,
-                    digest=layer.digest
-                )
-
-                client.put_blob(
-                    image_reference=target_ref,
-                    digest=layer.digest,
-                    octets_count=layer.size,
-                    data=blob_resp.content
-                )
-
-                blobs.append(layer)
-
-    # upload component descriptor
+    #target component_descriptor serialized
     raw_fobj = gci.oci.component_descriptor_to_tarfileobj(component_descriptor_v2)
 
     cd_digest = hashlib.sha256()
@@ -296,15 +278,11 @@ def _upload_component(
     cd_digest_with_alg = f'sha256:{cd_digest}'
     raw_fobj.seek(0)
 
-    client.put_blob(
-        image_reference=target_ref,
-        digest=cd_digest_with_alg,
-        octets_count=cd_octets,
-        data=raw_fobj,
-        # mimetype=gci.oci.component_descriptor_mimetype,
-    )
+    #old component descriptor OciBlobRef for patching
+    src_config_dict = json.loads(client.blob(src_ref, src_manifest.config.digest).content)
+    src_component_descriptor_oci_blob_ref = om.OciBlobRef(**src_config_dict['componentDescriptorLayer'])
 
-    # build and upload config
+    #config OciBlobRef
     cfg = gci.oci.ComponentDescriptorOciCfg(
         componentDescriptorLayer=gci.oci.ComponentDescriptorOciBlobRef(
             digest=cd_digest_with_alg,
@@ -316,38 +294,24 @@ def _upload_component(
     cfg_digest = hashlib.sha256(cfg_raw).hexdigest()
     cfg_digest_with_alg = f'sha256:{cfg_digest}'
 
-    client.put_blob(
-        image_reference=target_ref,
-        digest=cfg_digest_with_alg,
-        octets_count=cfg_octets,
-        data=cfg_raw,
-        mimetype='application/vnd.docker.container.image.v1+json',
+    #replicate all blobs except override
+    target_manifest = oci.replicate_blobs(
+        src_ref=src_ref,
+        src_oci_manifest=src_manifest,
+        tgt_ref=target_ref,
+        oci_client=client,
+        blob_overwrites={
+            src_component_descriptor_oci_blob_ref: raw_fobj, 
+            src_manifest.config: cfg_raw,
+        }
     )
 
-    # upload manifest
-    layers = [gci.oci.ComponentDescriptorOciBlobRef(
-                digest=cd_digest_with_alg,
-                size=cd_octets,
-            )]
-    layers.extend([gci.oci.OciBlobRef(
-                    digest=b.digest,
-                    size=b.size,
-                    mediaType=b.mediaType) for b in blobs]
-                )
-    manifest = om.OciImageManifest(
-        config=gci.oci.ComponentDescriptorOciCfgBlobRef(
-            digest=f'sha256:{cfg_digest}',
-            size=cfg_octets,
-        ),
-        layers=layers,
-    )
-
-    manifest_dict = dataclasses.asdict(manifest)
-    manifest_bytes = json.dumps(manifest_dict).encode('utf-8')
+    target_manifest_dict = dataclasses.asdict(target_manifest)
+    target_manifest_bytes = json.dumps(target_manifest_dict).encode('utf-8')
 
     client.put_manifest(
         image_reference=target_ref,
-        manifest=manifest_bytes,
+        manifest=target_manifest_bytes,
     )
 
 
