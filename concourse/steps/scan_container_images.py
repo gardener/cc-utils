@@ -444,9 +444,9 @@ def retrieve_buildlog(uuid):
     build_id = build.id()
     task_id = client.build_plan(build_id=build_id).task_id(task_name='malware-scan')
     build_events = client.build_events(build_id=build_id)
-    log = build_events.iter_buildlog(task_id=task_id)
+
     log = ''
-    for line in log:
+    for line in build_events.iter_buildlog(task_id=task_id):
         log += f'{line}'
         if uuid in line:
             break
