@@ -14,9 +14,7 @@
 # limitations under the License.
 
 import enum
-from deprecated import deprecated
 import functools
-import logging
 import os
 
 from pathlib import Path
@@ -211,47 +209,3 @@ def cfg_set(name: str=None):
             raise RuntimeError('current cfg set only available for "central builds"')
         name = ci.util.current_config_set_name()
     return cfg_factory().cfg_set(name)
-
-
-def _default_logging_config(stdout_level):
-    return {
-        'version': 1,
-        'formatters': {
-            'default': {
-                'format': '%(asctime)s [%(levelname)s] [%(threadName)s] %(name)s: %(message)s',
-            },
-        },
-        'handlers': {
-            'console': {
-                'class': 'logging.StreamHandler',
-                'formatter': 'default',
-                'level': stdout_level,
-                'stream': 'ext://sys.stdout',
-            },
-        },
-        'root': {
-            'level': logging.DEBUG,
-            'handlers': ['console',],
-        },
-    }
-
-
-@deprecated
-def configure_default_logging(stdout_level=None):
-    import logging
-    if not stdout_level:
-        stdout_level = logging.INFO
-
-    cfg = _default_logging_config(stdout_level)
-    cfg.update({
-        'loggers': {
-            'github3': {
-                'level': logging.WARNING,
-            },
-            'elasticsearch': {
-                'level': logging.WARNING,
-            },
-        }
-    })
-    import logging.config
-    logging.config.dictConfig(cfg)
