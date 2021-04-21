@@ -1,7 +1,5 @@
 '''
-utils used for transitioning to new component-descriptor v2
-
-see: https://github.com/gardener/component-spec
+utils used for replicating cnudie components between different repository contexts
 '''
 
 
@@ -17,12 +15,12 @@ import oci.model as om
 import product.v2 as v2
 
 
-def replicate_oci_artifact_and_patch_component_descriptor(
-    src_base_url: str,
+def replicate_oci_artifact_with_patched_component_descriptor(
+    src_ctx_repo_base_url: str,
     src_name: str,
     src_version: str,
     patched_component_descriptor: gci.componentmodel.ComponentDescriptor,
-    on_exist=v2.UploadMode.SKIP
+    on_exist=v2.UploadMode.SKIP,
 ):
 
     v2.ensure_is_v2(patched_component_descriptor)
@@ -47,14 +45,13 @@ def replicate_oci_artifact_and_patch_component_descriptor(
     src_ref = v2._target_oci_ref_from_ctx_base_url(
         component_name=src_name,
         component_version=src_version,
-        ctx_repo_base_url=src_base_url,
+        ctx_repo_base_url=src_ctx_repo_base_url,
     )
 
     src_manifest = client.manifest(
         image_reference=src_ref
     )
 
-    #target component_descriptor serialized
     raw_fobj = gci.oci.component_descriptor_to_tarfileobj(patched_component_descriptor)
 
     cd_digest = hashlib.sha256()
@@ -66,22 +63,22 @@ def replicate_oci_artifact_and_patch_component_descriptor(
     cd_digest_with_alg = f'sha256:{cd_digest}'
     raw_fobj.seek(0)
 
-    #old component descriptor OciBlobRef for patching
+    # src component descriptor OciBlobRef for patching
     src_config_dict = json.loads(client.blob(src_ref, src_manifest.config.digest).content)
     src_component_descriptor_oci_blob_ref = om.OciBlobRef(
-        **src_config_dict['componentDescriptorLayer']
+        **src_config_dict['componentDescriptorLayer'],
     )
 
-    #config OciBlobRef
+    # config OciBlobRef
     cfg = gci.oci.ComponentDescriptorOciCfg(
         componentDescriptorLayer=gci.oci.ComponentDescriptorOciBlobRef(
             digest=cd_digest_with_alg,
             size=cd_octets,
-        )
+        ),
     )
     cfg_raw = json.dumps(dataclasses.asdict(cfg)).encode('utf-8')
 
-    #replicate all blobs except override
+    # replicate all blobs except overwrites
     target_manifest = oci.replicate_blobs(
         src_ref=src_ref,
         src_oci_manifest=src_manifest,
@@ -90,7 +87,7 @@ def replicate_oci_artifact_and_patch_component_descriptor(
         blob_overwrites={
             src_component_descriptor_oci_blob_ref: raw_fobj,
             src_manifest.config: cfg_raw,
-        }
+        },
     )
 
     target_manifest_dict = dataclasses.asdict(target_manifest)
