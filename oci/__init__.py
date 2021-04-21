@@ -123,7 +123,7 @@ def replicate_blobs(
     '''
     replicates blobs from given oci-image-ref to the specified target-ref, optionally replacing
     the specified blobs. This is particularly useful for replacing some "special" blobs, such
-    as a component-descriptor layer blob of the config-blob.
+    as a component-descriptor layer blob or the config-blob.
 
     Note that the uploaded artifact must be finalised after the upload by a "manifest-put".
     '''
