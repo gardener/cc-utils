@@ -137,8 +137,7 @@ def filter_image(
         data=cfg_blob,
     )
 
-    manifest.config.digest = cfg_digest
-    manifest.config.size = cfg_leng
+    manifest.config = dataclasses.replace(manifest.config, digest=cfg_digest, size=cfg_leng)
 
     manifest_raw = json.dumps(dataclasses.asdict(manifest)).encode('utf-8')
 
