@@ -68,6 +68,9 @@ def filter_image(
             return False # rm member
         return True # keep member
 
+    # prepare copy of layers to avoid modification while iterating
+    layers_copy = manifest.layers.copy()
+
     for layer in manifest.layers:
         layer_hash = hashlib.sha256()
         leng = 0
@@ -102,9 +105,12 @@ def filter_image(
                 data=f,
             )
 
-            # patch layer in manifest to announce changes w/ manifest-upload
-            layer.digest = layer_digest
-            layer.size = leng
+            # update copy of layers-list with new layer
+            new_layer = dataclasses.replace(layer, digest=layer_digest, size=leng)
+            layers_copy[layers_copy.index(layer)] = new_layer
+
+    # switch layers in manifest to announce changes w/ manifest-upload
+    manifest.layers = layers_copy
 
     # need to patch cfg-object, in case layer-digests changed
     cfg_blob = oci_client.blob(
