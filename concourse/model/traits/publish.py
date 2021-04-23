@@ -302,14 +302,15 @@ class PublishTraitTransformer(TraitTransformer):
                 self._build_steps.append(build_step)
                 yield build_step
 
-        yield prepare_step
+                publish_step._add_dependency(build_step)
 
-        if self.trait.oci_builder() is OciBuilder.CONCOURSE_IMAGE_RESOURCE:
-            yield publish_step
+        yield prepare_step
+        yield publish_step
 
     def process_pipeline_args(self, pipeline_args: JobVariant):
         main_repo = pipeline_args.main_repository()
         prepare_step = pipeline_args.step('prepare')
+
         if self.trait.oci_builder() is OciBuilder.CONCOURSE_IMAGE_RESOURCE:
             publish_step = pipeline_args.step('publish')
 

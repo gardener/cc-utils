@@ -328,7 +328,7 @@ else:
       path: /bin/sh
       args:
       - -exc
-  % if job_step.name != 'publish':
+  % if job_step.name != 'publish' or (job_step.name == 'publish' and has_publish_trait(job_variant) and job_variant.trait('publish').oci_builder() is OciBuilder.CONCOURSE_IMAGE_RESOURCE):
       - |
   % else:
       - "echo this is a dummy step"
