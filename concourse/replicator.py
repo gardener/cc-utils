@@ -317,7 +317,7 @@ class ReplicationResultProcessor:
         job_mapping=None,
     ):
         '''
-        @param remove_pipelines_filter: pipeline-names the filter matches are never removed
+        @param remove_pipelines_filter: pipeline-names the filter does not match are never removed
         '''
         self._cfg_set = cfg_set
         self._job_mapping = job_mapping
@@ -367,7 +367,7 @@ class ReplicationResultProcessor:
                     logger.info(f'before applying filter: {pipelines_to_remove=}')
                     pipelines_to_remove = {
                         name for name in pipelines_to_remove
-                        if not self.remove_pipelines_filter(name)
+                        if self.remove_pipelines_filter(name)
                     }
                     logger.info(f'after applying filter: {pipelines_to_remove=}')
 
