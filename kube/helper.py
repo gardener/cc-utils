@@ -52,6 +52,44 @@ class KubernetesSecretHelper:
     def __init__(self, core_api: CoreV1Api):
         self.core_api = core_api
 
+    def create_image_pull_secret(
+        self,
+        namespace: str,
+        name: str,
+        password: str,
+        email: str,
+        user_name: str,
+        server_url: str,
+    ):
+        '''Create a k8s-imagePullSecret for authentication against a single server.
+        '''
+        metadata = V1ObjectMeta(name=name, namespace=namespace)
+        secret = V1Secret(metadata=metadata)
+
+        auth = f'{user_name}:{password}'
+
+        docker_config = {
+            'auths': {
+                server_url: {
+                    'username': user_name,
+                    'email': email,
+                    'password': password,
+                    'auth': base64.b64encode(auth.encode('utf-8')).decode('utf-8')
+                },
+            },
+        }
+
+        encoded_docker_config = base64.b64encode(
+          json.dumps(docker_config).encode('utf-8')
+        ).decode('utf-8')
+
+        secret.data = {
+          '.dockercfgjson': encoded_docker_config
+        }
+        secret.type = 'kubernetes.io/dockercfgjson'
+
+        self.core_api.create_namespaced_secret(namespace=namespace, body=secret)
+
     def create_gcr_secret(
         self,
         namespace: str,
@@ -61,33 +99,14 @@ class KubernetesSecretHelper:
         user_name: str='_json_key',
         server_url: str='https://eu.gcr.io'
       ):
-        metadata = V1ObjectMeta(name=name, namespace=namespace)
-        secret = V1Secret(metadata=metadata)
-
-        auth = '{user}:{gcr_secret}'.format(
-          user=user_name,
-          gcr_secret=password
+        self.create_image_pull_secret(
+            namespace=namespace,
+            name=name,
+            password=password,
+            email=email,
+            user_name=user_name,
+            server_url=server_url,
         )
-
-        docker_config = {
-          server_url: {
-            'username': user_name,
-            'email': email,
-            'password': password,
-            'auth': base64.b64encode(auth.encode('utf-8')).decode('utf-8')
-          }
-        }
-
-        encoded_docker_config = base64.b64encode(
-          json.dumps(docker_config).encode('utf-8')
-        ).decode('utf-8')
-
-        secret.data = {
-          '.dockercfg': encoded_docker_config
-        }
-        secret.type = 'kubernetes.io/dockercfg'
-
-        self.core_api.create_namespaced_secret(namespace=namespace, body=secret)
 
     def put_secret(self, name: str, data: dict, namespace: str='default'):
         '''creates or updates (replaces) the specified secret.
