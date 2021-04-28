@@ -571,11 +571,16 @@ class Client:
             image_reference=image_reference,
             scope=scope,
             method='PUT',
+            raise_for_status=False,
             headers={
                 'Content-Type': content_type,
             },
             data=manifest,
         )
+
+        if not res.ok:
+            logger.warning(f'our manifest was rejected (see below for more details): {manifest=}')
+        res.raise_for_status()
 
         return res
 
