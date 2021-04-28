@@ -210,7 +210,7 @@ ATTRIBUTES = (
         name='oci-builder',
         doc='specifies the container image builder to use',
         type=OciBuilder,
-        default=OciBuilder.CONCOURSE_IMAGE_RESOURCE,
+        default=OciBuilder.KANIKO,
     ),
 )
 
