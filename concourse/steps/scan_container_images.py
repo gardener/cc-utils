@@ -429,7 +429,7 @@ def print_protecode_info_table(
     print(tabulate.tabulate(entries, headers=headers))
 
 
-def retrieve_buildlog(uuid):
+def retrieve_buildlog(uuid: str):
     concourse_cfg = concourse.util._current_concourse_config()
     uam_cfg_name = concourse_cfg.concourse_uam_cfg()
     concourse_uam_cfg = ctx.cfg_factory().concourse_uam(uam_cfg_name)
