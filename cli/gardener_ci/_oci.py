@@ -1,5 +1,6 @@
 import dataclasses
 import pprint
+import sys
 
 import ccc.oci
 import oci
@@ -43,3 +44,27 @@ def cfg(image_reference: str):
             stream=False,
         ).json(),
     )
+
+
+def blob(image_reference: str, digest: str, outfile: str):
+    oci_client = ccc.oci.oci_client()
+
+    if outfile == '-':
+        if sys.stdout.isatty():
+            print('must not stream binary content to stdout (pipe to other process)')
+            exit(1)
+        outfh = sys.stdout
+        write = outfh.buffer.write
+    else:
+        outfh = open(outfile, 'wb')
+        write = outfh.write
+
+    blob = oci_client.blob(
+        image_reference=image_reference,
+        digest=digest,
+        stream=True,
+    )
+    for chunk in blob.iter_content():
+        write(chunk)
+
+    outfh.flush()
