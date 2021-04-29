@@ -64,7 +64,9 @@ def filter_image(
     remove_files = [p.lstrip('/') for p in remove_files]
 
     def tarmember_filter(tar_info: tarfile.TarInfo):
-        if tar_info.name in remove_files:
+        stripped_name = tar_info.name.lstrip('./')
+        if stripped_name in remove_files:
+            logger.debug(f'rm: {tar_info.name=}')
             return False # rm member
         return True # keep member
 
