@@ -222,11 +222,21 @@ class MailRecipients:
             license_report=self._license_scan_results,
         )
 
+    def _clamav_findings_to_str(self, scan_result):
+        if scan_result.findings:
+            return '\n'.join(scan_result.findings)
+        else:
+            return 'No findings'
+
     def _clamav_report(self):
         result = '<p><div>Virus Scanning Results:</div>'
         return result + tabulate.tabulate(
             map(
-                lambda sr: (sr.resource.name, sr.scan_state,'\n'.join(sr.findings)),
+                lambda sr: (
+                    sr.resource.access.imageReference,
+                    sr.scan_state,
+                    self._clamav_findings_to_str(sr)
+                ),
                 self._clamav_results,
             ),
             headers=('Resource Name', 'Scan State', 'Findings'),

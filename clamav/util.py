@@ -106,12 +106,14 @@ def virus_scan_images(
                     ],
                 )
         except requests.exceptions.RequestException as e:
-            logger.warning(
+            # log warning and include it as finding to document it via the generated report-mails
+            warning = (
                 'A connection error occurred while scanning the image '
                 f'"{resource.access.imageReference} for viruses: {e}'
             )
+            logger.warning(warning)
             yield saf.model.MalwarescanResult(
                     resource=resource,
                     scan_state=saf.model.MalwareScanState.FINISHED_WITH_ERRORS,
-                    findings=[],
+                    findings=[warning],
                 )
