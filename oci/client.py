@@ -562,7 +562,7 @@ class Client:
         scope = _scope(image_reference=image_reference, action='push,pull')
 
         parsed = json.loads(manifest)
-        content_type = parsed['mediaType']
+        content_type = parsed.get('mediaType', om.OCI_MANIFEST_SCHEMA_V2_MIME)
 
         logger.info(f'manifest-mimetype: {content_type=}')
 
