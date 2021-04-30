@@ -168,18 +168,22 @@ class JobVariant(ModelBase):
         try:
             result = list(toposort.toposort(dependencies))
         except toposort.CircularDependencyError as de:
-
             dependencies = self._find_and_resolve_publish_trait_circular_dependencies(
                 dependencies,
                 cycle_info=de.data,
             )
-            dependencies = self._find_and_resolve_release_trait_circular_dependencies(
-                dependencies,
-                cycle_info=de.data,
-            )
-            # try again - if there is still a cyclic dependency, this is probably caused
-            # by a user error - so let it propagate
-            result = list(toposort.toposort(dependencies))
+            try:
+                # check whether resolving the dependency between the publish trait has already
+                # fixed the issue
+                result = list(toposort.toposort(dependencies))
+            except toposort.CircularDependencyError as de:
+                dependencies = self._find_and_resolve_release_trait_circular_dependencies(
+                    dependencies,
+                    cycle_info=de.data,
+                )
+                # try again - if there is still a cyclic dependency, this is probably caused
+                # by a user error - so let it propagate
+                result = list(toposort.toposort(dependencies))
 
         # result contains a generator yielding tuples of step name in the correct execution order.
         # each tuple can/should be parallelised
