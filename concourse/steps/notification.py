@@ -146,7 +146,7 @@ def retrieve_build_log(concourse_api, task_name):
       return 'failed to retrieve build log'
 
 
-def resolve_recipients_by_component_name(components, github_cfg_name):
+def resolve_recipients_by_component(components, github_cfg_name):
     component_recipients = mailutil.determine_mail_recipients(
         github_cfg_name=github_cfg_name, # todo: actually this is not required here
         components=components,
