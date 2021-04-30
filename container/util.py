@@ -57,7 +57,7 @@ def filter_image(
 
     manifest = oci_client.manifest(image_reference=source_ref)
 
-    if not isinstance(manifest, (om.OciImageManifest, om.OciImageManifestV1)):
+    if not isinstance(manifest, om.OciImageManifest):
         raise NotImplementedError(manifest)
 
     # allow / ignore leading '/'
