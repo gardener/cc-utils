@@ -521,7 +521,7 @@ def resources(
         elif (
             resource.access
             and isinstance(resource.access, dict)
-            and resource.access['type'] in resource_access_types
+            and dict in resource_access_types
         ):
             yield resource
         elif resource.access and resource.access.type in resource_access_types:
