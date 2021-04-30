@@ -195,7 +195,7 @@ components = [
 ]
 
 recipients = resolve_recipients_by_component_name(
-    components=email_cfg.get('component_name_recipients', ()),
+    components=components,
     github_cfg_name="${default_github_cfg_name}",
 )
 email_cfg['recipients'] = email_cfg['recipients'] | set(recipients)
