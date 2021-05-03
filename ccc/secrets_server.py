@@ -104,10 +104,10 @@ class SecretsServerClient:
 
     def retrieve_secrets(self):
         if self.cache_file and os.path.isfile(self.cache_file):
-            with open(self.cache_file) as f:
+            with open(self.cache_file, 'rb') as f:
                 if self.secret:
                     raw_data = _decrypt_cipher_text(
-                        encrypted_cipher_text=f.read().encode('utf-8'),
+                        encrypted_cipher_text=f.read(),
                         secret=self.secret,
                     )
                     return json.loads(raw_data)
@@ -125,19 +125,15 @@ class SecretsServerClient:
             ))
 
         if self.cache_file:
-            with open(self.cache_file, 'w') as f:
+            with open(self.cache_file, 'wb') as f:
                 if self.secret:
-                    raw_data = _decrypt_cipher_text(
-                        encrypted_cipher_text=response.text,
-                        secret=self.secret,
-                    )
-                    f.write(raw_data)
+                    f.write(response.content)
                 else:
                     json.dump(response.json(), f)
 
         if self.secret:
             raw_data = _decrypt_cipher_text(
-                encrypted_cipher_text=response.text,
+                encrypted_cipher_text=response.content,
                 secret=self.secret,
             )
             return json.loads(raw_data)
@@ -152,8 +148,6 @@ def _decrypt_cipher_text(encrypted_cipher_text: bytes, secret: model.secret.Secr
         raise NotImplementedError(cipher_alg)
 
     cipher = AES.new(key=secret.key, mode=AES.MODE_ECB)
-
-    encrypted_cipher_text = base64.b64decode(encrypted_cipher_text)
 
     decrypted_cipher = cipher.decrypt(encrypted_cipher_text)
     return Crypto.Util.Padding.unpad(
