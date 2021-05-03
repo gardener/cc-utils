@@ -196,9 +196,10 @@ class GithubWebhookDispatcher:
             push_event
         ):
             if not (client := self.matching_client(pipeline.target_team)):
-                raise RuntimeError(
-                    f"No matching Concourse client found for team '{pipeline.target_team}'"
+                logger.info(
+                    f'no matching job-mapping for {pipeline.pipeline_name=} - skipping abortion'
                 )
+                continue
 
             pipeline_config = client.pipeline_cfg(pipeline.pipeline_name)
 
