@@ -129,7 +129,7 @@ class SecretsServerClient:
                 if self.secret:
                     raw_data = _decrypt_cipher_text(
                         encrypted_cipher_text=response.text,
-                        secret_key=self.secret,
+                        secret=self.secret,
                     )
                     f.write(raw_data)
                 else:
@@ -138,7 +138,7 @@ class SecretsServerClient:
         if self.secret:
             raw_data = _decrypt_cipher_text(
                 encrypted_cipher_text=response.text,
-                secret_key=self.secret,
+                secret=self.secret,
             )
             return json.loads(raw_data)
         else:
