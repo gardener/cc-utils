@@ -158,10 +158,15 @@ class GithubWebhookDispatcher:
         '''
         repo = push_event.repository()
         repo_url = repo.repository_url()
-        repo_enumerator = concourse.enumerator.GithubRepositoryDefinitionEnumerator(
-            repository_url=repo_url,
-            cfg_set=self.cfg_set,
-        )
+
+        try:
+            repo_enumerator = concourse.enumerator.GithubRepositoryDefinitionEnumerator(
+                repository_url=repo_url,
+                cfg_set=self.cfg_set,
+            )
+        except concourse.enumerator.JobMappingNotFoundError:
+            logger.info('no job-mapping matched for {repo_url=} - will not interact w/ pipeline(s)')
+            return
 
         try:
             definition_descriptors = [d for d in repo_enumerator.enumerate_definition_descriptors()]
