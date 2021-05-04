@@ -27,6 +27,7 @@ import ccc.oci
 import ci.util
 import oci
 import oci.client as oc
+import oci.convert as oconv
 import oci.model as om
 import tarutil
 
@@ -57,7 +58,16 @@ def filter_image(
 
     manifest = oci_client.manifest(image_reference=source_ref)
 
-    if not isinstance(manifest, om.OciImageManifest):
+    cp_cfg_blob = True
+    if isinstance(manifest, om.OciImageManifestV1):
+        logger.info(f'converting v1-manifest -> v2 {source_ref=} {target_ref=}')
+        manifest, cfg_blob = oconv.v1_manifest_to_v2(
+            manifest=manifest,
+            oci_client=oci_client,
+            tgt_image_ref=target_ref,
+        )
+        cp_cfg_blob = False # we synthesise new cfg - thus we cannot cp from src
+    elif not isinstance(manifest, om.OciImageManifest):
         raise NotImplementedError(manifest)
 
     # allow / ignore leading '/'
@@ -115,13 +125,16 @@ def filter_image(
     manifest.layers = layers_copy
 
     # need to patch cfg-object, in case layer-digests changed
-    cfg_blob = oci_client.blob(
-        image_reference=source_ref,
-        digest=manifest.config.digest,
-        stream=False,
-    ).json() # cfg-blobs are small - no point in streaming
-    if not 'rootfs' in cfg_blob:
-        raise ValueError('expected attr `rootfs` not present on cfg-blob')
+    if cp_cfg_blob:
+        cfg_blob = oci_client.blob(
+            image_reference=source_ref,
+            digest=manifest.config.digest,
+            stream=False,
+        ).json() # cfg-blobs are small - no point in streaming
+        if not 'rootfs' in cfg_blob:
+            raise ValueError('expected attr `rootfs` not present on cfg-blob')
+    else:
+        cfg_blob = json.loads(cfg_blob)
 
     cfg_blob['rootfs'] = {
         'diff_ids': [
