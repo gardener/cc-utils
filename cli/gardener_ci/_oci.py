@@ -24,12 +24,16 @@ def ls(image: str):
     print(oci_client.tags(image_reference=image))
 
 
-def manifest(image_reference: str):
+def manifest(image_reference: str, pretty:bool=True):
     oci_client = ccc.oci.oci_client()
 
-    manifest = oci_client.manifest(image_reference=image_reference)
+    if pretty:
+        manifest = oci_client.manifest(image_reference=image_reference)
 
-    pprint.pprint(dataclasses.asdict(manifest))
+        pprint.pprint(dataclasses.asdict(manifest))
+    else:
+        manifest = oci_client.manifest_raw(image_reference=image_reference)
+        print(manifest.text)
 
 
 def cfg(image_reference: str):
