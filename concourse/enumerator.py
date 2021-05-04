@@ -83,6 +83,7 @@ class DefinitionEnumerator:
         repo_hostname,
         branch,
         raw_definitions,
+        secret_cfg,
         override_definitions={},
         target_team: str=None,
     ) -> 'DefinitionDescriptor':
@@ -98,6 +99,7 @@ class DefinitionEnumerator:
                 concourse_target_cfg=self.cfg_set.concourse(),
                 concourse_target_team=target_team,
                 override_definitions=[override_definitions.get(name,{}),],
+                secret_cfg=secret_cfg,
             )
 
 
@@ -124,6 +126,7 @@ class SimpleFileDefinitionEnumerator(DefinitionEnumerator):
                 repo_hostname=self.repo_host,
                 branch=self.repo_branch,
                 raw_definitions=definitions,
+                secret_cfg=None,
             )
         except BaseException as e:
             yield DefinitionDescriptor(
@@ -138,6 +141,7 @@ class SimpleFileDefinitionEnumerator(DefinitionEnumerator):
                 concourse_target_team=self.job_mapping.team_name(),
                 override_definitions=(),
                 exception=e,
+                secret_cfg=None,
             )
 
 
@@ -245,6 +249,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
         org_name,
         repository_filter: callable=None,
         target_team: str=None,
+        secret_cfg=None,
     ) -> RawPipelineDefinitionDescriptor:
 
         repo_hostname = urlparse(github_cfg.http_url()).hostname
@@ -266,6 +271,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                 concourse_target_team=target_team,
                 override_definitions=(),
                 exception=e,
+                secret_cfg=secret_cfg,
             )
             return # nothing else to yield in case parsing the branch cfg failed
 
@@ -294,6 +300,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                     concourse_target_team=target_team,
                     override_definitions=(),
                     exception=e,
+                    secret_cfg=secret_cfg,
                 )
                 return # nothing else to yield in case parsing failed
 
@@ -310,6 +317,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                 raw_definitions=definitions,
                 override_definitions=override_definitions,
                 target_team=target_team,
+                secret_cfg=secret_cfg,
             )
 
 
@@ -359,11 +367,17 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
         github_org, github_repo = self._repository_url.path.lstrip('/').split('/')
         repository = github_api.repository(github_org, github_repo)
 
+        if self.job_mapping.secret_cfg():
+            secret_cfg = self.cfg_set.secret(self.job_mapping.secret_cfg())
+        else:
+            secret_cfg = None
+
         yield from self._scan_repository_for_definitions(
             repository=repository,
             github_cfg=github_cfg,
             org_name=github_org,
             target_team=self._target_team,
+            secret_cfg=secret_cfg,
         )
 
 
@@ -390,10 +404,16 @@ class GithubOrganisationDefinitionEnumerator(GithubDefinitionEnumeratorBase):
             github_api = ccc.github.github_api(github_cfg)
             github_org = github_api.organization(github_org_name)
 
+            if self.job_mapping.secret_cfg():
+                secret_cfg = self.cfg_set.secret(self.job_mapping.secret_cfg())
+            else:
+                secret_cfg = None
+
             scan_repository_for_definitions = functools.partial(
                 self._scan_repository_for_definitions,
                 github_cfg=github_cfg,
                 org_name=github_org_name,
+                secret_cfg=secret_cfg,
             )
 
             matching_repositories = (
@@ -421,6 +441,7 @@ class DefinitionDescriptor:
         main_repo,
         concourse_target_cfg,
         concourse_target_team,
+        secret_cfg,
         override_definitions=[{},],
         exception=None,
     ):
@@ -431,6 +452,7 @@ class DefinitionDescriptor:
             self.concourse_target_cfg = not_none(concourse_target_cfg)
             self.concourse_target_team = not_none(concourse_target_team)
             self.override_definitions = not_none(override_definitions)
+            self.secret_cfg = secret_cfg
         except Exception as e:
             raise ValueError(
                 f'{e=} missing value: {pipeline_name=} {pipeline_definition=} {main_repo=} '

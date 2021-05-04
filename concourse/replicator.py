@@ -150,6 +150,7 @@ class Renderer:
             'definition': factory.create_pipeline_definition(),
             'name': pipeline_definition.name,
             'target_team': definition_descriptor.concourse_target_team,
+            'secret_cfg': definition_descriptor.secret_cfg,
         }
 
         if bg := effective_definition.get('background_image'):

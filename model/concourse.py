@@ -258,9 +258,17 @@ class JobMapping(NamedModelElement):
             for name, raw in self.raw.get('github_orgs').items()
         ]
 
+    def secret_cfg(self) -> str:
+        return self.raw.get('secret_cfg')
+
     def _required_attributes(self):
         return [
             'concourse_target_team',
+        ]
+
+    def _optional_attributes(self):
+        return [
+            'secret_cfg',
         ]
 
     def _defaults_dict(self):
