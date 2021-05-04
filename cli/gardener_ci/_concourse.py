@@ -60,10 +60,16 @@ def render_pipeline(
     out_dir: CliHints.existing_dir(),
     template_path: str=_template_path(),
     template_include_dir: str=None,
+    secret_cfg_name: str = None,
 ):
     cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(cfg_name=cfg_name)
     print(template_path)
+
+    if secret_cfg_name:
+        secret_cfg = cfg_factory.secret(secret_cfg_name)
+    else:
+        secret_cfg = None
 
     def_enumerators = [
         SimpleFileDefinitionEnumerator(
@@ -85,6 +91,7 @@ def render_pipeline(
         template_retriever=template_retriever,
         template_include_dir=template_include_dir,
         cfg_set=cfg_set,
+        secret_cfg=secret_cfg,
     )
 
     deployer = FilesystemDeployer(base_dir=out_dir)
