@@ -22,14 +22,14 @@ class DockerContainerCfg:
   Cmd: typing.Union[typing.List[str], str, None] = None
   Entrypoint: typing.Union[typing.List[str], str, None] = None
   Domainname: str = ''
-  Env: typing.List[str] = (
+  Env: typing.Optional[typing.List[str]] = (
       'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
   )
   Hostname: str = ''
   Labels: typing.Dict[str, str] = dataclasses.field(
       default_factory=dict,
   )
-  OnBuild: str = None
+  OnBuild: typing.Optional[str] = None
   OpenStdin: bool = False
   StdinOnce: bool = False
   Tty: bool = False
