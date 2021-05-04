@@ -40,7 +40,7 @@ class DockerContainerCfg:
 
 @dc
 class Docker_Fs:
-    diff_ids: typing.Optional[typing.Tuple[str]] = () # tuple of layer-sha256-digests
+    diff_ids: typing.List[str] # tuple of layer-sha256-digests
     type: str = 'layers'
 
 
@@ -53,7 +53,7 @@ class DockerCfg:
   container: str # container-hash
   container_config: DockerContainerCfg
   created: str # iso8601-ts
-  rootfs: Docker_Fs
+  rootfs: typing.Optional[Docker_Fs]
 
   architecture: str = 'amd64'
   docker_version: str = '18.09.7'
