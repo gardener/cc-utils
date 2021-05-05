@@ -183,6 +183,7 @@ subproc_env['COMPONENT_DESCRIPTOR_PATH'] = v2_outfile
 subproc_env['CTF_PATH'] = ctf_out_path
 subproc_env['COMPONENT_NAME'] = component_name
 subproc_env['COMPONENT_VERSION'] = effective_version
+subproc_env['EFFECTIVE_VERSION'] = effective_version
 subproc_env['CURRENT_COMPONENT_REPOSITORY'] = ctx_repository_base_url
 
 # pass predefined command to add dependencies for convenience purposes
