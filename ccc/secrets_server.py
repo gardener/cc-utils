@@ -79,7 +79,7 @@ class SecretsServerClient:
         secret = get_secret_cfg_from_env_if_available()
         if secret:
             # if secret env vars are set we want to use encryption
-            default_secrets_path = 'concourse-secrets/encrypted_concourse_cfg'
+            default_secrets_path = 'encrypted-concourse-secrets/encrypted_concourse_cfg'
         else:
             default_secrets_path = 'concourse-secrets/concourse_cfg'
 
