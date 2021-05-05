@@ -17,8 +17,6 @@ pipeline_name = pipeline.get('name')
 pipeline_definition = pipeline.get('definition')
 target_team = pipeline.get('target_team')
 background_image = pipeline.get('background_image', 'https://i.imgur.com/raPlg21.png')
-secret_cfg = pipeline.get('secret_cfg')
-
 resource_registry = pipeline_definition._resource_registry
 
 github = config_set.github()
@@ -309,16 +307,12 @@ else:
 % for variable_name, value in job_step.outputs().items():
       ${variable_name.upper().replace('-','_')}: ${value}
 % endfor
-      BUILD_JOB_NAME: ${job_variant.job_name()}
+      SECRETS_SERVER_ENDPOINT: ${secrets_server_cfg.endpoint_url()}
+      SECRETS_SERVER_CONCOURSE_CFG_NAME: ${secrets_server_cfg.secrets().concourse_cfg_name()}
       CONCOURSE_CURRENT_CFG: ${config_set.name()}
       CONCOURSE_CURRENT_TEAM: ${target_team}
       PIPELINE_NAME: ${pipeline_name}
-  % if secret_cfg:
-      SECRET_CIPHER_ALGORITHM: ${secret_cfg.cipher_algorithm().value}
-      SECRET_KEY: ${secret_cfg.key()}
-  % endif
-      SECRETS_SERVER_ENDPOINT: ${secrets_server_cfg.endpoint_url()}
-      SECRETS_SERVER_CONCOURSE_CFG_NAME: ${secrets_server_cfg.secrets().concourse_cfg_name()}
+      BUILD_JOB_NAME: ${job_variant.job_name()}
 % if has_component_descriptor_trait(job_variant):
       COMPONENT_NAME: ${job_variant.trait('component_descriptor').component_name()}
 
