@@ -34,7 +34,7 @@ def _raw_image_dep_to_v2(raw: dict):
   name = raw['name']
   version = raw['version']
   img_ref = raw['image_reference']
-  img_rel = cm.ResourceRelation(raw.get('relation', cm.ResourceRelation.LOCAL))
+  img_rel = cm.ResourceRelation(raw.get('relation', cm.ResourceRelation.EXTERNAL))
 
   return cm.Resource(
     name=name,
