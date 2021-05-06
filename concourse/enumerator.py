@@ -327,6 +327,7 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
         repository_url:str,
         cfg_set,
         target_team: str=None,
+        job_mapping=None,
     ):
         if not '://' in repository_url:
             repository_url = 'x://' + repository_url
@@ -337,11 +338,15 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
         self._target_team = target_team
         concourse_cfg = cfg_set.concourse()
         job_mapping_set = cfg_set.job_mapping(concourse_cfg.job_mapping_cfg_name())
+        self.job_mapping = job_mapping
 
         org_name, repo_name = self._repository_url.path.lstrip('/').split('/')
 
         if target_team:
             return # if tgt-team is explicitly configured, we do not need to look it up
+
+        if self.job_mapping:
+            return
 
         for job_mapping in job_mapping_set.job_mappings().values():
             for org in job_mapping.github_organisations():
