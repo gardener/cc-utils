@@ -29,6 +29,11 @@ default_container_registry = config_set.container_registry()
 # expose secrets_server endpoint to all jobs
 secrets_server_cfg = config_set.secrets_server()
 
+if secret_cfg:
+  secrets_server_cc_cfg_name = secrets_server_cfg.secrets().encrypted_concourse_cfg_name()
+else
+  secrets_server_cc_cfg_name = secrets_server_cfg.secrets().concourse_cfg_name()
+
 # short-cut for now
 def has_version_trait(model_with_traits):
   return model_with_traits.has_trait('version')
@@ -198,7 +203,7 @@ notification_env_vars = {
   'CONCOURSE_CURRENT_CFG': config_set.name(),
   'CONCOURSE_CURRENT_TEAM': target_team,
   'PIPELINE_NAME': pipeline_name,
-  'SECRETS_SERVER_CONCOURSE_CFG_NAME': secrets_server_cfg.secrets().concourse_cfg_name(),
+  'SECRETS_SERVER_CONCOURSE_CFG_NAME': secrets_server_cc_cfg_name,
   'SECRETS_SERVER_ENDPOINT': secrets_server_cfg.endpoint_url(),
 }
 %>
@@ -317,8 +322,8 @@ else:
       SECRET_CIPHER_ALGORITHM: ${secret_cfg.cipher_algorithm().value}
       SECRET_KEY: ${secret_cfg.key()}
   % endif
+      SECRETS_SERVER_CONCOURSE_CFG_NAME: ${secrets_server_cc_cfg_name}
       SECRETS_SERVER_ENDPOINT: ${secrets_server_cfg.endpoint_url()}
-      SECRETS_SERVER_CONCOURSE_CFG_NAME: ${secrets_server_cfg.secrets().concourse_cfg_name()}
 % if has_component_descriptor_trait(job_variant):
       COMPONENT_NAME: ${job_variant.trait('component_descriptor').component_name()}
 
