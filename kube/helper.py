@@ -256,6 +256,29 @@ class KubernetesDeploymentHelper:
     def __init__(self, apps_api: AppsV1Api):
         self.apps_api = apps_api
 
+    def create_or_patch_deployment(
+        self,
+        namespace: str,
+        deployment: V1Deployment,
+    ):
+        '''Create a deployment in a given namespace. If the deployment already exists,
+        the previous version will be patched.
+        '''
+        not_empty(namespace)
+        not_none(deployment)
+
+        deployment_name = deployment.metadata.name
+        if self.get_deployment(namespace=namespace, name=deployment_name):
+            func = self.apps_api.api_client.select_header_content_type
+
+            # monkey patch function to set the correct merge strategy for request.
+            # This will apply all changes and remove unnecessary config
+            self.apps_api.api_client.select_header_content_type = lambda content_types: 'application/merge-patch+json' # noqa: E501
+            self.apps_api.patch_namespaced_deployment(deployment_name,namespace, deployment)
+            self.apps_api.api_client.select_header_content_type = func
+        else:
+            self.create_deployment(namespace=namespace, deployment=deployment)
+
     def replace_or_create_deployment(self, namespace: str, deployment: V1Deployment):
         '''Create a deployment in a given namespace. If the deployment already exists,
         the previous version will be deleted beforehand.
