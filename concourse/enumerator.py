@@ -372,7 +372,7 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
         github_org, github_repo = self._repository_url.path.lstrip('/').split('/')
         repository = github_api.repository(github_org, github_repo)
 
-        if self.job_mapping.secret_cfg():
+        if self.job_mapping and self.job_mapping.secret_cfg():
             secret_cfg = self.cfg_set.secret(self.job_mapping.secret_cfg())
         else:
             secret_cfg = None
