@@ -48,6 +48,7 @@ def configure_default_logging(
     stdout_level=None,
     force=True,
     print_thread_id=False,
+    custom_format_string: str = '',
 ):
     if not stdout_level:
         stdout_level = logging.INFO
@@ -60,7 +61,12 @@ def configure_default_logging(
 
     sh = logging.StreamHandler(stream=sys.stdout)
     sh.setLevel(stdout_level)
-    sh.setFormatter(CCFormatter(fmt=default_fmt_string(print_thread_id=print_thread_id)))
+
+    if custom_format_string:
+        sh.setFormatter(CCFormatter(fmt=custom_format_string))
+    else:
+        sh.setFormatter(CCFormatter(fmt=default_fmt_string(print_thread_id=print_thread_id)))
+
     logging.root.addHandler(hdlr=sh)
     logging.root.setLevel(level=stdout_level)
 
