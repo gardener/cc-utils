@@ -31,7 +31,7 @@ secrets_server_cfg = config_set.secrets_server()
 
 if secret_cfg:
   secrets_server_cc_cfg_name = secrets_server_cfg.secrets().encrypted_concourse_cfg_name()
-else
+else:
   secrets_server_cc_cfg_name = secrets_server_cfg.secrets().concourse_cfg_name()
 
 # short-cut for now
