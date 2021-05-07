@@ -208,6 +208,23 @@ class KubernetesServiceHelper:
     def __init__(self, core_api: CoreV1Api):
         self.core_api = core_api
 
+    def create_or_patch_service(self, namespace: str, service: V1Service):
+        not_empty(namespace)
+        not_none(service)
+
+        service_name = service.metadata.name
+        if self.get_service(name=service_name, namespace=namespace):
+            func = self.core_api.api_client.select_header_content_type
+            self.core_api.api_client.select_header_content_type = lambda content_types: 'application/merge-patch+json' # noqa: E501
+            self.core_api.patch_namespaced_service(
+                name=service_name,
+                namespace=namespace,
+                body=service,
+            )
+            self.core_api.api_client.select_header_content_type = func
+        else:
+            self.create_service(namespace=namespace,service=service)
+
     def replace_or_create_service(self, namespace: str, service: V1Service):
         '''Create a service in a given namespace. If the service already exists,
         the previous version will be deleted beforehand
