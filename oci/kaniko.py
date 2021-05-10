@@ -126,13 +126,52 @@ class _KanikoImageReadCtx:
   def cfg_blob(self):
     cfg_info = self.tarfile.getmember(name=self.kaniko_manifest.Config)
 
-    return _KanikoBlob(
+    # HACK: unfortunately, we need to patch the cfg-blob in case there are
+    # less history-entries than layer-blobs
+    def _mk_wrapper():
+        return  _KanikoBlob(
+          read_chunk=self._read_chunk,
+          offset=cfg_info.offset_data,
+          name=cfg_info.name,
+          size=cfg_info.size,
+          hash_algorithm=cfg_info.name.split(':')[0],
+        )
+
+    cfg_blob_bytes = _mk_wrapper().read()
+    cfg_blob_dict = json.loads(cfg_blob_bytes)
+
+    layers_count = len(tuple(self.layer_blobs()))
+
+    if layers_count <= (history_leng := len((history := cfg_blob_dict['history']))):
+        # no patching needed
+        print('no patching required')
+        return _mk_wrapper()
+
+    missing_history_count = layers_count - history_leng
+    last_history_entry = history[-1] # hackily cp last entry
+    for _ in range(missing_history_count):
+        history.append(last_history_entry)
+
+    cfg_blob_dict['history'] = history
+    cfg_blob_bytes = json.dumps(cfg_blob_dict).encode('utf-8')
+
+    import hashlib
+    cfg_hash = hashlib.sha256(cfg_blob_bytes).hexdigest()
+
+    cfg_blob_buf = io.BytesIO(cfg_blob_bytes)
+    cfg_blob_buf.seek(0)
+
+    # now we need to fake a kaniko-blob-wrapper
+    cfg_blob_wrapper =  _KanikoBlob(
       read_chunk=self._read_chunk,
       offset=cfg_info.offset_data,
-      name=cfg_info.name,
-      size=cfg_info.size,
+      name=f'sha256:{cfg_hash}', # XXX name is parsed again for digest_str()
+      size=len(cfg_blob_bytes),
       hash_algorithm=cfg_info.name.split(':')[0],
     )
+    cfg_blob_wrapper.read = cfg_blob_buf.read
+
+    return cfg_blob_wrapper
 
   def layer_blobs(self):
     for layer_name in self.kaniko_manifest.Layers:
