@@ -111,9 +111,11 @@ class _KanikoImageReadCtx:
     if not (leng := len(manifest_list)) == 1:
       raise NotImplementedError(leng)
 
+    manifest = manifest_list[0]
+
     return dacite.from_dict(
         data_class=KanikoManifest,
-        data=manifest_list[0],
+        data=manifest,
     )
 
   def _read_chunk(self, offset: int, length: int):
