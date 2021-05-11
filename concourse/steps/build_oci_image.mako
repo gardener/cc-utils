@@ -46,7 +46,7 @@ logger = logging.getLogger('kaniko-build.step')
 
 ${step_lib('build_oci_image')}
 
-home = os.path.join('/', 'kaniko')
+home = '/kaniko'
 docker_cfg_dir = os.path.join(home, '.docker')
 os.makedirs(docker_cfg_dir, exist_ok=True)
 docker_cfg_path = os.path.join(docker_cfg_dir, 'config.json')
@@ -59,7 +59,7 @@ write_docker_cfg(
 subproc_env = os.environ.copy()
 subproc_env['HOME'] = home
 subproc_env['GOOGLE_APPLICATION_CREDENTIALS'] = docker_cfg_path
-subproc_env['PATH'] = os.path.join('/', 'kaniko', 'bin')
+subproc_env['PATH'] = '/kaniko/bin'
 
 image_outfile = '${image_descriptor.name()}.oci-image.tar'
 
@@ -81,6 +81,7 @@ else:
 
 # XXX ugly hack: early-import so we survive kaniko's rampage (will purge container during build)
 import ccc.secrets_server
+import model.concourse
 import model.container_registry
 import model.elasticsearch
 import concurrent.futures
