@@ -457,8 +457,7 @@ class ProtecodeUtil:
         metadata = self._metadata(
             resource=resource,
             component=component,
-            omit_version=True, # omit version when searching for existing app
-            # (only one component version must exist per group by our chosen definition)
+            omit_version=False,
         )
         if not group_id:
             group_id = self._group_id
