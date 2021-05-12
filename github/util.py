@@ -716,8 +716,9 @@ def _retrieve_team_by_name_or_none(
 
 
 def find_greatest_github_release_version(
-    releases: [github3.repos.release.Release],
+    releases: typing.List[github3.repos.release.Release],
     warn_for_unparseable_releases: bool = True,
+    ignore_prerelease_versions: bool = False,
 ):
     # currently, non-draft-releases are not created with a name by us. Use the tag name as fallback
     release_versions = [
@@ -742,7 +743,10 @@ def find_greatest_github_release_version(
         version.parse_to_semver(release_version)
         for release_version in release_versions
     ]
-    latest_version = version.find_latest_version(release_version_infos)
+    latest_version = version.find_latest_version(
+        versions=release_version_infos,
+        ignore_prerelease_versions=ignore_prerelease_versions,
+    )
     if latest_version:
         return str(latest_version)
     else:

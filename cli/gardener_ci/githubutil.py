@@ -215,6 +215,10 @@ def greatest_release_version(
         typehint=bool,
         help='Use anonymous access. Unauthenticated access is only possible on github.com.',
     ) = False,
+    ignore_prereleases: CliHint(
+        typehint=bool,
+        help='Ignore prerelease-versions (e.g.: 1.2.3-foo)',
+    ) = False,
 ):
     '''Find the release with the greatest name (according to semver) and print its semver-version.
 
@@ -251,5 +255,6 @@ def greatest_release_version(
         find_greatest_github_release_version(
             releases=repo_helper.repository.releases(),
             warn_for_unparseable_releases=False,
+            ignore_prerelease_versions=ignore_prereleases,
         )
     )
