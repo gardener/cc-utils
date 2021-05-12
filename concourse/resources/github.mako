@@ -8,14 +8,18 @@
 </%def>
 <%def name="github_repo(repo_cfg, cfg_set, configure_webhook=True)">
 <%
+import ccc.github
 from concourse.client.model import ResourceType
 from makoutil import indent_func
 from model.github import Protocol
-repo_name = repo_cfg.name()
-if repo_name is not None:
-  github_cfg = cfg_set.github(cfg_name=repo_cfg.cfg_name())
+
+if github_cfg_name := repo_cfg.cfg_name():
+  github_cfg = cfg_set.github(cfg_name=github_cfg_name)
+elif repo_hostname := repo_cfg.repo_hostname():
+  github_cfg = ccc.github.github_cfg_for_hostname(repo_cfg.repo_hostname(), require_labels=None)
 else:
   github_cfg = cfg_set.github()
+
 credentials = github_cfg.credentials()
 disable_tls_validation = not github_cfg.tls_validation()
 have_http = Protocol.HTTPS in github_cfg.available_protocols()
