@@ -95,6 +95,7 @@ scan_container_images_step = concourse.steps.step_def('scan_container_images')
 malware_scan_step = concourse.steps.step_def('malware_scan')
 alter_container_images_step = concourse.steps.step_def('alter_container_images')
 scan_sources_step = concourse.steps.step_def('scan_sources')
+replicate_secrets_step = concourse.steps.step_def('replicate_secrets')
 %>
 
 <%namespace file="/resources/defaults.mako" import="*"/>
@@ -458,6 +459,8 @@ ${publish_step(job_step=job_step, job_variant=job_variant)}
         ${scan_sources_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
 % elif job_step.name == 'replicate_pipelines':
         ${replicate_pipelines_step(step=job_step, job=job_variant, job_mapping=job_mapping, indent=8)}
+% elif job_step.name == 'replicate_secrets':
+        ${replicate_secrets_step(step=job_step, job=job_variant, indent=8)}
 % endif
 % endif
 % if job_step.publish_repository_names() and not job_variant.has_trait('pull-request'):
