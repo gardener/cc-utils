@@ -180,6 +180,9 @@ def github_cfg_for_hostname(
         require_labels = tuple(require_labels)
 
     def has_required_labels(github_cfg):
+        if not require_labels:
+            return True
+
         for required_label in require_labels:
             if required_label not in github_cfg.purpose_labels():
                 return False
