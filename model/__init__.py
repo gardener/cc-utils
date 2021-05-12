@@ -414,6 +414,16 @@ class ConfigFactory:
 
         return functools.partial(self._cfg_element, cfg_type_name)
 
+    def _serialise(self):
+        cfg_types = self._cfg_types()
+
+        serialised_elements = {
+            cfg_name: self.retrieve_cfg(cfg_type) for cfg_name, cfg_type in cfg_types.items()
+        }
+        serialised_elements[ConfigFactory.CFG_TYPES] = self._cfg_types_raw()
+
+        return json.dumps(serialised_elements, indent=2)
+
 
 class ConfigSetSerialiser:
     def __init__(self, cfg_sets: 'ConfigurationSet', cfg_factory: ConfigFactory):
