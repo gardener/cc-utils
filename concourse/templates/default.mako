@@ -206,6 +206,11 @@ notification_env_vars = {
   'SECRETS_SERVER_CONCOURSE_CFG_NAME': secrets_server_cc_cfg_name,
   'SECRETS_SERVER_ENDPOINT': secrets_server_cfg.endpoint_url(),
 }
+
+if secret_cfg:
+  notification_env_vars['SECRET_CIPHER_ALGORITHM'] = secret_cfg.cipher_algorithm().value
+  notification_env_vars['SECRET_KEY'] = secret_cfg.key()
+
 %>
   ${email_notification(
     cfg_set=config_set,
