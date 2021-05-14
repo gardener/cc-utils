@@ -40,7 +40,7 @@ instantiated by users of this module.
 '''
 
 
-@dc
+@dc(frozen=True)
 class CfgTypeSrc: # just a marker class
     pass
 
