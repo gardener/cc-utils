@@ -657,7 +657,7 @@ class GitHubReleaseStep(TransactionalStep):
                 content_type='application/x-yaml',
                 name=asset_name,
                 asset=descriptor_str.encode('utf-8'),
-                label='component_descriptor.cnudie.yaml',
+                label=asset_name,
             )
 
         return {
