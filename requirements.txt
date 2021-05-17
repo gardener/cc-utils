@@ -48,6 +48,6 @@ termcolor<2.0.0
 toposort
 urllib3<2.0.0
 uvicorn # todo: rm once whd is factored-out to separate package
-websockets==8.1.0
+websockets
 whitesource_common
 yamllint<2

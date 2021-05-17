@@ -211,7 +211,7 @@ class WhitesourceRoutes:
 
 
 async def _upload_to_project(
-        websocket: websockets.client,
+        websocket: 'websockets.legacy.client.WebSocketClientProtocol',
         file: typing.IO,
         contract: protocol.WhiteSourceApiExtensionWebsocketContract,
 ):
