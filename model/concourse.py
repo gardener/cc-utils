@@ -22,6 +22,7 @@ from . import cluster_domain_from_kubernetes_config
 from model.base import (
     NamedModelElement,
     ModelValidationError,
+    ModelBase,
 )
 
 
@@ -242,6 +243,17 @@ class JobMappingSet(NamedModelElement):
             tgt_team_names.remove(team_name)
 
 
+class SecretsRepo(ModelBase):
+    def github_cfg(self):
+        return self.raw.get('github_cfg')
+
+    def org(self):
+        return self.raw.get('org')
+
+    def repo(self):
+        return self.raw.get('repo')
+
+
 class JobMapping(NamedModelElement):
     def team_name(self) -> str:
         # todo: use `name` attr for that (thus enforce unique mappings)
@@ -261,6 +273,9 @@ class JobMapping(NamedModelElement):
     def secret_cfg(self) -> str:
         return self.raw.get('secret_cfg')
 
+    def secrets_repo(self) -> SecretsRepo:
+        return SecretsRepo(self.raw.get('secrets_repo'))
+
     def _required_attributes(self):
         return [
             'concourse_target_team',
@@ -269,6 +284,7 @@ class JobMapping(NamedModelElement):
     def _optional_attributes(self):
         return [
             'secret_cfg',
+            'secrets_repo',
         ]
 
     def _defaults_dict(self):
@@ -276,6 +292,9 @@ class JobMapping(NamedModelElement):
         return {
             'cleanup_policy': PipelineCleanupPolicy.CLEANUP_EXTRA_PIPELINES,
         }
+
+    def target_secret_name(self):
+        return f'cc-{self.team_name()}-config'
 
 
 class GithubOrganisationConfig(NamedModelElement):
