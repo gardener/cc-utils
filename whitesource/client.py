@@ -3,6 +3,13 @@ import json
 import logging
 import typing
 import websockets
+from websockets.legacy import client
+"""
+The client, server, protocol, and auth modules were moved from the websockets package
+to websockets.legacy sub-package, as part of an upcoming refactoring.
+Despite the name, they’re still fully supported.
+See: https://websockets.readthedocs.io/en/stable/changelog.html#id5
+"""
 
 import dacite
 import requests
@@ -211,9 +218,9 @@ class WhitesourceRoutes:
 
 
 async def _upload_to_project(
-        websocket: websockets.client,
-        file: typing.IO,
-        contract: protocol.WhiteSourceApiExtensionWebsocketContract,
+    websocket: websockets.legacy.client,
+    file: typing.IO,
+    contract: protocol.WhiteSourceApiExtensionWebsocketContract,
 ):
     try:
         await websocket.send(json.dumps(dataclasses.asdict(contract.metadata)))
