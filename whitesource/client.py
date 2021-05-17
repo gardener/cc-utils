@@ -3,7 +3,7 @@ import json
 import logging
 import typing
 import websockets
-from websockets.legacy import client
+from websockets.legacy import client # noqa:F401
 """
 The client, server, protocol, and auth modules were moved from the websockets package
 to websockets.legacy sub-package, as part of an upcoming refactoring.
