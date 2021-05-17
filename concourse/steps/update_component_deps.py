@@ -306,36 +306,44 @@ def create_upgrade_pr(
         githubrepobranch=githubrepobranch,
         repo_dir=repo_dir,
     )
+    # branch was created. Cleanup if something fails
+    try:
+        github_cfg, repo_owner, repo_name = get_source_repo_config_for_component_reference(
+            component=component,
+            component_reference=from_ref,
+            component_version=from_version,
+        )
 
-    github_cfg, repo_owner, repo_name = get_source_repo_config_for_component_reference(
-        component=component,
-        component_reference=from_ref,
-        component_version=from_version,
-    )
-
-    release_notes = create_release_notes(
-        from_component_ref=from_ref,
-        ctx_repo_base_url=component.current_repository_ctx().baseUrl,
-        from_github_cfg=github_cfg,
-        from_repo_owner=repo_owner,
-        from_repo_name=repo_name,
-        from_version=from_version,
-        to_version=to_version,
-    )
-
-    if not release_notes:
-        release_notes = pull_request_util.retrieve_pr_template_text()
-
-    pull_request = ls_repo.create_pull(
-        title=github.util.PullRequestUtil.calculate_pr_title(
-            reference=to_ref,
+        release_notes = create_release_notes(
+            from_component_ref=from_ref,
+            ctx_repo_base_url=component.current_repository_ctx().baseUrl,
+            from_github_cfg=github_cfg,
+            from_repo_owner=repo_owner,
+            from_repo_name=repo_name,
             from_version=from_version,
-            to_version=to_version
-        ),
-        base=githubrepobranch.branch(),
-        head=upgrade_branch_name,
-        body=release_notes,
-    )
+            to_version=to_version,
+        )
+
+        if not release_notes:
+            release_notes = pull_request_util.retrieve_pr_template_text()
+
+        pull_request = ls_repo.create_pull(
+            title=github.util.PullRequestUtil.calculate_pr_title(
+                reference=to_ref,
+                from_version=from_version,
+                to_version=to_version
+            ),
+            base=githubrepobranch.branch(),
+            head=upgrade_branch_name,
+            body=release_notes,
+        )
+
+    except Exception:
+        logger.warning(
+            "Encountered an error when creating upgrade-PR. Cleaning up branch and re-raising..."
+        )
+        ls_repo.ref(f'heads/{upgrade_branch_name}').delete()
+        raise
 
     if merge_policy is MergePolicy.MANUAL:
         return
