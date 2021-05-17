@@ -14,7 +14,6 @@ import mako.template
 
 from ci.util import (
     existing_dir,
-    not_none,
     merge_dicts,
     FluentIterable
 )
@@ -110,7 +109,7 @@ class Renderer:
                 definition_descriptor,
                 render_status=RenderStatus.SUCCEEDED,
             )
-        except Exception:
+        except Exception as e:
             logger.warning(
                 f"erroneous pipeline definition '{definition_descriptor.pipeline_name}' "
                 f"in repository '{definition_descriptor.main_repo.get('path')}' on branch "
@@ -121,6 +120,7 @@ class Renderer:
                 definition_descriptor,
                 render_status=RenderStatus.FAILED,
                 error_details=traceback.format_exc(),
+                exception=e,
             )
 
     def _render(self, definition_descriptor):
@@ -178,16 +178,12 @@ class RenderStatus(Enum):
     FAILED = 1
 
 
+@dataclasses.dataclass
 class RenderResult:
-    def __init__(
-        self,
-        definition_descriptor:DefinitionDescriptor,
-        render_status,
-        error_details=None,
-    ):
-        self.definition_descriptor = not_none(definition_descriptor)
-        self.render_status = not_none(render_status)
-        self.error_details = error_details
+    definition_descriptor: DefinitionDescriptor
+    render_status: RenderStatus
+    error_details: str = None
+    exception: Exception = None
 
 
 class DeployStatus(IntEnum):
@@ -399,9 +395,44 @@ class ReplicationResultProcessor:
 
         logger.warning(f'Errors occurred whilst replicating pipeline(s): {failed_count=}')
 
+        def should_notify_pipeline_owners(definition_descriptor: DefinitionDescriptor):
+            if definition_descriptor.deploy_status & DeployStatus.SUCCEEDED:
+                # actually, this codepath should not be hit (we filter before-hand)
+                logger.warning(f'will not notify (no err): {definition_descriptor.pipeline_name=}')
+                return False
+
+            # if one of those exceptions was raised, presumably, there was either a
+            # (hopefully) transient issue (e.g. network connectivity), or a programming error
+            # in our template (in which case we should not bother end-users)
+            ignore_exceptions = (
+                ArithmeticError,
+                AttributeError,
+                BufferError,
+                EOFError,
+                ImportError,
+                MemoryError,
+                NameError,
+                OSError,
+                ReferenceError,
+                RecursionError,
+                SyntaxError,
+                TypeError,
+            )
+
+            if type(definition_descriptor.exception) in ignore_exceptions:
+                return False
+            else:
+                return True
+
         all_notifications_succeeded = True
         for failed_descriptor in failed_descriptors:
             logger.warning(failed_descriptor.definition_descriptor.pipeline_name)
+            if not should_notify_pipeline_owners(definition_descriptor=failed_descriptor):
+                logger.warning(
+                    'will not notify (likely the error is not on user-side '
+                    f'{failed_descriptor.pipeline_name=} {failed_descriptor.error_details=}'
+                )
+                continue
             try:
                 self._notify_broken_definition_owners(failed_descriptor)
             except Exception:
@@ -464,11 +495,14 @@ class ReplicationResultProcessor:
                 subject='Your pipeline definition in {repo} is erroneous'.format(
                     repo=main_repo['path'],
                 ),
-                mail_template=(
-                    f"The pipeline definition for pipeline '{definition_descriptor.pipeline_name}' "
-                    f" on branch '{main_repo['branch']}' contains errors.\n\n"
-                    f"Error details:\n{str(failed_descriptor.error_details)}"
-                )
+                mail_template=textwrap.dedent(
+                f'''
+                    The pipeline definition for {definition_descriptor.pipeline_name=}
+                    on {main_repo["branch"]=} failed to be rendered.
+                    Error details:
+                    {str(failed_descriptor.error_details)}
+                '''
+                ),
             )
 
     def _initialise_new_pipeline_resources(self, concourse_api, results):
