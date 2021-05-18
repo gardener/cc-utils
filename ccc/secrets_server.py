@@ -15,15 +15,24 @@
 
 import base64
 import json
+import logging
 import os
 import socket
 import typing
 
+from Crypto.Cipher import AES
 import Crypto.Util.Padding
 import requests
 
+import ci.log
 from ci.util import urljoin
+import model
+import model.concourse
 import model.secret
+
+
+ci.log.configure_default_logging()
+logger = logging.getLogger(__name__)
 
 
 def get_secret_cfg_from_env_if_available(
@@ -154,3 +163,24 @@ def _decrypt_cipher_text(encrypted_cipher_text: bytes, secret: model.secret.Secr
         padded_data=decrypted_cipher,
         block_size=AES.block_size,
     )
+
+
+def encrypt_data(
+    secret: model.secret.Secret,
+    serialized_secret_data: bytes,
+) -> bytes:
+
+    if (algorithm := secret.cipher_algorithm()) is model.secret.Cipher.AES_ECB:
+        secret_key = base64.b64decode(secret.key())
+        cipher = AES.new(secret_key, AES.MODE_ECB)
+        cipher_text = cipher.encrypt(
+            Crypto.Util.Padding.pad(
+                data_to_pad=serialized_secret_data,
+                block_size=AES.block_size,
+            )
+        )
+    else:
+        logger.error(f'cipher algorithm defined is not supported. {algorithm}')
+        raise NotImplementedError(algorithm)
+
+    return cipher_text
