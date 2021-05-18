@@ -211,7 +211,7 @@ notification_env_vars = {
 
 if secret_cfg:
   notification_env_vars['SECRET_CIPHER_ALGORITHM'] = secret_cfg.cipher_algorithm().value
-  notification_env_vars['SECRET_KEY'] = secret_cfg.key()
+  notification_env_vars['SECRET_KEY'] = secret_cfg.key().decode('utf-8')
 
 %>
   ${email_notification(
@@ -327,7 +327,7 @@ else:
       PIPELINE_NAME: ${pipeline_name}
   % if secret_cfg:
       SECRET_CIPHER_ALGORITHM: ${secret_cfg.cipher_algorithm().value}
-      SECRET_KEY: ${secret_cfg.key()}
+      SECRET_KEY: ${secret_cfg.key().decode('utf-8')}
   % endif
       SECRETS_SERVER_CONCOURSE_CFG_NAME: ${secrets_server_cfg_url_path}
       SECRETS_SERVER_ENDPOINT: ${secrets_server_cfg.endpoint_url()}
