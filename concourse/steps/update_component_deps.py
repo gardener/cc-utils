@@ -255,8 +255,8 @@ def _import_release_notes(
 
     main_source = cnudie.util.determine_main_source_for_component(component)
     github_cfg = ccc.github.github_cfg_for_hostname(main_source.access.hostname())
-    org_name = main_source.access.org_name(),
-    repository_name = main_source.access.repository_name(),
+    org_name = main_source.access.org_name()
+    repository_name = main_source.access.repository_name()
 
     release_notes = create_release_notes(
         from_component=component,
