@@ -5,30 +5,26 @@ from concourse.steps import step_lib
 
 extra_args = step._extra_args
 
-cfg_set = extra_args['cfg_set']
-job_mapping = extra_args['job_mapping']
-job_mapping_set_name = extra_args['job_mapping_set_name']
-kubeconfig = extra_args['kubeconfig']
 cfg_dir_path = extra_args['cfg_dir_path']
-concourse_cfg = cfg_set.concourse()
+kubeconfig = extra_args['kubeconfig']
+secrets_cfg_name = extra_args['secrets_cfg_name']
+team_name = extra_args['team_name']
+target_secret_name = extra_args['target_secret_name']
+target_secret_namespace = extra_args['target_secret_namespace']
 %>
-
-import ci.util
-import ctx
 
 ${step_lib('replicate_secrets')}
 
-cfg_factory = ctx.cfg_factory()
-
-cfg_set = cfg_factory.cfg_set('${cfg_set.name()}')
-concourse_cfg = cfg_factory.concourse('${concourse_cfg.name()}')
-job_mapping_set = cfg_factory.job_mapping('${job_mapping_set_name}')
-job_mapping = job_mapping_set['${job_mapping.name()}']
-own_pipeline_name = ci.util.check_env('PIPELINE_NAME')
-
 ## use logger from step_lib
-logger.info(f'replicating secret for {job_mapping.name()=} {job_mapping.team_name()=}')
+logger.info(f'replicating team ${team_name}')
 
-replicate_secrets('${cfg_dir_path}', dict(${kubeconfig}), job_mapping)
+replicate_secrets(
+  cfg_dir_env_name='${cfg_dir_path}',
+  kubeconfig=dict(${kubeconfig}),
+  secrets_cfg_name='${secrets_cfg_name}',
+  team_name='${team_name}',
+  target_secret_name='${target_secret_name}',
+  target_secret_namespace='${target_secret_namespace}',
+)
 
 </%def>
