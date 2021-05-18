@@ -41,8 +41,8 @@ class Cipher(enum.Enum):
 
 
 class Secret(NamedModelElement):
-    def key(self):
-        return self.raw.get('key')
+    def key(self) -> bytes:
+        return self.raw.get('key').encode('utf-8')
 
     def cipher_algorithm(self):
         return Cipher(self.raw.get('cipher_algorithm'))
