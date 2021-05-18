@@ -2,6 +2,7 @@ import logging
 import os
 import subprocess
 import tempfile
+import traceback
 import typing
 
 import gci.componentmodel
@@ -107,29 +108,6 @@ def upgrade_pr_exists(
             )
             for upgrade_rq in upgrade_requests
         ]
-    )
-
-
-def get_source_repo_config_for_component_reference(
-    component: gci.componentmodel.Component,
-    component_reference: gci.componentmodel.ComponentReference,
-    component_version: str,
-):
-    component_descriptor = cnudie.retrieve.component_descriptor(
-        name=component_reference.componentName,
-        version=component_reference.version,
-        ctx_repo_url=component.current_repository_ctx().baseUrl,
-    )
-    resolved_component = component_descriptor.component
-    if not resolved_component.sources:
-        raise ValueError(f'{resolved_component.name=} has no sources')
-
-    main_source = cnudie.util.determine_main_source_for_component(resolved_component)
-
-    return (
-        ccc.github.github_cfg_for_hostname(main_source.access.hostname()),
-        main_source.access.org_name(),
-        main_source.access.repository_name(),
     )
 
 
@@ -263,6 +241,37 @@ def determine_upgrade_prs(
                 yield(greatest_component_reference, greatest_version)
 
 
+def _import_release_notes(
+    component: gci.componentmodel.Component,
+    to_version: str,
+):
+    if not component.sources:
+        logger.warning(
+            f'''
+            {component.name=}:{component.version=} has no sources; skipping release-notes-import
+            '''
+        )
+        return None
+
+    main_source = cnudie.util.determine_main_source_for_component(component)
+    github_cfg = ccc.github.github_cfg_for_hostname(main_source.access.hostname())
+    org_name = main_source.access.org_name(),
+    repository_name = main_source.access.repository_name(),
+
+    release_notes = create_release_notes(
+        from_component=component,
+        from_github_cfg=github_cfg,
+        from_repo_owner=org_name,
+        from_repo_name=repository_name,
+        to_version=to_version,
+    )
+
+    if not release_notes:
+        release_notes = pull_request_util.retrieve_pr_template_text()
+
+    return release_notes
+
+
 def create_upgrade_pr(
     component: gci.componentmodel.Component,
     from_ref: gci.componentmodel.ComponentReference,
@@ -278,7 +287,13 @@ def create_upgrade_pr(
     after_merge_callback=None,
 ):
     ls_repo = pull_request_util.repository
-    from_version = from_ref.version
+
+    from_component_descriptor = cnudie.retrieve.component_descriptor(
+        name=from_ref.componentName,
+        version=from_ref.version,
+        ctx_repo_url=component.current_repository_ctx().baseUrl,
+    )
+    from_component = from_component_descriptor.component
 
     # prepare env for upgrade script and after-merge-callback
     cmd_env = os.environ.copy()
@@ -298,6 +313,7 @@ def create_upgrade_pr(
         env=cmd_env
     )
 
+    from_version = from_ref.version
     commit_message = f'Upgrade {to_ref.name}\n\nfrom {from_version} to {to_version}'
 
     upgrade_branch_name = push_upgrade_commit(
@@ -308,42 +324,25 @@ def create_upgrade_pr(
     )
     # branch was created. Cleanup if something fails
     try:
-        github_cfg, repo_owner, repo_name = get_source_repo_config_for_component_reference(
-            component=component,
-            component_reference=from_ref,
-            component_version=from_version,
-        )
-
-        release_notes = create_release_notes(
-            from_component_ref=from_ref,
-            ctx_repo_base_url=component.current_repository_ctx().baseUrl,
-            from_github_cfg=github_cfg,
-            from_repo_owner=repo_owner,
-            from_repo_name=repo_name,
-            from_version=from_version,
+        release_notes = _import_release_notes(
+            component=from_component,
             to_version=to_version,
         )
-
-        if not release_notes:
-            release_notes = pull_request_util.retrieve_pr_template_text()
-
-        pull_request = ls_repo.create_pull(
-            title=github.util.PullRequestUtil.calculate_pr_title(
-                reference=to_ref,
-                from_version=from_version,
-                to_version=to_version
-            ),
-            base=githubrepobranch.branch(),
-            head=upgrade_branch_name,
-            body=release_notes,
-        )
-
     except Exception:
-        logger.warning(
-            "Encountered an error when creating upgrade-PR. Cleaning up branch and re-raising..."
-        )
-        ls_repo.ref(f'heads/{upgrade_branch_name}').delete()
-        raise
+        logger.warning('failed to retrieve release-notes')
+        traceback.print_exc()
+        release_notes = 'failed to retrieve release-notes'
+
+    pull_request = ls_repo.create_pull(
+        title=github.util.PullRequestUtil.calculate_pr_title(
+            reference=to_ref,
+            from_version=from_version,
+            to_version=to_version
+        ),
+        base=githubrepobranch.branch(),
+        head=upgrade_branch_name,
+        body=release_notes or 'failed to retrieve release-notes',
+    )
 
     if merge_policy is MergePolicy.MANUAL:
         return
@@ -393,14 +392,13 @@ def push_upgrade_commit(
 
 
 def create_release_notes(
-    from_component_ref,
-    ctx_repo_base_url,
+    from_component: gci.componentmodel.Component,
     from_github_cfg,
     from_repo_owner: str,
     from_repo_name: str,
-    from_version: str,
     to_version: str,
 ):
+    from_version = from_component.version
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
             gitutil.GitHelper.clone_into(
@@ -408,17 +406,12 @@ def create_release_notes(
                 github_cfg=from_github_cfg,
                 github_repo_path=f'{from_repo_owner}/{from_repo_name}'
             )
-            from_cd = product.v2.download_component_descriptor_v2(
-                component_name=from_component_ref.componentName,
-                component_version=from_component_ref.version,
-                ctx_repo_base_url=ctx_repo_base_url,
-            )
             commit_range = '{from_version}..{to_version}'.format(
                 from_version=from_version,
                 to_version=to_version,
             )
             release_notes = ReleaseNotes(
-                component=from_cd.component,
+                component=from_component,
                 repo_dir=temp_dir,
             )
             release_notes.create(
