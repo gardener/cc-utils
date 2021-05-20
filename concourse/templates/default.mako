@@ -17,6 +17,7 @@ pipeline_name = pipeline.get('name')
 pipeline_definition = pipeline.get('definition')
 target_team = pipeline.get('target_team')
 background_image = pipeline.get('background_image', 'https://i.imgur.com/raPlg21.png')
+job_mapping = pipeline.get('job_mapping')
 secret_cfg = pipeline.get('secret_cfg')
 
 resource_registry = pipeline_definition._resource_registry
@@ -29,10 +30,10 @@ default_container_registry = config_set.container_registry()
 # expose secrets_server endpoint to all jobs
 secrets_server_cfg = config_set.secrets_server()
 
-if secret_cfg:
-  secrets_server_cc_cfg_name = secrets_server_cfg.secrets().encrypted_concourse_cfg_name()
-else:
-  secrets_server_cc_cfg_name = secrets_server_cfg.secrets().concourse_cfg_name()
+secrets_server_cc_cfg_name = secrets_server_cfg.secrets().secret_url_path(
+  job_mapping,
+  secret_cfg,
+)
 
 # short-cut for now
 def has_version_trait(model_with_traits):
