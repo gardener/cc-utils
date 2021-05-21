@@ -239,7 +239,7 @@ def image_layers_as_tarfile_generator(
     for blob in manifest.blobs() if include_config_blob else manifest.layers:
         logger.debug(f'getting blob {blob.digest}')
         if not include_config_blob:
-            logger.debug(f'skipping config blob')
+            logger.debug('skipping config blob')
         tarinfo = tarfile.TarInfo(name=blob.digest + '.tar') # note: may be gzipped
         tarinfo.size = blob.size
         tarinfo.offset = offset
