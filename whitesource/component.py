@@ -10,7 +10,7 @@ import dso.model
 import gci.componentmodel as cm
 
 
-def _get_ws_label_from_source(source: cm.ComponentSource) -> dso.labels.SourceIdHint:
+def _get_ws_label_from_artifact(source: cm.ComponentSource) -> dso.labels.SourceIdHint:
     if label := source.find_label(dso.labels.ScanLabelName.SOURCE_ID.value):
         return dacite.from_dict(
             data_class=dso.labels.SourceIdHint,
@@ -23,20 +23,21 @@ def get_scan_artifacts_from_components(
     components: typing.Sequence[cm.Component],
 ) -> typing.Generator:
     for component in components:
-        for source in component.sources:
-            if source.type is not cm.SourceType.GIT:
+        for artifact in component.sources + component.resources:
+
+            if not artifact.access:
+                continue
+            if artifact.access.type not in (cm.AccessType.GITHUB, cm.AccessType.OCI_REGISTRY):
                 raise NotImplementedError
 
-            if source.access.type is not cm.AccessType.GITHUB:
-                raise NotImplementedError
-
-            ws_hint = _get_ws_label_from_source(source)
-
+            ws_hint = _get_ws_label_from_artifact(artifact)
             if not ws_hint or ws_hint.policy is dso.labels.ScanPolicy.SCAN:
                 yield dso.model.ScanArtifact(
-                    access=source.access,
+                    access=artifact.access,
                     label=ws_hint,
-                    name=f'{component.name}_{source.identity(component.sources)}'
+                    name=f'{component.name}:{component.version}/'
+                         f'{"source" if artifact in component.sources else "resources"}/'
+                         f'{artifact.name}:{artifact.version}',
                 )
             elif ws_hint.policy is dso.labels.ScanPolicy.SKIP:
                 continue
@@ -77,6 +78,3 @@ def download_component(
                 filtered_out_files += 1
 
     logger.info(f'{files_to_scan=}, {filtered_out_files=}')
-    tar_out_size = target.tell()
-
-    return tar_out_size
