@@ -4,17 +4,21 @@ import functools
 import logging
 import tempfile
 import typing
+import os.path
 
 import tabulate
 
 import ccc.github
+import ccc.oci
 import cnudie.retrieve
 import ci.util
+import dso.model
 import gci.componentmodel as cm
 import mailutil
+import oci
 import product.util
 import reutil
-import dso.model
+import tarutil
 import whitesource.client
 import whitesource.component
 import whitesource.model
@@ -203,44 +207,55 @@ def scan_artifact_with_white_src(
     whitesource_client: whitesource.client.WhitesourceClient,
 ):
 
-    logger.info('init scan')
+    logger.debug('init scan')
+    with tempfile.NamedTemporaryFile() as tmp_file:
+        if scan_artifact.access.type == cm.AccessType.GITHUB:
+            logger.debug('pulling from github')
+            github_api = ccc.github.github_api_from_gh_access(access=scan_artifact.access)
+            github_repo = github_api.repository(
+                owner=scan_artifact.access.org_name(),
+                repository=scan_artifact.access.repository_name(),
+            )
+            # guess git-ref for the given version
+            commit_hash = product.util.guess_commit_from_source(
+                artifact_name=scan_artifact.name,
+                commit_hash=scan_artifact.access.commit,
+                ref=scan_artifact.access.ref,
+                github_repo=github_repo,
+            )
+            exclude_regexes = ''
+            include_regexes = ''
 
-    github_api = ccc.github.github_api_from_gh_access(access=scan_artifact.access)
-    github_repo = github_api.repository(
-        owner=scan_artifact.access.org_name(),
-        repository=scan_artifact.access.repository_name(),
-    )
+            if scan_artifact.label is not None:
+                if scan_artifact.label.path_config is not None:
+                    exclude_regexes = scan_artifact.label.path_config.exclude_paths
+                    include_regexes = scan_artifact.label.path_config.include_paths
 
-    logger.info('guessing commit hash')
-    # guess git-ref for the given version
-    commit_hash = product.util.guess_commit_from_source(
-        artifact_name=scan_artifact.name,
-        commit_hash=scan_artifact.access.commit,
-        ref=scan_artifact.access.ref,
-        github_repo=github_repo,
-    )
-    exclude_regexes = ''
-    include_regexes = ''
+            path_filter_func = reutil.re_filter(
+                exclude_regexes=exclude_regexes,
+                include_regexes=include_regexes
+            )
+            whitesource.component.download_component(
+                logger=logger,
+                github_repo=github_repo,
+                path_filter_func=path_filter_func,
+                ref=commit_hash,
+                target=tmp_file,
+            )
+        elif scan_artifact.access.type == cm.AccessType.OCI_REGISTRY:
+            logger.debug('pulling from oci registry')
+            oci_client = ccc.oci.oci_client()
+            tar_gen = oci.image_layers_as_tarfile_generator(
+                image_reference=scan_artifact.access.imageReference,
+                oci_client=oci_client,
+                include_config_blob=False,
+            )
 
-    if scan_artifact.label is not None:
-        if scan_artifact.label.path_config is not None:
-            exclude_regexes = scan_artifact.label.path_config.exclude_paths
-            include_regexes = scan_artifact.label.path_config.include_paths
-
-    path_filter_func = reutil.re_filter(
-        exclude_regexes=exclude_regexes,
-        include_regexes=include_regexes
-    )
-
-    with tempfile.TemporaryFile() as tmp_file:
-        logger.info('downloading component for scan')
-        file_size = whitesource.component.download_component(
-            logger=logger,
-            github_repo=github_repo,
-            path_filter_func=path_filter_func,
-            ref=commit_hash,
-            target=tmp_file,
-        )
+            fake_gen = tarutil._FilelikeProxy(generator=tar_gen)
+            while chunk := fake_gen.read():
+                tmp_file.write(chunk)
+        else:
+            raise NotImplementedError
 
         # don't change the following line, lest things no longer work
         # sets the file position at the offset 0 == start of the file
@@ -253,7 +268,7 @@ def scan_artifact_with_white_src(
                 extra_whitesource_config=extra_whitesource_config,
                 file=tmp_file,
                 project_name=scan_artifact.name,
-                length=file_size,
+                length=os.path.getsize(tmp_file.name),
             )
         )
         logger.info(res['message'])
@@ -264,14 +279,14 @@ def scan_artifact_with_white_src(
 
 
 def _scan_artifact(
-    artifact,
+    artifact: dso.model.ScanArtifact,
     extra_whitesource_config,
     whitesource_client,
     len_artifacts: int,
     get_scanned_count: typing.Callable,
     increment_scanned_count: typing.Callable[[], int],
 ):
-    logger.info(f'scanning {get_scanned_count()}/{len_artifacts}')
+    logger.info(f'scanning {get_scanned_count()}/{len_artifacts} - {artifact.name}')
     increment_scanned_count()
     whitesource.util.scan_artifact_with_white_src(
         extra_whitesource_config=extra_whitesource_config,

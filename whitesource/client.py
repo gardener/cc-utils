@@ -113,9 +113,9 @@ class WhitesourceClient:
 
         try:
             async with websockets.connect(
-                    uri=self.routes.upload_to_project(),
-                    ping_interval=ping_interval,
-                    ping_timeout=ping_timeout,
+                uri=self.routes.upload_to_project(),
+                ping_interval=ping_interval,
+                ping_timeout=ping_timeout,
             ) as websocket:
                 return await _upload_to_project(
                     websocket=websocket,
@@ -211,9 +211,9 @@ class WhitesourceRoutes:
 
 
 async def _upload_to_project(
-        websocket: 'websockets.legacy.client.WebSocketClientProtocol',
-        file: typing.IO,
-        contract: protocol.WhiteSourceApiExtensionWebsocketContract,
+    websocket: websockets.WebSocketClientProtocol,
+    file: typing.IO,
+    contract: protocol.WhiteSourceApiExtensionWebsocketContract,
 ):
     try:
         await websocket.send(json.dumps(dataclasses.asdict(contract.metadata)))

@@ -224,6 +224,7 @@ def image_layers_as_tarfile_generator(
     image_reference: str,
     oci_client: oc.Client,
     chunk_size=tarfile.RECORDSIZE,
+    include_config_blob=True,
 ) -> typing.Generator[bytes, None, None]:
     '''
     returns a generator yielding a tar-archive with the passed oci-image's layer-blobs as
@@ -231,10 +232,15 @@ def image_layers_as_tarfile_generator(
     that the cfg-blob is discarded.
     This function is useful to e.g. upload file system contents of an oci-container-image to some
     scanning-tool (provided it supports the extraction of tar-archives)
+    If include_config_blob is set to False the config blob will be ignored.
     '''
     manifest = oci_client.manifest(image_reference=image_reference)
     offset = 0
     for blob in manifest.blobs():
+        logger.debug(f'getting blob {blob.digest}')
+        if not include_config_blob:
+            if blob == manifest.config:
+                continue
         tarinfo = tarfile.TarInfo(name=blob.digest + '.tar') # note: may be gzipped
         tarinfo.size = blob.size
         tarinfo.offset = offset

@@ -23,23 +23,22 @@ def get_scan_artifacts_from_components(
     components: typing.Sequence[cm.Component],
 ) -> typing.Generator:
     for component in components:
-        for source in component.sources:
-            if source.type is not cm.SourceType.GIT:
-                raise NotImplementedError
-
-            if source.access.type is not cm.AccessType.GITHUB:
-                raise NotImplementedError
-
-            ws_hint = _get_ws_label_from_source(source)
-
-            if not ws_hint or ws_hint.policy is dso.labels.ScanPolicy.SCAN:
-                yield dso.model.ScanArtifact(
-                    access=source.access,
-                    label=ws_hint,
-                    name=f'{component.name}_{source.identity(component.sources)}'
-                )
-            elif ws_hint.policy is dso.labels.ScanPolicy.SKIP:
+        for source in component.sources + component.resources:
+            if not source.access:
                 continue
+            if source.access.type in (cm.AccessType.GITHUB, cm.AccessType.OCI_REGISTRY):
+                ws_hint = _get_ws_label_from_source(source)
+
+                if not ws_hint or ws_hint.policy is dso.labels.ScanPolicy.SCAN:
+                    yield dso.model.ScanArtifact(
+                        access=source.access,
+                        label=ws_hint,
+                        name=f'{component.name}:{component.version}/{"source" if source in component.sources else "resources"}/{source.name}:{source.version}',
+                    )
+                elif ws_hint.policy is dso.labels.ScanPolicy.SKIP:
+                    continue
+                else:
+                    raise NotImplementedError
             else:
                 raise NotImplementedError
 
@@ -77,6 +76,3 @@ def download_component(
                 filtered_out_files += 1
 
     logger.info(f'{files_to_scan=}, {filtered_out_files=}')
-    tar_out_size = target.tell()
-
-    return tar_out_size
