@@ -816,6 +816,11 @@ class Client:
 
         upload_url = res.headers.get('Location')
 
+        # returned url _may_ be relative
+        if upload_url.startswith('/'):
+            parsed_url = urllib.parse.urlparse(res.url)
+            upload_url = f'{parsed_url.scheme}://{parsed_url.netloc}{upload_url}'
+
         if '?' in upload_url:
             prefix = '&'
         else:
