@@ -236,11 +236,10 @@ def image_layers_as_tarfile_generator(
     '''
     manifest = oci_client.manifest(image_reference=image_reference)
     offset = 0
-    for blob in manifest.blobs():
+    for blob in manifest.blobs() if include_config_blob else manifest.layers:
         logger.debug(f'getting blob {blob.digest}')
         if not include_config_blob:
-            if blob == manifest.config:
-                continue
+            logger.debug(f'skipping config blob')
         tarinfo = tarfile.TarInfo(name=blob.digest + '.tar') # note: may be gzipped
         tarinfo.size = blob.size
         tarinfo.offset = offset

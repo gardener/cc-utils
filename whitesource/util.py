@@ -2,9 +2,9 @@ import asyncio
 import concurrent.futures
 import functools
 import logging
+import os.path
 import tempfile
 import typing
-import os.path
 
 import tabulate
 
@@ -209,7 +209,7 @@ def scan_artifact_with_white_src(
 
     logger.debug('init scan')
     with tempfile.NamedTemporaryFile() as tmp_file:
-        if scan_artifact.access.type == cm.AccessType.GITHUB:
+        if scan_artifact.access.type is cm.AccessType.GITHUB:
             logger.debug('pulling from github')
             github_api = ccc.github.github_api_from_gh_access(access=scan_artifact.access)
             github_repo = github_api.repository(
@@ -223,8 +223,8 @@ def scan_artifact_with_white_src(
                 ref=scan_artifact.access.ref,
                 github_repo=github_repo,
             )
-            exclude_regexes = ''
-            include_regexes = ''
+            exclude_regexes = ()
+            include_regexes = ()
 
             if scan_artifact.label is not None:
                 if scan_artifact.label.path_config is not None:
@@ -242,7 +242,7 @@ def scan_artifact_with_white_src(
                 ref=commit_hash,
                 target=tmp_file,
             )
-        elif scan_artifact.access.type == cm.AccessType.OCI_REGISTRY:
+        elif scan_artifact.access.type is cm.AccessType.OCI_REGISTRY:
             logger.debug('pulling from oci registry')
             oci_client = ccc.oci.oci_client()
             tar_gen = oci.image_layers_as_tarfile_generator(

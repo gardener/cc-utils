@@ -10,7 +10,7 @@ import dso.model
 import gci.componentmodel as cm
 
 
-def _get_ws_label_from_source(source: cm.ComponentSource) -> dso.labels.SourceIdHint:
+def _get_ws_label_from_artifact(source: cm.ComponentSource) -> dso.labels.SourceIdHint:
     if label := source.find_label(dso.labels.ScanLabelName.SOURCE_ID.value):
         return dacite.from_dict(
             data_class=dso.labels.SourceIdHint,
@@ -23,24 +23,24 @@ def get_scan_artifacts_from_components(
     components: typing.Sequence[cm.Component],
 ) -> typing.Generator:
     for component in components:
-        for source in component.sources + component.resources:
-            if not source.access:
-                continue
-            if source.access.type in (cm.AccessType.GITHUB, cm.AccessType.OCI_REGISTRY):
-                ws_hint = _get_ws_label_from_source(source)
+        for artifact in component.sources + component.resources:
 
-                if not ws_hint or ws_hint.policy is dso.labels.ScanPolicy.SCAN:
-                    yield dso.model.ScanArtifact(
-                        access=source.access,
-                        label=ws_hint,
-                        name=f'{component.name}:{component.version}/'
-                             f'{"source" if source in component.sources else "resources"}/'
-                             f'{source.name}:{source.version}',
-                    )
-                elif ws_hint.policy is dso.labels.ScanPolicy.SKIP:
-                    continue
-                else:
-                    raise NotImplementedError
+            if not artifact.access:
+                continue
+            if artifact.access.type not in (cm.AccessType.GITHUB, cm.AccessType.OCI_REGISTRY):
+                raise NotImplementedError
+
+            ws_hint = _get_ws_label_from_artifact(artifact)
+            if not ws_hint or ws_hint.policy is dso.labels.ScanPolicy.SCAN:
+                yield dso.model.ScanArtifact(
+                    access=artifact.access,
+                    label=ws_hint,
+                    name=f'{component.name}:{component.version}/'
+                         f'{"source" if artifact in component.sources else "resources"}/'
+                         f'{artifact.name}:{artifact.version}',
+                )
+            elif ws_hint.policy is dso.labels.ScanPolicy.SKIP:
+                continue
             else:
                 raise NotImplementedError
 
