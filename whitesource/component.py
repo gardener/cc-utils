@@ -1,3 +1,4 @@
+import logging
 import tarfile
 import typing
 
@@ -8,6 +9,9 @@ import dso.labels
 import dso.model
 
 import gci.componentmodel as cm
+
+
+logger = logging.getLogger(__name__)
 
 
 def _get_ws_label_from_artifact(source: cm.ComponentSource) -> dso.labels.SourceIdHint:
@@ -26,9 +30,11 @@ def get_scan_artifacts_from_components(
         for artifact in component.sources + component.resources:
 
             if not artifact.access:
+                logger.info(f'skipping {artifact.name=} since no access is found')
                 continue
             if artifact.access.type not in (cm.AccessType.GITHUB, cm.AccessType.OCI_REGISTRY):
-                raise NotImplementedError
+                logger.info(f'skipping {artifact.name=}, {artifact.access.type} is not supported')
+                continue
 
             ws_hint = _get_ws_label_from_artifact(artifact)
             if not ws_hint or ws_hint.policy is dso.labels.ScanPolicy.SCAN:
