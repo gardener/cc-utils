@@ -68,8 +68,6 @@ def scan_component_with_whitesource(
     )
 
     cds = _path_to_component_descriptors(path=component_descriptor_path)
-    print(cds)
-    exit(1)
     if len(cds) > 1:
         raise RuntimeError(
             f'More than one component_descriptor found in {component_descriptor_path}'
