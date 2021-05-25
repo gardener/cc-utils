@@ -92,7 +92,12 @@ def replicate_pipelines(
 
 
 class Renderer:
-    def __init__(self, template_retriever, template_include_dir, cfg_set):
+    def __init__(
+        self,
+        cfg_set,
+        template_retriever: TemplateRetriever=TemplateRetriever(),
+        template_include_dir=None,
+    ):
         self.template_retriever = template_retriever
         if template_include_dir:
             template_include_dir = os.path.abspath(template_include_dir)
