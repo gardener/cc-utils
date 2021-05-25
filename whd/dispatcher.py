@@ -117,36 +117,27 @@ class GithubWebhookDispatcher:
         thread.start()
 
     def _update_pipeline_definition(self, push_event):
+        def _do_update():
+            return update_repository_pipelines(
+                repo_url=push_event.repository().repository_url(),
+                cfg_set=self.cfg_set,
+                whd_cfg=self.whd_cfg,
+            )
+
         try:
-            try:
-                update_repository_pipelines(
-                    repo_url=push_event.repository().repository_url(),
-                    cfg_set=self.cfg_set,
-                    whd_cfg=self.whd_cfg,
-                )
-            except (JobMappingNotFoundError, ConfigElementNotFoundError) as e:
-                # A config element was missing or o JobMapping for the given repository was present.
-                # Print warning, reload and try again
-                logger.warning(
-                    f'failed to update pipeline definition: {e}. Will reload config and try again.'
-                )
-                # Attempt to fetch latest cfg from SS and replace it
-                raw_dict = ccc.secrets_server.SecretsServerClient.default().retrieve_secrets()
-                factory = ConfigFactory.from_dict(raw_dict)
-                self.cfg_set = factory.cfg_set(self.cfg_set.name())
-                # retry
-                update_repository_pipelines(
-                    repo_url=push_event.repository().repository_url(),
-                    cfg_set=self.cfg_set,
-                    whd_cfg=self.whd_cfg,
-                )
-        except BaseException as be:
-            logger.warning(f'failed to update pipeline definition - ignored {be}')
-            import traceback
-            try:
-                traceback.print_exc()
-            except BaseException:
-                pass # ignore
+            _do_update()
+        except (JobMappingNotFoundError, ConfigElementNotFoundError) as e:
+            # A config element was missing or o JobMapping for the given repository was present.
+            # Print warning, reload and try again
+            logger.warning(
+                f'failed to update pipeline definition: {e}. Will reload config and try again.'
+            )
+            # Attempt to fetch latest cfg from SS and replace it
+            raw_dict = ccc.secrets_server.SecretsServerClient.default().retrieve_secrets()
+            factory = ConfigFactory.from_dict(raw_dict)
+            self.cfg_set = factory.cfg_set(self.cfg_set.name())
+            # retry
+            _do_update()
 
     def _pipeline_definition_changed(self, push_event):
         if '.ci/pipeline_definitions' in push_event.modified_paths():
