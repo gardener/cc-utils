@@ -297,16 +297,11 @@ def _scan_artifact(
 
 def scan_sources(
     whitesource_client: whitesource.client.WhitesourceClient,
-    component_descriptor_path: str,
+    component_descriptor: cm.ComponentDescriptor,
     extra_whitesource_config: dict,
     max_workers: int,
 ) -> typing.Tuple[str, typing.List[whitesource.model.WhiteSrcProject]]:
 
-    logger.info(f'parsing component descriptor ({component_descriptor_path})')
-
-    component_descriptor = cm.ComponentDescriptor.from_dict(
-        ci.util.parse_yaml_file(component_descriptor_path)
-    )
     components = cnudie.retrieve.components(component=component_descriptor)
 
     product_name = component_descriptor.component.name

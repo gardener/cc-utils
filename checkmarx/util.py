@@ -29,7 +29,7 @@ import gci.componentmodel as cm
 
 
 def scan_sources(
-    component_descriptor_path: str,
+    component_descriptor: cm.ComponentDescriptor,
     cx_client: checkmarx.client.CheckmarxClient,
     team_id: str,
     threshold: int,
@@ -37,10 +37,6 @@ def scan_sources(
     exclude_paths: typing.Sequence[str] = (),
     include_paths: typing.Sequence[str] = (),
 ) -> model.FinishedScans:
-
-    component_descriptor = cm.ComponentDescriptor.from_dict(
-        ci.util.parse_yaml_file(component_descriptor_path)
-    )
 
     components = tuple(cnudie.retrieve.components(component=component_descriptor))
 

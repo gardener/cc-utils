@@ -1,9 +1,18 @@
+import logging
+import os
+import tarfile
 import typing
 
 import checkmarx.util
+import ci.util
+import cnudie.util
+import gci.componentmodel as cm
 import whitesource.client
 import whitesource.component
 import whitesource.util
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def scan_sources_and_notify(
@@ -17,8 +26,14 @@ def scan_sources_and_notify(
 ):
     checkmarx_client = checkmarx.util.create_checkmarx_client(checkmarx_cfg_name)
 
+    cds = _path_to_component_descriptors(path=component_descriptor_path)
+    if len(cds) > 1:
+        raise RuntimeError(
+            f'More than one component_descriptor found in {component_descriptor_path}'
+        )
+
     scans = checkmarx.util.scan_sources(
-        component_descriptor_path=component_descriptor_path,
+        component_descriptor=cds[0],
         cx_client=checkmarx_client,
         team_id=team_id,
         threshold=threshold,
@@ -52,9 +67,17 @@ def scan_component_with_whitesource(
         whitesource_cfg_name=whitesource_cfg_name,
     )
 
+    cds = _path_to_component_descriptors(path=component_descriptor_path)
+    print(cds)
+    exit(1)
+    if len(cds) > 1:
+        raise RuntimeError(
+            f'More than one component_descriptor found in {component_descriptor_path}'
+        )
+
     product_name, projects = whitesource.util.scan_sources(
         whitesource_client=whitesource_client,
-        component_descriptor_path=component_descriptor_path,
+        component_descriptor=cds[0],
         extra_whitesource_config=extra_whitesource_config,
         max_workers=max_workers,
     )
@@ -71,3 +94,32 @@ def scan_component_with_whitesource(
         product_name=product_name,
         projects=projects,
     )
+
+
+def _path_to_component_descriptors(path: str) -> typing.List[cm.ComponentDescriptor]:
+
+    if not os.path.isfile(path):
+        raise RuntimeError(
+            f'Neither component descriptor nor CTX archive found at {path}'
+        )
+
+    # path is ctf archive
+    if tarfile.is_tarfile(path):
+        component_descriptors: typing.List[cm.ComponentDescriptor] = [
+            cd
+            for cd in cnudie.util.component_descriptors_from_ctf_archive(path)
+        ]
+        if len(component_descriptors) == 0:
+            raise RuntimeError(
+                f'No component descriptor found in ctf archive at {path}'
+            )
+
+        return component_descriptors
+
+    # path is cd
+    else:
+        return [
+            cm.ComponentDescriptor.from_dict(
+                ci.util.parse_yaml_file(path)
+            )
+        ]
