@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from enum import Enum
+import typing
 
 import reutil
 
@@ -119,6 +120,58 @@ class ConcourseConfig(NamedModelElement):
 
     def validate(self):
         super().validate()
+
+
+class LocalUser(ModelBase):
+    def username(self) -> str:
+        return self.raw.get('username')
+
+    def password(self) -> str:
+        return self.raw.get('password')
+
+    def _required_attributes(self):
+        return [
+            'username',
+            'password',
+        ]
+
+
+class ConcourseUAM(NamedModelElement):
+    def local_user(self) -> typing.Optional[LocalUser]:
+        if local_user := self.raw.get('local_user'):
+            return LocalUser(local_user)
+
+    def username(self) -> str:
+        return self.local_user().username()
+
+    def password(self) -> str:
+        return self.local_user().password()
+
+    def role(self) -> str:
+        return self.raw.get('role')
+
+    def github_auth_team(self, split: bool=False) -> typing.Optional[str]:
+        '''
+        returns the github auth team (org:team)
+
+        @param split: if `true` return [org, team]
+        '''
+        git_auth_team = self.raw.get('git_auth_team')
+        if split and git_auth_team:
+            return git_auth_team.split(':')
+        return git_auth_team
+
+    def has_basic_auth_credentials(self):
+        if self.username() or self.password():
+            return True
+        return False
+
+    def _required_attributes(self):
+        return [
+            'local_user',
+            'role',
+            'git_auth_teams',
+        ]
 
 
 class ConcourseUAMConfig(NamedModelElement):
@@ -275,6 +328,9 @@ class JobMapping(NamedModelElement):
 
     def secrets_repo(self) -> SecretsRepo:
         return SecretsRepo(self.raw.get('secrets_repo'))
+
+    def concourse_uams(self):
+        return self.raw.get('concourse_uams')
 
     def _required_attributes(self):
         return [
