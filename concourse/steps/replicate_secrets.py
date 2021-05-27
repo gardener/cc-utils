@@ -42,6 +42,6 @@ def replicate_secrets(
     # TODO remove hardcoded value
     secrets_helper.put_secret(
         name=target_secret_name,
-        raw_data={'encrypted_concourse_cfg': encoded_cipher_data},
+        raw_data={'{team_name}_cfg': encoded_cipher_data},
         namespace=target_secret_namespace,
     )

@@ -310,6 +310,10 @@ class SecretsRepo(ModelBase):
         return self.raw.get('repo')
 
 
+def cfg_name_from_team(team_name):
+    return f'cc-{team_name}-config'
+
+
 class JobMapping(NamedModelElement):
     def team_name(self) -> str:
         # todo: use `name` attr for that (thus enforce unique mappings)
@@ -358,7 +362,7 @@ class JobMapping(NamedModelElement):
         '''
             k8s secret name used for replication
         '''
-        return f'cc-{self.team_name()}-config'
+        return cfg_name_from_team(self.team_name())
 
 
 class GithubOrganisationConfig(NamedModelElement):
