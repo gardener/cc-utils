@@ -6,13 +6,13 @@ import pathlib
 
 import test_utils
 
-import gci.componentmodel
+import gci.componentmodel as cm
 from concourse.steps import step_def
 import concourse.model.traits.component_descriptor as component_descriptor
 
 
 # make linter happy
-if gci.componentmodel.SchemaVersion.V2 == None:
+if cm.SchemaVersion.V2 == None:
     pass
 
 

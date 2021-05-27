@@ -3,8 +3,8 @@ import logging
 import os
 
 import cnudie.util
-# do not use cm alias here, it does not work with templating
-import gci.componentmodel
+import gci
+import gci.componentmodel as cm
 import product.v2
 
 
@@ -12,16 +12,16 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 def component_descriptor_fname(
-    schema_version=gci.componentmodel.SchemaVersion.V2,
+    schema_version=cm.SchemaVersion.V2,
 ):
-    if schema_version is gci.componentmodel.SchemaVersion.V2:
+    if schema_version is cm.SchemaVersion.V2:
       return 'component_descriptor_v2'
     else:
         raise NotImplementedError(schema_version)
 
 
 def component_descriptor_path(
-    schema_version=gci.componentmodel.SchemaVersion.V2,
+    schema_version=cm.SchemaVersion.V2,
 ):
     fname = component_descriptor_fname(schema_version=schema_version)
     return os.path.join(
@@ -31,10 +31,10 @@ def component_descriptor_path(
 
 
 def parse_component_descriptor(
-    schema_version=gci.componentmodel.SchemaVersion.V2,
+    schema_version=cm.SchemaVersion.V2,
 ):
-    if schema_version is gci.componentmodel.SchemaVersion.V2:
-      component_descriptor = gci.componentmodel.ComponentDescriptor.from_dict(
+    if schema_version is cm.SchemaVersion.V2:
+      component_descriptor = cm.ComponentDescriptor.from_dict(
           component_descriptor_dict=ci.util.parse_yaml_file(
             component_descriptor_path(
               schema_version=schema_version,
