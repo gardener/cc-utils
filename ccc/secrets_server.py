@@ -37,12 +37,11 @@ logger = logging.getLogger(__name__)
 
 def get_secret_cfg_from_env_if_available(
     key_env_var='SECRET_KEY',
-    cipher_algorithm='SECRET_CIPHER_ALGORITHM',
+    cipher_algorithm_env_var='SECRET_CIPHER_ALGORITHM',
 ) -> typing.Optional[model.secret.SecretData]:
-    if key_env_var in os.environ and cipher_algorithm in os.environ:
+    if key_env_var in os.environ and cipher_algorithm_env_var in os.environ:
         secret_key = base64.b64decode(os.environ.get(key_env_var).encode('utf-8'))
-        cipher_algorithm = model.secret.Cipher(os.environ.get(cipher_algorithm))
-
+        cipher_algorithm = model.secret.Cipher(os.environ.get(cipher_algorithm_env_var))
         secret = model.secret.SecretData(key=secret_key, cipher_algorithm=cipher_algorithm)
 
         return secret
