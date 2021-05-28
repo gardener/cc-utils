@@ -151,10 +151,12 @@ class ConcourseUAM(NamedModelElement):
             return LocalUser(local_user)
 
     def username(self) -> str:
-        return self.local_user().username()
+        if local_user := self.local_user():
+            return local_user.username()
 
     def password(self) -> str:
-        return self.local_user().password()
+        if local_user := self.local_user():
+            return local_user.password()
 
     def role(self) -> str:
         return self.raw.get('role')
@@ -350,6 +352,7 @@ class JobMapping(NamedModelElement):
         return [
             'secret_cfg',
             'secrets_repo',
+            'concourse_uams',
         ]
 
     def _defaults_dict(self):
