@@ -31,7 +31,7 @@ cc-utils:
           dockerimages:
             job-image:
               registry: 'docker_io_write'
-              image: 'registry-1.docker.io/gardenerci/cc-job-image'
+              image: 'eu.gcr.io/gardener-project/cc/job-image'
               dockerfile: 'Dockerfile'
               tag_as_latest: False
               inputs:
@@ -78,7 +78,7 @@ cc-utils:
           dockerimages:
             job-image:
               registry: 'docker_io_write'
-              image: 'registry-1.docker.io/gardenerci/cc-job-image'
+              image: 'eu.gcr.io/gardener-project/cc/job-image'
               dockerfile: 'Dockerfile'
               tag_as_latest: True
               inputs:

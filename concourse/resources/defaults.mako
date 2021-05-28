@@ -12,7 +12,7 @@ if not (job_image_tag := os.environ.get('CC_JOB_IMAGE_TAG', '')):
     job_image_tag = f.read().strip()
 
 # registry_cfg must be of type ContainerRegistryConfig (cc-utils)
-repository = 'registry-1.docker.io/gardenerci/cc-job-image'
+repository = 'eu.gcr.io/gardener-project/cc/job-image'
 registry_cfg = mcr.find_config(image_reference=repository)
 %>
 ${task_image_resource(
