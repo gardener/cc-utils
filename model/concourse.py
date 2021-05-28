@@ -21,6 +21,7 @@ import reutil
 from . import cluster_domain_from_kubernetes_config
 
 from model.base import (
+    BasicCredentials,
     NamedModelElement,
     ModelValidationError,
     ModelBase,
@@ -131,24 +132,10 @@ class ConcourseConfig(NamedModelElement):
         super().validate()
 
 
-class LocalUser(ModelBase):
-    def username(self) -> str:
-        return self.raw.get('username')
-
-    def password(self) -> str:
-        return self.raw.get('password')
-
-    def _required_attributes(self):
-        return [
-            'username',
-            'password',
-        ]
-
-
 class ConcourseUAM(NamedModelElement):
-    def local_user(self) -> typing.Optional[LocalUser]:
+    def local_user(self) -> typing.Optional[BasicCredentials]:
         if local_user := self.raw.get('local_user'):
-            return LocalUser(local_user)
+            return BasicCredentials(raw_dict=local_user)
 
     def username(self) -> str:
         if local_user := self.local_user():
