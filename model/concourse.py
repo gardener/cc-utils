@@ -143,7 +143,7 @@ class ConcourseUAM(NamedModelElement):
 
     def password(self) -> str:
         if local_user := self.local_user():
-            return local_user.password()
+            return local_user.passwd()
 
     def role(self) -> str:
         return self.raw.get('role')
