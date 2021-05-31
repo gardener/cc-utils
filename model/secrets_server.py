@@ -20,6 +20,7 @@ from model.base import (
 import model.concourse
 import model.secret
 import ensure
+import typing
 
 
 class SecretsServerConfig(NamedModelElement):
@@ -81,7 +82,7 @@ class SecretsServerSecrets(ModelBase):
     def secret_url_path(
         self,
         job_mapping: model.concourse.JobMapping,
-        secret_cfg: model.secret.Secret=None,
+        secret_cfg: typing.Optional[model.secret.Secret],
     ):
         '''
             used to retrieve the secret url path for given config in default template
