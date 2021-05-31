@@ -35,7 +35,6 @@ from ci.util import (
     parse_yaml_file,
 )
 from model.base import ModelBase, NamedModelElement
-import model.concourse
 from concourse.factory import RawPipelineDefinitionDescriptor
 import ccc.github
 import ci.log
@@ -86,7 +85,6 @@ class DefinitionEnumerator:
         raw_definitions,
         secret_cfg,
         override_definitions={},
-        job_mapping: model.concourse.JobMapping = None,
         target_team: str=None,
     ) -> 'DefinitionDescriptor':
         if not target_team:
@@ -102,7 +100,6 @@ class DefinitionEnumerator:
                 concourse_target_team=target_team,
                 override_definitions=[override_definitions.get(name,{}),],
                 secret_cfg=secret_cfg,
-                job_mapping=job_mapping,
             )
 
 
@@ -250,7 +247,6 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
         repository,
         github_cfg,
         org_name,
-        job_mapping: model.concourse.JobMapping = None,
         repository_filter: callable=None,
         target_team: str=None,
         secret_cfg=None,
@@ -322,7 +318,6 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                 override_definitions=override_definitions,
                 target_team=target_team,
                 secret_cfg=secret_cfg,
-                job_mapping=job_mapping,
             )
 
 
@@ -388,7 +383,6 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
             org_name=github_org,
             target_team=self._target_team,
             secret_cfg=secret_cfg,
-            job_mapping=self.job_mapping,
         )
 
 
@@ -425,7 +419,6 @@ class GithubOrganisationDefinitionEnumerator(GithubDefinitionEnumeratorBase):
                 github_cfg=github_cfg,
                 org_name=github_org_name,
                 secret_cfg=secret_cfg,
-                job_mapping=self.job_mapping,
             )
 
             matching_repositories = (
@@ -454,7 +447,6 @@ class DefinitionDescriptor:
         concourse_target_cfg,
         concourse_target_team,
         secret_cfg,
-        job_mapping: model.concourse.JobMapping = None,
         override_definitions=[{},],
         exception=None,
     ):
@@ -466,7 +458,6 @@ class DefinitionDescriptor:
             self.concourse_target_team = not_none(concourse_target_team)
             self.override_definitions = not_none(override_definitions)
             self.secret_cfg = secret_cfg
-            self.job_mapping = job_mapping
         except Exception as e:
             raise ValueError(
                 f'{e=} missing value: {pipeline_name=} {pipeline_definition=} {main_repo=} '

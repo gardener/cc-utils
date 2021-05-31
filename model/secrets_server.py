@@ -17,10 +17,6 @@ from model.base import (
     NamedModelElement,
     ModelBase,
 )
-import model.concourse
-import model.secret
-import ensure
-import typing
 
 
 class SecretsServerConfig(NamedModelElement):
@@ -77,20 +73,3 @@ class SecretsServerSecrets(ModelBase):
 
     def encrypted_concourse_cfg_name(self):
         return f'{self.encrypted_concourse_secret_name()}/{self.encrypted_concourse_attribute()}'
-
-    @ensure.ensure_annotations
-    def secret_url_path(
-        self,
-        job_mapping: model.concourse.JobMapping,
-        secret_cfg: typing.Optional[model.secret.Secret],
-    ):
-        '''
-            used to retrieve the secret url path for given config in default template
-        '''
-        if secret_cfg:
-            if job_mapping.secrets_repo():
-                return f'{job_mapping.target_secret_name()}/{job_mapping.team_name()}_cfg'
-            else:
-                return self.encrypted_concourse_cfg_name()
-        else:
-            return self.concourse_cfg_name()

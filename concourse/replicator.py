@@ -156,7 +156,6 @@ class Renderer:
             'name': pipeline_definition.name,
             'target_team': definition_descriptor.concourse_target_team,
             'secret_cfg': definition_descriptor.secret_cfg,
-            'job_mapping': definition_descriptor.job_mapping,
         }
 
         if bg := effective_definition.get('background_image'):
