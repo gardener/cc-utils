@@ -80,8 +80,8 @@ class SecretsServerSecrets(ModelBase):
     @ensure.ensure_annotations
     def secret_url_path(
         self,
-        job_mapping:model.concourse.JobMapping,
-        secret_cfg:model.secret.Secret=None,
+        job_mapping: model.concourse.JobMapping,
+        secret_cfg: model.secret.Secret=None,
     ):
         '''
             used to retrieve the secret url path for given config in default template
