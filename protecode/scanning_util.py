@@ -446,7 +446,7 @@ class ProtecodeUtil:
         for protecode_app in protecode_apps_to_remove:
             product_id = protecode_app.product_id()
             self._api.delete_product(product_id=product_id)
-            ci.util.info(f'purged outdated product {product_id}')
+            ci.util.info(f'purged outdated product {product_id} ({protecode_app.display_name()})')
 
     def retrieve_scan_result(
             self,
