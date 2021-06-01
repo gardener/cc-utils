@@ -39,7 +39,6 @@ logger = logging.getLogger(__name__)
 
 def replicate_pipelines(
     cfg_set,
-    concourse_cfg,
     job_mapping,
     template_path=concourse.paths.template_dir,
     template_include_dir=concourse.paths.template_include_dir,

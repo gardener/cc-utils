@@ -30,7 +30,6 @@ logger.info(f'replicating {job_mapping.name()=} {job_mapping.team_name()=}')
 
 replicate_pipelines(
   cfg_set=cfg_set,
-  concourse_cfg=concourse_cfg,
   job_mapping=job_mapping,
   own_pipeline_name=own_pipeline_name,
 )

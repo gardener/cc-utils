@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 ## linters to detect errors that would be missed if the call were inlined in mako
 def replicate_pipelines(
     cfg_set,
-    concourse_cfg,
     job_mapping,
     own_pipeline_name: str,
 ):
@@ -21,7 +20,6 @@ def replicate_pipelines(
 
     result = concourse.replicator.replicate_pipelines(
         cfg_set=cfg_set,
-        concourse_cfg=concourse_cfg,
         job_mapping=job_mapping,
         unpause_pipelines=False,
         unpause_new_pipelines=True,
