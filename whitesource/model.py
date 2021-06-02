@@ -1,12 +1,11 @@
 import typing
-
-import dataclasses
+from dataclasses import dataclass
 
 cve_name = str
 cvss_score = float
 
 
-@dataclasses.dataclass
+@dataclass
 class WhiteSrcProject:
     name: str
     token: str
@@ -29,8 +28,15 @@ class WhiteSrcProject:
         return (cve_name, float(max_score))
 
 
-@dataclasses.dataclass
+@dataclass
 class WhiteSrcDisplayProject:
     name: str
     highest_cve_name: str
     highest_cve_score: float
+
+
+@dataclass(frozen=True)
+class WhiteSourceFilterCfg:
+    type: str
+    match: typing.Union[bool, dict]
+    action: str

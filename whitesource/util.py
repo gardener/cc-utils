@@ -10,8 +10,8 @@ import tabulate
 
 import ccc.github
 import ccc.oci
-import cnudie.retrieve
 import ci.util
+import cnudie.retrieve
 import dso.model
 import gci.componentmodel as cm
 import mailutil
@@ -202,7 +202,7 @@ def _print_cve_tables(tables):
 
 
 def scan_artifact_with_white_src(
-    extra_whitesource_config: typing.Dict,
+    extra_whitesource_config: typing.Union[None, dict],
     scan_artifact: dso.model.ScanArtifact,
     whitesource_client: whitesource.client.WhitesourceClient,
 ):
@@ -280,7 +280,7 @@ def scan_artifact_with_white_src(
 
 def _scan_artifact(
     artifact: dso.model.ScanArtifact,
-    extra_whitesource_config,
+    extra_whitesource_config: typing.Union[None, dict],
     whitesource_client,
     len_artifacts: int,
     get_scanned_count: typing.Callable,
@@ -298,8 +298,9 @@ def _scan_artifact(
 def scan_sources(
     whitesource_client: whitesource.client.WhitesourceClient,
     component_descriptor: cm.ComponentDescriptor,
-    extra_whitesource_config: dict,
+    extra_whitesource_config: typing.Union[None, dict],
     max_workers: int,
+    filters: typing.List[whitesource.model.WhiteSourceFilterCfg],
 ) -> typing.Tuple[str, typing.List[whitesource.model.WhiteSrcProject]]:
 
     components = cnudie.retrieve.components(component=component_descriptor)
@@ -307,7 +308,10 @@ def scan_sources(
     product_name = component_descriptor.component.name
 
     # get scan artifacts with configured label
-    scan_artifacts_gen = whitesource.component.get_scan_artifacts_from_components(components)
+    scan_artifacts_gen = whitesource.component.get_scan_artifacts_from_components(
+        components,
+        filters=filters,
+    )
     scan_artifacts = tuple(scan_artifacts_gen)
 
     get_scanned_count, increment_scanned_count = _mk_ctx()
@@ -353,11 +357,13 @@ def print_scans(
 
 
 def send_mail(
-    notification_recipients: typing.List[str],
+    notification_recipients: typing.Union[None, typing.List[str]],
     cve_threshold: float,
     product_name: str,
     projects: typing.List[whitesource.model.WhiteSrcProject],
 ):
+    if not notification_recipients:
+        logger.warning('No recipients defined. No emails will be sent...')
 
     if len(notification_recipients) > 0:
 
@@ -390,3 +396,19 @@ def send_mail(
 
     else:
         logger.warning('No recipients defined. No emails will be sent...')
+
+
+def parse_filters(
+    filters: typing.Union[None, list],
+) -> typing.List[whitesource.model.WhiteSourceFilterCfg]:
+    l: typing.List[whitesource.model.WhiteSourceFilterCfg] = []
+    if filters:
+        for e in filters:
+            l.append(whitesource.model.WhiteSourceFilterCfg(
+                type=e.get('type'),
+                action=e.get('action'),
+                match=e.get('match'),
+            ))
+    if not l == []:
+        logger.info(f'found filter! {filters=}')
+    return l

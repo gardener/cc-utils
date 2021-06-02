@@ -73,6 +73,31 @@ WHITESOURCE_ATTRIBUTES = (
 )
 
 
+FILTER_ATTRIBUTES = (
+    AttributeSpec.required(
+        name='type',
+        doc='defines type to apply filter on, (component|source|resource)',
+        type=str,
+    ),
+    AttributeSpec.required(
+        name='match',
+        doc='matches artifacts (list of regex|true|false)',
+        type=typing.Union[dict, bool],
+    ),
+    AttributeSpec.required(
+        name='action',
+        doc='defines action to matched artifacts (include|exclude)',
+        type=str,
+    ),
+)
+
+
+class FilterCfg(ModelBase):
+    @classmethod
+    def _attribute_specs(cls):
+        return FILTER_ATTRIBUTES
+
+
 class WhitesourceCfg(ModelBase):
     @classmethod
     def _attribute_specs(cls):
@@ -122,6 +147,12 @@ ATTRIBUTES = (
         doc='optional list of email recipients to be notified about critical scan results',
         type=typing.List[str],
     ),
+    AttributeSpec.required(
+        name='filters',
+        default=(),
+        doc='config to include and exclude sources, resources or whole components',
+        type=FilterCfg,
+    ),
     AttributeSpec.optional(
         name='checkmarx',
         type=CheckmarxCfg,
@@ -159,6 +190,10 @@ class SourceScanTrait(Trait):
     def whitesource(self):
         if whitesource := self.raw.get('whitesource'):
             return WhitesourceCfg(whitesource)
+
+    def filters(self):
+        if filters := self.raw.get('filters'):
+            return FilterCfg(filters)
 
     def transformer(self):
         return SourceScanTraitTransformer(trait=self)
