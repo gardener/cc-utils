@@ -364,6 +364,7 @@ def send_mail(
 ):
     if not notification_recipients:
         logger.warning('No recipients defined. No emails will be sent...')
+        return
 
     if len(notification_recipients) > 0:
 
@@ -399,16 +400,20 @@ def send_mail(
 
 
 def parse_filters(
-    filters: typing.Union[None, list],
+    filters: typing.Optional[list[dict]],
 ) -> typing.List[whitesource.model.WhiteSourceFilterCfg]:
     l: typing.List[whitesource.model.WhiteSourceFilterCfg] = []
-    if filters:
-        for e in filters:
-            l.append(whitesource.model.WhiteSourceFilterCfg(
-                type=e.get('type'),
-                action=e.get('action'),
-                match=e.get('match'),
-            ))
-    if not l == []:
-        logger.info(f'found filter! {filters=}')
-    return l
+    if not filters:
+        return []
+
+    logger.info(f'found filter! {filters=}')
+    for f in filters:
+        l.append(whitesource.model.WhiteSourceFilterCfg(
+            type=whitesource.model.FilterType(f.get('type')),
+            action=whitesource.model.ActionType(f.get('action')),
+            match=f.get('match'),
+        ))
+
+    # sorting filters, component filters have to be first elements
+    # if component is excluded, its artifacts are excluded as well
+    return sorted(l, key=lambda k: str(k.type))

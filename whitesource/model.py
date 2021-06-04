@@ -1,3 +1,4 @@
+from enum import Enum
 import typing
 from dataclasses import dataclass
 
@@ -35,8 +36,19 @@ class WhiteSrcDisplayProject:
     highest_cve_score: float
 
 
+class FilterType(Enum):
+    COMPONENT = 'component'
+    SOURCE = 'source'
+    RESOURCE = 'resource'
+
+
+class ActionType(Enum):
+    INCLUDE = 'include'
+    EXCLUDE = 'exclude'
+
+
 @dataclass(frozen=True)
 class WhiteSourceFilterCfg:
-    type: str
+    type: FilterType
     match: typing.Union[bool, dict]
-    action: str
+    action: ActionType

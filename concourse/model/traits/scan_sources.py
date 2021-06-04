@@ -97,6 +97,15 @@ class FilterCfg(ModelBase):
     def _attribute_specs(cls):
         return FILTER_ATTRIBUTES
 
+    def type(self):
+        return self.raw['type']
+
+    def match(self):
+        return self.raw['match']
+
+    def action(self):
+        return self.raw['action']
+
 
 class WhitesourceCfg(ModelBase):
     @classmethod
