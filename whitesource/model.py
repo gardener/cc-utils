@@ -1,12 +1,12 @@
+from enum import Enum
 import typing
-
-import dataclasses
+from dataclasses import dataclass
 
 cve_name = str
 cvss_score = float
 
 
-@dataclasses.dataclass
+@dataclass
 class WhiteSrcProject:
     name: str
     token: str
@@ -29,8 +29,26 @@ class WhiteSrcProject:
         return (cve_name, float(max_score))
 
 
-@dataclasses.dataclass
+@dataclass
 class WhiteSrcDisplayProject:
     name: str
     highest_cve_name: str
     highest_cve_score: float
+
+
+class FilterType(Enum):
+    COMPONENT = 'component'
+    SOURCE = 'source'
+    RESOURCE = 'resource'
+
+
+class ActionType(Enum):
+    INCLUDE = 'include'
+    EXCLUDE = 'exclude'
+
+
+@dataclass(frozen=True)
+class WhiteSourceFilterCfg:
+    type: FilterType
+    match: typing.Union[bool, dict]
+    action: ActionType

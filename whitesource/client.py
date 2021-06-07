@@ -79,7 +79,7 @@ class WhitesourceClient:
 
     async def upload_to_project(
         self,
-        extra_whitesource_config: typing.Dict,
+        extra_whitesource_config: typing.Union[None, dict],
         file: typing.IO,
         project_name: str,
         length: int,
@@ -98,7 +98,7 @@ class WhitesourceClient:
             data_class=protocol.WhiteSourceApiExtensionWebsocketWSConfig,
             data={
                 'apiKey': self.api_key,
-                'extraWsConfig': extra_whitesource_config,
+                'extraWsConfig': extra_whitesource_config if extra_whitesource_config else {},
                 'productToken': self.product_token,
                 'projectName': project_name,
                 'requesterEmail': self.requester_mail,

@@ -48,11 +48,15 @@ def scan_sources_and_notify(
 def scan_component_with_whitesource(
     whitesource_cfg_name: str,
     component_descriptor: cm.ComponentDescriptor,
-    extra_whitesource_config: dict,
     cve_threshold: float,
-    notification_recipients: list,
+    extra_whitesource_config: dict = None,
+    notification_recipients: list = None,
+    filters: list = None,
     max_workers=4,
 ):
+
+    filters = whitesource.util.parse_filters(filters=filters)
+
     whitesource_client = whitesource.util.create_whitesource_client(
         whitesource_cfg_name=whitesource_cfg_name,
     )
@@ -62,6 +66,7 @@ def scan_component_with_whitesource(
         component_descriptor=component_descriptor,
         extra_whitesource_config=extra_whitesource_config,
         max_workers=max_workers,
+        filters=filters,
     )
 
     whitesource.util.print_scans(

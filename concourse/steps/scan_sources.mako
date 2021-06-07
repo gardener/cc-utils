@@ -14,6 +14,7 @@ whitesource_cfg = source_scan_trait.whitesource()
 email_recipients = source_scan_trait.email_recipients()
 component_trait = job_variant.trait('component_descriptor')
 component_descriptor_dir = job_step.input('component_descriptor_dir')
+scan_sources_filter = source_scan_trait.filters().raw
 %>
 ${step_lib('component_descriptor_util')}
 ${step_lib('scan_sources')}
@@ -40,6 +41,7 @@ scan_component_with_whitesource(
     extra_whitesource_config={},
     notification_recipients=${email_recipients},
     whitesource_cfg_name='${whitesource_cfg.cfg_name()}',
+    filters=${scan_sources_filter},
 )
 % endif
 
