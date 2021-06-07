@@ -400,7 +400,7 @@ def send_mail(
 
 
 def parse_filters(
-    filters: typing.Optional[list[dict]],
+    filters: typing.Optional[typing.List[dict]],
 ) -> typing.List[whitesource.model.WhiteSourceFilterCfg]:
     l: typing.List[whitesource.model.WhiteSourceFilterCfg] = []
     if not filters:

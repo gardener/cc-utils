@@ -48,10 +48,10 @@ def scan_sources_and_notify(
 def scan_component_with_whitesource(
     whitesource_cfg_name: str,
     component_descriptor: cm.ComponentDescriptor,
-    extra_whitesource_config: typing.Union[None, dict],
     cve_threshold: float,
-    notification_recipients: typing.Union[None, list],
-    filters: typing.Union[None, list],
+    extra_whitesource_config: dict = None,
+    notification_recipients: list = None,
+    filters: list = None,
     max_workers=4,
 ):
 

@@ -25,7 +25,7 @@ def _get_ws_label_from_artifact(source: cm.ComponentSource) -> dso.labels.Source
 
 
 def get_scan_artifacts_from_components(
-    components: typing.Generator[typing.Union[tuple, typing.Any], None, None],
+    components: typing.Generator[dso.model.ScanArtifact, None, None],
     filters: typing.List[whitesource.model.WhiteSourceFilterCfg],
 ) -> typing.Generator:
 

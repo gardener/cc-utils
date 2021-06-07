@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 def _print_filter_stats(
     components: typing.List[cm.Component],
-    filtered: bool
+    filtered: bool,
 ):
     sources = len([r for c in components for r in c.sources])
     resources = len([r for c in components for r in c.resources])
@@ -29,12 +29,14 @@ def apply_filters(
     _print_filter_stats(components=components, filtered=False)
     for f in filters:
         if f.type is whitesource.model.FilterType.COMPONENT:
-            components = list(filter(lambda c: _component_filter(
-                filter_cfg=f,
-                component=c,
-            ), components))
-        elif f.type is whitesource.model.FilterType.SOURCE \
-            or f.type is whitesource.model.FilterType.RESOURCE:
+            components = [c for c in filter(
+                lambda c: _component_filter(filter_cfg=f,component=c),
+                components,
+            )]
+        elif (
+            f.type is whitesource.model.FilterType.SOURCE
+            or f.type is whitesource.model.FilterType.RESOURCE
+        ):
             if not components:
                 logger.warning('all components excluded, skipping artifact filter')
             else:
@@ -49,20 +51,22 @@ def apply_filters(
 
 def _apply_artifact_filter(
     filter_cfg: whitesource.model.WhiteSourceFilterCfg,
-    components: typing.Generator[typing.Union[tuple, typing.Any], None, None],
+    components: typing.Generator[cm.Component, None, None],
 ):
     logger.debug('applying artifact filter')
     for c in components:
-        artifacts_pre = c.sources if filter_cfg.type is whitesource.model.FilterType.SOURCE \
+        artifacts_pre = (
+            c.sources if filter_cfg.type is whitesource.model.FilterType.SOURCE
             else c.resources
-        artifacts_past = list(filter(lambda a: _artifact_filter(
-            filter_cfg=filter_cfg,
-            artifact=a,
-        ), artifacts_pre))
+        )
+        filtered_artifacts = [c for c in filter(
+            lambda a: _artifact_filter(filter_cfg=filter_cfg, artifact=a),
+            artifacts_pre,
+        )]
         if filter_cfg.type is whitesource.model.FilterType.SOURCE:
-            c.sources = artifacts_past
+            c.sources = filtered_artifacts
         elif filter_cfg.type is whitesource.model.FilterType.RESOURCE:
-            c.resources = artifacts_past
+            c.resources = filtered_artifacts
         else:
             raise NotImplementedError(filter_cfg.type)
 
@@ -85,10 +89,14 @@ def _artifact_filter(
         else:
             raise NotImplementedError
 
-        re_str = resource_type_name if filter_cfg.type is whitesource.model.FilterType.RESOURCE \
+        re_str = (
+            resource_type_name if filter_cfg.type is whitesource.model.FilterType.RESOURCE
             else artifact.name
-        re_pat = filter_cfg.match.get('type') if filter_cfg.type is \
-            whitesource.model.FilterType.RESOURCE else filter_cfg.match.get('name')
+        )
+        re_pat = (
+            filter_cfg.match.get('type') if filter_cfg.type is whitesource.model.FilterType.RESOURCE
+            else filter_cfg.match.get('name')
+        )
 
         if filter_cfg.action is whitesource.model.ActionType.INCLUDE:
             if re.search(pattern=re_pat, string=re_str):
@@ -120,17 +128,17 @@ def _match_bool_filter(
 ) -> bool:
 
     if not artifact and not component:
-        raise NotImplementedError
+        raise RuntimeError('One of "artifact" or "component" must be given')
 
     if filter_cfg.action is whitesource.model.ActionType.INCLUDE:
         if filter_cfg.match:
-            logger.debug(f'included {artifact.name if artifact else component.name},'
-                         f' reason: {filter_cfg.match=} and {filter_cfg.action=}')
+            logger.debug(f'included {artifact.name if artifact else component.name}, '
+                         f'reason: {filter_cfg.match=} and {filter_cfg.action=}')
             return True
     elif filter_cfg.action is whitesource.model.ActionType.EXCLUDE:
         if not filter_cfg.match:
-            logger.debug(f'included {artifact.name if artifact else component.name},'
-                         f' reason: {filter_cfg.match=} and {filter_cfg.action=}')
+            logger.debug(f'included {artifact.name if artifact else component.name}, '
+                         f'reason: {filter_cfg.match=} and {filter_cfg.action=}')
             return True
     else:
         raise NotImplementedError(filter_cfg.action)

@@ -158,7 +158,7 @@ ATTRIBUTES = (
     ),
     AttributeSpec.required(
         name='filters',
-        default=(),
+        default={},
         doc='config to include and exclude sources, resources or whole components',
         type=FilterCfg,
     ),
