@@ -324,8 +324,9 @@ class JobMapping(NamedModelElement):
     def secret_cfg(self) -> str:
         return self.raw.get('secret_cfg')
 
-    def secrets_repo(self) -> SecretsRepo:
-        return SecretsRepo(self.raw.get('secrets_repo'))
+    def secrets_repo(self) -> typing.Optional[SecretsRepo]:
+        if secrets_repo := self.raw.get('secrets_repo'):
+            return SecretsRepo(secrets_repo)
 
     def concourse_uams(self):
         return self.raw.get('concourse_uams')
@@ -349,6 +350,9 @@ class JobMapping(NamedModelElement):
         }
 
     def target_secret_name(self):
+        '''
+            k8s secret name used for replication
+        '''
         return f'cc-{self.team_name()}-config'
 
 
