@@ -432,7 +432,10 @@ class ReplicationResultProcessor:
         all_notifications_succeeded = True
         for failed_descriptor in failed_descriptors:
             logger.warning(failed_descriptor.definition_descriptor.pipeline_name)
-            if not should_notify_pipeline_owners(definition_descriptor=failed_descriptor):
+            # failed_descriptor has type DeployResult - XXX: should rename variable
+            if not should_notify_pipeline_owners(
+                definition_descriptor=failed_descriptor.definition_descriptor,
+            ):
                 logger.warning(
                     'will not notify (likely the error is not on user-side '
                     f'{failed_descriptor.pipeline_name=} {failed_descriptor.error_details=}'
