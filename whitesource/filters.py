@@ -45,7 +45,7 @@ def apply_filters(
         else:
             raise NotImplementedError(f.type)
 
-    _print_filter_stats(components=components, filtered=False)
+    _print_filter_stats(components=components, filtered=True)
     yield from components
 
 
