@@ -19,7 +19,6 @@ from model.base import (
 )
 import model.concourse
 import model.secret
-import ensure
 import typing
 
 
@@ -78,7 +77,6 @@ class SecretsServerSecrets(ModelBase):
     def encrypted_concourse_cfg_name(self):
         return f'{self.encrypted_concourse_secret_name()}/{self.encrypted_concourse_attribute()}'
 
-    @ensure.ensure_annotations
     def secret_url_path(
         self,
         job_mapping: model.concourse.JobMapping,
@@ -89,7 +87,9 @@ class SecretsServerSecrets(ModelBase):
         '''
         if secret_cfg:
             if job_mapping.secrets_repo():
-                return f'{job_mapping.target_secret_name()}/{job_mapping.team_name()}_cfg'
+                # FIXME enable org based secret path as soon as org secret repos are commonly used
+                return self.encrypted_concourse_cfg_name()
+                # return f'{job_mapping.target_secret_name()}/{job_mapping.team_name()}_cfg'
             else:
                 return self.encrypted_concourse_cfg_name()
         else:
