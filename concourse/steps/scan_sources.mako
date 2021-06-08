@@ -14,7 +14,7 @@ whitesource_cfg = source_scan_trait.whitesource()
 email_recipients = source_scan_trait.email_recipients()
 component_trait = job_variant.trait('component_descriptor')
 component_descriptor_dir = job_step.input('component_descriptor_dir')
-scan_sources_filter = source_scan_trait.filters().raw
+scan_sources_filter = source_scan_trait.filters_raw()
 %>
 ${step_lib('component_descriptor_util')}
 ${step_lib('scan_sources')}

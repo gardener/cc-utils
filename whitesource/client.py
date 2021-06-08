@@ -234,7 +234,7 @@ async def _upload_to_project(
         # string as of today even though its defined in the standard
         # (https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent).
         # This might be due to the early state of developement (beta, 01.2020).
-        # Therefore the status code is resolved manually and exeption is raised.
+        # Therefore the status code is resolved manually and an exception is raised.
         raise websockets.exceptions.ConnectionClosedError(
             websocket.close_code,
             protocol.WhiteSourceApiExtensionStatusCodeReasons(websocket.close_code).name

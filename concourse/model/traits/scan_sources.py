@@ -156,7 +156,7 @@ ATTRIBUTES = (
         doc='optional list of email recipients to be notified about critical scan results',
         type=typing.List[str],
     ),
-    AttributeSpec.required(
+    AttributeSpec.optional(
         name='filters',
         default={},
         doc='config to include and exclude sources, resources or whole components',
@@ -203,6 +203,10 @@ class SourceScanTrait(Trait):
     def filters(self):
         if filters := self.raw.get('filters'):
             return FilterCfg(filters)
+
+    def filters_raw(self):
+        if filters := self.raw.get('filters'):
+            return filters
 
     def transformer(self):
         return SourceScanTraitTransformer(trait=self)

@@ -288,7 +288,7 @@ def _scan_artifact(
 ):
     logger.info(f'scanning {get_scanned_count()}/{len_artifacts} - {artifact.name}')
     increment_scanned_count()
-    whitesource.util.scan_artifact_with_white_src(
+    scan_artifact_with_white_src(
         extra_whitesource_config=extra_whitesource_config,
         scan_artifact=artifact,
         whitesource_client=whitesource_client,
