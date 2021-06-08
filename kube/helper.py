@@ -291,7 +291,7 @@ class KubernetesDeploymentHelper:
             # monkey patch function to set the correct merge strategy for request.
             # This will apply all changes and remove unnecessary config
             self.apps_api.api_client.select_header_content_type = lambda content_types: 'application/merge-patch+json' # noqa: E501
-            self.apps_api.patch_namespaced_deployment(deployment_name,namespace, deployment)
+            self.apps_api.patch_namespaced_deployment(deployment_name, namespace, deployment)
             self.apps_api.api_client.select_header_content_type = func
         else:
             self.create_deployment(namespace=namespace, deployment=deployment)
