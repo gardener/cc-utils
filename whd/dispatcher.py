@@ -237,14 +237,19 @@ class GithubWebhookDispatcher:
                         )
                         client.abort_build(build.id())
 
-    def dispatch_pullrequest_event(self, pr_event):
+    def dispatch_pullrequest_event(self, pr_event) -> bool:
+        '''Process the given push event.
+
+        Return `True` if event will be processed, `False` if no processing will be done.
+        '''
         if not pr_event.action() in (
             PullRequestAction.OPENED,
             PullRequestAction.REOPENED,
             PullRequestAction.LABELED,
             PullRequestAction.SYNCHRONIZE,
         ):
-            return logger.info(f'ignoring pull-request action {pr_event.action()}')
+            logger.info(f'ignoring pull-request action {pr_event.action()}')
+            return False
 
         def _process_pr_event():
             for concourse_api in self.concourse_clients():
@@ -280,6 +285,8 @@ class GithubWebhookDispatcher:
 
         thread = threading.Thread(target=_process_pr_event)
         thread.start()
+
+        return True
 
     def _trigger_resource_check(self, concourse_api, resources):
         logger.debug('_trigger_resource_check')
