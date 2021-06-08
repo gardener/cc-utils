@@ -478,7 +478,8 @@ class GithubWebhookDispatcher:
         for job, resource, resource_version in jobs_not_triggered(pr_event, concourse_api):
             logger.info(
                 f'processing untriggered job {job.name=} of {resource.pipeline_name()=} '
-                f'{resource.name=} {resource_version.version()=}. Triggered by {pr_event.action()=}'
+                f'{resource.name=} {resource_version.version()=}. Triggered by '
+                f'{pr_event.action()=} of {pr_event.delivery()=}'
             )
             try:
                 pin_resource_and_trigger_build(

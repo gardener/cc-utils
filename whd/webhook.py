@@ -35,7 +35,8 @@ class GithubWebhook:
 
     def on_post(self, req, resp):
         event = req.get_header('X-GitHub-Event', required=True)
-        logger_string = f'received event of type "{event}"'
+        delivery = req.get_header('X-GitHub-Delivery', required=True)
+        logger_string = f'received event (delivery-id: {delivery}) of type "{event}"'
         action = req.media.get("action")
         if action:
             logger_string += f' with action "{action}"'
@@ -45,16 +46,16 @@ class GithubWebhook:
 
         logger.info(logger_string)
         if event == 'push':
-            parsed = PushEvent(raw_dict=req.media)
+            parsed = PushEvent(raw_dict=req.media, delivery=delivery)
             self.dispatcher.dispatch_push_event(push_event=parsed)
             logger.debug('after push-event dispatching')
             return
         if event == 'create':
-            parsed = CreateEvent(raw_dict=req.media)
+            parsed = CreateEvent(raw_dict=req.media, delivery=delivery)
             self.dispatcher.dispatch_create_event(create_event=parsed)
             return
         elif event == 'pull_request':
-            parsed = PullRequestEvent(raw_dict=req.media)
+            parsed = PullRequestEvent(raw_dict=req.media, delivery=delivery)
             self.dispatcher.dispatch_pullrequest_event(pr_event=parsed)
             return
         else:

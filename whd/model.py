@@ -24,8 +24,17 @@ from model.base import ModelBase
 
 
 class EventBase(ModelBase):
+    def __init__(self, raw_dict, delivery):
+        super().__init__(raw_dict)
+        self._delivery = delivery
+
     def repository(self):
         return Repository(self.raw['repository'])
+
+    def delivery(self):
+        '''return the id of the GitHub delivery that triggered this event
+        '''
+        return self._delivery
 
 
 class Repository(ModelBase):
