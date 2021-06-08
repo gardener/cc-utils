@@ -172,6 +172,11 @@ class ConcourseUAM(NamedModelElement):
         ]
 
 
+class ConcourseUAMSet(NamedModelElement):
+    def concourse_uams(self) -> typing.Set[ConcourseUAM]:
+        return {name: ConcourseUAM(name=name, raw_dict=raw) for name, raw in self.raw.items()}
+
+
 class ConcourseUAMConfig(NamedModelElement):
     def teams(self):
         return [
@@ -328,8 +333,8 @@ class JobMapping(NamedModelElement):
         if secrets_repo := self.raw.get('secrets_repo'):
             return SecretsRepo(secrets_repo)
 
-    def concourse_uams(self):
-        return self.raw.get('concourse_uams')
+    def concourse_uam(self) -> str:
+        return self.raw.get('concourse_uam')
 
     def _required_attributes(self):
         return [
