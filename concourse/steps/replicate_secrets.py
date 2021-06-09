@@ -39,7 +39,7 @@ def replicate_secrets(
     encoded_cipher_data = base64.b64encode(encrypted_cipher_data).decode('utf-8')
 
     logger.info(f'deploying encrypted secret for team: {team_name}')
-    # TODO remove hardcoded value
+    # FIXME remove hardcoded name
     secrets_helper.put_secret(
         name=target_secret_name,
         raw_data={f'{team_name}_cfg': encoded_cipher_data},
