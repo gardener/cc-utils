@@ -586,7 +586,8 @@ class GitHubReleaseStep(TransactionalStep):
             ci.util.fail('exactly one of component-descriptor, or ctf-archive must exist')
         elif have_cd:
             self.components = [cm.ComponentDescriptor.from_dict(
-                ci.util.parse_yaml_file(self.component_descriptor_v2_path),
+                component_descriptor_dict=ci.util.parse_yaml_file(self.component_descriptor_v2_path),
+                validation_mode=cm.ValidationMode.WARN,
             )]
         elif have_ctf:
             self.components = tuple(cnudie.util.component_descriptors_from_ctf_archive(
