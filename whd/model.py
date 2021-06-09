@@ -129,6 +129,17 @@ class PullRequestEvent(EventBase):
         '''
         return self.raw['sender']
 
+    def head_commit(self):
+        '''the SHA-hash of the head-commit of the PR
+
+        returns None if unable to determine
+        '''
+        if (pr_info := self.raw.get('pull_request')):
+            if (head_info := pr_info.get('head')):
+                if (sha := head_info.get('sha')):
+                    return sha
+        return None
+
 
 @dataclasses.dataclass
 class Pipeline:

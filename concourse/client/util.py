@@ -161,12 +161,27 @@ def jobs_not_triggered(
     concourse_api,
 ) -> typing.Tuple[Job, PipelineConfigResource, ResourceVersion]:
 
+    if not (head_commit := pr_event.head_commit()):
+        logger.warn(
+            f'Unable to determine head-commit-sha of PR #{pr_event.number()} for '
+            f'repository {pr_event.repository().repository_path()} (from {pr_event.delivery()=}). '
+            'Jobs will be triggered for every commit of the PR.'
+        )
+
     for pr_resource, pr_resource_versions in determine_pr_resource_versions(
         pr_event=pr_event,
         concourse_api=concourse_api,
     ):
         for job in determine_jobs_to_be_triggered(pr_resource):
             for pr_resource_version in pr_resource_versions:
+
+                # we only run jobs for the head-commit of the PR (if it can be determined)
+                if (
+                    head_commit
+                    and pr_resource_version.version()['ref'] != head_commit
+                ):
+                    continue
+
                 if not wait_for_job_to_be_triggered(job, pr_resource_version, concourse_api):
                     yield (job, pr_resource, pr_resource_version)
                 else:
