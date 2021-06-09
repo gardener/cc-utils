@@ -400,10 +400,11 @@ class ReplicationResultProcessor:
 
         logger.warning(f'Errors occurred whilst replicating pipeline(s): {failed_count=}')
 
-        def should_notify_pipeline_owners(definition_descriptor: DefinitionDescriptor):
-            if definition_descriptor.deploy_status & DeployStatus.SUCCEEDED:
+        def should_notify_pipeline_owners(deploy_result: DeployResult):
+            if deploy_result.deploy_status & DeployStatus.SUCCEEDED:
                 # actually, this codepath should not be hit (we filter before-hand)
-                logger.warning(f'will not notify (no err): {definition_descriptor.pipeline_name=}')
+                pipeline_name = deploy_result.definition_descriptor.pipeline_name
+                logger.warning(f'will not notify (no err): {pipeline_name=}')
                 return False
 
             # if one of those exceptions was raised, presumably, there was either a
@@ -424,7 +425,7 @@ class ReplicationResultProcessor:
                 TypeError,
             )
 
-            if type(definition_descriptor.exception) in ignore_exceptions:
+            if type(deploy_result.definition_descriptor.exception) in ignore_exceptions:
                 return False
             else:
                 return True
@@ -432,9 +433,10 @@ class ReplicationResultProcessor:
         all_notifications_succeeded = True
         for failed_descriptor in failed_descriptors:
             logger.warning(failed_descriptor.definition_descriptor.pipeline_name)
+            failed_descriptor: DeployResult
             # failed_descriptor has type DeployResult - XXX: should rename variable
             if not should_notify_pipeline_owners(
-                definition_descriptor=failed_descriptor.definition_descriptor,
+                deploy_result=failed_descriptor,
             ):
                 logger.warning(
                     'will not notify (likely the error is not on user-side '
