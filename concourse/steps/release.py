@@ -587,7 +587,7 @@ class GitHubReleaseStep(TransactionalStep):
         elif have_cd:
             self.components = [cm.ComponentDescriptor.from_dict(
                 component_descriptor_dict=ci.util.parse_yaml_file(self.component_descriptor_v2_path),
-                validation_mode=cm.ValidationMode.WARN,
+                validation_mode=cm.ValidationMode.FAIL,
             )]
         elif have_ctf:
             self.components = tuple(cnudie.util.component_descriptors_from_ctf_archive(
