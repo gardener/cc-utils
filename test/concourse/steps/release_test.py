@@ -121,7 +121,7 @@ class TestGitHubReleaseStep:
         ctf_path = os.path.join(tmp_path, product.v2.CTF_OUT_DIR_NAME)
         cd_v2 = cm.ComponentDescriptor(
             component=cm.Component(
-                name='a_name',
+                name='test.url/foo/bar',
                 version='1.2.3',
                 repositoryContexts=[],
                 provider=cm.Provider.INTERNAL,
