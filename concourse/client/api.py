@@ -161,6 +161,7 @@ class ConcourseApiBase:
             auth=(AUTH_TOKEN_REQUEST_USER, AUTH_TOKEN_REQUEST_PWD),
             headers={'content-type': 'application/x-www-form-urlencoded'}
         )
+        response.raise_for_status()
         auth_token = response.json()[self.AUTH_TOKEN_ATTRIBUTE_NAME]
         self.request_builder = AuthenticatedRequestBuilder(
             auth_token=auth_token,
