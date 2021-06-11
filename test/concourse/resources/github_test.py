@@ -17,7 +17,7 @@ class TestGithubMakoResource:
         def _cfg_set(
             gh_config_name="foo",
             ssh_url='made-up-ssh-url',
-            http_url='made-up-http-url',
+            http_url='https://test.foo',
             api_url='made-up-api-url',
             disable_tls_validation=False,
             webhook_token='made-up-token',
@@ -58,10 +58,12 @@ class TestGithubMakoResource:
             branch='master',
             include_paths=['path/to/include'],
             exclude_paths=['path/to/exclude'],
+            hostname='test.foo'
         ):
             return RepositoryConfig(raw_dict={
                 'path': path,
                 'branch': branch,
+                'hostname': hostname,
                 'trigger_paths': {
                     'include': include_paths,
                     'exclude': exclude_paths,
