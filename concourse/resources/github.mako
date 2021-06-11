@@ -15,10 +15,10 @@ from model.github import Protocol
 
 if github_cfg_name := repo_cfg.cfg_name():
   github_cfg = cfg_set.github(cfg_name=github_cfg_name)
-elif repo_hostname := repo_cfg.repo_hostname():
-  github_cfg = ccc.github.github_cfg_for_hostname(repo_cfg.repo_hostname(), require_labels=None)
-else:
+elif cfg_set.github().matches_hostname(repo_cfg.repo_hostname()):
   github_cfg = cfg_set.github()
+else:
+  github_cfg = ccc.github.github_cfg_for_hostname(repo_cfg.repo_hostname(), require_labels=None)
 
 credentials = github_cfg.credentials()
 disable_tls_validation = not github_cfg.tls_validation()
