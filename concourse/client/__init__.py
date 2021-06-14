@@ -20,7 +20,7 @@ import functools
 import ci.util
 
 from .api import ConcourseApiFactory
-from model.concourse import ConcourseConfig, ConcourseUAMConfig
+from model.concourse import ConcourseConfig, ConcourseUAMConfig, ConcourseUAM
 
 
 '''
@@ -65,6 +65,32 @@ def from_cfg(
     team_name = concourse_team.teamname()
     username = concourse_team.username()
     password = concourse_team.password()
+
+    concourse_api = ConcourseApiFactory.create_api(
+        base_url=base_url,
+        team_name=team_name,
+        verify_ssl=verify_ssl,
+        concourse_api_version=concourse_api_version,
+    )
+
+    concourse_api.login(
+        username=username,
+        passwd=password,
+    )
+    return concourse_api
+
+
+@functools.lru_cache()
+@ensure_annotations
+def from_local_cc_user(
+    base_url: str,
+    local_cc_user: ConcourseUAM,
+    verify_ssl=True,
+    concourse_api_version=None,
+):
+    team_name = local_cc_user.name()
+    username = local_cc_user.username()
+    password = local_cc_user.password()
 
     concourse_api = ConcourseApiFactory.create_api(
         base_url=base_url,

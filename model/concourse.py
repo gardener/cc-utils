@@ -173,41 +173,19 @@ class ConcourseUAM(NamedModelElement):
 
 
 class ConcourseUAMSet(NamedModelElement):
-    def concourse_uams(self) -> typing.Set[ConcourseUAM]:
-        return {name: ConcourseUAM(name=name, raw_dict=raw) for name, raw in self.raw.items()}
+    def concourse_uams(self) -> typing.List[ConcourseUAM]:
+        return [ConcourseUAM(name=name, raw_dict=raw) for name, raw in self.raw.items()]
 
-
-class ConcourseUAMConfig(NamedModelElement):
-    def teams(self):
-        return [
-            ConcourseTeam(name=name, raw_dict=raw)
-            for name, raw in self.raw.get('teams').items()
-        ]
-
-    def team(self, team_name: str):
-        for team in self.teams():
-            if team.teamname() == team_name:
-                return team
+    def concourse_uam(self, uam_name):
+        for uam in self.concourse_uams():
+            if uam.name() == uam_name:
+                return uam
         raise ValueError(
-            f"Unknown team '{team_name}'; known teams: {', '.join(self.raw.get('teams').keys())}"
+            f"Unknown uam '{uam}'; known uams: {', '.join(self.raw.keys())}"
         )
 
-    def main_team(self):
-        return self.team('main')
-
-    def _required_attributes(self):
-        yield from super()._required_attributes()
-        yield from [
-            'teams',
-        ]
-
-    def validate(self):
-        # We check for the existence of the 'main'-team as it is the only team that is *required* to
-        # exist for any concourse server.
-        if not self.main_team():
-            raise ModelValidationError("No team 'main' defined.")
-        # explicitly validate main team
-        self.main_team().validate()
+    def main_team_uam(self):
+        return self.concourse_uam('main')
 
 
 class ConcourseTeam(NamedModelElement):
@@ -274,6 +252,39 @@ class ConcourseTeam(NamedModelElement):
                     t=github_org_and_team
                 )
             )
+
+
+class ConcourseUAMConfig(NamedModelElement):
+    def teams(self) -> typing.List[ConcourseTeam]:
+        return [
+            ConcourseTeam(name=name, raw_dict=raw)
+            for name, raw in self.raw.get('teams').items()
+        ]
+
+    def team(self, team_name: str):
+        for team in self.teams():
+            if team.teamname() == team_name:
+                return team
+        raise ValueError(
+            f"Unknown team '{team_name}'; known teams: {', '.join(self.raw.get('teams').keys())}"
+        )
+
+    def main_team(self):
+        return self.team('main')
+
+    def _required_attributes(self):
+        yield from super()._required_attributes()
+        yield from [
+            'teams',
+        ]
+
+    def validate(self):
+        # We check for the existence of the 'main'-team as it is the only team that is *required* to
+        # exist for any concourse server.
+        if not self.main_team():
+            raise ModelValidationError("No team 'main' defined.")
+        # explicitly validate main team
+        self.main_team().validate()
 
 
 class PipelineCleanupPolicy(Enum):

@@ -24,7 +24,6 @@ from ensure import ensure_annotations
 import ci.log
 from concourse.client.model import ResourceType
 from http_requests import AuthenticatedRequestBuilder
-from model.concourse import ConcourseTeam
 
 from concourse.client.model import (
     Build,
@@ -381,25 +380,30 @@ class ConcourseApiBase:
         url = self.routes.job(pipeline_name, job_name)
         return ConcourseJob(self._get(url))
 
-    def set_team(self, concourse_team: ConcourseTeam):
-        role = concourse_team.role() if concourse_team.role() else "member"
+    def set_team(
+        self,
+        team_name: str,
+        username: str,
+        role: str='member',
+        github_auth_team: str=None,
+    ):
         body = {
             "auth": {
                 role: {
                     "users": [
-                        "local:" + concourse_team.username()
+                        "local:" + username,
                     ]
                 }
             }
         }
-        if concourse_team.has_github_oauth_credentials():
+        if github_auth_team:
             body["auth"][role].update({
                 "groups": [
-                    "github:" + concourse_team.github_auth_team()
+                    "github:" + github_auth_team,
                 ]
             })
 
-        team_url = self.routes.team_url(concourse_team.teamname())
+        team_url = self.routes.team_url(team_name)
         self._put(team_url, json.dumps(body))
 
 
