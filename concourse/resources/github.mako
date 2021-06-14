@@ -18,7 +18,7 @@ if github_cfg_name := repo_cfg.cfg_name():
 elif cfg_set.github().matches_hostname(repo_cfg.repo_hostname()):
   github_cfg = cfg_set.github()
 else:
-  github_cfg = ccc.github.github_cfg_for_hostname(repo_cfg.repo_hostname(), require_labels=None)
+  github_cfg = ccc.github.github_cfg_for_hostname(repo_cfg.repo_hostname(), require_labels=('ci',))
 
 credentials = github_cfg.credentials()
 disable_tls_validation = not github_cfg.tls_validation()
