@@ -15,6 +15,7 @@
 
 from enum import Enum
 import typing
+import re
 
 import reutil
 
@@ -322,6 +323,8 @@ class SecretsRepo(ModelBase):
 
 
 def cfg_name_from_team(team_name):
+    team_name = re.sub('(.)([A-Z][a-z]+)', r'\1-\2', team_name)
+    team_name = re.sub('([a-z0-9])([A-Z])', r'\1-\2', team_name).lower()
     return f'cc-{team_name}-config'
 
 
