@@ -43,6 +43,31 @@ Other types defined in this module are not intended to be instantiated by users.
 '''
 
 
+
+@ensure_annotations
+def from_parameters(
+    base_url: str,
+    password: str,
+    team_name: str,
+    username: str,
+    verify_ssl=True,
+    concourse_api_version=None,
+):
+
+    concourse_api = ConcourseApiFactory.create_api(
+        base_url=base_url,
+        team_name=team_name,
+        verify_ssl=verify_ssl,
+        concourse_api_version=concourse_api_version,
+    )
+
+    concourse_api.login(
+        username=username,
+        passwd=password,
+    )
+    return concourse_api
+
+
 @functools.lru_cache()
 @ensure_annotations
 def from_cfg(
@@ -66,18 +91,14 @@ def from_cfg(
     username = concourse_team.username()
     password = concourse_team.password()
 
-    concourse_api = ConcourseApiFactory.create_api(
+    return from_parameters(
         base_url=base_url,
+        password=password,
         team_name=team_name,
+        username=username,
         verify_ssl=verify_ssl,
         concourse_api_version=concourse_api_version,
     )
-
-    concourse_api.login(
-        username=username,
-        passwd=password,
-    )
-    return concourse_api
 
 
 @functools.lru_cache()
@@ -88,19 +109,12 @@ def from_local_cc_user(
     verify_ssl=True,
     concourse_api_version=None,
 ):
-    team_name = local_cc_user.name()
-    username = local_cc_user.username()
-    password = local_cc_user.password()
 
-    concourse_api = ConcourseApiFactory.create_api(
+    return from_parameters(
         base_url=base_url,
-        team_name=team_name,
+        password=local_cc_user.password(),
+        team_name=local_cc_user.name(),
+        username=local_cc_user.username(),
         verify_ssl=verify_ssl,
         concourse_api_version=concourse_api_version,
     )
-
-    concourse_api.login(
-        username=username,
-        passwd=password,
-    )
-    return concourse_api
