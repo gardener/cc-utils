@@ -43,7 +43,6 @@ Other types defined in this module are not intended to be instantiated by users.
 '''
 
 
-
 @ensure_annotations
 def from_parameters(
     base_url: str,
