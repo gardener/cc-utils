@@ -10,7 +10,7 @@ def main():
     fh = open(sys.argv[1])
   else:
     fh = sys.stdin
-  json.dump(yaml.load(fh, Loader=yaml.SafeLoader), sys.stdout)
+  json.dump(yaml.load(fh, Loader=yaml.SafeLoader), sys.stdout, default=str)
 
 
 if __name__ == '__main__':
