@@ -47,7 +47,7 @@ def get_secret_cfg_from_env_if_available(
 
         return secret
     else:
-        raise RuntimeError('Secret environment variables not found')
+        raise ValueError('Secret environment variables not found')
 
 
 class SecretsServerClient:
