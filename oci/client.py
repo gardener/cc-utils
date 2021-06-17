@@ -530,7 +530,7 @@ class Client:
         return om.OciBlobRef(
             digest=headers.get('Docker-Content-Digest', None),
             mediaType=headers['Content-Type'],
-            size=int(headers['Content-Length']),
+            size=int(headers.get('Content-Length', 0)), # TODO: temp fix since content-length is missing sometimes
         )
 
     def to_digest_hash(self, image_reference: str):
