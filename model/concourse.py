@@ -328,6 +328,10 @@ def cfg_name_from_team(team_name):
     return f'cc-{team_name}-config'
 
 
+def secret_cfg_name_for_team(team_name):
+    return f'{team_name}_cfg'
+
+
 class JobMapping(NamedModelElement):
     def team_name(self) -> str:
         # todo: use `name` attr for that (thus enforce unique mappings)
@@ -377,6 +381,12 @@ class JobMapping(NamedModelElement):
             k8s secret name used for replication
         '''
         return cfg_name_from_team(self.team_name())
+
+    def target_secret_cfg_name(self):
+        '''
+            name of the config in the target k8s secret
+        '''
+        return secret_cfg_name_for_team(self.team_name())
 
 
 class GithubOrganisationConfig(NamedModelElement):

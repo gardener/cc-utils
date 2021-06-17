@@ -29,6 +29,7 @@ from ci.util import urljoin
 import model
 import model.concourse
 import model.secret
+import model.secrets_server
 
 
 ci.log.configure_default_logging()
@@ -45,6 +46,8 @@ def get_secret_cfg_from_env_if_available(
         secret = model.secret.SecretData(key=secret_key, cipher_algorithm=cipher_algorithm)
 
         return secret
+    else:
+        raise RuntimeError('Secret environment variables not found')
 
 
 class SecretsServerClient:
@@ -83,13 +86,16 @@ class SecretsServerClient:
             raise ValueError('secrets-server not accessible (are you running in ci-cluster?)')
         # also hardcode default url path (usually injected via env)
 
-        # secret will be set when env vars are set
+        # secret will be read from environemt variables
         secret = get_secret_cfg_from_env_if_available()
-        if secret:
+        if current_team := os.environ.get('CONCOURSE_CURRENT_TEAM'):
+            default_secrets_path = model.secrets_server._org_based_secret_url_path(
+                target_secret_name=model.concourse.cfg_name_from_team(current_team),
+                secret_cfg_name=model.concourse.secret_cfg_name_for_team(current_team),
+            )
+        else:
             # if secret env vars are set we want to use encryption
             default_secrets_path = 'encrypted-concourse-secrets/encrypted_concourse_cfg'
-        else:
-            default_secrets_path = 'concourse-secrets/concourse_cfg'
 
         return SecretsServerClient(
             endpoint_url=f'http://{default_secrets_server_hostname}',

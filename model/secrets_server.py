@@ -49,6 +49,10 @@ class SecretsServerConfig(NamedModelElement):
         return SecretsServerSecrets(raw_dict=self.raw['secrets'])
 
 
+def _org_based_secret_url_path(target_secret_name, secret_cfg_name):
+    return f'{target_secret_name}/{secret_cfg_name}'
+
+
 class SecretsServerSecrets(ModelBase):
     def _required_attributes(self):
         return {
@@ -87,9 +91,10 @@ class SecretsServerSecrets(ModelBase):
         '''
         if secret_cfg:
             if job_mapping.secrets_repo():
-                # FIXME enable org based secret path as soon as org secret repos are commonly used
-                return self.encrypted_concourse_cfg_name()
-                # return f'{job_mapping.target_secret_name()}/{job_mapping.team_name()}_cfg'
+                return _org_based_secret_url_path(
+                    target_secret_name=job_mapping.target_secret_name(),
+                    secret_cfg_name=job_mapping.target_secret_cfg_name(),
+                )
             else:
                 return self.encrypted_concourse_cfg_name()
         else:

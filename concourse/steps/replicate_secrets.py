@@ -22,6 +22,7 @@ def replicate_secrets(
     team_name: str,
     target_secret_name: str,
     target_secret_namespace: str,
+    target_secret_cfg_name: str,
 ):
     cfg_factory: model.ConfigFactory = model.ConfigFactory.from_cfg_dir(
         cfg_dir=os.environ.get(cfg_dir_env_name),
@@ -42,6 +43,6 @@ def replicate_secrets(
     # FIXME remove hardcoded name
     secrets_helper.put_secret(
         name=target_secret_name,
-        raw_data={f'{team_name}_cfg': encoded_cipher_data},
+        raw_data={target_secret_cfg_name: encoded_cipher_data},
         namespace=target_secret_namespace,
     )

@@ -11,6 +11,7 @@ target_secret_namespace = extra_args['target_secret_namespace']
 secrets_cfg_name = job_mapping.secret_cfg()
 team_name = job_mapping.team_name()
 target_secret_name = job_mapping.target_secret_name()
+target_secret_cfg_name = job_mapping.target_secret_cfg_name()
 
 %>
 
@@ -26,6 +27,7 @@ replicate_secrets(
   team_name='${team_name}',
   target_secret_name='${target_secret_name}',
   target_secret_namespace='${target_secret_namespace}',
+  target_secret_cfg_name='${target_secret_cfg_name}',
 )
 
 </%def>
