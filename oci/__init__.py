@@ -127,9 +127,10 @@ def replicate_blobs(
 
     Note that the uploaded artifact must be finalised after the upload by a "manifest-put".
     '''
+    blob_overwrites = {k.digest:v for (k,v) in blob_overwrites.items()} # TODO: not working for bytes or BinaryIO Type
     def replicate_blob(blob: om.OciBlobRef) -> om.OciBlobRef:
-        if (blob_overwrite_bytes := blob_overwrites.get(blob)):
-            logger.info(f'overwriting {blob=}')
+        if (blob_overwrite_bytes := blob_overwrites.get(blob.digest)):
+            logger.info(f'Replicate with overwriting {blob=}')
 
             if hasattr(blob_overwrite_bytes, 'read'):
                 digest = hashlib.sha256()
