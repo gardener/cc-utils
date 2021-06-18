@@ -13,12 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
+import ci.log
 from model.base import (
     NamedModelElement,
     ModelBase,
 )
 import model.concourse
 import model.secret
+
+
+logger = logging.getLogger(__name__)
+ci.log.configure_default_logging()
 
 
 class SecretsServerConfig(NamedModelElement):
@@ -89,7 +96,7 @@ class SecretsServerSecrets(ModelBase):
             used to retrieve the secret url path for given config in default template
         '''
         if not secret_cfg:
-            raise ValueError(f'Secret config is required {secret_cfg=}')
+            raise logger.warning(f'Secret config is required {secret_cfg=}')
 
         if job_mapping.secrets_repo():
             return _org_based_secret_url_path(
