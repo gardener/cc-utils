@@ -12,9 +12,9 @@ dataclasses-json
 deepmerge
 deprecated<2.0.0
 dockerfile-parse
-docutils<0.16.0
+docutils<0.16.0,>=0.15
 elasticsearch<8.0.0,>=7
-ensure<1.0.0
+ensure<1.0.0,>=0.8
 flake8==3.8.0a2
 gardener-component-model==v0.0.42
 gardener-oci
