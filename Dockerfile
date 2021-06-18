@@ -23,8 +23,6 @@ RUN pip3 install --upgrade \
   gardener-cicd-whd \
   gardenlinux \
   pycryptodome \
-&& pip3 uninstall -y gardener-component-model \
-&& pip3 install gardener-component-model \
 && curl -L \
   https://get.helm.sh/helm-${HELM_V3_VERSION}-linux-amd64.tar.gz | tar xz -C /tmp --strip=1 \
 && mv /tmp/helm /bin/helm3 \
