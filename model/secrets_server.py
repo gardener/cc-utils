@@ -84,18 +84,18 @@ class SecretsServerSecrets(ModelBase):
     def secret_url_path(
         self,
         job_mapping: model.concourse.JobMapping,
-        secret_cfg: typing.Optional[model.secret.Secret],
+        secret_cfg: model.secret.Secret,
     ):
         '''
             used to retrieve the secret url path for given config in default template
         '''
-        if secret_cfg:
-            if job_mapping.secrets_repo():
-                return _org_based_secret_url_path(
-                    target_secret_name=job_mapping.target_secret_name(),
-                    secret_cfg_name=job_mapping.target_secret_cfg_name(),
-                )
-            else:
-                return self.encrypted_concourse_cfg_name()
+        if not secret_cfg:
+            raise ValueError(f'Secret config is required {secret_cfg=}')
+
+        if job_mapping.secrets_repo():
+            return _org_based_secret_url_path(
+                target_secret_name=job_mapping.target_secret_name(),
+                secret_cfg_name=job_mapping.target_secret_cfg_name(),
+            )
         else:
-            return self.concourse_cfg_name()
+            return self.encrypted_concourse_cfg_name()
