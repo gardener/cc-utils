@@ -11,7 +11,8 @@ fi
 
 src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
 
-pip3 install --upgrade -r "${src_dir}/requirements.txt"
+# pip3 install --upgrade -r "${src_dir}/requirements.txt"
+pip3 install --upgrade dacite==1.6.0
 
 if PYTHONPATH="${src_dir}:${PYTHONPATH:-}" pytest "${src_dir}" "${@}"; then
     echo 'Unittest executions succeeded'
