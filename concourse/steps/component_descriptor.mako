@@ -15,6 +15,8 @@ main_repo_path_env_var = main_repo.logical_name().replace('-', '_').upper() + '_
 other_repos = [r for r in job_variant.repositories() if not r.is_main_repo()]
 ctx_repository_base_url = descriptor_trait.ctx_repository_base_url()
 
+snapshot_ctx_repository_base_url = descriptor_trait.snapshot_ctx_repository_base_url() or ""
+
 # label main repo as main
 if not 'cloud.gardener/cicd/source' in [label.name for label in main_repo_labels]:
   main_repo_labels.append(
@@ -52,6 +54,8 @@ logger = logging.getLogger('step.component_descriptor')
 
 ${step_lib('component_descriptor')}
 ${step_lib('component_descriptor_util')}
+
+snapshot_ctx_repository_base_url="${snapshot_ctx_repository_base_url}"
 
 # retrieve effective version
 version_file_path = os.path.join(
@@ -224,19 +228,40 @@ elif have_cd:
     ci.util.parse_yaml_file(v2_outfile)
   )
   print(f'found component-descriptor (v2) at {v2_outfile=}')
-elif have_ctf:
-  subprocess.run(
-    [
+  if snapshot_ctx_repository_base_url:
+    snapshot_descriptor = cm.ComponentDescriptor.from_dict(
+      ci.util.parse_yaml_file(v2_outfile)
+    )
+    if ctx_repository_base_url != snapshot_ctx_repository_base_url:
+      repo_ctx = cm.RepositoryContext(
+        baseUrl=snapshot_ctx_repository_base_url,
+        type=cm.AccessType.OCI_REGISTRY,
+      )
+      snapshot_descriptor.component.repositoryContexts.append(repo_ctx)
+
+    product.v2.upload_component_descriptor_v2_to_oci_registry(
+      component_descriptor_v2=snapshot_descriptor,
+    )
+
+elif have_ctf :
+  if snapshot_ctx_repository_base_url:
+    subprocess_args = [
       'component-cli',
       'ctf',
       'push',
       ctf_out_path,
-    ],
-    check=True,
-    env=subproc_env,
-  )
-  print(f'processed ctf-archive at {ctf_out_path=} - exiting')
-  # XXX TODO: also calculate bom-diff!
+    ]
+    if ctx_repository_base_url != snapshot_ctx_repository_base_url:
+      subprocess_args.extend(['--repo-ctx', snapshot_ctx_repository_base_url])
+
+    subprocess.run(
+      subprocess_args,
+      check=True,
+      env=subproc_env,
+    )
+    print(f'processed ctf-archive at {ctf_out_path=} - exiting')
+    # XXX TODO: also calculate bom-diff!
+
   exit(0)
 
 # determine "bom-diff" (changed component references)

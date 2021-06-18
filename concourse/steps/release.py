@@ -645,6 +645,14 @@ class GitHubReleaseStep(TransactionalStep):
             product.v2.upload_component_descriptor_v2_to_oci_registry(
                 component_descriptor_v2=component_descriptor_v2,
             )
+        elif os.path.exists(self.ctf_path):
+            logger.info('processing CTF-archive')
+            subprocess.run(
+                [
+                    'component-cli', 'ctf', 'push', self.ctf_path,
+                ],
+                check=True,
+            )
 
         for component_descriptor_v2 in self.components:
             descriptor_str = yaml.dump(

@@ -95,6 +95,16 @@ ATTRIBUTES = (
         '''
     ),
     AttributeSpec.optional(
+        name='snapshot_ctx_repository',
+        type=str,
+        default=None,
+        doc='''
+            the component descriptor context repository cfg name for snapshot-component-descriptors,
+            i.e. component descriptors that are not for release-versions.
+            If not configured, no snapshot-component-descriptor will be published.
+        '''
+    ),
+    AttributeSpec.optional(
         name='component_labels',
         default=[],
         type=typing.List[Label],
@@ -138,6 +148,14 @@ class ComponentDescriptorTrait(Trait):
 
     def validation_policies(self):
         return ()
+
+    def snapshot_ctx_repository(self):
+        if snapshot_ctx_repo_name := self.raw['snapshot_ctx_repository']:
+            return self.cfg_set.ctx_repository(snapshot_ctx_repo_name)
+
+    def snapshot_ctx_repository_base_url(self):
+        if snapshot_repo_cfg := self.snapshot_ctx_repository():
+            return snapshot_repo_cfg.base_url()
 
     def ctx_repository(self) -> model.ctx_repository.CtxRepositoryCfg:
         ctx_repo_name = self.raw.get('ctx_repository')
