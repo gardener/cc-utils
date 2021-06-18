@@ -11,7 +11,7 @@ dacite==1.6.0
 dataclasses-json
 deepmerge
 deprecated<2.0.0,>=1.2
-dockerfile-parse
+dockerfile-parse>=1.2
 docutils<0.16.0,>=0.15
 elasticsearch<8.0.0,>=7.13
 ensure<1.0.0,>=0.8
