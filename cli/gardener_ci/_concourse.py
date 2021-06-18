@@ -126,7 +126,7 @@ def render_pipelines(
     for job_mapping in job_mapping_set.job_mappings().values():
         job_mapping: ccm.JobMapping
 
-        if org and not org in {oc.name() for oc in job_mapping.github_organisations()}:
+        if org and not org in {oc.org_name() for oc in job_mapping.github_organisations()}:
             continue
 
         def_enumerators.append(
