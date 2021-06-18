@@ -55,7 +55,7 @@ def create_mock_component(
     mock_source.find_label.return_value = None
     mock_source.access = gh_access_mock
 
-    ctx_mock = MagicMock(spec=gci.componentmodel.RepositoryContext)
+    ctx_mock = MagicMock(spec=gci.componentmodel.OciRepositoryContext)
     ctx_mock.baseUrl = f'{hostname}/{org_name}/{repo_name}'
 
     mock_component = MagicMock(spec=gci.componentmodel.Component)

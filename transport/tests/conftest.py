@@ -46,7 +46,7 @@ def comp(name='a.b/c/e', version='1.2.3'):
                     name=name,
                     version=version,
                     repositoryContexts=[
-                        cm.RepositoryContext(
+                        cm.OciRepositoryContext(
                             baseUrl='example.com/context',
                             type=cm.AccessType.OCI_REGISTRY,
                         ),

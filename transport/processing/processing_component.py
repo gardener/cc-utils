@@ -106,7 +106,7 @@ class ComponentTool:
                     name=descriptor.component.name,
                     version=descriptor.component.version,
                     repositoryContexts=[
-                        cm.RepositoryContext(
+                        cm.OciRepositoryContext(
                             baseUrl=context_url,
                             type=cm.AccessType.OCI_REGISTRY,
                         ),
