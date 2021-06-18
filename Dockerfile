@@ -11,6 +11,7 @@ COPY VERSION /metadata/VERSION
 
 # XXX backards compatibility (remove eventually)
 ENV PATH /cc/utils/:/cc/utils/bin:$PATH
+ENV HELM_V3_VERSION=v3.1.1
 
 RUN pip3 install --upgrade \
   pip \
@@ -23,7 +24,11 @@ RUN pip3 install --upgrade \
   gardenlinux \
   pycryptodome \
 && pip3 uninstall -y gardener-component-model \
-&& pip3 install gardener-component-model
+&& pip3 install gardener-component-model \
+&& curl -L \
+  https://get.helm.sh/helm-${HELM_V3_VERSION}-linux-amd64.tar.gz | tar xz -C /tmp --strip=1 \
+&& mv /tmp/helm /bin/helm3 \
+&& chmod +x /bin/helm3 \
 
 RUN EFFECTIVE_VERSION="$(cat /metadata/VERSION)" REPO_DIR=/cc/utils \
   /cc/utils/.ci/bump_job_image_version.py
