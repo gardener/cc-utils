@@ -96,7 +96,7 @@ class SecretsServerSecrets(ModelBase):
             used to retrieve the secret url path for given config in default template
         '''
         if not secret_cfg:
-            raise logger.warning(f'Secret config is required {secret_cfg=}')
+            logger.warning(f'Secret config is required {secret_cfg=}')
 
         if job_mapping.secrets_repo():
             return _org_based_secret_url_path(
