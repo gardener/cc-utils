@@ -19,7 +19,6 @@ from model.base import (
 )
 import model.concourse
 import model.secret
-import typing
 
 
 class SecretsServerConfig(NamedModelElement):
