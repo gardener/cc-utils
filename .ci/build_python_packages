@@ -23,6 +23,7 @@ cd $repo_dir
 
 # install build-only dependencies (no need to include in image)
 pip3 install --upgrade pip wheel setuptools
+pip3 uninstall gardener-cicd-cli gardener-cicd-libs gardener-cicd-base
 
 # build into "${repo_dir}/dist"
 python3 "${repo_dir}/setup.oci.py" sdist bdist_wheel
