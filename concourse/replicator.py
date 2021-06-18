@@ -205,9 +205,9 @@ class DeployResult:
     error_details: str = None
 
     def ok(self):
-        if self.deploy_status in (
-            DeployStatus.SUCCEEDED, DeployStatus.SKIPPED, DeployStatus.CREATED
-        ):
+        if self.deploy_status & DeployStatus.SUCCEEDED:
+            return True
+        elif self.deploy_status is DeployStatus.SKIPPED:
             return True
         elif self.deploy_status is DeployStatus.FAILED:
             return False
