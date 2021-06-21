@@ -1,4 +1,4 @@
-dacite==1.4.0 # bug in 1.5.0
+dacite==1.6.0
 deprecated
 python-dateutil
 www-authenticate

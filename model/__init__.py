@@ -26,6 +26,7 @@ from ci.util import (
 
 dc = dataclasses.dataclass
 empty_list = dataclasses.field(default_factory=list)
+empty_tuple = dataclasses.field(default_factory=tuple)
 
 '''
 Configuration model and retrieval handling.
@@ -69,7 +70,7 @@ class ConfigType:
     represents a configuration type (used for serialisation and deserialisation)
     '''
     model: ConfigTypeModel
-    src: typing.Tuple[typing.Union[LocalFileCfgSrc, GithubRepoFileSrc]] = ()
+    src: typing.Tuple[typing.Union[LocalFileCfgSrc, GithubRepoFileSrc], ...] = empty_tuple
 
     def sources(self):
         return self.src
