@@ -169,7 +169,7 @@ class ConcourseUAM(NamedModelElement):
         return [
             'local_user',
             'role',
-            'git_auth_teams',
+            'git_auth_team',
         ]
 
 
@@ -367,7 +367,7 @@ class JobMapping(NamedModelElement):
         return [
             'secret_cfg',
             'secrets_repo',
-            'concourse_uams',
+            'concourse_uam',
         ]
 
     def _defaults_dict(self):
