@@ -17,6 +17,8 @@ from model.base import (
     NamedModelElement,
 )
 
+import gci.componentmodel as cm
+
 
 class CtxRepositoryCfg(NamedModelElement):
     '''
@@ -26,8 +28,16 @@ class CtxRepositoryCfg(NamedModelElement):
     def base_url(self):
         return self.raw.get('base_url')
 
+    def component_name_mapping(self) -> cm.OciComponentNameMapping:
+        return cm.OciComponentNameMapping(
+            self.raw.get('component_name_mapping', cm.OciComponentNameMapping.URL_PATH)
+        )
+
     def description(self):
         return self.raw.get('description', '<no description available>')
 
     def _required_attributes(self):
         return 'base_url',
+
+    def _optional_attributes(self):
+        return 'component_name_mapping',
