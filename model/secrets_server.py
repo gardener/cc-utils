@@ -48,6 +48,9 @@ class SecretsServerConfig(NamedModelElement):
             ns=self.namespace(),
         )
 
+    def node_selector(self):
+        return self.raw.get('node_selector')
+
     def kubernetes_cluster_config(self):
         return self.raw.get('kubernetes_cluster_config')
 
