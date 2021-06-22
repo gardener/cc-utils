@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import base64
+import ensure
 import json
 import logging
 import os
@@ -170,13 +171,15 @@ def _decrypt_cipher_text(encrypted_cipher_text: bytes, secret: model.secret.Secr
     )
 
 
+@ensure.ensure_annotations
 def encrypt_data(
-    secret: model.secret.Secret,
+    key: bytes,
+    cipher_algorithm: str,
     serialized_secret_data: bytes,
 ) -> bytes:
 
-    if (algorithm := secret.cipher_algorithm()) is model.secret.Cipher.AES_ECB:
-        secret_key = base64.b64decode(secret.key())
+    if cipher_algorithm is model.secret.Cipher.AES_ECB.value:
+        secret_key = base64.b64decode(key)
         cipher = AES.new(secret_key, AES.MODE_ECB)
         cipher_text = cipher.encrypt(
             Crypto.Util.Padding.pad(
@@ -185,7 +188,7 @@ def encrypt_data(
             )
         )
     else:
-        logger.error(f'cipher algorithm defined is not supported. {algorithm}')
-        raise NotImplementedError(algorithm)
+        logger.error(f'cipher algorithm defined is not supported. {cipher_algorithm}')
+        raise NotImplementedError(cipher_algorithm)
 
     return cipher_text

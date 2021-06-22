@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 def replicate_secrets(
     cfg_dir_env_name: str,
     kubeconfig: typing.Dict,
-    secrets_cfg_name: str,
+    secret_key: str,
+    secret_cipher_algorithm: str,
     team_name: str,
     target_secret_name: str,
     target_secret_namespace: str,
@@ -27,13 +28,13 @@ def replicate_secrets(
     cfg_factory: model.ConfigFactory = model.ConfigFactory.from_cfg_dir(
         cfg_dir=os.environ.get(cfg_dir_env_name),
     )
-    secret = cfg_factory.secret(secrets_cfg_name)
 
     kube_ctx = kube.ctx.Ctx(kubeconfig_dict=kubeconfig)
     logger.info(f'deploying secret on cluster {kube_ctx.kubeconfig.host}')
     secrets_helper = kube_ctx.secret_helper()
     encrypted_cipher_data = ccc.secrets_server.encrypt_data(
-        secret=secret,
+        key=secret_key.encode('utf-8'),
+        cipher_algorithm=secret_cipher_algorithm,
         serialized_secret_data=cfg_factory._serialise().encode('utf-8')
     )
 
