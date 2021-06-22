@@ -178,7 +178,7 @@ def encrypt_data(
     serialized_secret_data: bytes,
 ) -> bytes:
 
-    if cipher_algorithm is model.secret.Cipher.AES_ECB.value:
+    if model.secret.Cipher(cipher_algorithm) is model.secret.Cipher.AES_ECB:
         secret_key = base64.b64decode(key)
         cipher = AES.new(secret_key, AES.MODE_ECB)
         cipher_text = cipher.encrypt(
