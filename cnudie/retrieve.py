@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 def component_descriptor(
     name: str,
     version: str,
-    ctx_repo_url: str,
+    ctx_repo_url: str=None,
+    ctx_repo: cm.RepositoryContext=None,
     delivery_client: delivery.client.DeliveryServiceClient=None,
     cache_dir: str=None,
     validation_mode: cm.ValidationMode=cm.ValidationMode.NONE,
@@ -24,10 +25,25 @@ def component_descriptor(
     retrieves the requested, deserialised component-descriptor, preferring delivery-service,
     with a fallback to the underlying oci-registry
     '''
+    if not (bool(ctx_repo_url) ^ bool(ctx_repo)):
+        raise ValueError('exactly one of ctx_repo, ctx_repo_url must be passed')
+
+    if ctx_repo_url:
+        logger.warning('passing ctx_repo_url is deprecated - pass ctx_repo')
+        ctx_repo = cm.OciRepositoryContext(
+            baseUrl=ctx_repo_url,
+            componentNameMapping=cm.OciComponentNameMapping.URL_PATH,
+        )
+
+    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+        raise NotImplementedError(ctx_repo)
+
+    ctx_repo: cm.OciRepositoryContext
+
     return _component_descriptor(
         name=name,
         version=version,
-        ctx_repo_url=ctx_repo_url,
+        ctx_repo=ctx_repo,
         delivery_client=delivery_client,
         cache_dir=cache_dir,
         validation_mode=validation_mode,
@@ -72,7 +88,7 @@ def components(
             resolved_component = component_descriptor(
                 name=component_ref.componentName,
                 version=component_ref.version,
-                ctx_repo_url=component.current_repository_ctx().baseUrl,
+                ctx_repo=component.current_repository_ctx(),
                 delivery_client=delivery_client,
                 cache_dir=cache_dir,
                 validation_mode=validation_mode,
@@ -127,13 +143,20 @@ def component_diff(
 def _component_descriptor(
     name: str,
     version: str,
-    ctx_repo_url: str,
+    ctx_repo: cm.RepositoryContext,
     delivery_client: delivery.client.DeliveryServiceClient=None,
     cache_dir=None,
     validation_mode=cm.ValidationMode.NONE,
 ):
     if not delivery_client:
         delivery_client = ccc.delivery.default_client_if_available()
+
+    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+        raise NotImplementedError(ctx_repo)
+
+    ctx_repo: cm.OciRepositoryContext
+
+    ctx_repo_url = ctx_repo.baseUrl
 
     # delivery-client may still be None
     if delivery_client:

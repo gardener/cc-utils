@@ -12,6 +12,7 @@
 <%
 from makoutil import indent_func
 from concourse.steps import step_lib
+import gci.componentmodel as cm
 # xxx: for now, assume all repositories are from same github
 default_github_cfg_name = cfg_set.github().name()
 main_repo_hostname = job_variant.main_repository().repo_hostname()
@@ -28,13 +29,17 @@ if job_variant.has_trait('component_descriptor'):
 else:
   component_name = None # todo: fallback to main repository
 if (component_descriptor_trait := job_variant.trait('component_descriptor', None)):
-  ctx_repo_url = component_descriptor_trait.ctx_repository_base_url()
+  ctx_repo = component_descriptor_trait.ctx_repository()
 else:
   # fallback to default ctx-repo
-  ctx_repo_url = cfg_set.ctx_repository().base_url()
+  ctx_repo = cm.OciRepositoryContext(
+    baseUrl=cfg_set.ctx_repository().base_url(),
+  )
 %>
 import sys
 import os
+
+import gci.componentmodel as cm
 
 import ccc.github
 import concourse.client
@@ -176,16 +181,20 @@ if not email_cfg.get('mail_body'):
         task_name='${job_step.name}',
     )
 
+ctx_repo = cm.OciRepositoryContext(
+  baseUrl='${ctx_repo.baseUrl}',
+)
+
 ## Finally, determine recipients for all component names gathered
 def retr_component(component_name: str):
   greatest_version = product.v2.greatest_component_version(
     component_name=component_name,
-    ctx_repo_base_url='${ctx_repo_url}',
+    ctx_repo=ctx_repo,
   )
   comp_descr = cnudie.retrieve.component_descriptor(
     name=component_name,
     version=greatest_version,
-    ctx_repo_url='${ctx_repo_url}',
+    ctx_repo=ctx_repo,
   )
   return comp_descr.component
 

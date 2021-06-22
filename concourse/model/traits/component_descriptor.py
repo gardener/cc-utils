@@ -20,6 +20,7 @@ import dacite
 
 from ci.util import not_none
 from gci.componentmodel import Label
+import gci.componentmodel as cm
 
 from concourse.model.job import (
     JobVariant,
@@ -157,24 +158,32 @@ class ComponentDescriptorTrait(Trait):
         if snapshot_repo_cfg := self.snapshot_ctx_repository():
             return snapshot_repo_cfg.base_url()
 
-    def ctx_repository(self) -> model.ctx_repository.CtxRepositoryCfg:
+    def ctx_repository(self) -> cm.OciRepositoryContext:
         ctx_repo_name = self.raw.get('ctx_repository')
         # XXX hack for unittests
         if not self.cfg_set:
             return None
         if ctx_repo_name:
-            return self.cfg_set.ctx_repository(ctx_repo_name)
-        return self.cfg_set.ctx_repository()
+            ctx_repo_cfg = self.cfg_set.ctx_repository(ctx_repo_name)
+        else:
+            ctx_repo_cfg = self.cfg_set.ctx_repository()
+
+        ctx_repo_cfg: model.ctx_repository.CtxRepositoryCfg
+
+        return cm.OciRepositoryContext(
+            baseUrl=ctx_repo_cfg.base_url(),
+            componentNameMapping=ctx_repo_cfg.component_name_mapping(),
+        )
 
     def ctx_repository_base_url(self):
-        ctx_repo_cfg = self.ctx_repository()
+        ctx_repo = self.ctx_repository()
         # XXX hack for unittsts
-        if ctx_repo_cfg is None:
+        if ctx_repo is None:
             return None
 
         # use default ctx_repository_base_url, if not explicitly configured
         if not (base_url := self.raw.get('ctx_repository_base_url')):
-            return ctx_repo_cfg.base_url()
+            return ctx_repo.baseUrl
         else:
             # XXX warn or even forbid, at least if different from ctx-repo-cfg?
             return base_url

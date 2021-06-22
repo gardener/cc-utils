@@ -9,6 +9,7 @@ import enum
 import hashlib
 import io
 import json
+import logging
 import os
 import shutil
 import tempfile
@@ -26,6 +27,8 @@ import ci.util
 import oci.model as om
 import oci.client as oc
 import version
+
+logger = logging.getLogger(__name__)
 
 
 CTF_OUT_DIR_NAME = 'cnudie-transport-format.out'
@@ -58,10 +61,18 @@ def ensure_is_v2(
         raise RuntimeError(f'unsupported component-descriptor-version: {schema_version=}')
 
 
-def _target_oci_repository_from_component_name(component_name: str, ctx_repo_base_url: str):
+def _target_oci_repository_from_component_name(
+    component_name: str,
+    ctx_repo: cm.RepositoryContext,
+):
+    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+        raise NotImplementedError(ctx_repo)
+
+    ctx_repo: cm.OciRepositoryContext
+
     component_name = _normalise_component_name(component_name)
     return ci.util.urljoin(
-        ctx_repo_base_url,
+        ctx_repo.baseUrl,
         'component-descriptors',
         component_name,
     )
@@ -84,11 +95,10 @@ def _target_oci_ref(
 
     # last ctx-repo is target-repository
     last_ctx_repo = component.repositoryContexts[-1]
-    base_url = last_ctx_repo.baseUrl
 
     repository = _target_oci_repository_from_component_name(
         component_name=component_name,
-        ctx_repo_base_url=base_url,
+        ctx_repo=last_ctx_repo,
     )
 
     return f'{repository}:{component_version}'
@@ -97,12 +107,17 @@ def _target_oci_ref(
 def _target_oci_ref_from_ctx_base_url(
     component_name: str,
     component_version: str,
-    ctx_repo_base_url: str,
+    ctx_repo: cm.RepositoryContext,
 ):
+    if not isinstance(ctx_repo, cm.RepositoryContext):
+        raise NotImplementedError(ctx_repo)
+
+    ctx_repo: cm.OciRepositoryContext
+
     component_name = _normalise_component_name(component_name)
 
     return ci.util.urljoin(
-        ctx_repo_base_url,
+        ctx_repo.baseUrl,
         'component-descriptors',
         f'{component_name}:{component_version}',
     )
@@ -111,21 +126,33 @@ def _target_oci_ref_from_ctx_base_url(
 def download_component_descriptor_v2(
     component_name: str,
     component_version: str,
-    ctx_repo_base_url: str,
+    ctx_repo_base_url: str=None,
+    ctx_repo: cm.RepositoryContext=None,
     absent_ok: bool=False,
     cache_dir: str=None,
     validation_mode: cm.ValidationMode=cm.ValidationMode.NONE,
 ):
+    if not (bool(ctx_repo_base_url) ^ bool(ctx_repo)):
+        raise ValueError('exactly one of ctx_repo_base_url, ctx_repo must be passed')
+    if ctx_repo_base_url:
+        logger.warning('passing ctx_repo_base_url is deprecated - pass ctx_repo instead!')
+        ctx_repo = cm.OciRepositoryContext(baseUrl=ctx_repo_base_url)
+
+    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+        raise NotImplementedError(ctx_repo)
+
+    ctx_repo: cm.OciRepositoryContext
+
     target_ref = _target_oci_ref_from_ctx_base_url(
         component_name=component_name,
         component_version=component_version,
-        ctx_repo_base_url=ctx_repo_base_url,
+        ctx_repo=ctx_repo,
     )
 
     if cache_dir:
         descriptor_path = os.path.join(
             cache_dir,
-            ctx_repo_base_url.replace('/', '-'),
+            ctx_repo.baseUrl.replace('/', '-'),
             f'{component_name}-{component_version}',
         )
         if os.path.isfile(descriptor_path):
@@ -175,12 +202,22 @@ def write_component_descriptor_to_dir(
     cache_dir: str,
     on_exist=UploadMode.SKIP,
     ctx_repo_base_url: str=None, # if none, use current from component-descriptor
+    ctx_repo: cm.RepositoryContext=None,
 ):
     if not os.path.isdir(cache_dir):
         raise ValueError(f'not a directory: {cache_dir=}')
 
-    if not ctx_repo_base_url:
+    if ctx_repo_base_url:
+        logger.warning('passing ctx_repo_base_url is deprectead - pass ctx_repo instead')
+
+    if not ctx_repo_base_url and not ctx_repo:
         ctx_repo_base_url = component_descriptor.component.current_repository_ctx().baseUrl
+    elif ctx_repo:
+        if not isinstance(ctx_repo, cm.OciRepositoryContext):
+            raise NotImplementedError(ctx_repo)
+        ctx_repo: cm.OciRepositoryContext
+
+        ctx_repo_base_url = ctx_repo.baseUrl
 
     component = component_descriptor.component
     descriptor_path = os.path.join(
@@ -362,7 +399,7 @@ def retrieve_component_descriptor_from_oci_ref(
 def _resolve_dependency(
     component: gci.componentmodel.Component,
     component_ref: gci.componentmodel.ComponentReference,
-    repository_ctx_base_url=None,
+    ctx_repo: cm.RepositoryContext=None,
     cache_dir: str=None,
 ):
     '''
@@ -381,7 +418,7 @@ def _resolve_dependency(
     return download_component_descriptor_v2(
         component_name=cname,
         component_version=cversion,
-        ctx_repo_base_url=repository_ctx_base_url or component.current_repository_ctx().baseUrl,
+        ctx_repo=ctx_repo or component.current_repository_ctx(),
         cache_dir=cache_dir,
         absent_ok=False,
         validation_mode=cm.ValidationMode.NONE,
@@ -475,7 +512,7 @@ def components(
                 cache_dir=cache_dir,
                 component_name=component_ref.componentName,
                 component_version=component_ref.version,
-                ctx_repo_base_url=component.current_repository_ctx().baseUrl,
+                ctx_repo=component.current_repository_ctx(),
             )
 
             yield from resolve_component_dependencies(
@@ -575,12 +612,22 @@ def greatest_references(
 
 def greatest_component_version(
     component_name: str,
-    ctx_repo_base_url: str,
+    ctx_repo_base_url: str=None,
+    ctx_repo: cm.RepositoryContext=None,
     ignore_prerelease_versions: bool=False,
 ) -> str:
+    if not (bool(ctx_repo_base_url) ^ bool(ctx_repo)):
+        raise ValueError('exactly one of ctx_repo_base_url, ctx_repo must be passed')
+    if ctx_repo_base_url:
+        logger.warning('passing ctx_repo_base_url is deprecated - pass ctx_repo instead!')
+        ctx_repo = cm.OciRepositoryContext(baseUrl=ctx_repo_base_url)
+
+    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+        raise NotImplementedError(ctx_repo)
+
     image_tags = component_versions(
         component_name=component_name,
-        ctx_repo_base_url=ctx_repo_base_url,
+        ctx_repo=ctx_repo,
     )
     return version.find_latest_version(image_tags, ignore_prerelease_versions)
 
@@ -588,11 +635,14 @@ def greatest_component_version(
 def greatest_version_before(
     component_name: str,
     component_version: str,
-    ctx_repo_base_url: str,
+    ctx_repo: cm.RepositoryContext,
 ):
+    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+        raise NotImplementedError(ctx_repo)
+
     versions = component_versions(
         component_name=component_name,
-        ctx_repo_base_url=ctx_repo_base_url,
+        ctx_repo=ctx_repo,
     )
     versions = sorted(versions, key=version.parse_to_semver)
     versions = [
@@ -608,19 +658,50 @@ def greatest_version_before(
 latest_component_version = greatest_component_version
 
 
-def component_versions(component_name: str, ctx_repo_base_url: str) -> typing.Sequence[str]:
-    oci_ref = _target_oci_repository_from_component_name(component_name, ctx_repo_base_url)
+def component_versions(
+    component_name: str,
+    ctx_repo_base_url: str=None,
+    ctx_repo: cm.RepositoryContext=None,
+) -> typing.Sequence[str]:
+    if not (bool(ctx_repo_base_url) ^ bool(ctx_repo)):
+        raise ValueError('exactly one of ctx_repo_base_url, ctx_repo must be passed')
+    if ctx_repo_base_url:
+        logger.warning('passing ctx_repo_base_url is deprecated - pass ctx_repo instead!')
+        ctx_repo = cm.OciRepositoryContext(baseUrl=ctx_repo_base_url)
+
+    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+        raise NotImplementedError(ctx_repo)
+
+    ctx_repo: cm.OciRepositoryContext
+
+    oci_ref = _target_oci_repository_from_component_name(
+        component_name,
+        ctx_repo=ctx_repo,
+    )
     client = ccc.oci.oci_client()
     return client.tags(image_reference=oci_ref)
 
 
 def greatest_component_version_with_matching_minor(
     component_name: str,
-    ctx_repo_base_url: str,
     reference_version: str,
+    ctx_repo_base_url: str=None,
+    ctx_repo: cm.RepositoryContext=None,
     ignore_prerelease_versions: bool=False,
 ) -> str:
-    oci_image_repo = _target_oci_repository_from_component_name(component_name, ctx_repo_base_url)
+    if not (bool(ctx_repo_base_url) ^ bool(ctx_repo)):
+        raise ValueError('exactly one of ctx_repo_base_url, ctx_repo must be passed')
+    if ctx_repo_base_url:
+        logger.warning('passing ctx_repo_base_url is deprecated - pass ctx_repo instead!')
+        ctx_repo = cm.OciRepositoryContext(baseUrl=ctx_repo_base_url)
+
+    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+        raise NotImplementedError(ctx_repo)
+
+    oci_image_repo = _target_oci_repository_from_component_name(
+        component_name,
+        ctx_repo=ctx_repo,
+    )
     client = ccc.oci.oci_client()
     image_tags = client.tags(image_reference=oci_image_repo)
     return version.find_latest_version_with_matching_minor(
@@ -633,16 +714,26 @@ def greatest_component_version_with_matching_minor(
 def greatest_component_version_by_name(
     component_name: str,
     ctx_repo_base_url: str,
+    ctx_repo: cm.RepositoryContext=None,
     cache_dir: str=None,
 ):
+    if not (bool(ctx_repo_base_url) ^ bool(ctx_repo)):
+        raise ValueError('exactly one of ctx_repo_base_url, ctx_repo must be passed')
+    if ctx_repo_base_url:
+        logger.warning('passing ctx_repo_base_url is deprecated - pass ctx_repo instead!')
+        ctx_repo = cm.OciRepositoryContext(baseUrl=ctx_repo_base_url)
+
+    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+        raise NotImplementedError(ctx_repo)
+
     greatest_version = greatest_component_version(
         component_name=component_name,
-        ctx_repo_base_url=ctx_repo_base_url,
+        ctx_repo=ctx_repo,
     )
     component_descriptor = download_component_descriptor_v2(
         component_name,
         greatest_version,
-        ctx_repo_base_url=ctx_repo_base_url,
+        ctx_repo=ctx_repo,
         cache_dir=cache_dir,
     )
     return component_descriptor.component
