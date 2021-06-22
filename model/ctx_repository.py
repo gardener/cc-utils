@@ -40,4 +40,7 @@ class CtxRepositoryCfg(NamedModelElement):
         return 'base_url',
 
     def _optional_attributes(self):
-        return 'component_name_mapping',
+        return [
+            'component_name_mapping',
+            'description',
+        ]
