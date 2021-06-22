@@ -105,11 +105,12 @@ def component_diff_since_last_release(
     component = ci.util.not_none(
         component_descriptor.component,
     )
+    component: cm.Component
 
     greatest_release_version = product.v2.greatest_version_before(
         component_name=component.name,
         component_version=component.version,
-        ctx_repo_base_url=ctx_repo_url,
+        ctx_repo=component.current_repository_ctx(),
     )
 
     if not greatest_release_version:
