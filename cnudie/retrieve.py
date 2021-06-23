@@ -177,7 +177,7 @@ def _component_descriptor(
     return product.v2.download_component_descriptor_v2(
         component_name=name,
         component_version=version,
-        ctx_repo_base_url=ctx_repo_url,
+        ctx_repo=ctx_repo,
         cache_dir=cache_dir,
         validation_mode=validation_mode,
     )
