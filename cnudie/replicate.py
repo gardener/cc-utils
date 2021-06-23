@@ -10,6 +10,7 @@ import json
 import gci.oci
 
 import ccc.oci
+import gci.componentmodel as cm
 import oci
 import oci.model as om
 import product.v2 as v2
@@ -42,10 +43,12 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     else:
         raise NotImplementedError(on_exist)
 
+    ctx_repo = cm.OciRepositoryContext(baseUrl=src_ctx_repo_base_url)
+
     src_ref = v2._target_oci_ref_from_ctx_base_url(
         component_name=src_name,
         component_version=src_version,
-        ctx_repo_base_url=src_ctx_repo_base_url,
+        ctx_repo=ctx_repo,
     )
 
     src_manifest = client.manifest(
