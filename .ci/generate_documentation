@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+echo "skipping documentation for now"
+exit 0
+
 set -e
 
 if [ -z "$SOURCE_PATH" ]; then
