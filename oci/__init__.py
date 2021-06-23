@@ -9,6 +9,7 @@ import dacite
 
 import oci.auth as oa
 import oci.client as oc
+import oci.convert as oconv
 import oci.docker as od
 import oci.kaniko as ok
 import oci.model as om
@@ -53,11 +54,21 @@ def replicate_artifact(
     manifest = json.loads(raw_manifest)
     schema_version = int(manifest['schemaVersion'])
     if schema_version == 1:
-        manifest = dacite.from_dict(
-            data_class=om.OciImageManifestV1,
-            data=json.loads(raw_manifest)
+        manifest = client.manifest(image_reference=src_image_reference)
+
+        logger.warning(
+          f'''
+          manifest {src_image_reference=} is in legacy-format
+          (schemaVersion==1). Cannot verbatimly replicate
+          '''
         )
-        manifest = client.manifest(src_image_reference)
+
+        manifest, _ = oconv.v1_manifest_to_v2(
+            manifest=manifest,
+            oci_client=client,
+            tgt_image_ref=tgt_image_reference,
+        )
+        raw_manifest = json.dumps(dataclasses.asdict(manifest))
     elif schema_version == 2:
         manifest = dacite.from_dict(
             data_class=om.OciImageManifest,
