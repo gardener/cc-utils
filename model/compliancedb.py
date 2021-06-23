@@ -37,7 +37,6 @@ class ComplianceDbConfig(NamedModelElement):
     def port(self):
         return self.raw.get('port')
 
-
     def _defaults_dict(self):
         return {
             'namespace': 'compliance',
