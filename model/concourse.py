@@ -138,6 +138,9 @@ class ConcourseUAM(NamedModelElement):
         if local_user := self.raw.get('local_user'):
             return BasicCredentials(raw_dict=local_user)
 
+    def team_name(self) -> str:
+        return self.raw.get('team_name')
+
     def username(self) -> str:
         if local_user := self.local_user():
             return local_user.username()
@@ -170,6 +173,7 @@ class ConcourseUAM(NamedModelElement):
             'local_user',
             'role',
             'git_auth_team',
+            'team_name',
         ]
 
 
