@@ -165,10 +165,15 @@ def _decrypt_cipher_text(encrypted_cipher_text: bytes, secret: model.secret.Secr
     cipher = AES.new(key=secret.key, mode=AES.MODE_ECB)
 
     decrypted_cipher = cipher.decrypt(encrypted_cipher_text)
-    return Crypto.Util.Padding.unpad(
-        padded_data=decrypted_cipher,
-        block_size=AES.block_size,
-    )
+    try:
+        unpadded_cipher = Crypto.Util.Padding.unpad(
+            padded_data=decrypted_cipher,
+            block_size=AES.block_size,
+        )
+    except ValueError as ve:
+        raise ValueError("Unable to decrypt secret. Key doesn't fit cipher text.") from ve
+
+    return unpadded_cipher
 
 
 @ensure.ensure_annotations
