@@ -1,12 +1,14 @@
 import asyncio
 import concurrent.futures
 import functools
+import json
 import logging
 import os.path
 import tempfile
 import typing
 
 import tabulate
+import requests
 
 import ccc.github
 import ccc.oci
@@ -257,11 +259,9 @@ def scan_artifact_with_white_src(
         else:
             raise NotImplementedError
 
-        # don't change the following line, lest things no longer work
-        # sets the file position at the offset 0 == start of the file
         tmp_file.seek(0)
 
-        logger.info('sending component to scan backend...')
+        logger.info('sending component to whitesource-api-extension')
 
         res = asyncio.run(
             whitesource_client.upload_to_project(
@@ -417,3 +417,72 @@ def parse_filters(
     # sorting filters, component filters have to be first elements
     # if component is excluded, its artifacts are excluded as well
     return sorted(l, key=lambda k: str(k.type))
+
+
+def delete_all_projects_from_product(
+    product_token: str,
+    user_token: str,
+    api_endpoint: str,
+):
+
+    def request(
+        method: str,
+        *args, **kwargs
+    ):
+        res = requests.request(
+            method=method,
+            *args, **kwargs,
+        )
+        if not res.ok:
+            print(f'{method} request to url {res.url} failed with {res.status_code=} {res.reason=}')
+        return res
+
+    def get_all_projects(
+        product_token: str,
+        user_token: str,
+    ):
+        body = {
+            'requestType': 'getAllProjects',
+            'userKey': user_token,
+            'productToken': product_token,
+        }
+
+        res = request(
+            method='POST',
+            url=api_endpoint,
+            headers={'content-type': 'application/json'},
+            json=body,
+        )
+
+        return json.loads(res.text)['projects']
+
+    def delete_project(
+        project_token: str,
+        user_token: str,
+        product_token: str,
+    ):
+        logger.info(f'deleting {project_token=}')
+        body = {
+            'requestType': 'deleteProject',
+            'userKey': user_token,
+            'productToken': product_token,
+            'projectToken': project_token,
+        }
+
+        request(
+            method='POST',
+            url=api_endpoint,
+            headers={'content-type': 'application/json'},
+            json=body,
+        )
+
+    for p in get_all_projects(
+        product_token=product_token,
+        user_token=user_token,
+    ):
+        delete_project(
+            product_token=product_token,
+            project_token=p.get('projectToken'),
+            user_token=user_token,
+        )
+    logger.info('done')

@@ -3,6 +3,7 @@ import logging
 
 import concourse.steps.component_descriptor_util as util
 import concourse.steps.scan_sources
+import whitesource.util
 
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -92,4 +93,16 @@ def scan_component_from_dir(
         notification_recipients=notification_recipients,
         max_workers=max_workers,
         filters=filters,
+    )
+
+
+def delete_all_projects_from_product(
+    product_token: str,
+    user_token: str,
+    api_endpoint: str,
+):
+    whitesource.util.delete_all_projects_from_product(
+        product_token=product_token,
+        user_token=user_token,
+        api_endpoint=api_endpoint,
     )
