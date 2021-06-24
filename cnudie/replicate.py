@@ -18,6 +18,7 @@ import product.v2 as v2
 
 logger = logging.getLogger(__name__)
 
+
 def replicate_oci_artifact_with_patched_component_descriptor(
     src_name: str,
     src_version: str,
