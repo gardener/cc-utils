@@ -6,6 +6,7 @@ utils used for replicating cnudie components between different repository contex
 import dataclasses
 import hashlib
 import json
+import logging
 
 import gci.oci
 
@@ -15,6 +16,7 @@ import oci
 import oci.model as om
 import product.v2 as v2
 
+logger = logging.getLogger(__name__)
 
 def replicate_oci_artifact_with_patched_component_descriptor(
     src_name: str,
