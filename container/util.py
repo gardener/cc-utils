@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import dataclasses
+import gzip
 import hashlib
 import json
 import logging
@@ -83,8 +84,11 @@ def filter_image(
     # prepare copy of layers to avoid modification while iterating
     layers_copy = manifest.layers.copy()
 
+    non_gzipped_layer_digests = {} # {gzipped-digest: sha256:non-gzipped-digest}
+
     for layer in manifest.layers:
         layer_hash = hashlib.sha256()
+        cfg_hash = hashlib.sha256() # we need to write "non-gzipped" hash to cfg-blob
         leng = 0
 
         # unfortunately, GCR (our most important oci-registry) does not support chunked uploads,
@@ -104,6 +108,8 @@ def filter_image(
             )
 
             for chunk in filtered_stream:
+                cfg_hash.update(chunk) # need to hash before compressing for cfg-blob
+                chunk = gzip.compress(chunk)
                 layer_hash.update(chunk)
                 leng += len(chunk)
                 f.write(chunk)
@@ -116,6 +122,8 @@ def filter_image(
                 octets_count=leng,
                 data=f,
             )
+
+            non_gzipped_layer_digests[layer_digest] = 'sha256:' + cfg_hash.hexdigest()
 
             # update copy of layers-list with new layer
             new_layer = dataclasses.replace(layer, digest=layer_digest, size=leng)
@@ -138,7 +146,7 @@ def filter_image(
 
     cfg_blob['rootfs'] = {
         'diff_ids': [
-            layer.digest for layer in manifest.layers
+            non_gzipped_layer_digests[layer.digest] for layer in manifest.layers
         ],
         'type': 'layers',
     }
