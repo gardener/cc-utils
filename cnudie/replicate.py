@@ -17,12 +17,25 @@ import product.v2 as v2
 
 
 def replicate_oci_artifact_with_patched_component_descriptor(
-    src_ctx_repo_base_url: str,
     src_name: str,
     src_version: str,
     patched_component_descriptor: gci.componentmodel.ComponentDescriptor,
+    src_ctx_repo_base_url: str=None,
+    src_ctx_repo: cm.RepositoryContext=None,
     on_exist=v2.UploadMode.SKIP,
 ):
+    if not (bool(src_ctx_repo_base_url) ^ bool(src_ctx_repo)):
+        raise ValueError('exactly one of src_ctx_repo, src_ctx_repo_base_url must be passed')
+
+    if src_ctx_repo_base_url:
+        logger.warning('passing src_ctx_repo_base_url is deprecated - pass src_ctx_repo')
+        src_ctx_repo = cm.OciRepositoryContext(
+            baseUrl=src_ctx_repo_base_url,
+            componentNameMapping=cm.OciComponentNameMapping.URL_PATH,
+        )
+
+    if not isinstance(src_ctx_repo, cm.OciRepositoryContext):
+        raise NotImplementedError(src_ctx_repo)
 
     v2.ensure_is_v2(patched_component_descriptor)
     client = ccc.oci.oci_client()
@@ -43,12 +56,10 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     else:
         raise NotImplementedError(on_exist)
 
-    ctx_repo = cm.OciRepositoryContext(baseUrl=src_ctx_repo_base_url)
-
     src_ref = v2._target_oci_ref_from_ctx_base_url(
         component_name=src_name,
         component_version=src_version,
-        ctx_repo=ctx_repo,
+        ctx_repo=src_ctx_repo,
     )
 
     src_manifest = client.manifest(
