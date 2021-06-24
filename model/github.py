@@ -93,7 +93,7 @@ class GithubConfig(NamedModelElement):
         repos which the user is for
     '''
     def repo_urls(self) -> list[str]:
-        return self.raw.get('repo_urls')
+        return self.raw.get('repo_urls', ())
 
     def matches_repo_url(self, repo_url):
         if '://' not in repo_url:

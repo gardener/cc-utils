@@ -181,6 +181,7 @@ def github_cfg_for_repo_url(
     if not cfg_factory:
         cfg_factory = ci.util.ctx().cfg_factory()
 
+    matching_cfgs = []
     for github_cfg in cfg_factory._cfg_elements(cfg_type_name='github'):
         if require_labels:
             missing_labels = set(require_labels) - set(github_cfg.purpose_labels())
@@ -188,7 +189,11 @@ def github_cfg_for_repo_url(
                 # if not all required labels are present skip this element
                 continue
         if github_cfg.matches_repo_url(repo_url=repo_url):
-            return github_cfg
+            matching_cfgs.append(github_cfg)
+
+    # prefer config with configured repo urls
+    matching_cfgs = sorted(matching_cfgs,key=lambda config: len(config.repo_urls()))
+    return matching_cfgs[-1]
 
 
 @deprecated.deprecated()
