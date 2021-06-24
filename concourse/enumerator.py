@@ -369,9 +369,8 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
             )
 
     def enumerate_definition_descriptors(self):
-        github_cfg = ccc.github.github_cfg_for_hostname(
-            cfg_factory=self.cfg_set,
-            host_name=self._repository_url.hostname,
+        github_cfg = ccc.github.github_cfg_for_repo_url(
+            repo_url=self._repository_url,
         )
         github_api = ccc.github.github_api(github_cfg=github_cfg)
         github_org, github_repo = self._repository_url.path.lstrip('/').split('/')

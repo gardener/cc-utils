@@ -19,7 +19,7 @@ import typing
 import git
 import requests
 
-import ccc
+import ccc.github
 import cnudie.retrieve
 import cnudie.util
 import gci.componentmodel
@@ -554,6 +554,6 @@ def git_helper_from_github_access(
 ):
     return GitHelper(
         repo=repo_path,
-        github_cfg=ccc.github.github_cfg_for_hostname(github_access.hostname()),
+        github_cfg=ccc.github.github_cfg_for_repo_url(github_access.repoUrl),
         github_repo_path=f'{github_access.org_name()}/{github_access.repository_name()}',
     )

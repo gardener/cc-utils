@@ -316,9 +316,9 @@ class GithubWebhookDispatcher:
         repository_path = repo.repository_path()
         pr_number = pr_event.number()
 
-        github_cfg = ccc.github.github_cfg_for_hostname(
+        github_cfg = ccc.github.github_cfg_for_repo_url(
+            repo_url=ci.util.urljoin(github_host, repository_path),
             cfg_factory=self.cfg_set,
-            host_name=github_host,
         )
         owner, name = repository_path.split('/')
 

@@ -254,7 +254,7 @@ def _import_release_notes(
         return None
 
     main_source = cnudie.util.determine_main_source_for_component(component)
-    github_cfg = ccc.github.github_cfg_for_hostname(main_source.access.hostname())
+    github_cfg = ccc.github.github_cfg_for_repo_url(main_source.access.repoUrl)
     org_name = main_source.access.org_name()
     repository_name = main_source.access.repository_name()
 

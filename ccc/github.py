@@ -21,6 +21,7 @@ import typing
 import urllib.parse
 
 import cachecontrol
+import deprecated
 import gci.componentmodel as cm
 import github3
 import github3.github
@@ -31,6 +32,7 @@ import ci.util
 import github.util
 import http_requests
 import model
+import model.github
 
 if ci.util._running_on_ci():
     log_github_access = False
@@ -100,7 +102,7 @@ def repo_helper(
     session_adapter: SessionAdapter=SessionAdapter.RETRY,
 ):
     api = github_api(
-        github_cfg=github_cfg_for_hostname(host_name=host),
+        github_cfg=github_cfg_for_repo_url(repo_url=ci.util.urljoin(host, org, repo)),
         session_adapter=session_adapter,
     )
 
@@ -119,7 +121,7 @@ def pr_helper(
     session_adapter: SessionAdapter=SessionAdapter.RETRY,
 ):
     api = github_api(
-        github_cfg=github_cfg_for_hostname(host_name=host),
+        github_cfg=github_cfg_for_repo_url(repo_url=ci.util.urljoin(host, org, repo)),
         session_adapter=session_adapter,
     )
 
@@ -165,6 +167,31 @@ def github_api(
     return github_api
 
 
+@functools.lru_cache()
+def github_cfg_for_repo_url(
+    repo_url: typing.Union[str, urllib.parse.ParseResult],
+    cfg_factory=None,
+    require_labels=('ci',), # XXX unhardcode label
+) -> typing.Optional[model.github.GithubConfig]:
+    ci.util.not_none(repo_url)
+
+    if isinstance(repo_url, urllib.parse.ParseResult):
+        repo_url = repo_url.geturl()
+
+    if not cfg_factory:
+        cfg_factory = ci.util.ctx().cfg_factory()
+
+    for github_cfg in cfg_factory._cfg_elements(cfg_type_name='github'):
+        if require_labels:
+            missing_labels = set(require_labels) - set(github_cfg.purpose_labels())
+            if missing_labels:
+                # if not all required labels are present skip this element
+                continue
+        if github_cfg.matches_repo_url(repo_url=repo_url):
+            return github_cfg
+
+
+@deprecated.deprecated()
 @functools.lru_cache()
 def github_cfg_for_hostname(
     host_name,
@@ -237,5 +264,5 @@ def github_api_from_gh_access(
     if access.type is not cm.AccessType.GITHUB:
         raise ValueError(f'{access=}')
 
-    github_cfg = github_cfg_for_hostname(host_name=access.hostname())
+    github_cfg = github_cfg_for_repo_url(repo_url=access.repoUrl)
     return github_api(github_cfg=github_cfg)

@@ -3,6 +3,7 @@
   filter="indent_func(indent),trim">
 <%
 from makoutil import indent_func
+import ci.util
 import os
 import concourse.steps.component_descriptor_util as cdu
 import gci.componentmodel
@@ -61,7 +62,12 @@ component_descriptor_v2 = cnudie.util.determine_main_component(
     ctf_path='${ctf_path}',
 )
 
-github_cfg = ccc.github.github_cfg_for_hostname('${repo.repo_hostname()}')
+github_cfg = ccc.github.github_cfg_for_repo_url(
+  ci.util.urljoin(
+    '${repo.repo_hostname()}',
+    '${repo.repo_path()}'
+  ),
+)
 
 githubrepobranch = GitHubRepoBranch(
     github_config=github_cfg,

@@ -15,6 +15,7 @@
 
 import enum
 import random
+import re
 
 from urllib.parse import urlparse
 
@@ -88,11 +89,31 @@ class GithubConfig(NamedModelElement):
     def matches_hostname(self, host_name):
         return host_name.lower() == self.hostname()
 
+    '''
+        repos which the user is for
+    '''
+    def repo_urls(self) -> list[str]:
+        return self.raw.get('repo_urls')
+
+    def matches_repo_url(self, repo_url):
+        if '://' not in repo_url:
+            parsed_repo_url = urlparse(f'x://{repo_url}')
+
+        if not self.repo_urls():
+            return self.matches_hostname(host_name=parsed_repo_url.hostname)
+
+        for repo_url_regex in self.repo_urls():
+            if re.fullmatch(repo_url_regex, repo_url):
+                return True
+
+        return False
+
     def _optional_attributes(self):
         return (
             'httpUrl',
             'purpose_labels',
             'sshUrl',
+            'repo_urls'
         )
 
     def _required_attributes(self):

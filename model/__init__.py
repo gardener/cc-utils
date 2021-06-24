@@ -124,8 +124,8 @@ class ConfigFactory:
             raise RuntimeError('cannot resolve non-local cfg w/o bootstrap-cfg-factory')
 
         gh_api = ccc.github.github_api(
-            ccc.github.github_cfg_for_hostname(
-                repo_url.hostname,
+            ccc.github.github_cfg_for_repo_url(
+                repo_url,
                 cfg_factory=lookup_cfg_factory,
             ),
             cfg_factory=lookup_cfg_factory,

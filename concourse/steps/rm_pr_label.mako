@@ -23,7 +23,12 @@ ci.log.configure_default_logging()
 logger = logging.getLogger('step.rm_pr_label')
 
 concourse_cfg = ci.util.ctx().cfg_factory().concourse('${concourse_cfg.name()}')
-github_cfg = ccc.github.github_cfg_for_hostname('${main_repo.repo_hostname()}')
+github_cfg = ccc.github.github_cfg_for_repo_url(
+  ci.util.urljoin(
+    '${main_repo.repo_hostname()}',
+    '${main_repo.repo_path()}',
+  )
+)
 github_api = ccc.github.github_api(github_cfg)
 
 # assumption: only main repository may be PR-repo

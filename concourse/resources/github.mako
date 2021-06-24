@@ -9,6 +9,7 @@
 <%def name="github_repo(repo_cfg, cfg_set, configure_webhook=True)">
 <%
 import ccc.github
+import ci.util
 from concourse.client.model import ResourceType
 from makoutil import indent_func
 from model.github import Protocol
@@ -18,7 +19,13 @@ if github_cfg_name := repo_cfg.cfg_name():
 elif cfg_set.github().matches_hostname(repo_cfg.repo_hostname()):
   github_cfg = cfg_set.github()
 else:
-  github_cfg = ccc.github.github_cfg_for_hostname(repo_cfg.repo_hostname(), require_labels=('ci',))
+  github_cfg = ccc.github.github_cfg_for_repo_url(
+    ci.util.urljoin(
+      repo_cfg.repo_hostname(),
+      repo_cfg.repo_path(),
+    ),
+    require_labels=('ci',),
+  )
 
 credentials = github_cfg.credentials()
 disable_tls_validation = not github_cfg.tls_validation()
