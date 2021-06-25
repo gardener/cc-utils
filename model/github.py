@@ -25,6 +25,7 @@ from model.base import (
     NamedModelElement,
     ModelValidationError,
 )
+import ci.util
 
 
 class Protocol(enum.Enum):
@@ -105,6 +106,7 @@ class GithubConfig(NamedModelElement):
         if not self.repo_urls():
             return self.matches_hostname(host_name=parsed_repo_url.hostname)
 
+        repo_url = ci.util.urljoin(parsed_repo_url.hostname, parsed_repo_url.path)
         for repo_url_regex in self.repo_urls():
             if re.fullmatch(repo_url_regex, repo_url):
                 return True
