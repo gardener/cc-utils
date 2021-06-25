@@ -16,6 +16,7 @@
 import enum
 import random
 import re
+import typing
 
 from urllib.parse import urlparse
 
@@ -92,7 +93,7 @@ class GithubConfig(NamedModelElement):
     '''
         repos which the user is for
     '''
-    def repo_urls(self) -> list[str]:
+    def repo_urls(self) -> typing.List[str]:
         return self.raw.get('repo_urls', ())
 
     def matches_repo_url(self, repo_url):
