@@ -71,11 +71,24 @@ def _target_oci_repository_from_component_name(
     ctx_repo: cm.OciRepositoryContext
 
     component_name = _normalise_component_name(component_name)
-    return ci.util.urljoin(
-        ctx_repo.baseUrl,
-        'component-descriptors',
-        component_name,
-    )
+
+    if ctx_repo.componentNameMapping is cm.OciComponentNameMapping.URL_PATH:
+        return ci.util.urljoin(
+            ctx_repo.baseUrl,
+            'component-descriptors',
+            component_name,
+        )
+    elif ctx_repo.componentNameMapping is cm.OciComponentNameMapping.SHA256_DIGEST:
+        component_name_digest = hashlib.sha256(
+            component_name.encode('utf-8')
+        ).hexdigest().lower()
+
+        return ci.util.urljoin(
+            ctx_repo.baseUrl,
+            component_name_digest,
+        )
+    else:
+        raise NotImplementedError(ctx_repo.componentNameMapping)
 
 
 def _target_oci_ref(
