@@ -1,13 +1,10 @@
 import base64
 import logging
-import os
 import typing
 
 import ccc.secrets_server
 import ci.log
 import ci.util
-import model
-import model.concourse
 import kube.ctx
 
 
@@ -16,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def replicate_secrets(
-    cfg_dir_env_name: str,
+    cfg_factory,
     kubeconfig: typing.Dict,
     secret_key: str,
     secret_cipher_algorithm: str,
@@ -25,10 +22,6 @@ def replicate_secrets(
     target_secret_namespace: str,
     target_secret_cfg_name: str,
 ):
-    cfg_factory: model.ConfigFactory = model.ConfigFactory.from_cfg_dir(
-        cfg_dir=os.environ.get(cfg_dir_env_name),
-    )
-
     kube_ctx = kube.ctx.Ctx(kubeconfig_dict=kubeconfig)
     logger.info(f'deploying secret on cluster {kube_ctx.kubeconfig.host}')
     secrets_helper = kube_ctx.secret_helper()
