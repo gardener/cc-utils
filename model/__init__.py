@@ -2,6 +2,7 @@ import dataclasses
 import functools
 import json
 import os
+import os.path
 import pkgutil
 import sys
 import typing
@@ -144,6 +145,13 @@ class ConfigFactory:
         cfg_dir: str,
         cfg_types_file='config_types.yaml',
     ):
+        if not cfg_dir:
+            raise ValueError('cfg dir must not be None')
+
+        cfg_dir = os.path.abspath(cfg_dir)
+        if not os.path.isdir(cfg_dir):
+            raise ValueError(f'{cfg_dir=} is not a directory')
+
         bootstrap_cfg_factory = ConfigFactory._from_cfg_dir(
             cfg_dir=cfg_dir,
             cfg_types_file=cfg_types_file,
