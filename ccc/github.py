@@ -16,6 +16,7 @@
 import datetime
 import enum
 import functools
+import sys
 import traceback
 import typing
 import urllib.parse
@@ -191,9 +192,12 @@ def github_cfg_for_repo_url(
         if github_cfg.matches_repo_url(repo_url=repo_url):
             matching_cfgs.append(github_cfg)
 
-    # prefer config with configured repo urls
-    matching_cfgs = sorted(matching_cfgs,key=lambda config: len(config.repo_urls()))
-    return matching_cfgs[-1]
+    # prefer config with most configured repo urls
+    matching_cfgs = sorted(matching_cfgs, key=lambda config: len(config.repo_urls()))
+    gh_cfg = matching_cfgs[-1]
+    # do not interfere with cli.py
+    print(f'using {gh_cfg.name()=} for {repo_url=}', file=sys.stderr)
+    return gh_cfg
 
 
 @deprecated.deprecated()
