@@ -2,6 +2,7 @@ import dataclasses
 import functools
 import json
 import os
+import os.path
 import pkgutil
 import sys
 import typing
@@ -144,6 +145,13 @@ class ConfigFactory:
         cfg_dir: str,
         cfg_types_file='config_types.yaml',
     ):
+        if not cfg_dir:
+            raise ValueError('cfg dir must not be None')
+
+        cfg_dir = os.path.abspath(cfg_dir)
+        if not os.path.isdir(cfg_dir):
+            raise ValueError(f'{cfg_dir=} is not a directory')
+
         bootstrap_cfg_factory = ConfigFactory._from_cfg_dir(
             cfg_dir=cfg_dir,
             cfg_types_file=cfg_types_file,
@@ -253,10 +261,8 @@ class ConfigFactory:
         }
 
     def _cfg_type(self, cfg_type_name: str):
-        cfg_type = self._cfg_types().get(cfg_type_name, None)
-        if not cfg_type:
-            raise ValueError('unknown cfg_type: ' + str(cfg_type_name))
-        return cfg_type
+        self._ensure_type_is_known(cfg_type_name=cfg_type_name)
+        return self._cfg_types().get(cfg_type_name)
 
     def _cfg_types_raw(self):
         return self.raw[self.CFG_TYPES]
@@ -342,6 +348,13 @@ class ConfigFactory:
 
         return element_instance
 
+    def _ensure_type_is_known(self, cfg_type_name: str):
+        if cfg_type_name not in (known_types := self._cfg_types()):
+            raise ValueError("Unknown config type '{c}'. Known types: {k}".format(
+                c=cfg_type_name,
+                k=', '.join(known_types.keys()),
+            ))
+
     def _cfg_elements(self, cfg_type_name: str):
         '''Returns all cfg_elements for the given cfg_type.
 
@@ -361,7 +374,10 @@ class ConfigFactory:
             If the specified cfg_type is unknown.
         '''
         not_empty(cfg_type_name)
+
         self._retrieve_cfg_elements(cfg_type_name=cfg_type_name)
+
+        self._ensure_type_is_known(cfg_type_name=cfg_type_name)
 
         for element_name in self._cfg_element_names(cfg_type_name):
             yield self._cfg_element(cfg_type_name, element_name)
@@ -387,12 +403,7 @@ class ConfigFactory:
         not_empty(cfg_type_name)
         self._retrieve_cfg_elements(cfg_type_name=cfg_type_name)
 
-        known_types = self._cfg_types()
-        if cfg_type_name not in known_types:
-            raise ValueError("Unknown config type '{c}'. Known types: {k}".format(
-                c=cfg_type_name,
-                k=', '.join(known_types.keys()),
-            ))
+        self._ensure_type_is_known(cfg_type_name=cfg_type_name)
         if cfg_type_name in self.raw:
             return set(self.raw[cfg_type_name].keys())
         else:
@@ -404,21 +415,16 @@ class ConfigFactory:
             if (factory_method := cfg_type.factory_method()):
                 yield factory_method
 
-            # also include methods for NamedModelElement-derived types
-            elif cfg_type.cfg_type() == NamedModelElement.__name__:
-                yield cfg_type.cfg_type_name()
-
         yield from super().__dir__()
 
     def __getattr__(self, cfg_type_name):
         for cfg_type in self._cfg_types().values():
             if cfg_type.factory_method() == cfg_type_name:
-                return functools.partial(self._cfg_element, cfg_type_name)
+                break
+        else:
+            raise AttributeError(cfg_type_name)
 
-            if cfg_type.cfg_type() == NamedModelElement.__name__:
-                return functools.partial(self._cfg_element, cfg_type_name)
-
-        raise AttributeError(cfg_type_name)
+        return functools.partial(self._cfg_element, cfg_type_name)
 
     def _serialise(self):
         cfg_types = self._cfg_types()

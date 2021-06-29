@@ -238,6 +238,7 @@ def determine_mail_recipients(
         entries_and_resolvers = [
             _codeowners_parser_from_component_name(
                 component_name=component_name,
+                ctx_repo_url=ctx_repo_url,
                 branch_name=branch_name
             ) for component_name in component_names
         ]
@@ -262,7 +263,7 @@ def _codeowners_parser_from_component_name(
 ):
     component = product.v2.greatest_component_version_by_name(
         component_name=component_name,
-        ctx_repo_url=ctx_repo_url,
+        ctx_repo_base_url=ctx_repo_url,
     )
     return _codeowners_parser_from_component(
         component=component,

@@ -197,7 +197,7 @@ class ConfigFactoryCfgDirDeserialisationTest(unittest.TestCase, ConfigFactorySmo
         return filename
 
     def test_absent_directory_causes_failure(self):
-        with self.assertRaises(Failure):
+        with self.assertRaises(ValueError):
             ConfigFactory.from_cfg_dir(cfg_dir='should not exist')
 
     def test_absent_cfg_types_file_causes_failure(self):

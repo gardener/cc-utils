@@ -39,7 +39,7 @@ setuptools.setup(
     name='gardener-cicd-cli',
     version=version(),
     description='Gardener CI/CD Command Line Interface',
-    python_requires='>=3.8.*',
+    python_requires='>=3.9.*',
     py_modules=modules(),
     packages=setuptools.find_packages(),
     install_requires=list(requirements()),

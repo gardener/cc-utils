@@ -21,7 +21,7 @@ def cp(src:str, tgt:str):
 def ls(image: str):
     oci_client = ccc.oci.oci_client()
 
-    print(oci_client.tags(image_reference=image))
+    print('\n'.join(oci_client.tags(image_reference=image)))
 
 
 def manifest(image_reference: str, pretty:bool=True):
@@ -30,7 +30,11 @@ def manifest(image_reference: str, pretty:bool=True):
     if pretty:
         manifest = oci_client.manifest(image_reference=image_reference)
 
+        total_size = sum(blob.size for blob in manifest.blobs())
+
         pprint.pprint(dataclasses.asdict(manifest))
+        print()
+        print(f'{total_size=}')
     else:
         manifest = oci_client.manifest_raw(image_reference=image_reference)
         print(manifest.text)
@@ -68,7 +72,7 @@ def blob(image_reference: str, digest: str, outfile: str):
         digest=digest,
         stream=True,
     )
-    for chunk in blob.iter_content():
+    for chunk in blob.iter_content(chunk_size=4096):
         write(chunk)
 
     outfh.flush()
