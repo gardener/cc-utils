@@ -101,7 +101,7 @@ class CodeOwnerEntryResolver:
         org_name, team_name = github_team_name.split('/') # always of form 'org/name'
         organisation = self.github_api.organization(org_name)
         # unfortunately, we have to look-up the team (no api to retrieve it by name)
-        team_or_none = _first(filter(lambda team: team.name == team_name, organisation.teams()))
+        team_or_none = _first(filter(lambda team: team.slug == team_name, organisation.teams()))
         if not team_or_none:
             warning('failed to lookup team {t}'.format(t=team_name))
             return []
