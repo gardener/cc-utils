@@ -529,7 +529,7 @@ class Client:
 
         if (size := headers.get('Content-Length', None)):
             size = int(size)
-        
+
         return om.OciBlobRef(
             digest=headers.get('Docker-Content-Digest', None),
             mediaType=headers['Content-Type'],
