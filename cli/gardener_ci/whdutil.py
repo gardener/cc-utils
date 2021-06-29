@@ -44,6 +44,15 @@ def app():
     cfg_set = cfg_factory.cfg_set(args.cfg_set_name)
     webhook_dispatcher_cfg = cfg_set.webhook_dispatcher()
 
+    print(f'{cfg_set.name()=}')
+    try:
+        print('tying to get ctx_repository')
+        print(f'{cfg_set.ctx_repository()}')
+    except:
+        print('XXX failed to read ctx_repository (will ignore this, though)')
+        import traceback
+        traceback.print_exc()
+
     app = whd.server.webhook_dispatcher_app(
         cfg_set=cfg_set,
         whd_cfg=webhook_dispatcher_cfg,
