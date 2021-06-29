@@ -30,7 +30,11 @@ def manifest(image_reference: str, pretty:bool=True):
     if pretty:
         manifest = oci_client.manifest(image_reference=image_reference)
 
+        total_size = sum(blob.size for blob in manifest.blobs())
+
         pprint.pprint(dataclasses.asdict(manifest))
+        print()
+        print(f'{total_size=}')
     else:
         manifest = oci_client.manifest_raw(image_reference=image_reference)
         print(manifest.text)
