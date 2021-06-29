@@ -491,11 +491,14 @@ class ConfigurationSet(NamedModelElement):
     `ConfigurationSet` is itself a factory, offering a set of factory methods which create
     concrete configuration objects based on the backing configuration source.
 
+    Note: This class is not thread safe until base_cfg_sets are resolved (_resolve_base_cfg_sets).
+
     Not intended to be instantiated by users of this module
     '''
 
     def __init__(self, cfg_factory, cfg_name, *args, **kwargs):
-        self.cfg_factory = not_none(cfg_factory)
+        self.resolved_base_cfg_sets = False
+        self.cfg_factory: ConfigFactory = not_none(cfg_factory)
         super().__init__(name=cfg_name, *args, **kwargs)
 
         # normalise cfg mappings
@@ -520,6 +523,27 @@ class ConfigurationSet(NamedModelElement):
             k: v for k, v in self.raw.items() if not k == '_base_cfgs'
         }
 
+    def _resolve_base_cfg_sets(self):
+        if self.resolved_base_cfg_sets:
+            return
+        for base_cfg in self._base_cfgs():
+            cfg_set = self.cfg_factory.cfg_set(cfg_name=base_cfg.name)
+            self._merge_cfg_set(cfg_set=cfg_set, base_cfg=base_cfg)
+
+        self.resolved_base_cfg_sets = True
+
+    def _merge_cfg_set(self, cfg_set: 'ConfigurationSet', base_cfg: BaseConfigSetCfg):
+        cfg_set_dict = cfg_set._raw()
+        for cfg_type_name, elements in cfg_set_dict.items():
+            if not self.raw.get(cfg_type_name, {}):
+                self.raw[cfg_type_name] = elements
+            else:
+                our_element_names = self._raw()[cfg_type_name]['config_names']
+                other_element_names = elements.get('config_names')
+
+                if duplicates := set(our_element_names) & set(other_element_names):
+                    raise ValueError(f'duplicate keys for {cfg_type_name=} {duplicates=}')
+                self.raw[cfg_type_name]['config_names'].extend(other_element_names)
 
     def _optional_attributes(self):
         return {
@@ -527,11 +551,13 @@ class ConfigurationSet(NamedModelElement):
         }
 
     def _cfg_mappings(self):
-        return self.raw.items()
+        self._resolve_base_cfg_sets()
+        return self._raw().items()
 
     def _cfg_element(self, cfg_type_name: str, cfg_name=None):
-        if not cfg_name:
-            cfg_name = self.raw[cfg_type_name]['default']
+        self.cfg_factory._ensure_type_is_known(cfg_type_name=cfg_type_name)
+
+        cfg_name = self._default_name(cfg_type_name=cfg_type_name, cfg_name=cfg_name)
 
         return self.cfg_factory._cfg_element(
             cfg_type_name=cfg_type_name,
@@ -560,7 +586,7 @@ class ConfigurationSet(NamedModelElement):
             If the specified cfg_type is unknown.
         '''
         not_empty(cfg_type_name)
-
+        self._resolve_base_cfg_sets()
         # ask factory for all known names. This ensures that the existance of the type is checked.
         all_cfg_element_names = self.cfg_factory._cfg_element_names(cfg_type_name=cfg_type_name)
 
@@ -571,10 +597,18 @@ class ConfigurationSet(NamedModelElement):
             return set()
 
     def _default_name(self, cfg_type_name, cfg_name=None):
-        if not cfg_name:
-            return self.raw[cfg_type_name]['default']
-        else:
+        if cfg_name:
             return cfg_name
+
+        if not cfg_type_name in self._raw():
+            self._resolve_base_cfg_sets()
+
+        cfg_name = self._raw()[cfg_type_name].get('default', None)
+        if not cfg_name:
+            self._resolve_base_cfg_sets()
+            if not (cfg_name := self._raw()[cfg_type_name].get('default', None)):
+                raise ValueError(f'No default for {cfg_type_name=}')
+        return cfg_name
 
     def __getattr__(self, cfg_type_name):
         if not hasattr(self.cfg_factory, cfg_type_name):
