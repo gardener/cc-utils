@@ -68,7 +68,7 @@ def blob(image_reference: str, digest: str, outfile: str):
         digest=digest,
         stream=True,
     )
-    for chunk in blob.iter_content():
+    for chunk in blob.iter_content(chunk_size=4096):
         write(chunk)
 
     outfh.flush()
