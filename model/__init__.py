@@ -43,6 +43,11 @@ instantiated by users of this module.
 
 
 @dc(frozen=True)
+class BaseConfigSetCfg:
+    name: str
+
+
+@dc(frozen=True)
 class CfgTypeSrc: # just a marker class
     pass
 
@@ -505,6 +510,17 @@ class ConfigurationSet(NamedModelElement):
 
             self.raw[cfg_type_name] = entry
 
+    def _base_cfgs(self):
+        return (
+            BaseConfigSetCfg(**cfg) for cfg in self.raw.get('_base_cfgs', {})
+        )
+
+    def _raw(self):
+        return{
+            k: v for k, v in self.raw.items() if not k == '_base_cfgs'
+        }
+
+
     def _optional_attributes(self):
         return {
             cfg_type_name for cfg_type_name in self.cfg_factory._cfg_types_raw()
@@ -548,8 +564,9 @@ class ConfigurationSet(NamedModelElement):
         # ask factory for all known names. This ensures that the existance of the type is checked.
         all_cfg_element_names = self.cfg_factory._cfg_element_names(cfg_type_name=cfg_type_name)
 
-        if cfg_type_name in self.raw.keys():
-            return all_cfg_element_names & set(self.raw[cfg_type_name]['config_names'])
+        if cfg_type_name in self._raw().keys():
+            our_cfg_names = set(self._raw()[cfg_type_name]['config_names'])
+            return (all_cfg_element_names & our_cfg_names) | our_cfg_names
         else:
             return set()
 
