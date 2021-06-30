@@ -346,6 +346,9 @@ class JobMapping(NamedModelElement):
             self.raw.get('cleanup_policy', PipelineCleanupPolicy.CLEANUP_EXTRA_PIPELINES)
         )
 
+    def replication_ctx_cfg_set(self) -> str:
+        return self.raw.get('replication_ctx_cfg_set')
+
     def github_organisations(self):
         return [
             GithubOrganisationConfig(name, raw)
@@ -365,6 +368,7 @@ class JobMapping(NamedModelElement):
     def _required_attributes(self):
         return [
             'concourse_target_team',
+            'replication_ctx_cfg_set',
         ]
 
     def _optional_attributes(self):
