@@ -130,7 +130,7 @@ ctx_repo = dacite.from_dict(
   data_class=gci.componentmodel.OciRepositoryContext,
   data=${ctx_repo_dict},
   cast=[
-      OciComponentNameMapping,
+      gci.componentmodel.OciComponentNameMapping,
   ]
 )
 
