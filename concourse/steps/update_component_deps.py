@@ -114,24 +114,24 @@ def upgrade_pr_exists(
 def latest_component_version_from_upstream(
     component_name: str,
     upstream_component_name: str,
-    base_url: str,
+    ctx_repo: gci.componentmodel.OciRepositoryContext,
     ignore_prerelease_versions: bool=False,
 ):
     upstream_component_version = product.v2.latest_component_version(
         component_name=upstream_component_name,
-        ctx_repo_base_url=base_url,
+        ctx_repo=ctx_repo,
         ignore_prerelease_versions=ignore_prerelease_versions,
     )
 
     if not upstream_component_version:
         raise RuntimeError(
-            f'did not find any versions for {upstream_component_name=}, {base_url=}'
+            f'did not find any versions for {upstream_component_name=}, {ctx_repo=}'
         )
 
     upstream_component_descriptor = cnudie.retrieve.component_descriptor(
         name=upstream_component_name,
         version=upstream_component_version,
-        ctx_repo_url=base_url,
+        ctx_repo=ctx_repo,
     )
     upstream_component = upstream_component_descriptor.component
     for component_ref in upstream_component.componentReferences:
@@ -143,21 +143,21 @@ def latest_component_version_from_upstream(
 def determine_reference_versions(
     component_name: str,
     reference_version: str,
-    repository_ctx_base_url: str,
+    ctx_repo: gci.componentmodel.OciRepositoryContext,
     upstream_component_name: str=None,
     upstream_update_policy: UpstreamUpdatePolicy=UpstreamUpdatePolicy.STRICTLY_FOLLOW,
     ignore_prerelease_versions: bool=False,
 ) -> typing.Sequence[str]:
     if upstream_component_name is None:
         # no upstream component defined - look for greatest released version
-        latest_component_version = product.v2.latest_component_version(
+        latest_component_version = product.v2.greatest_component_version(
                 component_name=component_name,
-                ctx_repo_base_url=repository_ctx_base_url,
+                ctx_repo=ctx_repo,
                 ignore_prerelease_versions=ignore_prerelease_versions,
         )
         if not latest_component_version:
             raise RuntimeError(
-                f'did not find any versions of {component_name=} {repository_ctx_base_url=}'
+                f'did not find any versions of {component_name=} {ctx_repo=}'
             )
 
         return (
@@ -167,7 +167,7 @@ def determine_reference_versions(
     version_candidate = latest_component_version_from_upstream(
         component_name=component_name,
         upstream_component_name=upstream_component_name,
-        base_url=repository_ctx_base_url,
+        ctx_repo=ctx_repo,
         ignore_prerelease_versions=ignore_prerelease_versions,
     )
 
@@ -177,7 +177,7 @@ def determine_reference_versions(
     elif upstream_update_policy is UpstreamUpdatePolicy.ACCEPT_HOTFIXES:
         hotfix_candidate = product.v2.greatest_component_version_with_matching_minor(
             component_name=component_name,
-            ctx_repo_base_url=repository_ctx_base_url,
+            ctx_repo=ctx_repo,
             reference_version=reference_version,
             ignore_prerelease_versions=ignore_prerelease_versions,
         )
@@ -191,7 +191,7 @@ def determine_upgrade_prs(
     upstream_component_name: str,
     upstream_update_policy: UpstreamUpdatePolicy,
     upgrade_pull_requests,
-    ctx_repo_base_url: str,
+    ctx_repo: gci.componentmodel.OciRepositoryContext,
     ignore_prerelease_versions=False,
 ) -> typing.Iterable[typing.Tuple[
     gci.componentmodel.ComponentReference, gci.componentmodel.ComponentReference, str
@@ -204,7 +204,7 @@ def determine_upgrade_prs(
             reference_version=greatest_component_reference.version,
             upstream_component_name=upstream_component_name,
             upstream_update_policy=upstream_update_policy,
-            repository_ctx_base_url=ctx_repo_base_url,
+            ctx_repo=ctx_repo,
             ignore_prerelease_versions=ignore_prerelease_versions,
         ):
             if not greatest_version:
@@ -216,7 +216,7 @@ def determine_upgrade_prs(
                 continue
 
             greatest_version_semver = version.parse_to_semver(greatest_version)
-            print(f'{greatest_version=}, ours: {greatest_component_reference} {ctx_repo_base_url=}')
+            print(f'{greatest_version=}, ours: {greatest_component_reference} {ctx_repo=}')
             if greatest_version_semver <= version.parse_to_semver(
                 greatest_component_reference.version
             ):
@@ -291,7 +291,7 @@ def create_upgrade_pr(
     from_component_descriptor = cnudie.retrieve.component_descriptor(
         name=from_ref.componentName,
         version=from_ref.version,
-        ctx_repo_url=component.current_repository_ctx().baseUrl,
+        ctx_repo=component.current_repository_ctx(),
     )
     from_component = from_component_descriptor.component
 
