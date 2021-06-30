@@ -28,6 +28,7 @@ import ccc.secrets_server
 import ccc.github
 import ci.util
 import concourse.client
+import model
 
 from github3.exceptions import NotFoundError
 
@@ -66,12 +67,13 @@ logger.setLevel(logging.DEBUG)
 class GithubWebhookDispatcher:
     def __init__(
         self,
+        cfg_factory,
         cfg_set,
         whd_cfg: WebhookDispatcherConfig
     ):
+        self.cfg_factory: model.ConfigFactory = cfg_factory
         self.cfg_set = cfg_set
         self.whd_cfg = whd_cfg
-        self.cfg_factory = ci.util.ctx().cfg_factory()
         logger.info(f'github-whd initialised for cfg-set: {cfg_set.name()}')
 
     def concourse_clients(self):
@@ -117,10 +119,15 @@ class GithubWebhookDispatcher:
         thread.start()
 
     def _update_pipeline_definition(self, push_event):
+
         def _do_update():
+            repo_url = push_event.repository().repository_url()
+            job_mapping_set = self.cfg_set.job_mapping()
+            job_mapping = job_mapping_set.job_mapping_for_repo_url(repo_url)
+
             return update_repository_pipelines(
-                repo_url=push_event.repository().repository_url(),
-                cfg_set=self.cfg_set,
+                repo_url=repo_url,
+                cfg_set=self.cfg_factory.cfg_set(job_mapping.replication_ctx_cfg_set()),
                 whd_cfg=self.whd_cfg,
             )
 
@@ -134,8 +141,8 @@ class GithubWebhookDispatcher:
             )
             # Attempt to fetch latest cfg from SS and replace it
             raw_dict = ccc.secrets_server.SecretsServerClient.default().retrieve_secrets()
-            factory = ConfigFactory.from_dict(raw_dict)
-            self.cfg_set = factory.cfg_set(self.cfg_set.name())
+            self.cfg_factory = ConfigFactory.from_dict(raw_dict)
+            self.cfg_set = self.cfg_factory.cfg_set(self.cfg_set.name())
             # retry
             _do_update()
 
