@@ -3,6 +3,9 @@
   filter="indent_func(indent),trim"
 >
 <%
+import dataclasses
+import enum
+
 from concourse.steps import step_lib
 from makoutil import indent_func
 import gci.componentmodel as cm
@@ -20,6 +23,15 @@ upstream_update_policy = update_component_deps_trait.upstream_update_policy()
 ignore_prerelease_versions=update_component_deps_trait.ignore_prerelease_versions()
 component_descriptor_trait = job_variant.trait('component_descriptor')
 ctx_repo = component_descriptor_trait.ctx_repository()
+
+def enum_to_value(v):
+  if isinstance(v, enum.Enum):
+    return v.value
+  return v
+
+ctx_repo_dict = {
+  k: enum_to_value(v) for k,v in dataclasses.asdict(ctx_repo).items()
+}
 
 if not isinstance(ctx_repo, cm.OciRepositoryContext):
   raise NotImplementedError(ctx_repo)
@@ -114,9 +126,9 @@ upstream_update_policy = concourse.model.traits.update_component_deps.UpstreamUp
 )
 
 # we checked for ctx_repository to be of type OciRepositoryContext above
-ctx_repository = dacite.from_dict(
+ctx_repo = dacite.from_dict(
   data_class=gci.componentmodel.OciRepositoryContext,
-  data=${dataclasses.asdict(ctx_repository)},
+  data=${ctx_repo_dict},
 )
 
 # find components that need to be upgraded
@@ -124,7 +136,7 @@ for from_ref, to_version in determine_upgrade_prs(
     upstream_component_name=upstream_component_name,
     upstream_update_policy=upstream_update_policy,
     upgrade_pull_requests=upgrade_pull_requests,
-    ctx_repo=ctx_repository,
+    ctx_repo=ctx_repo,
     ignore_prerelease_versions=${ignore_prerelease_versions},
 ):
     applicable_merge_policy = [
