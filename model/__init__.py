@@ -545,6 +545,10 @@ class ConfigurationSet(NamedModelElement):
                     raise ValueError(f'duplicate keys for {cfg_type_name=} {duplicates=}')
                 self.raw[cfg_type_name]['config_names'].extend(other_element_names)
 
+                # use the first default from referenced based cfg sets if there is none
+                if not self._raw()[cfg_type_name].get('default', None):
+                    self.raw[cfg_type_name]['default'] = elements.get('default', None)
+
     def _optional_attributes(self):
         return {
             cfg_type_name for cfg_type_name in self.cfg_factory._cfg_types_raw()
