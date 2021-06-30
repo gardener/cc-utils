@@ -129,6 +129,9 @@ upstream_update_policy = concourse.model.traits.update_component_deps.UpstreamUp
 ctx_repo = dacite.from_dict(
   data_class=gci.componentmodel.OciRepositoryContext,
   data=${ctx_repo_dict},
+  cast=[
+      OciComponentNameMapping,
+  ]
 )
 
 # find components that need to be upgraded
