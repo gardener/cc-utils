@@ -10,8 +10,7 @@ RUN pip3 install --upgrade \
   --find-links /cc/utils/dist \
   gardener-cicd-libs \
   pycryptodome \
-&& pip3 uninstall -y gardener-component-model \
-&& pip3 install gardener-component-model \
+&& pip3 install gardener-component-model jsonschema \
 && cp /etc/ssl/cert.pem "$(python3 -c 'import certifi; print(certifi.where());')" \
 && if [ ! -f /usr/bin/python3 ]; then ln -s /usr/local/bin/python3 /usr/bin/python3; fi
 
