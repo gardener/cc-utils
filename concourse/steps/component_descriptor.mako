@@ -117,7 +117,7 @@ component_v2.sources.append(
 % for name, image_descriptor in output_image_descriptors.items():
 component_v2.resources.append(
   cm.Resource(
-    name='${name.replace('/', '_').replace('.', '_')}',
+    name='${name}',
     version=effective_version, # always inherited from component
     type=cm.ResourceType.OCI_IMAGE,
     relation=cm.ResourceRelation.LOCAL,
