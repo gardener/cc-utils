@@ -539,10 +539,13 @@ class ConfigurationSet(NamedModelElement):
                 self.raw[cfg_type_name] = elements
             else:
                 our_element_names = self._raw()[cfg_type_name]['config_names']
-                other_element_names = elements.get('config_names')
 
-                if duplicates := set(our_element_names) & set(other_element_names):
-                    raise ValueError(f'duplicate keys for {cfg_type_name=} {duplicates=}')
+                # only add elements once
+                other_element_names = [
+                    cfg_name for cfg_name in elements.get('config_names')
+                    if not cfg_name in our_element_names
+                ]
+
                 self.raw[cfg_type_name]['config_names'].extend(other_element_names)
 
                 # use the first default from referenced based cfg sets if there is none
