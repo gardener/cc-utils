@@ -12,6 +12,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 def scan_component_from_component_descriptor(
     whitesource_cfg_name: str,
     component_descriptor_path: str,
+    compliancedb_cfg_name: str = None,
     notification_recipients: str = None,
     filters: str = None,
     extra_whitesource_config: str = None,
@@ -27,6 +28,7 @@ def scan_component_from_component_descriptor(
 
     concourse.steps.scan_sources.scan_component_with_whitesource(
         whitesource_cfg_name=whitesource_cfg_name,
+        compliancedb_cfg_name=compliancedb_cfg_name,
         component_descriptor=util.component_descriptor_from_component_descriptor_path(
             cd_path=component_descriptor_path,
         ),
@@ -41,6 +43,7 @@ def scan_component_from_component_descriptor(
 def scan_component_from_ctf(
     whitesource_cfg_name: str,
     ctf_path: str,
+    compliancedb_cfg_name: str = None,
     notification_recipients: str = None,
     filters: str = None,
     extra_whitesource_config: str = None,
@@ -56,6 +59,7 @@ def scan_component_from_ctf(
 
     concourse.steps.scan_sources.scan_component_with_whitesource(
         whitesource_cfg_name=whitesource_cfg_name,
+        compliancedb_cfg_name=compliancedb_cfg_name,
         component_descriptor=util.component_descriptor_from_ctf_path(
             ctf_path=ctf_path,
         ),
@@ -70,6 +74,7 @@ def scan_component_from_ctf(
 def scan_component_from_dir(
     whitesource_cfg_name: str,
     dir_path: str,
+    compliancedb_cfg_name: str = None,
     notification_recipients: str = None,
     filters: str = None,
     extra_whitesource_config: str = None,
@@ -85,6 +90,7 @@ def scan_component_from_dir(
 
     concourse.steps.scan_sources.scan_component_with_whitesource(
         whitesource_cfg_name=whitesource_cfg_name,
+        compliancedb_cfg_name=compliancedb_cfg_name,
         component_descriptor=util.component_descriptor_from_dir(
             dir_path=dir_path,
         ),

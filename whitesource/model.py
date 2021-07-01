@@ -2,6 +2,7 @@ from enum import Enum
 import typing
 from dataclasses import dataclass
 
+
 cve_name = str
 cvss_score = float
 
@@ -27,6 +28,12 @@ class WhiteSrcProject:
                 cve_name = entry['name']
 
         return (cve_name, float(max_score))
+
+
+@dataclass
+class WhiteSrcProduct:
+    name: str
+    projects: typing.List[WhiteSrcProject]
 
 
 @dataclass

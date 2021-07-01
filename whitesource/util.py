@@ -14,7 +14,9 @@ import ccc.github
 import ccc.oci
 import ci.util
 import cnudie.retrieve
+import dso.compliancedb.model
 import dso.model
+import dso.util
 import gci.componentmodel as cm
 import mailutil
 import oci
@@ -295,25 +297,28 @@ def _scan_artifact(
     )
 
 
-def scan_sources(
-    whitesource_client: whitesource.client.WhitesourceClient,
-    component_descriptor: cm.ComponentDescriptor,
-    extra_whitesource_config: typing.Union[None, dict],
-    max_workers: int,
+def scan_artifacts_from_component_descriptor(
     filters: typing.List[whitesource.model.WhiteSourceFilterCfg],
-) -> typing.Tuple[str, typing.List[whitesource.model.WhiteSrcProject]]:
-
+    component_descriptor: cm.ComponentDescriptor,
+):
     components = cnudie.retrieve.components(component=component_descriptor)
-
-    product_name = component_descriptor.component.name
 
     # get scan artifacts with configured label
     scan_artifacts_gen = whitesource.component.get_scan_artifacts_from_components(
         components,
         filters=filters,
     )
-    scan_artifacts = tuple(scan_artifacts_gen)
+    return tuple(scan_artifacts_gen)
 
+
+def scan_artifacts(
+    whitesource_client: whitesource.client.WhitesourceClient,
+    extra_whitesource_config: typing.Union[None, dict],
+    max_workers: int,
+    scan_artifacts,
+) -> whitesource.model.WhiteSrcProduct:
+
+    # TODO lock
     get_scanned_count, increment_scanned_count = _mk_ctx()
 
     logger.info(f'{len(scan_artifacts)} artifacts to scan')
@@ -328,27 +333,22 @@ def scan_sources(
             increment_scanned_count=increment_scanned_count,
         ), scan_artifacts)
 
-    projects = whitesource_client.get_all_projects_of_product()
 
-    return product_name, projects
-
-
-def print_scans(
-    projects: typing.List[whitesource.model.WhiteSrcProject],
+def print_product_scans(
     cve_threshold: float,
-    product_name: str,
+    product: whitesource.model.WhiteSrcProduct
 ):
     logger.info('retrieving all projects')
 
-    if len(projects) == 0:
+    if len(product.projects) == 0:
         ci.util.warning(
-            f'No projects found in product {product_name}. No data to report. Exiting...',
+            f'No projects found in product {product.name}. No data to report. Exiting...',
         )
         return
 
     logger.info('generate simple reporting table for console output')
     tables = generate_reporting_tables(
-        projects=projects,
+        projects=product.projects,
         threshold=cve_threshold,
         tablefmt='simple',
     )
@@ -359,8 +359,7 @@ def print_scans(
 def send_mail(
     notification_recipients: typing.Union[None, typing.List[str]],
     cve_threshold: float,
-    product_name: str,
-    projects: typing.List[whitesource.model.WhiteSrcProject],
+    product: whitesource.model.WhiteSrcProduct,
 ):
     if not notification_recipients:
         logger.warning('No recipients defined. No emails will be sent...')
@@ -370,7 +369,7 @@ def send_mail(
 
         # generate html reporting table for email notifications
         tables = generate_reporting_tables(
-            projects=projects,
+            projects=product.projects,
             threshold=cve_threshold,
             tablefmt='html',
         )
@@ -391,7 +390,7 @@ def send_mail(
             email_cfg=cfg_set.email(),
             recipients=notification_recipients,
             mail_template=body,
-            subject=f'[Action Required] ({product_name}) WhiteSource Vulnerability Report',
+            subject=f'[Action Required] ({product.name}) WhiteSource Vulnerability Report',
             mimetype='html',
         )
 
@@ -486,3 +485,39 @@ def delete_all_projects_from_product(
             user_token=user_token,
         )
     logger.info('done')
+
+
+def insert_results(
+    projects: typing.List[whitesource.model.WhiteSrcProject],
+    scan_artifacts: typing.List[dso.model.ScanArtifact],
+    compliancedb_cfg_name: str,
+):
+    if not compliancedb_cfg_name:
+        logger.warning('no compliance db cfg name found, skipping insertion')
+        return
+
+    client = ccc.delivery.default_client_if_available()
+
+    for scan_artifact in scan_artifacts:
+        for project in projects:
+            if project.name == scan_artifact.name:
+                client.post_compliance_scan(
+                    scan_data=project.vulnerability_report,
+                    compliancedb_cfg_name=compliancedb_cfg_name,
+                    tool=dso.compliancedb.model.ScanTool.WHITESOURCE,
+                    component_name=scan_artifact.componentName,
+                    component_version=scan_artifact.componentVersion,
+                    artifact_name=scan_artifact.artifactName,
+                    artifact_version=scan_artifact.artifactVersion,
+                    artifact_type=scan_artifact.artifactType,
+                )
+
+
+def product_for_component_descriptor(
+    whitesource_client: whitesource.client.WhitesourceClient,
+    component_descriptor: cm.ComponentDescriptor,
+):
+    return whitesource.model.WhiteSrcProduct(
+        name=component_descriptor.component.name,
+        projects=whitesource_client.get_all_projects_of_product(),
+    )

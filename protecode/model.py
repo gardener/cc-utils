@@ -13,8 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from enum import Enum
+import typing
 from typing import Iterable
+
 
 import ci.util
 from model.base import ModelBase
@@ -85,6 +88,10 @@ class Component(ModelBase):
             f'{self.version() or "Version not detected"}'
         )
 
+    def __iter__(self):
+        yield 'name', self.name()
+        yield 'version', self.version()
+
 
 class ExtendedObject(ModelBase):
     def name(self):
@@ -118,6 +125,11 @@ class License(ModelBase):
             self.url(),
             self.license_type(),
         ))
+
+    def __iter__(self):
+        yield 'name', self.name()
+        yield 'licenseType', self.license_type()
+        yield 'url', self.url()
 
 
 class Vulnerability(ModelBase):
@@ -155,6 +167,14 @@ class Vulnerability(ModelBase):
 
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.cve()}'
+
+    def __iter__(self):
+        yield 'historical', self.historical()
+        yield 'cve', self.cve()
+        yield 'cve_severity_v3', self.cve_severity_str(cvss_version=CVSSVersion.V3)
+        yield 'cve_severity_v2', self.cve_severity_str(cvss_version=CVSSVersion.V2)
+        yield 'has_triage', self.has_triage()
+        yield 'triages', self.triages()
 
 
 class TriageScope(Enum):
@@ -279,3 +299,28 @@ class UploadResult:
 
     def pdf_report(self):
         return self._pdf_report_retrieval_func()
+
+
+@dataclass(frozen=True)
+class ProtecodeComponent:
+    component: Component
+    license: License
+    vulnerabilities: typing.List[Vulnerability]
+
+
+@dataclass(frozen=True)
+class ProtecodeScanResult:
+    componentName: str
+    componentVersion: str
+    artifactName: str
+    artifactVersion: str
+    scanResults: typing.List[ProtecodeComponent]
+
+
+@dataclass(frozen=True)
+class ProtecodeScanReport:
+    cveThreshold: int
+    above: typing.Tuple[UploadResult, int]
+    below: typing.Tuple[UploadResult, int]
+    licenseReport: typing.Tuple[UploadResult, dict]
+    rawResults: typing.List[ProtecodeScanResult]

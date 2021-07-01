@@ -1,13 +1,18 @@
-import dataclasses
+from dataclasses import dataclass
+from enum import Enum
 import typing
 
+import dso.labels
 import gci.componentmodel as cm
 
-import dso.labels
+
+class ArtifactType(Enum):
+    RESOURCE = 'resource'
+    SOURCE = 'source'
 
 
 # abstraction of component model v2 source and resource
-@dataclasses.dataclass
+@dataclass
 class ScanArtifact:
     name: str
     access: typing.Union[
@@ -17,3 +22,8 @@ class ScanArtifact:
         cm.ResourceAccess,
     ]
     label: dso.labels.ScanningHint
+    componentName: str
+    componentVersion: str
+    artifactName: str
+    artifactVersion: str
+    artifactType: ArtifactType

@@ -1,5 +1,7 @@
 import requests
 
+from dso.compliancedb.model import ScanTool
+from dso.model import ArtifactType
 import gci.componentmodel as cm
 
 import ci.util
@@ -14,6 +16,13 @@ class DeliveryServiceRoutes:
             self._base_url,
             'cnudie',
             'component',
+        )
+
+    def compliance_scan(self):
+        return 'http://' + ci.util.urljoin(
+            self._base_url,
+            'compliance',
+            'scan',
         )
 
 
@@ -43,3 +52,31 @@ class DeliveryServiceClient:
             res.json(),
             validation_mode=validation_mode,
         )
+
+    def post_compliance_scan(
+        self,
+        scan_data: dict,
+        compliancedb_cfg_name: str,
+        tool: ScanTool,
+        component_name: str,
+        component_version: str,
+        artifact_name: str,
+        artifact_version: str,
+        artifact_type: ArtifactType,
+    ):
+        body = {
+            'scanData': scan_data,
+            'complianceDbCfg': compliancedb_cfg_name,
+            'tool': tool.value,
+            'componentName': component_name,
+            'componentVersion': component_version,
+            'artifactName': artifact_name,
+            'artifactVersion': artifact_version,
+            'artifactType': artifact_type.value,
+        }
+        res = requests.post(
+            url=self._routes.compliance_scan(),
+            json=body,
+        )
+
+        res.raise_for_status()

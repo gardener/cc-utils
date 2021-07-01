@@ -11,6 +11,7 @@ repo_name = main_repo.logical_name().upper()
 image_scan_trait = job_variant.trait('image_scan')
 protecode_scan = image_scan_trait.protecode()
 clam_av = image_scan_trait.clam_av()
+compliance_db = image_scan_trait.compliance_db()
 
 filter_cfg = image_scan_trait.filters()
 component_trait = job_variant.trait('component_descriptor')
@@ -43,6 +44,7 @@ import protecode.util
 
 from concourse.model.traits.image_scan import Notify
 from protecode.model import CVSSVersion
+import protecode.scanning_util
 from protecode.scanning_util import ProcessingMode
 
 logger = logging.getLogger('scan_container_images.step')
@@ -88,7 +90,7 @@ print_protecode_info_table(
 )
 
 logger.info('running protecode scan for all components')
-results_above_threshold, results_below_threshold, license_report = protecode.util.upload_grouped_images(
+protecode_results = protecode.util.upload_grouped_images(
   protecode_cfg=protecode_cfg,
   protecode_group_id = protecode_group_id,
   component_descriptor = component_descriptor,
@@ -99,6 +101,20 @@ results_above_threshold, results_below_threshold, license_report = protecode.uti
   image_reference_filter=filter_function,
   cvss_version = CVSSVersion('${protecode_scan.cvss_version().value}'),
 )
+results_above_threshold = protecode_results.above
+results_below_threshold = protecode_results.below
+license_report = protecode_results.licenseReport
+
+if not compliance_db:
+    compliancedb_cfg_name = None
+else:
+    compliancedb_cfg_name = compliance_db.cfg_name()
+
+protecode.scanning_util.insert_results(
+    protecode_results=protecode_results,
+    compliancedb_cfg_name=compliancedb_cfg_name,
+)
+
 logger.info('preparing license report for protecode results')
 print_license_report(license_report)
 

@@ -142,6 +142,8 @@ class WhitesourceClient:
     def get_all_projects_of_product(
         self,
     ) -> typing.List[whitesource.model.WhiteSrcProject]:
+        logger.info('getting all projects')
+
         body = {
             'requestType': 'getAllProjects',
             'userKey': self.creds.user_key(),
@@ -162,7 +164,7 @@ class WhitesourceClient:
         for element in res['projects']:
             projects.append(whitesource.model.WhiteSrcProject(
                 name=element['projectName'],
-                token=element['projectName'],
+                token=element['projectToken'],
                 vulnerability_report=self.get_project_vulnerability_report(
                     project_token=element['projectToken'],
                 ),

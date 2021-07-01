@@ -1,4 +1,5 @@
 import concurrent.futures
+import dataclasses
 import functools
 import logging
 import shutil
@@ -12,45 +13,43 @@ import dacite
 import github3.exceptions
 import github3.repos
 
+import ccc.delivery
 import ccc.github
-import cnudie.retrieve
 import checkmarx.client
 import checkmarx.model as model
 import checkmarx.project
 import checkmarx.tablefmt
 import ci.util
+import cnudie.retrieve
+import dso.compliancedb.model
+import dso.labels
+import dso.model
+import dso.util
+import gci.componentmodel as cm
 import mailutil
 import product.util
 import reutil
-import dso.labels
-import dso.model
 
-import gci.componentmodel as cm
+
+logger = logging.getLogger(__name__)
 
 
 def scan_sources(
-    component_descriptor: cm.ComponentDescriptor,
+    artifacts: typing.Tuple[dso.model.ScanArtifact],
     cx_client: checkmarx.client.CheckmarxClient,
     team_id: str,
     threshold: int,
-    max_workers: int = 4, # only two scan will be run per user
     exclude_paths: typing.Sequence[str] = (),
     include_paths: typing.Sequence[str] = (),
+    max_workers: int = 4, # only two scan will be run per user
 ) -> model.FinishedScans:
-
-    components = tuple(cnudie.retrieve.components(component=component_descriptor))
-
-    # identify scan artifacts and collect them in a sequence
-    artifacts_gen = _get_scan_artifacts_from_components(
-        components=components,
-    )
 
     return scan_artifacts(
         cx_client=cx_client,
         exclude_paths=exclude_paths,
         include_paths=include_paths,
         max_workers=max_workers,
-        scan_artifacts=artifacts_gen,
+        scan_artifacts=artifacts,
         team_id=team_id,
         threshold=threshold,
     )
@@ -74,6 +73,11 @@ def _get_scan_artifacts_from_components(
                     access=source.access,
                     name=f'{component.name}_{source.identity(peers=component.sources)}',
                     label=cx_label,
+                    componentName=component.name,
+                    componentVersion=component.version,
+                    artifactName=source.name,
+                    artifactVersion=source.version,
+                    artifactType=dso.model.ArtifactType.SOURCE,
                 )
             elif cx_label.policy is dso.labels.ScanPolicy.SKIP:
                 continue
@@ -112,7 +116,7 @@ def scan_artifacts(
     artifact_count = len(artifacts)
     finished = 0
 
-    ci.util.info(f'will scan {artifact_count} artifacts')
+    logger.info(f'will scan {artifact_count} artifacts')
 
     scan_func = functools.partial(
         scan_gh_artifact,
@@ -162,7 +166,7 @@ def scan_artifacts(
                     finished_scans.scans_below_threshold.append(scan_result)
 
             finished += 1
-            ci.util.info(f'remaining: {artifact_count - finished}')
+            logger.info(f'remaining: {artifact_count - finished}')
 
     return finished_scans
 
@@ -279,7 +283,7 @@ def send_mail(
         cfg_factory = ci.util.ctx().cfg_factory()
         cfg_set = cfg_factory.cfg_set(default_cfg_set_name)
 
-        ci.util.info(f'sending notification emails to: {",".join(email_recipients)}')
+        logger.info(f'sending notification emails to: {",".join(email_recipients)}')
         mailutil._send_mail(
             email_cfg=cfg_set.email(),
             recipients=email_recipients,
@@ -287,11 +291,11 @@ def send_mail(
             subject='[Action Required] checkmarx vulnerability report',
             mimetype='html',
         )
-        ci.util.info('sent notification emails to: ' + ','.join(email_recipients))
+        logger.info('sent notification emails to: ' + ','.join(email_recipients))
 
     except Exception:
         traceback.print_exc()
-        ci.util.warning('error whilst trying to send notification-mail')
+        logger.warning('error whilst trying to send notification-mail')
 
 
 def print_scans(
@@ -300,23 +304,23 @@ def print_scans(
 ):
     if scans.scans_above_threshold:
         print('\n')
-        ci.util.info('critical scans above threshold')
+        logger.info('critical scans above threshold')
         checkmarx.tablefmt.print_scan_result(
             scan_results=scans.scans_above_threshold,
             routes=routes,
         )
     else:
-        ci.util.info('no critical artifacts above threshold')
+        logger.info('no critical artifacts above threshold')
 
     if scans.scans_below_threshold:
         print('\n')
-        ci.util.info('clean scans below threshold')
+        logger.info('clean scans below threshold')
         checkmarx.tablefmt.print_scan_result(
             scan_results=scans.scans_below_threshold,
             routes=routes,
         )
     else:
-        ci.util.info('no scans below threshold')
+        logger.info('no scans below threshold')
 
     if scans.failed_scans:
         print('\n')
@@ -325,7 +329,7 @@ def print_scans(
                 f'- {artifact_name}' for artifact_name in scans.failed_scans
             )
         )
-        ci.util.warning(f'failed scan artifacts:\n\n{failed_artifacts_str}\n')
+        logger.warning(f'failed scan artifacts:\n\n{failed_artifacts_str}\n')
 
 
 def _download_and_zip_repo(
@@ -411,3 +415,40 @@ def component_logger(artifact_name: str):
 def create_checkmarx_client(checkmarx_cfg_name: str):
     cfg_fac = ci.util.ctx().cfg_factory()
     return checkmarx.client.CheckmarxClient(cfg_fac.checkmarx(checkmarx_cfg_name))
+
+
+def insert_results(
+    scans: model.FinishedScans,
+    scan_artifacts,
+    compliancedb_cfg_name: str,
+):
+    if not compliancedb_cfg_name:
+        logger.warning('no compliance db cfg name found, skipping insertion')
+        return
+
+    client = ccc.delivery.default_client_if_available()
+
+    for scan_artifact in scan_artifacts:
+        for scan in scans.failed_scans + scans.scans_above_threshold + scans.scans_below_threshold:
+            if scan.artifact_name == scan_artifact.name:
+                client.post_compliance_scan(
+                    compliancedb_cfg_name=compliancedb_cfg_name,
+                    scan_data=dataclasses.asdict(scan),
+                    tool=dso.compliancedb.model.ScanTool.CHECKMARX,
+                    component_name=scan_artifact.componentName,
+                    component_version=scan_artifact.componentVersion,
+                    artifact_name=scan_artifact.artifactName,
+                    artifact_version=scan_artifact.artifactVersion,
+                    artifact_type=scan_artifact.artifactType,
+                )
+
+
+def scan_artifacts_from_component_descriptor(
+    component_descriptor: cm.ComponentDescriptor,
+) -> typing.Tuple[dso.model.ScanArtifact]:
+    components = tuple(cnudie.retrieve.components(component=component_descriptor))
+
+    # identify scan artifacts and collect them in a sequence
+    return tuple(_get_scan_artifacts_from_components(
+        components=components,
+    ))

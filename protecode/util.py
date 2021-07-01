@@ -36,9 +36,12 @@ from protecode.scanning_util import (
     ProtecodeUtil,
 )
 from protecode.model import (
-    License,
-    highest_major_cve_severity,
     CVSSVersion,
+    highest_major_cve_severity,
+    License,
+    ProtecodeComponent,
+    ProtecodeScanReport,
+    ProtecodeScanResult,
     UploadResult,
 )
 
@@ -56,7 +59,7 @@ def upload_grouped_images(
     image_reference_filter=(lambda component, resource: True),
     reference_group_ids=(),
     cvss_version=CVSSVersion.V2,
-):
+) -> ProtecodeScanReport:
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
     protecode_api = ccc.protecode.client(protecode_cfg)
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
@@ -130,7 +133,7 @@ def upload_grouped_images(
             else:
                 return True
 
-        for component_name, components in component_groups.items():
+        for _, components in component_groups.items():
             for grouped_resources in group_resources(components):
                 # all components in a component group share a name
                 component = next(iter(components))
@@ -148,20 +151,47 @@ def upload_grouped_images(
         for result_set in results:
             yield from result_set
 
-    results = list(flatten_results())
-
     logger.info('Preparing results')
+
+    upload_results: typing.List[UploadResult] = list(flatten_results())
+
+    protecode_results: typing.List[ProtecodeScanResult] = []
+    for r in upload_results:
+        protecode_components: typing.List[ProtecodeComponent] = []
+        for component in r.result.components():
+            protecode_components.append(ProtecodeComponent(
+                component=component,
+                license=component.license(),
+                vulnerabilities=[v for v in component.vulnerabilities()],
+            ))
+
+        protecode_results.append(
+            ProtecodeScanResult(
+                componentName=r.component.name,
+                componentVersion=r.component.version,
+                artifactName=r.resource.name,
+                artifactVersion=r.resource.version,
+                scanResults=protecode_components,
+            )
+        )
+
     relevant_results, results_below_threshold = filter_and_display_upload_results(
-        upload_results=results,
+        upload_results=upload_results,
         cvss_version=cvss_version,
         cve_threshold=cve_threshold,
         ignore_if_triaged=ignore_if_triaged,
     )
 
     logger.info('Preparing license report')
-    _license_report = license_report(upload_results=results)
+    _license_report = license_report(upload_results=upload_results)
 
-    return (relevant_results, results_below_threshold, _license_report)
+    return ProtecodeScanReport(
+        cveThreshold=cve_threshold,
+        above=relevant_results,
+        below=results_below_threshold,
+        licenseReport=_license_report,
+        rawResults=protecode_results,
+    )
 
 
 def license_report(

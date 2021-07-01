@@ -107,6 +107,27 @@ PROTECODE_ATTRS = (
 )
 
 
+COMPLIANCE_DB_ATTRIBUTES = (
+    AttributeSpec.required(
+        name='cfg_name',
+        doc='compliance db cfg_name',
+        type=str,
+    ),
+)
+
+
+class ComplianceDBCfg(ModelBase):
+    @classmethod
+    def _attribute_specs(cls):
+        return COMPLIANCE_DB_ATTRIBUTES
+
+    def cfg_name(self):
+        return self.raw['cfg_name']
+
+    def validate(self):
+        super().validate()
+
+
 class ProtecodeScanCfg(ModelBase):
     @classmethod
     def _attribute_specs(cls):
@@ -201,7 +222,14 @@ ATTRIBUTES = (
         default=(),
         type=typing.Set[str],
         doc='if present, generated build steps depend on those generated from specified traits',
-    )
+    ),
+    # TODO required
+    AttributeSpec.optional(
+        name='compliance_db',
+        type=ComplianceDBCfg,
+        default=(),
+        doc='config to write scan results to compliance db',
+    ),
 )
 
 
@@ -229,6 +257,10 @@ class ImageScanTrait(Trait, ImageFilterMixin):
     def clam_av(self):
         if self.raw['clam_av']:
             return ClamAVScanCfg(raw_dict=self.raw['clam_av'])
+
+    def compliance_db(self):
+        if self.raw['compliance_db']:
+            return ComplianceDBCfg(raw_dict=self.raw['compliance_db'])
 
     def transformer(self):
         return ImageScanTraitTransformer(trait=self)

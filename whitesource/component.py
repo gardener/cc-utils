@@ -47,8 +47,15 @@ def get_scan_artifacts_from_components(
                     access=artifact.access,
                     label=ws_hint,
                     name=f'{component.name}:{component.version}/'
-                         f'{"source" if artifact in component.sources else "resources"}/'
+                         f'{"source" if artifact in component.sources else "resource"}/'
                          f'{artifact.name}:{artifact.version}',
+                    componentName=component.name,
+                    componentVersion=component.version,
+                    artifactName=artifact.name,
+                    artifactVersion=artifact.version,
+                    artifactType=dso.model.ArtifactType(
+                        'source' if artifact in component.sources else 'resource'
+                    ),
                 )
             elif ws_hint.policy is dso.labels.ScanPolicy.SKIP:
                 continue

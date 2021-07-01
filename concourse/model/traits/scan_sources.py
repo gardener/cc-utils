@@ -73,6 +73,15 @@ WHITESOURCE_ATTRIBUTES = (
 )
 
 
+COMPLIANCE_DB_ATTRIBUTES = (
+    AttributeSpec.required(
+        name='cfg_name',
+        doc='compliance db cfg_name',
+        type=str,
+    ),
+)
+
+
 FILTER_ATTRIBUTES = (
     AttributeSpec.required(
         name='type',
@@ -90,6 +99,15 @@ FILTER_ATTRIBUTES = (
         type=str,
     ),
 )
+
+
+class ComplianceDBCfg(ModelBase):
+    @classmethod
+    def _attribute_specs(cls):
+        return COMPLIANCE_DB_ATTRIBUTES
+
+    def cfg_name(self):
+        return self.raw['cfg_name']
 
 
 class FilterCfg(ModelBase):
@@ -174,6 +192,13 @@ ATTRIBUTES = (
         default=(),
         doc='if present, perform whitesource scanning',
     ),
+    # TODO required
+    AttributeSpec.optional(
+        name='compliance_db',
+        type=ComplianceDBCfg,
+        default=(),
+        doc='config to write scan results to compliance db',
+    ),
 )
 
 
@@ -199,6 +224,10 @@ class SourceScanTrait(Trait):
     def whitesource(self):
         if whitesource := self.raw.get('whitesource'):
             return WhitesourceCfg(whitesource)
+
+    def compliance_db(self):
+        if compliance_db := self.raw.get('compliance_db'):
+            return ComplianceDBCfg(compliance_db)
 
     def filters(self):
         if filters := self.raw.get('filters'):
