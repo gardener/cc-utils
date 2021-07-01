@@ -26,7 +26,11 @@ def replicate_secrets(
     kube_ctx = kube.ctx.Ctx(kubeconfig_dict=kubeconfig)
     logger.info(f'deploying secret on cluster {kube_ctx.kubeconfig.host}')
     secrets_helper = kube_ctx.secret_helper()
-    serialiser = model.ConfigSetSerialiser(cfg_sets=[cfg_set], cfg_factory=cfg_factory)
+
+    # force cfg_set serialiser to include referenced cfg_sets
+    cfg_sets = list(cfg_set._cfg_elements('cfg_set')) + [cfg_set]
+    serialiser = model.ConfigSetSerialiser(cfg_sets=cfg_sets, cfg_factory=cfg_factory)
+
     encrypted_cipher_data = ccc.secrets_server.encrypt_data(
         key=secret_key.encode('utf-8'),
         cipher_algorithm=secret_cipher_algorithm,
