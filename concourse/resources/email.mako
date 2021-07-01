@@ -26,8 +26,9 @@ from makoutil import indent_func
 % endfor
     ${task_image_defaults(cfg_set.container_registry(), indent=4)}
     run:
-      path: /usr/bin/python3
+      path: /usr/bin/env
       args:
+      - python3
       - -c
       - |
         ${notification_step(
