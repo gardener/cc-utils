@@ -12,6 +12,7 @@ RUN pip3 install --upgrade \
   pycryptodome \
 && pip3 uninstall -y gardener-component-model \
 && pip3 install gardener-component-model \
+&& cp /etc/ssl/cert.pem "$(python3 -c 'import certifi; print(certifi.where());')" \
 && if [ ! -f /usr/bin/python3 ]; then ln -s /usr/local/bin/python3 /usr/bin/python3; fi
 
 RUN mv /kaniko/executor.tmp /bin/kaniko
