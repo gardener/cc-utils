@@ -11,6 +11,7 @@ RUN pip3 install --upgrade \
   gardener-cicd-libs \
   pycryptodome \
 && pip3 uninstall -y gardener-component-model \
-&& pip3 install gardener-component-model
+&& pip3 install gardener-component-model \
+&& ln -s /usr/local/bin/python3 /usr/bin/python3
 
 RUN mv /kaniko/executor.tmp /bin/kaniko
