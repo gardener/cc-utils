@@ -336,10 +336,10 @@ else:
 
 % endif
 % for name, expression in job_step.variables().items():
-      ${name}: ${eval(expression, {
+      ${name}: '${eval(expression, {
         'pipeline': pipeline_definition,
         'pipeline_descriptor': pipeline,
-        })}
+        })}'
 % endfor
 % if job_step.script_type() == ScriptType.BOURNE_SHELL:
     run:
