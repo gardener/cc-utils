@@ -609,6 +609,9 @@ class ConfigurationSet(NamedModelElement):
         if not cfg_type_name in self._raw():
             self._resolve_base_cfg_sets()
 
+        if not cfg_type_name in self._raw():
+            raise ValueError(f'{cfg_type_name=} is unknown - known: {self._raw().keys()}')
+
         cfg_name = self._raw()[cfg_type_name].get('default', None)
         if not cfg_name:
             self._resolve_base_cfg_sets()
