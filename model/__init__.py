@@ -333,7 +333,7 @@ class ConfigFactory:
         configs = self._configs(cfg_type.cfg_type_name())
         if cfg_name not in configs:
             raise ConfigElementNotFoundError(
-                f'no such cfg-element: {cfg_name=} {cfg_type.cfg_type_name()=} '
+                f'{self.name()}: no such cfg-element: {cfg_name=} {cfg_type.cfg_type_name()=} '
                 'Known: {", ".join(configs.keys())}'
             )
         kwargs = {'raw_dict': configs[cfg_name]}
@@ -610,7 +610,9 @@ class ConfigurationSet(NamedModelElement):
             self._resolve_base_cfg_sets()
 
         if not cfg_type_name in self._raw():
-            raise ValueError(f'{cfg_type_name=} is unknown - known: {self._raw().keys()}')
+            raise ValueError(
+                f'{self.name()=}: {cfg_type_name=} is unknown - known: {self._raw().keys()}'
+            )
 
         cfg_name = self._raw()[cfg_type_name].get('default', None)
         if not cfg_name:
