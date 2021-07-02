@@ -332,9 +332,11 @@ class ConfigFactory:
         # (with the exception of ConfigurationSet)
         configs = self._configs(cfg_type.cfg_type_name())
         if cfg_name not in configs:
+            known_cfg_names = ', '.join(configs.keys())
+
             raise ConfigElementNotFoundError(
                 f'cfg-factory: no such cfg-element: {cfg_name=} {cfg_type.cfg_type_name()=} '
-                'Known: {", ".join(configs.keys())}'
+                f'{known_cfg_names=}'
             )
         kwargs = {'raw_dict': configs[cfg_name]}
 
