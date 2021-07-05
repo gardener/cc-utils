@@ -1,10 +1,10 @@
-import datetime
 from enum import Enum
 
 import sqlalchemy
 from sqlalchemy import Column, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 import dso.model
 
@@ -42,7 +42,7 @@ class ScanResult(Base):
     artifact_id = Column(sqlalchemy.String, ForeignKey('artifact.id'))
     timestamp = Column(
         sqlalchemy.TIMESTAMP(timezone=True),
-        server_default=datetime.datetime.utcnow(),
+        server_default=func.now(),
     )
     source = Column(sqlalchemy.types.Enum(
         ScanTool,
