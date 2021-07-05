@@ -28,6 +28,9 @@ import dso.model
 import gci.componentmodel as cm
 
 
+logger = logging.getLogger(__name__)
+
+
 def scan_sources(
     component_descriptor: cm.ComponentDescriptor,
     cx_client: checkmarx.client.CheckmarxClient,
@@ -112,7 +115,7 @@ def scan_artifacts(
     artifact_count = len(artifacts)
     finished = 0
 
-    ci.util.info(f'will scan {artifact_count} artifacts')
+    logger.info(f'will scan {artifact_count} artifacts')
 
     scan_func = functools.partial(
         scan_gh_artifact,
@@ -162,7 +165,7 @@ def scan_artifacts(
                     finished_scans.scans_below_threshold.append(scan_result)
 
             finished += 1
-            ci.util.info(f'remaining: {artifact_count - finished}')
+            logger.info(f'remaining: {artifact_count - finished}')
 
     return finished_scans
 
@@ -279,7 +282,7 @@ def send_mail(
         cfg_factory = ci.util.ctx().cfg_factory()
         cfg_set = cfg_factory.cfg_set(default_cfg_set_name)
 
-        ci.util.info(f'sending notification emails to: {",".join(email_recipients)}')
+        logger.info(f'sending notification emails to: {",".join(email_recipients)}')
         mailutil._send_mail(
             email_cfg=cfg_set.email(),
             recipients=email_recipients,
@@ -287,11 +290,11 @@ def send_mail(
             subject='[Action Required] checkmarx vulnerability report',
             mimetype='html',
         )
-        ci.util.info('sent notification emails to: ' + ','.join(email_recipients))
+        logger.info('sent notification emails to: ' + ','.join(email_recipients))
 
     except Exception:
         traceback.print_exc()
-        ci.util.warning('error whilst trying to send notification-mail')
+        logger.warning('error whilst trying to send notification-mail')
 
 
 def print_scans(
@@ -300,23 +303,23 @@ def print_scans(
 ):
     if scans.scans_above_threshold:
         print('\n')
-        ci.util.info('critical scans above threshold')
+        logger.info('critical scans above threshold')
         checkmarx.tablefmt.print_scan_result(
             scan_results=scans.scans_above_threshold,
             routes=routes,
         )
     else:
-        ci.util.info('no critical artifacts above threshold')
+        logger.info('no critical artifacts above threshold')
 
     if scans.scans_below_threshold:
         print('\n')
-        ci.util.info('clean scans below threshold')
+        logger.info('clean scans below threshold')
         checkmarx.tablefmt.print_scan_result(
             scan_results=scans.scans_below_threshold,
             routes=routes,
         )
     else:
-        ci.util.info('no scans below threshold')
+        logger.info('no scans below threshold')
 
     if scans.failed_scans:
         print('\n')
@@ -325,7 +328,7 @@ def print_scans(
                 f'- {artifact_name}' for artifact_name in scans.failed_scans
             )
         )
-        ci.util.warning(f'failed scan artifacts:\n\n{failed_artifacts_str}\n')
+        logger.warning(f'failed scan artifacts:\n\n{failed_artifacts_str}\n')
 
 
 def _download_and_zip_repo(
