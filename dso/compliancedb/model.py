@@ -42,7 +42,7 @@ class ScanResult(Base):
     artifact_id = Column(sqlalchemy.String, ForeignKey('artifact.id'))
     timestamp = Column(
         sqlalchemy.TIMESTAMP(timezone=True),
-        default=datetime.datetime.utcnow(),
+        server_default=datetime.datetime.utcnow(),
     )
     source = Column(sqlalchemy.types.Enum(
         ScanTool,
