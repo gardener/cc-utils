@@ -102,10 +102,10 @@ chroot = shutil.which('chroot')
 
 ## cp build-ctx
 workspace_dirname = 'workspace'
-build_ctx_tgt = os.path.join(root, workspace_dirname)
+build_ctx_tgt = os.path.join(home, workspace_dirname)
 shutil.copytree('${build_ctx_dir}', build_ctx_tgt)
 
-chroot_build_ctx_dir = f'/{workspace_dirname}' # relative to chroot env
+chroot_build_ctx_dir = f'/kaniko/{workspace_dirname}' # relative to chroot env
 
 ## cp dockerfile
 dockerfile_tgt = os.path.join(build_ctx_tgt, 'Dockerfile')
