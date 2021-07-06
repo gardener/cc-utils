@@ -1,6 +1,7 @@
 import os
 
 own_dir = os.path.abspath(os.path.dirname(__file__))
+repo_root_dir = os.path.join(own_dir, os.pardir)
 res_dir = os.path.join(own_dir, 'resources')
 template_dir = os.path.join(own_dir, 'templates')
 template_include_dir = own_dir
