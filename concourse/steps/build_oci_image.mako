@@ -104,7 +104,7 @@ chroot = shutil.which('chroot')
 build_ctx_tgt = os.path.join(root, 'build')
 shutil.copytree('${build_ctx_dir}', build_ctx_tgt)
 
-chroot_build_ctx_dir = '/build' # relative to chroot env
+chroot_build_ctx_dir = '/workspace' # relative to chroot env
 
 ## cp dockerfile
 dockerfile_tgt = os.path.join(build_ctx_tgt, 'Dockerfile')
