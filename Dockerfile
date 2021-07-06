@@ -18,9 +18,9 @@ RUN pip3 install --upgrade \
   wheel \
 && pip3 install --upgrade \
   --find-links /cc/utils/dist \
-  gardener-cicd-libs \
-  gardener-cicd-cli \
-  gardener-cicd-whd \
+  gardener-cicd-libs==$(cat /metadata/VERSION) \
+  gardener-cicd-cli==$(cat /metadata/VERSION) \
+  gardener-cicd-whd==$(cat /metadata/VERSION) \
   gardenlinux \
   pycryptodome \
 && curl -L \
