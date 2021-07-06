@@ -118,6 +118,12 @@ class NamedModelElement(ModelBase):
     def name(self):
         return self._name
 
+    def __getattr__(self, name):
+        if name in self.raw:
+            return lambda: self.raw[name]
+
+        raise AttributeError(name)
+
     def __repr__(self):
         return f'{self.__class__.__qualname__}: {self.name()}'
 
