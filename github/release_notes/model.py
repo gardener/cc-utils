@@ -94,11 +94,11 @@ class ReleaseNoteBlock(ReleaseNote):
         reference = Reference(type=reference_type, identifier=reference_id)
 
         source_component_access = cnudie.util.determine_main_source_for_component(
-            coponent=source_component,
+            component=source_component,
             absent_ok=False,
         ).access
         current_component_access = cnudie.util.determine_main_source_for_component(
-            coponent=current_component,
+            component=current_component,
             absent_ok=False,
         ).access
 
