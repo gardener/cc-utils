@@ -157,8 +157,6 @@ class TestGitHubReleaseStep:
                 githubrepobranch=githubrepobranch,
                 repo_dir=repo_dir,
                 release_version=release_version,
-                component_descriptor_v2_path=component_descriptor_v2,
-                ctf_path=ctf_path,
             )
         return _examinee
 

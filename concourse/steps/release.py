@@ -10,7 +10,10 @@ import version
 
 import yaml
 
-from github3.exceptions import NotFoundError
+from github3.exceptions import (
+    ConnectionError,
+    NotFoundError,
+)
 
 import gci.componentmodel as cm
 
@@ -562,45 +565,17 @@ class GitHubReleaseStep(TransactionalStep):
         githubrepobranch: GitHubRepoBranch,
         repo_dir: str,
         release_version: str,
-        component_descriptor_v2_path: str,
-        ctf_path:str,
     ):
         self.github_helper = not_none(github_helper)
         self.githubrepobranch = githubrepobranch
         self.release_version = not_empty(release_version)
-
         self.repo_dir = repo_dir
-        self.component_descriptor_v2_path = component_descriptor_v2_path
-        self.ctf_path = ctf_path
 
     def name(self):
         return "Create Release"
 
     def validate(self):
         version.parse_to_semver(self.release_version)
-
-        # either cds _XOR_ ctf must exist
-        have_ctf = os.path.exists(self.ctf_path)
-        have_cd = os.path.exists(self.component_descriptor_v2_path)
-        if not have_ctf ^ have_cd:
-            ci.util.fail('exactly one of component-descriptor, or ctf-archive must exist')
-        elif have_cd:
-            self.components = [cm.ComponentDescriptor.from_dict(
-                component_descriptor_dict=ci.util.parse_yaml_file(self.component_descriptor_v2_path),
-                validation_mode=cm.ValidationMode.FAIL,
-            )]
-        elif have_ctf:
-            self.components = tuple(cnudie.util.component_descriptors_from_ctf_archive(
-                self.ctf_path,
-            ))
-            if not self.components:
-                ci.util.fail(f'No component descriptor found in CTF archive at {self.ctf_path=}')
-
-        for component_descriptor_v2 in self.components:
-            collections.deque(
-                cnudie.retrieve.components(component=component_descriptor_v2),
-                maxlen=0,
-            )
 
     def apply(
         self,
@@ -634,6 +609,66 @@ class GitHubReleaseStep(TransactionalStep):
                 name=self.release_version,
             )
 
+        return {
+            'release_tag_name': release_tag,
+        }
+
+    def revert(self):
+        # Fetch release
+        try:
+            release = self.github_helper.repository.release_from_tag(self.release_version)
+        except NotFoundError:
+            release = None
+        if release:
+            logger.info(f'Deleting {self.release_version=}')
+            if not release.delete():
+                raise RuntimeError("Release could not be deleted")
+
+
+class UploadComponentDescriptorStep(TransactionalStep):
+    def __init__(
+        self,
+        github_helper: GitHubRepositoryHelper,
+        component_descriptor_v2_path: str,
+        ctf_path:str,
+    ):
+        self.github_helper = not_none(github_helper)
+        self.component_descriptor_v2_path = component_descriptor_v2_path
+        self.ctf_path = ctf_path
+
+    def name(self):
+        return "Upload Component Descriptor"
+
+    def validate(self):
+        # either cds _XOR_ ctf must exist
+        have_ctf = os.path.exists(self.ctf_path)
+        have_cd = os.path.exists(self.component_descriptor_v2_path)
+        if not have_ctf ^ have_cd:
+            ci.util.fail('exactly one of component-descriptor, or ctf-archive must exist')
+        elif have_cd:
+            self.components = [cm.ComponentDescriptor.from_dict(
+                component_descriptor_dict=ci.util.parse_yaml_file(self.component_descriptor_v2_path),
+                validation_mode=cm.ValidationMode.FAIL,
+            )]
+        elif have_ctf:
+            self.components = tuple(cnudie.util.component_descriptors_from_ctf_archive(
+                self.ctf_path,
+            ))
+            if not self.components:
+                ci.util.fail(f'No component descriptor found in CTF archive at {self.ctf_path=}')
+
+        for component_descriptor_v2 in self.components:
+            collections.deque(
+                cnudie.retrieve.components(component=component_descriptor_v2),
+                maxlen=0,
+            )
+
+    def apply(
+        self,
+    ):
+        create_release_step_output = self.context().step_output('Create Release')
+        release_tag_name = create_release_step_output['release_tag_name']
+
         if os.path.exists(self.component_descriptor_v2_path):
             component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
                 component_descriptor_dict=ci.util.parse_yaml_file(
@@ -654,35 +689,28 @@ class GitHubReleaseStep(TransactionalStep):
                 check=True,
             )
 
-        for component_descriptor_v2 in self.components:
-            descriptor_str = yaml.dump(
-                data=dataclasses.asdict(component_descriptor_v2),
-                Dumper=cm.EnumValueYamlDumper,
-            )
+        try:
+            release = self.github_helper.repository.release_from_tag(release_tag_name)
 
-            normalized_component_name = component_descriptor_v2.component.name.replace('/', '_')
-            asset_name = f'{normalized_component_name}.component_descriptor.cnudie.yaml'
-            release.upload_asset(
-                content_type='application/x-yaml',
-                name=asset_name,
-                asset=descriptor_str.encode('utf-8'),
-                label=asset_name,
-            )
+            for component_descriptor_v2 in self.components:
+                descriptor_str = yaml.dump(
+                    data=dataclasses.asdict(component_descriptor_v2),
+                    Dumper=cm.EnumValueYamlDumper,
+                )
 
-        return {
-            'release_tag_name': release_tag,
-        }
+                normalized_component_name = component_descriptor_v2.component.name.replace('/', '_')
+                asset_name = f'{normalized_component_name}.component_descriptor.cnudie.yaml'
+                release.upload_asset(
+                    content_type='application/x-yaml',
+                    name=asset_name,
+                    asset=descriptor_str.encode('utf-8'),
+                    label=asset_name,
+                )
+        except ConnectionError:
+            logger.warning('Unable to attach component-descriptors to release as release-asset.')
 
     def revert(self):
-        # Fetch release
-        try:
-            release = self.github_helper.repository.release_from_tag(self.release_version)
-        except NotFoundError:
-            release = None
-        if release:
-            logger.info(f'Deleting {self.release_version=}')
-            if not release.delete():
-                raise RuntimeError("Release could not be deleted")
+        pass
 
 
 class PublishReleaseNotesStep(TransactionalStep):
@@ -960,14 +988,19 @@ def release_and_prepare_next_dev_cycle(
         githubrepobranch=githubrepobranch,
         repo_dir=repo_dir,
         release_version=release_version,
-        component_descriptor_v2_path=component_descriptor_v2_path,
-        ctf_path=ctf_path,
     )
     step_list.append(github_release_step)
 
+    upload_component_descriptor_step = UploadComponentDescriptorStep(
+        github_helper=github_helper,
+        component_descriptor_v2_path=component_descriptor_v2_path,
+        ctf_path=ctf_path,
+    )
+    step_list.append(upload_component_descriptor_step)
+
     release_transaction = Transaction(
         ctx=transaction_ctx,
-        steps=step_list
+        steps=step_list,
     )
 
     release_transaction.validate()
