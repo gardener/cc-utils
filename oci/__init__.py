@@ -66,6 +66,7 @@ def replicate_artifact(
         manifest, _ = oconv.v1_manifest_to_v2(
             manifest=manifest,
             oci_client=client,
+            src_image_reference=src_image_reference,
             tgt_image_ref=tgt_image_reference,
         )
         raw_manifest = json.dumps(dataclasses.asdict(manifest))
