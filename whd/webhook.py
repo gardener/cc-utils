@@ -26,12 +26,15 @@ logger.setLevel(logging.DEBUG)
 class GithubWebhook:
     def __init__(
         self,
+        cfg_factory,
         cfg_set,
         whd_cfg: WebhookDispatcherConfig
     ):
-        self.cfg_set = cfg_set
-        self.whd_cfg = whd_cfg
-        self.dispatcher = GithubWebhookDispatcher(cfg_set=cfg_set, whd_cfg=whd_cfg)
+        self.dispatcher = GithubWebhookDispatcher(
+            cfg_factory=cfg_factory,
+            cfg_set=cfg_set,
+            whd_cfg=whd_cfg,
+        )
 
     def on_post(self, req, resp):
         event = req.get_header('X-GitHub-Event', required=True)

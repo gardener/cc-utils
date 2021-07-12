@@ -16,6 +16,7 @@
 from enum import Enum
 import typing
 import re
+import urllib.parse
 
 import reutil
 
@@ -301,6 +302,13 @@ class JobMappingSet(NamedModelElement):
     def job_mappings(self):
         return {name: JobMapping(name=name, raw_dict=raw) for name, raw in self.raw.items()}
 
+    def job_mapping_for_repo_url(self, repo_url: str):
+        for _, job_mapping in self.job_mappings().items():
+            if job_mapping.matches_repo_url(repo_url):
+                return job_mapping
+
+        raise ValueError(f'no matching job mapping for {repo_url=}')
+
     def __iter__(self):
         return self.job_mappings().values().__iter__()
 
@@ -346,6 +354,9 @@ class JobMapping(NamedModelElement):
             self.raw.get('cleanup_policy', PipelineCleanupPolicy.CLEANUP_EXTRA_PIPELINES)
         )
 
+    def replication_ctx_cfg_set(self) -> str:
+        return self.raw.get('replication_ctx_cfg_set')
+
     def github_organisations(self):
         return [
             GithubOrganisationConfig(name, raw)
@@ -362,9 +373,26 @@ class JobMapping(NamedModelElement):
     def concourse_uam(self) -> str:
         return self.raw.get('concourse_uam')
 
+    def matches_repo_url(self, repo_url) -> bool:
+        if not '://' in repo_url:
+            repo_url = 'x://' + repo_url
+
+        repo_url = urllib.parse.urlparse(repo_url)
+        org, repo = repo_url.path[1:].split('/')
+
+        for github_org_cfg in self.github_organisations():
+            if not github_org_cfg.org_name() == org:
+                continue
+
+            if github_org_cfg.repository_matches(repo):
+                return True
+
+        return False
+
     def _required_attributes(self):
         return [
             'concourse_target_team',
+            'replication_ctx_cfg_set',
         ]
 
     def _optional_attributes(self):

@@ -5,8 +5,6 @@ from concourse.steps import step_lib
 
 extra_args = step._extra_args
 
-cfg_set = extra_args['cfg_set']
-
 name = job_mapping.name()
 raw = job_mapping.raw
 %>
@@ -16,11 +14,12 @@ import model.concourse
 
 ${step_lib('replicate_pipelines')}
 
+job_mapping = model.concourse.JobMapping(name='${name}', raw_dict=${raw})
+
 cfg_factory = ctx.cfg_factory()
-cfg_set = cfg_factory.cfg_set('${cfg_set.name()}')
+cfg_set = cfg_factory.cfg_set('${job_mapping.replication_ctx_cfg_set()}')
 
 own_pipeline_name = ci.util.check_env('PIPELINE_NAME')
-job_mapping = model.concourse.JobMapping(name='${name}', raw_dict=${raw})
 
 ## use logger from step_lib
 logger.info(f'replicating {job_mapping.name()=} {job_mapping.team_name()=}')

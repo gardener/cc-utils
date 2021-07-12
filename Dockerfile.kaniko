@@ -1,4 +1,4 @@
-FROM eu.gcr.io/gardener-project/cc/job-image-base:0.51.0
+FROM eu.gcr.io/gardener-project/cc/job-image-base:0.55.0
 COPY --from=gcr.io/kaniko-project/executor:latest /kaniko/executor /kaniko/executor.tmp
 
 COPY . /cc/utils/
@@ -10,7 +10,8 @@ RUN pip3 install --upgrade \
   --find-links /cc/utils/dist \
   gardener-cicd-libs \
   pycryptodome \
-&& pip3 uninstall -y gardener-component-model \
-&& pip3 install gardener-component-model
+&& pip3 install gardener-component-model jsonschema \
+&& cp /etc/ssl/cert.pem "$(python3 -c 'import certifi; print(certifi.where());')" \
+&& if [ ! -f /usr/bin/python3 ]; then ln -s /usr/local/bin/python3 /usr/bin/python3; fi
 
 RUN mv /kaniko/executor.tmp /bin/kaniko

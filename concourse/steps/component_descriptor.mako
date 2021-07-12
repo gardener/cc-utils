@@ -146,7 +146,7 @@ ctf_out_path = os.path.abspath(
 )
 
 descriptor_script = os.path.abspath(
-  '${job_variant.main_repository().resource_name()}/.ci/${job_step.name}'
+  '${job_variant.main_repository().resource_name()}/.ci/component_descriptor'
 )
 if not os.path.isfile(descriptor_script):
   logger.info('no component_descriptor script found at {s} - will use default'.format(

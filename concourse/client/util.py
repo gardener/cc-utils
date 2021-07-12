@@ -20,6 +20,7 @@ import time
 import typing
 
 import dateutil.parser
+import requests
 
 from dacite import from_dict
 from dacite.exceptions import DaciteError
@@ -148,8 +149,10 @@ def has_job_been_triggered(
             continue
         try:
             build_plan = build.plan()
-        except RuntimeError:
+        except requests.exceptions.HTTPError as e:
             # a job that just now went into running state could still have no build plan
+            if e.response.status_code is not requests.status_codes.codes.NOT_FOUND:
+                raise e
             continue
         if build_plan.contains_version_ref(resource_version.version()['ref']):
             return True

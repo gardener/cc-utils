@@ -3,8 +3,12 @@
   filter="indent_func(indent),trim"
 >
 <%
+import dataclasses
+import enum
+
 from concourse.steps import step_lib
 from makoutil import indent_func
+import gci.componentmodel as cm
 
 main_repo = job_variant.main_repository()
 repo_name = main_repo.repo_name()
@@ -18,12 +22,26 @@ after_merge_callback = update_component_deps_trait.after_merge_callback()
 upstream_update_policy = update_component_deps_trait.upstream_update_policy()
 ignore_prerelease_versions=update_component_deps_trait.ignore_prerelease_versions()
 component_descriptor_trait = job_variant.trait('component_descriptor')
-ctx_repo_base_url = component_descriptor_trait.ctx_repository_base_url()
+ctx_repo = component_descriptor_trait.ctx_repository()
+
+def enum_to_value(v):
+  if isinstance(v, enum.Enum):
+    return v.value
+  return v
+
+ctx_repo_dict = {
+  k: enum_to_value(v) for k,v in dataclasses.asdict(ctx_repo).items()
+}
+
+if not isinstance(ctx_repo, cm.OciRepositoryContext):
+  raise NotImplementedError(ctx_repo)
 %>
 import logging
 import os
 import subprocess
 import sys
+
+import dacite
 
 import ci.util
 import concourse.model.traits.update_component_deps
@@ -107,12 +125,24 @@ upstream_update_policy = concourse.model.traits.update_component_deps.UpstreamUp
     '${upstream_update_policy.value}'
 )
 
+# we checked for ctx_repository to be of type OciRepositoryContext above
+ctx_repo = dacite.from_dict(
+  data_class=gci.componentmodel.OciRepositoryContext,
+  data=${ctx_repo_dict},
+  config=dacite.Config(
+    cast=[
+        gci.componentmodel.AccessType,
+        gci.componentmodel.OciComponentNameMapping,
+    ]
+  )
+)
+
 # find components that need to be upgraded
 for from_ref, to_version in determine_upgrade_prs(
     upstream_component_name=upstream_component_name,
     upstream_update_policy=upstream_update_policy,
     upgrade_pull_requests=upgrade_pull_requests,
-    ctx_repo_base_url='${ctx_repo_base_url}',
+    ctx_repo=ctx_repo,
     ignore_prerelease_versions=${ignore_prerelease_versions},
 ):
     applicable_merge_policy = [

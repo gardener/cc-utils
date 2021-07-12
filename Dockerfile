@@ -1,5 +1,5 @@
 FROM eu.gcr.io/gardener-project/component/cli:latest AS component-cli
-FROM eu.gcr.io/gardener-project/cc/job-image-base:0.51.0
+FROM eu.gcr.io/gardener-project/cc/job-image-base:0.55.0
 
 COPY . /cc/utils/
 
@@ -26,7 +26,9 @@ RUN pip3 install --upgrade \
 && curl -L \
   https://get.helm.sh/helm-${HELM_V3_VERSION}-linux-amd64.tar.gz | tar xz -C /tmp --strip=1 \
 && mv /tmp/helm /bin/helm3 \
-&& chmod +x /bin/helm3
+&& chmod +x /bin/helm3 \
+&& ln -s /usr/local/bin/python3 /usr/bin/python3 \
+&& cp /etc/ssl/cert.pem "$(python3 -c 'import certifi; print(certifi.where());')"
 
 RUN EFFECTIVE_VERSION="$(cat /metadata/VERSION)" REPO_DIR=/cc/utils \
   /cc/utils/.ci/bump_job_image_version.py

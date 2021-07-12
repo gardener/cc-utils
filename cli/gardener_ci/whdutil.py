@@ -54,6 +54,7 @@ def app():
         traceback.print_exc()
 
     app = whd.server.webhook_dispatcher_app(
+        cfg_factory=cfg_factory,
         cfg_set=cfg_set,
         whd_cfg=webhook_dispatcher_cfg,
     )

@@ -20,6 +20,7 @@ from model.webhook_dispatcher import WebhookDispatcherConfig
 
 
 def webhook_dispatcher_app(
+    cfg_factory,
     cfg_set,
     whd_cfg: WebhookDispatcherConfig,
 ):
@@ -38,6 +39,7 @@ def webhook_dispatcher_app(
 
     app.add_route('/github-webhook',
         GithubWebhook(
+            cfg_factory=cfg_factory,
             whd_cfg=whd_cfg,
             cfg_set=cfg_set,
         ),

@@ -1,4 +1,5 @@
 import dataclasses
+import hashlib
 import pprint
 import sys
 
@@ -29,12 +30,14 @@ def manifest(image_reference: str, pretty:bool=True):
 
     if pretty:
         manifest = oci_client.manifest(image_reference=image_reference)
+        manifest_raw = oci_client.manifest_raw(image_reference=image_reference)
 
         total_size = sum(blob.size for blob in manifest.blobs())
+        manifest_digest = hashlib.sha256(manifest_raw.content).hexdigest()
 
         pprint.pprint(dataclasses.asdict(manifest))
         print()
-        print(f'{total_size=}')
+        print(f'{total_size=} {manifest_digest=}')
     else:
         manifest = oci_client.manifest_raw(image_reference=image_reference)
         print(manifest.text)
