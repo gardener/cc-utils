@@ -527,7 +527,7 @@ class Client:
         # XXX Docker-Content-Digest header may be absent or incorrect
         # -> it would be preferrable to retrieve the manifest and calculate the hash manually
 
-        if (size := headers.get('Content-Length', None)):
+        if size := headers.get('Content-Length'):
             size = int(size)
 
         return om.OciBlobRef(
