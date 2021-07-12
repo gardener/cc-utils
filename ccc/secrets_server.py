@@ -41,14 +41,14 @@ def get_secret_cfg_from_env_if_available(
     key_env_var='SECRET_KEY',
     cipher_algorithm_env_var='SECRET_CIPHER_ALGORITHM',
 ) -> typing.Optional[model.secret.SecretData]:
-    if key_env_var in os.environ and cipher_algorithm_env_var in os.environ:
-        secret_key = base64.b64decode(os.environ.get(key_env_var).encode('utf-8'))
-        cipher_algorithm = model.secret.Cipher(os.environ.get(cipher_algorithm_env_var))
-        secret = model.secret.SecretData(key=secret_key, cipher_algorithm=cipher_algorithm)
+    if not all((name in os.environ for name in (key_env_var, cipher_algorithm_env_var))):
+        return None
 
-        return secret
-    else:
-        raise ValueError('Secret environment variables not found')
+    secret_key = base64.b64decode(os.environ.get(key_env_var).encode('utf-8'))
+    cipher_algorithm = model.secret.Cipher(os.environ.get(cipher_algorithm_env_var))
+    secret = model.secret.SecretData(key=secret_key, cipher_algorithm=cipher_algorithm)
+
+    return secret
 
 
 class SecretsServerClient:
@@ -157,10 +157,14 @@ class SecretsServerClient:
 
 
 def _decrypt_cipher_text(encrypted_cipher_text: bytes, secret: model.secret.SecretData):
-    from Crypto.Cipher import AES
-
-    if not (cipher_alg := secret.cipher_algorithm) is model.secret.Cipher.AES_ECB:
+    if (cipher_alg := secret.cipher_algorithm) is model.secret.Cipher.PLAINTEXT:
+        return encrypted_cipher_text
+    elif cipher_alg is model.secret.Cipher.AES_ECB:
+        pass
+    else:
         raise NotImplementedError(cipher_alg)
+
+    from Crypto.Cipher import AES
 
     cipher = AES.new(key=secret.key, mode=AES.MODE_ECB)
 
@@ -182,8 +186,11 @@ def encrypt_data(
     cipher_algorithm: str,
     serialized_secret_data: bytes,
 ) -> bytes:
+    cipher_algorithm = model.secret.Cipher(cipher_algorithm)
 
-    if model.secret.Cipher(cipher_algorithm) is model.secret.Cipher.AES_ECB:
+    if cipher_algorithm is model.secret.Cipher.PLAINTEXT:
+        return serialized_secret_data
+    elif cipher_algorithm is model.secret.Cipher.AES_ECB:
         secret_key = base64.b64decode(key)
         cipher = AES.new(secret_key, AES.MODE_ECB)
         cipher_text = cipher.encrypt(
