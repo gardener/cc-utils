@@ -38,6 +38,7 @@ from model.base import (
 
 class Cipher(enum.Enum):
     AES_ECB = 'AES.ECB'
+    PLAINTEXT = 'PLAINTEXT'
 
 
 class Secret(NamedModelElement):
