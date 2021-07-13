@@ -1,6 +1,7 @@
 import sys
 
 import ccc.oci
+import gci.componentmodel as cm
 import product.v2
 import version
 
@@ -11,10 +12,15 @@ def retrieve(
     ctx_base_url: str=None,
     out: str=None
 ):
+    ctx_repo = cm.OciRepositoryContext(
+            baseUrl=ctx_base_url,
+            componentNameMapping=cm.OciComponentNameMapping.URL_PATH,
+        )
+
     target_ref = product.v2._target_oci_ref_from_ctx_base_url(
         component_name=name,
         component_version=version,
-        ctx_repo_base_url=ctx_base_url,
+        ctx_repo=ctx_repo,
     )
 
     component_descriptor = product.v2.retrieve_component_descriptor_from_oci_ref(
