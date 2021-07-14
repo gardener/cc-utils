@@ -1,7 +1,8 @@
 import dataclasses
-import gzip
 import hashlib
 import json
+import tarfile
+import zlib
 
 import ccc.oci
 import dacite
@@ -25,18 +26,18 @@ def v2_cfg_from_v1_manifest(
     oci_client =  ccc.oci.oci_client()
     uncompressed_layers_digests = []
     for layer in manifest.layers:
+        decompressor = zlib.decompressobj(wbits=zlib.MAX_WBITS | 16)  # gzip format
         cfg_hash = hashlib.sha256() # we need to write "non-gzipped" hash to cfg-blob
 
         src_content = oci_client.blob(
             image_reference=src_image_reference,
             digest=layer.digest,
             stream=False,
-        ).content
+        ).iter_content(chunk_size=tarfile.BLOCKSIZE * 64)
 
-        # detect header magic bytes for gzip on first chunk
-        if bytes(src_content).startswith(b'\x1f\x8b'):
-            src_content = gzip.decompress(src_content)
-        cfg_hash.update(src_content) # need uncompressed before hashing for cfg-blob
+        for chunk in src_content:
+            cfg_hash.update(decompressor.decompress(chunk))
+
         uncompressed_layers_digests.append(f'sha256:{cfg_hash.hexdigest()}')
 
     # docker mandates the uncompressed-layer digests in the config
