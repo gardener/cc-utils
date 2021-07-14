@@ -459,9 +459,12 @@ class Client:
         manifest_dict = res.json()
 
         distribution_list_mediatype = 'application/vnd.docker.distribution.manifest.list.v2+json'
-        if 'mediaType' in manifest_dict and (mediaType := manifest_dict['mediaType']) == distribution_list_mediatype:
+        if (
+                'mediaType' in manifest_dict and
+                (mediaType := manifest_dict['mediaType']) == distribution_list_mediatype
+            ):
             #XXX: ignore for now, need to be fixed later
-            raise NotImplementedError(f'OCI Manifest media type {mediaType} not implemented')
+            raise NotImplementedError(f'OCI Manifest media type {mediaType} not implemented for {image_reference}')
 
         if (schema_version := int(manifest_dict['schemaVersion'])) == 1:
             manifest = dacite.from_dict(
