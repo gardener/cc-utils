@@ -71,24 +71,13 @@ class _TeeFilelikeProxy:
         self._orig_read = fileobj.read
         self._fp.read = self._tee_read
 
-        self._did_create_generator = False
-
     def _tee_read(self, size=-1):
-        # detect obvious programming errors
-        if not self._did_create_generator:
-            raise RuntimeError('tee-generator must be created before reading from stream')
-
         buf = self._orig_read(size)
         self._queue.put(buf)
 
         return buf
 
     def iter_contents(self) -> typing.Generator[bytes, None, None]:
-        # guard against programming errors
-        if self._did_create_generator:
-            raise ValueError('only one tee-generator must be created')
-        self._did_create_generator = True
-
         while (buf := self._queue.get()):
             yield buf
 
