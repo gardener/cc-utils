@@ -289,7 +289,6 @@ class PublishTraitTransformer(TraitTransformer):
                     name=f'build_oci_image_{img.name()}',
                     raw_dict={
                         'image': kaniko_image_ref,
-                        'privilege_mode': concourse.model.step.PrivilegeMode.PRIVILEGED,
                     },
                     is_synthetic=True,
                     notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
