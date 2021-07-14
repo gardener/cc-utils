@@ -57,11 +57,7 @@ def filter_image(
             oci_client=oci_client,
         )
 
-    try:
-        manifest = oci_client.manifest(image_reference=source_ref)
-    except NotImplementedError as e:
-        logger.warning(f'could not filter image {e}. Skipping...')
-        return
+    manifest = oci_client.manifest(image_reference=source_ref)
 
     cp_cfg_blob = True
     if isinstance(manifest, om.OciImageManifestV1):
