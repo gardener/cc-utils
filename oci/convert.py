@@ -35,8 +35,17 @@ def v2_cfg_from_v1_manifest(
             stream=False,
         ).iter_content(chunk_size=tarfile.BLOCKSIZE * 64)
 
+        is_first_chunk = True
+        is_gziped = False
         for chunk in src_content:
-            cfg_hash.update(decompressor.decompress(chunk))
+            if is_first_chunk:
+                is_first_chunk = False
+                if bytes(chunk).startswith(b'\x1f\x8b'):
+                    is_gziped = True
+            if is_gziped:
+                cfg_hash.update(decompressor.decompress(chunk))
+            else:
+                cfg_hash.update(chunk)
 
         uncompressed_layers_digests.append(f'sha256:{cfg_hash.hexdigest()}')
 
