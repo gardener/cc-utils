@@ -40,7 +40,7 @@ class DockerContainerCfg:
 
 @dc
 class Docker_Fs:
-    diff_ids: typing.List[str] # tuple of layer-sha256-digests
+    diff_ids: typing.List[str] = dataclasses.field(default_factory=list) # [layer-sha256-digests]
     type: str = 'layers'
 
 
