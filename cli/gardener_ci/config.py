@@ -42,8 +42,10 @@ def export_kubeconfig(
         yaml.dump(kubernetes_cfg.kubeconfig(), f)
 
 
-def serialise_cfg(cfg_dir: CliHints.existing_dir(), cfg_sets: [str], out_file: str):
+def serialise_cfg(cfg_dir: CliHints.existing_dir(), out_file: str, cfg_sets: [str] = []):
     factory = ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)
+    if not cfg_sets:
+        cfg_sets = factory._cfg_element_names('cfg_set')
     cfg_sets = [factory.cfg_set(cfg_set) for cfg_set in cfg_sets]
     serialiser = CSS(cfg_sets=cfg_sets, cfg_factory=factory)
     with open(out_file, 'w') as f:
