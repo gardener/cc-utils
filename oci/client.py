@@ -463,8 +463,8 @@ class Client:
                 'mediaType' in manifest_dict and
                 (mediaType := manifest_dict['mediaType']) == distribution_list_mediatype
             ):
-            #XXX: ignore for now, need to be fixed later
-            raise NotImplementedError(f'OCI Manifest media type {mediaType}'
+            #XXX: not implemented for now, need to be fixed later
+            raise NotImplementedError(f'OCI manifest media type {mediaType}'
                                        'not implemented for {image_reference}')
 
         if (schema_version := int(manifest_dict['schemaVersion'])) == 1:
