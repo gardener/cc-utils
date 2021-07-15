@@ -4,13 +4,13 @@ import json
 import logging
 import tarfile
 import typing
+import zlib
 
 import dacite
 
 import oci.auth as oa
 import oci.client as oc
 import oci.convert as oconv
-import oci.docker as od
 import oci.kaniko as ok
 import oci.model as om
 import oci.util as ou
@@ -68,12 +68,23 @@ def replicate_artifact(
             oci_client=client,
             tgt_image_ref=tgt_image_reference,
         )
-        raw_manifest = json.dumps(dataclasses.asdict(manifest))
+
+        # we must determine the uncompressed layer-digests to synthesise a valid
+        # cfg-blob docker will accept (this means in particular we must download
+        # all layers, even if we do not need to upload them)
+        need_uncompressed_layer_digests = True
+        uncompressed_layer_digests = []
     elif schema_version == 2:
         manifest = dacite.from_dict(
             data_class=om.OciImageManifest,
             data=json.loads(raw_manifest)
         )
+        need_uncompressed_layer_digests = False
+        uncompressed_layer_digests = None
+    else:
+      raise NotImplementedError(schema_version)
+
+    need_to_synthesise_cfg_blob = False
 
     for idx, layer in enumerate(manifest.blobs()):
         # need to specially handle manifest (may be absent for v2 / legacy images)
@@ -83,9 +94,26 @@ def replicate_artifact(
             image_reference=tgt_image_reference,
             digest=layer.digest,
         )
-        if head_res.ok:
-            logger.info(f'skipping blob download {layer.digest=} - already exists in tgt')
-            continue # no need to download if blob already exists in tgt
+        if head_res.ok and False:
+            if not need_uncompressed_layer_digests:
+                logger.info(f'skipping blob download {layer.digest=} - already exists in tgt')
+                continue # no need to download if blob already exists in tgt
+            elif not is_manifest:
+                # we will not need to re-upload, however we do need the uncompressed digest
+                blob_res = client.blob(
+                    image_reference=src_image_reference,
+                    digest=layer.digest,
+                    absent_ok=is_manifest,
+                )
+
+                layer_hash = hashlib.sha256()
+                decompressor = zlib.decompressobj(wbits=zlib.MAX_WBITS | 16)
+
+                for chunk in blob_res.iter_content(chunk_size=4096):
+                    layer_hash.update(decompressor.decompress(chunk))
+
+                uncompressed_layer_digests.append(f'sha256:{layer_hash.hexdigest()}')
+                continue # we may still skip the upload, of course
 
         blob_res = client.blob(
             image_reference=src_image_reference,
@@ -98,18 +126,21 @@ def replicate_artifact(
                 'falling back to non-verbatim replication '
                 '{src_image_reference=} {tgt_image_reference=}'
             )
-
-            fake_cfg = od.docker_cfg() # TODO: check whether we need to pass-in cfg
-            fake_cfg_dict = dataclasses.asdict(fake_cfg)
-            fake_cfg_raw = json.dumps(fake_cfg_dict).encode('utf-8')
-
-            client.put_blob(
-                image_reference=tgt_image_reference,
-                digest=f'sha256:{hashlib.sha256(fake_cfg_raw).hexdigest()}',
-                octets_count=len(fake_cfg_raw),
-                data=fake_cfg_raw,
-            )
+            need_to_synthesise_cfg_blob = True
             continue
+
+        if need_uncompressed_layer_digests:
+            uncompressed_layer_hash = hashlib.sha256()
+            decompressor = zlib.decompressobj(wbits=zlib.MAX_WBITS | 16)
+
+            def intercept_chunks():
+                for chunk in blob_res.iter_content(chunk_size=4096):
+                    uncompressed_layer_hash.update(decompressor.decompress(chunk))
+                    yield chunk
+
+                uncompressed_layer_digests.append(f'sha256:{uncompressed_layer_hash.hexdigest()}')
+
+            blob_res = intercept_chunks()
 
         client.put_blob(
             image_reference=tgt_image_reference,
@@ -117,6 +148,30 @@ def replicate_artifact(
             octets_count=layer.size,
             data=blob_res,
         )
+
+    if need_to_synthesise_cfg_blob:
+        fake_cfg_dict = json.loads(json.loads(raw_manifest)['history'][0]['v1Compatibility'])
+
+        # patch-in uncompressed layer-digests
+        fake_cfg_dict['rootfs'] = {
+            'diff_ids': uncompressed_layer_digests,
+            'type': 'layers',
+        }
+
+        fake_cfg_raw = json.dumps(fake_cfg_dict).encode('utf-8')
+
+        client.put_blob(
+            image_reference=tgt_image_reference,
+            digest=(cfg_digest := f'sha256:{hashlib.sha256(fake_cfg_raw).hexdigest()}'),
+            octets_count=len(fake_cfg_raw),
+            data=fake_cfg_raw,
+        )
+
+        manifest_dict = dataclasses.asdict(manifest)
+        # patch-on altered cfg-digest
+        manifest_dict['config']['digest'] = cfg_digest
+        manifest_dict['config']['size'] = len(fake_cfg_raw)
+        raw_manifest = json.dumps(manifest_dict)
 
     client.put_manifest(
         image_reference=tgt_image_reference,
