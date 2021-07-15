@@ -541,10 +541,13 @@ class Client:
         # XXX Docker-Content-Digest header may be absent or incorrect
         # -> it would be preferrable to retrieve the manifest and calculate the hash manually
 
+        if size := headers.get('Content-Length'):
+            size = int(size)
+
         return om.OciBlobRef(
             digest=headers.get('Docker-Content-Digest', None),
             mediaType=headers['Content-Type'],
-            size=int(headers['Content-Length']),
+            size=size,
         )
 
     def to_digest_hash(self, image_reference: str):
