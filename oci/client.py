@@ -66,25 +66,30 @@ class OauthToken:
         if not self.issued_at:
             self.issued_at = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
         if not self.expires_in:
-            payload = self.token.split('.')[1]
-            # add padding (JWT by convention has unpadded base64)
-            payload = _append_b64_padding_if_missing(b64_str=payload)
+            # check if format seems to be jwt
+            if self.token.count('.') == 3:
+                payload = self.token.split('.')[1]
+                # add padding (JWT by convention has unpadded base64)
+                payload = _append_b64_padding_if_missing(b64_str=payload)
 
-            if (mod3 := len(payload) % 3) == 0:
-                pass
-            elif mod3 == 1:
-                payload += '=='
-            elif mod3 == 2:
-                payload += '='
+                if (mod3 := len(payload) % 3) == 0:
+                    pass
+                elif mod3 == 1:
+                    payload += '=='
+                elif mod3 == 2:
+                    payload += '='
 
-            parsed = json.loads(base64.b64decode(payload.encode('utf-8')))
+                parsed = json.loads(base64.b64decode(payload.encode('utf-8')))
 
-            exp = parsed['exp']
-            iat = parsed['iat']
+                exp = parsed['exp']
+                iat = parsed['iat']
 
-            self.expires_in = exp - iat
-            self.issued_at = datetime.datetime.fromtimestamp(iat, tz=datetime.timezone.utc)\
-                .isoformat()
+                self.expires_in = exp - iat
+                self.issued_at = datetime.datetime.fromtimestamp(iat, tz=datetime.timezone.utc)\
+                    .isoformat()
+            else:
+                # hard-code a value in the future since it is not given
+                self.expires_in = datetime.timedelta(hours=1).seconds
 
 
 class OauthTokenCache:
@@ -452,6 +457,15 @@ class Client:
             return None
 
         manifest_dict = res.json()
+
+        distribution_list_mediatype = 'application/vnd.docker.distribution.manifest.list.v2+json'
+        if (
+                'mediaType' in manifest_dict and
+                (mediaType := manifest_dict['mediaType']) == distribution_list_mediatype
+            ):
+            #XXX: not implemented for now, need to be fixed later
+            raise NotImplementedError(f'OCI manifest media type {mediaType}'
+                                       'not implemented for {image_reference}')
 
         if (schema_version := int(manifest_dict['schemaVersion'])) == 1:
             manifest = dacite.from_dict(
