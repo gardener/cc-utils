@@ -12,39 +12,12 @@ class _FilelikeProxy:
         usage w/ tarfile.open (in stream-mode)
         '''
         self.generator = generator
-        self.pos = 0
-        self.buf = b''
-        self.eof = False
-
-    def tell(self):
-        return self.pos
 
     def read(self, size: int=-1):
-        if self.eof:
-            return b''
-
-        if self.buf:
-            if len(self.buf) >= size and size > 0:
-                buf = self.buf[:size]
-                self.buf = self.buf[size:]
-                self.pos += len(buf)
-                return buf
-
         try:
-            while chunk := next(self.generator):
-                self.buf = self.buf + chunk
-
-                if len(self.buf) >= size:
-                    buf = self.buf[:size]
-                    self.buf = chunk[size:]
-                    self.pos += len(buf)
-                    return buf
-
+            return next(self.generator)
         except StopIteration:
-            self.eof = True
-            buf = self.buf
-            self.buf = b''
-            return buf
+            return b''
 
 
 def filtered_tarfile_generator(
