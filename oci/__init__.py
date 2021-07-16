@@ -94,7 +94,7 @@ def replicate_artifact(
             image_reference=tgt_image_reference,
             digest=layer.digest,
         )
-        if head_res.ok and False:
+        if head_res.ok:
             if not need_uncompressed_layer_digests:
                 logger.info(f'skipping blob download {layer.digest=} - already exists in tgt')
                 continue # no need to download if blob already exists in tgt
