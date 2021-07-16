@@ -101,9 +101,13 @@ class GithubWebhookDispatcher:
 
     def dispatch_push_event(self, push_event):
         if self._pipeline_definition_changed(push_event):
-            self._update_pipeline_definition(push_event)
-
-        logger.debug('before push-event dispatching')
+            try:
+                self._update_pipeline_definition(push_event)
+            except ValueError as e:
+                logger.warning(
+                    f'Received error updating pipeline-definitions: "{e}". '
+                    'Will still abort running jobs (if configured) and trigger resource checks.'
+                )
 
         self.abort_running_jobs_if_configured(push_event)
 
