@@ -118,7 +118,6 @@ class TestGitHubReleaseStep:
         # prepare test component descriptor file and fill it with test content
 
         component_descriptor_v2 = os.path.join(tmp_path, 'component_descriptor_v2')
-        ctf_path = os.path.join(tmp_path, product.v2.CTF_OUT_DIR_NAME)
         cd_v2 = cm.ComponentDescriptor(
             component=cm.Component(
                 name='test.url/foo/bar',
