@@ -156,7 +156,7 @@ def github_api(
 
     github_ctor = github_api_ctor(
         github_url=github_url, verify_ssl=verify_ssl,
-        session_adapter=SessionAdapter.RETRY,
+        session_adapter=session_adapter,
     )
     github_api = github_ctor(
         token=github_auth_token,
