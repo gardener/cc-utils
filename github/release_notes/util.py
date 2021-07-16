@@ -468,6 +468,7 @@ def create_release_note_block(
                 version=product.v2.greatest_component_version(
                     component_name=source_repo,
                     ctx_repo_base_url=ctx_repo_url,
+                    ignore_prerelease_versions=True,
                 ),
                 ctx_repo_url=ctx_repo_url,
             ).component
