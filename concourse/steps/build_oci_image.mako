@@ -34,15 +34,12 @@ import os
 import subprocess
 
 import ccc.oci
-import ci.log
 import oci
 import oci.model as om
 import oci.util as ou
 
 import shutil
 
-ci.log.configure_default_logging()
-logger = logging.getLogger('kaniko-build.step')
 
 ${step_lib('build_oci_image')}
 
@@ -79,13 +76,6 @@ if os.path.exists('/kaniko/executor'):
 else:
   kaniko_executor = '/bin/kaniko'
 
-# XXX ugly hack: early-import so we survive kaniko's rampage (will purge container during build)
-import ccc.secrets_server
-import model.concourse
-import model.container_registry
-import model.elasticsearch
-import concurrent.futures
-import concurrent.futures.thread
 
 # XXX another hack: save truststores from being purged by kaniko's multistage-build
 import certifi
@@ -98,26 +88,15 @@ os.link(
   (ca_certs_bak := os.path.join('/', 'kaniko', 'ca-certificates.crt')),
 )
 
-# XXX final hack (I hope): cp entire python-dir
-import sys
-import shutil
-if sys.version_info.minor >= 9 or sys.version_info.major > 3:
-  lib_dir = os.path.join(sys.prefix, sys.platlibdir)
-else:
-  lib_dir = os.path.join(sys.prefix, 'lib')
-
-# Initialise oci client before kaniko removes _everything_, otherwise cfg-element-retrieval will
-# fail
 oci_client = ccc.oci.oci_client()
 
-python_lib_dir = os.path.join(lib_dir, f'python{sys.version_info.major}.{sys.version_info.minor}')
-python_bak_dir = os.path.join('/', 'kaniko', 'python.bak')
-if os.path.isdir(python_lib_dir):
-   shutil.copytree(python_lib_dir, python_bak_dir)
+## one last hack: import concourse-config upfront
+## (for some reason, this type will not be found, even after restoring python's libdir)
+import model.concourse
+concourse_cfg = model.concourse.ConcourseConfig
 
-# HACK remove '/usr/lib' and '/cc/utils' to avoid pip from failing in the first stage of builds
-shutil.rmtree(path=os.path.join('/', 'usr', 'lib'), ignore_errors=True)
-shutil.rmtree(path=os.path.join('/', 'cc', 'utils'), ignore_errors=True)
+new_root = mv_directories_to_kaniko_dir()
+kaniko_executor = os.path.join(new_root, kaniko_executor[1:])
 
 kaniko_argv = (
   kaniko_executor,
@@ -142,6 +121,8 @@ res = subprocess.run(
   check=True,
 )
 
+restore_required_dirs(root_dir=new_root)
+
 print(f'wrote image {image_ref=} to {image_outfile=} attempting to push')
 
 os.makedirs(os.path.dirname(certifi_certs_path), exist_ok=True)
@@ -151,9 +132,6 @@ if not os.path.exists(certifi_certs_path):
 os.makedirs(os.path.dirname(ca_certs_path), exist_ok=True)
 if not os.path.exists(ca_certs_path):
   os.link(ca_certs_bak, ca_certs_path)
-
-if not os.path.exists(python_lib_dir):
-  os.symlink(python_bak_dir, python_lib_dir)
 
 additional_tags = ${image_descriptor.additional_tags()}
 print(f'publishing to {image_ref=}, {additional_tags=}')
