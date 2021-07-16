@@ -99,7 +99,7 @@ if not should_notify(
     meta_vars=meta_vars_dict,
     cfg_set=cfg_set,
 ):
-    logger.info('will not notify due to policy')
+    logger.info(f'will not notify due to policy ${triggering_policy.value}')
     sys.exit(0)
 
 ## prepare notification config.
