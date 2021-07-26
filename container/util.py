@@ -23,6 +23,7 @@ import tempfile
 import typing
 
 import deprecated
+import requests
 
 import ccc.oci
 import ci.util
@@ -45,7 +46,7 @@ def filter_image(
     target_ref:str,
     remove_files: typing.Sequence[str]=(),
     oci_client: oc.Client=None,
-):
+) -> requests.Response:
     if not oci_client:
         oci_client = ccc.oci.oci_client()
 
@@ -165,7 +166,7 @@ def filter_image(
 
     manifest_raw = json.dumps(dataclasses.asdict(manifest)).encode('utf-8')
 
-    oci_client.put_manifest(image_reference=target_ref, manifest=manifest_raw)
+    return oci_client.put_manifest(image_reference=target_ref, manifest=manifest_raw)
 
 
 @deprecated.deprecated
