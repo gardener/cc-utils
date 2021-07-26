@@ -79,6 +79,21 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
             host: {'auth': auth_str} for host in self.image_reference_prefixes()
         }
 
+        # ugly workaround for docker-hub, see:
+        # https://github.com/GoogleContainerTools/kaniko/issues/1209
+        # -> if there is a cfg for "docker-hub", implicitly patch-in the v1-flavoured cfg
+        if not (docker_v1_prefix := 'https://index.docker.io/v1/') in auths:
+            # try both w/ slash and w/o slash suffix
+            def auth_for_prefix(prefix):
+                if v := auths.get(prefix, None):
+                    return v
+                return auths.get(prefix + '/', None)
+
+            for candidate in 'registry-1.docker.io', 'docker.io', 'index.docker.io':
+                if auth_cfg := auth_for_prefix(prefix=candidate):
+                    auths[docker_v1_prefix] = auth_cfg
+                    break # use first (we have no way of knowing which one would be better..)
+
         return auths
 
     def privileges(self) -> oa.Privileges:
