@@ -7,6 +7,7 @@ import typing
 import zlib
 
 import dacite
+import requests
 
 import oci.auth as oa
 import oci.client as oc
@@ -27,7 +28,7 @@ def replicate_artifact(
     credentials_lookup: oa.credentials_lookup=None,
     routes: oc.OciRoutes=oc.OciRoutes(),
     oci_client: oc.Client=None,
-):
+) -> requests.Response:
     '''
     verbatimly replicate the OCI Artifact from src -> tgt without taking any assumptions
     about the transported contents. This in particular allows contents to be replicated
@@ -173,7 +174,7 @@ def replicate_artifact(
         manifest_dict['config']['size'] = len(fake_cfg_raw)
         raw_manifest = json.dumps(manifest_dict)
 
-    client.put_manifest(
+    return client.put_manifest(
         image_reference=tgt_image_reference,
         manifest=raw_manifest,
     )
