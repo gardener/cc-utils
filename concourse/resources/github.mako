@@ -16,16 +16,17 @@ from model.github import Protocol
 
 if github_cfg_name := repo_cfg.cfg_name():
   github_cfg = cfg_set.github(cfg_name=github_cfg_name)
-elif cfg_set.github().matches_hostname(repo_cfg.repo_hostname()):
-  github_cfg = cfg_set.github()
-else:
-  github_cfg = ccc.github.github_cfg_for_repo_url(
+elif github_cfg := ccc.github.github_cfg_for_repo_url(
     ci.util.urljoin(
       repo_cfg.repo_hostname(),
       repo_cfg.repo_path(),
     ),
     require_labels=('ci',),
-  )
+  ):
+  pass
+else:
+  raise RuntimeError(f'this line should not have been reached. Function before should have raised')
+
 
 credentials = github_cfg.credentials()
 disable_tls_validation = not github_cfg.tls_validation()
