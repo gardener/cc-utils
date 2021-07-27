@@ -21,6 +21,7 @@ elif github_cfg := ccc.github.github_cfg_for_repo_url(
       repo_cfg.repo_hostname(),
       repo_cfg.repo_path(),
     ),
+    cfg_factory=cfg_set,
     require_labels=('ci',),
   ):
   pass

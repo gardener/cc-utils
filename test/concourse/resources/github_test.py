@@ -16,7 +16,7 @@ class TestGithubMakoResource:
     def cfg_set(self):
         def _cfg_set(
             gh_config_name="foo",
-            ssh_url='made-up-ssh-url',
+            ssh_url='ssh://test.foo',
             http_url='https://test.foo',
             api_url='made-up-api-url',
             disable_tls_validation=False,
@@ -32,6 +32,7 @@ class TestGithubMakoResource:
             gh_cfg = GithubConfig(
                 name=gh_config_name,
                 raw_dict={
+                    'purpose_labels': ['ci'],
                     'sshUrl': ssh_url,
                     'httpUrl': http_url,
                     'apiUrl': api_url,
@@ -48,6 +49,7 @@ class TestGithubMakoResource:
                 },
             )
             cfg_set_mock.github.return_value = gh_cfg
+            cfg_set_mock._cfg_elements = lambda cfg_type_name: [gh_cfg]
             return cfg_set_mock
         return _cfg_set
 

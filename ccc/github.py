@@ -34,6 +34,7 @@ import github.util
 import http_requests
 import model
 import model.github
+import model.base
 
 if ci.util._running_on_ci():
     log_github_access = False
@@ -194,6 +195,9 @@ def github_cfg_for_repo_url(
 
     # prefer config with most configured repo urls
     matching_cfgs = sorted(matching_cfgs, key=lambda config: len(config.repo_urls()))
+    if len(matching_cfgs) == 0:
+        raise model.base.ConfigElementNotFoundError(f'No github cfg found for {repo_url=}')
+
     gh_cfg = matching_cfgs[-1]
     # do not interfere with cli.py
     print(f'using {gh_cfg.name()=} for {repo_url=}', file=sys.stderr)
