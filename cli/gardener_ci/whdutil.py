@@ -46,7 +46,7 @@ def app():
 
     print(f'{cfg_set.name()=}')
     try:
-        print('tying to get ctx_repository')
+        print('trying to get ctx_repository')
         print(f'{cfg_set.ctx_repository()}')
     except:
         print('XXX failed to read ctx_repository (will ignore this, though)')
