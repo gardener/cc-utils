@@ -417,22 +417,73 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             tagger=author
         )
 
+    MAXIMUM_GITHUB_RELEASE_BODY_LENGTH = 25000
+    '''The limit is not documented explicitly in the GitHub docs. To see it, the error returned by
+    GitHub when creating a release with more then the allowed number of characters must be
+    looked at.'''
+
+    def _replacement_release_notes(
+        self,
+        asset_url: str,
+        component_name: str,
+        component_version: str,
+    ):
+        return (
+            f'The release-notes for component **{component_name}** in version '
+            f'**{component_version}** exceeded the maximum length of '
+            f'{self.MAXIMUM_GITHUB_RELEASE_BODY_LENGTH} characters allowed by GitHub for '
+            'release-bodies.\n'
+            f'They have been uploaded as release-asset and can be found at {asset_url}.'
+        )
+
+    RELEASE_NOTES_ASSET_NAME = 'release_notes.md'
+
     def create_release(
         self,
         tag_name: str,
         body: str,
         draft: bool=False,
         prerelease: bool=False,
-        name: str=None
+        name: str=None,
+        component_name: str=None,
+        component_version: str=None,
     ):
-        release = self.repository.create_release(
-            tag_name=tag_name,
-            body=body,
-            draft=draft,
-            prerelease=prerelease,
-            name=name
-        )
-        return release
+        if len(body) < self.MAXIMUM_GITHUB_RELEASE_BODY_LENGTH:
+            return self.repository.create_release(
+                tag_name=tag_name,
+                body=body,
+                draft=draft,
+                prerelease=prerelease,
+                name=name
+            )
+        else:
+            # release notes are too large to be added to the github-release directly. As a work-
+            # around, attach them to the release and write an appropriate release-body pointing
+            # towards the attached asset.
+            # For draft releases, the url cannot be calculated easily beforehand, so create the
+            # release, attach the notes and then retrieve the URL via the asset-object.
+            release = self.repository.create_release(
+                tag_name=tag_name,
+                body='',
+                draft=draft,
+                prerelease=prerelease,
+                name=name
+            )
+            release_notes_asset = release.upload_asset(
+                content_type='text/markdown',
+                name=self.RELEASE_NOTES_ASSET_NAME,
+                asset=body.encode('utf-8'),
+                label='Release Notes',
+            )
+            release.edit(
+                body=self._replacement_release_notes(
+                    asset_url=release_notes_asset.browser_download_url,
+                    component_name=component_name,
+                    # Fallback: use tag_name if version not explicitly given
+                    component_version=component_version or tag_name,
+                )
+            )
+            return release
 
     def delete_releases(
         self,
@@ -446,27 +497,88 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         self,
         name: str,
         body: str,
+        component_name: str=None,
+        component_version: str=None,
     ):
         return self.create_release(
             tag_name='',
             name=name,
             body=body,
             draft=True,
+            component_name=component_name,
+            component_version=component_version,
         )
+
+    def promote_draft_release(
+        self,
+        draft_release,
+        release_tag,
+        release_version,
+        component_name: str=None,
+    ):
+        draft_release.edit(
+            tag_name=release_tag,
+            body=None,
+            draft=False,
+            prerelease=False,
+            name=release_version,
+        )
+
+        # If there is a release-notes asset attached, we need to update the release-notes after
+        # promoting the release so that the contained URL is adjusted as well
+        release_notes_asset = next(
+            (a for a in draft_release.assets() if a.name == self.RELEASE_NOTES_ASSET_NAME),
+            None,
+        )
+        if release_notes_asset:
+            draft_release.edit(
+                body=self._replacement_release_notes(
+                    asset_url=release_notes_asset.browser_download_url,
+                    component_name=component_name,
+                    component_version=release_version,
+                )
+            )
 
     def update_release_notes(
         self,
         tag_name: str,
+        component_name: str,
         body: str,
     ) -> bool:
         ci.util.not_empty(tag_name)
+
         release = self.repository.release_from_tag(tag_name)
         if not release:
             raise RuntimeError(
                 f"No release with tag '{tag_name}' found "
                 f"in repository {self.repository}"
             )
-        return release.edit(body=body)
+
+        if len(body) < self.MAXIMUM_GITHUB_RELEASE_BODY_LENGTH:
+            release.edit(body=body)
+        else:
+            release_notes_asset = next(
+                (a for a in release.assets() if a.name == self.RELEASE_NOTES_ASSET_NAME),
+                None,
+            )
+            # Clean up any attached release-note-asset
+            if release_notes_asset:
+                release_notes_asset.delete()
+
+            release_notes_asset = release.upload_asset(
+                content_type='text/markdown',
+                name=self.RELEASE_NOTES_ASSET_NAME,
+                asset=body.encode('utf-8'),
+                label='Release Notes',
+            )
+            release.edit(
+                body=self._replacement_release_notes(
+                    asset_url=release_notes_asset.browser_download_url,
+                    component_version=tag_name,
+                    component_name=component_name)
+            )
+
+        return release
 
     def draft_release_with_name(
         self,

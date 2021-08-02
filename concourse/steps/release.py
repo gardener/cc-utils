@@ -564,12 +564,14 @@ class GitHubReleaseStep(TransactionalStep):
         github_helper: GitHubRepositoryHelper,
         githubrepobranch: GitHubRepoBranch,
         repo_dir: str,
+        component_name: str,
         release_version: str,
     ):
         self.github_helper = not_none(github_helper)
         self.githubrepobranch = githubrepobranch
         self.release_version = not_empty(release_version)
         self.repo_dir = repo_dir
+        self.component_name = component_name
 
     def name(self):
         return "Create Release"
@@ -593,12 +595,11 @@ class GitHubReleaseStep(TransactionalStep):
 
         # Create GitHub-release
         if release := self.github_helper.draft_release_with_name(f'{self.release_version}-draft'):
-            release.edit(
-                tag_name=release_tag,
-                body=None,
-                draft=False,
-                prerelease=False,
-                name=self.release_version,
+            self.github_helper.promote_draft_release(
+                draft_release=release,
+                release_tag=release_tag,
+                release_version=self.release_version,
+                component_name=self.component_name,
             )
         else:
             release = self.github_helper.repository.create_release(
@@ -607,6 +608,7 @@ class GitHubReleaseStep(TransactionalStep):
                 draft=False,
                 prerelease=False,
                 name=self.release_version,
+                component_name=self.component_name,
             )
 
         return {
@@ -764,6 +766,7 @@ class PublishReleaseNotesStep(TransactionalStep):
         self.github_helper.update_release_notes(
             tag_name=release_tag,
             body=release_notes_md,
+            component_name=self.component_descriptor_v2.component.name,
         )
         return {
             'release notes': release_notes,
@@ -900,6 +903,7 @@ def _calculate_next_cycle_dev_version(
 
 
 def release_and_prepare_next_dev_cycle(
+    component_name: str,
     githubrepobranch: GitHubRepoBranch,
     release_commit_publishing_policy: str,
     release_notes_policy: str,
@@ -987,6 +991,7 @@ def release_and_prepare_next_dev_cycle(
         github_helper=github_helper,
         githubrepobranch=githubrepobranch,
         repo_dir=repo_dir,
+        component_name=component_name,
         release_version=release_version,
     )
     step_list.append(github_release_step)
