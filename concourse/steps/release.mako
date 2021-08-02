@@ -40,6 +40,7 @@ release_callback_path = release_trait.release_callback_path()
 next_version_callback_path = release_trait.next_version_callback_path()
 %>
 import ccc.github
+import concourse.steps.component_descriptor_util as cdu
 
 ${step_lib('release')}
 
@@ -63,7 +64,13 @@ githubrepobranch = GitHubRepoBranch(
     branch=repository_branch,
 )
 
+component_descriptor = cdu.component_descriptor_from_dir(
+  '${job_step.input('component_descriptor_dir')}'
+)
+component_name = component_descriptor.component.name
+
 release_and_prepare_next_dev_cycle(
+  component_name=component_name,
   component_descriptor_v2_path='${component_descriptor_v2_path}',
   ctf_path='${ctf_path}',
   % if has_slack_trait:

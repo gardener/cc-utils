@@ -146,6 +146,7 @@ class TestGitHubReleaseStep:
             ),
             repo_dir=str(tmp_path),
             release_version='1.0.0',
+            component_name='github.test/test/component',
             tag_helper_return_value=False,
         ):
             # Create a github_helper mock that always reports a tag as existing/not existing,
@@ -156,6 +157,7 @@ class TestGitHubReleaseStep:
                 githubrepobranch=githubrepobranch,
                 repo_dir=repo_dir,
                 release_version=release_version,
+                component_name=component_name,
             )
         return _examinee
 
