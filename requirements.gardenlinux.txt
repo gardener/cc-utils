@@ -5,9 +5,9 @@ azure-mgmt-compute~=22.1.0
 azure-mgmt-storage~=18.0.0
 azure-storage-blob<13
 boto3
-google-api-python-client
-google-auth
-google-cloud-storage
+google-api-python-client<3
+google-auth<2
+google-cloud-storage<2
 msal<2
 msrestazure~=0.6.4
 oss2<3
