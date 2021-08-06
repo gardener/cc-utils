@@ -360,7 +360,7 @@ class JobMapping(NamedModelElement):
     def github_organisations(self):
         return [
             GithubOrganisationConfig(name, raw)
-            for name, raw in self.raw.get('github_orgs').items()
+            for name, raw in self.raw.get('github_orgs', {}).items()
         ]
 
     def secret_cfg(self) -> str:
