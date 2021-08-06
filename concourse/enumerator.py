@@ -409,7 +409,10 @@ class GithubOrganisationDefinitionEnumerator(GithubDefinitionEnumeratorBase):
         for github_org_cfg in self.job_mapping.github_organisations():
             github_cfg = self.cfg_set.github(github_org_cfg.github_cfg_name())
             github_org_name = github_org_cfg.org_name()
-            logger.info('scanning github organisation {gho}'.format(gho=github_org_name))
+            logger.info(
+                f'scanning github organisation {github_org_name}'
+                f' with github_cfg {github_cfg.name()}'
+            )
 
             github_api = ccc.github.github_api(github_cfg)
             github_org = github_api.organization(github_org_name)
