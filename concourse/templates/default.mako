@@ -23,7 +23,6 @@ secret_cfg = pipeline.get('secret_cfg')
 resource_registry = pipeline_definition._resource_registry
 
 github = config_set.github()
-concourse_cfg = config_set.concourse()
 
 default_container_registry = config_set.container_registry()
 
@@ -430,7 +429,7 @@ else:
 % elif job_step.name == 'meta':
         ${meta_step(job_step=job_step, job_variant=job_variant, indent=8)}
 % elif job_step.name == 'rm_pr_label':
-        ${rm_pr_label_step(job_step=job_step, job_variant=job_variant, github_cfg=github, concourse_cfg=concourse_cfg, indent=8)}
+        ${rm_pr_label_step(job_step=job_step, job_variant=job_variant, github_cfg=github, indent=8)}
 % elif job_step.name == DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME:
 <%
   if has_publish_trait(job_variant):

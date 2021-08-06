@@ -1,5 +1,5 @@
 <%def
-  name="rm_pr_label_step(job_step, job_variant, github_cfg, concourse_cfg, indent)",
+  name="rm_pr_label_step(job_step, job_variant, github_cfg, indent)",
   filter="indent_func(indent),trim"
 >
 <%
@@ -22,7 +22,6 @@ import ci.util
 ci.log.configure_default_logging()
 logger = logging.getLogger('step.rm_pr_label')
 
-concourse_cfg = ci.util.ctx().cfg_factory().concourse('${concourse_cfg.name()}')
 github_cfg = ccc.github.github_cfg_for_repo_url(
   ci.util.urljoin(
     '${main_repo.repo_hostname()}',
