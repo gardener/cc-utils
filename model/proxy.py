@@ -64,6 +64,7 @@ class ProxyConfig(NamedModelElement):
         yield from [
             'mitm_proxy',
             'sidecar_image',
+            'job_mapping_name',
         ]
 
     def mitm_proxy(self):
@@ -71,6 +72,9 @@ class ProxyConfig(NamedModelElement):
 
     def sidecar_image(self):
         return DockerImageConfig(raw_dict=self.raw['sidecar_image'])
+
+    def job_mapping_name(self) -> str:
+        return self.raw.get('job_mapping_name')
 
 
 class MitmProxyConfig(DockerImageConfig):
