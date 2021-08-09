@@ -110,4 +110,3 @@ class SecretsServerSecrets(ModelBase):
             logger.warning(
                 f'No secrets repo for job_mapping {job_mapping.name()} configured. Please do so...',
             )
-
