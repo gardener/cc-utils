@@ -95,8 +95,9 @@ class SecretsServerClient:
                 secret_cfg_name=model.concourse.secret_cfg_name_for_team(current_team),
             )
         else:
-            # if secret env vars are set we want to use encryption
-            default_secrets_path = 'encrypted-concourse-secrets/encrypted_concourse_cfg'
+            logger.warning(
+                'CONCOURSE_CURRENT_TEAM not found in environment. Needed for secret retrieval.',
+            )
 
         return SecretsServerClient(
             endpoint_url=f'http://{default_secrets_server_hostname}',
