@@ -18,7 +18,6 @@ import logging
 import ci.log
 from model.base import (
     NamedModelElement,
-    ModelBase,
 )
 import model.concourse
 import model.secret
@@ -33,7 +32,11 @@ class SecretsServerConfig(NamedModelElement):
         return {
             'namespace',
             'service_name',
-            'secrets',
+        }
+
+    def _optional_attributes(self):
+        return {
+            'node_selector',
         }
 
     def namespace(self):
@@ -43,70 +46,32 @@ class SecretsServerConfig(NamedModelElement):
         return self.raw.get('service_name')
 
     def endpoint_url(self):
-        return 'http://{sn}.{ns}.svc.cluster.local'.format(
-            sn=self.service_name(),
-            ns=self.namespace(),
-        )
+        return f'http://{self.service_name()}.{self.namespace()}.svc.cluster.local'
 
     def node_selector(self):
         return self.raw.get('node_selector')
 
-    def kubernetes_cluster_config(self):
-        return self.raw.get('kubernetes_cluster_config')
 
-    def secrets(self):
-        return SecretsServerSecrets(raw_dict=self.raw['secrets'])
+def secret_url_path(
+    job_mapping: model.concourse.JobMapping,
+    secret_cfg: model.secret.Secret,
+):
+    '''
+        used to retrieve the secret url path for given config in default template
+    '''
+    if not secret_cfg:
+        logger.warning(f'Secret config not set {secret_cfg=}')
+
+    if job_mapping.secrets_repo():
+        return _org_based_secret_url_path(
+            target_secret_name=job_mapping.target_secret_name(),
+            secret_cfg_name=job_mapping.target_secret_cfg_name(),
+        )
+    else:
+        logger.warning(
+            f'No secrets repo for job_mapping {job_mapping.name()} configured. Please do so...',
+        )
 
 
 def _org_based_secret_url_path(target_secret_name, secret_cfg_name):
     return f'{target_secret_name}/{secret_cfg_name}'
-
-
-class SecretsServerSecrets(ModelBase):
-    def _required_attributes(self):
-        return {
-            'concourse_config',
-            'cfg_sets',
-        }
-
-    def concourse_secret_name(self):
-        return self.raw.get('concourse_config').get('name')
-
-    def encrypted_concourse_secret_name(self):
-        return self.raw.get('encrypted_concourse_config').get('name')
-
-    def concourse_attribute(self):
-        return self.raw.get('concourse_config').get('attribute')
-
-    def encrypted_concourse_attribute(self):
-        return self.raw.get('encrypted_concourse_config').get('attribute')
-
-    def cfg_set_names(self):
-        return self.raw['cfg_sets']
-
-    def concourse_cfg_name(self):
-        return f'{self.concourse_secret_name()}/{self.concourse_attribute()}'
-
-    def encrypted_concourse_cfg_name(self):
-        return f'{self.encrypted_concourse_secret_name()}/{self.encrypted_concourse_attribute()}'
-
-    def secret_url_path(
-        self,
-        job_mapping: model.concourse.JobMapping,
-        secret_cfg: model.secret.Secret,
-    ):
-        '''
-            used to retrieve the secret url path for given config in default template
-        '''
-        if not secret_cfg:
-            logger.warning(f'Secret config not set {secret_cfg=}')
-
-        if job_mapping.secrets_repo():
-            return _org_based_secret_url_path(
-                target_secret_name=job_mapping.target_secret_name(),
-                secret_cfg_name=job_mapping.target_secret_cfg_name(),
-            )
-        else:
-            logger.warning(
-                f'No secrets repo for job_mapping {job_mapping.name()} configured. Please do so...',
-            )

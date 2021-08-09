@@ -4,6 +4,7 @@ import os
 
 import oci.auth as oa
 import model.container_registry
+import model.secrets_server
 
 from ci.util import urljoin
 from makoutil import indent_func
@@ -29,7 +30,7 @@ default_container_registry = config_set.container_registry()
 # expose secrets_server endpoint to all jobs
 secrets_server_cfg = config_set.secrets_server()
 
-secrets_server_cfg_url_path = secrets_server_cfg.secrets().secret_url_path(
+secrets_server_cfg_url_path = model.secrets_server.secret_url_path(
   job_mapping,
   secret_cfg,
 )
