@@ -62,7 +62,7 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
             'webhook_dispatcher_config',
             'container_port',
             'logging_els_index',
-            'secret_config',
+            'job_mapping_name',
         }
 
     @deprecated.deprecated
@@ -79,8 +79,8 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
     def secrets_server_config_name(self):
         return self.raw.get('secrets_server_config')
 
-    def secret_config_name(self):
-        return self.raw['secret_config']
+    def job_mapping_name(self):
+        return self.raw.get('job_mapping_name')
 
     def ingress_host(self, cfg_factory):
         cluster_domain = cluster_domain_from_kubernetes_config(
