@@ -485,9 +485,14 @@ class Client:
                     stream=False,
                     timeout=None,
                 )
+                if (mediaType := res.headers['Content-Type']) == 'application/octet-stream':
+                    # legacy container-images declare application/octet-stream as content-type,
+                    # which is not supported by containerd
+                    # https://github.com/containerd/containerd/pull/2456#issuecomment-406478687
+                    mediaType = 'application/vnd.docker.image.rootfs.diff.tar.gzip'
                 return om.OciBlobRef(
                     digest=digest,
-                    mediaType=res.headers['Content-Type'],
+                    mediaType=mediaType,
                     size=int(res.headers['Content-Length']),
                 )
 
