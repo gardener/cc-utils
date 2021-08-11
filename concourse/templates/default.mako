@@ -20,6 +20,7 @@ target_team = pipeline.get('target_team')
 background_image = pipeline.get('background_image', 'https://i.imgur.com/raPlg21.png')
 job_mapping = pipeline.get('job_mapping')
 secret_cfg = pipeline.get('secret_cfg')
+concourse_instance_url = pipeline.get('concourse_instance_url')
 
 resource_registry = pipeline_definition._resource_registry
 
@@ -209,6 +210,9 @@ notification_env_vars = {
   'SECRETS_SERVER_ENDPOINT': secrets_server_cfg.endpoint_url(),
 }
 
+if concourse_instance_url:
+  notification_env_vars['CONCOURSE_INSTANCE_URL'] = concourse_instance_url
+
 if secret_cfg:
   notification_env_vars['SECRET_CIPHER_ALGORITHM'] = secret_cfg.cipher_algorithm().value
   notification_env_vars['SECRET_KEY'] = secret_cfg.key().decode('utf-8')
@@ -325,6 +329,9 @@ else:
       CONCOURSE_CURRENT_CFG: ${config_set.name()}
       CONCOURSE_CURRENT_TEAM: ${target_team}
       PIPELINE_NAME: ${pipeline_name}
+  % if concourse_instance_url:
+      CONCOURSE_INSTANCE_URL: ${concourse_instance_url}
+  % endif
   % if secret_cfg:
       SECRET_CIPHER_ALGORITHM: ${secret_cfg.cipher_algorithm().value}
       SECRET_KEY: ${secret_cfg.key().decode('utf-8')}
