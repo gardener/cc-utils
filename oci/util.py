@@ -9,9 +9,6 @@ def normalise_image_reference(image_reference: str):
   if not isinstance(image_reference, str):
     raise ValueError(image_reference)
 
-  if '@' in image_reference:
-    return image_reference
-
   parts = image_reference.split('/')
 
   left_part = parts[0]
