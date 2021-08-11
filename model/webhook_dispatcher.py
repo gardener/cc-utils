@@ -79,7 +79,7 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
     def secrets_server_config_name(self):
         return self.raw.get('secrets_server_config')
 
-    def job_mapping_name(self):
+    def job_mapping_name(self) -> str:
         return self.raw.get('job_mapping_name')
 
     def ingress_host(self, cfg_factory):
