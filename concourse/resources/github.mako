@@ -59,8 +59,8 @@ if (overwrite_preferred_protocol := repo_cfg.preferred_protocol()):
     no_ssl_verify: ${disable_tls_validation}
     private_key: |
       ${indent_func(6)(credentials.private_key()).strip()}
-    username: "${credentials.username()}"
-    password: "${token_or_passwd}"
+    username: '${credentials.username()}'
+    password: '${token_or_passwd}'
     git_config:
     - name: 'protocol.version'
       value: '2'
@@ -108,10 +108,10 @@ credentials = github_cfg.credentials()
     no_ssl_verify: ${disable_tls_validation}
     private_key: |
       ${indent_func(6)(credentials.private_key()).strip()}
-    username: "${credentials.username()}"
-    password: "${credentials.passwd()}"
+    username: '${credentials.username()}'
+    password: '${credentials.passwd()}'
 % if require_label:
-    label: "${require_label}"
+    label: '${require_label}'
 % endif
 ${git_ignore_paths(repo_cfg)}
 </%def>
