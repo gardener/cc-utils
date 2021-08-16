@@ -13,12 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pathlib import Path
+import logging
+
 from github3 import GitHub
 from github3.exceptions import NotFoundError
 
 from github.util import GitHubRepositoryHelper
 
 from ci.util import existing_dir, existing_file, not_none, warning
+import ci.log
+
+logger = logging.getLogger(__name__)
+ci.log.configure_default_logging()
 
 
 class CodeownersEnumerator:
@@ -93,7 +99,12 @@ class CodeOwnerEntryResolver:
 
     def _determine_email_address(self, github_user_name: str):
         not_none(github_user_name)
-        user = self.github_api.user(github_user_name)
+        try:
+            user = self.github_api.user(github_user_name)
+        except NotFoundError:
+            logger.warning(f'failed to lookup {github_user_name=} {github_api._github_url=}')
+            return None
+
         return user.email
 
     def _resolve_team_members(self, github_team_name: str):
