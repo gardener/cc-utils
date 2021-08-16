@@ -55,7 +55,7 @@ logger = logging.getLogger('step.component_descriptor')
 ${step_lib('component_descriptor')}
 ${step_lib('component_descriptor_util')}
 
-snapshot_ctx_repository_base_url="${snapshot_ctx_repository_base_url}"
+snapshot_ctx_repository_base_url = "${snapshot_ctx_repository_base_url}"
 
 # retrieve effective version
 version_file_path = os.path.join(
@@ -148,71 +148,69 @@ ctf_out_path = os.path.abspath(
 descriptor_script = os.path.abspath(
   '${job_variant.main_repository().resource_name()}/.ci/component_descriptor'
 )
-if not os.path.isfile(descriptor_script):
-  logger.info('no component_descriptor script found at {s} - will use default'.format(
-    s=descriptor_script
-    )
+if os.path.isfile(descriptor_script):
+  is_executable = bool(os.stat(descriptor_script)[stat.ST_MODE] & stat.S_IEXEC)
+  if not is_executable:
+    fail(f'descriptor script file exists but is not executable: {descriptor_script}')
+
+  # dump base_ctf_v2 as valid component archive and pass it to descriptor script
+  base_ctf_dir = os.path.join(descriptor_out_dir, 'base_component_ctf')
+  os.makedirs(base_ctf_dir, exist_ok=False)
+
+  # dump base_descriptor_v2 and pass it to descriptor script
+  base_component_descriptor_fname = (
+    f'base_{component_descriptor_fname(schema_version=gci.componentmodel.SchemaVersion.V2)}'
+  )
+  base_descriptor_file_v2 = os.path.join(
+    descriptor_out_dir,
+    base_component_descriptor_fname,
+  )
+  with open(base_descriptor_file_v2, 'w') as f:
+    f.write(dump_component_descriptor_v2(base_descriptor_v2))
+
+  subproc_env = os.environ.copy()
+  subproc_env['${main_repo_path_env_var}'] = main_repo_path
+  subproc_env['MAIN_REPO_DIR'] = main_repo_path
+  subproc_env['BASE_DEFINITION_PATH'] = base_descriptor_file_v2
+  subproc_env['BASE_CTF_PATH'] = base_ctf_dir
+  subproc_env['COMPONENT_DESCRIPTOR_PATH'] = v2_outfile
+  subproc_env['CTF_PATH'] = ctf_out_path
+  subproc_env['COMPONENT_NAME'] = component_name
+  subproc_env['COMPONENT_VERSION'] = effective_version
+  subproc_env['EFFECTIVE_VERSION'] = effective_version
+  subproc_env['CURRENT_COMPONENT_REPOSITORY'] = ctx_repository_base_url
+
+  # pass predefined command to add dependencies for convenience purposes
+  add_dependencies_cmd = ' '.join((
+    'gardener-ci',
+    'productutil_v2',
+    'add_dependencies',
+    '--descriptor-src-file', base_descriptor_file_v2,
+    '--descriptor-out-file', base_descriptor_file_v2,
+    '--component-version', effective_version,
+    '--component-name', component_name,
+  ))
+
+  subproc_env['ADD_DEPENDENCIES_CMD'] = add_dependencies_cmd
+
+  % for name, value in descriptor_trait.callback_env().items():
+  subproc_env['${name}'] = '${value}'
+  % endfor
+
+  subprocess.run(
+    [descriptor_script],
+    check=True,
+    cwd=descriptor_out_dir,
+    env=subproc_env
   )
 
+else:
+  logger.info(
+    f'no component_descriptor script found at {descriptor_script} - will use default'
+  )
   with open(v2_outfile, 'w') as f:
     f.write(dump_component_descriptor_v2(base_descriptor_v2))
   logger.info(f'wrote component descriptor (v2): {v2_outfile=}')
-  sys.exit(0)
-else:
-  is_executable = bool(os.stat(descriptor_script)[stat.ST_MODE] & stat.S_IEXEC)
-  if not is_executable:
-    fail('descriptor script file exists but is not executable: ' + descriptor_script)
-
-# dump base_ctf_v2 as valid component archive and pass it to descriptor script
-base_ctf_dir = os.path.join(descriptor_out_dir, 'base_component_ctf')
-os.makedirs(base_ctf_dir, exist_ok=False)
-
-# dump base_descriptor_v2 and pass it to descriptor script
-base_component_descriptor_fname = (
-  f'base_{component_descriptor_fname(schema_version=gci.componentmodel.SchemaVersion.V2)}'
-)
-base_descriptor_file_v2 = os.path.join(
-  descriptor_out_dir,
-  base_component_descriptor_fname,
-)
-with open(base_descriptor_file_v2, 'w') as f:
-  f.write(dump_component_descriptor_v2(base_descriptor_v2))
-
-subproc_env = os.environ.copy()
-subproc_env['${main_repo_path_env_var}'] = main_repo_path
-subproc_env['MAIN_REPO_DIR'] = main_repo_path
-subproc_env['BASE_DEFINITION_PATH'] = base_descriptor_file_v2
-subproc_env['BASE_CTF_PATH'] = base_ctf_dir
-subproc_env['COMPONENT_DESCRIPTOR_PATH'] = v2_outfile
-subproc_env['CTF_PATH'] = ctf_out_path
-subproc_env['COMPONENT_NAME'] = component_name
-subproc_env['COMPONENT_VERSION'] = effective_version
-subproc_env['EFFECTIVE_VERSION'] = effective_version
-subproc_env['CURRENT_COMPONENT_REPOSITORY'] = ctx_repository_base_url
-
-# pass predefined command to add dependencies for convenience purposes
-add_dependencies_cmd = ' '.join((
-  'gardener-ci',
-  'productutil_v2',
-  'add_dependencies',
-  '--descriptor-src-file', base_descriptor_file_v2,
-  '--descriptor-out-file', base_descriptor_file_v2,
-  '--component-version', effective_version,
-  '--component-name', component_name,
-))
-
-subproc_env['ADD_DEPENDENCIES_CMD'] = add_dependencies_cmd
-
-% for name, value in descriptor_trait.callback_env().items():
-subproc_env['${name}'] = '${value}'
-% endfor
-
-subprocess.run(
-  [descriptor_script],
-  check=True,
-  cwd=descriptor_out_dir,
-  env=subproc_env
-)
 
 have_ctf = os.path.exists(ctf_out_path)
 have_cd = os.path.exists(v2_outfile)
@@ -243,7 +241,7 @@ elif have_cd:
       component_descriptor_v2=snapshot_descriptor,
     )
 
-elif have_ctf :
+elif have_ctf:
   if snapshot_ctx_repository_base_url:
     subprocess_args = [
       'component-cli',
