@@ -38,7 +38,7 @@ def from_parameters(
     password: str,
     team_name: str,
     username: str,
-    verify_ssl: bool = 'True',
+    verify_ssl: bool = True,
     concourse_api_version=None,
 ) -> concourse.client.api.ConcourseApiBase:
     """
@@ -104,7 +104,7 @@ def client_from_cfg_set(
 
 
 def client_from_env(
-    cfg_set = None,
+    cfg_set=None,
     team_name: str = None,
 ) -> concourse.client.api.ConcourseApiBase:
     """
