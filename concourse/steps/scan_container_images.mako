@@ -140,6 +140,14 @@ email_recipients = tuple(
   )
 )
 
+## order by max. severity; highest first (descending)
+## type: Iterable[Tuple[ScanResult, float]] (written in comment to save imports)
+results_above_threshold = sorted(
+  results_above_threshold,
+  key=lambda x: x[1],
+  reverse=True,
+)
+
 print(f'Components: {len(components)}   Mail recipients: {len(email_recipients)}')
 
 for email_recipient in email_recipients:
