@@ -7,6 +7,7 @@ import concourse.client
 import os
 import traceback
 
+import ccc.concourse
 import ci.util
 import mailutil
 
@@ -43,13 +44,9 @@ def job_url(v):
 
 
 def determine_previous_build_status(v, cfg_set):
-    cc_cfg = cfg_set.concourse()
-    cc_uam = cfg_set.concourse_uam(cc_cfg.concourse_uam_cfg())
-
-    concourse_client = concourse.client.from_cfg(
-        concourse_cfg=cc_cfg,
-        concourse_uam_cfg=cc_uam,
-        team_name=v['build-team-name']
+    concourse_client = ccc.concourse.client_from_cfg(
+        cfg_set=cfg_set,
+        team_name=v['build-team-name'],
     )
     try:
         build_number = int(float(v['build-name']))
