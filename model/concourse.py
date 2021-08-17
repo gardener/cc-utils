@@ -135,8 +135,8 @@ class ConcourseConfig(NamedModelElement):
 
 
 class ConcourseEndpoint(NamedModelElement):
-    def url(self) -> typing.Optional[str]:
-        return self.raw.get('url')
+    def base_url(self) -> typing.Optional[str]:
+        return self.raw.get('base_url')
 
 
 class ConcourseUAM(NamedModelElement):
