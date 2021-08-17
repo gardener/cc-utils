@@ -29,6 +29,7 @@ from concourse.enumerator import (
     GithubOrganisationDefinitionEnumerator,
 )
 
+import ccc.concourse
 import ccc.github
 import concourse.client
 import concourse.client.model
@@ -258,13 +259,9 @@ class ConcourseDeployer(DefinitionDeployer):
         pipeline_definition = definition_descriptor.pipeline
         pipeline_name = definition_descriptor.pipeline_name
         try:
-            concourse_cfg = definition_descriptor.concourse_target_cfg
-            concourse_uam_cfg = self.cfg_set.concourse_uam(concourse_cfg.concourse_uam_config())
-
-            api = concourse.client.from_cfg(
-                concourse_cfg=concourse_cfg,
-                concourse_uam_cfg=concourse_uam_cfg,
-                team_name=definition_descriptor.concourse_target_team,
+            api = ccc.concourse.client_from_cfg(
+               cfg_set=self.cfg_set,
+               team_name=definition_descriptor.concourse_target_team,
             )
             response = api.set_pipeline(
                 name=pipeline_name,
@@ -347,16 +344,14 @@ class ReplicationResultProcessor:
 
         for concourse_target_key, concourse_results in concourse_target_results.items():
             # TODO: implement eq for concourse_cfg
-            concourse_cfg, concourse_team = next(iter(
+            _, concourse_team = next(iter(
                 concourse_results)).definition_descriptor.concourse_target()
-            concourse_uam_cfg = self._cfg_set.concourse_uam(concourse_cfg.concourse_uam_cfg())
 
-            concourse_results = concourse_target_results[concourse_target_key]
-            concourse_api = concourse.client.from_cfg(
-                concourse_cfg=concourse_cfg,
-                concourse_uam_cfg=concourse_uam_cfg,
+            concourse_api = ccc.concourse.client_from_cfg(
+                cfg_set=self._cfg_set,
                 team_name=concourse_team,
             )
+            concourse_results = concourse_target_results[concourse_target_key]
 
             # find pipelines to remove
             if self.remove_pipelines:
