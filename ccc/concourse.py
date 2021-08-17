@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import functools
-import warnings
 
 import ci.util
 import concourse.client
@@ -42,7 +41,7 @@ def from_parameters(
     concourse_api_version=None,
 ) -> concourse.client.api.ConcourseApiBase:
     """
-    inits the concourse api object
+    initialises the concourse api and automatically logs in user
     """
 
     concourse_api = concourse.client.api.ConcourseApiFactory.create_api(
@@ -59,32 +58,8 @@ def from_parameters(
     return concourse_api
 
 
-@functools.lru_cache()
-@ensure.ensure_annotations
-def client_from_cfg_name(
-    team_name: str,
-    concourse_cfg_name: str = '',
-) -> concourse.client.api.ConcourseApiBase:
-    if concourse_cfg_name:
-        warnings.warn(
-            'Parameter concourse_cfg_name is deprecated and will not be used',
-            DeprecationWarning,
-            3,
-        )
-
-    cfg_factory = ci.util.ctx().cfg_factory()
-    cc_uam = lookup_cc_uam(cfg_set=cfg_factory, team_name=team_name)
-    cc_endpoint = cfg_factory.concourse_endpoint(cc_uam.concourse_endpoint_name())
-
-    return from_parameters(
-        base_url=cc_endpoint,
-        password=cc_uam.password(),
-        team_name=team_name,
-        username=cc_uam.username(),
-    )
-
-
-def client_from_cfg_set(
+@functools.cache
+def client_from_cfg(
     cfg_set,
     team_name: str = '',
 ) -> concourse.client.api.ConcourseApiBase:
@@ -103,9 +78,10 @@ def client_from_cfg_set(
     )
 
 
+@functools.cache
 def client_from_env(
+    team_name: str=None,
     cfg_set=None,
-    team_name: str = None,
 ) -> concourse.client.api.ConcourseApiBase:
     """
     returns a concourse-client w/ the credentials valid for the current execution environment.
@@ -122,6 +98,7 @@ def client_from_env(
 
     if not cfg_set:
         cfg_set = ctx.cfg_set()
+
     cc_uam = lookup_cc_uam(cfg_set=cfg_set, team_name=team_name)
     cc_endpoint = cfg_set.concourse_endpoint(cc_uam.concourse_endpoint_name())
 
