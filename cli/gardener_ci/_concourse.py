@@ -15,12 +15,11 @@
 
 import os
 
-
+import ccc.concourse
 from ci.util import (
     ctx,
     CliHints,
 )
-from concourse import client
 from concourse.util import sync_org_webhooks
 from concourse.enumerator import (
     DefinitionDescriptorPreprocessor,
@@ -179,14 +178,12 @@ def trigger_resource_check(
     '''
     cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(cfg_name)
-    concourse_cfg = cfg_set.concourse()
-    concourse_uam = cfg_set.concourse_uam(concourse_cfg.concourse_uam_cfg())
 
-    api = client.from_cfg(
-        concourse_cfg=concourse_cfg,
-        concourse_uam_cfg=concourse_uam,
+    api = ccc.concourse.client_from_cfg(
+        cfg_set=cfg_set,
         team_name=team_name,
     )
+
     api.trigger_resource_check(
         pipeline_name=pipeline_name,
         resource_name=resource_name,
