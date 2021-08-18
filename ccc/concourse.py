@@ -71,7 +71,7 @@ def client_from_cfg(
     cc_endpoint = cfg_set.concourse_endpoint(cc_uam.concourse_endpoint_name())
 
     return from_parameters(
-        base_url=cc_endpoint,
+        base_url=cc_endpoint.base_url(),
         password=cc_uam.password(),
         team_name=team_name,
         username=cc_uam.username(),
