@@ -602,7 +602,7 @@ class GitHubReleaseStep(TransactionalStep):
                 component_name=self.component_name,
             )
         else:
-            release = self.github_helper.repository.create_release(
+            release = self.github_helper.create_release(
                 tag_name=release_tag,
                 body=None,
                 draft=False,
