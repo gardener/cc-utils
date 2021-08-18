@@ -604,7 +604,7 @@ class GitHubReleaseStep(TransactionalStep):
         else:
             release = self.github_helper.create_release(
                 tag_name=release_tag,
-                body=None,
+                body="",
                 draft=False,
                 prerelease=False,
                 name=self.release_version,
