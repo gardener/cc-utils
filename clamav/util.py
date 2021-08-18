@@ -70,16 +70,10 @@ def iter_image_files(
             for tar_info in layer_tarfile:
                 if not tar_info.isfile():
                     continue
-
-                def iter_content(chunk_size=4096):
-                    fobj = layer_tarfile.fileobj
-                    remaining = tar_info.size
-                    while remaining > 0:
-                        chunk = fobj.read(min(chunk_size, remaining))
-                        remaining -= len(chunk)
-                        yield chunk
-
-                yield (iter_content(), f'{layer_blob.digest}:{tar_info.name}')
+                yield (
+                    layer_tarfile.extractfile(tar_info),
+                    f'{layer_blob.digest}:{tar_info.name}',
+                )
 
 
 def virus_scan_images(
