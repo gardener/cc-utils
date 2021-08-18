@@ -172,7 +172,7 @@ class ConcourseUAM(NamedModelElement):
 
     def _required_attributes(self):
         return [
-            'concourse_endpoint'
+            'concourse_endpoint_name',
             'git_auth_team',
             'role',
             'service_user',
