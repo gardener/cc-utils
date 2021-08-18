@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import typing
+
 import ci.util
 
 from clamav.client import ClamAVClient
@@ -19,13 +21,24 @@ from clamav.routes import ClamAVRoutes
 from model.clamav import ClamAVConfig
 
 
-def client_from_config(clamav_config: ClamAVConfig):
-    url = clamav_config.service_url()
+def client(
+    cfg: typing.Union[str, ClamAVConfig, None]=None,
+    url: str=None,
+    cfg_factory=None,
+):
+    if not (bool(cfg) ^ bool(url)):
+        raise ValueError('exactly one of cfg, url must be passed')
+
+    if isinstance(cfg, ClamAVConfig):
+        url = cfg.service_url()
+    elif isinstance(cfg, str):
+        if not cfg_factory:
+            cfg_factory = ci.util.ctx().cfg_factory()
+        cfg = cfg_factory.clamav(cfg)
+
+        url = cfg.service_url()
+    elif cfg is None:
+        url = url
+
     routes = ClamAVRoutes(base_url=url)
     return ClamAVClient(routes=routes)
-
-
-def client_from_config_name(clamav_config_name: str):
-    cfg_factory = ci.util.ctx().cfg_factory()
-    clamav_config = cfg_factory.clamav(clamav_config_name)
-    return client_from_config(clamav_config)
