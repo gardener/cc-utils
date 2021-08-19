@@ -17,73 +17,33 @@ import functools
 import ci.util
 import concourse.client
 import ctx
-import model.concourse
 
-import ensure
-import concourse.client.api
+from ensure import ensure_annotations
 
 
-def lookup_cc_uam(cfg_set, team_name) -> model.concourse.ConcourseUAM:
-    for cc_uam in cfg_set._cfg_elements('concourse_uam'):
-        if cc_uam.team_name() == team_name:
-            return cc_uam
+@functools.lru_cache()
+@ensure_annotations
+def client_from_cfg_name(
+    concourse_cfg_name: str,
+    team_name: str
+):
+    cfg_factory = ci.util.ctx().cfg_factory()
 
-    raise RuntimeError(f'No concourse uam for team name {team_name} found')
+    cc_cfg = cfg_factory.concourse(concourse_cfg_name)
+    uam_cfg = cfg_factory.concourse_uam(cc_cfg.concourse_uam_config())
 
-
-@ensure.ensure_annotations
-def from_parameters(
-    base_url: str,
-    password: str,
-    team_name: str,
-    username: str,
-    verify_ssl: bool = True,
-    concourse_api_version=None,
-) -> concourse.client.api.ConcourseApiBase:
-    """
-    initialises the concourse api and automatically logs in user
-    """
-
-    concourse_api = concourse.client.api.ConcourseApiFactory.create_api(
-        base_url=base_url,
+    return concourse.client.from_cfg(
+        concourse_cfg=cc_cfg,
+        concourse_uam_cfg=uam_cfg,
         team_name=team_name,
-        verify_ssl=verify_ssl,
-        concourse_api_version=concourse_api_version,
-    )
-
-    concourse_api.login(
-        username=username,
-        passwd=password,
-    )
-    return concourse_api
-
-
-@functools.cache
-def client_from_cfg(
-    cfg_set,
-    team_name: str = '',
-) -> concourse.client.api.ConcourseApiBase:
-
-    if not team_name:
-        team_name = ci.util.check_env('CONCOURSE_CURRENT_TEAM')
-
-    cc_uam = lookup_cc_uam(cfg_set=cfg_set, team_name=team_name)
-    cc_endpoint = cfg_set.concourse_endpoint(cc_uam.concourse_endpoint_name())
-
-    return from_parameters(
-        base_url=cc_endpoint.base_url(),
-        password=cc_uam.password(),
-        team_name=team_name,
-        username=cc_uam.username(),
+        verify_ssl=True,
     )
 
 
-@functools.cache
 def client_from_env(
     team_name: str=None,
-    cfg_set=None,
-) -> concourse.client.api.ConcourseApiBase:
-    """
+):
+    '''
     returns a concourse-client w/ the credentials valid for the current execution environment.
     Note that this function must only be called if running in a "central" cicd-job.
     The returned client is authorised to perform operations in the same concourse-team as the
@@ -91,20 +51,15 @@ def client_from_env(
 
     if the (optional) team_name is specified, the returned client is not guaranteed to have the
     required authorisation.
-    """
-
+    '''
+    cfg_set = ctx.cfg_set()
+    cc_cfg = cfg_set.concourse()
+    cc_uam = cfg_set.concourse_uam(cc_cfg.concourse_uam_config())
     if not team_name:
         team_name = ci.util.check_env('CONCOURSE_CURRENT_TEAM')
 
-    if not cfg_set:
-        cfg_set = ctx.cfg_set()
-
-    cc_uam = lookup_cc_uam(cfg_set=cfg_set, team_name=team_name)
-    cc_endpoint = cfg_set.concourse_endpoint(cc_uam.concourse_endpoint_name())
-
-    return from_parameters(
-        base_url=cc_endpoint.base_url(),
-        password=cc_uam.password(),
+    return concourse.client.from_cfg(
+        concourse_cfg=cc_cfg,
+        concourse_uam_cfg=cc_uam,
         team_name=team_name,
-        username=cc_uam.username(),
     )

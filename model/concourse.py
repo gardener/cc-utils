@@ -41,6 +41,12 @@ class ConcourseConfig(NamedModelElement):
     def job_mapping_cfg_name(self):
         return self.raw.get('job_mapping')
 
+    def concourse_uam_config(self):
+        return self.raw.get('concourse_uam_config')
+
+    def concourse_uam_cfg(self): # alias for convenience
+        return self.concourse_uam_config()
+
     def helm_chart_default_values_config(self):
         return self.raw.get('helm_chart_default_values_config')
 
@@ -102,6 +108,7 @@ class ConcourseConfig(NamedModelElement):
     def _required_attributes(self):
         return [
             'externalUrl',
+            'concourse_uam_config',
             'helm_chart_default_values_config',
             'kubernetes_cluster_config',
             'job_mapping',
@@ -127,39 +134,31 @@ class ConcourseConfig(NamedModelElement):
         super().validate()
 
 
-class ConcourseEndpoint(NamedModelElement):
-    def base_url(self) -> typing.Optional[str]:
-        return self.raw.get('base_url')
-
-
 class ConcourseUAM(NamedModelElement):
-    def service_user(self) -> typing.Optional[BasicCredentials]:
-        if service_user := self.raw.get('service_user'):
-            return BasicCredentials(raw_dict=service_user)
+    def local_user(self) -> typing.Optional[BasicCredentials]:
+        if local_user := self.raw.get('local_user'):
+            return BasicCredentials(raw_dict=local_user)
 
     def team_name(self) -> str:
         return self.raw.get('team_name')
 
-    def concourse_endpoint_name(self) -> str:
-        return self.raw.get('concourse_endpoint_name')
+    def username(self) -> str:
+        if local_user := self.local_user():
+            return local_user.username()
 
-    def username(self) -> typing.Optional[str]:
-        if service_user := self.service_user():
-            return service_user.username()
-
-    def password(self) -> typing.Optional[str]:
-        if service_user := self.service_user():
-            return service_user.passwd()
+    def password(self) -> str:
+        if local_user := self.local_user():
+            return local_user.passwd()
 
     def role(self) -> str:
         return self.raw.get('role')
 
     def github_auth_team(self, split: bool=False) -> typing.Optional[str]:
-        """
+        '''
         returns the github auth team (org:team)
 
         @param split: if `true` return [org, team]
-        """
+        '''
         git_auth_team = self.raw.get('git_auth_team')
         if split and git_auth_team:
             return git_auth_team.split(':')
@@ -172,12 +171,27 @@ class ConcourseUAM(NamedModelElement):
 
     def _required_attributes(self):
         return [
-            'concourse_endpoint_name',
-            'git_auth_team',
+            'local_user',
             'role',
-            'service_user',
+            'git_auth_team',
             'team_name',
         ]
+
+
+class ConcourseUAMSet(NamedModelElement):
+    def concourse_uams(self) -> typing.List[ConcourseUAM]:
+        return [ConcourseUAM(name=name, raw_dict=raw) for name, raw in self.raw.items()]
+
+    def concourse_uam(self, uam_name):
+        for uam in self.concourse_uams():
+            if uam.name() == uam_name:
+                return uam
+        raise ValueError(
+            f"Unknown uam '{uam}'; known uams: {', '.join(self.raw.keys())}"
+        )
+
+    def main_team_uam(self):
+        return self.concourse_uam('main')
 
 
 class ConcourseTeam(NamedModelElement):

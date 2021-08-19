@@ -22,7 +22,6 @@ import tabulate
 
 import gci.componentmodel as cm
 
-import ccc.concourse
 import concourse.util
 import ctx
 import mail.model
@@ -441,9 +440,14 @@ def print_protecode_info_table(
 
 
 def retrieve_buildlog(uuid: str):
+    concourse_cfg = concourse.util._current_concourse_config()
+    uam_cfg_name = concourse_cfg.concourse_uam_cfg()
+    concourse_uam_cfg = ctx.cfg_factory().concourse_uam(uam_cfg_name)
+
     pipeline_metadata = concourse.util.get_pipeline_metadata()
-    client = ccc.concourse.client_from_cfg(
-        cfg_set=ctx.cfg_factory(),
+    client = concourse.client.from_cfg(
+        concourse_cfg=concourse_cfg,
+        concourse_uam_cfg=concourse_uam_cfg,
         team_name=pipeline_metadata.team_name,
     )
     build = concourse.util.find_own_running_build()

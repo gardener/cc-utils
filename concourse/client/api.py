@@ -64,7 +64,7 @@ class ConcourseApiFactory:
     def create_api(
         base_url: str,
         team_name: str,
-        verify_ssl: bool,
+        verify_ssl: str,
         concourse_api_version: latest_concourse_api_version,
     ) -> 'ConcourseApiBase':
         # disable logging output for now (breaks template in lss)
