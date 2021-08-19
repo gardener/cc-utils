@@ -22,25 +22,6 @@ import model.concourse
 import ensure
 
 
-@functools.lru_cache()
-@ensure.ensure_annotations
-def client_from_cfg_name(
-    concourse_cfg_name: str,
-    team_name: str
-):
-    cfg_factory = ci.util.ctx().cfg_factory()
-
-    cc_cfg = cfg_factory.concourse(concourse_cfg_name)
-    uam_cfg = cfg_factory.concourse_uam(cc_cfg.concourse_uam_config())
-
-    return concourse.client.from_cfg(
-        concourse_cfg=cc_cfg,
-        concourse_uam_cfg=uam_cfg,
-        team_name=team_name,
-        verify_ssl=True,
-    )
-
-
 def lookup_cc_team_cfg(cfg_set, team_name) -> model.concourse.ConcourseTeamConfig:
     for cc_uam in cfg_set._cfg_elements('concourse_uam'):
         if cc_uam.team_name() == team_name:
