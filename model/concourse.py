@@ -134,6 +134,50 @@ class ConcourseConfig(NamedModelElement):
         super().validate()
 
 
+class ConcourseTeamConfig(NamedModelElement):
+    def service_user(self) -> typing.Optional[BasicCredentials]:
+        if local_user := self.raw.get('service_user'):
+            return BasicCredentials(raw_dict=local_user)
+
+    def team_name(self) -> str:
+        return self.raw.get('team_name')
+
+    def username(self) -> str:
+        if service_user := self.service_user():
+            return service_user.username()
+
+    def password(self) -> str:
+        if service_user := self.service_user():
+            return service_user.passwd()
+
+    def role(self) -> str:
+        return self.raw.get('role')
+
+    def github_auth_team(self, split: bool = False) -> typing.Optional[str]:
+        """
+        returns the github auth team (org:team)
+
+        @param split: if `true` return [org, team]
+        """
+        git_auth_team = self.raw.get('git_auth_team')
+        if split and git_auth_team:
+            return git_auth_team.split(':')
+        return git_auth_team
+
+    def has_basic_auth_credentials(self) -> bool:
+        if self.username() or self.password():
+            return True
+        return False
+
+    def _required_attributes(self):
+        return [
+            'concourse_endpoint_name',
+            'git_auth_team',
+            'role',
+            'service_user',
+            'team_name',
+        ]
+
 class ConcourseUAM(NamedModelElement):
     def local_user(self) -> typing.Optional[BasicCredentials]:
         if local_user := self.raw.get('local_user'):
