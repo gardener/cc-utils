@@ -134,6 +134,11 @@ class ConcourseConfig(NamedModelElement):
         super().validate()
 
 
+class ConcourseEndpoint(NamedModelElement):
+    def base_url(self) -> str:
+        return self.raw.get('base_url')
+
+
 class ConcourseTeamConfig(NamedModelElement):
     def service_user(self) -> typing.Optional[BasicCredentials]:
         if local_user := self.raw.get('service_user'):
@@ -177,6 +182,7 @@ class ConcourseTeamConfig(NamedModelElement):
             'service_user',
             'team_name',
         ]
+
 
 class ConcourseUAM(NamedModelElement):
     def local_user(self) -> typing.Optional[BasicCredentials]:
