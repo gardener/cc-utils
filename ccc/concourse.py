@@ -80,6 +80,7 @@ def client_from_cfg(
     )
 
 
+@functools.cache
 def client_from_env(
     team_name: str=None,
 ) -> concourse.client.api.ConcourseApiBase:
