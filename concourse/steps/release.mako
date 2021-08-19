@@ -64,10 +64,15 @@ githubrepobranch = GitHubRepoBranch(
     branch=repository_branch,
 )
 
-component_descriptor = cdu.component_descriptor_from_dir(
-  '${job_step.input('component_descriptor_dir')}'
-)
-component_name = component_descriptor.component.name
+try:
+  component_descriptor = cdu.component_descriptor_from_dir(
+    '${job_step.input('component_descriptor_dir')}'
+  )
+  component_name = component_descriptor.component.name
+except NotImplementedError:
+  # fallback: We might have a ctf-archive with several component-descriptors. Use github
+  # repo path instead.
+  component_name = '${repo.repo_hostname()}/${repo.repo_path()}'
 
 release_and_prepare_next_dev_cycle(
   component_name=component_name,
