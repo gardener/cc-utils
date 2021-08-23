@@ -80,6 +80,7 @@ def virus_scan_images(
     component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
     filter_function,
     clamav_client,
+    oci_client: oc.Client=None,
 ) -> typing.Generator[saf.model.MalwarescanResult, None, None]:
     '''Scans components of the given Component Descriptor using ClamAV
 
@@ -93,7 +94,7 @@ def virus_scan_images(
 
         try:
             clamav_findings = list(
-                clamav_client.scan_container_image(
+                clamav_client.scan_container_image_layers(
                     image_reference=resource.access.imageReference
                 )
             )
