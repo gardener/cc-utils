@@ -102,7 +102,7 @@ class CodeOwnerEntryResolver:
         try:
             user = self.github_api.user(github_user_name)
         except NotFoundError:
-            logger.warning(f'failed to lookup {github_user_name=} {github_api._github_url=}')
+            logger.warning(f'failed to lookup {github_user_name=} {self.github_api._github_url=}')
             return None
 
         return user.email
