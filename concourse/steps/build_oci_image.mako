@@ -100,6 +100,7 @@ kaniko_executor = os.path.join(new_root, kaniko_executor[1:])
 
 kaniko_argv = (
   kaniko_executor,
+  '--force',
   '--no-push',
   '--dockerfile', '${dockerfile_relpath}',
   '--context', '${build_ctx_dir}',
