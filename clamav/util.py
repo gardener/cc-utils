@@ -95,7 +95,8 @@ def virus_scan_images(
         try:
             clamav_findings = list(
                 clamav_client.scan_container_image_layers(
-                    image_reference=resource.access.imageReference
+                    image_reference=resource.access.imageReference,
+                    oci_client=oci_client,
                 )
             )
             yield saf.model.MalwarescanResult(
