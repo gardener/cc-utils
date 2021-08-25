@@ -97,7 +97,7 @@ class ClamAVClient:
                     data=layer_blob.iter_content(chunk_size=4096)
                 )
                 if not scan_result.malware_detected():
-                    logger.info(f'{image_reference=}:{layer_blob.digest=}: no malware found')
+                    logger.info(f'{image_reference=}:{layer.digest=}: no malware found')
                     continue
                 else:
                     yield (scan_result, layer.digest)
