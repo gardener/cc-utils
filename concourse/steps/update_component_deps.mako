@@ -114,7 +114,7 @@ git_helper.rebase(
 upgrade_pull_requests = pull_request_util.enumerate_upgrade_pull_requests(state_filter='all')
 
 own_component = current_component()
-logger.info(f'{own_component=}')
+logger.info(f'{own_component.name=} {own_component.version=}'
 
 close_obsolete_pull_requests(
     upgrade_pull_requests=upgrade_pull_requests,
