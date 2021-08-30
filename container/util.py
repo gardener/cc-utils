@@ -14,19 +14,20 @@
 # limitations under the License.
 
 import dataclasses
-import gzip
 import hashlib
 import json
 import logging
 import tarfile
 import tempfile
 import typing
+import zlib
 
 import deprecated
 import requests
 
 import ccc.oci
 import ci.util
+import gziputil
 import oci
 import oci.client as oc
 import oci.convert as oconv
@@ -91,6 +92,8 @@ def filter_image(
         layer_hash = hashlib.sha256()
         cfg_hash = hashlib.sha256() # we need to write "non-gzipped" hash to cfg-blob
         leng = 0
+        src_leng = 0 # required for calculating leng for gzip-footer
+        crc = 0 # requried for calculcating crc32-checksum for gzip-footer
 
         # unfortunately, GCR (our most important oci-registry) does not support chunked uploads,
         # so we have to resort to writing the streaming result into a local tempfile to be able
@@ -109,12 +112,33 @@ def filter_image(
                 chunk_size=tarfile.BLOCKSIZE * 64,
             )
 
+            f.write((gzip_header := gziputil.gzip_header(fname=b'layer.tar')))
+            layer_hash.update(gzip_header)
+            leng += len(gzip_header)
+
+            compressor = gziputil.zlib_compressobj()
+
             for chunk in filtered_stream:
                 cfg_hash.update(chunk) # need to hash before compressing for cfg-blob
-                chunk = gzip.compress(chunk)
+                crc = zlib.crc32(chunk, crc)
+                src_leng += len(chunk)
+
+                chunk = compressor.compress(chunk)
                 layer_hash.update(chunk)
                 leng += len(chunk)
                 f.write(chunk)
+
+            f.write((remainder := compressor.flush()))
+            layer_hash.update(remainder)
+            leng += len(remainder)
+
+            gzip_footer = gziputil.gzip_footer(
+                crc32=crc,
+                uncompressed_size=src_leng,
+            )
+            f.write(gzip_footer)
+            layer_hash.update(gzip_footer)
+            leng += len(gzip_footer)
 
             f.seek(0)
 
