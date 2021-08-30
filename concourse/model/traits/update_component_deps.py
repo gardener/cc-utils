@@ -120,7 +120,7 @@ ATTRIBUTES = (
     ),
     AttributeSpec.optional(
         name='ignore_prerelease_versions',
-        default=False,
+        default=True,
         doc=(
             'ignores prerelease versions like "0.1.0-dev-abc" and '
             'only creates upgrade pr\'s for finalized versions.'
