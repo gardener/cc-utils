@@ -28,6 +28,9 @@ meta_data_dict = {
 }
 if replication_pipeline_name := pipeline.get('replication_pipeline_name'):
   meta_data_dict['replication pipeline name'] = replication_pipeline_name
+if pipeline_definition_committish := pipeline.get('pipeline_definition_committish'):
+  meta_data_dict['pipeline definition committish'] = pipeline_definition_committish
+
 resource_registry = pipeline_definition._resource_registry
 
 github = config_set.github()
