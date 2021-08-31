@@ -88,6 +88,7 @@ class DefinitionEnumerator:
         override_definitions={},
         job_mapping: model.concourse.JobMapping = None,
         target_team: str=None,
+        pipeline_definition_committish: str = None,
     ) -> 'DefinitionDescriptor':
         if not target_team:
             target_team = self.job_mapping.team_name()
@@ -103,6 +104,7 @@ class DefinitionEnumerator:
                 override_definitions=[override_definitions.get(name,{}),],
                 secret_cfg=secret_cfg,
                 job_mapping=job_mapping,
+                pipeline_definition_committish=pipeline_definition_committish,
             )
 
 
@@ -285,6 +287,9 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                     path='.ci/pipeline_definitions',
                     ref=branch_name
                 )
+                pipeline_definition_committish = repository.ref(
+                    ref=f'heads/{branch_name}'
+                ).object.sha
             except NotFoundError:
                 continue # no pipeline definition for this branch
 
@@ -323,6 +328,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                 target_team=target_team,
                 secret_cfg=secret_cfg,
                 job_mapping=job_mapping,
+                pipeline_definition_committish=pipeline_definition_committish,
             )
 
 
@@ -459,6 +465,7 @@ class DefinitionDescriptor:
         job_mapping: model.concourse.JobMapping = None,
         override_definitions=[{},],
         exception=None,
+        pipeline_definition_committish: str = None,
     ):
         try:
             self.pipeline_name = not_empty(pipeline_name)
@@ -469,6 +476,7 @@ class DefinitionDescriptor:
             self.override_definitions = not_none(override_definitions)
             self.secret_cfg = secret_cfg
             self.job_mapping = job_mapping
+            self.pipeline_definition_committish = pipeline_definition_committish
         except Exception as e:
             raise ValueError(
                 f'{e=} missing value: {pipeline_name=} {pipeline_definition=} {main_repo=} '
