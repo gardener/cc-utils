@@ -1,4 +1,5 @@
 import dataclasses
+import enum
 import os
 
 from enum import Enum, IntEnum
@@ -38,6 +39,13 @@ import model.concourse
 logger = logging.getLogger(__name__)
 
 
+class RenderOrigin(enum.Enum):
+    LOCAL = 'local'
+    WEBHOOK_DISPATCHER = 'webhook dispatcher'
+    PIPELINE_REPLICATION = 'pipeline replication'
+    UNKNOWN = 'unknown'
+
+
 def replicate_pipelines(
     cfg_set,
     job_mapping,
@@ -64,6 +72,7 @@ def replicate_pipelines(
         template_retriever=template_retriever,
         template_include_dir=template_include_dir,
         cfg_set=cfg_set,
+        render_origin=RenderOrigin.PIPELINE_REPLICATION,
     )
 
     deployer = ConcourseDeployer(
@@ -97,8 +106,10 @@ class Renderer:
         cfg_set,
         template_retriever: TemplateRetriever=TemplateRetriever(),
         template_include_dir=None,
+        render_origin: RenderOrigin = RenderOrigin.UNKNOWN,
     ):
         self.template_retriever = template_retriever
+        self.render_origin = render_origin
         if template_include_dir:
             template_include_dir = os.path.abspath(template_include_dir)
             self.template_include_dir = os.path.abspath(template_include_dir)
@@ -106,7 +117,10 @@ class Renderer:
             self.lookup = TemplateLookup([template_include_dir])
             self.cfg_set = cfg_set
 
-    def render(self, definition_descriptor):
+    def render(
+        self,
+        definition_descriptor: DefinitionDescriptor,
+    ):
         try:
             definition_descriptor = self._render(definition_descriptor)
             logger.info('rendered pipeline {pn}'.format(pn=definition_descriptor.pipeline_name))
@@ -157,7 +171,16 @@ class Renderer:
             'target_team': definition_descriptor.concourse_target_team,
             'secret_cfg': definition_descriptor.secret_cfg,
             'job_mapping': definition_descriptor.job_mapping,
+            'render_origin': self.render_origin.value,
         }
+
+        # also pass pipeline name if this was rendered by a replication job. Will be printed
+        # in the meta-step later
+        if (
+            self.render_origin is RenderOrigin.PIPELINE_REPLICATION
+            and (pipeline_name := os.environ.get('PIPELINE_NAME'))
+        ):
+            pipeline_metadata['replication_pipeline_name'] = pipeline_name
 
         if bg := effective_definition.get('background_image'):
             pipeline_metadata['background_image'] = bg

@@ -21,6 +21,12 @@ background_image = pipeline.get('background_image', 'https://i.imgur.com/raPlg21
 job_mapping = pipeline.get('job_mapping')
 secret_cfg = pipeline.get('secret_cfg')
 
+# fetch metadata and prepare it for the meta-step
+meta_data_dict = {
+  'render origin': pipeline.get('render_origin'),
+}
+if replication_pipeline_name := pipeline.get('replication_pipeline_name'):
+  meta_data_dict['replication pipeline name'] = replication_pipeline_name
 resource_registry = pipeline_definition._resource_registry
 
 github = config_set.github()
@@ -428,7 +434,7 @@ else:
 % elif job_step.name == 'release':
         ${release_step(job_step=job_step, job_variant=job_variant, github_cfg=github, indent=8)}
 % elif job_step.name == 'meta':
-        ${meta_step(job_step=job_step, job_variant=job_variant, indent=8)}
+        ${meta_step(job_step=job_step, job_variant=job_variant, indent=8, additional_meta_data=meta_data_dict)}
 % elif job_step.name == 'rm_pr_label':
         ${rm_pr_label_step(job_step=job_step, job_variant=job_variant, github_cfg=github, indent=8)}
 % elif job_step.name == DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME:
