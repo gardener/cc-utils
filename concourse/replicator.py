@@ -182,6 +182,7 @@ class Renderer:
             'job_mapping': definition_descriptor.job_mapping,
             'render_origin': self.render_origin.value,
             'cc_utils_version': _cc_utils_version(),
+            'pipeline_definition_committish ': definition_descriptor.pipeline_definition_committish,
         }
 
         # also pass pipeline name if this was rendered by a replication job. Will be printed
