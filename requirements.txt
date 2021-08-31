@@ -19,6 +19,7 @@ flake8>=3.9
 gardener-component-model==v0.0.56
 gardener-oci
 github3.py<3.0.0
+google-crc32c==1.1.2
 google-api-core<2
 google-api-python-client<3
 google-auth<2
