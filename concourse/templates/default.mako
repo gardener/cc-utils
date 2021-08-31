@@ -24,6 +24,7 @@ secret_cfg = pipeline.get('secret_cfg')
 # fetch metadata and prepare it for the meta-step
 meta_data_dict = {
   'render origin': pipeline.get('render_origin'),
+  'cc-utils version used for rendering': pipeline.get('cc_utils_version'),
 }
 if replication_pipeline_name := pipeline.get('replication_pipeline_name'):
   meta_data_dict['replication pipeline name'] = replication_pipeline_name

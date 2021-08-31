@@ -100,6 +100,15 @@ def replicate_pipelines(
     return replicator.replicate()
 
 
+@functools.lru_cache
+def _cc_utils_version():
+    try:
+        with open(concourse.paths.last_released_tag_file) as f:
+            return f.read().strip()
+    except:
+        return None
+
+
 class Renderer:
     def __init__(
         self,
@@ -172,6 +181,7 @@ class Renderer:
             'secret_cfg': definition_descriptor.secret_cfg,
             'job_mapping': definition_descriptor.job_mapping,
             'render_origin': self.render_origin.value,
+            'cc_utils_version': _cc_utils_version(),
         }
 
         # also pass pipeline name if this was rendered by a replication job. Will be printed
