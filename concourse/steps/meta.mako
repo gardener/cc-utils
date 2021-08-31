@@ -1,4 +1,4 @@
-<%def name="meta_step(job_step, job_variant, indent)", filter="indent_func(indent),trim">
+<%def name="meta_step(job_step, job_variant, indent, additional_meta_data={})", filter="indent_func(indent),trim">
 <%
 import datetime
 import os
@@ -8,6 +8,7 @@ from concourse.steps import step_lib
 import concourse.paths
 
 extra_attrs = {}
+extra_attrs |= additional_meta_data
 
 if os.path.isdir(os.path.join(concourse.paths.repo_root_dir, '.git')):
     import git
