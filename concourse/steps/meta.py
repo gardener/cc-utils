@@ -38,4 +38,4 @@ def export_job_metadata(extra_attrs: dict={}):
     with open(jobmetadata_outfile, 'w') as f:
         json.dump(metadata, f)
 
-    print(json.dumps(metadata))
+    print(json.dumps(metadata, indent=2))
