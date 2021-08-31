@@ -40,6 +40,7 @@ def update_repository_pipelines(
         template_retriever=template_retriever,
         template_include_dir=whd_cfg.pipeline_include_path(),
         cfg_set=cfg_set,
+        render_origin=concourse.replicator.RenderOrigin.WEBHOOK_DISPATCHER,
     )
     deployer = concourse.replicator.ConcourseDeployer(
         cfg_set=cfg_set,

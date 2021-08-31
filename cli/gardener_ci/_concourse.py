@@ -31,6 +31,7 @@ from concourse.enumerator import (
 from concourse.replicator import (
     FilesystemDeployer,
     PipelineReplicator,
+    RenderOrigin,
     Renderer,
 )
 import concourse.model as ccm
@@ -85,6 +86,7 @@ def render_pipeline(
         template_retriever=template_retriever,
         template_include_dir=template_include_dir,
         cfg_set=cfg_set,
+        render_origin=RenderOrigin.LOCAL,
     )
 
     deployer = FilesystemDeployer(base_dir=out_dir)
@@ -144,6 +146,7 @@ def render_pipelines(
         template_retriever=template_retriever,
         template_include_dir=template_include_dir,
         cfg_set=config_set,
+        render_origin=RenderOrigin.LOCAL,
     )
 
     deployer = FilesystemDeployer(base_dir=out_dir)
