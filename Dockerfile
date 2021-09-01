@@ -27,7 +27,6 @@ RUN pip3 install --upgrade \
   https://get.helm.sh/helm-${HELM_V3_VERSION}-linux-amd64.tar.gz | tar xz -C /tmp --strip=1 \
 && mv /tmp/helm /bin/helm3 \
 && chmod +x /bin/helm3 \
-&& ln -s /usr/local/bin/python3 /usr/bin/python3 \
 && cp /etc/ssl/cert.pem "$(python3 -c 'import certifi; print(certifi.where());')"
 
 RUN EFFECTIVE_VERSION="$(cat /metadata/VERSION)" REPO_DIR=/cc/utils \
