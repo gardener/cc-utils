@@ -10,7 +10,6 @@ RUN pip3 install --upgrade \
   --find-links /cc/utils/dist \
   gardener-cicd-libs \
   pycryptodome \
-&& pip3 install gardener-component-model jsonschema \
-&& cp /etc/ssl/cert.pem "$(python3 -c 'import certifi; print(certifi.where());')"
+&& pip3 install gardener-component-model jsonschema
 
 RUN mv /kaniko/executor.tmp /bin/kaniko
