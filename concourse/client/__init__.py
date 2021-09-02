@@ -23,6 +23,7 @@ import model.base
 
 from model.concourse import ConcourseConfig, ConcourseUAMConfig, ConcourseUAM, ConcourseTeamConfig
 
+from .api import ConcourseApiFactory
 
 '''
 An implementation of the (undocumented [0]) RESTful HTTP API offered by concourse
