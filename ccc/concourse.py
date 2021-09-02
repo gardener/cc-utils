@@ -12,18 +12,57 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import ensure
 import functools
 
+import ci.log
 import ci.util
 import concourse.client
 import ctx
+import model.base
+import model.concourse
 
-from ensure import ensure_annotations
+
+def lookup_cc_team_cfg(cfg_set, team_name) -> model.concourse.ConcourseTeamConfig:
+    for cc_team_cfg in cfg_set._cfg_elements('concourse_team_cfg'):
+        if cc_team_cfg.team_name() == team_name:
+            return cc_team_cfg
+
+    raise RuntimeError(f'No concourse team config for team name {team_name} found')
+
+
+@ensure.ensure_annotations
+def client_from_parameters(
+    base_url: str,
+    password: str,
+    team_name: str,
+    username: str,
+    verify_ssl: bool = True,
+    concourse_api_version=None,
+) -> concourse.client.api.ConcourseApiBase:
+    """
+    returns a concourse-client w/ the credentials valid for the current execution environment.
+    The returned client is authorised to perform operations in the same concourse-team as the
+    credentials provided calling this function.
+    """
+
+    concourse_api = concourse.client.api.ConcourseApiFactory.create_api(
+        base_url=base_url,
+        team_name=team_name,
+        verify_ssl=verify_ssl,
+        concourse_api_version=concourse_api_version,
+    )
+
+    concourse_api.login(
+        username=username,
+        passwd=password,
+    )
+    return concourse_api
 
 
 @functools.lru_cache()
-@ensure_annotations
-def client_from_cfg_name(
+@ensure.ensure_annotations
+def _client_from_cfg_name(
     concourse_cfg_name: str,
     team_name: str
 ):
@@ -40,7 +79,7 @@ def client_from_cfg_name(
     )
 
 
-def client_from_env(
+def _client_from_env(
     team_name: str=None,
 ):
     '''
@@ -63,3 +102,59 @@ def client_from_env(
         concourse_uam_cfg=cc_uam,
         team_name=team_name,
     )
+
+
+@functools.lru_cache()
+@ensure.ensure_annotations
+def client_from_cfg_name(
+    concourse_cfg_name: str,
+    team_name: str,
+    cfg_factory=None,
+):
+    if not cfg_factory:
+        cfg_factory = ci.util.ctx().cfg_factory()
+
+    try:
+        cfg_factory.concourse_team_cfg('abc123-test')
+    except model.base.ConfigElementNotFoundError:
+        concourse_team_config = lookup_cc_team_cfg(cfg_set=cfg_factory, team_name=team_name)
+        concourse_endpoint = cfg_factory.concourse_endpoint(
+            concourse_team_config.concourse_endpoint_name()
+        )
+        return client_from_parameters(
+            base_url=concourse_endpoint.base_url(),
+            password=concourse_team_config.password(),
+            team_name=team_name,
+            username=concourse_team_config.username(),
+        )
+
+    except ValueError:
+        return _client_from_cfg_name(
+            concourse_cfg_name=concourse_cfg_name,
+            team_name=team_name,
+        )
+
+
+def client_from_env(
+    team_name: str=None,
+):
+    cfg_set = ctx.cfg_set()
+
+    try:
+        cfg_set.concourse_team_cfg('abc123-test')
+    except model.base.ConfigElementNotFoundError:
+        if not team_name:
+            team_name = ci.util.check_env('CONCOURSE_CURRENT_TEAM')
+        concourse_team_config = lookup_cc_team_cfg(cfg_set=cfg_set, team_name=team_name)
+        concourse_endpoint = cfg_set.concourse_endpoint(
+            concourse_team_config.concourse_endpoint_name()
+        )
+        return client_from_parameters(
+            base_url=concourse_endpoint.base_url(),
+            password=concourse_team_config.password(),
+            team_name=team_name,
+            username=concourse_team_config.username(),
+        )
+
+    except ValueError:
+        return _client_from_env(team_name)

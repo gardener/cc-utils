@@ -17,7 +17,9 @@ from ensure import ensure_annotations
 
 import functools
 
+import ccc.concourse
 import ci.util
+import model.base
 
 from .api import ConcourseApiFactory
 from model.concourse import ConcourseConfig, ConcourseUAMConfig, ConcourseUAM
@@ -78,6 +80,27 @@ def from_cfg(
 ):
     # XXX rm last dependency towards cfg-factory
     cfg_factory = ci.util.ctx().cfg_factory()
+
+    try:
+        cfg_factory.concourse_team_cfg('abc123-test')
+    except model.base.ConfigElementNotFoundError:
+        concourse_team_config = ccc.concourse.lookup_cc_team_cfg(
+            cfg_set=cfg_factory,
+            team_name=team_name,
+        )
+        concourse_endpoint = cfg_factory.concourse_endpoint(
+            concourse_team_config.concourse_endpoint_name()
+        )
+        return ccc.concourse.client_from_parameters(
+            base_url=concourse_endpoint.base_url(),
+            password=concourse_team_config.password(),
+            team_name=team_name,
+            username=concourse_team_config.username(),
+        )
+    except ValueError:
+        # continue with old cfg elements since new team_cfg is not present
+        pass
+
     base_url = concourse_cfg.ingress_url(cfg_factory)
 
     if not concourse_uam_cfg:
