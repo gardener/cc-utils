@@ -15,14 +15,12 @@
 
 from ensure import ensure_annotations
 
-
 import functools
 
 import ci.util
-import model.base
 
+from model.base import ConfigElementNotFoundError
 from model.concourse import ConcourseConfig, ConcourseUAMConfig, ConcourseUAM, ConcourseTeamConfig
-
 from .api import ConcourseApiFactory
 
 '''
@@ -120,7 +118,7 @@ def from_cfg(
 
     try:
         cfg_factory.concourse_team_cfg('abc123-test')
-    except model.base.ConfigElementNotFoundError:
+    except ConfigElementNotFoundError:
         concourse_team_config = lookup_cc_team_cfg(
             cfg_set=cfg_factory,
             team_name=team_name,
