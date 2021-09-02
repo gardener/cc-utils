@@ -15,14 +15,13 @@
 
 from ensure import ensure_annotations
 
+
 import functools
 
-import ccc.concourse
 import ci.util
 import model.base
 
-from .api import ConcourseApiFactory
-from model.concourse import ConcourseConfig, ConcourseUAMConfig, ConcourseUAM
+from model.concourse import ConcourseConfig, ConcourseUAMConfig, ConcourseUAM, ConcourseTeamConfig
 
 
 '''
@@ -43,6 +42,43 @@ Other types defined in this module are not intended to be instantiated by users.
 [2] https://github.com/concourse/concourse/blob/master/atc/routes.go
 [3] https://www.getpostman.com/
 '''
+
+
+def lookup_cc_team_cfg(cfg_set, team_name) -> ConcourseTeamConfig:
+    for cc_team_cfg in cfg_set._cfg_elements('concourse_team_cfg'):
+        if cc_team_cfg.team_name() == team_name:
+            return cc_team_cfg
+
+    raise RuntimeError(f'No concourse team config for team name {team_name} found')
+
+
+@ensure_annotations
+def client_from_parameters(
+    base_url: str,
+    password: str,
+    team_name: str,
+    username: str,
+    verify_ssl: bool = True,
+    concourse_api_version=None,
+):
+    """
+    returns a concourse-client w/ the credentials valid for the current execution environment.
+    The returned client is authorised to perform operations in the same concourse-team as the
+    credentials provided calling this function.
+    """
+
+    concourse_api = ConcourseApiFactory.create_api(
+        base_url=base_url,
+        team_name=team_name,
+        verify_ssl=verify_ssl,
+        concourse_api_version=concourse_api_version,
+    )
+
+    concourse_api.login(
+        username=username,
+        passwd=password,
+    )
+    return concourse_api
 
 
 @ensure_annotations
@@ -84,14 +120,14 @@ def from_cfg(
     try:
         cfg_factory.concourse_team_cfg('abc123-test')
     except model.base.ConfigElementNotFoundError:
-        concourse_team_config = ccc.concourse.lookup_cc_team_cfg(
+        concourse_team_config = lookup_cc_team_cfg(
             cfg_set=cfg_factory,
             team_name=team_name,
         )
         concourse_endpoint = cfg_factory.concourse_endpoint(
             concourse_team_config.concourse_endpoint_name()
         )
-        return ccc.concourse.client_from_parameters(
+        return client_from_parameters(
             base_url=concourse_endpoint.base_url(),
             password=concourse_team_config.password(),
             team_name=team_name,
