@@ -5,6 +5,8 @@ import zlib
 '''
 some useful utils for creating standard-compliant GZIP-streams that also work w/ python's
 `tarfile` module when read in streaming mode.
+
+see https://docs.fileformat.com/compression/gz/
 '''
 
 
@@ -13,18 +15,20 @@ def gzip_header(fname: bytes=b'', mtime: int=None) -> bytes:
     returns a gzip header with some hard-coded defaults;
     matches a gzip-stream created w/o header using zlib's defaults
     and wbits=-15 (which suppresses gzip header output)
+
+    see https://docs.fileformat.com/compression/gz/#gz-file-header
     '''
     buf = b''
     buf += b'\037\213' # magic
     buf += b'\010' # compression method
-    buf += chr(8).encode('latin-1')
+    buf += chr(8).encode('latin-1') # file-flags 0x08 -> contains fname str
 
     if not mtime:
         mtime = time.time()
 
     buf += struct.pack('<L', int(mtime))
     buf += b'\000' # compression level (default)
-    buf += b'\377'
+    buf += b'\377' # OS (unknown)
     buf += fname + b'\000'
 
     return buf
