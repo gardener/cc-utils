@@ -225,9 +225,9 @@ elif have_cd:
   descriptor_v2 = cm.ComponentDescriptor.from_dict(
     ci.util.parse_yaml_file(v2_outfile)
   )
-  print(f'found component-descriptor (v2) at {v2_outfile=}')
+  logger.info(f'found component-descriptor (v2) at {v2_outfile=}')
 elif have_ctf:
-  print(f'found ctf-archive at {ctf_out_path=}')
+  logger.info(f'found ctf-archive at {ctf_out_path=}')
 
 if snapshot_ctx_repository_base_url:
   if have_cd:
@@ -261,7 +261,7 @@ if snapshot_ctx_repository_base_url:
     )
 
 if have_ctf:
-  print(f'processed ctf-archive at {ctf_out_path=} - exiting')
+  logger.info(f'processed ctf-archive at {ctf_out_path=} - exiting')
   # XXX TODO: also calculate bom-diff!
   exit(0)
 
