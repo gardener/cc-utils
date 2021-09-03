@@ -226,7 +226,11 @@ elif have_cd:
     ci.util.parse_yaml_file(v2_outfile)
   )
   print(f'found component-descriptor (v2) at {v2_outfile=}')
-  if snapshot_ctx_repository_base_url:
+elif have_ctf:
+  print(f'found ctf-archive at {ctf_out_path=}')
+
+if snapshot_ctx_repository_base_url:
+  if have_cd:
     snapshot_descriptor = cm.ComponentDescriptor.from_dict(
       ci.util.parse_yaml_file(v2_outfile)
     )
@@ -240,9 +244,7 @@ elif have_cd:
     product.v2.upload_component_descriptor_v2_to_oci_registry(
       component_descriptor_v2=snapshot_descriptor,
     )
-
-elif have_ctf:
-  if snapshot_ctx_repository_base_url:
+  elif have_ctf:
     subprocess_args = [
       'component-cli',
       'ctf',
@@ -257,9 +259,10 @@ elif have_ctf:
       check=True,
       env=subproc_env,
     )
-    print(f'processed ctf-archive at {ctf_out_path=} - exiting')
-    # XXX TODO: also calculate bom-diff!
 
+if have_ctf:
+  print(f'processed ctf-archive at {ctf_out_path=} - exiting')
+  # XXX TODO: also calculate bom-diff!
   exit(0)
 
 # determine "bom-diff" (changed component references)
