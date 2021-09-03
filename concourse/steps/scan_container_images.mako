@@ -114,11 +114,11 @@ notification_policy = Notify('${image_scan_trait.notify().value}')
 if notification_policy is not Notify.EMAIL_RECIPIENTS:
   results_below_threshold = []
 
-if not (
-  results_above_threshold
-  or results_below_threshold
-  or updated_license_report
-):
+if all ((
+  not results_above_threshold,
+  not results_below_threshold,
+  not updated_license_report,
+)):
   print('nothing to report - early-exiting')
   sys.exit(0)
 
