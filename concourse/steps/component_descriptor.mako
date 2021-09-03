@@ -229,6 +229,7 @@ elif have_cd:
 elif have_ctf:
   logger.info(f'found ctf-archive at {ctf_out_path=}')
 
+% if not job_variant.has_trait('release'):
 if snapshot_ctx_repository_base_url:
   if have_cd:
     snapshot_descriptor = cm.ComponentDescriptor.from_dict(
@@ -259,7 +260,7 @@ if snapshot_ctx_repository_base_url:
       check=True,
       env=subproc_env,
     )
-
+% endif
 if have_ctf:
   logger.info(f'processed ctf-archive at {ctf_out_path=} - exiting')
   # XXX TODO: also calculate bom-diff!
