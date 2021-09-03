@@ -67,7 +67,9 @@ def sync_org_webhooks(whd_deployment_cfg: WebhookDispatcherDeploymentConfig,):
                 webhook_url=webhook_url,
                 skip_ssl_validation=False,
             )
-            logger.info(f'Created/updated organization hook for {organization_name=}')
+            logger.info(
+                f'Created/updated organization hook for {organization_name=}: {webhook_url}'
+            )
         except Exception as e:
             failed_hooks += 1
             logger.warning(f'{organization_name=} - error: {e}')
