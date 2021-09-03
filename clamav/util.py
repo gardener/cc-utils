@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def iter_image_files(
-    container_image_reference: str,
+    image_reference: str,
     oci_client: oc.Client=None,
 ) -> typing.Iterable[typing.Tuple[typing.IO, str]]:
     '''
@@ -30,12 +30,12 @@ def iter_image_files(
     if not oci_client:
         oci_client = ccc.oci.oci_client()
 
-    manifest = oci_client.manifest(image_reference=container_image_reference)
+    manifest = oci_client.manifest(image_reference=image_reference)
 
     # we ignore cfg-blob (which would be included in manifest.blobs())
     for layer_blob in manifest.layers:
         blob_resp = oci_client.blob(
-            image_reference=container_image_reference,
+            image_reference=image_reference,
             digest=layer_blob.digest,
             stream=True,
         )
@@ -59,6 +59,41 @@ def iter_image_files(
                 )
 
 
+def _scan_oci_image(
+    clamav_client,
+    oci_client,
+    image_reference: str,
+) -> typing.Generator[saf.model.MalwarescanResult, None, None]:
+    try:
+        content_iterator = iter_image_files(
+            image_reference=image_reference,
+            oci_client=oci_client,
+        )
+        findings = clamav_client.scan_container_image(
+            content_iterator=content_iterator,
+        )
+        yield from findings
+        return
+    except tarfile.TarError as te:
+        logger.warning(f'{image_reference=}: {te=} - falling back to layer-scan')
+
+    # fallback to layer-wise scan in case we encounter gzip-uncompression-problems
+    def iter_layers():
+        manifest = oci_client.manifest(image_reference=image_reference)
+        for layer in manifest.layers:
+            layer_blob = oci_client.blob(
+                image_reference=image_reference,
+                digest=layer.digest,
+                stream=True,
+            )
+            yield (layer_blob.iter_content(chunk_size=4096), layer_blob.digest)
+
+    findings = clamav_client.scan_container_image(
+        content_iterator=iter_layers(),
+    )
+    yield from findings
+
+
 def virus_scan_images(
     component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
     filter_function,
@@ -75,18 +110,22 @@ def virus_scan_images(
         if not filter_function(component, resource):
             continue
 
+        if not resource.access.type is gci.componentmodel.AccessType.OCI_REGISTRY:
+            raise ValueError(resource.access.type)
+        access: gci.componentmodel.OciAccess = resource.access
+
         try:
-            clamav_findings = list(
-                clamav_client.scan_container_image_layers(
-                    image_reference=resource.access.imageReference,
-                    oci_client=oci_client,
-                )
+            clamav_findings = _scan_oci_image(
+                clamav_client=clamav_client,
+                oci_client=oci_client,
+                image_reference=access.imageReference,
             )
+
             yield saf.model.MalwarescanResult(
                     resource=resource,
                     scan_state=saf.model.MalwareScanState.FINISHED_SUCCESSFULLY,
                     findings=[
-                        f'{path.split(":")[1]}: {scan_result.virus_signature()}'
+                        f'{path}: {scan_result.virus_signature()}'
                         for scan_result, path in clamav_findings
                     ],
                 )
