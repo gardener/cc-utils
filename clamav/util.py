@@ -1,4 +1,3 @@
-import io
 import tarfile
 import typing
 import logging
@@ -10,25 +9,10 @@ import gci.componentmodel
 import oci.client as oc
 import product
 import saf.model
+import tarutil
 
 
 logger = logging.getLogger(__name__)
-
-
-class _FilelikeProxy(io.BytesIO):
-    '''
-    a fake filelike-object that will mimic the required behaviour (read) "good enough" for
-    usage w/ tarfile.open (in stream-mode)
-    '''
-    def __init__(self, generator, size):
-        self.generator = generator
-        self.size = size
-
-    def read(self, size: int=-1):
-        try:
-            return next(self.generator)
-        except StopIteration:
-            return b''
 
 
 def iter_image_files(
@@ -56,12 +40,11 @@ def iter_image_files(
             stream=True,
         )
 
-        fileobj = _FilelikeProxy(
+        fileobj = tarutil._FilelikeProxy(
             generator=blob_resp.iter_content(
                 chunk_size=tarfile.RECORDSIZE,
                 decode_unicode=False,
             ),
-            size=layer_blob.size,
         )
         with tarfile.open(
             fileobj=fileobj,
