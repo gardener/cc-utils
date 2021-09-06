@@ -140,6 +140,9 @@ class ConcourseEndpoint(NamedModelElement):
 
 
 class ConcourseTeamConfig(NamedModelElement):
+    def concourse_endpoint_name(self) -> str:
+        return self.raw['concourse_endpoint_name']
+
     def service_user(self) -> typing.Optional[BasicCredentials]:
         if local_user := self.raw.get('service_user'):
             return BasicCredentials(raw_dict=local_user)
