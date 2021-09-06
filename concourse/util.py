@@ -18,6 +18,9 @@ import functools
 import json
 import logging
 import os
+import urllib.parse
+
+import github3
 
 import concourse.client
 import concourse.model.traits.meta
@@ -53,6 +56,16 @@ class PipelineMetaData:
     team_name: str
 
 
+def _github_api_hostname(github_api) -> str:
+    # retrieve the hostname from a github3 github-api instance. Unfortunately the public-github
+    # class neither has a proper repr nor does it expose its url in a way that is consistent with
+    # the class for enterprise-github instances
+    if isinstance(github_api, github3.github.GitHubEnterprise):
+        return urllib.parse.urlparse(github_api.url).hostname
+    elif isinstance(github_api, github3.github.GitHub):
+        return 'github.com'
+
+
 def sync_org_webhooks(whd_deployment_cfg: WebhookDispatcherDeploymentConfig,):
     '''Syncs required organization webhooks for a given webhook dispatcher instance'''
 
@@ -61,6 +74,7 @@ def sync_org_webhooks(whd_deployment_cfg: WebhookDispatcherDeploymentConfig,):
 
         webhook_syncer = github.webhook.GithubWebHookSyncer(github_api)
         failed_hooks = 0
+
         try:
             webhook_syncer.create_or_update_org_hook(
                 organization_name=organization_name,
@@ -68,7 +82,8 @@ def sync_org_webhooks(whd_deployment_cfg: WebhookDispatcherDeploymentConfig,):
                 skip_ssl_validation=False,
             )
             logger.info(
-                f'Created/updated organization hook for {organization_name=}: {webhook_url}'
+                f'Created/updated organization hook on {_github_api_hostname(github_api)} '
+                f'for {organization_name=}: {webhook_url}'
             )
         except Exception as e:
             failed_hooks += 1
