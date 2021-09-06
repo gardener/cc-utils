@@ -24,14 +24,6 @@ import model.base
 import model.concourse
 
 
-def lookup_cc_team_cfg(cfg_set, team_name) -> model.concourse.ConcourseTeamConfig:
-    for cc_team_cfg in cfg_set._cfg_elements('concourse_team_cfg'):
-        if cc_team_cfg.team_name() == team_name:
-            return cc_team_cfg
-
-    raise RuntimeError(f'No concourse team config for team name {team_name} found')
-
-
 @ensure.ensure_annotations
 def client_from_parameters(
     base_url: str,
@@ -115,10 +107,12 @@ def client_from_cfg_name(
     if not cfg_factory:
         cfg_factory = ci.util.ctx().cfg_factory()
 
-    try:
-        cfg_factory.concourse_team_cfg('abc123-test')
-    except model.base.ConfigElementNotFoundError:
-        concourse_team_config = lookup_cc_team_cfg(cfg_set=cfg_factory, team_name=team_name)
+    if concourse.client._have_new_team_cfg(cfg_factory=cfg_factory):
+        concourse_team_config = concourse.client.lookup_cc_team_cfg(
+            concourse_cfg_name=concourse_cfg_name,
+            cfg_set=cfg_factory,
+            team_name=team_name,
+        )
         concourse_endpoint = cfg_factory.concourse_endpoint(
             concourse_team_config.concourse_endpoint_name()
         )
@@ -129,7 +123,7 @@ def client_from_cfg_name(
             username=concourse_team_config.username(),
         )
 
-    except ValueError:
+    else:
         return _client_from_cfg_name(
             concourse_cfg_name=concourse_cfg_name,
             team_name=team_name,
@@ -141,12 +135,14 @@ def client_from_env(
 ):
     cfg_set = ctx.cfg_set()
 
-    try:
-        cfg_set.concourse_team_cfg('abc123-test')
-    except model.base.ConfigElementNotFoundError:
+    if concourse.client._have_new_team_cfg(cfg_factory=cfg_set):
         if not team_name:
             team_name = ci.util.check_env('CONCOURSE_CURRENT_TEAM')
-        concourse_team_config = lookup_cc_team_cfg(cfg_set=cfg_set, team_name=team_name)
+        concourse_team_config = concourse.client.lookup_cc_team_cfg(
+            concourse_cfg_name=cfg_set.concourse().name(),
+            cfg_set=cfg_set,
+            team_name=team_name,
+        )
         concourse_endpoint = cfg_set.concourse_endpoint(
             concourse_team_config.concourse_endpoint_name()
         )
@@ -157,5 +153,5 @@ def client_from_env(
             username=concourse_team_config.username(),
         )
 
-    except ValueError:
+    else:
         return _client_from_env(team_name)

@@ -43,12 +43,27 @@ Other types defined in this module are not intended to be instantiated by users.
 '''
 
 
-def lookup_cc_team_cfg(cfg_set, team_name) -> ConcourseTeamConfig:
+def lookup_cc_team_cfg(concourse_cfg_name, cfg_set, team_name) -> ConcourseTeamConfig:
     for cc_team_cfg in cfg_set._cfg_elements('concourse_team_cfg'):
-        if cc_team_cfg.team_name() == team_name:
-            return cc_team_cfg
+        if cc_team_cfg.team_name() != team_name:
+            continue
+        if concourse_cfg_name != cc_team_cfg.concourse_endpoint_name():
+            continue
 
-    raise RuntimeError(f'No concourse team config for team name {team_name} found')
+        return cc_team_cfg
+
+    raise KeyError(f'No concourse team config for team name {team_name} found')
+
+
+def _have_new_team_cfg(cfg_factory):
+    try:
+        # migration coding. Check if concourse_team_cfg type exists
+        cfg_factory.concourse_team_cfg('does-not-exists')
+    except ConfigElementNotFoundError:
+        return True
+
+    except ValueError:
+        return False
 
 
 @ensure_annotations
@@ -116,10 +131,9 @@ def from_cfg(
     # XXX rm last dependency towards cfg-factory
     cfg_factory = ci.util.ctx().cfg_factory()
 
-    try:
-        cfg_factory.concourse_team_cfg('abc123-test')
-    except ConfigElementNotFoundError:
+    if _have_new_team_cfg(cfg_factory=cfg_factory):
         concourse_team_config = lookup_cc_team_cfg(
+            concourse_cfg_name=concourse_cfg.name(),
             cfg_set=cfg_factory,
             team_name=team_name,
         )
@@ -132,10 +146,8 @@ def from_cfg(
             team_name=team_name,
             username=concourse_team_config.username(),
         )
-    except ValueError:
-        # continue with old cfg elements since new team_cfg is not present
-        pass
 
+    # continue with old cfg elements since new team_cfg is not present
     base_url = concourse_cfg.ingress_url(cfg_factory)
 
     if not concourse_uam_cfg:
