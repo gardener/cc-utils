@@ -20,8 +20,6 @@ import ci.util
 import concourse.client
 import concourse.client.api
 import ctx
-import model.base
-import model.concourse
 
 
 @ensure.ensure_annotations
