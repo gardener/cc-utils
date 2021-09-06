@@ -78,7 +78,7 @@ class GrafeasClient:
         scoped_credentials = credentials.with_scopes(scopes)
         self._api_client =  googleapiclient.discovery.build(
             'containeranalysis',
-            'v1',
+            'v1beta1', # see site-packages/googleapiclient/discovery_cache/documents/*.json
             credentials=scoped_credentials,
         )
 
