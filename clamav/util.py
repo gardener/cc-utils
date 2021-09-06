@@ -86,7 +86,7 @@ def _scan_oci_image(
                 digest=layer.digest,
                 stream=True,
             )
-            yield (layer_blob.iter_content(chunk_size=4096), layer_blob.digest)
+            yield (layer_blob.iter_content(chunk_size=4096), layer.digest)
 
     findings = clamav_client.scan_container_image(
         content_iterator=iter_layers(),
