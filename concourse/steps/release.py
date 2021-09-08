@@ -678,7 +678,10 @@ class UploadComponentDescriptorStep(TransactionalStep):
                 ),
             )
 
-            logger.info('publishing CNUDIE-Component-Descriptor')
+            component = component_descriptor_v2.component
+            tgt_ref = product.v2._target_oci_ref(component=component)
+
+            logger.info(f'publishing CNUDIE-Component-Descriptor to {tgt_ref=}')
             product.v2.upload_component_descriptor_v2_to_oci_registry(
                 component_descriptor_v2=component_descriptor_v2,
             )
