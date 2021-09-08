@@ -245,6 +245,10 @@ if snapshot_ctx_repository_base_url:
     product.v2.upload_component_descriptor_v2_to_oci_registry(
       component_descriptor_v2=snapshot_descriptor,
     )
+    logger.info(
+      'Successfully uploaded snapshot Component Descriptor to '
+      f'{product.v2._target_oci_ref(snapshot_descriptor.component)}'
+    )
   elif have_ctf:
     subprocess_args = [
       'component-cli',
