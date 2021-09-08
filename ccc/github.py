@@ -140,15 +140,25 @@ github_repo_helper = repo_helper
 
 @functools.lru_cache()
 def github_api(
-    github_cfg: 'model.GithubConfig',
+    github_cfg: 'model.GithubConfig'=None,
+    repo_url: str=None,
     session_adapter: SessionAdapter=SessionAdapter.RETRY,
     cfg_factory=None,
 ):
+    if not (bool(github_cfg) ^ bool(repo_url)):
+        raise ValueError('exactly one of github_cfg, repo_url must be passed')
+
     if not cfg_factory:
         cfg_factory = ci.util.ctx().cfg_factory()
 
     if isinstance(github_cfg, str):
         github_cfg = cfg_factory().github(github_cfg)
+
+    if repo_url:
+        github_cfg = github_cfg_for_repo_url(
+            repo_url=repo_url,
+            cfg_factory=cfg_factory,
+        )
 
     github_url = github_cfg.http_url()
     github_auth_token = github_cfg.credentials().auth_token()
