@@ -420,7 +420,7 @@ def create_release_notes(
             )
             release_note_blocks = release_notes.release_note_blocks()
             if release_note_blocks:
-                return f'**Release Notes*:\n{release_note_blocks}'
+                return f'**Release Notes**:\n{release_note_blocks}'
     except:
         logger.warning('an error occurred during release notes processing (ignoring)')
         import traceback
