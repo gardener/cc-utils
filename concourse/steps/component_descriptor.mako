@@ -225,7 +225,8 @@ elif have_cd:
   descriptor_v2 = cm.ComponentDescriptor.from_dict(
     ci.util.parse_yaml_file(v2_outfile)
   )
-  logger.info(f'found component-descriptor (v2) at {v2_outfile=}')
+  logger.info(f'found component-descriptor (v2) at {v2_outfile=}:\n')
+  print(dump_component_descriptor_v2(descriptor_v2))
 elif have_ctf:
   logger.info(f'found ctf-archive at {ctf_out_path=}')
 
