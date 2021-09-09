@@ -464,8 +464,10 @@ class Client:
                 (mediaType := manifest_dict['mediaType']) == distribution_list_mediatype
             ):
             #XXX: not implemented for now, need to be fixed later
-            raise NotImplementedError(f'OCI manifest media type {mediaType}'
-                                       'not implemented for {image_reference}')
+            raise NotImplementedError(
+                f'OCI manifest media type {mediaType} '
+                f'not implemented for {image_reference}'
+            )
 
         if (schema_version := int(manifest_dict['schemaVersion'])) == 1:
             manifest = dacite.from_dict(
