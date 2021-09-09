@@ -139,8 +139,10 @@ def _split_image_reference(image_reference: str):
 
     if '@' in image_name_and_tag:
         image_name, image_tag = image_name_and_tag.rsplit('@', 1)
-    else:
+    elif ':' in image_name_and_tag:
         image_name, image_tag = image_name_and_tag.rsplit(':', 1)
+    else:
+        raise ValueError(f'{image_reference=} does not seem to contain a tag')
 
     return prefix, image_name, image_tag
 
