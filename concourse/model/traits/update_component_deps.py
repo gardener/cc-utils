@@ -34,6 +34,9 @@ from concourse.model.job import (
 from model.base import ModelValidationError
 
 import concourse.model.traits.component_descriptor
+import concourse.model.traits.images
+
+OciImageCfg = concourse.model.traits.images.OciImageCfg
 
 
 class MergePolicy(enum.Enum):
@@ -83,24 +86,6 @@ class MergePolicyConfig(ModelBase):
         return MergePolicy(self.raw['merge_mode'])
 
 
-OCI_IMAGE_CFG_ATTRIBUTES = (
-    AttributeSpec.required(
-        name='image_reference',
-        type=str,
-        doc='the OCI Image reference to use',
-    ),
-)
-
-
-class OciImageCfg(ModelBase):
-    @classmethod
-    def _attribute_specs(cls):
-        return OCI_IMAGE_CFG_ATTRIBUTES
-
-    def image_reference(self):
-        return self.raw['image_reference']
-
-
 ATTRIBUTES = (
     AttributeSpec.optional(
         name='set_dependency_version_script',
@@ -115,7 +100,7 @@ ATTRIBUTES = (
             OCI container using the specified container image.
             main_repository will be mounted at /mnt/main_repo
         ''',
-        type=OciImageCfg,
+        type=concourse.model.traits.images.OciImageCfg,
     ),
     AttributeSpec.optional(
         name='upstream_component_name',

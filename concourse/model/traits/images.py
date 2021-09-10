@@ -19,6 +19,24 @@ from concourse.model.base import (
 )
 
 
+OCI_IMAGE_CFG_ATTRIBUTES = (
+    AttributeSpec.required(
+        name='image_reference',
+        type=str,
+        doc='the OCI Image reference to use',
+    ),
+)
+
+
+class OciImageCfg(ModelBase):
+    @classmethod
+    def _attribute_specs(cls):
+        return OCI_IMAGE_CFG_ATTRIBUTES
+
+    def image_reference(self):
+        return self.raw['image_reference']
+
+
 class FilterCfg(ModelBase):
     @classmethod
     def _attribute_specs(cls):
