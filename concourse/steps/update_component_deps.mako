@@ -24,6 +24,13 @@ ignore_prerelease_versions=update_component_deps_trait.ignore_prerelease_version
 component_descriptor_trait = job_variant.trait('component_descriptor')
 ctx_repo = component_descriptor_trait.ctx_repository()
 
+set_version_script_image_cfg = \
+    update_component_deps_trait.set_dependency_version_script_container_image()
+if set_version_script_image_cfg:
+    set_version_script_image = set_version_script_image_cfg.image_reference()
+else:
+    set_version_script_image = None
+
 def enum_to_value(v):
   if isinstance(v, enum.Enum):
     return v.value
@@ -137,6 +144,9 @@ ctx_repo = dacite.from_dict(
   )
 )
 
+# we at most need to do this once
+os.environ['DOCKERD_STARTED'] = 'no'
+
 # find components that need to be upgraded
 for from_ref, to_version in determine_upgrade_prs(
     upstream_component_name=upstream_component_name,
@@ -167,6 +177,7 @@ for from_ref, to_version in determine_upgrade_prs(
         to_version=to_version,
         pull_request_util=pull_request_util,
         upgrade_script_path=os.path.join(REPO_ROOT, '${set_dependency_version_script_path}'),
+        upgrade_script_relpath='${set_dependency_version_script_path}',
         githubrepobranch=githubrepobranch,
         repo_dir=REPO_ROOT,
         github_cfg_name=github_cfg_name,
@@ -174,6 +185,11 @@ for from_ref, to_version in determine_upgrade_prs(
         merge_policy=merge_policy,
 % if after_merge_callback:
         after_merge_callback='${after_merge_callback}',
+% endif
+% if set_version_script_image:
+        container_image='${set_version_script_image}',
+% else:
+        container_image = None
 % endif
     )
 </%def>

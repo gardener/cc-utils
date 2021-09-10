@@ -18,6 +18,7 @@ import typing
 
 from concourse.model.step import (
     PipelineStep,
+    PrivilegeMode,
     StepNotificationPolicy,
 )
 from concourse.model.base import (
@@ -82,11 +83,39 @@ class MergePolicyConfig(ModelBase):
         return MergePolicy(self.raw['merge_mode'])
 
 
+OCI_IMAGE_CFG_ATTRIBUTES = (
+    AttributeSpec.required(
+        name='image_reference',
+        type=str,
+        doc='the OCI Image reference to use',
+    ),
+)
+
+
+class OciImageCfg(ModelBase):
+    @classmethod
+    def _attribute_specs(cls):
+        return OCI_IMAGE_CFG_ATTRIBUTES
+
+    def image_reference(self):
+        return self.raw['image_reference']
+
+
 ATTRIBUTES = (
     AttributeSpec.optional(
         name='set_dependency_version_script',
         default='.ci/set_dependency_version',
         doc='configures the path to set_dependency_version script',
+    ),
+    AttributeSpec.optional(
+        name='set_dependency_version_script_container_image',
+        default=None,
+        doc='''
+            if specified, the `set_dependency_version_script` will be executed in a separate
+            OCI container using the specified container image.
+            main_repository will be mounted at /mnt/main_repo
+        ''',
+        type=OciImageCfg,
     ),
     AttributeSpec.optional(
         name='upstream_component_name',
@@ -143,6 +172,12 @@ class UpdateComponentDependenciesTrait(Trait):
 
     def set_dependency_version_script_path(self):
         return self.raw['set_dependency_version_script']
+
+    def set_dependency_version_script_container_image(self) -> typing.Optional[OciImageCfg]:
+        if raw := self.raw.get('set_dependency_version_script_container_image'):
+            return OciImageCfg(raw_dict=raw)
+        else:
+            return None
 
     def upstream_component_name(self):
         return self.raw.get('upstream_component_name')
@@ -215,10 +250,17 @@ class UpdateComponentDependenciesTraitTransformer(TraitTransformer):
         return {'component_descriptor'}
 
     def inject_steps(self):
+        if self.trait.set_dependency_version_script_container_image():
+            privilege_mode = PrivilegeMode.PRIVILEGED
+        else:
+            privilege_mode = PrivilegeMode.UNPRIVILEGED
+
         # declare no dependencies --> run asap, but do not block other steps
         self.update_component_deps_step = PipelineStep(
                 name='update_component_dependencies',
-                raw_dict={},
+                raw_dict={
+                    'privilege_mode': privilege_mode,
+                },
                 is_synthetic=True,
                 notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
                 injecting_trait_name=self.name,

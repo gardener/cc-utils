@@ -7,3 +7,7 @@ template_dir = os.path.join(own_dir, 'templates')
 template_include_dir = own_dir
 
 last_released_tag_file = os.path.join(res_dir, 'LAST_RELEASED_TAG')
+
+# available in cc-job-image, only
+cc_bin_dir = '/cc/utils/bin'
+launch_dockerd = os.path.join(cc_bin_dir, 'launch-dockerd.sh')

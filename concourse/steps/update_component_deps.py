@@ -14,6 +14,7 @@ import cnudie.util
 import cnudie.retrieve
 import concourse.model.traits.update_component_deps
 import concourse.steps.component_descriptor_util as cdu
+import concourse.paths
 import github.util
 import gitutil
 import product.v2
@@ -279,13 +280,25 @@ def create_upgrade_pr(
     to_version: str,
     pull_request_util,
     upgrade_script_path,
+    upgrade_script_relpath,
     githubrepobranch: GitHubRepoBranch,
     repo_dir,
     github_cfg_name,
     cfg_factory,
     merge_policy,
     after_merge_callback=None,
+    container_image:str=None,
 ):
+    if container_image and os.environ.get('DOCKERD_STARTED') != 'yes':
+        logger.info(f'starting dockerd for running set_dependency-callback in ${container_image=}')
+        subprocess.run(
+            concourse.paths.launch_dockerd,
+            check=True,
+        )
+        logger.info('successfully launched dockerd')
+        # optimisation: only start dockerd once
+        os.environ['DOCKERD_STARTED'] = 'yes'
+
     ls_repo = pull_request_util.repository
 
     from_component_descriptor = cnudie.retrieve.component_descriptor(
@@ -302,16 +315,45 @@ def create_upgrade_pr(
     cmd_env['DEPENDENCY_NAME'] = to_ref.componentName
     cmd_env['LOCAL_DEPENDENCY_NAME'] = to_ref.name
     cmd_env['DEPENDENCY_VERSION'] = to_version
-    cmd_env['REPO_DIR'] = repo_dir
+    if container_image:
+        cmd_env['REPO_DIR'] = (repo_dir_in_container := '/mnt/main_repo')
+    else:
+        cmd_env['REPO_DIR'] = repo_dir
     cmd_env['GITHUB_CFG_NAME'] = github_cfg_name
     cmd_env['CTX_REPO_URL'] = component.current_repository_ctx().baseUrl
 
-    # create upgrade diff
-    subprocess.run(
-        [str(upgrade_script_path)],
-        check=True,
-        env=cmd_env
-    )
+    if not container_image:
+        # create upgrade diff
+        subprocess.run(
+            [str(upgrade_script_path)],
+            check=True,
+            env=cmd_env
+        )
+    else:
+        # run check-script in container
+        docker_argv = ['docker', 'run']
+        for k, v in cmd_env.items():
+            docker_argv.extend(('--env', f'{k}={v}'))
+
+        repo_dir = os.path.abspath(repo_dir)
+        docker_argv.extend(('--volume', f'{repo_dir}:{repo_dir_in_container}'))
+
+        # XXX: need to create a .docker/config.json for authentication
+        docker_argv.append(container_image)
+
+        upgrade_script_path_in_container = os.path.join(
+            repo_dir_in_container,
+            upgrade_script_relpath,
+        )
+
+        docker_argv.append(upgrade_script_path_in_container)
+
+        logger.info(f'will run: ${docker_argv=}')
+
+        subprocess.run(
+            docker_argv,
+            check=True,
+        )
 
     from_version = from_ref.version
     commit_message = f'Upgrade {to_ref.name}\n\nfrom {from_version} to {to_version}'
