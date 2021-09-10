@@ -36,6 +36,7 @@ class TestReleaseCommitStep:
                 repository_branch=repository_branch,
                 release_commit_message_prefix=None,
                 release_commit_callback=release_commit_callback,
+                release_commit_callback_image_reference=None,
                 publishing_policy=ReleaseCommitPublishingPolicy.TAG_ONLY,
             )
         return _examinee
