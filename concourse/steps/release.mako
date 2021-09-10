@@ -12,6 +12,10 @@ import os
 import product.v2
 version_file = job_step.input('version_path') + '/version'
 release_trait = job_variant.trait('release')
+
+if (release_commit_callback_image_reference := release_trait.release_callback_image_reference()):
+  release_commit_callback_image_reference = release_commit_callback_image_reference.image_reference()
+
 version_trait = job_variant.trait('version')
 version_op = release_trait.nextversion()
 release_commit_message_prefix = release_trait.release_commit_message_prefix()
@@ -74,6 +78,12 @@ except NotImplementedError:
   # repo path instead.
   component_name = '${repo.repo_hostname()}/${repo.repo_path()}'
 
+% if release_commit_callback_image_reference:
+release_commit_callback_image_reference = '${release_commit_callback_image_reference}'
+% else:
+release_commit_callback_image_reference = None
+% endif
+
 release_and_prepare_next_dev_cycle(
   component_name=component_name,
   component_descriptor_v2_path='${component_descriptor_v2_path}',
@@ -97,6 +107,7 @@ release_and_prepare_next_dev_cycle(
   version_operation='${version_op}',
   release_notes_policy='${release_trait.release_notes_policy().value}',
   release_commit_publishing_policy='${release_trait.release_commit_publishing_policy().value}',
+  release_commit_callback_image_reference=release_commit_callback_image_reference,
   % if release_commit_message_prefix:
   release_commit_message_prefix='${release_commit_message_prefix}',
   % endif

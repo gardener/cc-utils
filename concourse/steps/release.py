@@ -26,6 +26,7 @@ from ci.util import (
 )
 import cnudie.retrieve
 import cnudie.util
+import dockerutil
 
 from gitutil import GitHelper
 from github.util import (
@@ -194,6 +195,7 @@ class ReleaseCommitStep(TransactionalStep):
         repository_branch: str,
         release_commit_message_prefix: str,
         publishing_policy: ReleaseCommitPublishingPolicy,
+        release_commit_callback_image_reference: str,
         release_commit_callback: str=None,
     ):
         self.git_helper = not_none(git_helper)
@@ -206,14 +208,9 @@ class ReleaseCommitStep(TransactionalStep):
         )
         self.release_commit_message_prefix = release_commit_message_prefix
         self.publishing_policy = publishing_policy
+        self.release_commit_callback_image_reference = release_commit_callback_image_reference
 
-        if release_commit_callback:
-            self.release_commit_callback = os.path.join(
-                self.repo_dir,
-                release_commit_callback,
-            )
-        else:
-            self.release_commit_callback = None
+        self.release_commit_callback = release_commit_callback
 
         self.head_commit = None # stored while applying - used for revert
 
@@ -231,7 +228,12 @@ class ReleaseCommitStep(TransactionalStep):
         existing_dir(self.repo_dir)
         version.parse_to_semver(self.release_version)
         if(self.release_commit_callback):
-            existing_file(self.release_commit_callback)
+            existing_file(
+                os.path.join(
+                    self.repo_dir,
+                    self.release_commit_callback,
+                )
+            )
 
         existing_file(self.repository_version_file_path)
 
@@ -255,6 +257,7 @@ class ReleaseCommitStep(TransactionalStep):
                 callback_script_path=self.release_commit_callback,
                 repo_dir=self.repo_dir,
                 effective_version=self.release_version,
+                callback_image_reference=self.release_commit_callback_image_reference,
             )
 
         release_commit = self.git_helper.index_to_commit(
@@ -430,13 +433,7 @@ class NextDevCycleCommitStep(TransactionalStep):
             repository_version_file_path,
         )
 
-        if next_version_callback:
-            self.next_version_callback = os.path.join(
-                self.repo_dir,
-                next_version_callback,
-            )
-        else:
-            self.next_version_callback = None
+        self.next_version_callback = next_version_callback
 
     def _next_dev_cycle_commit_message(self, version: str, message_prefix: str):
         message = f'Prepare next Dev Cycle {version}'
@@ -451,7 +448,12 @@ class NextDevCycleCommitStep(TransactionalStep):
         existing_dir(self.repo_dir)
         version.parse_to_semver(self.release_version)
         if self.next_version_callback:
-            existing_file(self.next_version_callback)
+            existing_file(
+                os.path.join(
+                    self.repo_dir,
+                    self.next_version_callback,
+                )
+            )
 
         existing_file(self.repository_version_file_path)
 
@@ -867,15 +869,50 @@ def _invoke_callback(
     callback_script_path: str,
     repo_dir: str,
     effective_version: str,
+    callback_image_reference: str=None,
 ):
     callback_env = os.environ.copy()
-    callback_env['REPO_DIR'] = repo_dir
     callback_env['EFFECTIVE_VERSION'] = effective_version
-    subprocess.run(
-        [callback_script_path],
-        check=True,
-        env=callback_env,
-    )
+
+    if callback_image_reference:
+        repo_dir_in_container = '/mnt/main_repo'
+        callback_env['REPO_DIR'] = repo_dir_in_container
+    else:
+        callback_env['REPO_DIR'] = repo_dir
+
+    if not callback_image_reference:
+        callback_script_path = os.path.join(
+            repo_dir,
+            callback_script_path,
+        )
+        subprocess.run(
+            [callback_script_path],
+            check=True,
+            env=callback_env,
+        )
+    else:
+        script_path_in_container = os.path.join(
+            repo_dir_in_container,
+            callback_script_path,
+        )
+
+        docker_argv = dockerutil.docker_run_argv(
+            image_reference=callback_image_reference,
+            argv=(script_path_in_container,),
+            env=callback_env,
+            mounts={
+                repo_dir: repo_dir_in_container,
+            }
+        )
+
+        dockerutil.launch_dockerd_if_not_running()
+
+        logger.info(f'will run callback using {docker_argv=}')
+
+        subprocess.run(
+            docker_argv,
+            check=True,
+        )
 
 
 def _add_all_and_create_commit(git_helper: GitHelper, message: str):
@@ -917,6 +954,7 @@ def release_and_prepare_next_dev_cycle(
     repository_version_file_path: str,
     git_tags: list,
     github_release_tag: dict,
+    release_commit_callback_image_reference: str,
     author_email: str="gardener.ci.user@gmail.com",
     author_name: str="gardener-ci",
     component_descriptor_v2_path: str=None,
@@ -959,6 +997,7 @@ def release_and_prepare_next_dev_cycle(
         repository_branch=githubrepobranch.branch(),
         release_commit_message_prefix=release_commit_message_prefix,
         release_commit_callback=release_commit_callback,
+        release_commit_callback_image_reference=release_commit_callback_image_reference,
         publishing_policy=release_commit_publishing_policy,
     )
     step_list.append(release_commit_step)

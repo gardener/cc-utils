@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
+
 import version
 import ci.util
 from concourse.model.job import (
@@ -20,6 +22,7 @@ from concourse.model.job import (
 )
 from concourse.model.step import (
     PipelineStep,
+    PrivilegeMode,
     StepNotificationPolicy,
 )
 from concourse.model.base import (
@@ -33,6 +36,9 @@ from concourse.model.base import (
 from model.base import(
     ModelValidationError,
 )
+import concourse.model.traits.images
+
+OciImageCfg = concourse.model.traits.images.OciImageCfg
 
 
 class NextVersion(EnumWithDocumentation):
@@ -95,6 +101,15 @@ ATTRIBUTES = (
         the absolute path to the main repository's work tree via environment variable `REPO_DIR`.
         Any changes left inside the worktree are added to the resulting release commit.
         ''',
+    ),
+    AttributeSpec.optional(
+        name='release_callback_image_reference',
+        default=None,
+        doc='''
+        if specified, the release_callback will be run in a virtualisation container using the
+        chosen container image (if not specified, the callback is run as a subprocess)
+        ''',
+        type=OciImageCfg,
     ),
     AttributeSpec.optional(
         name='rebase_before_release',
@@ -179,6 +194,12 @@ class ReleaseTrait(Trait):
     def release_callback_path(self):
         return self.raw['release_callback']
 
+    def release_callback_image_reference(self) -> typing.Optional[OciImageCfg]:
+        if not (raw := self.raw.get('release_callback_image_reference')):
+            return None
+
+        return OciImageCfg(raw_dict=raw)
+
     def next_version_callback_path(self):
         return self.raw['next_version_callback']
 
@@ -233,17 +254,29 @@ class ReleaseTrait(Trait):
         )
 
     def transformer(self):
-        return ReleaseTraitTransformer()
+        return ReleaseTraitTransformer(trait=self)
 
 
 class ReleaseTraitTransformer(TraitTransformer):
     name = 'release'
 
+    def __init__(self, trait: ReleaseTrait, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.trait = trait
+
     def inject_steps(self):
+        if self.trait.release_callback_image_reference():
+            # we need privileged container in order to run callback in container
+            privilege_mode = PrivilegeMode.PRIVILEGED
+        else:
+            privilege_mode = PrivilegeMode.UNPRIVILEGED
+
         # inject 'release' step
         self.release_step = PipelineStep(
             name='release',
-            raw_dict={},
+            raw_dict={
+                'privilege_mode': privilege_mode,
+            },
             is_synthetic=True,
             notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
             injecting_trait_name=self.name,
