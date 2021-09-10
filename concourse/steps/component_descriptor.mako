@@ -230,7 +230,7 @@ elif have_cd:
 elif have_ctf:
   logger.info(f'found ctf-archive at {ctf_out_path=}')
 
-% if not job_variant.has_trait('release'):
+% if not (job_variant.has_trait('release') or job_variant.has_trait('update_component_deps')):
 if snapshot_ctx_repository_base_url:
   if have_cd:
     snapshot_descriptor = cm.ComponentDescriptor.from_dict(
