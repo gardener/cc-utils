@@ -90,7 +90,7 @@
               
             
             
-              <p class="caption"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="../pipeline_contract.html">CC-Utils - Build Pipeline Reference Manual</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../pipeline.html">Pipeline Definition</a></li>
@@ -208,43 +208,51 @@
 <td><p>str</p></td>
 <td><p>configures the path to set_dependency_version script</p></td>
 </tr>
-<tr class="row-odd"><td><p>upstream_component_name</p></td>
+<tr class="row-odd"><td><p>set_dependency_version_script_container_image</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>OciImageCfg</p></td>
+<td><p>if specified, the <code class="code docutils literal notranslate"><span class="pre">set_dependency_version_script</span></code> will be executed in a separate
+OCI container using the specified container image.
+main_repository will be mounted at /mnt/main_repo</p></td>
+</tr>
+<tr class="row-even"><td><p>upstream_component_name</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>configures the upstream component</p></td>
 </tr>
-<tr class="row-even"><td><p>upstream_update_policy</p></td>
+<tr class="row-odd"><td><p>upstream_update_policy</p></td>
 <td><p>no</p></td>
 <td><p><code class="code docutils literal notranslate"><span class="pre">strictly_follow</span></code></p></td>
 <td><p>str</p></td>
 <td><p>configures the upstream component update policy</p></td>
 </tr>
-<tr class="row-odd"><td><p>merge_policy</p></td>
+<tr class="row-even"><td><p>merge_policy</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>MergePolicy</p></td>
 <td><p>whether or not created PRs should be automatically merged. <strong>deprecated</strong></p></td>
 </tr>
-<tr class="row-even"><td><p>merge_policies</p></td>
+<tr class="row-odd"><td><p>merge_policies</p></td>
 <td><p>no</p></td>
 <td><p>()</p></td>
 <td><p>List[MergePolicyConfig]</p></td>
 <td><p>merge policies to apply to detected component upgrades. By default, upgrade pull-requests must be merged manually</p></td>
 </tr>
-<tr class="row-odd"><td><p>after_merge_callback</p></td>
+<tr class="row-even"><td><p>after_merge_callback</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>callback to be invoked after auto-merge</p></td>
 </tr>
-<tr class="row-even"><td><p>ignore_prerelease_versions</p></td>
+<tr class="row-odd"><td><p>ignore_prerelease_versions</p></td>
 <td><p>no</p></td>
-<td><p>False</p></td>
+<td><p>True</p></td>
 <td><p>bool</p></td>
 <td><p>ignores prerelease versions like “0.1.0-dev-abc” and only creates upgrade pr’s for finalized versions.</p></td>
 </tr>
-<tr class="row-odd"><td><p>vars</p></td>
+<tr class="row-even"><td><p>vars</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">{}</span>
 </pre></div>
@@ -252,6 +260,25 @@
 </p></td>
 <td><p>dict</p></td>
 <td><p>env vars to pass to after_merge_callback (similar to step’s vars)</p></td>
+</tr>
+</tbody>
+</table>
+<h2>set_dependency_version_script_container_image Attributes<a class="headerlink" href="#trait-update-component-deps" title="Permalink to this headline">¶</a></h2>
+<table class="colwidths-auto docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>image_reference</p></td>
+<td><p>yes</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>the OCI Image reference to use</p></td>
 </tr>
 </tbody>
 </table>
