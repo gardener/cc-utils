@@ -15,6 +15,7 @@ import cnudie.retrieve
 import concourse.model.traits.update_component_deps
 import concourse.steps.component_descriptor_util as cdu
 import concourse.paths
+import dockerutil
 import github.util
 import gitutil
 import product.v2
@@ -289,15 +290,8 @@ def create_upgrade_pr(
     after_merge_callback=None,
     container_image:str=None,
 ):
-    if container_image and os.environ.get('DOCKERD_STARTED') != 'yes':
-        logger.info(f'starting dockerd for running set_dependency-callback in ${container_image=}')
-        subprocess.run(
-            concourse.paths.launch_dockerd,
-            check=True,
-        )
-        logger.info('successfully launched dockerd')
-        # optimisation: only start dockerd once
-        os.environ['DOCKERD_STARTED'] = 'yes'
+    if container_image:
+        dockerutil.launch_dockerd_if_not_running()
 
     ls_repo = pull_request_util.repository
 
