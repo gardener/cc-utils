@@ -325,13 +325,6 @@ def create_upgrade_pr(
         )
     else:
         # run check-script in container
-        docker_argv = ['docker', 'run']
-        for k, v in cmd_env.items():
-            docker_argv.extend(('--env', f'{k}={v}'))
-
-        repo_dir = os.path.abspath(repo_dir)
-        docker_argv.extend(('--volume', f'{repo_dir}:{repo_dir_in_container}'))
-
         # XXX: need to create a .docker/config.json for authentication
         docker_argv.append(container_image)
 
@@ -340,7 +333,16 @@ def create_upgrade_pr(
             upgrade_script_relpath,
         )
 
-        docker_argv.append(upgrade_script_path_in_container)
+        docker_argv = dockerutil.docker_run_argv(
+            image_reference=container_image,
+            argv=(
+                upgrade_script_path_in_container,
+            ),
+            env=cmd_env,
+            mounts={
+                repo_dir: repo_dir_in_container,
+            }
+        )
 
         logger.info(f'will run: ${docker_argv=}')
 
