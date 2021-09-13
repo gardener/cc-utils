@@ -18,6 +18,7 @@ import concourse.paths
 import dockerutil
 import github.util
 import gitutil
+import model.container_registry as cr
 import product.v2
 import version
 from concourse.model.traits.update_component_deps import (
@@ -325,7 +326,15 @@ def create_upgrade_pr(
         )
     else:
         # run check-script in container
-        # XXX: need to create a .docker/config.json for authentication
+        oci_registry_cfg = cr.find_config(image_reference=container_image)
+        if oci_registry_cfg:
+            docker_cfg_dir = tempfile.TemporaryDirectory()
+            dockerutil.mk_docker_cfg_dir(
+                cfg={'auths': oci_registry_cfg.as_docker_auths()},
+                cfg_dir=docker_cfg_dir.name,
+            )
+        else:
+            docker_cfg_dir = None
 
         upgrade_script_path_in_container = os.path.join(
             repo_dir_in_container,
@@ -340,15 +349,20 @@ def create_upgrade_pr(
             env=cmd_env,
             mounts={
                 repo_dir: repo_dir_in_container,
-            }
+            },
+            cfg_dir=docker_cfg_dir,
         )
 
         logger.info(f'will run: ${docker_argv=}')
 
-        subprocess.run(
-            docker_argv,
-            check=True,
-        )
+        try:
+            subprocess.run(
+                docker_argv,
+                check=True,
+            )
+        finally:
+            if docker_cfg_dir:
+                docker_cfg_dir.cleanup()
 
     from_version = from_ref.version
     commit_message = f'Upgrade {to_ref.name}\n\nfrom {from_version} to {to_version}'
