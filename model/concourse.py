@@ -372,6 +372,13 @@ class JobMappingSet(NamedModelElement):
 
         raise ValueError(f'no matching job mapping for {repo_url=}')
 
+    def job_mapping_for_team_name(self, team_name: str):
+        for _, job_mapping in self.job_mappings().items():
+            if job_mapping.concourse_target_team() == team_name:
+                return job_mapping
+
+        raise ValueError(f'no matching job mapping for {team_name=}')
+
     def __iter__(self):
         return self.job_mappings().values().__iter__()
 
