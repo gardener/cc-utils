@@ -187,6 +187,16 @@ class ConcourseTeamConfig(NamedModelElement):
         ]
 
 
+def get_team_cfg_by_name(cc_team_cfgs, name: str) -> typing.Optional[ConcourseTeamConfig]:
+    for cc_team_cfg in cc_team_cfgs:
+        if cc_team_cfg.team_name() == name:
+            return cc_team_cfg
+
+
+def get_main_team_cfg(cc_team_cfgs):
+    return get_team_cfg_by_name(cc_team_cfgs, 'main')
+
+
 class ConcourseUAM(NamedModelElement):
     def local_user(self) -> typing.Optional[BasicCredentials]:
         if local_user := self.raw.get('local_user'):
@@ -426,6 +436,9 @@ class JobMapping(NamedModelElement):
     def concourse_uam(self) -> str:
         return self.raw.get('concourse_uam')
 
+    def concourse_team_cfg_name(self) -> str:
+        return self.raw.get('concourse_team_cfg_name')
+
     def matches_repo_url(self, repo_url) -> bool:
         if not '://' in repo_url:
             repo_url = 'x://' + repo_url
@@ -450,9 +463,10 @@ class JobMapping(NamedModelElement):
 
     def _optional_attributes(self):
         return [
+            'concourse_team_cfg_name',
+            'concourse_uam',
             'secret_cfg',
             'secrets_repo',
-            'concourse_uam',
         ]
 
     def _defaults_dict(self):
