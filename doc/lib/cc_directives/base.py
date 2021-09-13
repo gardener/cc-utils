@@ -29,7 +29,7 @@ class AttributesDocMixin(sphinxutil.SphinxUtilsMixin):
 
         def render_element_attribs(prefix: str, attributes_doc):
             if prefix:
-                subtitle = f'{prefix} Attributes'
+                subtitle = f'{prefix} *({attributes_doc._model_element_type.__name__})* Attributes'
             else:
                 subtitle = 'Attributes'
             if issubclass(attributes_doc._model_element_type, enum.Enum):
