@@ -14,7 +14,6 @@ Pipeline Definition Traits
 * :doc:`traits/scan_sources`
 * :doc:`traits/image_alter`
 * :doc:`traits/image_scan`
-* :doc:`traits/image_upload`
 * :doc:`traits/notifications`
 * :doc:`traits/options`
 * :doc:`traits/publish`
