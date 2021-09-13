@@ -171,7 +171,7 @@ class GithubWebhookDispatcher:
                 cfg_set=self.cfg_factory.cfg_set(job_mapping.replication_ctx_cfg_set()),
             )
         except concourse.enumerator.JobMappingNotFoundError:
-            logger.info('no job-mapping matched for {repo_url=} - will not interact w/ pipeline(s)')
+            logger.info(f'no job-mapping matched for {repo_url=} - will not interact w/ pipeline(s)')
             return
 
         try:
