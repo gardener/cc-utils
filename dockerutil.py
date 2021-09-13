@@ -36,7 +36,7 @@ def docker_run_argv(
     mounts: dict=None,
     cfg_dir: str=None,
 ) -> tuple[str]:
-    docker_argv = ['docker', 'run']
+    docker_argv = ['docker']
 
     if cfg_dir:
         docker_argv.extend(('--config', cfg_dir))
