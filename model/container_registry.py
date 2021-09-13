@@ -15,6 +15,7 @@
 
 import base64
 import json
+import typing
 
 import ci.util
 import oci.util
@@ -168,7 +169,7 @@ def find_config(
     image_reference: str,
     privileges:oa.Privileges=None,
     _normalised_image_reference=False,
-) -> ContainerRegistryConfig:
+) -> typing.Optional[ContainerRegistryConfig]:
     ci.util.check_type(image_reference, str)
     cfg_factory = ci.util.ctx().cfg_factory()
 
