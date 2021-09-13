@@ -326,7 +326,6 @@ def create_upgrade_pr(
     else:
         # run check-script in container
         # XXX: need to create a .docker/config.json for authentication
-        docker_argv.append(container_image)
 
         upgrade_script_path_in_container = os.path.join(
             repo_dir_in_container,
