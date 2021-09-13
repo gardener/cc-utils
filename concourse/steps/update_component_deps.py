@@ -332,6 +332,7 @@ def create_upgrade_pr(
             dockerutil.mk_docker_cfg_dir(
                 cfg={'auths': oci_registry_cfg.as_docker_auths()},
                 cfg_dir=docker_cfg_dir.name,
+                exist_ok=True,
             )
         else:
             docker_cfg_dir = None
@@ -350,7 +351,7 @@ def create_upgrade_pr(
             mounts={
                 repo_dir: repo_dir_in_container,
             },
-            cfg_dir=docker_cfg_dir,
+            cfg_dir=docker_cfg_dir.name,
         )
 
         logger.info(f'will run: ${docker_argv=}')
