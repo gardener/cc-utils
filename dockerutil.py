@@ -51,9 +51,6 @@ def docker_run_argv(
         for host_path, container_path in mounts.items():
             docker_argv.extend(('--volume', f'{host_path}:{container_path}'))
 
-    if cfg_dir:
-        docker_argv.extend(('--config', cfg_dir))
-
     docker_argv.append(image_reference)
 
     if argv:
