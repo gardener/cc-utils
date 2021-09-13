@@ -38,6 +38,11 @@ def docker_run_argv(
 ) -> tuple[str]:
     docker_argv = ['docker', 'run']
 
+    if cfg_dir:
+        docker_argv.extend(('--config', cfg_dir))
+
+    docker_argv.append('run')
+
     if env:
         for k, v in env.items():
             docker_argv.extend(('--env', f'{k}={v}'))
