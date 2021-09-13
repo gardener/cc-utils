@@ -4,6 +4,7 @@ import dataclasses
 import logging
 import os
 import subprocess
+import tempfile
 import traceback
 import typing
 import version
@@ -44,6 +45,7 @@ from concourse.model.traits.release import (
     ReleaseNotesPolicy,
     ReleaseCommitPublishingPolicy,
 )
+import model.container_registry as cr
 
 logger = logging.getLogger('step.release')
 
@@ -896,23 +898,39 @@ def _invoke_callback(
             callback_script_path,
         )
 
+        oci_registry_cfg = cr.find_config(image_reference=callback_image_reference)
+        if oci_registry_cfg:
+            docker_cfg_dir = tempfile.TemporaryDirectory()
+            dockerutil.mk_docker_cfg_dir(
+                cfg={'auths': oci_registry_cfg.as_docker_auths()},
+                cfg_dir=docker_cfg_dir.name,
+                exist_ok=True,
+            )
+        else:
+            docker_cfg_dir = None
+
         docker_argv = dockerutil.docker_run_argv(
             image_reference=callback_image_reference,
             argv=(script_path_in_container,),
             env=callback_env,
             mounts={
                 repo_dir: repo_dir_in_container,
-            }
+            },
+            cfg_dir=docker_cfg_dir.name,
         )
 
         dockerutil.launch_dockerd_if_not_running()
 
         logger.info(f'will run callback using {docker_argv=}')
 
-        subprocess.run(
-            docker_argv,
-            check=True,
-        )
+        try:
+            subprocess.run(
+                docker_argv,
+                check=True,
+            )
+        finally:
+            if docker_cfg_dir:
+                docker_cfg_dir.cleanup()
 
 
 def _add_all_and_create_commit(git_helper: GitHelper, message: str):
