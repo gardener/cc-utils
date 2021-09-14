@@ -76,12 +76,51 @@ def replicate_artifact(
         need_uncompressed_layer_digests = True
         uncompressed_layer_digests = []
     elif schema_version == 2:
-        manifest = dacite.from_dict(
-            data_class=om.OciImageManifest,
-            data=json.loads(raw_manifest)
-        )
-        need_uncompressed_layer_digests = False
-        uncompressed_layer_digests = None
+        manifest = json.loads(raw_manifest)
+        media_type = manifest['mediaType']
+
+        if media_type == om.OCI_MANIFEST_LIST_MIME:
+            # multi-arch
+            manifest = dacite.from_dict(
+                data_class=om.OciImageManifestList,
+                data=manifest,
+            )
+
+            src_ref = om.OciImageReference(image_reference=src_image_reference)
+            src_name = src_ref.name
+            tgt_ref = om.OciImageReference(image_reference=tgt_image_reference)
+            tgt_name = tgt_ref.name
+
+            for sub_manifest in manifest.manifests:
+                src_reference = f'{src_name}@{sub_manifest.digest}'
+                tgt_reference = f'{tgt_name}@{sub_manifest.digest}'
+                logger.info(f'replicating to {tgt_reference=}')
+
+                replicate_artifact(
+                    src_image_reference=src_reference,
+                    tgt_image_reference=tgt_reference,
+                    oci_client=client,
+                )
+
+            print('XXX done - now need to replicate manifest-list')
+            print(raw_manifest)
+            return client.put_manifest(
+                image_reference=tgt_image_reference,
+                manifest=raw_manifest,
+            )
+
+        elif media_type in (
+            om.OCI_MANIFEST_SCHEMA_V2_MIME,
+            om.DOCKER_MANIFEST_SCHEMA_V2_MIME,
+        ):
+            manifest = dacite.from_dict(
+                data_class=om.OciImageManifest,
+                data=json.loads(raw_manifest)
+            )
+            need_uncompressed_layer_digests = False
+            uncompressed_layer_digests = None
+        else:
+            raise NotImplementedError(f'{media_type=}')
     else:
       raise NotImplementedError(schema_version)
 
