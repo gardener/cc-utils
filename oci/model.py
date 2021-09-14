@@ -9,6 +9,7 @@ import requests
 import oci.util
 
 OCI_MANIFEST_SCHEMA_V2_MIME = 'application/vnd.oci.image.manifest.v1+json'
+OCI_MANIFEST_LIST_MIME = 'application/vnd.docker.distribution.manifest.list.v2+json'
 DOCKER_MANIFEST_SCHEMA_V2_MIME = 'application/vnd.docker.distribution.manifest.v2+json'
 empty_dict = dataclasses.field(default_factory=dict)
 
@@ -161,3 +162,21 @@ class OciImageManifestV1:
             raise ValueError('instance was not properly initialised')
 
         yield from self.layers
+
+
+@dataclasses.dataclass(frozen=True)
+class OciPlatform:
+    architecture: str
+    os: str
+
+
+@dataclasses.dataclass(frozen=True)
+class OciImageManifestListEntry(OciBlobRef):
+    platform: OciPlatform
+
+
+@dataclasses.dataclass
+class OciImageManifestList:
+    manifests: typing.List[OciImageManifestListEntry]
+    mediaType: str = OCI_MANIFEST_LIST_MIME
+    schemaVersion: int = 2
