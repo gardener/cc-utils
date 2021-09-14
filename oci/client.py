@@ -422,11 +422,13 @@ class Client:
         self,
         image_reference: str,
         absent_ok: bool=False,
+        accept: str=None,
     ):
         scope = _scope(image_reference=image_reference, action='pull')
 
         # be backards-compatible, and also accept (legacy) docker-mimetype
-        accept = f'{om.OCI_MANIFEST_SCHEMA_V2_MIME}, {om.DOCKER_MANIFEST_SCHEMA_V2_MIME}'
+        if not accept:
+            accept = f'{om.OCI_MANIFEST_SCHEMA_V2_MIME}, {om.DOCKER_MANIFEST_SCHEMA_V2_MIME}'
 
         try:
             res = self._request(
@@ -449,10 +451,37 @@ class Client:
         self,
         image_reference: str,
         absent_ok: bool=False,
-    ) -> om.OciImageManifest:
+        accept: str=None,
+    ) -> typing.Union[om.OciImageManifest, om.OciImageManifestList]:
+        '''
+        returns the parsed OCI Manifest for the given image reference. If the optional `accept`
+        argument is passed, the given value will be set as `Accept` HTTP Header when retrieving
+        the manifest (defaults to
+            application/vnd.docker.distribution.manifest.list.v2+json,
+            application/vnd.docker.distribution.manifest.v2+json
+        , which requests a single Oci Image manifest, with a preference for the mimetype defined
+        by OCI, and accepting docker's mimetype as a fallback)
+
+        The following mimetype is also well-known:
+
+            application/vnd.oci.image.manifest.v1+json
+
+        If set, and the underlying OCI Artifact is a "multi-arch" artifact, than the returned
+        value is (parsed into) a OciImageManifestList.
+
+        see oci.model for both mimetype and model class definitions.
+
+        Note that in case no `accept` header is set, the returned manifest type differs depending
+        on the OCI Registry, if there actually is a multi-arch artifact.
+
+        GCR is known to return a single OCI Image manifest (defaulting to GNU/Linux x86_64),
+        whereas the registry backing quay.io will return a Manifest-List regardless of accept
+        header.
+        '''
         res = self.manifest_raw(
             image_reference=image_reference,
             absent_ok=absent_ok,
+            accept=accept,
         )
 
         if not res and absent_ok:
@@ -461,15 +490,12 @@ class Client:
         manifest_dict = res.json()
 
         distribution_list_mediatype = 'application/vnd.docker.distribution.manifest.list.v2+json'
-        if (
-                'mediaType' in manifest_dict and
-                (mediaType := manifest_dict['mediaType']) == distribution_list_mediatype
-            ):
-            #XXX: not implemented for now, need to be fixed later
-            raise NotImplementedError(
-                f'OCI manifest media type {mediaType} '
-                f'not implemented for {image_reference}'
+        if manifest_dict.get('mediaType') == distribution_list_mediatype:
+            manifest = dacite.from_dict(
+                data_class=om.OciImageManifestList,
+                data=manifest_dict,
             )
+            return manifest
 
         if (schema_version := int(manifest_dict['schemaVersion'])) == 1:
             manifest = dacite.from_dict(
