@@ -127,6 +127,9 @@ class OciImageReference:
     def __str__(self) -> str:
         return self.normalised_image_reference
 
+    def __repr__(self) -> str:
+        return f'OciImageReference({str(self)})'
+
     def __eq__(self, other) -> bool:
         if not isinstance(other, OciImageReference):
             # XXX: should we return True for str with same value?
