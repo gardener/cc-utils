@@ -1,12 +1,20 @@
 import dataclasses
+import enum
 import hashlib
 import pprint
 import sys
 
 import ccc.oci
 import oci
+import oci.model as om
 
 __cmd_name__ = 'oci'
+
+
+class OciManifestChoice(enum.Enum):
+    PREFER_MULTIARCH = 'prefer-multiarch'
+    SINGLE = 'single'
+    MULTIARCH = 'multiarch'
 
 
 def cp(src:str, tgt:str):
@@ -25,21 +33,45 @@ def ls(image: str):
     print('\n'.join(oci_client.tags(image_reference=image)))
 
 
-def manifest(image_reference: str, pretty:bool=True):
+def manifest(
+    image_reference: str,
+    pretty:bool=True,
+    accept:OciManifestChoice=OciManifestChoice.SINGLE,
+):
     oci_client = ccc.oci.oci_client()
 
-    if pretty:
-        manifest = oci_client.manifest(image_reference=image_reference)
-        manifest_raw = oci_client.manifest_raw(image_reference=image_reference)
+    if accept is OciManifestChoice.SINGLE:
+        accept = om.MimeTypes.single_image
+    elif accept is OciManifestChoice.MULTIARCH:
+        accept = om.MimeTypes.multiarch
+    elif accept is OciManifestChoice.PREFER_MULTIARCH:
+        accept = om.MimeTypes.prefer_multiarch
+    else:
+        raise NotImplementedError(accept)
 
-        total_size = sum(blob.size for blob in manifest.blobs())
-        manifest_digest = hashlib.sha256(manifest_raw.content).hexdigest()
+    if pretty:
+        manifest = oci_client.manifest(
+            image_reference=image_reference,
+            accept=accept,
+        )
+        manifest_raw = oci_client.manifest_raw(
+            image_reference=image_reference,
+            accept=accept,
+        )
 
         pprint.pprint(dataclasses.asdict(manifest))
-        print()
-        print(f'{total_size=} {manifest_digest=}')
+
+        if isinstance(manifest, om.OciImageManifest):
+            total_size = sum(blob.size for blob in manifest.blobs())
+            manifest_digest = hashlib.sha256(manifest_raw.content).hexdigest()
+
+            print()
+            print(f'{total_size=} {manifest_digest=}')
     else:
-        manifest = oci_client.manifest_raw(image_reference=image_reference)
+        manifest = oci_client.manifest_raw(
+            image_reference=image_reference,
+            accept=accept,
+        )
         print(manifest.text)
 
 
