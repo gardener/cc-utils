@@ -14,6 +14,21 @@ DOCKER_MANIFEST_SCHEMA_V2_MIME = 'application/vnd.docker.distribution.manifest.v
 empty_dict = dataclasses.field(default_factory=dict)
 
 
+class MimeTypes:
+    '''
+    predefined, well-known mimetypes, handy to be used in oci.client.Client.manifest as `accept` arg
+
+    single_image: force single-image
+    multiarch: force multi-arch (image-list)
+    prefer_multiarch
+
+    note: not all registries honour `access` header
+    '''
+    single_image = ', '.join((OCI_MANIFEST_SCHEMA_V2_MIME, DOCKER_MANIFEST_SCHEMA_V2_MIME))
+    multiarch = OCI_MANIFEST_LIST_MIME
+    prefer_multiarch = ', '.join((multiarch, single_image))
+
+
 class OciTagType(enum.Enum):
     SYMBOLIC = 'symbolic'
     DIGEST = 'digest'
