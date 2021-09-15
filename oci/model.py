@@ -32,6 +32,7 @@ class MimeTypes:
 class OciTagType(enum.Enum):
     SYMBOLIC = 'symbolic'
     DIGEST = 'digest'
+    NO_TAG = 'no_tag'
 
 
 class OciImageReference:
@@ -65,6 +66,27 @@ class OciImageReference:
 
     @property
     @functools.cache
+    def has_digest_tag(self) -> bool:
+        if self.tag_type is OciTagType.DIGEST:
+            return True
+        else:
+            return False
+
+    @property
+    @functools.cache
+    def has_symbolical_tag(self) -> bool:
+        if self.tag_type is OciTagType.SYMBOLIC:
+            return True
+        else:
+            return False
+
+    @property
+    @functools.cache
+    def has_tag(self):
+        return not self.tag_type is OciTagType.NO_TAG
+
+    @property
+    @functools.cache
     def tag(self) -> str:
         p = self.urlparsed
 
@@ -85,7 +107,7 @@ class OciImageReference:
         elif ':' in p.path:
             return OciTagType.SYMBOLIC
         else:
-            raise ValueError(f'failed to determine tag-type for {str(self)=}')
+            return OciTagType.NO_TAG
 
     @property
     def parsed_digest_tag(self) -> typing.Tuple[str, str]:
