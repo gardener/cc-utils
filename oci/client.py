@@ -544,6 +544,7 @@ class Client:
         self,
         image_reference: str,
         absent_ok=False,
+        accept: str=None,
     ) -> typing.Optional[om.OciBlobRef]:
         '''
         issues an HTTP-HEAD request for the specified oci-artifact's manifest and returns
@@ -559,10 +560,16 @@ class Client:
         '''
         scope = _scope(image_reference=image_reference, action='pull')
 
+        if not accept:
+            accept = om.MimeTypes.single_image
+
         res = self._request(
             url=self.routes.manifest_url(image_reference=image_reference),
             image_reference=image_reference,
             method='HEAD',
+            headers={
+                'accept': accept,
+            },
             scope=scope,
             stream=False,
             raise_for_status=not absent_ok,
