@@ -16,6 +16,7 @@
 # limitations under the License.
 
 import argparse
+import enum
 import functools
 import inspect
 import itertools
@@ -182,6 +183,12 @@ def add_module(module_name, parser):
                     action = 'append'
                 elif callable(typehint):
                     argtype = typehint
+                    if inspect.isclass(typehint) and issubclass(typehint, enum.Enum):
+                        # XXX: improve online-help
+                        kwargs['choices'] = [
+                            e for e in typehint
+                        ]
+
             if default != NotImplemented:
                 required = False
             else:
