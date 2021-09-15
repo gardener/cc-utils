@@ -613,6 +613,23 @@ class Client:
 
         return res.json()['tags']
 
+    def has_multiarch(self, image_reference: str) -> bool:
+        res = self.head_manifest(
+            image_reference=image_reference,
+            absent_ok=True,
+            accept=om.MimeTypes.multiarch,
+        )
+        if res:
+            return True
+
+        # sanity-check: at least single image must exist
+        self.head_manifest(
+            image_reference=image_reference,
+            absent_ok=False,
+            accept=om.MimeTypes.single_image,
+        )
+        return False
+
     def put_manifest(
         self,
         image_reference: str,
