@@ -43,23 +43,61 @@ def image_exists(image_reference: str):
 
 
 def filter_image(
-    source_ref:str,
-    target_ref:str,
+    source_ref: typing.Union[str, om.OciImageReference],
+    target_ref: typing.Union[str, om.OciImageReference],
     remove_files: typing.Sequence[str]=(),
     oci_client: oc.Client=None,
-) -> requests.Response:
+) -> typing.Tuple[requests.Response, str, bytes]: # response, tgt-ref, manifest_bytes
     if not oci_client:
         oci_client = ccc.oci.oci_client()
+
+    if isinstance(source_ref, str):
+        source_ref = om.OciImageReference(source_ref)
+
+    if isinstance(target_ref, str):
+        target_ref = om.OciImageReference(target_ref)
 
     # shortcut in case there are no filtering-rules
     if not remove_files:
         return oci.replicate_artifact(
-            src_image_reference=source_ref,
-            tgt_image_reference=target_ref,
+            src_image_reference=str(source_ref),
+            tgt_image_reference=str(target_ref),
             oci_client=oci_client,
         )
 
-    manifest = oci_client.manifest(image_reference=source_ref)
+    manifest = oci_client.manifest(image_reference=str(source_ref))
+
+    if isinstance(manifest, om.OciImageManifestList):
+        # recurse into sub-images
+
+        src_name = source_ref.name
+        tgt_name = target_ref.name
+
+        for idx, sub_manifest in enumerate(manifest.manifests):
+           source_ref = f'{src_name}@{sub_manifest.digest}'
+           logger.info(f'filtering to {tgt_name=}')
+
+           res, tgt_ref, manifest_bytes = filter_image(
+               source_ref=source_ref,
+               target_ref=tgt_name,
+               remove_files=remove_files,
+               oci_client=oci_client,
+            )
+
+           # patch (potentially) modified manifest-digest
+           patched_manifest = dataclasses.replace(
+               sub_manifest,
+               digest=f'sha256:{hashlib.sha256(manifest_bytes).hexdigest()}',
+               size=len(manifest_bytes),
+           )
+           manifest.manifests[idx] = patched_manifest
+
+        manifest_dict = dataclasses.asdict(manifest)
+        manifest_raw = json.dumps(manifest_dict).encode('utf-8')
+        return oci_client.put_manifest(
+            image_reference=str(target_ref),
+            manifest=manifest_raw,
+        )
 
     cp_cfg_blob = True
     if isinstance(manifest, om.OciImageManifestV1):
@@ -67,7 +105,7 @@ def filter_image(
         manifest, cfg_blob = oconv.v1_manifest_to_v2(
             manifest=manifest,
             oci_client=oci_client,
-            tgt_image_ref=target_ref,
+            tgt_image_ref=str(target_ref),
         )
         cp_cfg_blob = False # we synthesise new cfg - thus we cannot cp from src
     elif not isinstance(manifest, om.OciImageManifest):
@@ -101,7 +139,7 @@ def filter_image(
         # when interacting w/ oci-registries that support chunked-uploads
         with tempfile.TemporaryFile() as f:
             src_tar_stream = oci_client.blob(
-                image_reference=source_ref,
+                image_reference=str(source_ref),
                 digest=layer.digest,
                 stream=True,
             ).iter_content(chunk_size=tarfile.BLOCKSIZE * 64)
@@ -143,7 +181,7 @@ def filter_image(
             f.seek(0)
 
             oci_client.put_blob(
-                image_reference=target_ref,
+                image_reference=str(target_ref),
                 digest=(layer_digest := 'sha256:' + layer_hash.hexdigest()),
                 octets_count=leng,
                 data=f,
@@ -161,7 +199,7 @@ def filter_image(
     # need to patch cfg-object, in case layer-digests changed
     if cp_cfg_blob:
         cfg_blob = oci_client.blob(
-            image_reference=source_ref,
+            image_reference=str(source_ref),
             digest=manifest.config.digest,
             stream=False,
         ).json() # cfg-blobs are small - no point in streaming
@@ -180,7 +218,7 @@ def filter_image(
     cfg_digest = f'sha256:{hashlib.sha256(cfg_blob).hexdigest()}'
     cfg_leng = len(cfg_blob)
     oci_client.put_blob(
-        image_reference=target_ref,
+        image_reference=str(target_ref),
         digest=cfg_digest,
         octets_count=cfg_leng,
         data=cfg_blob,
@@ -190,7 +228,20 @@ def filter_image(
 
     manifest_raw = json.dumps(dataclasses.asdict(manifest)).encode('utf-8')
 
-    return oci_client.put_manifest(image_reference=target_ref, manifest=manifest_raw)
+    if target_ref.has_tag:
+        target_ref = str(target_ref)
+    else:
+        # if tgt does not bear a tag, calculate hash digest as tgt
+        manifest_digest = hashlib.sha256(manifest_raw).hexdigest()
+        target_ref = f'{target_ref.name}@sha256:{manifest_digest}'
+
+    res = oci_client.put_manifest(
+        image_reference=target_ref,
+        manifest=manifest_raw
+    )
+    res.raise_for_status()
+
+    return res, target_ref, manifest_raw
 
 
 @deprecated.deprecated
