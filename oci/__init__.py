@@ -102,8 +102,6 @@ def replicate_artifact(
                     oci_client=client,
                 )
 
-            print('XXX done - now need to replicate manifest-list')
-            print(raw_manifest)
             return client.put_manifest(
                 image_reference=tgt_image_reference,
                 manifest=raw_manifest,
