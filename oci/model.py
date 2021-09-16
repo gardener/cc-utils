@@ -36,8 +36,18 @@ class OciTagType(enum.Enum):
 
 
 class OciImageReference:
+    @staticmethod
+    def to_image_ref(image_reference: typing.Union[str, 'OciImageReference']):
+        if isinstance(image_reference, OciImageReference):
+            return image_reference
+        else:
+            return OciImageReference(image_reference=image_reference)
+
     def __init__(self, image_reference: str):
-        self._orig_image_reference = image_reference
+        if isinstance(image_reference, OciImageReference):
+            self._orig_image_reference = image_reference._orig_image_reference
+        else:
+            self._orig_image_reference = image_reference
 
     @property
     def original_image_reference(self) -> str:

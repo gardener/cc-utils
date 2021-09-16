@@ -116,7 +116,9 @@ class OauthTokenCache:
         self.auth_methods[netloc] = auth_method
 
     def auth_method(self, image_reference: str) -> typing.Optional[AuthMethod]:
-        netloc = parse_image_reference(image_reference=image_reference).netloc
+        image_reference = om.OciImageReference.to_image_ref(image_reference)
+
+        netloc = image_reference.netloc
         return self.auth_methods.get(netloc)
 
 
@@ -212,13 +214,19 @@ class OciRoutes:
         })
         return self.uploads_url(image_reference=image_reference) + '?' + query
 
-    def blob_url(self, image_reference: str, digest: str):
+    def blob_url(self, image_reference: typing.Union[str, om.OciImageReference], digest: str):
+        if isinstance(image_reference, om.OciImageReference):
+            image_reference = str(image_reference)
+
         return urljoin(
             self._blobs_url(image_reference=image_reference),
             digest
         )
 
-    def manifest_url(self, image_reference: str) -> str:
+    def manifest_url(self, image_reference: typing.Union[str, om.OciImageReference]) -> str:
+        if isinstance(image_reference, om.OciImageReference):
+            image_reference = str(image_reference)
+
         last_part = image_reference.split('/')[-1]
         if '@' in last_part:
             tag = last_part.split('@')[-1]
@@ -234,10 +242,13 @@ class OciRoutes:
         )
 
 
-def _scope(image_reference: str, action: str):
-    image_name = _image_name(image_reference=image_reference)
+def _scope(image_reference: typing.Union[str, om.OciImageReference], action: str):
+    image_reference = om.OciImageReference.to_image_ref(image_reference)
+
+    image_name = image_reference.name
     # action = 'pull' # | pull,push | catalog
     scope = f'repository:{image_name}:{action}'
+
     return scope
 
 
@@ -256,9 +267,12 @@ class Client:
 
     def _authenticate(
         self,
-        image_reference: str,
+        image_reference: typing.Union[str, om.OciImageReference],
         scope: str,
     ):
+        if isinstance(image_reference, om.OciImageReference):
+            image_reference = str(image_reference)
+
         cached_auth_method = self.token_cache.auth_method(image_reference=image_reference)
         if cached_auth_method is AuthMethod.BASIC:
             return # basic-auth does not require any additional preliminary steps
@@ -347,7 +361,7 @@ class Client:
     def _request(
         self,
         url: str,
-        image_reference: str,
+        image_reference: typing.Union[str, om.OciImageReference],
         scope: str,
         method: str='GET',
         headers: dict=None,
@@ -355,6 +369,8 @@ class Client:
         warn_if_not_ok=True,
         **kwargs,
     ):
+        image_reference = om.OciImageReference.to_image_ref(image_reference)
+
         self._authenticate(
             image_reference=image_reference,
             scope=scope,
@@ -372,7 +388,7 @@ class Client:
                 privileges = oa.Privileges.READONLY
 
             if oci_creds := self.credentials_lookup(
-                image_reference=image_reference,
+                image_reference=image_reference.original_image_reference,
                 privileges=privileges,
                 absent_ok=True,
             ):
@@ -420,10 +436,12 @@ class Client:
 
     def manifest_raw(
         self,
-        image_reference: str,
+        image_reference: typing.Union[str, om.OciImageReference],
         absent_ok: bool=False,
         accept: str=None,
     ):
+        image_reference = om.OciImageReference.to_image_ref(image_reference)
+
         scope = _scope(image_reference=image_reference, action='pull')
 
         # be backards-compatible, and also accept (legacy) docker-mimetype
@@ -449,7 +467,7 @@ class Client:
 
     def manifest(
         self,
-        image_reference: str,
+        image_reference: typing.Union[str, om.OciImageReference],
         absent_ok: bool=False,
         accept: str=None,
     ) -> typing.Union[om.OciImageManifest, om.OciImageManifestList]:
@@ -478,6 +496,7 @@ class Client:
         whereas the registry backing quay.io will return a Manifest-List regardless of accept
         header.
         '''
+        image_reference = om.OciImageReference.to_image_ref(image_reference)
         res = self.manifest_raw(
             image_reference=image_reference,
             absent_ok=absent_ok,

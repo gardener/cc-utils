@@ -87,9 +87,9 @@ def replicate_artifact(
             )
 
             src_ref = om.OciImageReference(image_reference=src_image_reference)
-            src_name = src_ref.name
+            src_name = src_ref.ref_without_tag
             tgt_ref = om.OciImageReference(image_reference=tgt_image_reference)
-            tgt_name = tgt_ref.name
+            tgt_name = tgt_ref.ref_without_tag
 
             for sub_manifest in manifest.manifests:
                 src_reference = f'{src_name}@{sub_manifest.digest}'
