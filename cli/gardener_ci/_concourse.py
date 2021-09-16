@@ -20,7 +20,7 @@ from ci.util import (
     ctx,
     CliHints,
 )
-from concourse import client
+
 from concourse.util import sync_org_webhooks
 from concourse.enumerator import (
     DefinitionDescriptorPreprocessor,
@@ -34,6 +34,8 @@ from concourse.replicator import (
     RenderOrigin,
     Renderer,
 )
+
+import ccc.concourse
 import concourse.model as ccm
 
 own_dir = os.path.abspath(os.path.dirname(__file__))
@@ -183,11 +185,9 @@ def trigger_resource_check(
     cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(cfg_name)
     concourse_cfg = cfg_set.concourse()
-    concourse_uam = cfg_set.concourse_uam(concourse_cfg.concourse_uam_cfg())
 
-    api = client.from_cfg(
-        concourse_cfg=concourse_cfg,
-        concourse_uam_cfg=concourse_uam,
+    api = ccc.concourse.client_from_cfg_name(
+        concourse_cfg_name=concourse_cfg.name(),
         team_name=team_name,
     )
     api.trigger_resource_check(

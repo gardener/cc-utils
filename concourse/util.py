@@ -22,7 +22,7 @@ import urllib.parse
 
 import github3
 
-import concourse.client
+import concourse.client.model
 import concourse.model.traits.meta
 import concourse.steps.meta
 import github.webhook
