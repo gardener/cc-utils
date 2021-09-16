@@ -696,11 +696,13 @@ class Client:
 
     def blob(
         self,
-        image_reference: str,
+        image_reference: typing.Union[str, om.OciImageReference],
         digest: str,
         stream=True,
         absent_ok=False,
     ) -> requests.models.Response:
+        image_reference = om.OciImageReference(image_reference)
+
         scope = _scope(image_reference=image_reference, action='pull')
 
         res = self._request(
@@ -721,10 +723,11 @@ class Client:
 
     def head_blob(
         self,
-        image_reference: str,
+        image_reference: typing.Union[str, om.OciImageReference],
         digest: str,
         absent_ok=True,
     ):
+        image_reference = om.OciImageReference(image_reference)
         scope = _scope(image_reference=image_reference, action='pull')
 
         res = self._request(
@@ -748,13 +751,14 @@ class Client:
 
     def put_blob(
         self,
-        image_reference: str,
+        image_reference: typing.Union[str, om.OciImageReference],
         digest: str,
         octets_count: int,
         data: requests.models.Response,
         max_chunk=1024 * 1024 * 1, # 1 MiB
         mimetype: str='application/data',
     ):
+        image_reference = om.OciImageReference(image_reference)
         head_res = self.head_blob(
             image_reference=image_reference,
             digest=digest,
@@ -809,12 +813,13 @@ class Client:
 
     def _put_blob_chunked(
         self,
-        image_reference: str,
+        image_reference: typing.Union[str, om.OciImageReference],
         digest: str,
         octets_count: int,
         data_iterator: typing.Iterator[bytes],
         chunk_size: int=1024 * 1024 * 16, # 16 MiB
     ):
+        image_reference = om.OciImageReference(image_reference)
         scope = _scope(image_reference=image_reference, action='push,pull')
         logger.debug(f'chunked-put {chunk_size=}')
 
@@ -891,12 +896,13 @@ class Client:
 
     def _put_blob_single_post(
         self,
-        image_reference: str,
+        image_reference: typing.Union[str, om.OciImageReference],
         digest: str,
         octets_count: int,
         data: bytes,
     ):
         logger.debug(f'single-post {image_reference=} {octets_count=}')
+        image_reference = om.OciImageReference(image_reference)
         scope = _scope(image_reference=image_reference, action='push,pull')
 
         # XXX according to distribution-spec, single-POST should also work - however
