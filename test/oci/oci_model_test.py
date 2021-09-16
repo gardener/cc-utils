@@ -25,19 +25,34 @@ def test_netloc():
     assert ref.netloc == 'registry-1.docker.io'
 
 
-def test_name():
+def test_ref_without_tag():
     ref = om.OciImageReference('example.org/path:tag')
-    assert ref.name == 'example.org/path'
+    assert ref.ref_without_tag == 'example.org/path'
 
     ref = om.OciImageReference(f'example.org/path@sha256:{example_digest}')
-    assert ref.name == 'example.org/path'
+    assert ref.ref_without_tag == 'example.org/path'
 
     ref = om.OciImageReference('example.org:1234/path:tag')
-    assert ref.name == 'example.org:1234/path'
+    assert ref.ref_without_tag == 'example.org:1234/path'
 
     # special handling to mimic docker-cli
     ref = om.OciImageReference('alpine:3')
-    assert ref.name == 'registry-1.docker.io/library/alpine'
+    assert ref.ref_without_tag == 'registry-1.docker.io/library/alpine'
+
+
+def test_name():
+    ref = om.OciImageReference('example.org/path:tag')
+    assert ref.name == 'path'
+
+    ref = om.OciImageReference(f'example.org/path@sha256:{example_digest}')
+    assert ref.name == 'path'
+
+    ref = om.OciImageReference('example.org:1234/path:tag')
+    assert ref.name == 'path'
+
+    # special handling to mimic docker-cli
+    ref = om.OciImageReference('alpine:3')
+    assert ref.name == 'library/alpine'
 
 
 def test_original_image_reference():

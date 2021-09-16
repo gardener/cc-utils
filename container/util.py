@@ -70,8 +70,8 @@ def filter_image(
     if isinstance(manifest, om.OciImageManifestList):
         # recurse into sub-images
 
-        src_name = source_ref.name
-        tgt_name = target_ref.name
+        src_name = source_ref.ref_without_tag
+        tgt_name = target_ref.ref_without_tag
 
         for idx, sub_manifest in enumerate(manifest.manifests):
            source_ref = f'{src_name}@{sub_manifest.digest}'

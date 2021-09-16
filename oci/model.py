@@ -55,12 +55,23 @@ class OciImageReference:
 
     @property
     @functools.cache
-    def name(self) -> str:
+    def ref_without_tag(self) -> str:
         '''
-        returns the (normalised) image name, i.e. the image reference w/o the tag or digest tag.
+        returns the (normalised) image reference w/o the tag or digest tag.
         '''
         p = self.urlparsed
         name = p.netloc + p.path.rsplit(':', 1)[0].rsplit('@', 1)[0]
+
+        return name
+
+    @property
+    @functools.cache
+    def name(self) -> str:
+        '''
+        returns the (normalised) image name (omitting api-prefix and tag)
+        '''
+        p = self.urlparsed
+        name = p.path[1:].rsplit(':', 1)[0].rsplit('@', 1)[0]
 
         return name
 
