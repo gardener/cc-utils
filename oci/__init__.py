@@ -23,8 +23,8 @@ image_reference = str
 
 
 def replicate_artifact(
-    src_image_reference: str,
-    tgt_image_reference: str,
+    src_image_reference: typing.Union[str, om.OciImageReference],
+    tgt_image_reference: typing.Union[str, om.OciImageReference],
     credentials_lookup: oa.credentials_lookup=None,
     routes: oc.OciRoutes=oc.OciRoutes(),
     oci_client: oc.Client=None,
@@ -37,8 +37,8 @@ def replicate_artifact(
     if not (bool(credentials_lookup) ^ bool(oci_client)):
         raise ValueError('either credentials-lookup + routes, xor client must be passed')
 
-    src_image_reference = ou.normalise_image_reference(src_image_reference)
-    tgt_image_reference = ou.normalise_image_reference(tgt_image_reference)
+    src_image_reference = om.OciImageReference.to_image_ref(src_image_reference)
+    tgt_image_reference = om.OciImageReference.to_image_ref(tgt_image_reference)
 
     if not oci_client:
         client = oc.Client(
@@ -67,7 +67,7 @@ def replicate_artifact(
         manifest, _ = oconv.v1_manifest_to_v2(
             manifest=manifest,
             oci_client=client,
-            tgt_image_ref=tgt_image_reference,
+            tgt_image_ref=str(tgt_image_reference),
         )
 
         # we must determine the uncompressed layer-digests to synthesise a valid
