@@ -1,4 +1,5 @@
 import dataclasses
+import enum
 import hashlib
 import json
 import logging
@@ -22,12 +23,41 @@ logger = logging.getLogger(__name__)
 image_reference = str
 
 
+class ReplicationMode(enum.Enum):
+    '''
+    configures the oci artifact replication semantics
+
+    REGISTRY_DEFAULTS:
+        do not specify `accept`-header. Depending on OCI-Registry, this will
+        in some cases result in "single" oci artifacts (defaulting to variants
+        for linux-x86_64) to be replicated, even if multiarch would be available
+
+        for clients that also do not specify the `accept` header, or that require only
+        the default image, the result will most closely reflect the one from the source
+        registry.
+
+    PREFER_MULTIARCH:
+        prefer multiarch if available (by setting `accept` header)
+
+        The replication result will match the source as exact as possible.
+
+    NORMALISE_TO_MULTIARCH:
+        like PREFER_MULTIARCH. However, in case only a single artifact is available,
+        generate a multiarch manifest with the single artifact as only entry, using the
+        `os` and `architecture` attributes from the artifact's cfg-blob.
+    '''
+    REGISTRY_DEFAULTS = 'registry_defaults'
+    PREFER_MULTIARCH = 'prefer_multiarch'
+    NORMALISE_TO_MULTIARCH = 'normalise_to_multiarch'
+
+
 def replicate_artifact(
     src_image_reference: typing.Union[str, om.OciImageReference],
     tgt_image_reference: typing.Union[str, om.OciImageReference],
     credentials_lookup: oa.credentials_lookup=None,
     routes: oc.OciRoutes=oc.OciRoutes(),
     oci_client: oc.Client=None,
+    mode: ReplicationMode=ReplicationMode.REGISTRY_DEFAULTS,
 ) -> typing.Tuple[requests.Response, str, bytes]:
     '''
     verbatimly replicate the OCI Artifact from src -> tgt without taking any assumptions
@@ -48,9 +78,20 @@ def replicate_artifact(
     else:
         client = oci_client
 
+    if mode is ReplicationMode.REGISTRY_DEFAULTS:
+        accept = None
+    elif mode is ReplicationMode.PREFER_MULTIARCH:
+        accept = om.MimeTypes.prefer_multiarch
+    elif mode is ReplicationMode.NORMALISE_TO_MULTIARCH:
+        accept = om.MimeTypes.prefer_multiarch
+        raise NotImplementedError(mode) # todo: implement
+    else:
+        raise NotImplementedError(mode)
+
     # we need the unaltered - manifest for verbatim replication
     raw_manifest = client.manifest_raw(
         image_reference=src_image_reference,
+        accept=accept,
     ).text
     manifest = json.loads(raw_manifest)
     schema_version = int(manifest['schemaVersion'])

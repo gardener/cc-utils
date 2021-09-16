@@ -47,6 +47,7 @@ def filter_image(
     target_ref: typing.Union[str, om.OciImageReference],
     remove_files: typing.Sequence[str]=(),
     oci_client: oc.Client=None,
+    mode: oci.ReplicationMode=oci.ReplicationMode.REGISTRY_DEFAULTS,
 ) -> typing.Tuple[requests.Response, str, bytes]: # response, tgt-ref, manifest_bytes
     if not oci_client:
         oci_client = ccc.oci.oci_client()
@@ -63,9 +64,23 @@ def filter_image(
             src_image_reference=str(source_ref),
             tgt_image_reference=str(target_ref),
             oci_client=oci_client,
+            mode=mode,
         )
 
-    manifest = oci_client.manifest(image_reference=str(source_ref))
+    if mode is oci.ReplicationMode.REGISTRY_DEFAULTS:
+        accept = None
+    elif mode is oci.ReplicationMode.PREFER_MULTIARCH:
+        accept = om.MimeTypes.prefer_multiarch
+    elif mode is oci.ReplicationMode.NORMALISE_TO_MULTIARCH:
+        accept = om.MimeTypes.prefer_multiarch
+        raise NotImplementedError(mode)
+    else:
+        raise NotImplementedError(mode)
+
+    manifest = oci_client.manifest(
+        image_reference=str(source_ref),
+        accept=accept,
+    )
 
     if isinstance(manifest, om.OciImageManifestList):
         # recurse into sub-images
