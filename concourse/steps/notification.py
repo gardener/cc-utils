@@ -1,8 +1,8 @@
 from concourse.model.traits.notifications import NotificationTriggeringPolicy
 from concourse.client.model import BuildStatus
 
+import ccc.concourse
 import concourse.util
-import concourse.client
 
 import os
 import traceback
@@ -44,11 +44,9 @@ def job_url(v):
 
 def determine_previous_build_status(v, cfg_set):
     cc_cfg = cfg_set.concourse()
-    cc_uam = cfg_set.concourse_uam(cc_cfg.concourse_uam_cfg())
 
-    concourse_client = concourse.client.from_cfg(
-        concourse_cfg=cc_cfg,
-        concourse_uam_cfg=cc_uam,
+    concourse_client = ccc.concourse.client_from_cfg_name(
+        concourse_cfg=cc_cfg.name(),
         team_name=v['build-team-name']
     )
     try:

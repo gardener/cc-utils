@@ -46,8 +46,8 @@ import os
 
 import gci.componentmodel as cm
 
+import ccc.concourse
 import ccc.github
-import concourse.client
 import cnudie.retrieve
 import ci.util
 import ci.log
@@ -80,11 +80,9 @@ if meta_build_job_name != env_build_job_name:
     )
 
 cc_cfg = cfg_set.concourse()
-cc_uam = cfg_set.concourse_uam(cc_cfg.concourse_uam_cfg())
 
-concourse_api = concourse.client.from_cfg(
-  concourse_cfg=cc_cfg,
-  concourse_uam_cfg=cc_uam,
+concourse_api = ccc.concourse.client_from_cfg_name(
+  concourse_cfg_name=cc_cfg.name(),
   team_name=meta_vars_dict['build-team-name'],
 )
 ## TODO: Replace with MAIN_REPO_DIR once it is available in synthetic steps
