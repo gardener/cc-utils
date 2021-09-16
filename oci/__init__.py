@@ -77,7 +77,7 @@ def replicate_artifact(
         uncompressed_layer_digests = []
     elif schema_version == 2:
         manifest = json.loads(raw_manifest)
-        media_type = manifest['mediaType']
+        media_type = manifest.get('mediaType', om.DOCKER_MANIFEST_SCHEMA_V2_MIME)
 
         if media_type == om.OCI_MANIFEST_LIST_MIME:
             # multi-arch
