@@ -94,10 +94,12 @@ def filter_image(
 
         manifest_dict = dataclasses.asdict(manifest)
         manifest_raw = json.dumps(manifest_dict).encode('utf-8')
-        return oci_client.put_manifest(
+        res = oci_client.put_manifest(
             image_reference=str(target_ref),
             manifest=manifest_raw,
         )
+
+        return res, str(target_ref), manifest_raw
 
     cp_cfg_blob = True
     if isinstance(manifest, om.OciImageManifestV1):
