@@ -149,16 +149,6 @@ def _split_image_reference(image_reference: str):
     return prefix, image_name, image_tag
 
 
-def _image_name(image_reference: str):
-    if ':' in image_reference or '@' in image_reference:
-        return _split_image_reference(image_reference=image_reference)[1]
-    else:
-        if not image_reference.startswith('https://'):
-            image_reference = 'https://' + image_reference
-        parsed = urllib.parse.urlparse(image_reference)
-        return parsed.path.lstrip('/')
-
-
 def base_api_url(
     image_reference: str,
 ) -> str:
@@ -177,13 +167,13 @@ class OciRoutes:
 
     def artifact_base_url(
         self,
-        image_reference: str,
+        image_reference: typing.Union[str, om.OciImageReference],
     ) -> str:
-        image_name = _image_name(image_reference=image_reference)
+        image_reference = om.OciImageReference.to_image_ref(image_reference)
 
         return urljoin(
             self.base_api_url_lookup(image_reference=image_reference),
-            image_name,
+            image_reference.name,
         )
 
     def _blobs_url(self, image_reference: str) -> str:
@@ -296,7 +286,7 @@ class Client:
             logger.warning(f'no credentials for {image_reference=} - attempting anonymous-auth')
 
         url = base_api_url(
-            image_reference=image_reference,
+            image_reference=str(image_reference),
         )
         res = self.session.get(
             url=url,
