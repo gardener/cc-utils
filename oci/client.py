@@ -150,10 +150,11 @@ def _split_image_reference(image_reference: str):
 
 
 def base_api_url(
-    image_reference: str,
+    image_reference: typing.Union[str, om.OciImageReference],
 ) -> str:
-    parsed_url = parse_image_reference(image_reference=image_reference)
-    base_url = f'https://{parsed_url.netloc}'
+    image_reference = om.OciImageReference.to_image_ref(image_reference)
+
+    base_url = f'https://{image_reference.netloc}'
 
     return urljoin(base_url, 'v2') + '/'
 

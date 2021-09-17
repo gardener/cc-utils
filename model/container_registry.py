@@ -172,6 +172,7 @@ def find_config(
     _normalised_image_reference=False,
 ) -> typing.Optional[ContainerRegistryConfig]:
     ci.util.check_type(image_reference, (str, om.OciImageManifest))
+    image_reference = str(image_reference)
     cfg_factory = ci.util.ctx().cfg_factory()
 
     if isinstance(image_reference, om.OciImageReference):
