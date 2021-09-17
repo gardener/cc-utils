@@ -227,8 +227,13 @@ class OciImageManifestV1:
 
 @dataclasses.dataclass(frozen=True)
 class OciPlatform:
+    '''
+    https://github.com/distribution/distribution/blob/main/docs/spec/manifest-v2-2.md#manifest-list
+    '''
     architecture: str
-    os: str
+    os: str # could also be a dict (see spec)
+    variant: typing.Optional[str] = None
+    features: typing.Optional[list[str]] = dataclasses.field(default_factory=list)
 
 
 @dataclasses.dataclass(frozen=True)
