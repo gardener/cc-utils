@@ -156,7 +156,6 @@ def replicate_artifact(
         accept = om.MimeTypes.prefer_multiarch
     elif mode is ReplicationMode.NORMALISE_TO_MULTIARCH:
         accept = om.MimeTypes.prefer_multiarch
-        raise NotImplementedError(mode) # todo: implement
     else:
         raise NotImplementedError(mode)
 
@@ -226,6 +225,49 @@ def replicate_artifact(
             om.OCI_MANIFEST_SCHEMA_V2_MIME,
             om.DOCKER_MANIFEST_SCHEMA_V2_MIME,
         ):
+            if mode is ReplicationMode.NORMALISE_TO_MULTIARCH:
+                if not src_image_reference.has_digest_tag:
+                    src_image_reference = om.OciImageReference.to_image_ref(
+                        oci_client.to_digest_hash(
+                            image_reference=src_image_reference,
+                        )
+                    )
+                platform = _platform_from_single_image(
+                    image_reference=src_image_reference,
+                    oci_client=oci_client,
+                )
+                # force usage of digest-tag (symbolic tag required for manifest-list
+                tgt_image_ref = \
+                    f'{tgt_image_reference.ref_without_tag}@{src_image_reference.tag}'
+
+                res, ref, manifest_bytes = replicate_artifact(
+                    src_image_reference=src_image_reference,
+                    tgt_image_reference=tgt_image_ref,
+                    oci_client=oci_client,
+                )
+
+                manifest_list = om.OciImageManifestList(
+                    manifests=[
+                        om.OciImageManifestListEntry(
+                            digest=f'sha256:{hashlib.sha256(manifest_bytes).hexdigest()}',
+                            mediaType=media_type,
+                            size=len(manifest_bytes),
+                            platform=platform,
+                        ),
+                    ]
+                )
+
+                manifest_list_bytes = json.dumps(
+                    manifest_list.as_dict(),
+                ).encode('utf-8')
+
+                res = oci_client.put_manifest(
+                    image_reference=tgt_image_reference,
+                    manifest=manifest_list_bytes,
+                )
+
+                return res, tgt_image_reference, manifest_list_bytes
+
             manifest = dacite.from_dict(
                 data_class=om.OciImageManifest,
                 data=json.loads(raw_manifest)
