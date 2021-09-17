@@ -171,7 +171,6 @@ def find_config(
     privileges:oa.Privileges=None,
     _normalised_image_reference=False,
 ) -> typing.Optional[ContainerRegistryConfig]:
-    ci.util.check_type(image_reference, (str, om.OciImageManifest))
     image_reference = str(image_reference)
     cfg_factory = ci.util.ctx().cfg_factory()
 
