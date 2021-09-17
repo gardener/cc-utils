@@ -234,7 +234,11 @@ def find_own_running_build():
         except StopIteration:
             pass
 
-        uuid_json = json.loads(uuid_line)
+        try:
+            uuid_json = json.loads(uuid_line)
+        except json.decoder.JSONDecodeError:
+            logger.error(f'Error when parsing {uuid_line=}')
+            raise
         if uuid_json['uuid'] == build_job_uuid:
             return build
     else:
