@@ -603,16 +603,20 @@ class Client:
         )
 
     def to_digest_hash(self, image_reference: str, accept: str=None):
-        # TODO: we might early-exit if img_ref already has a "hashtag"
+        image_reference = om.OciImageReference.to_image_ref(image_reference)
+        if image_reference.has_digest_tag:
+            return str(image_reference)
+
         manifest_hash_digest = hashlib.sha256(
             self.manifest_raw(
                 image_reference=image_reference,
                 accept=accept,
             ).content
         ).hexdigest()
-        prefix, image_name, _ = _split_image_reference(image_reference=image_reference)
 
-        return f'{prefix}/{image_name}@sha256:{manifest_hash_digest}'
+        prefix = image_reference.ref_without_tag
+
+        return f'{prefix}@sha256:{manifest_hash_digest}'
 
     def tags(self, image_reference: str):
         scope = _scope(image_reference=image_reference, action='pull')
