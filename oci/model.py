@@ -235,10 +235,25 @@ class OciPlatform:
     variant: typing.Optional[str] = None
     features: typing.Optional[list[str]] = dataclasses.field(default_factory=list)
 
+    def as_dict(self) -> dict:
+        # need custom serialisation, because some OCI registries do not like null-values
+        # (must be absent instead)
+        raw = dataclasses.asdict(self)
+
+        if not self.variant:
+            del raw['variant']
+
+        return raw
+
 
 @dataclasses.dataclass(frozen=True)
 class OciImageManifestListEntry(OciBlobRef):
     platform: OciPlatform
+
+    def as_dict(self) -> dict:
+        raw = dataclasses.asdict(self)
+        raw['platform'] = self.platform.as_dict()
+        return raw
 
 
 @dataclasses.dataclass
@@ -246,3 +261,10 @@ class OciImageManifestList:
     manifests: typing.List[OciImageManifestListEntry]
     mediaType: str = OCI_MANIFEST_LIST_MIME
     schemaVersion: int = 2
+
+    def as_dict(self):
+        return {
+            'manifests': [le.as_dict() for le in self.manifests],
+            'mediaType': self.mediaType,
+            'schemaVersion': self.schemaVersion,
+        }
