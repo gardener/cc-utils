@@ -20,6 +20,7 @@ import typing
 import ci.util
 import oci.util
 import oci.auth as oa
+import oci.model as om
 
 from model.base import (
     BasicCredentials,
@@ -166,12 +167,16 @@ class GcrCredentials(BasicCredentials):
 
 
 def find_config(
-    image_reference: str,
+    image_reference: typing.Union[str, om.OciImageReference],
     privileges:oa.Privileges=None,
     _normalised_image_reference=False,
 ) -> typing.Optional[ContainerRegistryConfig]:
-    ci.util.check_type(image_reference, str)
+    ci.util.check_type(image_reference, (str, om.OciImageManifest))
     cfg_factory = ci.util.ctx().cfg_factory()
+
+    if isinstance(image_reference, om.OciImageReference):
+        image_reference = image_reference.normalised_image_reference()
+        _normalised_image_reference = True
 
     matching_cfgs = sorted((
         cfg for cfg in
