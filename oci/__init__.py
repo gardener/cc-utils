@@ -137,11 +137,33 @@ def replicate_artifact(
     routes: oc.OciRoutes=oc.OciRoutes(),
     oci_client: oc.Client=None,
     mode: ReplicationMode=ReplicationMode.REGISTRY_DEFAULTS,
+    platform_filter: typing.Callable[[om.OciPlatform], bool]=None,
 ) -> typing.Tuple[requests.Response, str, bytes]:
     '''
-    verbatimly replicate the OCI Artifact from src -> tgt without taking any assumptions
-    about the transported contents. This in particular allows contents to be replicated
-    that are not e.g. "docker-compliant" OCI Images.
+    replicate the given OCI Artifact from src_image_reference to tgt_image_reference.
+
+    try to be verbatim, if possible (i.e. target should reflect source as close as
+    possible). Whether or not a fully identical replication is possible depends on
+    the source artifact and chosen replication `mode`:
+
+    If source artifact is a "legacy / v1" "docker image" (as it used to be
+    created from older versions of docker) verbatim replication is not
+    possible, because modern (v2) OCI Registries (such as GCR) will not accept
+    those manifests. Therefore, conversion to "v2" is required (done
+    transparently by this function).
+
+    If source artifact is a "multiarch" image (oci.model.OciImageManifestList), OCI
+    registries show different behaviour if ReplicationMode.REGISTRY_DEFAULTS is used.
+    Some registries will in this case return a single-image manifest, instead of the
+    multiarch-manifest (in this case, the replication result will only be a single-image).
+
+    Use ReplicationMode.PREFER_MULTIARCH or ReplicationMode.NORMALISE_TO_MULTIARCH to
+    prevent this.
+
+    If platform_filter is specified (only applied for multi-arch images), the replication
+    result will obviously also deviate from src, depending on the filter semantics.
+
+    pass either `credentials_lookup`, `routes`, OR `oci_client`
     '''
     if not (bool(credentials_lookup) ^ bool(oci_client)):
         raise ValueError('either credentials-lookup + routes, xor client must be passed')
@@ -210,9 +232,26 @@ def replicate_artifact(
             tgt_ref = om.OciImageReference(image_reference=tgt_image_reference)
             tgt_name = tgt_ref.ref_without_tag
 
-            for sub_manifest in manifest.manifests:
+            # try to avoid modifications (from x-serialisation) - unless we have to
+            manifest_dirty = False
+
+            # cp manifests to tuple, because we _might_ modify if there is a platform_filter
+            for sub_manifest in tuple(manifest.manifests):
                 src_reference = f'{src_name}@{sub_manifest.digest}'
                 tgt_reference = f'{tgt_name}@{sub_manifest.digest}'
+
+                if platform_filter:
+                    platform = _platform_from_single_image(
+                        image_reference=src_reference,
+                        oci_client=oci_client,
+                        base_platform=sub_manifest.platform,
+                    )
+                    if not platform_filter(platform):
+                        logger.info(f'skipping {platform=} for {src_image_reference=}')
+                        manifest_dirty = True
+                        manifest.manifests.remove(sub_manifest)
+                        continue
+
                 logger.info(f'replicating to {tgt_reference=}')
 
                 replicate_artifact(
@@ -220,6 +259,9 @@ def replicate_artifact(
                     tgt_image_reference=tgt_reference,
                     oci_client=client,
                 )
+
+            if manifest_dirty:
+                raw_manifest = json.dumps(manifest.as_dict())
 
             res = client.put_manifest(
                 image_reference=tgt_image_reference,
