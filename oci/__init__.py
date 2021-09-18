@@ -54,6 +54,7 @@ class ReplicationMode(enum.Enum):
 def _platform_from_single_image(
     image_reference: typing.Union[str, om.OciImageReference],
     oci_client: oc.Client=None,
+    base_platform: om.OciPlatform=None,
 ) -> om.OciPlatform:
     '''
     determines the platform from a "single oci image" (i.e. an oci image which is _not_
@@ -64,7 +65,13 @@ def _platform_from_single_image(
         raise ValueError(image_reference)
 
     manifest = oci_client.manifest(image_reference=image_reference)
-    cfg = oci_client.blob(
+
+    if base_platform:
+        cfg = base_platform.as_dict()
+    else:
+        cfg = {}
+
+    cfg |= oci_client.blob(
         image_reference=image_reference,
         digest=manifest.config.digest,
         stream=False, # we will need to json.load the (small) result anyhow
