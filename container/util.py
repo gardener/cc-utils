@@ -250,7 +250,7 @@ def filter_image(
     else:
         # if tgt does not bear a tag, calculate hash digest as tgt
         manifest_digest = hashlib.sha256(manifest_raw).hexdigest()
-        target_ref = f'{target_ref.name}@sha256:{manifest_digest}'
+        target_ref = f'{target_ref.ref_without_tag}@sha256:{manifest_digest}'
 
     res = oci_client.put_manifest(
         image_reference=target_ref,
