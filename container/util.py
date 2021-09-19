@@ -70,7 +70,6 @@ def filter_image(
         accept = om.MimeTypes.prefer_multiarch
     elif mode is oci.ReplicationMode.NORMALISE_TO_MULTIARCH:
         accept = om.MimeTypes.prefer_multiarch
-        raise NotImplementedError(mode)
     else:
         raise NotImplementedError(mode)
 
@@ -112,6 +111,49 @@ def filter_image(
         )
 
         return res, str(target_ref), manifest_raw
+
+    # normalise single-image to multi-arch (w/ one entry)
+    if mode is oci.ReplicationMode.NORMALISE_TO_MULTIARCH:
+        if not source_ref.has_digest_tag:
+            source_ref = om.OciImageReference.to_image_ref(
+                oci_client.to_digest_hash(
+                    image_reference=source_ref,
+                )
+            )
+
+        platform = oci._platform_from_single_image(
+            image_reference=source_ref,
+            oci_client=oci_client,
+        )
+
+        res, ref, manifest_bytes = filter_image(
+            source_ref=source_ref,
+            target_ref=target_ref.ref_without_tag,
+            remove_files=remove_files,
+            oci_client=oci_client,
+        )
+
+        manifest_list = om.OciImageManifestList(
+            manifests=[
+                om.OciImageManifestListEntry(
+                    digest=f'sha256:{hashlib.sha256(manifest_bytes).hexdigest()}',
+                    mediaType=manifest.mediaType,
+                    size=len(manifest_bytes),
+                    platform=platform,
+                )
+            ],
+        )
+
+        manifest_list_bytes = json.dumps(
+            manifest_list.as_dict(),
+        ).encode('utf-8')
+
+        res = oci_client.put_manifest(
+            image_reference=target_ref,
+            manifest=manifest_list_bytes,
+        )
+
+        return res, target_ref, manifest_list_bytes
 
     cp_cfg_blob = True
     if isinstance(manifest, om.OciImageManifestV1):
