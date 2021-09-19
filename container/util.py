@@ -52,17 +52,14 @@ def filter_image(
     if not oci_client:
         oci_client = ccc.oci.oci_client()
 
-    if isinstance(source_ref, str):
-        source_ref = om.OciImageReference(source_ref)
-
-    if isinstance(target_ref, str):
-        target_ref = om.OciImageReference(target_ref)
+    source_ref = om.OciImageReference.to_image_ref(source_ref)
+    target_ref = om.OciImageReference.to_image_ref(target_ref)
 
     # shortcut in case there are no filtering-rules
     if not remove_files:
         return oci.replicate_artifact(
-            src_image_reference=str(source_ref),
-            tgt_image_reference=str(target_ref),
+            src_image_reference=source_ref,
+            tgt_image_reference=target_ref,
             oci_client=oci_client,
             mode=mode,
         )
@@ -198,7 +195,7 @@ def filter_image(
             f.seek(0)
 
             oci_client.put_blob(
-                image_reference=str(target_ref),
+                image_reference=target_ref,
                 digest=(layer_digest := 'sha256:' + layer_hash.hexdigest()),
                 octets_count=leng,
                 data=f,

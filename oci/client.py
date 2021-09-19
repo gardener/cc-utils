@@ -215,15 +215,9 @@ class OciRoutes:
         )
 
     def manifest_url(self, image_reference: typing.Union[str, om.OciImageReference]) -> str:
-        if isinstance(image_reference, om.OciImageReference):
-            image_reference = str(image_reference)
+        image_reference = om.OciImageReference.to_image_ref(image_reference)
 
-        last_part = image_reference.split('/')[-1]
-        if '@' in last_part:
-            tag = last_part.split('@')[-1]
-        elif ':' in last_part:
-            tag = last_part.split(':')[-1]
-        else:
+        if not (tag := image_reference.tag):
             raise ValueError(f'{image_reference=} does not seem to contain a tag')
 
         return urljoin(
@@ -649,9 +643,10 @@ class Client:
 
     def put_manifest(
         self,
-        image_reference: str,
+        image_reference: typing.Union[str, om.OciImageReference],
         manifest: bytes,
     ):
+        image_reference = om.OciImageReference.to_image_ref(image_reference)
         scope = _scope(image_reference=image_reference, action='push,pull')
 
         parsed = json.loads(manifest)
