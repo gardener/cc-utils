@@ -59,6 +59,10 @@ def test_original_image_reference():
     ref = om.OciImageReference('alpine:3')
     assert ref.original_image_reference == 'alpine:3'
 
+    # without tag
+    ref = om.OciImageReference('eu.gcr.io/example/foo')
+    assert ref.original_image_reference == 'eu.gcr.io/example/foo'
+
 
 def test_tag():
     ref = om.OciImageReference('alpine:3')
@@ -82,6 +86,18 @@ def test_tag_type():
 def test_str():
     ref = om.OciImageReference('alpine:3')
     assert str(ref) == ref.normalised_image_reference
+
+
+def test_normalised_image_reference():
+    ref = om.OciImageReference('alpine:3')
+    assert ref.normalised_image_reference == 'registry-1.docker.io/library/alpine:3'
+
+    ref = om.OciImageReference('eu.gcr.io/project/foo:bar')
+    assert ref.normalised_image_reference == 'eu.gcr.io/project/foo:bar'
+
+    # no tag
+    ref = om.OciImageReference('eu.gcr.io/project/foo')
+    assert ref.normalised_image_reference == 'eu.gcr.io/project/foo'
 
 
 def test_eq():
