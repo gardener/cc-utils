@@ -117,7 +117,7 @@ def filter_image(
            )
            manifest.manifests[idx] = patched_manifest
 
-        manifest_dict = dataclasses.asdict(manifest)
+        manifest_dict = manifest.as_dict()
         manifest_raw = json.dumps(manifest_dict).encode('utf-8')
         res = oci_client.put_manifest(
             image_reference=str(target_ref),
