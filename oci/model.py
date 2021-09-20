@@ -43,11 +43,13 @@ class OciImageReference:
         else:
             return OciImageReference(image_reference=image_reference)
 
-    def __init__(self, image_reference: str):
+    def __init__(self, image_reference: typing.Union[str, 'OciImageReference']):
         if isinstance(image_reference, OciImageReference):
             self._orig_image_reference = image_reference._orig_image_reference
-        else:
+        elif isinstance(image_reference, str):
             self._orig_image_reference = image_reference
+        else:
+            raise ValueError(image_reference)
 
     @property
     def original_image_reference(self) -> str:
