@@ -24,7 +24,6 @@ import gci.componentmodel as cm
 
 import ccc.concourse
 import concourse.util
-import ctx
 import mail.model
 import mailutil
 import reutil
@@ -442,7 +441,6 @@ def print_protecode_info_table(
 
 def retrieve_buildlog(uuid: str):
     concourse_cfg = concourse.util._current_concourse_config()
-    uam_cfg_name = concourse_cfg.concourse_uam_cfg()
 
     pipeline_metadata = concourse.util.get_pipeline_metadata()
     client = ccc.concourse.client_from_cfg_name(
