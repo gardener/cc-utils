@@ -281,7 +281,7 @@ class ImageScanTraitTransformer(TraitTransformer):
                 name=concourse.model.traits.component_descriptor.DIR_NAME,
                 variable_name=concourse.model.traits.component_descriptor.ENV_VAR_NAME,
             )
-            self.malware_scan_step.set_timeout(duration_string='12h')
+            self.malware_scan_step.set_timeout(duration_string='18h')
             yield self.malware_scan_step
 
     def process_pipeline_args(self, pipeline_args: JobVariant):
