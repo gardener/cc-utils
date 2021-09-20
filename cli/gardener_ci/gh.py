@@ -31,13 +31,14 @@ def ls_team_members(host: str, org: str, teams: [str]):
 def ls_org_webhooks(org_url: str):
     gh_api = ccc.github.github_api(repo_url=org_url)
 
+    if not '://' in org_url:
+        org_url = f'https://{org_url}'
+
     parsed_url = urllib.parse.urlparse(org_url)
 
     org_name = parsed_url.path[1:]
     if '/' in org_name:
         org_name = org_name.split('/')[0]
-
-    print(org_name)
 
     webhooks = github.webhook.org_webhooks(github_api=gh_api, org_name=org_name).json()
 
@@ -51,6 +52,9 @@ def retrigger_failed_webhooks(org_url: str, hook_id: str, max_age_days:int=2):
 
     gh_api = ccc.github.github_api(repo_url=org_url)
     routes = github.webhook.Routes(gh_api)
+
+    if not '://' in org_url:
+        org_url = f'https://{org_url}'
 
     parsed_url = urllib.parse.urlparse(org_url)
     org_name = parsed_url.path[1:]
