@@ -48,6 +48,7 @@ def filter_image(
     remove_files: typing.Sequence[str]=(),
     oci_client: oc.Client=None,
     mode: oci.ReplicationMode=oci.ReplicationMode.REGISTRY_DEFAULTS,
+    platform_filter: typing.Callable[[om.OciPlatform], bool]=None,
 ) -> typing.Tuple[requests.Response, str, bytes]: # response, tgt-ref, manifest_bytes
     if not oci_client:
         oci_client = ccc.oci.oci_client()
@@ -62,6 +63,7 @@ def filter_image(
             tgt_image_reference=target_ref,
             oci_client=oci_client,
             mode=mode,
+            platform_filter=platform_filter,
         )
 
     if mode is oci.ReplicationMode.REGISTRY_DEFAULTS:
@@ -84,8 +86,20 @@ def filter_image(
         src_name = source_ref.ref_without_tag
         tgt_name = target_ref.ref_without_tag
 
-        for idx, sub_manifest in enumerate(manifest.manifests):
+        for idx, sub_manifest in enumerate(tuple(manifest.manifests)):
            source_ref = f'{src_name}@{sub_manifest.digest}'
+
+           if platform_filter:
+               platform = oci._platform_from_single_image(
+                   image_reference=source_ref,
+                   oci_client=oci_client,
+                   base_platform=sub_manifest.platform,
+                )
+               if not platform_filter(platform):
+                   logger.info(f'skipping {platform=} for {source_ref=}')
+                   manifest.manifests.remove(sub_manifest)
+                   continue
+
            logger.info(f'filtering to {tgt_name=}')
 
            res, tgt_ref, manifest_bytes = filter_image(
