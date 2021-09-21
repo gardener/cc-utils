@@ -1,6 +1,8 @@
-import tarfile
-import typing
 import logging
+import socket
+import tarfile
+import traceback
+import typing
 
 import requests.exceptions
 
@@ -117,10 +119,12 @@ def _try_scan_image(
                     for scan_result, path in clamav_findings
                 ],
             )
-    except requests.exceptions.RequestException as e:
+    except (requests.exceptions.RequestException, socket.gaierror) as e:
         # log warning and include it as finding to document it via the generated report-mails
         warning = f'error while scanning {resource.access.imageReference} {e=}'
         logger.warning(warning)
+        traceback.print_exc()
+
         return saf.model.MalwarescanResult(
                 resource=resource,
                 scan_state=saf.model.MalwareScanState.FINISHED_WITH_ERRORS,
