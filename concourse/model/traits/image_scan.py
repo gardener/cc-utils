@@ -150,6 +150,12 @@ CLAMAV_ATTRS = (
         name='clamav_cfg_name',
         doc='clamav cfg name to use (see cc-config)',
     ),
+    AttributeSpec.optional(
+        name='parallel_jobs',
+        doc='the amount of (maxium) parallel workers',
+        type=int,
+        default=8,
+    ),
 )
 
 
@@ -160,6 +166,9 @@ class ClamAVScanCfg(ModelBase):
 
     def clamav_cfg_name(self):
         return self.raw.get('clamav_cfg_name')
+
+    def parallel_jobs(self) -> int:
+        return int(self.raw['parallel_jobs'])
 
     def validate(self):
         super().validate()
