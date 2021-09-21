@@ -133,12 +133,12 @@ def _try_scan_image(
             )
     except (requests.exceptions.RequestException, socket.gaierror) as e:
         # log warning and include it as finding to document it via the generated report-mails
-        warning = f'error while scanning {resource.access.imageReference} {e=}'
+        warning = f'error while scanning {oci_resource.access.imageReference} {e=}'
         logger.warning(warning)
         traceback.print_exc()
 
         return saf.model.MalwarescanResult(
-                resource=resource,
+                resource=oci_resource,
                 scan_state=saf.model.MalwareScanState.FINISHED_WITH_ERRORS,
                 findings=[warning],
             )
