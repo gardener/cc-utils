@@ -5,6 +5,7 @@ import logging
 import requests.exceptions
 
 import ccc.oci
+import clamav.client
 import gci.componentmodel
 import oci.client as oc
 import product
@@ -94,6 +95,39 @@ def _scan_oci_image(
     yield from findings
 
 
+def _try_scan_image(
+    oci_resource: gci.componentmodel.Resource,
+    clamav_client: clamav.client.ClamAVClient,
+    oci_client: oc.Client,
+):
+    access: gci.componentmodel.OciAccess = oci_resource.access
+
+    try:
+        clamav_findings = _scan_oci_image(
+            clamav_client=clamav_client,
+            oci_client=oci_client,
+            image_reference=access.imageReference,
+        )
+
+        return saf.model.MalwarescanResult(
+                resource=oci_resource,
+                scan_state=saf.model.MalwareScanState.FINISHED_SUCCESSFULLY,
+                findings=[
+                    f'{path}: {scan_result.virus_signature()}'
+                    for scan_result, path in clamav_findings
+                ],
+            )
+    except requests.exceptions.RequestException as e:
+        # log warning and include it as finding to document it via the generated report-mails
+        warning = f'error while scanning {resource.access.imageReference} {e=}'
+        logger.warning(warning)
+        return saf.model.MalwarescanResult(
+                resource=resource,
+                scan_state=saf.model.MalwareScanState.FINISHED_WITH_ERRORS,
+                findings=[warning],
+            )
+
+
 def virus_scan_images(
     component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
     filter_function,
@@ -104,40 +138,18 @@ def virus_scan_images(
 
     Used by image-scan-trait
     '''
-    for component, resource in product.v2.enumerate_oci_resources(
-            component_descriptor=component_descriptor_v2,
-    ):
-        if not filter_function(component, resource):
-            continue
+    resources = [
+        resource for component, resource
+        in product.v2.enumerate_oci_resources(component_descriptor=component_descriptor_v2)
+        if filter_function(component, resource)
+    ]
 
+    for resource in resources:
         if not resource.access.type is gci.componentmodel.AccessType.OCI_REGISTRY:
             raise ValueError(resource.access.type)
-        access: gci.componentmodel.OciAccess = resource.access
 
-        try:
-            clamav_findings = _scan_oci_image(
-                clamav_client=clamav_client,
-                oci_client=oci_client,
-                image_reference=access.imageReference,
-            )
-
-            yield saf.model.MalwarescanResult(
-                    resource=resource,
-                    scan_state=saf.model.MalwareScanState.FINISHED_SUCCESSFULLY,
-                    findings=[
-                        f'{path}: {scan_result.virus_signature()}'
-                        for scan_result, path in clamav_findings
-                    ],
-                )
-        except requests.exceptions.RequestException as e:
-            # log warning and include it as finding to document it via the generated report-mails
-            warning = (
-                'A connection error occurred while scanning the image '
-                f'"{resource.access.imageReference} for viruses: {e}'
-            )
-            logger.warning(warning)
-            yield saf.model.MalwarescanResult(
-                    resource=resource,
-                    scan_state=saf.model.MalwareScanState.FINISHED_WITH_ERRORS,
-                    findings=[warning],
-                )
+        yield _try_scan_image(
+            clamav_client=clamav_client,
+            oci_client=oci_client,
+            oci_resource=resource,
+        )
