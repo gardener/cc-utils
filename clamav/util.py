@@ -1,3 +1,5 @@
+import concurrent.futures
+import functools
 import logging
 import socket
 import tarfile
@@ -148,12 +150,17 @@ def virus_scan_images(
         if filter_function(component, resource)
     ]
 
-    for resource in resources:
-        if not resource.access.type is gci.componentmodel.AccessType.OCI_REGISTRY:
-            raise ValueError(resource.access.type)
+    try_scan_func = functools.partial(
+        _try_scan_image,
+        clamav_client=clamav_client,
+        oci_client=oci_client,
+    )
 
-        yield _try_scan_image(
-            clamav_client=clamav_client,
-            oci_client=oci_client,
-            oci_resource=resource,
-        )
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=8)
+
+    results = executor.map(
+        try_scan_func,
+        resources,
+    )
+
+    yield from results
