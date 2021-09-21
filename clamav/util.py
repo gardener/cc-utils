@@ -1,4 +1,5 @@
 import concurrent.futures
+import datetime
 import functools
 import logging
 import socket
@@ -69,6 +70,9 @@ def _scan_oci_image(
     oci_client,
     image_reference: str,
 ) -> typing.Generator[saf.model.MalwarescanResult, None, None]:
+    start_time = datetime.datetime.now()
+    logger.info(f'starting to scan {image_reference=}')
+
     try:
         content_iterator = iter_image_files(
             image_reference=image_reference,
@@ -78,9 +82,12 @@ def _scan_oci_image(
             content_iterator=content_iterator,
         )
         yield from findings
+        passed_seconds = datetime.datetime.now().timestamp() - start_time.timestamp()
+        logger.info(f'scan finished for {image_reference=} after {passed_seconds=}')
         return
     except tarfile.TarError as te:
-        logger.warning(f'{image_reference=}: {te=} - falling back to layer-scan')
+        passed_seconds = datetime.datetime.now().timestamp() - start_time.timestamp()
+        logger.warning(f'{image_reference=}: {te=} - falling back to layer-scan {passed_seconds=}')
 
     # fallback to layer-wise scan in case we encounter gzip-uncompression-problems
     def iter_layers():
@@ -97,6 +104,9 @@ def _scan_oci_image(
         content_iterator=iter_layers(),
     )
     yield from findings
+
+    passed_seconds = datetime.datetime.now().timestamp() - start_time.timestamp()
+    logger.info(f'{image_reference=} layer-scan finished after {passed_seconds=}')
 
 
 def _try_scan_image(
@@ -139,6 +149,7 @@ def virus_scan_images(
     filter_function,
     clamav_client,
     oci_client: oc.Client=None,
+    max_workers=8,
 ) -> typing.Generator[saf.model.MalwarescanResult, None, None]:
     '''Scans components of the given Component Descriptor using ClamAV
 
@@ -150,13 +161,15 @@ def virus_scan_images(
         if filter_function(component, resource)
     ]
 
+    logger.info(f'will scan {len(resources)=} OCI Images')
+
     try_scan_func = functools.partial(
         _try_scan_image,
         clamav_client=clamav_client,
         oci_client=oci_client,
     )
 
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=8)
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
 
     results = executor.map(
         try_scan_func,
