@@ -9,7 +9,7 @@ import requests
 import oci.util
 
 OCI_MANIFEST_SCHEMA_V2_MIME = 'application/vnd.oci.image.manifest.v1+json'
-OCI_MANIFEST_LIST_MIME = 'application/vnd.docker.distribution.manifest.list.v2+json'
+DOCKER_MANIFEST_LIST_MIME = 'application/vnd.docker.distribution.manifest.list.v2+json'
 DOCKER_MANIFEST_SCHEMA_V2_MIME = 'application/vnd.docker.distribution.manifest.v2+json'
 empty_dict = dataclasses.field(default_factory=dict)
 
@@ -25,7 +25,7 @@ class MimeTypes:
     note: not all registries honour `access` header
     '''
     single_image = ', '.join((OCI_MANIFEST_SCHEMA_V2_MIME, DOCKER_MANIFEST_SCHEMA_V2_MIME))
-    multiarch = OCI_MANIFEST_LIST_MIME
+    multiarch = DOCKER_MANIFEST_LIST_MIME
     prefer_multiarch = ', '.join((multiarch, single_image))
 
 
@@ -261,7 +261,7 @@ class OciImageManifestListEntry(OciBlobRef):
 @dataclasses.dataclass
 class OciImageManifestList:
     manifests: typing.List[OciImageManifestListEntry]
-    mediaType: str = OCI_MANIFEST_LIST_MIME
+    mediaType: str = DOCKER_MANIFEST_LIST_MIME
     schemaVersion: int = 2
 
     def as_dict(self):
