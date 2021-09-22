@@ -56,15 +56,26 @@ class ClamAVClient:
         response = self._request(self._session.get, url)
         return ClamAVMonitoringInfo(response.json())
 
-    def scan(self, data):
+    def scan(self, data, timeout_seconds:float=60*15):
         url = self.routes.scan()
-        response = self._request(self._session.post, url=url, data=data)
+        response = self._request(
+            self._session.post,
+            url=url,
+            data=data,
+            timeout=timeout_seconds,
+        )
         return ClamAVScanResult(response.json())
 
-    def sse_scan(self, data):
+    def sse_scan(self, data, timeout_seconds:float=60*15):
         url = self.routes.sse_scan()
         client = ClamAVScanEventClient(
-            self._request(self._session.post, url=url, data=data, stream=True)
+            self._request(
+                self._session.post,
+                url=url,
+                data=data,
+                stream=True,
+                timeout=timeout_seconds,
+            )
         )
         return client.process_events()
 
@@ -87,7 +98,13 @@ class ClamAVClient:
             except ClamAVError as e:
                 if e.error_code() == ERROR_CODE_ON_SCAN_ABORTED:
                     yield (
-                        ClamAVScanResult({'finding': f'Scan aborted: {e.error_message()}'}), path
+                        ClamAVScanResult({'finding': f'Scan aborted: {e.error_message()}'}),
+                        path,
                     )
                 else:
                     raise e
+            except requests.exceptions.Timeout as te:
+                yield (
+                    ClamAVScanResult({'finding': f'Scan aborted (timed out) {te=}'}),
+                    path,
+                )
