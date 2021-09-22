@@ -17,16 +17,16 @@ import functools
 
 import ci.log
 import ci.util
-import concourse.client
 import concourse.client.api
 import ctx
+import model.concourse
 
 
 def lookup_cc_team_cfg(
     concourse_cfg_name,
     cfg_set,
     team_name,
-) -> concourse.client.ConcourseTeamConfig:
+) -> model.concourse.ConcourseTeamConfig:
     for cc_team_cfg in cfg_set._cfg_elements('concourse_team_cfg'):
         if cc_team_cfg.team_name() != team_name:
             continue
