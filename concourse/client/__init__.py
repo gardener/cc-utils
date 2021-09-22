@@ -55,17 +55,6 @@ def lookup_cc_team_cfg(concourse_cfg_name, cfg_set, team_name) -> ConcourseTeamC
     raise KeyError(f'No concourse team config for team name {team_name} found')
 
 
-def _have_new_team_cfg(cfg_factory):
-    try:
-        # migration coding. Check if concourse_team_cfg type exists
-        cfg_factory.concourse_team_cfg('does-not-exists')
-    except ConfigElementNotFoundError:
-        return True
-
-    except ValueError:
-        return False
-
-
 @ensure_annotations
 def client_from_parameters(
     base_url: str,
@@ -131,42 +120,19 @@ def from_cfg(
     # XXX rm last dependency towards cfg-factory
     cfg_factory = ci.util.ctx().cfg_factory()
 
-    if _have_new_team_cfg(cfg_factory=cfg_factory):
-        concourse_team_config = lookup_cc_team_cfg(
-            concourse_cfg_name=concourse_cfg.name(),
-            cfg_set=cfg_factory,
-            team_name=team_name,
-        )
-        concourse_endpoint = cfg_factory.concourse_endpoint(
-            concourse_team_config.concourse_endpoint_name()
-        )
-        return client_from_parameters(
-            base_url=concourse_endpoint.base_url(),
-            password=concourse_team_config.password(),
-            team_name=team_name,
-            username=concourse_team_config.username(),
-        )
-
-    # continue with old cfg elements since new team_cfg is not present
-    base_url = concourse_cfg.ingress_url(cfg_factory)
-
-    if not concourse_uam_cfg:
-        concourse_uam_cfg = cfg_factory.concourse_uam(concourse_cfg.concourse_uam_cfg())
-        import sys
-        print('warning: omitting concourse_uam_cfg is deprecated!', file=sys.stderr)
-
-    concourse_team = concourse_uam_cfg.team(team_name)
-    team_name = concourse_team.teamname()
-    username = concourse_team.username()
-    password = concourse_team.password()
-
-    return from_parameters(
-        base_url=base_url,
-        password=password,
+    concourse_team_config = lookup_cc_team_cfg(
+        concourse_cfg_name=concourse_cfg.name(),
+        cfg_set=cfg_factory,
         team_name=team_name,
-        username=username,
-        verify_ssl=verify_ssl,
-        concourse_api_version=concourse_api_version,
+    )
+    concourse_endpoint = cfg_factory.concourse_endpoint(
+        concourse_team_config.concourse_endpoint_name()
+    )
+    return client_from_parameters(
+        base_url=concourse_endpoint.base_url(),
+        password=concourse_team_config.password(),
+        team_name=team_name,
+        username=concourse_team_config.username(),
     )
 
 

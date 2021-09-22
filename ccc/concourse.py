@@ -53,50 +53,6 @@ def client_from_parameters(
 
 @functools.lru_cache()
 @ensure.ensure_annotations
-def _client_from_cfg_name(
-    concourse_cfg_name: str,
-    team_name: str
-):
-    cfg_factory = ci.util.ctx().cfg_factory()
-
-    cc_cfg = cfg_factory.concourse(concourse_cfg_name)
-    uam_cfg = cfg_factory.concourse_uam(cc_cfg.concourse_uam_config())
-
-    return concourse.client.from_cfg(
-        concourse_cfg=cc_cfg,
-        concourse_uam_cfg=uam_cfg,
-        team_name=team_name,
-        verify_ssl=True,
-    )
-
-
-def _client_from_env(
-    team_name: str=None,
-):
-    '''
-    returns a concourse-client w/ the credentials valid for the current execution environment.
-    Note that this function must only be called if running in a "central" cicd-job.
-    The returned client is authorised to perform operations in the same concourse-team as the
-    job calling this function.
-
-    if the (optional) team_name is specified, the returned client is not guaranteed to have the
-    required authorisation.
-    '''
-    cfg_set = ctx.cfg_set()
-    cc_cfg = cfg_set.concourse()
-    cc_uam = cfg_set.concourse_uam(cc_cfg.concourse_uam_config())
-    if not team_name:
-        team_name = ci.util.check_env('CONCOURSE_CURRENT_TEAM')
-
-    return concourse.client.from_cfg(
-        concourse_cfg=cc_cfg,
-        concourse_uam_cfg=cc_uam,
-        team_name=team_name,
-    )
-
-
-@functools.lru_cache()
-@ensure.ensure_annotations
 def client_from_cfg_name(
     concourse_cfg_name: str,
     team_name: str,
@@ -105,27 +61,20 @@ def client_from_cfg_name(
     if not cfg_factory:
         cfg_factory = ci.util.ctx().cfg_factory()
 
-    if concourse.client._have_new_team_cfg(cfg_factory=cfg_factory):
-        concourse_team_config = concourse.client.lookup_cc_team_cfg(
-            concourse_cfg_name=concourse_cfg_name,
-            cfg_set=cfg_factory,
-            team_name=team_name,
-        )
-        concourse_endpoint = cfg_factory.concourse_endpoint(
-            concourse_team_config.concourse_endpoint_name()
-        )
-        return client_from_parameters(
-            base_url=concourse_endpoint.base_url(),
-            password=concourse_team_config.password(),
-            team_name=team_name,
-            username=concourse_team_config.username(),
-        )
-
-    else:
-        return _client_from_cfg_name(
-            concourse_cfg_name=concourse_cfg_name,
-            team_name=team_name,
-        )
+    concourse_team_config = concourse.client.lookup_cc_team_cfg(
+        concourse_cfg_name=concourse_cfg_name,
+        cfg_set=cfg_factory,
+        team_name=team_name,
+    )
+    concourse_endpoint = cfg_factory.concourse_endpoint(
+        concourse_team_config.concourse_endpoint_name()
+    )
+    return client_from_parameters(
+        base_url=concourse_endpoint.base_url(),
+        password=concourse_team_config.password(),
+        team_name=team_name,
+        username=concourse_team_config.username(),
+    )
 
 
 def client_from_env(
@@ -133,23 +82,19 @@ def client_from_env(
 ):
     cfg_set = ctx.cfg_set()
 
-    if concourse.client._have_new_team_cfg(cfg_factory=cfg_set):
-        if not team_name:
-            team_name = ci.util.check_env('CONCOURSE_CURRENT_TEAM')
-        concourse_team_config = concourse.client.lookup_cc_team_cfg(
-            concourse_cfg_name=cfg_set.concourse().name(),
-            cfg_set=cfg_set,
-            team_name=team_name,
-        )
-        concourse_endpoint = cfg_set.concourse_endpoint(
-            concourse_team_config.concourse_endpoint_name()
-        )
-        return client_from_parameters(
-            base_url=concourse_endpoint.base_url(),
-            password=concourse_team_config.password(),
-            team_name=team_name,
-            username=concourse_team_config.username(),
-        )
-
-    else:
-        return _client_from_env(team_name)
+    if not team_name:
+        team_name = ci.util.check_env('CONCOURSE_CURRENT_TEAM')
+    concourse_team_config = concourse.client.lookup_cc_team_cfg(
+        concourse_cfg_name=cfg_set.concourse().name(),
+        cfg_set=cfg_set,
+        team_name=team_name,
+    )
+    concourse_endpoint = cfg_set.concourse_endpoint(
+        concourse_team_config.concourse_endpoint_name()
+    )
+    return client_from_parameters(
+        base_url=concourse_endpoint.base_url(),
+        password=concourse_team_config.password(),
+        team_name=team_name,
+        username=concourse_team_config.username(),
+    )
