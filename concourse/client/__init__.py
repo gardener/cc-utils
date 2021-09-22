@@ -19,7 +19,6 @@ import functools
 
 import ci.util
 
-from model.base import ConfigElementNotFoundError
 from model.concourse import ConcourseConfig, ConcourseUAMConfig, ConcourseUAM, ConcourseTeamConfig
 from .api import ConcourseApiFactory
 
