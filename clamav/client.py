@@ -108,3 +108,8 @@ class ClamAVClient:
                     ClamAVScanResult({'finding': f'Scan aborted (timed out) {te=}'}),
                     path,
                 )
+            except requests.exceptions.ConnectionError as ce:
+                yield (
+                    ClamAVScanResult({'finding': f'Scan aborted (connection-error) {ce=}'}),
+                    path,
+                )
