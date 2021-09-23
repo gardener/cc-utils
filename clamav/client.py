@@ -96,9 +96,12 @@ class ClamAVClient:
                 else:
                     yield (scan_result, path)
             except ClamAVError as e:
-                if e.status_code == ERROR_CODE_ON_SCAN_ABORTED:
+                if e.status_code in (ERROR_CODE_ON_SCAN_ABORTED, 500):
                     yield (
-                        ClamAVScanResult({'finding': f'Scan aborted: {e.error_message}'}),
+                        ClamAVScanResult(
+                            {
+                                'finding': f'Scan aborted: {e.error_message=} {e.status_code=}'
+                            }),
                         path,
                     )
                 else:
