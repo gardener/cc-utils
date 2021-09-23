@@ -220,7 +220,7 @@ def replicate_artifact(
         manifest = json.loads(raw_manifest)
         media_type = manifest.get('mediaType', om.DOCKER_MANIFEST_SCHEMA_V2_MIME)
 
-        if media_type == om.OCI_MANIFEST_LIST_MIME:
+        if media_type == om.DOCKER_MANIFEST_LIST_MIME:
             # multi-arch
             manifest = dacite.from_dict(
                 data_class=om.OciImageManifestList,
