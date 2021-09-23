@@ -139,18 +139,12 @@ ERROR_CODE_ON_SCAN_ABORTED = 422
 
 
 class ClamAVError(Exception):
-    def __init__(self, error_code: int, error_message: str):
+    def __init__(self, status_code: int, error_message: str):
         super().__init__(
-            f'Received error response from ClamAV: {error_code} - {error_message}'
+            f'Received from ClamAV: {status_code=} {error_message=}'
         )
-        self._error_code = error_code
-        self._error_message = error_message
-
-    def error_code(self) -> int:
-        return self._error_code
-
-    def error_message(self) -> str:
-        return self._error_message
+        self.status_code = status_code
+        self.error_message = error_message
 
 
 class ClamAVScanEventClient:
