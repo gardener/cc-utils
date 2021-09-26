@@ -5,6 +5,7 @@ import enum
 import hashlib
 import json
 import logging
+import threading
 import typing
 
 import dacite
@@ -96,12 +97,14 @@ class OauthTokenCache:
     def __init__(self):
         self.tokens = {} # {scope: token}
         self.auth_methods = {} # {netloc: method}
+        self._token_access_lock = threading.Lock()
 
     def token(self, scope: str):
-        # purge expired tokens
-        self.tokens = {s:t for s,t in self.tokens.items() if t.valid()}
+        with self._token_access_lock:
+            # purge expired tokens
+            self.tokens = {s:t for s,t in self.tokens.items() if t.valid()}
 
-        return self.tokens.get(scope)
+            return self.tokens.get(scope)
 
     def set_token(self, token: OauthToken):
         if not token.valid():
@@ -109,7 +112,8 @@ class OauthTokenCache:
         # TODO: we might compare remaining validity, and only replace existing tokens
         # if the new one has a later expiry date
 
-        self.tokens[token.scope] = token
+        with self._token_access_lock:
+            self.tokens[token.scope] = token
 
     def set_auth_method(self, image_reference: str, auth_method: AuthMethod):
         netloc = parse_image_reference(image_reference=image_reference).netloc
