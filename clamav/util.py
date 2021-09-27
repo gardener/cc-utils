@@ -13,6 +13,7 @@ import ccc.oci
 import clamav.client
 import gci.componentmodel
 import oci.client as oc
+import oci.model as om
 import product
 import saf.model
 import tarutil
@@ -38,8 +39,9 @@ def iter_image_files(
 
     manifest = oci_client.manifest(image_reference=image_reference)
 
-    # we ignore cfg-blob (which would be included in manifest.blobs())
-    for layer_blob in manifest.layers:
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(manifest.layers))
+
+    def _iter_layer_blob_files(layer_blob: om.OciBlobRef):
         blob_resp = oci_client.blob(
             image_reference=image_reference,
             digest=layer_blob.digest,
@@ -63,6 +65,10 @@ def iter_image_files(
                     layer_tarfile.extractfile(tar_info),
                     f'{layer_blob.digest}:{tar_info.name}',
                 )
+
+    # we ignore cfg-blob (which would be included in manifest.blobs())
+    for layer_blob_files in executor.map(_iter_layer_blob_files, manifest.layers):
+        yield from layer_blob_files
 
 
 def _scan_oci_image(
