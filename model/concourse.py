@@ -30,6 +30,20 @@ from model.base import (
 )
 
 
+class ConcourseOAuthConfig(NamedModelElement):
+    def client_id(self) -> str:
+        return self.raw['client_id']
+
+    def client_secret(self) -> str:
+        return self.raw['client_secret']
+
+    def _required_attributes(self):
+        return [
+            'client_id',
+            'client_secret'
+        ]
+
+
 class ConcourseConfig(NamedModelElement):
     '''
     Not intended to be instantiated by users of this module
