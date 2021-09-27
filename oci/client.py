@@ -177,7 +177,7 @@ class OciRoutes:
         image_reference = om.OciImageReference.to_image_ref(image_reference)
 
         return urljoin(
-            self.base_api_url_lookup(image_reference=image_reference),
+            self.base_api_url_lookup(image_reference=str(image_reference)),
             image_reference.name,
         )
 
