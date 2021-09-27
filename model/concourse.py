@@ -111,13 +111,8 @@ class ConcourseConfig(NamedModelElement):
     def deploy_storage_class(self):
         return self.raw.get('deploy_storage_class', False)
 
-    def github_auth_client_id(self):
-        if oauth_creds := self.raw.get('oauth_client_creds'):
-            return oauth_creds.get('github_auth_client_id')
-
-    def github_auth_client_secret(self):
-        if oauth_creds := self.raw.get('oauth_client_creds'):
-            return oauth_creds.get('github_auth_client_secret')
+    def oauth_config_name(self):
+        return self.raw['oauth_config_name']
 
     def _required_attributes(self):
         return [
@@ -131,7 +126,7 @@ class ConcourseConfig(NamedModelElement):
             'ingress_config',
             'helm_chart_version',
             'helm_chart_values',
-            'oauth_client_creds',
+            'oauth_config_name',
         ]
 
     def _optional_attributes(self):
