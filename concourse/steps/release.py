@@ -769,7 +769,7 @@ class PublishReleaseNotesStep(TransactionalStep):
             repo_dir=self.repo_dir,
             repository_branch=self.githubrepobranch.branch(),
         )
-        release_notes_md = release_notes.to_markdown()
+        release_notes_md = release_notes.to_markdown(force_link_generation=True)
         self.github_helper.update_release_notes(
             tag_name=release_tag,
             body=release_notes_md,
