@@ -1,6 +1,7 @@
-import logging
 import functools
+import logging
 import traceback
+import typing
 
 import ccc.elasticsearch
 import oci.auth as oa
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 @functools.lru_cache
-def oci_cfg_lookup():
+def oci_cfg_lookup() -> typing.Callable[[str, oa.Privileges, bool], oa.OciCredentials]:
     def find_credentials(
         image_reference: str,
         privileges: oa.Privileges=oa.Privileges.READONLY,
@@ -38,7 +39,9 @@ def oci_cfg_lookup():
     return find_credentials
 
 
-def oci_client(credentials_lookup=oci_cfg_lookup()):
+def oci_client(
+    credentials_lookup: typing.Callable = oci_cfg_lookup(),
+) -> oc.Client:
     def base_api_lookup(image_reference):
         registry_cfg = model.container_registry.find_config(
             image_reference=image_reference,
