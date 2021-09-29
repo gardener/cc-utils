@@ -15,6 +15,7 @@
 import typing
 
 import ci.util
+import clamav.client_asgi
 
 from clamav.client import ClamAVClient
 from clamav.routes import ClamAVRoutes
@@ -25,6 +26,7 @@ def client(
     cfg: typing.Union[str, ClamAVConfig, None]=None,
     url: str=None,
     cfg_factory=None,
+    asgi=False, # XXX do not pass parameter - will be removed again, soon; use _client_asgi
 ):
     if not (bool(cfg) ^ bool(url)):
         raise ValueError('exactly one of cfg, url must be passed')
@@ -40,5 +42,17 @@ def client(
     elif cfg is None:
         url = url
 
-    routes = ClamAVRoutes(base_url=url)
-    return ClamAVClient(routes=routes)
+    if not asgi:
+        routes = ClamAVRoutes(base_url=url)
+        return ClamAVClient(routes=routes)
+
+    routes = clamav.client_asgi.ClamAVRoutesAsgi(base_url=url)
+    return clamav.client_asgi.ClamAVClientAsgi(routes=routes)
+
+
+def client_asgi(
+    cfg: typing.Union[str, ClamAVConfig, None]=None,
+    url: str=None,
+    cfg_factory=None,
+):
+    return client(cfg=cfg, url=url, cfg_factory=cfg_factory, asgi=True)
