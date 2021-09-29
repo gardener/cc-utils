@@ -41,6 +41,7 @@ def oci_cfg_lookup() -> typing.Callable[[str, oa.Privileges, bool], oa.OciCreden
 
 def oci_client(
     credentials_lookup: typing.Callable = oci_cfg_lookup(),
+    install_logging_handler: bool = True
 ) -> oc.Client:
     def base_api_lookup(image_reference):
         registry_cfg = model.container_registry.find_config(
@@ -53,12 +54,13 @@ def oci_client(
 
     routes = oc.OciRoutes(base_api_lookup)
 
-    try:
-        _add_oci_request_logging_handler_unless_already_registered()
-    except:
-        # do not fail just because of logging-issue
-        import traceback
-        traceback.print_exc()
+    if install_logging_handler:
+        try:
+            _add_oci_request_logging_handler_unless_already_registered()
+        except:
+            # do not fail just because of logging-issue
+            import traceback
+            traceback.print_exc()
 
     return oc.Client(
         credentials_lookup=credentials_lookup,

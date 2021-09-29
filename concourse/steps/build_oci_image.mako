@@ -88,7 +88,10 @@ os.link(
   (ca_certs_bak := os.path.join('/', 'kaniko', 'ca-certificates.crt')),
 )
 
-oci_client = ccc.oci.oci_client()
+## Do not install logging hander to oci_client here as there is currently an issue with
+## the cfg-set-caching we've added for our kaniko build leading to confusing (to our users)
+## build-logs in case of errors
+oci_client = ccc.oci.oci_client(install_logging_handler=False)
 
 ## one last hack: import concourse-config upfront
 ## (for some reason, this type will not be found, even after restoring python's libdir)
