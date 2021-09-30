@@ -103,44 +103,16 @@ class ClamAVClientAsgi:
 
         def _scan_content(content_path: typing.Tuple[io.BytesIO, str]):
             content, path = content_path # hack to make compatible w/ ThreadPoolExecutor.map
-            try:
-                scan_result = self.scan(content)
-                return (scan_result, path)
-            except ClamAVError as e:
-                if e.status_code in (ERROR_CODE_ON_SCAN_ABORTED, 500):
-                    return (
-                        ClamAVScanResult(
-                            {
-                                'finding': f'Scan aborted: {e.error_message=} {e.status_code=}'
-                            }),
-                        path,
-                    )
-                else:
-                    raise e
-            except requests.exceptions.Timeout as te:
-                return (
-                    ClamAVScanResult({'finding': f'Scan aborted (timed out) {te=}'}),
-                    path,
-                )
-            except requests.exceptions.ConnectionError as ce:
-                return (
-                    ClamAVScanResult({'finding': f'Scan aborted (connection-error) {ce=}'}),
-                    path,
-                )
+            scan_result = self.scan(content)
+            return (scan_result, path)
 
         if max_parallel_workers < 2:
             for content, path in content_iterator:
                 scan_result, path =  _scan_content(content_path=(content, path))
-                if not scan_result.malware_detected():
-                    continue
-                else:
-                    yield (scan_result, path)
+                yield (scan_result, path)
             return
 
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_parallel_workers)
 
         for scan_result, path in executor.map(_scan_content, content_iterator):
-            if not scan_result.malware_detected():
-                continue
-            else:
-                yield (scan_result, path)
+            yield (scan_result, path)
