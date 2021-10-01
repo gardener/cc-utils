@@ -12,10 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import concurrent.futures
+
 import dataclasses
 import enum
-import io
 import logging
 import typing
 
@@ -38,10 +37,19 @@ class MalwareStatus(enum.Enum):
 
 
 @dataclasses.dataclass
-class ClamAVScanResult:
+class Meta:
+    scanned_octets: int
+    receive_duration_seconds: float
+    scan_duration_seconds: float
+
+
+@dataclasses.dataclass
+class ScanResult:
     status: ScanStatus
     details: str
     malware_status: MalwareStatus
+    meta: typing.Optional[Meta]
+    name: str
 
 
 class ClamAVRoutesAsgi:
@@ -68,51 +76,44 @@ class ClamAVClientAsgi:
         res.raise_for_status()
         return res
 
-    def scan(self, data, timeout_seconds:float=60*15):
+    def scan(
+        self,
+        data,
+        timeout_seconds:float=60*15,
+        content_length_octets:int=None,
+        name: str=None,
+    ) -> ScanResult:
         url = self.routes.scan()
+
+        if content_length_octets:
+            headers = {'Content-Length': str(content_length_octets)}
+        else:
+            headers = {}
 
         response = self._request(
             method='POST',
             url=url,
             data=data,
+            headers=headers,
             timeout=timeout_seconds,
             stream=True,
         )
 
         if not response.ok:
-            return ClamAVScanResult(
+            return ScanResult(
                 status=ScanStatus.SCAN_FAILED,
                 details=f'{response.status_code=} {response.reason=} {response.content=}',
                 malware_status=MalwareStatus.UNKNOWN,
+                meta=None,
+                name=name,
             )
 
         resp = response.json()
 
-        return ClamAVScanResult(
+        return ScanResult(
             status=ScanStatus.SCAN_SUCCEEDED,
             details=resp.get('message', 'no details available'),
             malware_status=MalwareStatus(resp['result']),
+            meta=Meta(**resp.get('meta')),
+            name=name,
         )
-
-    def scan_container_image(
-        self,
-        content_iterator: typing.Generator[typing.Tuple[typing.IO, str], None, None],
-        max_parallel_workers: int=0,
-    ):
-        logger.info(f'scanning with {max_parallel_workers=}')
-
-        def _scan_content(content_path: typing.Tuple[io.BytesIO, str]):
-            content, path = content_path # hack to make compatible w/ ThreadPoolExecutor.map
-            scan_result = self.scan(content)
-            return (scan_result, path)
-
-        if max_parallel_workers < 2:
-            for content, path in content_iterator:
-                scan_result, path =  _scan_content(content_path=(content, path))
-                yield (scan_result, path)
-            return
-
-        executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_parallel_workers)
-
-        for scan_result, path in executor.map(_scan_content, content_iterator):
-            yield (scan_result, path)
