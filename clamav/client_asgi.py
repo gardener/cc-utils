@@ -25,7 +25,7 @@ import ci.util
 logger = logging.getLogger(__name__)
 
 
-class ScanStatus:
+class ScanStatus(enum.Enum):
     SCAN_SUCCEEDED = 'scan_succeeded'
     SCAN_FAILED = 'scan_failed'
 
