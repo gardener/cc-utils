@@ -1,6 +1,7 @@
 import concurrent.futures
 import dataclasses
 import functools
+import logging
 import tarfile
 import typing
 
@@ -8,6 +9,11 @@ import clamav.client_asgi as cac
 import oci.client
 import oci.model
 import tarutil
+
+import ci.log
+
+logger = logging.getLogger(__name__)
+ci.log.configure_default_logging()
 
 
 @dataclasses.dataclass
@@ -105,6 +111,30 @@ def scan_oci_blob(
     oci_client: oci.client.Client,
     clamav_client: cac.ClamAVClientAsgi,
 ) -> typing.Generator[cac.ScanResult, None, None]:
+    try:
+        yield from scan_oci_blob_filewise(
+            blob_reference=blob_reference,
+            image_reference=image_reference,
+            oci_client=oci_client,
+            clamav_client=clamav_client,
+        )
+    except tarfile.TarError as te:
+        logger.warning(f'{image_reference=} {te=} - falling back to layerwise scan')
+
+        yield from scan_oci_blob_layerwise(
+            blob_reference=blob_reference,
+            image_reference=image_reference,
+            oci_client=oci_client,
+            clamav_client=clamav_client,
+        )
+
+
+def scan_oci_blob_filewise(
+    blob_reference: oci.model.OciBlobRef,
+    image_reference: typing.Union[str, oci.model.OciImageReference],
+    oci_client: oci.client.Client,
+    clamav_client: cac.ClamAVClientAsgi,
+) -> typing.Generator[cac.ScanResult, None, None]:
     blob = oci_client.blob(
         image_reference=image_reference,
         digest=blob_reference.digest,
@@ -124,3 +154,21 @@ def scan_oci_blob(
                 name=tar_info.name,
             )
             yield scan_result
+
+
+def scan_oci_blob_layerwise(
+    blob_reference: oci.model.OciBlobRef,
+    image_reference: typing.Union[str, oci.model.OciImageReference],
+    oci_client: oci.client.Client,
+    clamav_client: cac.ClamAVClientAsgi,
+) -> typing.Generator[cac.ScanResult, None, None]:
+    blob = oci_client.blob(
+        image_reference=image_reference,
+        digest=blob_reference.digest,
+    )
+
+    scan_result = clamav_client.scan(
+        data=blob.iter_content(),
+        name=blob_reference.digest,
+    )
+    yield scan_result
