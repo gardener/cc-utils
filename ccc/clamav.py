@@ -32,7 +32,10 @@ def client(
         raise ValueError('exactly one of cfg, url must be passed')
 
     if isinstance(cfg, ClamAVConfig):
-        url = cfg.service_url()
+        if asgi:
+            url = cfg.service_url_asgi()
+        else:
+            url = cfg.service_url()
     elif isinstance(cfg, str):
         if not cfg_factory:
             cfg_factory = ci.util.ctx().cfg_factory()
