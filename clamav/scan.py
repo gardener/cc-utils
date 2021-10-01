@@ -23,7 +23,7 @@ class ImageScanResult:
     '''
     image_reference: str
     name: str
-    scan_status: cac.ScanStatus
+    malware_status: cac.MalwareStatus
     findings: typing.Collection[cac.ScanResult] # if empty, there were no findings
     scan_count: int # amount of scanned files
     scanned_octets: int
@@ -66,14 +66,17 @@ def aggregate_scan_result(
         raise ValueError('results-iterator did not contain any elements')
 
     if succeeded:
-        scan_status = cac.ScanStatus.SCAN_SUCCEEDED
+        if len(findings) < 1:
+            malware_status = cac.MalwareStatus.OK
+        else:
+            malware_status = cac.MalwareStatus.FOUND_MALWARE
     else:
-        scan_status = cac.ScanStatus.SCAN_FAILED
+        malware_status = cac.MalwareStatus.UNKNOWN
 
     return ImageScanResult(
         image_reference=image_reference,
         name=name,
-        scan_status=scan_status,
+        malware_status=malware_status,
         findings=findings,
         scan_count=count,
         scanned_octets=scanned_octets,
