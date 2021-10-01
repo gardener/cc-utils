@@ -41,7 +41,11 @@ def client(
             cfg_factory = ci.util.ctx().cfg_factory()
         cfg = cfg_factory.clamav(cfg)
 
-        url = cfg.service_url()
+        if asgi:
+            url = cfg.service_url_asgi()
+        else:
+            url = cfg.service_url()
+
     elif cfg is None:
         url = url
 
