@@ -19,6 +19,7 @@ import logging
 import os
 import subprocess
 import tempfile
+import typing
 import urllib.parse
 
 import git
@@ -141,6 +142,22 @@ class GitHelper:
             self.repo.delete_remote(remote)
             if protocol is Protocol.SSH:
                 os.unlink(tmp_id.name)
+
+    def check_tag_availability(
+        self,
+        tags: typing.Iterable[str],
+    ) -> typing.Tuple[typing.Iterable[str], typing.Iterable[str]]:
+        '''checks the availability of the tag-names in the given iterable.
+
+        Returns a pair of iterables, where the first contains all tags that are available (and thus
+        may still be created) and the second contains all tags that are already known to the
+        repository.
+        '''
+        known_tags = set(t.name for t in self.repo.tags)
+        tags_to_check = set(tags)
+        available_tags = tags_to_check - known_tags
+        existing_tags = tags_to_check - available_tags
+        return available_tags, existing_tags
 
     def index_to_commit(self, message, parent_commits=None):
         '''moves all diffs from worktree to a new commit without modifying branches.
