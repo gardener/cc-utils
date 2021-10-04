@@ -359,7 +359,13 @@ class CreateTagsStep(TransactionalStep):
         return 'Create Tags'
 
     def validate(self):
-        version.parse_to_semver(self.release_version)
+        tags_to_set = [self.github_release_tag] + self.git_tags
+        _, existing_tags = self.git_helper.check_tag_availability(tags_to_set)
+        if(existing_tags):
+            ci.util.fail(
+                'Cannot create the following tags as they already exist in the '
+                f'repository: {", ".join(existing_tags)}'
+            )
 
     def apply(
         self,
