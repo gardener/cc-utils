@@ -404,7 +404,7 @@ class Client:
             },
         )
 
-        res = requests.request(
+        res = self.session.request(
             method=method,
             url=url,
             auth=auth,
