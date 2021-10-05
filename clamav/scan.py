@@ -171,7 +171,7 @@ def scan_oci_blob_layerwise(
     )
 
     scan_result = clamav_client.scan(
-        data=blob.iter_content(),
+        data=blob.iter_content(chunk_size=tarfile.BLOCKSIZE),
         name=blob_reference.digest,
     )
     yield scan_result
