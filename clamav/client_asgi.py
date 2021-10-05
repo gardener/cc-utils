@@ -69,10 +69,9 @@ class ClamAVClientAsgi:
         routes: ClamAVRoutesAsgi,
     ):
         self.routes = routes
-        self._session = requests.Session()
 
     def _request(self, *args, **kwargs):
-        res =  self._session.request(*args, **kwargs)
+        res =  requests.request(*args, **kwargs)
         res.raise_for_status()
         return res
 
