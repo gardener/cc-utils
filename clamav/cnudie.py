@@ -55,10 +55,27 @@ def scan_resources(
             ),
             name=f'{component.name}/{resource.name}',
         )
+
         return ResourceScanResult(
             component=component,
             resource=resource,
             scan_result=scan_result,
         )
 
-    yield from executor.map(scan_resource, component_resources)
+    tasks = [
+        executor.submit(scan_resource, component_resource)
+       for component_resource in component_resources
+    ]
+
+    logger.info(f'will scan {len(tasks)=} for {component.name=} with {max_workers=}')
+
+    while True:
+        done, not_done = concurrent.futures.wait(
+            tasks,
+            return_when=concurrent.futures.FIRST_COMPLETED,
+        )
+        logger.info(f'{len(done)} scans finished - {len(not_done)=}')
+        yield from (f.result() for f in done)
+        if not not_done:
+            break
+        tasks = not_done
