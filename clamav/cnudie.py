@@ -28,6 +28,9 @@ def scan_resources(
     clamav_client: clamav.client_asgi.ClamAVClientAsgi,
     max_workers:int = 16,
 ) -> typing.Generator[ResourceScanResult, None, None]:
+    if isinstance(component, cm.ComponentDescriptor):
+        component = component.component
+
     component_resources = product.v2.enumerate_oci_resources(
         component_descriptor=component,
     ) # Generator[Tuple[component, resource]]
