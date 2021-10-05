@@ -89,14 +89,27 @@ class ClamAVClientAsgi:
         else:
             headers = {}
 
-        response = self._request(
-            method='POST',
-            url=url,
-            data=data,
-            headers=headers,
-            timeout=timeout_seconds,
-            stream=True,
-        )
+        try:
+            response = self._request(
+                method='POST',
+                url=url,
+                data=data,
+                headers=headers,
+                timeout=timeout_seconds,
+                stream=True,
+            )
+        except (
+            requests.exceptions.ChunkedEncodingError,
+            requests.exceptions.ConnectionError,
+        ) as ce:
+            logger.warning(f'{name=}: {ce=}')
+            return ScanResult(
+                status=ScanStatus.SCAN_FAILED,
+                details=f'{ce=}',
+                malware_status=MalwareStatus.UNKNOWN,
+                meta=None,
+                name=name,
+            )
 
         if not response.ok:
             return ScanResult(
