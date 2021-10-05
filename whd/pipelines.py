@@ -27,6 +27,7 @@ def update_repository_pipelines(
     whd_cfg,
 ):
     logger.info(f'replicating pipeline for {repo_url=}')
+    logger.info(f'using {cfg_set.name()}')
 
     repo_enumerator = concourse.enumerator.GithubRepositoryDefinitionEnumerator(
         repository_url=repo_url,

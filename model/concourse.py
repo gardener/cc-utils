@@ -374,9 +374,9 @@ class JobMappingSet(NamedModelElement):
     def job_mappings(self):
         return {name: JobMapping(name=name, raw_dict=raw) for name, raw in self.raw.items()}
 
-    def job_mapping_for_repo_url(self, repo_url: str):
+    def job_mapping_for_repo_url(self, repo_url: str, cfg_set):
         for _, job_mapping in self.job_mappings().items():
-            if job_mapping.matches_repo_url(repo_url):
+            if job_mapping.matches_repo_url(repo_url, cfg_set):
                 return job_mapping
 
         raise ValueError(f'no matching job mapping for {repo_url=}')
@@ -455,7 +455,7 @@ class JobMapping(NamedModelElement):
     def concourse_team_cfg_name(self) -> str:
         return self.raw.get('concourse_team_cfg_name')
 
-    def matches_repo_url(self, repo_url) -> bool:
+    def matches_repo_url(self, repo_url, cfg_set) -> bool:
         if not '://' in repo_url:
             repo_url = 'x://' + repo_url
 
@@ -464,6 +464,10 @@ class JobMapping(NamedModelElement):
 
         for github_org_cfg in self.github_organisations():
             if not github_org_cfg.org_name() == org:
+                continue
+
+            gh_cfg = cfg_set.github(github_org_cfg.github_cfg_name())
+            if not gh_cfg.matches_repo_url(urllib.parse.urlunparse(repo_url)):
                 continue
 
             if github_org_cfg.repository_matches(repo):

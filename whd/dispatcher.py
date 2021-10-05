@@ -129,7 +129,7 @@ class GithubWebhookDispatcher:
         def _do_update():
             repo_url = push_event.repository().repository_url()
             job_mapping_set = self.cfg_set.job_mapping()
-            job_mapping = job_mapping_set.job_mapping_for_repo_url(repo_url)
+            job_mapping = job_mapping_set.job_mapping_for_repo_url(repo_url, self.cfg_set)
 
             return update_repository_pipelines(
                 repo_url=repo_url,
@@ -165,7 +165,7 @@ class GithubWebhookDispatcher:
         job_mapping_set = self.cfg_set.job_mapping()
 
         try:
-            job_mapping = job_mapping_set.job_mapping_for_repo_url(repo_url)
+            job_mapping = job_mapping_set.job_mapping_for_repo_url(repo_url, self.cfg_set)
         except ValueError:
             logger.info(f'no job-mapping found for {repo_url=} - will not interact w/ pipeline(s)')
             return
