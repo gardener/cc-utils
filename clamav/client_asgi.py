@@ -19,6 +19,7 @@ import logging
 import typing
 
 import requests
+import urllib3
 
 import ci.util
 
@@ -101,8 +102,14 @@ class ClamAVClientAsgi:
         except (
             requests.exceptions.ChunkedEncodingError,
             requests.exceptions.ConnectionError,
+            urllib3.exceptions.HTTPError,
         ) as ce:
-            logger.warning(f'{name=}: {ce=}')
+            if (rq := getattr(ce, 'request', None)):
+                rq_url = getattr(rq, 'url', '<unknown>')
+                if rq_url != url:
+                    url = f'{url=}, {rq_url=}'
+
+            logger.warning(f'{name=}: {ce=} {url=}')
             return ScanResult(
                 status=ScanStatus.SCAN_FAILED,
                 details=f'{ce=}',
