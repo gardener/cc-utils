@@ -144,7 +144,7 @@ def scan_oci_blob_filewise(
     )
 
     with tarfile.open(
-        fileobj=tarutil._FilelikeProxy(generator=blob.iter_content(chunk_size=tarfile.BLOCKSIZE)),
+        fileobj=tarutil._FilelikeProxy(generator=blob.iter_content(chunk_size=8192)),
         mode='r|*',
     ) as tf:
         for tar_info in tf:
@@ -171,7 +171,7 @@ def scan_oci_blob_layerwise(
     )
 
     scan_result = clamav_client.scan(
-        data=blob.iter_content(chunk_size=tarfile.BLOCKSIZE),
-        name=blob_reference.digest,
+        data=blob.iter_content(chunk_size=tarfile.RECORDSIZE),
+        name=f'{image_reference}:{blob_reference.digest}',
     )
     yield scan_result
