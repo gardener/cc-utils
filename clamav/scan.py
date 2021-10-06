@@ -154,7 +154,7 @@ def scan_oci_blob_filewise(
 
             scan_result = clamav_client.scan(
                 data=data,
-                name=f'{image_reference}:{blob_reference.digest}:tar_info.name',
+                name=f'{image_reference}:{blob_reference.digest}:{tar_info.name}',
             )
             yield scan_result
 
