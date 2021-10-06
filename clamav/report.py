@@ -29,12 +29,14 @@ def as_table(
         else:
             raise NotImplementedError(status)
 
-        yield resource, status, details
+        return resource, status, details
 
-    rows = (row_from_result(result) for result in scan_results)
+    def rows():
+        for result in scan_results:
+            yield row_from_result(scan_result=result)
 
     return tabulate.tabulate(
-        tabular_data=rows,
+        tabular_data=rows(),
         headers=headers,
         tablefmt=tablefmt,
     )
