@@ -90,6 +90,9 @@ class ClamAVClientAsgi:
         else:
             headers = {}
 
+        if name:
+            headers['Name'] = name
+
         try:
             response = self._request(
                 method='POST',
