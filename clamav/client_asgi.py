@@ -15,11 +15,13 @@
 
 import dataclasses
 import enum
+import json
 import logging
 import typing
 
 import requests
 import urllib3
+import urllib3.util.retry
 
 import ci.util
 import clamav.util
@@ -70,13 +72,25 @@ class ClamAVClientAsgi:
     def __init__(
         self,
         routes: ClamAVRoutesAsgi,
+        retry_cfg: urllib3.util.retry.Retry=None,
     ):
         self.routes = routes
+        self.http = urllib3.PoolManager(retries=retry_cfg)
 
     def _request(self, *args, **kwargs):
-        res =  requests.request(*args, **kwargs)
-        res.raise_for_status()
-        return res
+        res = self.http.request(
+            *args,
+            **kwargs,
+        )
+        if res.status < 200 or res.status > 200:
+            raise urllib3.exceptions.HTTPError(f'{res.status=} {res.data=}')
+
+        body = b''
+        for chunk in res.stream():
+            body += chunk
+
+        parsed = json.loads(body)
+        return parsed
 
     def scan(
         self,
@@ -99,10 +113,10 @@ class ClamAVClientAsgi:
             response = self._request(
                 method='POST',
                 url=url,
-                data=data,
+                body=data,
                 headers=headers,
                 timeout=timeout_seconds,
-                stream=True,
+                preload_content=False,
             )
         except (
             requests.exceptions.ChunkedEncodingError,
@@ -123,21 +137,10 @@ class ClamAVClientAsgi:
                 name=name,
             )
 
-        if not response.ok:
-            return ScanResult(
-                status=ScanStatus.SCAN_FAILED,
-                details=f'{response.status_code=} {response.reason=} {response.content=}',
-                malware_status=MalwareStatus.UNKNOWN,
-                meta=None,
-                name=name,
-            )
-
-        resp = response.json()
-
         return ScanResult(
             status=ScanStatus.SCAN_SUCCEEDED,
-            details=resp.get('message', 'no details available'),
-            malware_status=MalwareStatus(resp['result']),
-            meta=Meta(**resp.get('meta')),
+            details=response.get('message', 'no details available'),
+            malware_status=MalwareStatus(response['result']),
+            meta=Meta(**response.get('meta')),
             name=name,
         )

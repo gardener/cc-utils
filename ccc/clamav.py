@@ -20,6 +20,7 @@ import clamav.client_asgi
 from clamav.client import ClamAVClient
 from clamav.routes import ClamAVRoutes
 from model.clamav import ClamAVConfig
+import http_requests
 
 
 def client(
@@ -54,7 +55,20 @@ def client(
         return ClamAVClient(routes=routes)
 
     routes = clamav.client_asgi.ClamAVRoutesAsgi(base_url=url)
-    return clamav.client_asgi.ClamAVClientAsgi(routes=routes)
+    retry_cfg = http_requests.LoggingRetry(
+        total=8,
+        connect=8,
+        read=8,
+        backoff_factor=2.0,
+        allowed_methods=('POST', 'GET'),
+    )
+
+    client = clamav.client_asgi.ClamAVClientAsgi(
+        routes=routes,
+        retry_cfg=retry_cfg,
+    )
+
+    return client
 
 
 def client_asgi(
