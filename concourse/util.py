@@ -224,21 +224,14 @@ def find_own_running_build():
         build_plan = build.plan()
         meta_task_id = build_plan.task_id(concourse.model.traits.meta.META_STEP_NAME)
 
-        uuid_line = None
-        try:
-            for line in reversed(list(build_events.iter_buildlog(meta_task_id))):
-                if line.strip():
-                    # last non empty line
-                    uuid_line = line
-                    break
-        except StopIteration:
-            pass
+        # we expect output to only contain valid JSON
+        meta_output = ''.join(build_events.iter_buildlog(meta_task_id)).strip()
 
         try:
-            uuid_json = json.loads(uuid_line)
+            uuid_json = json.loads(meta_output)
         except json.decoder.JSONDecodeError:
-            logger.error(f'Error when parsing {uuid_line=}')
-            raise
+            logger.error(f'Error when parsing {meta_output=}')
+            continue # ignore - we might still find "our" job
         if uuid_json['uuid'] == build_job_uuid:
             return build
     else:
