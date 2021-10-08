@@ -22,6 +22,8 @@ import requests
 import urllib3
 
 import ci.util
+import clamav.util
+
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +93,7 @@ class ClamAVClientAsgi:
             headers = {}
 
         if name:
-            headers['Name'] = name
+            headers['Name'] = clamav.util.make_latin1_encodable(name)
 
         try:
             response = self._request(

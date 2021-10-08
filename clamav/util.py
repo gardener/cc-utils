@@ -6,6 +6,7 @@ import socket
 import tarfile
 import traceback
 import typing
+import urllib.parse
 
 import requests.exceptions
 
@@ -20,6 +21,17 @@ import tarutil
 
 
 logger = logging.getLogger(__name__)
+
+
+def make_latin1_encodable(value: str, /) -> str:
+    try:
+        value.encode('latin-1')
+        return value
+    except UnicodeEncodeError as ue:
+        invalid_char = value[ue.start:ue.end]
+        encoded_char = urllib.parse.quote(invalid_char)
+        value = value.replace(invalid_char, encoded_char)
+        return make_latin1_encodable(value)
 
 
 def iter_image_files(
