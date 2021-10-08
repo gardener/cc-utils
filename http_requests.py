@@ -32,6 +32,24 @@ class AdapterFlag(enum.Flag):
 
 
 class LoggingRetry(Retry):
+    def __init__(
+        self,
+        **kwargs,
+    ):
+        defaults = dict(
+            total=3,
+            connect=3,
+            read=3,
+            status=3,
+            redirect=False,
+            status_forcelist=(429, 500, 502, 503, 504),
+            raise_on_status=False,
+            respect_retry_after_header=True,
+            backoff_factor=1.0,
+        )
+
+        super().__init__(**(defaults | kwargs))
+
     def increment(self,
         method=None,
         url=None,
@@ -51,10 +69,7 @@ class LoggingRetry(Retry):
         return retry
 
 
-_allowed_methods = getattr(
-    Retry, 'DEFAULT_ALLOWED_METHODS',
-    getattr(Retry, 'DEFAULT_METHOD_WHITELIST')
-)
+_default_retry_cfg = LoggingRetry()
 
 
 def mount_default_adapter(
@@ -62,7 +77,7 @@ def mount_default_adapter(
     connection_pool_cache_size=32, # requests-library default
     max_pool_size=32, # requests-library default
     flags=AdapterFlag.CACHE|AdapterFlag.RETRY,
-    retryable_methods_whitelist=_allowed_methods,
+    retry_cfg: Retry=_default_retry_cfg,
 ):
     if AdapterFlag.CACHE in flags:
         adapter_constructor = cachecontrol.CacheControlAdapter
@@ -72,18 +87,8 @@ def mount_default_adapter(
     if AdapterFlag.RETRY in flags:
         adapter_constructor = functools.partial(
             adapter_constructor,
-            max_retries=LoggingRetry(
-                total=3,
-                connect=3,
-                read=3,
-                status=3,
-                redirect=False,
-                status_forcelist=[500, 502, 503, 504],
-                method_whitelist=retryable_methods_whitelist,
-                raise_on_status=False,
-                respect_retry_after_header=True,
-                backoff_factor=1.0,
-        ))
+            max_retries=retry_cfg,
+        )
 
     default_http_adapter = adapter_constructor(
         pool_connections=connection_pool_cache_size,
@@ -140,10 +145,13 @@ class AuthenticatedRequestBuilder:
             self.auth = HTTPBasicAuth(basic_auth_username, basic_auth_passwd)
 
         # create session and mount our default adapter (for retry-semantics).
-        retryable_methods = Retry.DEFAULT_METHOD_WHITELIST | set(['POST'])
+        retry_cfg = LoggingRetry(
+            allowed_methods=(*Retry.DEFAULT_ALLOWED_METHODS, 'POST'),
+        )
+
         self.session = mount_default_adapter(
             requests.Session(),
-            retryable_methods_whitelist=retryable_methods,
+            retry_cfg=retry_cfg,
         )
 
         self.verify_ssl = verify_ssl
