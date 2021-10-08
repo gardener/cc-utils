@@ -3,12 +3,12 @@ import dataclasses
 import functools
 import logging
 import tarfile
+import tempfile
 import typing
 
 import clamav.client_asgi as cac
 import oci.client
 import oci.model
-import tarutil
 
 import ci.log
 
@@ -137,26 +137,34 @@ def scan_oci_blob_filewise(
     image_reference: typing.Union[str, oci.model.OciImageReference],
     oci_client: oci.client.Client,
     clamav_client: cac.ClamAVClientAsgi,
+    chunk_size=8096,
 ) -> typing.Generator[cac.ScanResult, None, None]:
     blob = oci_client.blob(
         image_reference=image_reference,
         digest=blob_reference.digest,
     )
 
-    with tarfile.open(
-        fileobj=tarutil._FilelikeProxy(generator=blob.iter_content(chunk_size=8192)),
-        mode='r|*',
-    ) as tf:
-        for tar_info in tf:
-            if not tar_info.isfile():
-                continue
-            data = tf.extractfile(member=tar_info)
+    # unfortunately, we need a backing tempfile, because we need a seekable filelike-obj for retry
+    with tempfile.TemporaryFile() as tmpfh:
+        for chunk in blob.iter_content(chunk_size=chunk_size):
+            tmpfh.write(chunk)
 
-            scan_result = clamav_client.scan(
-                data=data,
-                name=f'{image_reference}:{blob_reference.digest}:{tar_info.name}',
-            )
-            yield scan_result
+        tmpfh.seek(0)
+
+        with tarfile.open(
+            fileobj=tmpfh,
+            mode='r',
+        ) as tf:
+            for tar_info in tf:
+                if not tar_info.isfile():
+                    continue
+                data = tf.extractfile(member=tar_info)
+
+                scan_result = clamav_client.scan(
+                    data=data,
+                    name=f'{image_reference}:{blob_reference.digest}:{tar_info.name}',
+                )
+                yield scan_result
 
 
 def scan_oci_blob_layerwise(
