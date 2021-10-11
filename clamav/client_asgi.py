@@ -73,9 +73,13 @@ class ClamAVClientAsgi:
         self,
         routes: ClamAVRoutesAsgi,
         retry_cfg: urllib3.util.retry.Retry=None,
+        max_parallel:int=8,
     ):
         self.routes = routes
-        self.http = urllib3.PoolManager(retries=retry_cfg)
+        self.http = urllib3.PoolManager(
+            retries=retry_cfg,
+            maxsize=max_parallel,
+        )
 
     def _request(self, *args, **kwargs):
         res = self.http.request(
