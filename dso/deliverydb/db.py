@@ -2,10 +2,10 @@ import logging
 
 import sqlalchemy
 
-from dso.compliancedb.model import Base
+from dso.deliverydb.model import Base
 
 
-class ComplianceDB:
+class DeliveryDB:
     def __init__(
         self,
         username: str,
