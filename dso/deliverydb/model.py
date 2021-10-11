@@ -6,6 +6,7 @@ from sqlalchemy.ext.mutable import MutableDict
 
 Base = declarative_base()
 
+
 class Scan(Base):
     __tablename__ = 'compliance_issue'
 
