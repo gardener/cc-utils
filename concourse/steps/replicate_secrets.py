@@ -33,7 +33,9 @@ def replicate_secrets(
         logger.info(f'config subset {cfg_set.name()=} with keys')
         for cfg_mapping in [cfg_set._cfg_mappings()]:
             for cfg_type_name, _ in cfg_mapping:
-                pprint.pprint({cfg_type_name: cfg_set._cfg_element_names(cfg_type_name=cfg_type_name)})
+                pprint.pprint(
+                    {cfg_type_name: cfg_set._cfg_element_names(cfg_type_name=cfg_type_name)}
+                )
 
     serialiser = model.ConfigSetSerialiser(cfg_sets=cfg_sets, cfg_factory=cfg_factory)
 
