@@ -350,7 +350,10 @@ class ConfigFactory:
         try:
             element_instance.validate()
         except ModelValidationError as mve:
-            warning(f'validation error for {cfg_name} - ignored: {mve}')
+            warning(
+                f"validation error for config '{cfg_name}' of type '{element_type.__name__}' "
+                f"- ignored: {mve}"
+            )
 
         return element_instance
 
