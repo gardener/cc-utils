@@ -141,10 +141,21 @@ class ClamAVClientAsgi:
                 name=name,
             )
 
+        malware_status = MalwareStatus(response['result'])
+        message = response.get('message', None)
+        details = response.get('details', 'no details available')
+
+        if malware_status is MalwareStatus.OK:
+            details = message or 'no details available'
+        elif malware_status is MalwareStatus.FOUND_MALWARE:
+            details = f'{message}: {details}'
+        else:
+            raise NotImplementedError(malware_status)
+
         return ScanResult(
             status=ScanStatus.SCAN_SUCCEEDED,
-            details=response.get('message', 'no details available'),
-            malware_status=MalwareStatus(response['result']),
+            details=details,
+            malware_status=malware_status,
             meta=Meta(**response.get('meta')),
             name=name,
         )

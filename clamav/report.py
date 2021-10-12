@@ -24,7 +24,7 @@ def as_table(
             details = 'failed to scan'
         elif status is cac.MalwareStatus.FOUND_MALWARE:
             details = '\n'.join((
-                finding.details for finding in res.findings
+                f'{finding.name}: {finding.details}' for finding in res.findings
             ))
         else:
             raise NotImplementedError(status)
