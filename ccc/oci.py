@@ -91,8 +91,9 @@ class _OciRequestHandler(logging.Handler):
                     'stacktrace': traceback.format_stack(),
                 }
             )
-        except:
-            logger.warning(traceback.format_exc())
+        except Exception as e:
+            if not isinstance(e, FileNotFoundError):
+                logger.warning(traceback.format_exc())
             logger.warning('could not send oci request log to elastic search')
 
 
