@@ -55,7 +55,8 @@ def configure_default_logging(
 
     # make sure to have a clean root logger (in case setup is called multiple times)
     if force:
-        for h in logging.root.handlers:
+        handlers = logging.root.handlers
+        for h in handlers:
             logging.root.removeHandler(h)
             h.close()
 
