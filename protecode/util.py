@@ -130,7 +130,7 @@ def upload_grouped_images(
             else:
                 return True
 
-        for component_name, components in component_groups.items():
+        for _, components in component_groups.items():
             for grouped_resources in group_resources(components):
                 # all components in a component group share a name
                 component = next(iter(components))
