@@ -2,6 +2,7 @@ import logging
 
 import sqlalchemy
 
+import ci.util
 from dso.deliverydb.model import Base
 
 
@@ -19,9 +20,23 @@ class DeliveryDB:
             echo=True,
             future=True,
         )
+
         self.Base = Base
         # we configured our own root logger and use log propagation
         # therefore pop streamhandler to not have duplicate output
         logging.getLogger('sqlalchemy.engine.Engine').handlers.pop()
         self.Base.metadata.create_all(self._engine)
         self.Session = sqlalchemy.orm.Session(self._engine)
+
+
+def make_deliverydb(
+    deliverydb_cfg_name: str,
+) -> DeliveryDB:
+    cfg_fac = ci.util.ctx().cfg_factory()
+    cfg = cfg_fac.compliancedb(deliverydb_cfg_name)
+    return DeliveryDB(
+        username=cfg.credentials().username(),
+        password=cfg.credentials().password(),
+        hostname=cfg.hostname(),
+        port=cfg.port(),
+    )
