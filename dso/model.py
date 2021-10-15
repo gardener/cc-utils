@@ -32,7 +32,6 @@ class Datasource(Enum):
 class ComplianceIssueId:
     componentName: str
     componentVersion: str
-    ctxRepo: str
     artifact: cm.Artifact
 
 
