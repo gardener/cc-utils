@@ -1,6 +1,7 @@
 import dataclasses
 import datetime
 import logging
+import typing
 import uuid
 
 import dso.deliverydb
@@ -16,7 +17,8 @@ logger = logging.getLogger(__name__)
 def insert_compliance_issue(
     db: dso.deliverydb.db.DeliveryDB,
     datasource: dso.model.Datasource,
-    scan,
+    # extend typehints with more integrations
+    scan: typing.Union[protecode.model.UploadResult],
 ):
     def _insert(
         issue: dso.model.ComplianceIssue,
