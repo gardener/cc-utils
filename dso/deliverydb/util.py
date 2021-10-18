@@ -14,19 +14,15 @@ logger = logging.getLogger(__name__)
 
 
 def insert_compliance_issue(
-    deliverydb_cfg_name: str,
+    db: dso.deliverydb.db.DeliveryDB,
     datasource: dso.model.Datasource,
     scan,
 ):
     def _insert(
         issue: dso.model.ComplianceIssue,
-        deliverydb_cfg_name: str,
+        db: dso.deliverydb.db.DeliveryDB,
     ):
         logger.info('inserting result to deliverydb')
-        db = dso.deliverydb.db.make_deliverydb(
-            deliverydb_cfg_name=deliverydb_cfg_name,
-        )
-
         scan = dso.deliverydb.model.Scan(
             id=dataclasses.asdict(issue.id),
             meta=dataclasses.asdict(issue.meta),
@@ -78,7 +74,7 @@ def insert_compliance_issue(
         )
         _insert(
             issue=issue,
-            deliverydb_cfg_name=deliverydb_cfg_name,
+            db=db,
         )
     elif datasource in \
     [dso.model.Datasource.WHITESOURCE, dso.model.Datasource.CHECKMARX, dso.model.Datasource.CLAMAV]:
