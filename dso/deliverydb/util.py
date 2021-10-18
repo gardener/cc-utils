@@ -78,9 +78,5 @@ def insert_compliance_issue(
             issue=issue,
             db=db,
         )
-    elif datasource in \
-    [dso.model.Datasource.WHITESOURCE, dso.model.Datasource.CHECKMARX, dso.model.Datasource.CLAMAV]:
-        raise NotImplementedError
-
     else:
-        raise Exception(f'{datasource=} not supported')
+        raise NotImplementedError(datasource)
