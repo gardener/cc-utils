@@ -682,7 +682,6 @@ class UploadComponentDescriptorStep(TransactionalStep):
                     f"this component's Component Descriptor: {e}"
                 )
 
-
     def apply(
         self,
     ):
