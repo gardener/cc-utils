@@ -46,6 +46,7 @@ from concourse.model.traits.release import (
     ReleaseCommitPublishingPolicy,
 )
 import model.container_registry as cr
+import oci.model
 
 logger = logging.getLogger('step.release')
 
@@ -670,10 +671,17 @@ class UploadComponentDescriptorStep(TransactionalStep):
                 ci.util.fail(f'No component descriptor found in CTF archive at {self.ctf_path=}')
 
         for component_descriptor_v2 in self.components:
-            collections.deque(
-                cnudie.retrieve.components(component=component_descriptor_v2),
-                maxlen=0,
-            )
+            try:
+                collections.deque(
+                    cnudie.retrieve.components(component=component_descriptor_v2),
+                    maxlen=0,
+                )
+            except oci.model.OciImageNotFoundException as e:
+                logger.warning(
+                    'Error when retrieving the Component Descriptor of a component referenced in '
+                    f"this component's Component Descriptor: {e}"
+                )
+
 
     def apply(
         self,
