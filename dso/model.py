@@ -1,6 +1,5 @@
 import dataclasses
 import datetime
-from enum import Enum
 import typing
 
 import gci.componentmodel as cm
@@ -21,7 +20,7 @@ class ScanArtifact:
     label: dso.labels.ScanningHint
 
 
-class Datasource(Enum):
+class Datasource:
     WHITESOURCE = 'whitesource'
     PROTECODE = 'protecode'
     CHECKMARX = 'checkmarx'
@@ -29,21 +28,24 @@ class Datasource(Enum):
 
 
 @dataclasses.dataclass
-class ComplianceIssueId:
+class ArtifactReference:
     componentName: str
     componentVersion: str
-    artifact: cm.Artifact
+    artifact: typing.Union[
+        cm.Resource,
+        cm.ComponentSource,
+    ]
 
 
 @dataclasses.dataclass
-class ComplianceIssueMeta:
-    datasource: Datasource
-    creationDate: datetime.datetime
+class ComplianceIssueMetadata:
+    datasource: str
+    creationDate: typing.Union[datetime.datetime, str]
     uuid: str
 
 
 @dataclasses.dataclass
 class ComplianceIssue:
-    id: ComplianceIssueId
-    meta: ComplianceIssueMeta
+    artifact: ArtifactReference
+    meta: ComplianceIssueMetadata
     data: dict

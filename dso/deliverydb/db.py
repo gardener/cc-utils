@@ -1,13 +1,9 @@
-import dataclasses
-import logging
-import typing
-
 import sqlalchemy
 
+import ci.util
 from dso.deliverydb.model import Base
 import dso.model
 import dso.util
-import protecode.model
 
 
 class DeliveryDB:
@@ -19,7 +15,6 @@ class DeliveryDB:
         port: int,
         dialect: str = 'postgresql',
     ):
-        self.logger = logging.getLogger(__name__)
         self._engine = sqlalchemy.create_engine(
             f'{dialect}://{username}:{password}@{hostname}:{port}',
             echo=True,
@@ -33,35 +28,19 @@ class DeliveryDB:
         self.Base.metadata.create_all(self._engine)
         self.Session = sqlalchemy.orm.Session(self._engine)
 
-    def _insert(
+    def insert_compliance_issue(
         self,
-        issue: dso.model.ComplianceIssue,
+        artifact: dict,
+        meta: dict,
+        data: dict,
     ):
-        self.logger.info('inserting result to deliverydb')
         scan = dso.deliverydb.model.Scan(
-            id=dataclasses.asdict(issue.id),
-            meta=dataclasses.asdict(issue.meta),
-            data=issue.data,
+            artifact=artifact,
+            meta=meta,
+            data=data,
         )
 
         self.Session.add(scan)
-        self.Session.commit()
-
-    def insert_compliance_issue(
-        self,
-        datasource: dso.model.Datasource,
-        # extend typehints with more integrations
-        scan: typing.Union[protecode.model.UploadResult],
-    ):
-        if datasource is dso.model.Datasource.PROTECODE:
-            issue = dso.util.upload_result_to_compliance_issue(
-                upload_result=scan,
-            )
-            self._insert(
-                issue=issue,
-            )
-        else:
-            raise NotImplementedError(datasource)
 
 
 def make_deliverydb(

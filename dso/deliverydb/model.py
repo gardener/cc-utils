@@ -14,6 +14,6 @@ class Scan(Base):
     # combination of hstore and mutabledict to allow in-place changes to the dict.
     # https://docs.sqlalchemy.org/en/14/dialects/
     # postgresql.html#sqlalchemy.dialects.postgresql.HSTORE
-    id = Column(MutableDict.as_mutable(JSONB), nullable=True, default=dict)
+    artifact = Column(MutableDict.as_mutable(JSONB), nullable=True, default=dict)
     meta = Column(MutableDict.as_mutable(JSONB), nullable=True, default=dict)
     data = Column(MutableDict.as_mutable(JSONB), nullable=True, default=dict)
