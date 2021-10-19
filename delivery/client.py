@@ -1,8 +1,10 @@
+import dataclasses
 import requests
 
 import gci.componentmodel as cm
 
 import ci.util
+import dso.model
 
 
 class DeliveryServiceRoutes:
@@ -14,6 +16,13 @@ class DeliveryServiceRoutes:
             self._base_url,
             'cnudie',
             'component',
+        )
+
+    def compliance_issue(self):
+        return 'http://' + ci.util.urljoin(
+            self._base_url,
+            'compliance',
+            'scan',
         )
 
 
@@ -42,4 +51,13 @@ class DeliveryServiceClient:
         return cm.ComponentDescriptor.from_dict(
             res.json(),
             validation_mode=validation_mode,
+        )
+
+    def compliance_issue(
+        self,
+        issue: dso.model.ComplianceIssue,
+    ):
+        requests.post(
+            url=self._routes.compliance_issue(),
+            json={'entries': [dataclasses.asdict(issue)]},
         )
