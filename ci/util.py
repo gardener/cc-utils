@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import collections
+import enum
 import functools
 import hashlib
 import os
@@ -582,3 +583,13 @@ class FluentIterable:
 
     def as_list(self):
         return list(self.as_generator())
+
+
+def dict_factory_enum_serialisiation(data):
+
+    def convert_value(obj):
+        if isinstance(obj, enum.Enum):
+            return obj.value
+        return obj
+
+    return dict((k, convert_value(v)) for k, v in data)
