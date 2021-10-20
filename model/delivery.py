@@ -38,6 +38,9 @@ class DeliveryConfig(NamedModelElement):
     def deployment_name(self):
         return self.raw.get('deployment_name', 'delivery-dashboard')
 
+    def active_db_cfg_name(self):
+        return self.raw.get('active_db_cfg_name')
+
     def mongodb_config(self):
         if not self.raw.get('mongodb'):
             return None
@@ -48,6 +51,7 @@ class DeliveryConfig(NamedModelElement):
         yield from [
             'mongodb',
             'deployment_name',
+            'active_db_cfg_name',
         ]
 
     def _required_attributes(self):
