@@ -162,7 +162,7 @@ class WhitesourceClient:
         for element in res['projects']:
             projects.append(whitesource.model.WhiteSrcProject(
                 name=element['projectName'],
-                token=element['projectName'],
+                token=element['projectToken'],
                 vulnerability_report=self.get_project_vulnerability_report(
                     project_token=element['projectToken'],
                 ),
