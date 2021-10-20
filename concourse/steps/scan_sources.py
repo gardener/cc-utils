@@ -1,9 +1,9 @@
 import logging
 import typing
 
+import ccc.whitesource
 import checkmarx.util
 import gci.componentmodel as cm
-import whitesource.client
 import whitesource.component
 import whitesource.util
 
@@ -57,7 +57,7 @@ def scan_component_with_whitesource(
 
     filters = whitesource.util.parse_filters(filters=filters)
 
-    whitesource_client = whitesource.util.create_whitesource_client(
+    whitesource_client = ccc.whitesource.make_client(
         whitesource_cfg_name=whitesource_cfg_name,
     )
 

@@ -29,27 +29,6 @@ import whitesource.model
 logger = logging.getLogger(__name__)
 
 
-@functools.lru_cache()
-def create_whitesource_client(
-    whitesource_cfg_name: str,
-) -> whitesource.client.WhitesourceClient:
-
-    logger.info('creating whitesource client')
-
-    cfg_fac = ci.util.ctx().cfg_factory()
-    ws_config = cfg_fac.whitesource(whitesource_cfg_name)
-
-    return whitesource.client.WhitesourceClient(
-        api_key=ws_config.api_key(),
-        extension_endpoint=ws_config.extension_endpoint(),
-        wss_api_endpoint=ws_config.wss_api_endpoint(),
-        wss_endpoint=ws_config.wss_endpoint(),
-        ws_creds=ws_config.credentials(),
-        product_token=ws_config.product_token(),
-        requester_mail=ws_config.requester_mail(),
-    )
-
-
 def _mk_ctx():
     scanned = 1
 
