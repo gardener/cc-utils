@@ -29,7 +29,7 @@ jira
 kubernetes<12.0.0
 oss2==2.12.1
 passlib<2.0.0
-psycopg2-binary
+psycopg
 pycryptodome
 pydash<5.0.0
 pymongo
