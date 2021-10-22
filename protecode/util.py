@@ -26,6 +26,7 @@ import ccc.deliverydb
 import ccc.gcp
 import ccc.protecode
 import cnudie.retrieve
+import delivery.client
 import dso.model
 import dso.util
 import product.util
@@ -147,16 +148,14 @@ def upload_grouped_images(
     tasks = _upload_tasks()
     results = tuple(executor.map(lambda task: task(), tasks))
 
-    for result_set in results:
-        for upload_result in result_set:
-            issue = dso.util.upload_result_to_compliance_issue(
-                upload_result=upload_result,
-                datasource=dso.model.Datasource.PROTECODE,
-            )
-            delivery_client = ccc.delivery.default_client_if_available()
-            delivery_client.compliance_issue(
-                issue=issue,
-            )
+    if (delivery_client := ccc.delivery.default_client_if_available()):
+        logger.info('uploading results to deliverydb')
+        _upload_results_to_db(
+            results=results,
+            client=delivery_client,
+        )
+    else:
+        logger.warning('not uploading results to deliverydb, client not available')
 
     def flatten_results():
         for result_set in results:
@@ -176,6 +175,25 @@ def upload_grouped_images(
     _license_report = license_report(upload_results=results)
 
     return (relevant_results, results_below_threshold, _license_report)
+
+
+def _upload_results_to_db(
+    results: tuple,
+    client: delivery.client.DeliveryServiceClient,
+):
+    for result_set in results:
+        for upload_result in result_set:
+            try:
+                issue = dso.util.upload_result_to_compliance_issue(
+                    upload_result=upload_result,
+                    datasource=dso.model.Datasource.PROTECODE,
+                )
+                client.compliance_issue(
+                    issue=issue,
+                )
+            except:
+                import traceback
+                traceback.print_exc()
 
 
 def license_report(
