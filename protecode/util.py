@@ -21,14 +21,17 @@ import typing
 
 import dacite
 
+import ccc.delivery
+import ccc.deliverydb
 import ccc.gcp
 import ccc.protecode
 import cnudie.retrieve
+import dso.model
+import dso.util
 import product.util
 import product.v2
 
 import gci.componentmodel as cm
-import dso.labels
 
 from protecode.scanning_util import (
     ResourceGroup,
@@ -143,6 +146,17 @@ def upload_grouped_images(
 
     tasks = _upload_tasks()
     results = tuple(executor.map(lambda task: task(), tasks))
+
+    for result_set in results:
+        for upload_result in result_set:
+            issue = dso.util.upload_result_to_compliance_issue(
+                upload_result=upload_result,
+                datasource=dso.model.Datasource.PROTECODE,
+            )
+            delivery_client = ccc.delivery.default_client_if_available()
+            delivery_client.compliance_issue(
+                issue=issue,
+            )
 
     def flatten_results():
         for result_set in results:
