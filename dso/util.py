@@ -39,7 +39,7 @@ def upload_result_to_compliance_issue(
     data = [
         {
             'component': f'{c.name()}:{c.version()}',
-            'license': c.license().name(),
+            'license': c.license().name() if c.license() else 'UNKNOWN',
             'vulnerabilities': [v.cve() for v in c.vulnerabilities()],
         }
         for c in upload_result.result.components()
