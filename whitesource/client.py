@@ -139,7 +139,7 @@ class WhitesourceClient:
             json=body,
         )
 
-    def get_all_projects_of_product(
+    def projects_of_product(
         self,
     ) -> typing.List[whitesource.model.WhiteSrcProject]:
         body = {
@@ -228,7 +228,7 @@ async def _upload_to_project(
             await websocket.send(chunk)
             sent += len(chunk)
 
-        return json.loads(await websocket.recv())
+        return (await websocket.recv(), json.loads(await websocket.recv()))
     except websockets.exceptions.ConnectionClosedError as e:
         # Falcon, which is the ASGI framework of choice for the backend, does not support a reason
         # string as of today even though its defined in the standard

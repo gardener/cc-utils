@@ -10,12 +10,12 @@ import typing
 import tabulate
 import requests
 
+import gci.componentmodel as cm
+
 import ccc.github
 import ccc.oci
 import ci.util
-import cnudie.retrieve
 import dso.model
-import gci.componentmodel as cm
 import mailutil
 import oci
 import product.util
@@ -40,6 +40,19 @@ def _mk_ctx():
         return scanned
 
     return get, increment
+
+
+def _mk_exitcodes():
+    exit_codes = []
+
+    def add(exit_code: int):
+        nonlocal exit_codes
+        exit_codes.append(exit_code)
+
+    def get():
+        return exit_codes
+
+    return get, add
 
 
 def generate_reporting_tables(
@@ -186,7 +199,7 @@ def scan_artifact_with_white_src(
     extra_whitesource_config: typing.Union[None, dict],
     scan_artifact: dso.model.ScanArtifact,
     whitesource_client: whitesource.client.WhitesourceClient,
-):
+) -> int:
 
     logger.debug('init scan')
     with tempfile.NamedTemporaryFile() as tmp_file:
@@ -242,7 +255,7 @@ def scan_artifact_with_white_src(
 
         logger.info('sending component to whitesource-api-extension')
 
-        res = asyncio.run(
+        exit_code, res = asyncio.run(
             whitesource_client.upload_to_project(
                 extra_whitesource_config=extra_whitesource_config,
                 file=tmp_file,
@@ -255,6 +268,7 @@ def scan_artifact_with_white_src(
         # TODO save scanned commit hash or tag in project tag show scanned version
         # version for agent will create a new project
         # https://whitesource.atlassian.net/wiki/spaces/WD/pages/34046170/HTTP+API+v1.1#HTTPAPIv1.1-ProjectTags
+        return int(exit_code)
 
 
 def _scan_artifact(
@@ -264,52 +278,40 @@ def _scan_artifact(
     len_artifacts: int,
     get_scanned_count: typing.Callable,
     increment_scanned_count: typing.Callable[[], int],
+    add_exit_code: typing.Callable[[], int],
 ):
     logger.info(f'scanning {get_scanned_count()}/{len_artifacts} - {artifact.name}')
     increment_scanned_count()
-    scan_artifact_with_white_src(
+    exit_code = scan_artifact_with_white_src(
         extra_whitesource_config=extra_whitesource_config,
         scan_artifact=artifact,
         whitesource_client=whitesource_client,
     )
+    add_exit_code(exit_code)
 
 
-def scan_sources(
+def scan_artifacts(
     whitesource_client: whitesource.client.WhitesourceClient,
-    component_descriptor: cm.ComponentDescriptor,
     extra_whitesource_config: typing.Union[None, dict],
     max_workers: int,
-    filters: typing.List[whitesource.model.WhiteSourceFilterCfg],
-) -> typing.Tuple[str, typing.List[whitesource.model.WhiteSrcProject]]:
-
-    components = cnudie.retrieve.components(component=component_descriptor)
-
-    product_name = component_descriptor.component.name
-
-    # get scan artifacts with configured label
-    scan_artifacts_gen = whitesource.component.get_scan_artifacts_from_components(
-        components,
-        filters=filters,
-    )
-    scan_artifacts = tuple(scan_artifacts_gen)
+    artifacts: typing.List[dso.model.ScanArtifact],
+) -> typing.List[int]:
 
     get_scanned_count, increment_scanned_count = _mk_ctx()
-
-    logger.info(f'{len(scan_artifacts)} artifacts to scan')
+    get_exit_codes, add_exit_code = _mk_exitcodes()
+    logger.info(f'{len(artifacts)} artifacts to scan')
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         executor.map(functools.partial(
             _scan_artifact,
             extra_whitesource_config=extra_whitesource_config,
             whitesource_client=whitesource_client,
-            len_artifacts=len(scan_artifacts),
+            len_artifacts=len(artifacts),
             get_scanned_count=get_scanned_count,
             increment_scanned_count=increment_scanned_count,
-        ), scan_artifacts)
-
-    projects = whitesource_client.get_all_projects_of_product()
-
-    return product_name, projects
+            add_exit_code=add_exit_code,
+        ), artifacts)
+    return get_exit_codes()
 
 
 def print_scans(
@@ -335,18 +337,54 @@ def print_scans(
     _print_cve_tables(tables=tables)
 
 
-def send_mail(
+def _ensure_notification_recipients(
+    notification_recipients: typing.Union[None, typing.List[str]],
+) -> bool:
+    if not notification_recipients:
+        return False
+    if not len(notification_recipients) > 0:
+        return False
+    return True
+
+
+def send_scan_failed(
+    notification_recipients: typing.Union[None, typing.List[str]],
+    product_name: str,
+):
+    if _ensure_notification_recipients(
+        notification_recipients=notification_recipients,
+    ):
+        logger.info('sending scan failed notification')
+
+        body = f'The WhiteSource scan for {product_name=} failed. \n' \
+            f'Please check the Concourse logs.'
+
+        # get standard cfg set for email cfg
+        default_cfg_set_name = ci.util.current_config_set_name()
+        cfg_factory = ci.util.ctx().cfg_factory()
+        cfg_set = cfg_factory.cfg_set(default_cfg_set_name)
+
+        mailutil._send_mail(
+            email_cfg=cfg_set.email(),
+            recipients=notification_recipients,
+            mail_template=body,
+            subject=f'[ALERT] ({product_name}) WhiteSource Scan Failed',
+            mimetype='html',
+        )
+
+    else:
+        logger.warning('No recipients defined. No emails will be sent...')
+
+
+def send_vulnerability_report(
     notification_recipients: typing.Union[None, typing.List[str]],
     cve_threshold: float,
     product_name: str,
     projects: typing.List[whitesource.model.WhiteSrcProject],
 ):
-    if not notification_recipients:
-        logger.warning('No recipients defined. No emails will be sent...')
-        return
-
-    if len(notification_recipients) > 0:
-
+    if _ensure_notification_recipients(
+        notification_recipients=notification_recipients,
+    ):
         # generate html reporting table for email notifications
         tables = generate_reporting_tables(
             projects=projects,
@@ -359,7 +397,7 @@ def send_mail(
             threshold=cve_threshold,
         )
 
-        logger.info('sending notification')
+        logger.info('sending vulnerability report')
 
         # get standard cfg set for email cfg
         default_cfg_set_name = ci.util.current_config_set_name()

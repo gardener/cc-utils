@@ -1,9 +1,11 @@
 import logging
 import typing
 
+import gci.componentmodel as cm
+
 import ccc.whitesource
 import checkmarx.util
-import gci.componentmodel as cm
+import cnudie.retrieve
 import whitesource.component
 import whitesource.util
 
@@ -54,20 +56,36 @@ def scan_component_with_whitesource(
     filters: list = None,
     max_workers=4,
 ):
-
     filters = whitesource.util.parse_filters(filters=filters)
 
     whitesource_client = ccc.whitesource.make_client(
         whitesource_cfg_name=whitesource_cfg_name,
     )
 
-    product_name, projects = whitesource.util.scan_sources(
-        whitesource_client=whitesource_client,
-        component_descriptor=component_descriptor,
-        extra_whitesource_config=extra_whitesource_config,
-        max_workers=max_workers,
+    components = cnudie.retrieve.components(component=component_descriptor)
+
+    scan_artifacts_gen = whitesource.component.scan_artifacts_gen(
+        components,
         filters=filters,
     )
+    scan_artifacts = tuple(scan_artifacts_gen)
+
+    exit_codes = whitesource.util.scan_artifacts(
+        whitesource_client=whitesource_client,
+        extra_whitesource_config=extra_whitesource_config,
+        max_workers=max_workers,
+        artifacts=scan_artifacts,
+    )
+
+    product_name = component_descriptor.component.name
+
+    if -1 in exit_codes:
+        whitesource.util.send_scan_failed(
+            notification_recipients=notification_recipients,
+            product_name=product_name,
+        )
+
+    projects = whitesource_client.projects_of_product()
 
     whitesource.util.print_scans(
         cve_threshold=cve_threshold,
@@ -75,7 +93,7 @@ def scan_component_with_whitesource(
         product_name=product_name,
     )
 
-    whitesource.util.send_mail(
+    whitesource.util.send_vulnerability_report(
         notification_recipients=notification_recipients,
         cve_threshold=cve_threshold,
         product_name=product_name,
