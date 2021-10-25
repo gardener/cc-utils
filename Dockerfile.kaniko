@@ -1,5 +1,5 @@
 FROM eu.gcr.io/gardener-project/cc/job-image-base:0.61.0
-COPY --from=gcr.io/kaniko-project/executor:latest /kaniko/executor /kaniko/executor.tmp
+COPY --from=gcr.io/kaniko-project/executor:v1.6.0 /kaniko/executor /kaniko/executor.tmp
 
 COPY . /cc/utils/
 
