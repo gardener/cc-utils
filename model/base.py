@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import textwrap
+
 
 import ci.util
 
@@ -48,8 +50,10 @@ class ModelValidationMixin:
         missing_attributes = [a for a in self._required_attributes() if a not in self.raw]
         if missing_attributes:
             raise ModelValidationError(
-                'the following required attributes are absent: {m}'.format(
-                    m=', '.join(missing_attributes),
+                textwrap.dedent(f'''\
+                    the following required attributes are absent: {", ".join(missing_attributes)}
+                    {self.name()=}
+                    '''
                 )
             )
 
