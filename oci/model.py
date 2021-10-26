@@ -9,8 +9,11 @@ import requests
 import oci.util
 
 OCI_MANIFEST_SCHEMA_V2_MIME = 'application/vnd.oci.image.manifest.v1+json'
+OCI_IMAGE_INDEX_MIME = 'application/vnd.oci.image.index.v1+json'
+
 DOCKER_MANIFEST_LIST_MIME = 'application/vnd.docker.distribution.manifest.list.v2+json'
 DOCKER_MANIFEST_SCHEMA_V2_MIME = 'application/vnd.docker.distribution.manifest.v2+json'
+
 empty_dict = dataclasses.field(default_factory=dict)
 
 
@@ -25,7 +28,7 @@ class MimeTypes:
     note: not all registries honour `access` header
     '''
     single_image = ', '.join((OCI_MANIFEST_SCHEMA_V2_MIME, DOCKER_MANIFEST_SCHEMA_V2_MIME))
-    multiarch = DOCKER_MANIFEST_LIST_MIME
+    multiarch = ', '.join((OCI_IMAGE_INDEX_MIME, DOCKER_MANIFEST_LIST_MIME))
     prefer_multiarch = ', '.join((multiarch, single_image))
 
 
