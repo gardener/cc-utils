@@ -79,11 +79,16 @@ def scan_component_with_whitesource(
 
     product_name = component_descriptor.component.name
 
-    if -1 in exit_codes:
+    # if any exit_code != 0, send "scan fail" notification
+    if any((lambda: e != 0)() for e in exit_codes):
+        logger.warning('some scans failed')
+        logger.info(f'notifying {notification_recipients} about failed scan')
         whitesource.util.send_scan_failed(
             notification_recipients=notification_recipients,
             product_name=product_name,
         )
+    else:
+        logger.info('all scans reported a successful execution')
 
     projects = whitesource_client.projects_of_product()
 
@@ -93,6 +98,7 @@ def scan_component_with_whitesource(
         product_name=product_name,
     )
 
+    logger.info(f'sending vulnerability report to {notification_recipients}')
     whitesource.util.send_vulnerability_report(
         notification_recipients=notification_recipients,
         cve_threshold=cve_threshold,

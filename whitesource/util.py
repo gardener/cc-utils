@@ -354,7 +354,6 @@ def send_scan_failed(
     if _ensure_notification_recipients(
         notification_recipients=notification_recipients,
     ):
-        logger.info('sending scan failed notification')
 
         body = f'The WhiteSource scan for {product_name=} failed. \n' \
             f'Please check the Concourse logs.'
@@ -396,8 +395,6 @@ def send_vulnerability_report(
             tables=tables,
             threshold=cve_threshold,
         )
-
-        logger.info('sending vulnerability report')
 
         # get standard cfg set for email cfg
         default_cfg_set_name = ci.util.current_config_set_name()
