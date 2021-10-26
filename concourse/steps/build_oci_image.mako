@@ -193,7 +193,9 @@ subprocess.run(
   check=True,
 )
 
-for img_ref in (image_ref, *${(image_descriptor.additional_tags() or ())}):
+additional_img_refs = ${set(f'{image_descriptor.image_reference()}:{t}' for t in image_descriptor.additional_tags())}
+
+for img_ref in (image_ref, *additional_img_refs):
   container_registry_cfg = mc.find_config(
     image_reference=img_ref,
     privileges=oa.Privileges.READWRITE,
