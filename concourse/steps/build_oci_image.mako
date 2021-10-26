@@ -7,9 +7,11 @@ import os
 
 from makoutil import indent_func
 from concourse.steps import step_lib
+import concourse.model.traits.publish as cm_publish
 container_registry_cfgs = cfg_set._cfg_elements(cfg_type_name='container_registry')
 
 image_descriptor = job_step._extra_args['image_descriptor']
+image_ref = image_descriptor.image_reference()
 
 main_repo = job_variant.main_repository()
 main_repo_relpath = main_repo.resource_name()
@@ -27,6 +29,9 @@ build_ctx_dir = os.path.join(
 version_path = os.path.join(job_step.input('version_path'), 'version')
 
 eff_version_replace_token = '${EFFECTIVE_VERSION}'
+
+publish_trait = job_variant.trait('publish')
+oci_builder = publish_trait.oci_builder()
 %>
 import json
 import logging
@@ -40,9 +45,19 @@ import oci.util as ou
 
 import shutil
 
+with open('${version_path}') as f:
+  effective_version = f.read().strip()
+
+image_tag = '${image_descriptor.tag_template()}'.replace(
+  '${eff_version_replace_token}',
+   effective_version
+)
+
+image_ref = f'${image_ref}:{image_tag}'
 
 ${step_lib('build_oci_image')}
 
+% if oci_builder is cm_publish.OciBuilder.KANIKO:
 home = '/kaniko'
 docker_cfg_dir = os.path.join(home, '.docker')
 os.makedirs(docker_cfg_dir, exist_ok=True)
@@ -60,22 +75,11 @@ subproc_env['PATH'] = '/kaniko/bin'
 
 image_outfile = '${image_descriptor.name()}.oci-image.tar'
 
-with open('${version_path}') as f:
-  effective_version = f.read().strip()
-
-image_tag = '${image_descriptor.tag_template()}'.replace(
-  '${eff_version_replace_token}',
-   effective_version
-)
-
-image_ref = f'${image_descriptor.image_reference()}:{image_tag}'
-
 # XXX rm migration-code again
 if os.path.exists('/kaniko/executor'):
   kaniko_executor = '/kaniko/executor'
 else:
   kaniko_executor = '/bin/kaniko'
-
 
 # XXX another hack: save truststores from being purged by kaniko's multistage-build
 import certifi
@@ -138,6 +142,7 @@ if not os.path.exists(ca_certs_path):
   os.link(ca_certs_bak, ca_certs_path)
 
 additional_tags = ${image_descriptor.additional_tags()}
+
 print(f'publishing to {image_ref=}, {additional_tags=}')
 
 manifest_mimetype = om.DOCKER_MANIFEST_SCHEMA_V2_MIME
@@ -149,4 +154,64 @@ oci.publish_container_image_from_kaniko_tarfile(
   additional_tags=additional_tags,
   manifest_mimetype=manifest_mimetype,
 )
+% elif oci_builder is cm_publish.OciBuilder.DOCKER:
+import tempfile
+
+import dockerutil
+import model.container_registry as mc
+import oci.auth as oa
+
+dockerutil.launch_dockerd_if_not_running()
+
+docker_cfg_dir = tempfile.mkdtemp()
+write_docker_cfg(
+    dockerfile_path='${dockerfile_relpath}',
+    docker_cfg_path=f'{docker_cfg_dir}/config.json',
+)
+
+docker_argv = (
+  'docker',
+  '--config', docker_cfg_dir,
+  'build',
+% for k,v in image_descriptor.build_args().items():
+  '--build-arg', '${k}=${v}',
+% endfor
+% if (target := image_descriptor.target_name()):
+    '--target', '${target}',
+% endif
+    '--tag', image_ref,
+% for img_ref in image_descriptor.additional_tags():
+    '--tag', '${img_ref}',
+% endfor
+  '--file', '${dockerfile_relpath}',
+  '${build_ctx_dir}',
+)
+
+logger.info(f'running docker-build with {docker_argv=}')
+subprocess.run(
+  docker_argv,
+  check=True,
+)
+
+for img_ref in (image_ref, *${(image_descriptor.additional_tags() or ())}):
+  container_registry_cfg = mc.find_config(
+    image_reference=img_ref,
+    privileges=oa.Privileges.READWRITE,
+  )
+  docker_cfg_dir = tempfile.mkdtemp()
+  with open(os.path.join(docker_cfg_dir, 'config.json'), 'w') as f:
+    json.dump({'auths': container_registry_cfg.as_docker_auths()}, f)
+
+  docker_argv = (
+    'docker',
+    '--config', docker_cfg_dir,
+    'push',
+    img_ref,
+  )
+  logger.info(f'running docker-push with {docker_argv=}')
+  subprocess.run(docker_argv, check=True)
+
+% else:
+  <% raise NotImplementedError(oci_builder) %>
+% endif
 </%def>

@@ -28,6 +28,7 @@ from concourse.model.job import (
 )
 from concourse.model.step import (
     PipelineStep,
+    PrivilegeMode,
     StepNotificationPolicy,
 )
 from concourse.model.base import (
@@ -198,6 +199,7 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
 class OciBuilder(enum.Enum):
     CONCOURSE_IMAGE_RESOURCE = 'concourse-image-resource'
     KANIKO = 'kaniko'
+    DOCKER = 'docker'
 
 
 ATTRIBUTES = (
@@ -279,16 +281,24 @@ class PublishTraitTransformer(TraitTransformer):
 
         publish_step._add_dependency(prepare_step)
 
-        if self.trait.oci_builder() is OciBuilder.KANIKO:
-            with open(concourse.paths.last_released_tag_file) as f:
-                last_tag = f.read().strip()
-            kaniko_image_ref = f'eu.gcr.io/gardener-project/cc/job-image-kaniko:{last_tag}'
+        if (oci_builder := self.trait.oci_builder()) in (OciBuilder.KANIKO, OciBuilder.DOCKER):
+            if oci_builder is OciBuilder.KANIKO:
+                with open(concourse.paths.last_released_tag_file) as f:
+                    last_tag = f.read().strip()
+                kaniko_image_ref = f'eu.gcr.io/gardener-project/cc/job-image-kaniko:{last_tag}'
+            elif oci_builder is OciBuilder.DOCKER:
+                kaniko_image_ref = None
+            else:
+                raise NotImplementedError(oci_builder)
 
             for img in self.trait.dockerimages():
                 build_step = PipelineStep(
                     name=f'build_oci_image_{img.name()}',
                     raw_dict={
                         'image': kaniko_image_ref,
+                        'privilege_mode': PrivilegeMode.PRIVILEGED
+                            if oci_builder is OciBuilder.DOCKER
+                            else PrivilegeMode.UNPRIVILEGED,
                     },
                     is_synthetic=True,
                     notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
