@@ -10,7 +10,7 @@ import ci.log
 import model.container_registry as mc
 
 ci.log.configure_default_logging()
-logger = logging.getLogger('kaniko-build.step')
+logger = logging.getLogger('build-oci-image.step')
 
 
 _rescue_root_path = '/kaniko/rescued-fs'
