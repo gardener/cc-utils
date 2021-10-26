@@ -57,10 +57,10 @@ class DefinitionDescriptorPreprocessor:
         return self._inject_main_repo(descriptor)
 
     def _add_branch_to_pipeline_name(self, descriptor):
-        descriptor.pipeline_name = '{n}-{b}'.format(
-            n=descriptor.pipeline_name,
-            b=descriptor.main_repo.get('branch'),
-        )
+        pipeline_name = descriptor.pipeline_name
+        branch = descriptor.main_repo.get('branch').replace('/', '_')
+
+        descriptor.pipeline_name = f'{pipeline_name}-{branch}'
         return descriptor
 
     def _inject_main_repo(self, descriptor):
