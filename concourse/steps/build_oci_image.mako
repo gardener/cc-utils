@@ -12,6 +12,10 @@ container_registry_cfgs = cfg_set._cfg_elements(cfg_type_name='container_registr
 
 image_descriptor = job_step._extra_args['image_descriptor']
 image_ref = image_descriptor.image_reference()
+additional_img_refs = set(
+  f'{image_descriptor.image_reference()}:{t}'
+  for t in image_descriptor.additional_tags()
+)
 
 main_repo = job_variant.main_repository()
 main_repo_relpath = main_repo.resource_name()
@@ -32,6 +36,7 @@ eff_version_replace_token = '${EFFECTIVE_VERSION}'
 
 publish_trait = job_variant.trait('publish')
 oci_builder = publish_trait.oci_builder()
+
 %>
 import json
 import logging
@@ -180,7 +185,7 @@ docker_argv = (
     '--target', '${target}',
 % endif
     '--tag', image_ref,
-% for img_ref in image_descriptor.additional_tags():
+% for img_ref in additional_img_refs:
     '--tag', '${img_ref}',
 % endfor
   '--file', '${dockerfile_relpath}',
@@ -193,9 +198,7 @@ subprocess.run(
   check=True,
 )
 
-additional_img_refs = ${set(f'{image_descriptor.image_reference()}:{t}' for t in image_descriptor.additional_tags())}
-
-for img_ref in (image_ref, *additional_img_refs):
+for img_ref in (image_ref, *${additional_img_refs}):
   container_registry_cfg = mc.find_config(
     image_reference=img_ref,
     privileges=oa.Privileges.READWRITE,
