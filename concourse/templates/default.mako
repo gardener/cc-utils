@@ -413,8 +413,8 @@ else:
     prefix = (cloned_main_repo_name, '.ci')
   else:
     prefix = (source_repo.resource_name(), '.ci')
-  executable_file = job_step.executable(prefix=prefix)
-  executable_cmd = job_step.execute(prefix=prefix)
+  executable_file = job_step.executable(prefix=prefix).rstrip()
+  executable_cmd = job_step.execute(prefix=prefix).rstrip()
 %>
         if readlink -f .>/dev/null 2>&1; then
           CC_ROOT_DIR="$(readlink -f .)"
