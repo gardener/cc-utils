@@ -40,7 +40,13 @@ def upload_result_to_compliance_issue(
         {
             'component': f'{c.name()}:{c.version()}',
             'license': c.license().name() if c.license() else 'UNKNOWN',
-            'vulnerabilities': [v.cve() for v in c.vulnerabilities()],
+            'vulnerabilities': [
+                {
+                    "cve": v.cve(),
+                    "severity": v.cve_severity_str(protecode.model.CVSSVersion.V3),
+                }
+                for v in c.vulnerabilities()
+            ],
         }
         for c in upload_result.result.components()
     ]
