@@ -1,16 +1,14 @@
-import ci.util
 from dso.deliverydb.db import DeliveryDB
+import model.compliancedb
 
 
-def default_with_cfg_name(
-    cfg_name: str,
+def default_with_db_cfg(
+    db_cfg: model.compliancedb.ComplianceDbConfig,
     hostname: str = None,
 ) -> DeliveryDB:
-    cfg_fac = ci.util.ctx().cfg_factory()
-    cfg = cfg_fac.compliancedb(cfg_name)
     return DeliveryDB(
-        username=cfg.credentials().username(),
-        password=cfg.credentials().password(),
-        hostname=cfg.hostname() if not hostname else hostname,
-        port=cfg.port(),
+        username=db_cfg.credentials().username(),
+        password=db_cfg.credentials().password(),
+        hostname=db_cfg.hostname() if not hostname else hostname,
+        port=db_cfg.port(),
     )
