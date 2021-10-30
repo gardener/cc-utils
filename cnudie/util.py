@@ -1,5 +1,6 @@
 import dataclasses
 import io
+import graphlib
 import os
 import tarfile
 import typing
@@ -10,6 +11,34 @@ import ci.util
 import gci.componentmodel as cm
 import product.v2
 import version
+
+
+def iter_sorted(components: typing.Iterable[cm.Component], /) \
+-> typing.Generator[cm.Component, None, None]:
+    '''
+    returns a generator yielding the given components, honouring their dependencies, starting
+    with "leaf" components (i.e. components w/o dependencies), also known as topologically sorted.
+    '''
+    components = (to_component(c) for c in components)
+    components_by_id = {c.identity(): c for c in components}
+
+    toposorter = graphlib.TopologicalSorter()
+
+    def ref_to_comp_id(component_ref: cm.ComponentReference) -> cm.ComponentIdentity:
+        return cm.ComponentIdentity(
+            name=component_ref.componentName,
+            version=component_ref.version,
+        )
+
+    for component_id, component in components_by_id.items():
+        depended_on_comp_ids = (
+            ref_to_comp_id(cref)
+            for cref in component.componentReferences
+        )
+        toposorter.add(component_id, *depended_on_comp_ids)
+
+    for component_id in toposorter.static_order():
+        yield components_by_id[component_id]
 
 
 def to_component(*args, **kwargs) -> cm.Component:

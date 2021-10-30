@@ -99,6 +99,24 @@ def iref():
     return image_ref
 
 
+def test_iter_sorted():
+    def cref(component: cm.Component):
+        return cm.ComponentReference(
+            name='dont-care',
+            componentName=component.name,
+            version=component.version,
+            extraIdentity={},
+        )
+
+    comp_a = comp(name='a', version=1)
+    comp_b = comp(name='b', version=1, componentReferences=[cref(comp_a)])
+    comp_c = comp(name='c', version=1, componentReferences=[cref(comp_a), cref(comp_b)])
+
+    sorted_comps = tuple(cnudie.util.iter_sorted((comp_c, comp_b, comp_a)))
+
+    assert sorted_comps == (comp_a, comp_b, comp_c)
+
+
 def test_remove_component(cid):
     left_components = [
         comp('c1', '1.2.3'),
