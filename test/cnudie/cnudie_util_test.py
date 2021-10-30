@@ -27,22 +27,25 @@ diff_components = cnudie.util.diff_components
 diff_resources = cnudie.util.diff_resources
 
 
-def component_id_v2(name: str, version: str):
-    return cm.ComponentIdentity(name=name, version=version)
-
-
 @pytest.fixture
 def cid():
-    return component_id_v2
+    def component_id(name: str, version: str):
+        return cm.ComponentIdentity(name=name, version=version)
+
+    return component_id
 
 
-def comp(name, version) -> cm.Component:
+def comp(
+    name,
+    version,
+    componentReferences=None,
+) -> cm.Component:
     return cm.Component(
         name=name,
         version=version,
         provider=cm.Provider.INTERNAL,
         repositoryContexts=[],
-        componentReferences=[],
+        componentReferences=componentReferences or [],
         sources=[],
         resources=[],
         labels=[],
@@ -79,21 +82,20 @@ def create_ctf(
         ctf_tar.close()
 
 
-def image_ref(name, version):
-    return cm.Resource(
-        name=name,
-        version=version,
-        access=cm.OciAccess,
-        type=cm.AccessType.OCI_REGISTRY,
-        extraIdentity={},
-        labels=[],
-        srcRefs=[],
-        relation=None,
-    )
-
-
 @pytest.fixture
 def iref():
+    def image_ref(name, version):
+        return cm.Resource(
+            name=name,
+            version=version,
+            access=cm.OciAccess,
+            type=cm.AccessType.OCI_REGISTRY,
+            extraIdentity={},
+            labels=[],
+            srcRefs=[],
+            relation=None,
+        )
+
     return image_ref
 
 
