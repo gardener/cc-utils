@@ -1,5 +1,4 @@
 import abc
-import collections
 import dataclasses
 import logging
 import os
@@ -652,75 +651,75 @@ class UploadComponentDescriptorStep(TransactionalStep):
     def name(self):
         return "Upload Component Descriptor"
 
-    def validate(self):
-        # either cds _XOR_ ctf must exist
+    def component_descriptors(self):
         have_ctf = os.path.exists(self.ctf_path)
         have_cd = os.path.exists(self.component_descriptor_v2_path)
         if not have_ctf ^ have_cd:
             ci.util.fail('exactly one of component-descriptor, or ctf-archive must exist')
+        # either cds _XOR_ ctf must exist
         elif have_cd:
-            self.components = [cm.ComponentDescriptor.from_dict(
-                component_descriptor_dict=ci.util.parse_yaml_file(self.component_descriptor_v2_path),
-                validation_mode=cm.ValidationMode.FAIL,
-            )]
+            component_descriptor = cm.ComponentDescriptor.from_dict(
+                    component_descriptor_dict=ci.util.parse_yaml_file(
+                        self.component_descriptor_v2_path
+                    ),
+                    validation_mode=cm.ValidationMode.FAIL,
+            )
+            yield component_descriptor
+            return
         elif have_ctf:
-            self.components = tuple(cnudie.util.component_descriptors_from_ctf_archive(
-                self.ctf_path,
-            ))
-            if not self.components:
-                ci.util.fail(f'No component descriptor found in CTF archive at {self.ctf_path=}')
+            yield from cnudie.util.component_descriptors_from_ctf_archive(self.ctf_path)
 
-        for component_descriptor_v2 in self.components:
+    def validate(self):
+        components: tuple[cm.Component] = tuple(
+            cnudie.util.iter_sorted(self.component_descriptors())
+        )
+
+        if not components:
+            ci.util.fail('No component descriptor found')
+
+    def apply(self):
+        create_release_step_output = self.context().step_output('Create Release')
+        release_tag_name = create_release_step_output['release_tag_name']
+
+        component_descriptors = tuple(self.component_descriptors())
+        component_id_to_cd = {cd.component.identity(): cd for cd in component_descriptors}
+        components = tuple(cnudie.util.iter_sorted(component_descriptors))
+
+        def resolve_dependencies(component: cm.Component):
+            for _ in cnudie.retrieve.components(component=component):
+                pass
+
+        for component in components:
             try:
-                collections.deque(
-                    cnudie.retrieve.components(component=component_descriptor_v2),
-                    maxlen=0,
-                )
+                resolve_dependencies(component=component)
             except oci.model.OciImageNotFoundException as e:
+                # XXX: escalate to error ASAP
                 logger.warning(
                     'Error when retrieving the Component Descriptor of a component referenced in '
                     f"this component's Component Descriptor: {e}"
                 )
 
-    def apply(
-        self,
-    ):
-        create_release_step_output = self.context().step_output('Create Release')
-        release_tag_name = create_release_step_output['release_tag_name']
+            component_descriptor = component_id_to_cd[component.identity()]
 
-        if os.path.exists(self.component_descriptor_v2_path):
-            component_descriptor_v2 = cm.ComponentDescriptor.from_dict(
-                component_descriptor_dict=ci.util.parse_yaml_file(
-                    self.component_descriptor_v2_path
-                ),
-            )
-
-            component = component_descriptor_v2.component
             tgt_ref = product.v2._target_oci_ref(component=component)
 
             logger.info(f'publishing CNUDIE-Component-Descriptor to {tgt_ref=}')
             product.v2.upload_component_descriptor_v2_to_oci_registry(
-                component_descriptor_v2=component_descriptor_v2,
-            )
-        elif os.path.exists(self.ctf_path):
-            logger.info('processing CTF-archive')
-            subprocess.run(
-                [
-                    'component-cli', 'ctf', 'push', self.ctf_path,
-                ],
-                check=True,
+                component_descriptor_v2=component_descriptor,
             )
 
         try:
             release = self.github_helper.repository.release_from_tag(release_tag_name)
 
-            for component_descriptor_v2 in self.components:
+            for component in components:
+                component_descriptor = component_id_to_cd[component.identity()]
+
                 descriptor_str = yaml.dump(
-                    data=dataclasses.asdict(component_descriptor_v2),
+                    data=dataclasses.asdict(component_descriptor),
                     Dumper=cm.EnumValueYamlDumper,
                 )
 
-                normalized_component_name = component_descriptor_v2.component.name.replace('/', '_')
+                normalized_component_name = component.name.replace('/', '_')
                 asset_name = f'{normalized_component_name}.component_descriptor.cnudie.yaml'
                 release.upload_asset(
                     content_type='application/x-yaml',
