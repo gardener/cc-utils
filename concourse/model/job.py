@@ -15,7 +15,8 @@
 
 import copy
 import enum
-import toposort
+import graphlib
+import typing
 
 from concourse.model.base import (
     ModelBase,
@@ -93,7 +94,13 @@ class JobVariant(ModelBase):
     def step_names(self):
         return map(select_attr('name'), self.steps())
 
-    def _step_depends_on(self, step_name, step_dependency_name, dependencies, visited_steps=None):
+    def _step_depends_on(
+        self,
+        step_name,
+        step_dependency_name,
+        dependencies,
+        visited_steps=None
+    ):
         '''return whether `step_name` depends on `step_dependency_name` given the passed
         dependencies-dictionary.
 
@@ -120,32 +127,46 @@ class JobVariant(ModelBase):
             for s in dependencies[step_name]
         ])
 
-    def _find_and_resolve_publish_trait_circular_dependencies(self, dependencies, cycle_info):
+    def _find_and_resolve_publish_trait_circular_dependencies(
+        self,
+        dependencies: dict[str, set[str]],
+        cycle_info: typing.Sequence[str],
+    ):
+        '''
+        @param dependencies: dict of {step_name: dependencies} as understood by TopologicalSorter
+        @cycle_info: sequence of step-names with circular dependency
+        '''
         # handle circular dependencies caused by depending on the publish step, e.g.:
         # test -> publish -> ... -> prepare -> test
         updated_dependencies = copy.deepcopy(dependencies)
         custom_steps_depending_on_publish = [
             step_name for step_name in cycle_info
-            if self._step_depends_on(step_name, 'publish', cycle_info)
+            if self._step_depends_on(
+                step_name=step_name,
+                step_dependency_name='publish',
+                dependencies=updated_dependencies,
+            )
         ]
-        if (
-            'prepare' in cycle_info
-            and 'publish' in cycle_info
-            and custom_steps_depending_on_publish
-        ):
+
+        if 'prepare' in cycle_info and custom_steps_depending_on_publish:
             for step_name in custom_steps_depending_on_publish:
                 if step_name in updated_dependencies['prepare']:
                     updated_dependencies['prepare'].remove(step_name)
 
         return updated_dependencies
 
-    def _find_and_resolve_release_trait_circular_dependencies(self, dependencies, cycle_info):
+    def _find_and_resolve_release_trait_circular_dependencies(
+        self,
+        dependencies,
+        cycle_info: typing.Sequence[str],
+    ):
         updated_dependencies = copy.deepcopy(dependencies)
-        for step_name, step_dependencies in cycle_info.items():
+        for step_name in cycle_info:
             step = self.step(step_name)
             if not step.is_synthetic:
                 continue # only patch away synthetic steps' dependencies
-            for step_dependency_name in step_dependencies:
+
+            for step_dependency_name in step._dependencies():
                 step_dependency = self.step(step_dependency_name)
                 if step_dependency.is_synthetic:
                     continue # leave dependencies between synthetic steps
@@ -155,7 +176,7 @@ class JobVariant(ModelBase):
 
         return updated_dependencies
 
-    def ordered_steps(self):
+    def ordered_steps(self) -> typing.Generator[tuple[str], None, None]:
         dependencies = {
             step.name: step.depends() for step in self.steps()
         }
@@ -165,29 +186,40 @@ class JobVariant(ModelBase):
                 s.name for s in self.steps()
                 if s.injecting_trait_name() in step.trait_depends()
             }
+
+        def iter_results(toposorter: graphlib.TopologicalSorter):
+            while toposorter.is_active():
+                ready_tasks = tuple(toposorter.get_ready())
+                toposorter.done(*ready_tasks)
+                yield ready_tasks
+
         try:
-            result = list(toposort.toposort(dependencies))
-        except toposort.CircularDependencyError as de:
+            toposorter = graphlib.TopologicalSorter(graph=dependencies)
+            toposorter.prepare()
+            return iter_results(toposorter=toposorter)
+        except graphlib.CycleError as ce:
+            cycle_steps = ce.args[1] # contains a list of circular steps
             dependencies = self._find_and_resolve_publish_trait_circular_dependencies(
                 dependencies,
-                cycle_info=de.data,
+                cycle_info=cycle_steps,
             )
             try:
                 # check whether resolving the dependency between the publish trait has already
                 # fixed the issue
-                result = list(toposort.toposort(dependencies))
-            except toposort.CircularDependencyError as de:
+                toposorter = graphlib.TopologicalSorter(graph=dependencies)
+                toposorter.prepare()
+                return iter_results(toposorter=toposorter)
+            except graphlib.CycleError as ce:
+                cycle_steps = ce.args[1] # contains a list of circular steps
                 dependencies = self._find_and_resolve_release_trait_circular_dependencies(
                     dependencies,
-                    cycle_info=de.data,
+                    cycle_info=cycle_steps,
                 )
                 # try again - if there is still a cyclic dependency, this is probably caused
                 # by a user error - so let it propagate
-                result = list(toposort.toposort(dependencies))
-
-        # result contains a generator yielding tuples of step name in the correct execution order.
-        # each tuple can/should be parallelised
-        return result
+                toposorter = graphlib.TopologicalSorter(graph=dependencies)
+                toposorter.prepare()
+                return iter_results(toposorter=toposorter)
 
     def add_step(self, step: 'PipelineStep'): # noqa
         if self.has_step(step.name):

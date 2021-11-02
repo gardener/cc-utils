@@ -1,6 +1,6 @@
 from copy import deepcopy
 from itertools import chain
-import toposort
+import graphlib
 
 from ci.util import merge_dicts, not_none
 from model.base import ModelValidationError
@@ -157,13 +157,14 @@ class DefinitionFactory:
                 )
 
         # order transformers according to dependencies
-        transformer_dependencies = {
-            t.name: t.order_dependencies() & transformer_names for t in transformers
-        }
+        toposorter = graphlib.TopologicalSorter()
+        for transformer in transformers:
+            dependencies = transformer.order_dependencies() & transformer_names
+            toposorter.add(transformer.name, *dependencies)
 
-        ordered_transformers = []
-        for name in toposort.toposort_flatten(transformer_dependencies):
-            ordered_transformers.append(transformers_dict[name])
+        ordered_transformers = [
+            transformers_dict[name] for name in toposorter.static_order()
+        ]
 
         # hardcode meta trait transformer
         ordered_transformers.append(MetaTraitTransformer())

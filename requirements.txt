@@ -48,7 +48,6 @@ sqlalchemy>1.4.0
 sseclient-py<2.0.0
 tabulate<1.0.0
 termcolor<2.0.0
-toposort
 urllib3<2.0.0
 uvicorn # todo: rm once whd is factored-out to separate package
 websockets

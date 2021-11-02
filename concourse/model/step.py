@@ -370,6 +370,8 @@ class PipelineStep(ModelBase):
         return self._publish_to_dict
 
     def _add_dependency(self, step: 'PipelineStep'):
+        if step.name == self.name:
+            return # ignore dependencies towards self
         self.raw['depends'].add(step.name)
 
     def _remove_dependency(self, step: 'PipelineStep'):
@@ -380,6 +382,9 @@ class PipelineStep(ModelBase):
 
     def trait_depends(self):
         return set(self.raw['trait_depends'])
+
+    def _dependencies(self) -> set[str]:
+        return self.raw['depends']
 
     def injecting_trait_name(self):
         return self._injecting_trait_name

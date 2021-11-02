@@ -256,11 +256,6 @@ each subcomponent.
 * copyright: Maxime Petazzoni
 * license: [Apache License Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
 
-### toposort
-* [url](https://bitbucket.org/ericvsmith/toposort)
-* copyright: Eric V. Smith
-* license: [Apache License Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
-
 ### urllib3
 * [url](https://urllib3.readthedocs.io/)
 * copyright: Andrey Petrov
