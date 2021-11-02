@@ -4,11 +4,10 @@ import model.compliancedb
 
 def default_with_db_cfg(
     db_cfg: model.compliancedb.ComplianceDbConfig,
-    overwrite_hostname: bool,
-    hostname: str,
+    hostname: str = None,
 ) -> DeliveryDB:
 
-    if not overwrite_hostname:
+    if not hostname:
         hostname = db_cfg.hostname()
 
     return DeliveryDB(
