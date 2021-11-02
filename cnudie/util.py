@@ -38,6 +38,10 @@ def iter_sorted(components: typing.Iterable[cm.Component], /) \
         toposorter.add(component_id, *depended_on_comp_ids)
 
     for component_id in toposorter.static_order():
+        if not component_id in components_by_id:
+            # XXX: ignore component-references not contained in passed components for now
+            continue
+
         yield components_by_id[component_id]
 
 
