@@ -693,11 +693,10 @@ class UploadComponentDescriptorStep(TransactionalStep):
             try:
                 resolve_dependencies(component=component)
             except oci.model.OciImageNotFoundException as e:
-                # XXX: escalate to error ASAP
-                logger.warning(
-                    'Error when retrieving the Component Descriptor of a component referenced in '
-                    f"this component's Component Descriptor: {e}"
+                logger.error(
+                    f'{component.name=} {component.version=} has a dangling component-reference'
                 )
+                raise e
 
             component_descriptor = component_id_to_cd[component.identity()]
 
