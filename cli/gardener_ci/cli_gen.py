@@ -116,8 +116,17 @@ def add_module(module_name, parser):
     try:
         module = __import__(module_name)
     except ImportError as ie:
-        if ie.name in ('containerregistry', 'kubernetes'):
-            return # XXX HACK: ignore this particular import error for now
+        if ie.name in (
+            'containerregistry',
+            'kubernetes',
+            'whitesource_common',
+            'sqlalchemy',
+            'psycopg2-binary',
+        ):
+            # "whitesource_common", "sqlalchemy", and "psycopg2-binary" are only required by "gardener-cicd-dso"
+            # There is a valid use case where "gardener-cicd-cli" is present and "gardener-cicd-dso" is not.
+            # Therefore, ImportErrors raised due to these missing dependencies are ignored.
+            return # XXX HACK: ignore these particular import errors for now
         raise ie
 
     # skip if module defines a symbol 'main'
