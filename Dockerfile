@@ -21,6 +21,7 @@ RUN pip3 install --upgrade \
   gardener-cicd-libs==$(cat /metadata/VERSION) \
   gardener-cicd-cli==$(cat /metadata/VERSION) \
   gardener-cicd-whd==$(cat /metadata/VERSION) \
+  gardener-cicd-dso==$(cat /metadata/VERSION) \
   gardenlinux \
   pycryptodome \
 && curl -L \
