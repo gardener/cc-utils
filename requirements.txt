@@ -29,7 +29,6 @@ jira
 kubernetes<12.0.0
 oss2==2.12.1
 passlib<2.0.0
-psycopg2-binary
 pycryptodome
 pydash<5.0.0
 pymongo
@@ -44,12 +43,10 @@ requests_toolbelt<1
 semver<3.0.0
 slackclient<3.0.0
 sphinx_rtd_theme<1.0.0
-sqlalchemy>1.4.0
 sseclient-py<2.0.0
 tabulate<1.0.0
 termcolor<2.0.0
 urllib3<2.0.0
 uvicorn # todo: rm once whd is factored-out to separate package
 websockets
-whitesource_common
 yamllint<2
