@@ -123,8 +123,10 @@ def add_module(module_name, parser):
             'sqlalchemy',
             'psycopg2-binary',
         ):
-            # "whitesource_common", "sqlalchemy", and "psycopg2-binary" are only required by "gardener-cicd-dso"
-            # There is a valid use case where "gardener-cicd-cli" is present and "gardener-cicd-dso" is not.
+            # "whitesource_common", "sqlalchemy", and "psycopg2-binary"
+            # are only required by "gardener-cicd-dso".
+            # There is a valid use case where "gardener-cicd-cli" is present
+            # and "gardener-cicd-dso" is not.
             # Therefore, ImportErrors raised due to these missing dependencies are ignored.
             return # XXX HACK: ignore these particular import errors for now
         raise ie
