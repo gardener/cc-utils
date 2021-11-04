@@ -32,7 +32,7 @@ setuptools.setup(
     python_requires='>=3.9.*',
     py_modules=modules(),
     packages=[
-        'checkmarx'
+        'checkmarx',
         'clamav',
         'dso',
         'protecode',
