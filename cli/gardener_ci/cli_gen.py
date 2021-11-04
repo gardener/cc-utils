@@ -119,6 +119,8 @@ def add_module(module_name, parser):
         if ie.name in (
             'containerregistry',
             'kubernetes',
+            'dso.model',
+            'protecode',
         ) or module_name in (
             'checkmarx_cli',
             'protecode_cli',
