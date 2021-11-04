@@ -1,9 +1,3 @@
-dacite
-gardener-component-model
-github3
 psycopg2-binary
-requests
 sqlalchemy>1.4.0
-tabulate
-urllib3
 whitesource_common
