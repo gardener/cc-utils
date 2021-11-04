@@ -17,9 +17,7 @@ def requirements():
             yield line
 
 
-def modules():
-    return [
-    ]
+def modules(): return []
 
 
 def version():
