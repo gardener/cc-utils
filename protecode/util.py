@@ -15,9 +15,12 @@
 
 import collections
 from concurrent.futures import ThreadPoolExecutor
+import dataclasses
+import datetime
 import logging
 import tabulate
 import typing
+import uuid
 
 import dacite
 
@@ -25,6 +28,7 @@ import ccc.delivery
 import ccc.deliverydb
 import ccc.gcp
 import ccc.protecode
+import ci.util
 import cnudie.retrieve
 import delivery.client
 import dso.model
@@ -184,7 +188,7 @@ def _upload_results_to_db(
     for result_set in results:
         for upload_result in result_set:
             try:
-                issue = dso.util.upload_result_to_compliance_issue(
+                issue = upload_result_to_compliance_issue(
                     upload_result=upload_result,
                     datasource=dso.model.Datasource.PROTECODE,
                 )
@@ -312,3 +316,48 @@ def filter_and_display_upload_results(
         render_results_table(upload_results=results_above_cve_thresh)
 
     return results_above_cve_thresh, results_below_cve_thresh
+
+
+def upload_result_to_compliance_issue(
+    upload_result: UploadResult,
+    datasource: str = dso.model.Datasource.PROTECODE,
+) -> dso.model.ComplianceIssue:
+
+    artifact = dataclasses.asdict(
+        upload_result.resource,
+        dict_factory=ci.util.dict_factory_enum_serialisiation,
+    )
+
+    artifact_ref = dso.model.ArtifactReference(
+        componentName=upload_result.component.name,
+        componentVersion=upload_result.component.version,
+        artifact=artifact,
+    )
+
+    meta = dso.model.ComplianceIssueMetadata(
+        datasource=datasource,
+        creationDate=datetime.datetime.now().isoformat(),
+        uuid=str(uuid.uuid4()),
+    )
+
+    data = [
+        {
+            'component': f'{c.name()}:{c.version()}',
+            'license': c.license().name() if c.license() else 'UNKNOWN',
+            'vulnerabilities': [
+                {
+                    "cve": v.cve(),
+                    "severity": v.cve_severity_str(CVSSVersion.V3),
+                }
+                for v in c.vulnerabilities()
+            ],
+        }
+        for c in upload_result.result.components()
+    ]
+
+    issue = dso.model.ComplianceIssue(
+        artifact=artifact_ref,
+        meta=meta,
+        data={'data': data},
+    )
+    return issue

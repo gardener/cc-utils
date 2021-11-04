@@ -124,7 +124,7 @@ def add_module(module_name, parser):
             'checkmarx_cli',
             'protecode_cli',
             'whitesource_cli',
-        ) or ie.name.startswith('dso'):
+        ):
             # (checkmarx|protecode|whitesource)_cli.py have different, additional
             # requirements, as they belong to the "gardener-cicd-dso" package.
             # "gardener-cicd-libs" might be present while "gardener-cicd-dso" is not,

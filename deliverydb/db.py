@@ -2,9 +2,7 @@ import logging
 
 import sqlalchemy
 
-from dso.deliverydb.model import Base
-import dso.model
-import dso.util
+from deliverydb.model import Base, Scan
 
 
 class DeliveryDB:
@@ -35,7 +33,7 @@ class DeliveryDB:
         meta: dict,
         data: dict,
     ):
-        scan = dso.deliverydb.model.Scan(
+        scan = Scan(
             artifact=artifact,
             meta=meta,
             data=data,

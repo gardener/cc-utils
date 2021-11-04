@@ -1,4 +1,4 @@
-from dso.deliverydb.db import DeliveryDB
+from deliverydb.db import DeliveryDB
 import model.compliancedb
 
 
