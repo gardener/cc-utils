@@ -119,15 +119,17 @@ def add_module(module_name, parser):
         if ie.name in (
             'containerregistry',
             'kubernetes',
-            'whitesource_common',
-            'sqlalchemy',
-            'psycopg2-binary',
+        ) or module_name in (
+            'checkmarx_cli',
+            'protecode_cli',
+            'whitesource_cli',
         ):
-            # "whitesource_common", "sqlalchemy", and "psycopg2-binary"
-            # are only required by "gardener-cicd-dso".
-            # There is a valid use case where "gardener-cicd-cli" is present
-            # and "gardener-cicd-dso" is not.
-            # Therefore, ImportErrors raised due to these missing dependencies are ignored.
+            # (checkmarx|protecode|whitesource)_cli.py have different, additional
+            # requirements, as they belong to the "gardener-cicd-dso" package.
+            # "gardener-cicd-libs" might be present while "gardener-cicd-dso" is not,
+            # therefore their requirements might be missing.
+            # To still let the cli.py work as intended, ImportErrors caused by these
+            # modules are ignored.
             return # XXX HACK: ignore these particular import errors for now
         raise ie
 
