@@ -51,8 +51,10 @@ def packages():
     package_names.remove('checkmarx')
     package_names.remove('clamav')
     package_names.remove('dso')
+    package_names.remove('dso.deliverydb')
     package_names.remove('protecode')
     package_names.remove('whitesource')
+
     return package_names
 
 
