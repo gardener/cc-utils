@@ -389,6 +389,10 @@ class ProtecodeUtil:
                 # to the list of scans to consider. In all other cases re-raise the error.
                 if e.response.status_code != requests.codes.conflict:
                     raise e
+
+                image_ref = resource.access.imageReference
+                logger.warning(f'conflict whilst trying to upload {image_ref=}')
+
                 scan_result = self.retrieve_scan_result(
                     component=resource_group.component(),
                     resource=resource,
@@ -442,9 +446,18 @@ class ProtecodeUtil:
                 pdf_report_retrieval_func=pdf_retrieval_function,
             )
 
+        # in rare cases, we fail to find (again) an existing app, but (through naming-convention)
+        # succeed in finding it implicitly while trying to upload image. Do not purge those
+        # IDs (or in general: purge no ID we just recently created/retrieved)
+        product_ids_not_to_purge = {app.product_id() for app in protecode_apps_to_consider}
+
         # rm all outdated protecode apps
         for protecode_app in protecode_apps_to_remove:
             product_id = protecode_app.product_id()
+            if product_id in product_ids_not_to_purge:
+                logger.warning(f'would have tried to purge {product_id=} - skipping')
+                continue
+
             self._api.delete_product(product_id=product_id)
             logger.info(f'purged outdated product {product_id} ({protecode_app.display_name()})')
 
