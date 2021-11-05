@@ -651,8 +651,11 @@ class UploadComponentDescriptorStep(TransactionalStep):
     def name(self):
         return "Upload Component Descriptor"
 
+    def _have_ctf(self) -> bool:
+        return os.path.exists(self.ctf_path)
+
     def component_descriptors(self):
-        have_ctf = os.path.exists(self.ctf_path)
+        have_ctf = self._have_ctf()
         have_cd = os.path.exists(self.component_descriptor_v2_path)
         if not have_ctf ^ have_cd:
             ci.util.fail('exactly one of component-descriptor, or ctf-archive must exist')
@@ -689,23 +692,35 @@ class UploadComponentDescriptorStep(TransactionalStep):
             for _ in cnudie.retrieve.components(component=component):
                 pass
 
-        for component in components:
-            try:
-                resolve_dependencies(component=component)
-            except oci.model.OciImageNotFoundException as e:
-                logger.error(
-                    f'{component.name=} {component.version=} has a dangling component-reference'
+        def upload_component_descriptors(components):
+            for component in components:
+                try:
+                    resolve_dependencies(component=component)
+                except oci.model.OciImageNotFoundException as e:
+                    logger.error(
+                        f'{component.name=} {component.version=} has dangling component-reference'
+                    )
+                    raise e
+
+                component_descriptor = component_id_to_cd[component.identity()]
+
+                tgt_ref = product.v2._target_oci_ref(component=component)
+
+                logger.info(f'publishing CNUDIE-Component-Descriptor to {tgt_ref=}')
+                product.v2.upload_component_descriptor_v2_to_oci_registry(
+                    component_descriptor_v2=component_descriptor,
                 )
-                raise e
 
-            component_descriptor = component_id_to_cd[component.identity()]
-
-            tgt_ref = product.v2._target_oci_ref(component=component)
-
-            logger.info(f'publishing CNUDIE-Component-Descriptor to {tgt_ref=}')
-            product.v2.upload_component_descriptor_v2_to_oci_registry(
-                component_descriptor_v2=component_descriptor,
+        def upload_ctf(ctf_path: str):
+            subprocess.run(
+                ('component-cli', 'ctf', 'push', ctf_path),
+                check=True,
             )
+
+        if not self._have_ctf():
+            upload_component_descriptors(components=components)
+        else:
+            upload_ctf(ctf_path=self.ctf_path)
 
         try:
             release = self.github_helper.repository.release_from_tag(release_tag_name)
