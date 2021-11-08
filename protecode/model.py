@@ -147,9 +147,9 @@ class Vulnerability(ModelBase):
 
         return (Triage(raw_dict=raw) for raw in trs)
 
-    def cve_major_severity(self, cvss_version) -> int:
+    def cve_major_severity(self, cvss_version) -> float:
         if self.cve_severity_str(cvss_version):
-            return int(self.cve_severity_str(cvss_version).split('.')[0])
+            return float(self.cve_severity_str(cvss_version).split('.')[0])
         else:
             return -1
 
@@ -235,7 +235,7 @@ class ScanResult(ModelBase):
 def highest_major_cve_severity(
     vulnerabilites: Iterable[Vulnerability],
     cvss_version,
-) -> int:
+) -> float:
     try:
         return max(
             map(lambda v: v.cve_major_severity(cvss_version), vulnerabilites)
