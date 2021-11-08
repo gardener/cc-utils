@@ -152,15 +152,6 @@ def upload_grouped_images(
     tasks = _upload_tasks()
     results = tuple(executor.map(lambda task: task(), tasks))
 
-    if (delivery_client := ccc.delivery.default_client_if_available()):
-        logger.info('uploading results to deliverydb')
-        _upload_results_to_db(
-            results=results,
-            client=delivery_client,
-        )
-    else:
-        logger.warning('not uploading results to deliverydb, client not available')
-
     def flatten_results():
         for result_set in results:
             yield from result_set
@@ -175,6 +166,15 @@ def upload_grouped_images(
         ignore_if_triaged=ignore_if_triaged,
     )
 
+    if (delivery_client := ccc.delivery.default_client_if_available()):
+        logger.info('uploading results to deliverydb')
+        _upload_results_to_db(
+            results=relevant_results + results_below_threshold,
+            client=delivery_client,
+        )
+    else:
+        logger.warning('not uploading results to deliverydb, client not available')
+
     logger.info('Preparing license report')
     _license_report = license_report(upload_results=results)
 
@@ -185,19 +185,19 @@ def _upload_results_to_db(
     results: tuple,
     client: delivery.client.DeliveryServiceClient,
 ):
-    for result_set in results:
-        for upload_result in result_set:
-            try:
-                issue = upload_result_to_compliance_issue(
-                    upload_result=upload_result,
-                    datasource=dso.model.Datasource.PROTECODE,
-                )
-                client.compliance_issue(
-                    issue=issue,
-                )
-            except:
-                import traceback
-                traceback.print_exc()
+    for upload_result in results:
+        try:
+            issue = upload_result_to_compliance_issue(
+                upload_result=upload_result[0],
+                greatest_cvss3_score=upload_result[1],
+                datasource=dso.model.Datasource.PROTECODE,
+            )
+            client.compliance_issue(
+                issue=issue,
+            )
+        except:
+            import traceback
+            traceback.print_exc()
 
 
 def license_report(
@@ -320,6 +320,7 @@ def filter_and_display_upload_results(
 
 def upload_result_to_compliance_issue(
     upload_result: UploadResult,
+    greatest_cvss3_score: float,
     datasource: str = dso.model.Datasource.PROTECODE,
 ) -> dso.model.ComplianceIssue:
 
@@ -340,20 +341,7 @@ def upload_result_to_compliance_issue(
         uuid=str(uuid.uuid4()),
     )
 
-    data = [
-        {
-            'component': f'{c.name()}:{c.version()}',
-            'license': c.license().name() if c.license() else 'UNKNOWN',
-            'vulnerabilities': [
-                {
-                    "cve": v.cve(),
-                    "severity": v.cve_severity_str(CVSSVersion.V3),
-                }
-                for v in c.vulnerabilities()
-            ],
-        }
-        for c in upload_result.result.components()
-    ]
+    data = {'greatestCvss3Score': greatest_cvss3_score}
 
     issue = dso.model.ComplianceIssue(
         artifact=artifact_ref,
