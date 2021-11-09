@@ -149,7 +149,7 @@ class Vulnerability(ModelBase):
 
     def cve_major_severity(self, cvss_version) -> float:
         if self.cve_severity_str(cvss_version):
-            return float(self.cve_severity_str(cvss_version).split('.')[0])
+            return float(self.cve_severity_str(cvss_version))
         else:
             return -1
 
