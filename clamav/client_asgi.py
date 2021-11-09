@@ -35,10 +35,10 @@ class ScanStatus(enum.Enum):
     SCAN_FAILED = 'scan_failed'
 
 
-class MalwareStatus(enum.Enum):
-    UNKNOWN = 'unknown'
-    FOUND_MALWARE = 'FOUND_MALWARE'
-    OK = 'OK'
+class MalwareStatus(enum.IntEnum):
+    OK = 0
+    FOUND_MALWARE = 1
+    UNKNOWN = 2
 
 
 @dataclasses.dataclass
@@ -141,16 +141,19 @@ class ClamAVClientAsgi:
                 name=name,
             )
 
-        malware_status = MalwareStatus(response['result'])
         message = response.get('message', None)
         details = response.get('details', 'no details available')
 
-        if malware_status is MalwareStatus.OK:
+        if (malware_status_str := MalwareStatus(response['result'])) == 'OK':
+            malware_status = MalwareStatus.OK
             details = message or 'no details available'
-        elif malware_status is MalwareStatus.FOUND_MALWARE:
+        elif malware_status_str == 'FOUND_MALWARE':
+            malware_status = MalwareStatus.FOUND_MALWARE
             details = f'{message}: {details}'
+        elif malware_status_str == 'unknown':
+            malware_status = MalwareStatus.UNKNOWN
         else:
-            raise NotImplementedError(malware_status)
+            raise NotImplementedError(malware_status_str)
 
         return ScanResult(
             status=ScanStatus.SCAN_SUCCEEDED,
