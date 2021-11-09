@@ -144,7 +144,7 @@ class ClamAVClientAsgi:
         message = response.get('message', None)
         details = response.get('details', 'no details available')
 
-        if (malware_status_str := MalwareStatus(response['result'])) == 'OK':
+        if (malware_status_str := response['result']) == 'OK':
             malware_status = MalwareStatus.OK
             details = message or 'no details available'
         elif malware_status_str == 'FOUND_MALWARE':
