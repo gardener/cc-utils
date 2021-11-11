@@ -475,6 +475,12 @@ class JobMapping(NamedModelElement):
 
         return False
 
+    '''
+        when set the secrets replication pipline will be rendered into the defined team
+    '''
+    def secrets_replication_pipeline_target_cc_team_cfg_name(self) -> typing.Optional[str]:
+        return self.raw.get('secrets_replication_pipeline_target_cc_team_cfg_name')
+
     def _required_attributes(self):
         return [
             'concourse_target_team',
@@ -487,6 +493,7 @@ class JobMapping(NamedModelElement):
             'concourse_uam',
             'secret_cfg',
             'secrets_repo',
+            'secrets_replication_pipeline_target_cc_team_cfg_name',
         ]
 
     def _defaults_dict(self):
