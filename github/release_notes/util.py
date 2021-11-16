@@ -14,12 +14,14 @@
 # limitations under the License.
 
 import re
+import logging
 import typing
 
 import git
 import requests
 
 import ccc.github
+import ci.log
 import cnudie.retrieve
 import cnudie.util
 import gci.componentmodel
@@ -30,7 +32,7 @@ from git.exc import GitError
 from github.util import GitHubRepositoryHelper
 from pydash import _
 
-from ci.util import info, warning, fail, verbose, ctx
+from ci.util import fail, ctx
 from github.release_notes.model import (
     REF_TYPE_PULL_REQUEST, ReleaseNote,
     Commit,
@@ -47,6 +49,10 @@ from github.release_notes.renderer import (
 from gitutil import GitHelper
 from model.base import ModelValidationError
 from slackclient.util import SlackHelper
+
+
+logger = logging.getLogger(__name__)
+ci.log.configure_default_logging()
 
 
 def fetch_release_notes(
@@ -107,7 +113,7 @@ def post_to_slack(
             idx += max_msg_size_bytes
 
     except RuntimeError as e:
-        warning(e)
+        logger.warning(e)
 
 
 def delete_file_from_slack(
@@ -162,7 +168,7 @@ class ReleaseNotes:
             force_link_generation=force_link_generation
         ).render()
 
-        info('Release notes:\n{rn}'.format(rn=release_notes_str))
+        logger.info('Release notes:\n{rn}'.format(rn=release_notes_str))
         return release_notes_str
 
     def release_note_blocks(self):
@@ -176,7 +182,7 @@ class ReleaseNotes:
         else:
             release_notes_str = ''
 
-        info('Release note blocks:\n{rn}'.format(rn=release_notes_str))
+        logger.info('Release note blocks:\n{rn}'.format(rn=release_notes_str))
         return release_notes_str
 
     def _rls_note_objs(
@@ -188,13 +194,13 @@ class ReleaseNotes:
             commit_range = self.calculate_range(
                 repository_branch,
             )
-        info(f'Fetching release notes from revision range: {commit_range}')
+        logger.info(f'Fetching release notes from revision range: {commit_range}')
         commits = self.commits_in_range(
             commit_range=commit_range,
             repository_branch=repository_branch,
         )
         pr_numbers = fetch_pr_numbers_from_commits(commits=commits)
-        verbose(f'Merged pull request numbers in range {commit_range}: {pr_numbers}')
+        logger.debug(f'Merged pull request numbers in range {commit_range}: {pr_numbers}')
         release_note_objs = self.fetch_release_notes_from_prs(
             pr_numbers_in_range=pr_numbers,
         )
@@ -226,7 +232,7 @@ class ReleaseNotes:
             # better readable range_end by describing head commit
             range_end = repo.git.describe(branch_head, tags=True)
         except GitError as err:
-            warning(
+            logger.warning(
                 'failed to describe branch head, maybe the repository has no tags? '
                 f'GitError: {err}. Falling back to branch head commit hash.'
             )
@@ -244,7 +250,7 @@ class ReleaseNotes:
                 version.parse_to_semver(tag_name)
                 return True
             except ValueError:
-                warning('{tag} is not a valid SemVer string'.format(tag=tag_name))
+                logger.warning('{tag} is not a valid SemVer string'.format(tag=tag_name))
                 return False
 
         release_tags = self.github_helper.release_tags()
@@ -290,7 +296,7 @@ class ReleaseNotes:
         reachable_tags.sort(key=lambda t: version.parse_to_semver(t), reverse=True)
 
         if not reachable_tags:
-            warning('no release tag found, falling back to root commit')
+            logger.warning('no release tag found, falling back to root commit')
             root_commits = repo.iter_commits(rev=commit, max_parents=0)
             root_commit = next(root_commits, None)
             if not root_commit:
@@ -432,7 +438,7 @@ def extract_release_notes(
                 continue
             release_notes.append(rls_note_block)
         except ModelValidationError as e:
-            warning(f'an exception occurred while extracting release notes: {e}')
+            logger.warning(f'an exception occurred while extracting release notes: {e}')
             continue
     return release_notes
 
@@ -473,7 +479,9 @@ def create_release_note_block(
                 ctx_repo_url=ctx_repo_url,
             ).component
         except requests.exceptions.HTTPError:
-            warning(f'Unable to retrieve component descriptor for source repository {source_repo}')
+            logger.warning(
+                f'Unable to retrieve component descriptor for source repository {source_repo}'
+            )
             return None
 
         reference_type = reference_type_for_type_identifier(code_block.get('reference_type'))
