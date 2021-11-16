@@ -75,6 +75,7 @@ def post_to_slack(
 ):
     # slack can't auto link pull requests, commits or users
     # hence we force the link generation when building the markdown string
+    logger.info('Creating release-note markdown before posting to Slack')
     release_notes_md_links = release_notes.to_markdown(
         force_link_generation=True
     )
@@ -107,6 +108,7 @@ def post_to_slack(
             # post part
             title += f' - part {i} ]'
             msg = release_notes_md_links[idx: idx+max_msg_size_bytes]
+            logger.info(f"Posting release-note '{title}'")
             yield slack_helper.post_to_slack(channel=slack_channel, title=title, message=msg)
 
             i += 1
