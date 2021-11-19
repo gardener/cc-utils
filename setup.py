@@ -1,21 +1,7 @@
-import os
 import setuptools
-import setuptools.command.build_py
-
+import os
 
 own_dir = os.path.abspath(os.path.dirname(__file__))
-
-
-# Removing specific modules from packages turns out to be tricky. Create a custom package-
-# builder, override the method used to find package-modules and just skip over the
-# module in question (ccc.deliverydb, hardcoded for now).
-class custom_build_py(setuptools.command.build_py.build_py):
-    def find_package_modules(self, package, package_dir):
-        return [
-            (package, module, filename)
-            for package, module, filename in super().find_package_modules(package, package_dir)
-            if not (package == 'ccc' and module == 'deliverydb')
-        ]
 
 
 def requirements():
@@ -94,5 +80,4 @@ setuptools.setup(
     install_requires=list(requirements()),
     entry_points={
     },
-    cmdclass={'build_py': custom_build_py},
 )
