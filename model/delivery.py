@@ -101,19 +101,25 @@ class OAuth(ModelBase):
 
 
 class SigningCfg(ModelBase):
+    def id(self) -> str:
+        return self.raw.get('id')
+
     def algorithm(self):
         return self.raw.get('algorithm', 'HS256')
 
     def secret(self):
         return self.raw.get('secret')
 
+    def purpose_label(self):
+        return self.raw.get('purpose_label')
+
 
 class DeliverySvcCfg(ModelBase):
     def external_host(self):
         return self.raw.get('external_host')
 
-    def signing_cfg(self):
-        return SigningCfg(self.raw.get('signing'))
+    def signing_cfgs(self) -> list[SigningCfg]:
+        return [SigningCfg(raw) for raw in self.raw.get('signing')]
 
 
 class DeliveryDashboardCfg(ModelBase):
