@@ -1,9 +1,9 @@
 import typing
 
+import psycopg
+
 from deliverydb.db import DeliveryDB, delivery_db_no_orm
 import model.compliancedb
-
-import psycopg
 
 
 def default_with_db_cfg(
