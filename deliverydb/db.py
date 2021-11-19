@@ -49,9 +49,10 @@ def delivery_db_no_orm(
     hostname: str,
     port: int,
 ) -> psycopg.Connection:
-        return psycopg.connect(
-            user=username,
-            password=password,
-            host=hostname,
-            port=port,
-        )
+
+    return psycopg.connect(
+        user=username,
+        password=password,
+        host=hostname,
+        port=port,
+    )
