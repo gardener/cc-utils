@@ -1,5 +1,6 @@
 import logging
 
+import psycopg
 import sqlalchemy
 
 from deliverydb.model import Base, Scan
@@ -40,3 +41,17 @@ class DeliveryDB:
         )
 
         self.Session.add(scan)
+
+
+def delivery_db_no_orm(
+    username: str,
+    password: str,
+    hostname: str,
+    port: int,
+) -> psycopg.Connection:
+        return psycopg.connect(
+            user=username,
+            password=password,
+            host=hostname,
+            port=port,
+        )
