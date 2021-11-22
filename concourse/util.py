@@ -109,9 +109,11 @@ def _enumerate_required_org_webhooks(
         job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
 
         for github_orgname, github_cfg_name in _enumerate_github_org_configs(job_mapping_set):
-            github_api = ccc.github.github_api(
-                github_cfg=cfg_factory.github(github_cfg_name),
-            )
+            github_cfg = cfg_factory.github(github_cfg_name)
+            github_api = ccc.github.github_api(github_cfg=github_cfg)
+
+            if not concourse_cfg.is_accessible_from(github_cfg.http_url()):
+                continue
 
             webhook_url = create_url_from_attributes(
                 netloc=whd_deployment_cfg.external_url(),
