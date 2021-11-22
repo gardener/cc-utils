@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import enum
+import typing
 
 from model.base import (
     BasicCredentials,
@@ -110,16 +111,29 @@ class SigningCfg(ModelBase):
     def secret(self):
         return self.raw.get('secret')
 
-    def purpose_label(self):
-        return self.raw.get('purpose_label')
+    def purpose_labels(self) -> list[str]:
+        return self.raw['purpose_labels']
 
 
 class DeliverySvcCfg(ModelBase):
     def external_host(self):
         return self.raw.get('external_host')
 
-    def signing_cfgs(self) -> list[SigningCfg]:
-        return [SigningCfg(raw) for raw in self.raw.get('signing')]
+    def signing_cfgs(
+        self,
+        purpose_label: str = None,
+    ) -> typing.Union[SigningCfg, list[SigningCfg], None]:
+        cfgs = self.raw.get('signing')
+        if purpose_label:
+            for raw_singing_Cfg in cfgs:
+                signing_cfg = SigningCfg(raw_singing_Cfg)
+                if not (labels := signing_cfg.purpose_labels()):
+                    return None
+
+                if purpose_label in labels:
+                    return signing_cfg
+
+        return [SigningCfg(raw) for raw in cfgs]
 
 
 class DeliveryDashboardCfg(ModelBase):
