@@ -13,6 +13,8 @@ COPY VERSION /metadata/VERSION
 ENV PATH /cc/utils/:/cc/utils/bin:$PATH
 ENV HELM_V3_VERSION=v3.1.1
 
+RUN cat /cc/utils/gardener-cicd-dso.apk-packages | xargs apk add --no-cache
+
 RUN pip3 install --upgrade \
   pip \
   wheel \
