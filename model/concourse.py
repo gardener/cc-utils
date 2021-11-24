@@ -114,6 +114,19 @@ class ConcourseConfig(NamedModelElement):
     def oauth_config_name(self):
         return self.raw['oauth_config_name']
 
+    def is_accessible_from(self, url: str) -> bool:
+        if not (domain_rules := self.raw.get('domain_rules', [])):
+            return True
+
+        for dr in domain_rules:
+            if (
+                re.compile(dr['domain_regex']).fullmatch(url)
+                and not dr['accessible_from']
+            ):
+                return False
+
+        return True
+
     def _required_attributes(self):
         return [
             'externalUrl',
@@ -134,6 +147,7 @@ class ConcourseConfig(NamedModelElement):
             'clamav_config',
             'concourse_version', # TODO: Remove
             'deploy_storage_class',
+            'domain_rules',
             'github_enterprise_host',
             'ingress_host', # TODO: Remove
             'proxy',
