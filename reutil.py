@@ -1,11 +1,14 @@
 import re
+import typing
+
+T = typing.TypeVar
 
 
 def re_filter(
-    include_regexes=(),
-    exclude_regexes=(),
-    value_transformation=None,
-):
+    include_regexes: typing.Iterable[str] = (),
+    exclude_regexes: typing.Iterable[str] = (),
+    value_transformation: typing.Callable[[T], str] = None,
+) -> typing.Callable[[typing.Union[T, str]], bool]:
     '''
     returns a callable that can be used as a filter, applying the given include and exclude
     regular expressions. The matching semantics is defined so that the absence of filter values
