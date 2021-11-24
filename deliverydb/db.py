@@ -4,19 +4,16 @@ import psycopg
 import sqlalchemy
 
 from deliverydb.model import Base, Scan
+import model.compliancedb
 
 
 class DeliveryDB:
     def __init__(
         self,
-        username: str,
-        password: str,
-        hostname: str,
-        port: int,
-        dialect: str = 'postgresql',
+        db_conn_url: str,
     ):
         self._engine = sqlalchemy.create_engine(
-            f'{dialect}://{username}:{password}@{hostname}:{port}',
+            db_conn_url,
             echo=True,
             future=True,
         )
@@ -44,17 +41,11 @@ class DeliveryDB:
 
 
 def delivery_db_no_orm(
-    username: str,
-    password: str,
-    hostname: str,
-    port: int,
+    db_conn_url: str,
 ) -> psycopg.Connection:
 
     return psycopg.connect(
-        user=username,
-        password=password,
-        host=hostname,
-        port=port,
+        conninfo=db_conn_url,
     )
 
 
