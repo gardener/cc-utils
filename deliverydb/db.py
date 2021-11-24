@@ -41,7 +41,7 @@ class DeliveryDB:
 
 def database_conncetion_url_from_cfg(
     db_cfg: model.compliancedb.ComplianceDbConfig,
-    dialect: str = 'postgres',
+    dialect: str = 'postgresql',
     overwrite_hostname: str = None,
     overwrite_username: str = None,
     overwrite_password: str = None,
@@ -54,4 +54,4 @@ def database_conncetion_url_from_cfg(
 
     # Potentially, this function could be used to create connection urls
     # to different types of databases, therefore the "dialect" can vary.
-    return f'{dialect}://{username}:{password}@{hostname}:{port}',
+    return f'{dialect}://{username}:{password}@{hostname}:{port}'
