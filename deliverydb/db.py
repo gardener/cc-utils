@@ -56,3 +56,27 @@ def delivery_db_no_orm(
         host=hostname,
         port=port,
     )
+
+
+def database_conncetion_url_from_cfg(
+    db_cfg: model.compliancedb.ComplianceDbConfig,
+    dialect: str = 'postgres',
+) -> str:
+    username = db_cfg.credentials().username()
+    password = db_cfg.credentials().password()
+    hostname = db_cfg.hostname()
+    port = db_cfg.port()
+
+    # Potentially, this function could be used to create connection urls
+    # to different types of databases, therefore the "dialect" can vary.
+    return f'{dialect}://{username}:{password}@{hostname}:{port}',
+
+
+def database_connection_url_from_custom(
+    hostname: str,
+    username: str,
+    password: str,
+    port: int,
+    dialect: str = 'postgres',
+) -> str:
+    return f'{dialect}://{username}:{password}@{hostname}:{port}'
