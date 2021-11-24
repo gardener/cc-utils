@@ -1,6 +1,5 @@
 import logging
 
-import psycopg
 import sqlalchemy
 
 from deliverydb.model import Base, Scan
@@ -38,15 +37,6 @@ class DeliveryDB:
         )
 
         self.Session.add(scan)
-
-
-def delivery_db_no_orm(
-    db_conn_url: str,
-) -> psycopg.Connection:
-
-    return psycopg.connect(
-        conninfo=db_conn_url,
-    )
 
 
 def database_conncetion_url_from_cfg(
