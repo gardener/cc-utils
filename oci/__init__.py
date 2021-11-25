@@ -195,7 +195,10 @@ def replicate_artifact(
     ).text
     manifest = json.loads(raw_manifest)
     schema_version = int(manifest['schemaVersion'])
+    need_to_synthesise_cfg_blob = False
+
     if schema_version == 1:
+        need_to_synthesise_cfg_blob = True
         manifest = client.manifest(image_reference=src_image_reference)
 
         logger.warning(
@@ -328,11 +331,16 @@ def replicate_artifact(
     else:
       raise NotImplementedError(schema_version)
 
-    need_to_synthesise_cfg_blob = False
-
     for idx, layer in enumerate(manifest.blobs()):
-        # need to specially handle manifest (may be absent for v2 / legacy images)
-        is_manifest = idx == 0
+        # need to specially handle cfg-blob (may be absent for v2 / legacy images)
+
+        is_cfg_blob = idx == 0
+        if is_cfg_blob and need_to_synthesise_cfg_blob:
+            # if we need(ed) to synthesise cfg-blob (because source-image contained a v1-manifest)
+            # then there will never be a cfg-blob in src.
+            # -> silently skip to avoid emitting a confusing, but unhelpful warning
+            logger.debug(f'{src_image_reference=} - synthesised cfg-blob - skipping replicatation')
+            continue
 
         head_res = client.head_blob(
             image_reference=tgt_image_reference,
@@ -342,12 +350,12 @@ def replicate_artifact(
             if not need_uncompressed_layer_digests:
                 logger.info(f'skipping blob download {layer.digest=} - already exists in tgt')
                 continue # no need to download if blob already exists in tgt
-            elif not is_manifest:
+            elif not is_cfg_blob:
                 # we will not need to re-upload, however we do need the uncompressed digest
                 blob_res = client.blob(
                     image_reference=src_image_reference,
                     digest=layer.digest,
-                    absent_ok=is_manifest,
+                    absent_ok=is_cfg_blob,
                 )
 
                 layer_hash = hashlib.sha256()
@@ -359,16 +367,18 @@ def replicate_artifact(
                 uncompressed_layer_digests.append(f'sha256:{layer_hash.hexdigest()}')
                 continue # we may still skip the upload, of course
 
+        # todo: consider silencing warning if we do v1->v2-conversion (cfg-blob will never exist
+        #       in this case
         blob_res = client.blob(
             image_reference=src_image_reference,
             digest=layer.digest,
-            absent_ok=is_manifest,
+            absent_ok=is_cfg_blob,
         )
-        if not blob_res and is_manifest:
+        if not blob_res and is_cfg_blob:
             # fallback to non-verbatim replication; synthesise cfg
             logger.warning(
                 'falling back to non-verbatim replication '
-                '{src_image_reference=} {tgt_image_reference=}'
+                f'{src_image_reference=} {tgt_image_reference=}'
             )
             need_to_synthesise_cfg_blob = True
             continue
