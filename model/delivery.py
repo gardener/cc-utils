@@ -17,7 +17,6 @@ import enum
 import typing
 
 from model.base import (
-    BasicCredentials,
     ModelBase,
     NamedModelElement,
 )
@@ -30,9 +29,6 @@ class DeliveryConfig(NamedModelElement):
     def auth(self):
         return Auth(self.raw.get('auth'))
 
-    def dashboard(self):
-        return DeliveryDashboardCfg(self.raw.get('dashboard'))
-
     def service(self):
         return DeliverySvcCfg(self.raw.get('service'))
 
@@ -42,15 +38,9 @@ class DeliveryConfig(NamedModelElement):
     def db_cfg_name(self):
         return self.raw.get('db_cfg_name')
 
-    def mongodb_config(self):
-        if not self.raw.get('mongodb'):
-            return None
-        return MongoDbConfig(self.raw.get('mongodb'))
-
     def _optional_attributes(self):
         yield from super()._optional_attributes()
         yield from [
-            'mongodb',
             'deployment_name',
             'db_cfg_name',
         ]
@@ -58,7 +48,6 @@ class DeliveryConfig(NamedModelElement):
     def _required_attributes(self):
         yield from super()._required_attributes()
         yield from [
-            'dashboard',
             'service',
         ]
 
@@ -116,9 +105,6 @@ class SigningCfg(ModelBase):
 
 
 class DeliverySvcCfg(ModelBase):
-    def external_host(self):
-        return self.raw.get('external_host')
-
     def signing_cfgs(
         self,
         purpose_label: str = None,
@@ -142,44 +128,3 @@ class DeliveryEndpointsCfg(NamedModelElement):
 
     def dashboard_host(self):
         return self.raw['dashboard_host']
-
-
-class DeliveryDashboardCfg(ModelBase):
-    def external_host(self):
-        return self.raw.get('external_host')
-
-
-class MongoDbConfig(ModelBase):
-    '''
-    Not intended to be instantiated by users of this module
-    '''
-
-    def credentials(self):
-        return BasicCredentials(self.raw.get('credentials'))
-
-    def configmap(self):
-        '''Entries for the MongoDB config file.
-        '''
-        return self.raw.get('configmap')
-
-    def database_name(self):
-        return self.raw.get('database_name', 'delivery')
-
-    def service_port(self):
-        '''Return the port on which the kubernetes cluster-service is listening.
-        '''
-        return self.raw.get('service_port', 27017)
-
-    def _optional_attributes(self):
-        yield from super()._optional_attributes()
-        yield from [
-            'configmap',
-            'service_port',
-            'database_name',
-        ]
-
-    def _required_attributes(self):
-        yield from super()._required_attributes()
-        yield from [
-            'credentials',
-        ]
