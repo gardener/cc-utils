@@ -197,7 +197,6 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
 
 
 class OciBuilder(enum.Enum):
-    CONCOURSE_IMAGE_RESOURCE = 'concourse-image-resource'
     KANIKO = 'kaniko'
     DOCKER = 'docker'
 
@@ -321,20 +320,12 @@ class PublishTraitTransformer(TraitTransformer):
         main_repo = pipeline_args.main_repository()
         prepare_step = pipeline_args.step('prepare')
 
-        if self.trait.oci_builder() is OciBuilder.CONCOURSE_IMAGE_RESOURCE:
-            publish_step = pipeline_args.step('publish')
-
         image_name = main_repo.branch() + '-image'
         tag_name = main_repo.branch() + '-tag'
 
         # configure prepare step's outputs (consumed by publish step)
         prepare_step.add_output(variable_name=IMAGE_ENV_VAR_NAME, name=image_name)
         prepare_step.add_output(variable_name=TAG_ENV_VAR_NAME, name=tag_name)
-
-        if self.trait.oci_builder() is OciBuilder.CONCOURSE_IMAGE_RESOURCE:
-            # configure publish step's inputs (produced by prepare step)
-            publish_step.add_input(variable_name=IMAGE_ENV_VAR_NAME, name=image_name)
-            publish_step.add_input(variable_name=TAG_ENV_VAR_NAME, name=tag_name)
 
         for build_step in self._build_steps:
             build_step.add_input(variable_name=IMAGE_ENV_VAR_NAME, name=image_name)
