@@ -247,10 +247,12 @@ class ProtecodeApi:
             return True
 
         def _iter_matching_products(url: str):
-            res = self._get(url=url).json()
+            res = self._get(url=url)
+            res.raise_for_status()
+            res = res.json()
+            products: list[dict] = res['products']
 
-            for product in res.get('products', ()):
-                product: dict
+            for product in products:
                 if not full_match(product.get('custom_data')):
                     continue
                 yield AnalysisResult(product)
