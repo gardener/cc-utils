@@ -136,6 +136,14 @@ class DeliverySvcCfg(ModelBase):
         return [SigningCfg(raw) for raw in cfgs]
 
 
+class DeliveryEndpointsCfg(NamedModelElement):
+    def service_host(self):
+        return self.raw['service_host']
+
+    def dashboard_host(self):
+        return self.raw['dashboard_host']
+
+
 class DeliveryDashboardCfg(ModelBase):
     def external_host(self):
         return self.raw.get('external_host')
