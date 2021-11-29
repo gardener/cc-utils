@@ -29,11 +29,11 @@ class WhiteSrcProject:
         return (cve_name, float(max_score))
 
 
-@dataclass
-class WhiteSrcDisplayProject:
+@dataclass(frozen=True)
+class ProjectSummary:
     name: str
-    highest_cve_name: str
-    highest_cve_score: float
+    greatestCvssv3: float
+    greatestCve: str
 
 
 class FilterType(Enum):

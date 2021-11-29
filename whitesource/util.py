@@ -1,7 +1,6 @@
 import asyncio
 import concurrent.futures
 import functools
-import json
 import logging
 import os.path
 import tempfile
@@ -56,28 +55,12 @@ def _mk_exitcodes():
 
 
 def generate_reporting_tables(
-    projects: typing.List[whitesource.model.WhiteSrcProject],
-    threshold: float,
+    below: typing.List[whitesource.model.WhiteSrcProject],
+    above: typing.List[whitesource.model.WhiteSrcProject],
     tablefmt,
 ):
     # monkeypatch: disable html escaping
     tabulate.htmlescape = lambda x: x
-
-    # split respecting CVSS-V3 threshold
-    above: typing.List[whitesource.model.WhiteSrcDisplayProject] = []
-    below: typing.List[whitesource.model.WhiteSrcDisplayProject] = []
-
-    for project in projects:
-        max_cve = project.max_cve()
-        display_project = whitesource.model.WhiteSrcDisplayProject(
-            name=project.name,
-            highest_cve_name=max_cve[0],
-            highest_cve_score=float(max_cve[1]),
-        )
-        if display_project.highest_cve_score > threshold:
-            above.append(display_project)
-        else:
-            below.append(display_project)
 
     ttable_header = (
         'Component',
@@ -106,13 +89,13 @@ def generate_reporting_tables(
 
 
 def _create_table(
-    data: typing.List[whitesource.model.WhiteSrcDisplayProject],
+    data: typing.List[whitesource.model.ProjectSummary],
     table_header,
     tablefmt,
 ):
     sorted_data = sorted(
         data,
-        key=lambda p: p.highest_cve_score,
+        key=lambda p: p.greatestCvssv3,
         reverse=True,
     )
     table = _gen_table_from_data(
@@ -126,13 +109,13 @@ def _create_table(
 def _gen_table_from_data(
     table_headers,
     tablefmt,
-    data: typing.List[whitesource.model.WhiteSrcDisplayProject],
+    data: typing.List[whitesource.model.ProjectSummary],
 ):
     table_data = (
         (
             project.name,
-            project.highest_cve_name,
-            project.highest_cve_score,
+            project.greatestCve,
+            project.greatestCvssv3,
         ) for project in data
     )
     table = tabulate.tabulate(
@@ -189,10 +172,6 @@ def assemble_mail_body(
             </p>
         </div>
     '''
-
-
-def _print_cve_tables(tables):
-    print('\n' + '\n\n'.join(tables) + '\n')
 
 
 def scan_artifact_with_white_src(
@@ -253,7 +232,7 @@ def scan_artifact_with_white_src(
 
         tmp_file.seek(0)
 
-        logger.info('sending component to whitesource-api-extension')
+        logger.info(f'sending {scan_artifact.name} to whitesource-api-extension')
 
         exit_code, res = asyncio.run(
             whitesource_client.upload_to_project(
@@ -314,103 +293,59 @@ def scan_artifacts(
     return get_exit_codes()
 
 
-def print_scans(
-    projects: typing.List[whitesource.model.WhiteSrcProject],
-    cve_threshold: float,
-    product_name: str,
-):
-    logger.info('retrieving all projects')
-
-    if len(projects) == 0:
-        ci.util.warning(
-            f'No projects found in product {product_name}. No data to report. Exiting...',
-        )
-        return
-
-    logger.info('generate simple reporting table for console output')
-    tables = generate_reporting_tables(
-        projects=projects,
-        threshold=cve_threshold,
-        tablefmt='simple',
-    )
-
-    _print_cve_tables(tables=tables)
-
-
-def _ensure_notification_recipients(
-    notification_recipients: typing.Union[None, typing.List[str]],
-) -> bool:
-    if not notification_recipients:
-        return False
-    if not len(notification_recipients) > 0:
-        return False
-    return True
-
-
 def send_scan_failed(
     notification_recipients: typing.Union[None, typing.List[str]],
     product_name: str,
 ):
-    if _ensure_notification_recipients(
-        notification_recipients=notification_recipients,
-    ):
 
-        body = f'The WhiteSource scan for {product_name=} failed. \n' \
-            f'Please check the Concourse logs.'
+    body = f'The WhiteSource scan for {product_name=} failed. \n' \
+        f'Please check the Concourse logs.'
 
-        # get standard cfg set for email cfg
-        default_cfg_set_name = ci.util.current_config_set_name()
-        cfg_factory = ci.util.ctx().cfg_factory()
-        cfg_set = cfg_factory.cfg_set(default_cfg_set_name)
+    # get standard cfg set for email cfg
+    default_cfg_set_name = ci.util.current_config_set_name()
+    cfg_factory = ci.util.ctx().cfg_factory()
+    cfg_set = cfg_factory.cfg_set(default_cfg_set_name)
 
-        mailutil._send_mail(
-            email_cfg=cfg_set.email(),
-            recipients=notification_recipients,
-            mail_template=body,
-            subject=f'[ALERT] ({product_name}) WhiteSource Scan Failed',
-            mimetype='html',
-        )
-
-    else:
-        logger.warning('No recipients defined. No emails will be sent...')
+    mailutil._send_mail(
+        email_cfg=cfg_set.email(),
+        recipients=notification_recipients,
+        mail_template=body,
+        subject=f'[ALERT] ({product_name}) WhiteSource Scan Failed',
+        mimetype='html',
+    )
 
 
 def send_vulnerability_report(
     notification_recipients: typing.Union[None, typing.List[str]],
     cve_threshold: float,
     product_name: str,
-    projects: typing.List[whitesource.model.WhiteSrcProject],
+    below: typing.List[whitesource.model.WhiteSrcProject],
+    above: typing.List[whitesource.model.WhiteSrcProject],
 ):
-    if _ensure_notification_recipients(
-        notification_recipients=notification_recipients,
-    ):
-        # generate html reporting table for email notifications
-        tables = generate_reporting_tables(
-            projects=projects,
-            threshold=cve_threshold,
-            tablefmt='html',
-        )
+    # generate html reporting table for email notifications
+    tables = generate_reporting_tables(
+        below=below,
+        above=above,
+        tablefmt='html',
+    )
 
-        body = assemble_mail_body(
-            tables=tables,
-            threshold=cve_threshold,
-        )
+    body = assemble_mail_body(
+        tables=tables,
+        threshold=cve_threshold,
+    )
 
-        # get standard cfg set for email cfg
-        default_cfg_set_name = ci.util.current_config_set_name()
-        cfg_factory = ci.util.ctx().cfg_factory()
-        cfg_set = cfg_factory.cfg_set(default_cfg_set_name)
+    # get standard cfg set for email cfg
+    default_cfg_set_name = ci.util.current_config_set_name()
+    cfg_factory = ci.util.ctx().cfg_factory()
+    cfg_set = cfg_factory.cfg_set(default_cfg_set_name)
 
-        mailutil._send_mail(
-            email_cfg=cfg_set.email(),
-            recipients=notification_recipients,
-            mail_template=body,
-            subject=f'[Action Required] ({product_name}) WhiteSource Vulnerability Report',
-            mimetype='html',
-        )
-
-    else:
-        logger.warning('No recipients defined. No emails will be sent...')
+    mailutil._send_mail(
+        email_cfg=cfg_set.email(),
+        recipients=notification_recipients,
+        mail_template=body,
+        subject=f'[Action Required] ({product_name}) WhiteSource Vulnerability Report',
+        mimetype='html',
+    )
 
 
 def parse_filters(
@@ -468,7 +403,7 @@ def delete_all_projects_from_product(
             json=body,
         )
 
-        return json.loads(res.text)['projects']
+        return res.json()['projects']
 
     def delete_project(
         project_token: str,
@@ -500,3 +435,38 @@ def delete_all_projects_from_product(
             user_token=user_token,
         )
     logger.info('done')
+
+
+def split_projects_summaries_on_threshold(
+    projects_summaries: typing.List[whitesource.model.ProjectSummary],
+    threshold: float,
+) -> typing.Sequence[whitesource.model.ProjectSummary]:
+    projects_summaries_below_threshold = []
+    projects_summaries_above_threshold = []
+
+    for p in projects_summaries:
+        if p.greatestCvssv3 > threshold:
+            projects_summaries_above_threshold.append(p)
+        else:
+            projects_summaries_below_threshold.append(p)
+
+    return projects_summaries_below_threshold, projects_summaries_above_threshold
+
+
+def check_exitcodes(
+    product_name: str,
+    notification_recipients: list,
+    exitcodes: list,
+):
+    """
+    If any exit code != 0, a notification is send to all recipients.
+    """
+    if any((lambda: e != 0)() for e in exitcodes):
+        logger.warning('some scans failed')
+        logger.info(f'notifying {notification_recipients} about failed scan')
+        send_scan_failed(
+            notification_recipients=notification_recipients,
+            product_name=product_name,
+        )
+    else:
+        logger.info('all scans reported a successful execution')
