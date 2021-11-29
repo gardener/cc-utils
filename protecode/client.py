@@ -236,12 +236,6 @@ class ProtecodeApi:
         return result
 
     def list_apps(self, group_id, custom_attribs={}) -> List[AnalysisResult]:
-        url = self._routes.apps(group_id=group_id, custom_attribs=custom_attribs)
-
-        result = self._get(
-            url=url,
-        )
-
         # Protecode checks for substring match only.
         def full_match(analysis_result_attribs):
             if not custom_attribs:
@@ -252,10 +246,20 @@ class ProtecodeApi:
                     return False
             return True
 
-        return [
-            AnalysisResult(p)
-            for p in result.json().get('products') if full_match(p.get('custom_data'))
-        ]
+        def _iter_matching_products(url: str):
+            res = self._get(url=url).json()
+
+            for product in res.get('products', ()):
+                product: dict
+                if not full_match(product.get('custom_data')):
+                    continue
+                yield AnalysisResult(product)
+
+            if next_page_url := res.get('next'):
+                yield from _iter_matching_products(url=next_page_url)
+
+        url = self._routes.apps(group_id=group_id, custom_attribs=custom_attribs)
+        return list(_iter_matching_products(url=url))
 
     def set_metadata(self, product_id: int, custom_attribs: dict):
         url = self._routes.product_custom_data(product_id=product_id)
