@@ -1,18 +1,14 @@
 import ast
-import logging
 
 import concourse.steps.component_descriptor_util as util
 import concourse.steps.scan_sources
 import whitesource.util
 
 
-logger: logging.Logger = logging.getLogger(__name__)
-
-
 def scan_component_from_component_descriptor(
     whitesource_cfg_name: str,
     component_descriptor_path: str,
-    notification_recipients: str = None,
+    notification_recipients: [str] = [],
     filters: str = None,
     extra_whitesource_config: str = None,
     cve_threshold: float = 5.0,
@@ -22,8 +18,6 @@ def scan_component_from_component_descriptor(
         filters = ast.literal_eval(filters)
     if extra_whitesource_config:
         extra_whitesource_config = ast.literal_eval(extra_whitesource_config)
-    if notification_recipients:
-        notification_recipients = ast.literal_eval(notification_recipients)
 
     concourse.steps.scan_sources.scan_component_with_whitesource(
         whitesource_cfg_name=whitesource_cfg_name,
