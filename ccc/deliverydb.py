@@ -12,7 +12,7 @@ def sqlalchemy_with_db_cfg(
     overwrite_port: int = None,
 ) -> deliverydb.db.DeliveryDB:
 
-    db_url = deliverydb.db.database_conncetion_url_from_cfg(
+    db_url = deliverydb.db.database_connection_url_from_cfg(
         db_cfg=db_cfg,
         overwrite_hostname=overwrite_hostname,
         overwrite_username=overwrite_username,
@@ -33,7 +33,7 @@ def psycopg_with_db_cfg(
     overwrite_port: int = None,
 ) -> psycopg.Connection:
 
-    db_url = deliverydb.db.database_conncetion_url_from_cfg(
+    db_url = deliverydb.db.database_connection_url_from_cfg(
         db_cfg=db_cfg,
         overwrite_hostname=overwrite_hostname,
         overwrite_username=overwrite_username,

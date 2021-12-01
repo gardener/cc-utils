@@ -39,7 +39,7 @@ class DeliveryDB:
         self.Session.add(scan)
 
 
-def database_conncetion_url_from_cfg(
+def database_connection_url_from_cfg(
     db_cfg: model.compliancedb.ComplianceDbConfig,
     dialect: str = 'postgresql',
     overwrite_hostname: str = None,
