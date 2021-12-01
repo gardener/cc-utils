@@ -31,7 +31,7 @@ def psycopg_with_db_cfg(
     overwrite_username: str = None,
     overwrite_password: str = None,
     overwrite_port: int = None,
-) -> deliverydb.db.DeliveryDB:
+) -> psycopg.Connection:
 
     db_url = deliverydb.db.database_conncetion_url_from_cfg(
         db_cfg=db_cfg,
