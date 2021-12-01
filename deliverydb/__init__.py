@@ -1,4 +1,2 @@
-from psycopg.rows import dict_row as psycopg_dict_row
-
-
-dict_row = psycopg_dict_row
+from psycopg.rows import dict_row # noqa # pylint: disable=unused-import
+# with this import, consumers can access the dict_row without directly depending on psycopg
