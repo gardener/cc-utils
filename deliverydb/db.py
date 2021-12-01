@@ -47,10 +47,11 @@ def database_conncetion_url_from_cfg(
     overwrite_password: str = None,
     overwrite_port: int = None,
 ) -> str:
-    username = overwrite_username if overwrite_username else db_cfg.credentials().username()
-    password = overwrite_password if overwrite_password else db_cfg.credentials().password()
-    hostname = overwrite_hostname if overwrite_hostname else db_cfg.hostname()
-    port = overwrite_port if overwrite_port else db_cfg.port()
+    # use overwrite values if present
+    username = overwrite_username or db_cfg.credentials().username()
+    password = overwrite_password or db_cfg.credentials().password()
+    hostname = overwrite_hostname or db_cfg.hostname()
+    port = overwrite_port or db_cfg.port()
 
     # Potentially, this function could be used to create connection urls
     # to different types of databases, therefore the "dialect" can vary.
