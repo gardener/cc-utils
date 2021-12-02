@@ -1,4 +1,5 @@
 import psycopg
+import psycopg_pool
 
 import deliverydb.db
 import model.compliancedb
@@ -25,7 +26,7 @@ def sqlalchemy_with_db_cfg(
     )
 
 
-def psycopg_with_db_cfg(
+def psycopg_connection_with_db_cfg(
     db_cfg: model.compliancedb.ComplianceDbConfig,
     overwrite_hostname: str = None,
     overwrite_username: str = None,
@@ -43,6 +44,39 @@ def psycopg_with_db_cfg(
 
     return psycopg.connect(
         conninfo=db_url,
+    )
+
+
+def psycopg_connection_pool_with_db_cfg(
+    db_cfg: model.compliancedb.ComplianceDbConfig,
+    overwrite_hostname: str = None,
+    overwrite_username: str = None,
+    overwrite_password: str = None,
+    overwrite_port: int = None,
+    min_size: int = 1,
+    max_size: int = 4,
+) -> psycopg_pool.ConnectionPool:
+    """
+    Please define pool size with cautious.
+    Rule of thumb for pool size is:
+    pool_size = ((core_count * 2) + effective_spindle_count)
+
+    Detailed analysis about pool sizing:
+    https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing
+    """
+
+    db_url = database_connection_url_from_cfg(
+        db_cfg=db_cfg,
+        overwrite_hostname=overwrite_hostname,
+        overwrite_username=overwrite_username,
+        overwrite_password=overwrite_password,
+        overwrite_port=overwrite_port,
+    )
+
+    return psycopg_pool.ConnectionPool(
+        conninfo=db_url,
+        min_size=min_size,
+        max_size=max_size,
     )
 
 
