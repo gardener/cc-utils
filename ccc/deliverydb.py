@@ -5,7 +5,7 @@ import deliverydb.db
 import model.compliancedb
 
 
-def sqlalchemy_with_db_cfg(
+def sqlalchemy_from_db_cfg(
     db_cfg: model.compliancedb.ComplianceDbConfig,
     overwrite_hostname: str = None,
     overwrite_username: str = None,
@@ -26,7 +26,7 @@ def sqlalchemy_with_db_cfg(
     )
 
 
-def psycopg_connection_with_db_cfg(
+def psycopg_connection_from_db_cfg(
     db_cfg: model.compliancedb.ComplianceDbConfig,
     overwrite_hostname: str = None,
     overwrite_username: str = None,
@@ -47,7 +47,7 @@ def psycopg_connection_with_db_cfg(
     )
 
 
-def psycopg_connection_pool_with_db_cfg(
+def psycopg_connection_pool_from_db_cfg(
     db_cfg: model.compliancedb.ComplianceDbConfig,
     overwrite_hostname: str = None,
     overwrite_username: str = None,
