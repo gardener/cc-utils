@@ -68,6 +68,9 @@ class Auth(ModelBase):
 
 
 class OAuth(ModelBase):
+    def name(self) -> str:
+        return self.raw.get('name')
+
     def type(self):
         return OAuthType(self.raw.get('type'))
 
