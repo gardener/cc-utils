@@ -1,5 +1,3 @@
-psycopg[binary, pool]
-# psycopg[binary] is version 3, used for direct db connection
 psycopg2-binary
 # psycopg2-binary is version 2, used by sqlalchemy
 sqlalchemy>1.4.0
