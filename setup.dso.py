@@ -34,7 +34,6 @@ setuptools.setup(
     packages=[
         'checkmarx',
         'clamav',
-        'deliverydb',
         'protecode',
         'whitesource',
     ],
