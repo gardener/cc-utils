@@ -1,4 +1,1 @@
-psycopg2-binary
-# psycopg2-binary is version 2, used by sqlalchemy
-sqlalchemy>1.4.0
 whitesource_common
