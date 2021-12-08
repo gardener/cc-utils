@@ -25,7 +25,6 @@ import uuid
 import dacite
 
 import ccc.delivery
-import ccc.deliverydb
 import ccc.gcp
 import ccc.protecode
 import ci.util
