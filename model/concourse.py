@@ -511,7 +511,7 @@ class JobMapping(NamedModelElement):
         Exposed pipelines are viewable by authenticated users from other teams. Note: this does
         not grant access to buildlogs and build metadata.
         '''
-        return self.raw.get('expose_pipelines', False)
+        return self.raw.get('expose_pipelines', True)
 
     def _required_attributes(self):
         return [
