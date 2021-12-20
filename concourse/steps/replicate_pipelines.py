@@ -22,9 +22,9 @@ def replicate_pipelines(
     result = concourse.replicator.replicate_pipelines(
         cfg_set=cfg_set,
         job_mapping=job_mapping,
-        unpause_pipelines=False,
-        unpause_new_pipelines=True,
-        expose_pipelines=True,
+        unpause_pipelines=job_mapping.unpause_deployed_pipelines(),
+        unpause_new_pipelines=job_mapping.unpause_new_pipelines(),
+        expose_pipelines=job_mapping.expose_deployed_pipelines(),
         remove_pipelines_filter=filter_own_pipeline,
     )
     return result

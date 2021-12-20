@@ -495,6 +495,24 @@ class JobMapping(NamedModelElement):
     def secrets_replication_pipeline_target_cc_team_cfg_name(self) -> typing.Optional[str]:
         return self.raw.get('secrets_replication_pipeline_target_cc_team_cfg_name')
 
+    def unpause_new_pipelines(self) -> bool:
+        '''Whether newly created pipelines are to be unpaused.
+        '''
+        return self.raw.get('unpause_new_pipelines', True)
+
+    def unpause_deployed_pipelines(self) -> bool:
+        '''Whether deployed pipelines are to be unpaused unconditionally.
+        '''
+        return self.raw.get('unpause_deployed_pipelines', False)
+
+    def expose_deployed_pipelines(self) -> bool:
+        '''Whether to expose pipelines after deploying them.
+
+        Exposed pipelines are viewable by authenticated users from other teams. Note: this does
+        not grant access to buildlogs and build metadata.
+        '''
+        return self.raw.get('expose_pipelines', False)
+
     def _required_attributes(self):
         return [
             'concourse_target_team',
@@ -505,9 +523,12 @@ class JobMapping(NamedModelElement):
         return [
             'concourse_team_cfg_name',
             'concourse_uam',
+            'expose_pipelines',
             'secret_cfg',
-            'secrets_repo',
             'secrets_replication_pipeline_target_cc_team_cfg_name',
+            'secrets_repo',
+            'unpause_deployed_pipelines',
+            'unpause_new_pipelines',
         ]
 
     def _defaults_dict(self):
