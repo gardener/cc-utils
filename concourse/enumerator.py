@@ -459,7 +459,7 @@ class DefinitionDescriptor:
         pipeline_name,
         pipeline_definition,
         main_repo,
-        concourse_target_cfg,
+        concourse_target_cfg: model.concourse.ConcourseConfig,
         concourse_target_team,
         secret_cfg,
         job_mapping: model.concourse.JobMapping = None,

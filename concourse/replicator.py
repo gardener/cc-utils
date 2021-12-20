@@ -288,7 +288,10 @@ class ConcourseDeployer(DefinitionDeployer):
         self.unpause_new_pipelines = unpause_new_pipelines
         self.expose_pipelines = expose_pipelines
 
-    def deploy(self, definition_descriptor):
+    def deploy(
+        self,
+        definition_descriptor: DefinitionDescriptor,
+    ):
         pipeline_definition = definition_descriptor.pipeline
         pipeline_name = definition_descriptor.pipeline_name
         try:

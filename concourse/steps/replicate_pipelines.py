@@ -2,6 +2,7 @@ import logging
 
 import ci.log
 import concourse.replicator
+import model.concourse
 
 ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 ## linters to detect errors that would be missed if the call were inlined in mako
 def replicate_pipelines(
     cfg_set,
-    job_mapping,
+    job_mapping: model.concourse.JobMapping,
     pipelines_not_to_delete: list,
 ):
     # prevent own replication pipeline from being removed
