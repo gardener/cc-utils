@@ -33,6 +33,8 @@ Run `.ci/install_git_hooks` to register recommended git hooks.
 
 `pip install gardener-cicd-whd` - install Webhook-Dispatcher
 
+`pip install gardener-cicd-dso` - install DevSecOps libraries
+
 ### Consume from Container Image
 
 A copy of cc-utils is contained in the default container image in which gardener
