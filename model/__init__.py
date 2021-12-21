@@ -5,6 +5,7 @@ import os
 import os.path
 import pkgutil
 import sys
+import threading
 import typing
 import urllib.parse
 
@@ -508,6 +509,7 @@ class ConfigurationSet(NamedModelElement):
     def __init__(self, cfg_factory, cfg_name, *args, **kwargs):
         self.resolved_base_cfg_sets = False
         self.cfg_factory: ConfigFactory = not_none(cfg_factory)
+        self._raw_lock = threading.Lock()
         super().__init__(name=cfg_name, *args, **kwargs)
 
         # normalise cfg mappings
@@ -523,9 +525,10 @@ class ConfigurationSet(NamedModelElement):
             self.raw[cfg_type_name] = entry
 
     def _base_cfgs(self):
-        return (
-            BaseConfigSetCfg(**cfg) for cfg in self.raw.get('_base_cfgs', {})
-        )
+        with self._raw_lock:
+            return tuple(
+                BaseConfigSetCfg(**cfg) for cfg in self.raw.get('_base_cfgs', {})
+            )
 
     def _raw(self):
         return{
@@ -542,12 +545,15 @@ class ConfigurationSet(NamedModelElement):
         self.resolved_base_cfg_sets = True
 
     def _merge_cfg_set(self, cfg_set: 'ConfigurationSet', base_cfg: BaseConfigSetCfg):
-        cfg_set_dict = cfg_set._raw()
+        with self._raw_lock:
+            cfg_set_dict = cfg_set._raw()
+
         for cfg_type_name, elements in cfg_set_dict.items():
             if not self.raw.get(cfg_type_name, {}):
                 self.raw[cfg_type_name] = elements
             else:
-                our_element_names = self._raw()[cfg_type_name]['config_names']
+                with self._raw_lock:
+                    our_element_names = self._raw()[cfg_type_name]['config_names']
 
                 # only add elements once
                 other_element_names = [
