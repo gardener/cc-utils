@@ -31,7 +31,6 @@ import ci.util
 import cnudie.retrieve
 import delivery.client
 import dso.model
-import dso.util
 import product.util
 import product.v2
 
