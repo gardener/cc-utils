@@ -2,6 +2,7 @@ import tarfile
 
 import dacite
 
+import version
 import unixutil.model as um
 
 
@@ -89,13 +90,22 @@ def determine_osinfo(tarfh: tarfile.TarFile) -> um.OperatingSystemId:
         if fname == 'os-release':
             for k,v in _parse_os_release(contents):
                 if k in os_info:
-                    continue # os-release has lesser precedence
+                    print(f'{k=} {v=}')
+                    print(f'{version.is_semver_parseable(v)=}')
+                    if k == 'VERSION_ID' and version.is_semver_parseable(v) and \
+                        not version.is_semver_parseable(os_info[k]):
+                        pass
+                    else:
+                        continue # os-release has lesser precedence
                 os_info[k] = v
         elif fname == 'centos-release':
             for k,v in _parse_centos_release(contents):
                 os_info[k] = v
         elif fname == 'debian_version':
             for k,v in _parse_debian_version(contents):
+                if k in os_info:
+                    if not version.is_semver_parseable(v):
+                        continue # e.g. ubuntu has "misleading" debian_version
                 os_info[k] = v
         else:
             raise NotImplementedError(fname)
