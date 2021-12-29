@@ -3,10 +3,13 @@ import enum
 import hashlib
 import pprint
 import sys
+import tarfile
+import tempfile
 
 import ccc.oci
 import oci
 import oci.model as om
+import unixutil.scan as us
 
 __cmd_name__ = 'oci'
 
@@ -111,3 +114,23 @@ def blob(image_reference: str, digest: str, outfile: str):
         write(chunk)
 
     outfh.flush()
+
+
+def osinfo(image_reference: str):
+    oci_client = ccc.oci.oci_client()
+
+    with tempfile.TemporaryFile() as tmpf:
+        manifest = oci_client.manifest(image_reference=image_reference)
+        first_layer_blob = oci_client.blob(
+            image_reference=image_reference,
+            digest=manifest.layers[0].digest,
+        )
+        for chunk in first_layer_blob.iter_content(chunk_size=4096):
+            tmpf.write(chunk)
+
+        tmpf.seek(0)
+        tf = tarfile.open(fileobj=tmpf, mode='r')
+
+        osi_info = us.determine_osinfo(tf)
+
+    pprint.pprint(osi_info)
