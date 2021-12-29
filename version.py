@@ -51,6 +51,7 @@ def parse_to_semver(
 
     - strip away `v` prefix
     - append patch-level `.0` for two-digit versions
+    - rm leading zeroes
 
     @param version: either a str, or an object with a `version` attr
     '''
@@ -100,7 +101,20 @@ def _parse_to_semver_and_metadata(version: str):
         sep = '+'
 
     numeric, sep, suffix = semver_version.partition(sep)
-    numeric += '.0'
+    if len(tuple(c for c in version if c == '.')) == 1:
+        numeric += '.0'
+
+    try:
+        return semver.VersionInfo.parse(numeric + sep + suffix), metadata
+    except ValueError:
+        pass # last try: strip leading zeroes
+
+    major, minor, patch = numeric.split('.')
+    numeric = '.'.join((
+        str(int(major)),
+        str(int(minor)),
+        str(int(patch)),
+    ))
 
     try:
         return semver.VersionInfo.parse(numeric + sep + suffix), metadata
