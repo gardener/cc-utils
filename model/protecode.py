@@ -36,7 +36,14 @@ class ProtecodeConfig(NamedModelElement):
         return ProtecodeAuthScheme(self.raw['credentials'].get('auth_scheme', 'basic_auth'))
 
     def credentials(self) -> typing.Union[BasicCredentials, TokenCredentials]:
-        if (auth_scheme := self.auth_scheme()) is ProtecodeAuthScheme.BEARER_TOKEN:
+        if (auth_scheme := self.auth_scheme()) is ProtecodeAuthScheme.BASIC_AUTH:
+            return BasicCredentials(
+                raw_dict={
+                    'password': self.raw['credentials']['password'],
+                    'username': self.raw['credentials']['username']
+                }
+            )
+        elif auth_scheme is ProtecodeAuthScheme.BEARER_TOKEN:
             return TokenCredentials(
                 raw_dict={
                     'token': self.raw['credentials']['token'],

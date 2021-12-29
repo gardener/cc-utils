@@ -15,11 +15,13 @@
 
 import json
 import time
+import logging
 
 from functools import partial
 from typing import List
 from urllib.parse import urlencode, quote_plus
 
+import ci.log
 import requests
 from ci.util import not_empty, not_none, urljoin
 from http_requests import check_http_code, mount_default_adapter
@@ -32,7 +34,13 @@ from .model import (
     TriageScope,
     VersionOverrideScope,
 )
-from model.protecode import ProtecodeAuthScheme
+from model.protecode import (
+    ProtecodeAuthScheme,
+    ProtecodeConfig,
+)
+
+logger = logging.getLogger(__name__)
+ci.log.configure_default_logging()
 
 
 class ProtecodeApiRoutes:
@@ -61,6 +69,9 @@ class ProtecodeApiRoutes:
             url += '?' + urlencode({'q': search_query})
 
         return url
+
+    def login(self):
+        return self._url('login') + '/'
 
     def pdf_report(self, product_id: int):
         return self._url('products', str(product_id), 'pdf-report')
@@ -96,12 +107,16 @@ class ProtecodeApi:
     def __init__(
         self,
         api_routes,
-        protecode_cfg,
+        protecode_cfg: ProtecodeConfig,
     ):
         self._routes = not_none(api_routes)
         not_none(protecode_cfg)
         self._credentials = protecode_cfg.credentials()
         self._auth_scheme = protecode_cfg.auth_scheme()
+
+        if self._auth_scheme is ProtecodeAuthScheme.BASIC_AUTH:
+            logger.warning('Using basic auth to authenticate against Protecode.')
+
         self._tls_verify = protecode_cfg.tls_verify()
         self._session_id = None
         self._session = requests.Session()
@@ -143,6 +158,11 @@ class ProtecodeApi:
 
         if (auth_scheme := self._auth_scheme) is ProtecodeAuthScheme.BEARER_TOKEN:
             headers['Authorization'] = f"Bearer {self._credentials.token()}"
+        elif auth_scheme is ProtecodeAuthScheme.BASIC_AUTH:
+            method = partial(
+                method,
+                auth=self._credentials.as_tuple(),
+            )
         else:
             raise NotImplementedError(auth_scheme)
 
@@ -346,6 +366,49 @@ class ProtecodeApi:
 
     # --- "rest" routes (undocumented API)
 
+    def login(self):
+
+        if (auth_scheme := self._auth_scheme) is ProtecodeAuthScheme.BASIC_AUTH:
+            pass
+        elif auth_scheme is ProtecodeAuthScheme.BEARER_TOKEN:
+            return
+        else:
+            raise NotImplementedError(auth_scheme)
+
+        url = self._routes.login()
+
+        result = self._post(
+            url=url,
+            data={
+                'username': self._credentials.username(),
+                'password': self._credentials.passwd(),
+            },
+            auth=None,
+        )
+
+        # session-id is returned in first response
+        if not result.history:
+            raise RuntimeError('authentication failed:' + str(result.text))
+
+        relevant_response = result.history[0]
+
+        # work around breaking change in protecode endpoint behaviour
+        if not relevant_response.cookies.get('sessionid'):
+            raw_cookie = relevant_response.raw.headers['Set-Cookie']
+            session_id_key = 'sessionid='
+            # XXX hack
+            sid = raw_cookie[raw_cookie.find(session_id_key) + len(session_id_key):]
+            sid = sid[:sid.find(';')] # let's hope sid never contains a semicolon
+            self._session_id = sid
+            del sid
+        else:
+            self._session_id = relevant_response.cookies.get('sessionid')
+
+        self._csrf_token = relevant_response.cookies.get('csrftoken')
+
+        if not self._session_id:
+            raise RuntimeError('authentication failed: ' + str(relevant_response.text))
+
     def scan_result_short(self, product_id: int):
         url = self._routes.product(product_id=product_id)
 
@@ -410,6 +473,9 @@ class ProtecodeApi:
         ).json()
 
     def pdf_report(self, product_id: int, cvss_version: CVSSVersion=CVSSVersion.V3):
+        if not self._csrf_token:
+            self.login()
+
         url = self._routes.pdf_report(product_id)
 
         if cvss_version is CVSSVersion.V2:
