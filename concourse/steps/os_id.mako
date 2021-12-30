@@ -25,7 +25,7 @@ component_descriptor = parse_component_descriptor()
 delivery_db_client = ccc.delivery.default_client_if_available()
 oci_client = ccc.oci.oci_client()
 
-if not delivery_endpoints:
+if not '${delivery_svc_cfg_name}':
   logger.error('no deliverydb-client available - exiting now')
   exit(1)
 
