@@ -174,6 +174,25 @@ class ClamAVScanCfg(ModelBase):
         super().validate()
 
 
+OS_ID_SCAN_ATTRS = (
+    AttributeSpec.optional(
+        name='parallel_jobs',
+        default=8,
+        doc='amount of parallel jobs to run',
+        type=int,
+    ),
+)
+
+
+class OsIdScan(ModelBase):
+    @classmethod
+    def _attribute_specs(cls):
+        return OS_ID_SCAN_ATTRS
+
+    def parallel_jobs(self) -> int:
+        return int(self.raw['parallel_jobs'])
+
+
 class Notify(enum.Enum):
     EMAIL_RECIPIENTS = 'email_recipients'
     NOBODY = 'nobody'
@@ -204,6 +223,12 @@ ATTRIBUTES = (
         default=None,
         type=ClamAVScanCfg,
         doc='if present, perform ClamAV scanning',
+    ),
+    AttributeSpec.optional(
+        name='os_id',
+        default=None,
+        type=OsIdScan,
+        doc='if present, identify operating system',
     ),
     AttributeSpec.optional(
         name='trait_depends',
@@ -238,6 +263,10 @@ class ImageScanTrait(Trait, ImageFilterMixin):
     def clam_av(self):
         if self.raw['clam_av']:
             return ClamAVScanCfg(raw_dict=self.raw['clam_av'])
+
+    def os_id(self):
+        if raw := self.raw.get('os_id'):
+            return OsIdScan(raw_dict=raw)
 
     def transformer(self):
         return ImageScanTraitTransformer(trait=self)
@@ -292,6 +321,22 @@ class ImageScanTraitTransformer(TraitTransformer):
             )
             self.malware_scan_step.set_timeout(duration_string='18h')
             yield self.malware_scan_step
+
+        if self.trait.os_id():
+            self.os_id_step = PipelineStep(
+                    name='os-id-scan',
+                    raw_dict={},
+                    is_synthetic=True,
+                    notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
+                    injecting_trait_name=self.name,
+                    script_type=ScriptType.PYTHON3
+            )
+            self.os_id_step.add_input(
+                name=concourse.model.traits.component_descriptor.DIR_NAME,
+                variable_name=concourse.model.traits.component_descriptor.ENV_VAR_NAME,
+            )
+            self.os_id_step.set_timeout(duration_string='2h')
+            yield self.os_id_step
 
     def process_pipeline_args(self, pipeline_args: JobVariant):
         # our steps depends on dependency descriptor step
