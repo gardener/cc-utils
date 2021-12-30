@@ -18,13 +18,13 @@ import enum
 import json
 import logging
 import typing
+import urllib.parse
 
 import requests
 import urllib3
 import urllib3.util.retry
 
 import ci.util
-import clamav.util
 
 
 logger = logging.getLogger(__name__)
@@ -66,6 +66,17 @@ class ClamAVRoutes:
 
     def scan(self):
         return ci.util.urljoin(self._base_url, 'scan')
+
+
+def _make_latin1_encodable(value: str, /) -> str:
+    try:
+        value.encode('latin-1')
+        return value
+    except UnicodeEncodeError as ue:
+        invalid_char = value[ue.start:ue.end]
+        encoded_char = urllib.parse.quote(invalid_char)
+        value = value.replace(invalid_char, encoded_char)
+        return _make_latin1_encodable(value)
 
 
 class ClamAVClient:
@@ -111,7 +122,7 @@ class ClamAVClient:
             headers = {}
 
         if name:
-            headers['Name'] = clamav.util.make_latin1_encodable(name)
+            headers['Name'] = _make_latin1_encodable(name)
 
         try:
             response = self._request(

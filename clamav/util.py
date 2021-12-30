@@ -6,11 +6,11 @@ import socket
 import tarfile
 import traceback
 import typing
-import urllib.parse
 
 import requests.exceptions
 
 import ccc.oci
+import clamav.client
 import gci.componentmodel
 import oci.client as oc
 import oci.model as om
@@ -20,17 +20,6 @@ import tarutil
 
 
 logger = logging.getLogger(__name__)
-
-
-def make_latin1_encodable(value: str, /) -> str:
-    try:
-        value.encode('latin-1')
-        return value
-    except UnicodeEncodeError as ue:
-        invalid_char = value[ue.start:ue.end]
-        encoded_char = urllib.parse.quote(invalid_char)
-        value = value.replace(invalid_char, encoded_char)
-        return make_latin1_encodable(value)
 
 
 def iter_image_files(
@@ -83,8 +72,8 @@ def iter_image_files(
 
 
 def _scan_oci_image(
-    clamav_client,
-    oci_client,
+    clamav_client: clamav.client.ClamAVClient,
+    oci_client: oc.Client,
     image_reference: str,
 ) -> typing.Generator[saf.model.MalwarescanResult, None, None]:
     start_time = datetime.datetime.now()
@@ -128,7 +117,7 @@ def _scan_oci_image(
 
 def _try_scan_image(
     oci_resource: gci.componentmodel.Resource,
-    clamav_client,
+    clamav_client: clamav.client.ClamAVClient,
     oci_client: oc.Client,
 ):
     access: gci.componentmodel.OciAccess = oci_resource.access
@@ -164,7 +153,7 @@ def _try_scan_image(
 def virus_scan_images(
     component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
     filter_function,
-    clamav_client,
+    clamav_client: clamav.client.ClamAVClient,
     oci_client: oc.Client=None,
     max_workers=8,
 ) -> typing.Generator[saf.model.MalwarescanResult, None, None]:
