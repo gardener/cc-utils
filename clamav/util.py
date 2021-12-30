@@ -11,7 +11,6 @@ import urllib.parse
 import requests.exceptions
 
 import ccc.oci
-import clamav.client
 import gci.componentmodel
 import oci.client as oc
 import oci.model as om
@@ -129,7 +128,7 @@ def _scan_oci_image(
 
 def _try_scan_image(
     oci_resource: gci.componentmodel.Resource,
-    clamav_client: clamav.client.ClamAVClient,
+    clamav_client,
     oci_client: oc.Client,
 ):
     access: gci.componentmodel.OciAccess = oci_resource.access
