@@ -93,7 +93,6 @@ draft_release_step = concourse.steps.step_def('draft_release')
 scan_container_images_step = concourse.steps.step_def('scan_container_images')
 malware_scan_step = concourse.steps.step_def('malware_scan')
 os_id_step = concourse.steps.step_def('os_id')
-alter_container_images_step = concourse.steps.step_def('alter_container_images')
 scan_sources_step = concourse.steps.step_def('scan_sources')
 replicate_secrets_step = concourse.steps.step_def('replicate_secrets')
 %>
@@ -438,8 +437,6 @@ else:
         ${malware_scan_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
 % elif job_step.name == 'os-id-scan':
         ${os_id_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
-% elif job_step.name == 'alter_container_images':
-        ${alter_container_images_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
 % elif job_step.name == 'scan_sources':
         ${scan_sources_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
 % elif job_step.name == 'replicate_pipelines':
