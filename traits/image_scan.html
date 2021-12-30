@@ -45,7 +45,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="notifications Trait" href="notifications.html" />
-    <link rel="prev" title="image_alter Trait" href="image_alter.html" /> 
+    <link rel="prev" title="draft_release Trait" href="draft_release.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -100,7 +100,6 @@
 <li class="toctree-l3"><a class="reference internal" href="component_descriptor.html"><em>component_descriptor</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="cronjob.html"><em>cronjob</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="draft_release.html"><em>draft_release</em> Trait</a></li>
-<li class="toctree-l3"><a class="reference internal" href="image_alter.html"><em>image_alter</em> Trait</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#"><em>image_scan</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notifications.html"><em>notifications</em> Trait</a></li>
 <li class="toctree-l3"><a class="reference internal" href="options.html"><em>options</em> Trait</a></li>
@@ -248,7 +247,13 @@ with different contents, all variants are subject to being scanned.</p>
 <td><p>ClamAVScanCfg</p></td>
 <td><p>if present, perform ClamAV scanning</p></td>
 </tr>
-<tr class="row-odd"><td><p>trait_depends</p></td>
+<tr class="row-odd"><td><p>os_id</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>OsIdScan</p></td>
+<td><p>if present, identify operating system</p></td>
+</tr>
+<tr class="row-even"><td><p>trait_depends</p></td>
 <td><p>no</p></td>
 <td><p>()</p></td>
 <td><p>List[str]</p></td>
@@ -428,6 +433,25 @@ include_component_names.</p></td>
 </tr>
 </tbody>
 </table>
+<h2>os_id <em>(OsIdScan)</em> Attributes<a class="headerlink" href="#trait-image-scan" title="Permalink to this headline">¶</a></h2>
+<table class="colwidths-auto docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>name</p></th>
+<th class="head"><p>required?</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>type</p></th>
+<th class="head"><p>explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>parallel_jobs</p></td>
+<td><p>no</p></td>
+<td><p>8</p></td>
+<td><p>int</p></td>
+<td><p>amount of parallel jobs to run</p></td>
+</tr>
+</tbody>
+</table>
 <h2>Dependencies<a class="headerlink" href="#trait-image-scan" title="Permalink to this headline">¶</a></h2>
 <p>This trait requires the following traits to be declared:</p>
 <ul class="simple">
@@ -443,7 +467,7 @@ include_component_names.</p></td>
           <footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
         <a href="notifications.html" class="btn btn-neutral float-right" title="notifications Trait" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-        <a href="image_alter.html" class="btn btn-neutral float-left" title="image_alter Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="draft_release.html" class="btn btn-neutral float-left" title="draft_release Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>
