@@ -90,14 +90,15 @@ def determine_osinfo(tarfh: tarfile.TarFile) -> um.OperatingSystemId:
         if fname == 'os-release':
             for k,v in _parse_os_release(contents):
                 if k in os_info:
-                    print(f'{k=} {v=}')
-                    print(f'{version.is_semver_parseable(v)=}')
                     if k == 'VERSION_ID' and version.is_semver_parseable(v) and \
                         not version.is_semver_parseable(os_info[k]):
                         pass
                     else:
                         continue # os-release has lesser precedence
                 os_info[k] = v
+            if os_info.get('ID') == 'ubuntu' and (ver := os_info.get('VERSION')):
+                # of _course_ ubuntu requires a special hack
+                os_info['VERSION_ID'] = ver.split(' ', 1)[0]
         elif fname == 'centos-release':
             for k,v in _parse_centos_release(contents):
                 os_info[k] = v
