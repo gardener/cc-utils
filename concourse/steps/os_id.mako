@@ -11,7 +11,7 @@ os_id = image_scan_trait.os_id()
 component_trait = job_variant.trait('component_descriptor')
 root_component_name = component_trait.component_name()
 
-delivery_svc_cfg_name = cfg_set.delivery_endpoints()
+delivery_svc_cfg_name = cfg_set.delivery_endpoints().name()
 %>
 
 import ccc.delivery
