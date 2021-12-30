@@ -265,7 +265,7 @@ class ImageScanTrait(Trait, ImageFilterMixin):
             return ClamAVScanCfg(raw_dict=self.raw['clam_av'])
 
     def os_id(self):
-        if raw := self.raw.get('os_id'):
+        if (raw := self.raw.get('os_id')) is not None:
             return OsIdScan(raw_dict=raw)
 
     def transformer(self):
