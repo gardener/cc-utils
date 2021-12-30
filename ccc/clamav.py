@@ -15,10 +15,9 @@
 import typing
 
 import ci.util
-import clamav.client_asgi
+import clamav.client
+import clamav.routes
 
-from clamav.client import ClamAVClient
-from clamav.routes import ClamAVRoutes
 from model.clamav import ClamAVConfig
 import http_requests
 
@@ -27,34 +26,21 @@ def client(
     cfg: typing.Union[str, ClamAVConfig, None]=None,
     url: str=None,
     cfg_factory=None,
-    asgi=False, # XXX do not pass parameter - will be removed again, soon; use _client_asgi
 ):
     if not (bool(cfg) ^ bool(url)):
         raise ValueError('exactly one of cfg, url must be passed')
 
     if isinstance(cfg, ClamAVConfig):
-        if asgi:
-            url = cfg.service_url_asgi()
-        else:
-            url = cfg.service_url()
+        url = cfg.service_url()
     elif isinstance(cfg, str):
         if not cfg_factory:
             cfg_factory = ci.util.ctx().cfg_factory()
         cfg = cfg_factory.clamav(cfg)
-
-        if asgi:
-            url = cfg.service_url_asgi()
-        else:
-            url = cfg.service_url()
-
+        url = cfg.service_url()
     elif cfg is None:
         url = url
 
-    if not asgi:
-        routes = ClamAVRoutes(base_url=url)
-        return ClamAVClient(routes=routes)
-
-    routes = clamav.client_asgi.ClamAVRoutesAsgi(base_url=url)
+    routes = clamav.routes.ClamAVRoutes(base_url=url)
     retry_cfg = http_requests.LoggingRetry(
         total=8,
         connect=8,
@@ -63,17 +49,9 @@ def client(
         allowed_methods=('POST', 'GET'),
     )
 
-    client = clamav.client_asgi.ClamAVClientAsgi(
+    client = clamav.client.ClamAVClient(
         routes=routes,
         retry_cfg=retry_cfg,
     )
 
     return client
-
-
-def client_asgi(
-    cfg: typing.Union[str, ClamAVConfig, None]=None,
-    url: str=None,
-    cfg_factory=None,
-):
-    return client(cfg=cfg, url=url, cfg_factory=cfg_factory, asgi=True)

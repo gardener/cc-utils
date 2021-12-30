@@ -47,16 +47,6 @@ class ClamAVConfig(NamedModelElement):
             '',
         ))
 
-    def service_url_asgi(self):
-        return urllib.parse.urlunparse((
-          'http',
-          f'{self.service_name()}-asgi.{self.namespace()}.svc.cluster.local:{self.service_port()}',
-          '',
-          '',
-          '',
-          '',
-        ))
-
     def clamd_config_values(self):
         return self.raw.get('clamd_config_values', {})
 

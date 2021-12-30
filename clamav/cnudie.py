@@ -6,7 +6,7 @@ import typing
 import gci.componentmodel as cm
 
 import ci.log
-import clamav.client_asgi
+import clamav.client
 import clamav.scan
 import oci.client
 import product.v2
@@ -25,7 +25,7 @@ class ResourceScanResult:
 def scan_resources(
     component: typing.Union[cm.ComponentDescriptor, cm.Component],
     oci_client: oci.client.Client,
-    clamav_client: clamav.client_asgi.ClamAVClientAsgi,
+    clamav_client: clamav.client.ClamAVClient,
     max_workers:int = 16,
 ) -> typing.Generator[ResourceScanResult, None, None]:
     if isinstance(component, cm.ComponentDescriptor):

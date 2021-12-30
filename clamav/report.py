@@ -2,8 +2,8 @@ import typing
 
 import tabulate
 
+import clamav.client
 import clamav.cnudie
-import clamav.client_asgi as cac
 
 
 def as_table(
@@ -18,11 +18,11 @@ def as_table(
 
         status = res.malware_status
 
-        if status is cac.MalwareStatus.OK:
+        if status is clamav.client.MalwareStatus.OK:
             details = 'no malware found'
-        elif status is cac.MalwareStatus.UNKNOWN:
+        elif status is clamav.client.MalwareStatus.UNKNOWN:
             details = 'failed to scan'
-        elif status is cac.MalwareStatus.FOUND_MALWARE:
+        elif status is clamav.client.MalwareStatus.FOUND_MALWARE:
             details = '\n'.join((
                 f'{finding.name}: {finding.details}' for finding in res.findings
             ))
