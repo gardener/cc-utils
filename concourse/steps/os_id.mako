@@ -19,7 +19,7 @@ import ccc.oci
 import cnudie.retrieve
 
 ${concourse.steps.step_lib('os_id')}
-${step_lib('component_descriptor_util')}
+${concourse.steps.step_lib('component_descriptor_util')}
 
 component_descriptor = parse_component_descriptor()
 delivery_db_client = ccc.delivery.default_client_if_available()
