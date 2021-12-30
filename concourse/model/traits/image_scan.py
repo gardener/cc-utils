@@ -347,6 +347,8 @@ class ImageScanTraitTransformer(TraitTransformer):
             self.image_scan_step._add_dependency(component_descriptor_step)
         if self.trait.clam_av():
             self.malware_scan_step._add_dependency(component_descriptor_step)
+        if self.trait.os_id():
+            self.os_id_step._add_dependency(component_descriptor_step)
 
         for trait_name in self.trait.trait_depends():
             if not pipeline_args.has_trait(trait_name):
