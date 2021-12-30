@@ -62,7 +62,6 @@ class ClamAVConfig(NamedModelElement):
             'namespace',
             'service_name',
             'service_port',
-            'freshclam_image',
             'clamav_image',
             'replicas',
         ]
@@ -72,4 +71,5 @@ class ClamAVConfig(NamedModelElement):
         yield from [
             'container_registry',
             'clamd_config_values',
+            'freshclam_image',
         ]
