@@ -12,7 +12,6 @@ Pipeline Definition Traits
 * :doc:`traits/cronjob`
 * :doc:`traits/draft_release`
 * :doc:`traits/scan_sources`
-* :doc:`traits/image_alter`
 * :doc:`traits/image_scan`
 * :doc:`traits/notifications`
 * :doc:`traits/options`

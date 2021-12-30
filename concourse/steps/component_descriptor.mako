@@ -25,12 +25,6 @@ if not 'cloud.gardener/cicd/source' in [label.name for label in main_repo_labels
       value={'repository-classification': 'main'},
     )
   )
-
-
-if job_variant.has_trait('image_alter'):
-  image_alter_cfgs = job_variant.trait('image_alter').image_alter_cfgs()
-else:
-  image_alter_cfgs = ()
 %>
 import dataclasses
 import git

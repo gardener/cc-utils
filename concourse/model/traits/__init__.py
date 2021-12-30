@@ -25,7 +25,6 @@ def _traits():
     from .component_descriptor import ComponentDescriptorTrait
     from .cronjob import CronTrait
     from .draft_release import DraftReleaseTrait
-    from .image_alter import ImageAlterTrait
     from .image_scan import ImageScanTrait
     from .notifications import NotificationsTrait
     from .options import OptionsTrait
@@ -41,7 +40,6 @@ def _traits():
         'component_descriptor': ComponentDescriptorTrait,
         'cronjob': CronTrait,
         'draft_release': DraftReleaseTrait,
-        'image_alter': ImageAlterTrait,
         'image_scan': ImageScanTrait,
         'notifications': NotificationsTrait,
         'options': OptionsTrait,
