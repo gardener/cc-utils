@@ -30,7 +30,7 @@ from concourse.model.job import (
 from concourse.model.step import (
     PipelineStep,
     PrivilegeMode,
-    StepNotificationPolicy,
+    PullRequestNotificationPolicy,
 )
 from concourse.model.base import (
   AttributeSpec,
@@ -349,7 +349,6 @@ class PublishTraitTransformer(TraitTransformer):
             name='publish',
             raw_dict={},
             is_synthetic=True,
-            notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
             injecting_trait_name=self.name,
             script_type=ScriptType.PYTHON3,
             extra_args={
@@ -364,7 +363,7 @@ class PublishTraitTransformer(TraitTransformer):
             name='prepare',
             raw_dict={},
             is_synthetic=True,
-            notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
+            pull_request_notification_policy=PullRequestNotificationPolicy.NO_NOTIFICATION,
             injecting_trait_name=self.name,
             script_type=ScriptType.BOURNE_SHELL,
         )
@@ -396,7 +395,6 @@ class PublishTraitTransformer(TraitTransformer):
                             else PrivilegeMode.UNPRIVILEGED,
                     },
                     is_synthetic=True,
-                    notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
                     injecting_trait_name=self.name,
                     script_type=ScriptType.PYTHON3,
                     extra_args={
