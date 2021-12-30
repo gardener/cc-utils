@@ -18,10 +18,7 @@ import unittest
 import shlex
 
 from concourse.model.base import ScriptType
-from concourse.model.step import (
-    PipelineStep,
-    StepNotificationPolicy,
-)
+from concourse.model.step import PipelineStep
 
 
 class PipelineStepTest(unittest.TestCase):
@@ -29,7 +26,6 @@ class PipelineStepTest(unittest.TestCase):
         return PipelineStep(
             name=name,
             is_synthetic=False,
-            notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
             script_type=ScriptType.BOURNE_SHELL,
             raw_dict=kwargs,
         )

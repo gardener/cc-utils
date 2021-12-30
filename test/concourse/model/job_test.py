@@ -4,10 +4,7 @@ import unittest
 from concourse.model.base import ScriptType
 from concourse.model.job import JobVariant
 
-from concourse.model.step import (
-    PipelineStep,
-    StepNotificationPolicy,
-)
+from concourse.model.step import PipelineStep
 
 
 class JobVariantTest(unittest.TestCase):
@@ -23,7 +20,6 @@ class JobVariantTest(unittest.TestCase):
         return PipelineStep(
             name=name,
             is_synthetic=is_synthetic,
-            notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
             script_type=ScriptType.BOURNE_SHELL,
             raw_dict=kwargs,
         )

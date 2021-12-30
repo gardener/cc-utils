@@ -228,7 +228,12 @@ def attrs(pipeline_step):
 
 class StepNotificationPolicy(enum.Enum):
     NO_NOTIFICATION = enum.auto()
-    NOTIFY_PULL_REQUESTS = enum.auto()
+    ALWAYS = enum.auto()
+
+
+class PullRequestNotificationPolicy(enum.Enum):
+    NO_NOTIFICATION = enum.auto()
+    ALWAYS = enum.auto()
 
 
 class TaskHook(enum.Enum):
@@ -241,8 +246,11 @@ class PipelineStep(ModelBase):
         self,
         name: str,
         is_synthetic: bool,
-        notification_policy: StepNotificationPolicy,
-        script_type,
+        script_type: ScriptType,
+        notification_policy: StepNotificationPolicy = StepNotificationPolicy.ALWAYS,
+        pull_request_notification_policy: PullRequestNotificationPolicy = (
+            PullRequestNotificationPolicy.ALWAYS
+        ),
         extra_args=None,
         injecting_trait_name=None,
         *args,
@@ -255,6 +263,7 @@ class PipelineStep(ModelBase):
         self._inputs_dict = {}
         self._publish_to_dict = {}
         self._notification_policy = notification_policy
+        self._pull_request_notification_policy = pull_request_notification_policy
         self._notifications_cfg = None
         self._injecting_trait_name = injecting_trait_name
         self._extra_args = extra_args
@@ -445,6 +454,9 @@ class PipelineStep(ModelBase):
 
     def _on_abort(self):
         return self.raw.get('on_abort', None)
+
+    def pull_request_notification_policy(self):
+        return self._pull_request_notification_policy
 
     def validate(self):
         super().validate()

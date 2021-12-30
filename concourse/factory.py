@@ -4,10 +4,8 @@ import graphlib
 
 from ci.util import merge_dicts, not_none
 from model.base import ModelValidationError
-from concourse.model.step import (
-    PipelineStep,
-    StepNotificationPolicy,
-)
+from concourse.model.step import PipelineStep
+
 from concourse.model.base import (
         normalise_to_dict,
         ScriptType,
@@ -219,7 +217,6 @@ class DefinitionFactory:
         return PipelineStep(
             name=name,
             is_synthetic=False,
-            notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
             raw_dict=step_dict,
             script_type=ScriptType.BOURNE_SHELL,
         )

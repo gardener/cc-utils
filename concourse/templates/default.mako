@@ -9,7 +9,12 @@ import model.secrets_server
 from ci.util import urljoin
 from makoutil import indent_func
 from concourse.model.base import ScriptType
-from concourse.model.step import PrivilegeMode, StepNotificationPolicy, TaskHook
+from concourse.model.step import (
+  PrivilegeMode,
+  PullRequestNotificationPolicy,
+  StepNotificationPolicy,
+  TaskHook,
+)
 from concourse.model.traits.component_descriptor import DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME
 from concourse.model.traits.publish import OciBuilder
 
@@ -144,10 +149,17 @@ repo = job_variant.main_repository()
 
 <%def name="notification(indent, job_variant, job_step, status)" filter="indent_func(indent),trim">
 <%
-notify_pull_request = (
-  has_pr_trait(job_variant)
-  and job_step.notification_policy() is StepNotificationPolicy.NOTIFY_PULL_REQUESTS
-)
+if has_pr_trait(job_variant):
+  pr_notification_policy = job_step.pull_request_notification_policy()
+  if pr_notification_policy is PullRequestNotificationPolicy.NO_NOTIFICATION:
+    notify_pull_requests = False
+  elif pr_notification_policy is PullRequestNotificationPolicy.ALWAYS:
+    notify_pull_requests = True
+  else:
+    raise NotImplementedError(pr_notification_policy)
+else:
+  notify_pull_requests = False
+
 send_email_notification = not has_pr_trait(job_variant) and status == 'error'
 %>
 % if notify_pull_request or send_email_notification:
@@ -542,15 +554,21 @@ if not publish_options:
 notification_policy = job_step.notification_policy()
 if notification_policy is StepNotificationPolicy.NO_NOTIFICATION:
   render_notification_step = False
-elif notification_policy is StepNotificationPolicy.NOTIFY_PULL_REQUESTS:
+elif notification_policy is StepNotificationPolicy.ALWAYS:
   render_notification_step = True
 else:
   raise NotImplementedError(notification_policy)
 
-notify_pull_requests = (
-  has_pr_trait(job_variant)
-  and job_step.notification_policy() is StepNotificationPolicy.NOTIFY_PULL_REQUESTS
-)
+if has_pr_trait(job_variant):
+  pr_notification_policy = job_step.pull_request_notification_policy()
+  if pr_notification_policy is PullRequestNotificationPolicy.NO_NOTIFICATION:
+    notify_pull_requests = False
+  elif pr_notification_policy is PullRequestNotificationPolicy.ALWAYS:
+    notify_pull_requests = True
+  else:
+    raise NotImplementedError(pr_notification_policy)
+else:
+  notify_pull_requests = False
 
 if job_variant.has_main_repository():
   source_repo = job_variant.main_repository()
