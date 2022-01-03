@@ -20,11 +20,7 @@ from model.base import (
 
 
 class PostgresCredentials(BasicCredentials):
-    def username(self):
-        return self.raw.get('username')
-
-    def password(self):
-        return self.raw.get('password')
+    pass
 
 
 class ComplianceDbConfig(NamedModelElement):
@@ -37,9 +33,22 @@ class ComplianceDbConfig(NamedModelElement):
     def port(self):
         return self.raw.get('port')
 
+    def db_type(self):
+        return self.raw.get('db_type', 'postgresql')
+
+    def as_url(self):
+        creds = self.credentials()
+        if self.credentials():
+            auth_str = f'{creds.username()}:{creds.passwd()}@'
+        else:
+            auth_str = ''
+
+        return f'{self.db_type()}://{auth_str}{self.hostname()}:{self.port()}'
+
     def _defaults_dict(self):
         return {
             'namespace': 'compliance',
+            'db_type': 'postgresql',
         }
 
     def _required_attributes(self):
