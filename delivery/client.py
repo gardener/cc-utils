@@ -57,7 +57,9 @@ class DeliveryServiceClient:
         self,
         issue: dso.model.ComplianceIssue,
     ):
-        requests.post(
+        res = requests.post(
             url=self._routes.compliance_issue(),
             json={'entries': [dataclasses.asdict(issue)]},
         )
+
+        res.raise_for_status()
