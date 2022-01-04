@@ -88,10 +88,10 @@ def upload_to_delivery_db(
         'os_info': dataclasses.asdict(os_info),
     }
 
-    issue = dm.ComplianceIssue(
+    data = dm.ComplianceIssue(
         artifact=artifact_ref,
         meta=meta,
         data=data,
     )
 
-    db_client.compliance_issue(issue=issue)
+    db_client.upload_metadata(data=data)

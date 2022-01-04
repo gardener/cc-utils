@@ -185,13 +185,13 @@ def _upload_results_to_db(
 ):
     for upload_result in results:
         try:
-            issue = upload_result_to_compliance_issue(
+            data = upload_result_to_compliance_issue(
                 upload_result=upload_result[0],
                 greatest_cvss3_score=upload_result[1],
                 datasource=dso.model.Datasource.PROTECODE,
             )
-            client.compliance_issue(
-                issue=issue,
+            client.upload_metadata(
+                data=data,
             )
         except:
             import traceback

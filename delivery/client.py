@@ -18,16 +18,19 @@ class DeliveryServiceRoutes:
             'component',
         )
 
-    def compliance_issue(self):
+    def upload_metadata(self):
         return 'http://' + ci.util.urljoin(
             self._base_url,
-            'compliance',
-            'scan',
+            'artefacts',
+            'upload-metadata',
         )
 
 
 class DeliveryServiceClient:
-    def __init__(self, routes: DeliveryServiceRoutes):
+    def __init__(
+        self,
+        routes: DeliveryServiceRoutes,
+    ):
         self._routes = routes
 
     def component_descriptor(
@@ -53,13 +56,13 @@ class DeliveryServiceClient:
             validation_mode=validation_mode,
         )
 
-    def compliance_issue(
+    def upload_metadata(
         self,
-        issue: dso.model.ComplianceIssue,
+        data: dso.model.ComplianceIssue,
     ):
         res = requests.post(
-            url=self._routes.compliance_issue(),
-            json={'entries': [dataclasses.asdict(issue)]},
+            url=self._routes.upload_metadata(),
+            json={'entries': [dataclasses.asdict(data)]},
         )
 
         res.raise_for_status()
