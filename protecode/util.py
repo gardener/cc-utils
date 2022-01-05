@@ -339,11 +339,9 @@ def upload_result_to_compliance_issue(
         uuid=str(uuid.uuid4()),
     )
 
-    data = {'greatestCvss3Score': greatest_cvss3_score}
-
     issue = dso.model.ComplianceIssue(
         artifact=artifact_ref,
         meta=meta,
-        data={'data': data},
+        data={'greatestCvss3Score': greatest_cvss3_score},
     )
     return issue
