@@ -775,6 +775,7 @@ class Client:
                 _data = bytes()
                 for chunk in data:
                     _data += chunk
+                data = _data
             elif data_is_filelike:
                 pass # if filelike, http.client will handle streaming for us
 

@@ -387,14 +387,14 @@ def replicate_artifact(
             uncompressed_layer_hash = hashlib.sha256()
             decompressor = zlib.decompressobj(wbits=zlib.MAX_WBITS | 16)
 
-            def intercept_chunks():
+            def intercept_chunks(blob_res):
                 for chunk in blob_res.iter_content(chunk_size=4096):
                     uncompressed_layer_hash.update(decompressor.decompress(chunk))
                     yield chunk
 
                 uncompressed_layer_digests.append(f'sha256:{uncompressed_layer_hash.hexdigest()}')
 
-            blob_res = intercept_chunks()
+            blob_res = intercept_chunks(blob_res=blob_res)
 
         client.put_blob(
             image_reference=tgt_image_reference,
