@@ -293,28 +293,6 @@ def scan_artifacts(
     return get_exit_codes()
 
 
-def send_scan_failed(
-    notification_recipients: typing.Union[None, typing.List[str]],
-    product_name: str,
-):
-
-    body = f'The WhiteSource scan for {product_name=} failed. \n' \
-        f'Please check the Concourse logs.'
-
-    # get standard cfg set for email cfg
-    default_cfg_set_name = ci.util.current_config_set_name()
-    cfg_factory = ci.util.ctx().cfg_factory()
-    cfg_set = cfg_factory.cfg_set(default_cfg_set_name)
-
-    mailutil._send_mail(
-        email_cfg=cfg_set.email(),
-        recipients=notification_recipients,
-        mail_template=body,
-        subject=f'[ALERT] ({product_name}) WhiteSource Scan Failed',
-        mimetype='html',
-    )
-
-
 def send_vulnerability_report(
     notification_recipients: typing.Union[None, typing.List[str]],
     cve_threshold: float,
@@ -464,9 +442,5 @@ def check_exitcodes(
     if any((lambda: e != 0)() for e in exitcodes):
         logger.warning('some scans failed')
         logger.info(f'notifying {notification_recipients} about failed scan')
-        send_scan_failed(
-            notification_recipients=notification_recipients,
-            product_name=product_name,
-        )
     else:
         logger.info('all scans reported a successful execution')
