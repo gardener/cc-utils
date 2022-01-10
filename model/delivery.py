@@ -35,6 +35,9 @@ class DeliveryConfig(NamedModelElement):
     def deployment_name(self):
         return self.raw.get('deployment_name', 'delivery-dashboard')
 
+    def dashboard(self):
+        return DeliveryDashboardCfg(self.raw.get('dashboard'))
+
     def db_cfg_name(self):
         return self.raw.get('db_cfg_name')
 
@@ -107,7 +110,15 @@ class SigningCfg(ModelBase):
         return self.raw['purpose_labels']
 
 
+class DeliveryDashboardCfg(ModelBase):
+    def deployment_name(self):
+        return self.raw.get('deployment_name', 'delivery-dashboard')
+
+
 class DeliverySvcCfg(ModelBase):
+    def deployment_name(self):
+        return self.raw.get('deployment_name', 'delivery-service')
+
     def signing_cfgs(
         self,
         purpose_label: str = None,
