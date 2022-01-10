@@ -5,6 +5,7 @@ import enum
 import hashlib
 import json
 import logging
+import tempfile
 import threading
 import typing
 
@@ -785,6 +786,21 @@ class Client:
                 octets_count=octets_count,
                 data=data,
             )
+        elif octets_count >= max_chunk and data_is_generator:
+            # workaround: write into temporary file, as at least GCR does not implement
+            # chunked-upload, and requests will not properly work w/ all generators
+            # (in particular, it will not work w/ our "fake" on)
+            with tempfile.TemporaryFile() as tf:
+                for chunk in data:
+                    tf.write(chunk)
+                tf.seek(0)
+
+                return self._put_blob_single_post(
+                    image_reference=image_reference,
+                    digest=digest,
+                    octets_count=octets_count,
+                    data=tf,
+                )
         else:
             if data_is_requests_resp:
                 with data:
@@ -795,14 +811,6 @@ class Client:
                       data_iterator=data.iter_content(chunk_size=max_chunk),
                       chunk_size=max_chunk,
                   )
-            elif data_is_generator:
-              return self._put_blob_chunked(
-                  image_reference=image_reference,
-                  digest=digest,
-                  octets_count=octets_count,
-                  data_iterator=data.iter_content(chunk_size=max_chunk),
-                  chunk_size=max_chunk,
-              )
             else:
               raise NotImplementedError
 
