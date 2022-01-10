@@ -40,6 +40,23 @@ class DeliveryDbConfig(NamedModelElement):
     def helm_values(self):
         return self.raw.get('helm_values')
 
+    def db_type(self):
+        return self.raw.get('db_type', 'postgresql')
+
+    def as_url(self):
+        creds = self.credentials()
+        if self.credentials():
+            auth_str = f'{creds.username()}:{creds.passwd()}@'
+        else:
+            auth_str = ''
+
+        return f'{self.db_type()}://{auth_str}{self.hostname()}:{self.port()}'
+
+    def _defaults_dict(self):
+        return {
+            'db_type': 'postgresql',
+        }
+
     def _required_attributes(self):
         return (
             'credentials',
