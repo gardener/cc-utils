@@ -40,11 +40,6 @@ class DeliveryDbConfig(NamedModelElement):
     def helm_values(self):
         return self.raw.get('helm_values')
 
-    def _defaults_dict(self):
-        return {
-            'namespace': 'compliance',
-        }
-
     def _required_attributes(self):
         return (
             'credentials',
