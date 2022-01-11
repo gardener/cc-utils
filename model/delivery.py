@@ -32,9 +32,6 @@ class DeliveryConfig(NamedModelElement):
     def service(self):
         return DeliverySvcCfg(self.raw.get('service'))
 
-    def deployment_name(self):
-        return self.raw.get('deployment_name', 'delivery-dashboard')
-
     def dashboard(self):
         return DeliveryDashboardCfg(self.raw.get('dashboard'))
 
@@ -44,7 +41,6 @@ class DeliveryConfig(NamedModelElement):
     def _optional_attributes(self):
         yield from super()._optional_attributes()
         yield from [
-            'deployment_name',
             'db_cfg_name',
         ]
 
