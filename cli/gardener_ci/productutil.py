@@ -14,9 +14,12 @@
 # limitations under the License.
 
 import itertools
+import logging
 
 import ccc.protecode
 from ci.util import ctx
+
+logger = logging.getLogger(__name__)
 
 
 def transport_triages(
@@ -51,7 +54,7 @@ def transport_triages(
                     yield component, triage
 
     triages = list(enum_triages())
-    info(f'found {len(triages)} triage(s) to import')
+    logger.info(f'found {len(triages)} triage(s) to import')
 
     for to_product_id, component_name_and_triage in itertools.product(to_product_ids, triages):
         component, triage = component_name_and_triage
@@ -59,11 +62,11 @@ def transport_triages(
             product_id=to_product_id,
             component_name=component.name(),
         ):
-            info(f'adding triage for {triage.component_name()}:{target_component_version}')
+            logger.info(f'adding triage for {triage.component_name()}:{target_component_version}')
             api.add_triage(
                 triage=triage,
                 product_id=to_product_id,
                 group_id=to_group_id,
                 component_version=target_component_version,
             )
-        info(f'added triage for {triage.component_name()} to {to_product_id}')
+        logger.info(f'added triage for {triage.component_name()} to {to_product_id}')
