@@ -28,10 +28,10 @@ class Datasource:
 
 
 @dataclasses.dataclass
-class ArtifactReference:
+class ArtefactReference:
     componentName: str
     componentVersion: str
-    artifact: typing.Union[
+    artefact: typing.Union[
         cm.Resource,
         cm.ComponentSource,
     ]
@@ -46,6 +46,6 @@ class ComplianceIssueMetadata:
 
 @dataclasses.dataclass
 class ComplianceIssue:
-    artifact: ArtifactReference
+    artefact: ArtefactReference
     meta: ComplianceIssueMetadata
     data: dict

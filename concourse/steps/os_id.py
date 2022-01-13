@@ -68,14 +68,14 @@ def upload_to_delivery_db(
     component: cm.Component,
     os_info: um.OperatingSystemId,
 ):
-    artifact = dataclasses.asdict(
+    artefact = dataclasses.asdict(
         resource,
         dict_factory=ci.util.dict_factory_enum_serialisiation,
     )
-    artifact_ref = dm.ArtifactReference(
+    artefact_ref = dm.ArtefactReference(
         componentName=component.name,
         componentVersion=component.version,
-        artifact=artifact,
+        artefact=artefact,
     )
 
     meta = dm.ComplianceIssueMetadata(
@@ -89,7 +89,7 @@ def upload_to_delivery_db(
     }
 
     data = dm.ComplianceIssue(
-        artifact=artifact_ref,
+        artefact=artefact_ref,
         meta=meta,
         data=data,
     )
