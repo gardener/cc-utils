@@ -13,11 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
 from enum import Enum
 from typing import Iterable
 
 import ci.util
 from model.base import ModelBase
+import gci.componentmodel as cm
 
 
 class VersionOverrideScope(Enum):
@@ -30,6 +32,12 @@ class ProcessingStatus(Enum):
     BUSY = 'B'
     READY = 'R'
     FAILED = 'F'
+
+
+@dataclasses.dataclass(frozen=True)
+class UploadElement:
+    component: cm.Component
+    resource: cm.Resource
 
 
 class CVSSVersion(Enum):

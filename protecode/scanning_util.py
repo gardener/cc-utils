@@ -21,6 +21,7 @@ from protecode.client import ProtecodeApi
 from protecode.model import (
     AnalysisResult,
     TriageScope,
+    UploadElement,
     UploadResult,
     UploadStatus,
     VersionOverrideScope,
@@ -234,17 +235,17 @@ class ProtecodeUtil:
 
     def upload_container_image_group(
         self,
-        resource_group: ResourceGroup,
+        upload_elements: typing.List[UploadElement],
     ) -> typing.Iterable[UploadResult]:
-        mk_upload_result = partial(
-            UploadResult,
-            component=resource_group.component(),
-        )
+        #mk_upload_result = partial(
+        #    UploadResult,
+        #    component=resource_group.component(),
+        #)
 
-        logger.info(
-            f'Processing resource group for component {resource_group.component().name} and image '
-            f'{resource_group.image_name()} with {len(resource_group.resources())} resources'
-        )
+        # logger.info(
+        #     f'Processing resource group for component {upload_elements[0].component.name} and image '
+        #     f'{upload_elements[0].resource.name} with {len(upload_elements)} resources'
+        # )
 
         # depending on upload-mode, determine an upload-action for each related image
         # - images to upload
@@ -255,6 +256,21 @@ class ProtecodeUtil:
         protecode_apps_to_consider = list() # consider to rescan; return results
         triages_to_import = set()
 
+        print(upload_elements[0].component.name, flush=True)
+        print(upload_elements[0].component.version, flush=True)
+        print(upload_elements[1].component.name, flush=True)
+        print(upload_elements[1].component.version, flush=True)
+        print(upload_elements[2].component.name, flush=True)
+        print(upload_elements[2].component.version, flush=True)
+        print('')
+        print(upload_elements[0].resource, flush=True)
+        print('')
+        print(upload_elements[1].resource, flush=True)
+        print('')
+        print(upload_elements[2].resource, flush=True)
+        print('')
+
+        exit(1)
         metadata = self._image_group_metadata(
             resource_group=resource_group,
             omit_version=True,

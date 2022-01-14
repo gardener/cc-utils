@@ -37,7 +37,6 @@ import product.v2
 import gci.componentmodel as cm
 
 from protecode.scanning_util import (
-    ResourceGroup,
     ProcessingMode,
     ProtecodeUtil,
 )
@@ -46,6 +45,7 @@ from protecode.model import (
     highest_major_cve_severity,
     CVSSVersion,
     UploadResult,
+    UploadElement,
 )
 
 logger = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ def upload_grouped_images(
     reference_group_ids=(),
     cvss_version=CVSSVersion.V2,
 ):
-    executor = ThreadPoolExecutor(max_workers=parallel_jobs)
+    executor = ThreadPoolExecutor(max_workers=1)
     protecode_api = ccc.protecode.client(protecode_cfg)
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
     protecode_util = ProtecodeUtil(
@@ -74,17 +74,13 @@ def upload_grouped_images(
         cvss_threshold=cve_threshold,
     )
 
-    def _upload_task(component, resources):
-        resource_group = ResourceGroup(
-            component=component,
-            resources=resources,
-        )
+    def _upload_task(upload_elements: typing.List[UploadElement]):
 
         def _task():
             # force executor to actually iterate through generator
             return set(
                 protecode_util.upload_container_image_group(
-                    resource_group=resource_group,
+                    upload_elements=upload_elements,
                 )
             )
 
@@ -98,9 +94,9 @@ def upload_grouped_images(
         for component in components:
             component_groups[component.name].append(component)
 
-        def group_resources(components):
+        def group_resources(components) -> typing.Generator[typing.List[UploadElement], None, None]:
             # groups resources of components by resource name
-            resource_groups = collections.defaultdict(list)
+            upload_element_groups = collections.defaultdict(list)
             for component in components:
                 # TODO: Handle other resource types
                 for resource in product.v2.resources(
@@ -108,10 +104,15 @@ def upload_grouped_images(
                     resource_types=[cm.ResourceType.OCI_IMAGE],
                     resource_access_types=[cm.AccessType.OCI_REGISTRY],
                 ):
-                    resource_groups[resource.name].append(resource)
+                    upload_element_groups[resource.name].append(
+                        UploadElement(
+                            resource=resource,
+                            component=component,
+                        ),
+                    )
 
-            for resource_name, resources in resource_groups.items():
-                yield resources
+            for upload_elements in upload_element_groups.values():
+                yield upload_elements
 
         def _filter_resources_to_scan(component: cm.Component, resource: cm.Resource):
             # check whether the trait was configured to filter out the resource
@@ -137,18 +138,18 @@ def upload_grouped_images(
                 return True
 
         for _, components in component_groups.items():
-            for grouped_resources in group_resources(components):
+            for upload_elements in group_resources(components):
                 # all components in a component group share a name
-                component = next(iter(components))
-                resources = [
-                    r for r in grouped_resources
-                    if _filter_resources_to_scan(component, r)
+                filtered_upload_elements = [
+                    ul for ul in upload_elements
+                    if _filter_resources_to_scan(ul.component, ul.resource)
                 ]
-                if resources:
-                    yield _upload_task(component=component, resources=resources)
+                if filtered_upload_elements:
+                    yield _upload_task(upload_elements=filtered_upload_elements)
 
     tasks = _upload_tasks()
     results = tuple(executor.map(lambda task: task(), tasks))
+    exit()
 
     def flatten_results():
         for result_set in results:
