@@ -147,9 +147,15 @@ def upload_grouped_images(
                 if filtered_upload_elements:
                     yield _upload_task(upload_elements=filtered_upload_elements)
 
-    tasks = _upload_tasks()
-    results = tuple(executor.map(lambda task: task(), tasks))
+    tasks = list(_upload_tasks())
+
+    # FIXME WIP: enable executor again
+    for task in tasks:
+        task()
+        print('xxxxx')
+
     exit()
+    results = tuple(executor.map(lambda task: task(), tasks))
 
     def flatten_results():
         for result_set in results:
