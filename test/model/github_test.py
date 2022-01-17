@@ -42,11 +42,19 @@ def test_validation_fails_on_missing_required_key(required_dict):
     for key in required_dict.keys():
         test_dict = required_dict.copy()
         test_dict.pop(key)
-        element = examinee.GithubConfig(name='foo', raw_dict=test_dict)
+        element = examinee.GithubConfig(
+            name='foo',
+            raw_dict=test_dict,
+            type_name='github',
+        )
         with pytest.raises(ModelValidationError):
             element.validate()
 
 
 def test_validation_succeeds_on_required_dict(required_dict):
-    element = examinee.GithubConfig(name='foo', raw_dict=required_dict)
+    element = examinee.GithubConfig(
+        name='foo',
+        raw_dict=required_dict,
+        type_name='github',
+    )
     element.validate()

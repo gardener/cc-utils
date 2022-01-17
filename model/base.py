@@ -109,8 +109,16 @@ class ModelBase(ModelValidationMixin, ModelDefaultsMixin):
 
 
 class NamedModelElement(ModelBase):
-    def __init__(self, name, raw_dict, *args, **kwargs):
+    def __init__(
+        self,
+        name: str,
+        raw_dict: dict,
+        type_name: str=None,
+        *args,
+        **kwargs
+    ):
         self._name = ci.util.not_none(name)
+        self._type_name = type_name
         super().__init__(raw_dict=raw_dict, *args, **kwargs)
 
     def _optional_attributes(self):
