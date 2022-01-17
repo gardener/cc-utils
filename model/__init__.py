@@ -177,6 +177,7 @@ class ConfigFactory:
         cfg_types_file='config_types.yaml',
         cfg_src_types=None,
         lookup_cfg_factory=None,
+        disable_cfg_element_lookup=False,
     ):
         cfg_dir = existing_dir(os.path.abspath(cfg_dir))
         cfg_types_dict = parse_yaml_file(os.path.join(cfg_dir, cfg_types_file))
@@ -197,6 +198,8 @@ class ConfigFactory:
                         cfg_src=cfg_src,
                     )
                 elif isinstance(cfg_src, GithubRepoFileSrc):
+                    if disable_cfg_element_lookup:
+                        continue
                     parsed_cfg = ConfigFactory._parse_repo_file(
                         cfg_src=cfg_src,
                         lookup_cfg_factory=lookup_cfg_factory,
@@ -345,6 +348,7 @@ class ConfigFactory:
             kwargs.update({'cfg_name': cfg_name, 'cfg_factory': self})
         else:
             kwargs['name'] = cfg_name
+            kwargs['type_name'] = cfg_type.cfg_type_name()
 
         element_instance = element_type(**kwargs)
 
@@ -510,7 +514,12 @@ class ConfigurationSet(NamedModelElement):
         self.resolved_base_cfg_sets = False
         self.cfg_factory: ConfigFactory = not_none(cfg_factory)
         self._raw_lock = threading.Lock()
-        super().__init__(name=cfg_name, *args, **kwargs)
+        super().__init__(
+            name=cfg_name,
+            type_name='cfg_set',
+            *args,
+            **kwargs,
+        )
 
         # normalise cfg mappings
         for cfg_type_name, entry in self.raw.items():

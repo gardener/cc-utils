@@ -33,6 +33,7 @@ pycryptodome
 pydash<5.0.0
 pymongo
 pytest
+pytimeparse
 python-dateutil
 python-keystoneclient
 python-magic

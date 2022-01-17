@@ -32,17 +32,29 @@ def test_validation_fails_on_missing_required_key(required_dict):
     for key in required_dict.keys():
         test_dict = required_dict.copy()
         test_dict.pop(key)
-        element = examinee.AwsProfile(name='foo', raw_dict=test_dict)
+        element = examinee.AwsProfile(
+            name='foo',
+            raw_dict=test_dict,
+            type_name='aws',
+        )
         with pytest.raises(ModelValidationError):
             element.validate()
 
 
 def test_validation_succeeds_on_required_dict(required_dict):
-    element = examinee.AwsProfile(name='foo', raw_dict=required_dict)
+    element = examinee.AwsProfile(
+        name='foo',
+        raw_dict=required_dict,
+        type_name='aws',
+    )
     element.validate()
 
 
 def test_validation_succeeds_on_unknown_key(required_dict):
     test_dict = {**required_dict, **{'foo': 'bar'}}
-    element = examinee.AwsProfile(name='foo', raw_dict=test_dict)
+    element = examinee.AwsProfile(
+        name='foo',
+        raw_dict=test_dict,
+        type_name='aws',
+    )
     element.validate()
