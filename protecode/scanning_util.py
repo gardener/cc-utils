@@ -468,7 +468,7 @@ class ProtecodeUtil:
         # succeed in finding it implicitly while trying to upload image. Do not purge those
         # IDs (or in general: purge no ID we just recently created/retrieved)
         product_ids_not_to_purge = {app.product_id() for app in protecode_apps_to_consider}
-        return
+
         # rm all outdated protecode apps
         for protecode_app in protecode_apps_to_remove:
             product_id = protecode_app.product_id()

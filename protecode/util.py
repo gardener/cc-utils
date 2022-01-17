@@ -156,7 +156,6 @@ def upload_grouped_images(
             yield from result_set
 
     results = list(flatten_results())
-    exit()
 
     logger.info('Preparing results')
     relevant_results, results_below_threshold = filter_and_display_upload_results(
