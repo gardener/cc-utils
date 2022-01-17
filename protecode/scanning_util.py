@@ -237,12 +237,6 @@ class ProtecodeUtil:
         self,
         upload_elements: typing.List[UploadElement],
     ) -> typing.Iterable[UploadResult]:
-
-        # logger.info(
-        #     f'Processing resource group for component {upload_elements[0].component.name} and image '
-        #     f'{upload_elements[0].resource.name} with {len(upload_elements)} resources'
-        # )
-
         # depending on upload-mode, determine an upload-action for each related image
         # - images to upload
         # - protecode-apps to remove
@@ -257,6 +251,11 @@ class ProtecodeUtil:
         # we can take any (idx=0) component from the list. List is grouped by name
         component_name = upload_elements[0].component.name
         resource_name = upload_elements[0].resource.name
+
+        logger.info(
+            f'Processing resource group for component {component_name} and image '
+            f'{resource_name} with {len(upload_elements)} resources'
+        )
 
         metadata = self._image_group_metadata(
             component_name=component_name,
