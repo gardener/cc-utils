@@ -252,8 +252,8 @@ class ProtecodeUtil:
         # - protecode-apps to remove
         # - triages to import
         elements_to_upload = list()
-        protecode_apps_to_remove = set()
         protecode_apps_to_consider = list() # consider to rescan; return results
+        protecode_apps_to_remove = set()
         triages_to_import = set()
 
         print(upload_elements[0].component.name, flush=True)
@@ -287,6 +287,7 @@ class ProtecodeUtil:
             for product in existing_products
         )
         triages_to_import |= set(self._existing_triages(scan_results))
+        print(triages_to_import)
 
         # import triages from reference groups
         def enumerate_reference_triages():
@@ -400,6 +401,9 @@ class ProtecodeUtil:
         # upload new images
         for upload_element in elements_to_upload:
             try:
+                print(
+                    f'uploading resource {upload_element.resource.name} {upload_element.resource.version}'
+                )
                 scan_result = self._upload_image(
                     component=upload_element.component,
                     resource=upload_element.resource,
@@ -421,15 +425,21 @@ class ProtecodeUtil:
 
             protecode_apps_to_consider.append(scan_result)
 
+        id_list = [ar.product_id() for ar in protecode_apps_to_consider]
+        print(id_list)
         # wait for all apps currently being scanned
         for protecode_app in protecode_apps_to_consider:
             # replace - potentially incomplete - scan result
+            print(protecode_app.product_id())
             protecode_apps_to_consider.remove(protecode_app)
+            print(protecode_app.product_id())
             logger.info(f'waiting for {protecode_app.product_id()}')
             protecode_apps_to_consider.append(
                 self._api.wait_for_scan_result(protecode_app.product_id())
             )
+            print(protecode_app.product_id())
             logger.info(f'finished waiting for {protecode_app.product_id()}')
+            print('')
 
         # apply imported triages for all protecode apps
         for protecode_app in protecode_apps_to_consider:
@@ -449,6 +459,7 @@ class ProtecodeUtil:
             self._import_triages_from_gcr(protecode_app) for protecode_app
             in protecode_apps_to_consider
         ]
+        return
 
         # yield results
         for protecode_app in protecode_apps_to_consider:
