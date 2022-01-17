@@ -63,7 +63,7 @@ def upload_grouped_images(
     reference_group_ids=(),
     cvss_version=CVSSVersion.V2,
 ):
-    executor = ThreadPoolExecutor(max_workers=1)
+    executor = ThreadPoolExecutor(max_workers=parallel_jobs)
     protecode_api = ccc.protecode.client(protecode_cfg)
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
     protecode_util = ProtecodeUtil(
@@ -149,12 +149,6 @@ def upload_grouped_images(
 
     tasks = list(_upload_tasks())
 
-    # FIXME WIP: enable executor again
-    for task in tasks:
-        task()
-        print('xxxxx')
-
-    exit()
     results = tuple(executor.map(lambda task: task(), tasks))
 
     def flatten_results():
@@ -162,6 +156,7 @@ def upload_grouped_images(
             yield from result_set
 
     results = list(flatten_results())
+    exit()
 
     logger.info('Preparing results')
     relevant_results, results_below_threshold = filter_and_display_upload_results(
