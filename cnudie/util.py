@@ -88,6 +88,12 @@ def determine_main_source_for_component(
 
 
 @dataclasses.dataclass(frozen=True)
+class ComponentResource:
+    component: cm.Component
+    resource: cm.Resource
+
+
+@dataclasses.dataclass(frozen=True)
 class LabelDiff:
     labels_only_left: typing.List[cm.Label] = dataclasses.field(default_factory=list)
     labels_only_right: typing.List[cm.Label] = dataclasses.field(default_factory=list)

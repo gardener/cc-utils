@@ -29,6 +29,7 @@ import ccc.gcp
 import ccc.protecode
 import ci.util
 import cnudie.retrieve
+import cnudie.util
 import delivery.client
 import dso.model
 import product.util
@@ -37,7 +38,6 @@ import product.v2
 import gci.componentmodel as cm
 
 from protecode.scanning_util import (
-    ResourceGroup,
     ProcessingMode,
     ProtecodeUtil,
 )
@@ -75,16 +75,12 @@ def upload_grouped_images(
     )
 
     def _upload_task(component, resources):
-        resource_group = ResourceGroup(
-            component=component,
-            resources=resources,
-        )
 
         def _task():
             # force executor to actually iterate through generator
             return set(
                 protecode_util.upload_container_image_group(
-                    resource_group=resource_group,
+                    resource_group=resources,
                 )
             )
 
@@ -108,7 +104,12 @@ def upload_grouped_images(
                     resource_types=[cm.ResourceType.OCI_IMAGE],
                     resource_access_types=[cm.AccessType.OCI_REGISTRY],
                 ):
-                    resource_groups[resource.name].append(resource)
+                    resource_groups[resource.name].append(
+                        cnudie.util.ComponentResource(
+                            component=component,
+                            resource=resource,
+                        )
+                    )
 
             for resource_name, resources in resource_groups.items():
                 yield resources
@@ -142,7 +143,7 @@ def upload_grouped_images(
                 component = next(iter(components))
                 resources = [
                     r for r in grouped_resources
-                    if _filter_resources_to_scan(component, r)
+                    if _filter_resources_to_scan(r.component, r.resource)
                 ]
                 if resources:
                     yield _upload_task(component=component, resources=resources)
