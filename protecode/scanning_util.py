@@ -15,7 +15,6 @@ import gci.componentmodel
 import protecode.model
 import version
 
-from functools import partial
 
 from protecode.client import ProtecodeApi
 from protecode.model import (
@@ -153,12 +152,12 @@ class ProtecodeUtil:
 
     def _image_group_metadata(
         self,
-        resource_group: ResourceGroup,
+        resource_group,
         omit_version=False,
     ):
         metadata = {
-            'IMAGE_REFERENCE_NAME': resource_group.image_name(),
-            'COMPONENT_NAME': resource_group.component().name,
+            'IMAGE_REFERENCE_NAME': resource_group[0].resource.name,
+            'COMPONENT_NAME': resource_group[0].component.name,
         }
 
         if not omit_version:
@@ -234,16 +233,12 @@ class ProtecodeUtil:
 
     def upload_container_image_group(
         self,
-        resource_group: ResourceGroup,
+        resource_group,
     ) -> typing.Iterable[UploadResult]:
-        mk_upload_result = partial(
-            UploadResult,
-            component=resource_group.component(),
-        )
 
         logger.info(
-            f'Processing resource group for component {resource_group.component().name} and image '
-            f'{resource_group.image_name()} with {len(resource_group.resources())} resources'
+            f'Processing resource group for component {resource_group[0].component.name} and '
+            f'resource {resource_group[0].resource.name} with {len(resource_group)}'
         )
 
         # depending on upload-mode, determine an upload-action for each related image
@@ -254,6 +249,7 @@ class ProtecodeUtil:
         protecode_apps_to_remove = set()
         protecode_apps_to_consider = list() # consider to rescan; return results
         triages_to_import = set()
+        product_id_to_resource = dict()
 
         metadata = self._image_group_metadata(
             resource_group=resource_group,
@@ -290,15 +286,16 @@ class ProtecodeUtil:
 
         if self._processing_mode is ProcessingMode.FORCE_UPLOAD:
             logger.info('force-upload - will re-upload all images')
-            images_to_upload += list(resource_group.resources())
+            images_to_upload += list(resource_group)
             # remove all
             protecode_apps_to_remove = set(existing_products)
         elif self._processing_mode is ProcessingMode.RESCAN:
-            for resource in resource_group.resources():
+            for resource in resource_group:
                 logger.info(
-                    f'Checking whether a product for {resource.access.imageReference} exists.'
+                    f'Checking whether a product for '
+                    f'{resource.resource.access.imageReference} exists.'
                 )
-                component_version = resource_group.component().version
+                component_version = resource.component.version
                 # find matching protecode product (aka app)
                 for existing_product in existing_products:
                     product_image_digest = existing_product.custom_data().get('IMAGE_DIGEST')
@@ -308,7 +305,7 @@ class ProtecodeUtil:
 
                     oci_client = ccc.oci.oci_client()
                     img_ref_with_digest = oci_client.to_digest_hash(
-                        image_reference=resource.access.imageReference,
+                        image_reference=resource.resource.access.imageReference,
                     )
                     digest = img_ref_with_digest.split('@')[-1]
                     if (
@@ -317,16 +314,17 @@ class ProtecodeUtil:
                     ):
                         existing_products.remove(existing_product)
                         protecode_apps_to_consider.append(existing_product)
+                        product_id_to_resource[existing_product.product_id()] = resource
                         logger.info(
-                            f"found product for '{resource.access.imageReference}' for "
+                            f"found product for '{resource.resource.access.imageReference}' for "
                             f"component version '{component_version}': "
                             f'{existing_product.product_id()}'
                         )
                         break
                 else:
                     logger.info(
-                        f'did not find product for image {resource.access.imageReference} and '
-                        f'version {component_version} - will upload'
+                        f'did not find product for image {resource.resource.access.imageReference} '
+                        f'and version {component_version} - will upload'
                     )
                     # not found -> need to upload
                     images_to_upload.append(resource)
@@ -338,7 +336,8 @@ class ProtecodeUtil:
                     'Marked existing product(s) with ID(s) '
                     f"'{','.join([str(p.product_id()) for p in protecode_apps_to_remove])}' "
                     'that had no match in the current group '
-                    f"'{resource_group.component().name}, {resource_group.image_name()}' "
+                    f"'{resource_group[0].component.name}, "
+                    f"{resource_group[0].resource.image_name()}' "
                     'for removal after triage transport.'
                 )
 
@@ -361,12 +360,13 @@ class ProtecodeUtil:
                 oci_client = ccc.oci.oci_client()
                 for resource in resource_group:
                     digest = oci_client.to_digest_hash(
-                        image_reference=resource.access.imageReference,
+                        image_reference=resource.resource.access.imageReference,
                     ).split('@')[-1]
                     if image_digest == digest:
                         logger.info(
-                            f'{resource.access.imageReference=} no longer available to protecode '
-                            f'- will upload. Corresponding product: {protecode_app.product_id()}'
+                            f'{resource.resource.access.imageReference=} no longer available '
+                            'to protecode - will upload. '
+                            f'Corresponding product: {protecode_app.product_id()}'
                         )
                         images_to_upload.append(resource)
                         protecode_apps_to_consider.remove(protecode_app)
@@ -380,8 +380,8 @@ class ProtecodeUtil:
         for resource in images_to_upload:
             try:
                 scan_result = self._upload_image(
-                    component=resource_group.component(),
-                    resource=resource,
+                    component=resource.component,
+                    resource=resource.resource,
                 )
             except requests.exceptions.HTTPError as e:
                 # in case the image is currently being scanned, Protecode will answer with HTTP
@@ -390,25 +390,24 @@ class ProtecodeUtil:
                 if e.response.status_code != requests.codes.conflict:
                     raise e
 
-                image_ref = resource.access.imageReference
+                image_ref = resource.resource.access.imageReference
                 logger.warning(f'conflict whilst trying to upload {image_ref=}')
 
                 scan_result = self.retrieve_scan_result(
-                    component=resource_group.component(),
-                    resource=resource,
+                    component=resource.component,
+                    resource=resource.resource,
                 )
 
+            product_id_to_resource[scan_result.product_id()] = resource
             protecode_apps_to_consider.append(scan_result)
 
-        # wait for all apps currently being scanned
-        for protecode_app in protecode_apps_to_consider:
-            # replace - potentially incomplete - scan result
-            protecode_apps_to_consider.remove(protecode_app)
-            logger.info(f'waiting for {protecode_app.product_id()}')
-            protecode_apps_to_consider.append(
-                self._api.wait_for_scan_result(protecode_app.product_id())
-            )
-            logger.info(f'finished waiting for {protecode_app.product_id()}')
+        def wait_for_scan_results(protecode_apps_to_consider):
+            for protecode_app in protecode_apps_to_consider:
+                logger.info(f'waiting for {protecode_app.product_id()}')
+                yield self._api.wait_for_scan_result(protecode_app.product_id())
+                logger.info(f'finished waiting for {protecode_app.product_id()}')
+
+        protecode_apps_to_consider = list(wait_for_scan_results(protecode_apps_to_consider))
 
         # apply imported triages for all protecode apps
         for protecode_app in protecode_apps_to_consider:
@@ -433,16 +432,19 @@ class ProtecodeUtil:
         for protecode_app in protecode_apps_to_consider:
             scan_result = self._api.scan_result(protecode_app.product_id())
 
+            resource = product_id_to_resource.get(protecode_app.product_id())
+
             # create closure for pdf retrieval to avoid actually having to store
             # all the pdf-reports in memory. Will be called when preparing to send
             # the notification emails if reports are to be included
             def pdf_retrieval_function():
                 return self._api.pdf_report(protecode_app.product_id())
 
-            yield mk_upload_result(
+            yield UploadResult(
+                component=resource.component,
                 status=UploadStatus.DONE, # XXX remove this
                 result=scan_result,
-                resource=resource,
+                resource=resource.resource,
                 pdf_report_retrieval_func=pdf_retrieval_function,
             )
 
