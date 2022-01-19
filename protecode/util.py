@@ -71,13 +71,12 @@ def upload_grouped_images(
         cvss_threshold=cve_threshold,
     )
 
-    def _upload_task(component, resources):
-
+    def _upload_task(component_resources):
         def _task():
             # force executor to actually iterate through generator
             return set(
-                protecode_util.upload_container_image_group(
-                    resource_group=resources,
+                protecode_util.process_component_resources(
+                    component_resources=component_resources,
                 )
             )
 
@@ -91,9 +90,15 @@ def upload_grouped_images(
         for component in components:
             component_groups[component.name].append(component)
 
-        def group_resources(components):
+        def group_by_resource_name(
+            components
+        ) -> typing.Generator[
+            list[cnudie.util.ComponentResource],
+            None,
+            None
+        ]:
             # groups resources of components by resource name
-            resource_groups = collections.defaultdict(list)
+            resource_groups = collections.defaultdict(list[cnudie.util.ComponentResource])
             for component in components:
                 # TODO: Handle other resource types
                 for resource in product.v2.resources(
@@ -108,8 +113,7 @@ def upload_grouped_images(
                         )
                     )
 
-            for resource_name, resources in resource_groups.items():
-                yield resources
+            yield from resource_groups.values()
 
         def _filter_resources_to_scan(component: cm.Component, resource: cm.Resource):
             # check whether the trait was configured to filter out the resource
@@ -134,16 +138,15 @@ def upload_grouped_images(
             else:
                 return True
 
-        for _, components in component_groups.items():
-            for grouped_resources in group_resources(components):
+        for components in component_groups.values():
+            for component_resources in group_by_resource_name(components):
                 # all components in a component group share a name
-                component = next(iter(components))
-                resources = [
-                    r for r in grouped_resources
+                component_resources = [
+                    r for r in component_resources
                     if _filter_resources_to_scan(r.component, r.resource)
                 ]
-                if resources:
-                    yield _upload_task(component=component, resources=resources)
+                if component_resources:
+                    yield _upload_task(component_resources=component_resources)
 
     tasks = _upload_tasks()
     results = tuple(executor.map(lambda task: task(), tasks))
