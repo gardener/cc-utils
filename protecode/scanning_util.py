@@ -337,7 +337,7 @@ class ProtecodeUtil:
                     f"'{','.join([str(p.product_id()) for p in protecode_apps_to_remove])}' "
                     'that had no match in the current group '
                     f"'{resource_group[0].component.name}, "
-                    f"{resource_group[0].resource.image_name()}' "
+                    f"{resource_group[0].resource.name}' "
                     'for removal after triage transport.'
                 )
 
