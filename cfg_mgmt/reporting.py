@@ -25,7 +25,7 @@ class CfgElementStatusReport:
 
 def create_report(
     cfg_element_statuses: typing.Iterable[CfgElementStatusReport],
-) -> str:
+):
     no_rule_assigned = []
     no_status = []
     assigned_rule_refers_to_undefined_policy = []
@@ -71,7 +71,7 @@ def create_report(
     def cfg_element_status_name(status: CfgElementStatusReport):
         return f'{status.element_storage}/{status.element_type}/{status.element_name}'
 
-    def print_paragraph(header: str, statuses: typing.Iterable[CfgElementStatusReport]):
+    def print_paragraph(header: str, statuses: typing.List[CfgElementStatusReport]):
         print(f'({len(statuses)}) {header}')
         print(2*'\n')
 

@@ -38,7 +38,7 @@ def report(cfg_dir: str):
         )
     )
 
-    statuses = [
+    status_reports = [
         cmu.determine_status(
             element=element,
             policies=policies,
@@ -50,5 +50,5 @@ def report(cfg_dir: str):
     ]
 
     cmr.create_report(
-        cfg_element_statuses=statuses,
+        cfg_element_statuses=status_reports,
     )
