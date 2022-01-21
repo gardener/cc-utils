@@ -38,7 +38,7 @@ class CfgPolicy:
         today = datetime.datetime.now()
         latest_required_update_date = last_update + datetime.timedelta(seconds=max_age_seconds)
 
-        return today > latest_required_update_date
+        return today < latest_required_update_date
 
 
 @dataclasses.dataclass

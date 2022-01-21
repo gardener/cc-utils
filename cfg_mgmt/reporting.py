@@ -66,7 +66,7 @@ def create_report(
                     _fully_compliant = False
                     credentials_outdated.append(cfg_element_status)
         if _fully_compliant:
-            fully_compliant.append(cfg_element_statuses)
+            fully_compliant.append(cfg_element_status)
 
     def cfg_element_status_name(status: CfgElementStatusReport):
         return f'{status.element_storage}/{status.element_type}/{status.element_name}'
@@ -81,7 +81,6 @@ def create_report(
         print('')
         print(40 * '-')
 
-    fully_compliant = []
     print_paragraph(
         header='Cfg-Elements w/o assigned policy/rule',
         statuses=no_rule_assigned,
