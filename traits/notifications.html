@@ -205,9 +205,9 @@ mails upon errors).</p>
 <tbody>
 <tr class="row-even"><td><p>default</p></td>
 <td><p>no</p></td>
-<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">on_error</span><span class="p">:</span>
-  <span class="nt">email</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
-  <span class="nt">triggering_policy</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">only_first</span>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">on_error</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">email</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"></span>
+<span class="w">  </span><span class="nt">triggering_policy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">only_first</span><span class="w"></span>
 </pre></div>
 </div>
 </p></td>
@@ -229,7 +229,7 @@ mails upon errors).</p>
 <tbody>
 <tr class="row-even"><td><p>on_error</p></td>
 <td><p>no</p></td>
-<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">triggering_policy</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">only_first</span>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">triggering_policy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">only_first</span><span class="w"></span>
 </pre></div>
 </div>
 </p></td>
@@ -263,7 +263,7 @@ mails upon errors).</p>
 </tr>
 <tr class="row-even"><td><p>inputs</p></td>
 <td><p>no</p></td>
-<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">on_error_dir</span>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">on_error_dir</span><span class="w"></span>
 </pre></div>
 </div>
 </p></td>
@@ -278,7 +278,7 @@ mails upon errors).</p>
 </tr>
 <tr class="row-even"><td><p>cfg_callback</p></td>
 <td><p>no</p></td>
-<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">on_error_dir</span>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">on_error_dir</span><span class="w"></span>
 </pre></div>
 </div>
 </p></td>
@@ -327,10 +327,10 @@ an environment variables:</p>
 <td><p><blockquote>
 <div><p>notifiy specific email addresses</p>
 <p>Example:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">recipients</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="nt">email_addresses</span><span class="p">:</span>
-        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">foo.bar@mycloud.com</span>
-        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">bar.buzz@mycloud.com</span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">recipients</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">email_addresses</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">foo.bar@mycloud.com</span><span class="w"></span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bar.buzz@mycloud.com</span><span class="w"></span>
 </pre></div>
 </div>
 </div></blockquote>
@@ -349,20 +349,20 @@ an environment variables:</p>
 </div>
 <div class="section" id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">traits</span><span class="p">:</span>
-    <span class="nt">notifications</span><span class="p">:</span>
-        <span class="nt">demo_breakers</span><span class="p">:</span>
-            <span class="nt">on_error</span><span class="p">:</span>
-                <span class="nt">triggering_policy</span><span class="p">:</span> <span class="s">&#39;only_first&#39;</span>
-                <span class="nt">recipients</span><span class="p">:</span>
-                <span class="p p-Indicator">-</span> <span class="nt">email_addresses</span><span class="p">:</span>
-                    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">foo.bar@mycloud.com</span>
-                    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">bar.bazz@mycloud.com</span>
-                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">committers</span>
-                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">component_diff_owners</span>
-                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">codeowners</span>
-                <span class="nt">inputs</span><span class="p">:</span>
-                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">component_descriptor_dir</span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">traits</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">notifications</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="nt">demo_breakers</span><span class="p">:</span><span class="w"></span>
+<span class="w">            </span><span class="nt">on_error</span><span class="p">:</span><span class="w"></span>
+<span class="w">                </span><span class="nt">triggering_policy</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;only_first&#39;</span><span class="w"></span>
+<span class="w">                </span><span class="nt">recipients</span><span class="p">:</span><span class="w"></span>
+<span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">email_addresses</span><span class="p">:</span><span class="w"></span>
+<span class="w">                    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">foo.bar@mycloud.com</span><span class="w"></span>
+<span class="w">                    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bar.bazz@mycloud.com</span><span class="w"></span>
+<span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">committers</span><span class="w"></span>
+<span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">component_diff_owners</span><span class="w"></span>
+<span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">codeowners</span><span class="w"></span>
+<span class="w">                </span><span class="nt">inputs</span><span class="p">:</span><span class="w"></span>
+<span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">component_descriptor_dir</span><span class="w"></span>
 </pre></div>
 </div>
 </div>
