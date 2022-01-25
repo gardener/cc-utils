@@ -15,6 +15,8 @@ job_mapping_name = extra_args['job_mapping_name']
 
 ${step_lib('replicate_secrets')}
 
+import cfg_mgmt.reporting as cmr
+import cfg_mgmt.util as cmu
 import model
 import model.concourse
 
@@ -42,6 +44,14 @@ replicate_secrets(
   target_secret_name=org_job_mapping.target_secret_name(),
   target_secret_namespace='${target_secret_namespace}',
   target_secret_cfg_name=org_job_mapping.target_secret_cfg_name(),
+)
+
+logger.info('generating cfg element status report')
+
+status_reports = cmu.generate_cfg_element_status_reports('${cfg_repo_relpath}')
+
+cmr.create_report(
+    cfg_element_statuses=status_reports,
 )
 
 </%def>
