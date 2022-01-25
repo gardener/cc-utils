@@ -28,7 +28,6 @@ import ccc.protecode
 import ci.util
 import cnudie.retrieve
 import cnudie.util
-import delivery.client
 import dso.model
 import product.util
 import product.v2
@@ -165,10 +164,19 @@ def upload_grouped_images(
 
     if (delivery_client := ccc.delivery.default_client_if_available()):
         logger.info('uploading results to deliverydb')
-        _upload_results_to_db(
-            results=relevant_results + results_below_threshold,
-            client=delivery_client,
-        )
+        try:
+            compliance_data = [
+                upload_result_to_compliance_data(
+                    upload_result=result[0],
+                    greatest_cvss3_score=result[1],
+                    datasource=dso.model.Datasource.PROTECODE,
+                ) for result in relevant_results + results_below_threshold
+            ]
+            for data in compliance_data:
+                delivery_client.upload_metadata(data=data)
+        except:
+            import traceback
+            traceback.print_exc()
     else:
         logger.warning('not uploading results to deliverydb, client not available')
 
@@ -176,25 +184,6 @@ def upload_grouped_images(
     _license_report = license_report(upload_results=results)
 
     return (relevant_results, results_below_threshold, _license_report)
-
-
-def _upload_results_to_db(
-    results: typing.List[typing.Tuple[UploadResult, float]],
-    client: delivery.client.DeliveryServiceClient,
-):
-    for upload_result in results:
-        try:
-            data = upload_result_to_compliance_issue(
-                upload_result=upload_result[0],
-                greatest_cvss3_score=upload_result[1],
-                datasource=dso.model.Datasource.PROTECODE,
-            )
-            client.upload_metadata(
-                data=data,
-            )
-        except:
-            import traceback
-            traceback.print_exc()
 
 
 def license_report(
@@ -315,7 +304,7 @@ def filter_and_display_upload_results(
     return results_above_cve_thresh, results_below_cve_thresh
 
 
-def upload_result_to_compliance_issue(
+def upload_result_to_compliance_data(
     upload_result: UploadResult,
     greatest_cvss3_score: float,
     datasource: str = dso.model.Datasource.PROTECODE,
