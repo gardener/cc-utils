@@ -321,31 +321,23 @@ def upload_result_to_compliance_issue(
     upload_result: UploadResult,
     greatest_cvss3_score: float,
     datasource: str = dso.model.Datasource.PROTECODE,
-) -> dso.model.ComplianceIssue:
+) -> dso.model.ComplianceData:
 
     artefact = dataclasses.asdict(
         upload_result.resource,
         dict_factory=ci.util.dict_factory_enum_serialisiation,
     )
 
-    artefact_ref = dso.model.ArtefactReference(
-        componentName=upload_result.component.name,
-        componentVersion=upload_result.component.version,
+    payload = {
+        'greatestCvss3Score': greatest_cvss3_score,
+        'protecodeProductUrl': upload_result.result.report_url(),
+    }
+
+    compliance_data = dso.model.ComplianceData.create(
+        type=datasource,
         artefact=artefact,
+        component=upload_result.component,
+        data=payload,
     )
 
-    meta = dso.model.ComplianceIssueMetadata(
-        datasource=datasource,
-        creationDate=datetime.datetime.now().isoformat(),
-        uuid=str(uuid.uuid4()),
-    )
-
-    issue = dso.model.ComplianceIssue(
-        artefact=artefact_ref,
-        meta=meta,
-        data={
-            'greatestCvss3Score': greatest_cvss3_score,
-            'protecodeProductUrl': upload_result.result.report_url(),
-        },
-    )
-    return issue
+    return compliance_data

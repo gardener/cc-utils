@@ -58,7 +58,7 @@ class DeliveryServiceClient:
 
     def upload_metadata(
         self,
-        data: dso.model.ComplianceIssue,
+        data: dso.model.ComplianceData,
     ):
         res = requests.post(
             url=self._routes.upload_metadata(),

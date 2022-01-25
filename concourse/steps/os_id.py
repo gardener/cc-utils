@@ -72,26 +72,16 @@ def upload_to_delivery_db(
         resource,
         dict_factory=ci.util.dict_factory_enum_serialisiation,
     )
-    artefact_ref = dm.ArtefactReference(
-        componentName=component.name,
-        componentVersion=component.version,
-        artefact=artefact,
-    )
 
-    meta = dm.ComplianceIssueMetadata(
-        datasource='os-id',
-        creationDate=datetime.datetime.now().isoformat(),
-        uuid=str(uuid.uuid4()),
-    )
-
-    data = {
+    payload = {
         'os_info': dataclasses.asdict(os_info),
     }
 
-    data = dm.ComplianceIssue(
-        artefact=artefact_ref,
-        meta=meta,
-        data=data,
+    compliance_data = dm.ComplianceData.create(
+        type='os-id',
+        artefact=artefact,
+        component=component,
+        data=payload,
     )
 
-    db_client.upload_metadata(data=data)
+    db_client.upload_metadata(data=compliance_data)
