@@ -48,8 +48,6 @@ def generate_cfg_element_status_reports(cfg_dir: str) -> list[cmr.CfgElementStat
     ]
 
 
-
-
 def iter_cfg_elements(
     cfg_factory: typing.Union[model.ConfigFactory, model.ConfigurationSet],
 ):
