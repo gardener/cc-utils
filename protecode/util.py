@@ -165,14 +165,18 @@ def upload_grouped_images(
     if (delivery_client := ccc.delivery.default_client_if_available()):
         logger.info('uploading results to deliverydb')
         try:
-            compliance_data = [
-                upload_result_to_compliance_data(
+            cve_data = [
+                upload_result_to_cve_data(
                     upload_result=result[0],
                     greatest_cvss3_score=result[1],
-                    datasource=dso.model.Datasource.PROTECODE,
                 ) for result in relevant_results + results_below_threshold
             ]
-            for data in compliance_data:
+            license_data = [
+                upload_result_to_license_data(
+                    upload_result=result[0],
+                ) for result in relevant_results + results_below_threshold
+            ]
+            for data in cve_data + license_data:
                 delivery_client.upload_metadata(data=data)
         except:
             import traceback
@@ -304,7 +308,37 @@ def filter_and_display_upload_results(
     return results_above_cve_thresh, results_below_cve_thresh
 
 
-def upload_result_to_compliance_data(
+def upload_result_to_license_data(
+    upload_result: UploadResult,
+    datasource: str = 'protecode-licenses',
+) -> dso.model.ComplianceData:
+
+    artefact = dataclasses.asdict(
+        upload_result.resource,
+        dict_factory=ci.util.dict_factory_enum_serialisiation,
+    )
+
+    licenses = list(dict.fromkeys(
+        [
+            component.license().name()
+            for component in upload_result.result.components()
+        ]
+    ))
+    payload = {
+        'licenses': licenses
+    }
+
+    compliance_data = dso.model.ComplianceData.create(
+        type=datasource,
+        artefact=artefact,
+        component=upload_result.component,
+        data=payload,
+    )
+
+    return compliance_data
+
+
+def upload_result_to_cve_data(
     upload_result: UploadResult,
     greatest_cvss3_score: float,
     datasource: str = dso.model.Datasource.PROTECODE,
