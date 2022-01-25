@@ -170,7 +170,6 @@ def upload_grouped_images(
         _upload_results_to_db(
             results=relevant_results + results_below_threshold,
             client=delivery_client,
-            api_url=protecode_cfg.api_url(),
         )
     else:
         logger.warning('not uploading results to deliverydb, client not available')
@@ -182,7 +181,6 @@ def upload_grouped_images(
 
 
 def _upload_results_to_db(
-    api_url: str,
     results: typing.List[typing.Tuple[UploadResult, float]],
     client: delivery.client.DeliveryServiceClient,
 ):
@@ -192,7 +190,6 @@ def _upload_results_to_db(
                 upload_result=upload_result[0],
                 greatest_cvss3_score=upload_result[1],
                 datasource=dso.model.Datasource.PROTECODE,
-                api_url=api_url,
             )
             client.upload_metadata(
                 data=data,
@@ -323,7 +320,6 @@ def filter_and_display_upload_results(
 def upload_result_to_compliance_issue(
     upload_result: UploadResult,
     greatest_cvss3_score: float,
-    api_url: str,
     datasource: str = dso.model.Datasource.PROTECODE,
 ) -> dso.model.ComplianceIssue:
 
@@ -349,12 +345,7 @@ def upload_result_to_compliance_issue(
         meta=meta,
         data={
             'greatestCvss3Score': greatest_cvss3_score,
-            'protecodeProductUrl': ci.util.urljoin(
-                api_url,
-                '#',
-                'product',
-                str(upload_result.result.product_id()),
-            )
+            'protecodeProductUrl': upload_result.result.report_url(),
         },
     )
     return issue

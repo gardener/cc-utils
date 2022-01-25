@@ -41,6 +41,9 @@ class AnalysisResult(ModelBase):
     def product_id(self):
         return self.raw.get('product_id')
 
+    def report_url(self):
+        return self.raw.get('report_url')
+
     def display_name(self):
         return self.raw.get('filename', '<None>')
 
