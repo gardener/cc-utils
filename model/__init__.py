@@ -1,6 +1,7 @@
 import dataclasses
 import functools
 import json
+import logging
 import os
 import os.path
 import pkgutil
@@ -11,7 +12,10 @@ import urllib.parse
 
 import dacite
 import deprecated
+import github3.exceptions
 import yaml
+
+import ci.log
 
 from model.base import (
     ConfigElementNotFoundError,
@@ -29,6 +33,9 @@ from ci.util import (
 dc = dataclasses.dataclass
 empty_list = dataclasses.field(default_factory=list)
 empty_tuple = dataclasses.field(default_factory=tuple)
+
+ci.log.configure_default_logging()
+logger = logging.getLogger(__name__)
 
 '''
 Configuration model and retrieval handling.
@@ -140,10 +147,18 @@ class ConfigFactory:
         org, repo = repo_url.path.strip('/').split('/')
         gh_repo = gh_api.repository(org, repo)
 
-        file_contents = gh_repo.file_contents(
-            path=cfg_src.relpath,
-            ref=gh_repo.default_branch,
-        ).decoded.decode('utf-8')
+        try:
+            file_contents = gh_repo.file_contents(
+                path=cfg_src.relpath,
+                ref=gh_repo.default_branch,
+            ).decoded.decode('utf-8')
+
+        except github3.exceptions.NotFoundError:
+            logger.error(
+                f"Unable to access file '{cfg_src.relpath}' in repository '{repo_url.path}'"
+            )
+            raise
+
         return yaml.safe_load(file_contents)
 
     @staticmethod
