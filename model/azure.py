@@ -30,12 +30,16 @@ class AzureServicePrincipal(NamedModelElement):
     def client_secret(self):
         return self.raw['client_secret']
 
+    def subscription_id(self):
+        return self.raw['subscription_id']
+
     def _required_attributes(self):
         yield from super()._required_attributes()
         yield from [
-            'tenant_id',
             'client_id',
             'client_secret',
+            'subscription_id',
+            'tenant_id',
         ]
 
 
