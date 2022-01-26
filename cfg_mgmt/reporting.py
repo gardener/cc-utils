@@ -54,17 +54,24 @@ def create_report(
             if not policy.type is cmm.PolicyType.MAX_AGE:
                 raise NotImplementedError(policy.type)
 
-            if not (status := cfg_element_status.status):
-                _fully_compliant = False
-                no_status.append(cfg_element_status)
+            # status is only required if policy requires rotation
+            if policy.max_age is None:
+                require_status = False
             else:
-                last_update = dp.isoparse(status.credential_update_timestamp)
+                require_status = True
 
-                if policy.check(last_update=last_update):
-                    credentials_not_outdated.append(cfg_element_status)
-                else:
+            if require_status:
+                if not (status := cfg_element_status.status):
                     _fully_compliant = False
-                    credentials_outdated.append(cfg_element_status)
+                    no_status.append(cfg_element_status)
+                else:
+                    last_update = dp.isoparse(status.credential_update_timestamp)
+
+                    if policy.check(last_update=last_update):
+                        credentials_not_outdated.append(cfg_element_status)
+                    else:
+                        _fully_compliant = False
+                        credentials_outdated.append(cfg_element_status)
         if _fully_compliant:
             fully_compliant.append(cfg_element_status)
 
