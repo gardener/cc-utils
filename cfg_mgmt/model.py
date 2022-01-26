@@ -108,6 +108,7 @@ class CfgRule:
 
 class CfgResponsibleType(enum.Enum):
     GITHUB = 'github'
+    EMAIL = 'email'
 
 
 @dataclasses.dataclass
