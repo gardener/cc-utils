@@ -44,7 +44,7 @@ class NotificationStepTest(unittest.TestCase):
             script_type=ScriptType.BOURNE_SHELL,
             raw_dict={},
         )
-        self.job_step._notifications_cfg = NotificationCfgSet('default', {})
+        self.job_step._notifications_cfg = NotificationCfgSet('default', {}, type_name='cfg_set')
         resource_registry = ResourceRegistry()
         meta_resource_identifier = ResourceIdentifier(type_name='meta', base_name='a_job')
         meta_resource = Resource(resource_identifier=meta_resource_identifier, raw_dict={})

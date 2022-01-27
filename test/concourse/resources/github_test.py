@@ -47,6 +47,7 @@ class TestGithubMakoResource:
                             'emailAddress': tu_email_address,
                     }],
                 },
+                type_name='github',
             )
             cfg_set_mock.github.return_value = gh_cfg
             cfg_set_mock._cfg_elements = lambda cfg_type_name: [gh_cfg]
