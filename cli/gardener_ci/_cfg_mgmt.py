@@ -19,8 +19,10 @@ def report(
         return False
 
     def filtered_reports(responsible_names):
+        print(responsible_names)
         if not responsible_names:
-            return status_reports
+            yield from status_reports
+            return
 
         for report in status_reports:
             if not (responsible_mapping := report.responsible):
