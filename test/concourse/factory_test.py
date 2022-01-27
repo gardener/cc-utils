@@ -94,8 +94,9 @@ class DefinitionFactoryTest(unittest.TestCase):
         cfg_set = model.ConfigurationSet('dummy','dummy', raw_dict={})
         cfg_set.github = unittest.mock.MagicMock(
             return_value=model.github.GithubConfig(
-                name='dontcare',
-                raw_dict={'available_protocols': ('https',)}
+                    name='dontcare',
+                    raw_dict={'available_protocols': ('https',)},
+                    type_name='github',
                 ),
             )
         factory = DefinitionFactory(
