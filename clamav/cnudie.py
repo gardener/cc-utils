@@ -6,8 +6,10 @@ import typing
 import gci.componentmodel as cm
 
 import ci.log
+import ci.util
 import clamav.client
 import clamav.scan
+import dso.model
 import oci.client
 import product.v2
 
@@ -79,3 +81,33 @@ def scan_resources(
         if not not_done:
             break
         tasks = not_done
+
+
+def resource_scan_result_to_findings_data(
+    resource_scan_result: ResourceScanResult,
+    datasource: str = dso.model.Datasource.CLAMAV,
+) -> dso.model.ComplianceData:
+
+    artefact = dataclasses.asdict(
+        resource_scan_result.resource,
+        dict_factory=ci.util.dict_factory_enum_serialisiation,
+    )
+
+    payload = {
+        'findings': [
+          dataclasses.asdict(
+            obj=finding,
+            dict_factory=ci.util.dict_factory_enum_serialisiation
+          )
+          for finding in resource_scan_result.scan_result.findings
+        ],
+    }
+
+    compliance_data = dso.model.ComplianceData.create(
+        type=datasource,
+        artefact=artefact,
+        component=resource_scan_result.component,
+        data=payload,
+    )
+
+    return compliance_data
