@@ -15,6 +15,7 @@ job_mapping_name = extra_args['job_mapping_name']
 
 ${step_lib('replicate_secrets')}
 
+import ccc.elasticsearch
 import cfg_mgmt.reporting as cmr
 import cfg_mgmt.util as cmu
 import model
@@ -50,8 +51,17 @@ logger.info('generating cfg element status report')
 
 status_reports = cmu.generate_cfg_element_status_reports('${cfg_repo_relpath}')
 
-cmr.create_report(
+cfg_report_summary_gen = cmr.create_report(
     cfg_element_statuses=status_reports,
 )
+
+if (es_client := ccc.elasticsearch.default_client_if_available()):
+    logger.info('writing cfg status to elasticsearch')
+    cmu.cfg_report_summaries_to_es(
+        es_client=es_client,
+        cfg_report_summary_gen=cfg_report_summary_gen,
+    )
+else:
+    logger.warning('not writing cfg status to elasticsearch, no client available')
 
 </%def>

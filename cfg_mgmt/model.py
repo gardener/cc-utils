@@ -232,3 +232,10 @@ def cfg_status(status: list[dict]) -> list[CfgStatus]:
             data=status_dict,
         ) for status_dict in status
     ]
+
+
+@dataclasses.dataclass
+class CfgReportingSummary:
+    url: str
+    compliant_elements_count: int = 0
+    noncompliant_elements_count: int = 0

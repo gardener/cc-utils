@@ -1,9 +1,16 @@
 import dataclasses
+import logging
 import typing
 
 import dateutil.parser as dp
 
 import cfg_mgmt.model as cmm
+import ci.log
+import ci.util
+
+
+ci.log.configure_default_logging()
+logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass
@@ -25,7 +32,7 @@ class CfgElementStatusReport:
 
 def create_report(
     cfg_element_statuses: typing.Iterable[CfgElementStatusReport],
-):
+) -> typing.Generator[cmm.CfgReportingSummary, None, None]:
     no_rule_assigned = []
     no_status = []
     assigned_rule_refers_to_undefined_policy = []
@@ -33,6 +40,17 @@ def create_report(
     credentials_outdated = []
     credentials_not_outdated = []
     fully_compliant = []
+    compliance_summaries = dict()
+
+    def compliance_summary(element_storage: str):
+        if (summary := compliance_summaries.get(element_storage)):
+            return summary
+
+        cfg_reporting_summary = cmm.CfgReportingSummary(
+            url=element_storage
+        )
+        compliance_summaries[element_storage] = cfg_reporting_summary
+        return cfg_reporting_summary
 
     for cfg_element_status in cfg_element_statuses:
         _fully_compliant = True
@@ -72,8 +90,15 @@ def create_report(
                     else:
                         _fully_compliant = False
                         credentials_outdated.append(cfg_element_status)
+
+        cfg_summary = compliance_summary(element_storage=cfg_element_status.element_storage)
         if _fully_compliant:
+            cfg_summary.compliant_elements_count += 1
             fully_compliant.append(cfg_element_status)
+        else:
+            cfg_summary.noncompliant_elements_count += 1
+
+    yield from compliance_summaries.values()
 
     def cfg_element_status_name(status: CfgElementStatusReport):
         return f'{status.element_storage}/{status.element_type}/{status.element_name}'

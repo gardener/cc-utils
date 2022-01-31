@@ -1,3 +1,5 @@
+import datetime
+import logging
 import os.path
 import typing
 
@@ -5,6 +7,9 @@ import cfg_mgmt.model as cmm
 import cfg_mgmt.reporting as cmr
 import ci.util
 import model
+
+
+logger = logging.getLogger(__name__)
 
 
 def generate_cfg_element_status_reports(cfg_dir: str) -> list[cmr.CfgElementStatusReport]:
@@ -109,3 +114,24 @@ def determine_status(
         status=status,
         responsible=responsible,
     )
+
+
+def cfg_report_summaries_to_es(
+    es_client,
+    cfg_report_summary_gen: typing.Generator[cmm.CfgReportingSummary, None, None],
+):
+    for cfg_report_summary in cfg_report_summary_gen:
+        try:
+            es_client.store_document(
+                index='cc_cfg_compliance_status',
+                body={
+                    'url': cfg_report_summary.url,
+                    'compliant': cfg_report_summary.compliant_elements_count,
+                    'noncompliant': cfg_report_summary.noncompliant_elements_count,
+                    'creation_date': datetime.datetime.now().isoformat()
+                },
+            )
+        except Exception:
+            import traceback
+            logger.warning(traceback.format_exc())
+            logger.warning('could not send route request to elastic search')
