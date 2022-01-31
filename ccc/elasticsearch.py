@@ -15,14 +15,18 @@
 
 import datetime
 import functools
-import os
 import json
+import logging
+import os
 
 import elasticsearch
 
 import ci.util
 import concourse.util
 import model.elasticsearch
+
+
+logger = logging.getLogger(__name__)
 
 
 def default_client_if_available():
@@ -124,13 +128,18 @@ class ElasticSearchClient:
             md = _metadata_dict()
             body['cc_meta'] = md
 
-        return self._api.index(
-            index=index,
-            doc_type='_doc',
-            body=body,
-            *args,
-            **kwargs,
-        )
+        try:
+            return self._api.index(
+                index=index,
+                doc_type='_doc',
+                body=body,
+                *args,
+                **kwargs,
+            )
+        except elasticsearch.exceptions.RequestError as e:
+            logger.error(e)
+            logger.error(e.info.get('error').get('caused_by'))
+
 
     def store_documents(
         self,
