@@ -141,7 +141,6 @@ class ElasticSearchClient:
             logger.error(e.info.get('error').get('caused_by'))
             raise e
 
-
     def store_documents(
         self,
         index: str,
