@@ -130,6 +130,7 @@ def cfg_report_summaries_to_es(
                     'noncompliant': cfg_report_summary.noncompliant_elements_count,
                     'creation_date': datetime.datetime.now().isoformat()
                 },
+                inject_metadata=False,
             )
         except Exception:
             import traceback
