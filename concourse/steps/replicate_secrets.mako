@@ -55,7 +55,7 @@ cfg_report_summary_gen = cmr.create_report(
     cfg_element_statuses=status_reports,
 )
 
-if (es_client := ccc.elasticsearch.default_client_if_available()):
+if (es_client := ccc.elasticsearch.from_cfg(cfg_set.elasticsearch())):
     logger.info('writing cfg status to elasticsearch')
     cmu.cfg_report_summaries_to_es(
         es_client=es_client,
