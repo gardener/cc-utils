@@ -1,7 +1,6 @@
 import logging
 import re
 
-import ccc.elasticsearch
 import cfg_mgmt.reporting as cmr
 import cfg_mgmt.util as cmu
 
@@ -40,15 +39,6 @@ def report(
 
     reports = filtered_reports(responsible_names=responsible_names)
 
-    cfg_report_summary_gen = cmr.create_report(
+    cmr.create_report(
         cfg_element_statuses=reports,
     )
-
-    if (es_client := ccc.elasticsearch.default_client_if_available()):
-        logger.info('writing cfg status to elasticsearch')
-        cmu.cfg_report_summaries_to_es(
-            es_client=es_client,
-            cfg_report_summary_gen=cfg_report_summary_gen,
-        )
-    else:
-        logger.warning('not writing cfg status to elasticsearch, no client available')
