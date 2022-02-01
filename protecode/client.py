@@ -15,6 +15,7 @@
 
 import json
 import time
+import traceback
 import logging
 
 from functools import partial
@@ -359,10 +360,17 @@ class ProtecodeApi:
         self, triage_dict: dict
     ):
         url = self._routes.triage()
-        return self._put(
-            url=url,
-            json=triage_dict,
-        ).json()
+        try:
+            res = self._put(
+                url=url,
+                json=triage_dict,
+            ).json()
+            return res
+        except requests.exceptions.HTTPError as e:
+            resp: requests.Response = e.response
+            logger.warning(f'{url=} {resp.status_code=} {resp.content=}')
+            traceback.print_exc()
+            raise e
 
     # --- "rest" routes (undocumented API)
 
