@@ -39,6 +39,5 @@ def report(
 
     reports = filtered_reports(responsible_names=responsible_names)
 
-    cmr.create_report(
-        cfg_element_statuses=reports,
-    )
+    for _ in cmr.create_report(cfg_element_statuses=reports):
+        pass
