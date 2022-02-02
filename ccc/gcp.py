@@ -68,6 +68,22 @@ class VulnerabilitiesRetrievalFailed(RuntimeError):
     pass
 
 
+def create_iam_client(
+    # adjust type hint to union once more cfg_types are supported
+    cfg_element: model.container_registry.ContainerRegistryConfig,
+) -> googleapiclient.discovery.Resource:
+    if isinstance(cfg_element, model.container_registry.ContainerRegistryConfig):
+        credentials = cfg_element.credentials().service_account_credentials()
+    else:
+        raise NotImplementedError
+
+    return googleapiclient.discovery.build(
+        serviceName='iam',
+        version='v1',
+        credentials=credentials,
+    )
+
+
 class GrafeasClient:
     def __init__(
         self,
