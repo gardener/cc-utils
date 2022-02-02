@@ -68,6 +68,25 @@ class VulnerabilitiesRetrievalFailed(RuntimeError):
     pass
 
 
+def qualified_service_account_name(
+    service_account_name: str,
+    project_id: str = '-',
+) -> str:
+    return f'projects/{project_id}/serviceAccounts/{service_account_name}'
+
+
+def qualified_service_account_key_name(
+    service_account_name: str,
+    key_name: str,
+    project_id: str = '-',
+) -> str:
+    base_name = qualified_service_account_name(
+        service_account_name=service_account_name,
+        project_id=project_id,
+    )
+    return f'{base_name}/keys/{key_name}'
+
+
 def create_iam_client(
     # adjust type hint to union once more cfg_types are supported
     cfg_element: model.container_registry.ContainerRegistryConfig,
