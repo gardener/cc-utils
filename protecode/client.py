@@ -368,7 +368,7 @@ class ProtecodeApi:
             return res
         except requests.exceptions.HTTPError as e:
             resp: requests.Response = e.response
-            logger.warning(f'{url=} {resp.status_code=} {resp.content=}')
+            logger.warning(f'{url=} {resp.status_code=} {resp.content=} {triage_dict=}')
             traceback.print_exc()
             raise e
 
