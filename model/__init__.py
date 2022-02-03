@@ -165,6 +165,7 @@ class ConfigFactory:
     def from_cfg_dir(
         cfg_dir: str,
         cfg_types_file='config_types.yaml',
+        disable_cfg_element_lookup=False,
     ):
         if not cfg_dir:
             raise ValueError('cfg dir must not be None')
@@ -177,22 +178,27 @@ class ConfigFactory:
             cfg_dir=cfg_dir,
             cfg_types_file=cfg_types_file,
             cfg_src_types=(LocalFileCfgSrc,),
+            disable_cfg_element_lookup=False,
         )
+
+        if disable_cfg_element_lookup:
+            return bootstrap_cfg_factory
 
         return ConfigFactory._from_cfg_dir(
             cfg_dir=cfg_dir,
             cfg_types_file=cfg_types_file,
             cfg_src_types=None, # all
             lookup_cfg_factory=bootstrap_cfg_factory,
+            disable_cfg_element_lookup=disable_cfg_element_lookup,
         )
 
     @staticmethod
     def _from_cfg_dir(
         cfg_dir: str,
+        disable_cfg_element_lookup: bool,
         cfg_types_file='config_types.yaml',
         cfg_src_types=None,
         lookup_cfg_factory=None,
-        disable_cfg_element_lookup=False,
     ):
         cfg_dir = existing_dir(os.path.abspath(cfg_dir))
         cfg_types_dict = parse_yaml_file(os.path.join(cfg_dir, cfg_types_file))
