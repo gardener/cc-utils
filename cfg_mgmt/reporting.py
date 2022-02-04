@@ -47,24 +47,36 @@ def create_report(
             return summary
 
         cfg_reporting_summary = cmm.CfgReportingSummary(
-            url=element_storage
+            url=element_storage,
+            noRuleAssigned=[],
+            noStatus=[],
+            assignedRuleRefersToUndefinedPolicy=[],
+            noResponsibleAssigned=[],
+            credentialsOutdated=[],
+            credentialsNotOutdated=[],
+            fullyCompliant=[],
         )
         compliance_summaries[element_storage] = cfg_reporting_summary
         return cfg_reporting_summary
 
     for cfg_element_status in cfg_element_statuses:
+        cfg_summary = compliance_summary(element_storage=cfg_element_status.element_storage)
+
         _fully_compliant = True
 
         if not cfg_element_status.responsible:
             _fully_compliant = False
             no_responsible_assigned.append(cfg_element_status)
+            cfg_summary.noResponsibleAssigned.append(cfg_element_status)
 
         if not cfg_element_status.rule:
             _fully_compliant = False
             no_rule_assigned.append(cfg_element_status)
+            cfg_summary.noRuleAssigned.append(cfg_element_status)
         elif not cfg_element_status.policy:
             _fully_compliant = False
             assigned_rule_refers_to_undefined_policy.append(cfg_element_status)
+            cfg_summary.assignedRuleRefersToUndefinedPolicy.append(cfg_element_status)
         else:
             # have rule w/ policy
             # XXX hardcode there is only one rule-type (-> checking for credential-age)
@@ -82,19 +94,22 @@ def create_report(
                 if not (status := cfg_element_status.status):
                     _fully_compliant = False
                     no_status.append(cfg_element_status)
+                    cfg_summary.noStatus.append(cfg_element_status)
                 else:
                     last_update = dp.isoparse(status.credential_update_timestamp)
 
                     if policy.check(last_update=last_update):
                         credentials_not_outdated.append(cfg_element_status)
+                        cfg_summary.credentialsNotOutdated.append(cfg_element_status)
                     else:
                         _fully_compliant = False
                         credentials_outdated.append(cfg_element_status)
+                        cfg_summary.credentialsOutdated.append(cfg_element_status)
 
-        cfg_summary = compliance_summary(element_storage=cfg_element_status.element_storage)
         if _fully_compliant:
             cfg_summary.compliant_elements_count += 1
             fully_compliant.append(cfg_element_status)
+            cfg_summary.fullyCompliant.append(cfg_element_status)
         else:
             cfg_summary.noncompliant_elements_count += 1
 

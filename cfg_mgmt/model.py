@@ -244,5 +244,12 @@ def cfg_status(status: list[dict]) -> list[CfgStatus]:
 @dataclasses.dataclass
 class CfgReportingSummary:
     url: str
+    noRuleAssigned: list
+    noStatus: list
+    assignedRuleRefersToUndefinedPolicy: list
+    noResponsibleAssigned: list
+    credentialsOutdated: list
+    credentialsNotOutdated: list
+    fullyCompliant: list
     compliant_elements_count: int = 0
     noncompliant_elements_count: int = 0
