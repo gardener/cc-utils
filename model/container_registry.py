@@ -50,6 +50,7 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
             'host',
             'email',
             'api_base_url',
+            'registry_type',
         }
 
     def _required_attributes(self):
@@ -57,6 +58,9 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
             'username',
             'password',
         }
+
+    def registry_type(self):
+        return self.raw.get('registry_type')
 
     def api_base_url(self):
         return self.raw.get('api_base_url')
