@@ -55,6 +55,7 @@ def generate_cfg_element_status_reports(cfg_dir: str) -> list[cmr.CfgElementStat
 
 def iter_cfg_elements(
     cfg_factory: typing.Union[model.ConfigFactory, model.ConfigurationSet],
+    cfg_target: typing.Optional[cmm.CfgTarget] = None,
 ):
     if isinstance(cfg_factory, model.ConfigurationSet):
         type_names = cfg_factory.cfg_factory._cfg_types().keys()
@@ -67,7 +68,10 @@ def iter_cfg_elements(
         # -> policy-checks will only add limited value
         if type_name == 'cfg_set':
             continue
-        yield from cfg_factory._cfg_elements(cfg_type_name=type_name)
+        for cfg_element in cfg_factory._cfg_elements(cfg_type_name=type_name):
+            if cfg_target and not cfg_target.matches(cfg_element):
+                continue
+            yield cfg_element
 
 
 def determine_status(
