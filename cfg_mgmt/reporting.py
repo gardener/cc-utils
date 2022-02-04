@@ -107,11 +107,11 @@ def create_report(
                         cfg_summary.credentialsOutdated.append(cfg_element_status)
 
         if _fully_compliant:
-            cfg_summary.compliant_elements_count += 1
+            cfg_summary.compliantElementsCount += 1
             fully_compliant.append(cfg_element_status)
             cfg_summary.fullyCompliant.append(cfg_element_status)
         else:
-            cfg_summary.noncompliant_elements_count += 1
+            cfg_summary.noncompliantElementsCount += 1
 
     yield from compliance_summaries.values()
 

@@ -130,8 +130,8 @@ def cfg_report_summaries_to_es(
                 index='cc_cfg_compliance_status',
                 body={
                     'url': cfg_report_summary.url,
-                    'compliant': cfg_report_summary.compliant_elements_count,
-                    'noncompliant': cfg_report_summary.noncompliant_elements_count,
+                    'compliant': cfg_report_summary.compliantElementsCount,
+                    'noncompliant': cfg_report_summary.noncompliantElementsCount,
                     'creation_date': datetime.datetime.now().isoformat()
                 },
                 inject_metadata=False,

@@ -251,5 +251,5 @@ class CfgReportingSummary:
     credentialsOutdated: list
     credentialsNotOutdated: list
     fullyCompliant: list
-    compliant_elements_count: int = 0
-    noncompliant_elements_count: int = 0
+    compliantElementsCount: int = 0
+    noncompliantElementsCount: int = 0
