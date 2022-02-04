@@ -118,6 +118,13 @@ class CfgResponsible:
 
 
 @dataclasses.dataclass
+class CfgRotationQueue:
+    target: CfgTarget
+    deleteAfter: datetime.datetime
+    secretId: dict
+
+
+@dataclasses.dataclass
 class CfgStatus:
     target: CfgTarget
     credential_update_timestamp: str
