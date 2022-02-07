@@ -157,6 +157,8 @@ class CfgResponsibleMapping:
 cfg_policies_fname = 'config_policies.yaml'
 cfg_responsibles_fname = 'config_responsibles.yaml'
 cfg_status_fname = 'config_status.yaml'
+cfg_queue_fname = 'config_queue.yaml'
+container_registry_fname = 'container_registry.yaml'
 
 
 def _parse_cfg_policies_file(path: str):
