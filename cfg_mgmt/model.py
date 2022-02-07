@@ -118,7 +118,7 @@ class CfgResponsible:
 
 
 @dataclasses.dataclass
-class CfgRotationQueue:
+class CfgQueueEntry:
     target: CfgTarget
     deleteAfter: datetime.datetime
     secretId: dict
