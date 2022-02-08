@@ -32,6 +32,7 @@ class CfgElementStatusReport:
 
 def create_report(
     cfg_element_statuses: typing.Iterable[CfgElementStatusReport],
+    print_report: bool = True,
 ) -> typing.Generator[cmm.CfgReportingSummary, None, None]:
     no_rule_assigned = []
     no_status = []
@@ -127,6 +128,9 @@ def create_report(
 
         print('')
         print(40 * '-')
+
+    if not print_report:
+        return
 
     print_paragraph(
         header='Cfg-Elements w/o assigned policy/rule',
