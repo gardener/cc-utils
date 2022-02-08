@@ -12,7 +12,6 @@ import googleapiclient
 import ccc.gcp
 import ccc.github
 import cfg_mgmt.model as cmm
-import cfg_mgmt.reporting as cmr
 import cfg_mgmt.util as cmu
 import ci.log
 import ci.util
@@ -63,51 +62,20 @@ def find_gcr_cfg_element_to_rotate(
     cfg_fac,
     cfg_element_name,
 ) -> typing.Optional[model.container_registry.ContainerRegistryConfig]:
-    cfg_target = cmm.CfgTarget(
-        name=cfg_element_name,
-        type='container_registry',
-    )
-    cfg_element_gen = cmu.iter_cfg_elements(
-        cfg_factory=cfg_fac,
-        cfg_target=cfg_target,
-    )
+    for element in cmu.iter_cfg_elements_requiring_rotation(
+        cfg_elements=cmu.iter_cfg_elements(
+            cfg_factory=cfg_fac,
+            cfg_target=cmm.CfgTarget(
+                name=cfg_element_name,
+                type='container_registry',
+            ),
+        ),
+        cfg_metadata=cmm.cfg_metadata_from_cfg_dir(cfg_dir=cfg_dir),
+        # element_filter=lambda e: e.registry_type() == 'gcr',
+    ):
+        return element
 
-    cfg_policies = ci.util.parse_yaml_file(os.path.join(cfg_dir, cmm.cfg_policies_fname))
-    cfg_responsibles = cmm.cfg_responsibles(
-        ci.util.parse_yaml_file(os.path.join(cfg_dir, cmm.cfg_responsibles_fname))
-    )
-
-    rules = cmm.cfg_rules(cfg_policies['rules'])
-    policies = cmm.cfg_policies(cfg_policies['policies'])
-
-    cfg_statuses = []
-    for cfg_element in cfg_element_gen:
-        # ensure its gcr
-        if cfg_element.registry_type() == 'gcr':
-            cfg_statuses.append(
-                cmu.determine_status(
-                    element=cfg_element,
-                    policies=policies,
-                    rules=rules,
-                    responsibles=cfg_responsibles,
-                    statuses=cfg_statuses,
-                    element_storage=None,
-                )
-            )
-        else:
-            logger.info(
-                f'skipping {cfg_element.name()=}, '
-                f'not a gcr secret {cfg_element.registry_type()=}'
-            )
-
-    cfg_element_report = cmr.create_report(
-        cfg_statuses,
-    )
-
-    for cfg_element_summary in cfg_element_report:
-        for cfg_element_status_report in \
-            cfg_element_summary.noStatus + cfg_element_summary.credentialsOutdated:
-            return cfg_fac.container_registry(cfg_element_status_report.element_name)
+    return None
 
 
 def rotate_gcr_cfg_element(

@@ -1,6 +1,7 @@
 import dataclasses
 import datetime
 import enum
+import os
 import re
 import typing
 
@@ -154,6 +155,31 @@ class CfgResponsibleMapping:
         return False
 
 
+@dataclasses.dataclass
+class CfgMetadata:
+    '''
+    stores full cfg-element metadata from a cfg-dir
+    '''
+    policies: tuple[CfgPolicy]
+    rules: tuple[CfgRule]
+    responsibles: tuple[CfgResponsibleMapping]
+    statuses: tuple[CfgStatus]
+
+
+@dataclasses.dataclass
+class CfgReportingSummary:
+    url: str
+    noRuleAssigned: list
+    noStatus: list
+    assignedRuleRefersToUndefinedPolicy: list
+    noResponsibleAssigned: list
+    credentialsOutdated: list
+    credentialsNotOutdated: list
+    fullyCompliant: list
+    compliantElementsCount: int = 0
+    noncompliantElementsCount: int = 0
+
+
 cfg_policies_fname = 'config_policies.yaml'
 cfg_responsibles_fname = 'config_responsibles.yaml'
 cfg_status_fname = 'config_status.yaml'
@@ -189,7 +215,7 @@ def _parse_cfg_status_file(path: str):
     }
 
 
-def cfg_policies(policies: list[dict]) -> list[CfgPolicy]:
+def _cfg_policies(policies: list[dict]) -> list[CfgPolicy]:
     if isinstance(policies, dict):
         policies = policies['policies']
 
@@ -204,7 +230,7 @@ def cfg_policies(policies: list[dict]) -> list[CfgPolicy]:
     ]
 
 
-def cfg_rules(rules: list[dict]) -> list[CfgRule]:
+def _cfg_rules(rules: list[dict]) -> list[CfgRule]:
     if isinstance(rules, dict):
         rules = rules['rules']
 
@@ -216,7 +242,7 @@ def cfg_rules(rules: list[dict]) -> list[CfgRule]:
     ]
 
 
-def cfg_responsibles(responsibles: list[dict]) -> list[CfgResponsibleMapping]:
+def _cfg_responsibles(responsibles: list[dict]) -> list[CfgResponsibleMapping]:
     if isinstance(responsibles, dict):
         responsibles = responsibles['responsibles']
 
@@ -231,7 +257,7 @@ def cfg_responsibles(responsibles: list[dict]) -> list[CfgResponsibleMapping]:
     ]
 
 
-def cfg_status(status: list[dict]) -> list[CfgStatus]:
+def _cfg_status(status: list[dict]) -> list[CfgStatus]:
     if isinstance(status, dict):
         status = status['config_status']
 
@@ -243,15 +269,14 @@ def cfg_status(status: list[dict]) -> list[CfgStatus]:
     ]
 
 
-@dataclasses.dataclass
-class CfgReportingSummary:
-    url: str
-    noRuleAssigned: list
-    noStatus: list
-    assignedRuleRefersToUndefinedPolicy: list
-    noResponsibleAssigned: list
-    credentialsOutdated: list
-    credentialsNotOutdated: list
-    fullyCompliant: list
-    compliantElementsCount: int = 0
-    noncompliantElementsCount: int = 0
+def cfg_metadata_from_cfg_dir(cfg_dir: str):
+    policies = _parse_cfg_policies_file(os.path.join(cfg_dir, cfg_policies_fname))
+    responsibles = _parse_cfg_responsibles_file(os.path.join(cfg_dir, cfg_responsibles_fname))
+    statuses = _parse_cfg_status_file(os.path.join(cfg_dir, cfg_status_fname))
+
+    return CfgMetadata(
+        policies=tuple(_cfg_policies(policies['policies'])),
+        rules=tuple(_cfg_rules(policies['rules'])),
+        responsibles=tuple(_cfg_responsibles(responsibles['responsibles'])),
+        statuses=tuple(_cfg_status(statuses['config_status']))
+    )

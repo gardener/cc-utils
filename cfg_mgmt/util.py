@@ -1,7 +1,8 @@
 import datetime
 import logging
-import os.path
 import typing
+
+import dateutil.parser
 
 import cfg_mgmt.model as cmm
 import cfg_mgmt.reporting as cmr
@@ -20,26 +21,12 @@ def generate_cfg_element_status_reports(cfg_dir: str) -> list[cmr.CfgElementStat
         disable_cfg_element_lookup=True,
     )
 
-    policies = cmm.cfg_policies(
-        policies=cmm._parse_cfg_policies_file(
-            path=os.path.join(cfg_dir, cmm.cfg_policies_fname),
-        )
-    )
-    rules = cmm.cfg_rules(
-        rules=cmm._parse_cfg_policies_file(
-            path=os.path.join(cfg_dir, cmm.cfg_policies_fname),
-        )
-    )
-    statuses = cmm.cfg_status(
-        status=cmm._parse_cfg_status_file(
-            path=os.path.join(cfg_dir, cmm.cfg_status_fname),
-        )
-    )
-    responsibles = cmm.cfg_responsibles(
-        responsibles=cmm._parse_cfg_responsibles_file(
-            path=os.path.join(cfg_dir, cmm.cfg_responsibles_fname),
-        )
-    )
+    cfg_metadata = cmm.cfg_metadata_from_cfg_dir(cfg_dir)
+
+    policies = cfg_metadata.policies
+    rules = cfg_metadata.rules
+    statuses = cfg_metadata.statuses
+    responsibles = cfg_metadata.responsibles
 
     return [
         determine_status(
@@ -71,6 +58,48 @@ def iter_cfg_elements(
         for cfg_element in cfg_factory._cfg_elements(cfg_type_name=type_name):
             if cfg_target and not cfg_target.matches(cfg_element):
                 continue
+            yield cfg_element
+
+
+def iter_cfg_elements_requiring_rotation(
+    cfg_elements: typing.Iterable[model.NamedModelElement],
+    cfg_metadata: cmm.CfgMetadata,
+    cfg_target: typing.Optional[cmm.CfgTarget]=None,
+    element_filter: typing.Callable[[model.NamedModelElement], bool]=None,
+):
+    for cfg_element in cfg_elements:
+        if cfg_target and not cfg_target.matches(element=cfg_element):
+            continue
+
+        if element_filter and not element_filter(cfg_element):
+            print('bad filta')
+            continue
+
+        status = determine_status(
+            element=cfg_element,
+            policies=cfg_metadata.policies,
+            rules=cfg_metadata.rules,
+            responsibles=cfg_metadata.responsibles,
+            statuses=cfg_metadata.statuses,
+        )
+
+        # hardcode rule: ignore elements w/o rule and policy
+        if not status.policy or not status.rule:
+            continue
+
+        # hardcode: ignore all policies we cannot handle (currently, only MAX_AGE)
+        if not status.policy.type is cmm.PolicyType.MAX_AGE:
+            continue
+
+        # if there is no status, assume rotation be required
+        if not status.status:
+            yield cfg_element
+            continue
+
+        last_update = dateutil.parser.isoparse(status.status.credential_update_timestamp)
+        if status.policy.check(last_update=last_update):
+            continue
+        else:
             yield cfg_element
 
 
