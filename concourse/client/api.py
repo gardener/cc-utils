@@ -271,6 +271,22 @@ class ConcourseApiBase:
         return Build(response, self)
 
     @ensure_annotations
+    def pause_job(self, pipeline_name: str, job_name: str):
+        pause_url = self.routes.pause_job(pipeline_name, job_name)
+        self.request_builder.put(
+                pause_url,
+                body=""
+        )
+
+    @ensure_annotations
+    def unpause_job(self, pipeline_name: str, job_name: str):
+        unpause_url = self.routes.unpause_job(pipeline_name, job_name)
+        self.request_builder.put(
+                unpause_url,
+                body=""
+        )
+
+    @ensure_annotations
     def trigger_build(self, pipeline_name: str, job_name: str):
         trigger_url = self.routes.job_builds(pipeline_name, job_name)
         response = self._post(trigger_url)

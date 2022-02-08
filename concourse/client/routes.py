@@ -128,6 +128,14 @@ class ConcourseApiRoutesBase:
         return self._api_url('pipelines', pipeline_name, 'jobs', job_name)
 
     @ensure_annotations
+    def pause_job(self, pipeline_name: str, job_name: str):
+        return self._api_url('pipelines', pipeline_name, 'jobs', job_name, 'pause')
+
+    @ensure_annotations
+    def unpause_job(self, pipeline_name: str, job_name: str):
+        return self._api_url('pipelines', pipeline_name, 'jobs', job_name, 'unpause')
+
+    @ensure_annotations
     def build_events(self, build_id):
         return self._api_url('builds', str(build_id), 'events', prefix_team=False)
 
