@@ -16,6 +16,7 @@
 import datetime
 import enum
 import functools
+import logging
 import sys
 import traceback
 import typing
@@ -40,6 +41,8 @@ if ci.util._running_on_ci():
     log_github_access = False
 else:
     log_github_access = False
+
+logger = logging.getLogger(__name__)
 
 
 class SessionAdapter(enum.Enum):
@@ -149,7 +152,11 @@ def github_api(
         raise ValueError('exactly one of github_cfg, repo_url must be passed')
 
     if not cfg_factory:
-        cfg_factory = ci.util.ctx().cfg_factory()
+        try:
+            cfg_factory = ci.util.ctx().cfg_factory()
+        except:
+            logger.warning(f'error trying to retrieve {repo_url=} {github_cfg=}')
+            raise
 
     if isinstance(github_cfg, str):
         github_cfg = cfg_factory().github(github_cfg)
