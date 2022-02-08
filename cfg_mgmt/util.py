@@ -140,3 +140,38 @@ def cfg_report_summaries_to_es(
             import traceback
             logger.warning(traceback.format_exc())
             logger.warning('could not send route request to elastic search')
+
+
+def cfg_element_statuses_to_es(
+    es_client,
+    cfg_element_statuses: typing.Iterable[cmr.CfgElementStatusReport],
+):
+    for cfg_element_status in cfg_element_statuses:
+        names = []
+        types = []
+        if cfg_element_status.responsible:
+            names = [resp.name for resp in cfg_element_status.responsible.responsibles]
+            types = [resp.type.value for resp in cfg_element_status.responsible.responsibles]
+
+        report = list(cmr.create_report(
+            cfg_element_statuses=[cfg_element_status],
+            print_report=False,
+        ))[0]
+        try:
+            es_client.store_document(
+                index='cc_cfg_compliance_status_raw',
+                body={
+                    'creation_date': datetime.datetime.now().isoformat(),
+                    'element_name': cfg_element_status.element_name,
+                    'element_type': cfg_element_status.element_type,
+                    'element_storage': cfg_element_status.element_storage,
+                    'responsible_name': names,
+                    'responsible_type': types,
+                    'is_compliant': bool(report.compliantElementsCount),
+                },
+                inject_metadata=False,
+            )
+        except Exception:
+            import traceback
+            logger.warning(traceback.format_exc())
+            logger.warning('could not send route request to elastic search')

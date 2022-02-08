@@ -61,6 +61,10 @@ if (es_client := ccc.elasticsearch.from_cfg(cfg_set.elasticsearch())):
         es_client=es_client,
         cfg_report_summary_gen=cfg_report_summary_gen,
     )
+    cmu.cfg_element_statuses_to_es(
+        es_client=es_client,
+        cfg_element_statuses=status_reports,
+    )
 else:
     logger.warning('not writing cfg status to elasticsearch, no client available')
 
