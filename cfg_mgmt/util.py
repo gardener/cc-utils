@@ -72,7 +72,6 @@ def iter_cfg_elements_requiring_rotation(
             continue
 
         if element_filter and not element_filter(cfg_element):
-            print('bad filta')
             continue
 
         status = determine_status(
