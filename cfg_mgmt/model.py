@@ -221,7 +221,7 @@ def _parse_cfg_status_file(path: str):
     }
 
 
-def _cfg_policies(policies: list[dict]) -> list[CfgPolicy]:
+def cfg_policies(policies: list[dict]) -> list[CfgPolicy]:
     if isinstance(policies, dict):
         policies = policies['policies']
 
@@ -236,7 +236,7 @@ def _cfg_policies(policies: list[dict]) -> list[CfgPolicy]:
     ]
 
 
-def _cfg_rules(rules: list[dict]) -> list[CfgRule]:
+def cfg_rules(rules: list[dict]) -> list[CfgRule]:
     if isinstance(rules, dict):
         rules = rules['rules']
 
@@ -248,7 +248,7 @@ def _cfg_rules(rules: list[dict]) -> list[CfgRule]:
     ]
 
 
-def _cfg_responsibles(responsibles: list[dict]) -> list[CfgResponsibleMapping]:
+def cfg_responsibles(responsibles: list[dict]) -> list[CfgResponsibleMapping]:
     if isinstance(responsibles, dict):
         responsibles = responsibles['responsibles']
 
@@ -263,7 +263,7 @@ def _cfg_responsibles(responsibles: list[dict]) -> list[CfgResponsibleMapping]:
     ]
 
 
-def _cfg_status(status: list[dict]) -> list[CfgStatus]:
+def cfg_status(status: list[dict]) -> list[CfgStatus]:
     if isinstance(status, dict):
         status = status['config_status']
 
@@ -281,8 +281,8 @@ def cfg_metadata_from_cfg_dir(cfg_dir: str):
     statuses = _parse_cfg_status_file(os.path.join(cfg_dir, cfg_status_fname))
 
     return CfgMetadata(
-        policies=tuple(_cfg_policies(policies['policies'])),
-        rules=tuple(_cfg_rules(policies['rules'])),
-        responsibles=tuple(_cfg_responsibles(responsibles['responsibles'])),
-        statuses=tuple(_cfg_status(statuses['config_status']))
+        policies=tuple(cfg_policies(policies['policies'])),
+        rules=tuple(cfg_rules(policies['rules'])),
+        responsibles=tuple(cfg_responsibles(responsibles['responsibles'])),
+        statuses=tuple(cfg_status(statuses['config_status']))
     )
