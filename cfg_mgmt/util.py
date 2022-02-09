@@ -66,6 +66,7 @@ def iter_cfg_elements_requiring_rotation(
     cfg_metadata: cmm.CfgMetadata,
     cfg_target: typing.Optional[cmm.CfgTarget]=None,
     element_filter: typing.Callable[[model.NamedModelElement], bool]=None,
+    rotation_method: cmm.RotationMethod=None,
 ):
     for cfg_element in cfg_elements:
         if cfg_target and not cfg_target.matches(element=cfg_element):
@@ -88,6 +89,9 @@ def iter_cfg_elements_requiring_rotation(
 
         # hardcode: ignore all policies we cannot handle (currently, only MAX_AGE)
         if not status.policy.type is cmm.PolicyType.MAX_AGE:
+            continue
+
+        if rotation_method and status.policy.rotation_method is not rotation_method:
             continue
 
         # if there is no status, assume rotation be required

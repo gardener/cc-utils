@@ -16,6 +16,11 @@ class PolicyType(enum.Enum):
     MAX_AGE = 'max_age'
 
 
+class RotationMethod(enum.Enum):
+    MANUAL = 'manual'
+    AUTOMATED = 'automated'
+
+
 @dataclasses.dataclass
 class CfgPolicy:
     '''
@@ -24,6 +29,7 @@ class CfgPolicy:
     name: str
     max_age: typing.Optional[str]
     type: PolicyType = PolicyType.MAX_AGE
+    rotation_method: RotationMethod = RotationMethod.MANUAL
     comment: typing.Optional[str] = None
 
     def check(self, last_update: datetime.date) -> bool:
@@ -224,7 +230,7 @@ def _cfg_policies(policies: list[dict]) -> list[CfgPolicy]:
             data_class=CfgPolicy,
             data=policy_dict,
             config=dacite.Config(
-                cast=[PolicyType],
+                cast=[PolicyType, RotationMethod],
             )
         ) for policy_dict in policies
     ]
