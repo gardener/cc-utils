@@ -3,6 +3,9 @@ import logging
 import typing
 import pprint
 
+import cfg_mgmt.model as cmm
+import cfg_mgmt.util as cmu
+import cfg_mgmt.rotate as cmr
 import ccc.secrets_server
 import ci.log
 import ci.util
@@ -11,6 +14,30 @@ import model
 
 ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
+
+
+def rotate_secrets(
+    cfg_dir: str,
+):
+    cfg_metadata = cmm.cfg_metadata_from_cfg_dir(cfg_dir=cfg_dir)
+    cfg_factory = model.ConfigFactory.from_cfg_dir(
+        cfg_dir=cfg_dir,
+        disable_cfg_element_lookup=True,
+    )
+
+    for cfg_element in cmu.iter_cfg_elements_requiring_rotation(
+        cmu.iter_cfg_elements(cfg_factory=cfg_factory),
+        cfg_metadata=cfg_metadata,
+    ):
+        if not cmr.rotate_cfg_element(
+            cfg_dir=cfg_dir,
+            cfg_element=cfg_element,
+        ):
+            logger.info(f'skipping rotation of {cfg_element._type_name=} {cfg_element._name=}')
+            continue
+
+        # stop after first successful rotation (avoid causing too much trouble at one time
+        break
 
 
 def replicate_secrets(

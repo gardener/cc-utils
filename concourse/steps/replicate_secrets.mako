@@ -21,12 +21,23 @@ import cfg_mgmt.util as cmu
 import model
 import model.concourse
 
+cfg_dir = '${cfg_repo_relpath}'
+
+try:
+  rotate_secrets(
+    cfg_dir=cfg_dir,
+  )
+except:
+  ## we are paranoid: let us not break replication upon rotation-error for now
+  import traceback
+  traceback.print_exc()
+
 org_job_mapping = model.concourse.JobMapping(name='${job_mapping_name}', raw_dict=${raw_job_mapping})
 team_name = org_job_mapping.team_name()
 
 logger.info('using repo in ${cfg_repo_relpath}')
 cfg_factory: model.ConfigFactory = model.ConfigFactory.from_cfg_dir(
-  cfg_dir='${cfg_repo_relpath}',
+  cfg_dir=cfg_dir,
 )
 cfg_set = cfg_factory.cfg_set(org_job_mapping.replication_ctx_cfg_set())
 
