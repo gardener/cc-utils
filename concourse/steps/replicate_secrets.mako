@@ -16,6 +16,7 @@ job_mapping_name = extra_args['job_mapping_name']
 ${step_lib('replicate_secrets')}
 
 import ccc.elasticsearch
+import ccc.github
 import cfg_mgmt.reporting as cmr
 import cfg_mgmt.util as cmu
 import model
@@ -23,9 +24,23 @@ import model.concourse
 
 cfg_dir = '${cfg_repo_relpath}'
 
+secrets_repo_dict = ${raw_job_mapping['secrets_repo']}
+secrets_repo_org = secrets_repo_dict['org']
+secrets_repo_repo = secrets_repo_dict['repo']
+
+cfg_factory: model.ConfigFactory = model.ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)
+github_cfg = cfg_factory.github(secrets_repo_dict['github_cfg'])
+
+github_api = ccc.github.github_api(github_cfg)
+secrets_repo = github_api.repository(secrets_repo_org, secrets_repo_repo)
+secrets_repo_default_branch = secrets_repo.default_branch
+
 try:
   rotate_secrets(
     cfg_dir=cfg_dir,
+    target_ref=f'refs/heads/{default_branch},
+    repo_url=f'{github_cfg.ssh_url()}/{secrets_repo_org}/{secrets_repo_repo}',
+    github_repo_path=f'{secrets_repo_org}/{secrets_repo_repo}',
   )
 except:
   ## we are paranoid: let us not break replication upon rotation-error for now
