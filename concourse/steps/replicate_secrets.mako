@@ -28,14 +28,15 @@ secrets_repo_dict = ${raw_job_mapping['secrets_repo']}
 secrets_repo_org = secrets_repo_dict['org']
 secrets_repo_repo = secrets_repo_dict['repo']
 
-cfg_factory: model.ConfigFactory = model.ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)
-github_cfg = cfg_factory.github(secrets_repo_dict['github_cfg'])
-
-github_api = ccc.github.github_api(github_cfg)
-secrets_repo = github_api.repository(secrets_repo_org, secrets_repo_repo)
-secrets_repo_default_branch = secrets_repo.default_branch
 
 try:
+  cfg_factory: model.ConfigFactory = model.ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)
+  github_cfg = cfg_factory.github(secrets_repo_dict['github_cfg'])
+
+  github_api = ccc.github.github_api(github_cfg)
+  secrets_repo = github_api.repository(secrets_repo_org, secrets_repo_repo)
+  secrets_repo_default_branch = secrets_repo.default_branch
+
   rotate_secrets(
     cfg_dir=cfg_dir,
     target_ref=f'refs/heads/{default_branch}',
