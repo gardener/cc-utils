@@ -33,7 +33,10 @@ try:
   cfg_factory: model.ConfigFactory = model.ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)
   github_cfg = cfg_factory.github(secrets_repo_dict['github_cfg'])
 
-  github_api = ccc.github.github_api(github_cfg)
+  github_api = ccc.github.github_api(
+    github_cfg=github_cfg,
+    cfg_factory=cfg_factory,
+  )
   secrets_repo = github_api.repository(secrets_repo_org, secrets_repo_repo)
   secrets_repo_default_branch = secrets_repo.default_branch
 
