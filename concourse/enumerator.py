@@ -268,7 +268,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
             branches_and_cfg_entries = [
                 i for i in self._determine_repository_branches(repository=repository)
             ]
-        except yaml.scanner.ScannerError as e:
+        except (yaml.scanner.ScannerError, yaml.parser.ParserError) as e:
             yield DefinitionDescriptor(
                 pipeline_name='<invalid YAML>',
                 pipeline_definition=None,
