@@ -191,7 +191,7 @@ def cfg_element_statuses_to_es(
         ))[0]
         try:
             es_client.store_document(
-                index='cc_cfg_compliance_status_raw',
+                index='cc_cfg_compliance_responsible',
                 body={
                     'creation_date': datetime.datetime.now().isoformat(),
                     'element_name': cfg_element_status.element_name,
