@@ -80,9 +80,10 @@ def find_gcr_cfg_element_to_rotate(
 
 def rotate_gcr_cfg_element(
     cfg_dir: str,
-    target_ref: str,
     cfg_element: model.container_registry.ContainerRegistryConfig,
-    github_api: gitutil.GitHelper,
+    git_helper: gitutil.GitHelper,
+    target_ref: str,
+    cfg_metadata: cmm.CfgMetadata,
 ):
     client_email = json.loads(cfg_element.password())['client_email']
 
@@ -95,10 +96,56 @@ def rotate_gcr_cfg_element(
     )
 
     old_key_id = json.loads(cfg_element.password())['private_key_id']
+
     new_key = create_service_account_key(
         iam_client=iam_client,
         service_account_name=service_account_name,
     )
+
+    try:
+        _try_rotate_gcr_cfg_element(
+            cfg_dir=cfg_dir,
+            cfg_element=cfg_element,
+            git_helper=git_helper,
+            target_ref=target_ref,
+            cfg_metadata=cfg_metadata,
+            new_key=new_key,
+            old_key_id=old_key_id,
+            iam_client=iam_client,
+            client_email=client_email,
+        )
+    except:
+        try:
+            git_helper.repo.git.reset('--hard')
+        finally:
+            delete_service_account_key(
+                iam_client=iam_client,
+                service_account_key_name=ccc.gcp.qualified_service_account_key_name(
+                    service_account_name=client_email,
+                    key_name=new_key['private_key_id'],
+                )
+            )
+        raise
+
+
+def _try_rotate_gcr_cfg_element(
+    cfg_dir: str,
+    cfg_element: model.container_registry.ContainerRegistryConfig,
+    git_helper: gitutil.GitHelper,
+    target_ref: str,
+    cfg_metadata: cmm.CfgMetadata,
+    new_key,
+    old_key_id: str,
+    iam_client,
+    client_email: str,
+):
+    '''
+    Creates new GCR Service Account Key and patches config.
+    Old Key is appended to rotation queue and config status is updated.
+    A local commit is created and pushed.
+    If pushing fails, the newly created key is removed and a checkout (HEAD~1)
+    on the repo is performed.
+    '''
 
     cfg_file = ci.util.parse_yaml_file(os.path.join(cfg_dir, cmm.container_registry_fname))
 
@@ -135,9 +182,7 @@ def rotate_gcr_cfg_element(
 
     # update config status
     logger.info('updating config status')
-    cfg_statuses = cmm.cfg_status(
-        ci.util.parse_yaml_file(os.path.join(cfg_dir, cmm.cfg_status_fname))
-    )
+    cfg_statuses = cfg_metadata.statuses
 
     # update credential timestamp, create if not present
     for cfg_status in cfg_statuses:
@@ -168,35 +213,37 @@ def rotate_gcr_cfg_element(
             f,
         )
 
-    commit = github_api.index_to_commit(
-        message=f'[ci] rotate GCR credentials "{cfg_element.name()}"',
+    git_helper.repo.git.add(
+        cmm.cfg_queue_fname,
+        cmm.cfg_status_fname,
+        cmm.container_registry_fname,
     )
-    logger.info('local commit created')
+    git_helper.repo.git.commit(
+        '-m',
+        f'[ci] rotate GCR credentials "{cfg_element.name()}"',
+        author=git_helper.github_cfg.credentials().email_address(),
+    )
+
     try:
-        logger.info('pushing to remote')
-        github_api.push(
-            from_ref=commit.hexsha,
+        logger.info('pushing changed secret')
+        git_helper.push(
+            from_ref='@',
             to_ref=target_ref,
         )
         logger.info('secret rotated successfully')
     except:
-        # push failed, delete newly created key
+        # push failed, delete newly created key, checkout to undo commit
         logger.error('unable to push, deleting new key')
-        delete_service_account_key(
-            iam_client=iam_client,
-            service_account_key_name=ccc.gcp.qualified_service_account_key_name(
-                service_account_name=client_email,
-                key_name=new_key['private_key_id'],
-            )
-        )
+        git_helper.repo.git.reset('--hard', '@~')
+        raise
 
 
 def rotate_cfg_element_if_rotation_required(
     cfg_element_name: str,
     cfg_dir: str,
-    target_ref: str,
     repo_url: str,
     github_repo_path: str,
+    target_ref: str,
 ):
     cfg_fac = model.ConfigFactory.from_cfg_dir(
         cfg_dir=cfg_dir,
@@ -216,14 +263,18 @@ def rotate_cfg_element_if_rotation_required(
     github_cfg = ccc.github.github_cfg_for_repo_url(
         repo_url=repo_url,
     )
-    github_api = gitutil.GitHelper(
+    git_helper = gitutil.GitHelper(
         repo=cfg_dir,
         github_cfg=github_cfg,
         github_repo_path=github_repo_path,
     )
+
+    cfg_metadata = cmm.cfg_metadata_from_cfg_dir(cfg_dir)
+
     rotate_gcr_cfg_element(
         cfg_element=cfg_element,
         cfg_dir=cfg_dir,
-        github_api=github_api,
+        git_helper=git_helper,
         target_ref=target_ref,
+        cfg_metadata=cfg_metadata,
     )

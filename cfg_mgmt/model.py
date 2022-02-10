@@ -169,7 +169,7 @@ class CfgMetadata:
     policies: tuple[CfgPolicy]
     rules: tuple[CfgRule]
     responsibles: tuple[CfgResponsibleMapping]
-    statuses: tuple[CfgStatus]
+    statuses: list[CfgStatus]
 
 
 @dataclasses.dataclass
@@ -284,5 +284,5 @@ def cfg_metadata_from_cfg_dir(cfg_dir: str):
         policies=tuple(cfg_policies(policies['policies'])),
         rules=tuple(cfg_rules(policies['rules'])),
         responsibles=tuple(cfg_responsibles(responsibles['responsibles'])),
-        statuses=tuple(cfg_status(statuses['config_status']))
+        statuses=list(cfg_status(statuses['config_status']))
     )

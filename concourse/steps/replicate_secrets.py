@@ -6,6 +6,7 @@ import pprint
 import cfg_mgmt.model as cmm
 import cfg_mgmt.util as cmu
 import cfg_mgmt.rotate as cmr
+import ccc.github
 import ccc.secrets_server
 import ci.log
 import ci.util
@@ -18,22 +19,34 @@ logger = logging.getLogger(__name__)
 
 def rotate_secrets(
     cfg_dir: str,
+    target_ref: str,
+    repo_url: str,
+    github_repo_path: str,
 ):
     cfg_metadata = cmm.cfg_metadata_from_cfg_dir(cfg_dir=cfg_dir)
     cfg_factory = model.ConfigFactory.from_cfg_dir(
         cfg_dir=cfg_dir,
         disable_cfg_element_lookup=True,
     )
+    github_cfg = ccc.github.github_cfg_for_repo_url(
+        repo_url,
+        cfg_factory=cfg_factory,
+    )
 
     for cfg_element in cmu.iter_cfg_elements_requiring_rotation(
         cmu.iter_cfg_elements(cfg_factory=cfg_factory),
         cfg_metadata=cfg_metadata,
+        rotation_method=cmm.RotationMethod.AUTOMATED,
     ):
         if not cmr.rotate_cfg_element(
             cfg_dir=cfg_dir,
             cfg_element=cfg_element,
+            target_ref=target_ref,
+            github_cfg=github_cfg,
+            cfg_metadata=cfg_metadata,
+            github_repo_path=github_repo_path,
         ):
-            logger.info(f'skipping rotation of {cfg_element._type_name=} {cfg_element._name=}')
+            logger.info(f'skipping rotation of {cfg_element._type_name=} {cfg_element.name()}')
             continue
 
         # stop after first successful rotation (avoid causing too much trouble at one time

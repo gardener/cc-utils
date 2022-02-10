@@ -88,7 +88,6 @@ def qualified_service_account_key_name(
 
 
 def create_iam_client(
-    # adjust type hint to union once more cfg_types are supported
     cfg_element: model.container_registry.ContainerRegistryConfig,
 ) -> googleapiclient.discovery.Resource:
     if isinstance(cfg_element, model.container_registry.ContainerRegistryConfig):
