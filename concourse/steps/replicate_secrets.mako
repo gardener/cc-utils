@@ -38,7 +38,7 @@ secrets_repo_default_branch = secrets_repo.default_branch
 try:
   rotate_secrets(
     cfg_dir=cfg_dir,
-    target_ref=f'refs/heads/{default_branch},
+    target_ref=f'refs/heads/{default_branch}',
     repo_url=f'{github_cfg.ssh_url()}/{secrets_repo_org}/{secrets_repo_repo}',
     github_repo_path=f'{secrets_repo_org}/{secrets_repo_repo}',
   )
