@@ -5,7 +5,7 @@ import pprint
 
 import cfg_mgmt.model as cmm
 import cfg_mgmt.util as cmu
-import cfg_mgmt.rotate as cmr
+import cfg_mgmt.rotate
 import ccc.github
 import ccc.secrets_server
 import ci.log
@@ -38,7 +38,7 @@ def rotate_secrets(
         cfg_metadata=cfg_metadata,
         rotation_method=cmm.RotationMethod.AUTOMATED,
     ):
-        if not cmr.rotate_cfg_element(
+        if not cfg_mgmt.rotate.rotate_cfg_element(
             cfg_dir=cfg_dir,
             cfg_element=cfg_element,
             target_ref=target_ref,
