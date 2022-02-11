@@ -119,6 +119,7 @@ def rotate_gcr_cfg_element(
         try:
             git_helper.repo.git.reset('--hard')
         finally:
+            logger.warning('something went wrong, deleting new key (again)')
             delete_service_account_key(
                 iam_client=iam_client,
                 service_account_key_name=ccc.gcp.qualified_service_account_key_name(
