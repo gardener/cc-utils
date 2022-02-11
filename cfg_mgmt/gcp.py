@@ -18,6 +18,7 @@ import ci.util
 import gitutil
 import model
 import model.container_registry
+import oci.model as om
 
 
 ci.log.configure_default_logging()
@@ -71,7 +72,7 @@ def find_gcr_cfg_element_to_rotate(
             ),
         ),
         cfg_metadata=cmm.cfg_metadata_from_cfg_dir(cfg_dir=cfg_dir),
-        element_filter=lambda e: e.registry_type() == 'gcr',
+        element_filter=lambda e: e.registry_type() == om.OciRegistryType.GCR,
     ):
         return element
 

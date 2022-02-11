@@ -38,6 +38,12 @@ class OciTagType(enum.Enum):
     NO_TAG = 'no_tag'
 
 
+class OciRegistryType(enum.Enum):
+    GCR = 'gcr'
+    DOCKERHUB = 'dockerhub'
+    ARTIFACTORY = 'artifactory'
+
+
 class OciImageReference:
     @staticmethod
     def to_image_ref(image_reference: typing.Union[str, 'OciImageReference']):

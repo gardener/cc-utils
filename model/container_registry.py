@@ -60,7 +60,9 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
         }
 
     def registry_type(self):
-        return self.raw.get('registry_type')
+        if (registry_type_str := self.raw.get('registry_type')):
+          return om.OciRegistryType(registry_type_str)
+        return None
 
     def api_base_url(self):
         return self.raw.get('api_base_url')
