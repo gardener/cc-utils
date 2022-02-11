@@ -113,8 +113,6 @@ def rotate_gcr_cfg_element(
             cfg_metadata=cfg_metadata,
             new_key=new_key,
             old_key_id=old_key_id,
-            iam_client=iam_client,
-            client_email=client_email,
         )
     except:
         try:
