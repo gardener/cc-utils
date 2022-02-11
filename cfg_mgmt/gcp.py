@@ -115,10 +115,11 @@ def rotate_gcr_cfg_element(
             old_key_id=old_key_id,
         )
     except:
+        logger.error('something went wrong')
         try:
             git_helper.repo.git.reset('--hard')
         finally:
-            logger.warning('something went wrong, deleting new key (again)')
+            logger.info('deleting new key (again)')
             delete_service_account_key(
                 iam_client=iam_client,
                 service_account_key_name=ccc.gcp.qualified_service_account_key_name(
@@ -237,8 +238,9 @@ def _try_rotate_gcr_cfg_element(
         )
         logger.info('secret rotated successfully')
     except:
-        # push failed, delete newly created key, checkout to undo commit
-        logger.error('unable to push, deleting new key')
+        # undo local changes
+        logger.error('unable to push')
+        logger.info('make local repo consistent again')
         git_helper.repo.git.reset('--hard', '@~')
         raise
 
