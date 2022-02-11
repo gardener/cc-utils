@@ -162,9 +162,11 @@ oci.publish_container_image_from_kaniko_tarfile(
 % elif oci_builder is cm_publish.OciBuilder.DOCKER:
 import tempfile
 
+import ccc.oci
 import dockerutil
 import model.container_registry as mc
 import oci.auth as oa
+import oci.workarounds as ow
 
 dockerutil.launch_dockerd_if_not_running()
 
@@ -215,6 +217,11 @@ for img_ref in (image_ref, *${additional_img_refs}):
   )
   logger.info(f'running docker-push with {docker_argv=}')
   subprocess.run(docker_argv, check=True)
+
+  ## in some cases, the built images are not accepted by all oci-registries
+  ## (see oci.workarounds for details)
+  oci_client = ccc.oci_client()
+  ow.sanitise_image(image_ref=img_ref, oci_client=oci_client)
 
 % else:
   <% raise NotImplementedError(oci_builder) %>
