@@ -10,6 +10,7 @@ target_secret_namespace = extra_args['target_secret_namespace']
 raw_secret_cfg = extra_args['secret_cfg']
 raw_job_mapping = extra_args['raw_job_mapping']
 job_mapping_name = extra_args['job_mapping_name']
+secrets_repo_url = extra_args['secrets_repo_url']
 
 %>
 
@@ -27,7 +28,7 @@ cfg_dir = '${cfg_repo_relpath}'
 secrets_repo_dict = ${raw_job_mapping['secrets_repo']}
 secrets_repo_org = secrets_repo_dict['org']
 secrets_repo_repo = secrets_repo_dict['repo']
-secrets_repo_url = secrets_repo_dict.get('secrets_repo_url', None)
+secrets_repo_url = '${secrets_repo_url}'
 
 
 try:
