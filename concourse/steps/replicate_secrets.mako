@@ -27,11 +27,20 @@ cfg_dir = '${cfg_repo_relpath}'
 secrets_repo_dict = ${raw_job_mapping['secrets_repo']}
 secrets_repo_org = secrets_repo_dict['org']
 secrets_repo_repo = secrets_repo_dict['repo']
+secrets_repo_url = secrets_repo_dict.get('secrets_repo_url', None)
 
 
 try:
   cfg_factory: model.ConfigFactory = model.ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)
-  github_cfg = cfg_factory.github(secrets_repo_dict['github_cfg'])
+  if secrets_repo_url:
+    github_cfg = ccc.github.github_cfg_for_repo_url(
+      repo_url=secrets_repo_url,
+      cfg_factory=cfg_factory,
+    )
+  else:
+    ## TODO: remove else-case after release of cc-utils >= 1.1581.0
+    logger.warning('no secrets_repo_url - falling back to github_cfg name')
+    github_cfg = cfg_factory.github(secrets_repo_dict['github_cfg'])
 
   github_api = ccc.github.github_api(
     github_cfg=github_cfg,
@@ -40,10 +49,14 @@ try:
   secrets_repo = github_api.repository(secrets_repo_org, secrets_repo_repo)
   secrets_repo_default_branch = secrets_repo.default_branch
 
+  ## TODO: remove if after release of cc-utils >= 1.1581.0
+  if not secrets_repo_url:
+    secrets_repo_url = f'{github_cfg.ssh_url()}/{secrets_repo_org}/{secrets_repo_repo}'
+
   rotate_secrets(
     cfg_dir=cfg_dir,
     target_ref=f'refs/heads/{default_branch}',
-    repo_url=f'{github_cfg.ssh_url()}/{secrets_repo_org}/{secrets_repo_repo}',
+    repo_url=secrets_repo_url,
     github_repo_path=f'{secrets_repo_org}/{secrets_repo_repo}',
   )
 except:
