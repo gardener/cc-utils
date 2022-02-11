@@ -42,6 +42,7 @@ class OciRegistryType(enum.Enum):
     GCR = 'gcr'
     DOCKERHUB = 'dockerhub'
     ARTIFACTORY = 'artifactory'
+    UNKNOWN = 'unknown'
 
 
 class OciImageReference:
