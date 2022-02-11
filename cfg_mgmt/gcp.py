@@ -1,6 +1,7 @@
 import base64
 import dataclasses
 import datetime
+import git.objects.util
 import json
 import logging
 import os
@@ -218,10 +219,16 @@ def _try_rotate_gcr_cfg_element(
         cmm.cfg_status_fname,
         cmm.container_registry_fname,
     )
+
+    author = git.objects.util.Actor(
+        git_helper.github_cfg.credentials().username(),
+        git_helper.github_cfg.credentials().email_address(),
+    )
+
     git_helper.repo.git.commit(
         '-m',
         f'[ci] rotate GCR credentials "{cfg_element.name()}"',
-        author=git_helper.github_cfg.credentials().email_address(),
+        author=author,
     )
 
     try:
