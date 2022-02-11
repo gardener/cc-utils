@@ -5,6 +5,7 @@ import cfg_mgmt.model as cmm
 import gitutil
 import model
 import model.github
+import oci.model as om
 
 
 logger = logging.getLogger(__name__)
@@ -27,15 +28,20 @@ def rotate_cfg_element(
     )
 
     if type_name == 'container_registry':
-        logger.info(f'rotating {cfg_element.name()} {type_name=}')
-        cmg.rotate_gcr_cfg_element(
-            cfg_dir=cfg_dir,
-            cfg_element=cfg_element,
-            git_helper=git_helper,
-            target_ref=target_ref,
-            cfg_metadata=cfg_metadata,
+        if cfg_element.registry_type() == om.OciRegistryType.GCR:
+            logger.info(f'rotating {cfg_element.name()} {type_name=}')
+            cmg.rotate_gcr_cfg_element(
+                cfg_dir=cfg_dir,
+                cfg_element=cfg_element,
+                git_helper=git_helper,
+                target_ref=target_ref,
+                cfg_metadata=cfg_metadata,
+            )
+            return True
+        logger.warning(
+            f'{cfg_element.registry_type()} is not (yet) supported for automated rotation'
         )
-        return True
+        return False
 
     logger.warning(f'{type_name=} is not (yet) supported for automated rotation')
     return False
