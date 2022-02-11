@@ -138,8 +138,6 @@ def _try_rotate_gcr_cfg_element(
     cfg_metadata: cmm.CfgMetadata,
     new_key,
     old_key_id: str,
-    iam_client,
-    client_email: str,
 ):
     '''
     Creates new GCR Service Account Key and patches config.
