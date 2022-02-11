@@ -248,12 +248,17 @@ class Client:
         credentials_lookup: typing.Callable,
         routes: OciRoutes=OciRoutes(),
         disable_tls_validation=False,
+        timeout_seconds: int=None,
     ):
         self.credentials_lookup = credentials_lookup
         self.token_cache = OauthTokenCache()
         self.session = requests.Session()
         self.routes = routes
         self.disable_tls_validation = disable_tls_validation
+
+        if timeout_seconds:
+            timeout_seconds = int(timeout_seconds)
+        self.timeout_seconds = timeout_seconds
 
     def _authenticate(
         self,
@@ -359,6 +364,9 @@ class Client:
         warn_if_not_ok=True,
         **kwargs,
     ):
+        if not 'timeout' in kwargs and self.timeout_seconds:
+            kwargs['timeout'] = self.timeout_seconds
+
         image_reference = om.OciImageReference.to_image_ref(image_reference)
 
         self._authenticate(
