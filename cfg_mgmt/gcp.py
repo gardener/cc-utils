@@ -226,7 +226,7 @@ def _try_rotate_gcr_cfg_element(
     git_helper.repo.git.commit(
         '-m',
         f'[ci] rotate GCR credentials "{cfg_element.name()}"',
-        author=author,
+        author=f'{author.name} <{author.email}>',
     )
 
     try:
