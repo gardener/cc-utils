@@ -2,6 +2,7 @@ import base64
 import logging
 import typing
 import pprint
+import re
 
 import cfg_mgmt.model as cmm
 import cfg_mgmt.util as cmu
@@ -60,6 +61,8 @@ def replicate_secrets(
     kubeconfig: typing.Dict,
     secret_key: str,
     secret_cipher_algorithm: str,
+    future_secrets: typing.Dict[str, str],
+    generation: int,
     team_name: str,
     target_secret_name: str,
     target_secret_namespace: str,
@@ -90,10 +93,32 @@ def replicate_secrets(
     kube_ctx = kube.ctx.Ctx(kubeconfig_dict=kubeconfig)
     secrets_helper = kube_ctx.secret_helper()
 
-    logger.info(f'deploying secret on cluster {kube_ctx.kubeconfig.host}')
+    logger.info(f'deploying secret on cluster {kube_ctx.kubeconfig.host} generation {generation}')
     secrets_helper.put_secret(
         name=target_secret_name,
         raw_data={target_secret_cfg_name: encoded_cipher_data},
         namespace=target_secret_namespace,
     )
+
+    logger.info(f'deploying future secrets on cluster {kube_ctx.kubeconfig.host}')
+    for (k,v) in future_secrets.items():
+        m = re.match(r'key[-](\d+)', k)
+        if m:
+            f_name = target_secret_name + '-' + m.group(1)
+
+            encrypted_cipher_data = ccc.secrets_server.encrypt_data(
+                key=v.encode('utf-8'),
+                cipher_algorithm=secret_cipher_algorithm,
+                serialized_secret_data=serialiser.serialise().encode('utf-8')
+            )
+            encoded_cipher_data = base64.b64encode(encrypted_cipher_data).decode('utf-8')
+            print(f'deploying secret {f_name} in namespace {target_secret_namespace}')
+            secrets_helper.put_secret(
+                name=f_name,
+                raw_data={target_secret_cfg_name: encoded_cipher_data},
+                namespace=target_secret_namespace,
+            )
+        else:
+            logger.error(f'ignoring unmatched key: {k}')
+
     logger.info(f'deployed encrypted secret for team: {team_name}')

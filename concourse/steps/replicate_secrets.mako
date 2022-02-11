@@ -82,12 +82,15 @@ cfg_set = cfg_factory.cfg_set(org_job_mapping.replication_ctx_cfg_set())
 logger.info(f'replicating team {team_name}')
 
 raw_secret_cfg = ${raw_secret_cfg}
+future_secrets =  {k:v for (k,v) in raw_secret_cfg.items() if k.startswith('key-')}
 
 replicate_secrets(
   cfg_factory=cfg_factory,
   cfg_set=cfg_set,
   kubeconfig=dict(${kubeconfig}),
   secret_key=raw_secret_cfg.get('key'),
+  generation=raw_secret_cfg.get('generation'),
+  future_secrets=future_secrets,
   secret_cipher_algorithm=raw_secret_cfg.get('cipher_algorithm'),
   team_name=team_name,
   target_secret_name=org_job_mapping.target_secret_name(),
