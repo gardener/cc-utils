@@ -220,7 +220,7 @@ for img_ref in (image_ref, *${additional_img_refs}):
 
   ## in some cases, the built images are not accepted by all oci-registries
   ## (see oci.workarounds for details)
-  oci_client = ccc.oci_client()
+  oci_client = ccc.oci.oci_client()
   ow.sanitise_image(image_ref=img_ref, oci_client=oci_client)
 
 % else:
