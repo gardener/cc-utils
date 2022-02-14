@@ -17,7 +17,6 @@ import datetime
 import enum
 import functools
 import logging
-import sys
 import traceback
 import typing
 import urllib.parse
@@ -220,7 +219,7 @@ def github_cfg_for_repo_url(
 
     gh_cfg = matching_cfgs[-1]
     # do not interfere with cli.py
-    print(f'using {gh_cfg.name()=} for {repo_url=}', file=sys.stderr)
+    logger.info(f'using {gh_cfg.name()=} for {repo_url=}')
     return gh_cfg
 
 
