@@ -60,7 +60,7 @@ def configure_default_logging(
             logging.root.removeHandler(h)
             h.close()
 
-    sh = logging.StreamHandler(stream=sys.stdout)
+    sh = logging.StreamHandler()
     sh.setLevel(stdout_level)
 
     if custom_format_string:
