@@ -223,7 +223,7 @@ def _try_rotate_gcr_cfg_element(
     repo.git.add(os.path.abspath(cfg_dir))
 
     repo.index.commit(
-        f'[ci] rotate {cfg_element._type_name=} {cfg_element.name()=}',
+        f'[ci] rotate credential {cfg_element._type_name}:{cfg_element.name()}',
         author=actor,
         committer=actor,
     )
