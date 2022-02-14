@@ -36,11 +36,6 @@ import model
 import model.github
 import model.base
 
-if ci.util._running_on_ci():
-    log_github_access = False
-else:
-    log_github_access = False
-
 logger = logging.getLogger(__name__)
 
 
@@ -80,9 +75,6 @@ def github_api_ctor(
         )
     else:
         raise NotImplementedError
-
-    if log_github_access:
-        session.hooks['response'] = log_stack_trace_information_hook
 
     if hostname.lower() == 'github.com':
         return functools.partial(
