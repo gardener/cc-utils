@@ -226,7 +226,8 @@ def _try_rotate_gcr_cfg_element(
     commit_msg = f'[ci] rotate credential {cfg_element._type_name}:{cfg_element.name()}'
     # TODO: Rm once multiple gcr key creation fixed
     if ci.util._running_on_ci():
-        commit_msg = f'[ci] rotate credential {cfg_element._type_name}:{cfg_element.name()} {concourse.util.own_running_build_url()=}'
+        commit_msg = f'[ci] rotate credential {cfg_element._type_name}:{cfg_element.name()}' \
+            f'{concourse.util.own_running_build_url()=}'
 
     repo.index.commit(
         commit_msg,
