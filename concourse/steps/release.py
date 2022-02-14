@@ -325,8 +325,6 @@ class ReleaseCommitStep(TransactionalStep):
 class CreateTagsStep(TransactionalStep):
     def __init__(
         self,
-        author_email,
-        author_name,
         github_release_tag,
         git_tags,
         github_helper,
@@ -336,9 +334,6 @@ class CreateTagsStep(TransactionalStep):
     ):
         self.github_helper = github_helper
         self.git_helper = git_helper
-
-        self.author_name = author_name
-        self.author_email = author_email
 
         self.publishing_policy = publishing_policy
 
@@ -999,8 +994,6 @@ def release_and_prepare_next_dev_cycle(
     git_tags: list,
     github_release_tag: dict,
     release_commit_callback_image_reference: str,
-    author_email: str="gardener.ci.user@gmail.com",
-    author_name: str="gardener-ci",
     component_descriptor_v2_path: str=None,
     ctf_path: str=None,
     next_cycle_commit_message_prefix: str=None,
@@ -1047,8 +1040,6 @@ def release_and_prepare_next_dev_cycle(
     step_list.append(release_commit_step)
 
     create_tag_step = CreateTagsStep(
-        author_email=author_email,
-        author_name=author_name,
         git_tags=git_tags,
         github_release_tag=github_release_tag,
         git_helper=git_helper,
