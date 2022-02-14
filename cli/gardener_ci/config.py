@@ -52,7 +52,13 @@ def serialise_cfg(cfg_dir: CliHints.existing_dir(), out_file: str, cfg_sets: [st
         f.write(serialiser.serialise())
 
 
-def attribute(cfg_type: str, cfg_name: str, key: str, json: bool=False):
+def attribute(
+    cfg_type: str,
+    cfg_name: str,
+    key: str,
+    output_file: str = None,
+    json: bool=False,
+):
     raw = _retrieve_model_element(cfg_type=cfg_type, cfg_name=cfg_name).raw
 
     attrib_path = key.split('.')
@@ -62,13 +68,21 @@ def attribute(cfg_type: str, cfg_name: str, key: str, json: bool=False):
         attrib = raw.get(attrib_path.pop())
         raw = attrib
 
-    if json:
-        print(json_m.dumps(attrib))
+    output = json_m.dumps(attrib) if json else str(attrib)
+
+    if output_file:
+        with open(output_file, 'w') as f:
+            f.write(output)
     else:
-        print(str(attrib))
+        print(output)
 
 
-def model_element(cfg_type: str, cfg_name: str, key: str):
+def model_element(
+    cfg_type: str,
+    cfg_name: str,
+    key: str,
+    output_file: str = None,
+):
     cfg = _retrieve_model_element(cfg_type=cfg_type, cfg_name=cfg_name)
 
     attrib_path = key.split('.')
@@ -78,7 +92,11 @@ def model_element(cfg_type: str, cfg_name: str, key: str):
         getter = getattr(cfg, attrib_path.pop())
         cfg = getter()
 
-    print(str(cfg))
+    if output_file:
+        with open(output_file, 'w') as f:
+            f.write(str(cfg))
+    else:
+        print(str(cfg))
 
 
 def __add_module_command_args(parser):
