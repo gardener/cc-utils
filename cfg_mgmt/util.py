@@ -67,7 +67,7 @@ def iter_cfg_elements_requiring_rotation(
     cfg_target: typing.Optional[cmm.CfgTarget]=None,
     element_filter: typing.Callable[[model.NamedModelElement], bool]=None,
     rotation_method: cmm.RotationMethod=None,
-):
+) -> typing.Generator[model.NamedModelElement, None, None]:
     for cfg_element in cfg_elements:
         if cfg_target and not cfg_target.matches(element=cfg_element):
             continue
