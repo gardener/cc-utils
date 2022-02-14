@@ -49,7 +49,7 @@ def _ssh_auth_env(github_cfg):
     suppress_hostcheck = '-o "StrictHostKeyChecking no"'
     id_only = '-o "IdentitiesOnly yes"'
     cmd_env = os.environ.copy()
-    cmd_env['GIT_SSH_COMMAND'] = f'ssh -v -l git -i {tmp_id.name} {suppress_hostcheck} {id_only}'
+    cmd_env['GIT_SSH_COMMAND'] = f'ssh -v -i {tmp_id.name} {suppress_hostcheck} {id_only}'
     return (cmd_env, tmp_id)
 
 
