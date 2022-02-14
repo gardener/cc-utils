@@ -219,7 +219,7 @@ def _try_rotate_gcr_cfg_element(
     )
 
     repo = git_helper.repo
-    repo.index.add(cfg_dir)
+    repo.index.add((cfg_dir,))
 
     repo.index.commit(
         f'[ci] rotate {cfg_element_name._type_name=} {cfg_element.name()=}',
