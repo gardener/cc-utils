@@ -74,6 +74,7 @@ def find_gcr_cfg_element_to_rotate(
         ),
         cfg_metadata=cmm.cfg_metadata_from_cfg_dir(cfg_dir=cfg_dir),
         element_filter=lambda e: e.registry_type() == om.OciRegistryType.GCR,
+        rotation_method=cmm.RotationMethod.AUTOMATED,
     ):
         return element
 
