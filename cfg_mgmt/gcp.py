@@ -16,6 +16,7 @@ import cfg_mgmt.model as cmm
 import cfg_mgmt.util as cmu
 import ci.log
 import ci.util
+import concourse.util
 import gitutil
 import model
 import model.container_registry
@@ -222,8 +223,13 @@ def _try_rotate_gcr_cfg_element(
     repo = git_helper.repo
     repo.git.add(os.path.abspath(cfg_dir))
 
+    commit_msg = f'[ci] rotate credential {cfg_element._type_name}:{cfg_element.name()}'
+    # TODO: Rm once multiple gcr key creation fixed
+    if ci.util._running_on_ci():
+        commit_msg = f'[ci] rotate credential {cfg_element._type_name}:{cfg_element.name()} {concourse.util.own_running_build_url()=}'
+
     repo.index.commit(
-        f'[ci] rotate credential {cfg_element._type_name}:{cfg_element.name()}',
+        commit_msg,
         author=actor,
         committer=actor,
     )
