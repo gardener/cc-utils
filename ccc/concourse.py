@@ -94,8 +94,10 @@ def client_from_cfg_name(
 
 def client_from_env(
     team_name: str=None,
+    cfg_set=None
 ):
-    cfg_set = ctx.cfg_set()
+    if not cfg_set:
+        cfg_set = ctx.cfg_set()
 
     if not team_name:
         team_name = ci.util.check_env('CONCOURSE_CURRENT_TEAM')

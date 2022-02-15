@@ -83,6 +83,7 @@ def find_gcr_cfg_element_to_rotate(
 
 
 def rotate_gcr_cfg_element(
+    cfg_factory,
     cfg_dir: str,
     cfg_element: model.container_registry.ContainerRegistryConfig,
     git_helper: gitutil.GitHelper,
@@ -108,6 +109,7 @@ def rotate_gcr_cfg_element(
 
     try:
         _try_rotate_gcr_cfg_element(
+            cfg_factory=cfg_factory,
             cfg_dir=cfg_dir,
             cfg_element=cfg_element,
             git_helper=git_helper,
@@ -133,6 +135,7 @@ def rotate_gcr_cfg_element(
 
 
 def _try_rotate_gcr_cfg_element(
+    cfg_factory,
     cfg_dir: str,
     cfg_element: model.container_registry.ContainerRegistryConfig,
     git_helper: gitutil.GitHelper,
@@ -226,8 +229,10 @@ def _try_rotate_gcr_cfg_element(
     commit_msg = f'[ci] rotate credential {cfg_element._type_name}:{cfg_element.name()}'
     # TODO: Rm once multiple gcr key creation fixed
     if ci.util._running_on_ci():
-        commit_msg = f'[ci] rotate credential {cfg_element._type_name}:{cfg_element.name()}' \
-            f'{concourse.util.own_running_build_url()=}'
+        build_url = concourse.util.own_running_build_url(
+            cfg_factory=cfg_factory,
+        )
+        commit_msg += f'{build_url=}'
 
     repo.index.commit(
         commit_msg,
@@ -284,6 +289,7 @@ def rotate_cfg_element_if_rotation_required(
     cfg_metadata = cmm.cfg_metadata_from_cfg_dir(cfg_dir)
 
     rotate_gcr_cfg_element(
+        cfg_factory=cfg_fac,
         cfg_element=cfg_element,
         cfg_dir=cfg_dir,
         git_helper=git_helper,
