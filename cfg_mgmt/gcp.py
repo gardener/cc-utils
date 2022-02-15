@@ -131,7 +131,6 @@ def rotate_gcr_cfg_element(
                     key_name=new_key['private_key_id'],
                 )
             )
-        raise
 
 
 def _try_rotate_gcr_cfg_element(
