@@ -225,7 +225,7 @@ def _try_rotate_gcr_cfg_element(
     repo = git_helper.repo
     repo.git.add(os.path.abspath(cfg_dir))
 
-    commit_msg = f'[ci] rotate credential {cfg_element._type_name}:{cfg_element.name()}'
+    commit_msg = f'rotate credential {cfg_element._type_name}:{cfg_element.name()}'
     # TODO: Rm once multiple gcr key creation fixed
     if ci.util._running_on_ci():
         try:
