@@ -11,7 +11,7 @@ raw_secret_cfg = extra_args['secret_cfg']
 raw_job_mapping = extra_args['raw_job_mapping']
 job_mapping_name = extra_args['job_mapping_name']
 secrets_repo_url = extra_args['secrets_repo_url']
-
+do_rotate_secrets = bool(extra_args.get('rotate_secrets', False))
 %>
 
 ${step_lib('replicate_secrets')}
@@ -31,6 +31,7 @@ secrets_repo_repo = secrets_repo_dict['repo']
 secrets_repo_url = '${secrets_repo_url}'
 
 
+% if do_rotate_secrets:
 try:
   cfg_factory: model.ConfigFactory = model.ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)
   if secrets_repo_url:
@@ -64,6 +65,9 @@ except:
   ## we are paranoid: let us not break replication upon rotation-error for now
   import traceback
   traceback.print_exc()
+% else:
+logger.info('will not rotate secrets (disabled for this pipeline)')
+% endif
 
 org_job_mapping = model.concourse.JobMapping(name='${job_mapping_name}', raw_dict=${raw_job_mapping})
 team_name = org_job_mapping.team_name()
