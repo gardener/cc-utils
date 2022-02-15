@@ -209,7 +209,8 @@ class GitHelper:
             with remote.repo.git.custom_environment(**cmd_env):
                 results = remote.push(':'.join((from_ref, to_ref)))
                 if not results:
-                    raise RuntimeError('git-push failed (empty results-list)')
+                    return # according to remote.push's documentation, empty results indicate
+                    # an error. however, the documentation seems to be wrong
                 elif len(results) > 1:
                     raise NotImplementedError('more than one result (do not know how to handle')
 
