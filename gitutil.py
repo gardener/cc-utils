@@ -24,6 +24,7 @@ import urllib.parse
 
 import git
 import git.objects.util
+import git.remote
 
 from github.util import GitHubRepoBranch
 import ci.log
@@ -206,7 +207,15 @@ class GitHelper:
     def push(self, from_ref, to_ref):
         with self._authenticated_remote() as (cmd_env, remote):
             with remote.repo.git.custom_environment(**cmd_env):
-                remote.push(':'.join((from_ref, to_ref)))
+                results = remote.push(':'.join((from_ref, to_ref)))
+                if not results:
+                    raise RuntimeError('git-push failed (empty results-list)')
+                elif len(results) > 1:
+                    raise NotImplementedError('more than one result (do not know how to handle')
+
+                push_info: git.remote.PushInfo = results[0]
+                if push_info.flags & push_info.ERROR:
+                    raise RuntimeError('git-push failed (see stderr output)')
 
     def rebase(self, commit_ish: str):
         self.repo.git.rebase('--quiet', commit_ish)
