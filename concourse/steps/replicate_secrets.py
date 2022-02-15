@@ -39,6 +39,7 @@ def rotate_secrets(
         rotation_method=cmm.RotationMethod.AUTOMATED,
     ):
         if not cfg_mgmt.rotate.rotate_cfg_element(
+            cfg_factory=cfg_factory,
             cfg_dir=cfg_dir,
             cfg_element=cfg_element,
             target_ref=target_ref,

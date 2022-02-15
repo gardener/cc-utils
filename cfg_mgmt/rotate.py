@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def rotate_cfg_element(
+    cfg_factory,
     cfg_dir: str,
     cfg_element: model.NamedModelElement,
     target_ref: str,
@@ -31,6 +32,7 @@ def rotate_cfg_element(
         if cfg_element.registry_type() == om.OciRegistryType.GCR:
             logger.info(f'rotating {cfg_element.name()} {type_name=}')
             cmg.rotate_gcr_cfg_element(
+                cfg_factory=cfg_factory,
                 cfg_dir=cfg_dir,
                 cfg_element=cfg_element,
                 git_helper=git_helper,
