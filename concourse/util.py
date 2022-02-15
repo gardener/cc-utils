@@ -180,7 +180,7 @@ def own_running_build_url(cfg_factory=None):
 
 
 @functools.lru_cache()
-def find_own_running_build(cfg_factory):
+def find_own_running_build(cfg_factory=None):
     '''
     Determines the current build job running on concourse by relying on the "meta" contract (
     see steps/meta), which prints a JSON document containing a UUID. By iterating through all
