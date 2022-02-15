@@ -229,10 +229,13 @@ def _try_rotate_gcr_cfg_element(
     commit_msg = f'[ci] rotate credential {cfg_element._type_name}:{cfg_element.name()}'
     # TODO: Rm once multiple gcr key creation fixed
     if ci.util._running_on_ci():
-        build_url = concourse.util.own_running_build_url(
-            cfg_factory=cfg_factory,
-        )
-        commit_msg += f'{build_url=}'
+        try:
+            build_url = concourse.util.own_running_build_url(
+                cfg_factory=cfg_factory,
+            )
+            commit_msg += f'{build_url=}'
+        except:
+            pass # do not fail just because we cannot find out build-url
 
     repo.index.commit(
         commit_msg,
