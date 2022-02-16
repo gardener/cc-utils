@@ -34,6 +34,7 @@ from kubernetes.client import (
     V1ObjectMeta,
     V1PodList,
     V1Secret,
+    V1SecretList,
     V1Service,
     V1ServiceAccount,
     V1StatefulSet,
@@ -141,6 +142,11 @@ class KubernetesSecretHelper:
             else:
                 return None
         return secret
+
+    def list_secrets(self, namespace: str):
+        secrets: V1SecretList = self.core_api.list_namespaced_secret(namespace=namespace)
+        names = [s.metadata.name for s in secrets.items if s.metadata.name.startswith('cc-')]
+        return names
 
 
 class KubernetesServiceAccountHelper:
