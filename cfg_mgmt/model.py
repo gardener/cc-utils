@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import dateutil.parser
 import enum
 import os
 import re
@@ -129,6 +130,12 @@ class CfgQueueEntry:
     target: CfgTarget
     deleteAfter: str
     secretId: dict
+
+    def to_be_deleted(
+        self,
+        timestamp: datetime.datetime,
+    ) -> bool:
+        return timestamp > dateutil.parser.isoparse(self.deleteAfter)
 
 
 @dataclasses.dataclass

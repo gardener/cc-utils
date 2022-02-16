@@ -61,6 +61,21 @@ def iter_cfg_elements(
             yield cfg_element
 
 
+def iter_cfg_queue_entries_to_be_deleted(
+    cfg_metadata: cmm.CfgMetadata,
+    timestamp: datetime.datetime,
+    cfg_target: cmm.CfgTarget=None,
+) -> typing.Generator[cmm.CfgQueueEntry, None, None]:
+    for cfg_queue_entry in cfg_metadata.queue:
+        if cfg_target and not cfg_target == cfg_queue_entry.target:
+            continue
+
+        if not cfg_queue_entry.to_be_deleted(timestamp):
+            continue
+
+        yield cfg_queue_entry
+
+
 def iter_cfg_elements_requiring_rotation(
     cfg_elements: typing.Iterable[model.NamedModelElement],
     cfg_metadata: cmm.CfgMetadata,
