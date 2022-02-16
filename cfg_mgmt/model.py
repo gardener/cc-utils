@@ -127,7 +127,7 @@ class CfgResponsible:
 @dataclasses.dataclass
 class CfgQueueEntry:
     target: CfgTarget
-    deleteAfter: datetime.datetime
+    deleteAfter: str
     secretId: dict
 
 
@@ -170,6 +170,7 @@ class CfgMetadata:
     rules: tuple[CfgRule]
     responsibles: tuple[CfgResponsibleMapping]
     statuses: list[CfgStatus]
+    queue: list[CfgQueueEntry]
 
 
 @dataclasses.dataclass
@@ -218,6 +219,15 @@ def _parse_cfg_status_file(path: str):
     # document expected structure
     return {
         'config_status': raw['config_status'],
+    }
+
+
+def _parse_cfg_queue_file(path: str):
+    raw = ci.util.parse_yaml_file(path=path)
+
+    # document expected structure
+    return {
+        'rotation_queue': raw['rotation_queue'],
     }
 
 
@@ -287,14 +297,31 @@ def cfg_status(status: list[dict]) -> list[CfgStatus]:
     ]
 
 
+def cfg_queue(queue: list[dict]) -> list[CfgQueueEntry]:
+    if isinstance(queue, dict):
+        queue = queue['rotation_queue']
+
+    if not queue:
+        queue = []
+
+    return [
+        dacite.from_dict(
+            data_class=CfgQueueEntry,
+            data=queue_dict,
+        ) for queue_dict in queue
+    ]
+
+
 def cfg_metadata_from_cfg_dir(cfg_dir: str):
     policies = _parse_cfg_policies_file(os.path.join(cfg_dir, cfg_policies_fname))
     responsibles = _parse_cfg_responsibles_file(os.path.join(cfg_dir, cfg_responsibles_fname))
     statuses = _parse_cfg_status_file(os.path.join(cfg_dir, cfg_status_fname))
+    queue = _parse_cfg_queue_file(os.path.join(cfg_dir, cfg_queue_fname))
 
     return CfgMetadata(
         policies=tuple(cfg_policies(policies['policies'])),
         rules=tuple(cfg_rules(policies['rules'])),
         responsibles=tuple(cfg_responsibles(responsibles['responsibles'])),
-        statuses=list(cfg_status(statuses['config_status']))
+        statuses=list(cfg_status(statuses['config_status'])),
+        queue=list(cfg_queue(queue['rotation_queue'])),
     )

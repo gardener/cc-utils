@@ -162,8 +162,6 @@ def _try_rotate_gcr_cfg_element(
         )
     logger.info('secret patched')
 
-    cfg_queue = ci.util.parse_yaml_file(os.path.join(cfg_dir, cmm.cfg_queue_fname))
-
     # add old key to rotation queue
     cfg_queue_entry = cmm.CfgQueueEntry(
         target=cmm.CfgTarget(
@@ -173,13 +171,17 @@ def _try_rotate_gcr_cfg_element(
         deleteAfter=(datetime.datetime.now() + datetime.timedelta(days=7)).isoformat(),
         secretId={'gcp_secret_key': old_key_id},
     )
-    cfg_queue['rotation-queue'].append(
-        dataclasses.asdict(cfg_queue_entry),
-    )
+
+    cfg_metadata.queue.append(cfg_queue_entry),
 
     with open(os.path.join(cfg_dir, cmm.cfg_queue_fname), 'w') as f:
         yaml.dump(
-            cfg_queue,
+            {
+                'rotation_queue': [
+                    dataclasses.asdict(cfg_queue_entry)
+                    for cfg_queue_entry in cfg_metadata.queue
+                ]
+            },
             f,
         )
     logger.info('old key added to rotation queue')
