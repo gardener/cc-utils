@@ -259,26 +259,23 @@ def _try_rotate_gcr_cfg_element(
         raise
 
 
-def rotate_cfg_element_if_rotation_required(
+def force_rotate_cfg_element(
     cfg_element_name: str,
     cfg_dir: str,
     repo_url: str,
     github_repo_path: str,
     target_ref: str,
 ):
+    '''
+    Rotates given cfg_element without checking whether rotation is required.
+    '''
     cfg_fac = model.ConfigFactory.from_cfg_dir(
         cfg_dir=cfg_dir,
         disable_cfg_element_lookup=True,
     )
-    if not (cfg_element := find_gcr_cfg_element_to_rotate(
-        cfg_dir=cfg_dir,
-        cfg_fac=cfg_fac,
-        cfg_element_name=cfg_element_name,
-        )
-    ):
-        logger.info('no cfg_element eligble for rotation found')
-        return
+    cfg_element = cfg_fac.container_registry(cfg_element_name)
 
+    logger.info('force rotating, rotation required is ignored')
     logger.info(f'rotating {cfg_element.name()}')
 
     github_cfg = ccc.github.github_cfg_for_repo_url(
