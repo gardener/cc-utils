@@ -1,7 +1,6 @@
 import base64
 import dataclasses
 import datetime
-import git
 import json
 import logging
 import os
@@ -14,7 +13,6 @@ import ccc.github
 import cfg_mgmt.model as cmm
 import ci.log
 import ci.util
-import concourse.util
 import gitutil
 import model
 import model.container_registry
@@ -56,11 +54,9 @@ def delete_service_account_key(
     logger.info('Deleted key: ' + service_account_key_name)
 
 
-def rotate_gcr_cfg_element(
-    cfg_factory,
+def create_secret_and_persist_in_cfg_repo(
     cfg_dir: str,
     cfg_element: model.container_registry.ContainerRegistryConfig,
-    git_helper: gitutil.GitHelper,
     target_ref: str,
     cfg_metadata: cmm.CfgMetadata,
 ):
@@ -84,50 +80,6 @@ def rotate_gcr_cfg_element(
         iam_client=iam_client,
         service_account_name=service_account_name,
     )
-
-    try:
-        _try_rotate_gcr_cfg_element(
-            cfg_factory=cfg_factory,
-            cfg_dir=cfg_dir,
-            cfg_element=cfg_element,
-            git_helper=git_helper,
-            target_ref=target_ref,
-            cfg_metadata=cfg_metadata,
-            new_key=new_key,
-            old_key_id=old_key_id,
-        )
-    except:
-        logger.error('something went wrong')
-        try:
-            git_helper.repo.git.reset('--hard')
-        finally:
-            logger.info('deleting new key (again)')
-            delete_service_account_key(
-                iam_client=iam_client,
-                service_account_key_name=ccc.gcp.qualified_service_account_key_name(
-                    service_account_name=client_email,
-                    key_name=new_key['private_key_id'],
-                )
-            )
-
-
-def _try_rotate_gcr_cfg_element(
-    cfg_factory,
-    cfg_dir: str,
-    cfg_element: model.container_registry.ContainerRegistryConfig,
-    git_helper: gitutil.GitHelper,
-    target_ref: str,
-    cfg_metadata: cmm.CfgMetadata,
-    new_key,
-    old_key_id: str,
-):
-    '''
-    Creates new GCR Service Account Key and patches config.
-    Old Key is appended to rotation queue and config status is updated.
-    A local commit is created and pushed.
-    If pushing fails, the newly created key is removed and a checkout (HEAD~1)
-    on the repo is performed.
-    '''
 
     cfg_file = ci.util.parse_yaml_file(os.path.join(cfg_dir, cmm.container_registry_fname))
 
@@ -164,8 +116,6 @@ def _try_rotate_gcr_cfg_element(
         )
     logger.info('old key added to rotation queue')
 
-    # update config status
-    logger.info('updating config status')
     cfg_statuses = cfg_metadata.statuses
 
     # update credential timestamp, create if not present
@@ -197,44 +147,16 @@ def _try_rotate_gcr_cfg_element(
             f,
         )
 
-    actor = git.Actor(
-        git_helper.github_cfg.credentials().username(),
-        git_helper.github_cfg.credentials().email_address(),
-    )
-
-    repo = git_helper.repo
-    repo.git.add(os.path.abspath(cfg_dir))
-
-    commit_msg = f'rotate credential {cfg_element._type_name}:{cfg_element.name()}'
-    # TODO: Rm once multiple gcr key creation fixed
-    if ci.util._running_on_ci():
-        try:
-            build_url = concourse.util.own_running_build_url(
-                cfg_factory=cfg_factory,
+    def revert():
+        delete_service_account_key(
+            iam_client=iam_client,
+            service_account_key_name=ccc.gcp.qualified_service_account_key_name(
+                service_account_name=client_email,
+                key_name=new_key['private_key_id'],
             )
-            commit_msg += f'{build_url=}'
-        except:
-            pass # do not fail just because we cannot find out build-url
-
-    repo.index.commit(
-        commit_msg,
-        author=actor,
-        committer=actor,
-    )
-
-    try:
-        logger.info('pushing changed secret')
-        git_helper.push(
-            from_ref='@',
-            to_ref=target_ref,
         )
-        logger.info('secret rotated successfully')
-    except:
-        # undo local changes
-        logger.error('unable to push')
-        logger.info('make local repo consistent again')
-        git_helper.repo.git.reset('--hard', '@~')
-        raise
+
+    return revert
 
 
 def force_rotate_cfg_element(
