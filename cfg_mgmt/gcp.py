@@ -24,10 +24,9 @@ ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
 
 
-def create_service_account_key(
+def _create_service_account_key(
     iam_client: googleapiclient.discovery.Resource,
     service_account_name: str,
-    body: dict = {},
 ) -> dict:
     '''
     Creates a key for a service account.
@@ -35,7 +34,7 @@ def create_service_account_key(
 
     key_request = iam_client.projects().serviceAccounts().keys().create(
         name=service_account_name,
-        body=body,
+        body={},
     )
     try:
         key = key_request.execute()
@@ -81,7 +80,7 @@ def rotate_gcr_cfg_element(
         key_name=old_key_id,
     )
 
-    new_key = create_service_account_key(
+    new_key = _create_service_account_key(
         iam_client=iam_client,
         service_account_name=service_account_name,
     )
