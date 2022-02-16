@@ -101,6 +101,10 @@ def rotate_gcr_cfg_element(
     )
 
     old_key_id = json.loads(cfg_element.password())['private_key_id']
+    old_key_id = ccc.gcp.qualified_service_account_key_name(
+        service_account_name=client_email,
+        key_name=old_key_id,
+    )
 
     new_key = create_service_account_key(
         iam_client=iam_client,
