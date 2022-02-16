@@ -225,6 +225,9 @@ def cfg_policies(policies: list[dict]) -> list[CfgPolicy]:
     if isinstance(policies, dict):
         policies = policies['policies']
 
+    if not policies:
+        policies = []
+
     return [
         dacite.from_dict(
             data_class=CfgPolicy,
@@ -240,6 +243,9 @@ def cfg_rules(rules: list[dict]) -> list[CfgRule]:
     if isinstance(rules, dict):
         rules = rules['rules']
 
+    if not rules:
+        rules = []
+
     return [
         dacite.from_dict(
             data_class=CfgRule,
@@ -251,6 +257,9 @@ def cfg_rules(rules: list[dict]) -> list[CfgRule]:
 def cfg_responsibles(responsibles: list[dict]) -> list[CfgResponsibleMapping]:
     if isinstance(responsibles, dict):
         responsibles = responsibles['responsibles']
+
+    if not responsibles:
+        responsibles = []
 
     return [
         dacite.from_dict(
@@ -266,6 +275,9 @@ def cfg_responsibles(responsibles: list[dict]) -> list[CfgResponsibleMapping]:
 def cfg_status(status: list[dict]) -> list[CfgStatus]:
     if isinstance(status, dict):
         status = status['config_status']
+
+    if not status:
+        status = []
 
     return [
         dacite.from_dict(
