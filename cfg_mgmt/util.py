@@ -229,3 +229,13 @@ def cfg_element_statuses_to_es(
             import traceback
             logger.warning(traceback.format_exc())
             logger.warning('could not send route request to elastic search')
+
+
+def local_cfg_type_sources(
+    cfg_element: model.NamedModelElement,
+    cfg_factory: typing.Union[model.ConfigFactory, model.ConfigurationSet],
+) -> typing.Iterable[str]:
+    cfg_type = cfg_factory._cfg_type(cfg_element._type_name)
+    return {
+        src.file for src in cfg_type.sources() if isinstance(src, model.LocalFileCfgSrc)
+    }
