@@ -5,7 +5,6 @@ import git
 import json
 import logging
 import os
-import typing
 import yaml
 
 import googleapiclient
@@ -13,14 +12,12 @@ import googleapiclient
 import ccc.gcp
 import ccc.github
 import cfg_mgmt.model as cmm
-import cfg_mgmt.util as cmu
 import ci.log
 import ci.util
 import concourse.util
 import gitutil
 import model
 import model.container_registry
-import oci.model as om
 
 
 ci.log.configure_default_logging()
@@ -58,28 +55,6 @@ def delete_service_account_key(
         name=service_account_key_name,
     ).execute()
     logger.info('Deleted key: ' + service_account_key_name)
-
-
-def find_gcr_cfg_element_to_rotate(
-    cfg_dir,
-    cfg_fac,
-    cfg_element_name,
-) -> typing.Optional[model.container_registry.ContainerRegistryConfig]:
-    for element in cmu.iter_cfg_elements_requiring_rotation(
-        cfg_elements=cmu.iter_cfg_elements(
-            cfg_factory=cfg_fac,
-            cfg_target=cmm.CfgTarget(
-                name=cfg_element_name,
-                type='container_registry',
-            ),
-        ),
-        cfg_metadata=cmm.cfg_metadata_from_cfg_dir(cfg_dir=cfg_dir),
-        element_filter=lambda e: e.registry_type() == om.OciRegistryType.GCR,
-        rotation_method=cmm.RotationMethod.AUTOMATED,
-    ):
-        return element
-
-    return None
 
 
 def rotate_gcr_cfg_element(
