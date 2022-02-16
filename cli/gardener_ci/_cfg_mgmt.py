@@ -53,11 +53,11 @@ def rotate_gcr_config(
 ):
     '''
     Rotates GCR credential from given directory without checking whether rotation is required.
-    A new secret-key is created, and stored in the configuration element store (container_registry.yaml),
-    replacing the previous one. In addition, the update-timestamp for the configuration element is
-    updated in config_status.yaml, and the old secret key is marked for deletion
-    (config_queue.yaml). The change is commited, and pushed to the given push target. In case
-    pushing fails, the secret key is deleted again.
+    A new secret-key is created, and stored in the configuration element store
+    (container_registry.yaml), replacing the previous one. In addition, the update-timestamp
+    for the configuration element is updated in config_status.yaml, and the old secret key is
+    marked for deletion (config_queue.yaml). The change is commited, and pushed to the given
+    push target. In case pushing fails, the secret key is deleted again.
     '''
     cfg_mgmt.gcp.force_rotate_cfg_element(
         cfg_element_name=element_name,
