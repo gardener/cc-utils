@@ -199,6 +199,23 @@ class GitHelper:
         self.repo.index.reset()
         return commit
 
+    def add_and_commit(self, message):
+        '''
+        adds changed and new files (`git add .`) and creates a commit, potentially updating the
+        current branch (`git commit`). If a github_cfg is present, author and committer are set.
+
+        see `index_to_commit` for an alternative implementation that will leave less side-effects
+        in the underlying git repository and worktree.
+        '''
+        self.repo.git.add(self.repo.working_tree_dir)
+
+        actor = self._actor()
+        return self.repo.index.commit(
+            message=message,
+            author=actor,
+            committer=actor,
+        )
+
     def _stash_changes(self):
         self.repo.git.stash('--include-untracked', '--quiet')
 
