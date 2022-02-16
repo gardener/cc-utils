@@ -138,6 +138,7 @@ def github_api(
     repo_url: str=None,
     session_adapter: SessionAdapter=SessionAdapter.RETRY,
     cfg_factory=None,
+    username: typing.Optional[str]=None,
 ):
     if not (bool(github_cfg) ^ bool(repo_url)):
         raise ValueError('exactly one of github_cfg, repo_url must be passed')
@@ -159,7 +160,10 @@ def github_api(
         )
 
     github_url = github_cfg.http_url()
-    github_auth_token = github_cfg.credentials().auth_token()
+    if username:
+        github_auth_token = github_cfg.credentials(username).auth_token()
+    else:
+        github_auth_token = github_cfg.credentials().auth_token()
 
     verify_ssl = github_cfg.tls_validation()
 
