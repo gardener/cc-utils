@@ -160,6 +160,12 @@ class GitHelper:
         existing_tags = tags_to_check - available_tags
         return available_tags, existing_tags
 
+    def _actor(self):
+        if self.github_cfg:
+            credentials = self.github_cfg.credentials()
+            return git.Actor(credentials.username(), credentials.email_address())
+        return None
+
     def index_to_commit(self, message, parent_commits=None):
         '''moves all diffs from worktree to a new commit without modifying branches.
         The worktree remains unchanged after the method returns.
@@ -174,14 +180,12 @@ class GitHelper:
         tree = self.repo.index.write_tree()
 
         if self.github_cfg:
-            credentials = self.github_cfg.credentials()
-            author = git.objects.util.Actor(credentials.username(), credentials.email_address())
-            committer = git.objects.util.Actor(credentials.username(), credentials.email_address())
+            actor = self._actor()
 
             create_commit = functools.partial(
                 git.Commit.create_from_tree,
-                author=author,
-                committer=committer,
+                author=actor,
+                committer=actor,
             )
         else:
             create_commit = git.Commit.create_from_tree
