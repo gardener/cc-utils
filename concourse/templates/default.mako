@@ -195,6 +195,8 @@ notification_env_vars = {
 if secret_cfg:
   notification_env_vars['SECRET_CIPHER_ALGORITHM'] = secret_cfg.cipher_algorithm().value
   notification_env_vars['SECRET_KEY'] = secret_cfg.key().decode('utf-8')
+  if secret_cfg.generation():
+    notification_env_vars['SECRETS_SERVER_GENERATION'] = secret_cfg.generation()
 
 %>
   ${email_notification(
