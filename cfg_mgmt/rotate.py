@@ -40,6 +40,9 @@ def rotate_cfg_element(
             )
             return False
 
+    elif type_name == 'github':
+        update_secret_function = cmgh.create_secret_and_persist_in_cfg_repo
+
     if not update_secret_function:
         logger.warning(f'{type_name=} is not (yet) supported for automated rotation')
         return False
@@ -48,7 +51,6 @@ def rotate_cfg_element(
         revert_function = update_secret_function(
             cfg_dir=cfg_dir,
             cfg_element=cfg_element,
-            target_ref=target_ref,
             cfg_metadata=cfg_metadata,
         )
     except:

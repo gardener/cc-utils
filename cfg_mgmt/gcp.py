@@ -56,7 +56,6 @@ def delete_service_account_key(
 def create_secret_and_persist_in_cfg_repo(
     cfg_dir: str,
     cfg_element: model.container_registry.ContainerRegistryConfig,
-    target_ref: str,
     cfg_metadata: cmm.CfgMetadata,
 ):
     client_email = json.loads(cfg_element.password())['client_email']
