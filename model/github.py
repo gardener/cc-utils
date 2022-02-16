@@ -69,19 +69,22 @@ class GithubConfig(NamedModelElement):
         return [Protocol(value) for value in self.raw.get('available_protocols')]
 
     def credentials(self, technical_user_name: str = None):
-        technical_users = [
-            GithubCredentials(user) for user in self.raw.get('technical_users')
-        ]
+        technical_users = self._technical_user_credentials()
         if technical_user_name:
-            for user in technical_users:
-                if user.username() == technical_user_name:
-                    return user
+            for credential in technical_users:
+                if credential.username() == technical_user_name:
+                    return credential
             raise ModelValidationError(
                 f'Did not find technical user "{technical_user_name}" '
                 f'for Github config "{self.name()}"'
             )
 
         return random.choice(technical_users)
+
+    def _technical_user_credentials(self) -> typing.Iterable["GithubCredentials"]:
+        return [
+            GithubCredentials(user) for user in self.raw.get('technical_users')
+        ]
 
     def hostname(self):
         if not (parsed := urlparse(self.http_url())).hostname:
