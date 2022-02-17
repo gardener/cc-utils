@@ -60,7 +60,8 @@ def secret_url_path(
         used to retrieve the secret url path for given config in default template
     '''
     if not secret_cfg:
-        logger.warning(f'Secret config not set {secret_cfg=}')
+        logger.warning(f'No secret configuration found, check job_mapping {job_mapping.name()}')
+        return
 
     if job_mapping.secrets_repo():
         if secret_cfg.generation():
