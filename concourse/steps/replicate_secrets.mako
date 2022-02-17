@@ -119,4 +119,18 @@ if (es_client := ccc.elasticsearch.from_cfg(cfg_set.elasticsearch())):
 else:
     logger.warning('not writing cfg status to elasticsearch, no client available')
 
+% if do_rotate_secrets:
+try:
+  process_config_queue(
+    cfg_dir=cfg_dir,
+    target_ref=f'refs/heads/{secrets_repo_default_branch}',
+    repo_url=secrets_repo_url,
+    github_repo_path=f'{secrets_repo_org}/{secrets_repo_repo}',
+  )
+except:
+  ## we are paranoid: let us not break replication upon rotation-error for now
+  import traceback
+  traceback.print_exc()
+% endif
+
 </%def>

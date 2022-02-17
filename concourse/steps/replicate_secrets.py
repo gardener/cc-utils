@@ -11,11 +11,55 @@ import ccc.github
 import ccc.secrets_server
 import ci.log
 import ci.util
+import gitutil
 import kube.ctx
 import model
 
 ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
+
+
+def process_config_queue(
+    cfg_dir: str,
+    repo_url: str,
+    github_repo_path: str,
+    target_ref: str,
+):
+    '''
+    Iterates to be deleted cfg_queue_entries.
+    Processes very first supported entry and terminates.
+    '''
+    cfg_metadata = cmm.cfg_metadata_from_cfg_dir(cfg_dir=cfg_dir)
+    cfg_factory = model.ConfigFactory.from_cfg_dir(
+        cfg_dir=cfg_dir,
+        disable_cfg_element_lookup=True,
+    )
+    github_cfg = ccc.github.github_cfg_for_repo_url(
+        repo_url,
+        cfg_factory=cfg_factory,
+    )
+    git_helper = gitutil.GitHelper(
+        repo=cfg_dir,
+        github_cfg=github_cfg,
+        github_repo_path=github_repo_path,
+    )
+
+    for cfg_queue_entry in cmu.iter_cfg_queue_entries_to_be_deleted(
+        cfg_metadata=cfg_metadata,
+    ):
+        if not cfg_mgmt.rotate.delete_cfg_element(
+            cfg_dir=cfg_dir,
+            cfg_queue_entry=cfg_queue_entry,
+            cfg_fac=cfg_factory,
+            cfg_metadata=cfg_metadata,
+            git_helper=git_helper,
+            target_ref=target_ref,
+        ):
+            continue
+
+        # stop after first successful rotation (avoid causing too much trouble at one time
+        return
+    logger.info('no to be deleted config queue entry found')
 
 
 def rotate_secrets(
