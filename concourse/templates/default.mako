@@ -310,7 +310,11 @@ else:
       PIPELINE_NAME: ${pipeline_name}
   % if secret_cfg:
       SECRET_CIPHER_ALGORITHM: ${secret_cfg.cipher_algorithm().value}
+      % if secret_cfg.generation():
+      SECRET_KEY: ${secret_cfg.key_from_gen().decode('utf-8')}
+      % else:
       SECRET_KEY: ${secret_cfg.key().decode('utf-8')}
+      % endif
   % endif
       SECRETS_SERVER_CONCOURSE_CFG_NAME: ${secrets_server_cfg_url_path}
       SECRETS_SERVER_ENDPOINT: ${secrets_server_cfg.endpoint_url()}

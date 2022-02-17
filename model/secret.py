@@ -45,8 +45,14 @@ class Secret(NamedModelElement):
     def key(self) -> bytes:
         return self.raw.get('key').encode('utf-8')
 
+    def key_from_gen(self) -> bytes:
+        return self.raw.get(f'key-{self.generation()}').encode('utf-8')
+
     def cipher_algorithm(self):
         return Cipher(self.raw.get('cipher_algorithm'))
+
+    def generation(self):
+        return self.raw.get('generation')
 
     def _required_attributes(self):
         return 'key', 'cipher_algorithm'

@@ -63,10 +63,17 @@ def secret_url_path(
         logger.warning(f'Secret config not set {secret_cfg=}')
 
     if job_mapping.secrets_repo():
-        return _org_based_secret_url_path(
-            target_secret_name=job_mapping.target_secret_name(),
-            secret_cfg_name=job_mapping.target_secret_cfg_name(),
-        )
+        if secret_cfg.generation():
+            return _org_based_secret_url_path_with_generation(
+                target_secret_name=job_mapping.target_secret_name(),
+                secret_cfg_name=job_mapping.target_secret_cfg_name(),
+                generation=secret_cfg.generation(),
+            )
+        else:
+            return _org_based_secret_url_path(
+                target_secret_name=job_mapping.target_secret_name(),
+                secret_cfg_name=job_mapping.target_secret_cfg_name(),
+            )
     else:
         logger.warning(
             f'No secrets repo for job_mapping {job_mapping.name()} configured. Please do so...',
@@ -75,3 +82,7 @@ def secret_url_path(
 
 def _org_based_secret_url_path(target_secret_name, secret_cfg_name):
     return f'{target_secret_name}/{secret_cfg_name}'
+
+
+def _org_based_secret_url_path_with_generation(target_secret_name, secret_cfg_name, generation):
+    return f'{target_secret_name}-{generation}/{secret_cfg_name}'

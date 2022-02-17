@@ -34,6 +34,7 @@ from kubernetes.client import (
     V1ObjectMeta,
     V1PodList,
     V1Secret,
+    V1SecretList,
     V1Service,
     V1ServiceAccount,
     V1StatefulSet,
@@ -44,6 +45,7 @@ from kubernetes.stream import stream
 from ensure import ensure_annotations
 
 from ci.util import info, not_empty, not_none, fail
+from model.concourse import SecretNamePattern
 
 
 class KubernetesSecretHelper:
@@ -141,6 +143,12 @@ class KubernetesSecretHelper:
             else:
                 return None
         return secret
+
+    def list_secrets(self, namespace: str):
+        secrets: V1SecretList = self.core_api.list_namespaced_secret(namespace=namespace)
+        names = [s.metadata.name for s in secrets.items
+                    if s.metadata.name.startswith(SecretNamePattern.PREFIX.value)]
+        return names
 
 
 class KubernetesServiceAccountHelper:
