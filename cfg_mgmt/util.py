@@ -63,14 +63,14 @@ def iter_cfg_elements(
 
 def iter_cfg_queue_entries_to_be_deleted(
     cfg_metadata: cmm.CfgMetadata,
-    timestamp: datetime.datetime,
-    cfg_target: cmm.CfgTarget=None,
+    cfg_target: typing.Optional[cmm.CfgTarget]=None,
 ) -> typing.Generator[cmm.CfgQueueEntry, None, None]:
+    now = datetime.datetime.now()
     for cfg_queue_entry in cfg_metadata.queue:
         if cfg_target and not cfg_target == cfg_queue_entry.target:
             continue
 
-        if not cfg_queue_entry.to_be_deleted(timestamp):
+        if not cfg_queue_entry.to_be_deleted(now):
             continue
 
         yield cfg_queue_entry
