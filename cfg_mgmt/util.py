@@ -221,6 +221,7 @@ def cfg_element_statuses_to_es(
                     'responsible_name': names,
                     'responsible_type': types,
                     'is_compliant': bool(report.compliantElementsCount),
+                    'rotation_method': cfg_element_status.policy.rotation_method.value,
                 },
                 inject_metadata=False,
             )
