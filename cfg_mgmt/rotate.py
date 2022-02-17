@@ -71,7 +71,6 @@ def delete_cfg_element(
                 cmg.delete_service_account_key(
                     iam_client=iam_client,
                     service_account_key_name=cfg_queue_entry.secretId['gcp_secret_key'],
-                    absent_ok=True,
                 )
                 did_remove = True
             except:
