@@ -112,13 +112,13 @@ def replicate_secrets(
                 serialized_secret_data=serialiser.serialise().encode('utf-8')
             )
             encoded_cipher_data = base64.b64encode(encrypted_cipher_data).decode('utf-8')
-            print(f'deploying secret {f_name} in namespace {target_secret_namespace}')
+            logger.info(f'deploying secret {f_name} in namespace {target_secret_namespace}')
             secrets_helper.put_secret(
                 name=f_name,
                 raw_data={target_secret_cfg_name: encoded_cipher_data},
                 namespace=target_secret_namespace,
             )
         else:
-            logger.error(f'ignoring unmatched key: {k}')
+            logger.warning(f'ignoring unmatched key: {k}')
 
     logger.info(f'deployed encrypted secret for team: {team_name}')

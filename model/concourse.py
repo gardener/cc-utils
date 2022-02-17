@@ -416,6 +416,11 @@ class JobMappingSet(NamedModelElement):
             tgt_team_names.remove(team_name)
 
 
+class SecretNamePattern(Enum):
+    PREFIX = 'cc-'
+    POSTFIX = '-config'
+
+
 class SecretsRepo(ModelBase):
     def github_cfg(self):
         return self.raw.get('github_cfg')
@@ -430,7 +435,7 @@ class SecretsRepo(ModelBase):
 def cfg_name_from_team(team_name):
     team_name = re.sub('(.)([A-Z][a-z]+)', r'\1-\2', team_name)
     team_name = re.sub('([a-z0-9])([A-Z])', r'\1-\2', team_name).lower()
-    return f'cc-{team_name}-config'
+    return f'{SecretNamePattern.PREFIX.value}{team_name}{SecretNamePattern.POSTFIX.value}'
 
 
 def secret_cfg_name_for_team(team_name):
