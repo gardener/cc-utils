@@ -3,7 +3,10 @@ import re
 
 import cfg_mgmt.gcp
 import cfg_mgmt.reporting as cmr
+import cfg_mgmt.rotate
+import cfg_mgmt.model
 import cfg_mgmt.util as cmu
+import model
 
 __cmd_name__ = 'cfg_mgmt'
 logger = logging.getLogger(__name__)
@@ -44,25 +47,34 @@ def report(
         pass
 
 
-def rotate_gcr_config(
+def rotate(
     cfg_dir: str,
-    element_name: str,
-    repo_url: str,
-    github_repo_path: str,
-    target_ref: str,
+    type_name: str,
+    name: str,
+    github_cfg: str, # e.g. github_wdf_sap_corp
+    cfg_repo_path: str, # e.g. kubernetes/cc-config
+    tgt_ref: str='refs/heads/master',
 ):
-    '''
-    Rotates GCR credential from given directory without checking whether rotation is required.
-    A new secret-key is created, and stored in the configuration element store
-    (container_registry.yaml), replacing the previous one. In addition, the update-timestamp
-    for the configuration element is updated in config_status.yaml, and the old secret key is
-    marked for deletion (config_queue.yaml). The change is commited, and pushed to the given
-    push target. In case pushing fails, the secret key is deleted again.
-    '''
-    cfg_mgmt.gcp.force_rotate_cfg_element(
-        cfg_element_name=element_name,
+    cfg_factory = model.ConfigFactory.from_cfg_dir(
         cfg_dir=cfg_dir,
-        repo_url=repo_url,
-        github_repo_path=github_repo_path,
-        target_ref=target_ref,
+        disable_cfg_element_lookup=True,
+    )
+
+    github_cfg = cfg_factory.github(github_cfg)
+
+    cfg_element = cfg_factory._cfg_element(
+        cfg_type_name=type_name,
+        cfg_name=name,
+    )
+
+    cfg_metadata = cfg_mgmt.model.cfg_metadata_from_cfg_dir(cfg_dir=cfg_dir)
+
+    cfg_mgmt.rotate.rotate_cfg_element(
+        cfg_factory=cfg_factory,
+        cfg_dir=cfg_dir,
+        cfg_element=cfg_element,
+        target_ref=tgt_ref,
+        github_cfg=github_cfg,
+        cfg_metadata=cfg_metadata,
+        github_repo_path=cfg_repo_path,
     )
