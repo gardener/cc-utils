@@ -200,10 +200,16 @@ def cfg_element_statuses_to_es(
             names = [resp.name for resp in cfg_element_status.responsible.responsibles]
             types = [resp.type.value for resp in cfg_element_status.responsible.responsibles]
 
-        report = list(cmr.create_report(
+        # HACK
+        # We only use create_report to determine is_compliant flag.
+        # Therefore the amount of compliant elements is considered.
+        # As we only pass one cfg_element_status to create_report,
+        # the amount of compliant elements is either 0 or 1
+        report = next(cmr.create_report(
             cfg_element_statuses=[cfg_element_status],
             print_report=False,
-        ))[0]
+        ))
+
         try:
             es_client.store_document(
                 index='cc_cfg_compliance_responsible',
