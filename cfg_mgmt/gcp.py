@@ -13,7 +13,6 @@ import ccc.github
 import cfg_mgmt.model as cmm
 import ci.log
 import ci.util
-import gitutil
 import model
 import model.container_registry
 
@@ -157,43 +156,3 @@ def create_secret_and_persist_in_cfg_repo(
         )
 
     return revert
-
-
-def force_rotate_cfg_element(
-    cfg_element_name: str,
-    cfg_dir: str,
-    repo_url: str,
-    github_repo_path: str,
-    target_ref: str,
-):
-    '''
-    Rotates given cfg_element without checking whether rotation is required.
-    '''
-    cfg_fac = model.ConfigFactory.from_cfg_dir(
-        cfg_dir=cfg_dir,
-        disable_cfg_element_lookup=True,
-    )
-    cfg_element = cfg_fac.container_registry(cfg_element_name)
-
-    logger.info('force rotating, rotation required is ignored')
-    logger.info(f'rotating {cfg_element.name()}')
-
-    github_cfg = ccc.github.github_cfg_for_repo_url(
-        repo_url=repo_url,
-    )
-    git_helper = gitutil.GitHelper(
-        repo=cfg_dir,
-        github_cfg=github_cfg,
-        github_repo_path=github_repo_path,
-    )
-
-    cfg_metadata = cmm.cfg_metadata_from_cfg_dir(cfg_dir)
-
-    rotate_gcr_cfg_element(
-        cfg_factory=cfg_fac,
-        cfg_element=cfg_element,
-        cfg_dir=cfg_dir,
-        git_helper=git_helper,
-        target_ref=target_ref,
-        cfg_metadata=cfg_metadata,
-    )
