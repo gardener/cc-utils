@@ -58,7 +58,7 @@ def process_config_queue(
 
         # stop after first successful deletion (avoid causing too much trouble at one time
         return
-    logger.info('no to be deleted config queue entry found')
+    logger.info('did not find a config queue entry to delete')
 
 
 def rotate_secrets(
