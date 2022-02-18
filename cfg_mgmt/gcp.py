@@ -48,7 +48,6 @@ def delete_service_account_key(
     iam_client: googleapiclient.discovery.Resource,
     service_account_key_name: str,
 ):
-    # TODO: check whether key exists
     iam_client.projects().serviceAccounts().keys().delete(
         name=service_account_key_name,
     ).execute()
