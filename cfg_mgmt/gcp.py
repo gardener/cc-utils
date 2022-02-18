@@ -12,6 +12,7 @@ import ccc.gcp
 import ccc.github
 import cfg_mgmt
 import cfg_mgmt.model as cmm
+import cfg_mgmt.util as cmu
 import ci.log
 import ci.util
 import model
@@ -92,16 +93,12 @@ def create_secret_and_persist_in_cfg_repo(
     logger.info('secret patched')
 
     # add old key to rotation queue
-    cfg_queue_entry = cmm.CfgQueueEntry(
-        target=cmm.CfgTarget(
-            name=cfg_element.name(),
-            type='container_registry',
-        ),
-        deleteAfter=(datetime.datetime.now() + datetime.timedelta(days=7)).isoformat(),
-        secretId={'gcp_secret_key': old_key_id},
+    cfg_metadata.queue.append(
+        cmu.create_config_queue_entry(
+            queue_entry_config_element=cfg_element,
+            queue_entry_data={'gcp_secret_key': old_key_id},
+        )
     )
-
-    cfg_metadata.queue.append(cfg_queue_entry),
 
     with open(os.path.join(cfg_dir, cmm.cfg_queue_fname), 'w') as f:
         yaml.dump(
