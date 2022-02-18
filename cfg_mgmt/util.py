@@ -206,6 +206,40 @@ def create_config_queue_entry(
     )
 
 
+def update_config_status(
+    cfg_status_file_path: str,
+    config_element: model.NamedModelElement,
+    config_statuses: typing.Iterable[cmm.CfgStatus],
+):
+    for cfg_status in config_statuses:
+        if cfg_status.matches(
+            element=config_element,
+        ):
+            break
+    else:
+        # does not exist
+        cfg_status = cmm.CfgStatus(
+            target=cmm.CfgTarget(
+                type=config_element._type_name,
+                name=config_element.name(),
+            ),
+            credential_update_timestamp=datetime.date.today().isoformat(),
+        )
+        config_statuses.append(cfg_status)
+    cfg_status.credential_update_timestamp = datetime.date.today().isoformat()
+
+    with open(cfg_status_file_path, 'w') as f:
+        yaml.dump(
+            {
+                'config_status': [
+                    dataclasses.asdict(cfg_status)
+                    for cfg_status in config_statuses
+                ]
+            },
+            f,
+        )
+
+
 def write_config_queue(
     cfg_dir: str,
     cfg_metadata: cmm.CfgMetadata,

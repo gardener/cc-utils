@@ -1,6 +1,4 @@
 import base64
-import dataclasses
-import datetime
 import json
 import logging
 import os
@@ -106,36 +104,15 @@ def create_secret_and_persist_in_cfg_repo(
     )
     logger.info('old key added to rotation queue')
 
-    cfg_statuses = cfg_metadata.statuses
-
     # update credential timestamp, create if not present
-    for cfg_status in cfg_statuses:
-        if cfg_status.matches(
-            element=cfg_element,
-        ):
-            break
-    else:
-        # does not exist
-        cfg_status = cmm.CfgStatus(
-            target=cmm.CfgTarget(
-                type='container_registry',
-                name=cfg_element.name(),
-            ),
-            credential_update_timestamp=datetime.datetime.now().isoformat(),
+    cmu.update_config_status(
+        config_element=cfg_element,
+        config_statuses=cfg_metadata.statuses,
+        cfg_status_file_path=os.path.join(
+            cfg_dir,
+            cmm.cfg_status_fname,
         )
-        cfg_statuses.append(cfg_status)
-    cfg_status.credential_update_timestamp = datetime.datetime.now().isoformat()
-
-    with open(os.path.join(cfg_dir, cmm.cfg_status_fname), 'w') as f:
-        yaml.dump(
-            {
-                'config_status': [
-                    dataclasses.asdict(cfg_status)
-                    for cfg_status in cfg_statuses
-                ]
-            },
-            f,
-        )
+    )
 
     def revert():
         delete_service_account_key(

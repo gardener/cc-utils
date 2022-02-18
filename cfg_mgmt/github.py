@@ -1,5 +1,3 @@
-import dataclasses
-import datetime
 import logging
 import os
 import typing
@@ -15,8 +13,6 @@ import model
 import model.github
 
 from cfg_mgmt.model import (
-    CfgTarget,
-    CfgStatus,
     CfgMetadata,
     cfg_status_fname,
 )
@@ -113,11 +109,13 @@ def create_secret_and_persist_in_cfg_repo(
         cfg_metadata=cfg_metadata,
     )
 
-    _update_config_status(
-        cfg_dir=cfg_dir,
-        cfg_status_filename=cfg_status_fname,
+    cfg_mgmt.util.update_config_status(
         config_element=cfg_to_rotate,
         config_statuses=cfg_metadata.statuses,
+        cfg_status_file_path=os.path.join(
+            cfg_dir,
+            cfg_status_fname,
+        )
     )
 
     def revert():
@@ -146,41 +144,6 @@ def _write_github_configs(cfg_dir, cfg_file_name, github_configs):
     configs = {c.name(): c.raw for c in github_configs}
     with open(os.path.join(cfg_dir, cfg_file_name), 'w') as cfg_file:
         yaml.dump(configs, cfg_file, Dumper=ci.util.MultilineYamlDumper)
-
-
-def _update_config_status(
-    cfg_dir: str,
-    cfg_status_filename: str,
-    config_element: model.NamedModelElement,
-    config_statuses: typing.Iterable[CfgStatus],
-):
-    for cfg_status in config_statuses:
-        if cfg_status.matches(
-            element=config_element,
-        ):
-            break
-    else:
-        # does not exist
-        cfg_status = CfgStatus(
-            target=CfgTarget(
-                type=config_element._type_name,
-                name=config_element.name(),
-            ),
-            credential_update_timestamp=datetime.date.today().isoformat(),
-        )
-        config_statuses.append(cfg_status)
-    cfg_status.credential_update_timestamp = datetime.date.today().isoformat()
-
-    with open(os.path.join(cfg_dir, cfg_status_filename), 'w') as f:
-        yaml.dump(
-            {
-                'config_status': [
-                    dataclasses.asdict(cfg_status)
-                    for cfg_status in config_statuses
-                ]
-            },
-            f,
-        )
 
 
 def update_user(
