@@ -35,22 +35,6 @@ def write_config_queue(
         )
 
 
-def push_config_queue(
-    git_helper: gitutil.GitHelper,
-    target_ref: str,
-    type_name: str,
-    name: str,
-):
-    git_helper.add_and_commit(
-        message=f'process config queue for {type_name}/{name}',
-    )
-    try:
-        git_helper.push('@', target_ref)
-    except:
-        logger.warning('failed to push processed config queue - reverting')
-        git_helper.repo.git.reset('--hard', '@~')
-
-
 def delete_cfg_element(
     cfg_dir: str,
     cfg_queue_entry: cmm.CfgQueueEntry,
@@ -92,12 +76,14 @@ def delete_cfg_element(
             cfg_queue=new_cfg_queue,
             cfg_queue_file_path=os.path.join(cfg_dir, cmm.cfg_queue_fname),
         )
-        push_config_queue(
-            git_helper=git_helper,
-            target_ref=target_ref,
-            type_name=cfg_element._type_name,
-            name=cfg_element.name()
+        git_helper.add_and_commit(
+            message=f'process config queue for {cfg_element._type_name}/{cfg_element.name()}',
         )
+        try:
+            git_helper.push('@', target_ref)
+        except:
+            logger.warning('failed to push processed config queue - reverting')
+            git_helper.repo.git.reset('--hard', '@~')
 
     return did_remove
 
