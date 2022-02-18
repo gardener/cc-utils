@@ -86,9 +86,6 @@ def process_config_queue(
         name=name,
     )
 
-    # cfg_queue_entries cannot be select with much comfort as cli argument.
-    # Therefore, as in pipeline case, they are iterated and the first candidate
-    # is processed.
     for cfg_queue_entry in cmu.iter_cfg_queue_entries_to_be_deleted(
         cfg_metadata=cfg_metadata,
         cfg_target=cfg_target,
