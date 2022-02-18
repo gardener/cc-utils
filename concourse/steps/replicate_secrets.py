@@ -26,8 +26,7 @@ def process_config_queue(
     target_ref: str,
 ):
     '''
-    Iterates to be deleted cfg_queue_entries.
-    Processes very first supported entry and terminates.
+    Find first config queue entry that should be deleted and delete it.
     '''
     cfg_metadata = cmm.cfg_metadata_from_cfg_dir(cfg_dir=cfg_dir)
     cfg_factory = model.ConfigFactory.from_cfg_dir(
