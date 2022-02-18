@@ -10,6 +10,7 @@ import googleapiclient
 
 import ccc.gcp
 import ccc.github
+import cfg_mgmt
 import cfg_mgmt.model as cmm
 import ci.log
 import ci.util
@@ -57,7 +58,7 @@ def create_secret_and_persist_in_cfg_repo(
     cfg_dir: str,
     cfg_element: model.container_registry.ContainerRegistryConfig,
     cfg_metadata: cmm.CfgMetadata,
-):
+) ->  cfg_mgmt.revert_function:
     client_email = json.loads(cfg_element.password())['client_email']
 
     iam_client = ccc.gcp.create_iam_client(

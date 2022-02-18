@@ -8,6 +8,7 @@ import yaml
 from Crypto.PublicKey import RSA
 
 import ccc.github
+import cfg_mgmt
 import cfg_mgmt.util
 import ci.util
 import model
@@ -35,7 +36,7 @@ def create_secret_and_persist_in_cfg_repo(
     cfg_dir: str,
     cfg_element: GithubConfig,
     cfg_metadata: CfgMetadata,
-):
+) -> cfg_mgmt.revert_function:
     cfg_factory = model.ConfigFactory.from_cfg_dir(cfg_dir, disable_cfg_element_lookup=True)
 
     local_sources = cfg_mgmt.util.local_cfg_type_sources(
