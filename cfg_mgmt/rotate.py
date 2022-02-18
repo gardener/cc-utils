@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 def rotate_cfg_element(
-    cfg_factory,
     cfg_dir: str,
     cfg_element: model.NamedModelElement,
     target_ref: str,
