@@ -56,7 +56,7 @@ def process_config_queue(
         ):
             continue
 
-        # stop after first successful rotation (avoid causing too much trouble at one time
+        # stop after first successful deletion (avoid causing too much trouble at one time
         return
     logger.info('no to be deleted config queue entry found')
 
