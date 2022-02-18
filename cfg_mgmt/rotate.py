@@ -1,6 +1,8 @@
 import logging
+import typing
 
 import cfg_mgmt.gcp as cmg
+import cfg_mgmt.github as cmgh
 import cfg_mgmt.model as cmm
 import gitutil
 import model
@@ -27,8 +29,10 @@ def rotate_cfg_element(
         github_cfg=github_cfg,
         github_repo_path=github_repo_path,
     )
-
-    update_secret_function = None
+    revert_function = typing.Callable[[], None]
+    update_secret_function: typing.Callable[
+        [str, model.NamedModelElement, cmm.CfgMetadata], revert_function
+    ] = None
 
     if type_name == 'container_registry':
         if cfg_element.registry_type() == om.OciRegistryType.GCR:
