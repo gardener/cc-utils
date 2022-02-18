@@ -70,7 +70,6 @@ def rotate(
     cfg_metadata = cfg_mgmt.model.cfg_metadata_from_cfg_dir(cfg_dir=cfg_dir)
 
     cfg_mgmt.rotate.rotate_cfg_element(
-        cfg_factory=cfg_factory,
         cfg_dir=cfg_dir,
         cfg_element=cfg_element,
         target_ref=tgt_ref,
