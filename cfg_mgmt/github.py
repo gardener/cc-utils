@@ -15,7 +15,6 @@ import model
 import model.github
 
 from cfg_mgmt.model import (
-    CfgQueueEntry,
     CfgTarget,
     CfgStatus,
     CfgMetadata,
@@ -104,7 +103,7 @@ def create_secret_and_persist_in_cfg_repo(
     )
 
     cfg_metadata.queue.append(
-        _create_config_queue_entry(
+        cfg_mgmt.util.create_config_queue_entry(
             queue_entry_config_element=cfg_to_rotate,
             queue_entry_data={'github_users': old_public_keys},
         )
@@ -198,20 +197,6 @@ def _update_config_status(
             },
             f,
         )
-
-
-def _create_config_queue_entry(
-    queue_entry_config_element,
-    queue_entry_data,
-):
-    return CfgQueueEntry(
-        target=CfgTarget(
-            name=queue_entry_config_element.name(),
-            type=queue_entry_config_element._type_name,
-        ),
-        deleteAfter=(datetime.datetime.today() + datetime.timedelta(days=7)).date().isoformat(),
-        secretId=queue_entry_data,
-    )
 
 
 def update_user(

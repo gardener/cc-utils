@@ -189,6 +189,20 @@ def cfg_report_summaries_to_es(
             logger.warning('could not send route request to elastic search')
 
 
+def create_config_queue_entry(
+    queue_entry_config_element: model.NamedModelElement,
+    queue_entry_data: dict,
+) -> cmm.CfgQueueEntry:
+    return cmm.CfgQueueEntry(
+        target=cmm.CfgTarget(
+            name=queue_entry_config_element.name(),
+            type=queue_entry_config_element._type_name,
+        ),
+        deleteAfter=(datetime.datetime.today() + datetime.timedelta(days=7)).date().isoformat(),
+        secretId=queue_entry_data,
+    )
+
+
 def cfg_element_statuses_to_es(
     es_client,
     cfg_element_statuses: typing.Iterable[cmr.CfgElementStatusReport],
