@@ -593,3 +593,16 @@ def dict_factory_enum_serialisiation(data):
         return obj
 
     return dict((k, convert_value(v)) for k, v in data)
+
+
+class MultilineYamlDumper(yaml.SafeDumper):
+    def represent_data(self, data):
+        # by default, the SafeDumper includes an extra empty line for each line in the data for
+        # string-blocks. As all provided ways to configure the dumper differently affect all
+        # rendered types we create our own Dumper.
+        if isinstance(data, str) and '\n' in data:
+            return self.represent_scalar(u'tag:yaml.org,2002:str', data, style='|')
+        # Also, don't include keys with None/null values.
+        if data is None:
+            return self.represent_scalar('tag:yaml.org,2002:null', '')
+        return super().represent_data(data)

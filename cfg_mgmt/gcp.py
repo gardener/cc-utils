@@ -100,16 +100,10 @@ def create_secret_and_persist_in_cfg_repo(
         )
     )
 
-    with open(os.path.join(cfg_dir, cmm.cfg_queue_fname), 'w') as f:
-        yaml.dump(
-            {
-                'rotation_queue': [
-                    dataclasses.asdict(cfg_queue_entry)
-                    for cfg_queue_entry in cfg_metadata.queue
-                ]
-            },
-            f,
-        )
+    cmu.write_config_queue(
+        cfg_dir=cfg_dir,
+        cfg_metadata=cfg_metadata,
+    )
     logger.info('old key added to rotation queue')
 
     cfg_statuses = cfg_metadata.statuses

@@ -1,6 +1,9 @@
+import dataclasses
 import datetime
 import logging
+import os
 import typing
+import yaml
 
 import dateutil.parser
 
@@ -201,6 +204,24 @@ def create_config_queue_entry(
         deleteAfter=(datetime.datetime.today() + datetime.timedelta(days=7)).date().isoformat(),
         secretId=queue_entry_data,
     )
+
+
+def write_config_queue(
+    cfg_dir: str,
+    cfg_metadata: cmm.CfgMetadata,
+    queue_file_name: str=cmm.cfg_queue_fname,
+):
+    with open(os.path.join(cfg_dir, queue_file_name), 'w') as queue_file:
+        yaml.dump(
+            {
+                'rotation_queue': [
+                    dataclasses.asdict(cfg_queue_entry)
+                    for cfg_queue_entry in cfg_metadata.queue
+                ],
+            },
+            queue_file,
+            Dumper=ci.util.MultilineYamlDumper,
+        )
 
 
 def cfg_element_statuses_to_es(

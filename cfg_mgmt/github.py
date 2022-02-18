@@ -18,7 +18,6 @@ from cfg_mgmt.model import (
     CfgTarget,
     CfgStatus,
     CfgMetadata,
-    cfg_queue_fname,
     cfg_status_fname,
 )
 from model.github import (
@@ -109,7 +108,10 @@ def create_secret_and_persist_in_cfg_repo(
         )
     )
 
-    _write_config_queue(cfg_dir, cfg_metadata)
+    cfg_mgmt.util.write_config_queue(
+        cfg_dir=cfg_dir,
+        cfg_metadata=cfg_metadata,
+    )
 
     _update_config_status(
         cfg_dir=cfg_dir,
@@ -143,25 +145,7 @@ def create_secret_and_persist_in_cfg_repo(
 def _write_github_configs(cfg_dir, cfg_file_name, github_configs):
     configs = {c.name(): c.raw for c in github_configs}
     with open(os.path.join(cfg_dir, cfg_file_name), 'w') as cfg_file:
-        yaml.dump(configs, cfg_file, Dumper=MultilineYamlDumper)
-
-
-def _write_config_queue(
-    cfg_dir,
-    cfg_metadata: CfgMetadata,
-    queue_file_name=cfg_queue_fname,
-):
-    with open(os.path.join(cfg_dir, queue_file_name), 'w') as queue_file:
-        yaml.dump(
-            {
-                'rotation_queue': [
-                    dataclasses.asdict(cfg_queue_entry)
-                    for cfg_queue_entry in cfg_metadata.queue
-                ],
-            },
-            queue_file,
-            Dumper=MultilineYamlDumper,
-        )
+        yaml.dump(configs, cfg_file, Dumper=ci.util.MultilineYamlDumper)
 
 
 def _update_config_status(
@@ -257,16 +241,3 @@ def _create_key_pair(
         private_key.export_key().decode('utf-8'),
         public_key.export_key(format='OpenSSH').decode('utf-8')
     )
-
-
-class MultilineYamlDumper(yaml.SafeDumper):
-    def represent_data(self, data):
-        # by default, the SafeDumper includes an extra empty line for each line in the data for
-        # string-blocks. As all provided ways to configure the dumper differently affect all
-        # rendered types we create our own Dumper.
-        if isinstance(data, str) and '\n' in data:
-            return self.represent_scalar(u'tag:yaml.org,2002:str', data, style='|')
-        # Also, don't include keys with None/null values.
-        if data is None:
-            return self.represent_scalar('tag:yaml.org,2002:null', '')
-        return super().represent_data(data)
