@@ -157,11 +157,10 @@ def update_user(
     cfg_factory: model.ConfigFactory,
 ) -> str:
     gh_api = ccc.github.github_api(
-        github_config=github_config,
+        github_cfg=github_config,
         username=credential.username(),
         cfg_factory=cfg_factory,
     )
-
     private_key, public_key = _create_key_pair()
     gh_api.create_key(
         title='Auto-generated key',
