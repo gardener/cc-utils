@@ -180,15 +180,15 @@ class CfgMetadata:
     queue: list[CfgQueueEntry]
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class CfgStatusAnalysis:
     fullyCompliant: bool
     hasResponsible: bool
     hasRule: bool
     assignedRuleRefersToUndefinedPolicy: bool
     hasStatus: bool
-    requiresStatus: bool = None
-    credentialsOutdated: bool = None
+    requiresStatus: typing.Optional[bool]
+    credentialsOutdated: typing.Optional[bool]
 
 
 @dataclasses.dataclass

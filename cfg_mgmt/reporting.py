@@ -34,53 +34,61 @@ def analyse_cfg_element_status(
     cfg_element_status: CfgElementStatusReport,
 ) -> cmm.CfgStatusAnalysis:
 
-    analysis = cmm.CfgStatusAnalysis(
-        fullyCompliant=True,
-        hasResponsible=True,
-        hasRule=True,
-        assignedRuleRefersToUndefinedPolicy=False,
-        hasStatus=True,
-    )
+    fully_compliant = True
+    has_responsible = True
+    has_rule = True
+    assigned_rule_refers_to_undefined_policy = False
+    has_status = True
+    requires_status = None
+    credentials_outdated = None
 
     if not cfg_element_status.responsible:
-        analysis.fullyCompliant = False
-        analysis.hasResponsible = False
+        fully_compliant = False
+        has_responsible = False
 
     if not cfg_element_status.rule:
-        analysis.fullyCompliant = False
-        analysis.hasRule = False
+        fully_compliant = False
+        has_rule = False
 
     elif not cfg_element_status.policy:
-        analysis.fullyCompliant = False
-        analysis.assignedRuleRefersToUndefinedPolicy = True
+        fully_compliant = False
+        assigned_rule_refers_to_undefined_policy = True
 
     elif cfg_element_status.policy.type is cmm.PolicyType.MAX_AGE:
         policy = cfg_element_status.policy
 
         # status is only required if policy requires rotation
         if policy.max_age is None:
-            analysis.requiresStatus = False
+            requires_status = False
         else:
-            analysis.requiresStatus = True
+            requires_status = True
 
-        if analysis.requiresStatus:
+        if requires_status:
             if not (status := cfg_element_status.status):
-                analysis.fullyCompliant = False
-                analysis.hasStatus = False
+                fully_compliant = False
+                has_status = False
 
             else:
                 last_update = dp.isoparse(status.credential_update_timestamp)
 
                 if policy.check(last_update=last_update):
-                    analysis.credentialsOutdated = False
+                    credentials_outdated = False
                 else:
-                    analysis.fullyCompliant = False
-                    analysis.credentialsOutdated = True
+                    fully_compliant = False
+                    credentials_outdated = True
 
     else:
         raise NotImplementedError(cfg_element_status.policy.type)
 
-    return analysis
+    return cmm.CfgStatusAnalysis(
+        fullyCompliant=fully_compliant,
+        hasResponsible=has_responsible,
+        hasRule=has_rule,
+        assignedRuleRefersToUndefinedPolicy=assigned_rule_refers_to_undefined_policy,
+        hasStatus=has_status,
+        requiresStatus=requires_status,
+        credentialsOutdated=credentials_outdated,
+    )
 
 
 def create_report(
