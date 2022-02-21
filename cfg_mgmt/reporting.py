@@ -54,12 +54,8 @@ def analyse_cfg_element_status(
         analysis.fullyCompliant = False
         analysis.assignedRuleRefersToUndefinedPolicy = True
 
-    else:
-        # have rule w/ policy
-        # XXX hardcode there is only one rule-type (-> checking for credential-age)
+    elif cfg_element_status.policy.type is cmm.PolicyType.MAX_AGE:
         policy = cfg_element_status.policy
-        if not policy.type is cmm.PolicyType.MAX_AGE:
-            raise NotImplementedError(policy.type)
 
         # status is only required if policy requires rotation
         if policy.max_age is None:
@@ -80,6 +76,9 @@ def analyse_cfg_element_status(
                 else:
                     analysis.fullyCompliant = False
                     analysis.credentialsOutdated = True
+
+    else:
+        raise NotImplementedError(cfg_element_status.policy.type)
 
     return analysis
 
