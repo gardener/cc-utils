@@ -14,6 +14,7 @@ import model.github
 
 from cfg_mgmt.model import (
     CfgMetadata,
+    CfgQueueEntry,
     cfg_status_fname,
 )
 from model.github import (
@@ -176,6 +177,25 @@ def undo_update(
         logger.warning(
             f'Current public key for {username} not known to github, nothing to revert.'
         )
+
+
+def delete_config_secret(
+    cfg_factory: model.ConfigFactory,
+    cfg_queue_entry: CfgQueueEntry,
+) -> bool:
+    github_config = cfg_factory.github(cfg_queue_entry.target.name)
+    for entry in cfg_queue_entry.secretId['github_users']:
+        username = entry['name']
+        gh_api = ccc.github.github_api(github_config, username=username)
+        for key in gh_api.keys():
+            if key.key == entry['public_key']:
+                key.delete()
+            else:
+                logger.warning(
+                    f'Old public key for {username} not known to github, nothing to delete.'
+                )
+
+    return True
 
 
 def _corresponding_public_key(
