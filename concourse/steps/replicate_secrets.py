@@ -46,10 +46,14 @@ def process_config_queue(
     for cfg_queue_entry in cmu.iter_cfg_queue_entries_to_be_deleted(
         cfg_metadata=cfg_metadata,
     ):
+        cfg_element = cfg_factory._cfg_element(
+            cfg_type_name=cfg_queue_entry.target.type,
+            cfg_name=cfg_queue_entry.target.name,
+        )
         if not cfg_mgmt.rotate.delete_cfg_element(
             cfg_dir=cfg_dir,
+            cfg_element=cfg_element,
             cfg_queue_entry=cfg_queue_entry,
-            cfg_fac=cfg_factory,
             cfg_metadata=cfg_metadata,
             git_helper=git_helper,
             target_ref=target_ref,

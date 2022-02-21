@@ -4,9 +4,6 @@ import os
 import typing
 import yaml
 
-import traceback
-
-import ccc.gcp
 import cfg_mgmt.gcp as cmg
 import cfg_mgmt.github as cmgh
 import cfg_mgmt.model as cmm
@@ -37,55 +34,53 @@ def write_config_queue(
 
 def delete_cfg_element(
     cfg_dir: str,
+    cfg_element: str,
     cfg_queue_entry: cmm.CfgQueueEntry,
-    cfg_fac: model.ConfigFactory,
     cfg_metadata: cmm.CfgMetadata,
     git_helper: gitutil.GitHelper,
     target_ref: str,
-) -> bool:
-    did_remove = False
-    if cfg_queue_entry.target.type == 'container_registry':
-        cfg_element = cfg_fac.container_registry(cfg_queue_entry.target.name)
+):
+
+    delete_func: typing.Callable[[model.NamedModelElement, str, cmm.CfgQueueEntry], None] = None
+
+    if (type_name := cfg_queue_entry.target.type) == 'container_registry':
         if cfg_element.registry_type() == om.OciRegistryType.GCR:
-            logger.info('deleting old gcr secret')
-            iam_client = ccc.gcp.create_iam_client(
-                cfg_element=cfg_element,
-            )
-            try:
-                cmg.delete_service_account_key(
-                    iam_client=iam_client,
-                    service_account_key_name=cfg_queue_entry.secretId['gcp_secret_key'],
-                )
-                did_remove = True
-            except:
-                logger.warning(f'deleting {cfg_queue_entry.secretId["gcp_secret_key"]} failed')
-                traceback.print_exc()
+            delete_func = cmg.delete_config_secret
         else:
-            logger.warning(
-                f'{cfg_element.registry_type()} is not (yet) supported for automated deletion'
-            )
-    else:
-        logger.warning(f'{cfg_queue_entry.target.type} is not (yet) supported for automated delete')
+            f'{cfg_element.registry_type()} is not (yet) supported for automated deletion'
+            return
 
-    if did_remove:
-        new_cfg_queue: typing.List[cmm.CfgQueueEntry] = [
-            entry for entry in cfg_metadata.queue
-            if not entry == cfg_queue_entry
-        ]
-        write_config_queue(
-            cfg_queue=new_cfg_queue,
-            cfg_queue_file_path=os.path.join(cfg_dir, cmm.cfg_queue_fname),
+    if not delete_func:
+        logger.warning(
+            f'{type_name} is not (yet) supported for automated deletion'
         )
-        git_helper.add_and_commit(
-            message=f'process config queue for {cfg_element._type_name}/{cfg_element.name()}',
-        )
-        try:
-            git_helper.push('@', target_ref)
-        except:
-            logger.warning('failed to push processed config queue - reverting')
-            git_helper.repo.git.reset('--hard', '@~')
+        return
 
-    return did_remove
+    try:
+        delete_func(cfg_element=cfg_element, cfg_dir=cfg_dir, cfg_queue_entry=cfg_queue_entry)
+    except Exception as e:
+        logger.error(
+            f"error deleting secret for cfg-type '{type_name}' with name "
+            f"'{cfg_queue_entry.target.name}': {e}."
+        )
+        raise
+
+    new_cfg_queue: typing.List[cmm.CfgQueueEntry] = [
+        entry for entry in cfg_metadata.queue
+        if not entry == cfg_queue_entry
+    ]
+    write_config_queue(
+        cfg_queue=new_cfg_queue,
+        cfg_queue_file_path=os.path.join(cfg_dir, cmm.cfg_queue_fname),
+    )
+    git_helper.add_and_commit(
+        message=f'process config queue for {cfg_element._type_name}/{cfg_element.name()}',
+    )
+    try:
+        git_helper.push('@', target_ref)
+    except:
+        logger.warning('failed to push processed config queue - reverting')
+        git_helper.repo.git.reset('--hard', '@~')
 
 
 def rotate_cfg_element(

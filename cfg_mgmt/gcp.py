@@ -124,3 +124,18 @@ def create_secret_and_persist_in_cfg_repo(
         )
 
     return revert
+
+
+def delete_config_secret(
+    cfg_element: model.container_registry.ContainerRegistryConfig,
+    cfg_dir: str,
+    cfg_queue_entry: cmm.CfgQueueEntry,
+):
+    logger.info('deleting old gcr secret')
+    iam_client = ccc.gcp.create_iam_client(
+        cfg_element=cfg_element,
+    )
+    delete_service_account_key(
+        iam_client=iam_client,
+        service_account_key_name=cfg_queue_entry.secretId['gcp_secret_key'],
+    )

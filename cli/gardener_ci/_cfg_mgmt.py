@@ -88,10 +88,14 @@ def process_config_queue(
         cfg_metadata=cfg_metadata,
         cfg_target=cfg_target,
     ):
+        cfg_element = cfg_factory._cfg_element(
+            cfg_type_name=cfg_queue_entry.target.type,
+            cfg_name=cfg_queue_entry.target.name,
+        )
         if not cfg_mgmt.rotate.delete_cfg_element(
             cfg_dir=cfg_dir,
             cfg_queue_entry=cfg_queue_entry,
-            cfg_fac=cfg_factory,
+            cfg_element=cfg_element,
             cfg_metadata=cfg_metadata,
             git_helper=git_helper,
             target_ref=tgt_ref,
@@ -100,7 +104,7 @@ def process_config_queue(
 
         # stop after first successful rotation (avoid causing too much trouble at one time
         return
-    logger.info('no to be deleted config queue entry found')
+    logger.info('no config-entry to be deleted found in config-queue')
 
 
 def rotate(
