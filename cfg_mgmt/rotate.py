@@ -50,6 +50,9 @@ def delete_cfg_element(
             f'{cfg_element.registry_type()} is not (yet) supported for automated deletion'
             return
 
+    elif type_name == 'github':
+        delete_func = cmgh.delete_config_secret
+
     if not delete_func:
         logger.warning(
             f'{type_name} is not (yet) supported for automated deletion'
