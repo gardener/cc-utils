@@ -171,23 +171,6 @@ def update_user(
     return public_key
 
 
-def undo_update(
-    github_config: GithubConfig,
-    username: str,
-):
-    credential = github_config.credentials(technical_user_name=username)
-    gh_api = ccc.github.github_api(github_config, username=username)
-    private_key = credential.private_key()
-    public_key = _corresponding_public_key(private_key)
-    for key in gh_api.keys():
-        if key.key == public_key:
-            key.delete()
-    else:
-        logger.warning(
-            f'Current public key for {username} not known to github, nothing to revert.'
-        )
-
-
 def delete_config_secret(
     cfg_factory: model.ConfigFactory,
     cfg_queue_entry: CfgQueueEntry,
