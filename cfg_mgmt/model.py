@@ -181,7 +181,7 @@ class CfgMetadata:
 
 
 @dataclasses.dataclass(frozen=True)
-class CfgStatusAnalysis:
+class CfgStatusEvaluationResult:
     fullyCompliant: bool
     hasResponsible: bool
     hasRule: bool

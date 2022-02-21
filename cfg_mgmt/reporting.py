@@ -30,9 +30,9 @@ class CfgElementStatusReport:
     status: typing.Optional[cmm.CfgStatus]
 
 
-def analyse_cfg_element_status(
+def evaluate_cfg_element_status(
     cfg_element_status: CfgElementStatusReport,
-) -> cmm.CfgStatusAnalysis:
+) -> cmm.CfgStatusEvaluationResult:
 
     fully_compliant = True
     has_responsible = True
@@ -80,7 +80,7 @@ def analyse_cfg_element_status(
     else:
         raise NotImplementedError(cfg_element_status.policy.type)
 
-    return cmm.CfgStatusAnalysis(
+    return cmm.CfgStatusEvaluationResult(
         fullyCompliant=fully_compliant,
         hasResponsible=has_responsible,
         hasRule=has_rule,
@@ -123,28 +123,28 @@ def create_report(
 
     for cfg_element_status in cfg_element_statuses:
         cfg_summary = compliance_summary(element_storage=cfg_element_status.element_storage)
-        analysis = analyse_cfg_element_status(cfg_element_status)
+        evaluation_result = evaluate_cfg_element_status(cfg_element_status)
 
-        if not analysis.hasResponsible:
+        if not evaluation_result.hasResponsible:
             no_responsible_assigned.append(cfg_element_status)
             cfg_summary.noResponsibleAssigned.append(cfg_element_status)
 
-        if not analysis.hasRule:
+        if not evaluation_result.hasRule:
             no_rule_assigned.append(cfg_element_status)
             cfg_summary.noRuleAssigned.append(cfg_element_status)
 
-        elif analysis.assignedRuleRefersToUndefinedPolicy:
+        elif evaluation_result.assignedRuleRefersToUndefinedPolicy:
             assigned_rule_refers_to_undefined_policy.append(cfg_element_status)
             cfg_summary.assignedRuleRefersToUndefinedPolicy.append(cfg_element_status)
 
         else:
-            if analysis.requiresStatus:
-                if not analysis.hasStatus:
+            if evaluation_result.requiresStatus:
+                if not evaluation_result.hasStatus:
                     no_status.append(cfg_element_status)
                     cfg_summary.noStatus.append(cfg_element_status)
 
                 else:
-                    if analysis.credentialsOutdated:
+                    if evaluation_result.credentialsOutdated:
                         credentials_outdated.append(cfg_element_status)
                         cfg_summary.credentialsOutdated.append(cfg_element_status)
 
@@ -152,7 +152,7 @@ def create_report(
                         credentials_not_outdated.append(cfg_element_status)
                         cfg_summary.credentialsNotOutdated.append(cfg_element_status)
 
-        if analysis.fullyCompliant:
+        if evaluation_result.fullyCompliant:
             fully_compliant.append(cfg_element_status)
             cfg_summary.fullyCompliant.append(cfg_element_status)
             cfg_summary.compliantElementsCount += 1
