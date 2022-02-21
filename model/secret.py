@@ -43,10 +43,15 @@ class Cipher(enum.Enum):
 
 class Secret(NamedModelElement):
     def key(self) -> bytes:
-        return self.raw.get('key').encode('utf-8')
+        if self.generation():
+            return self.key_from_gen()
+        else:
+            key = self.raw.get('key')
+            return key.encode('utf-8') if key else None
 
     def key_from_gen(self) -> bytes:
-        return self.raw.get(f'key-{self.generation()}').encode('utf-8')
+        key = self.raw.get(f'key-{self.generation()}')
+        return key.encode('utf-8') if key else None
 
     def cipher_algorithm(self):
         return Cipher(self.raw.get('cipher_algorithm'))
