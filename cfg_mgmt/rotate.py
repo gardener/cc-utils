@@ -131,9 +131,9 @@ def rotate_cfg_element(
             cfg_element=cfg_element,
             cfg_metadata=cfg_metadata,
         )
-    except:
+    except Exception as e:
         git_helper.repo.git.reset('--hard')
-        logger.warning(f'an error occured whilst trying to update secret for {cfg_element=}')
+        logger.warning(f'an error occured whilst trying to update secret for {cfg_element=}: {e}')
         return True
 
     git_helper.add_and_commit(
