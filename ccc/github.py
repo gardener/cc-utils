@@ -146,8 +146,8 @@ def github_api(
     if not cfg_factory:
         try:
             cfg_factory = ci.util.ctx().cfg_factory()
-        except:
-            logger.warning(f'error trying to retrieve {repo_url=} {github_cfg=}')
+        except Exception as e:
+            logger.warning(f'error trying to retrieve {repo_url=} {github_cfg=}: {e}')
             raise
 
     if isinstance(github_cfg, str):
