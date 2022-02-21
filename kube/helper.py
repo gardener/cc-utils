@@ -144,6 +144,17 @@ class KubernetesSecretHelper:
                 return None
         return secret
 
+    def delete_secret(self, name: str, namespace: str) -> bool:
+        '''Delete the `V1Secret` with the given name in the given namespace'''
+        try:
+            self.core_api.delete_namespaced_secret(name=name, namespace=namespace)
+            return True
+        except ApiException as ae:
+            if not ae.status == 404:
+                raise ae
+            else:
+                return False
+
     def list_secrets(self, namespace: str):
         secrets: V1SecretList = self.core_api.list_namespaced_secret(namespace=namespace)
         names = [s.metadata.name for s in secrets.items
