@@ -88,7 +88,7 @@ def create_secret_and_persist_in_cfg_repo(
     ]
 
     new_public_keys = {
-        credential.username(): update_user(cfg_to_rotate, credential)
+        credential.username(): update_user(cfg_to_rotate, credential, cfg_factory)
         for credential in technical_user_credentials
     }
 
@@ -128,7 +128,11 @@ def create_secret_and_persist_in_cfg_repo(
             username = credential.username()
             logger.warning(f"Rolling back changes to user '{username}'")
             new_pub_key = new_public_keys[username]
-            gh_api = ccc.github.github_api(cfg_to_rotate, username=username)
+            gh_api = ccc.github.github_api(
+                github_cfg=cfg_to_rotate,
+                username=username,
+                cfg_factory=cfg_factory,
+            )
             for key in gh_api.keys():
                 if key.key == new_pub_key:
                     key.delete()
@@ -150,8 +154,13 @@ def _write_github_configs(cfg_dir, cfg_file_name, github_configs):
 def update_user(
     github_config: GithubConfig,
     credential: GithubCredentials,
-) -> typing.Tuple[str, str]:
-    gh_api = ccc.github.github_api(github_config, username=credential.username())
+    cfg_factory: model.ConfigFactory,
+) -> str:
+    gh_api = ccc.github.github_api(
+        github_config=github_config,
+        username=credential.username(),
+        cfg_factory=cfg_factory,
+    )
 
     private_key, public_key = _create_key_pair()
     gh_api.create_key(
