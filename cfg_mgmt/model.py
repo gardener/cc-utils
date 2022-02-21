@@ -181,6 +181,17 @@ class CfgMetadata:
 
 
 @dataclasses.dataclass
+class CfgStatusAnalysis:
+    fullyCompliant: bool
+    hasResponsible: bool
+    hasRule: bool
+    assignedRuleRefersToUndefinedPolicy: bool
+    hasStatus: bool
+    requiresStatus: bool = None
+    credentialsOutdated: bool = None
+
+
+@dataclasses.dataclass
 class CfgReportingSummary:
     url: str
     noRuleAssigned: list

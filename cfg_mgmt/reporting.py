@@ -30,6 +30,60 @@ class CfgElementStatusReport:
     status: typing.Optional[cmm.CfgStatus]
 
 
+def analyse_cfg_element_status(
+    cfg_element_status: CfgElementStatusReport,
+) -> cmm.CfgStatusAnalysis:
+
+    analysis = cmm.CfgStatusAnalysis(
+        fullyCompliant=True,
+        hasResponsible=True,
+        hasRule=True,
+        assignedRuleRefersToUndefinedPolicy=False,
+        hasStatus=True,
+    )
+
+    if not cfg_element_status.responsible:
+        analysis.fullyCompliant = False
+        analysis.hasResponsible = False
+
+    if not cfg_element_status.rule:
+        analysis.fullyCompliant = False
+        analysis.hasRule = False
+
+    elif not cfg_element_status.policy:
+        analysis.fullyCompliant = False
+        analysis.assignedRuleRefersToUndefinedPolicy = True
+
+    else:
+        # have rule w/ policy
+        # XXX hardcode there is only one rule-type (-> checking for credential-age)
+        policy = cfg_element_status.policy
+        if not policy.type is cmm.PolicyType.MAX_AGE:
+            raise NotImplementedError(policy.type)
+
+        # status is only required if policy requires rotation
+        if policy.max_age is None:
+            analysis.requiresStatus = False
+        else:
+            analysis.requiresStatus = True
+
+        if analysis.requiresStatus:
+            if not (status := cfg_element_status.status):
+                analysis.fullyCompliant = False
+                analysis.hasStatus = False
+
+            else:
+                last_update = dp.isoparse(status.credential_update_timestamp)
+
+                if policy.check(last_update=last_update):
+                    analysis.credentialsOutdated = False
+                else:
+                    analysis.fullyCompliant = False
+                    analysis.credentialsOutdated = True
+
+    return analysis
+
+
 def create_report(
     cfg_element_statuses: typing.Iterable[CfgElementStatusReport],
     print_report: bool = True,
@@ -62,55 +116,40 @@ def create_report(
 
     for cfg_element_status in cfg_element_statuses:
         cfg_summary = compliance_summary(element_storage=cfg_element_status.element_storage)
+        analysis = analyse_cfg_element_status(cfg_element_status)
 
-        _fully_compliant = True
-
-        if not cfg_element_status.responsible:
-            _fully_compliant = False
+        if not analysis.hasResponsible:
             no_responsible_assigned.append(cfg_element_status)
             cfg_summary.noResponsibleAssigned.append(cfg_element_status)
 
-        if not cfg_element_status.rule:
-            _fully_compliant = False
+        if not analysis.hasRule:
             no_rule_assigned.append(cfg_element_status)
             cfg_summary.noRuleAssigned.append(cfg_element_status)
-        elif not cfg_element_status.policy:
-            _fully_compliant = False
+
+        elif analysis.assignedRuleRefersToUndefinedPolicy:
             assigned_rule_refers_to_undefined_policy.append(cfg_element_status)
             cfg_summary.assignedRuleRefersToUndefinedPolicy.append(cfg_element_status)
+
         else:
-            # have rule w/ policy
-            # XXX hardcode there is only one rule-type (-> checking for credential-age)
-            policy = cfg_element_status.policy
-            if not policy.type is cmm.PolicyType.MAX_AGE:
-                raise NotImplementedError(policy.type)
-
-            # status is only required if policy requires rotation
-            if policy.max_age is None:
-                require_status = False
-            else:
-                require_status = True
-
-            if require_status:
-                if not (status := cfg_element_status.status):
-                    _fully_compliant = False
+            if analysis.requiresStatus:
+                if not analysis.hasStatus:
                     no_status.append(cfg_element_status)
                     cfg_summary.noStatus.append(cfg_element_status)
-                else:
-                    last_update = dp.isoparse(status.credential_update_timestamp)
 
-                    if policy.check(last_update=last_update):
-                        credentials_not_outdated.append(cfg_element_status)
-                        cfg_summary.credentialsNotOutdated.append(cfg_element_status)
-                    else:
-                        _fully_compliant = False
+                else:
+                    if analysis.credentialsOutdated:
                         credentials_outdated.append(cfg_element_status)
                         cfg_summary.credentialsOutdated.append(cfg_element_status)
 
-        if _fully_compliant:
-            cfg_summary.compliantElementsCount += 1
+                    else:
+                        credentials_not_outdated.append(cfg_element_status)
+                        cfg_summary.credentialsNotOutdated.append(cfg_element_status)
+
+        if analysis.fullyCompliant:
             fully_compliant.append(cfg_element_status)
             cfg_summary.fullyCompliant.append(cfg_element_status)
+            cfg_summary.compliantElementsCount += 1
+
         else:
             cfg_summary.noncompliantElementsCount += 1
 
