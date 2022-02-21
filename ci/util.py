@@ -20,7 +20,9 @@ import hashlib
 import os
 import pathlib
 import shutil
+import string
 import sys
+import typing
 import yaml
 import yamllint
 import yamllint.config
@@ -421,14 +423,17 @@ def lint_yaml(input, config={'extends': 'relaxed'}):
         raise LintingError(f'linter found errors {linting_result=}')
 
 
-def random_str(prefix=None, length=12):
+def random_str(
+    prefix: typing.Optional[str]=None,
+    length: int=12,
+    alphabet: typing.Optional[str]=string.ascii_lowercase,
+) -> str:
     import random
-    import string
     if prefix:
         length -= len(prefix)
     else:
         prefix = ''
-    return prefix + ''.join(random.choice(string.ascii_lowercase) for _ in range(length))
+    return prefix + ''.join(random.choice(alphabet) for _ in range(length))
 
 
 def create_url_from_attributes(
