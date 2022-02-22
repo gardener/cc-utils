@@ -237,7 +237,7 @@ def write_config_queue(
         )
 
 
-def cfg_report_summaries_to_es(
+def cfg_compliance_status_to_es(
     es_client,
     cfg_report_summary_gen: typing.Generator[cmm.CfgStorageSummary, None, None],
 ):
@@ -254,7 +254,7 @@ def cfg_report_summaries_to_es(
         )
 
 
-def cfg_element_statuses_to_es(
+def cfg_compliance_responsibles_to_es(
     es_client,
     cfg_element_statuses: typing.Iterable[cmr.CfgElementStatusReport],
 ):

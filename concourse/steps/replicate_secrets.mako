@@ -106,11 +106,11 @@ cfg_report_summary_gen = cmr.cfg_element_statuses_storage_summaries(status_repor
 
 if (es_client := ccc.elasticsearch.from_cfg(cfg_set.elasticsearch())):
     logger.info('writing cfg status to elasticsearch')
-    cmu.cfg_report_summaries_to_es(
+    cmu.cfg_compliance_status_to_es(
         es_client=es_client,
         cfg_report_summary_gen=cfg_report_summary_gen,
     )
-    cmu.cfg_element_statuses_to_es(
+    cmu.cfg_compliance_responsibles_to_es(
         es_client=es_client,
         cfg_element_statuses=status_reports,
     )
