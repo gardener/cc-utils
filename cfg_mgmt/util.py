@@ -254,6 +254,24 @@ def cfg_compliance_status_to_es(
         )
 
 
+def cfg_compliance_storage_responsibles_to_es(
+    es_client,
+    cfg_responsible_summary_gen: typing.Generator[cmm.CfgResponsibleSummary, None, None],
+):
+    for cfg_responsible_sum in cfg_responsible_summary_gen:
+        cc_cfg_compliance_storage_responsibles = cfg_mgmt.metrics.CcCfgComplianceStorageResponsibles.create(
+            url=cfg_responsible_sum.url,
+            compliant_count=cfg_responsible_sum.compliantElementsCount,
+            non_compliant_count=cfg_responsible_sum.noncompliantElementsCount,
+            responsible=cfg_responsible_sum.responsible,
+        )
+
+        cfg_mgmt.metrics.metric_to_es(
+            es_client=es_client,
+            metric=cc_cfg_compliance_storage_responsibles,
+        )
+
+
 def cfg_compliance_responsibles_to_es(
     es_client,
     cfg_element_statuses: typing.Iterable[cmr.CfgElementStatusReport],

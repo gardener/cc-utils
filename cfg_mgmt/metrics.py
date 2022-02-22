@@ -11,6 +11,35 @@ logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(frozen=True)
+class CcCfgComplianceStorageResponsibles:
+    creation_date: str
+    compliant: int
+    noncompliant: int
+    responsible_name: str
+    responsible_type: str
+    url: str
+
+    @staticmethod
+    def create(
+        url: str,
+        responsible: cmm.CfgResponsible,
+        compliant_count: int,
+        non_compliant_count: int,
+    ):
+        '''
+        convenience method to create a `CcCfgComplianceStorageResponsibles`
+        '''
+        return CcCfgComplianceStorageResponsibles(
+            creation_date=datetime.datetime.now().isoformat(),
+            compliant=compliant_count,
+            noncompliant=non_compliant_count,
+            responsible_name=responsible.name,
+            responsible_type=responsible.type.value,
+            url=url,
+        )
+
+
+@dataclasses.dataclass(frozen=True)
 class CcCfgComplianceStatus:
     '''
     represents counts for (non)compliant cfg_elements for a url (element_storage)
@@ -88,6 +117,9 @@ def index_name(
 
     if isinstance(obj, CcCfgComplianceStatus):
         return 'cc_cfg_compliance_status'
+
+    if isinstance(obj, CcCfgComplianceStorageResponsibles):
+        return 'cc_cfg_compliance_storage_responsibles'
 
     raise NotImplementedError(obj)
 

@@ -119,7 +119,8 @@ class CfgResponsibleType(enum.Enum):
     EMAIL = 'email'
 
 
-@dataclasses.dataclass
+# hash used to determine compliance rate for a responsible
+@dataclasses.dataclass(unsafe_hash=True)
 class CfgResponsible:
     name: str
     type: CfgResponsibleType
@@ -189,6 +190,14 @@ class CfgStatusEvaluationResult:
     hasStatus: bool
     requiresStatus: typing.Optional[bool]
     credentialsOutdated: typing.Optional[bool]
+
+
+@dataclasses.dataclass
+class CfgResponsibleSummary:
+    url: str
+    responsible: CfgResponsible
+    compliantElementsCount: int = 0
+    noncompliantElementsCount: int = 0
 
 
 @dataclasses.dataclass

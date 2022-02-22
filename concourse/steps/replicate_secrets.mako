@@ -103,9 +103,10 @@ logger.info('generating cfg element status report')
 status_reports = cmu.generate_cfg_element_status_reports('${cfg_repo_relpath}')
 cmr.create_report(status_reports)
 cfg_report_summary_gen = cmr.cfg_element_statuses_storage_summaries(status_reports)
+cfg_responsible_summary_gen = cmr.cfg_element_statuses_responsible_summaries(status_reports)
 
 if (es_client := ccc.elasticsearch.from_cfg(cfg_set.elasticsearch())):
-    logger.info('writing cfg status to elasticsearch')
+    logger.info('writing cfg metrics to elasticsearch')
     cmu.cfg_compliance_status_to_es(
         es_client=es_client,
         cfg_report_summary_gen=cfg_report_summary_gen,
@@ -113,6 +114,10 @@ if (es_client := ccc.elasticsearch.from_cfg(cfg_set.elasticsearch())):
     cmu.cfg_compliance_responsibles_to_es(
         es_client=es_client,
         cfg_element_statuses=status_reports,
+    )
+    cmu.cfg_compliance_storage_responsibles_to_es(
+        es_client=es_client,
+        cfg_responsible_summary_gen=cfg_responsible_summary_gen,
     )
 else:
     logger.warning('not writing cfg status to elasticsearch, no client available')

@@ -91,6 +91,49 @@ def evaluate_cfg_element_status(
     )
 
 
+def cfg_element_statuses_responsible_summaries(
+    cfg_element_statuses: typing.Iterable[CfgElementStatusReport],
+) -> typing.Generator[cmm.CfgResponsibleSummary, None, None]:
+
+    responsible_summaries = dict()
+
+    def responsible_summary(responsible: cmm.CfgResponsible, url: str) -> cmm.CfgResponsibleSummary:
+        if (summary := responsible_summaries.get(responsible)):
+            return summary
+
+        cfg_responsible_summary = cmm.CfgResponsibleSummary(
+            url=url,
+            responsible=responsible,
+            compliantElementsCount=0,
+            noncompliantElementsCount=0,
+        )
+        responsible_summaries[responsible] = cfg_responsible_summary
+        return cfg_responsible_summary
+
+    for cfg_element_status in cfg_element_statuses:
+        local_responsible_summaries: typing.List[cmm.CfgResponsibleSummary] = []
+
+        if not cfg_element_status.responsible:
+            continue
+
+        for responsible in cfg_element_status.responsible.responsibles:
+            cfg_responsible_summary = responsible_summary(
+                responsible=responsible,
+                url=cfg_element_status.element_storage,
+            )
+            local_responsible_summaries.append(cfg_responsible_summary)
+
+        evaluation_result = evaluate_cfg_element_status(cfg_element_status)
+
+        for summary in local_responsible_summaries:
+            if evaluation_result.fullyCompliant:
+                summary.compliantElementsCount += 1
+            else:
+                summary.noncompliantElementsCount += 1
+
+    yield from responsible_summaries.values()
+
+
 def cfg_element_statuses_storage_summaries(
     cfg_element_statuses: typing.Iterable[CfgElementStatusReport],
 ) -> typing.Generator[cmm.CfgStorageSummary, None, None]:
