@@ -8,6 +8,7 @@ import yaml
 import dateutil.parser
 
 import cfg_mgmt.model as cmm
+import cfg_mgmt.metrics
 import cfg_mgmt.reporting as cmr
 import ci.util
 import model
@@ -263,12 +264,6 @@ def cfg_element_statuses_to_es(
     cfg_element_statuses: typing.Iterable[cmr.CfgElementStatusReport],
 ):
     for cfg_element_status in cfg_element_statuses:
-        names = []
-        types = []
-        if cfg_element_status.responsible:
-            names = [resp.name for resp in cfg_element_status.responsible.responsibles]
-            types = [resp.type.value for resp in cfg_element_status.responsible.responsibles]
-
         # HACK
         # We only use create_report to determine is_compliant flag.
         # Therefore the amount of compliant elements is considered.
@@ -279,25 +274,19 @@ def cfg_element_statuses_to_es(
             print_report=False,
         ))
 
-        try:
-            es_client.store_document(
-                index='cc_cfg_compliance_responsible',
-                body={
-                    'creation_date': datetime.datetime.now().isoformat(),
-                    'element_name': cfg_element_status.element_name,
-                    'element_type': cfg_element_status.element_type,
-                    'element_storage': cfg_element_status.element_storage,
-                    'responsible_name': names,
-                    'responsible_type': types,
-                    'is_compliant': bool(report.compliantElementsCount),
-                    'rotation_method': cfg_element_status.policy.rotation_method.value,
-                },
-                inject_metadata=False,
-            )
-        except Exception:
-            import traceback
-            logger.warning(traceback.format_exc())
-            logger.warning('could not send route request to elastic search')
+        cc_cfg_compliance_responsible = cfg_mgmt.metrics.CcCfgComplianceResponsible.create(
+            element_name=cfg_element_status.element_name,
+            element_type=cfg_element_status.element_type,
+            element_storage=cfg_element_status.element_storage,
+            is_compliant=bool(report.compliantElementsCount),
+            responsible=cfg_element_status.responsible,
+            rotation_method=cfg_element_status.policy.rotation_method,
+        )
+
+        cfg_mgmt.metrics.metric_to_es(
+            es_client=es_client,
+            metric=cc_cfg_compliance_responsible,
+        )
 
 
 def local_cfg_type_sources(
