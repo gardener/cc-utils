@@ -192,7 +192,10 @@ class CfgStatusEvaluationResult:
 
 
 @dataclasses.dataclass
-class CfgReportingSummary:
+class CfgStorageSummary:
+    '''
+    represents a compliance summary for a cfg_storage (url)
+    '''
     url: str
     noRuleAssigned: list
     noStatus: list

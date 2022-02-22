@@ -91,17 +91,17 @@ def evaluate_cfg_element_status(
     )
 
 
-def cfg_element_statuses_reporting_summaries(
+def cfg_element_statuses_storage_summaries(
     cfg_element_statuses: typing.Iterable[CfgElementStatusReport],
-) -> typing.Generator[cmm.CfgReportingSummary, None, None]:
+) -> typing.Generator[cmm.CfgStorageSummary, None, None]:
 
-    compliance_summaries = dict()
+    storage_summaries = dict()
 
-    def compliance_summary(element_storage: str):
-        if (summary := compliance_summaries.get(element_storage)):
+    def storage_summary(element_storage: str) -> cmm.CfgStorageSummary:
+        if (summary := storage_summaries.get(element_storage)):
             return summary
 
-        cfg_reporting_summary = cmm.CfgReportingSummary(
+        cfg_storage_summary = cmm.CfgStorageSummary(
             url=element_storage,
             noRuleAssigned=[],
             noStatus=[],
@@ -111,42 +111,42 @@ def cfg_element_statuses_reporting_summaries(
             credentialsNotOutdated=[],
             fullyCompliant=[],
         )
-        compliance_summaries[element_storage] = cfg_reporting_summary
-        return cfg_reporting_summary
+        storage_summaries[element_storage] = cfg_storage_summary
+        return cfg_storage_summary
 
     for cfg_element_status in cfg_element_statuses:
-        cfg_summary = compliance_summary(element_storage=cfg_element_status.element_storage)
+        cfg_storage_summary = storage_summary(cfg_element_status.element_storage)
         evaluation_result = evaluate_cfg_element_status(cfg_element_status)
 
         if not evaluation_result.hasResponsible:
-            cfg_summary.noResponsibleAssigned.append(cfg_element_status)
+            cfg_storage_summary.noResponsibleAssigned.append(cfg_element_status)
 
         if not evaluation_result.hasRule:
-            cfg_summary.noRuleAssigned.append(cfg_element_status)
+            cfg_storage_summary.noRuleAssigned.append(cfg_element_status)
 
         elif evaluation_result.assignedRuleRefersToUndefinedPolicy:
-            cfg_summary.assignedRuleRefersToUndefinedPolicy.append(cfg_element_status)
+            cfg_storage_summary.assignedRuleRefersToUndefinedPolicy.append(cfg_element_status)
 
         else:
             if evaluation_result.requiresStatus:
                 if not evaluation_result.hasStatus:
-                    cfg_summary.noStatus.append(cfg_element_status)
+                    cfg_storage_summary.noStatus.append(cfg_element_status)
 
                 else:
                     if evaluation_result.credentialsOutdated:
-                        cfg_summary.credentialsOutdated.append(cfg_element_status)
+                        cfg_storage_summary.credentialsOutdated.append(cfg_element_status)
 
                     else:
-                        cfg_summary.credentialsNotOutdated.append(cfg_element_status)
+                        cfg_storage_summary.credentialsNotOutdated.append(cfg_element_status)
 
         if evaluation_result.fullyCompliant:
-            cfg_summary.fullyCompliant.append(cfg_element_status)
-            cfg_summary.compliantElementsCount += 1
+            cfg_storage_summary.fullyCompliant.append(cfg_element_status)
+            cfg_storage_summary.compliantElementsCount += 1
 
         else:
-            cfg_summary.noncompliantElementsCount += 1
+            cfg_storage_summary.noncompliantElementsCount += 1
 
-    yield from compliance_summaries.values()
+    yield from storage_summaries.values()
 
 
 def create_report(

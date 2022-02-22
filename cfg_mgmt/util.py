@@ -239,7 +239,7 @@ def write_config_queue(
 
 def cfg_report_summaries_to_es(
     es_client,
-    cfg_report_summary_gen: typing.Generator[cmm.CfgReportingSummary, None, None],
+    cfg_report_summary_gen: typing.Generator[cmm.CfgStorageSummary, None, None],
 ):
     for cfg_report_summary in cfg_report_summary_gen:
         cc_cfg_compliance_status = cfg_mgmt.metrics.CcCfgComplianceStatus.create(
@@ -264,7 +264,7 @@ def cfg_element_statuses_to_es(
         # Therefore the amount of compliant elements is considered.
         # As we only pass one cfg_element_status,
         # the amount of compliant elements is either 0 or 1
-        reporting_summary = next(cmr.cfg_element_statuses_reporting_summaries(
+        reporting_summary = next(cmr.cfg_element_statuses_storage_summaries(
             cfg_element_statuses=[cfg_element_status],
         ))
 

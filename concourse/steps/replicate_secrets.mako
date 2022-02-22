@@ -102,7 +102,7 @@ logger.info('generating cfg element status report')
 
 status_reports = cmu.generate_cfg_element_status_reports('${cfg_repo_relpath}')
 cmr.create_report(status_reports)
-cfg_report_summary_gen = cmr.cfg_element_statuses_reporting_summaries(status_reports)
+cfg_report_summary_gen = cmr.cfg_element_statuses_storage_summaries(status_reports)
 
 if (es_client := ccc.elasticsearch.from_cfg(cfg_set.elasticsearch())):
     logger.info('writing cfg status to elasticsearch')
