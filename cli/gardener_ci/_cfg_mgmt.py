@@ -129,11 +129,15 @@ def rotate(
 
     cfg_metadata = cfg_mgmt.model.cfg_metadata_from_cfg_dir(cfg_dir=cfg_dir)
 
-    cfg_mgmt.rotate.rotate_cfg_element(
-        cfg_dir=cfg_dir,
+    if cmu.rotate_config_element_and_persist_in_cfg_repo(
         cfg_element=cfg_element,
-        target_ref=tgt_ref,
-        github_cfg=github_cfg,
+        cfg_factory=cfg_factory,
         cfg_metadata=cfg_metadata,
+        cfg_dir=cfg_dir,
+        github_cfg=github_cfg,
         github_repo_path=cfg_repo_path,
-    )
+        target_ref=tgt_ref,
+    ):
+        logger.info('Rotation successful')
+    else:
+        logger.warning('Config element was not rotated.')

@@ -3,6 +3,7 @@ import logging
 import typing
 import pprint
 import re
+import traceback
 
 import cfg_mgmt.model as cmm
 import cfg_mgmt.util as cmu
@@ -87,19 +88,17 @@ def rotate_secrets(
         cfg_metadata=cfg_metadata,
         rotation_method=cmm.RotationMethod.AUTOMATED,
     ):
-        if not cfg_mgmt.rotate.rotate_cfg_element(
-            cfg_dir=cfg_dir,
+        if cmu.rotate_config_element_and_persist_in_cfg_repo(
             cfg_element=cfg_element,
-            target_ref=target_ref,
-            github_cfg=github_cfg,
+            cfg_factory=cfg_factory,
             cfg_metadata=cfg_metadata,
+            cfg_dir=cfg_dir,
+            github_cfg=github_cfg,
             github_repo_path=github_repo_path,
+            target_ref=target_ref,
         ):
-            logger.info(f'skipping rotation of {cfg_element._type_name=} {cfg_element.name()}')
-            continue
-
-        # stop after first successful rotation (avoid causing too much trouble at one time
-        break
+            # stop after first successful rotation (avoid causing too much trouble at one time)
+            break
 
 
 def replicate_secrets(

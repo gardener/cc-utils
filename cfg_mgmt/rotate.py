@@ -4,9 +4,11 @@ import os
 import typing
 import yaml
 
+import cfg_mgmt
 import cfg_mgmt.gcp as cmg
 import cfg_mgmt.github as cmgh
 import cfg_mgmt.model as cmm
+import cfg_mgmt.util as cmu
 import gitutil
 import model
 import model.github
@@ -87,23 +89,25 @@ def delete_cfg_element(
 
 
 def rotate_cfg_element(
-    cfg_dir: str,
     cfg_element: model.NamedModelElement,
-    target_ref: str,
-    github_cfg: model.github.GithubConfig,
-    cfg_metadata: cmm.CfgMetadata,
-    github_repo_path: str,
-) -> bool:
+    cfg_factory: model.ConfigFactory,
+) -> typing.Union[typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement], None]:
+    '''Rotates the credentials contained in the given config-element, using only config from the
+    given factory (if necessary)
+
+    Returns a triple of (callable, dict, NamedModelElement) if rotation for the given config-
+    element is supported:
+    - The callable is a function that reverts the rotation again.
+    - The dict contains the meta-information about the rotation.
+    - The returned NamedModelElement is the updated version of the element that was passed in.
+
+    If rotation for the given element is not supported, `None` will be returned.
+    '''
     type_name = cfg_element._type_name
 
-    git_helper = gitutil.GitHelper(
-        repo=cfg_dir,
-        github_cfg=github_cfg,
-        github_repo_path=github_repo_path,
-    )
-    revert_function = typing.Callable[[], None]
     update_secret_function: typing.Callable[
-        [str, model.NamedModelElement, cmm.CfgMetadata], revert_function
+        [model.NamedModelElement, model.ConfigFactory],
+        typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]
     ] = None
 
     if type_name == 'container_registry':
@@ -114,34 +118,20 @@ def rotate_cfg_element(
             logger.warning(
                 f'{cfg_element.registry_type()} is not (yet) supported for automated rotation'
             )
-            return False
+            return None
 
     elif type_name == 'github':
         update_secret_function = cmgh.create_secret_and_persist_in_cfg_repo
 
     if not update_secret_function:
         logger.warning(f'{type_name=} is not (yet) supported for automated rotation')
-        return False
+        return None
 
     try:
-        revert_function = update_secret_function(
-            cfg_dir=cfg_dir,
+        return update_secret_function(
             cfg_element=cfg_element,
-            cfg_metadata=cfg_metadata,
+            cfg_factory=cfg_factory,
         )
     except Exception as e:
-        git_helper.repo.git.reset('--hard')
         logger.warning(f'an error occured whilst trying to update secret for {cfg_element=}: {e}')
-        return True
-
-    git_helper.add_and_commit(
-        message=f'rotate secret for {type_name}/{cfg_element.name()}',
-    )
-    try:
-        git_helper.push('@', target_ref)
-    except:
-        logger.warning('failed to push updated secret - reverting')
-        revert_function()
-        git_helper.repo.git.reset('--hard', '@~')
-
-    return True
+        raise
