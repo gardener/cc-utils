@@ -442,6 +442,13 @@ def secret_cfg_name_for_team(team_name):
     return f'{team_name}_cfg'
 
 
+def secret_name_from_team(team_name: str, key_generation: int) -> str:
+    if key_generation is None:
+        return cfg_name_from_team(team_name)
+    else:
+        return f'{cfg_name_from_team(team_name)}-{key_generation}'
+
+
 class JobMapping(NamedModelElement):
     def team_name(self) -> str:
         # todo: use `name` attr for that (thus enforce unique mappings)
