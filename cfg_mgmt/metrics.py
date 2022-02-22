@@ -12,6 +12,9 @@ logger = logging.getLogger(__name__)
 
 @dataclasses.dataclass(frozen=True)
 class CcCfgComplianceStatus:
+    '''
+    represents counts for (non)compliant cfg_elements for a url (element_storage)
+    '''
     url: str
     compliant: int
     noncompliant: int
@@ -36,6 +39,9 @@ class CcCfgComplianceStatus:
 
 @dataclasses.dataclass(frozen=True)
 class CcCfgComplianceResponsible:
+    '''
+    represents compliance status for a cfg_element per responsible
+    '''
     creation_date: str
     element_name: str
     element_type: str
