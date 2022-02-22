@@ -1,8 +1,8 @@
 import base64
+import copy
 import json
 import logging
-import os
-import yaml
+import typing
 
 import googleapiclient
 
@@ -10,7 +10,6 @@ import ccc.gcp
 import ccc.github
 import cfg_mgmt
 import cfg_mgmt.model as cmm
-import cfg_mgmt.util as cmu
 import ci.log
 import ci.util
 import model
@@ -53,11 +52,10 @@ def delete_service_account_key(
     logger.info('Deleted key: ' + service_account_key_name)
 
 
-def create_secret_and_persist_in_cfg_repo(
-    cfg_dir: str,
+def rotate_cfg_element(
     cfg_element: model.container_registry.ContainerRegistryConfig,
-    cfg_metadata: cmm.CfgMetadata,
-) ->  cfg_mgmt.revert_function:
+    cfg_factory: model.ConfigFactory,
+) ->  typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]:
     client_email = json.loads(cfg_element.password())['client_email']
 
     iam_client = ccc.gcp.create_iam_client(
@@ -79,40 +77,14 @@ def create_secret_and_persist_in_cfg_repo(
         service_account_name=service_account_name,
     )
 
-    cfg_file = ci.util.parse_yaml_file(os.path.join(cfg_dir, cmm.container_registry_fname))
+    raw_cfg = copy.deepcopy(cfg_element.raw)
 
-    # patch secret
-    cfg_file[cfg_element.name()]['password'] = json.dumps(new_key)
-    with open(os.path.join(cfg_dir, cmm.container_registry_fname), 'w') as f:
-        yaml.safe_dump(
-            cfg_file,
-            f,
-        )
-    logger.info('secret patched')
-
-    # add old key to rotation queue
-    cfg_metadata.queue.append(
-        cmu.create_config_queue_entry(
-            queue_entry_config_element=cfg_element,
-            queue_entry_data={'gcp_secret_key': old_key_id},
-        )
+    raw_cfg['password'] = json.dumps(new_key)
+    updated_elem = model.container_registry.ContainerRegistryConfig(
+        name=cfg_element.name(), raw_dict=raw_cfg, type_name=cfg_element._type_name
     )
 
-    cmu.write_config_queue(
-        cfg_dir=cfg_dir,
-        cfg_metadata=cfg_metadata,
-    )
-    logger.info('old key added to rotation queue')
-
-    # update credential timestamp, create if not present
-    cmu.update_config_status(
-        config_element=cfg_element,
-        config_statuses=cfg_metadata.statuses,
-        cfg_status_file_path=os.path.join(
-            cfg_dir,
-            cmm.cfg_status_fname,
-        )
-    )
+    secret_id = {'gcp_secret_key': old_key_id}
 
     def revert():
         delete_service_account_key(
@@ -123,7 +95,7 @@ def create_secret_and_persist_in_cfg_repo(
             )
         )
 
-    return revert
+    return revert, secret_id, updated_elem
 
 
 def delete_config_secret(

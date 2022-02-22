@@ -1,7 +1,6 @@
+import copy
 import logging
-import os
 import typing
-import yaml
 
 from Crypto.PublicKey import RSA
 
@@ -12,11 +11,7 @@ import ci.util
 import model
 import model.github
 
-from cfg_mgmt.model import (
-    CfgMetadata,
-    CfgQueueEntry,
-    cfg_status_fname,
-)
+from cfg_mgmt.model import CfgQueueEntry
 from model.github import (
     GithubConfig,
     GithubCredentials,
@@ -27,56 +22,19 @@ ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
 
 
-def create_secret_and_persist_in_cfg_repo(
-    cfg_dir: str,
-    cfg_element: GithubConfig,
-    cfg_metadata: CfgMetadata,
-) -> cfg_mgmt.revert_function:
-    cfg_factory = model.ConfigFactory.from_cfg_dir(cfg_dir, disable_cfg_element_lookup=True)
+def rotate_cfg_element(
+    cfg_element: model.container_registry.ContainerRegistryConfig,
+    cfg_factory: model.ConfigFactory,
+) ->  typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]:
 
-    local_sources = cfg_mgmt.util.local_cfg_type_sources(
-        cfg_element=cfg_element,
-        cfg_factory=cfg_factory,
+    # copy passed cfg_element, since we update in-place.
+    raw_cfg = copy.deepcopy(cfg_element.raw)
+    cfg_to_rotate = model.github.GithubConfig(
+        name=cfg_element.name(), raw_dict=raw_cfg, type_name=cfg_element._type_name
     )
 
-    if len(local_sources) != 1:
-        raise NotImplementedError(
-            'Do not know how to rotate github configs sourced from more than one file.'
-        )
-
-    source_file = next((s for s in local_sources))
-
-    known_github_configs: typing.Iterable[GithubConfig] = [
-        c for c in cfg_factory._cfg_elements(
-            cfg_type_name=cfg_element._type_name,
-        )
-    ]
-
-    cfg_name = cfg_element.name()
-    if not (cfg_to_rotate := next(
-        (c for c in known_github_configs if c.name() == cfg_name),
-        None,
-    )):
-        raise RuntimeError(
-            f"Did not find requested config '{cfg_name}' in config dir at '{cfg_dir}'"
-        )
-
-    known_github_configs: typing.Iterable[GithubConfig] = [
-        c for c in cfg_factory._cfg_elements(
-            cfg_type_name=cfg_element._type_name,
-        )
-    ]
-
-    cfg_name = cfg_element.name()
-    if not (cfg_to_rotate := next(
-        (c for c in known_github_configs if c.name() == cfg_name),
-        None,
-    )):
-        raise RuntimeError(
-            f"Did not find requested config '{cfg_name}' in config dir at '{cfg_dir}'"
-        )
-
     technical_user_credentials = cfg_to_rotate._technical_user_credentials()
+
     # retrieve current/"old" public keys before updating to be able to store them in deletion
     # queue
     old_public_keys = [
@@ -92,32 +50,7 @@ def create_secret_and_persist_in_cfg_repo(
         for credential in technical_user_credentials
     }
 
-    _write_github_configs(
-        cfg_dir=cfg_dir,
-        cfg_file_name=source_file,
-        github_configs=known_github_configs,
-    )
-
-    cfg_metadata.queue.append(
-        cfg_mgmt.util.create_config_queue_entry(
-            queue_entry_config_element=cfg_to_rotate,
-            queue_entry_data={'github_users': old_public_keys},
-        )
-    )
-
-    cfg_mgmt.util.write_config_queue(
-        cfg_dir=cfg_dir,
-        cfg_metadata=cfg_metadata,
-    )
-
-    cfg_mgmt.util.update_config_status(
-        config_element=cfg_to_rotate,
-        config_statuses=cfg_metadata.statuses,
-        cfg_status_file_path=os.path.join(
-            cfg_dir,
-            cfg_status_fname,
-        )
-    )
+    secret_id = {'github_users': old_public_keys}
 
     def revert():
         logger.warning(
@@ -137,18 +70,13 @@ def create_secret_and_persist_in_cfg_repo(
                 if key.key == new_pub_key:
                     key.delete()
                     logger.info(f"Rollback successful for key '{new_pub_key}'.")
+                    break
             else:
                 logger.warning(
                     f"New public key for '{username}' not known to github, nothing to revert."
                 )
 
-    return revert
-
-
-def _write_github_configs(cfg_dir, cfg_file_name, github_configs):
-    configs = {c.name(): c.raw for c in github_configs}
-    with open(os.path.join(cfg_dir, cfg_file_name), 'w') as cfg_file:
-        yaml.dump(configs, cfg_file, Dumper=ci.util.MultilineYamlDumper)
+    return revert, secret_id, cfg_to_rotate
 
 
 def update_user(

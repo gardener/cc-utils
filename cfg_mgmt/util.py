@@ -7,10 +7,11 @@ import yaml
 
 import dateutil.parser
 
-import cfg_mgmt.model as cmm
 import cfg_mgmt.metrics
+import cfg_mgmt.model as cmm
 import cfg_mgmt.reporting as cmr
 import ci.util
+import gitutil
 import model
 
 
@@ -305,3 +306,116 @@ def local_cfg_type_sources(
     return {
         src.file for src in cfg_type.sources() if isinstance(src, model.LocalFileCfgSrc)
     }
+
+
+def write_named_elements(
+    cfg_elements: typing.Iterable[model.NamedModelElement],
+    cfg_dir: str,
+    cfg_file_name: str,
+):
+    configs = {e.name(): e.raw for e in cfg_elements}
+    with open(os.path.join(cfg_dir, cfg_file_name), 'w') as cfg_file:
+        yaml.dump(configs, cfg_file, Dumper=ci.util.MultilineYamlDumper)
+
+
+def write_changes_to_local_dir(
+    cfg_element: model.NamedModelElement,
+    secret_id: dict,
+    cfg_metadata: cmm.CfgMetadata,
+    cfg_factory: model.ConfigFactory,
+    cfg_dir: str,
+):
+    elements = [
+        e if e.name() != cfg_element.name() else cfg_element
+        for e in cfg_factory._cfg_elements(cfg_element._type_name)
+    ]
+
+    local_cfg_files = local_cfg_type_sources(cfg_element, cfg_factory)
+
+    if len(local_cfg_files) > 1:
+        raise RuntimeError("Config elements with more than one local source file are not supported")
+
+    if not (src_file := next((f for f in local_cfg_files), None)):
+        raise RuntimeError(f"No local source file known for cfg type '{cfg_element._type_name}'")
+
+    write_named_elements(elements, cfg_dir, src_file)
+
+    cfg_metadata.queue.append(
+        create_config_queue_entry(
+            queue_entry_config_element=cfg_element,
+            queue_entry_data=secret_id,
+        )
+    )
+    write_config_queue(
+        cfg_dir=cfg_dir,
+        cfg_metadata=cfg_metadata,
+    )
+
+    update_config_status(
+        config_element=cfg_element,
+        config_statuses=cfg_metadata.statuses,
+        cfg_status_file_path=os.path.join(
+            cfg_dir,
+            cmm.cfg_queue_fname,
+        )
+    )
+
+
+def rotate_config_element_and_persist_in_cfg_repo(
+    cfg_element: model.NamedModelElement,
+    cfg_factory: model.ConfigFactory,
+    cfg_metadata: cmm.CfgMetadata,
+    cfg_dir: str,
+    github_cfg,
+    github_repo_path: str,
+    target_ref: str = 'refs/heads/master',
+) -> bool:
+    '''Rotate the given config element and write it to the given cfg-repo, along with any additional
+    config metadata created.
+
+    Returns `True` if the rotation was successful and `False` if no rotation was performed (for
+    example due to there being no rotation-function for the given type).
+    '''
+    git_helper = gitutil.GitHelper(
+        repo=cfg_dir,
+        github_cfg=github_cfg,
+        github_repo_path=github_repo_path,
+    )
+
+    local_cfg_files = local_cfg_type_sources(cfg_element, cfg_factory)
+
+    if len(local_cfg_files) > 1:
+        logger.warning("Config elements with more than one local source file are not supported")
+        return False
+    if not local_cfg_files:
+        logger.warning(f"No local source file known for cfg type '{cfg_element._type_name}'")
+        return False
+
+    if ret_vals := cfg_mgmt.rotate.rotate_cfg_element(
+        cfg_factory=cfg_factory,
+        cfg_element=cfg_element,
+    ):
+        revert_function, secret_id, updated_elem = ret_vals
+    else:
+        return False
+
+    try:
+        write_changes_to_local_dir(
+            cfg_element=updated_elem,
+            cfg_factory=cfg_factory,
+            secret_id=secret_id,
+            cfg_metadata=cfg_metadata,
+            cfg_dir=cfg_dir,
+        )
+        git_helper.add_and_commit(
+            message=f'rotate secret for {cfg_element._type_name}/{cfg_element.name()}',
+        )
+        git_helper.push('@', target_ref)
+    except Exception as e:
+        logger.warning(f'failed to push updated secret - reverting. Error: {e}')
+        revert_function()
+        git_helper.repo.git.reset('--hard', '@~')
+        # intentionally do not return False here, as we would try another rotation in our pipeline
+        # in that case.
+
+    return True
