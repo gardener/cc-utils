@@ -33,7 +33,6 @@ import dataclasses
 
 from model.base import (
     ModelValidationError,
-    ModelValidationMixin,
     NamedModelElement,
 )
 

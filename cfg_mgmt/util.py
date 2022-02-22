@@ -259,7 +259,8 @@ def cfg_compliance_storage_responsibles_to_es(
     cfg_responsible_summary_gen: typing.Generator[cmm.CfgResponsibleSummary, None, None],
 ):
     for cfg_responsible_sum in cfg_responsible_summary_gen:
-        cc_cfg_compliance_storage_responsibles = cfg_mgmt.metrics.CcCfgComplianceStorageResponsibles.create(
+        cc_cfg_compliance_storage_responsibles = \
+            cfg_mgmt.metrics.CcCfgComplianceStorageResponsibles.create(
             url=cfg_responsible_sum.url,
             compliant_count=cfg_responsible_sum.compliantElementsCount,
             non_compliant_count=cfg_responsible_sum.noncompliantElementsCount,
