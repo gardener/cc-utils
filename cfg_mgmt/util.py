@@ -171,28 +171,6 @@ def determine_status(
     )
 
 
-def cfg_report_summaries_to_es(
-    es_client,
-    cfg_report_summary_gen: typing.Generator[cmm.CfgReportingSummary, None, None],
-):
-    for cfg_report_summary in cfg_report_summary_gen:
-        try:
-            es_client.store_document(
-                index='cc_cfg_compliance_status',
-                body={
-                    'url': cfg_report_summary.url,
-                    'compliant': cfg_report_summary.compliantElementsCount,
-                    'noncompliant': cfg_report_summary.noncompliantElementsCount,
-                    'creation_date': datetime.datetime.now().isoformat()
-                },
-                inject_metadata=False,
-            )
-        except Exception:
-            import traceback
-            logger.warning(traceback.format_exc())
-            logger.warning('could not send route request to elastic search')
-
-
 def create_config_queue_entry(
     queue_entry_config_element: model.NamedModelElement,
     queue_entry_data: dict,
@@ -256,6 +234,23 @@ def write_config_queue(
             },
             queue_file,
             Dumper=ci.util.MultilineYamlDumper,
+        )
+
+
+def cfg_report_summaries_to_es(
+    es_client,
+    cfg_report_summary_gen: typing.Generator[cmm.CfgReportingSummary, None, None],
+):
+    for cfg_report_summary in cfg_report_summary_gen:
+        cc_cfg_compliance_status = cfg_mgmt.metrics.CcCfgComplianceStatus.create(
+            url=cfg_report_summary.url,
+            compliant_count=cfg_report_summary.compliantElementsCount,
+            non_compliant_count=cfg_report_summary.noncompliantElementsCount,
+        )
+
+        cfg_mgmt.metrics.metric_to_es(
+            es_client=es_client,
+            metric=cc_cfg_compliance_status,
         )
 
 

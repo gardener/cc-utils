@@ -10,13 +10,28 @@ import cfg_mgmt.model as cmm
 logger = logging.getLogger(__name__)
 
 
-def index_name(
-    obj,
-) -> str:
-    if isinstance(obj, CcCfgComplianceResponsible):
-        return 'cc_cfg_compliance_responsible'
+@dataclasses.dataclass(frozen=True)
+class CcCfgComplianceStatus:
+    url: str
+    compliant: int
+    noncompliant: int
+    creation_date: str
 
-    raise NotImplementedError(obj)
+    @staticmethod
+    def create(
+        url: str,
+        compliant_count: int,
+        non_compliant_count: int,
+    ):
+        '''
+        convenience method to create a `CcCfgComplianceStatus`
+        '''
+        return CcCfgComplianceStatus(
+            url=url,
+            compliant=compliant_count,
+            noncompliant=non_compliant_count,
+            creation_date=datetime.datetime.now().isoformat(),
+        )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -59,9 +74,21 @@ class CcCfgComplianceResponsible:
         )
 
 
+def index_name(
+    obj: typing.Union[CcCfgComplianceStatus, CcCfgComplianceResponsible],
+) -> str:
+    if isinstance(obj, CcCfgComplianceResponsible):
+        return 'cc_cfg_compliance_responsible'
+
+    if isinstance(obj, CcCfgComplianceStatus):
+        return 'cc_cfg_compliance_status'
+
+    raise NotImplementedError(obj)
+
+
 def metric_to_es(
     es_client: ccc.elasticsearch.ElasticSearchClient,
-    metric,
+    metric: typing.Union[CcCfgComplianceStatus, CcCfgComplianceResponsible],
 ):
     try:
         es_client.store_document(
