@@ -32,6 +32,8 @@ import enum
 import dataclasses
 
 from model.base import (
+    ModelValidationError,
+    ModelValidationMixin,
     NamedModelElement,
 )
 
@@ -60,7 +62,13 @@ class Secret(NamedModelElement):
         return self.raw.get('generation')
 
     def _required_attributes(self):
-        return 'key', 'cipher_algorithm'
+        return ['cipher_algorithm',]
+
+    def _validate_required_attributes(self):
+        super()._validate_required_attributes()
+        key_attrs = [k for k in self.raw.keys() if k.startswith('key-')]
+        if not 'key' in self.raw and not key_attrs:
+            raise  ModelValidationError("Either 'key' or 'key-<number>' key must be present")
 
 
 @dataclasses.dataclass
