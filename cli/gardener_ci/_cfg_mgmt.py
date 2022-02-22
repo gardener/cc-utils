@@ -44,9 +44,7 @@ def report(
             yield report
 
     reports = filtered_reports(responsible_names=responsible_names)
-
-    for _ in cmr.create_report(cfg_element_statuses=reports):
-        pass
+    cmr.create_report(reports)
 
 
 def process_config_queue(

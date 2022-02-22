@@ -260,20 +260,19 @@ def cfg_element_statuses_to_es(
 ):
     for cfg_element_status in cfg_element_statuses:
         # HACK
-        # We only use create_report to determine is_compliant flag.
+        # We only use reporting_summary to determine is_compliant flag.
         # Therefore the amount of compliant elements is considered.
-        # As we only pass one cfg_element_status to create_report,
+        # As we only pass one cfg_element_status,
         # the amount of compliant elements is either 0 or 1
-        report = next(cmr.create_report(
+        reporting_summary = next(cmr.cfg_element_statuses_reporting_summaries(
             cfg_element_statuses=[cfg_element_status],
-            print_report=False,
         ))
 
         cc_cfg_compliance_responsible = cfg_mgmt.metrics.CcCfgComplianceResponsible.create(
             element_name=cfg_element_status.element_name,
             element_type=cfg_element_status.element_type,
             element_storage=cfg_element_status.element_storage,
-            is_compliant=bool(report.compliantElementsCount),
+            is_compliant=bool(reporting_summary.compliantElementsCount),
             responsible=cfg_element_status.responsible,
             rotation_method=cfg_element_status.policy.rotation_method,
         )

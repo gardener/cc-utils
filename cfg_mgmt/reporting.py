@@ -91,17 +91,10 @@ def evaluate_cfg_element_status(
     )
 
 
-def create_report(
+def cfg_element_statuses_reporting_summaries(
     cfg_element_statuses: typing.Iterable[CfgElementStatusReport],
-    print_report: bool = True,
 ) -> typing.Generator[cmm.CfgReportingSummary, None, None]:
-    no_rule_assigned = []
-    no_status = []
-    assigned_rule_refers_to_undefined_policy = []
-    no_responsible_assigned = []
-    credentials_outdated = []
-    credentials_not_outdated = []
-    fully_compliant = []
+
     compliance_summaries = dict()
 
     def compliance_summary(element_storage: str):
@@ -126,34 +119,27 @@ def create_report(
         evaluation_result = evaluate_cfg_element_status(cfg_element_status)
 
         if not evaluation_result.hasResponsible:
-            no_responsible_assigned.append(cfg_element_status)
             cfg_summary.noResponsibleAssigned.append(cfg_element_status)
 
         if not evaluation_result.hasRule:
-            no_rule_assigned.append(cfg_element_status)
             cfg_summary.noRuleAssigned.append(cfg_element_status)
 
         elif evaluation_result.assignedRuleRefersToUndefinedPolicy:
-            assigned_rule_refers_to_undefined_policy.append(cfg_element_status)
             cfg_summary.assignedRuleRefersToUndefinedPolicy.append(cfg_element_status)
 
         else:
             if evaluation_result.requiresStatus:
                 if not evaluation_result.hasStatus:
-                    no_status.append(cfg_element_status)
                     cfg_summary.noStatus.append(cfg_element_status)
 
                 else:
                     if evaluation_result.credentialsOutdated:
-                        credentials_outdated.append(cfg_element_status)
                         cfg_summary.credentialsOutdated.append(cfg_element_status)
 
                     else:
-                        credentials_not_outdated.append(cfg_element_status)
                         cfg_summary.credentialsNotOutdated.append(cfg_element_status)
 
         if evaluation_result.fullyCompliant:
-            fully_compliant.append(cfg_element_status)
             cfg_summary.fullyCompliant.append(cfg_element_status)
             cfg_summary.compliantElementsCount += 1
 
@@ -161,6 +147,45 @@ def create_report(
             cfg_summary.noncompliantElementsCount += 1
 
     yield from compliance_summaries.values()
+
+
+def create_report(
+    cfg_element_statuses: typing.Iterable[CfgElementStatusReport],
+):
+    no_rule_assigned = []
+    no_status = []
+    assigned_rule_refers_to_undefined_policy = []
+    no_responsible_assigned = []
+    credentials_outdated = []
+    credentials_not_outdated = []
+    fully_compliant = []
+
+    for cfg_element_status in cfg_element_statuses:
+        evaluation_result = evaluate_cfg_element_status(cfg_element_status)
+
+        if not evaluation_result.hasResponsible:
+            no_responsible_assigned.append(cfg_element_status)
+
+        if not evaluation_result.hasRule:
+            no_rule_assigned.append(cfg_element_status)
+
+        elif evaluation_result.assignedRuleRefersToUndefinedPolicy:
+            assigned_rule_refers_to_undefined_policy.append(cfg_element_status)
+
+        else:
+            if evaluation_result.requiresStatus:
+                if not evaluation_result.hasStatus:
+                    no_status.append(cfg_element_status)
+
+                else:
+                    if evaluation_result.credentialsOutdated:
+                        credentials_outdated.append(cfg_element_status)
+
+                    else:
+                        credentials_not_outdated.append(cfg_element_status)
+
+        if evaluation_result.fullyCompliant:
+            fully_compliant.append(cfg_element_status)
 
     def cfg_element_status_name(status: CfgElementStatusReport):
         return f'{status.element_storage}/{status.element_type}/{status.element_name}'
@@ -174,9 +199,6 @@ def create_report(
 
         print('')
         print(40 * '-')
-
-    if not print_report:
-        return
 
     print_paragraph(
         header='Cfg-Elements w/o assigned policy/rule',
