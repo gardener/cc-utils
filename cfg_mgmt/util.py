@@ -10,6 +10,7 @@ import dateutil.parser
 import cfg_mgmt.metrics
 import cfg_mgmt.model as cmm
 import cfg_mgmt.reporting as cmr
+import cfg_mgmt.rotate as cmro
 import ci.util
 import gitutil
 import model
@@ -356,7 +357,7 @@ def write_changes_to_local_dir(
         config_statuses=cfg_metadata.statuses,
         cfg_status_file_path=os.path.join(
             cfg_dir,
-            cmm.cfg_queue_fname,
+            cmm.cfg_status_fname,
         )
     )
 
@@ -391,7 +392,7 @@ def rotate_config_element_and_persist_in_cfg_repo(
         logger.warning(f"No local source file known for cfg type '{cfg_element._type_name}'")
         return False
 
-    if ret_vals := cfg_mgmt.rotate.rotate_cfg_element(
+    if ret_vals := cmro.rotate_cfg_element(
         cfg_factory=cfg_factory,
         cfg_element=cfg_element,
     ):
@@ -417,5 +418,52 @@ def rotate_config_element_and_persist_in_cfg_repo(
         git_helper.repo.git.reset('--hard', '@~')
         # intentionally do not return False here, as we would try another rotation in our pipeline
         # in that case.
+
+    return True
+
+
+def process_cfg_queue_and_persist_in_repo(
+    cfg_element: model.NamedModelElement,
+    cfg_factory: model.ConfigFactory,
+    cfg_metadata: cmm.CfgMetadata,
+    cfg_queue_entry: cmm.CfgQueueEntry,
+    cfg_dir: str,
+    github_cfg,
+    github_repo_path: str,
+    target_ref: str = 'refs/heads/master',
+):
+    '''Process the given config-queue entry by deleting the referenced credentials in the
+    infrastructure and persist the updated config metadata in the given config-repository.
+
+    Returns `True` if the config-entry was processed successfully and `False` if no processing
+    has taken place.
+    '''
+    git_helper = gitutil.GitHelper(
+        repo=cfg_dir,
+        github_cfg=github_cfg,
+        github_repo_path=github_repo_path,
+    )
+
+    if not cmro.delete_expired_secret(
+        cfg_element=cfg_element,
+        cfg_queue_entry=cfg_queue_entry,
+        cfg_factory=cfg_factory,
+    ):
+        return False
+
+    cfg_metadata.queue.remove(cfg_queue_entry)
+    write_config_queue(
+        cfg_dir=cfg_dir,
+        cfg_metadata=cfg_metadata,
+    )
+
+    try:
+        git_helper.add_and_commit(
+            message=f'process config queue for {cfg_element._type_name}/{cfg_element.name()}',
+        )
+        git_helper.push('@', target_ref)
+    except:
+        logger.warning('failed to push processed config queue - reverting')
+        git_helper.repo.git.reset('--hard', '@~')
 
     return True

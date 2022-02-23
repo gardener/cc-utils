@@ -100,8 +100,8 @@ def rotate_cfg_element(
 
 def delete_config_secret(
     cfg_element: model.container_registry.ContainerRegistryConfig,
-    cfg_dir: str,
     cfg_queue_entry: cmm.CfgQueueEntry,
+    cfg_factory: model.ConfigFactory,
 ):
     logger.info('deleting old gcr secret')
     iam_client = ccc.gcp.create_iam_client(

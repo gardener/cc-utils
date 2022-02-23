@@ -6,7 +6,6 @@ import cfg_mgmt.reporting as cmr
 import cfg_mgmt.rotate
 import cfg_mgmt.model
 import cfg_mgmt.util as cmu
-import gitutil
 import model
 
 
@@ -73,11 +72,6 @@ def process_config_queue(
         disable_cfg_element_lookup=True,
     )
     github_cfg = cfg_factory.github(github_cfg)
-    git_helper = gitutil.GitHelper(
-        repo=cfg_dir,
-        github_cfg=github_cfg,
-        github_repo_path=cfg_repo_path,
-    )
 
     cfg_target = cfg_mgmt.model.CfgTarget(
         type=type_name,
@@ -92,18 +86,18 @@ def process_config_queue(
             cfg_type_name=cfg_queue_entry.target.type,
             cfg_name=cfg_queue_entry.target.name,
         )
-        if not cfg_mgmt.rotate.delete_cfg_element(
-            cfg_dir=cfg_dir,
-            cfg_queue_entry=cfg_queue_entry,
+        if cmu.process_cfg_queue_and_persist_in_repo(
             cfg_element=cfg_element,
+            cfg_factory=cfg_factory,
             cfg_metadata=cfg_metadata,
-            git_helper=git_helper,
+            cfg_queue_entry=cfg_queue_entry,
+            cfg_dir=cfg_dir,
+            github_cfg=github_cfg,
+            github_repo_path=cfg_repo_path,
             target_ref=tgt_ref,
         ):
-            continue
+            return
 
-        # stop after first successful rotation (avoid causing too much trouble at one time
-        return
     logger.info('no config-entry to be deleted found in config-queue')
 
 
