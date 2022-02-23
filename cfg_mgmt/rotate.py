@@ -1,6 +1,5 @@
 import dataclasses
 import logging
-import os
 import typing
 import yaml
 
@@ -8,8 +7,6 @@ import cfg_mgmt
 import cfg_mgmt.gcp as cmg
 import cfg_mgmt.github as cmgh
 import cfg_mgmt.model as cmm
-import cfg_mgmt.util as cmu
-import gitutil
 import model
 import model.github
 import oci.model as om
@@ -34,14 +31,16 @@ def write_config_queue(
         )
 
 
-def delete_cfg_element(
-    cfg_dir: str,
+def delete_expired_secret(
     cfg_element: str,
     cfg_queue_entry: cmm.CfgQueueEntry,
-    cfg_metadata: cmm.CfgMetadata,
-    git_helper: gitutil.GitHelper,
-    target_ref: str,
-):
+    cfg_factory: model.ConfigFactory,
+) -> bool:
+    '''Deletes the expired secret contained in the given cfg-queue entry, using the passed
+    config element and config factory if necessary.
+
+    Returns `True` if the deletion was successful and `False` if no deletion was performed.
+    '''
 
     delete_func: typing.Callable[[model.NamedModelElement, str, cmm.CfgQueueEntry], None] = None
 
@@ -50,7 +49,7 @@ def delete_cfg_element(
             delete_func = cmg.delete_config_secret
         else:
             f'{cfg_element.registry_type()} is not (yet) supported for automated deletion'
-            return
+            return False
 
     elif type_name == 'github':
         delete_func = cmgh.delete_config_secret
@@ -59,10 +58,14 @@ def delete_cfg_element(
         logger.warning(
             f'{type_name} is not (yet) supported for automated deletion'
         )
-        return
+        return False
 
     try:
-        delete_func(cfg_element=cfg_element, cfg_dir=cfg_dir, cfg_queue_entry=cfg_queue_entry)
+        delete_func(
+            cfg_element=cfg_element,
+            cfg_factory=cfg_factory,
+            cfg_queue_entry=cfg_queue_entry,
+        )
     except Exception as e:
         logger.error(
             f"error deleting secret for cfg-type '{type_name}' with name "
@@ -70,22 +73,7 @@ def delete_cfg_element(
         )
         raise
 
-    new_cfg_queue: typing.List[cmm.CfgQueueEntry] = [
-        entry for entry in cfg_metadata.queue
-        if not entry == cfg_queue_entry
-    ]
-    write_config_queue(
-        cfg_queue=new_cfg_queue,
-        cfg_queue_file_path=os.path.join(cfg_dir, cmm.cfg_queue_fname),
-    )
-    git_helper.add_and_commit(
-        message=f'process config queue for {cfg_element._type_name}/{cfg_element.name()}',
-    )
-    try:
-        git_helper.push('@', target_ref)
-    except:
-        logger.warning('failed to push processed config queue - reverting')
-        git_helper.repo.git.reset('--hard', '@~')
+    return True
 
 
 def rotate_cfg_element(
@@ -113,7 +101,7 @@ def rotate_cfg_element(
     if type_name == 'container_registry':
         if cfg_element.registry_type() == om.OciRegistryType.GCR:
             logger.info(f'rotating {cfg_element.name()} {type_name=}')
-            update_secret_function = cmg.create_secret_and_persist_in_cfg_repo
+            update_secret_function = cmg.rotate_cfg_element
         else:
             logger.warning(
                 f'{cfg_element.registry_type()} is not (yet) supported for automated rotation'
@@ -121,7 +109,7 @@ def rotate_cfg_element(
             return None
 
     elif type_name == 'github':
-        update_secret_function = cmgh.create_secret_and_persist_in_cfg_repo
+        update_secret_function = cmgh.rotate_cfg_element
 
     if not update_secret_function:
         logger.warning(f'{type_name=} is not (yet) supported for automated rotation')

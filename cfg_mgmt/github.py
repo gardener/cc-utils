@@ -100,20 +100,20 @@ def update_user(
 
 def delete_config_secret(
     cfg_element: model.github.GithubConfig,
-    cfg_dir: str,
+    cfg_factory: model.ConfigFactory,
     cfg_queue_entry: CfgQueueEntry,
 ):
-    cfg_factory = model.ConfigFactory.from_cfg_dir(cfg_dir)
     for entry in cfg_queue_entry.secretId['github_users']:
         username = entry['name']
         gh_api = ccc.github.github_api(cfg_element, username=username, cfg_factory=cfg_factory)
         for key in gh_api.keys():
             if key.key == entry['public_key']:
                 key.delete()
-            else:
-                logger.warning(
-                    f'Old public key for {username} not known to github, nothing to delete.'
-                )
+                break
+        else:
+            logger.warning(
+                f'Old public key for {username} not known to github, nothing to delete.'
+            )
 
 
 def _corresponding_public_key(

@@ -3,16 +3,13 @@ import logging
 import typing
 import pprint
 import re
-import traceback
 
 import cfg_mgmt.model as cmm
 import cfg_mgmt.util as cmu
-import cfg_mgmt.rotate
 import ccc.github
 import ccc.secrets_server
 import ci.log
 import ci.util
-import gitutil
 import kube.ctx
 import model
 import model.concourse
@@ -39,11 +36,6 @@ def process_config_queue(
         repo_url,
         cfg_factory=cfg_factory,
     )
-    git_helper = gitutil.GitHelper(
-        repo=cfg_dir,
-        github_cfg=github_cfg,
-        github_repo_path=github_repo_path,
-    )
 
     for cfg_queue_entry in cmu.iter_cfg_queue_entries_to_be_deleted(
         cfg_metadata=cfg_metadata,
@@ -52,18 +44,18 @@ def process_config_queue(
             cfg_type_name=cfg_queue_entry.target.type,
             cfg_name=cfg_queue_entry.target.name,
         )
-        if not cfg_mgmt.rotate.delete_cfg_element(
-            cfg_dir=cfg_dir,
+        if cmu.process_cfg_queue_and_persist_in_repo(
             cfg_element=cfg_element,
-            cfg_queue_entry=cfg_queue_entry,
+            cfg_factory=cfg_factory,
             cfg_metadata=cfg_metadata,
-            git_helper=git_helper,
+            cfg_queue_entry=cfg_queue_entry,
+            cfg_dir=cfg_dir,
+            github_cfg=github_cfg,
+            github_repo_path=github_repo_path,
             target_ref=target_ref,
         ):
-            continue
-
-        # stop after first successful deletion (avoid causing too much trouble at one time
-        return
+            # stop after first successful deletion (avoid causing too much trouble at one time
+            return
     logger.info('did not find a config queue entry to delete')
 
 
