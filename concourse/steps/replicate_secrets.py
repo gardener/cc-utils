@@ -153,7 +153,7 @@ def replicate_secrets(
     for (k,v) in future_secrets.items():
         m = re.match(r'key[-](\d+)', k)
         if m:
-            f_name = model.concourse.secret_name_from_team(target_secret_name, m.group(1))
+            f_name = model.concourse.secret_name_from_team(team_name, m.group(1))
 
             encrypted_cipher_data = ccc.secrets_server.encrypt_data(
                 key=v.encode('utf-8'),
