@@ -322,6 +322,7 @@ def upload_result_to_license_data(
         [
             component.license().name()
             for component in upload_result.result.components()
+            if component.license()
         ]
     ))
     payload = {
