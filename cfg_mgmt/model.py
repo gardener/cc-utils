@@ -181,6 +181,14 @@ class CfgMetadata:
     queue: list[CfgQueueEntry]
 
 
+class CfgStatusEvaluationAspects(enum.Enum):
+    ASSIGNED_RULE_REFERS_TO_UNDEFINED_POLICY = 'assignedRuleRefersToUndefinedPolicy'
+    CREDENTIALS_OUTDATED = 'credentialsOutdated'
+    NO_RESPONSIBLE = 'noResponsible'
+    NO_RULE = 'noRule'
+    NO_STATUS = 'noStatus'
+
+
 @dataclasses.dataclass(frozen=True)
 class CfgStatusEvaluationResult:
     fullyCompliant: bool
@@ -190,6 +198,7 @@ class CfgStatusEvaluationResult:
     hasStatus: bool
     requiresStatus: typing.Optional[bool]
     credentialsOutdated: typing.Optional[bool]
+    nonCompliantReasons: typing.List[CfgStatusEvaluationAspects]
 
 
 @dataclasses.dataclass

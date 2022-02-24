@@ -79,6 +79,7 @@ class CcCfgComplianceResponsible:
     responsible_name: typing.List[str]
     responsible_type: typing.List[str]
     rotation_method: str
+    non_compliant_reasons: typing.List[str]
 
     @staticmethod
     def create(
@@ -88,6 +89,7 @@ class CcCfgComplianceResponsible:
         is_compliant: bool,
         responsible: cmm.CfgResponsibleMapping,
         rotation_method: cmm.RotationMethod,
+        non_compliant_reasons: typing.List[cmm.CfgStatusEvaluationAspects]
     ):
         '''
         convenience method to create a `CcCfgComplianceResponsible`
@@ -97,6 +99,11 @@ class CcCfgComplianceResponsible:
         if responsible:
             names = [resp.name for resp in responsible.responsibles]
             types = [resp.type.value for resp in responsible.responsibles]
+
+        reasons = [
+            reason.value
+            for reason in non_compliant_reasons
+        ]
         return CcCfgComplianceResponsible(
             creation_date=datetime.datetime.now().isoformat(),
             element_name=element_name,
@@ -106,6 +113,7 @@ class CcCfgComplianceResponsible:
             responsible_name=names,
             responsible_type=types,
             rotation_method=rotation_method.value,
+            non_compliant_reasons=reasons,
         )
 
 

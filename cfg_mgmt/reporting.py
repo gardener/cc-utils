@@ -41,18 +41,24 @@ def evaluate_cfg_element_status(
     has_status = True
     requires_status = None
     credentials_outdated = None
+    non_compliant_reasons = []
 
     if not cfg_element_status.responsible:
         fully_compliant = False
         has_responsible = False
+        non_compliant_reasons.append(cmm.CfgStatusEvaluationAspects.NO_RESPONSIBLE)
 
     if not cfg_element_status.rule:
         fully_compliant = False
         has_rule = False
+        non_compliant_reasons.append(cmm.CfgStatusEvaluationAspects.NO_RULE)
 
     elif not cfg_element_status.policy:
         fully_compliant = False
         assigned_rule_refers_to_undefined_policy = True
+        non_compliant_reasons.append(
+            cmm.CfgStatusEvaluationAspects.ASSIGNED_RULE_REFERS_TO_UNDEFINED_POLICY
+        )
 
     elif cfg_element_status.policy.type is cmm.PolicyType.MAX_AGE:
         policy = cfg_element_status.policy
@@ -67,6 +73,7 @@ def evaluate_cfg_element_status(
             if not (status := cfg_element_status.status):
                 fully_compliant = False
                 has_status = False
+                non_compliant_reasons.append(cmm.CfgStatusEvaluationAspects.NO_STATUS)
 
             else:
                 last_update = dp.isoparse(status.credential_update_timestamp)
@@ -76,6 +83,7 @@ def evaluate_cfg_element_status(
                 else:
                     fully_compliant = False
                     credentials_outdated = True
+                    non_compliant_reasons.append(cmm.CfgStatusEvaluationAspects.CREDENTIALS_OUTDATED)
 
     else:
         raise NotImplementedError(cfg_element_status.policy.type)
@@ -88,6 +96,7 @@ def evaluate_cfg_element_status(
         hasStatus=has_status,
         requiresStatus=requires_status,
         credentialsOutdated=credentials_outdated,
+        nonCompliantReasons=non_compliant_reasons,
     )
 
 

@@ -278,22 +278,17 @@ def cfg_compliance_responsibles_to_es(
     cfg_element_statuses: typing.Iterable[cmr.CfgElementStatusReport],
 ):
     for cfg_element_status in cfg_element_statuses:
-        # HACK
-        # We only use reporting_summary to determine is_compliant flag.
-        # Therefore the amount of compliant elements is considered.
-        # As we only pass one cfg_element_status,
-        # the amount of compliant elements is either 0 or 1
-        reporting_summary = next(cmr.cfg_element_statuses_storage_summaries(
-            cfg_element_statuses=[cfg_element_status],
-        ))
+
+        status_evaluation = cmr.evaluate_cfg_element_status(cfg_element_status)
 
         cc_cfg_compliance_responsible = cfg_mgmt.metrics.CcCfgComplianceResponsible.create(
             element_name=cfg_element_status.element_name,
             element_type=cfg_element_status.element_type,
             element_storage=cfg_element_status.element_storage,
-            is_compliant=bool(reporting_summary.compliantElementsCount),
+            is_compliant=status_evaluation.fullyCompliant,
             responsible=cfg_element_status.responsible,
             rotation_method=cfg_element_status.policy.rotation_method,
+            non_compliant_reasons=status_evaluation.nonCompliantReasons,
         )
 
         cfg_mgmt.metrics.metric_to_es(
