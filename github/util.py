@@ -589,9 +589,11 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         # in _most_ cases, most recent releases are returned first, so this should hardly ever
         # be an actual issue
         max_releases = 1020
-        releases = list(self.repository.releases(number=max_releases))
-        release = _.find(releases, lambda rls: rls.draft and rls.name == name)
-        return release
+        for release in self.repository.releases(number=max_releases):
+            if not release.draft:
+                continue
+            if release.name == name:
+                return release
 
     def tag_exists(
         self,
