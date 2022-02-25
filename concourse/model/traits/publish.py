@@ -199,6 +199,7 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
 class OciBuilder(enum.Enum):
     KANIKO = 'kaniko'
     DOCKER = 'docker'
+    DOCKER_BUILDX = 'docker-buildx'
 
 
 ATTRIBUTES = (
@@ -237,6 +238,7 @@ class PublishTrait(Trait):
         ]
 
     def oci_builder(self) -> OciBuilder:
+        return OciBuilder.DOCKER_BUILDX
         return OciBuilder(self.raw['oci-builder'])
 
     def transformer(self):
@@ -280,12 +282,16 @@ class PublishTraitTransformer(TraitTransformer):
 
         publish_step._add_dependency(prepare_step)
 
-        if (oci_builder := self.trait.oci_builder()) in (OciBuilder.KANIKO, OciBuilder.DOCKER):
+        if (oci_builder := self.trait.oci_builder()) in (
+            OciBuilder.KANIKO,
+            OciBuilder.DOCKER,
+            OciBuilder.DOCKER_BUILDX,
+        ):
             if oci_builder is OciBuilder.KANIKO:
                 with open(concourse.paths.last_released_tag_file) as f:
                     last_tag = f.read().strip()
                 kaniko_image_ref = f'eu.gcr.io/gardener-project/cc/job-image-kaniko:{last_tag}'
-            elif oci_builder is OciBuilder.DOCKER:
+            elif oci_builder in (OciBuilder.DOCKER, OciBuilder.DOCKER_BUILDX):
                 kaniko_image_ref = None
             else:
                 raise NotImplementedError(oci_builder)
@@ -296,7 +302,7 @@ class PublishTraitTransformer(TraitTransformer):
                     raw_dict={
                         'image': kaniko_image_ref,
                         'privilege_mode': PrivilegeMode.PRIVILEGED
-                            if oci_builder is OciBuilder.DOCKER
+                            if oci_builder in (OciBuilder.DOCKER, OciBuilder.DOCKER_BUILDX)
                             else PrivilegeMode.UNPRIVILEGED,
                     },
                     is_synthetic=True,

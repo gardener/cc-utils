@@ -159,7 +159,7 @@ oci.publish_container_image_from_kaniko_tarfile(
   additional_tags=additional_tags,
   manifest_mimetype=manifest_mimetype,
 )
-% elif oci_builder is cm_publish.OciBuilder.DOCKER:
+% elif oci_builder in (cm_publish.OciBuilder.DOCKER, cm_publish.OciBuilder.DOCKER_BUILDX):
 import tempfile
 
 import ccc.oci
@@ -179,6 +179,9 @@ write_docker_cfg(
 docker_argv = (
   'docker',
   '--config', docker_cfg_dir,
+  % if oci_builder is cm_publish.OciBuilder.DOCKER_BUILDX:
+  'buildx',
+  % endif
   'build',
 % for k,v in image_descriptor.build_args().items():
   '--build-arg', '${k}=${v}',
