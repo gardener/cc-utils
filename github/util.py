@@ -584,7 +584,12 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         self,
         name: str
     ) -> Release:
-        releases = list(self.repository.releases())
+        # if there are more than 1021 releases, github(.com) will return http-500 one requesting
+        # additional releases. As this limit is typically not reached, hardcode limit for now
+        # in _most_ cases, most recent releases are returned first, so this should hardly ever
+        # be an actual issue
+        max_releases = 1020
+        releases = list(self.repository.releases(number=max_releases))
         release = _.find(releases, lambda rls: rls.draft and rls.name == name)
         return release
 
