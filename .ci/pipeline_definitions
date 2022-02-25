@@ -30,7 +30,6 @@ cc-utils:
           oci-builder: 'docker'
           dockerimages:
             job-image:
-              registry: 'docker_io_write'
               image: 'eu.gcr.io/gardener-project/cc/job-image'
               dockerfile: 'Dockerfile'
               tag_as_latest: False
