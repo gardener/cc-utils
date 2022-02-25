@@ -24,8 +24,7 @@ from kubernetes import watch
 from kubernetes.client import (
     AppsV1Api,
     CoreV1Api,
-    ExtensionsV1beta1Api,
-    ExtensionsV1beta1Ingress as V1beta1Ingress,
+    NetworkingV1Api,
     StorageV1Api,
     V1ConfigMap,
     V1Deployment,
@@ -415,10 +414,10 @@ class KubernetesDeploymentHelper:
 
 
 class KubernetesIngressHelper:
-    def __init__(self, extensions_v1beta1_api: ExtensionsV1beta1Api):
+    def __init__(self, extensions_v1beta1_api: AppsV1Api):
         self.extensions_v1beta1_api = extensions_v1beta1_api
 
-    def replace_or_create_ingress(self, namespace: str, ingress: V1beta1Ingress):
+    def replace_or_create_ingress(self, namespace: str, ingress: NetworkingV1Api):
         '''Create an ingress in a given namespace. If the ingress already exists,
         the previous version will be deleted beforehand.
         '''
@@ -435,7 +434,7 @@ class KubernetesIngressHelper:
             )
         self.create_ingress(namespace=namespace, ingress=ingress)
 
-    def create_ingress(self, namespace: str, ingress: V1beta1Ingress):
+    def create_ingress(self, namespace: str, ingress: NetworkingV1Api):
         '''Create an ingress in a given namespace. Raises an `ApiException` if such an ingress
         already exists.'''
         not_empty(namespace)
@@ -443,8 +442,8 @@ class KubernetesIngressHelper:
 
         self.extensions_v1beta1_api.create_namespaced_ingress(namespace=namespace, body=ingress)
 
-    def get_ingress(self, namespace: str, name: str) -> V1beta1Ingress:
-        '''Return the `V1beta1Ingress` with the given name in the given namespace, or `None` if
+    def get_ingress(self, namespace: str, name: str) -> NetworkingV1Api:
+        '''Return the `NetworkingV1Api` with the given name in the given namespace, or `None` if
         no such ingress exists.'''
         not_empty(namespace)
         not_empty(name)

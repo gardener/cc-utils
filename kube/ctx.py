@@ -118,7 +118,7 @@ class Ctx:
         return self._create_api(client.AppsV1Api)
 
     def create_extensions_v1beta1_api(self):
-        return self._create_api(client.ExtensionsV1beta1Api)
+        return self._create_api(client.AppsV1Api)
 
     def create_version_api(self):
         return self._create_api(client.VersionApi)
