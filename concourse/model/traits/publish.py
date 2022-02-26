@@ -238,7 +238,6 @@ class PublishTrait(Trait):
         ]
 
     def oci_builder(self) -> OciBuilder:
-        return OciBuilder.DOCKER_BUILDX
         return OciBuilder(self.raw['oci-builder'])
 
     def transformer(self):
