@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import enum
+import textwrap
 import typing
 
 import dacite
@@ -107,13 +108,25 @@ IMG_DESCRIPTOR_ATTRIBS = (
 
 
 class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, AttribSpecMixin):
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        *args,
+        platform:str=None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         if not isinstance(self.raw, dict):
             raise ModelValidationError(
                 f'{self.__class__.__name__} expects a dict - got: {self.raw=}'
             )
         self._apply_defaults(raw_dict=self.raw)
+        self._platform = platform
+
+        if platform:
+            self._base_name = self._name
+            self._name += f'-{platform.replace("/", "-")}'
+        else:
+            self._base_name = self._name
 
     @classmethod
     def _attribute_specs(cls):
@@ -178,6 +191,15 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
         image_name = parts[-1]
         return '_'.join([self.name(), domain, image_name])
 
+    def platform(self) -> typing.Optional[str]:
+        '''
+        returns the target `platform` for which this image should be built, if tgt platform
+        was explicitly configured in pipeline-definition.
+        `None` indicates that no tgt platform was configured (in which case the platform
+        should default to the runtime's own platform).
+        '''
+        return self._platform
+
     def _children(self):
         return ()
 
@@ -214,6 +236,40 @@ ATTRIBUTES = (
         type=OciBuilder,
         default=OciBuilder.DOCKER,
     ),
+    AttributeSpec.optional(
+        name='platforms',
+        doc=textwrap.dedent('''\
+        if defined, all image-builds will be done for each of the specified platforms, which
+        may result in cross-platform builds. Only supported if using `docker-buildx` as oci-builder.
+
+        As an implementation detail that may change in the future, multiarch/quemu-user-static
+        `(see) <https://github.com/multiarch/qemu-user-static>`_ is used. As the underlying
+        CICD nodes use `Linux` as kernel, only the architecture may be chosen. The following
+        platforms are supported:
+
+        - linux/386
+        - linux/amd64 # aka x86_64
+        - linux/arm/v6
+        - linux/arm/v7
+        - linux/arm64
+        - linux/ppc64le
+        - linux/riscv64
+        - linux/s390x
+
+        The resulting images will receive tags derived from the default tag (single-image case)
+        with a suffix containing the platform.
+
+        The default tag will be published as multi-arch image, referencing all platform-variants.
+        This will also hold true if only one platform is specified.
+
+        .. note::
+            if specifying a list of platforms, _all_ platforms (including the default platform)
+            must be explicitly specified.
+        '''
+        ),
+        type=list[str],
+        default=None,
+    ),
 )
 
 
@@ -231,11 +287,26 @@ class PublishTrait(Trait):
     def dockerimages(self) -> typing.List[PublishDockerImageDescriptor]:
         image_dict = self.raw['dockerimages']
 
-        return [
-            PublishDockerImageDescriptor(name, args)
-            for name, args
-            in image_dict.items()
-        ]
+        if not (platforms := self.platforms()):
+            platforms = (None, )
+
+        for platform in platforms:
+            yield from (
+                PublishDockerImageDescriptor(
+                    name,
+                    args,
+                    platform=platform,
+                )
+                for name, args
+                in image_dict.items()
+            )
+
+    def platforms(self) -> typing.Optional[list[str]]:
+        '''
+        the list of explicitly configured build platforms
+        guaranteed to be either non-empty, or None
+        '''
+        return self.raw.get('platforms', None)
 
     def oci_builder(self) -> OciBuilder:
         return OciBuilder(self.raw['oci-builder'])
@@ -243,9 +314,17 @@ class PublishTrait(Trait):
     def transformer(self):
         return PublishTraitTransformer(trait=self)
 
+    def validate(self):
+        super().validate()
 
-IMAGE_ENV_VAR_NAME = 'image_path'
-TAG_ENV_VAR_NAME = 'tag_path'
+        if self.platforms() and not self.oci_builder() is OciBuilder.DOCKER_BUILDX:
+            raise ModelValidationError(
+                'must not specify platforms unless using docker-buildx as oci-builder'
+            )
+        if not self.platforms() and not self.platforms() is None:
+            raise ModelValidationError(
+                'must not specify empty list of platforms (omit attr instead)'
+            )
 
 
 class PublishTraitTransformer(TraitTransformer):
@@ -257,16 +336,19 @@ class PublishTraitTransformer(TraitTransformer):
         self._build_steps = []
 
     def inject_steps(self):
-        # 'publish' step
         publish_step = PipelineStep(
             name='publish',
             raw_dict={},
             is_synthetic=True,
             notification_policy=StepNotificationPolicy.NOTIFY_PULL_REQUESTS,
             injecting_trait_name=self.name,
-            script_type=ScriptType.BOURNE_SHELL,
+            script_type=ScriptType.PYTHON3,
+            extra_args={
+                'publish_trait': self.trait,
+            },
         )
         publish_step.set_timeout(duration_string='4h')
+        self._publish_step = publish_step
 
         # 'prepare' step
         prepare_step = PipelineStep(
@@ -328,12 +410,15 @@ class PublishTraitTransformer(TraitTransformer):
         image_name = main_repo.branch() + '-image'
         tag_name = main_repo.branch() + '-tag'
 
-        # configure prepare step's outputs (consumed by publish step)
-        prepare_step.add_output(variable_name=IMAGE_ENV_VAR_NAME, name=image_name)
-        prepare_step.add_output(variable_name=TAG_ENV_VAR_NAME, name=tag_name)
+        image_path = 'image_path'
+        tag_path = 'tag_path'
 
-        for build_step in self._build_steps:
-            build_step.add_input(variable_name=IMAGE_ENV_VAR_NAME, name=image_name)
+        # configure prepare step's outputs (consumed by publish step)
+        prepare_step.add_output(variable_name=image_path, name=image_name)
+        prepare_step.add_output(variable_name=tag_path, name=tag_name)
+
+        for build_step in self._build_steps + [self._publish_step]:
+            build_step.add_input(variable_name=image_path, name=image_name)
 
         input_step_names = set()
         for image_descriptor in self.trait.dockerimages():

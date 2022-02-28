@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import shutil
+import subprocess
 import sys
 
 import dockerfile_parse
@@ -40,6 +41,20 @@ def write_docker_cfg(
 
     with open(docker_cfg_path, 'w') as f:
         json.dump(docker_cfg, f)
+
+
+def prepare_qemu_and_binfmt_misc():
+    ## needs to be run once to allow for cross-platform executions/builds
+    ## see: https://github.com/multiarch/qemu-user-static
+    subprocess.run((
+        'docker',
+        'run',
+        '--rm',
+        '--privileged',
+        'multiarch/qemu-user-static',
+        '--reset',
+        '--persistent', 'yes',
+    ))
 
 
 def mv_directories_to_kaniko_dir(
