@@ -36,7 +36,7 @@ eff_version_replace_token = '${EFFECTIVE_VERSION}'
 
 publish_trait = job_variant.trait('publish')
 oci_builder = publish_trait.oci_builder()
-
+platform = image_descriptor.platform()
 %>
 import json
 import logging
@@ -57,6 +57,10 @@ image_tag = '${image_descriptor.tag_template()}'.replace(
   '${eff_version_replace_token}',
    effective_version
 )
+
+% if platform:
+image_tag += '-${platform.replace("/", "-")}'
+% endif
 
 image_ref = f'${image_ref}:{image_tag}'
 
@@ -136,7 +140,7 @@ res = subprocess.run(
 
 restore_required_dirs(root_dir=new_root)
 
-print(f'wrote image {image_ref=} to {image_outfile=} attempting to push')
+logger.info(f'wrote image {image_ref=} to {image_outfile=} attempting to push')
 
 os.makedirs(os.path.dirname(certifi_certs_path), exist_ok=True)
 if not os.path.exists(certifi_certs_path):
@@ -176,6 +180,12 @@ write_docker_cfg(
     docker_cfg_path=f'{docker_cfg_dir}/config.json',
 )
 
+%   if oci_builder is cm_publish.OciBuilder.DOCKER_BUILDX:
+logger.info('preparing crossplatform build')
+prepare_qemu_and_binfmt_misc()
+logger.info('done preparing crossplatform build. Now running actual build')
+%   endif
+
 docker_argv = (
   'docker',
   '--config', docker_cfg_dir,
@@ -186,6 +196,9 @@ docker_argv = (
 % for k,v in image_descriptor.build_args().items():
   '--build-arg', '${k}=${v}',
 % endfor
+% if platform:
+  '--platform', '${platform}',
+% endif
 % if (target := image_descriptor.target_name()):
     '--target', '${target}',
 % endif
