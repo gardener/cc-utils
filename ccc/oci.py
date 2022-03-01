@@ -3,7 +3,9 @@ import logging
 import traceback
 import typing
 
+import ccc.concourse
 import ccc.elasticsearch
+import ctx
 import oci.auth as oa
 import oci.client as oc
 import model.container_registry
@@ -39,6 +41,20 @@ def oci_cfg_lookup() -> typing.Callable[[str, oa.Privileges, bool], oa.OciCreden
     return find_credentials
 
 
+def oci_request_handler_requirements_fulfilled() -> bool:
+    '''
+    checks requirements for oci request handler installation
+    returns False if a requirement is not fulfilled and prints a warning with reason
+    '''
+    try:
+        cfg_set = ctx.cfg_set()
+        cfg_set.elasticsearch()
+        return True
+    except ValueError:
+        logger.warning('no elasticsearch config found')
+        return False
+
+
 def oci_client(
     credentials_lookup: typing.Callable = oci_cfg_lookup(),
     install_logging_handler: bool = True
@@ -56,7 +72,10 @@ def oci_client(
 
     if install_logging_handler:
         try:
-            _add_oci_request_logging_handler_unless_already_registered()
+            if oci_request_handler_requirements_fulfilled():
+                _add_oci_request_logging_handler_unless_already_registered()
+            else:
+                logger.warning('skipping oci request logger installation')
         except:
             # do not fail just because of logging-issue
             import traceback
