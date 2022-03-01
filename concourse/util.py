@@ -179,6 +179,16 @@ def own_running_build_url(cfg_factory=None):
     )
 
 
+def meta_info_file_from_env() -> str:
+    return os.path.abspath(
+        os.path.join(
+            check_env('CC_ROOT_DIR'),
+            concourse.model.traits.meta.DIR_NAME,
+            concourse.steps.meta.jobmetadata_filename,
+        )
+    )
+
+
 @functools.lru_cache()
 def find_own_running_build(cfg_factory=None):
     '''
@@ -191,14 +201,7 @@ def find_own_running_build(cfg_factory=None):
     if not _running_on_ci():
         raise RuntimeError('Can only find own running build if running on CI infrastructure.')
 
-    meta_dir = os.path.join(
-        os.path.abspath(check_env('CC_ROOT_DIR')),
-        concourse.model.traits.meta.DIR_NAME
-    )
-    meta_info_file = os.path.join(
-        meta_dir,
-        concourse.steps.meta.jobmetadata_filename,
-    )
+    meta_info_file = meta_info_file_from_env()
 
     with open(meta_info_file, 'r') as f:
         metadata_json = json.load(f)
