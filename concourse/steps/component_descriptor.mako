@@ -3,6 +3,7 @@
   filter="indent_func(indent),trim"
 >
 <%
+import collections
 import dataclasses
 from makoutil import indent_func
 from concourse.steps import step_lib
@@ -25,6 +26,11 @@ if not 'cloud.gardener/cicd/source' in [label.name for label in main_repo_labels
       value={'repository-classification': 'main'},
     )
   )
+
+# group images by _base_name
+images_by_base_name = collections.defaultdict(list)
+for image_descriptor in output_image_descriptors.values():
+  images_by_base_name[image_descriptor._base_name].append(image_descriptor)
 %>
 import dataclasses
 import git
@@ -108,7 +114,7 @@ component_v2.sources.append(
 % endfor
 
 # add own container image references
-% for name, image_descriptor in output_image_descriptors.items():
+% for name, image_descriptors in images_by_base_name.items():
 component_v2.resources.append(
   cm.Resource(
     name='${name}',
@@ -117,9 +123,9 @@ component_v2.resources.append(
     relation=cm.ResourceRelation.LOCAL,
     access=cm.OciAccess(
       type=cm.AccessType.OCI_REGISTRY,
-      imageReference='${image_descriptor.image_reference()}' + ':' + effective_version,
+      imageReference='${image_descriptors[0].image_reference()}' + ':' + effective_version,
     ),
-    labels=${image_descriptor.resource_labels()}
+    labels=${image_descriptors[0].resource_labels()}
   ),
 )
 % endfor
