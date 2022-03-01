@@ -189,6 +189,12 @@ def meta_info_file_from_env() -> str:
     )
 
 
+def has_metadata() -> bool:
+    return os.path.isfile(
+        meta_info_file_from_env()
+    )
+
+
 @functools.lru_cache()
 def find_own_running_build(cfg_factory=None):
     '''
