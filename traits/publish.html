@@ -213,6 +213,37 @@
 <td><p>OciBuilder</p></td>
 <td><p>specifies the container image builder to use</p></td>
 </tr>
+<tr class="row-even"><td><p>platforms</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>list</p></td>
+<td><p><p>if defined, all image-builds will be done for each of the specified platforms, which
+may result in cross-platform builds. Only supported if using <code class="code docutils literal notranslate"><span class="pre">docker-buildx</span></code> as oci-builder.</p>
+<p>As an implementation detail that may change in the future, multiarch/quemu-user-static
+<a class="reference external" href="https://github.com/multiarch/qemu-user-static">(see)</a> is used. As the underlying
+CICD nodes use <code class="code docutils literal notranslate"><span class="pre">Linux</span></code> as kernel, only the architecture may be chosen. The following
+platforms are supported:</p>
+<ul class="simple">
+<li><p>linux/386</p></li>
+<li><p>linux/amd64 # aka x86_64</p></li>
+<li><p>linux/arm/v6</p></li>
+<li><p>linux/arm/v7</p></li>
+<li><p>linux/arm64</p></li>
+<li><p>linux/ppc64le</p></li>
+<li><p>linux/riscv64</p></li>
+<li><p>linux/s390x</p></li>
+</ul>
+<p>The resulting images will receive tags derived from the default tag (single-image case)
+with a suffix containing the platform.</p>
+<p>The default tag will be published as multi-arch image, referencing all platform-variants.
+This will also hold true if only one platform is specified.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>if specifying a list of platforms, _all_ platforms (including the default platform)
+must be explicitly specified.</p>
+</div>
+</p></td>
+</tr>
 </tbody>
 </table>
 <h2>dockerimages.&lt;user-chosen&gt; <em>(PublishDockerImageDescriptor)</em> Attributes<a class="headerlink" href="#trait-publish" title="Permalink to this headline">¶</a></h2>
@@ -302,6 +333,7 @@
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">kaniko</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">docker</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">docker-buildx</span></code></p></li>
 </ul>
 <h2>Dependencies<a class="headerlink" href="#trait-publish" title="Permalink to this headline">¶</a></h2>
 <p>This trait requires the following traits to be declared:</p>
