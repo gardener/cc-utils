@@ -55,12 +55,6 @@ class ConcourseConfig(NamedModelElement):
     def job_mapping_cfg_name(self):
         return self.raw.get('job_mapping')
 
-    def concourse_uam_config(self):
-        return self.raw.get('concourse_uam_config')
-
-    def concourse_uam_cfg(self): # alias for convenience
-        return self.concourse_uam_config()
-
     def helm_chart_default_values_config(self):
         return self.raw.get('helm_chart_default_values_config')
 
@@ -130,7 +124,6 @@ class ConcourseConfig(NamedModelElement):
     def _required_attributes(self):
         return [
             'externalUrl',
-            'concourse_uam_config',
             'helm_chart_default_values_config',
             'kubernetes_cluster_config',
             'job_mapping',
@@ -262,22 +255,6 @@ class ConcourseUAM(NamedModelElement):
             'git_auth_team',
             'team_name',
         ]
-
-
-class ConcourseUAMSet(NamedModelElement):
-    def concourse_uams(self) -> typing.List[ConcourseUAM]:
-        return [ConcourseUAM(name=name, raw_dict=raw) for name, raw in self.raw.items()]
-
-    def concourse_uam(self, uam_name):
-        for uam in self.concourse_uams():
-            if uam.name() == uam_name:
-                return uam
-        raise ValueError(
-            f"Unknown uam '{uam}'; known uams: {', '.join(self.raw.keys())}"
-        )
-
-    def main_team_uam(self):
-        return self.concourse_uam('main')
 
 
 class ConcourseTeam(NamedModelElement):
@@ -475,9 +452,6 @@ class JobMapping(NamedModelElement):
         if secrets_repo := self.raw.get('secrets_repo'):
             return SecretsRepo(secrets_repo)
 
-    def concourse_uam(self) -> str:
-        return self.raw.get('concourse_uam')
-
     def concourse_team_cfg_name(self) -> str:
         return self.raw.get('concourse_team_cfg_name')
 
@@ -534,7 +508,6 @@ class JobMapping(NamedModelElement):
     def _optional_attributes(self):
         return [
             'concourse_team_cfg_name',
-            'concourse_uam',
             'expose_pipelines',
             'secret_cfg',
             'secrets_replication_pipeline_target_cc_team_cfg_name',
