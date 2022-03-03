@@ -29,3 +29,9 @@ class KubernetesConfig(NamedModelElement):
 
     def cluster_domain(self):
         return self.raw.get('cluster_domain')
+
+    def namespace(self):
+        '''
+        fallback to default if no namespace is configured
+        '''
+        return self.raw.get('namespace', 'default')
