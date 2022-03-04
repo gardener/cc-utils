@@ -3,6 +3,7 @@ import logging
 import traceback
 import typing
 
+import ci.util
 import ccc.concourse
 import ccc.elasticsearch
 import ctx
@@ -70,6 +71,7 @@ def oci_client(
 
     routes = oc.OciRoutes(base_api_lookup)
 
+    install_logging_handler &= ci.util._running_on_ci()
     if install_logging_handler:
         try:
             if oci_request_handler_requirements_fulfilled():
