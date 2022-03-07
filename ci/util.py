@@ -343,12 +343,23 @@ def load_yaml(stream, lint=False, linter_config=None, *args, **kwargs):
     return parsed
 
 
-def parse_yaml_file(path, lint=False, max_elements_count=100000):
+def parse_yaml_file(
+    path: str,
+    lint: bool=False,
+    multiple_documents: bool=False,
+) -> dict:
+    '''
+    parses yaml file from local file system to dict
+    if the yaml file contains multiple documents, caller must set multiple_documents
+    '''
     if lint:
         lint_yaml_file(path)
 
     with open(path) as f:
-        parsed = yaml.load(f, Loader=yaml.SafeLoader)
+        if multiple_documents:
+            parsed = yaml.load_all(f, Loader=yaml.SafeLoader)
+        else:
+            parsed = yaml.load(f, Loader=yaml.SafeLoader)
         # mitigate yaml bomb
         _count_elements(parsed)
         return parsed
