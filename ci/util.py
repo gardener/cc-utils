@@ -17,6 +17,7 @@ import collections
 import enum
 import functools
 import hashlib
+import logging
 import os
 import pathlib
 import shutil
@@ -32,6 +33,9 @@ import termcolor
 from urllib.parse import urlunparse
 
 import ci.paths
+
+
+logger = logging.getLogger(__name__)
 
 
 class Failure(RuntimeError, ValueError):
@@ -383,7 +387,7 @@ def _count_elements(value, count=0, max_elements_count=100000):
 
 def lint_yaml_file(path, linter_config: dict={'extends': 'relaxed'}):
     existing_file(path)
-    info(f'linting YAML file: {path}')
+    logger.info(f'linting YAML file: {path}')
 
     with open(path) as f:
         linting_result = _lint_yaml(f.read(), linter_config)
