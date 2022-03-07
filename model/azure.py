@@ -21,16 +21,16 @@ class AzureServicePrincipal(NamedModelElement):
     Not intended to be instantiated by users of this module
     '''
 
-    def tenant_id(self):
+    def tenant_id(self) -> str:
         return self.raw['tenant_id']
 
-    def client_id(self):
+    def client_id(self) -> str:
         return self.raw['client_id']
 
-    def client_secret(self):
+    def client_secret(self) -> str:
         return self.raw['client_secret']
 
-    def subscription_id(self):
+    def subscription_id(self) -> str:
         return self.raw['subscription_id']
 
     def _required_attributes(self):
