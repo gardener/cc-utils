@@ -347,7 +347,7 @@ def parse_yaml_file(
     path: str,
     lint: bool=False,
     multiple_documents: bool=False,
-) -> dict:
+) -> typing.Union[dict, list]:
     '''
     parses yaml file from local file system to dict
     if the yaml file contains multiple documents, caller must set multiple_documents
