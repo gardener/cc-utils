@@ -346,21 +346,15 @@ def load_yaml(stream, lint=False, linter_config=None, *args, **kwargs):
 def parse_yaml_file(
     path: str,
     lint: bool=False,
-    multiple_documents: bool=False,
-) -> typing.Union[dict, list]:
+) -> dict:
     '''
     parses yaml file from local file system to dict
-    if the yaml file contains multiple documents, caller must set multiple_documents
     '''
     if lint:
         lint_yaml_file(path)
 
     with open(path) as f:
-        if multiple_documents:
-            # cant return generator as file is closed after returning
-            parsed = list(yaml.safe_load_all(f))
-        else:
-            parsed = yaml.load(f, Loader=yaml.SafeLoader)
+        parsed = yaml.load(f, Loader=yaml.SafeLoader)
         # mitigate yaml bomb
         _count_elements(parsed)
         return parsed
