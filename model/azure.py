@@ -30,6 +30,9 @@ class AzureServicePrincipal(NamedModelElement):
     def client_secret(self) -> str:
         return self.raw['client_secret']
 
+    def object_id(self) -> str:
+        return self.raw['object_id']
+
     def subscription_id(self) -> str:
         return self.raw['subscription_id']
 
