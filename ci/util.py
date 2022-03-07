@@ -357,7 +357,8 @@ def parse_yaml_file(
 
     with open(path) as f:
         if multiple_documents:
-            parsed = yaml.load_all(f, Loader=yaml.SafeLoader)
+            # cant return generator as file is closed after returning
+            parsed = list(yaml.safe_load_all(f))
         else:
             parsed = yaml.load(f, Loader=yaml.SafeLoader)
         # mitigate yaml bomb
