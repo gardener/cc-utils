@@ -38,6 +38,10 @@ from kubernetes.client import (
     V1ServiceAccount,
     V1StatefulSet,
     V1StorageClass,
+    RbacAuthorizationV1Api,
+    V1ClusterRole,
+    V1Role,
+    V1RoleBinding,
 )
 from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
@@ -634,3 +638,103 @@ class KubernetesStorageClassHelper:
             raise ae
 
         return storage_class
+
+
+class KubernetesRbacHelper:
+    def __init__(
+        self,
+        rbac_api: RbacAuthorizationV1Api,
+    ):
+        self.rbac_api = rbac_api
+
+    def create_cluster_role(
+        self,
+        cluster_role: V1ClusterRole,
+    ):
+        self.rbac_api.create_cluster_role(body=cluster_role)
+
+    def get_cluster_role(
+        self,
+        name: str,
+    ) -> typing.Optional[V1ClusterRole]:
+        for cr in self.rbac_api.list_cluster_role().items:
+            if not name == cr.metadata.name:
+                continue
+            return cr
+        return None
+
+    def create_cluster_role_if_absent(
+        self,
+        cluster_role: V1ClusterRole,
+    ):
+        existing_cluster_role = self.get_cluster_role(name=cluster_role.metadata.get('name'))
+        if not existing_cluster_role:
+            self.rbac_api.create_cluster_role(body=cluster_role)
+
+    def create_role(
+        self,
+        role: V1Role,
+    ):
+        self.rbac_api.create_namespaced_role(
+            namespace=role.metadata.get('namespace'),
+            body=role,
+        )
+
+    def get_role(
+        self,
+        namespace,
+        role_name: str,
+    ) -> typing.Optional[V1Role]:
+        for role in self.rbac_api.list_namespaced_role(namespace).items:
+            if not role_name == role.metadata.name:
+                continue
+            return role
+        return None
+
+    def create_role_if_absent(
+        self,
+        role: V1Role,
+    ):
+        existing_role = self.get_role(
+            namespace=role.metadata.get('namespace'),
+            role_name=role.metadata.get('name'),
+        )
+        if not existing_role:
+            self.rbac_api.create_namespaced_role(
+                namespace=role.metadata.get('namespace'),
+                body=role,
+            )
+
+    def create_role_binding(
+        self,
+        role_binding: V1RoleBinding,
+    ):
+        self.rbac_api.create_namespaced_role_binding(
+            namespace=role_binding.metadata.get('namespace'),
+            body=role_binding,
+        )
+
+    def get_role_binding(
+        self,
+        namespace: str,
+        role_binding_name: str,
+    ) -> typing.Optional[V1RoleBinding]:
+        for rb in self.rbac_api.list_namespaced_role_binding(namespace).items:
+            if not role_binding_name == rb.metadata.name:
+                continue
+            return rb
+        return None
+
+    def create_role_binding_if_absent(
+        self,
+        role_binding: V1RoleBinding,
+    ):
+        existing_role_binding = self.get_role_binding(
+            namespace=role_binding.metadata.get('namespace'),
+            role_binding_name=role_binding.metadata.get('name'),
+        )
+        if not existing_role_binding:
+            self.rbac_api.create_namespaced_role_binding(
+                namespace=role_binding.metadata.get('namespace'),
+                body=role_binding,
+            )

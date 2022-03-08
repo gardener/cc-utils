@@ -31,7 +31,8 @@ from kube.helper import (
     KubernetesSecretHelper,
     KubernetesServiceAccountHelper,
     KubernetesServiceHelper,
-    KubernetesStorageClassHelper
+    KubernetesStorageClassHelper,
+    KubernetesRbacHelper,
 )
 
 
@@ -100,6 +101,9 @@ class Ctx:
 
     def storage_class_helper(self) -> 'KubernetesStorageClassHelper':
         return KubernetesStorageClassHelper(self.create_storage_api())
+
+    def rbac_helper(self) -> 'KubernetesRbacHelper':
+        return KubernetesRbacHelper(self.create_rbac_api())
 
     def _create_api(self, api_constructor):
         cfg = self.get_kubecfg()
