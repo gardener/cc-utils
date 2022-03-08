@@ -109,7 +109,7 @@ class Ctx:
         return self._create_api(client.CoreV1Api)
 
     def create_rbac_api(self):
-        return self._create_api(client.RbacAuthorizationV1beta1Api)
+        return self._create_api(client.RbacAuthorizationV1Api)
 
     def create_custom_api(self):
         return self._create_api(client.CustomObjectsApi)
