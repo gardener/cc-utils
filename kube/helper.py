@@ -36,6 +36,7 @@ from kubernetes.client import (
     V1SecretList,
     V1Service,
     V1ServiceAccount,
+    V1ServiceAccountList,
     V1StatefulSet,
     V1StorageClass,
     RbacAuthorizationV1Api,
@@ -192,6 +193,43 @@ class KubernetesServiceAccountHelper:
             namespace=namespace,
             body=service_account
         )
+
+    def get_service_account(
+        self,
+        name: str,
+        namespace: str,
+    ):
+        service_account_list = self.core_api.list_namespaced_service_account(namespace)
+        for sa in service_account_list.items:
+            if not sa.metadata.name == name:
+                continue
+            return sa
+
+    def create_service_account(
+        self,
+        service_account: V1ServiceAccount,
+        namespace: str,
+    ):
+        self.core_api.create_namespaced_service_account(
+            namespace=namespace,
+            body=service_account,
+        )
+
+    def create_service_account_if_absent(
+        self,
+        service_account: V1ServiceAccount,
+        namespace: str,
+    ):
+        existing_service_account = self.get_service_account(
+            name=service_account.metadata.get('name'),
+            namespace=namespace,
+        )
+
+        if not existing_service_account:
+            self.core_api.create_namespaced_service_account(
+                namespace=namespace,
+                body=service_account,
+            )
 
 
 class KubernetesNamespaceHelper:
