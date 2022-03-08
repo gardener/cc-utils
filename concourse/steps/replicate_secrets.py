@@ -100,7 +100,6 @@ def replicate_secrets(
     secret_key: str,
     secret_cipher_algorithm: str,
     future_secrets: typing.Dict[str, str],
-    generation: int,
     team_name: str,
     target_secret_name: str,
     target_secret_namespace: str,

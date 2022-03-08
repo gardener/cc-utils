@@ -89,7 +89,6 @@ replicate_secrets(
   cfg_set=cfg_set,
   kubeconfig=dict(${kubeconfig}),
   secret_key=raw_secret_cfg.get('key'),
-  generation=raw_secret_cfg.get('generation'),
   future_secrets=future_secrets,
   secret_cipher_algorithm=raw_secret_cfg.get('cipher_algorithm'),
   team_name=team_name,
