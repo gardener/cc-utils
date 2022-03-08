@@ -36,7 +36,6 @@ from kubernetes.client import (
     V1SecretList,
     V1Service,
     V1ServiceAccount,
-    V1ServiceAccountList,
     V1StatefulSet,
     V1StorageClass,
     RbacAuthorizationV1Api,
