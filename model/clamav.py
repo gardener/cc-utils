@@ -29,7 +29,9 @@ class ClamAVConfig(NamedModelElement):
         return DockerImageConfig(self.raw.get('freshclam_image'))
 
     def clamav_image_config(self):
-        return DockerImageConfig(self.raw.get('clamav_image'))
+        if image_config := self.raw.get('clamav_image'):
+            return DockerImageConfig(image_config)
+        return None
 
     def service_name(self):
         return self.raw.get('service_name')
@@ -60,16 +62,16 @@ class ClamAVConfig(NamedModelElement):
         yield from super()._required_attributes()
         yield from [
             'namespace',
+            'replicas',
             'service_name',
             'service_port',
-            'clamav_image',
-            'replicas',
         ]
 
     def _optional_attributes(self):
         yield from super()._optional_attributes()
         yield from [
-            'container_registry',
+            'clamav_image',
             'clamd_config_values',
+            'container_registry',
             'freshclam_image',
         ]
