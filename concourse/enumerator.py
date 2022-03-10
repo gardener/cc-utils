@@ -439,7 +439,7 @@ class GithubOrganisationDefinitionEnumerator(GithubDefinitionEnumeratorBase):
             matching_repositories = (
                 repo for repo in github_org.repositories()
                 if github_org_cfg.repository_matches(repo.name)
-                   and (not self.repository_filter or self.repository_filter(repo.name))
+                   and (not self.repository_filter or self.repository_filter(repo))
             )
 
             for definition_descriptors in executor.map(

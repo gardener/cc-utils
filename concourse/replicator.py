@@ -59,10 +59,12 @@ def replicate_pipelines(
     '''
     @param remove_pipelines_filter: pipeline-names the filter does not match are never removed
     '''
+
     definition_enumerators = [
         GithubOrganisationDefinitionEnumerator(
             job_mapping=job_mapping,
             cfg_set=cfg_set,
+            repository_filter=lambda repo: not repo.archived, # exclude archived repositories
         ),
     ]
 
