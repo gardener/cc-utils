@@ -250,9 +250,10 @@ def cfg_compliance_status_to_es(
             non_compliant_count=cfg_report_summary.noncompliantElementsCount,
         )
 
-        cfg_mgmt.metrics.metric_to_es(
+        ci.util.metric_to_es(
             es_client=es_client,
             metric=cc_cfg_compliance_status,
+            index_name=cfg_mgmt.metrics.index_name(cc_cfg_compliance_status),
         )
 
 
@@ -269,9 +270,10 @@ def cfg_compliance_storage_responsibles_to_es(
             responsible=cfg_responsible_sum.responsible,
         )
 
-        cfg_mgmt.metrics.metric_to_es(
+        ci.util.metric_to_es(
             es_client=es_client,
             metric=cc_cfg_compliance_storage_responsibles,
+            index_name=cfg_mgmt.metrics.index_name(cc_cfg_compliance_storage_responsibles),
         )
 
 
@@ -293,9 +295,10 @@ def cfg_compliance_responsibles_to_es(
             non_compliant_reasons=status_evaluation.nonCompliantReasons,
         )
 
-        cfg_mgmt.metrics.metric_to_es(
+        ci.util.metric_to_es(
             es_client=es_client,
             metric=cc_cfg_compliance_responsible,
+            index_name=cfg_mgmt.metrics.index_name(cc_cfg_compliance_responsible),
         )
 
 
