@@ -623,20 +623,3 @@ class MultilineYamlDumper(yaml.SafeDumper):
         if data is None:
             return self.represent_scalar('tag:yaml.org,2002:null', '')
         return super().represent_data(data)
-
-
-def metric_to_es(
-    es_client: ccc.elasticsearch.ElasticSearchClient,
-    metric,
-    index_name: str,
-):
-    try:
-        es_client.store_document(
-            index=index_name,
-            body=dataclasses.asdict(metric),
-            inject_metadata=False,
-        )
-    except Exception:
-        import traceback
-        logger.warning(traceback.format_exc())
-        logger.warning('could not send route request to elastic search')

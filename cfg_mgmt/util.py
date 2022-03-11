@@ -7,6 +7,7 @@ import yaml
 
 import dateutil.parser
 
+import ccc.elasticsearch
 import cfg_mgmt.metrics
 import cfg_mgmt.model as cmm
 import cfg_mgmt.reporting as cmr
@@ -250,7 +251,7 @@ def cfg_compliance_status_to_es(
             non_compliant_count=cfg_report_summary.noncompliantElementsCount,
         )
 
-        ci.util.metric_to_es(
+        ccc.elasticsearch.metric_to_es(
             es_client=es_client,
             metric=cc_cfg_compliance_status,
             index_name=cfg_mgmt.metrics.index_name(cc_cfg_compliance_status),
@@ -270,7 +271,7 @@ def cfg_compliance_storage_responsibles_to_es(
             responsible=cfg_responsible_sum.responsible,
         )
 
-        ci.util.metric_to_es(
+        ccc.elasticsearch.metric_to_es(
             es_client=es_client,
             metric=cc_cfg_compliance_storage_responsibles,
             index_name=cfg_mgmt.metrics.index_name(cc_cfg_compliance_storage_responsibles),
@@ -295,7 +296,7 @@ def cfg_compliance_responsibles_to_es(
             non_compliant_reasons=status_evaluation.nonCompliantReasons,
         )
 
-        ci.util.metric_to_es(
+        ccc.elasticsearch.metric_to_es(
             es_client=es_client,
             metric=cc_cfg_compliance_responsible,
             index_name=cfg_mgmt.metrics.index_name(cc_cfg_compliance_responsible),
