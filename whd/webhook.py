@@ -66,7 +66,13 @@ class GithubWebhook:
             return
         elif event == 'pull_request':
             parsed = PullRequestEvent(raw_dict=req.media, delivery=delivery)
-            processing = self.dispatcher.dispatch_pullrequest_event(pr_event=parsed)
+            processing = self.dispatcher.dispatch_pullrequest_event(
+                pr_event=parsed,
+                es_client=self.es_client,
+                delivery_id=delivery,
+                hostname=hostname,
+                repository=repository_name,
+            )
             if not processing:
                 resp.text = "Event ignored"
             return

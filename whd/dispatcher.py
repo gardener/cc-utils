@@ -62,6 +62,7 @@ from .model import (
     PushEvent,
     RefType,
 )
+import whd.metric
 
 
 logger = logging.getLogger(__name__)
@@ -264,7 +265,14 @@ class GithubWebhookDispatcher:
                         )
                         client.abort_build(build.id())
 
-    def dispatch_pullrequest_event(self, pr_event) -> bool:
+    def dispatch_pullrequest_event(
+        self,
+        pr_event,
+        delivery_id: int,
+        repository: str,
+        hostname: str,
+        es_client: ccc.elasticsearch.ElasticSearchClient,
+    ) -> bool:
         '''Process the given push event.
 
         Return `True` if event will be processed, `False` if no processing will be done.
@@ -278,7 +286,8 @@ class GithubWebhookDispatcher:
             logger.info(f'ignoring pull-request action {pr_event.action()}')
             return False
 
-        def _process_pr_event():
+        def _process_pr_event(**kwargs):
+            process_start_time = datetime.datetime.now()
             for concourse_api in self.concourse_clients():
                 resources = list(self._matching_resources(
                     concourse_api=concourse_api,
@@ -310,7 +319,31 @@ class GithubWebhookDispatcher:
                 time.sleep(random.randint(5,10))
                 self.handle_untriggered_jobs(pr_event=pr_event, concourse_api=concourse_api)
 
-        thread = threading.Thread(target=_process_pr_event)
+            process_end_time = datetime.datetime.now()
+            process_total_seconds = (process_end_time - process_start_time).total_seconds()
+            webhook_delivery_metric = whd.metric.WebhookDelivery.create(
+                delivery_id=kwargs.get('delivery_id'),
+                event_type=kwargs.get('event_type'),
+                repository=kwargs.get('repository'),
+                hostname=kwargs.get('hostname'),
+                process_total_seconds=process_total_seconds,
+            )
+            ccc.elasticsearch.metric_to_es(
+                es_client=kwargs.get('es_client'),
+                metric=webhook_delivery_metric,
+                index_name=whd.metric.index_name(webhook_delivery_metric),
+            )
+
+        thread = threading.Thread(
+            target=_process_pr_event,
+            kwargs={
+                'delivery_id': delivery_id,
+                'hostname': hostname,
+                'es_client': es_client,
+                'repository': repository,
+                'event_type': 'pull_request',
+            }
+        )
         thread.start()
 
         return True
