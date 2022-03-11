@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import collections
-import dataclasses
 import enum
 import functools
 import hashlib
@@ -34,7 +33,6 @@ import termcolor
 from urllib.parse import urlunparse
 
 import ci.paths
-import ccc.elasticsearch
 
 
 logger = logging.getLogger(__name__)
