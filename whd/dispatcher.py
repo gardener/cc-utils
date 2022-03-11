@@ -100,7 +100,14 @@ class GithubWebhookDispatcher:
         # todo: rename parameter
         self._update_pipeline_definition(push_event=create_event)
 
-    def dispatch_push_event(self, push_event):
+    def dispatch_push_event(
+        self,
+        push_event,
+        delivery_id: int,
+        repository: str,
+        hostname: str,
+        es_client: ccc.elasticsearch.ElasticSearchClient,
+    ):
         if self._pipeline_definition_changed(push_event):
             try:
                 self._update_pipeline_definition(push_event)
@@ -112,7 +119,8 @@ class GithubWebhookDispatcher:
 
         self.abort_running_jobs_if_configured(push_event)
 
-        def _check_resources():
+        def _check_resources(**kwargs):
+            process_start_time = datetime.datetime.now()
             for concourse_api in self.concourse_clients():
                 logger.debug(f'using concourse-api: {concourse_api}')
                 resources = self._matching_resources(
@@ -122,7 +130,31 @@ class GithubWebhookDispatcher:
                 logger.debug('triggering resource-check')
                 self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
 
-        thread = threading.Thread(target=_check_resources)
+            process_end_time = datetime.datetime.now()
+            process_total_seconds = (process_end_time - process_start_time).total_seconds()
+            webhook_delivery_metric = whd.metric.WebhookDelivery.create(
+                delivery_id=kwargs.get('delivery_id'),
+                event_type=kwargs.get('event_type'),
+                repository=kwargs.get('repository'),
+                hostname=kwargs.get('hostname'),
+                process_total_seconds=process_total_seconds,
+            )
+            ccc.elasticsearch.metric_to_es(
+                es_client=kwargs.get('es_client'),
+                metric=webhook_delivery_metric,
+                index_name=whd.metric.index_name(webhook_delivery_metric),
+            )
+
+        thread = threading.Thread(
+            target=_check_resources,
+            kwargs={
+                'delivery_id': delivery_id,
+                'hostname': hostname,
+                'es_client': es_client,
+                'repository': repository,
+                'event_type': 'push',
+            }
+        )
         thread.start()
 
     def _update_pipeline_definition(self, push_event):

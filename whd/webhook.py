@@ -57,7 +57,13 @@ class GithubWebhook:
         logger.info(logger_string)
         if event == 'push':
             parsed = PushEvent(raw_dict=req.media, delivery=delivery)
-            self.dispatcher.dispatch_push_event(push_event=parsed)
+            self.dispatcher.dispatch_push_event(
+                push_event=parsed,
+                es_client=self.es_client,
+                delivery_id=delivery,
+                hostname=hostname,
+                repository=repository_name,
+            )
             logger.debug('after push-event dispatching')
             return
         if event == 'create':
