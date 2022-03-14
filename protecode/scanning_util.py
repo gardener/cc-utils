@@ -402,6 +402,9 @@ class ProtecodeUtil:
                     resource=component_resource.resource,
                 )
 
+            if not scan_result:
+                print(f'{component_resource=}')
+
             product_id_to_resource[scan_result.product_id()] = component_resource
             protecode_products_to_consider.append(scan_result)
 
