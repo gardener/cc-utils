@@ -146,7 +146,9 @@ class GithubWebhookDispatcher:
                 self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
 
             process_end_time = datetime.datetime.now()
-            process_total_seconds = (process_end_time - kwargs.get('dispatch_start_time')).total_seconds()
+            process_total_seconds = (
+                process_end_time - kwargs.get('dispatch_start_time')
+            ).total_seconds()
             webhook_delivery_metric = whd.metric.WebhookDelivery.create(
                 delivery_id=kwargs.get('delivery_id'),
                 event_type=kwargs.get('event_type'),
@@ -412,7 +414,9 @@ class GithubWebhookDispatcher:
                 self.handle_untriggered_jobs(pr_event=pr_event, concourse_api=concourse_api)
 
             process_end_time = datetime.datetime.now()
-            process_total_seconds = (process_end_time - kwargs.get('dispatch_start_time')).total_seconds()
+            process_total_seconds = (
+                process_end_time - kwargs.get('dispatch_start_time')
+            ).total_seconds()
             webhook_delivery_metric = whd.metric.WebhookDelivery.create(
                 delivery_id=kwargs.get('delivery_id'),
                 event_type=kwargs.get('event_type'),
