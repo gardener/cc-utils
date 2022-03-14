@@ -49,6 +49,9 @@ class ConcourseConfig(NamedModelElement):
     Not intended to be instantiated by users of this module
     '''
 
+    def concourse_main_team_config(self):
+        return self.raw.get('concourse_main_team_config')
+
     def external_url(self):
         return self.raw.get('externalUrl')
 
