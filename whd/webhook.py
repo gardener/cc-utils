@@ -71,7 +71,14 @@ class GithubWebhook:
             return
         if event == 'create':
             parsed = CreateEvent(raw_dict=req.media, delivery=delivery)
-            self.dispatcher.dispatch_create_event(create_event=parsed)
+            self.dispatcher.dispatch_create_event(
+                create_event=parsed,
+                es_client=self.es_client,
+                delivery_id=delivery,
+                hostname=hostname,
+                repository=repository_name,
+                dispatch_start_time=dispatch_start_time,
+            )
             return
         elif event == 'pull_request':
             parsed = PullRequestEvent(raw_dict=req.media, delivery=delivery)

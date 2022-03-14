@@ -164,21 +164,49 @@ class GithubWebhookDispatcher:
         )
         thread.start()
 
-    def _update_pipeline_definition(self, push_event):
+    def _update_pipeline_definition(
+        self,
+        push_event,
+        delivery_id: int,
+        repository: str,
+        hostname: str,
+        es_client: ccc.elasticsearch.ElasticSearchClient,
+        dispatch_start_time: datetime.datetime,
+    ):
 
         def _do_update():
             repo_url = push_event.repository().repository_url()
             job_mapping_set = self.cfg_set.job_mapping()
             job_mapping = job_mapping_set.job_mapping_for_repo_url(repo_url, self.cfg_set)
 
-            return update_repository_pipelines(
+            update_repository_pipelines(
                 repo_url=repo_url,
                 cfg_set=self.cfg_factory.cfg_set(job_mapping.replication_ctx_cfg_set()),
                 whd_cfg=self.whd_cfg,
             )
 
+            process_end_time = datetime.datetime.now()
+            process_total_seconds = (process_end_time - dispatch_start_time).total_seconds()
+            webhook_delivery_metric = whd.metric.WebhookDelivery.create(
+                delivery_id=delivery_id,
+                event_type='create',
+                repository=repository,
+                hostname=hostname,
+                process_total_seconds=process_total_seconds,
+            )
+            ccc.elasticsearch.metric_to_es(
+                es_client=es_client,
+                metric=webhook_delivery_metric,
+                index_name=whd.metric.index_name(webhook_delivery_metric),
+            )
+
         try:
-            _do_update()
+            _do_update(
+                delivery_id=delivery_id,
+                event_type='create',
+                repository=repository,
+                hostname=hostname,
+            )
         except (JobMappingNotFoundError, ConfigElementNotFoundError) as e:
             # A config element was missing or o JobMapping for the given repository was present.
             # Print warning, reload and try again
