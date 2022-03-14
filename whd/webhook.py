@@ -49,7 +49,8 @@ class GithubWebhook:
         if action:
             logger_string += f' with action "{action}"'
         repository_name = req.media.get("repository", {}).get("full_name")
-        hostname = req.get_header('X-GitHub-Enterprise-Host')
+        # no GHES header ^= github.com
+        hostname = req.get_header('X-GitHub-Enterprise-Host') or 'github.com'
         if repository_name:
             logger_string += f' for repository "{repository_name}"'
         if hostname:
