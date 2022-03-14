@@ -94,6 +94,10 @@ class GithubWebhookDispatcher:
     def dispatch_create_event(
         self,
         create_event,
+        delivery_id: int,
+        repository: str,
+        hostname: str,
+        es_client: ccc.elasticsearch.ElasticSearchClient,
         dispatch_start_time: datetime.datetime,
     ):
         ref_type = create_event.ref_type()
@@ -104,6 +108,10 @@ class GithubWebhookDispatcher:
         # todo: rename parameter
         self._update_pipeline_definition(
             push_event=create_event,
+            delivery_id=delivery_id,
+            repository=repository,
+            hostname=hostname,
+            es_client=es_client,
             dispatch_start_time=dispatch_start_time,
         )
 
@@ -138,7 +146,7 @@ class GithubWebhookDispatcher:
                 self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
 
             process_end_time = datetime.datetime.now()
-            process_total_seconds = (process_end_time - dispatch_start_time).total_seconds()
+            process_total_seconds = (process_end_time - kwargs.get('dispatch_start_time')).total_seconds()
             webhook_delivery_metric = whd.metric.WebhookDelivery.create(
                 delivery_id=kwargs.get('delivery_id'),
                 event_type=kwargs.get('event_type'),
@@ -160,6 +168,7 @@ class GithubWebhookDispatcher:
                 'es_client': es_client,
                 'repository': repository,
                 'event_type': 'push',
+                'dispatch_start_time': dispatch_start_time,
             }
         )
         thread.start()
@@ -174,7 +183,14 @@ class GithubWebhookDispatcher:
         dispatch_start_time: datetime.datetime,
     ):
 
-        def _do_update():
+        def _do_update(
+            delivery_id: int,
+            event_type: str,
+            repository: str,
+            hostname: str,
+            dispatch_start_time: datetime.datetime,
+            es_client: ccc.elasticsearch.ElasticSearchClient,
+        ):
             repo_url = push_event.repository().repository_url()
             job_mapping_set = self.cfg_set.job_mapping()
             job_mapping = job_mapping_set.job_mapping_for_repo_url(repo_url, self.cfg_set)
@@ -189,7 +205,7 @@ class GithubWebhookDispatcher:
             process_total_seconds = (process_end_time - dispatch_start_time).total_seconds()
             webhook_delivery_metric = whd.metric.WebhookDelivery.create(
                 delivery_id=delivery_id,
-                event_type='create',
+                event_type=event_type,
                 repository=repository,
                 hostname=hostname,
                 process_total_seconds=process_total_seconds,
@@ -206,6 +222,8 @@ class GithubWebhookDispatcher:
                 event_type='create',
                 repository=repository,
                 hostname=hostname,
+                dispatch_start_time=dispatch_start_time,
+                es_client=es_client,
             )
         except (JobMappingNotFoundError, ConfigElementNotFoundError) as e:
             # A config element was missing or o JobMapping for the given repository was present.
@@ -218,7 +236,14 @@ class GithubWebhookDispatcher:
             self.cfg_factory = ConfigFactory.from_dict(raw_dict)
             self.cfg_set = self.cfg_factory.cfg_set(self.cfg_set.name())
             # retry
-            _do_update()
+            _do_update(
+                delivery_id=delivery_id,
+                event_type='create',
+                repository=repository,
+                hostname=hostname,
+                dispatch_start_time=dispatch_start_time,
+                es_client=es_client,
+            )
 
     def _pipeline_definition_changed(self, push_event):
         if '.ci/pipeline_definitions' in push_event.modified_paths():
@@ -387,7 +412,7 @@ class GithubWebhookDispatcher:
                 self.handle_untriggered_jobs(pr_event=pr_event, concourse_api=concourse_api)
 
             process_end_time = datetime.datetime.now()
-            process_total_seconds = (process_end_time - dispatch_start_time).total_seconds()
+            process_total_seconds = (process_end_time - kwargs.get('dispatch_start_time')).total_seconds()
             webhook_delivery_metric = whd.metric.WebhookDelivery.create(
                 delivery_id=kwargs.get('delivery_id'),
                 event_type=kwargs.get('event_type'),
@@ -409,6 +434,7 @@ class GithubWebhookDispatcher:
                 'es_client': es_client,
                 'repository': repository,
                 'event_type': 'pull_request',
+                'dispatch_start_time': dispatch_start_time,
             }
         )
         thread.start()
