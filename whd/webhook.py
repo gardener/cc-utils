@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 import logging
 
 import ccc.elasticsearch
@@ -55,6 +56,7 @@ class GithubWebhook:
             logger_string += f' from "{hostname}"'
 
         logger.info(logger_string)
+        dispatch_start_time = datetime.datetime.now()
         if event == 'push':
             parsed = PushEvent(raw_dict=req.media, delivery=delivery)
             self.dispatcher.dispatch_push_event(
@@ -63,6 +65,7 @@ class GithubWebhook:
                 delivery_id=delivery,
                 hostname=hostname,
                 repository=repository_name,
+                dispatch_start_time=dispatch_start_time,
             )
             logger.debug('after push-event dispatching')
             return
@@ -78,6 +81,7 @@ class GithubWebhook:
                 delivery_id=delivery,
                 hostname=hostname,
                 repository=repository_name,
+                dispatch_start_time=dispatch_start_time,
             )
             if not processing:
                 resp.text = "Event ignored"

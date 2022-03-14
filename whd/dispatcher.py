@@ -91,14 +91,21 @@ class GithubWebhookDispatcher:
                     team_name=job_mapping.team_name(),
                 )
 
-    def dispatch_create_event(self, create_event):
+    def dispatch_create_event(
+        self,
+        create_event,
+        dispatch_start_time: datetime.datetime,
+    ):
         ref_type = create_event.ref_type()
         if not ref_type == RefType.BRANCH:
             logger.info(f'ignored create event with type {ref_type}')
             return
 
         # todo: rename parameter
-        self._update_pipeline_definition(push_event=create_event)
+        self._update_pipeline_definition(
+            push_event=create_event,
+            dispatch_start_time=dispatch_start_time,
+        )
 
     def dispatch_push_event(
         self,
@@ -107,6 +114,7 @@ class GithubWebhookDispatcher:
         repository: str,
         hostname: str,
         es_client: ccc.elasticsearch.ElasticSearchClient,
+        dispatch_start_time: datetime.datetime,
     ):
         if self._pipeline_definition_changed(push_event):
             try:
@@ -120,7 +128,6 @@ class GithubWebhookDispatcher:
         self.abort_running_jobs_if_configured(push_event)
 
         def _check_resources(**kwargs):
-            process_start_time = datetime.datetime.now()
             for concourse_api in self.concourse_clients():
                 logger.debug(f'using concourse-api: {concourse_api}')
                 resources = self._matching_resources(
@@ -131,7 +138,7 @@ class GithubWebhookDispatcher:
                 self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
 
             process_end_time = datetime.datetime.now()
-            process_total_seconds = (process_end_time - process_start_time).total_seconds()
+            process_total_seconds = (process_end_time - dispatch_start_time).total_seconds()
             webhook_delivery_metric = whd.metric.WebhookDelivery.create(
                 delivery_id=kwargs.get('delivery_id'),
                 event_type=kwargs.get('event_type'),
@@ -304,6 +311,7 @@ class GithubWebhookDispatcher:
         repository: str,
         hostname: str,
         es_client: ccc.elasticsearch.ElasticSearchClient,
+        dispatch_start_time: datetime.datetime,
     ) -> bool:
         '''Process the given push event.
 
@@ -319,7 +327,6 @@ class GithubWebhookDispatcher:
             return False
 
         def _process_pr_event(**kwargs):
-            process_start_time = datetime.datetime.now()
             for concourse_api in self.concourse_clients():
                 resources = list(self._matching_resources(
                     concourse_api=concourse_api,
@@ -352,7 +359,7 @@ class GithubWebhookDispatcher:
                 self.handle_untriggered_jobs(pr_event=pr_event, concourse_api=concourse_api)
 
             process_end_time = datetime.datetime.now()
-            process_total_seconds = (process_end_time - process_start_time).total_seconds()
+            process_total_seconds = (process_end_time - dispatch_start_time).total_seconds()
             webhook_delivery_metric = whd.metric.WebhookDelivery.create(
                 delivery_id=kwargs.get('delivery_id'),
                 event_type=kwargs.get('event_type'),
