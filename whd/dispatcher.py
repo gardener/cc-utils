@@ -30,6 +30,7 @@ import ccc.github
 import ccc.secrets_server
 import ccc.github
 import ci.util
+import concourse.client.api
 import concourse.client.model
 import concourse.enumerator
 import model
@@ -81,7 +82,9 @@ class GithubWebhookDispatcher:
         self.whd_cfg = whd_cfg
         logger.info(f'github-whd initialised for cfg-set: {cfg_set.name()}')
 
-    def concourse_clients(self):
+    def concourse_clients(
+        self,
+    ) -> typing.Generator[concourse.client.api.ConcourseApiBase, None, None]:
         for concourse_config_name in self.whd_cfg.concourse_config_names():
             concourse_cfg = self.cfg_factory.concourse(concourse_config_name)
             job_mapping_set = self.cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
