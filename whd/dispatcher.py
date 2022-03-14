@@ -159,11 +159,12 @@ class GithubWebhookDispatcher:
                 hostname=kwargs.get('hostname'),
                 process_total_seconds=process_total_seconds,
             )
-            ccc.elasticsearch.metric_to_es(
-                es_client=kwargs.get('es_client'),
-                metric=webhook_delivery_metric,
-                index_name=whd.metric.index_name(webhook_delivery_metric),
-            )
+            if (es_client := kwargs.get('es_client')):
+                ccc.elasticsearch.metric_to_es(
+                    es_client=es_client,
+                    metric=webhook_delivery_metric,
+                    index_name=whd.metric.index_name(webhook_delivery_metric),
+                )
 
         thread = threading.Thread(
             target=_check_resources,
@@ -215,11 +216,12 @@ class GithubWebhookDispatcher:
                 hostname=hostname,
                 process_total_seconds=process_total_seconds,
             )
-            ccc.elasticsearch.metric_to_es(
-                es_client=es_client,
-                metric=webhook_delivery_metric,
-                index_name=whd.metric.index_name(webhook_delivery_metric),
-            )
+            if es_client:
+                ccc.elasticsearch.metric_to_es(
+                    es_client=es_client,
+                    metric=webhook_delivery_metric,
+                    index_name=whd.metric.index_name(webhook_delivery_metric),
+                )
 
         try:
             _do_update(
@@ -427,11 +429,12 @@ class GithubWebhookDispatcher:
                 hostname=kwargs.get('hostname'),
                 process_total_seconds=process_total_seconds,
             )
-            ccc.elasticsearch.metric_to_es(
-                es_client=kwargs.get('es_client'),
-                metric=webhook_delivery_metric,
-                index_name=whd.metric.index_name(webhook_delivery_metric),
-            )
+            if (es_client := kwargs.get('es_client')):
+                ccc.elasticsearch.metric_to_es(
+                    es_client=es_client,
+                    metric=webhook_delivery_metric,
+                    index_name=whd.metric.index_name(webhook_delivery_metric),
+                )
 
         thread = threading.Thread(
             target=_process_pr_event,
