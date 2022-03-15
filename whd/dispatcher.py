@@ -129,7 +129,14 @@ class GithubWebhookDispatcher:
     ):
         if self._pipeline_definition_changed(push_event):
             try:
-                self._update_pipeline_definition(push_event)
+                self._update_pipeline_definition(
+                    push_event=push_event,
+                    delivery_id=delivery_id,
+                    repository=repository,
+                    hostname=hostname,
+                    es_client=es_client,
+                    dispatch_start_time=dispatch_start_time,
+                )
             except ValueError as e:
                 logger.warning(
                     f'Received error updating pipeline-definitions: "{e}". '
