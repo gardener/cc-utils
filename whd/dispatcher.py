@@ -388,6 +388,7 @@ class GithubWebhookDispatcher:
 
         def _process_pr_event(**kwargs):
             for concourse_api in self.concourse_clients():
+                concourse_api: concourse.client.api.ConcourseApiBase
                 resources = list(self._matching_resources(
                     concourse_api=concourse_api,
                     event=pr_event,
@@ -451,7 +452,11 @@ class GithubWebhookDispatcher:
 
         return True
 
-    def _trigger_resource_check(self, concourse_api, resources):
+    def _trigger_resource_check(
+        self,
+        concourse_api: concourse.client.api.ConcourseApiBase,
+        resources,
+    ):
         logger.debug('_trigger_resource_check')
         for resource in resources:
             logger.info('triggering resource check for: ' + resource.name)
@@ -539,7 +544,11 @@ class GithubWebhookDispatcher:
                 return False
         return False
 
-    def _matching_resources(self, concourse_api, event):
+    def _matching_resources(
+        self,
+        concourse_api: concourse.client.api.ConcourseApiBase,
+        event,
+    ):
         if isinstance(event, PushEvent):
             resource_type = ResourceType.GIT
         elif isinstance(event, PullRequestEvent):
@@ -547,12 +556,13 @@ class GithubWebhookDispatcher:
         else:
             raise NotImplementedError
 
-        resources = concourse_api.pipeline_resources(
+        resources_gen = concourse_api.pipeline_resources(
             concourse_api.pipelines(),
             resource_type=resource_type,
         )
 
-        for resource in resources:
+        for resource in resources_gen:
+            resource: concourse.client.model.PipelineConfigResource
             if not resource.has_webhook_token():
                 continue
             ghs = resource.github_source()

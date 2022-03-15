@@ -31,6 +31,7 @@ from datetime import (
     timedelta,
 )
 
+import concourse.client.api
 from whd.model import (
     PullRequestEvent,
 )
@@ -251,7 +252,7 @@ def _pin_and_comment_resource(
     wait_until_next_retry_seconds: int,
     resource: PipelineConfigResource,
     resource_version: ResourceVersion,
-    concourse_api,
+    concourse_api: concourse.client.api.ConcourseApiBase,
 ):
     now = datetime.now()
     next_retry = now + timedelta(seconds=wait_until_next_retry_seconds)
