@@ -97,7 +97,7 @@ class GithubWebhookDispatcher:
     def dispatch_create_event(
         self,
         create_event,
-        delivery_id: int,
+        delivery_id: str,
         repository: str,
         hostname: str,
         es_client: ccc.elasticsearch.ElasticSearchClient,
@@ -121,7 +121,7 @@ class GithubWebhookDispatcher:
     def dispatch_push_event(
         self,
         push_event,
-        delivery_id: int,
+        delivery_id: str,
         repository: str,
         hostname: str,
         es_client: ccc.elasticsearch.ElasticSearchClient,
@@ -189,7 +189,7 @@ class GithubWebhookDispatcher:
     def _update_pipeline_definition(
         self,
         push_event,
-        delivery_id: int,
+        delivery_id: str,
         repository: str,
         hostname: str,
         es_client: ccc.elasticsearch.ElasticSearchClient,
@@ -197,7 +197,7 @@ class GithubWebhookDispatcher:
     ):
 
         def _do_update(
-            delivery_id: int,
+            delivery_id: str,
             event_type: str,
             repository: str,
             hostname: str,
@@ -374,7 +374,7 @@ class GithubWebhookDispatcher:
     def dispatch_pullrequest_event(
         self,
         pr_event,
-        delivery_id: int,
+        delivery_id: str,
         repository: str,
         hostname: str,
         es_client: ccc.elasticsearch.ElasticSearchClient,
