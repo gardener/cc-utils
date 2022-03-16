@@ -686,6 +686,7 @@ class GithubWebhookDispatcher:
             hostname=hostname,
             repository=repository,
             es_client=es_client,
+            event_type=event_type,
         )
 
     def handle_untriggered_jobs(self, pr_event: PullRequestEvent, concourse_api):
