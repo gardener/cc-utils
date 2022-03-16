@@ -621,7 +621,7 @@ class GithubWebhookDispatcher:
                 resource_name=resource.name,
             )
 
-        def is_up_to_date(resource, resource_versions):
+        def is_up_to_date(resource, resource_versions) -> bool:
             # check if pr requires a label to be present
             require_label = resource.source.get('label')
             if require_label:
