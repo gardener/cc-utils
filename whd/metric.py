@@ -18,9 +18,9 @@ class WebhookDelivery:
         repository: str,
         hostname: str,
         process_total_seconds: float
-    ):
+    ) -> 'WebhookDelivery':
         '''
-        convenience method to create a `CcCfgComplianceStorageResponsibles`
+        convenience method to create a `WebhookDelivery`
         '''
         return WebhookDelivery(
             creation_date=datetime.datetime.now().isoformat(),
