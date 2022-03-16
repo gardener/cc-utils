@@ -421,6 +421,11 @@ class GithubWebhookDispatcher:
                     concourse_api=concourse_api,
                     pr_event=pr_event,
                     resources=resources,
+                    delivery_id=kwargs.get('delivery_id'),
+                    event_type=kwargs.get('event_type'),
+                    repository=kwargs.get('repository'),
+                    hostname=kwargs.get('hostname'),
+                    es_client=kwargs.get('es_client'),
                 )
                 # Give concourse a chance to react
                 time.sleep(random.randint(5,10))
@@ -598,6 +603,11 @@ class GithubWebhookDispatcher:
         concourse_api,
         pr_event,
         resources,
+        delivery_id: str,
+        repository: str,
+        hostname: str,
+        event_type: str,
+        es_client: ccc.elasticsearch.ElasticSearchClient,
         retries=10,
         sleep_seconds=3,
     ):
@@ -613,6 +623,19 @@ class GithubWebhookDispatcher:
 
             outdated_resources_names = [r.name for r in resources]
             logger.info(f'could not update resources {outdated_resources_names} - giving up')
+            if es_client:
+                resource_update_failed_metric = whd.metric.WebhookResourceUpdateFailed.create(
+                    delivery_id=delivery_id,
+                    repository=repository,
+                    hostname=hostname,
+                    event_type=event_type,
+                    outdated_resources_names=outdated_resources_names,
+                )
+                ccc.elasticsearch.metric_to_es(
+                    es_client=es_client,
+                    metric=resource_update_failed_metric,
+                    index_name=whd.metric.index_name(resource_update_failed_metric),
+                )
             return
 
         def resource_versions(resource):
@@ -659,6 +682,10 @@ class GithubWebhookDispatcher:
             resources=outdated_resources,
             retries=retries,
             sleep_seconds=sleep_seconds*1.2,
+            delivery_id=delivery_id,
+            hostname=hostname,
+            repository=repository,
+            es_client=es_client,
         )
 
     def handle_untriggered_jobs(self, pr_event: PullRequestEvent, concourse_api):
