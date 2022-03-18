@@ -46,7 +46,7 @@ def determine_previous_build_status(v, cfg_set):
     cc_cfg = cfg_set.concourse()
 
     concourse_client = ccc.concourse.client_from_cfg_name(
-        concourse_cfg_name=cc_cfg.name(),
+        concourse_main_team_cfg_name=cc_cfg.concourse_main_team_config(),
         team_name=v['build-team-name']
     )
     try:

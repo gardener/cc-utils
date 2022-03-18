@@ -390,7 +390,7 @@ class ReplicationResultProcessor:
 
             concourse_results = concourse_target_results[concourse_target_key]
             concourse_api = ccc.concourse.client_from_cfg_name(
-                concourse_cfg_name=concourse_cfg.name(),
+                concourse_main_team_cfg_name=concourse_cfg.concourse_main_team_config(),
                 team_name=concourse_team,
             )
 

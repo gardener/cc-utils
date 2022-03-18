@@ -82,7 +82,7 @@ if meta_build_job_name != env_build_job_name:
 cc_cfg = cfg_set.concourse()
 
 concourse_api = ccc.concourse.client_from_cfg_name(
-  concourse_cfg_name=cc_cfg.name(),
+  concourse_main_team_cfg_name=cc_cfg.concourse_main_team_config(),
   team_name=meta_vars_dict['build-team-name'],
 )
 ## TODO: Replace with MAIN_REPO_DIR once it is available in synthetic steps

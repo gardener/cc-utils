@@ -444,7 +444,7 @@ def retrieve_buildlog(uuid: str):
 
     pipeline_metadata = concourse.util.get_pipeline_metadata()
     client = ccc.concourse.client_from_cfg_name(
-        concourse_cfg_name=concourse_cfg.name(),
+        concourse_main_team_cfg_name=concourse_cfg.concourse_main_team_config(),
         team_name=pipeline_metadata.team_name,
     )
     build = concourse.util.find_own_running_build()
