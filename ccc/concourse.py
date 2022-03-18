@@ -19,6 +19,22 @@ import ci.log
 import ci.util
 import concourse.client.api
 import ctx
+import model.concourse
+
+
+def lookup_cc_team_cfg(
+    concourse_cfg_name,
+    cfg_set,
+    team_name,
+) -> model.concourse.ConcourseTeamConfig:
+    for cc_team_cfg in cfg_set._cfg_elements('concourse_team_cfg'):
+        if cc_team_cfg.team_name() != team_name:
+            continue
+        if concourse_cfg_name != cc_team_cfg.concourse_endpoint_name():
+            continue
+
+        return cc_team_cfg
+    raise KeyError(f'No concourse team config for team name {team_name} found')
 
 
 @ensure.ensure_annotations
@@ -53,14 +69,18 @@ def client_from_parameters(
 @functools.lru_cache()
 @ensure.ensure_annotations
 def client_from_cfg_name(
-    concourse_main_team_cfg_name: str,
+    concourse_cfg_name: str,
     team_name: str,
     cfg_factory=None,
 ):
     if not cfg_factory:
         cfg_factory = ci.util.ctx().cfg_factory()
 
-    concourse_team_config = cfg_factory.concourse_team_cfg(concourse_main_team_cfg_name)
+    concourse_team_config = lookup_cc_team_cfg(
+        concourse_cfg_name=concourse_cfg_name,
+        cfg_set=cfg_factory,
+        team_name=team_name,
+    )
     concourse_endpoint = cfg_factory.concourse_endpoint(
         concourse_team_config.concourse_endpoint_name()
     )
@@ -81,9 +101,11 @@ def client_from_env(
 
     if not team_name:
         team_name = ci.util.check_env('CONCOURSE_CURRENT_TEAM')
-
-    concourse_main_team_cfg_name = cfg_set.concourse().concourse_main_team_config()
-    concourse_team_config = cfg_set.concourse_team_cfg(concourse_main_team_cfg_name)
+    concourse_team_config = lookup_cc_team_cfg(
+        concourse_cfg_name=cfg_set.concourse().name(),
+        cfg_set=cfg_set,
+        team_name=team_name,
+    )
     concourse_endpoint = cfg_set.concourse_endpoint(
         concourse_team_config.concourse_endpoint_name()
     )

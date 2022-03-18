@@ -300,7 +300,7 @@ class ConcourseDeployer(DefinitionDeployer):
             concourse_cfg = definition_descriptor.concourse_target_cfg
 
             api = ccc.concourse.client_from_cfg_name(
-                concourse_main_team_cfg_name=concourse_cfg.concourse_main_team_config(),
+                concourse_cfg_name=concourse_cfg.name(),
                 team_name=definition_descriptor.concourse_target_team,
             )
 
@@ -390,7 +390,7 @@ class ReplicationResultProcessor:
 
             concourse_results = concourse_target_results[concourse_target_key]
             concourse_api = ccc.concourse.client_from_cfg_name(
-                concourse_main_team_cfg_name=concourse_cfg.concourse_main_team_config(),
+                concourse_cfg_name=concourse_cfg.name(),
                 team_name=concourse_team,
             )
 

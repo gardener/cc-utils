@@ -49,9 +49,6 @@ class ConcourseConfig(NamedModelElement):
     Not intended to be instantiated by users of this module
     '''
 
-    def concourse_main_team_config(self):
-        return self.raw['concourse_main_team_config']
-
     def external_url(self):
         return self.raw.get('externalUrl')
 
@@ -136,7 +133,6 @@ class ConcourseConfig(NamedModelElement):
             'helm_chart_version',
             'helm_chart_values',
             'oauth_config_name',
-            'concourse_main_team_config',
         ]
 
     def _optional_attributes(self):
