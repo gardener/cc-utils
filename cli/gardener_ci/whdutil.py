@@ -21,6 +21,9 @@ import uvicorn
 import ci.util
 
 
+logger = logging.getLogger(__name__)
+
+
 def _logging_config(stdout_level=logging.INFO):
     return {
         'version': 1,
@@ -44,12 +47,12 @@ def app():
     cfg_set = cfg_factory.cfg_set(args.cfg_set_name)
     webhook_dispatcher_cfg = cfg_set.webhook_dispatcher()
 
-    print(f'{cfg_set.name()=}')
+    logger.info(f'{cfg_set.name()=}')
     try:
-        print('trying to get ctx_repository')
-        print(f'{cfg_set.ctx_repository()}')
+        logger.info('trying to get ctx_repository')
+        logger.info(f'{cfg_set.ctx_repository()}')
     except:
-        print('XXX failed to read ctx_repository (will ignore this, though)')
+        logger.error('XXX failed to read ctx_repository (will ignore this, though)')
         import traceback
         traceback.print_exc()
 

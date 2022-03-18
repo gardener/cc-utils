@@ -260,7 +260,7 @@ class UploadResult:
     def __init__(
             self,
             status: UploadStatus,
-            component: Component,
+            component,
             result: AnalysisResult,
             pdf_report_retrieval_func,
             resource=None,

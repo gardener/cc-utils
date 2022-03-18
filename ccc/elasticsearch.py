@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
 import datetime
 import functools
 import json
@@ -193,3 +194,20 @@ class ElasticSearchClient:
             *args,
             **kwargs,
         )
+
+
+def metric_to_es(
+    es_client: ElasticSearchClient,
+    metric,
+    index_name: str,
+):
+    try:
+        es_client.store_document(
+            index=index_name,
+            body=dataclasses.asdict(metric),
+            inject_metadata=False,
+        )
+    except Exception:
+        import traceback
+        logger.warning(traceback.format_exc())
+        logger.warning('could not send route request to elastic search')

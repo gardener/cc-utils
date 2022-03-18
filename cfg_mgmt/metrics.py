@@ -3,7 +3,6 @@ import datetime
 import logging
 import typing
 
-import ccc.elasticsearch
 import cfg_mgmt.model as cmm
 
 
@@ -130,19 +129,3 @@ def index_name(
         return 'cc_cfg_compliance_storage_responsibles'
 
     raise NotImplementedError(obj)
-
-
-def metric_to_es(
-    es_client: ccc.elasticsearch.ElasticSearchClient,
-    metric: typing.Union[CcCfgComplianceStatus, CcCfgComplianceResponsible],
-):
-    try:
-        es_client.store_document(
-            index=index_name(metric),
-            body=dataclasses.asdict(metric),
-            inject_metadata=False,
-        )
-    except Exception:
-        import traceback
-        logger.warning(traceback.format_exc())
-        logger.warning('could not send route request to elastic search')
