@@ -11,7 +11,7 @@ COPY VERSION /metadata/VERSION
 
 # XXX backards compatibility (remove eventually)
 ENV PATH /cc/utils/:/cc/utils/bin:$PATH
-ENV HELM_V3_VERSION=v3.1.1
+ENV HELM_V3_VERSION=v3.8.0
 
 RUN cat /cc/utils/gardener-cicd-dso.apk-packages | xargs apk add --no-cache
 
