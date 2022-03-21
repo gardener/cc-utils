@@ -41,6 +41,7 @@ class WebhookResourceUpdateFailed:
     eventType: str
     outdatedResourcesNames: typing.List[str]
     prId: int
+    prAction: str
     creation_date: str
 
     @staticmethod
@@ -51,6 +52,7 @@ class WebhookResourceUpdateFailed:
         event_type: str,
         outdated_resources_names: typing.List[str],
         pr_id: int,
+        pr_action: str,
     ) -> 'WebhookResourceUpdateFailed':
         '''
         convenience method to create a `WebhookResourceUpdateFailed`
@@ -63,6 +65,7 @@ class WebhookResourceUpdateFailed:
             eventType=event_type,
             outdatedResourcesNames=outdated_resources_names,
             prId=pr_id,
+            prAction=pr_action,
         )
 
 

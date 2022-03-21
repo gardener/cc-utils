@@ -604,7 +604,7 @@ class GithubWebhookDispatcher:
     def _ensure_pr_resource_updates(
         self,
         concourse_api,
-        pr_event,
+        pr_event: PullRequestEvent,
         resources,
         delivery_id: str,
         repository: str,
@@ -635,6 +635,7 @@ class GithubWebhookDispatcher:
                     event_type=event_type,
                     outdated_resources_names=outdated_resources_names,
                     pr_id=pr_id,
+                    pr_action=pr_event.action().value,
                 )
                 ccc.elasticsearch.metric_to_es(
                     es_client=es_client,
