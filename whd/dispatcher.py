@@ -563,7 +563,7 @@ class GithubWebhookDispatcher:
         self,
         concourse_api: concourse.client.api.ConcourseApiBase,
         event,
-    ):
+    ) -> typing.Generator[concourse.client.model.PipelineConfigResource, None, None]:
         if isinstance(event, PushEvent):
             resource_type = ResourceType.GIT
         elif isinstance(event, PullRequestEvent):
@@ -605,7 +605,7 @@ class GithubWebhookDispatcher:
         self,
         concourse_api,
         pr_event: PullRequestEvent,
-        resources,
+        resources: typing.List[concourse.client.model.PipelineConfigResource],
         delivery_id: str,
         repository: str,
         hostname: str,
