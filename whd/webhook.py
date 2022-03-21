@@ -31,15 +31,14 @@ class GithubWebhook:
         cfg_factory,
         cfg_set,
         whd_cfg: WebhookDispatcherConfig,
+        es_client: ccc.elasticsearch.ElasticSearchClient,
     ):
         self.dispatcher = GithubWebhookDispatcher(
             cfg_factory=cfg_factory,
             cfg_set=cfg_set,
             whd_cfg=whd_cfg,
         )
-        self.es_client = ccc.elasticsearch.from_cfg(cfg_set.elasticsearch())
-        if self.es_client:
-            logger.info('will write webhook metrics to ES')
+        self.es_client = es_client
 
     def on_post(self, req, resp):
         event = req.get_header('X-GitHub-Event', required=True)

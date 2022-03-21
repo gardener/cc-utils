@@ -12,11 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
 
 import falcon
 
+import ccc.elasticsearch
 from .webhook import GithubWebhook
 from model.webhook_dispatcher import WebhookDispatcherConfig
+
+
+logger = logging.getLogger(__name__)
 
 
 def webhook_dispatcher_app(
@@ -24,6 +29,9 @@ def webhook_dispatcher_app(
     cfg_set,
     whd_cfg: WebhookDispatcherConfig,
 ):
+    es_client = ccc.elasticsearch.from_cfg(cfg_set.elasticsearch())
+    if es_client:
+        logger.info('will write webhook metrics to ES')
 
     # falcon.API will be removed with falcon 4.0.0
     # see: https://github.com/falconry/falcon/
@@ -42,6 +50,7 @@ def webhook_dispatcher_app(
             cfg_factory=cfg_factory,
             whd_cfg=whd_cfg,
             cfg_set=cfg_set,
+            es_client=es_client,
         ),
     )
 
