@@ -82,8 +82,10 @@ class GithubWebhook:
             return
         elif event == 'pull_request':
             parsed = PullRequestEvent(raw_dict=req.media, delivery=delivery)
+            pr_id = req.media.get('pull_request').get('id')
             processing = self.dispatcher.dispatch_pullrequest_event(
                 pr_event=parsed,
+                pr_id=pr_id,
                 es_client=self.es_client,
                 delivery_id=delivery,
                 hostname=hostname,

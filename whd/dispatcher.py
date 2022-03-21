@@ -379,6 +379,7 @@ class GithubWebhookDispatcher:
         hostname: str,
         es_client: ccc.elasticsearch.ElasticSearchClient,
         dispatch_start_time: datetime.datetime,
+        pr_id: int,
     ) -> bool:
         '''Process the given push event.
 
@@ -426,6 +427,7 @@ class GithubWebhookDispatcher:
                     repository=kwargs.get('repository'),
                     hostname=kwargs.get('hostname'),
                     es_client=kwargs.get('es_client'),
+                    pr_id=kwargs.get('pr_id'),
                 )
                 # Give concourse a chance to react
                 time.sleep(random.randint(5,10))
@@ -458,6 +460,7 @@ class GithubWebhookDispatcher:
                 'repository': repository,
                 'event_type': 'pull_request',
                 'dispatch_start_time': dispatch_start_time,
+                'pr_id': pr_id,
             }
         )
         thread.start()
@@ -608,6 +611,7 @@ class GithubWebhookDispatcher:
         hostname: str,
         event_type: str,
         es_client: ccc.elasticsearch.ElasticSearchClient,
+        pr_id: int,
         retries=10,
         sleep_seconds=3,
     ):
@@ -630,6 +634,7 @@ class GithubWebhookDispatcher:
                     hostname=hostname,
                     event_type=event_type,
                     outdated_resources_names=outdated_resources_names,
+                    pr_id=pr_id,
                 )
                 ccc.elasticsearch.metric_to_es(
                     es_client=es_client,
@@ -687,6 +692,7 @@ class GithubWebhookDispatcher:
             repository=repository,
             es_client=es_client,
             event_type=event_type,
+            pr_id=pr_id,
         )
 
     def handle_untriggered_jobs(self, pr_event: PullRequestEvent, concourse_api):
