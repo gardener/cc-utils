@@ -108,6 +108,9 @@ class ConcourseConfig(NamedModelElement):
     def oauth_config_name(self):
         return self.raw['oauth_config_name']
 
+    def main_team_config_name(self):
+        return self.raw.get('main_team_config_name')
+
     def is_accessible_from(self, url: str) -> bool:
         if not (domain_rules := self.raw.get('domain_rules', [])):
             return True
@@ -125,14 +128,14 @@ class ConcourseConfig(NamedModelElement):
         return [
             'externalUrl',
             'helm_chart_default_values_config',
-            'kubernetes_cluster_config',
-            'job_mapping',
-            'imagePullSecret',
-            'tls_secret_name',
-            'ingress_config',
-            'helm_chart_version',
             'helm_chart_values',
+            'helm_chart_version',
+            'imagePullSecret',
+            'ingress_config',
+            'job_mapping',
+            'kubernetes_cluster_config',
             'oauth_config_name',
+            'tls_secret_name',
         ]
 
     def _optional_attributes(self):
@@ -143,6 +146,7 @@ class ConcourseConfig(NamedModelElement):
             'domain_rules',
             'github_enterprise_host',
             'ingress_host', # TODO: Remove
+            'main_team_config_name'
             'proxy',
         }
 

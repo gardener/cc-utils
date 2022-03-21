@@ -68,6 +68,30 @@ def client_from_parameters(
 
 
 @functools.lru_cache()
+def client_for_concourse_cfg(
+    concourse_cfg_name: str,
+    cfg_factory=None,
+) -> typing.Union[concourse.client.api.ConcourseApiBase, None]:
+    '''Create a Concourse API client for the main team of the given concourse config and return it
+
+    Will return `None` if no main team is configured.
+    '''
+    if not cfg_factory:
+        cfg_factory = ci.util.ctx().cfg_factory()
+
+    concourse_cfg: model.concourse.ConcourseConfig = cfg_factory.concourse(concourse_cfg_name)
+
+    if not (main_team_cfg_name := concourse_cfg.main_team_config_name()):
+        return None
+
+    return client_for_concourse_team(
+        concourse_cfg_name=concourse_cfg_name,
+        team_name=main_team_cfg_name,
+        cfg_factory=cfg_factory,
+    )
+
+
+@functools.lru_cache()
 def client_for_concourse_team(
     concourse_cfg_name: str,
     team_name: str,
