@@ -1,6 +1,31 @@
 import dataclasses
 import datetime
+import json
 import typing
+
+
+@dataclasses.dataclass(frozen=True)
+class ExceptionMetric:
+    service: str
+    stacktrace: typing.List[str]
+    request: str
+    creation_date: str
+
+    @staticmethod
+    def create(
+        service: str,
+        stacktrace: typing.List[str],
+        request: dict,
+    ) -> 'ExceptionMetric':
+        '''
+        convenience method to create a `ExceptionMetric`
+        '''
+        return ExceptionMetric(
+            creation_date=datetime.datetime.now().isoformat(),
+            service=service,
+            stacktrace=stacktrace,
+            request=json.dumps(request),
+        )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -70,11 +95,13 @@ class WebhookResourceUpdateFailed:
 
 
 def index_name(
-    obj: typing.Union[WebhookDelivery, WebhookResourceUpdateFailed],
+    obj: typing.Union[WebhookDelivery, WebhookResourceUpdateFailed, ExceptionMetric],
 ) -> str:
     if isinstance(obj, WebhookDelivery):
         return 'webhook_delivery'
     elif isinstance(obj, WebhookResourceUpdateFailed):
         return 'webhook_resource_update_failed'
+    elif isinstance(obj, ExceptionMetric):
+        return 'cicd_services_exception'
 
     raise NotImplementedError(obj)

@@ -13,12 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+import traceback
 
 import falcon
 
 import ccc.elasticsearch
 from .webhook import GithubWebhook
 from model.webhook_dispatcher import WebhookDispatcherConfig
+import whd.metric
 
 
 logger = logging.getLogger(__name__)
@@ -32,6 +34,23 @@ def webhook_dispatcher_app(
     es_client = ccc.elasticsearch.from_cfg(cfg_set.elasticsearch())
     if es_client:
         logger.info('will write webhook metrics to ES')
+
+    def handle_exception(ex, req, resp, params):
+        if not es_client:
+            raise ex
+        stacktrace = traceback.format_stack()
+        req_body = req.media
+        exception_metric = whd.metric.ExceptionMetric.create(
+            service='whd',
+            stacktrace=stacktrace,
+            request=req_body,
+        )
+        ccc.elasticsearch.metric_to_es(
+            es_client=es_client,
+            metric=exception_metric,
+            index_name=whd.metric.index_name(exception_metric),
+        )
+        raise ex
 
     # falcon.API will be removed with falcon 4.0.0
     # see: https://github.com/falconry/falcon/
@@ -52,6 +71,10 @@ def webhook_dispatcher_app(
             cfg_set=cfg_set,
             es_client=es_client,
         ),
+    )
+    app.add_error_handler(
+        exception=Exception,
+        handler=handle_exception,
     )
 
     return app
