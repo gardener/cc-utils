@@ -45,7 +45,7 @@ def job_url(v):
 def determine_previous_build_status(v, cfg_set):
     cc_cfg = cfg_set.concourse()
 
-    concourse_client = ccc.concourse.client_from_cfg_name(
+    concourse_client = ccc.concourse.client_for_concourse_team(
         concourse_cfg_name=cc_cfg.name(),
         team_name=v['build-team-name']
     )

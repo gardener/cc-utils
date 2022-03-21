@@ -186,10 +186,12 @@ def trigger_resource_check(
     cfg_set = cfg_factory.cfg_set(cfg_name)
     concourse_cfg = cfg_set.concourse()
 
-    api = ccc.concourse.client_from_cfg_name(
-        concourse_cfg_name=concourse_cfg.name(),
+    api = ccc.concourse.client_for_concourse_team(
         team_name=team_name,
+        concourse_cfg=concourse_cfg,
+        cfg_set=cfg_set,
     )
+
     api.trigger_resource_check(
         pipeline_name=pipeline_name,
         resource_name=resource_name,

@@ -443,7 +443,7 @@ def retrieve_buildlog(uuid: str):
     concourse_cfg = concourse.util._current_concourse_config()
 
     pipeline_metadata = concourse.util.get_pipeline_metadata()
-    client = ccc.concourse.client_from_cfg_name(
+    client = ccc.concourse.client_for_concourse_team(
         concourse_cfg_name=concourse_cfg.name(),
         team_name=pipeline_metadata.team_name,
     )

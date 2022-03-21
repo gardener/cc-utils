@@ -81,7 +81,7 @@ if meta_build_job_name != env_build_job_name:
 
 cc_cfg = cfg_set.concourse()
 
-concourse_api = ccc.concourse.client_from_cfg_name(
+concourse_api = ccc.concourse.client_for_concourse_team(
   concourse_cfg_name=cc_cfg.name(),
   team_name=meta_vars_dict['build-team-name'],
 )

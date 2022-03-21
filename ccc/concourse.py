@@ -14,6 +14,7 @@
 # limitations under the License.
 import ensure
 import functools
+import typing
 
 import ci.log
 import ci.util
@@ -67,12 +68,19 @@ def client_from_parameters(
 
 
 @functools.lru_cache()
-@ensure.ensure_annotations
-def client_from_cfg_name(
+def client_for_concourse_team(
     concourse_cfg_name: str,
     team_name: str,
     cfg_factory=None,
 ):
+    '''Create a Concourse API client for the team with the given name on the given concourse instance
+
+    As team names are not necessarily unique across all our Concourse instances, this function
+    will perform a lookup using the given config-factory/-set. If no config-factory or -set is given,
+    all config that is available by default will be considered.
+    An error will be raised if no team with the requested name can be found for the given Concourse
+    instance in the config.
+    '''
     if not cfg_factory:
         cfg_factory = ci.util.ctx().cfg_factory()
 
@@ -81,14 +89,31 @@ def client_from_cfg_name(
         cfg_set=cfg_factory,
         team_name=team_name,
     )
+
+    return client_for_team_cfg(
+        team_cfg=concourse_team_config,
+        cfg_factory=cfg_factory,
+    )
+
+
+@functools.lru_cache()
+def client_for_team_cfg(
+    team_cfg: model.concourse.ConcourseTeamConfig,
+    cfg_factory=None,
+) -> concourse.client.api.ConcourseApiBase:
+    '''Create a Concourse API client for the given team-config and return it
+    '''
+    if not cfg_factory:
+        cfg_factory = ci.util.ctx().cfg_factory()
+
     concourse_endpoint = cfg_factory.concourse_endpoint(
-        concourse_team_config.concourse_endpoint_name()
+        team_cfg.concourse_endpoint_name()
     )
     return client_from_parameters(
         base_url=concourse_endpoint.base_url(),
-        password=concourse_team_config.password(),
-        team_name=team_name,
-        username=concourse_team_config.username(),
+        password=team_cfg.password(),
+        team_name=team_cfg.team_name(),
+        username=team_cfg.username(),
     )
 
 
@@ -101,17 +126,11 @@ def client_from_env(
 
     if not team_name:
         team_name = ci.util.check_env('CONCOURSE_CURRENT_TEAM')
-    concourse_team_config = lookup_cc_team_cfg(
-        concourse_cfg_name=cfg_set.concourse().name(),
-        cfg_set=cfg_set,
+
+    concourse_cfg_name = cfg_set.concourse().name()
+
+    return client_for_concourse_team(
+        concourse_cfg_name=concourse_cfg_name,
         team_name=team_name,
-    )
-    concourse_endpoint = cfg_set.concourse_endpoint(
-        concourse_team_config.concourse_endpoint_name()
-    )
-    return client_from_parameters(
-        base_url=concourse_endpoint.base_url(),
-        password=concourse_team_config.password(),
-        team_name=team_name,
-        username=concourse_team_config.username(),
+        cfg_factory=cfg_set,
     )

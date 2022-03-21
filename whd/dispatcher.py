@@ -89,7 +89,7 @@ class GithubWebhookDispatcher:
             concourse_cfg = self.cfg_factory.concourse(concourse_config_name)
             job_mapping_set = self.cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
             for job_mapping in job_mapping_set.job_mappings().values():
-                yield ccc.concourse.client_from_cfg_name(
+                yield ccc.concourse.client_for_concourse_team(
                     concourse_cfg_name=concourse_cfg.name(),
                     team_name=job_mapping.team_name(),
                 )
