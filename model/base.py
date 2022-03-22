@@ -52,7 +52,6 @@ class ModelValidationMixin:
             raise ModelValidationError(
                 textwrap.dedent(f'''\
                     the following required attributes are absent: {", ".join(missing_attributes)}
-                    {self.name()=}
                     '''
                 )
             )
