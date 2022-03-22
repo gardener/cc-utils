@@ -111,6 +111,11 @@ updated_license_report = list(
 
 # only include results below threshold if email recipients are explicitly configured
 notification_policy = Notify('${image_scan_trait.notify().value}')
+
+if notification_policy is Notify.NOBODY:
+  print("Notification policy set to 'nobody', exiting")
+  sys.exit(0)
+
 if notification_policy is not Notify.EMAIL_RECIPIENTS:
   results_below_threshold = []
 
