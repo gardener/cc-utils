@@ -207,8 +207,9 @@ ATTRIBUTES = (
         doc='whom to notify about found issues',
         type=Notify,
     ),
-    AttributeSpec.required(
+    AttributeSpec.optional(
         name='email_recipients',
+        default=[],
         doc='optional list of email recipients to be notified about critical scan results',
         type=typing.List[str],
     ),
