@@ -73,6 +73,14 @@ def client_from_cfg_name(
     team_name: str,
     cfg_factory=None,
 ):
+    '''Create a Concourse API client for the team with the given name on the given concourse instance
+
+    As team names are not necessarily unique across all our Concourse instances, this function
+    will perform a lookup using the given config-factory/-set. If no config-factory or -set is given,
+    all config that is available by default will be considered.
+    An error will be raised if no team with the requested name can be found for the given Concourse
+    instance in the config.
+    '''
     if not cfg_factory:
         cfg_factory = ci.util.ctx().cfg_factory()
 
