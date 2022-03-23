@@ -172,8 +172,15 @@ def own_running_build_url(cfg_factory=None):
     own_build = find_own_running_build(cfg_factory=cfg_factory)
     cc_cfg = _current_concourse_config()
 
+    if not cfg_factory:
+        cfg_factory = ctx().cfg_factory()
+
+    external_url = cfg_factory.concourse_endpoint(
+        cc_cfg.concourse_endpoint_name()
+    ).base_url()
+
     return ConcourseApiRoutesBase.running_build_url(
-        cc_cfg.external_url(),
+        external_url,
         pipeline_metadata,
         own_build.build_number(),
     )

@@ -12,17 +12,23 @@ import mailutil
 
 
 def meta_vars():
+    cfg_fac = ci.util.ctx().cfg_factory()
+
     build = concourse.util.find_own_running_build()
     pipeline_metadata = concourse.util.get_pipeline_metadata()
-    config_set = ci.util.ctx().cfg_factory().cfg_set(pipeline_metadata.current_config_set_name)
+    config_set = cfg_fac.cfg_set(pipeline_metadata.current_config_set_name)
     concourse_cfg = config_set.concourse()
+    external_url = cfg_fac.concourse_endpoint(
+        concourse_cfg.concourse_endpoint_name()
+    ).base_url()
+
     v = {
         'build-id': build.id(),
         'build-name': build.build_number(),
         'build-job-name': pipeline_metadata.job_name,
         'build-team-name': pipeline_metadata.team_name,
         'build-pipeline-name': pipeline_metadata.pipeline_name,
-        'atc-external-url': concourse_cfg.external_url(),
+        'atc-external-url': external_url,
     }
 
     return v
