@@ -136,12 +136,12 @@ class ConcourseConfig(NamedModelElement):
             'helm_chart_version',
             'helm_chart_values',
             'oauth_config_name',
+            'concourse_endpoint_name',
         ]
 
     def _optional_attributes(self):
         return {
             'clamav_config',
-            'concourse_endpoint_name',
             'concourse_version', # TODO: Remove
             'deploy_storage_class',
             'domain_rules',
