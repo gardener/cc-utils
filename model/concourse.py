@@ -108,6 +108,9 @@ class ConcourseConfig(NamedModelElement):
     def oauth_config_name(self):
         return self.raw['oauth_config_name']
 
+    def concourse_endpoint_name(self):
+        return self.raw.get('concourse_endpoint_name')
+
     def is_accessible_from(self, url: str) -> bool:
         if not (domain_rules := self.raw.get('domain_rules', [])):
             return True
@@ -138,6 +141,7 @@ class ConcourseConfig(NamedModelElement):
     def _optional_attributes(self):
         return {
             'clamav_config',
+            'concourse_endpoint_name',
             'concourse_version', # TODO: Remove
             'deploy_storage_class',
             'domain_rules',
