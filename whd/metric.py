@@ -9,13 +9,15 @@ class ExceptionMetric:
     service: str
     stacktrace: typing.List[str]
     request: str
+    params: str
     creation_date: str
 
     @staticmethod
     def create(
         service: str,
         stacktrace: typing.List[str],
-        request: dict,
+        request: typing.Optional[dict] = None,
+        params: typing.Optional[dict] = None,
     ) -> 'ExceptionMetric':
         '''
         convenience method to create a `ExceptionMetric`
@@ -25,6 +27,7 @@ class ExceptionMetric:
             service=service,
             stacktrace=stacktrace,
             request=json.dumps(request),
+            params=json.dumps(params),
         )
 
 
