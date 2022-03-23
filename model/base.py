@@ -49,9 +49,18 @@ class ModelValidationMixin:
     def _validate_required_attributes(self):
         missing_attributes = [a for a in self._required_attributes() if a not in self.raw]
         if missing_attributes:
+            if hasattr(self, 'name'):
+                if callable(self.name):
+                    name = self.name()
+                else:
+                    name = str(self.name)
+            else:
+                name = '<unknown>'
+
             raise ModelValidationError(
                 textwrap.dedent(f'''\
                     the following required attributes are absent: {", ".join(missing_attributes)}
+                    {name}
                     '''
                 )
             )
