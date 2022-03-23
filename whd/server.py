@@ -37,20 +37,23 @@ def webhook_dispatcher_app(
 
     def handle_exception(ex, req, resp, params):
         if not es_client:
-            raise ex
-        stacktrace = traceback.format_stack()
+            raise falcon.HTTPInternalServerError
+        exc_trace = traceback.format_stack()
+        logger.error(exc_trace)
         req_body = req.media
         exception_metric = whd.metric.ExceptionMetric.create(
             service='whd',
-            stacktrace=stacktrace,
+            stacktrace=exc_trace,
             request=req_body,
+            params=params,
         )
         ccc.elasticsearch.metric_to_es(
             es_client=es_client,
             metric=exception_metric,
             index_name=whd.metric.index_name(exception_metric),
         )
-        raise ex
+        # raise HTTP error to not leak logs to client
+        raise falcon.HTTPInternalServerError
 
     # falcon.API will be removed with falcon 4.0.0
     # see: https://github.com/falconry/falcon/
