@@ -1,6 +1,5 @@
 bash
 ca-certificates
-cargo
 coreutils
 curl
 gcc
