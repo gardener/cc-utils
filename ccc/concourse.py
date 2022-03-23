@@ -23,14 +23,14 @@ import model.concourse
 
 
 def lookup_cc_team_cfg(
-    concourse_cfg_name,
+    concourse_cfg,
     cfg_set,
     team_name,
 ) -> model.concourse.ConcourseTeamConfig:
     for cc_team_cfg in cfg_set._cfg_elements('concourse_team_cfg'):
         if cc_team_cfg.team_name() != team_name:
             continue
-        if concourse_cfg_name != cc_team_cfg.concourse_endpoint_name():
+        if concourse_cfg.concourse_endpoint_name() != cc_team_cfg.concourse_endpoint_name():
             continue
 
         return cc_team_cfg
@@ -76,8 +76,10 @@ def client_from_cfg_name(
     if not cfg_factory:
         cfg_factory = ci.util.ctx().cfg_factory()
 
+    concourse_cfg = cfg_factory.concourse(concourse_cfg_name)
+
     concourse_team_config = lookup_cc_team_cfg(
-        concourse_cfg_name=concourse_cfg_name,
+        concourse_cfg=concourse_cfg,
         cfg_set=cfg_factory,
         team_name=team_name,
     )
@@ -101,8 +103,9 @@ def client_from_env(
 
     if not team_name:
         team_name = ci.util.check_env('CONCOURSE_CURRENT_TEAM')
+
     concourse_team_config = lookup_cc_team_cfg(
-        concourse_cfg_name=cfg_set.concourse().name(),
+        concourse_cfg=cfg_set.concourse(),
         cfg_set=cfg_set,
         team_name=team_name,
     )
