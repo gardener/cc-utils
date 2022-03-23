@@ -38,7 +38,7 @@ def webhook_dispatcher_app(
     def handle_exception(ex, req, resp, params):
         if not es_client:
             raise falcon.HTTPInternalServerError
-        exc_trace = traceback.format_stack()
+        exc_trace = traceback.format_exc()
         logger.error(exc_trace)
         req_body = req.media
         exception_metric = whd.metric.ExceptionMetric.create(
