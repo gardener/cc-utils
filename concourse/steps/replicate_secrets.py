@@ -123,22 +123,6 @@ def replicate_secrets(
     kube_ctx = kube.ctx.Ctx(kubeconfig_dict=kubeconfig)
     secrets_helper = kube_ctx.secret_helper()
 
-    # TODO: This section can be removed if all secret-repos are converted using keys with index
-    if secret_key:
-        logger.info(f'deploying legacy secret on cluster {kube_ctx.kubeconfig.host}')
-        encrypted_cipher_data = ccc.secrets_server.encrypt_data(
-            key=secret_key.encode('utf-8'),
-            cipher_algorithm=secret_cipher_algorithm,
-            serialized_secret_data=serialiser.serialise().encode('utf-8')
-        )
-        encoded_cipher_data = base64.b64encode(encrypted_cipher_data).decode('utf-8')
-
-        secrets_helper.put_secret(
-            name=target_secret_name,
-            raw_data={target_secret_cfg_name: encoded_cipher_data},
-            namespace=target_secret_namespace,
-        )
-
     logger.info(f'deploying indexed secrets on cluster {kube_ctx.kubeconfig.host}')
     for (k,v) in future_secrets.items():
         m = re.match(r'key[-](\d+)', k)
