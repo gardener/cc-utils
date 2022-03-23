@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import textwrap
-
-
 import ci.util
 
 
@@ -58,11 +55,8 @@ class ModelValidationMixin:
                 name = '<unknown>'
 
             raise ModelValidationError(
-                textwrap.dedent(f'''\
-                    the following required attributes are absent: {", ".join(missing_attributes)}
-                    {name}
-                    '''
-                )
+                f'{type(self).__name__}:{name}: The following required attributes are '
+                f'absent: {", ".join(missing_attributes)}.'
             )
 
     def _validate_known_attributes(self):
@@ -77,11 +71,8 @@ class ModelValidationMixin:
                 name = '<unknown>'
 
             raise ModelValidationError(
-                '{c}:{e}: the following attributes are unknown: {m}'.format(
-                    c=type(self).__name__,
-                    e=str(name),
-                    m=', '.join(unknown_attributes)
-                )
+                f'{type(self).__name__}:{name}: The following attributes are '
+                f'unknown: {", ".join(unknown_attributes)}.'
             )
 
 
