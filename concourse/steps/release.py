@@ -1000,6 +1000,7 @@ def release_and_prepare_next_dev_cycle(
     next_version_callback: str=None,
     prerelease_suffix: str="dev",
     rebase_before_release: bool=False,
+    release_on_github: bool=True,
     release_commit_callback: str=None,
     release_commit_message_prefix: str=None,
     slack_channel_configs: list=[],
