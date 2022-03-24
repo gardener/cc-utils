@@ -98,6 +98,7 @@ release_and_prepare_next_dev_cycle(
   next_version_callback='${next_version_callback_path}',
   % endif
   rebase_before_release=${release_trait.rebase_before_release()},
+  release_on_github=${release_trait.release_on_github()},
   githubrepobranch=githubrepobranch,
   repo_hostname='${repo.repo_hostname()}',
   repo_path='${repo.repo_path()}',
