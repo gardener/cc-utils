@@ -176,6 +176,14 @@ ATTRIBUTES = (
         The first tag will be used to create the GitHub-release.
         ''',
         type=list
+    ),
+    AttributeSpec.optional(
+        name='release_on_github',
+        default=True,
+        doc='''
+        if true, a github release is published.
+        ''',
+        type=bool
     )
 )
 
@@ -228,6 +236,9 @@ class ReleaseTrait(Trait):
         if tags := self.raw.get('git_tags'):
             return tags[0]
         return None
+
+    def release_on_github(self) -> bool:
+        return self.raw['release_on_github']
 
     def validate(self):
         super().validate()
