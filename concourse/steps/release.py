@@ -638,10 +638,12 @@ class UploadComponentDescriptorStep(TransactionalStep):
         github_helper: GitHubRepositoryHelper,
         component_descriptor_v2_path: str,
         ctf_path:str,
+        release_on_github: bool,
     ):
         self.github_helper = not_none(github_helper)
         self.component_descriptor_v2_path = component_descriptor_v2_path
         self.ctf_path = ctf_path
+        self.release_on_github = release_on_github
 
     def name(self):
         return "Upload Component Descriptor"
@@ -676,8 +678,9 @@ class UploadComponentDescriptorStep(TransactionalStep):
             ci.util.fail('No component descriptor found')
 
     def apply(self):
-        create_release_step_output = self.context().step_output('Create Release')
-        release_tag_name = create_release_step_output['release_tag_name']
+        if self.release_on_github:
+            create_release_step_output = self.context().step_output('Create Release')
+            release_tag_name = create_release_step_output['release_tag_name']
 
         component_descriptors = tuple(self.component_descriptors())
         component_id_to_cd = {cd.component.identity(): cd for cd in component_descriptors}
@@ -717,27 +720,31 @@ class UploadComponentDescriptorStep(TransactionalStep):
         else:
             upload_ctf(ctf_path=self.ctf_path)
 
-        try:
-            release = self.github_helper.repository.release_from_tag(release_tag_name)
+        def attach_cd_to_release():
+            try:
+                release = self.github_helper.repository.release_from_tag(release_tag_name)
 
-            for component in components:
-                component_descriptor = component_id_to_cd[component.identity()]
+                for component in components:
+                    component_descriptor = component_id_to_cd[component.identity()]
 
-                descriptor_str = yaml.dump(
-                    data=dataclasses.asdict(component_descriptor),
-                    Dumper=cm.EnumValueYamlDumper,
-                )
+                    descriptor_str = yaml.dump(
+                        data=dataclasses.asdict(component_descriptor),
+                        Dumper=cm.EnumValueYamlDumper,
+                    )
 
-                normalized_component_name = component.name.replace('/', '_')
-                asset_name = f'{normalized_component_name}.component_descriptor.cnudie.yaml'
-                release.upload_asset(
-                    content_type='application/x-yaml',
-                    name=asset_name,
-                    asset=descriptor_str.encode('utf-8'),
-                    label=asset_name,
-                )
-        except ConnectionError:
-            logger.warning('Unable to attach component-descriptors to release as release-asset.')
+                    normalized_component_name = component.name.replace('/', '_')
+                    asset_name = f'{normalized_component_name}.component_descriptor.cnudie.yaml'
+                    release.upload_asset(
+                        content_type='application/x-yaml',
+                        name=asset_name,
+                        asset=descriptor_str.encode('utf-8'),
+                        label=asset_name,
+                    )
+            except ConnectionError:
+                logger.warning('Unable to attach component-descriptors to release as release-asset.')
+
+        if self.release_on_github:
+            attach_cd_to_release()
 
     def revert(self):
         pass
@@ -1079,6 +1086,7 @@ def release_and_prepare_next_dev_cycle(
         github_helper=github_helper,
         component_descriptor_v2_path=component_descriptor_v2_path,
         ctf_path=ctf_path,
+        release_on_github=release_on_github,
     )
     step_list.append(upload_component_descriptor_step)
 
