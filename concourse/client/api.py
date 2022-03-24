@@ -125,11 +125,11 @@ class ConcourseApiBase:
         return self.request_builder.get(url, return_type='json')
 
     @ensure_annotations
-    def _put(self, url: str, body: str, headers={}):
+    def _put(self, url: str, body: str, headers={}, use_auth_token=True):
         if not self.request_builder:
             raise ValueError('login first')
 
-        return self.request_builder.put(url, body=body, headers=headers, dump_error_content=True)
+        return self.request_builder.put(url, body=body, headers=headers)
 
     @ensure_annotations
     def _post(self, url: str, body: str="", headers={}):

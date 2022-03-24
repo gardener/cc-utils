@@ -156,13 +156,11 @@ class AuthenticatedRequestBuilder:
 
         self.verify_ssl = verify_ssl
 
-    def _check_http_code(self, result, url, dump_error_content=False):
+    def _check_http_code(self, result, url):
         if not result.ok:
             logger.warning(
                 f'rq against {url=} returned {result.status_code=} {result.content=}'
             )
-            if dump_error_content:
-                logger.warning(f'Error message content: {result.content}')
             result.raise_for_status()
 
     def _request(self,
@@ -179,8 +177,6 @@ class AuthenticatedRequestBuilder:
             if 'content-type' not in headers:
                 headers['content-type'] = 'application/x-yaml'
 
-        dump_error_content = kwargs.get('dump_error_content', False)
-
         result = method(
             url,
             headers=headers,
@@ -190,7 +186,7 @@ class AuthenticatedRequestBuilder:
         )
 
         if check_http_code:
-            self._check_http_code(result, url, dump_error_content)
+            self._check_http_code(result, url)
 
         if return_type == 'json':
             return result.json()
