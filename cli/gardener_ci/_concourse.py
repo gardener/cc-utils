@@ -122,7 +122,7 @@ def render_pipelines(
     template_include_dir = template_path
 
     if repo:
-        repository_filter = lambda repo: repo.name == repo
+        repository_filter = lambda repo_obj: repo_obj.name == repo
     else:
         repository_filter = None
 
