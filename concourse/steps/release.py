@@ -1065,14 +1065,15 @@ def release_and_prepare_next_dev_cycle(
         )
         step_list.append(next_cycle_commit_step)
 
-    github_release_step = GitHubReleaseStep(
-        github_helper=github_helper,
-        githubrepobranch=githubrepobranch,
-        repo_dir=repo_dir,
-        component_name=component_name,
-        release_version=release_version,
-    )
-    step_list.append(github_release_step)
+    if release_on_github:
+        github_release_step = GitHubReleaseStep(
+            github_helper=github_helper,
+            githubrepobranch=githubrepobranch,
+            repo_dir=repo_dir,
+            component_name=component_name,
+            release_version=release_version,
+        )
+        step_list.append(github_release_step)
 
     upload_component_descriptor_step = UploadComponentDescriptorStep(
         github_helper=github_helper,
