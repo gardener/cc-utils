@@ -1099,16 +1099,17 @@ def release_and_prepare_next_dev_cycle(
     if not release_transaction.execute():
         raise RuntimeError('An error occurred while creating the Release.')
 
-    publish_release_notes_step = PublishReleaseNotesStep(
-        githubrepobranch=githubrepobranch,
-        github_helper=github_helper,
-        repository_hostname=repo_hostname,
-        repository_path=repo_path,
-        release_version=release_version,
-        component_descriptor_v2_path=component_descriptor_v2_path,
-        ctf_path=ctf_path,
-        repo_dir=repo_dir,
-    )
+    if release_on_github:
+        publish_release_notes_step = PublishReleaseNotesStep(
+            githubrepobranch=githubrepobranch,
+            github_helper=github_helper,
+            repository_hostname=repo_hostname,
+            repository_path=repo_path,
+            release_version=release_version,
+            component_descriptor_v2_path=component_descriptor_v2_path,
+            ctf_path=ctf_path,
+            repo_dir=repo_dir,
+        )
 
     cleanup_draft_releases_step = TryCleanupDraftReleasesStep(
         github_helper=github_helper,
@@ -1129,13 +1130,14 @@ def release_and_prepare_next_dev_cycle(
     else:
         raise NotImplementedError(release_notes_policy)
 
-    release_notes_transaction = Transaction(
-        ctx=transaction_ctx,
-        steps=(publish_release_notes_step,),
-    )
-    release_notes_transaction.validate()
-    if not release_notes_transaction.execute():
-        raise RuntimeError('An error occurred while publishing the release notes.')
+    if release_on_github:
+        release_notes_transaction = Transaction(
+            ctx=transaction_ctx,
+            steps=(publish_release_notes_step,),
+        )
+        release_notes_transaction.validate()
+        if not release_notes_transaction.execute():
+            raise RuntimeError('An error occurred while publishing the release notes.')
 
     if slack_channel_configs:
         release_notes = transaction_ctx.step_output(
