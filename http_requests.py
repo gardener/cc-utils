@@ -156,7 +156,7 @@ class AuthenticatedRequestBuilder:
 
         self.verify_ssl = verify_ssl
 
-    def _check_http_code(self, result, url, dump_error_content):
+    def _check_http_code(self, result, url, dump_error_content=False):
         if not result.ok:
             logger.warning(
                 f'rq against {url=} returned {result.status_code=} {result.content=}'
