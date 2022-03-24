@@ -1140,6 +1140,8 @@ def release_and_prepare_next_dev_cycle(
             raise RuntimeError('An error occurred while publishing the release notes.')
 
     if slack_channel_configs:
+        if not release_on_github:
+            raise RuntimeError('Cannot post to slack without a github release')
         release_notes = transaction_ctx.step_output(
             publish_release_notes_step.name()
             ).get('release notes')
