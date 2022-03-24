@@ -80,6 +80,7 @@ class ConcourseConfigTest:
     @pytest.fixture
     def required_dict(self):
         return {
+            'externalUrl': 'foo',
             'helm_chart_default_values_config': 'foo',
             'kubernetes_cluster_config': 'foo',
             'job_mapping': 'foo',

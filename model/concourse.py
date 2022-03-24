@@ -49,6 +49,9 @@ class ConcourseConfig(NamedModelElement):
     Not intended to be instantiated by users of this module
     '''
 
+    def external_url(self):
+        return self.raw.get('externalUrl')
+
     def job_mapping_cfg_name(self):
         return self.raw.get('job_mapping')
 
@@ -123,6 +126,7 @@ class ConcourseConfig(NamedModelElement):
 
     def _required_attributes(self):
         return [
+            'externalUrl',
             'helm_chart_default_values_config',
             'kubernetes_cluster_config',
             'job_mapping',
