@@ -720,7 +720,7 @@ class UploadComponentDescriptorStep(TransactionalStep):
         else:
             upload_ctf(ctf_path=self.ctf_path)
 
-        def attach_cd_to_release():
+        def upload_component_descriptor_as_release_asset():
             try:
                 release = self.github_helper.repository.release_from_tag(release_tag_name)
 
@@ -744,7 +744,7 @@ class UploadComponentDescriptorStep(TransactionalStep):
                 logger.warning('Unable to attach component-descriptors to release as release-asset.')
 
         if self.release_on_github:
-            attach_cd_to_release()
+            upload_component_descriptor_as_release_asset()
 
     def revert(self):
         pass
