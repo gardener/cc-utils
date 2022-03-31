@@ -493,7 +493,7 @@ def rm_component_descriptor(
 
 @deprecated.deprecated
 def components(
-    component_descriptor_v2: typing.Union[cm.ComponentDescriptor],
+    component_descriptor_v2: typing.Union[cm.ComponentDescriptor, cm.Component],
     cache_dir: str=None,
 ):
     if isinstance(component_descriptor_v2, cm.ComponentDescriptor):
