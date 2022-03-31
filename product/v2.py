@@ -382,18 +382,20 @@ def retrieve_component_descriptor_from_oci_ref(
         layer_digest = cfg.componentDescriptorLayer.digest
         layer_mimetype = cfg.componentDescriptorLayer.mediaType
     except Exception as e:
-        print(f'Warning: failed to parse or retrieve component-descriptor-cfg: {e=}')
-        print('falling back to single-layer')
+        logger.warning(
+            f'Failed to parse or retrieve component-descriptor-cfg: {e=}. '
+            'falling back to single-layer'
+        )
 
         # by contract, there must be exactly one layer (tar w/ component-descriptor)
         if not (layers_count := len(manifest.layers) == 1):
-            print(f'XXX unexpected amount of {layers_count=}')
+            logger.warning(f'XXX unexpected amount of {layers_count=}')
 
         layer_digest = manifest.layers[0].digest
         layer_mimetype = manifest.layers[0].mediaType
 
     if not layer_mimetype == gci.oci.component_descriptor_mimetype:
-        print(f'warning: {manifest_oci_image_ref=} {layer_mimetype=} was unexpected')
+        logger.warning(f'{manifest_oci_image_ref=} {layer_mimetype=} was unexpected')
         # XXX: check for non-tar-variant
 
     blob_res = client.blob(
