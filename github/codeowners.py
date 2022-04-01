@@ -178,6 +178,17 @@ class CodeOwnerMetadataTypes(enum.Enum):
             return CodeOwnerMetadataTypes.UNKNOWN
 
 
+def iter_codeowner_attribute_dict(
+    codeowner: CodeOwner,
+) -> typing.Generator[dict, None, None]:
+    for metadata in codeowner.__dict__.values():
+        if not metadata:
+            continue
+        attribute_dict = dataclasses.asdict(metadata)
+        attribute_dict['type'] = CodeOwnerMetadataTypes.for_codeowner_attribute(metadata).value
+        yield attribute_dict
+
+
 class CodeOwnerEntryResolver:
     '''
     Resolves GitHub CODEOWNERS entries [0] into email addresses.
