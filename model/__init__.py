@@ -27,7 +27,6 @@ from ci.util import (
     not_empty,
     not_none,
     parse_yaml_file,
-    warning,
 )
 
 dc = dataclasses.dataclass
