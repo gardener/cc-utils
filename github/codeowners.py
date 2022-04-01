@@ -326,3 +326,29 @@ class CodeOwnerEntryResolver:
                 )
 
 
+def find_codeowner_by_attribute(
+    codeowners: typing.List[CodeOwner],
+    user: typing.Optional[CodeOwnerGithubUser],
+    email: typing.Optional[CodeOwnerEmail],
+) -> typing.Tuple[CodeOwner, int]:
+    '''
+    search codeowners for attributes
+    returns found codeowners and its index in codeowners
+    if no codeowner is found, (`None`, `None`) is returned
+    '''
+    if not bool(user or email):
+        return None, None
+
+    for codeowner in codeowners:
+        if user:
+            if codeowner.github:
+                if codeowner.github.user == user.user:
+                    return codeowner, codeowners.index(codeowner)
+        if email:
+            if codeowner.email:
+                if codeowner.email.email == email.email:
+                    return codeowner, codeowners.index(codeowner)
+
+    return None, None
+
+
