@@ -17,6 +17,7 @@ import enum
 import logging
 from pathlib import Path
 import typing
+import urllib.parse
 
 from github3 import GitHub
 from github3.exceptions import NotFoundError
@@ -215,6 +216,35 @@ class CodeOwnerEntryResolver:
             else:
                 warning(f'no email found for GitHub user {member}')
 
+    def iter_codeowners_for_team_name(
+        self,
+        github_team_name: str,
+        source: str,
+    ) -> typing.Generator[CodeOwner, None, None]:
+        if not github_team_name:
+            raise RuntimeError(f'{github_team_name} must not be empty')
+
+        org_name, team_name = github_team_name.split('/') # always of form 'org/name'
+        organisation = self.github_api.organization(org_name)
+        team_or_none = _first(filter(lambda team: team.slug == team_name, organisation.teams()))
+
+        if not team_or_none:
+            logger.warning(f'failed to lookup team {team_name}')
+            return
+
+        for member in team_or_none.members():
+            gh_user = self.github_api.user(member)
+            gh_api_hostname = urllib.parse.urlparse(self.github_api._github_url).netloc
+
+            yield CodeOwner.create(
+                github_username=member.login,
+                github_source=source,
+                full_name=gh_user.name,
+                full_name_source=gh_api_hostname,
+                email=gh_user.email,
+                email_source=gh_api_hostname,
+            )
+
     def resolve_email_addresses(self, codeowners_entries):
         '''
         returns a generator yielding the resolved email addresses for the given iterable of
@@ -234,3 +264,54 @@ class CodeOwnerEntryResolver:
                     continue
             else:
                 yield from self._resolve_team_members(codeowner_entry[1:])
+
+    def iter_codeowners(
+        self,
+        codeowner_entries,
+        source: typing.Optional[str],
+    ) -> typing.Generator[CodeOwner, None, None]:
+        gh_api_hostname = urllib.parse.urlparse(self.github_api._github_url).netloc
+        for codeowner_entry in codeowner_entries:
+            # faulty CODEOWNERS
+            if '@' not in codeowner_entry:
+                logger.warning(f'invalid codeowners-entry: {codeowner_entry}')
+                return
+
+            # email
+            if not codeowner_entry.startswith('@'):
+                yield CodeOwner.create(
+                    email=codeowner_entry,
+                    email_source=source,
+                )
+            # username
+            elif '/' not in codeowner_entry:
+                username = codeowner_entry[1:]
+
+                try:
+                    # user found for username
+                    gh_user = self.github_api.user(username)
+                    yield CodeOwner.create(
+                        github_username=username,
+                        github_source=source,
+                        email=gh_user.email,
+                        email_source=gh_api_hostname,
+                        full_name=gh_user.name,
+                        full_name_source=gh_api_hostname,
+                    )
+                except NotFoundError:
+                    # no user found
+                    logger.warning(f'{username=} not found')
+                    yield CodeOwner.create(
+                        github_username=username,
+                        github_source=source,
+                    )
+
+            # team_name
+            else:
+                team_name = codeowner_entry[1:]
+                yield from self.iter_codeowners_for_team_name(
+                    github_team_name=team_name,
+                    source=source,
+                )
+
+
