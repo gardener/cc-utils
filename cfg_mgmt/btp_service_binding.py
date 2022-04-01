@@ -1,8 +1,8 @@
 import copy
-import json
 import logging
 import typing
 import requests
+from dataclasses import dataclass
 
 import cfg_mgmt
 import cfg_mgmt.model as cmm
@@ -16,27 +16,31 @@ ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
 
 
-def _filter_service_bindings(
-    result: dict,
+@dataclass
+class ServiceBindingInfo:
+    id: str
+    name: str
+    service_instance_id: str
+
+
+def _find_next_service_binding_serial_number(
+    bindings: list[ServiceBindingInfo],
     binding_name_prefix: str,
     instance_id: str,
-) -> tuple[list[str], int]:
-    outdated_ids = []
-    next = 1
-    for item in result["items"]:
-        name = item["name"]
-        if name.startswith(binding_name_prefix) and item["service_instance_id"] == instance_id:
+) -> int:
+    next_sn = 1
+    for item in bindings:
+        if item.name.startswith(binding_name_prefix) and item.service_instance_id == instance_id:
             try:
-                n = int(name[len(binding_name_prefix):])
-                outdated_ids.append(item["id"])
-                if n >= next:
-                    next = n + 1
+                n = int(item.name[len(binding_name_prefix):])
+                if n >= next_sn:
+                    next_sn = n + 1
             except ValueError:
-                logger.warn("ignored {}".format(name))
-    return outdated_ids, next
+                logger.warn(f'ignored {item.name}')
+    return next_sn
 
 
-class sbClient:
+class SBClient:
     def __init__(
         self,
         sm_url: str,
@@ -47,54 +51,58 @@ class sbClient:
 
     def delete_service_binding(self, name: str, id: str):
         headers = {
-            'Authorization': 'Bearer {}'.format(self.access_token),
+            'Authorization': f'Bearer {self.access_token}',
         }
-        url = "{}/v1/service_bindings/{}".format(self.sm_url, id)
+        url = f'{self.sm_url}/v1/service_bindings/{id}'
         resp = requests.delete(url, headers=headers)
-        if resp.status_code != 200:
-            msg = 'delete_service_binding failed: {} {}'.format(resp.status_code, resp.text)
+        if not resp.ok:
+            msg = f'delete_service_binding failed: {resp.status_code} {resp.text}'
             logger.error(msg)
             raise requests.HTTPError(msg)
-        logger.info("Deleted service binding {} ({})".format(name, id))
+        logger.info(f'Deleted service binding {name} ({id})')
 
     def create_service_binding(self, instance_id: str, binding_name: str) -> tuple[str, dict]:
-        url = "{}/v1/service_bindings".format(self.sm_url)
+        url = f'{self.sm_url}/v1/service_bindings'
         data = {
-            "name": binding_name,
-            "service_instance_id": instance_id,
+            'name': binding_name,
+            'service_instance_id': instance_id,
         }
         headers = {
             'Accept': 'application/json',
-            'Authorization': 'Bearer {}'.format(self.access_token),
-            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {self.access_token}',
         }
-        resp = requests.post(url, data=json.dumps(data), headers=headers)
-        if resp.status_code != 201:
-            msg = 'create_service_binding failed: {} {}'.format(resp.status_code, resp.text)
+        resp = requests.post(url, json=data, headers=headers)
+        if not resp.ok:
+            msg = f'create_service_binding failed: {resp.status_code} {resp.text}'
             logger.error(msg)
             raise requests.HTTPError(msg)
         result = resp.json()
-        id = result["id"]
-        logger.info('Creating service binding {} ({})'.format(binding_name, id))
-        return id, result["credentials"]
+        id = result['id']
+        logger.info(f'Creating service binding {binding_name} ({id})')
+        return id, result['credentials']
 
-    def get_service_bindings(self) -> dict:
-        url = "{}/v1/service_bindings".format(self.sm_url)
+    def get_service_bindings(self) -> list[ServiceBindingInfo]:
+        url = f'{self.sm_url}/v1/service_bindings'
         headers = {
             'Accept': 'application/json',
-            'Authorization': 'Bearer {}'.format(self.access_token),
+            'Authorization': f'Bearer {self.access_token}',
         }
         resp = requests.get(url, headers=headers)
-        if resp.status_code != 200:
-            msg = 'get_service_bindings failed: {} {}'.format(resp.status_code, resp.text)
+        if not resp.ok:
+            msg = f'get_service_bindings failed: {resp.status_code} {resp.text}'
             logger.error(msg)
             raise requests.HTTPError(msg)
-        list = resp.json()
-        return list
+        bindings = []
+        for item in resp.json()['items']:
+            id = item['id']
+            name = item['name']
+            instance_id = item['service_instance_id']
+            bindings.append(ServiceBindingInfo(id=id, name=name, service_instance_id=instance_id))
+        return bindings
 
 
 def _get_oauth_token(credentials: dict) -> str:
-    url = '{}/oauth/token'.format(credentials['url'])
+    url = f'{credentials["url"]}/oauth/token'
     data = {
         'grant_type': 'client_credentials',
         'token_format': 'bearer',
@@ -105,8 +113,8 @@ def _get_oauth_token(credentials: dict) -> str:
         'Accept': 'application/json',
     }
     resp = requests.post(url, data=data, headers=headers)
-    if resp.status_code != 200:
-        msg = '_get_oauth_token failed: {} {}'.format(resp.status_code, resp.reason)
+    if not resp.ok:
+        msg = f'_get_oauth_token failed: {resp.status_code} {resp.reason}'
         logger.error(msg)
         raise requests.HTTPError(msg)
     result = resp.json()
@@ -116,12 +124,12 @@ def _get_oauth_token(credentials: dict) -> str:
 def _authenticate(
     cfg_element: model.btp_service_binding.BtpServiceBinding,
     cfg_factory: model.ConfigFactory,
-) -> sbClient:
+) -> SBClient:
     auth = cfg_element.auth_service_binding()
     credentials = cfg_factory.btp_service_binding(auth).credentials()
     sm_url = credentials['sm_url']
     access_token = _get_oauth_token(credentials)
-    return sbClient(sm_url, access_token)
+    return SBClient(sm_url, access_token)
 
 
 def rotate_cfg_element(
@@ -129,11 +137,11 @@ def rotate_cfg_element(
     cfg_factory: model.ConfigFactory,
 ) -> typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]:
     client = _authenticate(cfg_element, cfg_factory)
-    result = client.get_service_bindings()
+    bindings = client.get_service_bindings()
     prefix = cfg_element.prefix()
     instance_id = cfg_element.instance_id()
-    _, next = _filter_service_bindings(result, prefix, instance_id)
-    binding_name = "{}{}".format(prefix, next)
+    next_sn = _find_next_service_binding_serial_number(bindings, prefix, instance_id)
+    binding_name = f'{prefix}{next_sn}'
     id, newcreds = client.create_service_binding(instance_id, binding_name)
 
     secret_id = {'binding_id': id, 'binding_name': binding_name}
