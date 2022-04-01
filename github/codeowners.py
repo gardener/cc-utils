@@ -12,8 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from pathlib import Path
+import dataclasses
+import enum
 import logging
+from pathlib import Path
+import typing
 
 from github3 import GitHub
 from github3.exceptions import NotFoundError
@@ -82,6 +85,96 @@ def _first(iterable):
         return next(iterable)
     except StopIteration:
         return None
+
+
+@dataclasses.dataclass(frozen=True)
+class CodeOwnerGithubUser:
+    user: str
+    source: str
+
+
+@dataclasses.dataclass(frozen=True)
+class CodeOwnerPersonalName:
+    firstName: str
+    lastName: str
+    source: str
+
+
+@dataclasses.dataclass(frozen=True)
+class CodeOwnerEmail:
+    email: str
+    source: str
+
+
+@dataclasses.dataclass
+class CodeOwner:
+    github: typing.Optional[CodeOwnerGithubUser]
+    personalName: typing.Optional[CodeOwnerPersonalName]
+    email: typing.Optional[CodeOwnerEmail]
+
+    @staticmethod
+    def create(
+        github_username: typing.Optional[str] = None,
+        github_source: typing.Optional[str] = None,
+        email: typing.Optional[str] = None,
+        email_source: typing.Optional[str] = None,
+        full_name: typing.Optional[str] = None,
+        full_name_source: typing.Optional[str] = None,
+    ) -> 'CodeOwner':
+        '''
+        convenience method to create a 'CodeOwner' obj
+        if an attribute is `None`, its source is ignored
+        '''
+        github = None
+        name = None
+        email_obj = None
+
+        if github_username:
+            github = CodeOwnerGithubUser(
+                user=github_username,
+                source=github_source or None,
+            )
+
+        if full_name:
+            nameparts = full_name.split(' ')
+            first, last = ' '.join(nameparts[:-1]), nameparts[-1:][0]
+            name = CodeOwnerPersonalName(
+                firstName=first,
+                lastName=last,
+                source=full_name_source or None,
+            )
+
+        if email:
+            email_obj = CodeOwnerEmail(
+                email=email,
+                source=email_source or None,
+            )
+
+        return CodeOwner(
+            github=github or None,
+            personalName=name or None,
+            email=email_obj or None,
+        )
+
+
+class CodeOwnerMetadataTypes(enum.Enum):
+    PERSONAL_NAME = 'personalName'
+    GITHUB_USER = 'githubUser'
+    EMAIL = 'email'
+    UNKNOWN = 'unknown'
+
+    @staticmethod
+    def for_codeowner_attribute(
+        attribute: typing.Union[CodeOwnerGithubUser, CodeOwnerEmail, CodeOwnerPersonalName],
+    ) -> 'CodeOwnerMetadataTypes':
+        if isinstance(attribute, CodeOwnerGithubUser):
+            return CodeOwnerMetadataTypes.GITHUB_USER
+        elif isinstance(attribute, CodeOwnerEmail):
+            return CodeOwnerMetadataTypes.EMAIL
+        elif isinstance(attribute, CodeOwnerPersonalName):
+            return CodeOwnerMetadataTypes.PERSONAL_NAME
+        else:
+            return CodeOwnerMetadataTypes.UNKNOWN
 
 
 class CodeOwnerEntryResolver:
