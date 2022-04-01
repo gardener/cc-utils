@@ -352,3 +352,19 @@ def find_codeowner_by_attribute(
     return None, None
 
 
+def merge_codeowner(
+    left_codeowner: CodeOwner,
+    right_codeowner: CodeOwner,
+) -> CodeOwner:
+    '''
+    inclusively full joins two codeowners
+    if both specify an attribute, the left side wins
+    '''
+    github = left_codeowner.github or right_codeowner.github
+    email = left_codeowner.email or right_codeowner.email
+    name = left_codeowner.personalName or right_codeowner.personalName
+    return CodeOwner(
+        github=github,
+        personalName=name,
+        email=email,
+    )
