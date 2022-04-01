@@ -50,6 +50,8 @@ cc-utils:
         test: ~
         lint: ~
       traits:
+        options:
+          public_build_logs: True
         pull-request:
           policies:
             require-label: 'reviewed/ok-to-test' # default
