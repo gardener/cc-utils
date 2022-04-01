@@ -137,6 +137,8 @@ def rotate_cfg_element(
     cfg_element: model.btp_service_binding.BtpServiceBinding,
     cfg_factory: model.ConfigFactory,
 ) -> typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]:
+    old_binding_id = cfg_element.binding_id()
+    old_binding_name = cfg_element.binding_name()
     client = _authenticate(cfg_element, cfg_factory)
     bindings = client.get_service_bindings()
     prefix = cfg_element.prefix()
@@ -145,7 +147,7 @@ def rotate_cfg_element(
     binding_name = f'{prefix}{next_sn}'
     id, newcreds = client.create_service_binding(instance_id, binding_name)
 
-    secret_id = {'binding_id': id, 'binding_name': binding_name}
+    secret_id = {'binding_id': old_binding_id, 'binding_name': old_binding_name}
     raw_cfg = copy.deepcopy(cfg_element.raw)
     raw_cfg['credentials'] = newcreds
     raw_cfg['binding_id'] = id
@@ -166,7 +168,8 @@ def delete_config_secret(
     cfg_factory: model.ConfigFactory,
 ):
     logger.info('deleting old service binding')
-    client = _authenticate(cfg_element, cfg_factory)
-    name = cfg_queue_entry.secretId['binding_name']
-    id = cfg_queue_entry.secretId['id']
-    client.delete_service_binding(name, id)
+    if 'binding_id' in cfg_queue_entry.secretId and cfg_queue_entry.secretId['binding_id'] != '':
+        id = cfg_queue_entry.secretId['binding_id']
+        name = cfg_queue_entry.secretId['binding_name']
+        client = _authenticate(cfg_element, cfg_factory)
+        client.delete_service_binding(name, id)
