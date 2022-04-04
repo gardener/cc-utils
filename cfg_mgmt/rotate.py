@@ -5,6 +5,7 @@ import yaml
 
 import cfg_mgmt
 import cfg_mgmt.azure as cma
+import cfg_mgmt.btp_service_binding as cmb
 import cfg_mgmt.gcp as cmg
 import cfg_mgmt.github as cmgh
 import cfg_mgmt.model as cmm
@@ -57,6 +58,9 @@ def delete_expired_secret(
 
     elif type_name == 'azure_service_principal':
         delete_func = cma.delete_config_secret
+
+    elif type_name == 'btp_service_binding':
+        delete_func = cmb.delete_config_secret
 
     if not delete_func:
         logger.warning(
@@ -117,6 +121,9 @@ def rotate_cfg_element(
 
     elif type_name == 'azure_service_principal':
         update_secret_function = cma.rotate_cfg_element
+
+    elif type_name == 'btp_service_binding':
+        update_secret_function = cmb.rotate_cfg_element
 
     if not update_secret_function:
         logger.warning(f'{type_name=} is not (yet) supported for automated rotation')
