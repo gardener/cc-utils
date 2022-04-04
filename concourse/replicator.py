@@ -1,6 +1,8 @@
 import dataclasses
 import enum
 import os
+import random
+import time
 
 from enum import Enum, IntEnum
 from concurrent.futures import ThreadPoolExecutor
@@ -10,6 +12,7 @@ import textwrap
 import threading
 import traceback
 import typing
+import requests.exceptions
 
 import mako.template
 
@@ -304,10 +307,26 @@ class ConcourseDeployer(DefinitionDeployer):
                 team_name=definition_descriptor.concourse_target_team,
             )
 
-            response = api.set_pipeline(
-                name=pipeline_name,
-                pipeline_definition=pipeline_definition
-            )
+            try:
+                response = api.set_pipeline(
+                    name=pipeline_name,
+                    pipeline_definition=pipeline_definition
+                )
+            except requests.exceptions.HTTPError as e:
+                # We sometimes see this non-descript error. According to an old Concourse-Issue
+                # this might happen due to concurrent saves. Wait a random time and try again.
+                err_content = (
+                    b'failed to save config: comparison with existing config failed during save'
+                )
+                if e.response.status == 500 and e.response.content == err_content:
+                    time.sleep(random.randrange(5,30))
+                    response = api.set_pipeline(
+                        name=pipeline_name,
+                        pipeline_definition=pipeline_definition
+                    )
+                else:
+                    raise
+
             logger.info(
                 'Deployed pipeline: ' + pipeline_name +
                 ' to team: ' + definition_descriptor.concourse_target_team
