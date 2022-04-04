@@ -9,6 +9,7 @@ import cfg_mgmt.model as cmm
 import ci.log
 import ci.util
 import model
+import model.btp_service_binding
 import model.container_registry
 
 
