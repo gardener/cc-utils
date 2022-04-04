@@ -67,7 +67,10 @@ def github_api_ctor(
     if session_adapter is SessionAdapter.NONE:
         pass
     elif session_adapter is SessionAdapter.RETRY:
-        session = http_requests.mount_default_adapter(session)
+        session = http_requests.mount_default_adapter(
+            session=session,
+            flags=http_requests.AdapterFlag.RETRY,
+        )
     elif session_adapter is SessionAdapter.CACHE:
         session = cachecontrol.CacheControl(
             session,
