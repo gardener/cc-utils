@@ -78,6 +78,7 @@ def sync_org_webhooks(whd_deployment_cfg: WebhookDispatcherDeploymentConfig,):
         try:
             webhook_syncer.create_or_update_org_hook(
                 organization_name=organization_name,
+                events=whd_deployment_cfg.events(),
                 webhook_url=webhook_url,
                 skip_ssl_validation=False,
             )

@@ -89,6 +89,9 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
         )
         return f'{WHD_DEPLOYMENT_SUBDOMAIN_LABEL}.{cluster_domain}'
 
+    def events(self):
+        return self.raw.get('events', ['*'])
+
     def kubernetes_config_name(self):
         return self.raw.get('kubernetes_config')
 
