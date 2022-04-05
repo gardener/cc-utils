@@ -106,4 +106,9 @@ cc-utils:
       traits:
         cronjob:
           interval: '2.5m'
-        update_component_deps: ~
+        update_component_deps:
+          ignore_prerelease_versions: yes
+          merge_policies:
+          - component_names:
+            - 'github.com/gardener/component-spec'
+            merge_mode: 'auto_merge'
