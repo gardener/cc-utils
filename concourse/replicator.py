@@ -318,7 +318,7 @@ class ConcourseDeployer(DefinitionDeployer):
                 err_content = (
                     b'failed to save config: comparison with existing config failed during save'
                 )
-                if e.response.status == 500 and e.response.content == err_content:
+                if e.response.status_code == 500 and e.response.content == err_content:
                     time.sleep(random.randrange(5,30))
                     response = api.set_pipeline(
                         name=pipeline_name,
