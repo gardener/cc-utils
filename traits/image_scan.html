@@ -229,7 +229,13 @@ with different contents, all variants are subject to being scanned.</p>
 <td><p>Notify</p></td>
 <td><p>whom to notify about found issues</p></td>
 </tr>
-<tr class="row-even"><td><p>email_recipients</p></td>
+<tr class="row-even"><td><p>overwrite_github_issues_tgt_repository_url</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>if set, and notify is set to github_issues, overwrite target github repository</p></td>
+</tr>
+<tr class="row-odd"><td><p>email_recipients</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span><span class="w"></span>
 </pre></div>
@@ -238,25 +244,25 @@ with different contents, all variants are subject to being scanned.</p>
 <td><p>List[str]</p></td>
 <td><p>optional list of email recipients to be notified about critical scan results</p></td>
 </tr>
-<tr class="row-odd"><td><p>protecode</p></td>
+<tr class="row-even"><td><p>protecode</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>ProtecodeScanCfg</p></td>
 <td><p>if present, perform protecode scanning</p></td>
 </tr>
-<tr class="row-even"><td><p>clam_av</p></td>
+<tr class="row-odd"><td><p>clam_av</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>ClamAVScanCfg</p></td>
 <td><p>if present, perform ClamAV scanning</p></td>
 </tr>
-<tr class="row-odd"><td><p>os_id</p></td>
+<tr class="row-even"><td><p>os_id</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>OsIdScan</p></td>
 <td><p>if present, identify operating system</p></td>
 </tr>
-<tr class="row-even"><td><p>trait_depends</p></td>
+<tr class="row-odd"><td><p>trait_depends</p></td>
 <td><p>no</p></td>
 <td><p>()</p></td>
 <td><p>List[str]</p></td>
@@ -327,6 +333,7 @@ include_component_names.</p></td>
 <li><p><code class="docutils literal notranslate"><span class="pre">email_recipients</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">nobody</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">component_owners</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">github_issues</span></code></p></li>
 </ul>
 <h2>protecode <em>(ProtecodeScanCfg)</em> Attributes<a class="headerlink" href="#trait-image-scan" title="Permalink to this headline">¶</a></h2>
 <table class="colwidths-auto docutils align-default">
