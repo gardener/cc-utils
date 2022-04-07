@@ -14,11 +14,11 @@
 # limitations under the License.
 from pathlib import Path
 import logging
+import typing
 
 from github3 import GitHub
 from github3.exceptions import NotFoundError
-
-from github.util import GitHubRepositoryHelper
+import github3.repos.repo
 
 from ci.util import existing_dir, existing_file, not_none, warning
 import ci.log
@@ -27,54 +27,56 @@ logger = logging.getLogger(__name__)
 ci.log.configure_default_logging()
 
 
-class CodeownersEnumerator:
+def enumerate_remote_repo(
+    repo: github3.repos.repo.Repository,
+    paths: typing.Sequence[str] = ('CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'),
+) -> typing.Generator[str, None, None]:
+    for path in paths:
+        try:
+            yield from filter_codeowners_entries(
+                repo.file_contents(path=path).decoded.decode('utf-8').split('\n')
+            )
+        except NotFoundError:
+            pass # ignore absent files
+
+
+def enumerate_single_file(
+    file_path: str,
+):
+    file_path = existing_file(file_path)
+    with open(file_path) as f:
+        yield from filter_codeowners_entries(f.readlines())
+
+
+def enumerate_local_repo(
+    repo_dir: str,
+    paths: typing.Sequence[str] = ('CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'),
+):
+    repo_dir = existing_dir(Path(repo_dir))
+    if not repo_dir.joinpath('.git').is_dir():
+        raise ValueError(f'not a git root directory: {repo_dir}')
+
+    for path in paths:
+        codeowners_file = repo_dir.joinpath(path)
+        if codeowners_file.is_file():
+            with open(codeowners_file) as f:
+                yield from filter_codeowners_entries(f.readlines())
+
+
+def filter_codeowners_entries(lines):
     '''
-    Parses GitHub CODEOWNSERS files [0] from the documented default locations for a given
-    (git) repository work tree into a stream of codeowners entries.
-
-    [0] https://help.github.com/articles/about-codeowners/
+    returns a generator yielding parsed entries from */CODEOWNERS
+    each entry may be one of
+        - a github user name (with a leading @ character)
+        - a github team name (leading @ character and exactly one / character (org/name))
+        - an email address
     '''
-    CODEOWNERS_PATHS = ('CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS')
-
-    def enumerate_single_file(self, file_path: str):
-        file_path = existing_file(file_path)
-        with open(file_path) as f:
-            yield from self._filter_codeowners_entries(f.readlines())
-
-    def enumerate_local_repo(self, repo_dir: str):
-        repo_dir = existing_dir(Path(repo_dir))
-        if not repo_dir.joinpath('.git').is_dir():
-            raise ValueError(f'not a git root directory: {self.repo_dir}')
-
-        for path in self.CODEOWNERS_PATHS:
-            codeowners_file = repo_dir.joinpath(path)
-            if codeowners_file.is_file():
-                with open(codeowners_file) as f:
-                    yield from self._filter_codeowners_entries(f.readlines())
-
-    def enumerate_remote_repo(self, github_repo_helper: GitHubRepositoryHelper):
-        for path in self.CODEOWNERS_PATHS:
-            try:
-                yield from self._filter_codeowners_entries(
-                    github_repo_helper.retrieve_text_file_contents(file_path=path).split('\n')
-                )
-            except NotFoundError:
-                pass # ignore absent files
-
-    def _filter_codeowners_entries(self, lines):
-        '''
-        returns a generator yielding parsed entries from */CODEOWNERS
-        each entry may be one of
-         - a github user name (with a leading @ character)
-         - a github team name (leading @ character and exactly one / character (org/name))
-         - an email address
-        '''
-        for line in lines:
-            line = line.strip()
-            if line.startswith('#'):
-                continue
-            # Yield tokens, ignoring the first (it is the path filter)
-            yield from line.split()[1:]
+    for line in lines:
+        line = line.strip()
+        if line.startswith('#'):
+            continue
+        # Yield tokens, ignoring the first (it is the path filter)
+        yield from line.split()[1:]
 
 
 def _first(iterable):
