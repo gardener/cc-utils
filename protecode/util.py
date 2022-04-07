@@ -59,7 +59,11 @@ def upload_grouped_images(
     image_reference_filter=(lambda component, resource: True),
     reference_group_ids=(),
     cvss_version=CVSSVersion.V2,
-):
+) -> tuple[
+    typing.Sequence[UploadResult], # results above threshold
+    typing.Sequence[UploadResult], # results below threshold
+    typing.Sequence[typing.Tuple[UploadResult, typing.Set[License]]], # license report
+]:
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
     protecode_api = ccc.protecode.client(protecode_cfg)
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
