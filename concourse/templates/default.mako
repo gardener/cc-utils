@@ -9,7 +9,7 @@ import model.secrets_server
 from ci.util import urljoin
 from makoutil import indent_func
 from concourse.model.base import ScriptType
-from concourse.model.step import StepNotificationPolicy, PrivilegeMode
+from concourse.model.step import PrivilegeMode, StepNotificationPolicy, TaskHook
 from concourse.model.traits.component_descriptor import DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME
 from concourse.model.traits.publish import OciBuilder
 
@@ -44,6 +44,11 @@ secrets_server_cfg_url_path = model.secrets_server.secret_url_path(
   job_mapping,
   secret_cfg,
 )
+
+def on_abort_anchor_name(variant_name, step_name):
+  # instead of re-rendering all the config for the on_abort hook, we just re-use the existing one for the
+  # step being aborted via yaml-anchor
+  return f'{variant_name}_{step_name}_config'
 
 # short-cut for now
 def has_version_trait(model_with_traits):
@@ -213,15 +218,104 @@ if secret_cfg:
 % endif
 </%def>
 
-<%def name="execute(indent, job_step, job_variant)" filter="indent_func(indent),trim">
+<%def name="render_job_exec(
+  indent,
+  job_step,
+  job_variant,
+  github_cfg,
+  source_repo,
+  clone_repositories,
+  executable,
+  cmd,
+)" filter="indent_func(indent),trim">
+  % if has_pr_trait(job_variant):
+    export PULLREQUEST_ID=$(git config -f "${job_variant.main_repository().resource_name()}/.git/config" pullrequest.id)
+    export PULLREQUEST_URL=$(git config -f "${job_variant.main_repository().resource_name()}/.git/config" pullrequest.url)
+  % endif
+  % if has_version_trait(job_variant):
+    export EFFECTIVE_VERSION=$(cat ${job_step.input('version_path')}/version)
+    % if job_variant.trait('version').inject_effective_version():
+    # copy processed version information to VERSION file
+        <%
+        version_file_path = os.path.join(
+          source_repo.resource_name(),
+          job_variant.trait('version').versionfile_relpath()
+        )
+        %>
+    cp "${job_step.input('version_path')}/version" "${version_file_path}"
+    % endif
+  % endif
+  % for from_path, to_path in clone_repositories:
+    # clone repositories for outputting
+    # cp directory recursively (resorting to least common deniminator defined by POSIX)
+    tar c -C ${from_path} . | tar x -C ${to_path}
+  % endfor
+  % if clone_repositories:
+    # init git config
+    git config --global user.name "${github_cfg.credentials().username()}"
+    git config --global user.email "${github_cfg.credentials().email_address()}"
+  % endif
+    if readlink -f .>/dev/null 2>&1; then
+      CC_ROOT_DIR="$(readlink -f .)"
+      export CC_ROOT_DIR
+    else
+      echo "WARNING: no readlink available - CC_ROOT_DIR not set"
+    fi
+    if [ -x "${executable}" ]; then
+      ${cmd}
+    elif [ -f "${executable}" ]; then
+      echo "ERROR: file ${executable} is not executable."
+      exit 1
+    else
+      echo "ERROR: no executable found at ${executable}"
+      exit 1
+    fi
+</%def>
+
+<%def name="on_abort(
+  indent,
+  job_step,
+  job_variant,
+  github_cfg,
+  source_repo,
+  prefix,
+)" filter="indent_func(indent),trim">
 <%
-if job_variant.has_main_repository():
-  source_repo = job_variant.main_repository()
-  source_repo_github_cfg_name = source_repo.cfg_name() or github.name()
-else:
-  source_repo = None
-  source_repo_github_cfg_name = github.name()
+main_repo_name = None
+clone_repositories = []
+for repository in job_variant.repositories():
+  if (
+    job_variant.has_publish_repository(repository.logical_name())
+    and repository.logical_name() in job_step.publish_repository_names()
+  ):
+    if repository.is_main_repo():
+      main_repo_name = job_variant.publish_repository(repository.logical_name()).resource_name()
+    clone_repositories.append((repository.resource_name(), env_var_repo.resource_name()))
+main_repo_name = main_repo_name or source_repo.resource_name()
+prefix = (main_repo_name, '.ci')
 %>
+on_abort:
+  task: '${job_step.name}_aborted'
+  config:
+    <<: *${on_abort_anchor_name(job_variant.variant_name, job_step.name)}
+    run:
+      path: /bin/sh
+      args:
+      - -exc
+      - |
+        ${render_job_exec(
+          job_step=job_step,
+          job_variant=job_variant,
+          github_cfg=github_cfg,
+          source_repo=source_repo,
+          clone_repositories=clone_repositories,
+          executable=job_step.executable(prefix=prefix, hook=TaskHook.ON_ABORT),
+          cmd=job_step.execute(prefix=prefix, hook=TaskHook.ON_ABORT),
+          indent=4,
+        )}
+</%def>
+
+<%def name="execute(indent, job_step, job_variant, source_repo, source_repo_github_cfg_name)" filter="indent_func(indent),trim">
 % if job_step.execute():
 - task: '${job_step.name}'
   privileged: ${'true' if job_step.privilege_mode() is PrivilegeMode.PRIVILEGED else 'false'}
@@ -231,7 +325,11 @@ else:
 % if job_step.retries():
   attempts: ${job_step.retries()}
 % endif
+% if job_step._on_abort():
+  config: &${on_abort_anchor_name(job_variant.variant_name, job_step.name)}
+% else:
   config:
+% endif
 % if job_step.image():
 <%
 image_reference, tag = job_step.image().split(':', 1)
@@ -323,7 +421,6 @@ else:
       SECRETS_SERVER_ENDPOINT: ${secrets_server_cfg.endpoint_url()}
 % if has_component_descriptor_trait(job_variant):
       COMPONENT_NAME: ${job_variant.trait('component_descriptor').component_name()}
-
 % endif
 % for name, expression in job_step.variables().items():
       ${name}: '${eval(expression, {
@@ -331,6 +428,12 @@ else:
         'pipeline_descriptor': pipeline,
         })}'
 % endfor
+  <%
+  if cloned_main_repo_name:
+    prefix = (cloned_main_repo_name, '.ci')
+  else:
+    prefix = (source_repo.resource_name(), '.ci')
+  %>
 % if job_step.script_type() == ScriptType.BOURNE_SHELL:
     run:
       path: /bin/sh
@@ -361,56 +464,16 @@ else:
   <% raise ValueError('unsupported script type') %>
 % endif
 % if not job_step.is_synthetic:
-  % if has_pr_trait(job_variant):
-        export PULLREQUEST_ID=$(git config -f "${job_variant.main_repository().resource_name()}/.git/config" pullrequest.id)
-        export PULLREQUEST_URL=$(git config -f "${job_variant.main_repository().resource_name()}/.git/config" pullrequest.url)
-  % endif
-  % if has_version_trait(job_variant):
-        export EFFECTIVE_VERSION=$(cat ${job_step.input('version_path')}/version)
-    % if job_variant.trait('version').inject_effective_version():
-        # copy processed version information to VERSION file
-        <%
-        version_file_path = os.path.join(
-          source_repo.resource_name(),
-          job_variant.trait('version').versionfile_relpath()
-        )
-        %>
-        cp "${job_step.input('version_path')}/version" "${version_file_path}"
-    % endif
-  % endif
-  % for from_path, to_path in clone_repositories:
-        # clone repositories for outputting
-        # cp directory recursively (resorting to least common deniminator defined by POSIX)
-        tar c -C ${from_path} . | tar x -C ${to_path}
-  % endfor
-  % if clone_repositories:
-        # init git config
-        git config --global user.name "${github.credentials().username()}"
-        git config --global user.email "${github.credentials().email_address()}"
-  % endif
-<%
-  if cloned_main_repo_name:
-    prefix = (cloned_main_repo_name, '.ci')
-  else:
-    prefix = (source_repo.resource_name(), '.ci')
-  executable_file = job_step.executable(prefix=prefix).rstrip()
-  executable_cmd = job_step.execute(prefix=prefix).rstrip()
-%>
-        if readlink -f .>/dev/null 2>&1; then
-          CC_ROOT_DIR="$(readlink -f .)"
-          export CC_ROOT_DIR
-        else
-          echo "WARNING: no readlink available - CC_ROOT_DIR not set"
-        fi
-        if [ -x "${executable_file}" ]; then
-          ${executable_cmd}
-        elif [ -f "${executable_file}" ]; then
-          echo "ERROR: file ${executable_file} is not executable."
-          exit 1
-        else
-          echo "ERROR: no executable found at ${executable_file}"
-          exit 1
-        fi
+        ${render_job_exec(
+            job_step=job_step,
+            job_variant=job_variant,
+            github_cfg=github,
+            source_repo=source_repo,
+            clone_repositories=clone_repositories,
+            executable=job_step.executable(prefix=prefix).rstrip(),
+            cmd=job_step.execute(prefix=prefix).rstrip(),
+            indent=4,
+          )}
 % elif job_step.name == 'prepare':
         ${prepare_step(job_step=job_step, job_variant=job_variant, indent=8)}
 % elif job_step.name == 'publish':
@@ -488,17 +551,35 @@ notify_pull_requests = (
   has_pr_trait(job_variant)
   and job_step.notification_policy() is StepNotificationPolicy.NOTIFY_PULL_REQUESTS
 )
+
+if job_variant.has_main_repository():
+  source_repo = job_variant.main_repository()
+  source_repo_github_cfg_name = source_repo.cfg_name() or github.name()
+else:
+  source_repo = None
+  source_repo_github_cfg_name = github.name()
+
 %>
 - do:
 % if notify_pull_requests:
   ${update_pr_status(2, job_variant, job_step, 'pending')}
 % endif
-  ${execute(2, job_step, job_variant)}
+  ${execute(2, job_step, job_variant, source_repo, source_repo_github_cfg_name)}
 % if notify_pull_requests:
   ${update_pr_status(2, job_variant, job_step, 'success')}
 % endif
 % if render_notification_step:
   ${notification(2, job_variant, job_step, 'error')}
+% endif
+% if job_step._on_abort():
+  ${on_abort(
+      job_step=job_step,
+      job_variant=job_variant,
+      github_cfg=github,
+      source_repo=source_repo,
+      prefix=prefix,
+      indent=2,
+  )}
 % endif
 </%def>
 
