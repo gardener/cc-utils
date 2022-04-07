@@ -258,7 +258,7 @@ class UploadStatus(Enum):
     DONE = 4
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class UploadResult:
     status: UploadStatus
     component: cm.Component
