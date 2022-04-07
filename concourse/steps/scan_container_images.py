@@ -24,7 +24,6 @@ import gci.componentmodel as cm
 
 import ccc.concourse
 import concourse.util
-import mail.model
 import mailutil
 import reutil
 import saf.model
@@ -137,32 +136,6 @@ class MailRecipients:
             parts.append(self._clamav_report())
 
         return ''.join(parts)
-
-    def pdf_report_attachments(self):
-        attachments = []
-
-        def report_filename(upload_result):
-            return upload_result.component.name.replace('/', '_') + '-report.pdf'
-
-        for r in self._protecode_results:
-            upload_result = r[0]
-            attachment = mail.model.Attachment(
-                mimetype_main='application',
-                mimetype_sub='pdf',
-                bytes=upload_result.pdf_report(),
-                filename=report_filename(upload_result),
-            )
-            attachments.append(attachment)
-        for r in self._protecode_results_below_threshold:
-            upload_result = r[0]
-            attachment = mail.model.Attachment(
-                mimetype_main='application',
-                mimetype_sub='pdf',
-                bytes=upload_result.pdf_report(),
-                filename=report_filename(upload_result),
-            )
-            attachments.append(attachment)
-        return attachments
 
     def _mail_disclaimer(self):
         return textwrap.dedent(f'''

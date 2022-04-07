@@ -438,18 +438,11 @@ class ProtecodeUtil:
 
             component_resource = product_id_to_resource[protecode_product.product_id()]
 
-            # create closure for pdf retrieval to avoid actually having to store
-            # all the pdf-reports in memory. Will be called when preparing to send
-            # the notification emails if reports are to be included
-            def pdf_retrieval_function():
-                return self._api.pdf_report(protecode_product.product_id())
-
             yield UploadResult(
                 component=component_resource.component,
                 status=UploadStatus.DONE, # XXX remove this
                 result=analysis_result,
                 resource=component_resource.resource,
-                pdf_report_retrieval_func=pdf_retrieval_function,
             )
 
         # in rare cases, we fail to find (again) an existing product, but through naming-convention

@@ -262,7 +262,6 @@ class UploadResult:
             status: UploadStatus,
             component,
             result: AnalysisResult,
-            pdf_report_retrieval_func,
             resource=None,
     ):
         self.status = ci.util.not_none(status)
@@ -272,13 +271,9 @@ class UploadResult:
         else:
             self.result = None
         self.resource = resource
-        self._pdf_report_retrieval_func = pdf_report_retrieval_func
 
     def __str__(self):
         return '{c} - {s}'.format(
             c=self.component.name,
             s=self.status
         )
-
-    def pdf_report(self):
-        return self._pdf_report_retrieval_func()

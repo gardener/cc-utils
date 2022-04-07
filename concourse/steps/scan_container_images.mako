@@ -170,12 +170,6 @@ for email_recipient in email_recipients:
   body = email_recipient.mail_body()
   email_addresses = set(email_recipient.resolve_recipients())
 
-  # XXX disable pdf-attachments for now
-  if False and notification_policy is Notify.COMPONENT_OWNERS:
-    attachments = email_recipient.pdf_report_attachments()
-  else:
-    attachments = []
-
   # component_name identifies the landscape that has been scanned
   component_name = "${component_trait.component_name()}"
 
@@ -189,7 +183,6 @@ for email_recipient in email_recipients:
     mailutil._send_mail(
       email_cfg=cfg_set.email(),
       recipients=email_addresses,
-      attachments=attachments,
       mail_template=body,
       subject=f'[Action Required] landscape {component_name} has critical Vulnerabilities',
       mimetype='html',
