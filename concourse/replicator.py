@@ -14,6 +14,7 @@ import traceback
 import typing
 import requests.exceptions
 
+import mako.exceptions
 import mako.template
 
 from ci.util import (
@@ -208,12 +209,21 @@ class Renderer:
                 )
             pipeline_metadata['pipeline_name'] = definition_descriptor.effective_pipeline_name()
 
-        t = mako.template.Template(template_contents, lookup=self.lookup)
+            t = mako.template.Template(template_contents, lookup=self.lookup)
 
-        definition_descriptor.pipeline = t.render(
-                config_set=self.cfg_set,
-                pipeline=pipeline_metadata,
-        )
+        try:
+            definition_descriptor.pipeline = t.render(
+                    config_set=self.cfg_set,
+                    pipeline=pipeline_metadata,
+            )
+        except:
+            # use mako-provided function to render the stacktrace. This will properly translate
+            # linenos and fill in information into the generated stacktrace
+            rendered_stacktrace = mako.exceptions.text_error_template().render()
+            raise RuntimeError(
+                f"An exception occured when rendering pipeline '{pipeline_definition.name}': "
+                f"{rendered_stacktrace}"
+            ) from None
 
         return definition_descriptor
 
