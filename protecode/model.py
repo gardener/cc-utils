@@ -13,10 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
 from enum import Enum
 from typing import Iterable
 
-import ci.util
+import gci.componentmodel as cm
+
 from model.base import ModelBase
 
 
@@ -256,24 +258,9 @@ class UploadStatus(Enum):
     DONE = 4
 
 
+@dataclasses.dataclass
 class UploadResult:
-    def __init__(
-            self,
-            status: UploadStatus,
-            component,
-            result: AnalysisResult,
-            resource=None,
-    ):
-        self.status = ci.util.not_none(status)
-        self.component = ci.util.not_none(component)
-        if result:
-            self.result = result
-        else:
-            self.result = None
-        self.resource = resource
-
-    def __str__(self):
-        return '{c} - {s}'.format(
-            c=self.component.name,
-            s=self.status
-        )
+    status: UploadStatus
+    component: cm.Component
+    result: AnalysisResult
+    resource: cm.Resource = None
