@@ -11,6 +11,7 @@ import ci.util
 import delivery.client
 import dso.model as dm
 import oci.client
+import oci.model
 import product.v2
 import unixutil.scan as us
 import unixutil.model as um
@@ -42,6 +43,14 @@ def base_image_os_id(
     image_reference = resource.access.imageReference
 
     manifest = oci_client.manifest(image_reference=image_reference)
+
+    # if multi-arch, randomly choose first entry (assumption: all variants have same os/version)
+    if isinstance(manifest, oci.model.OciImageManifestList):
+        manifest: oci.model.OciImageManifestList
+        manifest: oci.model.OciBlobRef = manifest.manifests[0]
+        image_reference = oci.model.OciImageReference(image_reference)
+        manifest = oci_client.manifest(image_reference.ref_without_tag + '@' + manifest.digest)
+
     first_layer_blob = oci_client.blob(
         image_reference=image_reference,
         digest=manifest.layers[0].digest,
