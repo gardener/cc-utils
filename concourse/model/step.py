@@ -202,12 +202,38 @@ def attrs(pipeline_step):
             counted as failed
             ''',
         ),
+        AttributeSpec.optional(
+            name='on_abort',
+            default=None,
+            doc='''
+            The executable (with optional additional arguments) to run in case the job is aborted.
+            The executable path is calculated relative to `<main_repo>/.ci`.
+
+            Just like `execute` this has two forms:
+
+            - scalar value (str in most cases) --> no shell-escaping is done
+            - list of scalar values -> used verbatim as ARGV
+
+            The resulting `on_abort` step will use the same container image reference as the job
+            that defines it. Also, it will have the same in- and outputs available and access to
+            the same env-vars.
+
+            .. note::
+                `on_abort`-steps themselves cannot be aborted. Beware.
+
+            ''',
+        ),
     )
 
 
 class StepNotificationPolicy(enum.Enum):
     NO_NOTIFICATION = enum.auto()
     NOTIFY_PULL_REQUESTS = enum.auto()
+
+
+class TaskHook(enum.Enum):
+    NONE = enum.auto()
+    ON_ABORT = enum.auto()
 
 
 class PipelineStep(ModelBase):
@@ -288,28 +314,40 @@ class PipelineStep(ModelBase):
         return self.raw['image']
 
     def _execute(self):
+        # by default, run an executable named as the step
         execute_value = self.raw.get('execute', self.name)
         if callable(execute_value):
             return execute_value(self)
         else:
             return execute_value
 
-    def _argv(self):
-        execute = self._execute()
+    def _argv(self, hook: TaskHook = TaskHook.NONE):
+        if hook is TaskHook.NONE:
+            execute = self._execute()
+        elif hook is TaskHook.ON_ABORT:
+            execute = self._on_abort()
+        else:
+            raise NotImplementedError(hook)
+
+        if execute is None:
+            # This can only happen if the template erroneously calls for the task-hook to be
+            # rendered. Check the template for errors.
+            raise RuntimeError(f'Nothing to execute configured for {hook}')
+
         if not isinstance(execute, list):
             return [str(execute)]
         return [shlex.quote(str(e)) for e in execute]
 
-    def executable(self, prefix=''):
-        # by default, run an executable named as the step
+    def executable(self, prefix='', hook: TaskHook = TaskHook.NONE):
+        argv = self._argv(hook)
         if isinstance(prefix, str):
             prefix = [prefix]
-        return os.path.join(*prefix, self._argv()[0])
+        return os.path.join(*prefix, argv[0]).rstrip()
 
-    def execute(self, prefix=''):
-        argv = self._argv()
+    def execute(self, prefix='', hook: TaskHook = TaskHook.NONE):
+        argv = self._argv(hook)
         argv[0] = self.executable(prefix=prefix)
-        return ' '.join(argv)
+        return ' '.join(argv).rstrip()
 
     def registry(self):
         return self.raw.get('registry', None)
@@ -404,6 +442,9 @@ class PipelineStep(ModelBase):
 
     def notification_policy(self):
         return self._notification_policy
+
+    def _on_abort(self):
+        return self.raw.get('on_abort', None)
 
     def validate(self):
         super().validate()
