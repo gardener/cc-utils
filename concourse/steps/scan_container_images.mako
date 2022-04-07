@@ -136,6 +136,7 @@ if notification_policy is Notify.GITHUB_ISSUES:
 % if issue_tgt_repo_url:
     issue_tgt_repo_url='${issue_tgt_repo_url}',
 % endif
+  )
   print(f'omitting email-sending, as notification-method was set to github-issues')
 
 email_recipients = ${image_scan_trait.email_recipients()}
