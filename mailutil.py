@@ -35,7 +35,8 @@ from ci.util import (
 )
 from mail import template_mailer as mailer
 import ccc.github
-from github.codeowners import CodeownersEnumerator, CodeOwnerEntryResolver
+from github.codeowners import CodeOwnerEntryResolver
+import github.codeowners
 
 
 def send_mail(
@@ -160,12 +161,11 @@ def determine_local_repository_codeowners_recipients(
     '''returns a generator yielding e-mail adresses from all given repository work
     tree's CODEOWNERS files.
     '''
-    enumerator = CodeownersEnumerator()
     resolver = CodeOwnerEntryResolver(github_api=github_api)
 
     def enumerate_entries_from_src_dirs(src_dirs):
         for src_dir in src_dirs:
-            yield from enumerator.enumerate_local_repo(repo_dir=src_dir)
+            yield from github.codeowners.enumerate_local_repo(repo_dir=src_dir)
 
     entries = enumerate_entries_from_src_dirs(src_dirs)
 
@@ -178,12 +178,11 @@ def determine_codeowner_file_recipients(
 ):
     '''returns a generator yielding e-mail adresses from the given CODEOWNERS file(s).
     '''
-    enumerator = CodeownersEnumerator()
     resolver = CodeOwnerEntryResolver(github_api=github_api)
 
     def enumerate_entries_from_codeowners_files(codeowners_files):
         for codeowners_file in codeowners_files:
-            yield from enumerator.enumerate_single_file(codeowners_file)
+            yield from github.codeowners.enumerate_single_file(codeowners_file)
 
     entries = enumerate_entries_from_codeowners_files(codeowners_files)
     yield from resolver.resolve_email_addresses(entries)
@@ -293,9 +292,10 @@ def _codeowners_parser_from_component(
     )
 
     resolver = CodeOwnerEntryResolver(github_api=github_api)
-    enumerator = CodeownersEnumerator()
 
-    return resolver, enumerator.enumerate_remote_repo(github_repo_helper=repo_helper)
+    return resolver, github.codeowners.enumerate_remote_repo(
+        repo=repo_helper.repository,
+    )
 
 
 def notify(
