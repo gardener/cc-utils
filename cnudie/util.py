@@ -68,7 +68,7 @@ def determine_component_name(
     return component_name.lower() # OCI demands lowercase
 
 
-def determine_main_source_for_component(
+def main_source(
     component: cm.Component,
     absent_ok: bool=True,
 ) -> cm.ComponentSource:
@@ -85,6 +85,9 @@ def determine_main_source_for_component(
     # if no label was found use heuristic approach
     # heuristic: use first source
     return component.sources[0]
+
+
+determine_main_source_for_component = main_source
 
 
 @dataclasses.dataclass(frozen=True)
