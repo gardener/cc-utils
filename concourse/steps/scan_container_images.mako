@@ -14,6 +14,8 @@ clam_av = image_scan_trait.clam_av()
 
 filter_cfg = image_scan_trait.filters()
 component_trait = job_variant.trait('component_descriptor')
+
+issue_tgt_repo_url = image_scan_trait.overwrite_github_issues_tgt_repository_url()
 %>
 import functools
 import logging
@@ -126,6 +128,15 @@ if all ((
 )):
   print('nothing to report - early-exiting')
   sys.exit(0)
+
+if notification_policy is Notify.GITHUB_ISSUES:
+  create_or_update_github_issues(
+    results=results_above_threshold,
+    cfg_factory=cfg_factory,
+% if issue_tgt_repo_url:
+    issue_tgt_repo_url='${issue_tgt_repo_url}',
+% endif
+  print(f'omitting email-sending, as notification-method was set to github-issues')
 
 email_recipients = ${image_scan_trait.email_recipients()}
 

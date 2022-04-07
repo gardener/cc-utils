@@ -17,13 +17,17 @@ import functools
 import logging
 import textwrap
 import typing
+import urllib.parse
 
 import tabulate
 
 import gci.componentmodel as cm
 
 import ccc.concourse
+import ccc.github
+import cnudie.util
 import concourse.util
+import github.compliance.issue
 import mailutil
 import reutil
 import saf.model
@@ -35,6 +39,57 @@ logger = logging.getLogger()
 
 # monkeypatch: disable html escaping
 tabulate.htmlescape = lambda x: x
+
+
+def create_or_update_github_issues(
+    results: typing.Sequence[UploadResult],
+    cfg_factory,
+    issue_tgt_repo_url: str=None,
+):
+    if issue_tgt_repo_url:
+        gh_api = ccc.github.github_api(repo_url=issue_tgt_repo_url)
+
+        if not '://' in issue_tgt_repo_url:
+            issue_tgt_repo_url = 'x://' + issue_tgt_repo_url
+
+        org, name = urllib.parse.urlparse(issue_tgt_repo_url).path.strip('/').split('/')
+        overwrite_repository = gh_api.repository(org, name)
+    else:
+        overwrite_repository = None
+
+    for result in results:
+        component = result.component
+        resource = result.resource
+        analysis_res = result.result
+
+        if overwrite_repository:
+            repository = overwrite_repository
+        else:
+            source = cnudie.util.main_source(component=component)
+
+            if not source.access.type is cm.AccessType.GITHUB:
+                raise NotImplementedError(source)
+
+            org = source.access.org_name()
+            name = source.access.repository_name()
+            gh_api = ccc.github.github_api(repo_url=source.access.repoUrl)
+
+            repository = gh_api.repository(org, name)
+
+        body = f'''\
+            {component.name}:{resource.name} was found to contain at least one vulnerability.
+
+            details can be found [here]({analysis_res.report_url()})
+        '''
+
+        github.compliance.issue.create_or_update_issue(
+            component=component,
+            resource=resource,
+            repository=repository,
+            body=body,
+        )
+
+        logger.info(f'updated gh-issue for {component.name=} {resource.name=}')
 
 
 class MailRecipients:

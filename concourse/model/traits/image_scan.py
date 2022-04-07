@@ -197,6 +197,7 @@ class Notify(enum.Enum):
     EMAIL_RECIPIENTS = 'email_recipients'
     NOBODY = 'nobody'
     COMPONENT_OWNERS = 'component_owners'
+    GITHUB_ISSUES = 'github_issues'
 
 
 ATTRIBUTES = (
@@ -206,6 +207,11 @@ ATTRIBUTES = (
         default=Notify.EMAIL_RECIPIENTS,
         doc='whom to notify about found issues',
         type=Notify,
+    ),
+    AttributeSpec.optional(
+        name='overwrite_github_issues_tgt_repository_url',
+        default=None,
+        doc='if set, and notify is set to github_issues, overwrite target github repository',
     ),
     AttributeSpec.optional(
         name='email_recipients',
@@ -251,8 +257,11 @@ class ImageScanTrait(Trait, ImageFilterMixin):
         if self.clam_av():
             yield self.clam_av()
 
-    def notify(self):
+    def notify(self) -> Notify:
         return Notify(self.raw['notify'])
+
+    def overwrite_github_issues_tgt_repository_url(self) -> typing.Optional[str]:
+        return self.raw.get('overwrite_github_issues_tgt_repository_url')
 
     def email_recipients(self):
         return self.raw['email_recipients']
