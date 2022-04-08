@@ -86,60 +86,64 @@ def _first(iterable):
         return None
 
 
-class CodeOwnerEntryResolver:
+def determine_email_address(
+    github_user_name: str,
+    github_api: GitHub,
+):
+    not_none(github_user_name)
+    try:
+        user = github_api.user(github_user_name)
+    except NotFoundError:
+        logger.warning(f'failed to lookup {github_user_name=} {github_api._github_url=}')
+        return None
+
+    return user.email
+
+
+def resolve_team_members(
+    github_team_name: str,
+    github_api: GitHub,
+):
+    not_none(github_team_name)
+    org_name, team_name = github_team_name.split('/') # always of form 'org/name'
+    organisation = github_api.organization(org_name)
+    # unfortunately, we have to look-up the team (no api to retrieve it by name)
+    team_or_none = _first(filter(lambda team: team.slug == team_name, organisation.teams()))
+    if not team_or_none:
+        logger.warning('failed to lookup team {t}'.format(t=team_name))
+        return []
+    for member in map(github_api.user, team_or_none.members()):
+        if member.email:
+            yield member.email
+        else:
+            logger.warning(f'no email found for GitHub user {member}')
+
+
+def resolve_email_addresses(
+    codeowners_entries,
+    github_api: GitHub,
+) -> typing.Generator[str, None, None]:
     '''
-    Resolves GitHub CODEOWNERS entries [0] into email addresses.
-
-    The github3.py api object needs to be pre-authenticated with the privilege to read
-    organisation and team memberhip data.
-
-    [0] https://help.github.com/articles/about-codeowners/
+    returns a generator yielding the resolved email addresses for the given iterable of
+    github codeowners entries.
     '''
-
-    def __init__(self, github_api: GitHub):
-        self.github_api = not_none(github_api)
-
-    def _determine_email_address(self, github_user_name: str):
-        not_none(github_user_name)
-        try:
-            user = self.github_api.user(github_user_name)
-        except NotFoundError:
-            logger.warning(f'failed to lookup {github_user_name=} {self.github_api._github_url=}')
-            return None
-
-        return user.email
-
-    def _resolve_team_members(self, github_team_name: str):
-        not_none(github_team_name)
-        org_name, team_name = github_team_name.split('/') # always of form 'org/name'
-        organisation = self.github_api.organization(org_name)
-        # unfortunately, we have to look-up the team (no api to retrieve it by name)
-        team_or_none = _first(filter(lambda team: team.slug == team_name, organisation.teams()))
-        if not team_or_none:
-            warning('failed to lookup team {t}'.format(t=team_name))
-            return []
-        for member in map(self.github_api.user, team_or_none.members()):
-            if member.email:
-                yield member.email
+    for codeowner_entry in codeowners_entries:
+        if '@' not in codeowner_entry:
+            logger.warning(f'invalid codeowners-entry: {codeowner_entry}')
+            continue
+        if not codeowner_entry.startswith('@'):
+            yield codeowner_entry # plain email address
+        elif '/' not in codeowner_entry:
+            email_addr = determine_email_address(
+                github_user_name=codeowner_entry[1:],
+                github_api=github_api,
+            )
+            if email_addr:
+                yield email_addr
             else:
-                warning(f'no email found for GitHub user {member}')
-
-    def resolve_email_addresses(self, codeowners_entries):
-        '''
-        returns a generator yielding the resolved email addresses for the given iterable of
-        github codeowners entries.
-        '''
-        for codeowner_entry in codeowners_entries:
-            if '@' not in codeowner_entry:
-                warning(f'invalid codeowners-entry: {codeowner_entry}')
                 continue
-            if not codeowner_entry.startswith('@'):
-                yield codeowner_entry # plain email address
-            elif '/' not in codeowner_entry:
-                email_addr = self._determine_email_address(codeowner_entry[1:])
-                if email_addr:
-                    yield email_addr
-                else:
-                    continue
-            else:
-                yield from self._resolve_team_members(codeowner_entry[1:])
+        else:
+            yield from resolve_team_members(
+                github_team_name=codeowner_entry[1:],
+                github_api=github_api,
+            )
