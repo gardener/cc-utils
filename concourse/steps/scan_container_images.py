@@ -42,7 +42,7 @@ tabulate.htmlescape = lambda x: x
 
 
 def create_or_update_github_issues(
-    results: typing.Sequence[UploadResult | tuple[UploadResult, float]],
+    results: typing.Sequence[typing.Union[UploadResult, tuple[UploadResult, float]]],
     cfg_factory,
     issue_tgt_repo_url: str=None,
 ):
