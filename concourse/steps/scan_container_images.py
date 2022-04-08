@@ -42,7 +42,7 @@ tabulate.htmlescape = lambda x: x
 
 
 def create_or_update_github_issues(
-    results: typing.Sequence[UploadResult],
+    results: typing.Sequence[UploadResult | tuple[UploadResult, float]],
     cfg_factory,
     issue_tgt_repo_url: str=None,
 ):
@@ -58,6 +58,9 @@ def create_or_update_github_issues(
         overwrite_repository = None
 
     for result in results:
+        if isinstance(result, tuple):
+            result = result[0] # result[1] represents greatest CVEv3-Score
+
         component = result.component
         resource = result.resource
         analysis_res = result.result
