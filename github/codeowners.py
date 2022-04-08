@@ -20,7 +20,7 @@ from github3 import GitHub
 from github3.exceptions import NotFoundError
 import github3.repos.repo
 
-from ci.util import existing_dir, existing_file, not_none, warning
+from ci.util import existing_dir, existing_file, not_none
 import ci.log
 
 logger = logging.getLogger(__name__)
