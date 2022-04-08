@@ -29,7 +29,7 @@ ci.log.configure_default_logging()
 
 def enumerate_codeowners_from_remote_repo(
     repo: github3.repos.repo.Repository,
-    paths: typing.Sequence[str] = ('CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'),
+    paths: typing.Iterable[str] = ('CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'),
 ) -> typing.Generator[str, None, None]:
     for path in paths:
         try:
@@ -42,7 +42,7 @@ def enumerate_codeowners_from_remote_repo(
 
 def enumerate_codeowners_from_file(
     file_path: str,
-):
+) -> typing.Generator[str, None, None]:
     file_path = existing_file(file_path)
     with open(file_path) as f:
         yield from filter_codeowners_entries(f.readlines())
@@ -50,8 +50,8 @@ def enumerate_codeowners_from_file(
 
 def enumerate_codeowners_from_local_repo(
     repo_dir: str,
-    paths: typing.Sequence[str] = ('CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'),
-):
+    paths: typing.Iterable[str] = ('CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'),
+) -> typing.Generator[str, None, None]:
     repo_dir = existing_dir(Path(repo_dir))
     if not repo_dir.joinpath('.git').is_dir():
         raise ValueError(f'not a git root directory: {repo_dir}')
@@ -63,7 +63,9 @@ def enumerate_codeowners_from_local_repo(
                 yield from filter_codeowners_entries(f.readlines())
 
 
-def filter_codeowners_entries(lines):
+def filter_codeowners_entries(
+    lines: typing.Iterable[str],
+) -> typing.Generator[str, None, None]:
     '''
     returns a generator yielding parsed entries from */CODEOWNERS
     each entry may be one of
@@ -79,7 +81,9 @@ def filter_codeowners_entries(lines):
         yield from line.split()[1:]
 
 
-def _first(iterable):
+def _first(
+    iterable: typing.Iterable,
+):
     try:
         return next(iterable)
     except StopIteration:
@@ -89,7 +93,7 @@ def _first(iterable):
 def determine_email_address(
     github_user_name: str,
     github_api: GitHub,
-):
+) -> typing.Optional[str]:
     not_none(github_user_name)
     try:
         user = github_api.user(github_user_name)
@@ -103,7 +107,7 @@ def determine_email_address(
 def resolve_team_members(
     github_team_name: str,
     github_api: GitHub,
-):
+) -> typing.Union[typing.Generator[str, None, None], list]:
     not_none(github_team_name)
     org_name, team_name = github_team_name.split('/') # always of form 'org/name'
     organisation = github_api.organization(org_name)
