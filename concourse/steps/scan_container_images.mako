@@ -138,6 +138,7 @@ if notification_policy is Notify.GITHUB_ISSUES:
 % endif
   )
   print(f'omitting email-sending, as notification-method was set to github-issues')
+  sys.exit(0)
 
 email_recipients = ${image_scan_trait.email_recipients()}
 
