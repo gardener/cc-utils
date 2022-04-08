@@ -78,7 +78,7 @@ def upload_grouped_images(
     def _upload_task(component_resources):
         def _task():
             # force executor to actually iterate through generator
-            return set(
+            return tuple(
                 protecode_util.process_component_resources(
                     component_resources=component_resources,
                 )
