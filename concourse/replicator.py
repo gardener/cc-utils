@@ -24,7 +24,6 @@ from ci.util import (
     urljoin,
 )
 from mailutil import _send_mail
-from github.codeowners import CodeOwnerEntryResolver
 import github.codeowners
 
 from concourse.factory import DefinitionFactory, RawPipelineDefinitionDescriptor
@@ -535,9 +534,11 @@ class ReplicationResultProcessor:
             branch=main_repo['branch'],
         )
 
-        codeowners_resolver = CodeOwnerEntryResolver(github_api=github_api)
-        recipients = set(codeowners_resolver.resolve_email_addresses(
-            github.codeowners.enumerate_remote_repo(repo=repo_helper.repository)
+        recipients = set(github.codeowners.resolve_email_addresses(
+            codeowners_entries=github.codeowners.enumerate_remote_repo(
+                repo=repo_helper.repository
+            ),
+            github_api=github_api,
         ))
 
         # in case no codeowners are available, resort to using the committer
