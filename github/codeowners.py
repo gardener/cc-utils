@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 ci.log.configure_default_logging()
 
 
-def enumerate_remote_repo(
+def enumerate_codeowners_from_remote_repo(
     repo: github3.repos.repo.Repository,
     paths: typing.Sequence[str] = ('CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'),
 ) -> typing.Generator[str, None, None]:
@@ -40,7 +40,7 @@ def enumerate_remote_repo(
             pass # ignore absent files
 
 
-def enumerate_single_file(
+def enumerate_codeowners_from_file(
     file_path: str,
 ):
     file_path = existing_file(file_path)
@@ -48,7 +48,7 @@ def enumerate_single_file(
         yield from filter_codeowners_entries(f.readlines())
 
 
-def enumerate_local_repo(
+def enumerate_codeowners_from_local_repo(
     repo_dir: str,
     paths: typing.Sequence[str] = ('CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'),
 ):
