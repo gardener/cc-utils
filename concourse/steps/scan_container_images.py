@@ -79,11 +79,12 @@ def create_or_update_github_issues(
 
             repository = gh_api.repository(org, name)
 
-        body = f'''\
+        body = textwrap.dedent(f'''\
             {component.name}:{resource.name} was found to contain at least one vulnerability.
 
             details can be found [here]({analysis_res.report_url()})
         '''
+        )
 
         github.compliance.issue.create_or_update_issue(
             component=component,
