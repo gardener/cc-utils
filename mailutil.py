@@ -35,7 +35,6 @@ from ci.util import (
 )
 from mail import template_mailer as mailer
 import ccc.github
-from github.codeowners import CodeOwnerEntryResolver
 import github.codeowners
 
 
@@ -161,15 +160,16 @@ def determine_local_repository_codeowners_recipients(
     '''returns a generator yielding e-mail adresses from all given repository work
     tree's CODEOWNERS files.
     '''
-    resolver = CodeOwnerEntryResolver(github_api=github_api)
-
     def enumerate_entries_from_src_dirs(src_dirs):
         for src_dir in src_dirs:
             yield from github.codeowners.enumerate_local_repo(repo_dir=src_dir)
 
     entries = enumerate_entries_from_src_dirs(src_dirs)
 
-    yield from resolver.resolve_email_addresses(entries)
+    yield from github.codeowners.resolve_email_addresses(
+        codeowners_entries=entries,
+        github_api=github_api,
+    )
 
 
 def determine_codeowner_file_recipients(
@@ -178,14 +178,15 @@ def determine_codeowner_file_recipients(
 ):
     '''returns a generator yielding e-mail adresses from the given CODEOWNERS file(s).
     '''
-    resolver = CodeOwnerEntryResolver(github_api=github_api)
-
     def enumerate_entries_from_codeowners_files(codeowners_files):
         for codeowners_file in codeowners_files:
             yield from github.codeowners.enumerate_single_file(codeowners_file)
 
     entries = enumerate_entries_from_codeowners_files(codeowners_files)
-    yield from resolver.resolve_email_addresses(entries)
+    yield from github.codeowners.resolve_email_addresses(
+        codeowners_entries=entries,
+        github_api=github_api,
+    )
 
 
 def determine_mail_recipients(
@@ -234,7 +235,7 @@ def determine_mail_recipients(
     )
 
     if component_names:
-        entries_and_resolvers = [
+        entries_and_apis = [
             _codeowners_parser_from_component_name(
                 component_name=component_name,
                 ctx_repo_url=ctx_repo_url,
@@ -242,7 +243,7 @@ def determine_mail_recipients(
             ) for component_name in component_names
         ]
     elif components:
-        entries_and_resolvers = [
+        entries_and_apis = [
             _codeowners_parser_from_component(
                 component=component,
                 branch_name=branch_name
@@ -251,8 +252,11 @@ def determine_mail_recipients(
     else:
         raise ValueError('One of components and component_names must be given')
 
-    for resolver, codeowner_entries in entries_and_resolvers:
-        yield from resolver.resolve_email_addresses(codeowner_entries)
+    for api, codeowner_entries in entries_and_apis:
+        yield from github.codeowners.resolve_email_addresses(
+            codeowners_entries=codeowner_entries,
+            github_api=api,
+        )
 
 
 def _codeowners_parser_from_component_name(
@@ -291,9 +295,7 @@ def _codeowners_parser_from_component(
         branch=branch_name,
     )
 
-    resolver = CodeOwnerEntryResolver(github_api=github_api)
-
-    return resolver, github.codeowners.enumerate_remote_repo(
+    return github_api, github.codeowners.enumerate_remote_repo(
         repo=repo_helper.repository,
     )
 
