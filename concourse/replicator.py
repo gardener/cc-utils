@@ -535,7 +535,7 @@ class ReplicationResultProcessor:
         )
 
         recipients = set(github.codeowners.resolve_email_addresses(
-            codeowners_entries=github.codeowners.enumerate_remote_repo(
+            codeowners_entries=github.codeowners.enumerate_codeowners_from_remote_repo(
                 repo=repo_helper.repository
             ),
             github_api=github_api,

@@ -162,7 +162,9 @@ def determine_local_repository_codeowners_recipients(
     '''
     def enumerate_entries_from_src_dirs(src_dirs):
         for src_dir in src_dirs:
-            yield from github.codeowners.enumerate_local_repo(repo_dir=src_dir)
+            yield from github.codeowners.enumerate_codeowners_from_local_repo(
+                repo_dir=src_dir,
+            )
 
     entries = enumerate_entries_from_src_dirs(src_dirs)
 
@@ -180,7 +182,7 @@ def determine_codeowner_file_recipients(
     '''
     def enumerate_entries_from_codeowners_files(codeowners_files):
         for codeowners_file in codeowners_files:
-            yield from github.codeowners.enumerate_single_file(codeowners_file)
+            yield from github.codeowners.enumerate_codeowners_from_file(codeowners_file)
 
     entries = enumerate_entries_from_codeowners_files(codeowners_files)
     yield from github.codeowners.resolve_email_addresses(
@@ -295,7 +297,7 @@ def _codeowners_parser_from_component(
         branch=branch_name,
     )
 
-    return github_api, github.codeowners.enumerate_remote_repo(
+    return github_api, github.codeowners.enumerate_codeowners_from_remote_repo(
         repo=repo_helper.repository,
     )
 
