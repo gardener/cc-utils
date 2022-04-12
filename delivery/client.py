@@ -12,14 +12,14 @@ class DeliveryServiceRoutes:
         self._base_url = base_url
 
     def component_descriptor(self):
-        return 'http://' + ci.util.urljoin(
+        return ci.util.urljoin(
             self._base_url,
             'cnudie',
             'component',
         )
 
     def upload_metadata(self):
-        return 'http://' + ci.util.urljoin(
+        return ci.util.urljoin(
             self._base_url,
             'artefacts',
             'upload-metadata',

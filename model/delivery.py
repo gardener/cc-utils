@@ -136,5 +136,8 @@ class DeliveryEndpointsCfg(NamedModelElement):
     def service_host(self):
         return self.raw['service_host']
 
+    def base_url(self):
+        return f'http://{self.service_host()}'
+
     def dashboard_host(self):
         return self.raw['dashboard_host']

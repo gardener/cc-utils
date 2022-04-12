@@ -20,7 +20,7 @@ def default_client_if_available():
     try:
         delivery_endpoints = cfg_set.delivery_endpoints()
         routes = delivery.client.DeliveryServiceRoutes(
-            base_url=delivery_endpoints.service_host(),
+            base_url=delivery_endpoints.base_url(),
         )
         return delivery.client.DeliveryServiceClient(routes=routes)
     except Exception:
