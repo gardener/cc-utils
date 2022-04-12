@@ -16,10 +16,7 @@ from concourse.steps import step_lib
 import gci.componentmodel as cm
 # xxx: for now, assume all repositories are from same github
 default_github_cfg_name = cfg_set.github().name()
-main_repo_url = ci.util.urljoin(
-  job_variant.main_repository().repo_hostname(),
-  job_variant.main_repository().repo_path(),
-)
+
 cc_email_cfg = cfg_set.email()
 
 notification_cfg = job_step.notifications_cfg()
@@ -27,6 +24,28 @@ notification_cfg_name = notification_cfg.name()
 on_error_cfg = notification_cfg.on_error()
 triggering_policy = on_error_cfg.triggering_policy()
 on_error_dir = job_step.output('on_error_dir')
+
+# handle case of absent main-repo (happens for our generated pipeline-replication pipelines)
+main_repo_url = ''
+path_to_main_repository = ''
+recipients = on_error_cfg.recipients()
+recipients_requiring_main_repo = [
+  'component_diff_owners',
+  'codeowners',
+  'committers',
+]
+if not job_variant.has_main_repository:
+  if any([r in recipients for r in recipients_requiring_main_repo]):
+    raise RuntimeError(
+      f'Main repository must be set if recipients is configured to any of {recipients_requiring_main_repo}'
+    )
+
+if job_variant.has_main_repository():
+  main_repo_url = ci.util.urljoin(
+    job_variant.main_repository().repo_hostname(),
+    job_variant.main_repository().repo_path(),
+  )
+  path_to_main_repository = job_variant.main_repository().resource_name()
 
 if job_variant.has_trait('component_descriptor'):
   component_name = job_variant.trait('component_descriptor').component_name()
@@ -86,7 +105,7 @@ concourse_api = ccc.concourse.client_from_cfg_name(
   team_name=meta_vars_dict['build-team-name'],
 )
 ## TODO: Replace with MAIN_REPO_DIR once it is available in synthetic steps
-path_to_main_repository = "${job_variant.main_repository().resource_name()}"
+path_to_main_repository = '${path_to_main_repository}'
 
 logger.info('Notification cfg: ${notification_cfg_name}')
 logger.info('Triggering policy: ${triggering_policy}')
@@ -123,8 +142,9 @@ notify_cfg = {'email': email_cfg}
 
 email_cfg['subject'] = email_cfg['subject'] or '${subject}'
 
-main_repo_github_cfg = ccc.github.github_cfg_for_repo_url('${main_repo_url}')
-main_repo_github_api = ccc.github.github_api(main_repo_github_cfg)
+if (main_repo_url := '${main_repo_url}'):
+  main_repo_github_cfg = ccc.github.github_cfg_for_repo_url(main_repo_url)
+  main_repo_github_api = ccc.github.github_api(main_repo_github_cfg)
 
 if 'component_diff_owners' in ${on_error_cfg.recipients()}:
     component_diff_path = os.path.join('component_descriptor_dir', 'dependencies.diff')
