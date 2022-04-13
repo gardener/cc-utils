@@ -1,9 +1,11 @@
 import dataclasses
 import requests
+import typing
 
 import gci.componentmodel as cm
 
 import ci.util
+import cnudie.util
 import dso.model
 
 
@@ -23,6 +25,14 @@ class DeliveryServiceRoutes:
             self._base_url,
             'artefacts',
             'upload-metadata',
+        )
+
+    def component_responsibles(self):
+        return ci.util.urljoin(
+            self._base_url,
+            'cnudie',
+            'component',
+            'responsibles',
         )
 
 
@@ -66,3 +76,49 @@ class DeliveryServiceClient:
         )
 
         res.raise_for_status()
+
+    def component_responsibles(
+        self,
+        name: str=None,
+        version: str=None,
+        ctx_repo_url: str=None,
+        component: typing.Union[cm.Component, cm.ComponentDescriptor]=None,
+    ) -> dict:
+        '''
+        retrieves component-responsibles. Responsibles are returned as a list of typed user
+        identities.
+
+        known types: githubUser, emailAddress, personalName
+        example (single user entry): [
+            {type: githubUser, username: <username>, source: <url>},
+            {type: emailAddress, email: <email-addr>, source: <url>},
+            {type: peronalName, firstName, lastName, source: <url>},
+        ]
+        '''
+
+        if any((name, version, ctx_repo_url)):
+            if not all((name, version, ctx_repo_url)):
+                raise ValueError('either all or not of name, version, ctx_repo_url must be set')
+            elif component:
+                raise ValueError('must pass either name, version, ctx_repo_url, OR component')
+        elif component := cnudie.util.to_component():
+            name = component.name
+            version = component.version
+            ctx_repo_url = component.current_repository_ctx().baseUrl
+        else:
+            raise ValueError('must either pass component or name, version ctx_repo_url')
+
+        url = self._routes.component_responsibles()
+
+        resp = requests.get(
+            url=url,
+            params={
+                'component_name': name,
+                'version': version,
+                'ctx_repo_url': ctx_repo_url,
+            }
+        )
+
+        resp.raise_for_status()
+
+        return resp.json()['responsibles']
