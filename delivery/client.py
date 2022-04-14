@@ -122,3 +122,17 @@ class DeliveryServiceClient:
         resp.raise_for_status()
 
         return resp.json()['responsibles']
+
+
+def github_users_from_responsibles(
+    responsibles: typing.Iterable[dict],
+) -> typing.Generator[str, None, None]:
+    '''
+    returns a generator yielding all github-usernames from the given `responsibles`.
+    use `DeliveryServiceClient.component_responsibles` to retrieve responsibles
+    '''
+    for responsible in responsibles:
+        for responsible_info in responsible:
+            if not responsible_info['type'] == 'githubUser':
+                continue
+            yield responsible_info['username']
