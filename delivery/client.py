@@ -101,7 +101,7 @@ class DeliveryServiceClient:
                 raise ValueError('either all or not of name, version, ctx_repo_url must be set')
             elif component:
                 raise ValueError('must pass either name, version, ctx_repo_url, OR component')
-        elif component := cnudie.util.to_component():
+        elif component := cnudie.util.to_component(component):
             name = component.name
             version = component.version
             ctx_repo_url = component.current_repository_ctx().baseUrl
