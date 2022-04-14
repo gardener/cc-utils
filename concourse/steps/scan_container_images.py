@@ -19,6 +19,7 @@ import textwrap
 import typing
 import urllib.parse
 
+import github3.exceptions
 import tabulate
 
 import gci.componentmodel as cm
@@ -93,11 +94,21 @@ def create_or_update_github_issues(
             logger.info(f'closed (if existing) gh-issue for {component.name=} {resource.name=}')
         elif action == 'report':
             if delivery_scv_client := ccc.delivery.default_client_if_available():
-                assignees = tuple(
-                    delivery.client.github_users_from_responsibles(
-                        delivery_scv_client.component_responsibles(component=component)
+                assignees = delivery.client.github_users_from_responsibles(
+                    delivery_scv_client.component_responsibles(
+                        component=component,
                     )
                 )
+
+                def user_exists(username):
+                    try:
+                        gh_api.user(username)
+                        return True
+                    except github3.exceptions.NotFoundError:
+                        logger.warning(f'{username=} not found')
+                        return False
+
+                assignees = tuple((u for u in assignees if user_exists(u)))
             else:
                 assignees = ()
 
