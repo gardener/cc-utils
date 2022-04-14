@@ -74,7 +74,7 @@ def _create_issue(
     resource: cm.Resource,
     repository: github3.repos.Repository,
     body:str,
-    github_users: typing.Iterable[str]=(),
+    assignees: typing.Iterable[str]=(),
     issue_type: str='vulnerabilities/bdba',
 ):
     title = f'[{issue_type}] - {component.name}:{resource.name}'
@@ -82,7 +82,7 @@ def _create_issue(
     return repository.create_issue(
         title=title,
         body=body,
-        assignees=tuple(github_users),
+        assignees=tuple(assignees),
         labels=tuple(repository_labels(
             component=component,
             resource=resource,
@@ -97,12 +97,12 @@ def _update_issue(
     repository: github3.repos.Repository,
     body:str,
     issue: github3.issues.Issue,
-    github_users: typing.Iterable[str]=(),
+    assignees: typing.Iterable[str]=(),
     issue_type: str='vulnerabilities/bdba',
 ):
     kwargs = {}
     if not issue.assignees:
-        kwargs['assignees'] = tuple(github_users)
+        kwargs['assignees'] = tuple(assignees)
 
     issue.edit(
         body=body,
@@ -115,7 +115,7 @@ def create_or_update_issue(
     resource: cm.Resource,
     repository: github3.repos.Repository,
     body:str,
-    github_users: typing.Iterable[str]=(),
+    assignees: typing.Iterable[str]=(),
     issue_type: str='vulnerabilities/bdba',
 ):
     open_issues = tuple(
@@ -136,7 +136,7 @@ def create_or_update_issue(
             repository=repository,
             issue_type=issue_type,
             body=body,
-            github_users=github_users,
+            assignees=assignees,
         )
     elif issues_count == 1:
         open_issue = open_issues[0] # we checked there is exactly one
@@ -146,7 +146,7 @@ def create_or_update_issue(
             repository=repository,
             issue_type=issue_type,
             body=body,
-            github_users=github_users,
+            assignees=assignees,
             issue=open_issue,
         )
     else:
