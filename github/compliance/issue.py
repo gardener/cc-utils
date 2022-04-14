@@ -56,7 +56,7 @@ def enumerate_issues(
     repository: github3.repos.Repository,
     state=None, # 'open' | 'closed'
     issue_type='vulnerabilities/bdba',
-) -> typing.Generator[github3.ShortIssue, None, None]:
+) -> typing.Generator[github3.issues.ShortIssue, None, None]:
     return repository.issues(
         state=state,
         labels=tuple(
@@ -177,7 +177,7 @@ def close_issue_if_present(
     succ = True
 
     for issue in open_issues:
-        issue: github3.ShortIssue
+        issue: github3.issues.ShortIssue
         issue.create_comment('closing ticket, because there are no longer unassessed findings')
         succ &= issue.close()
         if not succ:
