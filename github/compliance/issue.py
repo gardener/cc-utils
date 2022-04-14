@@ -1,12 +1,19 @@
 import hashlib
+import logging
+import typing
 
 import github3
 
 import gci.componentmodel as cm
 
+import ci.log
+
 '''
 functionality for creating and maintaining github-issues for tracking compliance issues
 '''
+
+logger = logging.getLogger(__name__)
+ci.log.configure_default_logging()
 
 
 def resource_digest_label(
@@ -48,13 +55,15 @@ def enumerate_issues(
     resource: cm.Resource,
     repository: github3.repos.Repository,
     state=None, # 'open' | 'closed'
-):
+    issue_type='vulnerabilities/bdba',
+) -> typing.Generator[github3.ShortIssue, None, None]:
     return repository.issues(
         state=state,
         labels=tuple(
             repository_labels(
                 component=component,
-                resource=resource
+                resource=resource,
+                issue_type=issue_type,
             ),
         ),
     )
@@ -111,7 +120,7 @@ def create_or_update_issue(
     )
 
     if (issues_count := len(open_issues)) > 1:
-        raise RuntimeError(f'more than one open issue found for {component=}{resource=}')
+        raise RuntimeError(f'more than one open issue found for {component.name=}{resource.name=}')
     elif issues_count == 0:
         return _create_issue(
             component=component,
@@ -132,3 +141,36 @@ def create_or_update_issue(
         )
     else:
         raise RuntimeError('this line should never be reached') # all cases should be handled before
+
+
+def close_issue_if_present(
+    component: cm.Component,
+    resource: cm.Resource,
+    repository: github3.repos.Repository,
+    issue_type: str='vulnerabilities/bdba',
+):
+    open_issues = tuple(
+        enumerate_issues(
+            component=component,
+            resource=resource,
+            repository=repository,
+            state='open',
+        )
+    )
+
+    if (issues_count := len(open_issues)) > 1:
+        logger.warning(f'more than one open issue found for {component.name=}{resource=}')
+    elif issues_count == 0:
+        logger.info(f'no open issue found for {component.name=}{resource.name=}')
+        return # nothing to do
+
+    succ = True
+
+    for issue in open_issues:
+        issue: github3.ShortIssue
+        issue.create_comment('closing ticket, because there are no longer unassessed findings')
+        succ &= issue.close()
+        if not succ:
+            logger.warning(f'failed to close {issue.id=}, {repo.url=}')
+
+    return succ
