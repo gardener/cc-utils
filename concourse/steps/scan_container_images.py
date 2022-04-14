@@ -24,9 +24,11 @@ import tabulate
 import gci.componentmodel as cm
 
 import ccc.concourse
+import ccc.delivery
 import ccc.github
 import cnudie.util
 import concourse.util
+import delivery.client
 import github.compliance.issue
 import mailutil
 import reutil
@@ -42,7 +44,8 @@ tabulate.htmlescape = lambda x: x
 
 
 def create_or_update_github_issues(
-    results: typing.Sequence[typing.Union[UploadResult, tuple[UploadResult, float]]],
+    results_to_report: typing.Sequence[typing.Union[UploadResult, tuple[UploadResult, float]]],
+    results_to_discard: typing.Sequence[typing.Union[UploadResult, tuple[UploadResult, float]]],
     cfg_factory,
     issue_tgt_repo_url: str=None,
 ):
@@ -57,9 +60,11 @@ def create_or_update_github_issues(
     else:
         overwrite_repository = None
 
-    for result in results:
+    def process_result(result: tuple, action:str):
         if isinstance(result, tuple):
-            result = result[0] # result[1] represents greatest CVEv3-Score
+            result, greatest_cve = result # AnalysisResult, float (cve-score)
+        else:
+            greatest_cve = 'unknown'
 
         component = result.component
         resource = result.resource
@@ -79,21 +84,49 @@ def create_or_update_github_issues(
 
             repository = gh_api.repository(org, name)
 
-        body = textwrap.dedent(f'''\
-            {component.name}:{resource.name} was found to contain at least one vulnerability.
+        if action == 'discard':
+            github.compliance.issue.close_issue_if_present(
+                component=component,
+                resource=resource,
+                repository=repository,
+            )
+            logger.info(f'closed (if existing) gh-issue for {component.name=} {resource.name=}')
+        elif action == 'report':
+            if delivery_scv_client := ccc.delivery.default_client_if_available():
+                assignees = tuple(
+                    delivery.client.github_users_from_responsibles(
+                        delivery_scv_client.component_responsibles()
+                    )
+                )
+            else:
+                assignees = ()
 
-            details can be found [here]({analysis_res.report_url()})
-        '''
-        )
+            body = textwrap.dedent(f'''\
+                {component.name}:{resource.name} was found to contain at least one vulnerability.
 
-        github.compliance.issue.create_or_update_issue(
-            component=component,
-            resource=resource,
-            repository=repository,
-            body=body,
-        )
+                greatest CVSSv3 score: *{greatest_cve}
 
-        logger.info(f'updated gh-issue for {component.name=} {resource.name=}')
+                details can be found [here]({analysis_res.report_url()})
+            '''
+            )
+
+            github.compliance.issue.create_or_update_issue(
+                component=component,
+                resource=resource,
+                repository=repository,
+                body=body,
+                assignees=assignees,
+            )
+
+            logger.info(f'updated gh-issue for {component.name=} {resource.name=}')
+        else:
+            raise NotImplementedError(action)
+
+    for result in results_to_report:
+        process_result(result=result, action='report')
+
+    for result in results_to_discard:
+        process_result(result=result, action='discard')
 
 
 class MailRecipients:

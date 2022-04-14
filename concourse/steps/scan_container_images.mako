@@ -131,7 +131,8 @@ if all ((
 
 if notification_policy is Notify.GITHUB_ISSUES:
   create_or_update_github_issues(
-    results=results_above_threshold,
+    results_to_report=results_above_threshold,
+    results_to_discard=results_below_threshold,
     cfg_factory=cfg_factory,
 % if issue_tgt_repo_url:
     issue_tgt_repo_url='${issue_tgt_repo_url}',
