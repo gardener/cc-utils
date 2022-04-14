@@ -29,15 +29,20 @@ if not '${delivery_svc_cfg_name}':
   logger.error('no deliverydb-client available - exiting now')
   exit(1)
 
+info_count = 0
+
 for component, resource, os_info in determine_os_ids(
   component_descriptor=component_descriptor,
   oci_client=oci_client,
 ):
   logger.info(f'uploading os-info for {component.name} {resource.name}')
   upload_to_delivery_db(
-  db_client=delivery_db_client,
-      resource=resource,
-      component=component,
-      os_info=os_info,
+    db_client=delivery_db_client,
+        resource=resource,
+        component=component,
+        os_info=os_info,
   )
+  info_count += 1
+
+logger.info(f'uploaded {info_count=} os-infos')
 </%def>
