@@ -95,7 +95,7 @@ def create_or_update_github_issues(
             if delivery_scv_client := ccc.delivery.default_client_if_available():
                 assignees = tuple(
                     delivery.client.github_users_from_responsibles(
-                        delivery_scv_client.component_responsibles()
+                        delivery_scv_client.component_responsibles(component=component)
                     )
                 )
             else:
