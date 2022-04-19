@@ -44,6 +44,12 @@ class MergePolicy(enum.Enum):
     AUTO_MERGE = 'auto_merge'
 
 
+class MergeMethod(enum.Enum):
+    MERGE = 'merge'
+    REBASE = 'rebase'
+    SQUASH = 'squash'
+
+
 class UpstreamUpdatePolicy(enum.Enum):
     STRICTLY_FOLLOW = 'strictly_follow'
     ACCEPT_HOTFIXES = 'accept_hotfixes'
@@ -65,6 +71,15 @@ MERGE_POLICY_CONFIG_ATTRIBUTES = (
         type=MergePolicy,
         doc='whether or not created PRs should be automatically merged',
     ),
+    AttributeSpec.optional(
+        name='merge_method',
+        default='merge',
+        type=MergeMethod,
+        doc=(
+            'The method to use when merging PRs automatically. For more details, check '
+            '`the GitHub documentation for merge-methods <https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/about-merge-methods-on-github>`_.' # noqa:E501
+        )
+    ),
 )
 
 
@@ -84,6 +99,9 @@ class MergePolicyConfig(ModelBase):
 
     def merge_mode(self):
         return MergePolicy(self.raw['merge_mode'])
+
+    def merge_method(self):
+        return MergeMethod(self.raw['merge_method'])
 
 
 ATTRIBUTES = (
@@ -180,6 +198,7 @@ class UpdateComponentDependenciesTrait(Trait):
                     MergePolicyConfig({
                         'component_names': ['.*'],
                         'merge_mode': 'manual',
+                        'merge_method': 'merge',
                     })]
 
             # preserve legacy behaviour
@@ -189,6 +208,7 @@ class UpdateComponentDependenciesTrait(Trait):
                     MergePolicyConfig({
                         'component_names': ['.*'],
                         'merge_mode': self.raw['merge_policy'],
+                        'merge_method': 'merge',
                     })
                 ]
 

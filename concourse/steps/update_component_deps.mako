@@ -165,10 +165,13 @@ for from_ref, to_version in determine_upgrade_prs(
         ]):
             raise RuntimeError(f'Conflicting merge policies found to apply to {from_ref.name}')
         merge_policy = applicable_merge_policy[0].merge_mode()
+        merge_method = applicable_merge_policy[0].merge_method()
     elif len(applicable_merge_policy) == 0:
         merge_policy = MergePolicy.MANUAL
+        merge_method = MergeMethod.MERGE
     else:
         merge_policy = applicable_merge_policy[0].merge_mode()
+        merge_method = applicable_merge_policy[0].merge_method()
 
     create_upgrade_pr(
         component=own_component,
@@ -182,6 +185,7 @@ for from_ref, to_version in determine_upgrade_prs(
         repo_dir=REPO_ROOT,
         github_cfg_name=github_cfg_name,
         merge_policy=merge_policy,
+        merge_method=merge_method,
 % if after_merge_callback:
         after_merge_callback='${after_merge_callback}',
 % endif

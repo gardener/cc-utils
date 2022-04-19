@@ -23,6 +23,7 @@ import product.v2
 import version
 from concourse.model.traits.update_component_deps import (
     MergePolicy,
+    MergeMethod,
 )
 from github.util import (
     GitHubRepoBranch,
@@ -286,7 +287,8 @@ def create_upgrade_pr(
     githubrepobranch: GitHubRepoBranch,
     repo_dir,
     github_cfg_name,
-    merge_policy,
+    merge_policy: MergePolicy,
+    merge_method: MergeMethod,
     after_merge_callback=None,
     container_image:str=None,
 ):
@@ -397,8 +399,16 @@ def create_upgrade_pr(
 
     if merge_policy is MergePolicy.MANUAL:
         return
-    # auto-merge - todo: make configurable (e.g. merge method)
-    pull_request.merge()
+
+    if merge_method is MergeMethod.MERGE:
+        pull_request.merge(merge_method='merge')
+    elif merge_method is MergeMethod.REBASE:
+        pull_request.merge(merge_method='rebase')
+    elif merge_method is MergeMethod.SQUASH:
+        pull_request.merge(merge_method='squash')
+    else:
+        raise NotImplementedError(f'{merge_method=}')
+
     try:
         ls_repo.ref(f'heads/{upgrade_branch_name}').delete()
     except github3.exceptions.NotFoundError:
