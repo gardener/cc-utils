@@ -8,8 +8,7 @@ bcrypt<4.0.0
 boto3
 cachecontrol<1
 cryptography
-dacite==1.6.0
-dataclasses-json
+dacite
 deepmerge
 deprecated<2.0.0,>=1.2
 dockerfile-parse>=1.2
@@ -40,7 +39,7 @@ python-dateutil
 python-keystoneclient
 python-magic
 python-swiftclient
-pyyaml<6.0.0
+pyyaml
 requests<3.0.0
 requests_toolbelt<1
 semver<3.0.0
@@ -52,4 +51,4 @@ termcolor<2.0.0
 urllib3<2.0.0
 uvicorn # todo: rm once whd is factored-out to separate package
 websockets
-yamllint<2
+yamllint
