@@ -286,7 +286,6 @@ def create_upgrade_pr(
     githubrepobranch: GitHubRepoBranch,
     repo_dir,
     github_cfg_name,
-    cfg_factory,
     merge_policy,
     after_merge_callback=None,
     container_image:str=None,
