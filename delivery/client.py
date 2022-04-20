@@ -141,7 +141,7 @@ def _normalise_github_hostname(github_url: str):
         parts = parts[1:]
     github_hostname = '.'.join(parts)
 
-    return github_hostname
+    return github_hostname.lower()
 
 
 def github_users_from_responsibles(
