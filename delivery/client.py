@@ -1,12 +1,19 @@
 import dataclasses
 import requests
 import typing
+import urllib.parse
 
 import gci.componentmodel as cm
 
 import ci.util
 import cnudie.util
 import dso.model
+
+
+@dataclasses.dataclass # TODO: deduplicate w/ modelclass in delivery-service
+class GithubUser:
+    username: str
+    github_hostname: str
 
 
 class DeliveryServiceRoutes:
@@ -90,7 +97,7 @@ class DeliveryServiceClient:
 
         known types: githubUser, emailAddress, personalName
         example (single user entry): [
-            {type: githubUser, username: <username>, source: <url>},
+            {type: githubUser, username: <username>, source: <url>, github_hostname: <hostname>},
             {type: emailAddress, email: <email-addr>, source: <url>},
             {type: peronalName, firstName, lastName, source: <url>},
         ]
@@ -124,15 +131,36 @@ class DeliveryServiceClient:
         return resp.json()['responsibles']
 
 
+def _normalise_github_hostname(github_url: str):
+    # hack: for github.com, we might get a different subdomain (api.github.com)
+    if not '://' in github_hostname:
+        github_hostname = 'x://' + github_hostname
+    github_hostname = urllib.parse.urlparse(github_hostname).hostname
+    parts = github_hostname.strip('.').split('.')
+    if parts[0] == 'api':
+        parts = parts[1:]
+    github_hostname = '.'.join(parts)
+
+    return github_hostname
+
+
 def github_users_from_responsibles(
     responsibles: typing.Iterable[dict],
-) -> typing.Generator[str, None, None]:
+    github_url: str=None,
+) -> typing.Generator[GithubUser, None, None]:
     '''
-    returns a generator yielding all github-usernames from the given `responsibles`.
+    returns a generator yielding all github-users from the given `responsibles`.
     use `DeliveryServiceClient.component_responsibles` to retrieve responsibles
+    if github_url is given, only github-users on a matching github-host are returned.
+    This is useful if the returned users should exist on a certain target github-instance.
+    github_url is gracefully parsed down to relevant hostname. It is okay to pass-in, e.g.
+    a repository- or github-user-URL for convenience.
     '''
     for responsible in responsibles:
         for responsible_info in responsible:
             if not responsible_info['type'] == 'githubUser':
                 continue
-            yield responsible_info['username']
+            username = responsible_info['username']
+            github_hostname = _normalise_github_hostname(responsible_info['github_hostname'])
+
+            yield GithubUser(username=username, github_hostname=github_hostname)

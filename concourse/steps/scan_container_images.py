@@ -95,9 +95,8 @@ def create_or_update_github_issues(
         elif action == 'report':
             if delivery_scv_client := ccc.delivery.default_client_if_available():
                 assignees = delivery.client.github_users_from_responsibles(
-                    delivery_scv_client.component_responsibles(
-                        component=component,
-                    )
+                    responsibles=delivery_scv_client.component_responsibles(component=component),
+                    github_url=repository.url,
                 )
 
                 def user_exists(username):
@@ -108,7 +107,7 @@ def create_or_update_github_issues(
                         logger.warning(f'{username=} not found')
                         return False
 
-                assignees = tuple((u for u in assignees if user_exists(u)))
+                assignees = tuple((u.username for u in assignees if user_exists(u.username)))
             else:
                 assignees = ()
 
