@@ -62,6 +62,8 @@ def create_or_update_github_issues(
         overwrite_repository = None
 
     def process_result(result: tuple, action:str):
+        nonlocal gh_api
+
         if isinstance(result, tuple):
             result, greatest_cve = result # AnalysisResult, float (cve-score)
         else:
