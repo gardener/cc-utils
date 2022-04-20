@@ -78,17 +78,25 @@ def _create_issue(
     issue_type: str='vulnerabilities/bdba',
 ):
     title = f'[{issue_type}] - {component.name}:{resource.name}'
+    assignees = tuple(assignees)
+    labels = tuple(repository_labels(
+        component=component,
+        resource=resource,
+        issue_type=issue_type,
+    ))
 
-    return repository.create_issue(
-        title=title,
-        body=body,
-        assignees=tuple(assignees),
-        labels=tuple(repository_labels(
-            component=component,
-            resource=resource,
-            issue_type=issue_type,
-        )),
-    )
+    try:
+        return repository.create_issue(
+            title=title,
+            body=body,
+            assignees=assignees,
+            labels=labels,
+        )
+    except github3.exceptions.GitHubError as ghe:
+        logger.warning(f'received error trying to create issue: {ghe=}')
+        logger.warning(f'{ghe.message=} {ghe.code=} {ghe.errors=}')
+        logger.warning(f'{component.name=} {resource.name=} {assignees=} {labels=}')
+        raise ghe
 
 
 def _update_issue(
