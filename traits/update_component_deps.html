@@ -312,12 +312,24 @@ main_repository will be mounted at /mnt/main_repo</p></td>
 <td><p>MergePolicy</p></td>
 <td><p>whether or not created PRs should be automatically merged</p></td>
 </tr>
+<tr class="row-even"><td><p>merge_method</p></td>
+<td><p>no</p></td>
+<td><p>merge</p></td>
+<td><p>MergeMethod</p></td>
+<td><p>The method to use when merging PRs automatically. For more details, check <a class="reference external" href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/about-merge-methods-on-github">the GitHub documentation for merge-methods</a>.</p></td>
+</tr>
 </tbody>
 </table>
 <h2>merge_policies.merge_mode Enumeration Values<a class="headerlink" href="#trait-update-component-deps" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">manual</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">auto_merge</span></code></p></li>
+</ul>
+<h2>merge_policies.merge_method Enumeration Values<a class="headerlink" href="#trait-update-component-deps" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">merge</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rebase</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">squash</span></code></p></li>
 </ul>
 <h2>Dependencies<a class="headerlink" href="#trait-update-component-deps" title="Permalink to this headline">¶</a></h2>
 <p>This trait requires the following traits to be declared:</p>
