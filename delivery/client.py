@@ -133,9 +133,9 @@ class DeliveryServiceClient:
 
 def _normalise_github_hostname(github_url: str):
     # hack: for github.com, we might get a different subdomain (api.github.com)
-    if not '://' in github_hostname:
-        github_hostname = 'x://' + github_hostname
-    github_hostname = urllib.parse.urlparse(github_hostname).hostname
+    if not '://' in github_url:
+        github_url = 'x://' + github_url
+    github_hostname = urllib.parse.urlparse(github_url).hostname
     parts = github_hostname.strip('.').split('.')
     if parts[0] == 'api':
         parts = parts[1:]
