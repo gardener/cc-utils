@@ -156,11 +156,19 @@ def github_users_from_responsibles(
     github_url is gracefully parsed down to relevant hostname. It is okay to pass-in, e.g.
     a repository- or github-user-URL for convenience.
     '''
+    if github_url:
+        target_github_hostname = _normalise_github_hostname(github_url)
+    else:
+        target_github_hostname = None
+
     for responsible in responsibles:
         for responsible_info in responsible:
             if not responsible_info['type'] == 'githubUser':
                 continue
             username = responsible_info['username']
             github_hostname = _normalise_github_hostname(responsible_info['github_hostname'])
+
+            if target_github_hostname and target_github_hostname != github_hostname:
+                continue
 
             yield GithubUser(username=username, github_hostname=github_hostname)
