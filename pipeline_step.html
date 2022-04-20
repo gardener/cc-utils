@@ -341,6 +341,26 @@ variable.</p></td>
 <td><p>positive integer specifying the maximum amount of failures until the step is
 counted as failed</p></td>
 </tr>
+<tr class="row-even"><td><p>on_abort</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p><p>The executable (with optional additional arguments) to run in case the job is aborted.
+The executable path is calculated relative to <code class="code docutils literal notranslate"><span class="pre">&lt;main_repo&gt;/.ci</span></code>.</p>
+<p>Just like <code class="code docutils literal notranslate"><span class="pre">execute</span></code> this has two forms:</p>
+<ul class="simple">
+<li><p>scalar value (str in most cases) –&gt; no shell-escaping is done</p></li>
+<li><p>list of scalar values -&gt; used verbatim as ARGV</p></li>
+</ul>
+<p>The resulting <code class="code docutils literal notranslate"><span class="pre">on_abort</span></code> step will use the same container image reference as the job
+that defines it. Also, it will have the same in- and outputs available and access to
+the same env-vars.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="code docutils literal notranslate"><span class="pre">on_abort</span></code>-steps themselves cannot be aborted. Beware.</p>
+</div>
+</p></td>
+</tr>
 </tbody>
 </table>
 <h2>privilege_mode Enumeration Values<a class="headerlink" href="#pipeline-step" title="Permalink to this headline">¶</a></h2>
