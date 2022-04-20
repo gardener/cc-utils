@@ -113,12 +113,39 @@ def create_or_update_github_issues(
             else:
                 assignees = ()
 
+            if isinstance(resource.type, enum.Enum):
+                resource_type = resource.type.value
+            else:
+                resource_type = resource.type
+
             body = textwrap.dedent(f'''\
-                {component.name}:{resource.name} was found to contain at least one vulnerability.
+                # Compliance Status Summary
 
-                greatest CVSSv3 score: *{greatest_cve}
+                |    |    |
+                | -- | -- |
+                | Component | {component.name} |
+                | Component-Version | {component.version} |
+                | Resource  | {resource.name} |
+                | Resource-Version  | {resource.version} |
+                | Resource-Type | {resource_type} |
+                | Greatest CVSSv3 Score | **{greatest_cve}** |
 
-                details can be found [here]({analysis_res.report_url()})
+                The aforementioned {resource_type}, declared by the given content was found to
+                contain potentially relevant vulnerabilities.
+
+                See [scan report]({analysis_res.report_url()}) for both viewing a detailed
+                scanning report, and doing assessments (see below).
+
+                **Action Item**
+
+                Please take appropriate action. Choose either of:
+
+                - assess findings
+                - upgrade {resource_type} version
+                - minimise image
+
+                In case of systematic false-positives, consider adding scanning-hints to your
+                Component-Descriptor.
             '''
             )
 
