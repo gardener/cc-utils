@@ -62,8 +62,11 @@ def create_or_update_github_issues(
     else:
         overwrite_repository = None
 
+    err_count = 0
+
     def process_result(result: tuple, action:str):
         nonlocal gh_api
+        nonlocal err_count
 
         if isinstance(result, tuple):
             result, greatest_cve = result # AnalysisResult, float (cve-score)
@@ -150,13 +153,18 @@ def create_or_update_github_issues(
             '''
             )
 
-            github.compliance.issue.create_or_update_issue(
-                component=component,
-                resource=resource,
-                repository=repository,
-                body=body,
-                assignees=assignees,
-            )
+            try:
+                github.compliance.issue.create_or_update_issue(
+                    component=component,
+                    resource=resource,
+                    repository=repository,
+                    body=body,
+                    assignees=assignees,
+                )
+            except github3.exceptions.GitHubError:
+                err_count += 1
+                logger.warning('error whilst trying to create or update issue - will keep going')
+                logger.warning(f'ticket-body: {body}')
 
             logger.info(f'updated gh-issue for {component.name=} {resource.name=}')
         else:
@@ -167,6 +175,10 @@ def create_or_update_github_issues(
 
     for result in results_to_discard:
         process_result(result=result, action='discard')
+
+    if err_count > 0:
+        logger.warning(f'{err_count=} - there were errors - will raise')
+        raise ValueError('not all gh-issues could be created/updated/deleted')
 
 
 class MailRecipients:
