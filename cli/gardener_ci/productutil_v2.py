@@ -22,13 +22,16 @@ parse = yaml.safe_load
 
 def _raw_component_dep_to_v2(raw: dict):
   name = raw['name']
+  args = {
+    'componentName': name,
+    'name': product.v2.mangle_name(name),
+    'version': raw['version'],
+  }
 
-  return cm.ComponentReference(
-    componentName=name,
-    name=product.v2.mangle_name(name),
-    version=raw['version'],
-  )
+  if 'labels' in raw:
+    args['labels'] = raw['labels']
 
+  return cm.ComponentReference(**args)
 
 def _raw_image_dep_to_v2(raw: dict):
   name = raw['name']
