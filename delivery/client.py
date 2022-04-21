@@ -90,10 +90,13 @@ class DeliveryServiceClient:
         version: str=None,
         ctx_repo_url: str=None,
         component: typing.Union[cm.Component, cm.ComponentDescriptor]=None,
+        resource: typing.Union[cm.Resource, str]=None,
     ) -> dict:
         '''
         retrieves component-responsibles. Responsibles are returned as a list of typed user
-        identities.
+        identities. Optionally, a resource (or resource name) may be passed. In this case,
+        responsibles are filtered for the given resource definition. Note that an error will
+        be raised if the given resource does not declare a resource of the given name.
 
         known types: githubUser, emailAddress, personalName
         example (single user entry): [
@@ -117,13 +120,23 @@ class DeliveryServiceClient:
 
         url = self._routes.component_responsibles()
 
+        params = {
+            'component_name': name,
+            'version': version,
+            'ctx_repo_url': ctx_repo_url,
+        }
+
+        if resource:
+            if isinstance(resource, cm.Resource):
+                resource_name = resource.name
+            else:
+                resource_name = resource
+
+            params['resource_name'] = resource_name
+
         resp = requests.get(
             url=url,
-            params={
-                'component_name': name,
-                'version': version,
-                'ctx_repo_url': ctx_repo_url,
-            }
+            params=params,
         )
 
         resp.raise_for_status()
