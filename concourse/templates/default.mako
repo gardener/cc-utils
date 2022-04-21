@@ -428,12 +428,6 @@ else:
         'pipeline_descriptor': pipeline,
         })}'
 % endfor
-  <%
-  if cloned_main_repo_name:
-    prefix = (cloned_main_repo_name, '.ci')
-  else:
-    prefix = (source_repo.resource_name(), '.ci')
-  %>
 % if job_step.script_type() == ScriptType.BOURNE_SHELL:
     run:
       path: /bin/sh
@@ -464,6 +458,12 @@ else:
   <% raise ValueError('unsupported script type') %>
 % endif
 % if not job_step.is_synthetic:
+  <%
+  if cloned_main_repo_name:
+    prefix = (cloned_main_repo_name, '.ci')
+  else:
+    prefix = (source_repo.resource_name(), '.ci')
+  %>
         ${render_job_exec(
             job_step=job_step,
             job_variant=job_variant,
