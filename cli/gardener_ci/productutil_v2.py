@@ -33,6 +33,7 @@ def _raw_component_dep_to_v2(raw: dict):
 
   return cm.ComponentReference(**args)
 
+
 def _raw_image_dep_to_v2(raw: dict):
   name = raw['name']
   version = raw['version']
