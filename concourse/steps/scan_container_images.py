@@ -101,7 +101,10 @@ def create_or_update_github_issues(
         elif action == 'report':
             if delivery_scv_client := ccc.delivery.default_client_if_available():
                 assignees = delivery.client.github_users_from_responsibles(
-                    responsibles=delivery_scv_client.component_responsibles(component=component),
+                    responsibles=delivery_scv_client.component_responsibles(
+                        component=component,
+                        resource=resource,
+                    ),
                     github_url=repository.url,
                 )
 
