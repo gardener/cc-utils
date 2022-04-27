@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
 import enum
 import functools
+import json
 import logging
+import tempfile
 import textwrap
 import typing
 import urllib.parse
@@ -578,3 +581,19 @@ def retrieve_buildlog(uuid: str):
         if uuid in line:
             break
     return log
+
+
+class EnumJSONEncoder(json.JSONEncoder):
+    '''
+    a json.JSONEncoder that will encode enum objects using their values
+    '''
+    def default(self, o):
+        if isinstance(o, enum.Enum):
+            return o.value
+        return super().default(o)
+
+
+def dump_malware_scan_request(request: saf.model.EvidenceRequest):
+    request_dict = dataclasses.asdict(request)
+    with tempfile.NamedTemporaryFile(delete=False, mode='wt') as tmp_file:
+        tmp_file.write(json.dumps(request_dict, cls=EnumJSONEncoder))
