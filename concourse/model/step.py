@@ -346,7 +346,7 @@ class PipelineStep(ModelBase):
 
     def execute(self, prefix='', hook: TaskHook = TaskHook.NONE):
         argv = self._argv(hook)
-        argv[0] = self.executable(prefix=prefix)
+        argv[0] = self.executable(prefix=prefix, hook=hook)
         return ' '.join(argv).rstrip()
 
     def registry(self):
