@@ -85,12 +85,47 @@ def aggregate_scan_result(
     )
 
 
+def _iter_layers(
+    image_reference: typing.Union[str, oci.model.OciImageReference],
+    oci_client: oci.client.Client,
+) -> typing.Generator[oci.model.OciBlobRef, None, None]:
+    '''
+    yields the flattened layer-blob-references from the given image
+
+    in case of regular ("single") oci-images, this will be said image-manifest's layers.
+    in case of an image-list (aka multi-arch), referenced sub-manifests are resolved
+    recursively
+    '''
+    manifest = oci_client.manifest(
+        image_reference=image_reference,
+        accept=oci.model.MimeTypes.prefer_multiarch,
+    )
+    if isinstance(manifest, oci.model.OciImageManifest):
+        yield from manifest.layers
+        return
+
+    if not isinstance(manifest, oci.model.OciImageManifestList):
+        raise NotImplementedError(manifest)
+
+    manifest: oci.model.OciImageManifestList
+    image_reference = oci.model.OciImageReference.to_image_ref(image_reference)
+
+    for manifest in manifest.manifests:
+        sub_manifest_img_ref = f'{image_reference.ref_without_tag}@{manifest.digest}'
+
+        # recurse into (potentially) nested sub-images (typically there should be no nesting)
+        yield from _iter_layers(
+            image_reference=sub_manifest_img_ref,
+            oci_client=oci_client,
+        )
+
+
 def scan_oci_image(
     image_reference: typing.Union[str, oci.model.OciImageReference],
     oci_client: oci.client.Client,
     clamav_client: clamav.client.ClamAVClient,
 ) -> typing.Generator[clamav.client.ScanResult, None, None]:
-    manifest = oci_client.manifest(image_reference=image_reference)
+    layer_blobs = tuple(_iter_layers(image_reference=image_reference, oci_client=oci_client))
 
     scan_func = functools.partial(
         scan_oci_blob,
@@ -99,13 +134,13 @@ def scan_oci_image(
         clamav_client=clamav_client,
     )
 
-    if len(manifest.layers) > 1:
-        executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(manifest.layers))
+    if len(layer_blobs) > 1:
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(layer_blobs))
 
-        for res in executor.map(scan_func, manifest.layers):
+        for res in executor.map(scan_func, layer_blobs):
             yield from res
     else:
-        yield from scan_func(blob_reference=manifest.layers[0])
+        yield from scan_func(blob_reference=layer_blobs[0])
 
 
 def scan_oci_blob(
