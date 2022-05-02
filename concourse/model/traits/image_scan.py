@@ -156,6 +156,12 @@ CLAMAV_ATTRS = (
         type=int,
         default=8,
     ),
+    AttributeSpec.optional(
+        name='saf_config_name',
+        doc='SAF config name to use (see cc-config)',
+        type=str,
+        default=None,
+    ),
 )
 
 
@@ -166,6 +172,9 @@ class ClamAVScanCfg(ModelBase):
 
     def clamav_cfg_name(self):
         return self.raw.get('clamav_cfg_name')
+
+    def saf_config_name(self):
+        return self.raw['saf_config_name']
 
     def parallel_jobs(self) -> int:
         return int(self.raw['parallel_jobs'])
