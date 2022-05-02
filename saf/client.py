@@ -4,7 +4,6 @@ import json
 
 import requests
 
-import ci.util
 import model.saf
 import saf.model
 
