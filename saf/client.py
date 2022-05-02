@@ -15,10 +15,7 @@ class SafClient:
 
     def _post_evidence_dict(self, raw: dict):
         res = requests.post(
-            url=ci.util.urljoin(
-                self._saf_cfg.base_url(),
-                'data',
-            ),
+            url=self._saf_cfg.base_url(),
             headers={
                 'Authorization': f'Bearer {self._saf_cfg.credentials().bearer_token}',
                 'Content-Type': 'application/json',
