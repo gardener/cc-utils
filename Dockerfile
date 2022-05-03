@@ -12,6 +12,7 @@ COPY VERSION /metadata/VERSION
 # XXX backards compatibility (remove eventually)
 ENV PATH /cc/utils/:/cc/utils/bin:$PATH
 ENV HELM_V3_VERSION=v3.8.0
+ENV COSIGN_VERSION=v1.8.0
 
 RUN pip3 install --upgrade \
   pip \
@@ -29,7 +30,11 @@ RUN pip3 install --upgrade \
 && mv /tmp/helm /bin/helm \
 && chmod +x /bin/helm \
 # backwards-compatibility
-&& ln -sf /bin/helm /bin/helm3
+&& ln -sf /bin/helm /bin/helm3 \
+&& curl -L --output cosign \
+  https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64 \
+&& mv cosign /bin/cosign \
+&& chmod +x /bin/cosign
 
 RUN EFFECTIVE_VERSION="$(cat /metadata/VERSION)" REPO_DIR=/cc/utils \
   /cc/utils/.ci/bump_job_image_version.py
