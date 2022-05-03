@@ -112,3 +112,4 @@ cc-utils:
           - component_names:
             - 'github.com/gardener/component-spec'
             merge_mode: 'auto_merge'
+            merge_method: 'rebase'
