@@ -35,21 +35,19 @@ def _raw_component_dep_to_v2(raw: dict):
 
 
 def _raw_image_dep_to_v2(raw: dict):
-  name = raw['name']
-  version = raw['version']
   img_ref = raw['image_reference']
-  img_rel = cm.ResourceRelation(raw.get('relation', cm.ResourceRelation.EXTERNAL))
+  args = {
+    'name': raw['name'],
+    'version': raw['version'],
+    'type': cm.ResourceType.OCI_IMAGE,
+    'relation': cm.ResourceRelation(raw.get('relation', cm.ResourceRelation.EXTERNAL)),
+    'access': cm.OciAccess(type=cm.AccessType.OCI_REGISTRY, imageReference=img_ref),
+  }
 
-  return cm.Resource(
-    name=name,
-    version=version,
-    type=cm.ResourceType.OCI_IMAGE,
-    relation=img_rel,
-    access=cm.OciAccess(
-      type=cm.AccessType.OCI_REGISTRY,
-      imageReference=img_ref,
-    )
-  )
+  if 'labels' in raw:
+    args['labels'] = raw['labels']
+
+  return cm.Resource(**args)
 
 
 def _raw_generic_dep_to_v2(raw: dict):
