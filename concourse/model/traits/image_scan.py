@@ -13,8 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
 import enum
 import typing
+
+import dacite
 
 from concourse.model.job import (
     JobVariant,
@@ -52,7 +55,7 @@ PROTECODE_ATTRS = (
     AttributeSpec.optional(
         name='cve_threshold',
         default=7,
-        doc='CVE threshold to interpret as an error',
+        doc='CVE threshold for reporting/notications (if smaller, findings are ignored)',
         type=int,
     ),
     AttributeSpec.optional(
@@ -209,6 +212,11 @@ class Notify(enum.Enum):
     GITHUB_ISSUES = 'github_issues'
 
 
+@dataclasses.dataclass
+class GithubIssueTemplateCfg:
+    body: str
+
+
 ATTRIBUTES = (
     *IMAGE_ATTRS,
     AttributeSpec.optional(
@@ -221,6 +229,23 @@ ATTRIBUTES = (
         name='overwrite_github_issues_tgt_repository_url',
         default=None,
         doc='if set, and notify is set to github_issues, overwrite target github repository',
+    ),
+    AttributeSpec.optional(
+        name='github_issue_template',
+        default=None,
+        doc='''\
+        use to configure a custom github-issue-template (sub-attr: `body`)
+        use python3's format-str syntax
+        available variables:
+        - component_name
+        - component_version
+        - resource_name
+        - resource_version
+        - resource_type
+        - greatest_cve
+        - bdba_report_url
+        ''',
+        type=GithubIssueTemplateCfg,
     ),
     AttributeSpec.optional(
         name='email_recipients',
@@ -271,6 +296,15 @@ class ImageScanTrait(Trait, ImageFilterMixin):
 
     def overwrite_github_issues_tgt_repository_url(self) -> typing.Optional[str]:
         return self.raw.get('overwrite_github_issues_tgt_repository_url')
+
+    def github_issue_template(self) -> typing.Optional[GithubIssueTemplateCfg]:
+        if not (raw := self.raw.get('github_issue_template')):
+            return None
+
+        return dacite.from_dict(
+            data_class=GithubIssueTemplateCfg,
+            data=raw,
+        )
 
     def email_recipients(self):
         return self.raw['email_recipients']

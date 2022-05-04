@@ -33,6 +33,7 @@ import ccc.delivery
 import ccc.github
 import cnudie.util
 import concourse.util
+import concourse.model.traits.image_scan as image_scan
 import delivery.client
 import github.compliance.issue
 import mailutil
@@ -53,6 +54,7 @@ def create_or_update_github_issues(
     results_to_discard: typing.Sequence[typing.Union[UploadResult, tuple[UploadResult, float]]],
     cfg_factory,
     issue_tgt_repo_url: str=None,
+    github_issue_template_cfg: image_scan.GithubIssueTemplateCfg=None,
 ):
     if issue_tgt_repo_url:
         gh_api = ccc.github.github_api(repo_url=issue_tgt_repo_url)
@@ -128,36 +130,49 @@ def create_or_update_github_issues(
             else:
                 resource_type = resource.type
 
-            body = textwrap.dedent(f'''\
-                # Compliance Status Summary
+            template_variables = {
+                'component_name': component.name,
+                'component_version': component.version,
+                'resource_name': resource.name,
+                'resource_version': resource.version,
+                'resource_type': resource.type,
+                'greatest_cve': greatest_cve,
+                'bdba_report_url': analysis_res.report_url(),
+            }
 
-                |    |    |
-                | -- | -- |
-                | Component | {component.name} |
-                | Component-Version | {component.version} |
-                | Resource  | {resource.name} |
-                | Resource-Version  | {resource.version} |
-                | Resource-Type | {resource_type} |
-                | Greatest CVSSv3 Score | **{greatest_cve}** |
+            if github_issue_template_cfg and (body := github_issue_template_cfg.body):
+                body = body.format(**template_variables)
+            else:
+                body = textwrap.dedent(f'''\
+                    # Compliance Status Summary
 
-                The aforementioned {resource_type}, declared by the given content was found to
-                contain potentially relevant vulnerabilities.
+                    |    |    |
+                    | -- | -- |
+                    | Component | {component.name} |
+                    | Component-Version | {component.version} |
+                    | Resource  | {resource.name} |
+                    | Resource-Version  | {resource.version} |
+                    | Resource-Type | {resource_type} |
+                    | Greatest CVSSv3 Score | **{greatest_cve}** |
 
-                See [scan report]({analysis_res.report_url()}) for both viewing a detailed
-                scanning report, and doing assessments (see below).
+                    The aforementioned {resource_type}, declared by the given content was found to
+                    contain potentially relevant vulnerabilities.
 
-                **Action Item**
+                    See [scan report]({analysis_res.report_url()}) for both viewing a detailed
+                    scanning report, and doing assessments (see below).
 
-                Please take appropriate action. Choose either of:
+                    **Action Item**
 
-                - assess findings
-                - upgrade {resource_type} version
-                - minimise image
+                    Please take appropriate action. Choose either of:
 
-                In case of systematic false-positives, consider adding scanning-hints to your
-                Component-Descriptor.
-            '''
-            )
+                    - assess findings
+                    - upgrade {resource_type} version
+                    - minimise image
+
+                    In case of systematic false-positives, consider adding scanning-hints to your
+                    Component-Descriptor.
+                '''
+                )
 
             try:
                 github.compliance.issue.create_or_update_issue(
