@@ -235,7 +235,22 @@ with different contents, all variants are subject to being scanned.</p>
 <td><p>str</p></td>
 <td><p>if set, and notify is set to github_issues, overwrite target github repository</p></td>
 </tr>
-<tr class="row-odd"><td><p>email_recipients</p></td>
+<tr class="row-odd"><td><p>github_issue_template</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>GithubIssueTemplateCfg</p></td>
+<td><p>use to configure a custom github-issue-template (sub-attr: <code class="code docutils literal notranslate"><span class="pre">body</span></code>)
+use python3’s format-str syntax
+available variables:
+- component_name
+- component_version
+- resource_name
+- resource_version
+- resource_type
+- greatest_cve
+- bdba_report_url</p></td>
+</tr>
+<tr class="row-even"><td><p>email_recipients</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span><span class="w"></span>
 </pre></div>
@@ -244,25 +259,25 @@ with different contents, all variants are subject to being scanned.</p>
 <td><p>List[str]</p></td>
 <td><p>optional list of email recipients to be notified about critical scan results</p></td>
 </tr>
-<tr class="row-even"><td><p>protecode</p></td>
+<tr class="row-odd"><td><p>protecode</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>ProtecodeScanCfg</p></td>
 <td><p>if present, perform protecode scanning</p></td>
 </tr>
-<tr class="row-odd"><td><p>clam_av</p></td>
+<tr class="row-even"><td><p>clam_av</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>ClamAVScanCfg</p></td>
 <td><p>if present, perform ClamAV scanning</p></td>
 </tr>
-<tr class="row-even"><td><p>os_id</p></td>
+<tr class="row-odd"><td><p>os_id</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>OsIdScan</p></td>
 <td><p>if present, identify operating system</p></td>
 </tr>
-<tr class="row-odd"><td><p>trait_depends</p></td>
+<tr class="row-even"><td><p>trait_depends</p></td>
 <td><p>no</p></td>
 <td><p>()</p></td>
 <td><p>List[str]</p></td>
@@ -356,7 +371,7 @@ include_component_names.</p></td>
 <td><p>no</p></td>
 <td><p>7</p></td>
 <td><p>int</p></td>
-<td><p>CVE threshold to interpret as an error</p></td>
+<td><p>CVE threshold for reporting/notications (if smaller, findings are ignored)</p></td>
 </tr>
 <tr class="row-even"><td><p>processing_mode</p></td>
 <td><p>no</p></td>
