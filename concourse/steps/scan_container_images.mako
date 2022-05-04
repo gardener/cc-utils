@@ -5,6 +5,8 @@
 <%
 from makoutil import indent_func
 from concourse.steps import step_lib
+import dataclasses
+
 main_repo = job_variant.main_repository()
 repo_name = main_repo.logical_name().upper()
 
@@ -16,6 +18,7 @@ filter_cfg = image_scan_trait.filters()
 component_trait = job_variant.trait('component_descriptor')
 
 issue_tgt_repo_url = image_scan_trait.overwrite_github_issues_tgt_repository_url()
+github_issue_template = image_scan_trait.github_issue_template()
 %>
 import functools
 import logging
@@ -23,6 +26,8 @@ import os
 import sys
 import tabulate
 import textwrap
+
+import dacite
 
 import gci.componentmodel as cm
 
@@ -37,6 +42,7 @@ try:
 except:
   pass
 import ci.util
+import concourse.model.traits.image_scan as image_scan
 import cnudie.retrieve
 import mailutil
 import product.util
@@ -129,6 +135,13 @@ if all ((
   print('nothing to report - early-exiting')
   sys.exit(0)
 
+% if github_issue_template:
+github_issue_template_cfg = dacite.from_dict(
+  data_class=image_scan.GithubIssueTemplateCfg,
+  data=${dataclasses.asdict(github_issue_template)},
+)
+% endif
+
 if notification_policy is Notify.GITHUB_ISSUES:
   create_or_update_github_issues(
     results_to_report=results_above_threshold,
@@ -136,6 +149,9 @@ if notification_policy is Notify.GITHUB_ISSUES:
     cfg_factory=cfg_factory,
 % if issue_tgt_repo_url:
     issue_tgt_repo_url='${issue_tgt_repo_url}',
+% endif
+% if github_issue_template:
+  github_issue_template_cfg=github_issue_template_cfg,
 % endif
   )
   print(f'omitting email-sending, as notification-method was set to github-issues')
