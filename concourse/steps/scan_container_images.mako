@@ -124,9 +124,6 @@ if notification_policy is Notify.NOBODY:
   print("Notification policy set to 'nobody', exiting")
   sys.exit(0)
 
-if notification_policy is not Notify.EMAIL_RECIPIENTS:
-  results_below_threshold = []
-
 if all ((
   not results_above_threshold,
   not results_below_threshold,
