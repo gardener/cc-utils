@@ -56,6 +56,8 @@ def create_or_update_github_issues(
     issue_tgt_repo_url: str=None,
     github_issue_template_cfg: image_scan.GithubIssueTemplateCfg=None,
 ):
+    logger.info(f'{len(results_to_report)=}, {len(results_to_discard)=}')
+
     if issue_tgt_repo_url:
         gh_api = ccc.github.github_api(repo_url=issue_tgt_repo_url)
 
