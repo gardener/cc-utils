@@ -137,7 +137,7 @@ def create_or_update_github_issues(
                 'component_version': component.version,
                 'resource_name': resource.name,
                 'resource_version': resource.version,
-                'resource_type': resource.type,
+                'resource_type': resource_type,
                 'greatest_cve': greatest_cve,
                 'bdba_report_url': analysis_res.report_url(),
             }
