@@ -32,16 +32,16 @@ import ccc.concourse
 import ccc.delivery
 import ccc.github
 import cnudie.util
-import concourse.util
 import concourse.model.traits.image_scan as image_scan
+import concourse.util
 import delivery.client
 import github.compliance.issue
 import mailutil
 import reutil
 import saf.model
+import protecode.model as pm
 
 from concourse.model.traits.image_scan import Notify
-from protecode.model import CVSSVersion, License, UploadResult
 
 logger = logging.getLogger()
 
@@ -50,8 +50,8 @@ tabulate.htmlescape = lambda x: x
 
 
 def create_or_update_github_issues(
-    results_to_report: typing.Sequence[typing.Union[UploadResult, tuple[UploadResult, float]]],
-    results_to_discard: typing.Sequence[typing.Union[UploadResult, tuple[UploadResult, float]]],
+    results_to_report: typing.Sequence[pm.BDBA_ScanResult],
+    results_to_discard: typing.Sequence[pm.BDBA_ScanResult],
     cfg_factory,
     issue_tgt_repo_url: str=None,
     github_issue_template_cfg: image_scan.GithubIssueTemplateCfg=None,
@@ -71,14 +71,11 @@ def create_or_update_github_issues(
 
     err_count = 0
 
-    def process_result(result: tuple, action:str):
+    def process_result(result: pm.BDBA_ScanResult, action:str):
         nonlocal gh_api
         nonlocal err_count
 
-        if isinstance(result, tuple):
-            result, greatest_cve = result # AnalysisResult, float (cve-score)
-        else:
-            greatest_cve = 'unknown'
+        greatest_cve = result.greatest_cve_score
 
         component = result.component
         resource = result.resource
@@ -212,7 +209,7 @@ class MailRecipients:
         protecode_cfg: None,
         protecode_group_id: int=None,
         protecode_group_url: str=None,
-        cvss_version: CVSSVersion=None,
+        cvss_version: pm.CVSSVersion=None,
         result_filter=None,
         recipients: typing.List[str]=[],
         recipients_component: cm.Component=None,
@@ -248,25 +245,27 @@ class MailRecipients:
 
     def add_protecode_results(
         self,
-        relevant_results: typing.Iterable[typing.Tuple[UploadResult, float]],
-        results_below_threshold: typing.Iterable[typing.Tuple[UploadResult, float]],
+        relevant_results: typing.Sequence[pm.BDBA_ScanResult],
+        results_below_threshold: typing.Sequence[pm.BDBA_ScanResult],
     ):
         logger.info(f'adding protecode results for {self}')
 
         self._protecode_results.extend([
                 r for r in relevant_results
-                if not self._result_filter or self._result_filter(component=r[0].component)
+                if not self._result_filter or self._result_filter(component=r.component)
             ])
 
         self._protecode_results_below_threshold.extend([
                 r for r in results_below_threshold
-                if not self._result_filter or self._result_filter(component=r[0].component)
+                if not self._result_filter or self._result_filter(component=r.component)
             ])
 
     def add_license_scan_results(
         self,
         results: typing.Iterable[
-            typing.Tuple[UploadResult, typing.Iterable[License], typing.Iterable[License]]
+            typing.Tuple[pm.BDBA_ScanResult],
+            typing.Iterable[pm.License],
+            typing.Iterable[pm.License],
         ],
     ):
         logger.info(f'adding license scan results for {self}')
@@ -399,7 +398,7 @@ def mail_recipients(
     protecode_cfg=None,
     protecode_group_id: int=None,
     protecode_group_url: str=None,
-    cvss_version: CVSSVersion=None,
+    cvss_version: pm.CVSSVersion=None,
     email_recipients: typing.Iterable[str]=(),
     components: typing.Iterable[cm.Component]=(),
 ):
@@ -441,11 +440,11 @@ def mail_recipients(
 
 def protecode_results_table(
     protecode_cfg,
-    upload_results: typing.Iterable[UploadResult],
+    upload_results: typing.Iterable[pm.BDBA_ScanResult],
     show_cve: bool=True,
 ):
-    def result_to_tuple(upload_result: UploadResult):
-        upload_result, greatest_cve = upload_result
+    def result_to_tuple(upload_result: pm.BDBA_ScanResult):
+        greatest_cve = upload_result.greatest_cve_score
         # protecode.model.AnalysisResult
         analysis_result = upload_result.result
 
@@ -462,9 +461,9 @@ def protecode_results_table(
           image_reference_url = None
 
         if show_cve:
-            return [link_to_analysis_url, greatest_cve, image_reference_url]
+            return (link_to_analysis_url, greatest_cve, image_reference_url)
         else:
-            return [link_to_analysis_url, image_reference_url]
+            return (link_to_analysis_url, image_reference_url)
 
     if show_cve:
         table_headers = ('Component Name', 'Greatest CVE', 'Container Image Reference')
@@ -555,7 +554,7 @@ def print_protecode_info_table(
     protecode_group_url: str,
     protecode_group_id: int,
     reference_protecode_group_ids: typing.List[int],
-    cvss_version: CVSSVersion,
+    cvss_version: pm.CVSSVersion,
     include_image_references: typing.List[str],
     exclude_image_references: typing.List[str],
     include_image_names: typing.List[str],

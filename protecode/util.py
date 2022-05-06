@@ -31,6 +31,7 @@ import cnudie.util
 import dso.model
 import product.util
 import product.v2
+import protecode.model as pm
 
 import gci.componentmodel as cm
 
@@ -40,9 +41,7 @@ from protecode.scanning_util import (
 )
 from protecode.model import (
     License,
-    highest_major_cve_severity,
     CVSSVersion,
-    UploadResult,
 )
 
 logger = logging.getLogger(__name__)
@@ -60,9 +59,9 @@ def upload_grouped_images(
     reference_group_ids=(),
     cvss_version=CVSSVersion.V2,
 ) -> tuple[
-    typing.Sequence[UploadResult], # results above threshold
-    typing.Sequence[UploadResult], # results below threshold
-    typing.Sequence[typing.Tuple[UploadResult, typing.Set[License]]], # license report
+    typing.Sequence[pm.BDBA_ScanResult], # results above threshold
+    typing.Sequence[pm.BDBA_ScanResult], # results below threshold
+    typing.Sequence[typing.Tuple[pm.BDBA_ScanResult, typing.Set[License]]], # license report
 ]:
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
     protecode_api = ccc.protecode.client(protecode_cfg)
@@ -198,11 +197,11 @@ def upload_grouped_images(
 
 
 def license_report(
-    upload_results: typing.Sequence[UploadResult],
-) -> typing.Sequence[typing.Tuple[UploadResult, typing.Set[License]]]:
+    upload_results: typing.Sequence[pm.BDBA_ScanResult],
+) -> typing.Sequence[typing.Tuple[pm.BDBA_ScanResult, typing.Set[License]]]:
     def create_component_reports():
         for upload_result in upload_results:
-            if isinstance(upload_result, UploadResult):
+            if isinstance(upload_result, pm.BDBA_ScanResult):
                 analysis_result = upload_result.result
             else:
                 analysis_result = upload_result
@@ -217,11 +216,11 @@ def license_report(
 
 
 def filter_and_display_upload_results(
-    upload_results: typing.Sequence[UploadResult],
+    upload_results: typing.Sequence[pm.BDBA_ScanResult],
     cvss_version: CVSSVersion,
     cve_threshold=7,
     ignore_if_triaged=True,
-) -> typing.Iterable[typing.Tuple[UploadResult, float]]:
+) -> typing.Sequence[pm.BDBA_ScanResult]:
     # we only require the analysis_results for now
 
     results_without_components = []
@@ -231,7 +230,7 @@ def filter_and_display_upload_results(
     for upload_result in upload_results:
         resource = upload_result.resource
 
-        if isinstance(upload_result, UploadResult):
+        if isinstance(upload_result, pm.BDBA_ScanResult):
             result = upload_result.result
         else:
             result = upload_result
@@ -241,18 +240,7 @@ def filter_and_display_upload_results(
             results_without_components.append(upload_result)
             continue
 
-        greatest_cve = -1
-
-        for component in components:
-            vulnerabilities = filter(lambda v: not v.historical(), component.vulnerabilities())
-            if ignore_if_triaged:
-                vulnerabilities = filter(lambda v: not v.has_triage(), vulnerabilities)
-            greatest_cve_candidate = highest_major_cve_severity(
-                vulnerabilities,
-                cvss_version,
-            )
-            if greatest_cve_candidate > greatest_cve:
-                greatest_cve = greatest_cve_candidate
+        greatest_cve = upload_result.greatest_cve_score
 
         if greatest_cve >= cve_threshold:
             try:
@@ -273,10 +261,10 @@ def filter_and_display_upload_results(
                     f'failed to retrieve vulnerabilies from gcr {traceback.format_exc()}'
                 )
 
-            results_above_cve_thresh.append((upload_result, greatest_cve))
+            results_above_cve_thresh.append(upload_result)
             continue
         else:
-            results_below_cve_thresh.append((upload_result, greatest_cve))
+            results_below_cve_thresh.append(upload_result)
             continue
 
     if results_without_components:
@@ -287,17 +275,17 @@ def filter_and_display_upload_results(
             print(result.result.display_name())
         print('')
 
-    def render_results_table(upload_results: typing.Sequence[typing.Tuple[UploadResult, int]]):
+    def render_results_table(upload_results: typing.Sequence[pm.BDBA_ScanResult]):
         header = ('Component Name', 'Greatest CVE')
-        results = sorted(upload_results, key=lambda e: e[1])
+        results = sorted(upload_results, key=lambda e: e.greatest_cve_score)
 
         def to_result(result):
-            if isinstance(result, UploadResult):
+            if isinstance(result, pm.BDBA_ScanResult):
                 return result.result
             return result
 
         result = tabulate.tabulate(
-            map(lambda r: (to_result(r[0]).display_name(), r[1]), results),
+            [(to_result(r).display_name(), r.greatest_cve_score) for r in results],
             headers=header,
             tablefmt='fancy_grid',
         )
@@ -316,7 +304,7 @@ def filter_and_display_upload_results(
 
 
 def upload_result_to_license_data(
-    upload_result: UploadResult,
+    upload_result: pm.BDBA_ScanResult,
     datasource: str = 'protecode-licenses',
 ) -> dso.model.ComplianceData:
 
@@ -347,7 +335,7 @@ def upload_result_to_license_data(
 
 
 def upload_result_to_cve_data(
-    upload_result: UploadResult,
+    upload_result: pm.BDBA_ScanResult,
     greatest_cvss3_score: float,
     datasource: str = dso.model.Datasource.PROTECODE,
 ) -> dso.model.ComplianceData:

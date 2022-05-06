@@ -13,7 +13,7 @@ import ccc.oci
 import ci.util
 import cnudie.util
 import gci.componentmodel
-import protecode.model
+import protecode.model as pm
 import version
 
 
@@ -21,7 +21,6 @@ from protecode.client import ProtecodeApi
 from protecode.model import (
     AnalysisResult,
     TriageScope,
-    UploadResult,
     UploadStatus,
     VersionOverrideScope,
 )
@@ -230,7 +229,7 @@ class ProtecodeUtil:
     def process_component_resources(
         self,
         component_resources: list[cnudie.util.ComponentResource],
-    ) -> typing.Iterable[UploadResult]:
+    ) -> typing.Iterable[pm.BDBA_ScanResult]:
 
         # depending on upload-mode, determine an upload-action for each related image
         # - resources to upload
@@ -438,11 +437,12 @@ class ProtecodeUtil:
 
             component_resource = product_id_to_resource[protecode_product.product_id()]
 
-            yield UploadResult(
+            yield pm.BDBA_ScanResult(
                 component=component_resource.component,
                 status=UploadStatus.DONE, # XXX remove this
                 result=analysis_result,
                 resource=component_resource.resource,
+                greatest_cve_score=analysis_result.greatest_cve_score(),
             )
 
         # in rare cases, we fail to find (again) an existing product, but through naming-convention
@@ -714,7 +714,7 @@ class ProtecodeUtil:
 
                 vulnerabilities_count += 1
 
-                severity = float(vulnerability.cve_severity_str(protecode.model.CVSSVersion.V3))
+                severity = float(vulnerability.cve_severity_str(pm.CVSSVersion.V3))
                 if severity < self.cvss_threshold:
                     continue # only triage vulnerabilities above threshold
                 if vulnerability.has_triage():
@@ -774,7 +774,7 @@ class ProtecodeUtil:
                     'component': component.name(),
                     'version': version,
                     'vulns': [vulnerability.cve()],
-                    'scope': protecode.model.TriageScope.RESULT.value,
+                    'scope': pm.TriageScope.RESULT.value,
                     'reason': 'OT', # "other"
                     'description': description,
                     'product_id': scan_result.product_id(),

@@ -176,7 +176,7 @@ email_recipients = tuple(
 ## type: Iterable[Tuple[ScanResult, float]] (written in comment to save imports)
 results_above_threshold = sorted(
   results_above_threshold,
-  key=lambda x: x[1],
+  key=lambda x: x.greatest_cve_score,
   reverse=True,
 )
 

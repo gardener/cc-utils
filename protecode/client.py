@@ -26,16 +26,18 @@ import ci.log
 import requests
 from ci.util import not_empty, not_none, urljoin
 from http_requests import check_http_code, mount_default_adapter
-from model.protecode import (
+from protecode.model import (
     AnalysisResult,
     CVSSVersion,
     ProcessingStatus,
-    ProtecodeAuthScheme,
-    ProtecodeConfig,
     ScanResult,
     Triage,
     TriageScope,
     VersionOverrideScope,
+)
+from model.protecode import (
+    ProtecodeAuthScheme,
+    ProtecodeConfig,
 )
 
 logger = logging.getLogger(__name__)

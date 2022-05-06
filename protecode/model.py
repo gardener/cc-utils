@@ -61,6 +61,14 @@ class AnalysisResult(ModelBase):
     def custom_data(self):
         return self.raw.get('custom_data')
 
+    def greatest_cve_score(self) -> float:
+        greatest_cve_score = -1
+
+        for component in self.components():
+            greatest_cve_score = max(component.greatest_cve_score(), greatest_cve_score)
+
+        return greatest_cve_score
+
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.display_name()}({self.product_id()})'
 
@@ -74,6 +82,17 @@ class Component(ModelBase):
 
     def vulnerabilities(self) -> 'typing.Generator[Vulnerability,None, None]':
         return (Vulnerability(raw_dict=raw) for raw in self.raw.get('vulns'))
+
+    def greatest_cve_score(self) -> float:
+        greatest_cve_score = -1
+
+        for vulnerability in self.vulnerabilities():
+            if vulnerability.historical() or vulnerability.has_triage():
+                continue
+
+            greatest_cve_score = max(vulnerability.cve_severity(), greatest_cve_score)
+
+        return greatest_cve_score
 
     def license(self) -> 'License':
         license_raw = self.raw.get('license', None)
@@ -132,13 +151,16 @@ class Vulnerability(ModelBase):
     def cve(self):
         return self.raw.get('vuln').get('cve')
 
-    def cve_severity_str(self, cvss_version):
+    def cve_severity(self, cvss_version=CVSSVersion.V3) -> float:
         if cvss_version is CVSSVersion.V3:
-            return str(self.raw.get('vuln').get('cvss3_score'))
+            return float(self.raw.get('vuln').get('cvss3_score'))
         elif cvss_version is CVSSVersion.V2:
-            return str(self.raw.get('vuln').get('cvss'))
+            return float(self.raw.get('vuln').get('cvss'))
         else:
             raise NotImplementedError(f'{cvss_version} not supported')
+
+    def cve_severity_str(self, cvss_version=CVSSVersion.V3):
+        return str(self.cve_severity(cvss_version=cvss_version))
 
     def has_triage(self) -> bool:
         return bool(self.raw.get('triage')) or bool(self.raw.get('triages'))
@@ -237,18 +259,6 @@ class ScanResult(ModelBase):
         return self.raw.get('rescan-possible')
 
 
-def highest_major_cve_severity(
-    vulnerabilites: typing.Iterable[Vulnerability],
-    cvss_version,
-) -> float:
-    try:
-        return max(
-            map(lambda v: v.cve_major_severity(cvss_version), vulnerabilites)
-        )
-    except ValueError:
-        return -1
-
-
 #############################################################################
 ## upload result model
 
@@ -259,8 +269,9 @@ class UploadStatus(Enum):
 
 
 @dataclasses.dataclass(frozen=True)
-class UploadResult:
+class BDBA_ScanResult:
     status: UploadStatus
     component: cm.Component
     result: AnalysisResult
     resource: cm.Resource = None
+    greatest_cve_score: float = None
