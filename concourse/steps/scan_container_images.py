@@ -263,9 +263,11 @@ class MailRecipients:
     def add_license_scan_results(
         self,
         results: typing.Iterable[
-            typing.Tuple[pm.BDBA_ScanResult],
-            typing.Iterable[pm.License],
-            typing.Iterable[pm.License],
+            tuple[
+                typing.Tuple[pm.BDBA_ScanResult],
+                typing.Iterable[pm.License],
+                typing.Iterable[pm.License],
+            ],
         ],
     ):
         logger.info(f'adding license scan results for {self}')
