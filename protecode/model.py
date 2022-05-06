@@ -15,7 +15,7 @@
 
 import dataclasses
 from enum import Enum
-from typing import Iterable
+import typing
 
 import gci.componentmodel as cm
 
@@ -55,7 +55,7 @@ class AnalysisResult(ModelBase):
     def status(self) -> ProcessingStatus:
         return ProcessingStatus(self.raw.get('status'))
 
-    def components(self) -> 'Iterable[Component]':
+    def components(self) -> 'typing.Generator[Component, None, None]':
         return (Component(raw_dict=raw) for raw in self.raw.get('components', []))
 
     def custom_data(self):
@@ -72,7 +72,7 @@ class Component(ModelBase):
     def version(self):
         return self.raw.get('version')
 
-    def vulnerabilities(self) -> 'Iterable[Vulnerability]':
+    def vulnerabilities(self) -> 'typing.Generator[Vulnerability,None, None]':
         return (Vulnerability(raw_dict=raw) for raw in self.raw.get('vulns'))
 
     def license(self) -> 'License':
@@ -81,7 +81,7 @@ class Component(ModelBase):
             return None
         return License(raw_dict=license_raw)
 
-    def extended_objects(self) -> 'Iterable[ExtendedObject]':
+    def extended_objects(self) -> 'typing.Generator[ExtendedObject, None, None]':
         return (ExtendedObject(raw_dict=raw) for raw in self.raw.get('extended-objects'))
 
     def __repr__(self):
@@ -143,7 +143,7 @@ class Vulnerability(ModelBase):
     def has_triage(self) -> bool:
         return bool(self.raw.get('triage')) or bool(self.raw.get('triages'))
 
-    def triages(self) -> 'Iterable[Triage]':
+    def triages(self) -> 'typing.Generator[Triage, None, None]':
         if not self.has_triage():
             return ()
         trs = self.raw.get('triage')
@@ -238,7 +238,7 @@ class ScanResult(ModelBase):
 
 
 def highest_major_cve_severity(
-    vulnerabilites: Iterable[Vulnerability],
+    vulnerabilites: typing.Iterable[Vulnerability],
     cvss_version,
 ) -> float:
     try:
