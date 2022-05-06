@@ -69,6 +69,24 @@ def create_or_update_github_issues(
     else:
         overwrite_repository = None
 
+    # workaround / hack:
+    # we map findings to <component-name>:<resource-name>
+    # in case of ambiguities, this would lead to the same ticket firstly be created, then closed
+    # -> do not close tickets in this case.
+    # a cleaner approach would be to create seperate tickets, or combine findings into shared
+    # tickets. For the time being, this should be "good enough"
+    def to_component_resource_name(result):
+        return f'{result.component.name}:{result.resource.name}'
+
+    reported_component_resource_names = {
+        to_component_resource_name(result) for result in results_to_report
+    }
+
+    results_to_discard = [
+        result for result in results_to_discard
+        if to_component_resource_name(result) not in reported_component_resource_names
+    ]
+
     err_count = 0
 
     def process_result(result: pm.BDBA_ScanResult, action:str):
