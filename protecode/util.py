@@ -173,13 +173,13 @@ def upload_grouped_images(
         try:
             cve_data = [
                 upload_result_to_cve_data(
-                    upload_result=result[0],
-                    greatest_cvss3_score=result[1],
+                    upload_result=result,
+                    greatest_cvss3_score=result.greatest_cve_score,
                 ) for result in relevant_results + results_below_threshold
             ]
             license_data = [
                 upload_result_to_license_data(
-                    upload_result=result[0],
+                    upload_result=result,
                 ) for result in relevant_results + results_below_threshold
             ]
             for data in cve_data + license_data:
