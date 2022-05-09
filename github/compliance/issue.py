@@ -45,12 +45,16 @@ def repository_labels(
     component: cm.Component,
     resource: cm.Resource,
     issue_type: str=_label_bdba,
+    extra_labels: typing.Iterable[str]=None
 ):
     yield 'area/security'
     yield 'cicd/auto-generated'
     yield f'cicd/{issue_type}'
 
     yield resource_digest_label(component=component, resource=resource)
+
+    if extra_labels:
+        yield from extra_labels
 
 
 def enumerate_issues(
@@ -79,13 +83,16 @@ def _create_issue(
     body:str,
     assignees: typing.Iterable[str]=(),
     issue_type: str=_label_bdba,
+    extra_labels: typing.Iterable[str]=None,
 ):
     title = f'[{issue_type}] - {component.name}:{resource.name}'
     assignees = tuple(assignees)
+
     labels = tuple(repository_labels(
         component=component,
         resource=resource,
         issue_type=issue_type,
+        extra_labels=extra_labels,
     ))
 
     try:
@@ -110,10 +117,20 @@ def _update_issue(
     issue: github3.issues.Issue,
     assignees: typing.Iterable[str]=(),
     issue_type: str=_label_bdba,
+    extra_labels: typing.Iterable[str]=None,
 ):
     kwargs = {}
     if not issue.assignees:
         kwargs['assignees'] = tuple(assignees)
+
+    labels = tuple(repository_labels(
+        component=component,
+        resource=resource,
+        issue_type=issue_type,
+        extra_labels=extra_labels,
+    ))
+
+    kwargs['labels'] = labels
 
     issue.edit(
         body=body,
@@ -128,6 +145,7 @@ def create_or_update_issue(
     body:str,
     assignees: typing.Iterable[str]=(),
     issue_type: str=_label_bdba,
+    extra_labels: typing.Iterable[str]=None,
 ):
     open_issues = tuple(
         enumerate_issues(
@@ -148,6 +166,7 @@ def create_or_update_issue(
             issue_type=issue_type,
             body=body,
             assignees=assignees,
+            extra_labels=extra_labels,
         )
     elif issues_count == 1:
         open_issue = open_issues[0] # we checked there is exactly one
@@ -159,6 +178,7 @@ def create_or_update_issue(
             body=body,
             assignees=assignees,
             issue=open_issue,
+            extra_labels=extra_labels,
         )
     else:
         raise RuntimeError('this line should never be reached') # all cases should be handled before
