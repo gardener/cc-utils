@@ -71,6 +71,24 @@ def _delivery_dashboard_url(
     return f'{url}?{query}'
 
 
+def _criticality_classification(cve_score: float):
+    if not cve_score or cve_score <= 0:
+        return None
+
+    if cve_score < 4.0:
+        return 'low'
+    if cve_score < 7.0:
+        return 'medium'
+    if cve_score < 9.0:
+        return 'high'
+    if cve_score >= 9.0:
+        return 'critical'
+
+
+def _criticality_label(classification: str):
+    return f'compliance-priority/{classification}'
+
+
 def create_or_update_github_issues(
     results_to_report: typing.Sequence[pm.BDBA_ScanResult],
     results_to_discard: typing.Sequence[pm.BDBA_ScanResult],
@@ -178,6 +196,8 @@ def create_or_update_github_issues(
             else:
                 delivery_dashboard_url = ''
 
+            criticality_classification = _criticality_classification(cve_score=greatest_cve)
+
             template_variables = {
                 'component_name': component.name,
                 'component_version': component.version,
@@ -185,6 +205,7 @@ def create_or_update_github_issues(
                 'resource_version': resource.version,
                 'resource_type': resource_type,
                 'greatest_cve': greatest_cve,
+                'criticality_classification': criticality_classification,
                 'bdba_report_url': analysis_res.report_url(),
                 'report_url': analysis_res.report_url(),
                 'delivery_dashboard_url': delivery_dashboard_url,
@@ -231,6 +252,9 @@ def create_or_update_github_issues(
                     repository=repository,
                     body=body,
                     assignees=assignees,
+                    extra_labels=(
+                        _criticality_label(classification=criticality_classification),
+                    ),
                 )
             except github3.exceptions.GitHubError:
                 err_count += 1
