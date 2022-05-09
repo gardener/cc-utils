@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 ci.log.configure_default_logging()
 
 
+_label_bdba = 'vulnerabilities/bdba'
+
+
 def resource_digest_label(
     component: cm.Component,
     resource: cm.Resource,
@@ -41,7 +44,7 @@ def resource_digest_label(
 def repository_labels(
     component: cm.Component,
     resource: cm.Resource,
-    issue_type: str='vulnerabilities/bdba',
+    issue_type: str=_label_bdba,
 ):
     yield 'area/security'
     yield 'cicd/auto-generated'
@@ -55,7 +58,7 @@ def enumerate_issues(
     resource: cm.Resource,
     repository: github3.repos.Repository,
     state=None, # 'open' | 'closed'
-    issue_type='vulnerabilities/bdba',
+    issue_type=_label_bdba,
 ) -> typing.Generator[github3.issues.ShortIssue, None, None]:
     return repository.issues(
         state=state,
@@ -75,7 +78,7 @@ def _create_issue(
     repository: github3.repos.Repository,
     body:str,
     assignees: typing.Iterable[str]=(),
-    issue_type: str='vulnerabilities/bdba',
+    issue_type: str=_label_bdba,
 ):
     title = f'[{issue_type}] - {component.name}:{resource.name}'
     assignees = tuple(assignees)
@@ -106,7 +109,7 @@ def _update_issue(
     body:str,
     issue: github3.issues.Issue,
     assignees: typing.Iterable[str]=(),
-    issue_type: str='vulnerabilities/bdba',
+    issue_type: str=_label_bdba,
 ):
     kwargs = {}
     if not issue.assignees:
@@ -124,7 +127,7 @@ def create_or_update_issue(
     repository: github3.repos.Repository,
     body:str,
     assignees: typing.Iterable[str]=(),
-    issue_type: str='vulnerabilities/bdba',
+    issue_type: str=_label_bdba,
 ):
     open_issues = tuple(
         enumerate_issues(
@@ -165,7 +168,7 @@ def close_issue_if_present(
     component: cm.Component,
     resource: cm.Resource,
     repository: github3.repos.Repository,
-    issue_type: str='vulnerabilities/bdba',
+    issue_type: str=_label_bdba,
 ):
     open_issues = tuple(
         enumerate_issues(
