@@ -143,13 +143,13 @@ if notification_policy is Notify.GITHUB_ISSUES:
   create_or_update_github_issues(
     results_to_report=results_above_threshold,
     results_to_discard=results_below_threshold,
-    cfg_factory=cfg_factory,
 % if issue_tgt_repo_url:
     issue_tgt_repo_url='${issue_tgt_repo_url}',
 % endif
 % if github_issue_template:
-  github_issue_template_cfg=github_issue_template_cfg,
+    github_issue_template_cfg=github_issue_template_cfg,
 % endif
+    delivery_svc_endpoints=ccc.delivery.endpoints(cfg_set=cfg_set),
   )
   print(f'omitting email-sending, as notification-method was set to github-issues')
   sys.exit(0)

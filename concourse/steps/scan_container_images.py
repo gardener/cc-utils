@@ -31,12 +31,14 @@ import gci.componentmodel as cm
 import ccc.concourse
 import ccc.delivery
 import ccc.github
+import ci.util
 import cnudie.util
 import concourse.model.traits.image_scan as image_scan
 import concourse.util
 import delivery.client
 import github.compliance.issue
 import mailutil
+import model.delivery
 import reutil
 import saf.model
 import protecode.model as pm
@@ -49,12 +51,32 @@ logger = logging.getLogger()
 tabulate.htmlescape = lambda x: x
 
 
+def _delivery_dashboard_url(
+    component: cm.Component,
+    base_url: str,
+):
+    url = ci.util.urljoin(
+        base_url,
+        '#/component'
+    )
+
+    query = urllib.parse.urlencode(
+        query={
+            'name': component.name,
+            'version': component.version,
+            'view': 'bom',
+        }
+    )
+
+    return f'{url}?{query}'
+
+
 def create_or_update_github_issues(
     results_to_report: typing.Sequence[pm.BDBA_ScanResult],
     results_to_discard: typing.Sequence[pm.BDBA_ScanResult],
-    cfg_factory,
     issue_tgt_repo_url: str=None,
     github_issue_template_cfg: image_scan.GithubIssueTemplateCfg=None,
+    delivery_svc_endpoints: model.delivery.DeliveryEndpointsCfg=None,
 ):
     logger.info(f'{len(results_to_report)=}, {len(results_to_discard)=}')
 
@@ -147,6 +169,15 @@ def create_or_update_github_issues(
             else:
                 resource_type = resource.type
 
+            if delivery_svc_endpoints:
+                delivery_dashboard_url = _delivery_dashboard_url(
+                    component=component,
+                    base_url=delivery_svc_endpoints.dashboard_url(),
+                )
+                delivery_dashboard_url = f'[Delivery-Dashboard]({delivery_dashboard_url})'
+            else:
+                delivery_dashboard_url = ''
+
             template_variables = {
                 'component_name': component.name,
                 'component_version': component.version,
@@ -155,6 +186,8 @@ def create_or_update_github_issues(
                 'resource_type': resource_type,
                 'greatest_cve': greatest_cve,
                 'bdba_report_url': analysis_res.report_url(),
+                'report_url': analysis_res.report_url(),
+                'delivery_dashboard_url': delivery_dashboard_url,
             }
 
             if github_issue_template_cfg and (body := github_issue_template_cfg.body):
