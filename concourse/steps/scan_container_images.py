@@ -89,6 +89,39 @@ def _criticality_label(classification: str):
     return f'compliance-priority/{classification}'
 
 
+def _compliance_status_summary(
+    component: cm.Component,
+    resource: cm.Resource,
+    greatest_cve: str,
+    report_url: str,
+):
+    if isinstance(resource.type, enum.Enum):
+        resource_type = resource.type.value
+    else:
+        resource_type = resource.type
+
+    summary = textwrap.dedent(f'''\
+        # Compliance Status Summary
+
+        |    |    |
+        | -- | -- |
+        | Component | {component.name} |
+        | Component-Version | {component.version} |
+        | Resource  | {resource.name} |
+        | Resource-Version  | {resource.version} |
+        | Resource-Type | {resource_type} |
+        | Greatest CVSSv3 Score | **{greatest_cve}** |
+
+        The aforementioned {resource_type}, declared by the given content was found to
+        contain potentially relevant vulnerabilities.
+
+        See [scan report]({report_url}) for both viewing a detailed
+        scanning report, and doing assessments (see below).
+    ''')
+
+    return summary
+
+
 def create_or_update_github_issues(
     results_to_report: typing.Sequence[pm.BDBA_ScanResult],
     results_to_discard: typing.Sequence[pm.BDBA_ScanResult],
@@ -199,6 +232,12 @@ def create_or_update_github_issues(
             criticality_classification = _criticality_classification(cve_score=greatest_cve)
 
             template_variables = {
+                'summary': _compliance_status_summary(
+                    component=component,
+                    resource=resource,
+                    greatest_cve=greatest_cve,
+                    report_url=analysis_res.report_url(),
+                ),
                 'component_name': component.name,
                 'component_version': component.version,
                 'resource_name': resource.name,
