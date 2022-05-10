@@ -81,11 +81,14 @@ def _create_issue(
     resource: cm.Resource,
     repository: github3.repos.Repository,
     body:str,
+    title:typing.Optional[str],
     assignees: typing.Iterable[str]=(),
     issue_type: str=_label_bdba,
     extra_labels: typing.Iterable[str]=None,
 ):
-    title = f'[{issue_type}] - {component.name}:{resource.name}'
+    if not title:
+        title = f'[{issue_type}] - {component.name}:{resource.name}'
+
     assignees = tuple(assignees)
 
     labels = tuple(repository_labels(
@@ -114,6 +117,7 @@ def _update_issue(
     resource: cm.Resource,
     repository: github3.repos.Repository,
     body:str,
+    title:typing.Optional[str],
     issue: github3.issues.Issue,
     assignees: typing.Iterable[str]=(),
     issue_type: str=_label_bdba,
@@ -122,6 +126,9 @@ def _update_issue(
     kwargs = {}
     if not issue.assignees:
         kwargs['assignees'] = tuple(assignees)
+
+    if title:
+        kwargs['title'] = title
 
     labels = tuple(repository_labels(
         component=component,
@@ -143,6 +150,7 @@ def create_or_update_issue(
     resource: cm.Resource,
     repository: github3.repos.Repository,
     body:str,
+    title:str=None,
     assignees: typing.Iterable[str]=(),
     issue_type: str=_label_bdba,
     extra_labels: typing.Iterable[str]=None,
@@ -165,6 +173,7 @@ def create_or_update_issue(
             repository=repository,
             issue_type=issue_type,
             body=body,
+            title=title,
             assignees=assignees,
             extra_labels=extra_labels,
         )
@@ -176,6 +185,7 @@ def create_or_update_issue(
             repository=repository,
             issue_type=issue_type,
             body=body,
+            title=title,
             assignees=assignees,
             issue=open_issue,
             extra_labels=extra_labels,
