@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import collections
 import dataclasses
 import enum
 import functools
@@ -91,14 +92,23 @@ def _criticality_label(classification: str):
 
 def _compliance_status_summary(
     component: cm.Component,
-    resource: cm.Resource,
+    resources: cm.Resource,
     greatest_cve: str,
-    report_url: str,
+    report_urls: str,
 ):
-    if isinstance(resource.type, enum.Enum):
-        resource_type = resource.type.value
+    if isinstance(resources[0].type, enum.Enum):
+        resource_type = resources[0].type.value
     else:
-        resource_type = resource.type
+        resource_type = resources[0].type
+
+    def pluralise(prefix: str, count: int):
+        if count == 1:
+            return prefix
+        return f'{prefix}s'
+
+    resource_versions = ', '.join((r.version for r in resources))
+
+    report_urls = '\n- '.join(report_urls)
 
     summary = textwrap.dedent(f'''\
         # Compliance Status Summary
@@ -107,19 +117,19 @@ def _compliance_status_summary(
         | -- | -- |
         | Component | {component.name} |
         | Component-Version | {component.version} |
-        | Resource  | {resource.name} |
-        | Resource-Version  | {resource.version} |
+        | Resource  | {resources[0].name} |
+        | {pluralise('Resource-Version', len(resources))}  | {resource_versions} |
         | Resource-Type | {resource_type} |
         | Greatest CVSSv3 Score | **{greatest_cve}** |
 
-        The aforementioned {resource_type}, declared by the given content was found to
-        contain potentially relevant vulnerabilities.
+        The aforementioned {pluralise(resource_type, len(resources))}, declared
+        by the given content was found to contain potentially relevant vulnerabilities.
 
-        See [scan report]({report_url}) for both viewing a detailed
-        scanning report, and doing assessments (see below).
+        For viewing detailed scan {pluralise('report', len(resources))}, see the following
+        {pluralise('Scan Report', len(resources))}:
     ''')
 
-    return summary
+    return summary + '- ' + report_urls
 
 
 def create_or_update_github_issues(
@@ -160,17 +170,26 @@ def create_or_update_github_issues(
         if to_component_resource_name(result) not in reported_component_resource_names
     ]
 
+    grouped_results_to_report = collections.defaultdict(list)
+    for result in results_to_report:
+        grouped_results_to_report[to_component_resource_name(result)].append(result)
+
     err_count = 0
 
-    def process_result(result: pm.BDBA_ScanResult, action:str):
+    def process_result(results: pm.BDBA_ScanResult, action:str):
         nonlocal gh_api
         nonlocal err_count
 
-        greatest_cve = result.greatest_cve_score
+        greatest_cve = max(results, key=lambda r: r.greatest_cve_score).greatest_cve_score
 
-        component = result.component
-        resource = result.resource
-        analysis_res = result.result
+        if not len({r.component.name for r in results}) == 1:
+            raise ValueError('not all component names are identical')
+
+        component = results[0].component
+        resources = [r.resource for r in results]
+        resource = resources[0]
+        analysis_results = [r.result for r in results]
+        analysis_res = analysis_results[0]
 
         if overwrite_repository:
             repository = overwrite_repository
@@ -234,9 +253,9 @@ def create_or_update_github_issues(
             template_variables = {
                 'summary': _compliance_status_summary(
                     component=component,
-                    resource=resource,
+                    resources=resources,
                     greatest_cve=greatest_cve,
-                    report_url=analysis_res.report_url(),
+                    report_urls=[ar.report_url() for ar in analysis_results],
                 ),
                 'component_name': component.name,
                 'component_version': component.version,
@@ -304,11 +323,11 @@ def create_or_update_github_issues(
         else:
             raise NotImplementedError(action)
 
-    for result in results_to_report:
-        process_result(result=result, action='report')
+    for results in grouped_results_to_report.values():
+        process_result(results=results, action='report')
 
     for result in results_to_discard:
-        process_result(result=result, action='discard')
+        process_result(results=(result,), action='discard')
 
     if err_count > 0:
         logger.warning(f'{err_count=} - there were errors - will raise')
