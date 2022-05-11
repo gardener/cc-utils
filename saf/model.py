@@ -2,6 +2,7 @@ import dataclasses
 import enum
 import typing
 
+import clamav.cnudie
 import gci.componentmodel as cm
 
 dc = dataclasses.dataclass
@@ -19,6 +20,12 @@ class EvidenceMetadata:
 class EvidenceRequest:
     meta: EvidenceMetadata
     data: typing.Dict
+
+
+@dc
+class EvidenceRequestV1:
+    meta: EvidenceMetadata
+    EvidenceDataBinary: typing.Dict
 
 
 # special-case evidence for gardener-mm5 (malware)
@@ -50,3 +57,8 @@ class MalwarescanEvidenceData:
 @dc
 class MalwarescanEvidenceRequest(EvidenceRequest):
     data: MalwarescanEvidenceData
+
+
+@dc
+class MalwarescanEvidenceRequestV1(EvidenceRequestV1):
+    EvidenceDataBinary: typing.List[clamav.cnudie.ResourceScanResult]
