@@ -240,7 +240,7 @@ ATTRIBUTES = (
         name='no-buildkit',
         doc='if using `docker` as oci-builder, force to not use buildkit - ignored otherwise',
         type=bool,
-        default=false,
+        default=False,
     ),
     AttributeSpec.optional(
         name='platforms',
