@@ -85,7 +85,7 @@ def _create_issue(
     assignees: typing.Iterable[str]=(),
     issue_type: str=_label_bdba,
     extra_labels: typing.Iterable[str]=None,
-):
+) -> github3.issues.issue.ShortIssue:
     if not title:
         title = f'[{issue_type}] - {component.name}:{resource.name}'
 
@@ -122,7 +122,7 @@ def _update_issue(
     assignees: typing.Iterable[str]=(),
     issue_type: str=_label_bdba,
     extra_labels: typing.Iterable[str]=None,
-):
+) -> github3.issues.issue.ShortIssue:
     kwargs = {}
     if not issue.assignees:
         kwargs['assignees'] = tuple(assignees)
@@ -144,6 +144,8 @@ def _update_issue(
         **kwargs,
     )
 
+    return issue
+
 
 def create_or_update_issue(
     component: cm.Component,
@@ -154,7 +156,7 @@ def create_or_update_issue(
     assignees: typing.Iterable[str]=(),
     issue_type: str=_label_bdba,
     extra_labels: typing.Iterable[str]=None,
-):
+) -> github3.issues.issue.ShortIssue:
     open_issues = tuple(
         enumerate_issues(
             component=component,
