@@ -1,6 +1,7 @@
 import dataclasses
 import enum
 import json
+import typing
 
 import requests
 
@@ -26,7 +27,10 @@ class SafClient:
 
         return res
 
-    def post_evidence(self, evidence: saf.model.EvidenceRequest):
+    def post_evidence(
+        self,
+        evidence: typing.Union[saf.model.EvidenceRequest, saf.model.EvidenceRequestV1],
+    ):
         raw = dataclasses.asdict(evidence)
 
         return self._post_evidence_dict(raw=raw)
