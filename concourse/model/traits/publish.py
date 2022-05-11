@@ -237,6 +237,12 @@ ATTRIBUTES = (
         default=OciBuilder.DOCKER,
     ),
     AttributeSpec.optional(
+        name='no-buildkit',
+        doc='if using `docker` as oci-builder, force to not use buildkit - ignored otherwise',
+        type=bool,
+        default=false,
+    ),
+    AttributeSpec.optional(
         name='platforms',
         doc=textwrap.dedent('''\
         if defined, all image-builds will be done for each of the specified platforms, which
@@ -310,6 +316,9 @@ class PublishTrait(Trait):
 
     def oci_builder(self) -> OciBuilder:
         return OciBuilder(self.raw['oci-builder'])
+
+    def use_buildkit(self) -> bool:
+        return not self.raw['no-buildkit']
 
     def transformer(self):
         return PublishTraitTransformer(trait=self)

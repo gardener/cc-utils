@@ -210,10 +210,18 @@ docker_argv = (
   '${build_ctx_dir}',
 )
 
+% if oci_builder is cm_publish.OciBuilder.DOCKER and publish_trait.use_buildkit():
+env = os.environ.copy()
+env['DOCKER_BUILDKIT'] = '1'
+% endif
+
 logger.info(f'running docker-build with {docker_argv=}')
 subprocess.run(
   docker_argv,
   check=True,
+% if oci_builder is cm_publish.OciBuilder.DOCKER:
+  env=env,
+% endif
 )
 
 for img_ref in (image_ref, *${additional_img_refs}):
