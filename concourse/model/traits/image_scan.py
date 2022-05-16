@@ -250,6 +250,12 @@ ATTRIBUTES = (
         type=GithubIssueTemplateCfg,
     ),
     AttributeSpec.optional(
+        name='github_issue_labels_to_preserve',
+        default=None,
+        doc='optional list of regexes for labels that will never be removed upon ticket-update',
+        type=list[str],
+    ),
+    AttributeSpec.optional(
         name='email_recipients',
         default=[],
         doc='optional list of email recipients to be notified about critical scan results',
@@ -307,6 +313,9 @@ class ImageScanTrait(Trait, ImageFilterMixin):
             data_class=GithubIssueTemplateCfg,
             data=raw,
         )
+
+    def github_issue_labels_to_preserve(self) -> typing.Optional[list[str]]:
+        return self.raw['github_issue_labels_to_preserve']
 
     def email_recipients(self):
         return self.raw['email_recipients']

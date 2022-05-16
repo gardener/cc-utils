@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import re
 import typing
 
 import github3
@@ -156,6 +157,7 @@ def create_or_update_issue(
     assignees: typing.Iterable[str]=(),
     issue_type: str=_label_bdba,
     extra_labels: typing.Iterable[str]=None,
+    preserve_labels_regexes: typing.Iterable[str]=(),
 ) -> github3.issues.issue.ShortIssue:
     open_issues = tuple(
         enumerate_issues(
@@ -181,6 +183,22 @@ def create_or_update_issue(
         )
     elif issues_count == 1:
         open_issue = open_issues[0] # we checked there is exactly one
+
+        def labels_to_preserve():
+            if not preserve_labels_regexes:
+                return
+
+            for label in open_issue.labels():
+                for r in preserve_labels_regexes:
+                    if re.fullmatch(label.name, r):
+                        yield label.name
+                        break
+
+        if extra_labels:
+            extra_labels = set(extra_labels) | set(labels_to_preserve())
+        else:
+            extra_labels = labels_to_preserve()
+
         return _update_issue(
             component=component,
             resource=resource,

@@ -19,6 +19,7 @@ component_trait = job_variant.trait('component_descriptor')
 
 issue_tgt_repo_url = image_scan_trait.overwrite_github_issues_tgt_repository_url()
 github_issue_template = image_scan_trait.github_issue_template()
+github_issue_labels_to_preserve = image_scan_trait.github_issue_labels_to_preserve()
 %>
 import functools
 import logging
@@ -148,6 +149,9 @@ if notification_policy is Notify.GITHUB_ISSUES:
 % endif
 % if github_issue_template:
     github_issue_template_cfg=github_issue_template_cfg,
+% endif
+% if github_issue_labels_to_preserve:
+    preserve_labels_regexes=${github_issue_labels_to_preserve()},
 % endif
     delivery_svc_endpoints=ccc.delivery.endpoints(cfg_set=cfg_set),
   )

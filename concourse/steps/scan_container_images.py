@@ -135,6 +135,7 @@ def _compliance_status_summary(
 def create_or_update_github_issues(
     results_to_report: typing.Sequence[pm.BDBA_ScanResult],
     results_to_discard: typing.Sequence[pm.BDBA_ScanResult],
+    preserve_labels_regexes: typing.Iterable[str],
     issue_tgt_repo_url: str=None,
     github_issue_template_cfg: image_scan.GithubIssueTemplateCfg=None,
     delivery_svc_endpoints: model.delivery.DeliveryEndpointsCfg=None,
@@ -313,6 +314,7 @@ def create_or_update_github_issues(
                     extra_labels=(
                         _criticality_label(classification=criticality_classification),
                     ),
+                    preserve_labels_regexes=preserve_labels_regexes,
                 )
             except github3.exceptions.GitHubError:
                 err_count += 1
