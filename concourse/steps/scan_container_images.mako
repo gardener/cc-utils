@@ -151,7 +151,7 @@ if notification_policy is Notify.GITHUB_ISSUES:
     github_issue_template_cfg=github_issue_template_cfg,
 % endif
 % if github_issue_labels_to_preserve:
-    preserve_labels_regexes=${github_issue_labels_to_preserve()},
+    preserve_labels_regexes=${github_issue_labels_to_preserve},
 % endif
     delivery_svc_endpoints=ccc.delivery.endpoints(cfg_set=cfg_set),
   )
