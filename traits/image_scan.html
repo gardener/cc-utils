@@ -242,15 +242,23 @@ with different contents, all variants are subject to being scanned.</p>
 <td><p>use to configure a custom github-issue-template (sub-attr: <code class="code docutils literal notranslate"><span class="pre">body</span></code>)
 use python3’s format-str syntax
 available variables:
+- summary # contains name, version, etc in a table
 - component_name
 - component_version
 - resource_name
 - resource_version
 - resource_type
 - greatest_cve
-- bdba_report_url</p></td>
+- report_url
+- delivery_dashboard_url</p></td>
 </tr>
-<tr class="row-even"><td><p>email_recipients</p></td>
+<tr class="row-even"><td><p>github_issue_labels_to_preserve</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>list</p></td>
+<td><p>optional list of regexes for labels that will never be removed upon ticket-update</p></td>
+</tr>
+<tr class="row-odd"><td><p>email_recipients</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span><span class="w"></span>
 </pre></div>
@@ -259,25 +267,25 @@ available variables:
 <td><p>List[str]</p></td>
 <td><p>optional list of email recipients to be notified about critical scan results</p></td>
 </tr>
-<tr class="row-odd"><td><p>protecode</p></td>
+<tr class="row-even"><td><p>protecode</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>ProtecodeScanCfg</p></td>
 <td><p>if present, perform protecode scanning</p></td>
 </tr>
-<tr class="row-even"><td><p>clam_av</p></td>
+<tr class="row-odd"><td><p>clam_av</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>ClamAVScanCfg</p></td>
 <td><p>if present, perform ClamAV scanning</p></td>
 </tr>
-<tr class="row-odd"><td><p>os_id</p></td>
+<tr class="row-even"><td><p>os_id</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>OsIdScan</p></td>
 <td><p>if present, identify operating system</p></td>
 </tr>
-<tr class="row-even"><td><p>trait_depends</p></td>
+<tr class="row-odd"><td><p>trait_depends</p></td>
 <td><p>no</p></td>
 <td><p>()</p></td>
 <td><p>List[str]</p></td>
