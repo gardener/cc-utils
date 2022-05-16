@@ -237,13 +237,15 @@ ATTRIBUTES = (
         use to configure a custom github-issue-template (sub-attr: `body`)
         use python3's format-str syntax
         available variables:
+        - summary # contains name, version, etc in a table
         - component_name
         - component_version
         - resource_name
         - resource_version
         - resource_type
         - greatest_cve
-        - bdba_report_url
+        - report_url
+        - delivery_dashboard_url
         ''',
         type=GithubIssueTemplateCfg,
     ),
