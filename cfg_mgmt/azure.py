@@ -147,7 +147,7 @@ def rotate_cfg_element(
     if len(matching_password_credentials) > 1:
         raise RuntimeError('Unable to unambiguously determine old password credential, aborting.')
 
-    current_password_credential = next(matching_password_credentials)
+    current_password_credential = matching_password_credentials[0]
     new_password_credential = _add_password_credential(
         service_principal=cfg_element,
         display_name='CI Access',
