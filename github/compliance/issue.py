@@ -190,7 +190,7 @@ def create_or_update_issue(
 
             for label in open_issue.labels():
                 for r in preserve_labels_regexes:
-                    if re.fullmatch(label.name, r):
+                    if re.fullmatch(pattern=r, string=label.name):
                         yield label.name
                         break
 
