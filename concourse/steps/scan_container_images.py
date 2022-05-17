@@ -316,10 +316,10 @@ def create_or_update_github_issues(
                     ),
                     preserve_labels_regexes=preserve_labels_regexes,
                 )
-            except github3.exceptions.GitHubError:
+            except github3.exceptions.GitHubError as ghe:
                 err_count += 1
                 logger.warning('error whilst trying to create or update issue - will keep going')
-                logger.warning(f'ticket-body: {body}')
+                logger.warning(f'error: {ghe} {ghe.code=} {ghe.message()=}')
 
             logger.info(f'updated gh-issue for {component.name=} {resource.name=}')
         else:
