@@ -34,12 +34,13 @@ from ci.util import (
     not_none,
     parse_yaml_file,
 )
-from model.base import ModelBase, NamedModelElement
-import model.concourse
 from concourse.factory import RawPipelineDefinitionDescriptor
+from model.base import ModelBase, NamedModelElement
 import ccc.github
 import ci.log
 import concourse.paths
+import model.concourse
+import model.secret
 
 ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
@@ -109,16 +110,31 @@ class DefinitionEnumerator:
 
 
 class SimpleFileDefinitionEnumerator(DefinitionEnumerator):
-    def __init__(self, definition_file, cfg_set, repo_path, repo_branch, repo_host='github.com'):
+    def __init__(
+        self,
+        definition_file,
+        cfg_set,
+        repo_path,
+        repo_branch,
+        repo_host='github.com',
+        job_mapping: model.concourse.JobMapping = None,
+        secret_cfg: model.secret.Secret = None,
+    ):
         self.definition_file = definition_file
         self.repo_path = repo_path
         self.repo_branch = repo_branch
         self.repo_host = repo_host
         self.cfg_set = cfg_set
-        import model
-        self.job_mapping = model.concourse.JobMapping(
+        self.job_mapping = job_mapping or model.concourse.JobMapping(
             name='dummy',
             raw_dict={'concourse_target_team': 'dummy'},
+        )
+        self.secret_cfg = secret_cfg or model.secret.Secret(
+            name='dummy',
+            raw_dict={
+                'key': 'dummy',
+                'cipher_algorithm': 'PLAINTEXT'
+            },
         )
 
     def enumerate_definition_descriptors(self):
@@ -131,7 +147,8 @@ class SimpleFileDefinitionEnumerator(DefinitionEnumerator):
                 repo_hostname=self.repo_host,
                 branch=self.repo_branch,
                 raw_definitions=definitions,
-                secret_cfg=None,
+                job_mapping=self.job_mapping,
+                secret_cfg=self.secret_cfg,
             )
         except BaseException as e:
             yield DefinitionDescriptor(
@@ -146,7 +163,7 @@ class SimpleFileDefinitionEnumerator(DefinitionEnumerator):
                 concourse_target_team=self.job_mapping.team_name(),
                 override_definitions=(),
                 exception=e,
-                secret_cfg=None,
+                secret_cfg=self.secret_cfg,
             )
 
 
