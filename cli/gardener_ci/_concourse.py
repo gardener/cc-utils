@@ -14,7 +14,8 @@
 # limitations under the License.
 
 import os
-
+import urllib.parse
+import logging
 
 from ci.util import (
     ctx,
@@ -36,7 +37,13 @@ from concourse.replicator import (
 )
 
 import ccc.concourse
+import ci.log
 import concourse.model as ccm
+
+
+logger = logging.getLogger(__name__)
+ci.log.configure_default_logging()
+
 
 own_dir = os.path.abspath(os.path.dirname(__file__))
 repo_root = os.path.abspath(
@@ -61,20 +68,34 @@ def render_pipeline(
     definition_file: CliHints.existing_file(),
     cfg_name: str,
     out_dir: CliHints.existing_dir(),
+    repo_path: str = 'example/example',
+    repo_branch: str = 'master',
+    repo_host: str = 'github.com',
     template_path: str=_template_path(),
     template_include_dir: str=None,
 ):
     cfg_factory = ctx().cfg_factory()
     cfg_set = cfg_factory.cfg_set(cfg_name=cfg_name)
-    print(template_path)
+    logger.info(f'Template path: {template_path}')
+
+    repo_url = urllib.parse.urlunparse(('https', repo_host, repo_path, '', '', ''))
+    try:
+        job_mapping = cfg_set.job_mapping().job_mapping_for_repo_url(repo_url, cfg_set)
+        secret_cfg = cfg_factory.secret(job_mapping.secret_cfg())
+    except ValueError as e:
+        logger.warning(f'An error occurred: {e}. Will use dummy values to render pipeline.')
+        job_mapping = None
+        secret_cfg = None
 
     def_enumerators = [
         SimpleFileDefinitionEnumerator(
             definition_file=definition_file,
             cfg_set=cfg_set,
-            repo_path='example/example',
-            repo_branch='master',
-            repo_host='github.com',
+            repo_path=repo_path,
+            repo_branch=repo_branch,
+            repo_host=repo_host,
+            job_mapping=job_mapping,
+            secret_cfg=secret_cfg,
         )
     ]
 
