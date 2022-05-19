@@ -37,7 +37,7 @@ import gci.componentmodel as cm
 
 from protecode.scanning_util import (
     ProcessingMode,
-    ProtecodeUtil,
+    ProtecodeProcessor
 )
 from protecode.model import (
     CVSSVersion,
@@ -63,22 +63,19 @@ def upload_grouped_images(
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
     protecode_api = ccc.protecode.client(protecode_cfg)
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
-    protecode_util = ProtecodeUtil(
-        protecode_api=protecode_api,
-        processing_mode=processing_mode,
-        group_id=protecode_group_id,
-        reference_group_ids=reference_group_ids,
-        cvss_threshold=cve_threshold,
-    )
 
     def _upload_task(component_resources):
         def _task():
             # force executor to actually iterate through generator
-            return tuple(
-                protecode_util.process_component_resources(
-                    component_resources=component_resources,
-                )
+            protecode_processor = ProtecodeProcessor(
+                component_resources=component_resources,
+                protecode_api=protecode_api,
+                processing_mode=processing_mode,
+                group_id=protecode_group_id,
+                reference_group_ids=reference_group_ids,
+                cvss_threshold=cve_threshold,
             )
+            return tuple(protecode_processor.process_component_resources())
 
         return _task
 
