@@ -5,10 +5,11 @@ import yaml
 
 import cfg_mgmt
 import cfg_mgmt.azure as cma
-import cfg_mgmt.btp_service_binding as cmb
 import cfg_mgmt.btp_application_certificate as cmbac
+import cfg_mgmt.btp_service_binding as cmb
 import cfg_mgmt.gcp as cmg
 import cfg_mgmt.github as cmgh
+import cfg_mgmt.kubernetes as cmk
 import cfg_mgmt.model as cmm
 import model
 import model.github
@@ -65,6 +66,14 @@ def delete_expired_secret(
 
     elif type_name == 'btp_application_certificate':
         delete_func = cmbac.delete_config_secret
+
+    elif type_name == 'kubernetes':
+        if not cfg_element.service_account():
+            # This can only happen if the service-account config was removed after the rotation
+            # but before the removal of the expired secret
+            logger.warning("Cannot rotate kubeconfigs without service account configs.")
+            return None
+        delete_func = cmk.delete_config_secret
 
     if not delete_func:
         logger.warning(
@@ -131,6 +140,12 @@ def rotate_cfg_element(
 
     elif type_name == 'btp_application_certificate':
         update_secret_function = cmbac.rotate_cfg_element
+
+    elif type_name == 'kubernetes':
+        if not cfg_element.service_account():
+            logger.warning("Cannot rotate kubeconfigs without service account configs.")
+            return None
+        update_secret_function = cmk.rotate_cfg_element
 
     if not update_secret_function:
         logger.warning(f'{type_name=} is not (yet) supported for automated rotation')
