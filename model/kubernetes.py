@@ -12,10 +12,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import typing
 
 from model.base import (
+    ModelBase,
     NamedModelElement,
 )
+
+
+class ServiceAccountConfig(ModelBase):
+    def _required_attributes(self):
+        return {
+            'name',
+            'namespace',
+        }
+
+    def name(self) -> str:
+        return self.raw['name']
+
+    def namespace(self) -> str:
+        return self.raw['namespace']
 
 
 class KubernetesConfig(NamedModelElement):
@@ -23,6 +39,12 @@ class KubernetesConfig(NamedModelElement):
         return {
             'kubeconfig',
         }
+
+    def service_account(self) -> typing.Union[ServiceAccountConfig, None]:
+        if raw_cfg := self.raw.get('service_account'):
+            return ServiceAccountConfig(raw_dict=raw_cfg)
+        else:
+            return None
 
     def kubeconfig(self):
         return self.raw.get('kubeconfig')
