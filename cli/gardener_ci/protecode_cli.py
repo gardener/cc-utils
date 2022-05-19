@@ -30,12 +30,19 @@ def scan_without_notification(
     exclude_image_names: typing.List[str] = [],
     include_component_names: typing.List[str] = [],
     exclude_component_names: typing.List[str] = [],
+    no_license_report: bool = False,
 ):
+    cfg_factory = ci.util.ctx().cfg_factory()
+    protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
+
+    if not protecode_api_url:
+        protecode_api_url = protecode_cfg.api_url()
+        logger.info(f'Using Protecode at: {protecode_api_url}')
+
+    protecode_group_url = f'{protecode_api_url}/group/{protecode_group_id}/'
     cd = component_descriptor_util.component_descriptor_from_component_descriptor_path(
         cd_path=component_descriptor_path,
     )
-    cfg_factory = ci.util.ctx().cfg_factory()
-    protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
 
     protecode_api_url = protecode_cfg.api_url()
     protecode_group_url = ci.util.urljoin(protecode_api_url, 'group', str(protecode_group_id))
@@ -83,4 +90,3 @@ def scan_without_notification(
 
     logger.info(f'{len(results_above_threshold)=}; {results_above_threshold=}')
     logger.info(f'{len(results_below_threshold)=}; {results_below_threshold=}')
-    logger.info('finished')
