@@ -223,15 +223,17 @@ def create_or_update_github_issues(
                     github_url=repository.url,
                 )
 
-                def user_exists(username):
+                def user_is_active(username):
                     try:
-                        gh_api.user(username)
+                        user = gh_api.user(username)
+                        if user.as_dict().get('suspended_at'):
+                            return False
                         return True
                     except github3.exceptions.NotFoundError:
                         logger.warning(f'{username=} not found')
                         return False
 
-                assignees = tuple((u.username for u in assignees if user_exists(u.username)))
+                assignees = tuple((u.username for u in assignees if user_is_active(u.username)))
             else:
                 assignees = ()
 
