@@ -16,6 +16,7 @@ import github3.exceptions
 import yaml
 
 import ci.log
+import ctx
 
 from model.base import (
     ConfigElementNotFoundError,
@@ -132,6 +133,20 @@ class ConfigFactory:
         if not '://' in repo_url:
             repo_url = 'https://' + repo_url
         repo_url = urllib.parse.urlparse(repo_url)
+
+        # shortcut lookup if local repo-mapping was configured
+        if ctx.cfg and ctx.cfg.ctx and (repo_mappings := ctx.cfg.ctx.github_repo_mappings):
+            for repo_mapping in repo_mappings:
+                url = repo_mapping.repo_url
+                if not '://' in url:
+                    url = 'https://' + url
+                url = urllib.parse.urlparse(url)
+                if not url == repo_url:
+                    continue
+                fpath = os.path.join(repo_mapping.path, cfg_src.relpath)
+                with open(fpath) as f:
+                    print(f'cfg loaded from local dir {fpath=}')
+                    return yaml.safe_load(f)
 
         if not lookup_cfg_factory:
             raise RuntimeError('cannot resolve non-local cfg w/o bootstrap-cfg-factory')
