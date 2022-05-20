@@ -13,133 +13,155 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import enum
+import dataclasses
 import functools
 import os
+import typing
 
-from pathlib import Path
+import dacite
 
 import ci.util
-from model.base import ModelBase
+
 '''
 Execution context. Filled upon invocation of cli.py, read by submodules
 '''
 
 args = None # the parsed command line arguments
+cfg = None # initialised upon importing this module
 
 
-class ConfigBase(ModelBase):
-
-    def __init__(self):
-        super().__init__(raw_dict={})
-
-    def _add_config_source(self, config: dict):
-        self.raw = ci.util.merge_dicts(self.raw, config)
+@dataclasses.dataclass
+class TerminalCfg:
+    output_columns: typing.Optional[int] = None
+    terminal_type: typing.Optional[str] = None
 
 
-class ContextConfig(ConfigBase):
-
-    def config_dir(self):
-        return self.raw.get('cfg-dir')
-
-
-class TerminalConfig(ConfigBase):
-
-    def output_columns(self):
-        return self.raw.get('output-columns')
-
-    def terminal_type(self):
-        return self.raw.get('terminal-type')
+@dataclasses.dataclass
+class GithubRepoMapping:
+    repo_url: str
+    path: str
 
 
-class Config(enum.Enum):
-    CONTEXT = ContextConfig()
-    TERMINAL = TerminalConfig()
+@dataclasses.dataclass
+class CtxCfg:
+    config_dir: typing.Optional[str] = None # points to "root" cfg-repo dir
+    github_repo_mappings: tuple[GithubRepoMapping, ...] = ()
 
 
-def load_config_from_env():
+@dataclasses.dataclass
+class GlobalConfig:
+    ctx: typing.Optional[CtxCfg] = None
+    terminal: typing.Optional[TerminalCfg] = None
+
+
+def merge_cfgs(ctor, left, right):
+    if not left or not right:
+        return left or right # nothing to merge
+
+    left_dict = dataclasses.asdict(left)
+
+    # do not overwrite existing values w/ None
+    def none_or_empty(v):
+        if v is None or v == () or v == []:
+            return True
+        return False
+
+    right_dict = {k: v for k,v in dataclasses.asdict(right).items() if not none_or_empty(v)}
+
+    merged = ci.util.merge_dicts(left_dict, right_dict)
+
+    return dacite.from_dict(
+        data_class=ctor,
+        data=merged,
+        config=dacite.Config(cast=[tuple]),
+    )
+
+
+def merge_global_cfg(left: GlobalConfig, right: GlobalConfig):
+    merged_cfg = GlobalConfig(
+        ctx=merge_cfgs(CtxCfg, left.ctx, right.ctx),
+        terminal=merge_cfgs(TerminalCfg, left.terminal, right.terminal),
+    )
+
+    return merged_cfg
+
+
+def _config_from_env():
     env = os.environ
 
-    terminal_config = {}
-    if 'COLUMNS' in env:
-        terminal_config['output-columns'] = env['COLUMNS']
-    if 'TERM' in env:
-        terminal_config['terminal-type'] = env['TERM']
+    terminal_config = TerminalCfg(
+        output_columns=env.get('COLUMNS'),
+        terminal_type=env.get('TERM'),
+    )
 
-    context_config = {}
-    if 'CC_CONFIG_DIR' in env:
-        context_config['cfg-dir'] = env['CC_CONFIG_DIR']
-
-    return {
-        'ctx': context_config,
-        'terminal': terminal_config,
-    }
-
-
-def load_config_from_fs():
-    default_cfg_dir = '/cc-config'
-    if os.path.isdir(default_cfg_dir):
-        return {
-            'ctx': {
-                'cfg-dir':  default_cfg_dir,
-            },
-        }
-    return {}
-
-
-def load_config_from_user_home():
-    config_file = Path.home() / '.cc-utils.cfg'
-    if config_file.is_file():
-        return ci.util.parse_yaml_file(config_file)
-    return {}
-
-
-def add_config_source(config_source: dict):
-    if config_source.get('ctx') is not None:
-        Config.CONTEXT.value._add_config_source(
-            config=config_source.get('ctx')
+    if cfg_dir := env.get('CC_CONFIG_DIR'):
+        ctx_cfg = CtxCfg(
+            config_dir=cfg_dir,
         )
-    if config_source.get('terminal') is not None:
-        Config.TERMINAL.value._add_config_source(
-            config=config_source.get('terminal')
-        )
+    else:
+        ctx_cfg = None
+
+    return GlobalConfig(
+        ctx=ctx_cfg,
+        terminal=terminal_config,
+    )
+
+
+def _config_from_fs():
+    if os.path.isdir('/cc-config'):
+        return GlobalConfig(ctx=CtxCfg(config_dir='/cc-config'))
+
+    return None
+
+
+def _config_from_user_home():
+    cfg_file_path = os.path.join(os.path.expanduser('~'), '.cc-utils.cfg')
+    if not os.path.isfile(cfg_file_path):
+        return None
+
+    raw = ci.util.parse_yaml_file(cfg_file_path) or {}
+
+    return dacite.from_dict(
+        data_class=GlobalConfig,
+        data=raw,
+        config=dacite.Config(cast=[tuple]),
+    )
+
+
+def _config_from_parsed_argv():
+    if not args or args.cfg_dir is None:
+        return None
+
+    return GlobalConfig(ctx=CtxCfg(cfg_dir=args.cfg_dir))
 
 
 def load_config():
-    home_config = load_config_from_user_home()
-    env_config = load_config_from_env()
-    fs_config = load_config_from_fs()
+    global cfg
+    cfg = GlobalConfig()
 
-    merged = ci.util.merge_dicts(home_config, env_config)
-    merged = ci.util.merge_dicts(merged, fs_config)
+    additional_cfgs = (
+        _config_from_user_home(),
+        _config_from_env(),
+        _config_from_fs(),
+        _config_from_parsed_argv(),
+    )
 
-    cli_cfg = load_config_from_args()
-    merged = ci.util.merge_dicts(merged, cli_cfg)
-    add_config_source(merged)
+    for additional_cfg in additional_cfgs:
+        if not additional_cfg:
+            continue
 
-
-def load_config_from_args():
-    if not args:
-        return {}
-
-    context_config = {}
-    if args.cfg_dir is not None:
-        context_config['cfg-dir'] = args.cfg_dir
-
-    return {
-        'ctx': context_config,
-    }
+        cfg = merge_global_cfg(cfg, additional_cfg)
 
 
 load_config()
 
 
 def _cfg_factory_from_dir():
-    if Config.CONTEXT.value.config_dir() is None:
+    if not cfg or not (cfg_dir := cfg.ctx.config_dir):
         return None
 
     from ci.util import existing_dir
-    cfg_dir = existing_dir(Config.CONTEXT.value.config_dir())
+    cfg_dir = existing_dir(cfg_dir)
 
     from model import ConfigFactory
     factory = ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)

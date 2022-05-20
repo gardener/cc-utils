@@ -51,8 +51,11 @@ def print_import_errs():
         ci.util.verbose(ie)
 
 
-if ctx.Config.TERMINAL.value.output_columns() is not None:
-    column_width = ctx.Config.TERMINAL.value.output_columns()
+cfg = ctx.cfg
+terminal_cfg = cfg.terminal
+
+if terminal_cfg and terminal_cfg.output_columns is not None:
+    column_width = terminal_cfg.output_columns
     # Create a custom width formatter by fixing two arguments for the default formatter class,
     # namely 'width' (defaults to 80 - 2) and 'max_help_position' (defaults to 24)
     FORMATTER_CLASS = functools.partial(
