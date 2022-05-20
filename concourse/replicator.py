@@ -412,6 +412,19 @@ class ReplicationResultProcessor:
                 concourse_target_results[concourse_target_key] = []
             concourse_target_results[concourse_target_key].append(result)
 
+        # evaluate results
+        failed_descriptors = [
+            d for d in results
+            if not d.deploy_status & DeployStatus.SUCCEEDED
+        ]
+        failed_count = len(failed_descriptors)
+
+        if failed_count > 0:
+            self.remove_pipelines = False
+            logger.info(
+                'Failures occurred during pipeline-replication. Will not rcleanup pipelines.'
+            )
+
         for concourse_target_key, concourse_results in concourse_target_results.items():
             # TODO: implement eq for concourse_cfg
             concourse_cfg, concourse_team = next(iter(
@@ -450,14 +463,6 @@ class ReplicationResultProcessor:
                 pipeline_names = list(concourse_api.pipelines())
                 pipeline_names.sort()
                 concourse_api.order_pipelines(pipeline_names)
-
-        # evaluate results
-        failed_descriptors = [
-            d for d in results
-            if not d.deploy_status & DeployStatus.SUCCEEDED
-        ]
-
-        failed_count = len(failed_descriptors)
 
         logger.info('Successfully replicated {d} pipeline(s)'.format(d=len(results) - failed_count))
 
