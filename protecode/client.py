@@ -295,6 +295,28 @@ class ProtecodeApi:
         )
         return result.json().get('custom_data', {})
 
+    def get_triages(
+        self,
+        component_name: str,
+        component_version: str,
+        vulnerability_id: str,
+        scope: str,
+        description: str,
+    ):
+        url = self._routes.triage()
+        result = self._get(
+            url=url,
+            params={
+                'component': component_name,
+                'vuln_id': vulnerability_id,
+                'scope': scope,
+                'version': component_version,
+                'description': description,
+            }
+        ).json()['triages']
+
+        return [Triage(raw_dict=triage_dict) for triage_dict in result]
+
     def add_triage(
         self,
         triage: Triage,

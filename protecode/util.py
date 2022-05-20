@@ -112,36 +112,13 @@ def upload_grouped_images(
 
             yield from resource_groups.values()
 
-        def _filter_resources_to_scan(component: cm.Component, resource: cm.Resource):
-            # check whether the trait was configured to filter out the resource
-            configured_image_reference_filter_response = image_reference_filter(component, resource)
-            if not configured_image_reference_filter_response:
-                return False
-
-            # check for scanning labels on resource in cd
-            if (
-                (label := resource.find_label(name=dso.labels.ScanLabelName.BINARY_ID.value))
-                or (label := resource.find_label(name=dso.labels.ScanLabelName.BINARY_SCAN.value))
-            ):
-                if label.name == dso.labels.ScanLabelName.BINARY_SCAN.value:
-                    logger.warning(f'deprecated {label.name=}')
-                else:
-                    scanning_hint = dacite.from_dict(
-                        data_class=dso.labels.BinaryScanHint,
-                        data=label.value,
-                        config=dacite.Config(cast=[dso.labels.ScanPolicy]),
-                    )
-                    return scanning_hint.policy is dso.labels.ScanPolicy.SCAN
-            else:
-                return True
-
         for components in component_groups.values():
             for component_resources in group_by_resource_name(components):
                 # all components in a component group share a name
                 component_resources = [
-                    r for r in component_resources
-                    if _filter_resources_to_scan(r.component, r.resource)
+                    r for r in component_resources if image_reference_filter(component, r)
                 ]
+
                 if component_resources:
                     yield _upload_task(component_resources=component_resources)
 

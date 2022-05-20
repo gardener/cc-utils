@@ -3,6 +3,7 @@ import logging
 import textwrap
 import typing
 
+import dacite
 import requests
 import requests.exceptions
 
@@ -12,6 +13,7 @@ import ccc.gcp
 import ccc.oci
 import ci.util
 import cnudie.util
+import dso.model
 import gci.componentmodel
 import protecode.model as pm
 import version
@@ -132,6 +134,75 @@ class ProcessingMode(AttribSpecMixin, enum.Enum):
         )
 
 
+class Shared:
+
+    @staticmethod
+    def add_triage(
+        protecode_client: ProtecodeApi,
+        component_name: str,
+        component_version: str,
+        product_id: str,
+        vulnerability_cve: str,
+        description: str,
+        extended_objects: typing.Generator[pm.ExtendedObject, None, None],
+        paranoid: bool = False,
+    ):
+        if component_version:
+            version = component_version
+        else:
+            # Protecode only allows triages for components with known version.
+            # set version to be able to triage away.
+            version = '[ci]-not-found-in-GCR'
+            logger.info(f"Setting dummy version for component '{component_name}'")
+            try:
+                protecode_client.set_component_version(
+                    component_name=component_name,
+                    component_version=version,
+                    objects=[o.sha1() for o in extended_objects],
+                    scope=VersionOverrideScope.APP,
+                    app_id=product_id,
+                )
+            except requests.exceptions.HTTPError as http_err:
+                logger.warning(
+                    f"Unable to set version for component '{component_name}': {http_err}."
+                )
+                # version was not set - cannot triage
+                return
+
+        triage_dict = {
+            'component': component_name,
+            'version': version,
+            'vulns': [vulnerability_cve],
+            'scope': pm.TriageScope.RESULT.value,
+            'reason': 'OT', # "other"
+            'description': description,
+            'product_id': product_id,
+        }
+
+        try:
+            protecode_client.add_triage_raw(triage_dict=triage_dict)
+            if paranoid:
+                # Protecode accepts triages in some cases with 200 ok even if there are wrong
+                # parameters (e.g. wrong version) but ignores them
+                # Paranoid check is not helpful sincs retrieving the wrong versions succeeds again
+                # in other words Protecode allows (and stores) triages for non-existing versions
+                try:
+                    triages = protecode_client.get_triages(
+                                component_name=component_name,
+                                component_version=version,
+                                vulnerability_id=vulnerability_cve,
+                                scope=pm.TriageScope.RESULT.value,
+                                description=description,
+                            )
+                except requests.exceptions.HTTPError as http_err:
+                    logger.warning(f'triage not found after successful apply: {http_err}')
+
+            logger.info(f'added triage: {component_name}:{vulnerability_cve}')
+        except requests.exceptions.HTTPError as http_err:
+            # since we are auto-importing anyway, be a bit tolerant
+            logger.warning(f'failed to add triage: {http_err}')
+
+
 class ProtecodeProcessor:
 
     def __init__(
@@ -146,7 +217,7 @@ class ProtecodeProcessor:
     ):
         protecode_api.login()
         self._processing_mode = check_type(processing_mode, ProcessingMode)
-        self._api = not_none(protecode_api)
+        self._api: ProtecodeApi = not_none(protecode_api)
         self._group_id = group_id
         self._reference_group_ids = reference_group_ids
         self.cvss_threshold = cvss_threshold
@@ -238,7 +309,7 @@ class ProtecodeProcessor:
         metadata.update(self._component_metadata(component=component, omit_version=omit_version))
         return metadata
 
-    def _get_existing_protecode_apps(self):
+    def _get_existing_protecode_apps(self) -> typing.Tuple[AnalysisResult]:
         # import triages from local group
         scan_results = (
             self._api.scan_result(product_id=product.product_id())
@@ -506,6 +577,46 @@ class ProtecodeProcessor:
                 f'({protecode_product.display_name()})'
             )
 
+    def _has_skip_label(
+        self,
+        resource: gci.componentmodel.Resource
+    ):
+        # check for scanning labels on resource in cd
+        if (
+            (label := resource.find_label(name=dso.labels.ScanLabelName.BINARY_ID.value))
+            or (label := resource.find_label(name=dso.labels.ScanLabelName.BINARY_SCAN.value))
+        ):
+            if label.name == dso.labels.ScanLabelName.BINARY_SCAN.value:
+                logger.warning(f'deprecated {label.name=}')
+                return True
+            else:
+                scanning_hint = dacite.from_dict(
+                    data_class=dso.labels.BinaryScanHint,
+                    data=label.value,
+                    config=dacite.Config(cast=[dso.labels.ScanPolicy]),
+                )
+                return scanning_hint.policy is dso.labels.ScanPolicy.SKIP
+        else:
+            return False
+
+    def _auto_triage_all(
+        self,
+        analysis_result: AnalysisResult,
+    ):
+        for component in analysis_result.components():
+            for vulnerability in component.vulnerabilities():
+                if (vulnerability.cve_severity() >= self.cvss_threshold and not
+                    vulnerability.historical()) and not vulnerability.has_triage():
+                    Shared.add_triage(
+                        protecode_client=self._api,
+                        component_name=component.name(),
+                        component_version=component.version(),
+                        product_id=analysis_result.product_id(),
+                        vulnerability_cve=vulnerability.cve(),
+                        description='Auto-generated due to label skip-scan',
+                        extended_objects=component.extended_objects(),
+                    )
+
     def process_component_resources(self) -> typing.Iterable[pm.BDBA_ScanResult]:
         # depending on upload-mode, determine an upload-action for each related image
         # - resources to upload
@@ -520,15 +631,20 @@ class ProtecodeProcessor:
             resource_name=self.resource_name,
         )
 
+        # Get all protecode appps
         self.existing_protecode_products = self._api.list_apps(
             group_id=self._group_id,
             custom_attribs=metadata,
         )
 
+        # for each protecode app get the scan results
         scan_results = self._get_existing_protecode_apps()
+        logger.info('Found existing protecode apps:')
+        for r in scan_results:
+            logger.info(f'... {r.name()=}, {r.product_id()=}, {r.greatest_cve_score()=}')
 
         # get triages for the scan results
-        triages_to_import:typing.Set[pm.Triage] = set()
+        triages_to_import: typing.Set[pm.Triage] = set()
         triages_to_import |= set(self._existing_triages(scan_results))
 
         # import triages from reference groups
@@ -548,17 +664,27 @@ class ProtecodeProcessor:
         else:
             raise NotImplementedError()
 
-        # trigger rescan if recommended
+        # trigger rescan if recommended for all protecode apps
         self._trigger_rescan_if_recommended()
 
-        # upload new resources
+        # upload new resources (all images to scan)
         analysis_results = self._upload_new_resources()
 
         # apply imported triages for all protecode products
         self._apply_triages(analysis_results, triages_to_import)
 
-        # TODO: apply auto triages for resources labeled with skip binary scan
+        # apply auto triages for resources labeled with skip binary scan
+        for protecode_product in self.protecode_products_to_consider:
+            component_resource = self.product_id_to_resource[protecode_product.product_id()]
+            has_skip_label = self._has_skip_label(component_resource.resource)
+            logger.info(f'{component_resource.component.name}  has skip-scan label {has_skip_label}')
+            if has_skip_label:
+                logger.info(f'{component_resource.component.name} is marked for skip scanning -->'
+                    'auto-triaging all vulnerabilities')
+                analysis_result = self._api.scan_result(protecode_product.product_id())
+                self._auto_triage_all(analysis_result)
 
+        # After applying triages and new scan get remainig vulnerabilities
         for protecode_product in self.protecode_products_to_consider:
             analysis_result = self._api.scan_result(protecode_product.product_id())
 
@@ -676,13 +802,19 @@ class GcrSynchronizer:
         return found_it, worst_cve, worst_effective_severity
 
     # helper functon to avoid duplicating triages later
-    def _triage_already_present(self, triage_dict, triages):
+    def _triage_already_present(
+        self,
+        vulnerability_id: str,
+        component_name: str,
+        description: str,
+        triages: typing.Tuple[pm.Triage],
+    ):
         for triage in triages:
-            if triage.vulnerability_id() != triage_dict['vulns'][0]:
+            if triage.vulnerability_id() != vulnerability_id:
                 continue
-            if triage.component_name() != triage_dict['component']:
+            if triage.component_name() != component_name:
                 continue
-            if triage.description() != triage_dict['description']:
+            if triage.description() != description:
                 continue
             return True
         return False
@@ -755,30 +887,6 @@ class GcrSynchronizer:
         for component in scan_result.components():
             components_count += 1
 
-            version = component.version()
-            component_name = component.name()
-
-            if not version:
-                # if version is not known to protecode, see if it can be determined using gcr's
-                # vulnerability-assessment
-                if (version := self._find_component_version(component_name, vulnerabilities_from_grafeas)): # noqa:E203,E501
-                    logger.info(
-                        f"Grafeas has version '{version}' for undetermined protecode-component "
-                        f"'{component_name}'. Will try to import version to Protecode."
-                    )
-                    try:
-                        self.protecode_client.set_component_version(
-                            component_name=component_name,
-                            component_version=version,
-                            objects=[o.sha1() for o in component.extended_objects()],
-                            scope=VersionOverrideScope.APP,
-                            app_id=scan_result.product_id(),
-                        )
-                    except requests.exceptions.HTTPError as http_err:
-                        logger.warning(
-                            f"Unable to set version for component '{component_name}': {http_err}."
-                        )
-
             for vulnerability in component.vulnerabilities():
 
                 vulnerabilities_count += 1
@@ -792,25 +900,6 @@ class GcrSynchronizer:
                 if vulnerability.historical():
                     skipped_due_to_historicalness += 1
                     continue # historical vulnerabilities cannot be triaged.
-                if not version:
-                    # Protecode only allows triages for components with known version.
-                    # set version to be able to triage away.
-                    version = '[ci]-not-found-in-GCR'
-                    logger.info(f"Setting dummy version for component '{component_name}'")
-                    try:
-                        self.protecode_client.set_component_version(
-                            component_name=component_name,
-                            component_version=version,
-                            objects=[o.sha1() for o in component.extended_objects()],
-                            scope=VersionOverrideScope.APP,
-                            app_id=scan_result.product_id(),
-                        )
-                    except requests.exceptions.HTTPError as http_err:
-                        logger.warning(
-                            f"Unable to set version for component '{component_name}': {http_err}."
-                        )
-                        # version was not set - cannot triage
-                        continue
 
                 if not triage_remainder:
                     found_it, worst_cve, worst_eff = self._find_worst_vuln(
@@ -839,26 +928,24 @@ class GcrSynchronizer:
                     description = \
                         '[ci] vulnerability was not found by GCR'
 
-                triage_dict = {
-                    'component': component.name(),
-                    'version': version,
-                    'vulns': [vulnerability.cve()],
-                    'scope': pm.TriageScope.RESULT.value,
-                    'reason': 'OT', # "other"
-                    'description': description,
-                    'product_id': scan_result.product_id(),
-                }
-
-                if self._triage_already_present(triage_dict, scan_result_triages):
+                if self._triage_already_present(
+                    vulnerability_id=vulnerability.cve(),
+                    component_name=component.name(),
+                    description=description,
+                    triages=scan_result_triages,
+                ):
                     logger.info(f'triage {component.name()}:{vulnerability.cve()} already present.')
                     continue
 
-                try:
-                    self.protecode_client.add_triage_raw(triage_dict=triage_dict)
-                    logger.info(f'added triage: {component.name()}:{vulnerability.cve()}')
-                except requests.exceptions.HTTPError as http_err:
-                    # since we are auto-importing anyway, be a bit tolerant
-                    logger.warning(f'failed to add triage: {http_err}')
+                Shared.add_triage(
+                    protecode_client=self.protecode_client,
+                    component_name=component.name(),
+                    component_version=component.version(),
+                    product_id=scan_result.product_id(),
+                    vulnerability_cve=vulnerability.cve(),
+                    description=description,
+                    extended_objects=component.extended_objects(),
+                )
 
         logger.info(textwrap.dedent(f'''
             Product: {scan_result.display_name()} (ID: {scan_result.product_id()})
