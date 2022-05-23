@@ -27,19 +27,19 @@ class DeliveryServiceRoutes:
             'component',
         )
 
-    def upload_metadata(self):
-        return ci.util.urljoin(
-            self._base_url,
-            'artefacts',
-            'upload-metadata',
-        )
-
     def component_responsibles(self):
         return ci.util.urljoin(
             self._base_url,
             'cnudie',
             'component',
             'responsibles',
+        )
+
+    def upload_metadata(self):
+        return ci.util.urljoin(
+            self._base_url,
+            'artefacts',
+            'upload-metadata',
         )
 
 
