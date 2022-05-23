@@ -3,9 +3,9 @@ import datetime
 import logging
 import os
 import typing
-import yaml
 
 import dateutil.parser
+import ruamel.yaml
 
 import ccc.elasticsearch
 import cfg_mgmt.metrics
@@ -210,6 +210,7 @@ def update_config_status(
         config_statuses.append(cfg_status)
     cfg_status.credential_update_timestamp = datetime.date.today().isoformat()
 
+    yaml = ruamel.yaml.YAML()
     with open(cfg_status_file_path, 'w') as f:
         yaml.dump(
             {
@@ -227,6 +228,7 @@ def write_config_queue(
     cfg_metadata: cmm.CfgMetadata,
     queue_file_name: str=cmm.cfg_queue_fname,
 ):
+    yaml = ruamel.yaml.YAML()
     with open(os.path.join(cfg_dir, queue_file_name), 'w') as queue_file:
         yaml.dump(
             {
@@ -236,7 +238,6 @@ def write_config_queue(
                 ],
             },
             queue_file,
-            Dumper=ci.util.MultilineYamlDumper,
         )
 
 
@@ -313,14 +314,27 @@ def local_cfg_type_sources(
     }
 
 
-def write_named_elements(
-    cfg_elements: typing.Iterable[model.NamedModelElement],
+def write_named_element(
+    cfg_element,
     cfg_dir: str,
     cfg_file_name: str,
 ):
-    configs = {e.name(): e.raw for e in cfg_elements}
-    with open(os.path.join(cfg_dir, cfg_file_name), 'w') as cfg_file:
-        yaml.dump(configs, cfg_file, Dumper=ci.util.MultilineYamlDumper)
+    yaml = ruamel.yaml.YAML()
+    with open(os.path.join(cfg_dir, cfg_file_name)) as cfg_file:
+        file_contents = yaml.load(cfg_file)
+
+    # ruamel can preserve anchors, unless the entries that are anchored are _directly_ manipulated.
+    # To avoid this for kubernetes configs, only update the part that holds the kubeconfig
+    if cfg_element._type_name == 'kubernetes':
+        file_contents[cfg_element.name()]['kubeconfig'] = cfg_element.raw['kubeconfig']
+    # for all other cases, just replace the contents of the top-level element (this will resolve
+    # anchors)
+    else:
+        file_contents[cfg_element.name()] = cfg_element.raw
+
+    with open(os.path.join(cfg_dir, cfg_file_name), 'wt') as cfg_file:
+        yaml.dump(file_contents, cfg_file)
+
 
 
 def write_changes_to_local_dir(
@@ -330,11 +344,6 @@ def write_changes_to_local_dir(
     cfg_factory: model.ConfigFactory,
     cfg_dir: str,
 ):
-    elements = [
-        e if e.name() != cfg_element.name() else cfg_element
-        for e in cfg_factory._cfg_elements(cfg_element._type_name)
-    ]
-
     local_cfg_files = local_cfg_type_sources(cfg_element, cfg_factory)
 
     if len(local_cfg_files) > 1:
@@ -343,7 +352,7 @@ def write_changes_to_local_dir(
     if not (src_file := next((f for f in local_cfg_files), None)):
         raise RuntimeError(f"No local source file known for cfg type '{cfg_element._type_name}'")
 
-    write_named_elements(elements, cfg_dir, src_file)
+    write_named_element(cfg_element, cfg_dir, src_file)
 
     cfg_metadata.queue.append(
         create_config_queue_entry(
