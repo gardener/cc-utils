@@ -10,7 +10,7 @@ azure-mgmt-resource~=20.0.0
 azure-mgmt-storage~=18.0.0
 azure-mgmt-subscription~=1.0.0
 azure-storage-blob<13
-paramiko~=2.7.2
+paramiko>=2.10.1
 boto3
 google-api-python-client<3
 google-auth<3
