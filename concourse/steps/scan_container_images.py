@@ -15,6 +15,7 @@
 
 import collections
 import dataclasses
+import datetime
 import enum
 import functools
 import json
@@ -37,7 +38,9 @@ import cnudie.util
 import concourse.model.traits.image_scan as image_scan
 import concourse.util
 import delivery.client
+import delivery.model
 import github.compliance.issue
+import github.compliance.milestone
 import mailutil
 import model.delivery
 import reutil
@@ -50,6 +53,36 @@ logger = logging.getLogger()
 
 # monkeypatch: disable html escaping
 tabulate.htmlescape = lambda x: x
+
+
+def _target_sprint(
+    delivery_svc_client: delivery.client.DeliveryServiceClient,
+):
+    today = datetime.date.today()
+
+    issue_freeze_offset = datetime.timedelta(days=-7)
+
+    current_sprint = delivery_svc_client.sprint_current()
+    issue_freeze_date =  current_sprint.release_decision + issue_freeze_offset
+
+    if today < issue_freeze_date:
+        return current_sprint
+
+    # issues that are found "shortly" before release-decision are assigned to next sprint's milestone
+    next_sprint = delivery_svc_client.sprint_current(offset=+1)
+
+    return next_sprint
+
+
+@functools.cache
+def _target_milestone(
+    repo: github3.repos.Repository,
+    sprint: delivery.model.Sprint,
+):
+    return github.compliance.milestone.find_or_create_sprint_milestone(
+        repo=repo,
+        sprint=sprint,
+    )
 
 
 def _delivery_dashboard_url(
@@ -153,6 +186,20 @@ def create_or_update_github_issues(
     else:
         overwrite_repository = None
 
+    if delivery_svc_endpoints:
+        delivery_svc_client = delivery.client.DeliveryServiceClient(
+            routes=delivery.client.DeliveryServiceRoutes(
+                base_url=delivery_svc_endpoints.base_url(),
+            )
+        )
+    else:
+        delivery_svc_client = ccc.delivery.default_client_if_available()
+
+    if delivery_svc_client:
+        target_sprint = _target_sprint(delivery_svc_client=delivery_svc_client)
+    else:
+        target_sprint = None
+
     # workaround / hack:
     # we map findings to <component-name>:<resource-name>
     # in case of ambiguities, this would lead to the same ticket firstly be created, then closed
@@ -214,9 +261,9 @@ def create_or_update_github_issues(
             )
             logger.info(f'closed (if existing) gh-issue for {component.name=} {resource.name=}')
         elif action == 'report':
-            if delivery_scv_client := ccc.delivery.default_client_if_available():
+            if delivery_svc_client:
                 assignees = delivery.client.github_users_from_responsibles(
-                    responsibles=delivery_scv_client.component_responsibles(
+                    responsibles=delivery_svc_client.component_responsibles(
                         component=component,
                         resource=resource,
                     ),
@@ -234,8 +281,18 @@ def create_or_update_github_issues(
                         return False
 
                 assignees = tuple((u.username for u in assignees if user_is_active(u.username)))
+
+                try:
+                    target_milestone = _target_milestone(
+                        repo=repository,
+                        sprint=target_sprint,
+                    )
+                except Exception as e:
+                    logger.warning(f'{e=}')
+                    target_milestone = None
             else:
                 assignees = ()
+                target_milestone = None
 
             if isinstance(resource.type, enum.Enum):
                 resource_type = resource.type.value
@@ -313,6 +370,7 @@ def create_or_update_github_issues(
                     repository=repository,
                     body=body,
                     assignees=assignees,
+                    milestone=target_milestone,
                     extra_labels=(
                         _criticality_label(classification=criticality_classification),
                     ),
