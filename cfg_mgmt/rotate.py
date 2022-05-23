@@ -77,7 +77,7 @@ def delete_expired_secret(
     except Exception as e:
         logger.error(
             f"error deleting secret for cfg-type '{type_name}' with name "
-            f"'{cfg_queue_entry.target.name}': {e}."
+            f"'{cfg_element.name()}': {e}."
         )
         raise
 
