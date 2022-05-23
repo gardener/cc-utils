@@ -84,6 +84,7 @@ def _create_issue(
     body:str,
     title:typing.Optional[str],
     assignees: typing.Iterable[str]=(),
+    milestone: github3.issues.milestone.Milestone=None,
     issue_type: str=_label_bdba,
     extra_labels: typing.Iterable[str]=None,
 ) -> github3.issues.issue.ShortIssue:
@@ -104,6 +105,7 @@ def _create_issue(
             title=title,
             body=body,
             assignees=assignees,
+            milestone=milestone.number if milestone else None,
             labels=labels,
         )
     except github3.exceptions.GitHubError as ghe:
@@ -120,6 +122,7 @@ def _update_issue(
     body:str,
     title:typing.Optional[str],
     issue: github3.issues.Issue,
+    milestone: github3.issues.milestone.Milestone=None,
     assignees: typing.Iterable[str]=(),
     issue_type: str=_label_bdba,
     extra_labels: typing.Iterable[str]=None,
@@ -130,6 +133,9 @@ def _update_issue(
 
     if title:
         kwargs['title'] = title
+
+    if milestone and not issue.milestone:
+        kwargs['milestone'] = milestone.number
 
     labels = tuple(repository_labels(
         component=component,
@@ -155,6 +161,7 @@ def create_or_update_issue(
     body:str,
     title:str=None,
     assignees: typing.Iterable[str]=(),
+    milestone: github3.issues.milestone.Milestone=None,
     issue_type: str=_label_bdba,
     extra_labels: typing.Iterable[str]=None,
     preserve_labels_regexes: typing.Iterable[str]=(),
