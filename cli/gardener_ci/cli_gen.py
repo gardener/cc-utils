@@ -98,8 +98,7 @@ def main():
     # retrieve if (see ci.util.ctx)
     ctx.args = parsed
 
-    config_from_args = ctx.load_config_from_args()
-    ctx.add_config_source(config_from_args)
+    ctx.load_config()
 
     # mark 'cli' mode
     ci.util._set_cli(True)
