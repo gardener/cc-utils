@@ -161,10 +161,11 @@ class DeliveryServiceClient:
             for sprint_info in raw
         ]
 
-    def sprint_current(self) -> dm.Sprint:
+    def sprint_current(self, offset: int=0) -> dm.Sprint:
         return dm.Sprint.from_dict(
             requests.get(
                 url=self._routes.sprint_current(),
+                params={'offset': offset},
             ).json()
         )
 
