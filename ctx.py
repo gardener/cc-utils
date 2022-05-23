@@ -157,7 +157,7 @@ load_config()
 
 
 def _cfg_factory_from_dir():
-    if not cfg or not (cfg_dir := cfg.ctx.config_dir):
+    if not cfg or not cfg.ctx or not (cfg_dir := cfg.ctx.config_dir):
         return None
 
     from ci.util import existing_dir
