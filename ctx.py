@@ -132,7 +132,7 @@ def _config_from_parsed_argv():
     if not args or args.cfg_dir is None:
         return None
 
-    return GlobalConfig(ctx=CtxCfg(cfg_dir=args.cfg_dir))
+    return GlobalConfig(ctx=CtxCfg(config_dir=args.cfg_dir))
 
 
 def load_config():
