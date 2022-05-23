@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def delete_expired_secret(
-    cfg_element: str,
+    cfg_element: model.NamedModelElement,
     cfg_queue_entry: cmm.CfgQueueEntry,
     cfg_factory: model.ConfigFactory,
 ) -> bool:
