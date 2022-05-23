@@ -10,7 +10,10 @@ import ci.util
 import model
 import model.kubernetes
 
-from cfg_mgmt.model import CfgQueueEntry
+from cfg_mgmt.model import (
+    CfgQueueEntry,
+    ValidationError,
+)
 from kubernetes.client import (
     CoreV1Api,
     V1ObjectMeta,
@@ -192,3 +195,12 @@ def delete_config_secret(
             token_name=token['name'],
             namespace=cfg_element.service_account().namespace(),
         )
+
+
+def validate_for_rotation(
+    cfg_element: model.kubernetes.KubernetesConfig,
+):
+    if not cfg_element.service_account():
+        raise ValidationError("Cannot rotate kubeconfigs without service account configs.")
+    if len(cfg_element.kubeconfig()['contexts']) != 1:
+        raise ValidationError("Rotation of kubeconfigs with multiple contexts is not implemented.")
