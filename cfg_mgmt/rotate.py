@@ -1,7 +1,5 @@
-import dataclasses
 import logging
 import typing
-import yaml
 
 import cfg_mgmt
 import cfg_mgmt.azure as cma
@@ -17,22 +15,6 @@ import oci.model as om
 
 
 logger = logging.getLogger(__name__)
-
-
-def write_config_queue(
-    cfg_queue: typing.Iterable[cmm.CfgQueueEntry],
-    cfg_queue_file_path: str,
-):
-    with open(cfg_queue_file_path, 'w') as f:
-        yaml.dump(
-            {
-                'rotation_queue': [
-                    dataclasses.asdict(cfg_queue_entry)
-                    for cfg_queue_entry in cfg_queue
-                ]
-            },
-            f,
-        )
 
 
 def delete_expired_secret(

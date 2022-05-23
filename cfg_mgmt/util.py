@@ -336,7 +336,6 @@ def write_named_element(
         yaml.dump(file_contents, cfg_file)
 
 
-
 def write_changes_to_local_dir(
     cfg_element: model.NamedModelElement,
     secret_id: dict,
