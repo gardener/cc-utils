@@ -249,6 +249,6 @@ def close_issue_if_present(
         issue.create_comment('closing ticket, because there are no longer unassessed findings')
         succ &= issue.close()
         if not succ:
-            logger.warning(f'failed to close {issue.id=}, {repo.url=}')
+            logger.warning(f'failed to close {issue.id=}, {repository.url=}')
 
     return succ
