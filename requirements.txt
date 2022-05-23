@@ -42,6 +42,7 @@ python-swiftclient
 pyyaml
 requests<3.0.0
 requests_toolbelt<1
+ruamel.yaml
 semver<3.0.0
 slackclient<3.0.0
 sphinx_rtd_theme<1.0.0
