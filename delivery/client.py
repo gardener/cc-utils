@@ -7,13 +7,8 @@ import gci.componentmodel as cm
 
 import ci.util
 import cnudie.util
+import delivery.model as dm
 import dso.model
-
-
-@dataclasses.dataclass # TODO: deduplicate w/ modelclass in delivery-service
-class GithubUser:
-    username: str
-    github_hostname: str
 
 
 class DeliveryServiceRoutes:
@@ -34,6 +29,19 @@ class DeliveryServiceRoutes:
             'component',
             'responsibles',
         )
+
+    def _delivery(self, *suffix: typing.Iterable[str]):
+        return ci.util.urljoin(
+            self._base_url,
+            'delivery',
+            *suffix,
+        )
+
+    def sprint_infos(self):
+        return self._delivery('sprint-infos')
+
+    def sprint_current(self):
+        return self._delivery('sprint-infos', 'current')
 
     def upload_metadata(self):
         return ci.util.urljoin(
@@ -143,6 +151,23 @@ class DeliveryServiceClient:
 
         return resp.json()['responsibles']
 
+    def sprints(self) -> list[dm.Sprint]:
+        raw = requests.get(
+            url=self._routes.sprint_infos(),
+        ).json()['sprints']
+
+        return [
+            dm.Sprint.from_dict(sprint_info)
+            for sprint_info in raw
+        ]
+
+    def sprint_current(self) -> dm.Sprint:
+        return dm.Sprint.from_dict(
+            requests.get(
+                url=self._routes.sprint_current(),
+            ).json()
+        )
+
 
 def _normalise_github_hostname(github_url: str):
     # hack: for github.com, we might get a different subdomain (api.github.com)
@@ -160,7 +185,7 @@ def _normalise_github_hostname(github_url: str):
 def github_users_from_responsibles(
     responsibles: typing.Iterable[dict],
     github_url: str=None,
-) -> typing.Generator[GithubUser, None, None]:
+) -> typing.Generator[dm.GithubUser, None, None]:
     '''
     returns a generator yielding all github-users from the given `responsibles`.
     use `DeliveryServiceClient.component_responsibles` to retrieve responsibles
@@ -184,4 +209,4 @@ def github_users_from_responsibles(
             if target_github_hostname and target_github_hostname != github_hostname:
                 continue
 
-            yield GithubUser(username=username, github_hostname=github_hostname)
+            yield dm.GithubUser(username=username, github_hostname=github_hostname)
