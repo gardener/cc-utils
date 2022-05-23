@@ -11,7 +11,7 @@ class GithubUser:
     github_hostname: str
 
 
-@dataclasses.dataclass # TODO: deduplicate w/ modelclass in delivery-service/yp.py
+@dataclasses.dataclass(frozen=True) # TODO: deduplicate w/ modelclass in delivery-service/yp.py
 class Sprint:
     name: str
     end_date: datetime.date
