@@ -186,6 +186,7 @@ def create_or_update_issue(
             body=body,
             title=title,
             assignees=assignees,
+            milestone=milestone,
             extra_labels=extra_labels,
         )
     elif issues_count == 1:
@@ -214,6 +215,7 @@ def create_or_update_issue(
             body=body,
             title=title,
             assignees=assignees,
+            milestone=milestone,
             issue=open_issue,
             extra_labels=extra_labels,
         )
