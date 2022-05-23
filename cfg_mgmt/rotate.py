@@ -68,11 +68,16 @@ def delete_expired_secret(
         delete_func = cmbac.delete_config_secret
 
     elif type_name == 'kubernetes':
-        if not cfg_element.service_account():
-            # This can only happen if the service-account config was removed after the rotation
-            # but before the removal of the expired secret
-            logger.warning("Cannot rotate kubeconfigs without service account configs.")
+        try:
+            cmk.validate_for_rotation(cfg_element)
+        # This can only happen if the kubernetes config was edited after the rotation
+        # but before the removal of the expired secret
+        except cmm.ValidationError as e:
+            logger.warning(
+                f"Cannot rotate cfg-type '{type_name}' with name '{cfg_element.name()}': {e}"
+            )
             return None
+
         delete_func = cmk.delete_config_secret
 
     if not delete_func:
@@ -142,9 +147,14 @@ def rotate_cfg_element(
         update_secret_function = cmbac.rotate_cfg_element
 
     elif type_name == 'kubernetes':
-        if not cfg_element.service_account():
-            logger.warning("Cannot rotate kubeconfigs without service account configs.")
+        try:
+            cmk.validate_for_rotation(cfg_element)
+        except cmm.ValidationError as e:
+            logger.warning(
+                f"Cannot rotate cfg-type '{type_name}' with name '{cfg_element.name()}': {e}"
+            )
             return None
+
         update_secret_function = cmk.rotate_cfg_element
 
     if not update_secret_function:

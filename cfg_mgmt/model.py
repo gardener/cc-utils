@@ -364,3 +364,7 @@ def cfg_metadata_from_cfg_dir(cfg_dir: str):
         statuses=list(cfg_status(statuses['config_status'])),
         queue=list(cfg_queue(queue['rotation_queue'])),
     )
+
+
+class ValidationError(Exception):
+    pass
