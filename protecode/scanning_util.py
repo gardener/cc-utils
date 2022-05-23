@@ -187,7 +187,7 @@ class Shared:
                 # Paranoid check is not helpful sincs retrieving the wrong versions succeeds again
                 # in other words Protecode allows (and stores) triages for non-existing versions
                 try:
-                    triages = protecode_client.get_triages(
+                    protecode_client.get_triages(
                                 component_name=component_name,
                                 component_version=version,
                                 vulnerability_id=vulnerability_cve,

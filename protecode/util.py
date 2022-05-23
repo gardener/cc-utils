@@ -20,8 +20,6 @@ import logging
 import tabulate
 import typing
 
-import dacite
-
 import ccc.delivery
 import ccc.gcp
 import ccc.protecode
