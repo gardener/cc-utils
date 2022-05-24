@@ -20,6 +20,7 @@ import logging
 
 from functools import partial
 from typing import List
+import typing
 from urllib.parse import urlencode, quote_plus
 
 import ci.log
@@ -205,9 +206,18 @@ class ProtecodeApi:
             for k,v in custom_attributes.items()
         }
 
-    def upload(self, application_name, group_id, data, custom_attribs={}) -> AnalysisResult:
+    def upload(self,
+        application_name: str,
+        group_id: str,
+        data: typing.Generator[bytes, None, None],
+        replace_id: int = None,
+        custom_attribs={},
+    ) -> AnalysisResult:
         url = self._routes.upload(file_name=application_name)
+
         headers = {'Group': str(group_id)}
+        if replace_id:
+            headers['Replace'] = str(replace_id)
         headers.update(self._metadata_dict(custom_attribs))
 
         result = self._put(
@@ -448,8 +458,17 @@ class ProtecodeApi:
 
         return ScanResult(raw_dict=result)
 
-    def set_product_name(self, product_id: int, name: str):
+    def set_product_name_old(self, product_id: int, name: str):
         url = self._routes.scans(product_id)
+
+        self._patch(
+            url=url,
+            data=json.dumps({'name': name,}),
+            headers={'Content-Type': 'application/json'},
+        )
+
+    def set_product_name(self, product_id: int, name: str):
+        url = self._routes.product(product_id)
 
         self._patch(
             url=url,

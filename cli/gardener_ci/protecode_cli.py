@@ -100,7 +100,7 @@ def transport_triages(
     protecode_cfg_name: str,
     from_product_id: int,
     to_group_id: int,
-    to_product_ids: [int],
+    to_product_ids: typing.List[int],
 ):
     cfg_factory = ci.util.ctx().cfg_factory()
     protecode_cfg = cfg_factory.protecode(protecode_cfg_name)

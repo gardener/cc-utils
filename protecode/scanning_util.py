@@ -21,7 +21,7 @@ import dso.model
 import gci.componentmodel
 import protecode.model as pm
 import version
-
+import typing
 
 from protecode.client import ProtecodeApi
 from protecode.model import (
@@ -150,7 +150,7 @@ class Shared:
         product_id: int,
         vulnerability_cve: str,
         description: str,
-        extended_objects: Iterable[pm.ExtendedObject],
+        extended_objects: Generator[pm.ExtendedObject, None, None],
         paranoid: bool = False,
     ):
         if component_version:
@@ -228,16 +228,17 @@ class ProtecodeProcessor:
         self._reference_group_ids = reference_group_ids
         self.cvss_threshold = cvss_threshold
         self.effective_severity_threshold = Severity(effective_severity_threshold)
-        self.product_id_to_resource: dict[str, cnudie.util.ComponentResource] = dict()
-        self.protecode_products_to_consider: list[AnalysisResult] = list()
-        self.protecode_products_to_remove: set[AnalysisResult] = set()
-        self.component_resources_to_upload: list[cnudie.util.ComponentResource] = list()
-        self.existing_protecode_products: list[AnalysisResult] = list()
+        self.product_id_to_resource: dict[int, cnudie.util.ComponentResource] = dict()
+        self.protecode_products_to_consider = list() # consider to rescan; return results
+        self.protecode_products_to_remove = set()
+        self.component_resources_to_upload = list()
+        self.existing_protecode_products = list()
         self.component_resources = component_resources
         # HACK since the component and resource name are the same for all elements
         # (only the component and resource version differ) we can use the names for all elements
         self.component_name = self.component_resources[0].component.name
         self.resource_name = self.component_resources[0].resource.name
+        self.component_resource_to_product_id: dict[str, str] = {}
 
     def _image_group_metadata(
         self,
@@ -296,6 +297,13 @@ class ProtecodeProcessor:
             c=component.name,
         )
 
+    def _upload_name2(
+        self,
+        resource: gci.componentmodel.Resource,
+        component: gci.componentmodel.Component,
+    ):
+        return self._upload_name(resource, component).replace('/', '_')
+
     def _update_product_name(self, product_id: int, upload_name: str):
         scan_result = self._api.scan_result_short(product_id=product_id)
         current_name = scan_result.name()
@@ -316,6 +324,7 @@ class ProtecodeProcessor:
         return metadata
 
     def _get_existing_protecode_apps(self) -> Generator[AnalysisResult, None, None]:
+        # import triages from local group
         scan_results = (
             self._api.scan_result(product_id=product.product_id())
             for product in self.existing_protecode_products
@@ -324,7 +333,7 @@ class ProtecodeProcessor:
 
     def _existing_triages(
         self,
-        analysis_results: Iterable[AnalysisResult]=()
+        analysis_results: typing.Iterable[AnalysisResult]=()
     ) -> Generator[pm.Triage, None, None]:
         if not analysis_results:
             return ()
@@ -334,21 +343,6 @@ class ProtecodeProcessor:
             for component in analysis_result.components():
                 for vulnerability in component.vulnerabilities():
                     yield from vulnerability.triages()
-
-    def _enumerate_reference_triages(
-        self,
-        metadata: dict[str, str],
-    ) -> Generator[pm.Triage, None, None]:
-        for group_id in self._reference_group_ids:
-            ref_apps = self._api.list_apps(
-                group_id=group_id,
-                custom_attribs=metadata,
-            )
-            ref_scan_results = (
-                self._api.scan_result(app.product_id())
-                for app in ref_apps
-            )
-            yield from self._existing_triages(ref_scan_results)
 
     def _get_for_rescan(self):
         self.component_resources_to_upload = []
@@ -365,6 +359,11 @@ class ProtecodeProcessor:
                     'COMPONENT_VERSION'
                 )
 
+                image_reference_name = existing_product.custom_data().get('IMAGE_REFERENCE_NAME')
+                if component_resource.resource.name == image_reference_name:
+                    self.component_resource_to_product_id[component_resource.resource.name] = \
+                        existing_product.product_id()
+
                 oci_client = ccc.oci.oci_client()
                 img_ref_with_digest = oci_client.to_digest_hash(
                     image_reference=resource.access.imageReference,
@@ -378,7 +377,7 @@ class ProtecodeProcessor:
                     self.protecode_products_to_consider.append(existing_product)
                     self.product_id_to_resource[existing_product.product_id()] = component_resource
                     logger.info(
-                        f"found product for '{resource.access.imageReference}' for "
+                        f"found product-id for '{resource.access.imageReference}' for "
                         f"component version '{component_version}': "
                         f'{existing_product.product_id()}'
                     )
@@ -406,6 +405,7 @@ class ProtecodeProcessor:
             scan_result = self._api.scan_result_short(product_id=protecode_product.product_id())
 
             if not scan_result.is_stale():
+                logger.info(f'Skipping because not stale: {protecode_product.product_id()}')
                 continue # protecode does not recommend a rescan
 
             if not scan_result.has_binary():
@@ -446,7 +446,8 @@ class ProtecodeProcessor:
         self,
         component: gci.componentmodel.Component,
         resource: gci.componentmodel.Resource,
-    ) -> pm.AnalysisResult:
+        replace_id: int=None,
+    ):
         metadata = self._metadata(
             resource=resource,
             component=component,
@@ -466,12 +467,13 @@ class ProtecodeProcessor:
             # Upload image and update outdated analysis result with the one triggered
             # by the upload.
             scan_result = self._api.upload(
-                application_name=self._upload_name(
+                application_name=self._upload_name2(
                     resource=resource,
                     component=component
-                ).replace('/', '_'),
+                ),
                 group_id=self._group_id,
                 data=image_data,
+                replace_id=replace_id,
                 custom_attribs=metadata,
             )
             return scan_result
@@ -485,10 +487,24 @@ class ProtecodeProcessor:
                     f'uploading resource with name {component_resource.resource.name} '
                     f'and version {component_resource.resource.version}'
                 )
+                product_id = self._find_product_id_for_resource(component_resource.resource)
+                if product_id:
+                    logger.info(f'Found existing protecode id for replace-binary: {product_id}')
+                else:
+                    logger.info('No existing protecode id for replace-binary found')
                 scan_result = self._upload_resource(
                     component=component_resource.component,
                     resource=component_resource.resource,
+                    replace_id=product_id,
                 )
+                if product_id:
+                    # if replace-binary was used we need to update the product name
+                    upload_name = self._upload_name(
+                        component_resource.resource,
+                        component_resource.component
+                    )
+                    self._update_product_name(product_id, upload_name)
+
             except requests.exceptions.HTTPError as e:
                 # in case the image is currently being scanned, Protecode will answer with HTTP
                 # code 409 ('conflict'). In this case, fetch the ongoing scan to add it
@@ -532,48 +548,7 @@ class ProtecodeProcessor:
                     product_id=product_id,
                 )
 
-    def _apply_triages(
-        self,
-        analysis_results: Iterable[pm.AnalysisResult],
-        triages_to_import: Iterable[pm.Triage]
-    ):
-        # compare triages from former scan and get latest triages from new scan, calculate the
-        # difference
-        for analysis_result in analysis_results:
-            product_id = analysis_result.product_id()
-            existing_triages = list(self._existing_triages([analysis_result]))
-            new_triages = [
-                t for t in triages_to_import
-                if t not in existing_triages
-            ]
-            logger.info(f'transporting triages for {analysis_result.product_id()}')
-            self._transport_triages(new_triages, product_id)
-            logger.info(f'done with transporting triages for {analysis_result.product_id()}')
-
-        # apply triages from GCR
-        for analysis_result in analysis_results:
-            self._import_triages_from_gcr(analysis_result)
-
-        # yield results
-        for protecode_product in self.protecode_products_to_consider:
-            analysis_result = self._api.scan_result(protecode_product.product_id())
-
-            component_resource = self.product_id_to_resource[protecode_product.product_id()]
-            licenses = {
-                component.license() for component in analysis_result.components()
-                if component.license()
-            }
-
-            yield pm.BDBA_ScanResult(
-                component=component_resource.component,
-                status=UploadStatus.DONE, # XXX remove this
-                result=analysis_result,
-                resource=component_resource.resource,
-                greatest_cve_score=analysis_result.greatest_cve_score(),
-                licenses=licenses,
-            )
-
-    def _delete_outdated_protecode_apps(self):
+    def _delete_outdatet_protecode_apps(self):
         # in rare cases, we fail to find (again) an existing product, but through naming-convention
         # succeed in finding it implicitly while trying to upload image. Do not purge those
         # IDs (or in general: purge no ID we just recently created/retrieved)
@@ -632,7 +607,11 @@ class ProtecodeProcessor:
                         extended_objects=component.extended_objects(),
                     )
 
-    def process_component_resources(self) -> Iterable[pm.BDBA_ScanResult]:
+    def _find_product_id_for_resource(self, component_resource: gci.componentmodel.Resource):
+        product_id = self.component_resource_to_product_id.get(component_resource.name)
+        return product_id
+
+    def process_component_resources(self) -> typing.Iterable[pm.BDBA_ScanResult]:
         # depending on upload-mode, determine an upload-action for each related image
         # - resources to upload
         # - protecode-apps to remove
@@ -646,26 +625,22 @@ class ProtecodeProcessor:
             resource_name=self.resource_name,
         )
 
-        # Get all protecode appps
+        # Get all protecode appps where group-id matches and metadata
+        logger.info(f'Found all protecode apps in group: {self._group_id}, {self.component_name}, '
+            f'{self.resource_name}')
         self.existing_protecode_products = self._api.list_apps(
             group_id=self._group_id,
             custom_attribs=metadata,
         )
 
+        for r in self.existing_protecode_products:
+            logger.info(f'... {r.name()=}, {r.product_id()=}, {r.greatest_cve_score()=}')
+
         # for each protecode app get the scan results
-        scan_results = self._get_existing_protecode_apps()
+        scan_results = tuple(self._get_existing_protecode_apps())
         logger.info('Found existing protecode apps:')
         for r in scan_results:
             logger.info(f'... {r.name()=}, {r.product_id()=}, {r.greatest_cve_score()=}')
-
-        # get triages for the scan results
-        triages_to_import: set[pm.Triage] = set()
-        triages_to_import |= set(self._existing_triages(scan_results))
-
-        # import triages from reference groups
-        triages_to_import |= set(self._enumerate_reference_triages(metadata))
-
-        logger.info(f'found {len(triages_to_import)} triage(s) to import')
 
         # process resources according to processing mode
         if self._processing_mode is ProcessingMode.FORCE_UPLOAD:
@@ -675,7 +650,7 @@ class ProtecodeProcessor:
             self.protecode_products_to_remove = set(self.existing_protecode_products)
         elif self._processing_mode is ProcessingMode.RESCAN:
             logger.info('rescan - will upload images to be rescanned')
-            self._get_for_rescan()
+            self._get_for_rescan() # calculate images to add, remove, consider
         else:
             raise NotImplementedError()
 
@@ -683,10 +658,11 @@ class ProtecodeProcessor:
         self._trigger_rescan_if_recommended()
 
         # upload new resources (all images to scan)
-        analysis_results = self._upload_new_resources()
+        analysis_results = self._upload_new_resources() # gets new AnalysisResults
 
-        # apply imported triages for all protecode products
-        self._apply_triages(analysis_results, triages_to_import)
+        # apply triages from GCR
+        for analysis_result in analysis_results:
+            self._import_triages_from_gcr(analysis_result)
 
         # apply auto triages for resources labeled with skip binary scan
         for protecode_product in self.protecode_products_to_consider:
@@ -755,7 +731,7 @@ class ProtecodeProcessor:
         product_id = product.product_id()
 
         # update upload name to reflect new component version (if changed)
-        upload_name = self._upload_name(resource, component)
+        upload_name = self._upload_name(resource, component) #!!! TODO: check correct?
         self._update_product_name(product_id, upload_name)
 
         # retrieve existing product's details (list of products contained only subset of data)
