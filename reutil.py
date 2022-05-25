@@ -8,6 +8,7 @@ def re_filter(
     include_regexes: typing.Iterable[str] = (),
     exclude_regexes: typing.Iterable[str] = (),
     value_transformation: typing.Callable[[T], str] = None,
+    re_flags: int=0,
 ) -> typing.Callable[[typing.Union[T, str]], bool]:
     '''
     returns a callable that can be used as a filter, applying the given include and exclude
@@ -21,9 +22,8 @@ def re_filter(
     @param exclude_regexes: iterable[str]: value is excluded if any regex matches (fullmatch)
     @param value_transformation: callable: optional transformation for value; should yield str
     '''
-    # compile regexes
-    include_functions = [re.compile(r).fullmatch for r in include_regexes]
-    exclude_functions = [re.compile(r).fullmatch for r in exclude_regexes]
+    include_functions = [re.compile(r, re_flags).fullmatch for r in include_regexes]
+    exclude_functions = [re.compile(r, re_flags).fullmatch for r in exclude_regexes]
 
     def _re_filter(value):
         if value_transformation:
