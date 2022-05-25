@@ -215,6 +215,7 @@ class Notify(enum.Enum):
 @dataclasses.dataclass
 class GithubIssueTemplateCfg:
     body: str
+    type: str
 
 
 ATTRIBUTES = (
@@ -234,7 +235,15 @@ ATTRIBUTES = (
         name='github_issue_template',
         default=None,
         doc='''\
-        use to configure a custom github-issue-template (sub-attr: `body`)
+            deprecated - use github_issue_templates
+        ''',
+        type=GithubIssueTemplateCfg,
+    ),
+    AttributeSpec.optional(
+        name='github_issue_templates',
+        default=None,
+        doc='''\
+        use to configure custom github-issue-templates (sub-attr: `body`)
         use python3's format-str syntax
         available variables:
         - summary # contains name, version, etc in a table
@@ -247,7 +256,7 @@ ATTRIBUTES = (
         - report_url
         - delivery_dashboard_url
         ''',
-        type=GithubIssueTemplateCfg,
+        type=list[GithubIssueTemplateCfg],
     ),
     AttributeSpec.optional(
         name='github_issue_labels_to_preserve',
@@ -305,14 +314,33 @@ class ImageScanTrait(Trait, ImageFilterMixin):
     def overwrite_github_issues_tgt_repository_url(self) -> typing.Optional[str]:
         return self.raw.get('overwrite_github_issues_tgt_repository_url')
 
-    def github_issue_template(self) -> typing.Optional[GithubIssueTemplateCfg]:
-        if not (raw := self.raw.get('github_issue_template')):
-            return None
+    def github_issue_template(self, type: str) -> typing.Optional[GithubIssueTemplateCfg]:
+        if not (raw := self.raw.get('github_issue_templates')):
+            if not (raw := self.raw.get('github_issue_template')):
+                return None
 
-        return dacite.from_dict(
-            data_class=GithubIssueTemplateCfg,
-            data=raw,
-        )
+            raw['type'] = 'vulnerabilities/bdba'
+
+            if type != raw['type']:
+                raise ValueError(type)
+
+            return dacite.from_dict(
+                data_class=GithubIssueTemplateCfg,
+                data=raw,
+            )
+
+        template_cfgs = [
+            dacite.from_dict(
+                data_class=GithubIssueTemplateCfg,
+                data=cfg,
+            ) for cfg in raw
+        ]
+
+        for cfg in template_cfgs:
+            if cfg.type == type:
+                return cfg
+
+        raise KeyError(type)
 
     def github_issue_labels_to_preserve(self) -> typing.Optional[list[str]]:
         return self.raw['github_issue_labels_to_preserve']

@@ -18,7 +18,7 @@ filter_cfg = image_scan_trait.filters()
 component_trait = job_variant.trait('component_descriptor')
 
 issue_tgt_repo_url = image_scan_trait.overwrite_github_issues_tgt_repository_url()
-github_issue_template = image_scan_trait.github_issue_template()
+github_issue_template = image_scan_trait.github_issue_template(type='vulnerabilities/bdba')
 github_issue_labels_to_preserve = image_scan_trait.github_issue_labels_to_preserve()
 %>
 import functools
