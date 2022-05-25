@@ -238,14 +238,6 @@ ATTRIBUTES = (
         doc='if set, and notify is set to github_issues, overwrite target github repository',
     ),
     AttributeSpec.optional(
-        name='github_issue_template',
-        default=None,
-        doc='''\
-            deprecated - use github_issue_templates
-        ''',
-        type=GithubIssueTemplateCfg,
-    ),
-    AttributeSpec.optional(
         name='github_issue_templates',
         default=None,
         doc='''\
@@ -331,18 +323,7 @@ class ImageScanTrait(Trait, ImageFilterMixin):
 
     def github_issue_template(self, type: str) -> typing.Optional[GithubIssueTemplateCfg]:
         if not (raw := self.raw.get('github_issue_templates')):
-            if not (raw := self.raw.get('github_issue_template')):
-                return None
-
-            raw['type'] = 'vulnerabilities/bdba'
-
-            if type != raw['type']:
-                raise ValueError(type)
-
-            return dacite.from_dict(
-                data_class=GithubIssueTemplateCfg,
-                data=raw,
-            )
+            return None
 
         template_cfgs = [
             dacite.from_dict(
@@ -355,7 +336,7 @@ class ImageScanTrait(Trait, ImageFilterMixin):
             if cfg.type == type:
                 return cfg
 
-        raise KeyError(type)
+        return None
 
     def github_issue_labels_to_preserve(self) -> typing.Optional[list[str]]:
         return self.raw['github_issue_labels_to_preserve']
