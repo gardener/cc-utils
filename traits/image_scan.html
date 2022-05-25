@@ -297,6 +297,16 @@ available variables:
 <td><p>List[str]</p></td>
 <td><p>if present, generated build steps depend on those generated from specified traits</p></td>
 </tr>
+<tr class="row-odd"><td><p>licenses</p></td>
+<td><p>no</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span><span class="w"></span>
+</pre></div>
+</div>
+</p></td>
+<td><p>LicenseCfg</p></td>
+<td><p>if present, license checks will be done using available scanners (currently, this is
+only implemented for “protecode” / BDBA)</p></td>
+</tr>
 </tbody>
 </table>
 <h2>filters <em>(FilterCfg)</em> Attributes<a class="headerlink" href="#trait-image-scan" title="Permalink to this headline">¶</a></h2>
@@ -424,7 +434,7 @@ include_component_names.</p></td>
 </div>
 </p></td>
 <td><p>list</p></td>
-<td><p>A list of regular expressions. If configured, licenses detected by protecode that do not match at least one of regular expressions will result in a report mail being sent. If not configured or empty, <strong>all</strong> licenses will be accepted.</p></td>
+<td><p>use toplevel <code class="code docutils literal notranslate"><span class="pre">licences</span></code> attr</p></td>
 </tr>
 <tr class="row-even"><td><p>prohibited_licenses</p></td>
 <td><p>no</p></td>
@@ -433,7 +443,7 @@ include_component_names.</p></td>
 </div>
 </p></td>
 <td><p>list</p></td>
-<td><p>A list of regular expressions. If configured, licenses detected by protecode that match one of the regular expressions will result in a report mail being sent, even if they are included in <code class="code docutils literal notranslate"><span class="pre">allowed_licenses</span></code> (e.g. due to the default value).</p></td>
+<td><p>use toplevel <code class="code docutils literal notranslate"><span class="pre">licences</span></code> attr</p></td>
 </tr>
 </tbody>
 </table>
