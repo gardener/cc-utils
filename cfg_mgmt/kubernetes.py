@@ -1,12 +1,13 @@
+import base64
 import copy
 import logging
+import time
 import typing
-import base64
 
-import kube.ctx
 import cfg_mgmt
 import cfg_mgmt.util
 import ci.util
+import kube.ctx
 import model
 import model.kubernetes
 
@@ -52,23 +53,36 @@ def rotate_cfg_element(
     secret_id = {
         'old_tokens': old_tokens,
     }
+
     # create new token
     new_access_token_name = _create_token_for_sa(
         core_api=core_api,
         service_account=sa,
     )
+
+    new_access_token = _wait_for_token_secret(
+        core_api=core_api,
+        token_name=new_access_token_name,
+        token_namespace=service_account_config.namespace(),
+    )
+
+    if not new_access_token:
+        # the cluster controller did not update the secret in the given time. Clean up
+        # and raise
+        core_api.delete_namespaced_secret(
+            new_access_token_name,
+            service_account_config.namespace(),
+        )
+        raise RuntimeError(
+            'Service account token-secret was not populated with the required data in time.'
+        )
+
     # patch service-account with new secret (this updates the secret that will be mounted to
     # k8s-pods)
     patched_sa = _update_sa(
         core_api=core_api,
         service_account=sa,
         token_list=[{'name': new_access_token_name}]
-    )
-
-    # fetch token-secret. Data values should have been set by now
-    new_access_token = core_api.read_namespaced_secret(
-        name=new_access_token_name,
-        namespace=service_account_config.namespace(),
     )
 
     # create new kubeconfig from new access token
@@ -179,6 +193,34 @@ def _update_kubeconfig(
     kubeconfig['current-context'] = f'system:serviceaccount:{namespace}:{sa_name}'
 
     return kubeconfig
+
+
+def _wait_for_token_secret(
+    core_api: CoreV1Api,
+    token_name: str,
+    token_namespace: str,
+    retries: int = 3,
+    interval: int = 5,
+) -> typing.Union[V1Secret, None]:
+    new_access_token = core_api.read_namespaced_secret(
+        name=token_name,
+        namespace=token_namespace,
+    )
+    if not new_access_token.data:
+        logger.info('Access token was not yet populated with required information.')
+        if retries > 0:
+            logger.info(f'Will sleep for {interval} seconds and try again {retries} more times.')
+            time.sleep(interval)
+            return _wait_for_token_secret(
+                core_api=core_api,
+                token_name=token_name,
+                token_namespace=token_namespace,
+                retries=retries-1,
+                interval=interval,
+            )
+        else:
+            return None
+    return new_access_token
 
 
 def delete_config_secret(
