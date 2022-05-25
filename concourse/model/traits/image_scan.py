@@ -87,24 +87,16 @@ PROTECODE_ATTRS = (
         doc='CVSS version used to evaluate the severity of vulnerabilities',
         type=CVSSVersion,
     ),
-    AttributeSpec.optional(
+    AttributeSpec.deprecated(
         name='allowed_licenses',
         default=[],
-        doc=(
-            'A list of regular expressions. If configured, licenses detected by protecode '
-            'that do not match at least one of regular expressions will result in a report mail '
-            'being sent. If not configured or empty, **all** licenses will be accepted.'
-        ),
+        doc='use toplevel `licences` attr',
         type=list,
     ),
-    AttributeSpec.optional(
+    AttributeSpec.deprecated(
         name='prohibited_licenses',
         default=[],
-        doc=(
-            'A list of regular expressions. If configured, licenses detected by protecode that '
-            'match one of the regular expressions will result in a report mail being sent, even '
-            'if they are included in `allowed_licenses` (e.g. due to the default value).'
-        ),
+        doc='use toplevel `licences` attr',
         type=list,
     ),
 )
@@ -218,6 +210,20 @@ class GithubIssueTemplateCfg:
     type: str
 
 
+@dataclasses.dataclass
+class LicenseCfg:
+    '''
+    configures license policies for discovered licences
+
+    licenses are configured as lists of regular expressions (matching is done case-insensitive)
+
+    if allowed licences are configured, any non-matching license is considered to not be allowed,
+    regardless of configured prohibited licences.
+    '''
+    allowed_licences: typing.Optional[list[str]] = None
+    prohibited_licenses: typing.Optional[list[str]] = None
+
+
 ATTRIBUTES = (
     *IMAGE_ATTRS,
     AttributeSpec.optional(
@@ -293,7 +299,16 @@ ATTRIBUTES = (
         default=(),
         type=typing.Set[str],
         doc='if present, generated build steps depend on those generated from specified traits',
-    )
+    ),
+    AttributeSpec.optional(
+        name='licenses',
+        default=[],
+        doc='''\
+            if present, license checks will be done using available scanners (currently, this is
+            only implemented for "protecode" / BDBA)
+        ''',
+        type=LicenseCfg,
+    ),
 )
 
 
@@ -359,6 +374,15 @@ class ImageScanTrait(Trait, ImageFilterMixin):
     def os_id(self):
         if (raw := self.raw.get('os_id')) is not None:
             return OsIdScan(raw_dict=raw)
+
+    def licenses(self) -> typing.Optional[LicenseCfg]:
+        if (raw := self.get('licences')):
+            return dacite.from_dict(
+                data_class=LicenseCfg,
+                data=raw,
+            )
+
+        return None
 
     def transformer(self):
         return ImageScanTraitTransformer(trait=self)
