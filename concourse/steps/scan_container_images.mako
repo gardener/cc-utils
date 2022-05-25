@@ -157,69 +157,7 @@ if notification_policy is Notify.GITHUB_ISSUES:
   )
   print(f'omitting email-sending, as notification-method was set to github-issues')
   sys.exit(0)
-
-email_recipients = ${image_scan_trait.email_recipients()}
-
-components = tuple(cnudie.retrieve.components(component=component_descriptor))
-
-email_recipients = tuple(
-  mail_recipients(
-    notification_policy='${image_scan_trait.notify().value}',
-    root_component_name='${component_trait.component_name()}',
-    protecode_cfg=protecode_cfg,
-    protecode_group_id=protecode_group_id,
-    protecode_group_url=protecode_group_url,
-    cvss_version=CVSSVersion('${protecode_scan.cvss_version().value}'),
-    cfg_set=cfg_set,
-    email_recipients=email_recipients,
-    components=components
-  )
-)
-
-## order by max. severity; highest first (descending)
-## type: Iterable[Tuple[ScanResult, float]] (written in comment to save imports)
-results_above_threshold = sorted(
-  results_above_threshold,
-  key=lambda x: x.greatest_cve_score,
-  reverse=True,
-)
-
-print(f'Components: {len(components)}   Mail recipients: {len(email_recipients)}')
-
-for email_recipient in email_recipients:
-  print(f'Preparing email recipients for {email_recipient._recipients_component}')
-  email_recipient.add_protecode_results(
-    relevant_results=results_above_threshold,
-    results_below_threshold=results_below_threshold,
-  )
-  email_recipient.add_license_scan_results(results=updated_license_report)
-
-  if not email_recipient.has_results():
-    logger.info(f'skipping {email_recipient=}, since there are no relevant results')
-    continue
-
-  body = email_recipient.mail_body()
-  email_addresses = set(email_recipient.resolve_recipients())
-
-  # component_name identifies the landscape that has been scanned
-  component_name = "${component_trait.component_name()}"
-
-  if not email_addresses:
-    logger.warning(f'no email addresses could be determined for {component_name=}')
-    continue
-
-  import traceback
-  # notify about critical vulnerabilities
-  try:
-    mailutil._send_mail(
-      email_cfg=cfg_set.email(),
-      recipients=email_addresses,
-      mail_template=body,
-      subject=f'[Action Required] landscape {component_name} has critical Vulnerabilities',
-      mimetype='html',
-    )
-    logger.info(f'sent notification emails to: {email_addresses=}')
-  except:
-    traceback.print_exc()
-    logger.warning(f'error whilst trying to send notification-mails for {component_name=}')
+else:
+  logger.error(f'{notification_policy=} is no longer (or not yet) supported')
+  raise NotImplementedError(notification_policy)
 </%def>
