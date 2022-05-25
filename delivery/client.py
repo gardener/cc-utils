@@ -170,7 +170,7 @@ class DeliveryServiceClient:
         return dm.Sprint.from_dict(
             requests.get(
                 url=self._routes.sprint_current(),
-                params={'offset': offset, **before},
+                params={'offset': offset, **extra_args},
             ).json()
         )
 
