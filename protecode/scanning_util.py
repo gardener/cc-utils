@@ -1,7 +1,11 @@
+from collections.abc import (
+    Generator,
+    Iterable,
+    Sequence,
+)
 import enum
 import logging
 import textwrap
-import typing
 
 import dacite
 import requests
@@ -31,7 +35,9 @@ from concourse.model.base import (
     AttributeSpec,
 )
 from ccc.grafeas_model import (
+    Occurrence,
     Severity,
+    Vulnerability,
 )
 from ci.util import not_none, warning, check_type, info
 
@@ -55,7 +61,7 @@ class ResourceGroup:
     def __init__(
         self,
         component,
-        resources: typing.Iterable[gci.componentmodel.Resource],
+        resources: Sequence[gci.componentmodel.Resource],
     ):
         # TODO: Validate resource type?
         self._component = component
@@ -141,10 +147,10 @@ class Shared:
         protecode_client: ProtecodeApi,
         component_name: str,
         component_version: str,
-        product_id: str,
+        product_id: int,
         vulnerability_cve: str,
         description: str,
-        extended_objects: typing.Generator[pm.ExtendedObject, None, None],
+        extended_objects: Iterable[pm.ExtendedObject],
         paranoid: bool = False,
     ):
         if component_version:
@@ -207,11 +213,11 @@ class ProtecodeProcessor:
 
     def __init__(
         self,
-        component_resources: list[cnudie.util.ComponentResource],
+        component_resources: Sequence[cnudie.util.ComponentResource],
         protecode_api: ProtecodeApi,
         processing_mode: ProcessingMode=ProcessingMode.RESCAN,
         group_id: int=None,
-        reference_group_ids=(),
+        reference_group_ids: Sequence[int]=(),
         cvss_threshold: float=7.0,
         effective_severity_threshold: Severity=Severity.SEVERITY_UNSPECIFIED,
     ):
@@ -223,10 +229,10 @@ class ProtecodeProcessor:
         self.cvss_threshold = cvss_threshold
         self.effective_severity_threshold = Severity(effective_severity_threshold)
         self.product_id_to_resource: dict[str, cnudie.util.ComponentResource] = dict()
-        self.protecode_products_to_consider = list() # consider to rescan; return results
-        self.protecode_products_to_remove = set()
-        self.component_resources_to_upload = list()
-        self.existing_protecode_products = list()
+        self.protecode_products_to_consider: list[AnalysisResult] = list()
+        self.protecode_products_to_remove: set[AnalysisResult] = set()
+        self.component_resources_to_upload: list[cnudie.util.ComponentResource] = list()
+        self.existing_protecode_products: list[AnalysisResult] = list()
         self.component_resources = component_resources
         # HACK since the component and resource name are the same for all elements
         # (only the component and resource version differ) we can use the names for all elements
@@ -237,7 +243,7 @@ class ProtecodeProcessor:
         self,
         component_name: str,
         resource_name: str,
-    ):
+    ) -> dict[str, str]:
         return {
             'COMPONENT_NAME': component_name,
             'IMAGE_REFERENCE_NAME': resource_name,
@@ -247,7 +253,7 @@ class ProtecodeProcessor:
         self,
         resource: gci.componentmodel.Resource,
         omit_version: bool,
-    ):
+    ) -> dict[str, str]:
         metadata_dict = {
             'IMAGE_REFERENCE_NAME': resource.name,
             'RESOURCE_TYPE': resource.type.value,
@@ -269,7 +275,7 @@ class ProtecodeProcessor:
         self,
         component: gci.componentmodel.Component,
         omit_version=True,
-    ):
+    ) -> dict[str, str]:
         metadata = {'COMPONENT_NAME': component.name}
         if not omit_version:
             metadata['COMPONENT_VERSION'] = component.version
@@ -280,7 +286,7 @@ class ProtecodeProcessor:
         self,
         resource: gci.componentmodel.Resource,
         component: gci.componentmodel.Component,
-    ):
+    ) -> str:
         image_reference = resource.access.imageReference
         image_path, image_tag = image_reference.split(':')
         image_name = resource.name
@@ -304,13 +310,12 @@ class ProtecodeProcessor:
             resource: gci.componentmodel.Resource,
             component: gci.componentmodel.Component,
             omit_version: bool,
-    ):
+    ) -> dict[str, str]:
         metadata = self._image_ref_metadata(resource, omit_version=omit_version)
         metadata.update(self._component_metadata(component=component, omit_version=omit_version))
         return metadata
 
-    def _get_existing_protecode_apps(self) -> typing.Tuple[AnalysisResult]:
-        # import triages from local group
+    def _get_existing_protecode_apps(self) -> Generator[AnalysisResult, None, None]:
         scan_results = (
             self._api.scan_result(product_id=product.product_id())
             for product in self.existing_protecode_products
@@ -319,8 +324,8 @@ class ProtecodeProcessor:
 
     def _existing_triages(
         self,
-        analysis_results: typing.Iterable[AnalysisResult]=()
-    ) -> typing.Tuple[pm.Triage]:
+        analysis_results: Iterable[AnalysisResult]=()
+    ) -> Generator[pm.Triage, None, None]:
         if not analysis_results:
             return ()
 
@@ -333,7 +338,7 @@ class ProtecodeProcessor:
     def _enumerate_reference_triages(
         self,
         metadata: dict[str, str],
-    ):
+    ) -> Generator[pm.Triage, None, None]:
         for group_id in self._reference_group_ids:
             ref_apps = self._api.list_apps(
                 group_id=group_id,
@@ -429,7 +434,9 @@ class ProtecodeProcessor:
                 logger.info(f'triggering rescan for {protecode_product.product_id()}')
                 self._api.rescan(protecode_product.product_id())
 
-    def _wait_for_scan_to_finish(self):
+    def _wait_for_scan_to_finish(
+        self
+    ) -> Generator[pm.ProcessingStatus, None, None]:
         for protecode_product in self.protecode_products_to_consider:
             logger.info(f'waiting for {protecode_product.product_id()}')
             yield self._api.wait_for_scan_result(protecode_product.product_id())
@@ -439,7 +446,7 @@ class ProtecodeProcessor:
         self,
         component: gci.componentmodel.Component,
         resource: gci.componentmodel.Resource,
-    ):
+    ) -> pm.AnalysisResult:
         metadata = self._metadata(
             resource=resource,
             component=component,
@@ -471,7 +478,7 @@ class ProtecodeProcessor:
         finally:
             pass # TODO: should deal w/ closing the streaming-rq on oci-client-side
 
-    def _upload_new_resources(self):
+    def _upload_new_resources(self) -> list[pm.ProcessingStatus]:
         for component_resource in self.component_resources_to_upload:
             try:
                 logger.info(
@@ -505,7 +512,11 @@ class ProtecodeProcessor:
 
         return list(self._wait_for_scan_to_finish())
 
-    def _transport_triages(self, triages: typing.Set[pm.Triage], product_id):
+    def _transport_triages(
+        self,
+        triages: Iterable[pm.Triage],
+        product_id: int
+    ):
         for triage in triages:
             if triage.scope() is TriageScope.GROUP:
                 self._api.add_triage(
@@ -521,7 +532,11 @@ class ProtecodeProcessor:
                     product_id=product_id,
                 )
 
-    def _apply_triages(self, analysis_results, triages_to_import: typing.Set[pm.Triage]):
+    def _apply_triages(
+        self,
+        analysis_results: Iterable[pm.AnalysisResult],
+        triages_to_import: Iterable[pm.Triage]
+    ):
         # compare triages from former scan and get latest triages from new scan, calculate the
         # difference
         for analysis_result in analysis_results:
@@ -558,7 +573,7 @@ class ProtecodeProcessor:
                 licenses=licenses,
             )
 
-    def _delete_outdatet_protecode_apps(self):
+    def _delete_outdated_protecode_apps(self):
         # in rare cases, we fail to find (again) an existing product, but through naming-convention
         # succeed in finding it implicitly while trying to upload image. Do not purge those
         # IDs (or in general: purge no ID we just recently created/retrieved)
@@ -580,7 +595,7 @@ class ProtecodeProcessor:
     def _has_skip_label(
         self,
         resource: gci.componentmodel.Resource
-    ):
+    ) -> bool:
         # check for scanning labels on resource in cd
         if (
             (label := resource.find_label(name=dso.labels.ScanLabelName.BINARY_ID.value))
@@ -617,14 +632,14 @@ class ProtecodeProcessor:
                         extended_objects=component.extended_objects(),
                     )
 
-    def process_component_resources(self) -> typing.Iterable[pm.BDBA_ScanResult]:
+    def process_component_resources(self) -> Iterable[pm.BDBA_ScanResult]:
         # depending on upload-mode, determine an upload-action for each related image
         # - resources to upload
         # - protecode-apps to remove
         # - triages to import
 
         logger.info(f'Processing component resource group for {self.component_name=} and '
-            + f'{self.resource_name=}')
+            f'{self.resource_name=}')
 
         metadata = self._image_group_metadata(
             component_name=self.component_name,
@@ -644,7 +659,7 @@ class ProtecodeProcessor:
             logger.info(f'... {r.name()=}, {r.product_id()=}, {r.greatest_cve_score()=}')
 
         # get triages for the scan results
-        triages_to_import: typing.Set[pm.Triage] = set()
+        triages_to_import: set[pm.Triage] = set()
         triages_to_import |= set(self._existing_triages(scan_results))
 
         # import triages from reference groups
@@ -677,7 +692,6 @@ class ProtecodeProcessor:
         for protecode_product in self.protecode_products_to_consider:
             component_resource = self.product_id_to_resource[protecode_product.product_id()]
             has_skip_label = self._has_skip_label(component_resource.resource)
-            logger.info(f'{component_resource.component.name}  has skip-scan label {has_skip_label}')
             if has_skip_label:
                 logger.info(f'{component_resource.component.name} is marked for skip scanning -->'
                     'auto-triaging all vulnerabilities')
@@ -698,14 +712,14 @@ class ProtecodeProcessor:
                     greatest_cve_score=analysis_result.greatest_cve_score(),
             )
 
-        self._delete_outdatet_protecode_apps()
+        self._delete_outdated_protecode_apps()
 
     def retrieve_scan_result(
             self,
             resource: gci.componentmodel.Resource,
             component: gci.componentmodel.Component,
             group_id: int=None,
-    ):
+    ) -> AnalysisResult:
         metadata = self._metadata(
             resource=resource,
             component=component,
@@ -743,7 +757,10 @@ class ProtecodeProcessor:
         product = self._api.scan_result(product_id=product_id)
         return product
 
-    def _import_triages_from_gcr(self, scan_result: AnalysisResult):
+    def _import_triages_from_gcr(
+        self,
+        scan_result: AnalysisResult
+    ) -> AnalysisResult:
         image_ref = scan_result.custom_data().get('IMAGE_REFERENCE', None)
         scan_result_triages = list(self._existing_triages([scan_result]))
 
@@ -769,10 +786,10 @@ class GcrSynchronizer:
 
     def _find_worst_vuln(
         self,
-        component,
-        vulnerability,
-        grafeas_vulns
-    ):
+        component: pm.Component,
+        vulnerability: pm.Vulnerability,
+        grafeas_vulns: Iterable[Occurrence]
+    ) -> tuple[float, float, float]:
         component_name = component.name()
         cve_str = vulnerability.cve()
 
@@ -780,7 +797,7 @@ class GcrSynchronizer:
         worst_effective_severity = Severity.SEVERITY_UNSPECIFIED
         found_it = False
         for gv in grafeas_vulns:
-            v = gv.vulnerability
+            v: Vulnerability = gv.vulnerability
             if v.shortDescription != cve_str: # TODO: could also check the note name
                 continue
 
@@ -807,8 +824,8 @@ class GcrSynchronizer:
         vulnerability_id: str,
         component_name: str,
         description: str,
-        triages: typing.Tuple[pm.Triage],
-    ):
+        triages: Iterable[pm.Triage],
+    ) -> bool:
         for triage in triages:
             if triage.vulnerability_id() != vulnerability_id:
                 continue
@@ -839,8 +856,8 @@ class GcrSynchronizer:
     def sync(
         self,
         scan_result: AnalysisResult,
-        scan_result_triages: typing.Tuple[pm.Triage]
-    ):
+        scan_result_triages: Iterable[pm.Triage]
+    ) -> AnalysisResult:
         if not self.grafeas_client.scan_available(image_reference=self.image_ref):
             logger.warning(f'no scan result available in gcr: {self.image_ref}')
             return scan_result

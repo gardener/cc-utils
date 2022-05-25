@@ -88,5 +88,6 @@ def scan_without_notification(
     results_above_threshold = [r for r in results if r.greatest_cve_score >= cve_threshold]
     results_below_threshold = [r for r in results if r.greatest_cve_score < cve_threshold]
 
+    logger.info('Summary of found vulnerabilities:')
     logger.info(f'{len(results_above_threshold)=}; {results_above_threshold=}')
     logger.info(f'{len(results_below_threshold)=}; {results_below_threshold=}')
