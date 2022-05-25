@@ -216,11 +216,7 @@ class LicenseCfg:
     configures license policies for discovered licences
 
     licenses are configured as lists of regular expressions (matching is done case-insensitive)
-
-    if allowed licences are configured, any non-matching license is considered to not be allowed,
-    regardless of configured prohibited licences.
     '''
-    allowed_licences: typing.Optional[list[str]] = None
     prohibited_licenses: typing.Optional[list[str]] = None
 
 
