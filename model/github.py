@@ -101,10 +101,7 @@ class GithubConfig(NamedModelElement):
         return self.raw.get('repo_urls', ())
 
     def matches_repo_url(self, repo_url):
-        if '://' not in repo_url:
-            parsed_repo_url = urlparse(f'x://{repo_url}')
-        else:
-            parsed_repo_url = urlparse(repo_url)
+        parsed_repo_url = ci.util.urlparse(repo_url)
 
         if not self.repo_urls():
             return self.matches_hostname(host_name=parsed_repo_url.hostname)

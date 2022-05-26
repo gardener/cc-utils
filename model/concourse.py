@@ -18,6 +18,7 @@ import typing
 import re
 import urllib.parse
 
+import ci.util
 import reutil
 
 from . import cluster_domain_from_kubernetes_config
@@ -460,10 +461,7 @@ class JobMapping(NamedModelElement):
         return self.raw.get('concourse_team_cfg_name')
 
     def matches_repo_url(self, repo_url, cfg_set) -> bool:
-        if not '://' in repo_url:
-            repo_url = 'x://' + repo_url
-
-        repo_url = urllib.parse.urlparse(repo_url)
+        repo_url = ci.util.urlparse(repo_url)
         org, repo = repo_url.path[1:].split('/')
 
         for github_org_cfg in self.github_organisations():

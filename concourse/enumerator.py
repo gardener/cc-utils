@@ -15,7 +15,6 @@
 
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
-from urllib.parse import urlparse
 import functools
 import logging
 import os
@@ -33,6 +32,7 @@ from ci.util import (
     not_empty,
     not_none,
     parse_yaml_file,
+    urlparse,
 )
 from concourse.factory import RawPipelineDefinitionDescriptor
 from model.base import ModelBase, NamedModelElement
@@ -357,10 +357,7 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
         target_team: str=None,
         job_mapping=None,
     ):
-        if not '://' in repository_url:
-            repository_url = 'x://' + repository_url
-
-        self._repository_url = urlparse(not_none(repository_url))
+        self._repository_url = ci.util.urlparse(not_none(repository_url))
         self._repo_host = self._repository_url.hostname
         self.cfg_set = not_none(cfg_set)
         self._target_team = target_team

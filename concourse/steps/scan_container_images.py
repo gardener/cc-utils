@@ -176,10 +176,7 @@ def create_or_update_github_issues(
     if issue_tgt_repo_url:
         gh_api = ccc.github.github_api(repo_url=issue_tgt_repo_url)
 
-        if not '://' in issue_tgt_repo_url:
-            issue_tgt_repo_url = 'x://' + issue_tgt_repo_url
-
-        org, name = urllib.parse.urlparse(issue_tgt_repo_url).path.strip('/').split('/')
+        org, name = ci.util.urlparse(issue_tgt_repo_url).path.strip('/').split('/')
         overwrite_repository = gh_api.repository(org, name)
     else:
         overwrite_repository = None

@@ -24,6 +24,7 @@ import shutil
 import string
 import sys
 import typing
+import urllib.parse
 import yaml
 import yamllint
 import yamllint.config
@@ -500,6 +501,13 @@ def urljoin(*parts):
     last = last.lstrip('/')
 
     return '/'.join([first] + middle + [last])
+
+
+def urlparse(url: str) -> urllib.parse.ParseResult:
+    if not '://' in url:
+        url = f'x://{url}'
+
+    return urllib.parse.urlparse(url)
 
 
 def file_extension_join(path: str, extension: str) -> str:
