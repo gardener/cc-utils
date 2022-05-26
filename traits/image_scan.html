@@ -229,17 +229,17 @@ with different contents, all variants are subject to being scanned.</p>
 <td><p>Notify</p></td>
 <td><p>whom to notify about found issues</p></td>
 </tr>
-<tr class="row-even"><td><p>overwrite_github_issues_tgt_repository_url</p></td>
+<tr class="row-even"><td><p>issue_policies</p></td>
+<td><p>no</p></td>
+<td><p>IssuePolicies(max_processing_time_days=MaxProcessingTimesDays(very_high_or_greater=30, high=30, medium=90, low=120))</p></td>
+<td><p>IssuePolicies</p></td>
+<td><p>defines issues policies (e.g. SLAs for maximum processing times</p></td>
+</tr>
+<tr class="row-odd"><td><p>overwrite_github_issues_tgt_repository_url</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>if set, and notify is set to github_issues, overwrite target github repository</p></td>
-</tr>
-<tr class="row-odd"><td><p>github_issue_template</p></td>
-<td><p>no</p></td>
-<td><p>None</p></td>
-<td><p>GithubIssueTemplateCfg</p></td>
-<td><p>deprecated - use github_issue_templates</p></td>
 </tr>
 <tr class="row-even"><td><p>github_issue_templates</p></td>
 <td><p>no</p></td>
