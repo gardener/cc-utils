@@ -160,7 +160,7 @@ def render_pipelines(
 
         job_mapping.raw['github_orgs'] = gh_orgs
 
-    def_enumerators = []
+    job_mappings = []
     for job_mapping in job_mapping_set.job_mappings().values():
         job_mapping: ccm.JobMapping
 
@@ -170,13 +170,15 @@ def render_pipelines(
         if org:
             remove_org_names(job_mapping, org)
 
-        def_enumerators.append(
-            GithubOrganisationDefinitionEnumerator(
-                job_mapping=job_mapping,
-                cfg_set=config_set,
-                repository_filter=repository_filter,
-            )
-        )
+        job_mappings.append(job_mapping)
+
+    def_enumerators = [
+        GithubOrganisationDefinitionEnumerator(
+            job_mapping=job_mapping,
+            cfg_set=config_set,
+            repository_filter=repository_filter,
+        ) for job_mapping in job_mappings
+    ]
 
     preprocessor = DefinitionDescriptorPreprocessor()
 
