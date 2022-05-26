@@ -142,7 +142,7 @@ github_issue_template_cfg = dacite.from_dict(
 % endif
 
 max_processing_days = dacite.from_dict(
-  data_class=image_scan.MaxProcessingTypeDays,
+  data_class=image_scan.MaxProcessingTimeDays,
   data=${dataclasses.asdict(issue_policies.max_processing_time_days)},
 )
 
