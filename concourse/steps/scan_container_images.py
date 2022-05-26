@@ -276,7 +276,7 @@ def create_or_update_github_issues(
                     target_sprint = _target_sprint(
                         delivery_svc_client=delivery_svc_client,
                         latest_processing_date=_latest_processing_date(
-                            cve_score=greatest_cve_score,
+                            cve_score=greatest_cve,
                             max_processing_days=max_processing_days,
                         ),
                     )
