@@ -147,11 +147,15 @@ def render_pipelines(
     else:
         repository_filter = None
 
+    def org_names(job_mapping):
+        for org in job_mapping.github_organisations():
+            yield org.org_name()
+
     def_enumerators = []
     for job_mapping in job_mapping_set.job_mappings().values():
         job_mapping: ccm.JobMapping
 
-        if org and not org in {oc.org_name() for oc in job_mapping.github_organisations()}:
+        if org and not org in org_names(job_mapping):
             continue
 
         def_enumerators.append(
