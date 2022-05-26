@@ -220,6 +220,38 @@ class LicenseCfg:
     prohibited_licenses: typing.Optional[list[str]] = None
 
 
+@dataclasses.dataclass(frozen=True)
+class MaxProcessingTimesDays:
+    '''
+    defines maximum processing time in days, based on issue "criticality"
+
+    in the case of vulnerabilities, those map to CVE scores:
+    >= 9.0: very high / critical
+    >= 7.0: high
+    >= 4.0: medium
+    <  4.0: low
+    '''
+    very_high_or_greater: int = 30
+    high: int = 30
+    medium: int = 90
+    low: int = 120
+
+    def for_cve(self, cve_score: float):
+        if cve_score >= 9.0:
+            return self.very_high_or_greater
+        if cve_score < 9.0 and cve_score >= 7.0:
+            return self.high
+        if cve_score < 7.0 and cve_score >= 4.0:
+            return self.medium
+        else:
+            return self.low
+
+
+@dataclasses.dataclass(frozen=True)
+class IssuePolicies:
+    max_processing_time_days: MaxProcessingTimesDays = MaxProcessingTimesDays()
+
+
 ATTRIBUTES = (
     *IMAGE_ATTRS,
     AttributeSpec.optional(
@@ -227,6 +259,12 @@ ATTRIBUTES = (
         default=Notify.EMAIL_RECIPIENTS,
         doc='whom to notify about found issues',
         type=Notify,
+    ),
+    AttributeSpec.optional(
+        name='issue_policies',
+        default=IssuePolicies(),
+        type=IssuePolicies,
+        doc='defines issues policies (e.g. SLAs for maximum processing times',
     ),
     AttributeSpec.optional(
         name='overwrite_github_issues_tgt_repository_url',
@@ -310,6 +348,15 @@ class ImageScanTrait(Trait, ImageFilterMixin):
             yield self.protecode()
         if self.clam_av():
             yield self.clam_av()
+
+    def issue_policies(self) -> IssuePolicies:
+        if isinstance((v := self.raw['issue_policies']), IssuePolicies):
+            return v
+
+        return dacite.from_dict(
+            data_class=IssuePolicies,
+            data=v,
+        )
 
     def notify(self) -> Notify:
         return Notify(self.raw['notify'])

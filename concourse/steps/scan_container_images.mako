@@ -11,6 +11,7 @@ main_repo = job_variant.main_repository()
 repo_name = main_repo.logical_name().upper()
 
 image_scan_trait = job_variant.trait('image_scan')
+issue_policies = image_scan_trait.issue_policies()
 protecode_scan = image_scan_trait.protecode()
 clam_av = image_scan_trait.clam_av()
 
@@ -140,6 +141,11 @@ github_issue_template_cfg = dacite.from_dict(
 )
 % endif
 
+max_processing_days = dacite.from_dict(
+  data_class=image_scan.MaxProcessingTypeDays,
+  data=${dataclasses.asdict(issue_policies.max_processing_time_days)},
+)
+
 if notification_policy is Notify.GITHUB_ISSUES:
   create_or_update_github_issues(
     results_to_report=results_above_threshold,
@@ -153,6 +159,7 @@ if notification_policy is Notify.GITHUB_ISSUES:
 % if github_issue_labels_to_preserve:
     preserve_labels_regexes=${github_issue_labels_to_preserve},
 % endif
+    max_processing_days=max_processing_days,
     delivery_svc_endpoints=ccc.delivery.endpoints(cfg_set=cfg_set),
   )
   print(f'omitting email-sending, as notification-method was set to github-issues')

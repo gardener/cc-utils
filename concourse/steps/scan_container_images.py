@@ -52,23 +52,23 @@ logger = logging.getLogger()
 tabulate.htmlescape = lambda x: x
 
 
+def _latest_processing_date(
+    cve_score: float,
+    max_processing_days: image_scan.MaxProcessingTimesDays,
+):
+    return datetime.date.today() + datetime.timedelta(
+        days=max_processing_days.for_cve(cve_score=cve_score),
+    )
+
+
+@functools.cache
 def _target_sprint(
     delivery_svc_client: delivery.client.DeliveryServiceClient,
+    latest_processing_date: datetime.date,
 ):
-    today = datetime.date.today()
+    target_sprint = delivery_svc_client.sprint_current(before=latest_processing_date)
 
-    issue_freeze_offset = datetime.timedelta(days=-7)
-
-    current_sprint = delivery_svc_client.sprint_current()
-    issue_freeze_date =  current_sprint.release_decision + issue_freeze_offset
-
-    if today < issue_freeze_date:
-        return current_sprint
-
-    # issues that are found "shortly" before release-decision are assigned to next sprint's milestone
-    next_sprint = delivery_svc_client.sprint_current(offset=+1)
-
-    return next_sprint
+    return target_sprint
 
 
 @functools.cache
@@ -166,6 +166,7 @@ def create_or_update_github_issues(
     results_to_report: typing.Sequence[pm.BDBA_ScanResult],
     results_to_discard: typing.Sequence[pm.BDBA_ScanResult],
     preserve_labels_regexes: typing.Iterable[str],
+    max_processing_days: image_scan.MaxProcessingTimesDays,
     issue_tgt_repo_url: str=None,
     github_issue_template_cfg: image_scan.GithubIssueTemplateCfg=None,
     delivery_svc_endpoints: model.delivery.DeliveryEndpointsCfg=None,
@@ -191,11 +192,6 @@ def create_or_update_github_issues(
         )
     else:
         delivery_svc_client = ccc.delivery.default_client_if_available()
-
-    if delivery_svc_client:
-        target_sprint = _target_sprint(delivery_svc_client=delivery_svc_client)
-    else:
-        target_sprint = None
 
     # workaround / hack:
     # we map findings to <component-name>:<resource-name>
@@ -280,6 +276,13 @@ def create_or_update_github_issues(
                 assignees = tuple((u.username for u in assignees if user_is_active(u.username)))
 
                 try:
+                    target_sprint = _target_sprint(
+                        delivery_svc_client=delivery_svc_client,
+                        latest_processing_date=_latest_processing_date(
+                            cve_score=greatest_cve_score,
+                            max_processing_days=max_processing_days,
+                        ),
+                    )
                     target_milestone = _target_milestone(
                         repo=repository,
                         sprint=target_sprint,
