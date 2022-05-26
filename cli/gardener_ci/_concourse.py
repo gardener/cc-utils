@@ -151,12 +151,24 @@ def render_pipelines(
         for org in job_mapping.github_organisations():
             yield org.org_name()
 
+    def remove_org_names(job_mapping, org: str):
+        gh_orgs = {
+            ghorg.name(): ghorg.raw
+            for ghorg in job_mapping.github_organisations()
+            if ghorg.org_name() == org
+        }
+
+        job_mapping.raw['github_orgs'] = gh_orgs
+
     def_enumerators = []
     for job_mapping in job_mapping_set.job_mappings().values():
         job_mapping: ccm.JobMapping
 
         if org and not org in org_names(job_mapping):
             continue
+
+        if org:
+            remove_org_names(job_mapping, org)
 
         def_enumerators.append(
             GithubOrganisationDefinitionEnumerator(
