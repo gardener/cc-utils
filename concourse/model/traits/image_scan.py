@@ -328,7 +328,7 @@ ATTRIBUTES = (
     ),
     AttributeSpec.optional(
         name='licenses',
-        default=[],
+        default=None,
         doc='''\
             if present, license checks will be done using available scanners (currently, this is
             only implemented for "protecode" / BDBA)
@@ -400,7 +400,7 @@ class ImageScanTrait(Trait, ImageFilterMixin):
             return OsIdScan(raw_dict=raw)
 
     def licenses(self) -> typing.Optional[LicenseCfg]:
-        if (raw := self.get('licences')):
+        if (raw := self.raw.get('licences')):
             return dacite.from_dict(
                 data_class=LicenseCfg,
                 data=raw,
