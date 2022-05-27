@@ -7,31 +7,21 @@ from makoutil import indent_func
 from concourse.steps import step_lib
 import dataclasses
 
-main_repo = job_variant.main_repository()
-repo_name = main_repo.logical_name().upper()
-
 image_scan_trait = job_variant.trait('image_scan')
 issue_policies = image_scan_trait.issue_policies()
 protecode_scan = image_scan_trait.protecode()
 clam_av = image_scan_trait.clam_av()
 
 filter_cfg = image_scan_trait.filters()
-component_trait = job_variant.trait('component_descriptor')
 
 issue_tgt_repo_url = image_scan_trait.overwrite_github_issues_tgt_repository_url()
 github_issue_template = image_scan_trait.github_issue_template(type='vulnerabilities/bdba')
 github_issue_labels_to_preserve = image_scan_trait.github_issue_labels_to_preserve()
 %>
-import functools
 import logging
-import os
 import sys
-import tabulate
-import textwrap
 
 import dacite
-
-import gci.componentmodel as cm
 
 # debugging (dump stacktrace on error-signals)
 import faulthandler
@@ -39,15 +29,9 @@ faulthandler.enable() # print stacktraces upon fatal signals
 # end of debugging block
 
 import ci.log
-try:
-  ci.log.configure_default_logging()
-except:
-  pass
+ci.log.configure_default_logging()
 import ci.util
 import concourse.model.traits.image_scan as image_scan
-import cnudie.retrieve
-import mailutil
-import product.util
 import protecode.util
 
 
