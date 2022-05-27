@@ -83,7 +83,7 @@ print_protecode_info_table(
   exclude_component_names=${filter_cfg.exclude_component_names()},
 )
 
-cve_threshold = '${protecode_scan.cve_threshold()}'
+cve_threshold = ${protecode_scan.cve_threshold()}
 
 logger.info('running protecode scan for all components')
 results = protecode.util.upload_grouped_images(
