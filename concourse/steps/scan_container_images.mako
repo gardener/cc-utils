@@ -14,6 +14,8 @@ clam_av = image_scan_trait.clam_av()
 
 filter_cfg = image_scan_trait.filters()
 
+license_cfg = image_scan_trait.licenses()
+
 issue_tgt_repo_url = image_scan_trait.overwrite_github_issues_tgt_repository_url()
 github_issue_template = image_scan_trait.github_issue_template(type='vulnerabilities/bdba')
 github_issue_labels_to_preserve = image_scan_trait.github_issue_labels_to_preserve()
@@ -93,15 +95,16 @@ results = protecode.util.upload_grouped_images(
   image_reference_filter=filter_function,
   cvss_version = CVSSVersion('${protecode_scan.cvss_version().value}'),
 )
-logger.info('preparing license report for protecode results')
-print_license_report(license_report)
 
-allowed_licenses = ${protecode_scan.allowed_licenses()}
-prohibited_licenses = ${protecode_scan.prohibited_licenses()}
-
-updated_license_report = list(
-  determine_rejected_licenses(license_report, allowed_licenses, prohibited_licenses)
+% if license_cfg:
+license_cfg = dacite.from_dict(
+  data_class=image_scan.LicenseCfg,
+  data=${dataclasses.asdict(license_cfg)},
 )
+% else:
+license_cfg = None
+% endif
+
 
 # only include results below threshold if email recipients are explicitly configured
 notification_policy = Notify('${image_scan_trait.notify().value}')
@@ -141,6 +144,7 @@ if notification_policy is Notify.GITHUB_ISSUES:
     cve_threshold=cve_threshold,
     max_processing_days=max_processing_days,
     delivery_svc_endpoints=ccc.delivery.endpoints(cfg_set=cfg_set),
+    license_cfg=license_cfg,
   )
   print(f'omitting email-sending, as notification-method was set to github-issues')
   sys.exit(0)
