@@ -169,7 +169,7 @@ def upload_grouped_images(
             license_data = [
                 upload_result_to_license_data(
                     upload_result=result,
-                ) for result in relevant_results + results_below_threshold
+                ) for result in results
             ]
             for data in cve_data + license_data:
                 delivery_client.upload_metadata(data=data)

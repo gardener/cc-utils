@@ -83,6 +83,8 @@ print_protecode_info_table(
   exclude_component_names=${filter_cfg.exclude_component_names()},
 )
 
+cve_threshold = '${protecode_scan.cve_threshold()}'
+
 logger.info('running protecode scan for all components')
 results = protecode.util.upload_grouped_images(
   protecode_cfg=protecode_cfg,
@@ -91,7 +93,7 @@ results = protecode.util.upload_grouped_images(
   reference_group_ids = ${protecode_scan.reference_protecode_group_ids()},
   processing_mode = ProcessingMode('${protecode_scan.processing_mode().value}'),
   parallel_jobs=${protecode_scan.parallel_jobs()},
-  cve_threshold=${protecode_scan.cve_threshold()},
+  cve_threshold=cve_threshold,
   image_reference_filter=filter_function,
   cvss_version = CVSSVersion('${protecode_scan.cvss_version().value}'),
 )
