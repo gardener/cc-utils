@@ -15,6 +15,7 @@
 
 import dataclasses
 import enum
+import re
 import typing
 
 import dacite
@@ -218,6 +219,16 @@ class LicenseCfg:
     licenses are configured as lists of regular expressions (matching is done case-insensitive)
     '''
     prohibited_licenses: typing.Optional[list[str]] = None
+
+    def is_allowed(self, license: str):
+        if not self.prohibited_licenses:
+            return True
+
+        for prohibited in self.prohibited_licenses:
+            if re.fullmatch(prohibited, license, re.IGNORECASE):
+                return False
+        else:
+            return True
 
 
 @dataclasses.dataclass(frozen=True)
