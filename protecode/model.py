@@ -273,5 +273,6 @@ class BDBA_ScanResult:
     status: UploadStatus
     component: cm.Component
     result: AnalysisResult
+    licenses: set[License]
     resource: cm.Resource = None
     greatest_cve_score: float = None

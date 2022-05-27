@@ -36,13 +36,11 @@ import ccc.github
 import ci.util
 import cnudie.util
 import concourse.model.traits.image_scan as image_scan
-import concourse.util
 import delivery.client
 import delivery.model
 import github.compliance.issue
 import github.compliance.milestone
 import model.delivery
-import reutil
 import saf.model
 import protecode.model as pm
 
@@ -163,15 +161,16 @@ def _compliance_status_summary(
 
 
 def create_or_update_github_issues(
-    results_to_report: typing.Sequence[pm.BDBA_ScanResult],
-    results_to_discard: typing.Sequence[pm.BDBA_ScanResult],
+    results: typing.Sequence[pm.BDBA_ScanResult],
+    cve_threshold: float,
     preserve_labels_regexes: typing.Iterable[str],
     max_processing_days: image_scan.MaxProcessingTimesDays,
     issue_tgt_repo_url: str=None,
     github_issue_template_cfg: image_scan.GithubIssueTemplateCfg=None,
     delivery_svc_endpoints: model.delivery.DeliveryEndpointsCfg=None,
+    license_cfg: image_scan.LicenseCfg=None,
 ):
-    logger.info(f'{len(results_to_report)=}, {len(results_to_discard)=}')
+    logger.info(f'{len(results)=}')
 
     if issue_tgt_repo_url:
         gh_api = ccc.github.github_api(repo_url=issue_tgt_repo_url)
@@ -198,6 +197,9 @@ def create_or_update_github_issues(
     # tickets. For the time being, this should be "good enough"
     def to_component_resource_name(result):
         return f'{result.component.name}:{result.resource.name}'
+
+    results_to_report = [r for r in results if r.greatest_cve_score >= cve_threshold]
+    results_to_discard = [r for r in results if r.greatest_cve_score < cve_threshold]
 
     reported_component_resource_names = {
         to_component_resource_name(result) for result in results_to_report
@@ -393,53 +395,6 @@ def create_or_update_github_issues(
         raise ValueError('not all gh-issues could be created/updated/deleted')
 
 
-def print_license_report(license_report):
-    def to_table_row(upload_result, licenses):
-        component_name = upload_result.result.display_name()
-        license_names = {license.name() for license in licenses}
-        license_names_str = ', '.join(license_names)
-        yield (component_name, license_names_str)
-
-    license_lines = [
-        to_table_row(upload_result, licenses)
-        for upload_result, licenses in license_report
-    ]
-    print(tabulate.tabulate(
-        license_lines,
-        headers=('Component Name', 'Licenses'),
-        )
-    )
-
-    return license_lines
-
-
-def determine_rejected_licenses(license_report, allowed_licenses, prohibited_licenses):
-    accepted_filter_func = reutil.re_filter(
-        include_regexes=allowed_licenses or (),
-        exclude_regexes=prohibited_licenses or (),
-    )
-
-    prohibited_filter_func = reutil.re_filter(
-        include_regexes=prohibited_licenses or (),
-    )
-
-    for upload_result, licenses in license_report:
-        all_licenses = set(licenses)
-
-        accepted_licenses = {l for l in all_licenses if accepted_filter_func(l.name())}
-
-        # The filter will always return true if its 'prohibited_licenses' is an empty collection.
-        if prohibited_licenses:
-            rejected_licenses = {l for l in all_licenses if prohibited_filter_func(l.name())}
-        else:
-            rejected_licenses = set()
-
-        unclassified_licenses = all_licenses - (accepted_licenses | rejected_licenses)
-
-        if rejected_licenses or unclassified_licenses:
-            yield upload_result, rejected_licenses, unclassified_licenses
-
-
 def print_protecode_info_table(
     protecode_group_url: str,
     protecode_group_id: int,
@@ -466,27 +421,6 @@ def print_protecode_info_table(
         ('Component name filter (exclude)', exclude_component_names),
     )
     print(tabulate.tabulate(entries, headers=headers))
-
-
-def retrieve_buildlog(uuid: str):
-    concourse_cfg = concourse.util._current_concourse_config()
-
-    pipeline_metadata = concourse.util.get_pipeline_metadata()
-    client = ccc.concourse.client_from_cfg_name(
-        concourse_cfg_name=concourse_cfg.name(),
-        team_name=pipeline_metadata.team_name,
-    )
-    build = concourse.util.find_own_running_build()
-    build_id = build.id()
-    task_id = client.build_plan(build_id=build_id).task_id(task_name='malware-scan')
-    build_events = client.build_events(build_id=build_id)
-
-    log = ''
-    for line in build_events.iter_buildlog(task_id=task_id):
-        log += f'{line}'
-        if uuid in line:
-            break
-    return log
 
 
 class EnumJSONEncoder(json.JSONEncoder):

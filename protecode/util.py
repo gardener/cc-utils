@@ -40,7 +40,6 @@ from protecode.scanning_util import (
     ProtecodeUtil,
 )
 from protecode.model import (
-    License,
     CVSSVersion,
 )
 
@@ -57,11 +56,9 @@ def upload_grouped_images(
     processing_mode=ProcessingMode.RESCAN,
     image_reference_filter=(lambda component, resource: True),
     reference_group_ids=(),
-    cvss_version=CVSSVersion.V2,
+    cvss_version=CVSSVersion.V3,
 ) -> tuple[
-    typing.Sequence[pm.BDBA_ScanResult], # results above threshold
-    typing.Sequence[pm.BDBA_ScanResult], # results below threshold
-    typing.Sequence[typing.Tuple[pm.BDBA_ScanResult, typing.Set[License]]], # license report
+    typing.Sequence[pm.BDBA_ScanResult],
 ]:
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
     protecode_api = ccc.protecode.client(protecode_cfg)
@@ -158,15 +155,7 @@ def upload_grouped_images(
         for result_set in results:
             yield from result_set
 
-    results = list(flatten_results())
-
-    logger.info('Preparing results')
-    relevant_results, results_below_threshold = filter_and_display_upload_results(
-        upload_results=results,
-        cvss_version=cvss_version,
-        cve_threshold=cve_threshold,
-        ignore_if_triaged=ignore_if_triaged,
-    )
+    results = tuple(flatten_results())
 
     if (delivery_client := ccc.delivery.default_client_if_available()):
         logger.info('uploading results to deliverydb')
@@ -175,7 +164,7 @@ def upload_grouped_images(
                 upload_result_to_cve_data(
                     upload_result=result,
                     greatest_cvss3_score=result.greatest_cve_score,
-                ) for result in relevant_results + results_below_threshold
+                ) for result in results
             ]
             license_data = [
                 upload_result_to_license_data(
@@ -190,29 +179,7 @@ def upload_grouped_images(
     else:
         logger.warning('not uploading results to deliverydb, client not available')
 
-    logger.info('Preparing license report')
-    _license_report = license_report(upload_results=results)
-
-    return (relevant_results, results_below_threshold, _license_report)
-
-
-def license_report(
-    upload_results: typing.Sequence[pm.BDBA_ScanResult],
-) -> typing.Sequence[typing.Tuple[pm.BDBA_ScanResult, typing.Set[License]]]:
-    def create_component_reports():
-        for upload_result in upload_results:
-            if isinstance(upload_result, pm.BDBA_ScanResult):
-                analysis_result = upload_result.result
-            else:
-                analysis_result = upload_result
-
-            licenses = {
-                component.license() for component in analysis_result.components()
-                if component.license()
-            }
-            yield (upload_result, licenses)
-
-    return list(create_component_reports())
+    return results
 
 
 def filter_and_display_upload_results(

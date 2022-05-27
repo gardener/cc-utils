@@ -82,7 +82,7 @@ print_protecode_info_table(
 )
 
 logger.info('running protecode scan for all components')
-results_above_threshold, results_below_threshold, license_report = protecode.util.upload_grouped_images(
+results = protecode.util.upload_grouped_images(
   protecode_cfg=protecode_cfg,
   protecode_group_id = protecode_group_id,
   component_descriptor = component_descriptor,
@@ -110,11 +110,7 @@ if notification_policy is Notify.NOBODY:
   print("Notification policy set to 'nobody', exiting")
   sys.exit(0)
 
-if all ((
-  not results_above_threshold,
-  not results_below_threshold,
-  not updated_license_report,
-)):
+if not results:
   print('nothing to report - early-exiting')
   sys.exit(0)
 
@@ -132,8 +128,7 @@ max_processing_days = dacite.from_dict(
 
 if notification_policy is Notify.GITHUB_ISSUES:
   create_or_update_github_issues(
-    results_to_report=results_above_threshold,
-    results_to_discard=results_below_threshold,
+    results=results,
 % if issue_tgt_repo_url:
     issue_tgt_repo_url='${issue_tgt_repo_url}',
 % endif
@@ -143,6 +138,7 @@ if notification_policy is Notify.GITHUB_ISSUES:
 % if github_issue_labels_to_preserve:
     preserve_labels_regexes=${github_issue_labels_to_preserve},
 % endif
+    cve_threshold=cve_threshold,
     max_processing_days=max_processing_days,
     delivery_svc_endpoints=ccc.delivery.endpoints(cfg_set=cfg_set),
   )

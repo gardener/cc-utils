@@ -436,6 +436,10 @@ class ProtecodeUtil:
             analysis_result = self._api.scan_result(protecode_product.product_id())
 
             component_resource = product_id_to_resource[protecode_product.product_id()]
+            licenses = {
+                component.license() for component in analysis_result.components()
+                if component.license()
+            }
 
             yield pm.BDBA_ScanResult(
                 component=component_resource.component,
@@ -443,6 +447,7 @@ class ProtecodeUtil:
                 result=analysis_result,
                 resource=component_resource.resource,
                 greatest_cve_score=analysis_result.greatest_cve_score(),
+                licenses=licenses,
             )
 
         # in rare cases, we fail to find (again) an existing product, but through naming-convention
