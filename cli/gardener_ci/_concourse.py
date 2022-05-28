@@ -39,6 +39,8 @@ from concourse.replicator import (
 import ccc.concourse
 import ci.log
 import concourse.model as ccm
+import model.concourse
+import model.github
 
 
 logger = logging.getLogger(__name__)
@@ -130,6 +132,7 @@ def render_pipelines(
     template_path: str=_template_path(),
     org: str=None, # if set, filter for org
     repo: str=None, # if set, filter for repo
+    host: str=None, # if set, filter for gh-host
 ):
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
@@ -151,11 +154,21 @@ def render_pipelines(
         for org in job_mapping.github_organisations():
             yield org.org_name()
 
-    def remove_org_names(job_mapping, org: str):
+    def remove_github_org_configs(job_mapping, org: str, host: str):
+        def want_gh_org(org_cfg: model.concourse.GithubOrganisationConfig):
+            if org and org_cfg.org_name() != org:
+                return False
+
+            gh_cfg: model.github.GithubConfig = cfg_factory.github(org_cfg.github_cfg_name())
+            if host and gh_cfg.hostname() != host:
+                return False
+
+            return True
+
         gh_orgs = {
             ghorg.name(): ghorg.raw
             for ghorg in job_mapping.github_organisations()
-            if ghorg.org_name() == org
+            if want_gh_org(ghorg)
         }
 
         job_mapping.raw['github_orgs'] = gh_orgs
@@ -167,8 +180,8 @@ def render_pipelines(
         if org and not org in org_names(job_mapping):
             continue
 
-        if org:
-            remove_org_names(job_mapping, org)
+        if org or host:
+            remove_github_org_configs(job_mapping, org, host)
 
         job_mappings.append(job_mapping)
 
