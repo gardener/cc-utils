@@ -125,11 +125,11 @@ def render_pipeline(
 
 
 def render_pipelines(
-        cfg_name: str,
-        out_dir: str,
-        template_path: str=_template_path(),
-        org: str=None, # if set, filter for org
-        repo: str=None, # if set, filter for repo
+    cfg_name: str,
+    out_dir: str,
+    template_path: str=_template_path(),
+    org: str=None, # if set, filter for org
+    repo: str=None, # if set, filter for repo
 ):
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
