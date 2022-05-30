@@ -48,6 +48,9 @@ logger = logging.getLogger()
 # monkeypatch: disable html escaping
 tabulate.htmlescape = lambda x: x
 
+_compliance_label_vulnerabilities = github.compliance.issue._label_bdba
+_compliance_label_licenses = github.compliance.issue._label_licenses
+
 
 def _latest_processing_date(
     cve_score: float,
@@ -122,6 +125,8 @@ def _compliance_status_summary(
     resources: cm.Resource,
     greatest_cve: str,
     report_urls: str,
+    issue_description: str,
+    issue_value: str,
 ):
     if isinstance(resources[0].type, enum.Enum):
         resource_type = resources[0].type.value
@@ -147,7 +152,7 @@ def _compliance_status_summary(
         | Resource  | {resources[0].name} |
         | {pluralise('Resource-Version', len(resources))}  | {resource_versions} |
         | Resource-Type | {resource_type} |
-        | Greatest CVSSv3 Score | **{greatest_cve}** |
+        | {issue_description} | **{issue_value}** |
 
         The aforementioned {pluralise(resource_type, len(resources))}, declared
         by the given content was found to contain potentially relevant vulnerabilities.
@@ -159,13 +164,76 @@ def _compliance_status_summary(
     return summary + '- ' + report_urls
 
 
+def _template_vars(
+    result_group: pm.BDBA_ScanResult_Group,
+    finding_callback: typing.Callable[[pm.BDBA_ScanResult], bool],
+    issue_type: str,
+    license_cfg: image_scan.LicenseCfg,
+    delivery_dashboard_url: str='',
+):
+    component = result_group.component
+    resource_name = result_group.resource_name
+
+    results = result_group.results_with_findings(finding_callback)
+    analysis_results = [r.result for r in results]
+
+    resource_versions = ', '.join((r.resource.version for r in results))
+    resource_types = ', '.join(set((r.resource.type.value for r in results)))
+
+    template_variables = {
+        'component_name': component.name,
+        'component_version': component.version,
+        'resource_name': resource_name,
+        'resource_version': resource_versions,
+        'resource_type': resource_types,
+        'delivery_dashboard_url': delivery_dashboard_url,
+    }
+
+    if issue_type == _compliance_label_vulnerabilities:
+        template_variables['summary'] = _compliance_status_summary(
+            component=component,
+            resources=resources,
+            issue_value=greatest_cve,
+            issue_description='Greatest CVE Score',
+            report_urls=[ar.report_url() for ar in analysis_results],
+        )
+        greatest_cve = max((r.greatest_cve_score for r in results))
+        template_variables['greatest_cve'] = greatest_cve
+        template_variables['criticality_classification'] = _criticality_classification(
+            cve_score=greatest_cve
+        )
+    elif issue_type == _compliance_label_licenses:
+        prohibited_licenses = set()
+        all_licenses = set()
+
+        for r in results:
+            all_licenses |= r.license_names
+
+        for license_name in all_licenses:
+            if not license_cfg.is_allowed(license_name):
+                prohibited_licenses.add(license_name)
+
+        template_variables['summary'] = _compliance_status_summary(
+            component=component,
+            resources=resources,
+            issue_value=' ,'.join(prohibited_licenses),
+            issue_description='Prohibited Licenses',
+            report_urls=[ar.report_url() for ar in analysis_results],
+        )
+        template_variables['criticality_classification'] = 'critical'
+    else:
+        raise NotImplementedError(issue_type)
+
+    return template_variables
+
+
 def create_or_update_github_issues(
     results: typing.Sequence[pm.BDBA_ScanResult],
     cve_threshold: float,
     preserve_labels_regexes: typing.Iterable[str],
     max_processing_days: image_scan.MaxProcessingTimesDays,
     issue_tgt_repo_url: str=None,
-    github_issue_template_cfg: image_scan.GithubIssueTemplateCfg=None,
+    github_issue_template_cfgs: list[image_scan.GithubIssueTemplateCfg]=None,
     delivery_svc_endpoints: model.delivery.DeliveryEndpointsCfg=None,
     license_cfg: image_scan.LicenseCfg=None,
 ):
@@ -198,16 +266,44 @@ def create_or_update_github_issues(
 
     has_cve = lambda r: r.greatest_cve_score >= cve_threshold
 
+    def has_prohibited_licenses(result: pm.BDBA_ScanResult):
+        for license in result.licenses:
+            if not license_cfg.is_allowed(license.name()):
+                return True
+        else:
+            return False
+
     result_groups_with_cve = [rg for rg in result_groups if rg.has_findings(has_cve)]
     result_groups_without_cve = [rg for rg in result_groups if not rg.has_findings(has_cve)]
 
+    result_groups_with_prohibited_licenes = [
+        rg for rg in result_groups if rg.has_findings(has_prohibited_licenses)
+    ]
+    result_groups_without_prohibited_licenes = [
+        rg for rg in result_groups if not rg.has_findings(has_prohibited_licenses)
+    ]
+
     err_count = 0
 
-    def process_result(results: pm.BDBA_ScanResult, action:str):
+    def process_result(
+        result_group: pm.BDBA_ScanResult_Group,
+        finding_callback: typing.Callable[[pm.BDBA_ScanResult], bool],
+        action: str,
+        issue_type: str,
+    ):
         nonlocal gh_api
         nonlocal err_count
 
-        greatest_cve = max(results, key=lambda r: r.greatest_cve_score).greatest_cve_score
+        if action == 'discard':
+            results = result_group.results_without_findings(finding_callback)
+        elif action == 'report':
+            results = result_group.results_with_findings(finding_callback)
+
+        if issue_type == _compliance_label_vulnerabilities:
+            greatest_cve = max(results, key=lambda r: r.greatest_cve_score).greatest_cve_score
+            criticality_classification = _criticality_classification(cve_score=greatest_cve)
+        elif issue_type == _compliance_label_licenses:
+            criticality_classification = 'critical'
 
         if not len({r.component.name for r in results}) == 1:
             raise ValueError('not all component names are identical')
@@ -237,6 +333,7 @@ def create_or_update_github_issues(
                 component=component,
                 resource=resource,
                 repository=repository,
+                issue_type=issue_type,
             )
             logger.info(f'closed (if existing) gh-issue for {component.name=} {resource.name=}')
         elif action == 'report':
@@ -262,12 +359,20 @@ def create_or_update_github_issues(
                 assignees = tuple((u.username for u in assignees if user_is_active(u.username)))
 
                 try:
-                    target_sprint = _target_sprint(
-                        delivery_svc_client=delivery_svc_client,
-                        latest_processing_date=_latest_processing_date(
+                    if issue_type == _compliance_label_vulnerabilities:
+                        latest_processing_date = _latest_processing_date(
                             cve_score=greatest_cve,
                             max_processing_days=max_processing_days,
-                        ),
+                        )
+                    elif issue_type == _compliance_label_licenses:
+                        # license issues are always "release-blockers"
+                        latest_processing_date = datetime.date.today()
+                    else:
+                        raise NotImplementedError(issue_type)
+
+                    target_sprint = _target_sprint(
+                        delivery_svc_client=delivery_svc_client,
+                        latest_processing_date=latest_processing_date,
                     )
                     target_milestone = _target_milestone(
                         repo=repository,
@@ -294,29 +399,22 @@ def create_or_update_github_issues(
             else:
                 delivery_dashboard_url = ''
 
-            criticality_classification = _criticality_classification(cve_score=greatest_cve)
+            template_variables = _template_vars(
+                result_group=result_group,
+                finding_callback=finding_callback,
+                issue_type=issue_type,
+                license_cfg=license_cfg,
+                delivery_dashboard_url=delivery_dashboard_url,
+            )
 
-            template_variables = {
-                'summary': _compliance_status_summary(
-                    component=component,
-                    resources=resources,
-                    greatest_cve=greatest_cve,
-                    report_urls=[ar.report_url() for ar in analysis_results],
-                ),
-                'component_name': component.name,
-                'component_version': component.version,
-                'resource_name': resource.name,
-                'resource_version': resource.version,
-                'resource_type': resource_type,
-                'greatest_cve': greatest_cve,
-                'criticality_classification': criticality_classification,
-                'bdba_report_url': analysis_res.report_url(),
-                'report_url': analysis_res.report_url(),
-                'delivery_dashboard_url': delivery_dashboard_url,
-            }
+            if github_issue_template_cfgs:
+                for isuse_cfg in github_issue_template_cfgs:
+                    if issue_cfg.type == issue_type:
+                        break
+                else:
+                    raise ValueError(f'no template for {issue_type=}')
 
-            if github_issue_template_cfg and (body := github_issue_template_cfg.body):
-                body = body.format(**template_variables)
+                body = issue_cfg.body.format(**template_variables)
             else:
                 body = textwrap.dedent(f'''\
                     # Compliance Status Summary
@@ -353,6 +451,7 @@ def create_or_update_github_issues(
                 github.compliance.issue.create_or_update_issue(
                     component=component,
                     resource=resource,
+                    issue_type=issue_type,
                     repository=repository,
                     body=body,
                     assignees=assignees,
@@ -367,16 +466,41 @@ def create_or_update_github_issues(
                 logger.warning('error whilst trying to create or update issue - will keep going')
                 logger.warning(f'error: {ghe} {ghe.code=} {ghe.message()=}')
 
-            logger.info(f'updated gh-issue for {component.name=} {resource.name=}')
+            logger.info(f'updated gh-issue for {component.name=} {resource.name=} {issue_type=}')
         else:
             raise NotImplementedError(action)
 
     for result_group in result_groups_with_cve:
-        process_result(results=result_group.results_with_findings(has_cve), action='report')
+        process_result(
+            result_group=result_group,
+            finding_callback=has_cve,
+            action='report',
+            issue_type=_compliance_label_vulnerabilities,
+        )
+
+    for result_group in result_groups_with_prohibited_licenes:
+        process_result(
+            result_group=result_group,
+            finding_callback=has_prohibited_licenses,
+            action='report',
+            issue_type=_compliance_label_licenses,
+        )
 
     for result_group in result_groups_without_cve:
-        for result in result_group.results:
-            process_result(results=(result,), action='discard')
+        process_result(
+            result_group=result_group,
+            finding_callback=has_cve,
+            action='discard',
+            issue_type=_compliance_label_vulnerabilities,
+        )
+
+    for result_group in result_groups_without_prohibited_licenes:
+        process_result(
+            result_group=result_group,
+            finding_callback=has_prohibited_licenses,
+            action='discard',
+            issue_type=_compliance_label_licenses,
+        )
 
     if err_count > 0:
         logger.warning(f'{err_count=} - there were errors - will raise')

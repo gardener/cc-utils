@@ -17,7 +17,7 @@ filter_cfg = image_scan_trait.filters()
 license_cfg = image_scan_trait.licenses()
 
 issue_tgt_repo_url = image_scan_trait.overwrite_github_issues_tgt_repository_url()
-github_issue_template = image_scan_trait.github_issue_template(type='vulnerabilities/bdba')
+github_issue_templates = image_scan_trait.github_issue_templates()
 github_issue_labels_to_preserve = image_scan_trait.github_issue_labels_to_preserve()
 %>
 import logging
@@ -119,11 +119,12 @@ if not results:
   print('nothing to report - early-exiting')
   sys.exit(0)
 
-% if github_issue_template:
-github_issue_template_cfg = dacite.from_dict(
-  data_class=image_scan.GithubIssueTemplateCfg,
-  data=${dataclasses.asdict(github_issue_template)},
-)
+% if github_issue_templates:
+github_issue_template_cfgs = [dacite.from_dict(
+    data_class=image_scan.GithubIssueTemplateCfg,
+    data=raw
+    ) for raw in ${[dataclasses.asdict(ghit) for ghit in github_issue_templates]},
+]
 % endif
 
 max_processing_days = dacite.from_dict(
@@ -137,8 +138,8 @@ if notification_policy is Notify.GITHUB_ISSUES:
 % if issue_tgt_repo_url:
     issue_tgt_repo_url='${issue_tgt_repo_url}',
 % endif
-% if github_issue_template:
-    github_issue_template_cfg=github_issue_template_cfg,
+% if github_issue_templates:
+    github_issue_template_cfgs=github_issue_template_cfgs,
 % endif
 % if github_issue_labels_to_preserve:
     preserve_labels_regexes=${github_issue_labels_to_preserve},

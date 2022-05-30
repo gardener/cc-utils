@@ -375,7 +375,7 @@ class ImageScanTrait(Trait, ImageFilterMixin):
     def overwrite_github_issues_tgt_repository_url(self) -> typing.Optional[str]:
         return self.raw.get('overwrite_github_issues_tgt_repository_url')
 
-    def github_issue_template(self, type: str) -> typing.Optional[GithubIssueTemplateCfg]:
+    def github_issue_templates(self) -> list[GithubIssueTemplateCfg]:
         if not (raw := self.raw.get('github_issue_templates')):
             return None
 
@@ -385,6 +385,12 @@ class ImageScanTrait(Trait, ImageFilterMixin):
                 data=cfg,
             ) for cfg in raw
         ]
+
+        return template_cfgs
+
+    def github_issue_template(self, type: str) -> typing.Optional[GithubIssueTemplateCfg]:
+        if not (template_cfgs := self.github_issue_templates()):
+            return None
 
         for cfg in template_cfgs:
             if cfg.type == type:

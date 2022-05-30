@@ -277,11 +277,30 @@ class BDBA_ScanResult:
     resource: cm.Resource = None
     greatest_cve_score: float = None
 
+    @property
+    def license_names(self):
+        return {l.name() for l in self.licenses}
+
 
 @dataclasses.dataclass
 class BDBA_ScanResult_Group:
     name: str # {component.name}:{resource.name}
     results: list[BDBA_ScanResult]
+
+    @property
+    def component(self) -> cm.Component:
+        # results in result-groups must always have identical components
+        results[0].component
+
+    @property
+    def resource_name(self) -> str:
+        # results in resource-groups must always have identical resourcen-names
+        results[0].resource.name
+
+    @property
+    def resource_type(self) -> str:
+        # results in resource-groups must always have identical resourcen-names
+        results[0].resource.type.value
 
     def has_findings(
         self,
