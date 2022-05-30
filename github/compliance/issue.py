@@ -256,4 +256,4 @@ def close_issue_if_present(
         if not succ:
             logger.warning(f'failed to close {issue.id=}, {repository.url=}')
 
-    return succ
+    return issue
