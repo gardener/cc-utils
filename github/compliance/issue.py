@@ -170,6 +170,7 @@ def create_or_update_issue(
         enumerate_issues(
             component=component,
             resource=resource,
+            issue_type=issue_type,
             repository=repository,
             state='open',
         )
@@ -233,6 +234,7 @@ def close_issue_if_present(
         enumerate_issues(
             component=component,
             resource=resource,
+            issue_type=issue_type,
             repository=repository,
             state='open',
         )
