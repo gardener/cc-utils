@@ -78,7 +78,8 @@ def enumerate_issues(
 
     for issue in repository.issues(state=state, labels=labels):
         issue_labels = set((l.name for l in issues.labels()))
-        if not issue_labels == set(labels):
+        # workaround: skip if - even though we requested this - not all requested labels are present
+        if not issue_labels & set(labels) == issue_labels:
             continue
         yield issue
 
