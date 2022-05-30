@@ -63,18 +63,22 @@ def enumerate_issues(
     component: cm.Component,
     resource: cm.Resource,
     repository: github3.repos.Repository,
+    issue_type: str,
     state=None, # 'open' | 'closed'
-    issue_type=_label_bdba,
 ) -> typing.Generator[github3.issues.ShortIssue, None, None]:
+    labels = tuple(
+        repository_labels(
+            component=component,
+            resource=resource,
+            issue_type=issue_type,
+        ),
+    )
+
+    logger.info(f'enumerating issues with {labels=}')
+
     return repository.issues(
         state=state,
-        labels=tuple(
-            repository_labels(
-                component=component,
-                resource=resource,
-                issue_type=issue_type,
-            ),
-        ),
+        labels=labels,
     )
 
 
