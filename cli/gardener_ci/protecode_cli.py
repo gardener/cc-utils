@@ -21,6 +21,7 @@ def scan_without_notification(
     parallel_jobs: int=2,
     processing_mode: str='rescan',
     cve_threshold: float=7.0,
+    protecode_api_url=None,
     allowed_licenses: typing.List[str] = [],
     prohibited_licenses: typing.List[str] = [],
     reference_protecode_group_ids: typing.List[int] = [],
