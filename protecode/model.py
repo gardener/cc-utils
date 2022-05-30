@@ -290,17 +290,17 @@ class BDBA_ScanResult_Group:
     @property
     def component(self) -> cm.Component:
         # results in result-groups must always have identical components
-        self.results[0].component
+        return self.results[0].component
 
     @property
     def resource_name(self) -> str:
         # results in resource-groups must always have identical resourcen-names
-        self.results[0].resource.name
+        return self.results[0].resource.name
 
     @property
     def resource_type(self) -> str:
         # results in resource-groups must always have identical resourcen-names
-        self.results[0].resource.type.value
+        return self.results[0].resource.type.value
 
     def has_findings(
         self,
