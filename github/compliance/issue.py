@@ -229,7 +229,7 @@ def close_issue_if_present(
     component: cm.Component,
     resource: cm.Resource,
     repository: github3.repos.Repository,
-    issue_type: str=_label_bdba,
+    issue_type: str,
 ):
     open_issues = tuple(
         enumerate_issues(
@@ -240,6 +240,8 @@ def close_issue_if_present(
             state='open',
         )
     )
+
+    logger.info(f'{len(open_issues)=} found for closing {open_issues=}')
 
     if (issues_count := len(open_issues)) > 1:
         logger.warning(f'more than one open issue found for {component.name=}{resource=}')
