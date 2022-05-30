@@ -64,7 +64,7 @@ def github_api_ctor(
 
     session = github3.session.GitHubSession()
     session_adapter = SessionAdapter(session_adapter)
-    if session_adapter is SessionAdapter.NONE:
+    if session_adapter is SessionAdapter.NONE or not session_adapter:
         pass
     elif session_adapter is SessionAdapter.RETRY:
         session = http_requests.mount_default_adapter(
