@@ -76,10 +76,11 @@ def enumerate_issues(
 
     logger.info(f'enumerating issues with {labels=}')
 
-    return repository.issues(
-        state=state,
-        labels=labels,
-    )
+    for issue in repository.issues(state=state, labels=labels):
+        issue_labels = set((l.name for l in issues.labels()))
+        if not issue_labels == set(labels):
+            continue
+        yield issue
 
 
 def _create_issue(
