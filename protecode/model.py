@@ -281,7 +281,7 @@ class BDBA_ScanResult:
 @dataclasses.dataclass
 class BDBA_ScanResult_Group:
     name: str # {component.name}:{resource.name}
-    results: set[BDBA_ScanResult]
+    results: list[BDBA_ScanResult]
 
     def has_findings(
         self,
@@ -315,9 +315,9 @@ def group_scan_results(results: typing.Iterable[BDBA_ScanResult]) -> tuple[BDBA_
         if not group_name in result_groups:
             result_groups[group_name] = BDBA_ScanResult_Group(
                 name=group_name,
-                results=set()
+                results=list()
             )
         result_group = result_groups[group_name]
-        result_group.results.add(result)
+        result_group.results.append(result)
 
     return tuple(result_groups.values())
