@@ -123,7 +123,7 @@ if not results:
 github_issue_template_cfgs = [dacite.from_dict(
     data_class=image_scan.GithubIssueTemplateCfg,
     data=raw
-    ) for raw in ${[dataclasses.asdict(ghit) for ghit in github_issue_templates]},
+    ) for raw in ${[dataclasses.asdict(ghit) for ghit in github_issue_templates]}
 ]
 % endif
 
