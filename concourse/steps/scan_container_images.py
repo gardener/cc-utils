@@ -123,7 +123,6 @@ def _criticality_label(classification: str):
 def _compliance_status_summary(
     component: cm.Component,
     resources: cm.Resource,
-    greatest_cve: str,
     report_urls: str,
     issue_description: str,
     issue_value: str,
@@ -173,6 +172,7 @@ def _template_vars(
 ):
     component = result_group.component
     resource_name = result_group.resource_name
+    resources = [res.resource for res in result_group.results]
 
     results = result_group.results_with_findings(finding_callback)
     analysis_results = [r.result for r in results]
@@ -190,6 +190,7 @@ def _template_vars(
     }
 
     if issue_type == _compliance_label_vulnerabilities:
+        greatest_cve = max((r.greatest_cve_score for r in results))
         template_variables['summary'] = _compliance_status_summary(
             component=component,
             resources=resources,
@@ -197,7 +198,6 @@ def _template_vars(
             issue_description='Greatest CVE Score',
             report_urls=[ar.report_url() for ar in analysis_results],
         )
-        greatest_cve = max((r.greatest_cve_score for r in results))
         template_variables['greatest_cve'] = greatest_cve
         template_variables['criticality_classification'] = _criticality_classification(
             cve_score=greatest_cve
@@ -408,7 +408,7 @@ def create_or_update_github_issues(
             )
 
             if github_issue_template_cfgs:
-                for isuse_cfg in github_issue_template_cfgs:
+                for issue_cfg in github_issue_template_cfgs:
                     if issue_cfg.type == issue_type:
                         break
                 else:
