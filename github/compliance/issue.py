@@ -245,13 +245,16 @@ def close_issue_if_present(
         )
     )
 
-    logger.info(f'{len(open_issues)=} found for closing {open_issues=}')
+    logger.info(f'{len(open_issues)=} found for closing {open_issues=} {issue_type=}')
 
     if (issues_count := len(open_issues)) > 1:
         logger.warning(f'more than one open issue found for {component.name=}{resource=}')
     elif issues_count == 0:
         logger.info(f'no open issue found for {component.name=}{resource.name=}')
         return # nothing to do
+
+    open_issue = open_issues[0]
+    logger.info(f'labels for issue for closing: {[l.name for l in open_issue.labels()]}')
 
     succ = True
 
