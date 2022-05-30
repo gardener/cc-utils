@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import collections
 import dataclasses
 import datetime
 import enum
@@ -195,24 +194,12 @@ def create_or_update_github_issues(
     # -> do not close tickets in this case.
     # a cleaner approach would be to create seperate tickets, or combine findings into shared
     # tickets. For the time being, this should be "good enough"
-    def to_component_resource_name(result):
-        return f'{result.component.name}:{result.resource.name}'
+    result_groups = pm.group_scan_results(results=results)
 
-    results_to_report = [r for r in results if r.greatest_cve_score >= cve_threshold]
-    results_to_discard = [r for r in results if r.greatest_cve_score < cve_threshold]
+    has_cve = lambda r: r.greatest_cve_score >= cve_threshold
 
-    reported_component_resource_names = {
-        to_component_resource_name(result) for result in results_to_report
-    }
-
-    results_to_discard = [
-        result for result in results_to_discard
-        if to_component_resource_name(result) not in reported_component_resource_names
-    ]
-
-    grouped_results_to_report = collections.defaultdict(list)
-    for result in results_to_report:
-        grouped_results_to_report[to_component_resource_name(result)].append(result)
+    result_groups_with_cve = [rg for rg in result_groups if rg.has_findings(has_cve)]
+    result_groups_without_cve = [rg for rg in result_groups if not rg.has_findings(has_cve)]
 
     err_count = 0
 
@@ -384,11 +371,12 @@ def create_or_update_github_issues(
         else:
             raise NotImplementedError(action)
 
-    for results in grouped_results_to_report.values():
-        process_result(results=results, action='report')
+    for result_group in result_groups_with_cve:
+        process_result(results=result_group.results_with_findings(has_cve), action='report')
 
-    for result in results_to_discard:
-        process_result(results=(result,), action='discard')
+    for result_group in result_groups_without_cve:
+        for result in result_group.results:
+            process_result(results=(result,), action='discard')
 
     if err_count > 0:
         logger.warning(f'{err_count=} - there were errors - will raise')

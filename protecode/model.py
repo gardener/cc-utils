@@ -276,3 +276,48 @@ class BDBA_ScanResult:
     licenses: set[License]
     resource: cm.Resource = None
     greatest_cve_score: float = None
+
+
+@dataclasses.dataclass
+class BDBA_ScanResult_Group:
+    name: str # {component.name}:{resource.name}
+    results: set[BDBA_ScanResult]
+
+    def has_findings(
+        self,
+        finding_callback: typing.Callable[[BDBA_ScanResult], bool],
+    ):
+        for r in self.results:
+            if finding_callback(r):
+                return True
+        else:
+            return False
+
+    def results_with_findings(
+        self,
+        finding_callback: typing.Callable[[BDBA_ScanResult], bool],
+    ):
+        return [r for r in self.results if finding_callback(r)]
+
+    def results_without_findings(
+        self,
+        finding_callback: typing.Callable[[BDBA_ScanResult], bool],
+    ):
+        return [r for r in self.results if not finding_callback(r)]
+
+
+def group_scan_results(results: typing.Iterable[BDBA_ScanResult]) -> tuple[BDBA_ScanResult_Group]:
+    result_groups = dict()
+
+    for result in results:
+        group_name = f'{result.component.name}:{result.resource.name}'
+
+        if not group_name in result_groups:
+            result_groups[group_name] = BDBA_ScanResult_Group(
+                name=group_name,
+                results=set()
+            )
+        result_group = result_groups[group_name]
+        result_group.results.add(result)
+
+    return tuple(result_groups.values())
