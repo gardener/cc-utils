@@ -77,7 +77,7 @@ def enumerate_issues(
     logger.info(f'enumerating issues with {labels=}')
 
     for issue in repository.issues(state=state, labels=labels):
-        issue_labels = set((l.name for l in issues.labels()))
+        issue_labels = set((l.name for l in issue.labels()))
         # workaround: skip if - even though we requested this - not all requested labels are present
         if not issue_labels & set(labels) == issue_labels:
             continue
