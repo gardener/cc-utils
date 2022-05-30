@@ -703,13 +703,18 @@ class ProtecodeProcessor:
             analysis_result = self._api.scan_result(protecode_product.product_id())
 
             component_resource = self.product_id_to_resource[protecode_product.product_id()]
+            licenses = {
+                component.license() for component in analysis_result.components()
+                if component.license()
+            }
 
             yield pm.BDBA_ScanResult(
-                    component=component_resource.component,
-                    status=UploadStatus.DONE, # XXX remove this
-                    result=analysis_result,
-                    resource=component_resource.resource,
-                    greatest_cve_score=analysis_result.greatest_cve_score(),
+                component=component_resource.component,
+                status=UploadStatus.DONE, # XXX remove this
+                result=analysis_result,
+                resource=component_resource.resource,
+                greatest_cve_score=analysis_result.greatest_cve_score(),
+                licenses=licenses,
             )
 
         self._delete_outdated_protecode_apps()
