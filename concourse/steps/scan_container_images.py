@@ -329,13 +329,16 @@ def create_or_update_github_issues(
             repository = gh_api.repository(org, name)
 
         if action == 'discard':
-            github.compliance.issue.close_issue_if_present(
+            issue = github.compliance.issue.close_issue_if_present(
                 component=component,
                 resource=resource,
                 repository=repository,
                 issue_type=issue_type,
             )
-            logger.info(f'closed (if existing) gh-issue for {component.name=} {resource.name=}')
+            logger.info(
+                f'closed (if existing) gh-issue for {component.name=} {resource.name=} {issue_type=}'
+            )
+            logger.info(f'{issue=} was closed')
         elif action == 'report':
             if delivery_svc_client:
                 assignees = delivery.client.github_users_from_responsibles(
@@ -487,6 +490,7 @@ def create_or_update_github_issues(
         )
 
     for result_group in result_groups_without_cve:
+        print(f'discarding {result_group.name=} vulnerabilities')
         process_result(
             result_group=result_group,
             finding_callback=has_cve,
@@ -495,6 +499,7 @@ def create_or_update_github_issues(
         )
 
     for result_group in result_groups_without_prohibited_licenes:
+        print(f'discarding {result_group.name=} licenses')
         process_result(
             result_group=result_group,
             finding_callback=has_prohibited_licenses,
