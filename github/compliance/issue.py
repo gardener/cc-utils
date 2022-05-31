@@ -66,7 +66,7 @@ def enumerate_issues(
     issue_type: str,
     state=None, # 'open' | 'closed'
 ) -> typing.Generator[github3.issues.ShortIssue, None, None]:
-    labels = tuple(
+    labels = set(
         repository_labels(
             component=component,
             resource=resource,
@@ -74,12 +74,10 @@ def enumerate_issues(
         ),
     )
 
-    logger.info(f'enumerating issues with {labels=}')
-
     for issue in repository.issues(state=state, labels=labels):
         issue_labels = set((l.name for l in issue.labels()))
         # workaround: skip if - even though we requested this - not all requested labels are present
-        if not issue_labels & set(labels) == issue_labels:
+        if not issue_labels & labels == labels:
             continue
         yield issue
 
