@@ -266,7 +266,7 @@ class DeployResult:
 
 
 class DefinitionDeployer:
-    def deploy(self, definition_descriptor, pipeline):
+    def deploy(self, definition_descriptor):
         raise NotImplementedError('subclasses must overwrite')
 
 
