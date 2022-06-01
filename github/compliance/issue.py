@@ -44,27 +44,31 @@ def resource_digest_label(
 
 
 def repository_labels(
-    component: cm.Component,
-    resource: cm.Resource,
+    component: cm.Component | None,
+    resource: cm.Resource | None,
     issue_type: str=_label_bdba,
     extra_labels: typing.Iterable[str]=None
 ):
+    if any((component, resource)) and not all((component, resource)):
+        raise ValueError('either all or none of component, resource must be given')
+
     yield 'area/security'
     yield 'cicd/auto-generated'
     yield f'cicd/{issue_type}'
 
-    yield resource_digest_label(component=component, resource=resource)
+    if component:
+        yield resource_digest_label(component=component, resource=resource)
 
     if extra_labels:
         yield from extra_labels
 
 
 def enumerate_issues(
-    component: cm.Component,
-    resource: cm.Resource,
+    component: cm.Component | None,
+    resource: cm.Resource | None,
     repository: github3.repos.Repository,
     issue_type: str,
-    state=None, # 'open' | 'closed'
+    state: str | None = None, # 'open' | 'closed'
 ) -> typing.Generator[github3.issues.ShortIssue, None, None]:
     labels = set(
         repository_labels(
