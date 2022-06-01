@@ -153,8 +153,8 @@ def _compliance_status_summary(
         | Resource-Type | {resource_type} |
         | {issue_description} | **{issue_value}** |
 
-        The aforementioned {pluralise(resource_type, len(resources))}, declared
-        by the given content was found to contain potentially relevant vulnerabilities.
+        The aforementioned {pluralise(resource_type, len(resources))} yielded findings
+        relevant for future release decisions.
 
         For viewing detailed scan {pluralise('report', len(resources))}, see the following
         {pluralise('Scan Report', len(resources))}:
