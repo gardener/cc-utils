@@ -23,7 +23,7 @@ _label_licenses = 'licenses/bdba'
 
 def resource_digest_label(
     component: cm.Component,
-    resource: cm.Resource,
+    resource: cm.Resource | str,
     length=18,
 ):
     '''
@@ -31,7 +31,12 @@ def resource_digest_label(
 
     this is useful as GitHub labels are limited to 50 characters
     '''
-    label_str = f'{component.name}:{resource.name}'
+    if isinstance(resource, cm.Resource):
+        resource_name = resource.name
+    else:
+        resource_name = resource
+
+    label_str = f'{component.name}:{resource_name}'
 
     label_dig =  hashlib.shake_128(label_str.encode('utf-8')).hexdigest(length=length)
 
@@ -46,7 +51,7 @@ def resource_digest_label(
 def repository_labels(
     component: cm.Component | None,
     resource: cm.Resource | None,
-    issue_type: str=_label_bdba,
+    issue_type: str | None=_label_bdba,
     extra_labels: typing.Iterable[str]=None
 ):
     if any((component, resource)) and not all((component, resource)):
@@ -54,7 +59,9 @@ def repository_labels(
 
     yield 'area/security'
     yield 'cicd/auto-generated'
-    yield f'cicd/{issue_type}'
+
+    if issue_type:
+        yield f'cicd/{issue_type}'
 
     if component:
         yield resource_digest_label(component=component, resource=resource)
@@ -67,7 +74,7 @@ def enumerate_issues(
     component: cm.Component | None,
     resource: cm.Resource | None,
     repository: github3.repos.Repository,
-    issue_type: str,
+    issue_type: str | None,
     state: str | None = None, # 'open' | 'closed'
 ) -> typing.Generator[github3.issues.ShortIssue, None, None]:
     labels = set(
