@@ -267,6 +267,10 @@ def create_or_update_github_issues(
     has_cve = lambda r: r.greatest_cve_score >= cve_threshold
 
     def has_prohibited_licenses(result: pm.BDBA_ScanResult):
+        nonlocal license_cfg
+        if not license_cfg:
+            logger.warning('no license-cfg - will not report license-issues')
+            return False
         for license in result.licenses:
             if not license_cfg.is_allowed(license.name()):
                 return True
@@ -329,16 +333,16 @@ def create_or_update_github_issues(
             repository = gh_api.repository(org, name)
 
         if action == 'discard':
-            issue = github.compliance.issue.close_issue_if_present(
+            github.compliance.issue.close_issue_if_present(
                 component=component,
                 resource=resource,
                 repository=repository,
                 issue_type=issue_type,
             )
+
             logger.info(
                 f'closed (if existing) gh-issue for {component.name=} {resource.name=} {issue_type=}'
             )
-            logger.info(f'{issue=} was closed')
         elif action == 'report':
             if delivery_svc_client:
                 assignees = delivery.client.github_users_from_responsibles(
@@ -490,7 +494,7 @@ def create_or_update_github_issues(
         )
 
     for result_group in result_groups_without_cve:
-        print(f'discarding {result_group.name=} vulnerabilities')
+        logger.info(f'discarding issue for {result_group.name=} vulnerabilities')
         process_result(
             result_group=result_group,
             finding_callback=has_cve,
@@ -499,7 +503,7 @@ def create_or_update_github_issues(
         )
 
     for result_group in result_groups_without_prohibited_licenes:
-        print(f'discarding {result_group.name=} licenses')
+        logger.info(f'discarding issue for {result_group.name=} licenses')
         process_result(
             result_group=result_group,
             finding_callback=has_prohibited_licenses,

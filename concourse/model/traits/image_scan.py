@@ -417,7 +417,7 @@ class ImageScanTrait(Trait, ImageFilterMixin):
             return OsIdScan(raw_dict=raw)
 
     def licenses(self) -> typing.Optional[LicenseCfg]:
-        if (raw := self.raw.get('licences')):
+        if (raw := self.raw.get('licenses')):
             return dacite.from_dict(
                 data_class=LicenseCfg,
                 data=raw,
