@@ -511,9 +511,58 @@ def create_or_update_github_issues(
             issue_type=_compliance_label_licenses,
         )
 
+    if overwrite_repository:
+        close_issues_for_absent_resources(
+            result_groups=result_groups,
+            repository=overwrite_repository,
+            issue_type=None,
+        )
+
     if err_count > 0:
         logger.warning(f'{err_count=} - there were errors - will raise')
         raise ValueError('not all gh-issues could be created/updated/deleted')
+
+
+def close_issues_for_absent_resources(
+    result_groups: list[pm.BDBA_ScanResult_Group],
+    repository: github3.repos.Repository,
+    issue_type: str | None,
+):
+    '''
+    closes all open issues for component-resources that are not present in given result-groups.
+
+    this is intended to automatically close issues for components or component-resources that
+    have been removed from BoM.
+    '''
+    all_issues = github.compliance.issue.enumerate_issues(
+        component=None,
+        resource=None,
+        repository=repository,
+        issue_type=issue_type,
+        state='open',
+    )
+
+    def component_resource_label(issue: github3.issues.Issue) -> str:
+        for label in issue.labels():
+            if label.name.startswith('ocm/resource'):
+                return label.name
+
+    component_resources_to_issues = {
+        component_resource_label(issue): issue for issue in all_issues
+    }
+
+    for result_group in result_groups:
+        resource_label = github.compliance.issue.resource_digest_label(
+            component=result_group.component,
+            resource=result_group.resource_name,
+        )
+
+        component_resources_to_issues.pop(resource_label, None)
+
+    # any issues that have not been removed thus far were not referenced by given result_groups
+    for issue in component_resources_to_issues.values():
+        issue.create_comment('closing, because component/resource no longer present in BoM')
+        issue.close()
 
 
 def print_protecode_info_table(
