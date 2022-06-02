@@ -143,7 +143,13 @@ def upload_grouped_images(
                     upload_result=result,
                 ) for result in results
             ]
-            for data in cve_data + license_data:
+            libraries_data = [
+                upload_result_to_libraries(
+                    upload_result=result,
+                ) for result in results
+            ]
+
+            for data in cve_data + license_data + libraries_data:
                 delivery_client.upload_metadata(data=data)
         except:
             import traceback
@@ -288,6 +294,38 @@ def upload_result_to_cve_data(
         'greatestCvss3Score': greatest_cvss3_score,
         'protecodeProductUrl': upload_result.result.report_url(),
     }
+
+    compliance_data = dso.model.ComplianceData.create(
+        type=datasource,
+        artefact=artefact,
+        component=upload_result.component,
+        data=payload,
+    )
+
+    return compliance_data
+
+
+def upload_result_to_libraries(
+    upload_result: pm.BDBA_ScanResult,
+    datasource: str = 'protecode-libraries',
+) -> dso.model.ComplianceData:
+    '''
+    extracts detected libraries from protecode analysis result and
+    returns list of name, version
+    '''
+
+    artefact = dataclasses.asdict(
+        upload_result.resource,
+        dict_factory=ci.util.dict_factory_enum_serialisiation,
+    )
+
+    payload = [
+        {
+            'name': c.name(),
+            'version': c.version()
+        }
+        for c in upload_result.result.components()
+    ]
 
     compliance_data = dso.model.ComplianceData.create(
         type=datasource,
