@@ -3,7 +3,6 @@ ca-certificates
 coreutils
 curl
 gcc
-g++
 git
 git-lfs
 grep
