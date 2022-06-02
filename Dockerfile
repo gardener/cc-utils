@@ -22,7 +22,6 @@ RUN pip3 install --upgrade \
   gardener-cicd-cli==$(cat /metadata/VERSION) \
   gardener-cicd-whd==$(cat /metadata/VERSION) \
   gardener-cicd-dso==$(cat /metadata/VERSION) \
-  gardenlinux \
   pycryptodome \
 && curl -L \
   https://get.helm.sh/helm-${HELM_V3_VERSION}-linux-amd64.tar.gz | tar xz -C /tmp --strip=1 \
