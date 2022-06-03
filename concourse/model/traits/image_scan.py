@@ -18,8 +18,6 @@ import enum
 import re
 import typing
 
-import dacite
-
 from concourse.model.job import (
     JobVariant,
 )
@@ -29,7 +27,6 @@ from concourse.model.step import (
 )
 from concourse.model.base import (
     AttributeSpec,
-    Trait,
     TraitTransformer,
     ModelBase,
     ScriptType,
@@ -42,7 +39,6 @@ from protecode.model import CVSSVersion
 import concourse.model.traits.component_descriptor
 from .images import (
     IMAGE_ATTRS,
-    ImageFilterMixin,
 )
 
 
@@ -347,96 +343,6 @@ ATTRIBUTES = (
         type=LicenseCfg,
     ),
 )
-
-
-class ImageScanTrait(Trait, ImageFilterMixin):
-    @classmethod
-    def _attribute_specs(cls):
-        return ATTRIBUTES
-
-    def _children(self):
-        if self.protecode():
-            yield self.protecode()
-        if self.clam_av():
-            yield self.clam_av()
-
-    def issue_policies(self) -> IssuePolicies:
-        if isinstance((v := self.raw['issue_policies']), IssuePolicies):
-            return v
-
-        return dacite.from_dict(
-            data_class=IssuePolicies,
-            data=v,
-        )
-
-    def notify(self) -> Notify:
-        return Notify(self.raw['notify'])
-
-    def overwrite_github_issues_tgt_repository_url(self) -> typing.Optional[str]:
-        return self.raw.get('overwrite_github_issues_tgt_repository_url')
-
-    def github_issue_templates(self) -> list[GithubIssueTemplateCfg]:
-        if not (raw := self.raw.get('github_issue_templates')):
-            return None
-
-        template_cfgs = [
-            dacite.from_dict(
-                data_class=GithubIssueTemplateCfg,
-                data=cfg,
-            ) for cfg in raw
-        ]
-
-        return template_cfgs
-
-    def github_issue_template(self, type: str) -> typing.Optional[GithubIssueTemplateCfg]:
-        if not (template_cfgs := self.github_issue_templates()):
-            return None
-
-        for cfg in template_cfgs:
-            if cfg.type == type:
-                return cfg
-
-        return None
-
-    def github_issue_labels_to_preserve(self) -> typing.Optional[list[str]]:
-        return self.raw['github_issue_labels_to_preserve']
-
-    def email_recipients(self):
-        return self.raw['email_recipients']
-
-    def protecode(self):
-        if self.raw['protecode']:
-            return ProtecodeScanCfg(raw_dict=self.raw['protecode'])
-
-    def clam_av(self):
-        if self.raw['clam_av']:
-            return ClamAVScanCfg(raw_dict=self.raw['clam_av'])
-
-    def os_id(self):
-        if (raw := self.raw.get('os_id')) is not None:
-            return OsIdScan(raw_dict=raw)
-
-    def licenses(self) -> typing.Optional[LicenseCfg]:
-        if (raw := self.raw.get('licenses')):
-            return dacite.from_dict(
-                data_class=LicenseCfg,
-                data=raw,
-            )
-
-        return None
-
-    def transformer(self):
-        return ImageScanTraitTransformer(trait=self)
-
-    def trait_depends(self):
-        return set(self.raw['trait_depends'])
-
-    def validate(self):
-        super().validate()
-        if not (self.protecode() or self.clam_av()):
-            raise ModelValidationError(
-                "at least one of 'protecode' or 'clam_av' must be defined."
-            )
 
 
 class ImageScanTraitTransformer(TraitTransformer):
