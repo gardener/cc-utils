@@ -37,9 +37,6 @@ from protecode.scanning_util import ProcessingMode
 from protecode.model import CVSSVersion
 
 import concourse.model.traits.component_descriptor
-from .images import (
-    IMAGE_ATTRS,
-)
 
 
 PROTECODE_ATTRS = (
@@ -260,7 +257,6 @@ class IssuePolicies:
 
 
 ATTRIBUTES = (
-    *IMAGE_ATTRS,
     AttributeSpec.optional(
         name='notify',
         default=Notify.EMAIL_RECIPIENTS,
