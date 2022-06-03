@@ -683,7 +683,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
                 with the same major and minor version
         '''
 
-        releases = [release for release in self.repository.releases()]
+        releases = [release for release in self.repository.releases(number=20)]
         non_draft_releases = [release for release in releases if not release.draft]
         draft_releases = [release for release in releases if release.draft]
         greatest_release_version = find_greatest_github_release_version(non_draft_releases)
