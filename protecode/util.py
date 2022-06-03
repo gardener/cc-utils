@@ -52,7 +52,6 @@ def upload_grouped_images(
     cve_threshold=7,
     ignore_if_triaged=True,
     processing_mode=ProcessingMode.RESCAN,
-    image_reference_filter=(lambda component, resource: True),
     reference_group_ids=(),
     cvss_version=CVSSVersion.V3,
 ) -> tuple[
@@ -113,10 +112,6 @@ def upload_grouped_images(
         for components in component_groups.values():
             for component_resources in group_by_resource_name(components):
                 # all components in a component group share a name
-                component_resources = [
-                    r for r in component_resources if image_reference_filter(component, r)
-                ]
-
                 if component_resources:
                     yield _upload_task(component_resources=component_resources)
 

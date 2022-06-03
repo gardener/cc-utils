@@ -52,15 +52,6 @@ cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
 component_descriptor = parse_component_descriptor()
 
-filter_function = create_composite_filter_function(
-  include_image_references=${filter_cfg.include_image_references()},
-  exclude_image_references=${filter_cfg.exclude_image_references()},
-  include_image_names=${filter_cfg.include_image_names()},
-  exclude_image_names=${filter_cfg.exclude_image_names()},
-  include_component_names=${filter_cfg.include_component_names()},
-  exclude_component_names=${filter_cfg.exclude_component_names()},
-)
-
 % if not protecode_scan.protecode_cfg_name():
 protecode_cfg = cfg_factory.protecode()
 % else:
@@ -94,7 +85,6 @@ results = protecode.util.upload_grouped_images(
   processing_mode = ProcessingMode('${protecode_scan.processing_mode().value}'),
   parallel_jobs=${protecode_scan.parallel_jobs()},
   cve_threshold=cve_threshold,
-  image_reference_filter=filter_function,
   cvss_version = CVSSVersion('${protecode_scan.cvss_version().value}'),
 )
 
