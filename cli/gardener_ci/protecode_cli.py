@@ -2,6 +2,7 @@ import itertools
 import logging
 import typing
 
+import ccc.protecode
 import ci.util
 import concourse.steps.component_descriptor_util as component_descriptor_util
 import concourse.steps.images
