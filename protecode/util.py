@@ -15,7 +15,6 @@
 
 import collections
 from concurrent.futures import ThreadPoolExecutor
-import dataclasses
 import datetime
 import logging
 import tabulate
@@ -24,7 +23,6 @@ import typing
 import ccc.delivery
 import ccc.gcp
 import ccc.protecode
-import ci.util
 import cnudie.retrieve
 import cnudie.util
 import dso.model
