@@ -341,15 +341,17 @@ class ReleaseNotes:
         # we should consider adding a release-note label to the PRs
         # to reduce the number of search results
         prs_iter = self.github_helper.search_issues_in_repo('type:pull is:closed')
-
+        prs_inspected = 0
         release_notes = list()
         for pr_iter in prs_iter:
             pr_dict = pr_iter.as_dict()
+            prs_inspected +=1
 
             pr_number = str(pr_dict['number'])
             if pr_number not in pr_numbers_in_range:
                 continue
 
+            logger.info(f'Processing PR# {pr_number}')
             release_notes_pr = extract_release_notes(
                 reference_id=pr_number,
                 text=pr_dict['body'],
@@ -361,6 +363,8 @@ class ReleaseNotes:
                 continue
 
             release_notes.extend(release_notes_pr)
+
+        logger.info(f'Inspected a total of {prs_inspected} PRs') # mind the pagination
         return release_notes
 
 
@@ -552,6 +556,7 @@ def draft_release_name_for_version(release_version: str):
 def github_helper_from_github_access(
     github_access=gci.componentmodel.GithubAccess,
 ):
+    logger.info(f'Creating GH Repo-helper for {github_access.repoUrl}')
     return GitHubRepositoryHelper(
         github_api=ccc.github.github_api_from_gh_access(github_access),
         owner=github_access.org_name(),
@@ -563,6 +568,7 @@ def git_helper_from_github_access(
     github_access: gci.componentmodel.GithubAccess,
     repo_path: str,
 ):
+    logger.info(f'Creating Git-helper for {github_access.repoUrl}')
     return GitHelper(
         repo=repo_path,
         github_cfg=ccc.github.github_cfg_for_repo_url(github_access.repoUrl),
