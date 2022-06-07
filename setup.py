@@ -30,7 +30,6 @@ def modules():
     module_names.remove('util')
     module_names.remove('ctx')
     module_names.remove('setup.base')
-    module_names.remove('setup.gardenlinux')
     module_names.remove('setup.oci')
     module_names.remove('setup.whd')
     # remove modules already contained in gardener-cicd-dso
