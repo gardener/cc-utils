@@ -555,10 +555,10 @@ class ProtecodeProcessor:
             self._import_triages_from_gcr(analysis_result)
 
         # yield results
-        for protecode_product in protecode_products_to_consider:
+        for protecode_product in self.protecode_products_to_consider:
             analysis_result = self._api.scan_result(protecode_product.product_id())
 
-            component_resource = product_id_to_resource[protecode_product.product_id()]
+            component_resource = self.product_id_to_resource[protecode_product.product_id()]
             licenses = {
                 component.license() for component in analysis_result.components()
                 if component.license()
