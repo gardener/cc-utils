@@ -114,7 +114,7 @@ def upload_grouped_images(
             for component_resources in group_by_resource_name(components):
                 # all components in a component group share a name
                 component_resources = [
-                    r for r in component_resources if image_reference_filter(component, r)
+                    r for r in component_resources if image_reference_filter(component, r.resource)
                 ]
 
                 if component_resources:
