@@ -1,5 +1,6 @@
 import concurrent.futures
 import dataclasses
+import datetime
 import logging
 import typing
 
@@ -85,29 +86,36 @@ def scan_resources(
 
 def resource_scan_result_to_findings_data(
     resource_scan_result: ResourceScanResult,
-    datasource: str = dso.model.Datasource.CLAMAV,
-) -> dso.model.ComplianceData:
+) -> dso.model.ArtefactMetadata:
 
-    artefact = dataclasses.asdict(
-        resource_scan_result.resource,
-        dict_factory=ci.util.dict_factory_enum_serialisiation,
-    )
-
-    payload = {
-        'findings': [
-          dataclasses.asdict(
-            obj=finding,
-            dict_factory=ci.util.dict_factory_enum_serialisiation
-          )
-          for finding in resource_scan_result.scan_result.findings
-        ],
-    }
-
-    compliance_data = dso.model.ComplianceData.create(
-        type=datasource,
-        artefact=artefact,
+    artefact_ref = dso.model.artefact_ref_from_ocm(
         component=resource_scan_result.component,
-        data=payload,
+        artefact=resource_scan_result.resource,
+    )
+    meta = dso.model.Metadata(
+        datasource=dso.model.Datasource.CLAMAV,
+        type=dso.model.Datatype.MALWARE_RAW,
+        creation_date=datetime.datetime.now()
+    )
+    findings = [
+        dso.model.Finding(
+            result=finding.malware_status,
+            message=finding.name,
+            details=finding.details,
+            meta=dso.model.FindingMeta(
+                scanned_octets=finding.meta.scanned_octets,
+                receive_duration_seconds=finding.meta.receive_duration_seconds,
+                scan_duration_seconds=finding.meta.scan_duration_seconds,
+            ),
+        )
+        for finding in resource_scan_result.scan_result.findings
+    ]
+    finding = dso.model.ClamavFinding(
+        findings=findings,
     )
 
-    return compliance_data
+    return dso.model.ArtefactMetadata(
+        artefact=artefact_ref,
+        meta=meta,
+        data=finding,
+    )

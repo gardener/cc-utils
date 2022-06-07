@@ -83,7 +83,7 @@ class DeliveryServiceClient:
 
     def upload_metadata(
         self,
-        data: dso.model.ComplianceData,
+        data: dso.model.ArtefactMetadata,
     ):
         res = requests.post(
             url=self._routes.upload_metadata(),
