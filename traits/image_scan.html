@@ -209,39 +209,25 @@ with different contents, all variants are subject to being scanned.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>filters</p></td>
-<td><p>no</p></td>
-<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">exclude_component_names</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
-<span class="nt">exclude_image_names</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
-<span class="nt">exclude_image_references</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
-<span class="nt">include_component_names</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
-<span class="nt">include_image_names</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
-<span class="nt">include_image_references</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
-</pre></div>
-</div>
-</p></td>
-<td><p>FilterCfg</p></td>
-<td><p>optional filters to restrict container images to process</p></td>
-</tr>
-<tr class="row-odd"><td><p>notify</p></td>
+<tr class="row-even"><td><p>notify</p></td>
 <td><p>no</p></td>
 <td><p><code class="code docutils literal notranslate"><span class="pre">email_recipients</span></code></p></td>
 <td><p>Notify</p></td>
 <td><p>whom to notify about found issues</p></td>
 </tr>
-<tr class="row-even"><td><p>issue_policies</p></td>
+<tr class="row-odd"><td><p>issue_policies</p></td>
 <td><p>no</p></td>
 <td><p>IssuePolicies(max_processing_time_days=MaxProcessingTimesDays(very_high_or_greater=30, high=30, medium=90, low=120))</p></td>
 <td><p>IssuePolicies</p></td>
 <td><p>defines issues policies (e.g. SLAs for maximum processing times</p></td>
 </tr>
-<tr class="row-odd"><td><p>overwrite_github_issues_tgt_repository_url</p></td>
+<tr class="row-even"><td><p>overwrite_github_issues_tgt_repository_url</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>if set, and notify is set to github_issues, overwrite target github repository</p></td>
 </tr>
-<tr class="row-even"><td><p>github_issue_templates</p></td>
+<tr class="row-odd"><td><p>github_issue_templates</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>list</p></td>
@@ -258,13 +244,13 @@ available variables:
 - report_url
 - delivery_dashboard_url</p></td>
 </tr>
-<tr class="row-odd"><td><p>github_issue_labels_to_preserve</p></td>
+<tr class="row-even"><td><p>github_issue_labels_to_preserve</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>list</p></td>
 <td><p>optional list of regexes for labels that will never be removed upon ticket-update</p></td>
 </tr>
-<tr class="row-even"><td><p>email_recipients</p></td>
+<tr class="row-odd"><td><p>email_recipients</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span><span class="w"></span>
 </pre></div>
@@ -273,94 +259,36 @@ available variables:
 <td><p>List[str]</p></td>
 <td><p>optional list of email recipients to be notified about critical scan results</p></td>
 </tr>
-<tr class="row-odd"><td><p>protecode</p></td>
+<tr class="row-even"><td><p>protecode</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>ProtecodeScanCfg</p></td>
 <td><p>if present, perform protecode scanning</p></td>
 </tr>
-<tr class="row-even"><td><p>clam_av</p></td>
+<tr class="row-odd"><td><p>clam_av</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>ClamAVScanCfg</p></td>
 <td><p>if present, perform ClamAV scanning</p></td>
 </tr>
-<tr class="row-odd"><td><p>os_id</p></td>
+<tr class="row-even"><td><p>os_id</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>OsIdScan</p></td>
 <td><p>if present, identify operating system</p></td>
 </tr>
-<tr class="row-even"><td><p>trait_depends</p></td>
+<tr class="row-odd"><td><p>trait_depends</p></td>
 <td><p>no</p></td>
 <td><p>()</p></td>
 <td><p>List[str]</p></td>
 <td><p>if present, generated build steps depend on those generated from specified traits</p></td>
 </tr>
-<tr class="row-odd"><td><p>licenses</p></td>
+<tr class="row-even"><td><p>licenses</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>LicenseCfg</p></td>
 <td><p>if present, license checks will be done using available scanners (currently, this is
 only implemented for “protecode” / BDBA)</p></td>
-</tr>
-</tbody>
-</table>
-<h2>filters <em>(FilterCfg)</em> Attributes<a class="headerlink" href="#trait-image-scan" title="Permalink to this headline">¶</a></h2>
-<table class="colwidths-auto docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>name</p></th>
-<th class="head"><p>required?</p></th>
-<th class="head"><p>default</p></th>
-<th class="head"><p>type</p></th>
-<th class="head"><p>explanation</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p>include_image_references</p></td>
-<td><p>no</p></td>
-<td><p>()</p></td>
-<td><p>str</p></td>
-<td><p>a list of regular expressions. If configured, only matching image references are
-processed. By default, all image references are considered.</p></td>
-</tr>
-<tr class="row-odd"><td><p>exclude_image_references</p></td>
-<td><p>no</p></td>
-<td><p>()</p></td>
-<td><p>str</p></td>
-<td><p>a list of regular expressions. If configured, matching image references are
-exempted from processing. Has precedence over include_image_references.
-By default, no image references are excluded.</p></td>
-</tr>
-<tr class="row-even"><td><p>include_image_names</p></td>
-<td><p>no</p></td>
-<td><p>()</p></td>
-<td><p>str</p></td>
-<td><p>a list of regular expressions. If configured, only matching image names are
-processed. By default, all image references are considered.</p></td>
-</tr>
-<tr class="row-odd"><td><p>exclude_image_names</p></td>
-<td><p>no</p></td>
-<td><p>()</p></td>
-<td><p>str</p></td>
-<td><p>a list of regular expressions. If configured, matching image names are
-exempted from processing. Has precedence over include_image_references.
-By default, no image references are excluded.</p></td>
-</tr>
-<tr class="row-even"><td><p>include_component_names</p></td>
-<td><p>no</p></td>
-<td><p>()</p></td>
-<td><p>str</p></td>
-<td><p>a list of regular expressions. If configured, only image references from components
-whose name matches are considered.</p></td>
-</tr>
-<tr class="row-odd"><td><p>exclude_component_names</p></td>
-<td><p>no</p></td>
-<td><p>()</p></td>
-<td><p>str</p></td>
-<td><p>a list of regular expressions. If configured, image references from components whose
-name matches are excluded from further processing. Has precedence over
-include_component_names.</p></td>
 </tr>
 </tbody>
 </table>
