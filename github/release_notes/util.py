@@ -345,7 +345,7 @@ class ReleaseNotes:
         release_notes = list()
         for pr_iter in prs_iter:
             pr_dict = pr_iter.as_dict()
-            prs_inspected +=1
+            prs_inspected += 1
 
             pr_number = str(pr_dict['number'])
             if pr_number not in pr_numbers_in_range:
