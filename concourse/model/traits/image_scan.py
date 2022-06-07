@@ -40,6 +40,11 @@ from protecode.scanning_util import ProcessingMode
 from protecode.model import CVSSVersion
 
 import concourse.model.traits.component_descriptor
+from .images import (
+    IMAGE_ATTRS,
+    ImageFilterMixin,
+)
+
 
 PROTECODE_ATTRS = (
     AttributeSpec.optional(
@@ -259,6 +264,7 @@ class IssuePolicies:
 
 
 ATTRIBUTES = (
+    *IMAGE_ATTRS,
     AttributeSpec.optional(
         name='notify',
         default=Notify.EMAIL_RECIPIENTS,
@@ -343,7 +349,7 @@ ATTRIBUTES = (
 )
 
 
-class ImageScanTrait(Trait):
+class ImageScanTrait(Trait, ImageFilterMixin):
     @classmethod
     def _attribute_specs(cls):
         return ATTRIBUTES

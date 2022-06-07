@@ -49,6 +49,15 @@ def scan_without_notification(
     protecode_api_url = protecode_cfg.api_url()
     protecode_group_url = ci.util.urljoin(protecode_api_url, 'group', str(protecode_group_id))
 
+    filter_function = concourse.steps.images.create_composite_filter_function(
+        include_image_references=include_image_references,
+        exclude_image_references=exclude_image_references,
+        include_image_names=include_image_names,
+        exclude_image_names=exclude_image_names,
+        include_component_names=include_component_names,
+        exclude_component_names=exclude_component_names,
+    )
+
     cvss_version = CVSSVersion.V3
 
     concourse.steps.scan_container_images.print_protecode_info_table(
@@ -74,6 +83,7 @@ def scan_without_notification(
         processing_mode=ProcessingMode(processing_mode),
         parallel_jobs=parallel_jobs,
         cve_threshold=cve_threshold,
+        image_reference_filter=filter_function,
         cvss_version=cvss_version,
     )
 
