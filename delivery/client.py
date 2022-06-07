@@ -87,7 +87,13 @@ class DeliveryServiceClient:
     ):
         res = requests.post(
             url=self._routes.upload_metadata(),
-            json={'entries': [dataclasses.asdict(data)]},
+            json={'entries': [
+                    dataclasses.asdict(
+                        data,
+                        dict_factory=ci.util.dict_to_json_factory
+                    )
+                ]
+            },
         )
 
         res.raise_for_status()
