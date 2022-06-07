@@ -40,14 +40,6 @@ from protecode.scanning_util import ProcessingMode
 from protecode.model import CVSSVersion
 
 import concourse.model.traits.component_descriptor
-<<<<<<< HEAD
-=======
-from .images import (
-    IMAGE_ATTRS,
-    ImageFilterMixin,
-)
->>>>>>> parent of cec5935e (remove ImageFilterMixin)
-
 
 PROTECODE_ATTRS = (
     AttributeSpec.optional(
@@ -351,7 +343,7 @@ ATTRIBUTES = (
 )
 
 
-class ImageScanTrait(Trait, ImageFilterMixin):
+class ImageScanTrait(Trait):
     @classmethod
     def _attribute_specs(cls):
         return ATTRIBUTES
