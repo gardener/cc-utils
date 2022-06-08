@@ -87,10 +87,6 @@ def upload_to_delivery_db(
         creation_date=datetime.datetime.now()
     )
 
-    os_info = dacite.from_dict(
-        data_class=dm.OsInfo,
-        data=os_info,
-    )
     os_id = dm.OsID(
         osInfo=os_info,
     )

@@ -5,6 +5,7 @@ import typing
 import gci.componentmodel as cm
 
 import dso.labels
+import unixutil.model
 
 
 # abstraction of component model v2 source and resource
@@ -103,24 +104,8 @@ class ClamavFinding:
 
 
 @dataclasses.dataclass(frozen=True)
-class OsInfo:
-    name: str
-    id: str
-    pretty_name: str
-    cpe_name: str
-    variant: str
-    variant_id: str
-    version: str
-    version_id: str
-    version_codename: str
-    build_id: str
-    image_id: str
-    image_version: str
-
-
-@dataclasses.dataclass(frozen=True)
 class OsID:
-    osInfo: OsInfo
+    osInfo: unixutil.model.OperatingSystemId
 
 
 @dataclasses.dataclass(frozen=True)
