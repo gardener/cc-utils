@@ -39,6 +39,7 @@ import delivery.client
 import delivery.model
 import github.compliance.issue
 import github.compliance.milestone
+import github.user
 import model.delivery
 import saf.model
 import protecode.model as pm
@@ -353,17 +354,13 @@ def create_or_update_github_issues(
                     github_url=repository.url,
                 )
 
-                def user_is_active(username):
-                    try:
-                        user = gh_api.user(username)
-                        if user.as_dict().get('suspended_at'):
-                            return False
-                        return True
-                    except github3.exceptions.NotFoundError:
-                        logger.warning(f'{username=} not found')
-                        return False
-
-                assignees = tuple((u.username for u in assignees if user_is_active(u.username)))
+                assignees = tuple((
+                    u.username for u in assignees
+                    if github.user.is_user_active(
+                        username=u.username,
+                        github=gh_api,
+                    )
+                ))
 
                 try:
                     if issue_type == _compliance_label_vulnerabilities:
