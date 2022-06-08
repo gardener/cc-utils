@@ -548,7 +548,7 @@ class ProtecodeProcessor:
                     product_id=product_id,
                 )
 
-    def _delete_outdatet_protecode_apps(self):
+    def _delete_outdated_protecode_apps(self):
         # in rare cases, we fail to find (again) an existing product, but through naming-convention
         # succeed in finding it implicitly while trying to upload image. Do not purge those
         # IDs (or in general: purge no ID we just recently created/retrieved)
