@@ -28,3 +28,20 @@ class Sprint:
                 type_hooks={datetime.date: lambda d: dateutil.parser.isoparse(d).date()},
             ),
         )
+
+
+@dataclasses.dataclass(frozen=True) # deduplicate w/ modelclass in delivery-service/osinfo/model.py
+class OsReleaseInfo:
+    name: str
+    greatest_version: str | None
+    eol_date: datetime.date
+
+    @staticmethod
+    def from_dict(raw: dict):
+        return dacite.from_dict(
+            data_class=OsReleaseInfo,
+            data=raw,
+            config=dacite.Config(
+                type_hooks={datetime.date: lambda d: dateutil.parser.isoparse(d).date()},
+            ),
+        )

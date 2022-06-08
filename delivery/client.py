@@ -51,6 +51,15 @@ class DeliveryServiceRoutes:
         )
 
 
+    def os_branches(self, os_id: str):
+        return ci.util.urljoin(
+            self._base_url,
+            'os',
+            os_id,
+            'branches',
+        )
+
+
 class DeliveryServiceClient:
     def __init__(
         self,
@@ -172,6 +181,21 @@ class DeliveryServiceClient:
                 params={'offset': offset, **extra_args},
             ).json()
         )
+
+
+    def os_release_infos(self, os_id: str, absent_ok=False) -> list[dm.OsReleaseInfo]:
+        url = self._routes.os_branches(os_id=os_id)
+
+        res = requests.get(url)
+
+        if not absent_ok:
+            res.raise_for_status()
+        elif not res.ok:
+            return None
+
+        return [
+            dm.OsReleaseInfo.from_dict(ri) for ri in res.json()
+        ]
 
 
 def _normalise_github_hostname(github_url: str):
