@@ -277,7 +277,7 @@ def iter_artefact_metadata(
 
         meta = dso.model.Metadata(
             datasource=dso.model.Datasource.BDBA,
-            type=dso.model.Datatype.COMPONENTS_BDBA,
+            type=dso.model.Datatype.COMPONENTS,
             creation_date=datetime.datetime.now()
         )
         components = list(dict.fromkeys(

@@ -83,7 +83,7 @@ def upload_to_delivery_db(
     )
     meta = dm.Metadata(
         datasource=dm.Datasource.CC_UTILS,
-        type=dm.Datatype.OS_IDS_RAW,
+        type=dm.Datatype.OS_IDS,
         creation_date=datetime.datetime.now()
     )
 

@@ -94,7 +94,7 @@ def resource_scan_result_to_findings_data(
     )
     meta = dso.model.Metadata(
         datasource=dso.model.Datasource.CLAMAV,
-        type=dso.model.Datatype.MALWARE_RAW,
+        type=dso.model.Datatype.MALWARE,
         creation_date=datetime.datetime.now()
     )
     findings = [

@@ -63,10 +63,10 @@ def artefact_ref_from_ocm(
 class Datatype:
     VULNERABILITIES_AGGREGATED = 'vulnerabilities/aggregated'
     VULNERABILITIES_RAW = 'vulnerabilities/raw'
-    MALWARE_RAW = 'malware/raw'
+    MALWARE = 'malware'
     LICENSES_AGGREGATED = 'licenses/aggregated'
-    COMPONENTS_BDBA = 'components/bdba'
-    OS_IDS_RAW = 'os_ids/raw'
+    COMPONENTS = 'components'
+    OS_IDS = 'os_ids'
 
 
 @dataclasses.dataclass(frozen=True)
