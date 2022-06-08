@@ -17,7 +17,7 @@ import dataclasses
 from enum import Enum
 import typing
 
-import gci.componentmodel as cm
+import github.compliance.result as gcr
 
 from model.base import ModelBase
 
@@ -268,75 +268,15 @@ class UploadStatus(Enum):
     DONE = 4
 
 
-@dataclasses.dataclass(frozen=True)
-class BDBA_ScanResult:
+@dataclasses.dataclass
+class BDBA_ScanResult(gcr.ScanResult):
+    # component: cm.Component
+    # resource: cm.Resource
     status: UploadStatus
-    component: cm.Component
     result: AnalysisResult
     licenses: set[License]
-    resource: cm.Resource = None
     greatest_cve_score: float = None
 
     @property
     def license_names(self):
         return {l.name() for l in self.licenses}
-
-
-@dataclasses.dataclass
-class BDBA_ScanResult_Group:
-    name: str # {component.name}:{resource.name}
-    results: list[BDBA_ScanResult]
-
-    @property
-    def component(self) -> cm.Component:
-        # results in result-groups must always have identical components
-        return self.results[0].component
-
-    @property
-    def resource_name(self) -> str:
-        # results in resource-groups must always have identical resourcen-names
-        return self.results[0].resource.name
-
-    @property
-    def resource_type(self) -> str:
-        # results in resource-groups must always have identical resourcen-names
-        return self.results[0].resource.type.value
-
-    def has_findings(
-        self,
-        finding_callback: typing.Callable[[BDBA_ScanResult], bool],
-    ):
-        for r in self.results:
-            if finding_callback(r):
-                return True
-        else:
-            return False
-
-    def results_with_findings(
-        self,
-        finding_callback: typing.Callable[[BDBA_ScanResult], bool],
-    ):
-        return [r for r in self.results if finding_callback(r)]
-
-    def results_without_findings(
-        self,
-        finding_callback: typing.Callable[[BDBA_ScanResult], bool],
-    ):
-        return [r for r in self.results if not finding_callback(r)]
-
-
-def group_scan_results(results: typing.Iterable[BDBA_ScanResult]) -> tuple[BDBA_ScanResult_Group]:
-    result_groups = dict()
-
-    for result in results:
-        group_name = f'{result.component.name}:{result.resource.name}'
-
-        if not group_name in result_groups:
-            result_groups[group_name] = BDBA_ScanResult_Group(
-                name=group_name,
-                results=list()
-            )
-        result_group = result_groups[group_name]
-        result_group.results.append(result)
-
-    return tuple(result_groups.values())

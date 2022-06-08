@@ -39,6 +39,7 @@ import delivery.client
 import delivery.model
 import github.compliance.issue
 import github.compliance.milestone
+import github.compliance.result as gcr
 import github.user
 import model.delivery
 import saf.model
@@ -165,7 +166,7 @@ def _compliance_status_summary(
 
 
 def _template_vars(
-    result_group: pm.BDBA_ScanResult_Group,
+    result_group: gcr.ScanResultGroup,
     finding_callback: typing.Callable[[pm.BDBA_ScanResult], bool],
     issue_type: str,
     license_cfg: image_scan.LicenseCfg,
@@ -263,7 +264,12 @@ def create_or_update_github_issues(
     # -> do not close tickets in this case.
     # a cleaner approach would be to create seperate tickets, or combine findings into shared
     # tickets. For the time being, this should be "good enough"
-    result_groups = pm.group_scan_results(results=results)
+    result_group_collection = gcr.ScanResultGroupCollection(
+        results=results,
+        github_issue_label=_compliance_label_vulnerabilities, # XXX
+    )
+
+    result_groups = result_group_collection.result_groups
 
     has_cve = lambda r: r.greatest_cve_score >= cve_threshold
 
@@ -521,7 +527,7 @@ def create_or_update_github_issues(
 
 
 def close_issues_for_absent_resources(
-    result_groups: list[pm.BDBA_ScanResult_Group],
+    result_groups: list[gcr.ScanResultGroup],
     repository: github3.repos.Repository,
     issue_type: str | None,
 ):
