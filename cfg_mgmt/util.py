@@ -150,6 +150,8 @@ def determine_status(
                 break
         else:
             rule = None # inconsistent cfg: rule with specified name does not exist
+    else:
+        policy = None
 
     for responsible in responsibles:
         if responsible.matches(element=element):
