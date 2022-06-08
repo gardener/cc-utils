@@ -7,6 +7,7 @@ aliyun-python-sdk-ecs==4.24.13
 bcrypt<4.0.0
 boto3
 cachecontrol<1
+cachetools
 cryptography
 dacite
 deepmerge
