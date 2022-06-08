@@ -39,7 +39,6 @@ class ScanResultGroup:
     def resource_name(self) -> cm.Resource:
         return self.results[0].resource
 
-    @property
     def has_findings(self, findings_callback: FindingsCallback) -> bool:
         for r in self.results:
             if findings_callback(r):
@@ -47,11 +46,9 @@ class ScanResultGroup:
         else:
             return False
 
-    @property
     def results_with_findings(self, findings_callback: FindingsCallback) -> list[ScanResult]:
         return [r for r in self.results if findings_callback(r)]
 
-    @property
     def results_without_findings(self, findings_callback: FindingsCallback) -> list[ScanResult]:
         return [r for r in self.results if not findings_callback(r)]
 
