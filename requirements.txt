@@ -19,11 +19,11 @@ flake8>=3.9
 gardener-component-model==v0.0.63
 gardener-oci
 github3.py<3.0.0
-google-crc32c>1.1.4
 google-api-core<3
 google-api-python-client<3
 google-auth<3
 google-cloud-storage<2
+google-crc32c>1.1.4
 html2text
 jira
 kubernetes<24.0.0,>=23.0.0
@@ -34,11 +34,11 @@ pycryptodome
 pydash<5.0.0
 pymongo
 pytest
-pytimeparse
 python-dateutil
 python-keystoneclient
 python-magic
 python-swiftclient
+pytimeparse
 pyyaml
 requests<3.0.0
 requests_toolbelt<1
