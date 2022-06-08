@@ -50,6 +50,12 @@ class DeliveryServiceRoutes:
             'upload-metadata',
         )
 
+    def query_metadata(self):
+        return ci.util.urljoin(
+            self._base_url,
+            'artefacts',
+            'query-metadata',
+        )
 
     def os_branches(self, os_id: str):
         return ci.util.urljoin(
@@ -182,6 +188,22 @@ class DeliveryServiceClient:
             ).json()
         )
 
+    def query_metadata_raw(self, components: typing.Iterable[cm.Component]):
+        query = {
+            'components': [
+                {
+                    'componentName': c.name,
+                    'componentVersion': c.version,
+                } for c in components
+            ]
+        }
+
+        res = requests.post(
+            url=self._routes.query_metadata(),
+            json=query,
+        )
+
+        return res.json()
 
     def os_release_infos(self, os_id: str, absent_ok=False) -> list[dm.OsReleaseInfo]:
         url = self._routes.os_branches(os_id=os_id)
