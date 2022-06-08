@@ -474,7 +474,7 @@ def create_or_update_github_issues(
             except github3.exceptions.GitHubError as ghe:
                 err_count += 1
                 logger.warning('error whilst trying to create or update issue - will keep going')
-                logger.warning(f'error: {ghe} {ghe.code=} {ghe.message()=}')
+                logger.warning(f'error: {ghe} {ghe.code=} {ghe.message=}')
 
             logger.info(f'updated gh-issue for {component.name=} {resource.name=} {issue_type=}')
         else:
