@@ -167,7 +167,7 @@ def _compliance_status_summary(
 
 def _template_vars(
     result_group: gcr.ScanResultGroup,
-    finding_callback: typing.Callable[[pm.BDBA_ScanResult], bool],
+    finding_callback: typing.Callable[[gcr.ScanResult], bool],
     issue_type: str,
     license_cfg: image_scan.LicenseCfg,
     delivery_dashboard_url: str='',
@@ -297,7 +297,7 @@ def create_or_update_github_issues(
     err_count = 0
 
     def process_result(
-        result_group: pm.BDBA_ScanResult_Group,
+        result_group: gcr.ScanResultGroup,
         finding_callback: typing.Callable[[pm.BDBA_ScanResult], bool],
         action: str,
         issue_type: str,
