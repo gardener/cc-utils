@@ -259,7 +259,7 @@ class TraitTransformer:
         return set()
 
     @abstractmethod
-    def process_pipeline_args(self, pipeline_args: 'JobVariant'): # noqa
+    def process_pipeline_args(self, pipeline_args):
         raise NotImplementedError()
 
 
