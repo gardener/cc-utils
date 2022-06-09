@@ -84,17 +84,20 @@ def scan_resources(
         tasks = not_done
 
 
-def resource_scan_result_to_findings_data(
+def resource_scan_result_to_artefact_metadata(
     resource_scan_result: ResourceScanResult,
+    datasource: str = dso.model.Datasource.CLAMAV,
+    datatype: str = dso.model.Datatype.MALWARE,
 ) -> dso.model.ArtefactMetadata:
 
     artefact_ref = dso.model.artefact_ref_from_ocm(
         component=resource_scan_result.component,
         artefact=resource_scan_result.resource,
     )
+
     meta = dso.model.Metadata(
-        datasource=dso.model.Datasource.CLAMAV,
-        type=dso.model.Datatype.MALWARE,
+        datasource=datasource,
+        type=datatype,
         creation_date=datetime.datetime.now()
     )
 
