@@ -97,21 +97,9 @@ def resource_scan_result_to_findings_data(
         type=dso.model.Datatype.MALWARE,
         creation_date=datetime.datetime.now()
     )
-    findings = [
-        dso.model.Finding(
-            result=finding.malware_status,
-            message=finding.name,
-            details=finding.details,
-            meta=dso.model.FindingMeta(
-                scanned_octets=finding.meta.scanned_octets,
-                receive_duration_seconds=finding.meta.receive_duration_seconds,
-                scan_duration_seconds=finding.meta.scan_duration_seconds,
-            ),
-        )
-        for finding in resource_scan_result.scan_result.findings
-    ]
-    finding = dso.model.ClamavFinding(
-        findings=findings,
+
+    finding = dso.model.Malware(
+        findings=resource_scan_result.scan_result.findings,
     )
 
     return dso.model.ArtefactMetadata(

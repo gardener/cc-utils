@@ -4,6 +4,7 @@ import typing
 
 import gci.componentmodel as cm
 
+import clamav.client
 import dso.labels
 import unixutil.model
 
@@ -84,26 +85,6 @@ class GreatestCVE:
 
 
 @dataclasses.dataclass(frozen=True)
-class FindingMeta:
-    scanned_octets: int
-    receive_duration_seconds: float
-    scan_duration_seconds: float
-
-
-@dataclasses.dataclass(frozen=True)
-class Finding:
-    result: str
-    message: str
-    details: typing.Optional[str]
-    meta: FindingMeta
-
-
-@dataclasses.dataclass(frozen=True)
-class ClamavFinding:
-    findings: list[Finding]
-
-
-@dataclasses.dataclass(frozen=True)
 class OsID:
     osInfo: unixutil.model.OperatingSystemId
 
@@ -122,6 +103,11 @@ class ComponentVersion:
 @dataclasses.dataclass(frozen=True)
 class Component:
     components: list[ComponentVersion]
+
+
+@dataclasses.dataclass(frozen=True)
+class Malware:
+    findings: list[clamav.client.ScanResult]
 
 
 @dataclasses.dataclass(frozen=True)
