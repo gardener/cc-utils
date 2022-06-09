@@ -86,7 +86,7 @@ class GreatestCVE:
 
 @dataclasses.dataclass(frozen=True)
 class OsID:
-    osInfo: unixutil.model.OperatingSystemId
+    os_info: unixutil.model.OperatingSystemId
 
 
 @dataclasses.dataclass(frozen=True)

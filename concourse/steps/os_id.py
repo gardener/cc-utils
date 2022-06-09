@@ -88,7 +88,7 @@ def upload_to_delivery_db(
     )
 
     os_id = dm.OsID(
-        osInfo=os_info,
+        os_info=os_info,
     )
     artefact_metadata = dm.ArtefactMetadata(
         artefact=artefact_ref,
