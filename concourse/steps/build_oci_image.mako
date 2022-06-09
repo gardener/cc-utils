@@ -193,6 +193,7 @@ docker_argv = (
   'buildx',
   % endif
   'build',
+  '--progress', 'plain',
 % for k,v in image_descriptor.build_args().items():
   '--build-arg', '${k}=${v}',
 % endfor
