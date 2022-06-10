@@ -142,7 +142,7 @@ max_processing_days = dacite.from_dict(
   data=${dataclasses.asdict(issue_policies.max_processing_time_days)},
 )
 
-delivery_svc_endpoints=ccc.delivery.endpoints(cfg_set=cfg_set),
+delivery_svc_endpoints = ccc.delivery.endpoints(cfg_set=cfg_set)
 delivery_svc_client = ccc.delivery.default_client_if_available()
 
 % if issue_tgt_repo_url:
