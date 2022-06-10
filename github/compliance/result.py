@@ -3,13 +3,17 @@ import enum
 import typing
 
 import gci.componentmodel as cm
+import unixutil.model
 
 
-class Severity(enum.Enum):
-    LOW = 'low'
-    MEDIUM = 'medium'
-    HIGH = 'high'
-    CRITICAL = 'critical'
+class Severity(enum.IntEnum):
+    LOW = 0
+    MEDIUM = 1
+    HIGH = 3
+    CRITICAL = 7
+
+    def __str__(self):
+        return self.name.lower()
 
 
 @dataclasses.dataclass

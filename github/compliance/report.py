@@ -29,7 +29,7 @@ _compliance_label_licenses = github.compliance.issue._label_licenses
 
 
 def _criticality_label(classification: gcr.Severity):
-    return f'compliance-priority/{classification.value}'
+    return f'compliance-priority/{str(classification)}'
 
 
 def _criticality_classification(cve_score: float) -> gcr.Severity:
@@ -144,9 +144,9 @@ def _template_vars(
             report_urls=[ar.report_url() for ar in analysis_results],
         )
         template_variables['greatest_cve'] = greatest_cve
-        template_variables['criticality_classification'] = _criticality_classification(
+        template_variables['criticality_classification'] = str(_criticality_classification(
             cve_score=greatest_cve
-        ).value
+        ))
     elif issue_type == _compliance_label_licenses:
         analysis_results = [r.result for r in results]
         prohibited_licenses = set()
@@ -166,7 +166,7 @@ def _template_vars(
             issue_description='Prohibited Licenses',
             report_urls=[ar.report_url() for ar in analysis_results],
         )
-        template_variables['criticality_classification'] = gcr.Severity.CRITICAL.value
+        template_variables['criticality_classification'] = str(gcr.Severity.CRITICAL)
     else:
         raise NotImplementedError(issue_type)
 
