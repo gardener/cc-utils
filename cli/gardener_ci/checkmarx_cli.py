@@ -10,5 +10,5 @@ def upload_and_scan_from_component_descriptor(
         checkmarx_cfg_name=checkmarx_cfg_name,
         team_id=team_id,
         component_descriptor_path=component_descriptor_path,
-        email_recipients=['johannes.krayl@sap.com']
+        email_recipients=None
     )
