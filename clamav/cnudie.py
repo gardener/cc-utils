@@ -102,7 +102,7 @@ def resource_scan_result_to_artefact_metadata(
         creation_date=creation_date,
     )
 
-    finding = dso.model.Malware(
+    finding = dso.model.MalwareSummary(
         findings=resource_scan_result.scan_result.findings,
     )
 

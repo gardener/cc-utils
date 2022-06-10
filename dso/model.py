@@ -106,7 +106,10 @@ class ComponentSummary:
 
 
 @dataclasses.dataclass(frozen=True)
-class Malware:
+class MalwareSummary:
+    '''
+    empty list of findings states "no malware found"
+    '''
     findings: list[clamav.client.ScanResult]
 
 
@@ -114,4 +117,4 @@ class Malware:
 class ArtefactMetadata:
     artefact: ComponentArtefactId
     meta: Metadata
-    data: GreatestCVE | LicenseSummary | ComponentSummary | OsID | dict
+    data: GreatestCVE | LicenseSummary | ComponentSummary | OsID | MalwareSummary | dict
