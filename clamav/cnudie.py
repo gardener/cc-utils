@@ -88,6 +88,7 @@ def resource_scan_result_to_artefact_metadata(
     resource_scan_result: ResourceScanResult,
     datasource: str = dso.model.Datasource.CLAMAV,
     datatype: str = dso.model.Datatype.MALWARE,
+    creation_date: datetime.datetime = datetime.datetime.now(),
 ) -> dso.model.ArtefactMetadata:
 
     artefact_ref = dso.model.artefact_ref_from_ocm(
@@ -98,7 +99,7 @@ def resource_scan_result_to_artefact_metadata(
     meta = dso.model.Metadata(
         datasource=datasource,
         type=datatype,
-        creation_date=datetime.datetime.now()
+        creation_date=creation_date,
     )
 
     finding = dso.model.Malware(
