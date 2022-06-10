@@ -341,11 +341,9 @@ class ReleaseNotes:
         # we should consider adding a release-note label to the PRs
         # to reduce the number of search results
         prs_iter = self.github_helper.search_issues_in_repo('type:pull is:closed')
-        prs_inspected = 0
         release_notes = list()
         for pr_iter in prs_iter:
             pr_dict = pr_iter.as_dict()
-            prs_inspected += 1
 
             pr_number = str(pr_dict['number'])
             if pr_number not in pr_numbers_in_range:
@@ -364,7 +362,6 @@ class ReleaseNotes:
 
             release_notes.extend(release_notes_pr)
 
-        logger.info(f'Inspected a total of {prs_inspected} PRs') # mind the pagination
         return release_notes
 
 
