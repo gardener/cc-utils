@@ -80,7 +80,7 @@ class Metadata:
 
 @dataclasses.dataclass(frozen=True)
 class GreatestCVE:
-    greatestCvss3Score: typing.Optional[float]
+    greatestCvss3Score: float
     reportUrl: str
 
 
