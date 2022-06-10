@@ -4,8 +4,6 @@ import tarfile
 import tempfile
 import typing
 
-import dacite
-
 import gci.componentmodel as cm
 
 import ci.log
