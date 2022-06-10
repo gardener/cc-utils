@@ -492,7 +492,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
 
     def delete_releases(
         self,
-        release_names: [str],
+        release_names: typing.Iterable[str],
     ):
         for release in self.repository.releases():
             if release.name in release_names:
@@ -727,7 +727,7 @@ def branches(
 
 def retrieve_email_addresses(
     github_cfg: GithubConfig,
-    github_users: [str],
+    github_users: typing.Sequence[str] | typing.Collection[str],
     out_file: str=None
 ):
     github = ccc.github.github_api(github_cfg=github_cfg)
