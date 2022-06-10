@@ -620,6 +620,10 @@ def dict_factory_enum_serialisiation(data):
 
 
 def dict_to_json_factory(data):
+    '''
+    converts enums to their respective values and datetime.date[time] stamps
+    to iso8601 timestamp strings
+    '''
 
     def convert_value(obj):
         if isinstance(obj, datetime.datetime):
