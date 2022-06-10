@@ -1,7 +1,15 @@
 import dataclasses
+import enum
 import typing
 
 import gci.componentmodel as cm
+
+
+class Severity(enum.Enum):
+    LOW = 'low'
+    MEDIUM = 'medium'
+    HIGH = 'high'
+    CRITICAL = 'critical'
 
 
 @dataclasses.dataclass
@@ -17,6 +25,7 @@ otherwise.
 Definition of "finding" is type-specific
 '''
 FindingsCallback = typing.Callable[[ScanResult], bool]
+ClassificationCallback = typing.Callable[[ScanResult], Severity]
 
 
 @dataclasses.dataclass
@@ -30,6 +39,9 @@ class ScanResultGroup:
     '''
     name: str # {component.name}:{resource.name}
     results: list[ScanResult]
+    issue_type: str
+    findings_callback: FindingsCallback
+    classification_callback: ClassificationCallback
 
     @property
     def component(self) -> cm.Component:
@@ -39,24 +51,30 @@ class ScanResultGroup:
     def resource_name(self) -> cm.Resource:
         return self.results[0].resource
 
-    def has_findings(self, findings_callback: FindingsCallback) -> bool:
+    @property
+    def has_findings(self) -> bool:
         for r in self.results:
-            if findings_callback(r):
+            if self.findings_callback(r):
                 return True
         else:
             return False
 
-    def results_with_findings(self, findings_callback: FindingsCallback) -> list[ScanResult]:
-        return [r for r in self.results if findings_callback(r)]
+    @property
+    def results_with_findings(self) -> list[ScanResult]:
+        return [r for r in self.results if self.findings_callback(r)]
 
-    def results_without_findings(self, findings_callback: FindingsCallback) -> list[ScanResult]:
-        return [r for r in self.results if not findings_callback(r)]
+    @property
+    def results_without_findings(self) -> list[ScanResult]:
+        return [r for r in self.results if not self.findings_callback(r)]
 
 
 @dataclasses.dataclass
 class ScanResultGroupCollection:
     results: tuple[ScanResult]
     github_issue_label: str
+    issue_type: str
+    classification_callback: ClassificationCallback
+    findings_callback: FindingsCallback
 
     @property
     def result_groups(self) -> tuple[ScanResultGroup]:
@@ -71,8 +89,23 @@ class ScanResultGroupCollection:
                 result_groups[group_name] = ScanResultGroup(
                     name=group_name,
                     results=[result],
+                    issue_type=self.issue_type,
+                    findings_callback=self.findings_callback,
+                    classification_callback=self.classification_callback,
                 )
             else:
                 result_groups[group_name].results.append(result)
 
         return tuple(result_groups.values())
+
+    @property
+    def result_groups_with_findings(self) -> tuple[ScanResultGroup]:
+        return tuple(
+            (rg for rg in self.result_groups if rg.has_findings)
+        )
+
+    @property
+    def result_groups_without_findings(self) -> tuple[ScanResultGroup]:
+        return tuple(
+            (rg for rg in self.result_groups if not rg.has_findings)
+        )
