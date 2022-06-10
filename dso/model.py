@@ -90,7 +90,7 @@ class OsID:
 
 
 @dataclasses.dataclass(frozen=True)
-class License:
+class LicenseSummary:
     licenses: list[str]
 
 
@@ -114,4 +114,4 @@ class Malware:
 class ArtefactMetadata:
     artefact: ComponentArtefactId
     meta: Metadata
-    data: GreatestCVE | License | Component | OsID | dict
+    data: GreatestCVE | LicenseSummary | Component | OsID | dict

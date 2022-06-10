@@ -266,7 +266,7 @@ def iter_artefact_metadata(
                 if component.license()
             ]
         ))
-        license = dso.model.License(
+        license = dso.model.LicenseSummary(
             licenses=licenses
         )
         yield dso.model.ArtefactMetadata(
