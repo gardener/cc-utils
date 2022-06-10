@@ -37,7 +37,6 @@
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
         <script src="../_static/underscore.js"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../_static/doctools.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
@@ -189,9 +188,9 @@
            <div itemprop="articleBody">
             
   <div class="section" id="component-descriptor-trait">
-<h1><em>component_descriptor</em> Trait<a class="headerlink" href="#component-descriptor-trait" title="Permalink to this heading">¶</a></h1>
+<h1><em>component_descriptor</em> Trait<a class="headerlink" href="#component-descriptor-trait" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="trait-component-descriptor">
-<span id="trait-component-descriptor"></span><h2>Attributes<a class="headerlink" href="#trait-component-descriptor" title="Permalink to this heading">¶</a></h2>
+<span id="trait-component-descriptor"></span><h2>Attributes<a class="headerlink" href="#trait-component-descriptor" title="Permalink to this headline">¶</a></h2>
 <table class="colwidths-auto docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>name</p></th>
@@ -283,7 +282,7 @@ If not configured, the CICD_landscape’s default ctx will be used.</p></td>
 </tr>
 </tbody>
 </table>
-<h2>Dependencies<a class="headerlink" href="#trait-component-descriptor" title="Permalink to this heading">¶</a></h2>
+<h2>Dependencies<a class="headerlink" href="#trait-component-descriptor" title="Permalink to this headline">¶</a></h2>
 <p>This trait requires the following traits to be declared:</p>
 <ul class="simple">
 <li><p><a class="reference internal" href="version.html#trait-version"><span class="std std-ref">version trait</span></a></p></li>
@@ -293,14 +292,14 @@ If not configured, the CICD_landscape’s default ctx will be used.</p></td>
 <a class="reference internal" href="release.html"><span class="doc">release Trait</span></a> trait is also declared, the created component descriptor is added to the
 component’s release artifacts (as GitHub release asset).</p>
 <div class="section" id="example">
-<h2>Example<a class="headerlink" href="#example" title="Permalink to this heading">¶</a></h2>
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">traits</span><span class="p">:</span><span class="w"></span>
 <span class="w">  </span><span class="nt">component_descriptor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~</span><span class="w"></span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="default-component-descriptor">
-<h2>Default Component Descriptor<a class="headerlink" href="#default-component-descriptor" title="Permalink to this heading">¶</a></h2>
+<h2>Default Component Descriptor<a class="headerlink" href="#default-component-descriptor" title="Permalink to this headline">¶</a></h2>
 <p>If no additional customisation is done, a _default_ component descriptor is created with the
 following data:</p>
 <ul class="simple">
@@ -311,7 +310,7 @@ following data:</p>
 dependencies.</p>
 </div>
 <div class="section" id="declaring-additional-dependencies">
-<h2>Declaring Additional Dependencies<a class="headerlink" href="#declaring-additional-dependencies" title="Permalink to this heading">¶</a></h2>
+<h2>Declaring Additional Dependencies<a class="headerlink" href="#declaring-additional-dependencies" title="Permalink to this headline">¶</a></h2>
 <p>The component descriptor should contain the full “bill-of-materials” that makes up a component.
 For many components this will simply be the set of container images built and released by the
 component (those are added automatically).</p>
@@ -325,7 +324,7 @@ component_descriptor at a defined file system path. Unresolved <code class="code
 automatically resolved before uploading as release artifact.</p>
 </div>
 <div class="section" id="environment-variables-passed-to-component-descriptor">
-<h2>Environment Variables Passed to component_descriptor<a class="headerlink" href="#environment-variables-passed-to-component-descriptor" title="Permalink to this heading">¶</a></h2>
+<h2>Environment Variables Passed to component_descriptor<a class="headerlink" href="#environment-variables-passed-to-component-descriptor" title="Permalink to this headline">¶</a></h2>
 <table class="docutils align-default">
 <colgroup>
 <col style="width: 33%" />
@@ -357,7 +356,7 @@ automatically resolved before uploading as release artifact.</p>
 </table>
 </div>
 <div class="section" id="id1">
-<h2>Example<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h2>
+<h2>Example<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
 <p>How to declare dependencies towards:</p>
 <ul class="simple">
 <li><p>component <code class="code docutils literal notranslate"><span class="pre">github.com/gardener/vpn</span></code> in version 1.2.3</p></li>
