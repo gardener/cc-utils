@@ -336,27 +336,26 @@ class ReleaseNotes:
 
     def fetch_release_notes_from_prs(
         self,
-        pr_numbers_in_range: typing.Set[str],
+        pr_numbers_in_range: typing.Set[int],
     ) -> typing.List[ReleaseNote]:
         # we should consider adding a release-note label to the PRs
         # to reduce the number of search results
-        prs_iter = self.github_helper.search_issues_in_repo('type:pull is:closed')
         release_notes = list()
-        for pr_iter in prs_iter:
-            pr_dict = pr_iter.as_dict()
+        for pr_number in pr_numbers_in_range:
+            pr = self.github_helper.repository.pull_request(pr_number)
 
-            pr_number = str(pr_dict['number'])
-            if pr_number not in pr_numbers_in_range:
+            if not pr.state == 'closed':
                 continue
 
             logger.info(f'Processing PR# {pr_number}')
             release_notes_pr = extract_release_notes(
                 reference_id=pr_number,
-                text=pr_dict['body'],
-                user_login=_.get(pr_dict, 'user.login'),
+                text=pr.body,
+                user_login=pr.user.login,
                 reference_type=REF_TYPE_PULL_REQUEST,
                 current_component=self.component,
             )
+
             if not release_notes_pr:
                 continue
 
@@ -528,13 +527,13 @@ def commits_from_logs(
 
 def fetch_pr_numbers_from_commits(
     commits: typing.List[Commit]
-) -> typing.Set[str]:
+) -> typing.Set[int]:
     pr_numbers = set()
     for commit in commits:
         pr_number = pr_number_from_subject(commit.subject)
 
         if pr_number:
-            pr_numbers.add(pr_number)
+            pr_numbers.add(int(pr_number))
 
     return pr_numbers
 
