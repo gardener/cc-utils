@@ -647,11 +647,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             .value()
 
     def search_issues_in_repo(self, query: str):
-        query = "repo:{org}/{repo} {query}".format(
-            org=self.owner,
-            repo=self.repository_name,
-            query=query
-        )
+        query = f'repo:{self.owner}/{self.repository_name} {query}'
         search_result = self.github.search_issues(query)
         return search_result
 
