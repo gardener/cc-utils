@@ -101,7 +101,7 @@ class ComponentVersion:
 
 
 @dataclasses.dataclass(frozen=True)
-class Component:
+class ComponentSummary:
     components: list[ComponentVersion]
 
 
@@ -114,4 +114,4 @@ class Malware:
 class ArtefactMetadata:
     artefact: ComponentArtefactId
     meta: Metadata
-    data: GreatestCVE | LicenseSummary | Component | OsID | dict
+    data: GreatestCVE | LicenseSummary | ComponentSummary | OsID | dict

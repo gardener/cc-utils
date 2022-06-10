@@ -289,7 +289,7 @@ def iter_artefact_metadata(
                 for component in result.result.components()
             ]
         ))
-        component = dso.model.Component(
+        component = dso.model.ComponentSummary(
             components=components
         )
         yield dso.model.ArtefactMetadata(
