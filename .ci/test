@@ -7,8 +7,8 @@ if ! which pytest &>/dev/null; then
   exit 1
 fi
 
-# HACK: install pytimeparse to fix unittests until next release -> remove again
-pip3 install pytimeparse
+# HACK: install awesomeversion to fix unittests until next release -> remove again
+pip3 install awesomeversion
 
 # usage: $1: <src-dir>
 
