@@ -13,10 +13,10 @@ COPY VERSION /metadata/VERSION
 ENV PATH /cc/utils/:/cc/utils/bin:$PATH
 ENV HELM_V3_VERSION=v3.8.0
 
-RUN pip3 install --upgrade \
+RUN pip3 install --upgrade --no-cache-dir \
   pip \
   wheel \
-&& pip3 install --upgrade \
+&& pip3 install --upgrade --no-cache-dir \
   --find-links /cc/utils/dist \
   gardener-cicd-libs==$(cat /metadata/VERSION) \
   gardener-cicd-cli==$(cat /metadata/VERSION) \
