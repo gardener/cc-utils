@@ -37,6 +37,7 @@
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
         <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../_static/doctools.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
@@ -188,9 +189,9 @@
            <div itemprop="articleBody">
             
   <div class="section" id="pull-request-trait">
-<h1><em>pull-request</em> Trait<a class="headerlink" href="#pull-request-trait" title="Permalink to this headline">¶</a></h1>
+<h1><em>pull-request</em> Trait<a class="headerlink" href="#pull-request-trait" title="Permalink to this heading">¶</a></h1>
 <div class="section" id="trait-pullrequest">
-<span id="trait-pullrequest"></span><h2>Attributes<a class="headerlink" href="#trait-pullrequest" title="Permalink to this headline">¶</a></h2>
+<span id="trait-pullrequest"></span><h2>Attributes<a class="headerlink" href="#trait-pullrequest" title="Permalink to this heading">¶</a></h2>
 <table class="colwidths-auto docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>name</p></th>
@@ -222,7 +223,7 @@
 </tr>
 </tbody>
 </table>
-<h2>policies <em>(PullRequestPolicies)</em> Attributes<a class="headerlink" href="#trait-pullrequest" title="Permalink to this headline">¶</a></h2>
+<h2>policies <em>(PullRequestPolicies)</em> Attributes<a class="headerlink" href="#trait-pullrequest" title="Permalink to this heading">¶</a></h2>
 <table class="colwidths-auto docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>name</p></th>
@@ -247,7 +248,7 @@
 </tr>
 </tbody>
 </table>
-<h2>Dependencies<a class="headerlink" href="#trait-pullrequest" title="Permalink to this headline">¶</a></h2>
+<h2>Dependencies<a class="headerlink" href="#trait-pullrequest" title="Permalink to this heading">¶</a></h2>
 <p>This trait has <em>no</em> dependencies</p>
 </div>
 <p>Turns the declaring job into a pull-request job. This means it will be triggered upon the
@@ -257,7 +258,7 @@ post executions results to the corresponding PRs.</p>
 <code class="code docutils literal notranslate"><span class="pre">PULLREQUEST_URL</span></code> contains the full pull-request URL whereas <code class="code docutils literal notranslate"><span class="pre">PULLREQUEST_ID</span></code> contains the
 pull request number.</p>
 <div class="section" id="policies-pull-request-label-handling">
-<h2>Policies / Pull-Request Label Handling<a class="headerlink" href="#policies-pull-request-label-handling" title="Permalink to this headline">¶</a></h2>
+<h2>Policies / Pull-Request Label Handling<a class="headerlink" href="#policies-pull-request-label-handling" title="Permalink to this heading">¶</a></h2>
 <p>For security reasons, Pull-Requests are by default only reacted upon if a label is added to them.
 To mitigate the risk of subsequent updates with malicious changes, said labels are removed at the
 beginning of PR build job executions and have thus to be added again if a repeated PR build job
@@ -265,7 +266,7 @@ execution is required.</p>
 <p>To make this more obvious, a “replacement label” is added after label removal.</p>
 </div>
 <div class="section" id="example">
-<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this heading">¶</a></h2>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">traits</span><span class="p">:</span><span class="w"></span>
 <span class="w">  </span><span class="nt">pull-request</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~</span><span class="w"></span>
 </pre></div>
