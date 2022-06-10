@@ -64,11 +64,17 @@ class CfgTypeSrc: # just a marker class
 class LocalFileCfgSrc(CfgTypeSrc):
     file: str
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}: {self.file}'
+
 
 @dc(frozen=True)
 class GithubRepoFileSrc(CfgTypeSrc):
     repository_url: str
     relpath: str
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}: {self.repository_url} -> {self.relpath}'
 
 
 @dc(frozen=True)
@@ -244,7 +250,7 @@ class ConfigFactory:
 
                 for k,v in parsed_cfg.items():
                     if k in cfg_dict and cfg_dict[k] != v:
-                        raise ValueError(f'conflicting definition for {k=}')
+                        raise ValueError(f'conflicting definition for {k=} in src {cfg_src}')
                     cfg_dict[k] = v
 
             return cfg_dict
