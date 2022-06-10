@@ -91,7 +91,7 @@ def resource_scan_result_to_artefact_metadata(
     creation_date: datetime.datetime = datetime.datetime.now(),
 ) -> dso.model.ArtefactMetadata:
 
-    artefact_ref = dso.model.artefact_ref_from_ocm(
+    artefact_ref = dso.model.component_artefact_id_from_ocm(
         component=resource_scan_result.component,
         artefact=resource_scan_result.resource,
     )

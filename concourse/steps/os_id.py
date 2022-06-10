@@ -75,7 +75,7 @@ def upload_to_delivery_db(
     component: cm.Component,
     os_info: um.OperatingSystemId,
 ):
-    artefact_ref = dm.artefact_ref_from_ocm(
+    artefact_ref = dm.component_artefact_id_from_ocm(
         component=component,
         artefact=resource,
     )

@@ -235,7 +235,7 @@ def iter_artefact_metadata(
     results: typing.Collection[pm.BDBA_ScanResult],
 ) -> typing.Generator[dso.model.GreatestCVE, None, None]:
     for result in results:
-        artefact_ref = dso.model.artefact_ref_from_ocm(
+        artefact_ref = dso.model.component_artefact_id_from_ocm(
             component=result.component,
             artefact=result.resource,
         )

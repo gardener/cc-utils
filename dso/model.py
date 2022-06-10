@@ -31,7 +31,7 @@ class Datasource:
 
 
 @dataclasses.dataclass(frozen=True)
-class Artefact:
+class LocalArtefactId:
     artefact_name: str
     artefact_version: str
     artefact_type: str
@@ -39,26 +39,26 @@ class Artefact:
 
 
 @dataclasses.dataclass(frozen=True)
-class ArtefactReference:
+class ComponentArtefactId:
     component_name: str
     component_version: str
-    artefact: Artefact
+    artefact: LocalArtefactId
 
 
-def artefact_ref_from_ocm(
+def component_artefact_id_from_ocm(
     component: cm.Component,
     artefact: cm.Resource | cm.ComponentSource
-) -> ArtefactReference:
-    artefact = Artefact(
+) -> ComponentArtefactId:
+    local_artefact = LocalArtefactId(
         artefact_name=artefact.name,
         artefact_version=artefact.version,
         artefact_type=artefact.type,
         artefact_extra_id=artefact.extraIdentity,
     )
-    return ArtefactReference(
+    return ComponentArtefactId(
         component_name=component.name,
         component_version=component.version,
-        artefact=artefact,
+        artefact=local_artefact,
     )
 
 
@@ -112,6 +112,6 @@ class Malware:
 
 @dataclasses.dataclass(frozen=True)
 class ArtefactMetadata:
-    artefact: ArtefactReference
+    artefact: ComponentArtefactId
     meta: Metadata
     data: GreatestCVE | License | Component | OsID | dict
