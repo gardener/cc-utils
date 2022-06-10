@@ -5,6 +5,7 @@ import gci.componentmodel as cm
 
 import ccc.whitesource
 import checkmarx.util
+import concourse.steps.component_descriptor_util as component_descriptor_util
 import cnudie.retrieve
 import whitesource.component
 import whitesource.model
@@ -16,13 +17,18 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 def scan_sources_and_notify(
     checkmarx_cfg_name: str,
-    component_descriptor: cm.ComponentDescriptor,
+    component_descriptor_path: str,
     email_recipients,
     team_id: str,
     threshold: int = 40,
     exclude_paths: typing.Sequence[str] = (),
     include_paths: typing.Sequence[str] = (),
 ):
+    print(f'was: {component_descriptor_path=}')
+    component_descriptor = component_descriptor_util.component_descriptor_from_component_descriptor_path(
+        cd_path=component_descriptor_path,
+    )
+
     checkmarx_client = checkmarx.util.create_checkmarx_client(checkmarx_cfg_name)
 
     scans = checkmarx.util.scan_sources(
@@ -39,13 +45,14 @@ def scan_sources_and_notify(
         routes=checkmarx_client.routes,
     )
 
-    checkmarx.util.send_mail(
-        scans=scans,
-        threshold=threshold,
-        email_recipients=email_recipients,
-        routes=checkmarx_client.routes,
-    )
-    #TODO codeowner recipient
+    if email_recipients:
+        checkmarx.util.send_mail(
+            scans=scans,
+            threshold=threshold,
+            email_recipients=email_recipients,
+            routes=checkmarx_client.routes,
+        )
+        #TODO codeowner recipient
 
 
 def scan_component_with_whitesource(
