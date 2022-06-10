@@ -626,7 +626,7 @@ def dict_to_json_factory(data):
     '''
 
     def convert_value(obj):
-        if isinstance(obj, datetime.datetime):
+        if isinstance(obj, (datetime.date, datetime.datetime)):
             return obj.isoformat()
         elif isinstance(obj, enum.Enum):
             return obj.value
