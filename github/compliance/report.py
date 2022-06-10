@@ -19,6 +19,7 @@ import delivery.model
 import github.compliance.issue
 import github.compliance.milestone
 import github.compliance.result as gcr
+import github.user
 import model.delivery
 
 logger = logging.getLogger(__name__)
