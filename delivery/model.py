@@ -1,8 +1,15 @@
 import dataclasses
 import datetime
 
+import awesomeversion
 import dacite
 import dateutil.parser
+
+
+def _parse_date_if_present(date: str):
+    if not date:
+        return None
+    return dateutil.parser.isoparse(date).date()
 
 
 @dataclasses.dataclass # TODO: deduplicate w/ modelclass in delivery-service
@@ -25,7 +32,7 @@ class Sprint:
             data_class=Sprint,
             data=raw,
             config=dacite.Config(
-                type_hooks={datetime.date: lambda d: dateutil.parser.isoparse(d).date()},
+                type_hooks={datetime.date: _parse_date_if_present},
             ),
         )
 
@@ -34,7 +41,17 @@ class Sprint:
 class OsReleaseInfo:
     name: str
     greatest_version: str | None
-    eol_date: datetime.date
+    eol_date: datetime.date | None
+
+    @property
+    def parsed_version(self) -> awesomeversion.AwesomeVersion:
+        return awesomeversion.AwesomeVersion(self.name)
+
+    def reached_eol(self, ref_date:datetime.date=None):
+        if not ref_date:
+            ref_date = datetime.date.today()
+
+        return self.eol_date < ref_date
 
     @staticmethod
     def from_dict(raw: dict):
@@ -42,6 +59,6 @@ class OsReleaseInfo:
             data_class=OsReleaseInfo,
             data=raw,
             config=dacite.Config(
-                type_hooks={datetime.date: lambda d: dateutil.parser.isoparse(d).date()},
+                type_hooks={datetime.date | None: _parse_date_if_present},
             ),
         )

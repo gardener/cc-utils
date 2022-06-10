@@ -19,6 +19,7 @@ ci.log.configure_default_logging()
 
 _label_bdba = 'vulnerabilities/bdba'
 _label_licenses = 'licenses/bdba'
+_label_os_outdated = 'os/outdated'
 
 
 def resource_digest_label(

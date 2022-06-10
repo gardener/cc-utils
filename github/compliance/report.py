@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 _compliance_label_vulnerabilities = github.compliance.issue._label_bdba
 _compliance_label_licenses = github.compliance.issue._label_licenses
+_compliance_label_os_outdated = github.compliance.issue._label_os_outdated
 
 
 def _criticality_label(classification: gcr.Severity):
@@ -167,6 +168,20 @@ def _template_vars(
             report_urls=[ar.report_url() for ar in analysis_results],
         )
         template_variables['criticality_classification'] = str(gcr.Severity.CRITICAL)
+    elif issue_type == _compliance_label_os_outdated:
+        worst_result = result_group.worst_result
+        os_info = worst_result.os_id
+
+        os_name_and_version = f'{os_info.ID}:{os_info.VERSION_ID}'
+
+        template_variables['summary'] = _compliance_status_summary(
+            component=component,
+            resources=resources,
+            issue_value=os_name_and_version,
+            issue_description='Outdated OS-Version',
+            report_urls=(),
+        )
+
     else:
         raise NotImplementedError(issue_type)
 
@@ -240,12 +255,7 @@ def create_or_update_github_issues(
         elif action == 'report':
             results = result_group.results_with_findings
 
-        # XXX delegate to rgroup
-        if issue_type == _compliance_label_vulnerabilities:
-            greatest_cve = max(results, key=lambda r: r.greatest_cve_score).greatest_cve_score
-            criticality_classification = _criticality_classification(cve_score=greatest_cve)
-        elif issue_type == _compliance_label_licenses:
-            criticality_classification = gcr.Severity.CRITICAL
+        criticality_classification = result_group.worst_severity
 
         if not len({r.component.name for r in results}) == 1:
             raise ValueError('not all component names are identical')
@@ -253,10 +263,6 @@ def create_or_update_github_issues(
         component = result_group.component
         resources = [r.resource for r in results]
         resource = resources[0]
-
-        # XXX this is bdba-specific
-        analysis_results = [r.result for r in results]
-        analysis_res = analysis_results[0]
 
         if overwrite_repository:
             repository = overwrite_repository
@@ -302,16 +308,11 @@ def create_or_update_github_issues(
                 ))
 
                 try:
-                    if issue_type == _compliance_label_vulnerabilities:
-                        latest_processing_date = _latest_processing_date(
-                            cve_score=greatest_cve,
-                            max_processing_days=max_processing_days,
-                        )
-                    elif issue_type == _compliance_label_licenses:
-                        # license issues are always "release-blockers"
-                        latest_processing_date = datetime.date.today()
-                    else:
-                        raise NotImplementedError(issue_type)
+                    max_days = max_processing_days.for_severity(
+                        criticality_classification
+                    )
+                    latest_processing_date = datetime.date.today() + \
+                        datetime.timedelta(days=max_days)
 
                     target_sprint = _target_sprint(
                         delivery_svc_client=delivery_svc_client,
@@ -328,11 +329,6 @@ def create_or_update_github_issues(
                 assignees = ()
                 target_milestone = None
 
-            if isinstance(resource.type, enum.Enum):
-                resource_type = resource.type.value
-            else:
-                resource_type = resource.type
-
             if delivery_svc_endpoints:
                 delivery_dashboard_url = _delivery_dashboard_url(
                     component=component,
@@ -348,45 +344,13 @@ def create_or_update_github_issues(
                 delivery_dashboard_url=delivery_dashboard_url,
             )
 
-            if github_issue_template_cfgs:
-                for issue_cfg in github_issue_template_cfgs:
-                    if issue_cfg.type == issue_type:
-                        break
-                else:
-                    raise ValueError(f'no template for {issue_type=}')
-
-                body = issue_cfg.body.format(**template_variables)
+            for issue_cfg in github_issue_template_cfgs:
+                if issue_cfg.type == issue_type:
+                    break
             else:
-                body = textwrap.dedent(f'''\
-                    # Compliance Status Summary
+                raise ValueError(f'no template for {issue_type=}')
 
-                    |    |    |
-                    | -- | -- |
-                    | Component | {component.name} |
-                    | Component-Version | {component.version} |
-                    | Resource  | {resource.name} |
-                    | Resource-Version  | {resource.version} |
-                    | Resource-Type | {resource_type} |
-                    | Greatest CVSSv3 Score | **{greatest_cve}** |
-
-                    The aforementioned {resource_type}, declared by the given content was found to
-                    contain potentially relevant vulnerabilities.
-
-                    See [scan report]({analysis_res.report_url()}) for both viewing a detailed
-                    scanning report, and doing assessments (see below).
-
-                    **Action Item**
-
-                    Please take appropriate action. Choose either of:
-
-                    - assess findings
-                    - upgrade {resource_type} version
-                    - minimise image
-
-                    In case of systematic false-positives, consider adding scanning-hints to your
-                    Component-Descriptor.
-                '''
-                )
+            body = issue_cfg.body.format(**template_variables)
 
             try:
                 github.compliance.issue.create_or_update_issue(
@@ -428,7 +392,7 @@ def create_or_update_github_issues(
         close_issues_for_absent_resources(
             result_groups=result_groups,
             repository=overwrite_repository,
-            issue_type=None,
+            issue_type=result_group_collection.issue_type,
         )
 
     if err_count > 0:

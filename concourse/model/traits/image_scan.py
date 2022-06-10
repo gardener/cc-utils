@@ -40,6 +40,7 @@ from protecode.scanning_util import ProcessingMode
 from protecode.model import CVSSVersion
 
 import concourse.model.traits.component_descriptor
+import github.compliance.result
 from .images import (
     IMAGE_ATTRS,
     ImageFilterMixin,
@@ -246,6 +247,17 @@ class MaxProcessingTimesDays:
     high: int = 30
     medium: int = 90
     low: int = 120
+
+    def for_severity(self, severity: github.compliance.result.Severity):
+        S = github.compliance.result.Severity
+        if severity is S.CRITICAL:
+            return self.very_high_or_greater
+        elif severity is S.HIGH:
+            return self.high
+        elif severity is S.MEDIUM:
+            return self.medium
+        elif severity is S.LOW:
+            return self.low
 
     def for_cve(self, cve_score: float):
         if cve_score >= 9.0:

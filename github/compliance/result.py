@@ -22,6 +22,11 @@ class ScanResult:
     resource: cm.Resource
 
 
+@dataclasses.dataclass
+class OsIdScanResult(ScanResult):
+    os_id: unixutil.model.OperatingSystemId
+
+
 '''
 callback type accepting a ScanResult; expected to return True iff argument has a "finding" and False
 otherwise.
@@ -62,6 +67,26 @@ class ScanResultGroup:
                 return True
         else:
             return False
+
+    @property
+    def worst_severity(self) -> Severity:
+        if not self.has_findings:
+            return None
+        classifications = [self.classification_callback(r) for r in self.results_with_findings]
+        return max(classifications)
+
+    @property
+    def worst_result(self) -> ScanResult:
+        if not self.has_findings:
+            return None
+
+        worst_severity = self.worst_severity
+
+        for result in self.results_with_findings:
+            if self.classification_callback(result) is worst_severity:
+                return result
+
+        return None
 
     @property
     def results_with_findings(self) -> list[ScanResult]:

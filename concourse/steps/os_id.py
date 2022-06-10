@@ -4,12 +4,16 @@ import tarfile
 import tempfile
 import typing
 
+import awesomeversion
+
 import gci.componentmodel as cm
 
 import ci.log
 import ci.util
 import delivery.client
 import dso.model as dm
+import github.compliance.result as gcres
+import github.compliance.issue as gciss
 import oci.client
 import oci.model
 import product.v2
@@ -23,7 +27,7 @@ ci.log.configure_default_logging()
 def determine_os_ids(
     component_descriptor: cm.ComponentDescriptor,
     oci_client: oci.client.Client,
-) -> typing.Generator[tuple[cm.Component, cm.Resource, um.OperatingSystemId], None, None]:
+) -> typing.Generator[gcres.OsIdScanResult, None, None]:
     component_resources: typing.Generator[tuple[cm.Component, cm.Resource], None, None] = \
         product.v2.enumerate_oci_resources(component_descriptor=component_descriptor)
 
@@ -39,7 +43,7 @@ def base_image_os_id(
     oci_client: oci.client.Client,
     component: cm.Component,
     resource: cm.Resource,
-) -> tuple[cm.Component, cm.Resource, um.OperatingSystemId]:
+) -> gcres.OsIdScanResult:
     image_reference = resource.access.imageReference
 
     manifest = oci_client.manifest(image_reference=image_reference)
@@ -66,7 +70,97 @@ def base_image_os_id(
 
         os_info = us.determine_osinfo(tarfh=tf)
 
-    return component, resource, os_info
+    return gcres.OsIdScanResult(
+        component=component,
+        resource=resource,
+        os_id=os_info,
+    )
+
+
+def scan_result_group_collection_for_outdated_os_ids(
+    results: tuple[gcres.OsIdScanResult],
+    delivery_svc_client: delivery.client.DeliveryServiceClient,
+):
+    os_names = {r.os_id.ID for r in results}
+    os_infos = {
+        os_name: info
+        for os_name in os_names
+        if (info := delivery_svc_client.os_release_infos(os_id=os_name, absent_ok=True)) is not None
+    }
+
+    def find_branch_info(os_id: um.OperatingSystemId) -> delivery.model.OsReleaseInfo:
+        os_version = os_id.VERSION_ID
+
+        def version_candidates():
+            yield os_version
+            yield f'v{os_version}'
+
+            parts = os_version.split('.')
+
+            if len(parts) == 1:
+                return
+
+            yield '.'.join(parts[:2]) # strip parts after minor
+            yield 'v' + '.'.join(parts[:2]) # strip parts after minor
+
+        candidates = tuple(version_candidates())
+
+        for os_info in os_infos[os_id.ID]:
+            for candidate in candidates:
+                if os_info.name == candidate:
+                    return os_info
+
+    def branch_reached_eol(os_id: um.OperatingSystemId):
+        branch_info = find_branch_info(os_id=os_id)
+        if not branch_info:
+            logger.warning(f'did not find branch-info for {os_id.NAME=} {os_id.VERSION_ID=}')
+            return False
+
+        return branch_info.reached_eol()
+
+    def update_available(os_id: um.OperatingSystemId):
+        branch_info = find_branch_info(os_id=os_id)
+        if not branch_info:
+            logger.warning(f'did not find branch-info for {os_id.NAME=} {os_id.VERSION_ID=}')
+            return False
+
+        if not branch_info.greatest_version:
+            logger.warning(f'no greatest version known for {os_id.NAME=} {os_id.VERSION_ID=}')
+            return False
+
+        return branch_info.parsed_version > awesomeversion.AwesomeVersion(os_id.VERSION_ID)
+
+    def classification_callback(result: gcres.OsIdScanResult):
+        os_id = result.os_id
+        if not os_id.ID in os_infos:
+            return None
+
+        if branch_reached_eol(os_id=os_id):
+            return gcres.Severity.CRITICAL
+        elif update_available(os_id=os_id):
+            return gcres.Severity.HIGH
+        else:
+            return None
+
+    def findings_callback(result: gcres.OsIdScanResult):
+        os_id = result.os_id
+        if not os_id.ID in os_infos:
+            return None
+
+        if branch_reached_eol(os_id=os_id):
+            return True
+        elif update_available(os_id=os_id):
+            return True
+        else:
+            return False
+
+    return gcres.ScanResultGroupCollection(
+        results=tuple(results),
+        github_issue_label=gciss._label_os_outdated,
+        issue_type=gciss._label_os_outdated,
+        classification_callback=classification_callback,
+        findings_callback=findings_callback,
+    )
 
 
 def upload_to_delivery_db(
