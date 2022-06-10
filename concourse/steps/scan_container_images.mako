@@ -22,7 +22,7 @@ if not issue_tgt_repo_url:
   raise ValueError('overwrite-repo-url must be configured')
 
 parsed_repo_url = ci.util.urlparse(issue_tgt_repo_url)
-tgt_repo_name, tgt_repo_org = parsed_repo_url.path.strip('/').split('/')
+tgt_repo_org, tgt_repo_name = parsed_repo_url.path.strip('/').split('/')
 
 github_issue_templates = image_scan_trait.github_issue_templates()
 github_issue_labels_to_preserve = image_scan_trait.github_issue_labels_to_preserve()
@@ -37,10 +37,13 @@ import faulthandler
 faulthandler.enable() # print stacktraces upon fatal signals
 # end of debugging block
 
+import ccc.github
 import ci.log
 ci.log.configure_default_logging()
 import ci.util
 import concourse.model.traits.image_scan as image_scan
+import delivery.client
+import github.compliance.report
 import protecode.util
 
 
@@ -140,11 +143,7 @@ max_processing_days = dacite.from_dict(
 )
 
 delivery_svc_endpoints=ccc.delivery.endpoints(cfg_set=cfg_set),
-delivery_svc_client = delivery.client.DeliveryServiceClient(
-    routes=delivery.client.DeliveryServiceRoutes(
-        base_url=delivery_svc_endpoints.base_url(),
-    )
-)
+delivery_svc_client = ccc.delivery.default_client_if_available()
 
 % if issue_tgt_repo_url:
 gh_api = ccc.github.github_api(repo_url='${issue_tgt_repo_url}')
@@ -169,7 +168,7 @@ if not notification_policy is Notify.GITHUB_ISSUES:
 
 for result_group in scan_results_vulnerabilities, scan_results_licenses:
   logger.info(f'processing {result_group.issue_type=}')
-  create_or_update_github_issues(
+  github.compliance.report.create_or_update_github_issues(
     result_group_collection=result_group,
     max_processing_days=max_processing_days,
 % if issue_tgt_repo_url:
