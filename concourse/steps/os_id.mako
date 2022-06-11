@@ -25,6 +25,7 @@ tgt_repo_org, tgt_repo_name = parsed_repo_url.path.strip('/').split('/')
 
 github_issue_labels_to_preserve = image_scan_trait.github_issue_labels_to_preserve()
 %>
+import dacite
 
 import ccc.delivery
 import ccc.github
