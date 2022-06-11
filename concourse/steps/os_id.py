@@ -100,6 +100,9 @@ def scan_result_group_collection_for_outdated_os_ids(
             if len(parts) == 1:
                 return
 
+            yield parts[0]
+            yield 'v' + parts[0]
+
             yield '.'.join(parts[:2]) # strip parts after minor
             yield 'v' + '.'.join(parts[:2]) # strip parts after minor
 
@@ -110,10 +113,11 @@ def scan_result_group_collection_for_outdated_os_ids(
                 if os_info.name == candidate:
                     return os_info
 
+        logger.warning(f'did not find branch-info for {os_id=}')
+
     def branch_reached_eol(os_id: um.OperatingSystemId):
         branch_info = find_branch_info(os_id=os_id)
         if not branch_info:
-            logger.warning(f'did not find branch-info for {os_id.NAME=} {os_id.VERSION_ID=}')
             return False
 
         return branch_info.reached_eol()
@@ -121,7 +125,6 @@ def scan_result_group_collection_for_outdated_os_ids(
     def update_available(os_id: um.OperatingSystemId):
         branch_info = find_branch_info(os_id=os_id)
         if not branch_info:
-            logger.warning(f'did not find branch-info for {os_id.NAME=} {os_id.VERSION_ID=}')
             return False
 
         if not branch_info.greatest_version:
