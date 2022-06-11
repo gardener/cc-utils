@@ -24,6 +24,7 @@ parsed_repo_url = ci.util.urlparse(issue_tgt_repo_url)
 tgt_repo_org, tgt_repo_name = parsed_repo_url.path.strip('/').split('/')
 
 github_issue_labels_to_preserve = image_scan_trait.github_issue_labels_to_preserve()
+github_issue_templates = image_scan_trait.github_issue_templates()
 %>
 import dacite
 
@@ -58,6 +59,14 @@ if not '${delivery_svc_cfg_name}':
 gh_api = ccc.github.github_api(repo_url='${issue_tgt_repo_url}')
 overwrite_repository = gh_api.repository('${tgt_repo_org}', '${tgt_repo_name}')
 
+% if github_issue_templates:
+github_issue_template_cfgs = [dacite.from_dict(
+    data_class=image_scan.GithubIssueTemplateCfg,
+    data=raw
+    ) for raw in ${[dataclasses.asdict(ghit) for ghit in github_issue_templates]}
+]
+% endif
+
 results = []
 
 for result in determine_os_ids(
@@ -91,6 +100,9 @@ github.compliance.report.create_or_update_github_issues(
   overwrite_repository=overwrite_repository,
 % if github_issue_labels_to_preserve:
     preserve_labels_regexes=${github_issue_labels_to_preserve},
+% endif
+% if github_issue_templates:
+    github_issue_template_cfgs=github_issue_template_cfgs,
 % endif
   delivery_svc_client=delivery_db_client,
   delivery_svc_endpoints=delivery_svc_endpoints,
