@@ -431,7 +431,7 @@ def extract_release_notes(
             rls_note_block = create_release_note_block(
                 code_block=code_block,
                 reference_type=reference_type,
-                reference_id=reference_id,
+                reference_id=str(reference_id),
                 user_login=user_login,
                 current_component=current_component,
                 source_component=source_component,
