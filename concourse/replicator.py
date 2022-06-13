@@ -270,6 +270,15 @@ class DefinitionDeployer:
         raise NotImplementedError('subclasses must overwrite')
 
 
+class NoOpDeployer:
+    def deploy(self, definition_descriptor):
+        logger.info(f'Skipped deployment of pipeline {definition_descriptor.pipeline_name} (NoOp)')
+        return DeployResult(
+                definition_descriptor=definition_descriptor,
+                deploy_status=DeployStatus.SUCCEEDED,
+            )
+
+
 class FilesystemDeployer(DefinitionDeployer):
     def __init__(self, base_dir):
         self.base_dir = existing_dir(base_dir)
