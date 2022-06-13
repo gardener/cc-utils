@@ -162,11 +162,11 @@ else:
 
 send_email_notification = not has_pr_trait(job_variant) and status == 'error'
 %>
-% if notify_pull_request or send_email_notification:
+% if notify_pull_requests or send_email_notification:
 on_failure:
   do:
 % endif
-% if notify_pull_request:
+% if notify_pull_requests:
   ${update_pr_status(2, job_variant, job_step, status)}
 % endif
 ## let's send an e-mail only in case of a problem
@@ -586,7 +586,7 @@ else:
 % if notify_pull_requests:
   ${update_pr_status(2, job_variant, job_step, 'success')}
 % endif
-% if render_notification_step:
+% if render_notification_step or notify_pull_requests:
   ${notification(2, job_variant, job_step, 'error')}
 % endif
 % if job_step._on_abort():
