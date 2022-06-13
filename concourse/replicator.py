@@ -621,6 +621,26 @@ class ReplicationResultProcessor:
             .as_list()
 
 
+class PipelineValidationError(Exception):
+    pass
+
+
+class PipelineValidationResultProcessor:
+    def process_results(self, results: typing.Iterable[DeployResult]):
+        failed_results = [
+            r for r in results if not r.deploy_status is DeployStatus.SUCCEEDED
+        ]
+        if failed_results:
+            raise PipelineValidationError(
+                '\n'.join((
+                    f'{r.definition_descriptor.pipeline_name}: {r.error_details}'
+                    for r in failed_results)
+                )
+            )
+
+        return True
+
+
 class PipelineReplicator:
     def __init__(
             self,
