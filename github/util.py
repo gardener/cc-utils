@@ -660,6 +660,10 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         pull_request = self.repository.pull_request(pull_request_number)
         pull_request.issue().add_labels(*labels)
 
+    def remove_label_from_pull_request(self, pull_request_number, label):
+        pull_request = self.repository.pull_request(pull_request_number)
+        pull_request.issue().remove_label(label)
+
     def add_comment_to_pr(self, pull_request_number, comment):
         pull_request = self.repository.pull_request(pull_request_number)
         pull_request.create_comment(comment)
