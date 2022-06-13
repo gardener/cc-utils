@@ -81,7 +81,7 @@ def scan_result_group_collection_for_outdated_os_ids(
     results: tuple[gcres.OsIdScanResult],
     delivery_svc_client: delivery.client.DeliveryServiceClient,
 ):
-    os_names = {r.os_id.ID for r in results}
+    os_names = {r.os_id.ID for r in results if r.os_id.ID}
     os_infos = {
         os_name: info
         for os_name in os_names
@@ -89,6 +89,9 @@ def scan_result_group_collection_for_outdated_os_ids(
     }
 
     def find_branch_info(os_id: um.OperatingSystemId) -> delivery.model.OsReleaseInfo:
+        if not os_id.ID:
+            return None # os-id could not be determined
+
         os_version = os_id.VERSION_ID
 
         def version_candidates():
