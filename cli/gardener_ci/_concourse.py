@@ -227,10 +227,10 @@ def sync_org_webhooks_from_cfg(
 
 
 def trigger_resource_check(
-    cfg_name: CliHints.non_empty_string(help="cfg_set to use"),
-    team_name: CliHints.non_empty_string(help="pipeline's team name"),
-    pipeline_name: CliHints.non_empty_string(help="pipeline name"),
-    resource_name: CliHints.non_empty_string(help="resource to check"),
+    cfg_name: str,
+    team_name: str,
+    pipeline_name: str,
+    resource_name: str,
 ):
     '''Triggers a check of the specified Concourse resource
     '''

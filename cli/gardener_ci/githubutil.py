@@ -15,7 +15,6 @@
 import urllib
 
 from ci.util import (
-    CliHint,
     ctx,
 )
 from gitutil import GitHelper
@@ -40,7 +39,7 @@ import github3
 def assign_github_team_to_repo(
     github_cfg_name: str,
     github_org_name: str,
-    auth_token: CliHint(help="Token from an org admin user. Token must have 'admin:org' scope"),
+    auth_token: str, # token must have 'admin:org' scope
     team_name: str='ci'
 ):
     '''
@@ -210,15 +209,9 @@ def delete_releases(
 
 
 def greatest_release_version(
-    github_repository_url: CliHint(help='e.g.: https://github.com/gardener/cc-utils'),
-    anonymous: CliHint(
-        typehint=bool,
-        help='Use anonymous access. Unauthenticated access is only possible on github.com.',
-    ) = False,
-    ignore_prereleases: CliHint(
-        typehint=bool,
-        help='Ignore prerelease-versions (e.g.: 1.2.3-foo)',
-    ) = False,
+    github_repository_url: str,
+    anonymous: bool=False,
+    ignore_prereleases: bool=False,
 ):
     '''Find the release with the greatest name (according to semver) and print its semver-version.
 

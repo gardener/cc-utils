@@ -29,9 +29,7 @@ from ci.util import (
     not_none,
     info,
     fail,
-    CliHint,
     ctx,
-    CliHints,
 )
 from mail import template_mailer as mailer
 import ccc.github
@@ -39,12 +37,12 @@ import github.codeowners
 
 
 def send_mail(
-    email_cfg_name: CliHint(help="reference to an email cfg (see repo cc-config / secrets-server)"),
-    recipients: CliHint(typehint=[str], help="Recipient email address"),
-    mail_template_file: CliHints.existing_file(),
-    subject: CliHint(help="email subject"),
-    cc_recipients: CliHint(typehint=[str], help="Carbon copy email address")=[],
-    replace_token: CliHint(typehint=[str], help="<key>=<value> (replace <key> in body)")=[],
+    email_cfg_name: str,
+    recipients: typing.Iterable[str],
+    mail_template_file: str,
+    subject: str,
+    cc_recipients: typing.Iterable[str],
+    replace_token: typing.Iterable[str],
 ):
     '''
     Sends an email using the specified email_cfg (retrieved from a cfg_factory) to the specified

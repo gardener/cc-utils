@@ -19,7 +19,7 @@ import typing
 from concourse.model.step import (
     PipelineStep,
     PrivilegeMode,
-    StepNotificationPolicy,
+    PullRequestNotificationPolicy,
 )
 from concourse.model.base import (
     AttributeSpec,
@@ -267,7 +267,7 @@ class UpdateComponentDependenciesTraitTransformer(TraitTransformer):
                     'privilege_mode': privilege_mode,
                 },
                 is_synthetic=True,
-                notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
+                pull_request_notification_policy=PullRequestNotificationPolicy.NO_NOTIFICATION,
                 injecting_trait_name=self.name,
                 script_type=ScriptType.PYTHON3
         )

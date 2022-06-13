@@ -298,7 +298,12 @@ class PullRequestUtil(RepositoryHelperBase):
             pull_request.title = pull_request.title.strip()
             return pull_request
 
-        parsed_prs = ci.util.FluentIterable(self.repository.pull_requests(state=state_filter)) \
+        parsed_prs = ci.util.FluentIterable(
+            self.repository.pull_requests(
+                state=state_filter,
+                number=128, # avoid enumerations to become too expensive w/ growing repositories
+            )
+        ) \
             .map(strip_title) \
             .filter(self._has_upgrade_pr_title) \
             .map(pr_to_upgrade_pr) \
@@ -487,7 +492,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
 
     def delete_releases(
         self,
-        release_names: [str],
+        release_names: typing.Iterable[str],
     ):
         for release in self.repository.releases():
             if release.name in release_names:
@@ -642,11 +647,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             .value()
 
     def search_issues_in_repo(self, query: str):
-        query = "repo:{org}/{repo} {query}".format(
-            org=self.owner,
-            repo=self.repository_name,
-            query=query
-        )
+        query = f'repo:{self.owner}/{self.repository_name} {query}'
         search_result = self.github.search_issues(query)
         return search_result
 
@@ -683,7 +684,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
                 with the same major and minor version
         '''
 
-        releases = [release for release in self.repository.releases()]
+        releases = [release for release in self.repository.releases(number=20)]
         non_draft_releases = [release for release in releases if not release.draft]
         draft_releases = [release for release in releases if release.draft]
         greatest_release_version = find_greatest_github_release_version(non_draft_releases)
@@ -726,7 +727,7 @@ def branches(
 
 def retrieve_email_addresses(
     github_cfg: GithubConfig,
-    github_users: [str],
+    github_users: typing.Sequence[str] | typing.Collection[str],
     out_file: str=None
 ):
     github = ccc.github.github_api(github_cfg=github_cfg)

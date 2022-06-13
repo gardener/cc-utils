@@ -31,6 +31,7 @@ import gziputil
 import oci
 import oci.client as oc
 import oci.convert as oconv
+import oci.platform
 import oci.model as om
 import tarutil
 
@@ -90,7 +91,7 @@ def filter_image(
            source_ref = f'{src_name}@{sub_manifest.digest}'
 
            if platform_filter:
-               platform = oci._platform_from_single_image(
+               platform = oci.platform.from_single_image(
                    image_reference=source_ref,
                    oci_client=oci_client,
                    base_platform=sub_manifest.platform,
@@ -135,7 +136,7 @@ def filter_image(
                 )
             )
 
-        platform = oci._platform_from_single_image(
+        platform = oci.platform.from_single_image(
             image_reference=source_ref,
             oci_client=oci_client,
         )

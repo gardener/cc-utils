@@ -248,6 +248,7 @@ def determine_upgrade_prs(
 def _import_release_notes(
     component: gci.componentmodel.Component,
     to_version: str,
+    pull_request_util,
 ):
     if not component.sources:
         logger.warning(
@@ -380,6 +381,7 @@ def create_upgrade_pr(
         release_notes = _import_release_notes(
             component=from_component,
             to_version=to_version,
+            pull_request_util=pull_request_util,
         )
     except Exception:
         logger.warning('failed to retrieve release-notes')

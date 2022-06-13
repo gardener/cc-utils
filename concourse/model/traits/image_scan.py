@@ -25,7 +25,7 @@ from concourse.model.job import (
 )
 from concourse.model.step import (
     PipelineStep,
-    StepNotificationPolicy,
+    PullRequestNotificationPolicy,
 )
 from concourse.model.base import (
     AttributeSpec,
@@ -40,6 +40,7 @@ from protecode.scanning_util import ProcessingMode
 from protecode.model import CVSSVersion
 
 import concourse.model.traits.component_descriptor
+import github.compliance.result
 from .images import (
     IMAGE_ATTRS,
     ImageFilterMixin,
@@ -247,6 +248,17 @@ class MaxProcessingTimesDays:
     medium: int = 90
     low: int = 120
 
+    def for_severity(self, severity: github.compliance.result.Severity):
+        S = github.compliance.result.Severity
+        if severity is S.CRITICAL:
+            return self.very_high_or_greater
+        elif severity is S.HIGH:
+            return self.high
+        elif severity is S.MEDIUM:
+            return self.medium
+        elif severity is S.LOW:
+            return self.low
+
     def for_cve(self, cve_score: float):
         if cve_score >= 9.0:
             return self.very_high_or_greater
@@ -452,7 +464,7 @@ class ImageScanTraitTransformer(TraitTransformer):
                     name='scan_container_images',
                     raw_dict={},
                     is_synthetic=True,
-                    notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
+                    pull_request_notification_policy=PullRequestNotificationPolicy.NO_NOTIFICATION,
                     injecting_trait_name=self.name,
                     script_type=ScriptType.PYTHON3
             )
@@ -468,7 +480,7 @@ class ImageScanTraitTransformer(TraitTransformer):
                     name='malware-scan',
                     raw_dict={},
                     is_synthetic=True,
-                    notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
+                    pull_request_notification_policy=PullRequestNotificationPolicy.NO_NOTIFICATION,
                     injecting_trait_name=self.name,
                     script_type=ScriptType.PYTHON3
             )
@@ -484,7 +496,7 @@ class ImageScanTraitTransformer(TraitTransformer):
                     name='os-id-scan',
                     raw_dict={},
                     is_synthetic=True,
-                    notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
+                    pull_request_notification_policy=PullRequestNotificationPolicy.NO_NOTIFICATION,
                     injecting_trait_name=self.name,
                     script_type=ScriptType.PYTHON3
             )

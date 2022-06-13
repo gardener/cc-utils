@@ -1,6 +1,8 @@
+import itertools
 import logging
 import typing
 
+import ccc.protecode
 import ci.util
 import concourse.steps.component_descriptor_util as component_descriptor_util
 import concourse.steps.images
@@ -92,3 +94,53 @@ def scan_without_notification(
     logger.info('Summary of found vulnerabilities:')
     logger.info(f'{len(results_above_threshold)=}; {results_above_threshold=}')
     logger.info(f'{len(results_below_threshold)=}; {results_below_threshold=}')
+
+
+def transport_triages(
+    protecode_cfg_name: str,
+    from_product_id: int,
+    to_group_id: int,
+    to_product_ids: typing.List[int],
+):
+    cfg_factory = ci.util.ctx().cfg_factory()
+    protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
+    api = ccc.protecode.client(protecode_cfg)
+
+    scan_result_from = api.scan_result(product_id=from_product_id)
+    scan_results_to = {
+        product_id: api.scan_result(product_id=product_id)
+        for product_id in to_product_ids
+    }
+
+    def target_component_versions(product_id: int, component_name: str):
+        scan_result = scan_results_to[product_id]
+        component_versions = {
+            c.version() for c
+            in scan_result.components()
+            if c.name() == component_name
+        }
+        return component_versions
+
+    def enum_triages():
+        for component in scan_result_from.components():
+            for vulnerability in component.vulnerabilities():
+                for triage in vulnerability.triages():
+                    yield component, triage
+
+    triages = list(enum_triages())
+    logger.info(f'found {len(triages)} triage(s) to import')
+
+    for to_product_id, component_name_and_triage in itertools.product(to_product_ids, triages):
+        component, triage = component_name_and_triage
+        for target_component_version in target_component_versions(
+            product_id=to_product_id,
+            component_name=component.name(),
+        ):
+            logger.info(f'adding triage for {triage.component_name()}:{target_component_version}')
+            api.add_triage(
+                triage=triage,
+                product_id=to_product_id,
+                group_id=to_group_id,
+                component_version=target_component_version,
+            )
+        logger.info(f'added triage for {triage.component_name()} to {to_product_id}')

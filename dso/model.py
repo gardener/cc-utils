@@ -9,7 +9,6 @@ import dso.labels
 import unixutil.model
 
 
-# abstraction of component model v2 source and resource
 @dataclasses.dataclass
 class ScanArtifact:
     name: str

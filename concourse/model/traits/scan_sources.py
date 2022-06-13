@@ -8,7 +8,7 @@ from concourse.model.job import (
 )
 from concourse.model.step import (
     PipelineStep,
-    StepNotificationPolicy,
+    PullRequestNotificationPolicy,
 )
 from concourse.model.base import (
     AttributeSpec,
@@ -231,7 +231,7 @@ class SourceScanTraitTransformer(TraitTransformer):
             name='scan_sources',
             raw_dict={},
             is_synthetic=True,
-            notification_policy=StepNotificationPolicy.NO_NOTIFICATION,
+            pull_request_notification_policy=PullRequestNotificationPolicy.NO_NOTIFICATION,
             injecting_trait_name=self.name,
             script_type=ScriptType.PYTHON3
         )

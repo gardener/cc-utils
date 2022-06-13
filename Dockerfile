@@ -1,5 +1,5 @@
 FROM eu.gcr.io/gardener-project/component/cli:latest AS component-cli
-FROM eu.gcr.io/gardener-project/cc/job-image-base:0.69.0
+FROM eu.gcr.io/gardener-project/cc/job-image-base:0.70.0
 
 COPY . /cc/utils/
 
@@ -13,16 +13,15 @@ COPY VERSION /metadata/VERSION
 ENV PATH /cc/utils/:/cc/utils/bin:$PATH
 ENV HELM_V3_VERSION=v3.8.0
 
-RUN pip3 install --upgrade \
+RUN pip3 install --upgrade --no-cache-dir \
   pip \
   wheel \
-&& pip3 install --upgrade \
+&& pip3 install --upgrade --no-cache-dir \
   --find-links /cc/utils/dist \
   gardener-cicd-libs==$(cat /metadata/VERSION) \
   gardener-cicd-cli==$(cat /metadata/VERSION) \
   gardener-cicd-whd==$(cat /metadata/VERSION) \
   gardener-cicd-dso==$(cat /metadata/VERSION) \
-  gardenlinux \
   pycryptodome \
 && curl -L \
   https://get.helm.sh/helm-${HELM_V3_VERSION}-linux-amd64.tar.gz | tar xz -C /tmp --strip=1 \

@@ -6,6 +6,7 @@
 from makoutil import indent_func
 from concourse.steps import step_lib
 import dataclasses
+import ci.util
 
 image_scan_trait = job_variant.trait('image_scan')
 issue_policies = image_scan_trait.issue_policies()
@@ -17,6 +18,12 @@ filter_cfg = image_scan_trait.filters()
 license_cfg = image_scan_trait.licenses()
 
 issue_tgt_repo_url = image_scan_trait.overwrite_github_issues_tgt_repository_url()
+if not issue_tgt_repo_url:
+  raise ValueError('overwrite-repo-url must be configured')
+
+parsed_repo_url = ci.util.urlparse(issue_tgt_repo_url)
+tgt_repo_org, tgt_repo_name = parsed_repo_url.path.strip('/').split('/')
+
 github_issue_templates = image_scan_trait.github_issue_templates()
 github_issue_labels_to_preserve = image_scan_trait.github_issue_labels_to_preserve()
 %>
@@ -30,10 +37,13 @@ import faulthandler
 faulthandler.enable() # print stacktraces upon fatal signals
 # end of debugging block
 
+import ccc.github
 import ci.log
 ci.log.configure_default_logging()
 import ci.util
 import concourse.model.traits.image_scan as image_scan
+import delivery.client
+import github.compliance.report
 import protecode.util
 
 
@@ -132,26 +142,47 @@ max_processing_days = dacite.from_dict(
   data=${dataclasses.asdict(issue_policies.max_processing_time_days)},
 )
 
-if notification_policy is Notify.GITHUB_ISSUES:
-  create_or_update_github_issues(
-    results=results,
+delivery_svc_endpoints = ccc.delivery.endpoints(cfg_set=cfg_set)
+delivery_svc_client = ccc.delivery.default_client_if_available()
+
 % if issue_tgt_repo_url:
-    issue_tgt_repo_url='${issue_tgt_repo_url}',
+gh_api = ccc.github.github_api(repo_url='${issue_tgt_repo_url}')
+overwrite_repository = gh_api.repository('${tgt_repo_org}', '${tgt_repo_name}')
+% else:
+print('currently, overwrite-repo must be configured!')
+exit(1)
 % endif
-% if github_issue_templates:
-    github_issue_template_cfgs=github_issue_template_cfgs,
+
+scan_results_vulnerabilities = scan_result_group_collection_for_vulnerabilities(
+  results=results,
+  cve_threshold=cve_threshold,
+)
+scan_results_licenses = scan_result_group_collection_for_licenses(
+  results=results,
+  license_cfg=license_cfg,
+)
+
+if not notification_policy is Notify.GITHUB_ISSUES:
+  logger.error(f'{notification_policy=} is no longer (or not yet) supported')
+  raise NotImplementedError(notification_policy)
+
+for result_group in scan_results_vulnerabilities, scan_results_licenses:
+  logger.info(f'processing {result_group.issue_type=}')
+  github.compliance.report.create_or_update_github_issues(
+    result_group_collection=result_group,
+    max_processing_days=max_processing_days,
+% if issue_tgt_repo_url:
+    gh_api=gh_api,
+    overwrite_repository=overwrite_repository,
 % endif
 % if github_issue_labels_to_preserve:
     preserve_labels_regexes=${github_issue_labels_to_preserve},
 % endif
-    cve_threshold=cve_threshold,
-    max_processing_days=max_processing_days,
-    delivery_svc_endpoints=ccc.delivery.endpoints(cfg_set=cfg_set),
+% if github_issue_templates:
+    github_issue_template_cfgs=github_issue_template_cfgs,
+% endif
+    delivery_svc_client=delivery_svc_client,
+    delivery_svc_endpoints=delivery_svc_endpoints,
     license_cfg=license_cfg,
   )
-  print(f'omitting email-sending, as notification-method was set to github-issues')
-  sys.exit(0)
-else:
-  logger.error(f'{notification_policy=} is no longer (or not yet) supported')
-  raise NotImplementedError(notification_policy)
 </%def>

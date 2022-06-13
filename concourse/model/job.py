@@ -24,6 +24,7 @@ from concourse.model.base import (
 )
 from ci.util import not_none
 from concourse.model.resources import RepositoryConfig, ResourceIdentifier
+import concourse.model.step
 
 
 _not_set = object() # sentinel
@@ -221,7 +222,7 @@ class JobVariant(ModelBase):
                 toposorter.prepare()
                 return iter_results(toposorter=toposorter)
 
-    def add_step(self, step: 'PipelineStep'): # noqa
+    def add_step(self, step: concourse.model.step.PipelineStep): # noqa
         if self.has_step(step.name):
             raise ValueError('conflict: pipeline definition already contained step {s}'.format(
                 s=step.name
@@ -229,7 +230,7 @@ class JobVariant(ModelBase):
             )
         self._steps_dict[step.name] = step
 
-    def step(self, name) -> 'PipelineStep':
+    def step(self, name) -> concourse.model.step.PipelineStep:
         if not (step := self._steps_dict.get(name)):
             raise ValueError(f'no such step: {name=}')
         return step

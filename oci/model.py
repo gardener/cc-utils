@@ -257,6 +257,18 @@ class OciPlatform:
 
         return raw
 
+    def __eq__(self, other):
+        if not isinstance(other, OciPlatform):
+            return False
+
+        if not self.architecture == other.architecture:
+            return False
+
+        if not self.os == other.os:
+            return False
+
+        return True
+
 
 @dataclasses.dataclass(frozen=True)
 class OciImageManifestListEntry(OciBlobRef):
