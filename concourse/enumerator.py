@@ -87,9 +87,9 @@ class DefinitionEnumerator:
         raw_definitions,
         secret_cfg,
         override_definitions={},
-        job_mapping: model.concourse.JobMapping = None,
+        job_mapping: model.concourse.JobMapping=None,
         target_team: str=None,
-        pipeline_definition_committish: str = None,
+        pipeline_definition_committish: str=None,
     ) -> 'DefinitionDescriptor':
         if not target_team:
             target_team = self.job_mapping.team_name()
@@ -117,8 +117,8 @@ class SimpleFileDefinitionEnumerator(DefinitionEnumerator):
         repo_path,
         repo_branch,
         repo_host='github.com',
-        job_mapping: model.concourse.JobMapping = None,
-        secret_cfg: model.secret.Secret = None,
+        job_mapping: model.concourse.JobMapping=None,
+        secret_cfg: model.secret.Secret=None,
     ):
         self.definition_file = definition_file
         self.repo_path = repo_path
@@ -280,7 +280,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
         repository,
         github_cfg,
         org_name,
-        job_mapping: model.concourse.JobMapping = None,
+        job_mapping: model.concourse.JobMapping=None,
         target_team: str=None,
         secret_cfg=None,
         branch: str=None,
@@ -493,10 +493,10 @@ class DefinitionDescriptor:
         concourse_target_cfg: model.concourse.ConcourseConfig,
         concourse_target_team,
         secret_cfg,
-        job_mapping: model.concourse.JobMapping = None,
+        job_mapping: model.concourse.JobMapping=None,
         override_definitions=[{},],
         exception=None,
-        pipeline_definition_committish: str = None,
+        pipeline_definition_committish: str=None,
     ):
         try:
             self.pipeline_name = not_empty(pipeline_name)
