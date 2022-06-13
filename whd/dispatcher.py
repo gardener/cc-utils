@@ -373,13 +373,9 @@ class GithubWebhookDispatcher:
 
     def dispatch_pullrequest_event(
         self,
-        pr_event,
-        delivery_id: str,
-        repository: str,
-        hostname: str,
+        pr_event: whd.model.PullRequestEvent,
         es_client: ccc.elasticsearch.ElasticSearchClient,
         dispatch_start_time: datetime.datetime,
-        pr_id: int,
     ) -> bool:
         '''Process the given push event.
 
@@ -393,6 +389,11 @@ class GithubWebhookDispatcher:
         ):
             logger.info(f'ignoring pull-request action {pr_event.action()}')
             return False
+
+        delivery_id = pr_event.delivery()
+        repository = pr_event.repository().repository_path()
+        hostname = pr_event.hostname()
+        pr_id = pr_event.pr_id()
 
         def _process_pr_event(**kwargs):
             for concourse_api in self.concourse_clients():
