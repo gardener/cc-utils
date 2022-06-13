@@ -4,7 +4,9 @@ import typing
 
 import gci.componentmodel as cm
 
+import clamav.client
 import dso.labels
+import unixutil.model
 
 
 @dataclasses.dataclass
@@ -21,56 +23,97 @@ class ScanArtifact:
 
 class Datasource:
     WHITESOURCE = 'whitesource'
-    PROTECODE = 'protecode'
+    BDBA = 'bdba' # formerly protecode
     CHECKMARX = 'checkmarx'
     CLAMAV = 'clamav'
+    CC_UTILS = 'cc-utils'
 
 
-@dataclasses.dataclass
-class ArtefactReference:
-    componentName: str
-    componentVersion: str
-    artefact: typing.Union[
-        cm.Resource,
-        cm.ComponentSource,
-    ]
+@dataclasses.dataclass(frozen=True)
+class LocalArtefactId:
+    artefact_name: str
+    artefact_version: str
+    artefact_type: str
+    artefact_extra_id: dict
 
 
-@dataclasses.dataclass
-class ComplianceMetadata:
+@dataclasses.dataclass(frozen=True)
+class ComponentArtefactId:
+    component_name: str
+    component_version: str
+    artefact: LocalArtefactId
+
+
+def component_artefact_id_from_ocm(
+    component: cm.Component,
+    artefact: cm.Resource | cm.ComponentSource
+) -> ComponentArtefactId:
+    local_artefact = LocalArtefactId(
+        artefact_name=artefact.name,
+        artefact_version=artefact.version,
+        artefact_type=artefact.type,
+        artefact_extra_id=artefact.extraIdentity,
+    )
+    return ComponentArtefactId(
+        component_name=component.name,
+        component_version=component.version,
+        artefact=local_artefact,
+    )
+
+
+class Datatype:
+    VULNERABILITIES_AGGREGATED = 'vulnerabilities/aggregated'
+    VULNERABILITIES_RAW = 'vulnerabilities/raw'
+    MALWARE = 'malware'
+    LICENSES_AGGREGATED = 'licenses/aggregated'
+    COMPONENTS = 'components'
+    OS_IDS = 'os_ids'
+
+
+@dataclasses.dataclass(frozen=True)
+class Metadata:
     datasource: str
-    creationDate: typing.Union[datetime.datetime, str]
+    type: str
+    creation_date: datetime.datetime
 
 
-@dataclasses.dataclass
-class ComplianceData:
-    artefact: ArtefactReference
-    meta: ComplianceMetadata
-    data: dict
+@dataclasses.dataclass(frozen=True)
+class GreatestCVE:
+    greatestCvss3Score: float
+    reportUrl: str
 
-    @staticmethod
-    def create(
-        artefact: typing.Union[cm.Resource, cm.SourceReference],
-        component: cm.Component,
-        type: str,
-        data: dict,
-    ):
-        '''
-        convenient method to create ComplianceData
-        type: metadata type (implies expected data structure)
-        data: type-specific compliance data
-        '''
-        ar = ArtefactReference(
-            componentName=component.name,
-            componentVersion=component.version,
-            artefact=artefact,
-        )
-        cm = ComplianceMetadata(
-            datasource=type,
-            creationDate=datetime.datetime.now().isoformat(),
-        )
-        return ComplianceData(
-            artefact=ar,
-            data=data,
-            meta=cm
-        )
+
+@dataclasses.dataclass(frozen=True)
+class OsID:
+    os_info: unixutil.model.OperatingSystemId
+
+
+@dataclasses.dataclass(frozen=True)
+class LicenseSummary:
+    licenses: list[str]
+
+
+@dataclasses.dataclass(frozen=True)
+class ComponentVersion:
+    name: str
+    version: str
+
+
+@dataclasses.dataclass(frozen=True)
+class ComponentSummary:
+    components: list[ComponentVersion]
+
+
+@dataclasses.dataclass(frozen=True)
+class MalwareSummary:
+    '''
+    empty list of findings states "no malware found"
+    '''
+    findings: list[clamav.client.ScanResult]
+
+
+@dataclasses.dataclass(frozen=True)
+class ArtefactMetadata:
+    artefact: ComponentArtefactId
+    meta: Metadata
+    data: GreatestCVE | LicenseSummary | ComponentSummary | OsID | MalwareSummary | dict

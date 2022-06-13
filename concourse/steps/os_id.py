@@ -1,4 +1,4 @@
-import dataclasses
+import datetime
 import logging
 import tarfile
 import tempfile
@@ -180,20 +180,23 @@ def upload_to_delivery_db(
     component: cm.Component,
     os_info: um.OperatingSystemId,
 ):
-    artefact = dataclasses.asdict(
-        resource,
-        dict_factory=ci.util.dict_factory_enum_serialisiation,
-    )
-
-    payload = {
-        'os_info': dataclasses.asdict(os_info),
-    }
-
-    compliance_data = dm.ComplianceData.create(
-        type='os-id',
-        artefact=artefact,
+    artefact_ref = dm.component_artefact_id_from_ocm(
         component=component,
-        data=payload,
+        artefact=resource,
+    )
+    meta = dm.Metadata(
+        datasource=dm.Datasource.CC_UTILS,
+        type=dm.Datatype.OS_IDS,
+        creation_date=datetime.datetime.now()
     )
 
-    db_client.upload_metadata(data=compliance_data)
+    os_id = dm.OsID(
+        os_info=os_info,
+    )
+    artefact_metadata = dm.ArtefactMetadata(
+        artefact=artefact_ref,
+        meta=meta,
+        data=os_id,
+    )
+
+    db_client.upload_metadata(data=artefact_metadata)

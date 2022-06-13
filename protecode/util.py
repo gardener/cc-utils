@@ -15,7 +15,7 @@
 
 import collections
 from concurrent.futures import ThreadPoolExecutor
-import dataclasses
+import datetime
 import logging
 import tabulate
 import typing
@@ -23,7 +23,6 @@ import typing
 import ccc.delivery
 import ccc.gcp
 import ccc.protecode
-import ci.util
 import cnudie.retrieve
 import cnudie.util
 import dso.model
@@ -132,22 +131,12 @@ def upload_grouped_images(
     if (delivery_client := ccc.delivery.default_client_if_available()):
         logger.info('uploading results to deliverydb')
         try:
-            cve_data = [
-                upload_result_to_cve_data(
-                    upload_result=result,
-                    greatest_cvss3_score=result.greatest_cve_score,
-                ) for result in results
-            ]
-            license_data = [
-                upload_result_to_license_data(
-                    upload_result=result,
-                ) for result in results
-            ]
-            for data in cve_data + license_data:
-                delivery_client.upload_metadata(data=data)
+            for artefact_metadata in iter_artefact_metadata(results):
+                delivery_client.upload_metadata(data=artefact_metadata)
         except:
             import traceback
             traceback.print_exc()
+
     else:
         logger.warning('not uploading results to deliverydb, client not available')
 
@@ -242,58 +231,69 @@ def filter_and_display_upload_results(
     return results_above_cve_thresh, results_below_cve_thresh
 
 
-def upload_result_to_license_data(
-    upload_result: pm.BDBA_ScanResult,
-    datasource: str = 'protecode-licenses',
-) -> dso.model.ComplianceData:
+def iter_artefact_metadata(
+    results: typing.Collection[pm.BDBA_ScanResult],
+) -> typing.Generator[dso.model.GreatestCVE, None, None]:
+    for result in results:
+        artefact_ref = dso.model.component_artefact_id_from_ocm(
+            component=result.component,
+            artefact=result.resource,
+        )
+        meta = dso.model.Metadata(
+            datasource=dso.model.Datasource.BDBA,
+            type=dso.model.Datatype.VULNERABILITIES_AGGREGATED,
+            creation_date=datetime.datetime.now()
+        )
+        cve = dso.model.GreatestCVE(
+            greatestCvss3Score=result.greatest_cve_score,
+            reportUrl=result.result.report_url()
+        )
+        yield dso.model.ArtefactMetadata(
+            artefact=artefact_ref,
+            meta=meta,
+            data=cve,
+        )
 
-    artefact = dataclasses.asdict(
-        upload_result.resource,
-        dict_factory=ci.util.dict_factory_enum_serialisiation,
-    )
+        meta = dso.model.Metadata(
+            datasource=dso.model.Datasource.BDBA,
+            type=dso.model.Datatype.LICENSES_AGGREGATED,
+            creation_date=datetime.datetime.now()
+        )
+        license_names = list(dict.fromkeys(
+            [
+                component.license().name()
+                for component in result.result.components()
+                if component.license()
+            ]
+        ))
+        license = dso.model.LicenseSummary(
+            licenses=license_names,
+        )
+        yield dso.model.ArtefactMetadata(
+            artefact=artefact_ref,
+            meta=meta,
+            data=license,
+        )
 
-    licenses = list(dict.fromkeys(
-        [
-            component.license().name()
-            for component in upload_result.result.components()
-            if component.license()
-        ]
-    ))
-    payload = {
-        'licenses': licenses
-    }
-
-    compliance_data = dso.model.ComplianceData.create(
-        type=datasource,
-        artefact=artefact,
-        component=upload_result.component,
-        data=payload,
-    )
-
-    return compliance_data
-
-
-def upload_result_to_cve_data(
-    upload_result: pm.BDBA_ScanResult,
-    greatest_cvss3_score: float,
-    datasource: str = dso.model.Datasource.PROTECODE,
-) -> dso.model.ComplianceData:
-
-    artefact = dataclasses.asdict(
-        upload_result.resource,
-        dict_factory=ci.util.dict_factory_enum_serialisiation,
-    )
-
-    payload = {
-        'greatestCvss3Score': greatest_cvss3_score,
-        'protecodeProductUrl': upload_result.result.report_url(),
-    }
-
-    compliance_data = dso.model.ComplianceData.create(
-        type=datasource,
-        artefact=artefact,
-        component=upload_result.component,
-        data=payload,
-    )
-
-    return compliance_data
+        meta = dso.model.Metadata(
+            datasource=dso.model.Datasource.BDBA,
+            type=dso.model.Datatype.COMPONENTS,
+            creation_date=datetime.datetime.now()
+        )
+        components = list(dict.fromkeys(
+            [
+                dso.model.ComponentVersion(
+                    name=component.name(),
+                    version=component.version(),
+                )
+                for component in result.result.components()
+            ]
+        ))
+        component = dso.model.ComponentSummary(
+            components=components
+        )
+        yield dso.model.ArtefactMetadata(
+            artefact=artefact_ref,
+            meta=meta,
+            data=component,
+        )

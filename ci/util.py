@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import collections
+import datetime
 import enum
 import functools
 import hashlib
@@ -612,6 +613,22 @@ def dict_factory_enum_serialisiation(data):
 
     def convert_value(obj):
         if isinstance(obj, enum.Enum):
+            return obj.value
+        return obj
+
+    return dict((k, convert_value(v)) for k, v in data)
+
+
+def dict_to_json_factory(data):
+    '''
+    converts enums to their respective values and datetime.date[time] stamps
+    to iso8601 timestamp strings
+    '''
+
+    def convert_value(obj):
+        if isinstance(obj, (datetime.date, datetime.datetime)):
+            return obj.isoformat()
+        elif isinstance(obj, enum.Enum):
             return obj.value
         return obj
 
