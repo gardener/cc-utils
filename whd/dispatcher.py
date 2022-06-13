@@ -14,13 +14,9 @@
 # limitations under the License.
 
 import datetime
-import functools
 import logging
-import random
 import threading
-import time
 import typing
-import traceback
 
 import requests
 
@@ -28,33 +24,29 @@ import ccc.concourse
 import ccc.elasticsearch
 import ccc.github
 import ccc.secrets_server
-import ccc.github
 import ci.util
 import concourse.client.api
 import concourse.client.model
 import concourse.enumerator
+import concourse.replicator
 import model
+import whd.model
+import whd.pull_request
+import whd.util
 
 from github3.exceptions import NotFoundError
 
-from .pipelines import update_repository_pipelines
+from .pipelines import replicate_repository_pipelines
+from concourse.client.util import determine_jobs_to_be_triggered
 from concourse.enumerator import JobMappingNotFoundError
-from github.util import GitHubRepositoryHelper
+from concourse.model.job import AbortObsoleteJobs
 from model import ConfigFactory
 from model.base import ConfigElementNotFoundError
 from model.webhook_dispatcher import WebhookDispatcherConfig
 
-from concourse.client.util import (
-    determine_jobs_to_be_triggered,
-    jobs_not_triggered,
-    pin_resource_and_trigger_build,
-    PinningFailedError,
-    PinningUnnecessary,
-)
 from concourse.client.model import (
     ResourceType,
 )
-from concourse.model.job import AbortObsoleteJobs
 from .model import (
     AbortConfig,
     Pipeline,
@@ -153,7 +145,7 @@ class GithubWebhookDispatcher:
                     event=push_event,
                 )
                 logger.debug('triggering resource-check')
-                self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
+                whd.util.trigger_resource_check(concourse_api=concourse_api, resources=resources)
 
             process_end_time = datetime.datetime.now()
             process_total_seconds = (
@@ -195,7 +187,6 @@ class GithubWebhookDispatcher:
         es_client: ccc.elasticsearch.ElasticSearchClient,
         dispatch_start_time: datetime.datetime,
     ):
-
         def _do_update(
             delivery_id: str,
             event_type: str,
@@ -208,7 +199,7 @@ class GithubWebhookDispatcher:
             job_mapping_set = self.cfg_set.job_mapping()
             job_mapping = job_mapping_set.job_mapping_for_repo_url(repo_url, self.cfg_set)
 
-            update_repository_pipelines(
+            replicate_repository_pipelines(
                 repo_url=repo_url,
                 cfg_set=self.cfg_factory.cfg_set(job_mapping.replication_ctx_cfg_set()),
                 whd_cfg=self.whd_cfg,
@@ -390,175 +381,21 @@ class GithubWebhookDispatcher:
             logger.info(f'ignoring pull-request action {pr_event.action()}')
             return False
 
-        delivery_id = pr_event.delivery()
-        repository = pr_event.repository().repository_path()
-        hostname = pr_event.hostname()
-        pr_id = pr_event.pr_id()
-
-        def _process_pr_event(**kwargs):
-            for concourse_api in self.concourse_clients():
-                concourse_api: concourse.client.api.ConcourseApiBase
-                resources = list(self._matching_resources(
-                    concourse_api=concourse_api,
-                    event=pr_event,
-                ))
-
-                if len(resources) == 0:
-                    continue
-
-                if (
-                    pr_event.action() in [PullRequestAction.OPENED, PullRequestAction.SYNCHRONIZE]
-                    and not self._set_pr_labels(pr_event, resources)
-                ):
-                    logger.warning(
-                        f'Unable to set required labels for PR #{pr_event.number()} for '
-                        f'repository {pr_event.repository().repository_path()}. Will not trigger '
-                        'resource check.'
-                    )
-                    continue
-
-                logger.info(f'triggering resource check for PR number: {pr_event.number()}')
-                self._trigger_resource_check(concourse_api=concourse_api, resources=resources)
-                self._ensure_pr_resource_updates(
-                    concourse_api=concourse_api,
-                    pr_event=pr_event,
-                    resources=resources,
-                    delivery_id=kwargs.get('delivery_id'),
-                    event_type=kwargs.get('event_type'),
-                    repository=kwargs.get('repository'),
-                    hostname=kwargs.get('hostname'),
-                    es_client=kwargs.get('es_client'),
-                    pr_id=kwargs.get('pr_id'),
-                )
-                # Give concourse a chance to react
-                time.sleep(random.randint(5,10))
-                self.handle_untriggered_jobs(pr_event=pr_event, concourse_api=concourse_api)
-
-            process_end_time = datetime.datetime.now()
-            process_total_seconds = (
-                process_end_time - kwargs.get('dispatch_start_time')
-            ).total_seconds()
-            webhook_delivery_metric = whd.metric.WebhookDelivery.create(
-                delivery_id=kwargs.get('delivery_id'),
-                event_type=kwargs.get('event_type'),
-                repository=kwargs.get('repository'),
-                hostname=kwargs.get('hostname'),
-                process_total_seconds=process_total_seconds,
-            )
-            if (es_client := kwargs.get('es_client')):
-                ccc.elasticsearch.metric_to_es(
-                    es_client=es_client,
-                    metric=webhook_delivery_metric,
-                    index_name=whd.metric.index_name(webhook_delivery_metric),
-                )
-
         thread = threading.Thread(
-            target=_process_pr_event,
+            target=whd.pull_request.process_pr_event,
             kwargs={
-                'delivery_id': delivery_id,
-                'hostname': hostname,
+                'concourse_clients': self.concourse_clients(),
+                'cfg_factory': self.cfg_factory,
+                'whd_cfg': self.whd_cfg,
+                'cfg_set': self.cfg_set,
+                'pr_event': pr_event,
                 'es_client': es_client,
-                'repository': repository,
-                'event_type': 'pull_request',
                 'dispatch_start_time': dispatch_start_time,
-                'pr_id': pr_id,
             }
         )
         thread.start()
 
         return True
-
-    def _trigger_resource_check(
-        self,
-        concourse_api: concourse.client.api.ConcourseApiBase,
-        resources,
-    ):
-        logger.debug('_trigger_resource_check')
-        for resource in resources:
-            logger.info('triggering resource check for: ' + resource.name)
-            try:
-                concourse_api.trigger_resource_check(
-                    pipeline_name=resource.pipeline_name(),
-                    resource_name=resource.name,
-                )
-            except Exception:
-                traceback.print_exc()
-
-    def _set_pr_labels(self, pr_event, resources) -> bool:
-        '''
-        @ return True if the required label was set
-        '''
-        required_labels = {
-            resource.source.get('label')
-            for resource in resources if resource.source.get('label') is not None
-        }
-        if not required_labels:
-            return True
-
-        repo = pr_event.repository()
-        github_host = repo.github_host()
-        repository_path = repo.repository_path()
-        pr_number = pr_event.number()
-
-        github_cfg = ccc.github.github_cfg_for_repo_url(
-            repo_url=ci.util.urljoin(github_host, repository_path),
-            cfg_factory=self.cfg_set,
-        )
-        owner, name = repository_path.split('/')
-
-        try:
-            github_helper = GitHubRepositoryHelper(
-                owner=owner,
-                name=name,
-                github_cfg=github_cfg,
-            )
-        except NotFoundError:
-            logger.warning(
-                f"Unable to access repository '{repository_path}' on github '{github_host}'. "
-                "Please make sure the repository exists and the technical user has the necessary "
-                "permissions to access it."
-            )
-            return False
-
-        sender_login = pr_event.sender()['login']
-        if pr_event.action() is PullRequestAction.OPENED:
-            if github_helper.is_pr_created_by_org_member(pr_number):
-                logger.info(
-                    f"New pull request by member of '{owner}' in '{repository_path}' found. "
-                    f"Setting required labels '{required_labels}'."
-                )
-                github_helper.add_labels_to_pull_request(pr_number, *required_labels)
-                return True
-            else:
-                logger.debug(
-                    f"New pull request by member in '{repository_path}' found, but creator is not "
-                    f"member of '{owner}' - will not set required labels."
-                )
-                github_helper.add_comment_to_pr(
-                    pull_request_number=pr_number,
-                    comment=(
-                        f"Thank you @{sender_login} for your contribution. Before I can start "
-                        "building your PR, a member of the organization must set the required "
-                        f"label(s) {required_labels}. Once started, you can check the build "
-                        "status in the PR checks section below."
-                    )
-                )
-                return False
-        elif pr_event.action() is PullRequestAction.SYNCHRONIZE:
-            if github_helper.is_org_member(organization_name=owner, user_login=sender_login):
-                logger.info(
-                    f"Update to pull request #{pr_event.number()} by org member '{sender_login}' "
-                    f" in '{repository_path}' found. Setting required labels '{required_labels}'."
-                )
-                github_helper.add_labels_to_pull_request(pr_number, *required_labels)
-                return True
-            else:
-                logger.debug(
-                    f"Update to pull request #{pr_event.number()} by '{sender_login}' "
-                    f" in '{repository_path}' found. Ignoring, since they are not an org member'."
-                )
-                return False
-        return False
 
     def _matching_resources(
         self,
@@ -601,141 +438,3 @@ class GithubWebhookDispatcher:
                         continue
 
             yield resource
-
-    def _ensure_pr_resource_updates(
-        self,
-        concourse_api,
-        pr_event: PullRequestEvent,
-        resources: typing.List[concourse.client.model.PipelineConfigResource],
-        delivery_id: str,
-        repository: str,
-        hostname: str,
-        event_type: str,
-        es_client: ccc.elasticsearch.ElasticSearchClient,
-        pr_id: int,
-        retries=10,
-        sleep_seconds=3,
-    ):
-        time.sleep(sleep_seconds)
-
-        retries -= 1
-        if retries < 0:
-            try:
-                self.log_outdated_resources(resources)
-            # ignore logging errors
-            except BaseException:
-                pass
-
-            outdated_resources_names = [r.name for r in resources]
-            logger.info(f'could not update resources {outdated_resources_names} - giving up')
-            if es_client:
-                resource_update_failed_metric = whd.metric.WebhookResourceUpdateFailed.create(
-                    delivery_id=delivery_id,
-                    repository=repository,
-                    hostname=hostname,
-                    event_type=event_type,
-                    outdated_resources_names=outdated_resources_names,
-                    pr_id=pr_id,
-                    pr_action=pr_event.action().value,
-                )
-                ccc.elasticsearch.metric_to_es(
-                    es_client=es_client,
-                    metric=resource_update_failed_metric,
-                    index_name=whd.metric.index_name(resource_update_failed_metric),
-                )
-            return
-
-        def resource_versions(resource):
-            return concourse_api.resource_versions(
-                pipeline_name=resource.pipeline_name(),
-                resource_name=resource.name,
-            )
-
-        def is_up_to_date(resource, resource_versions) -> bool:
-            # check if pr requires a label to be present
-            require_label = resource.source.get('label')
-            if require_label:
-                if require_label not in pr_event.label_names():
-                    logger.info('skipping PR resource update (required label not present)')
-                    # regardless of whether or not the resource is up-to-date, it would not
-                    # be discovered by concourse's PR resource due to policy
-                    return True
-
-            # assumption: PR resource is up-to-date if our PR-number is listed
-            # XXX hard-code structure of concourse-PR-resource's version dict
-            pr_numbers = map(lambda r: r.version()['pr'], resource_versions)
-
-            return str(pr_event.number()) in pr_numbers
-
-        # filter out all resources that are _not_ up-to-date (we only care about those).
-        # Also keep resources that currently fail to check so that we keep retrying those
-        outdated_resources = [
-            resource for resource in resources
-            if resource.failing_to_check()
-            or not is_up_to_date(resource, resource_versions(resource))
-        ]
-
-        if not outdated_resources:
-            logger.info('no outdated PR resources found')
-            return # nothing to do
-
-        logger.info(f'found {len(outdated_resources)} PR resource(s) that require being updated')
-        self._trigger_resource_check(concourse_api=concourse_api, resources=outdated_resources)
-        logger.info(f'retriggered resource check will try again {retries} more times')
-
-        self._ensure_pr_resource_updates(
-            concourse_api=concourse_api,
-            pr_event=pr_event,
-            resources=outdated_resources,
-            retries=retries,
-            sleep_seconds=sleep_seconds*1.2,
-            delivery_id=delivery_id,
-            hostname=hostname,
-            repository=repository,
-            es_client=es_client,
-            event_type=event_type,
-            pr_id=pr_id,
-        )
-
-    def handle_untriggered_jobs(self, pr_event: PullRequestEvent, concourse_api):
-        for job, resource, resource_version in jobs_not_triggered(pr_event, concourse_api):
-            logger.info(
-                f'processing untriggered job {job.name=} of {resource.pipeline_name()=} '
-                f'{resource.name=} {resource_version.version()=}. Triggered by '
-                f'{pr_event.action()=} of {pr_event.delivery()=}'
-            )
-            try:
-                pin_resource_and_trigger_build(
-                    job=job,
-                    resource=resource,
-                    resource_version=resource_version,
-                    concourse_api=concourse_api,
-                    retries=3,
-                )
-            except PinningUnnecessary as e:
-                logger.info(e)
-            except PinningFailedError as e:
-                logger.warning(e)
-
-    @functools.lru_cache()
-    def els_client(self):
-        elastic_cfg = self.cfg_set.elasticsearch()
-        elastic_client = ccc.elasticsearch.from_cfg(elasticsearch_cfg=elastic_cfg)
-        return elastic_client
-
-    def log_outdated_resources(self, outdated_resources):
-        els_index = self.cfg_set.webhook_dispatcher_deployment().logging_els_index()
-        elastic_client = self.els_client()
-
-        date = datetime.datetime.utcnow().isoformat()
-        elastic_client.store_documents(
-            index=els_index,
-            body=[
-                {
-                    'date': date,
-                    'resource_name': resource.name,
-                    'pipeline_name': resource.pipeline_name(),
-                }
-                for resource in outdated_resources
-            ],
-        )
