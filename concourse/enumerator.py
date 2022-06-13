@@ -243,6 +243,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
     def _determine_repository_branches(
         self,
         repository,
+        branch: str = None,
     ):
         try:
             branch_cfg = self._branch_cfg_or_none(repository=repository)
@@ -250,19 +251,29 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
             # some linting errors (and possibly warnings) present. Print warning and continue
             logger.warning(e)
             return
-        if not branch_cfg:
-            # fallback for components w/o branch_cfg: use default branch
-            try:
-                default_branch = repository.default_branch
-            except Exception:
-                default_branch = 'master'
-            yield (default_branch, None)
-            return
 
-        for branch in repository.branches():
-            cfg_entry = branch_cfg.cfg_entry_for_branch(branch.name)
-            if cfg_entry:
-                yield (branch.name, cfg_entry)
+        if not branch_cfg:
+            try:
+                branch = branch or repository.default_branch
+            except Exception:
+                branch = 'master'
+            yield branch, None
+        else:
+            if branch:
+                cfg_entry = branch_cfg.cfg_entry_for_branch(branch)
+                if cfg_entry:
+                    # if the branch config has an entry that applies, use it
+                    yield branch, cfg_entry
+                else:
+                    # since we explicitly requested the branch, use only pipeline-def here. This
+                    # differs from the case when no branch is requested (where we would skip such
+                    # branches)
+                    yield branch, None
+            else:
+                for branch in repository.branches():
+                    cfg_entry = branch_cfg.cfg_entry_for_branch(branch.name)
+                    if cfg_entry:
+                        yield (branch.name, cfg_entry)
 
     def _scan_repository_for_definitions(
         self,
@@ -272,6 +283,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
         job_mapping: model.concourse.JobMapping = None,
         target_team: str=None,
         secret_cfg=None,
+        branch: str=None,
     ) -> RawPipelineDefinitionDescriptor:
 
         repo_hostname = urlparse(github_cfg.http_url()).hostname
@@ -282,7 +294,10 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
 
         try:
             branches_and_cfg_entries = [
-                i for i in self._determine_repository_branches(repository=repository)
+                i for i in self._determine_repository_branches(
+                    repository=repository,
+                    branch=branch,
+                )
             ]
         except (yaml.scanner.ScannerError, yaml.parser.ParserError) as e:
             yield DefinitionDescriptor(
@@ -355,6 +370,7 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
         cfg_set,
         target_team: str=None,
         job_mapping=None,
+        branch: str=None,
     ):
         self._repository_url = ci.util.urlparse(not_none(repository_url))
         self._repo_host = self._repository_url.hostname
@@ -363,6 +379,7 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
         concourse_cfg = cfg_set.concourse()
         job_mapping_set = cfg_set.job_mapping(concourse_cfg.job_mapping_cfg_name())
         self.job_mapping = job_mapping
+        self.branch = branch
 
         org_name, repo_name = self._repository_url.path.lstrip('/').split('/')
 
@@ -407,6 +424,7 @@ class GithubRepositoryDefinitionEnumerator(GithubDefinitionEnumeratorBase):
             target_team=self._target_team,
             secret_cfg=secret_cfg,
             job_mapping=self.job_mapping,
+            branch=self.branch,
         )
 
 
