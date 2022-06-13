@@ -270,7 +270,6 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
         github_cfg,
         org_name,
         job_mapping: model.concourse.JobMapping = None,
-        repository_filter: callable=None,
         target_team: str=None,
         secret_cfg=None,
     ) -> RawPipelineDefinitionDescriptor:
