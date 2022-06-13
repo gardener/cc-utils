@@ -24,17 +24,23 @@ from model.base import ModelBase
 
 
 class EventBase(ModelBase):
-    def __init__(self, raw_dict, delivery):
+    def __init__(self, raw_dict, delivery, hostname):
         super().__init__(raw_dict)
         self._delivery = delivery
+        self._hostname = hostname
 
     def repository(self):
         return Repository(self.raw['repository'])
 
-    def delivery(self):
+    def delivery(self) -> str:
         '''return the id of the GitHub delivery that triggered this event
         '''
         return self._delivery
+
+    def hostname(self) -> str:
+        '''return the hostname of the GitHub instance that sent this event, e.g.: 'github.com'
+        '''
+        return self._hostname
 
 
 class Repository(ModelBase):
@@ -119,10 +125,30 @@ class PullRequestEvent(EventBase):
         '''
         return self.raw['number']
 
+    def pr_id(self):
+        '''
+        the PR id
+
+        Note: This is _not_ the same as its number.
+        '''
+        return self.raw['pull_request']['id']
+
     def label_names(self):
         return [
             label.get('name') for label in self.raw.get('pull_request').get('labels')
         ]
+
+    def fork(self):
+        if (pr_info := self.raw.get('pull_request')):
+            if (head_info := pr_info.get('head')):
+                if (fork := head_info.get('fork')):
+                    return fork
+        raise RuntimeError(
+            'Unable to determine whether this PR-event was sent for a PR created from a fork. '
+        )
+
+    def head_repository(self):
+        return Repository(self.raw['pull_request']['head']['repo'])
 
     def sender(self):
         '''
@@ -139,6 +165,17 @@ class PullRequestEvent(EventBase):
             if (head_info := pr_info.get('head')):
                 if (sha := head_info.get('sha')):
                     return sha
+        return None
+
+    def head_ref(self):
+        '''the ref of the head-commit of the PR
+
+        returns None if unable to determine
+        '''
+        if (pr_info := self.raw.get('pull_request')):
+            if (head_info := pr_info.get('head')):
+                if (ref := head_info.get('ref')):
+                    return ref
         return None
 
 
