@@ -58,7 +58,7 @@ class GithubWebhook:
         logger.info(logger_string)
         dispatch_start_time = datetime.datetime.now()
         if event == 'push':
-            parsed = PushEvent(raw_dict=req.media, delivery=delivery)
+            parsed = PushEvent(raw_dict=req.media, delivery=delivery, hostname=hostname)
             self.dispatcher.dispatch_push_event(
                 push_event=parsed,
                 es_client=self.es_client,
@@ -69,7 +69,7 @@ class GithubWebhook:
             )
             return
         if event == 'create':
-            parsed = CreateEvent(raw_dict=req.media, delivery=delivery)
+            parsed = CreateEvent(raw_dict=req.media, delivery=delivery, hostname=hostname)
             self.dispatcher.dispatch_create_event(
                 create_event=parsed,
                 es_client=self.es_client,
@@ -82,6 +82,7 @@ class GithubWebhook:
         elif event == 'pull_request':
             parsed = PullRequestEvent(raw_dict=req.media, delivery=delivery)
             pr_id = req.media.get('pull_request').get('id')
+            parsed = PullRequestEvent(raw_dict=req.media, delivery=delivery, hostname=hostname)
             processing = self.dispatcher.dispatch_pullrequest_event(
                 pr_event=parsed,
                 pr_id=pr_id,
