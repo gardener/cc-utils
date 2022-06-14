@@ -167,7 +167,7 @@ class DeliveryServiceClient:
 
             params['resource_name'] = resource_name
 
-        logger.info(f'{component.identity()=} {resource.identity()=} {params=}')
+        logger.info(f'{component.identity()=} {params=}')
 
         resp = requests.get(
             url=url,
