@@ -19,17 +19,22 @@ def scan_sources_and_notify(
     checkmarx_cfg_name: str,
     component_descriptor_path: str,
     email_recipients,
-    team_id: str,
+    team_id: str = None,
     threshold: int = 40,
     exclude_paths: typing.Sequence[str] = (),
     include_paths: typing.Sequence[str] = (),
 ):
-    print(f'was: {component_descriptor_path=}')
     component_descriptor = component_descriptor_util.component_descriptor_from_component_descriptor_path(
         cd_path=component_descriptor_path,
     )
 
-    checkmarx_client = checkmarx.util.create_checkmarx_client(checkmarx_cfg_name)
+    checkmarx_cfg = checkmarx.util.get_checkmarx_cfg(checkmarx_cfg_name)
+    if not team_id:
+        team_id = checkmarx_cfg.team_id()
+
+    logger.info(f'using checkmarx team: {team_id}')
+
+    checkmarx_client = checkmarx.util.create_checkmarx_client(checkmarx_cfg)
 
     scans = checkmarx.util.scan_sources(
         component_descriptor=component_descriptor,

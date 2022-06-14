@@ -20,6 +20,7 @@ import checkmarx.project
 import checkmarx.tablefmt
 import ci.util
 import mailutil
+import model.checkmarx as cmmmodel
 import product.util
 import reutil
 import dso.labels
@@ -410,7 +411,11 @@ def component_logger(artifact_name: str):
     return logging.getLogger(artifact_name)
 
 
-@functools.lru_cache()
-def create_checkmarx_client(checkmarx_cfg_name: str):
+def get_checkmarx_cfg(checkmarx_cfg_name: str) -> cmmmodel.CheckmarxConfig:
     cfg_fac = ci.util.ctx().cfg_factory()
-    return checkmarx.client.CheckmarxClient(cfg_fac.checkmarx(checkmarx_cfg_name))
+    return cfg_fac.checkmarx(checkmarx_cfg_name)
+
+
+@functools.lru_cache()
+def create_checkmarx_client(checkmarx_cfg: cmmmodel.CheckmarxConfig):
+    return checkmarx.client.CheckmarxClient(checkmarx_cfg)
