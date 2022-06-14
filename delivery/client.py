@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import logging
 import requests
 import typing
 
@@ -9,6 +10,9 @@ import ci.util
 import cnudie.util
 import delivery.model as dm
 import dso.model
+
+
+logger = logging.getLogger(__name__)
 
 
 class DeliveryServiceRoutes:
@@ -162,6 +166,8 @@ class DeliveryServiceClient:
                 resource_name = resource
 
             params['resource_name'] = resource_name
+
+        logger.info(f'{component.identity()=} {resource.identity()=} {params=}')
 
         resp = requests.get(
             url=url,
