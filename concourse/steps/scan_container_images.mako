@@ -18,11 +18,10 @@ filter_cfg = image_scan_trait.filters()
 license_cfg = image_scan_trait.licenses()
 
 issue_tgt_repo_url = image_scan_trait.overwrite_github_issues_tgt_repository_url()
-if not issue_tgt_repo_url:
-  raise ValueError('overwrite-repo-url must be configured')
+if issue_tgt_repo_url:
+  parsed_repo_url = ci.util.urlparse(issue_tgt_repo_url)
+  tgt_repo_org, tgt_repo_name = parsed_repo_url.path.strip('/').split('/')
 
-parsed_repo_url = ci.util.urlparse(issue_tgt_repo_url)
-tgt_repo_org, tgt_repo_name = parsed_repo_url.path.strip('/').split('/')
 
 github_issue_templates = image_scan_trait.github_issue_templates()
 github_issue_labels_to_preserve = image_scan_trait.github_issue_labels_to_preserve()
@@ -148,9 +147,6 @@ delivery_svc_client = ccc.delivery.default_client_if_available()
 % if issue_tgt_repo_url:
 gh_api = ccc.github.github_api(repo_url='${issue_tgt_repo_url}')
 overwrite_repository = gh_api.repository('${tgt_repo_org}', '${tgt_repo_name}')
-% else:
-print('currently, overwrite-repo must be configured!')
-exit(1)
 % endif
 
 scan_results_vulnerabilities = scan_result_group_collection_for_vulnerabilities(
