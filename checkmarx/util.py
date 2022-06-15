@@ -78,6 +78,7 @@ def _get_scan_artifacts_from_components(
                     access=source.access,
                     name=f'{component.name}_{source.identity(peers=component.sources)}',
                     label=cx_label,
+                    component=component,
                 )
             elif cx_label.policy is dso.labels.ScanPolicy.SKIP:
                 continue
@@ -160,6 +161,7 @@ def scan_artifacts(
             if isinstance(scan_result, model.FailedScan):
                 finished_scans.failed_scans.append(scan_result.artifact_name)
             else:
+                print(f'{scan_result.scan_response.scanRiskSeverity=}')
                 if scan_result.scan_response.scanRiskSeverity > threshold:
                     finished_scans.scans_above_threshold.append(scan_result)
                 else:
@@ -172,14 +174,14 @@ def scan_artifacts(
 
 
 def upload_and_scan_gh_artifact(
-    artifact_name: str,
+    artifact: dso.model.ScanArtifact,
     gh_repo: github3.repos.repo.Repository,
     cx_project: checkmarx.project.CheckmarxProject,
     path_filter_func: typing.Callable,
     source_commit_hash,
 ) -> model.ScanResult:
 
-    clogger = component_logger(artifact_name=artifact_name)
+    clogger = component_logger(artifact_name=artifact.name)
 
     last_scans = cx_project.get_last_scans()
 
@@ -187,7 +189,7 @@ def upload_and_scan_gh_artifact(
         clogger.info('no scans found in project history. '
                      f'Starting new scan hash={source_commit_hash}')
         scan_id = download_repo_and_create_scan(
-            artifact_name=artifact_name,
+            artifact_name=artifact.name,
             cx_project=cx_project,
             hash=source_commit_hash,
             repo=gh_repo,
@@ -205,7 +207,7 @@ def upload_and_scan_gh_artifact(
             clogger.info('current hash differs from remote hash in cx. '
                          f'New scan started for hash={source_commit_hash}')
             scan_id = download_repo_and_create_scan(
-                artifact_name=artifact_name,
+                artifact_name=artifact.name,
                 cx_project=cx_project,
                 hash=source_commit_hash,
                 repo=gh_repo,
@@ -216,7 +218,7 @@ def upload_and_scan_gh_artifact(
     else:
         clogger.info(f'found a running scan id={last_scan.id}. Polling it')
 
-    return cx_project.poll_and_retrieve_scan(scan_id=scan_id)
+    return cx_project.poll_and_retrieve_scan(scan_id=scan_id, component=artifact.component)
 
 
 def scan_gh_artifact(
@@ -256,7 +258,7 @@ def scan_gh_artifact(
         exclude_regexes=exclude_paths,
     )
     return upload_and_scan_gh_artifact(
-        artifact_name=scan_artifact.name,
+        artifact=scan_artifact,
         cx_project=cx_project,
         gh_repo=gh_repo,
         source_commit_hash=commit_hash,

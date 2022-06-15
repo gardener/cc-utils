@@ -4,7 +4,7 @@ import time
 import checkmarx.client
 import checkmarx.model as model
 import checkmarx.util
-
+import gci.componentmodel as cm
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,11 @@ class CheckmarxProject:
         self.client = checkmarx_client
         self.project_details = project_details
 
-    def poll_and_retrieve_scan(self, scan_id: int):
+    def poll_and_retrieve_scan(
+        self,
+        scan_id: int,
+        component: cm.Component,
+    ):
         scan_response = self._poll_scan(scan_id=scan_id)
 
         if scan_response.status_value() is not model.ScanStatusValues.FINISHED:
@@ -52,6 +56,8 @@ class CheckmarxProject:
             artifact_name=self.artifact_name,
             scan_response=scan_response,
             scan_statistic=statistics,
+            component=component,
+            resource=None,
         )
 
     def update_remote_project(self):

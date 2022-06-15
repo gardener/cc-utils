@@ -1,7 +1,9 @@
 import datetime
 import dataclasses
-from enum import Enum
+from enum import Enum, IntEnum
 import typing
+
+import github.compliance.result as gcr
 
 
 class ScanStatusValues(Enum):
@@ -26,6 +28,16 @@ class CustomFieldKeys(Enum):
 class CustomField:
     id: int
     value: str
+
+
+class Severity(IntEnum):
+    INFO = 0 # Checkmarx only
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 3
+
+    def __str__(self):
+        return self.name.lower()
 
 
 @dataclasses.dataclass
@@ -108,7 +120,7 @@ class ScanSettings:
 
 # below types are not used for http body deserialization
 @dataclasses.dataclass
-class ScanResult:
+class ScanResult(gcr.ScanResult):
     """
     ScanResult is a data container for a scan result for a component version
     """

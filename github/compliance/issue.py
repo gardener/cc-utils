@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 ci.log.configure_default_logging()
 
 
+_label_checkmarx = 'vulnerabilities/checkmarx'
 _label_bdba = 'vulnerabilities/bdba'
 _label_licenses = 'licenses/bdba'
 _label_os_outdated = 'os/outdated'

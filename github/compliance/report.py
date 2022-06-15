@@ -48,6 +48,17 @@ def _criticality_classification(cve_score: float) -> gcm.Severity:
         return gcm.Severity.CRITICAL
 
 
+def _severity_classification(severity: str) -> gcr.Severity:
+    if not severity or severity <= 0:
+        return None
+
+    if severity < 30:
+        return gcr.Severity.LOW
+    if severity < 60:
+        return gcr.Severity.MEDIUM
+    return gcr.Severity.HIGH
+
+
 def _delivery_dashboard_url(
     component: cm.Component,
     base_url: str,
