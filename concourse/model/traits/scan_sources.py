@@ -1,7 +1,8 @@
-import enum
+import dataclasses
 import typing
 
 import ci.util
+import dacite
 
 from concourse.model.job import (
     JobVariant,
@@ -18,12 +19,13 @@ from concourse.model.base import (
     ScriptType,
 )
 import concourse.model.traits.component_descriptor
+import github.compliance.result
 
-
-class Notify(enum.Enum):
-    EMAIL_RECIPIENTS = 'email_recipients'
-    NOBODY = 'nobody'
-    COMPONENT_OWNERS = 'component_owners'
+from concourse.model.traits.image_scan import (
+    GithubIssueTemplateCfg,
+    IssuePolicies,
+    Notify,
+)
 
 
 CHECKMARX_ATTRIBUTES = (
@@ -34,9 +36,9 @@ CHECKMARX_ATTRIBUTES = (
     ),
     AttributeSpec.optional(
         name='severity_threshold',
-        default=30,
-        doc='threshold above which to notify recipients',
-        type=int,
+        default=30, # TODO: should be replaced by'medium',
+        doc='threshold for creating issues (high, medium, low, info)',
+        type=str,
     ),
     AttributeSpec.required(
         name='cfg_name',
@@ -143,6 +145,34 @@ class CheckmarxCfg(ModelBase):
         return self.raw['exclude_path_regexes']
 
 
+@dataclasses.dataclass(frozen=True)
+class MaxProcessingTimesDays:
+    '''
+    defines maximum processing time in days, based on issue "criticality"
+
+    in the case of vulnerabilities, those map to CVE scores:
+    >= 9.0: very high / critical
+    >= 7.0: high
+    >= 4.0: medium
+    <  4.0: low
+    '''
+    very_high_or_greater: int = 30
+    high: int = 30
+    medium: int = 90
+    low: int = 120
+
+    def for_severity(self, severity: github.compliance.result.Severity):
+        S = github.compliance.result.Severity
+        if severity is S.CRITICAL:
+            return self.very_high_or_greater
+        elif severity is S.HIGH:
+            return self.high
+        elif severity is S.MEDIUM:
+            return self.medium
+        elif severity is S.LOW:
+            return self.low
+
+
 ATTRIBUTES = (
     AttributeSpec.optional(
         name='notify',
@@ -174,6 +204,43 @@ ATTRIBUTES = (
         default=(),
         doc='if present, perform whitesource scanning',
     ),
+    AttributeSpec.optional(
+        name='issue_policies',
+        default=IssuePolicies(),
+        type=IssuePolicies,
+        doc='defines issues policies (e.g. SLAs for maximum processing times',
+    ),
+    AttributeSpec.optional(
+        name='overwrite_github_issues_tgt_repository_url',
+        default=None,
+        doc='if set, and notify is set to github_issues, overwrite target github repository',
+    ),
+    AttributeSpec.optional(
+        name='github_issue_templates',
+        default=None,
+        doc='''\
+        use to configure custom github-issue-templates (sub-attr: `body`)
+        use python3's format-str syntax
+        available variables:
+        - summary # contains name, version, etc in a table
+        - component_name
+        - component_version
+        - resource_name
+        - resource_version
+        - resource_type
+        - greatest_cve
+        - report_url
+        - delivery_dashboard_url
+        ''',
+        type=list[GithubIssueTemplateCfg],
+    ),
+    AttributeSpec.optional(
+        name='github_issue_labels_to_preserve',
+        default=None,
+        doc='optional list of regexes for labels that will never be removed upon ticket-update',
+        type=list[str],
+    ),
+
 )
 
 
@@ -217,6 +284,44 @@ class SourceScanTrait(Trait):
         else:
             # TODO should actually raise something, but breaks docu generation
             ci.util.warning('At least one of whitesource / checkmarx should be defined.')
+
+    def issue_policies(self) -> IssuePolicies:
+        if isinstance((v := self.raw['issue_policies']), IssuePolicies):
+            return v
+
+        return dacite.from_dict(
+            data_class=IssuePolicies,
+            data=v,
+        )
+
+    def overwrite_github_issues_tgt_repository_url(self) -> typing.Optional[str]:
+        return self.raw.get('overwrite_github_issues_tgt_repository_url')
+
+    def github_issue_templates(self) -> list[GithubIssueTemplateCfg]:
+        if not (raw := self.raw.get('github_issue_templates')):
+            return None
+
+        template_cfgs = [
+            dacite.from_dict(
+                data_class=GithubIssueTemplateCfg,
+                data=cfg,
+            ) for cfg in raw
+        ]
+
+        return template_cfgs
+
+    def github_issue_template(self, type: str) -> typing.Optional[GithubIssueTemplateCfg]:
+        if not (template_cfgs := self.github_issue_templates()):
+            return None
+
+        for cfg in template_cfgs:
+            if cfg.type == type:
+                return cfg
+
+        return None
+
+    def github_issue_labels_to_preserve(self) -> typing.Optional[list[str]]:
+        return self.raw['github_issue_labels_to_preserve']
 
 
 class SourceScanTraitTransformer(TraitTransformer):

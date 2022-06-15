@@ -1,12 +1,17 @@
+import dataclasses
 import logging
 import typing
 
 import gci.componentmodel as cm
 
 import ccc.whitesource
+import checkmarx.model as cmx_model
 import checkmarx.util
-import concourse.steps.component_descriptor_util as component_descriptor_util
 import cnudie.retrieve
+import gci
+import github.compliance.result as gcres
+import github.compliance.report as gcrep
+import github.compliance.issue as gciss
 import whitesource.component
 import whitesource.model
 import whitesource.util
@@ -15,19 +20,47 @@ import whitesource.util
 logger: logging.Logger = logging.getLogger(__name__)
 
 
+@dataclasses.dataclass
+class GithubIssueTemplateCfg:
+    body: str
+    type: str
+
+
+def scan_result_group_collection(
+    results: tuple[cmx_model.ScanResult],
+    severity_threshold: int,
+):
+    def greatest_severity(result: cmx_model.ScanResult):
+        return max([r.scan_response.scanRiskSeverity for r in result])
+
+    def classification_callback(result: cmx_model.ScanResult):
+        if not result.scan_response.scanRiskSeverity:
+            return None
+
+        return gcrep._severity_classification(severity=result.scan_response.scanRiskSeverity)
+
+    def findings_callback(result: cmx_model.ScanResult):
+        if not result.scan_response.scanRiskSeverity:
+            return None
+        return result.scan_response.scanRiskSeverity >= severity_threshold
+
+    return gcres.ScanResultGroupCollection(
+        results=tuple(results),
+        github_issue_label=gciss._label_checkmarx,
+        issue_type=gciss._label_checkmarx,
+        classification_callback=classification_callback,
+        findings_callback=findings_callback,
+    )
+
+
 def scan_sources_and_notify(
     checkmarx_cfg_name: str,
-    component_descriptor_path: str,
-    email_recipients,
+    component_descriptor: gci.componentmodel.ComponentDescriptor,
     team_id: str = None,
     threshold: int = 40,
     exclude_paths: typing.Sequence[str] = (),
     include_paths: typing.Sequence[str] = (),
-):
-    component_descriptor = component_descriptor_util.component_descriptor_from_component_descriptor_path(
-        cd_path=component_descriptor_path,
-    )
-
+) -> cmx_model.FinishedScans:
     checkmarx_cfg = checkmarx.util.get_checkmarx_cfg(checkmarx_cfg_name)
     if not team_id:
         team_id = checkmarx_cfg.team_id()
@@ -50,14 +83,7 @@ def scan_sources_and_notify(
         routes=checkmarx_client.routes,
     )
 
-    if email_recipients:
-        checkmarx.util.send_mail(
-            scans=scans,
-            threshold=threshold,
-            email_recipients=email_recipients,
-            routes=checkmarx_client.routes,
-        )
-        #TODO codeowner recipient
+    return scans
 
 
 def scan_component_with_whitesource(

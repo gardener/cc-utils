@@ -19,6 +19,7 @@ class ScanArtifact:
         cm.ResourceAccess,
     ]
     label: dso.labels.ScanningHint
+    component: cm.Component
 
 
 class Datasource:

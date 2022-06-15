@@ -9,6 +9,7 @@ import unixutil.model
 
 
 class Severity(enum.IntEnum):
+    INFO = -1 # Checkmarx only
     LOW = 0
     MEDIUM = 1
     HIGH = 3
