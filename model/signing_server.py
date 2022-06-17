@@ -29,9 +29,6 @@ class SigningServerIngressConfig(ModelBase):
     def enabled(self) -> bool:
         return self.raw['enabled']
 
-    def host(self) -> str:
-        return self.raw.get('host')
-
     def auth(self):
         return self.raw.get('auth')
 
@@ -64,14 +61,26 @@ class SigningServerConfig(NamedModelElement):
     def private_key(self) -> str:
         return self.raw['private_key']
 
-    def certificates_configmap_name(self) -> str:
-        return self.raw['certificates_configmap_name']
+    def certificate_configmap_name(self) -> str:
+        return self.raw['certificate_configmap_name']
 
-    def certificates(self):
-        return self.raw['certificates']
+    def certificate(self):
+        return self.raw['certificate']
+
+    def ca_certificates_configmap_name(self) -> str:
+        return self.raw['ca_certificates_configmap_name']
+
+    def ca_certificates(self):
+        return self.raw['ca_certificates']
 
     def max_body_size(self) -> int:
         return self.raw['max_body_size']
+
+    def disable_auth(self) -> bool:
+        return self.raw['disable_auth']
+
+    def host(self) -> str:
+        return self.raw['host']
 
     def ingress_config(self) -> SigningServerIngressConfig:
         return SigningServerIngressConfig(self.raw['ingress'])
@@ -84,8 +93,12 @@ class SigningServerConfig(NamedModelElement):
             'image_pull_secret_name',
             'private_key_secret_name',
             'private_key',
-            'certificates_configmap_name',
-            'certificates',
+            'certificate_configmap_name',
+            'certificate',
+            'ca_certificates_configmap_name',
+            'ca_certificates',
             'max_body_size',
+            'disable_auth',
+            'host',
             'ingress',
         }
