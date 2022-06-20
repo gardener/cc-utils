@@ -19,7 +19,7 @@ import json
 import oci.model as om
 
 
-CosignSignatureType = "cosign container image signature"
+COSIGN_SIGNATURE_TYPE = "cosign container image signature"
 
 
 @dataclasses.dataclass
@@ -47,7 +47,7 @@ class Payload:
                 "image": {
                     "docker-manifest-digest": self.image_ref.tag,
                 },
-                "type": CosignSignatureType,
+                "type": COSIGN_SIGNATURE_TYPE,
             },
             "optional": self.annotations,
         }
