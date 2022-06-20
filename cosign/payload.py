@@ -34,7 +34,7 @@ class Payload:
     def __init__(self, image_ref: str, annotations: dict = None):
         self.image_ref = om.OciImageReference.to_image_ref(image_ref)
         if not self.image_ref.has_digest_tag:
-            ValueError('an image must be referenced via its digest')
+            ValueError('only images that are referenced via a digest are allowed')
 
         self.annotations = annotations
 
