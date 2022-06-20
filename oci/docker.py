@@ -26,10 +26,10 @@ class DockerContainerCfg:
       'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
   )
   Hostname: str = ''
-  Labels: typing.Dict[str, str] = dataclasses.field(
+  Labels: typing.Optional[typing.Dict[str, str]] = dataclasses.field(
       default_factory=dict,
   )
-  OnBuild: typing.Optional[str] = None
+  OnBuild: typing.Optional[list[str]] = None
   OpenStdin: bool = False
   StdinOnce: bool = False
   Tty: bool = False
