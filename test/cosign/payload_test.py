@@ -20,9 +20,13 @@ import cosign.payload as cp
 
 class PayloadTest(unittest.TestCase):
     def test_json_marshaling_with_annotations(self):
-        expected_json = '{"critical":{"identity":{"docker-reference":"eu.gcr.io/test/img"},"image":{"docker-manifest-digest":"sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b"},"type":"cosign container image signature"},"optional":{"key":"val"}}'
+        expected_json = '{"critical":{"identity":{"docker-reference":"eu.gcr.io/test/img"},' \
+            '"image":{"docker-manifest-digest":' \
+            '"sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b"},' \
+            '"type":"cosign container image signature"},"optional":{"key":"val"}}'
 
-        img_ref = 'eu.gcr.io/test/img@sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b'
+        img_ref = 'eu.gcr.io/test/img@' \
+            'sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b'
         annotations = {
             "key": "val",
         }
@@ -37,9 +41,13 @@ class PayloadTest(unittest.TestCase):
         self.assertEqual(actual_json, expected_json)
 
     def test_json_marshaling_without_annotations(self):
-        expected_json = '{"critical":{"identity":{"docker-reference":"eu.gcr.io/test/img"},"image":{"docker-manifest-digest":"sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b"},"type":"cosign container image signature"},"optional":null}'
+        expected_json = '{"critical":{"identity":{"docker-reference":"eu.gcr.io/test/img"},' \
+            '"image":{"docker-manifest-digest":' \
+            '"sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b"},' \
+            '"type":"cosign container image signature"},"optional":null}'
 
-        img_ref = 'eu.gcr.io/test/img@sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b'
+        img_ref = 'eu.gcr.io/test/img@' \
+            'sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b'
 
         payload = cp.Payload(
             image_ref=img_ref,
