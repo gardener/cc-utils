@@ -75,7 +75,7 @@ def _get_scan_artifacts_from_components(
 
             if not cx_label or cx_label.policy is dso.labels.ScanPolicy.SCAN:
                 yield dso.model.ScanArtifact(
-                    access=source.access,
+                    source=source,
                     name=f'{component.name}_{source.identity(peers=component.sources)}',
                     label=cx_label,
                     component=component,
@@ -138,7 +138,7 @@ def scan_artifacts(
             team_id=team_id,
         )
 
-        if scan_artifact.access.type is cm.AccessType.GITHUB:
+        if scan_artifact.source.access.type is cm.AccessType.GITHUB:
             try:
                 return scan_func(
                     cx_project=cx_project,
@@ -195,7 +195,7 @@ def upload_and_scan_gh_artifact(
             repo=gh_repo,
             path_filter_func=path_filter_func,
         )
-        return cx_project.poll_and_retrieve_scan(scan_id=scan_id)
+        return cx_project.poll_and_retrieve_scan(scan_id=scan_id, source=artifact.source)
 
     last_scan = last_scans[0]
     scan_id = last_scan.id
@@ -218,7 +218,11 @@ def upload_and_scan_gh_artifact(
     else:
         clogger.info(f'found a running scan id={last_scan.id}. Polling it')
 
-    return cx_project.poll_and_retrieve_scan(scan_id=scan_id, component=artifact.component)
+    return cx_project.poll_and_retrieve_scan(
+        scan_id=scan_id,
+        component=artifact.component,
+        source=artifact.source
+    )
 
 
 def scan_gh_artifact(
@@ -228,19 +232,19 @@ def scan_gh_artifact(
     include_paths: typing.Sequence[str] = (),
 ) -> model.ScanResult:
 
-    github_api = ccc.github.github_api_from_gh_access(access=scan_artifact.access)
+    github_api = ccc.github.github_api_from_gh_access(access=scan_artifact.source.access)
 
     # access type has to be github thus we can call these methods
     gh_repo = github_api.repository(
-        owner=scan_artifact.access.org_name(),
-        repository=scan_artifact.access.repository_name(),
+        owner=scan_artifact.source.access.org_name(),
+        repository=scan_artifact.source.access.repository_name(),
     )
     try:
         commit_hash = product.util.guess_commit_from_source(
             artifact_name=scan_artifact.name,
-            commit_hash=scan_artifact.access.commit,
+            commit_hash=scan_artifact.source.access.commit,
             github_repo=gh_repo,
-            ref=scan_artifact.access.ref,
+            ref=scan_artifact.source.access.ref,
         )
     except github3.exceptions.NotFoundError as e:
         raise product.util.RefGuessingFailedError(e)
