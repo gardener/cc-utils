@@ -69,22 +69,22 @@ def _delivery_dashboard_url(
 
 def _compliance_status_summary(
     component: cm.Component,
-    resources: cm.Resource,
+    artifacts: typing.Sequence[cm.Artifact],
     report_urls: str,
     issue_description: str,
     issue_value: str,
 ):
-    if isinstance(resources[0].type, enum.Enum):
-        resource_type = resources[0].type.value
+    if isinstance(artifacts[0].type, enum.Enum):
+        resource_type = artifacts[0].type.value
     else:
-        resource_type = resources[0].type
+        resource_type = artifacts[0].type
 
     def pluralise(prefix: str, count: int):
         if count == 1:
             return prefix
         return f'{prefix}s'
 
-    resource_versions = ', '.join((r.version for r in resources))
+    artifact_versions = ', '.join((r.version for r in artifacts))
 
     report_urls = '\n- '.join(report_urls)
 
@@ -95,16 +95,16 @@ def _compliance_status_summary(
         | -- | -- |
         | Component | {component.name} |
         | Component-Version | {component.version} |
-        | Resource  | {resources[0].name} |
-        | {pluralise('Resource-Version', len(resources))}  | {resource_versions} |
+        | Resource  | {artifacts[0].name} |
+        | {pluralise('Resource-Version', len(artifacts))}  | {artifact_versions} |
         | Resource-Type | {resource_type} |
         | {issue_description} | **{issue_value}** |
 
-        The aforementioned {pluralise(resource_type, len(resources))} yielded findings
+        The aforementioned {pluralise(resource_type, len(artifacts))} yielded findings
         relevant for future release decisions.
 
-        For viewing detailed scan {pluralise('report', len(resources))}, see the following
-        {pluralise('Scan Report', len(resources))}:
+        For viewing detailed scan {pluralise('report', len(artifacts))}, see the following
+        {pluralise('Scan Report', len(artifacts))}:
     ''')
 
     return summary + '- ' + report_urls
@@ -116,14 +116,14 @@ def _template_vars(
     delivery_dashboard_url: str='',
 ):
     component = result_group.component
-    resource_name = result_group.resource_name
-    resources = [res.resource for res in result_group.results]
+    resource_name = result_group.name
+    artifacts = [res.artifact for res in result_group.results]
     issue_type = result_group.issue_type
 
     results = result_group.results_with_findings
 
-    resource_versions = ', '.join((r.resource.version for r in results))
-    resource_types = ', '.join(set((r.resource.type.value for r in results)))
+    resource_versions = ', '.join((r.artifact.version for r in results))
+    resource_types = ', '.join(set((r.artifact.type.value for r in results)))
 
     template_variables = {
         'component_name': component.name,
@@ -139,7 +139,7 @@ def _template_vars(
         greatest_cve = max((r.greatest_cve_score for r in results))
         template_variables['summary'] = _compliance_status_summary(
             component=component,
-            resources=resources,
+            artifacts=artifacts,
             issue_value=greatest_cve,
             issue_description='Greatest CVE Score',
             report_urls=[ar.report_url() for ar in analysis_results],
@@ -162,7 +162,7 @@ def _template_vars(
 
         template_variables['summary'] = _compliance_status_summary(
             component=component,
-            resources=resources,
+            artifacts=artifacts,
             issue_value=' ,'.join(prohibited_licenses),
             issue_description='Prohibited Licenses',
             report_urls=[ar.report_url() for ar in analysis_results],
@@ -176,12 +176,11 @@ def _template_vars(
 
         template_variables['summary'] = _compliance_status_summary(
             component=component,
-            resources=resources,
+            artifacts=artifacts,
             issue_value=os_name_and_version,
             issue_description='Outdated OS-Version',
             report_urls=(),
         )
-
     else:
         raise NotImplementedError(issue_type)
 
@@ -261,8 +260,8 @@ def create_or_update_github_issues(
             raise ValueError('not all component names are identical')
 
         component = result_group.component
-        resources = [r.resource for r in results]
-        resource = resources[0]
+        artifacts = [r.artifact for r in results]
+        artifact = artifacts[0]
 
         if overwrite_repository:
             repository = overwrite_repository
@@ -281,20 +280,20 @@ def create_or_update_github_issues(
         if action == 'discard':
             github.compliance.issue.close_issue_if_present(
                 component=component,
-                resource=resource,
+                artifact=artifact,
                 repository=repository,
                 issue_type=issue_type,
             )
 
             logger.info(
-                f'closed (if existing) gh-issue for {component.name=} {resource.name=} {issue_type=}'
+                f'closed (if existing) gh-issue for {component.name=} {artifact.name=} {issue_type=}'
             )
         elif action == 'report':
             if delivery_svc_client:
                 assignees = delivery.client.github_users_from_responsibles(
                     responsibles=delivery_svc_client.component_responsibles(
                         component=component,
-                        resource=resource,
+                        artifact=artifact,
                     ),
                     github_url=repository.url,
                 )
@@ -355,7 +354,7 @@ def create_or_update_github_issues(
             try:
                 github.compliance.issue.create_or_update_issue(
                     component=component,
-                    resource=resource,
+                    artifact=artifact,
                     issue_type=issue_type,
                     repository=repository,
                     body=body,
@@ -371,7 +370,7 @@ def create_or_update_github_issues(
                 logger.warning('error whilst trying to create or update issue - will keep going')
                 logger.warning(f'error: {ghe} {ghe.code=} {ghe.message=}')
 
-            logger.info(f'updated gh-issue for {component.name=} {resource.name=} {issue_type=}')
+            logger.info(f'updated gh-issue for {component.name=} {artifact.name=} {issue_type=}')
         else:
             raise NotImplementedError(action)
 
@@ -413,7 +412,7 @@ def close_issues_for_absent_resources(
     '''
     all_issues = github.compliance.issue.enumerate_issues(
         component=None,
-        resource=None,
+        artifact=None,
         repository=repository,
         issue_type=issue_type,
         state='open',
@@ -431,7 +430,7 @@ def close_issues_for_absent_resources(
     for result_group in result_groups:
         resource_label = github.compliance.issue.resource_digest_label(
             component=result_group.component,
-            resource=result_group.resource_name,
+            artifact=result_group.name,
         )
 
         component_resources_to_issues.pop(resource_label, None)

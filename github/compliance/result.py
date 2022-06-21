@@ -19,7 +19,7 @@ class Severity(enum.IntEnum):
 @dataclasses.dataclass
 class ScanResult:
     component: cm.Component
-    resource: cm.Resource
+    artifact: cm.Artifact
 
 
 @dataclasses.dataclass
@@ -57,8 +57,8 @@ class ScanResultGroup:
         return self.results[0].component
 
     @property
-    def resource_name(self) -> cm.Resource:
-        return self.results[0].resource
+    def artifact(self) -> cm.Artifact:
+        return self.results[0].artifact
 
     @property
     def has_findings(self) -> bool:
@@ -113,7 +113,8 @@ class ScanResultGroupCollection:
             return ()
 
         for result in self.results:
-            group_name = f'{result.component.name}:{result.resource.name}'
+            artifact_name = result.artifact.name
+            group_name = f'{result.component.name}:{artifact_name}'
             if not group_name in result_groups:
                 result_groups[group_name] = ScanResultGroup(
                     name=group_name,

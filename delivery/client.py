@@ -123,7 +123,7 @@ class DeliveryServiceClient:
         version: str=None,
         ctx_repo_url: str=None,
         component: typing.Union[cm.Component, cm.ComponentDescriptor]=None,
-        resource: typing.Union[cm.Resource, str]=None,
+        artifact: typing.Union[cm.Artifact, str]=None,
     ) -> dict:
         '''
         retrieves component-responsibles. Responsibles are returned as a list of typed user
@@ -159,11 +159,11 @@ class DeliveryServiceClient:
             'ctx_repo_url': ctx_repo_url,
         }
 
-        if resource:
-            if isinstance(resource, cm.Resource):
-                resource_name = resource.name
+        if artifact:
+            if isinstance(artifact, cm.Artifact):
+                resource_name = artifact.name
             else:
-                resource_name = resource
+                resource_name = artifact
 
             params['resource_name'] = resource_name
 
