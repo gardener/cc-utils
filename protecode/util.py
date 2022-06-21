@@ -156,7 +156,7 @@ def filter_and_display_upload_results(
     results_above_cve_thresh = []
 
     for upload_result in upload_results:
-        resource = upload_result.resource
+        resource = upload_result.artifact
 
         if isinstance(upload_result, pm.BDBA_ScanResult):
             result = upload_result.result
@@ -237,7 +237,7 @@ def iter_artefact_metadata(
     for result in results:
         artefact_ref = dso.model.component_artefact_id_from_ocm(
             component=result.component,
-            artefact=result.resource,
+            artefact=result.artifact,
         )
         meta = dso.model.Metadata(
             datasource=dso.model.Datasource.BDBA,

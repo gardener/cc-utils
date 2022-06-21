@@ -688,7 +688,7 @@ class ProtecodeProcessor:
                 component=component_resource.component,
                 status=UploadStatus.DONE, # XXX remove this
                 result=analysis_result,
-                resource=component_resource.resource,
+                artifact=component_resource.resource,
                 greatest_cve_score=analysis_result.greatest_cve_score(),
                 licenses=licenses,
             )
