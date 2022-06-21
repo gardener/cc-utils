@@ -40,7 +40,8 @@ class CheckmarxProject:
         self,
         scan_id: int,
         component: cm.Component,
-    ):
+        source: cm.ComponentSource,
+    ) -> model.ScanResult:
         scan_response = self._poll_scan(scan_id=scan_id)
 
         if scan_response.status_value() is not model.ScanStatusValues.FINISHED:
@@ -52,12 +53,12 @@ class CheckmarxProject:
         statistics = self.scan_statistics(scan_id=scan_response.id)
 
         return model.ScanResult(
+            component=component,
+            artifact=source,
             project_id=self.project_details.id,
             artifact_name=self.artifact_name,
             scan_response=scan_response,
             scan_statistic=statistics,
-            component=component,
-            resource=None,
         )
 
     def update_remote_project(self):
