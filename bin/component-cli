@@ -3,7 +3,7 @@
 set -eu
 set -o pipefail
 
-DOWNLOAD_URL=$(curl -s https://api.github.com/repos/gardener/component-cli/releases/latest | jq -r ".assets[] | select(.name | test(\"${componentcli-linux-amd64.gz}\")) | .browser_download_url"
+DOWNLOAD_URL=$(curl -s https://api.github.com/repos/gardener/component-cli/releases/latest | jq -r ".assets[] | select(.name | test(\"${componentcli-linux-amd64.gz}\")) | .browser_download_url")
 auth_user_and_token=$(cli.py github auth_user_and_token --url github.com/gardener/component-cli)
 COMPONENT_CLI_PATH=/bin/component-cli_binary
 
