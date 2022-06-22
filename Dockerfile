@@ -1,9 +1,6 @@
-FROM eu.gcr.io/gardener-project/component/cli:latest AS component-cli
 FROM eu.gcr.io/gardener-project/cc/job-image-base:0.70.0
 
 COPY . /cc/utils/
-
-COPY --from=component-cli /component-cli /bin/component-cli
 
 # place version file into container's filesystem to make it easier to
 # determine the image version during runtime
