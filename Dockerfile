@@ -20,10 +20,6 @@ RUN pip3 install --upgrade --no-cache-dir \
   gardener-cicd-whd==$(cat /metadata/VERSION) \
   gardener-cicd-dso==$(cat /metadata/VERSION) \
   pycryptodome \
-&& curl -L \
-  https://get.helm.sh/helm-${HELM_V3_VERSION}-linux-amd64.tar.gz | tar xz -C /tmp --strip=1 \
-&& mv /tmp/helm /bin/helm \
-&& chmod +x /bin/helm \
 # backwards-compatibility
 && ln -sf /bin/helm /bin/helm3
 
