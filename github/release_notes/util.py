@@ -342,12 +342,23 @@ class ReleaseNotes:
         # to reduce the number of search results
         release_notes = list()
         for pr_number in pr_numbers_in_range:
-            pr = self.github_helper.repository.pull_request(pr_number)
+            try:
+                pr = self.github_helper.repository.pull_request(pr_number)
+            except github3.exceptions.NotFoundError:
+                # Usually this exception would indicate a parsing error, since we found a PR-
+                # number that does not exist on the repository. However, since we use the same
+                # syntax as kubernetes for our release-notes there can be the case of us parsing
+                # IDs that belong to different repositories (e.g.: A merge of upstream changes in
+                # on of our forked repositories).
+                # This does not, of course, guard in any way against erroneous release notes that
+                # can occur if such a parsed ID actually exists in our repository.
+                logger.warning(f'Could not access PR #{pr_number}.')
+                continue
 
             if not pr.state == 'closed':
                 continue
 
-            logger.info(f'Processing PR# {pr_number}')
+            logger.info(f'Processing PR #{pr_number}')
             release_notes_pr = extract_release_notes(
                 reference_id=pr_number,
                 text=pr.body,
