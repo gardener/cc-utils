@@ -46,7 +46,7 @@ CI/CD jobs are run (`eu.gcr.io/gardener-project/cc/job-image`):
 
 ### Python Runtime
 
-`Python 3.9` or greater is required as a runtime (see requirements.txt for additional
+`Python 3.10` or greater is required as a runtime (see requirements.txt for additional
 runtime dependencies). Earlier Python versions (3.8, 3.7, 3.6, 2.x) are *not* supported.
 
 In addition to the Python API, some functions are exposed via a command line interface
