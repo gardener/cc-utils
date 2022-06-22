@@ -18,6 +18,7 @@ import logging
 import typing
 
 import git
+import github3.exceptions
 import requests
 
 import ccc.github
