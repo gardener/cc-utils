@@ -4,7 +4,9 @@ import pprint
 import urllib.parse
 
 import ccc.github
+import ci.log
 import ci.util
+import ctx
 import github.webhook
 
 
@@ -100,3 +102,21 @@ def retrigger_failed_webhooks(org_url: str, hook_id: str, max_age_days:int=2):
         print(f'retriggering hook: {redelivery_url=}')
         res = gh_api._post(redelivery_url)
         res.raise_for_status()
+
+
+def auth_user_and_token(
+    url: str, # domain.tld/owner/repo
+) -> str:
+    '''
+    write privileged user credentials for repo in format username:password to stdout
+    '''
+    # only write payload to stdout
+    ci.log.disable_logging()
+
+    cfg_factory = ctx.cfg_factory()
+    github_cfg = ccc.github.github_cfg_for_repo_url(
+        repo_url=url,
+        cfg_factory=cfg_factory,
+    )
+    credentials = github_cfg.credentials()
+    print(f'{credentials.username()}:{credentials.passwd()}')
