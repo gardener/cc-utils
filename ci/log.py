@@ -79,3 +79,15 @@ def configure_default_logging(
 def default_fmt_string(print_thread_id: bool=False):
     ptid = print_thread_id
     return f'%(asctime)s [%(levelprefix)s] {"TID:%(thread)d " if ptid else ""}%(name)s: %(message)s'
+
+
+def disable_logging(
+    log_levels: tuple = (
+        logging.CRITICAL,
+        logging.ERROR,
+        logging.WARNING,
+        logging.INFO,
+    ),
+):
+    for log_level in log_levels:
+        logging.disable(log_level)
