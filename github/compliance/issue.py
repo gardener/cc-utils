@@ -110,7 +110,7 @@ def _create_issue(
 
     assignees = tuple(assignees)
 
-    labels = tuple(repository_labels(
+    labels = sorted(repository_labels(
         component=component,
         resource=resource,
         issue_type=issue_type,
@@ -154,7 +154,7 @@ def _update_issue(
     if milestone and not issue.milestone:
         kwargs['milestone'] = milestone.number
 
-    labels = tuple(repository_labels(
+    labels = sorted(repository_labels(
         component=component,
         resource=resource,
         issue_type=issue_type,
