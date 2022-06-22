@@ -151,7 +151,6 @@ class ConfigFactory:
                     continue
                 fpath = os.path.join(repo_mapping.path, cfg_src.relpath)
                 with open(fpath) as f:
-                    print(f'cfg loaded from local dir {fpath=}')
                     return yaml.safe_load(f)
 
         if not lookup_cfg_factory:
