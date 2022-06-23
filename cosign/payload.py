@@ -38,7 +38,11 @@ class Payload:
 
         self.annotations = annotations
 
-    def json(self):
+    def normalised_json(self):
+        '''
+        return the normalised (ordered keys, no whitespace) json representation.
+        the returned payload can then be hashed, signed, and used as a cosign signature.
+        '''
         data = {
             "critical": {
                 "identity": {
