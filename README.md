@@ -17,8 +17,7 @@ relevant for the [gardener](https://github.com/gardener) project.
 
 Be sure to run tests, linter and codestyle checks:
 
-- `.ci/pycodestyle`
-- `.ci/pyflakes-lint`
+- `.ci/lint`
 - `.ci/test`
 
 Run `.ci/install_git_hooks` to register recommended git hooks.
