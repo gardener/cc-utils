@@ -199,8 +199,11 @@ def _template_vars(
             report_urls=(),
         )
     elif issue_type == _compliance_label_checkmarx:
-        analysis_results = [r.artifact for r in results]
         stat = result_group.worst_result.scan_statistic
+        report_urls = [
+                f'[Checkmarx Editor]({r.report_url}), [Checkmarx Summary]({r.overview_url})'
+                for r in results
+            ]
         summary_str = (f'Findings: High: {stat.highSeverity}, Medium: {stat.mediumSeverity}, '
             f'Low: {stat.lowSeverity}, Info: {stat.infoSeverity}')
         template_variables['summary'] = _compliance_status_summary(
@@ -208,7 +211,7 @@ def _template_vars(
             artifacts=artifacts,
             issue_value=summary_str,
             issue_description='Checkmarx Scan Summary',
-            report_urls=(),
+            report_urls=report_urls,
         )
         crit = (f'Risk: {result_group.worst_result.scan_response.scanRisk}, '
             f'Risk Severity: {result_group.worst_result.scan_response.scanRiskSeverity}')
@@ -385,7 +388,6 @@ def create_or_update_github_issues(
                 license_cfg=license_cfg,
                 delivery_dashboard_url=delivery_dashboard_url,
             )
-
             for issue_cfg in github_issue_template_cfgs:
                 if issue_cfg.type == issue_type:
                     break
@@ -492,7 +494,7 @@ def close_issues_for_absent_resources(
             component=result_group.component,
             artifact=result_group.artifact,
         )
-        logger.info(f'Digest-Label for {result_group.component.name=}, {result_group.name=} is:'
+        logger.info(f'Digest-Label for {result_group.component.name=}, {result_group.name=} is: '
             f'{resource_label=}')
         component_resources_to_issues.pop(resource_label, None)
 
