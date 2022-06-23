@@ -22,7 +22,7 @@ def test_json_marshaling_with_annotations():
     expected_json = '{"critical":{"identity":{"docker-reference":"eu.gcr.io/test/img"},' \
         '"image":{"docker-manifest-digest":' \
         '"sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b"},' \
-        '"type":"cosign container image signature"},"optional":{"key":"val"}}'
+        '"type":"gardener.vnd/oci/cosign-signature"},"optional":{"key":"val"}}'
 
     img_ref = 'eu.gcr.io/test/img@' \
         'sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b'
@@ -44,7 +44,7 @@ def test_json_marshaling_without_annotations():
     expected_json = '{"critical":{"identity":{"docker-reference":"eu.gcr.io/test/img"},' \
         '"image":{"docker-manifest-digest":' \
         '"sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b"},' \
-        '"type":"cosign container image signature"},"optional":null}'
+        '"type":"gardener.vnd/oci/cosign-signature"},"optional":null}'
 
     img_ref = 'eu.gcr.io/test/img@' \
         'sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b'
