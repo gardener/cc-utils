@@ -116,7 +116,7 @@ def _template_vars(
     delivery_dashboard_url: str='',
 ):
     component = result_group.component
-    resource_name = result_group.name
+    resource_name = result_group.artifact
     artifacts = [res.artifact for res in result_group.results]
     issue_type = result_group.issue_type
 
@@ -430,7 +430,7 @@ def close_issues_for_absent_resources(
     for result_group in result_groups:
         resource_label = github.compliance.issue.resource_digest_label(
             component=result_group.component,
-            artifact=result_group.name,
+            artifact=result_group.artifact,
         )
 
         component_resources_to_issues.pop(resource_label, None)
