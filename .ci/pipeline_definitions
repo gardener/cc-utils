@@ -44,6 +44,14 @@ cc-utils:
               inputs:
                 steps:
                   build_python_packages: ~
+            whd-image:
+              registry: 'gcr-readwrite'
+              image: 'eu.gcr.io/gardener-project/cc/whd'
+              dockerfile: 'Dockerfile.whd'
+              tag_as_latest: False
+              inputs:
+                steps:
+                  build_python_packages: ~
 
     pull-request:
       steps:
