@@ -128,6 +128,8 @@ class ScanResult(gcr.ScanResult):
     project_id: int
     scan_response: ScanResponse
     scan_statistic: ScanStatistic
+    report_url: str
+    overview_url: str
 
 
 @dataclasses.dataclass

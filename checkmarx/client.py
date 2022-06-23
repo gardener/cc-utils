@@ -41,7 +41,7 @@ class CheckmarxRoutes:
         return ci.util.urljoin(self.base_url, 'cxrestapi', *parts)
 
     def _web_url(self, *parts):
-        return ci.util.urljoin(self.base_url, 'CxWebClient', *parts)
+        return ci.util.urljoin(self.base_url, 'cxwebclient', *parts)
 
     def auth(self):
         return self._api_url('auth', 'identity', 'connect', 'token')
@@ -67,8 +67,8 @@ class CheckmarxRoutes:
     def remote_settings_git(self, project_id: int):
         return ci.util.urljoin(self.scan_by_id(project_id), 'sourceCode', 'remoteSettings', 'git')
 
-    def web_ui_scan_history(self, scan_id: int):
-        query = urllib.parse.urlencode({'id': scan_id, 'ProjectState': 'true'})
+    def web_ui_scan_history(self, project_id: int):
+        query = urllib.parse.urlencode({'id': project_id, 'ProjectState': 'true'})
         return ci.util.urljoin(self._web_url(), 'projectscans.aspx?' + query)
 
     def web_ui_scan_viewer(self, scan_id: int, project_id: int):

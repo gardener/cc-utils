@@ -59,6 +59,11 @@ class CheckmarxProject:
             artifact_name=self.artifact_name,
             scan_response=scan_response,
             scan_statistic=statistics,
+            report_url=self.client.routes.web_ui_scan_viewer(
+                scan_id=scan_response.id,
+                project_id=self.project_details.id
+            ),
+            overview_url=self.client.routes.web_ui_scan_history(project_id=self.project_details.id),
         )
 
     def update_remote_project(self):
