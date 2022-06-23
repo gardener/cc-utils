@@ -35,7 +35,7 @@ def test_json_marshaling_with_annotations():
         annotations=annotations,
     )
 
-    actual_json = payload.json()
+    actual_json = payload.normalised_json()
 
     assert actual_json == expected_json
 
@@ -53,7 +53,7 @@ def test_json_marshaling_without_annotations():
         image_ref=img_ref,
     )
 
-    actual_json = payload.json()
+    actual_json = payload.normalised_json()
 
     assert actual_json == expected_json
 
