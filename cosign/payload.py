@@ -19,7 +19,7 @@ import json
 import oci.model as om
 
 
-COSIGN_SIGNATURE_TYPE = "cosign container image signature"
+COSIGN_SIGNATURE_TYPE = "gardener.vnd/oci/cosign-signature"
 
 
 @dataclasses.dataclass
