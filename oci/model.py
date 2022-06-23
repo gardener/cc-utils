@@ -192,6 +192,7 @@ class OciBlobRef:
     digest: str
     mediaType: str
     size: int
+    annotations: typing.Optional[typing.Dict] = None
 
 
 @dataclasses.dataclass
@@ -272,7 +273,7 @@ class OciPlatform:
 
 @dataclasses.dataclass(frozen=True)
 class OciImageManifestListEntry(OciBlobRef):
-    platform: OciPlatform
+    platform: typing.Optional[OciPlatform] = None
 
     def as_dict(self) -> dict:
         raw = dataclasses.asdict(self)
