@@ -10,6 +10,7 @@ import urllib.parse
 import github3.repos
 
 import gci.componentmodel as cm
+import requests
 
 import ccc.delivery
 import ci.util
@@ -321,21 +322,32 @@ def create_or_update_github_issues(
             )
         elif action == 'report':
             if delivery_svc_client:
-                assignees = delivery.client.github_users_from_responsibles(
-                    responsibles=delivery_svc_client.component_responsibles(
-                        component=component,
-                        artifact=artifact,
-                    ),
-                    github_url=repository.url,
-                )
-
-                assignees = tuple((
-                    u.username for u in assignees
-                    if github.user.is_user_active(
-                        username=u.username,
-                        github=gh_api,
+                try:
+                    assignees = delivery.client.github_users_from_responsibles(
+                        responsibles=delivery_svc_client.component_responsibles(
+                            component=component,
+                            artifact=artifact,
+                        ),
+                        github_url=repository.url,
                     )
-                ))
+
+                    assignees = tuple((
+                        u.username for u in assignees
+                        if github.user.is_user_active(
+                            username=u.username,
+                            github=gh_api,
+                        )
+                    ))
+                except requests.exceptions.HTTPError as e:
+                    if e.response.status_code == 404:
+                        logger.warning(f'Delivery Service returned 404 for {component.name=}, '
+                            f'{artifact.name=}')
+                        assignees = ()
+                        target_milestone = None
+                    else:
+                        raise
+                else:
+                    raise
 
                 try:
                     max_days = max_processing_days.for_severity(
@@ -480,7 +492,8 @@ def close_issues_for_absent_resources(
             component=result_group.component,
             artifact=result_group.artifact,
         )
-
+        logger.info(f'Digest-Label for {result_group.component.name=}, {result_group.name=} is:'
+            f'{resource_label=}')
         component_resources_to_issues.pop(resource_label, None)
 
     # any issues that have not been removed thus far were not referenced by given result_groups
