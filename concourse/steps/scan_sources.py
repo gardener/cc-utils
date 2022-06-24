@@ -10,7 +10,6 @@ import checkmarx.util
 import cnudie.retrieve
 import gci
 import github.compliance.result as gcres
-import github.compliance.report as gcrep
 import github.compliance.issue as gciss
 import whitesource.component
 import whitesource.model
@@ -28,21 +27,17 @@ class GithubIssueTemplateCfg:
 
 def scan_result_group_collection(
     results: tuple[cmx_model.ScanResult],
-    severity_threshold: int,
+    severity_threshold: str,
 ):
-    def greatest_severity(result: cmx_model.ScanResult):
-        return max([r.scan_response.scanRiskSeverity for r in result])
-
-    def classification_callback(result: cmx_model.ScanResult):
-        if not result.scan_response.scanRiskSeverity:
-            return None
-
-        return gcrep._severity_classification(severity=result.scan_response.scanRiskSeverity)
+    def classification_callback(result: cmx_model.ScanResult) -> gcres.Severity:
+        max_sev = checkmarx.util.greatest_severity(result)
+        return checkmarx.util.checkmarx_severity_to_github_severity(max_sev)
 
     def findings_callback(result: cmx_model.ScanResult):
-        if not result.scan_response.scanRiskSeverity:
-            return None
-        return result.scan_response.scanRiskSeverity >= severity_threshold
+        max_sev = checkmarx.util.greatest_severity(result)
+        return max_sev >= threshold
+
+    threshold = cmx_model.Severity.from_str(severity_threshold)
 
     return gcres.ScanResultGroupCollection(
         results=tuple(results),
@@ -57,7 +52,7 @@ def scan_sources_and_notify(
     checkmarx_cfg_name: str,
     component_descriptor: gci.componentmodel.ComponentDescriptor,
     team_id: str = None,
-    threshold: int = 40,
+    threshold: str = 'medium',
     exclude_paths: typing.Sequence[str] = (),
     include_paths: typing.Sequence[str] = (),
 ) -> cmx_model.FinishedScans:
@@ -73,13 +68,13 @@ def scan_sources_and_notify(
         component_descriptor=component_descriptor,
         cx_client=checkmarx_client,
         team_id=team_id,
-        threshold=threshold,
         exclude_paths=exclude_paths,
         include_paths=include_paths,
     )
 
     checkmarx.util.print_scans(
         scans=scans,
+        threshold=cmx_model.Severity.from_str(threshold),
         routes=checkmarx_client.routes,
     )
 

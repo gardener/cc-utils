@@ -103,10 +103,8 @@ if not notification_policy is Notify.GITHUB_ISSUES:
   logger.error(f'{notification_policy=} is no longer (or not yet) supported')
   raise NotImplementedError(notification_policy)
 
-all_scan_results = scan_results.scans_above_threshold + scan_results.scans_below_threshold
-
 scan_results_grouped = scan_result_group_collection(
-  results=all_scan_results,
+  results=scan_results.scans,
   severity_threshold=severity_threshold,
 )
 
