@@ -19,7 +19,6 @@ import checkmarx.model as model
 import checkmarx.project
 import checkmarx.tablefmt
 import ci.util
-import mailutil
 import model.checkmarx as cmmmodel
 import product.util
 import reutil
@@ -27,7 +26,7 @@ import dso.labels
 import dso.model
 
 import gci.componentmodel as cm
-
+import github.compliance.result as gcr
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,6 @@ def scan_sources(
     component_descriptor: cm.ComponentDescriptor,
     cx_client: checkmarx.client.CheckmarxClient,
     team_id: str,
-    threshold: int,
     max_workers: int = 4, # only two scan will be run per user
     exclude_paths: typing.Sequence[str] = (),
     include_paths: typing.Sequence[str] = (),
@@ -56,7 +54,6 @@ def scan_sources(
         max_workers=max_workers,
         scan_artifacts=artifacts_gen,
         team_id=team_id,
-        threshold=threshold,
     )
 
 
@@ -106,7 +103,6 @@ def scan_artifacts(
     max_workers: int,
     scan_artifacts: typing.Tuple[dso.model.ScanArtifact],
     team_id: str,
-    threshold: int,
     exclude_paths: typing.Sequence[str] = (),
     include_paths: typing.Sequence[str] = (),
 ) -> model.FinishedScans:
@@ -161,11 +157,7 @@ def scan_artifacts(
             if isinstance(scan_result, model.FailedScan):
                 finished_scans.failed_scans.append(scan_result.artifact_name)
             else:
-                print(f'{scan_result.scan_response.scanRiskSeverity=}')
-                if scan_result.scan_response.scanRiskSeverity > threshold:
-                    finished_scans.scans_above_threshold.append(scan_result)
-                else:
-                    finished_scans.scans_below_threshold.append(scan_result)
+                finished_scans.scans.append(scan_result)
 
             finished += 1
             logger.info(f'remaining: {artifact_count - finished}')
@@ -270,59 +262,55 @@ def scan_gh_artifact(
     )
 
 
-def send_mail(
-    email_recipients,
-    routes: checkmarx.client.CheckmarxRoutes,
-    scans: model.FinishedScans,
-    threshold: int,
-):
-    body = checkmarx.tablefmt.assemble_mail_body(
-        failed_artifacts=scans.failed_scans,
-        routes=routes,
-        scans_above_threshold=scans.scans_above_threshold,
-        scans_below_threshold=scans.scans_below_threshold,
-        threshold=threshold,
-    )
-    try:
-        # get standard cfg set for email cfg
-        default_cfg_set_name = ci.util.current_config_set_name()
-        cfg_factory = ci.util.ctx().cfg_factory()
-        cfg_set = cfg_factory.cfg_set(default_cfg_set_name)
+def greatest_severity(result: model.ScanResult) -> model.Severity | None:
+    if result.scan_statistic.highSeverity > 0:
+        return model.Severity.HIGH
+    elif result.scan_statistic.mediumSeverity > 0:
+        return model.Severity.MEDIUM
+    elif result.scan_statistic.lowSeverity > 0:
+        return model.Severity.LOW
+    elif result.scan_statistic.infoSeverity > 0:
+        return model.Severity.INFO
+    else:
+        return None
 
-        logger.info(f'sending notification emails to: {",".join(email_recipients)}')
-        mailutil._send_mail(
-            email_cfg=cfg_set.email(),
-            recipients=email_recipients,
-            mail_template=body,
-            subject='[Action Required] checkmarx vulnerability report',
-            mimetype='html',
-        )
-        logger.info('sent notification emails to: ' + ','.join(email_recipients))
 
-    except Exception:
-        traceback.print_exc()
-        logger.warning('error whilst trying to send notification-mail')
+def checkmarx_severity_to_github_severity(severity: model.Severity) -> gcr.Severity:
+    if severity is model.Severity.HIGH:
+        return gcr.Severity.HIGH
+    elif severity is model.Severity.MEDIUM:
+        return gcr.Severity.MEDIUM
+    elif severity is model.Severity.LOW:
+        return gcr.Severity.LOW
+    elif severity is model.Severity.INFO:
+        return None
+    else:
+        return None
 
 
 def print_scans(
     scans: model.FinishedScans,
+    threshold: model.Severity,
     routes: checkmarx.client.CheckmarxRoutes,
 ):
-    if scans.scans_above_threshold:
+    scans_above_threshold = [s for s in scans.scans if greatest_severity(s) >= threshold]
+    scans_below_threshold = [s for s in scans.scans if greatest_severity(s) < threshold]
+
+    if scans_above_threshold:
         print('\n')
         logger.info('critical scans above threshold')
         checkmarx.tablefmt.print_scan_result(
-            scan_results=scans.scans_above_threshold,
+            scan_results=scans_above_threshold,
             routes=routes,
         )
     else:
         logger.info('no critical artifacts above threshold')
 
-    if scans.scans_below_threshold:
+    if scans_below_threshold:
         print('\n')
         logger.info('clean scans below threshold')
         checkmarx.tablefmt.print_scan_result(
-            scan_results=scans.scans_below_threshold,
+            scan_results=scans_below_threshold,
             routes=routes,
         )
     else:

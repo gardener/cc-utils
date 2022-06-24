@@ -1,6 +1,7 @@
 import datetime
 import dataclasses
 from enum import Enum, IntEnum
+from functools import total_ordering
 import typing
 
 import github.compliance.result as gcr
@@ -30,11 +31,31 @@ class CustomField:
     value: str
 
 
-class Severity(IntEnum):
-    INFO = 0 # Checkmarx only
+@total_ordering
+class Severity(Enum):
+    INFO = 0
     LOW = 1
     MEDIUM = 2
     HIGH = 3
+
+    @classmethod
+    def from_str(cls, s: str) -> IntEnum | None:
+        su = s.upper()
+        if su == 'INFO':
+            return Severity.INFO
+        elif su == 'LOW':
+            return Severity.LOW
+        elif su == 'MEDIUM':
+            return Severity.MEDIUM
+        elif su == 'HIGH':
+            return Severity.HIGH
+        else:
+            return None
+
+    def __lt__(self, other):
+        if self.__class__ is other.__class__:
+            return self.value < other.value
+        return self.value < other
 
     def __str__(self):
         return self.name.lower()
@@ -135,8 +156,7 @@ class ScanResult(gcr.ScanResult):
 @dataclasses.dataclass
 class FinishedScans:
     failed_scans: typing.List[str] = dataclasses.field(default_factory=list)
-    scans_above_threshold: typing.List[ScanResult] = dataclasses.field(default_factory=list)
-    scans_below_threshold: typing.List[ScanResult] = dataclasses.field(default_factory=list)
+    scans: typing.List[str] = dataclasses.field(default_factory=list)
 
 
 @dataclasses.dataclass
