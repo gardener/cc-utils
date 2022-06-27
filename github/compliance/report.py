@@ -75,9 +75,9 @@ def _compliance_status_summary(
     issue_value: str,
 ):
     if isinstance(artifacts[0].type, enum.Enum):
-        resource_type = artifacts[0].type.value
+        artifact_type = artifacts[0].type.value
     else:
-        resource_type = artifacts[0].type
+        artifact_type = artifacts[0].type
 
     def pluralise(prefix: str, count: int):
         if count == 1:
@@ -95,12 +95,12 @@ def _compliance_status_summary(
         | -- | -- |
         | Component | {component.name} |
         | Component-Version | {component.version} |
-        | Resource  | {artifacts[0].name} |
-        | {pluralise('Resource-Version', len(artifacts))}  | {artifact_versions} |
-        | Resource-Type | {resource_type} |
+        | Artifact  | {artifacts[0].name} |
+        | {pluralise('Artifact-Version', len(artifacts))}  | {artifact_versions} |
+        | Artifact-Type | {artifact_type} |
         | {issue_description} | **{issue_value}** |
 
-        The aforementioned {pluralise(resource_type, len(artifacts))} yielded findings
+        The aforementioned {pluralise(artifact_type, len(artifacts))} yielded findings
         relevant for future release decisions.
 
         For viewing detailed scan {pluralise('report', len(artifacts))}, see the following
@@ -116,21 +116,24 @@ def _template_vars(
     delivery_dashboard_url: str='',
 ):
     component = result_group.component
-    resource_name = result_group.artifact
+    artifact_name = result_group.artifact
     artifacts = [res.artifact for res in result_group.results]
     issue_type = result_group.issue_type
 
     results = result_group.results_with_findings
 
-    resource_versions = ', '.join((r.artifact.version for r in results))
-    resource_types = ', '.join(set((r.artifact.type.value for r in results)))
+    artifact_versions = ', '.join((r.artifact.version for r in results))
+    artifact_types = ', '.join(set((r.artifact.type.value for r in results)))
 
     template_variables = {
         'component_name': component.name,
         'component_version': component.version,
-        'resource_name': resource_name,
-        'resource_version': resource_versions,
-        'resource_type': resource_types,
+        'resource_name': artifact_name, # TODO: to be removed at some point use artifact_name instead
+        'resource_version': artifact_versions, # TODO: to be removed use artifact_version instead
+        'resource_type': artifact_types,       # TODO: to be removed use artifact_type instead
+        'artifact_name': artifact_name,
+        'artifact_version': artifact_versions,
+        'artifact_type': artifact_types,
         'delivery_dashboard_url': delivery_dashboard_url,
     }
 
@@ -428,7 +431,7 @@ def close_issues_for_absent_resources(
     }
 
     for result_group in result_groups:
-        resource_label = github.compliance.issue.resource_digest_label(
+        resource_label = github.compliance.issue.artifact_digest_label(
             component=result_group.component,
             artifact=result_group.artifact,
         )

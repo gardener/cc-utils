@@ -22,7 +22,7 @@ _label_licenses = 'licenses/bdba'
 _label_os_outdated = 'os/outdated'
 
 
-def resource_digest_label(
+def artifact_digest_label(
     component: cm.Component,
     artifact: cm.Artifact | str,
     length=18,
@@ -33,11 +33,11 @@ def resource_digest_label(
     this is useful as GitHub labels are limited to 50 characters
     '''
     if isinstance(artifact, cm.Resource):
-        resource_name = artifact.name
+        name = artifact.name
     else:
-        resource_name = artifact
+        name = artifact
 
-    label_str = f'{component.name}:{resource_name}'
+    label_str = f'{component.name}:{name}'
 
     label_dig =  hashlib.shake_128(label_str.encode('utf-8')).hexdigest(length=length)
 
@@ -65,7 +65,7 @@ def repository_labels(
         yield f'cicd/{issue_type}'
 
     if component:
-        yield resource_digest_label(component=component, artifact=artifact)
+        yield artifact_digest_label(component=component, artifact=artifact)
 
     if extra_labels:
         yield from extra_labels
