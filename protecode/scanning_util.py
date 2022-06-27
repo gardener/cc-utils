@@ -140,73 +140,70 @@ class ProcessingMode(AttribSpecMixin, enum.Enum):
         )
 
 
-class Shared:
-
-    @staticmethod
-    def add_triage(
-        protecode_client: ProtecodeApi,
-        component_name: str,
-        component_version: str,
-        product_id: int,
-        vulnerability_cve: str,
-        description: str,
-        extended_objects: Generator[pm.ExtendedObject, None, None],
-        paranoid: bool = False,
-    ):
-        if component_version:
-            version = component_version
-        else:
-            # Protecode only allows triages for components with known version.
-            # set version to be able to triage away.
-            version = '[ci]-not-found-in-GCR'
-            logger.info(f"Setting dummy version for component '{component_name}'")
-            try:
-                protecode_client.set_component_version(
-                    component_name=component_name,
-                    component_version=version,
-                    objects=[o.sha1() for o in extended_objects],
-                    scope=VersionOverrideScope.APP,
-                    app_id=product_id,
-                )
-            except requests.exceptions.HTTPError as http_err:
-                logger.warning(
-                    f"Unable to set version for component '{component_name}': {http_err}."
-                )
-                # version was not set - cannot triage
-                return
-
-        triage_dict = {
-            'component': component_name,
-            'version': version,
-            'vulns': [vulnerability_cve],
-            'scope': pm.TriageScope.RESULT.value,
-            'reason': 'OT', # "other"
-            'description': description,
-            'product_id': product_id,
-        }
-
+def add_triage(
+    protecode_client: ProtecodeApi,
+    component_name: str,
+    component_version: str,
+    product_id: int,
+    vulnerability_cve: str,
+    description: str,
+    extended_objects: Generator[pm.ExtendedObject, None, None],
+    paranoid: bool = False,
+):
+    if component_version:
+        version = component_version
+    else:
+        # Protecode only allows triages for components with known version.
+        # set version to be able to triage away.
+        version = '[ci]-not-found-in-GCR'
+        logger.info(f"Setting dummy version for component '{component_name}'")
         try:
-            protecode_client.add_triage_raw(triage_dict=triage_dict)
-            if paranoid:
-                # Protecode accepts triages in some cases with 200 ok even if there are wrong
-                # parameters (e.g. wrong version) but ignores them
-                # Paranoid check is not helpful sincs retrieving the wrong versions succeeds again
-                # in other words Protecode allows (and stores) triages for non-existing versions
-                try:
-                    protecode_client.get_triages(
-                                component_name=component_name,
-                                component_version=version,
-                                vulnerability_id=vulnerability_cve,
-                                scope=pm.TriageScope.RESULT.value,
-                                description=description,
-                            )
-                except requests.exceptions.HTTPError as http_err:
-                    logger.warning(f'triage not found after successful apply: {http_err}')
-
-            logger.info(f'added triage: {component_name}:{vulnerability_cve}')
+            protecode_client.set_component_version(
+                component_name=component_name,
+                component_version=version,
+                objects=[o.sha1() for o in extended_objects],
+                scope=VersionOverrideScope.APP,
+                app_id=product_id,
+            )
         except requests.exceptions.HTTPError as http_err:
-            # since we are auto-importing anyway, be a bit tolerant
-            logger.warning(f'failed to add triage: {http_err}')
+            logger.warning(
+                f"Unable to set version for component '{component_name}': {http_err}."
+            )
+            # version was not set - cannot triage
+            return
+
+    triage_dict = {
+        'component': component_name,
+        'version': version,
+        'vulns': [vulnerability_cve],
+        'scope': pm.TriageScope.RESULT.value,
+        'reason': 'OT', # "other"
+        'description': description,
+        'product_id': product_id,
+    }
+
+    try:
+        protecode_client.add_triage_raw(triage_dict=triage_dict)
+        if paranoid:
+            # Protecode accepts triages in some cases with 200 ok even if there are wrong
+            # parameters (e.g. wrong version) but ignores them
+            # Paranoid check is not helpful sincs retrieving the wrong versions succeeds again
+            # in other words Protecode allows (and stores) triages for non-existing versions
+            try:
+                protecode_client.get_triages(
+                            component_name=component_name,
+                            component_version=version,
+                            vulnerability_id=vulnerability_cve,
+                            scope=pm.TriageScope.RESULT.value,
+                            description=description,
+                        )
+            except requests.exceptions.HTTPError as http_err:
+                logger.warning(f'triage not found after successful apply: {http_err}')
+
+        logger.info(f'added triage: {component_name}:{vulnerability_cve}')
+    except requests.exceptions.HTTPError as http_err:
+        # since we are auto-importing anyway, be a bit tolerant
+        logger.warning(f'failed to add triage: {http_err}')
 
 
 class ProtecodeProcessor:
@@ -597,7 +594,7 @@ class ProtecodeProcessor:
             for vulnerability in component.vulnerabilities():
                 if (vulnerability.cve_severity() >= self.cvss_threshold and not
                     vulnerability.historical()) and not vulnerability.has_triage():
-                    Shared.add_triage(
+                    add_triage(
                         protecode_client=self._api,
                         component_name=component.name(),
                         component_version=component.version(),
@@ -935,7 +932,7 @@ class GcrSynchronizer:
                     logger.info(f'triage {component.name()}:{vulnerability.cve()} already present.')
                     continue
 
-                Shared.add_triage(
+                add_triage(
                     protecode_client=self.protecode_client,
                     component_name=component.name(),
                     component_version=component.version(),
