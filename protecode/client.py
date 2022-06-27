@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import time
 import traceback
 import logging
@@ -458,22 +457,12 @@ class ProtecodeApi:
 
         return ScanResult(raw_dict=result)
 
-    def set_product_name_old(self, product_id: int, name: str):
-        url = self._routes.scans(product_id)
-
-        self._patch(
-            url=url,
-            data=json.dumps({'name': name,}),
-            headers={'Content-Type': 'application/json'},
-        )
-
     def set_product_name(self, product_id: int, name: str):
         url = self._routes.product(product_id)
 
         self._patch(
             url=url,
-            data=json.dumps({'name': name,}),
-            headers={'Content-Type': 'application/json'},
+            json={'name': name},
         )
 
     def rescan(self, product_id: int):
