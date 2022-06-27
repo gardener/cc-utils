@@ -194,6 +194,12 @@ class OciBlobRef:
     size: int
     annotations: typing.Optional[typing.Dict] = None
 
+    def as_dict(self) -> dict:
+        raw = dataclasses.asdict(self)
+        # fields that are None should not be included in the output
+        raw = {k:v for k,v in raw.items() if v is not None}
+        return raw
+
 
 @dataclasses.dataclass
 class OciImageManifest:
@@ -201,6 +207,14 @@ class OciImageManifest:
     layers: typing.Sequence[OciBlobRef]
     mediaType: str = OCI_MANIFEST_SCHEMA_V2_MIME
     schemaVersion: int = 2
+
+    def as_dict(self) -> dict:
+        return {
+            'config': self.config.as_dict(),
+            'layers': [layer.as_dict() for layer in self.layers],
+            'mediaType': self.mediaType,
+            'schemaVersion': self.schemaVersion,
+        }
 
     def blobs(self) -> typing.Sequence[OciBlobRef]:
         yield self.config
@@ -276,8 +290,11 @@ class OciImageManifestListEntry(OciBlobRef):
     platform: typing.Optional[OciPlatform] = None
 
     def as_dict(self) -> dict:
-        raw = dataclasses.asdict(self)
-        raw['platform'] = self.platform.as_dict()
+        raw = OciBlobRef.as_dict(self)
+        # platform is an optional attribute according to oci spec
+        # => only include in the output if set
+        if self.platform:
+            raw['platform'] = self.platform.as_dict()
         return raw
 
 
