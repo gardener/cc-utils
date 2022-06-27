@@ -177,7 +177,7 @@ def test_oci_image_manifest_serialisation():
     assert manifest_dict['layers'][0]['annotations'] == annotations
 
 
-def test_oci_image_manifest_list_entry_serialisation():
+def test_oci_image_manifest_list_serialisation():
     manifest_list = om.OciImageManifestList(
         manifests=[
             om.OciImageManifestListEntry(
