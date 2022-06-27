@@ -218,7 +218,6 @@ class ProtecodeProcessor:
         cvss_threshold: float=7.0,
         effective_severity_threshold: Severity=Severity.SEVERITY_UNSPECIFIED,
     ):
-        protecode_api.login()
         self._processing_mode = check_type(processing_mode, ProcessingMode)
         self._api: ProtecodeApi = not_none(protecode_api)
         self._group_id = group_id

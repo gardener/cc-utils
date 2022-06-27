@@ -60,6 +60,7 @@ def upload_grouped_images(
     executor = ThreadPoolExecutor(max_workers=parallel_jobs)
     protecode_api = ccc.protecode.client(protecode_cfg)
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
+    protecode_api.login()
 
     def _upload_task(component_resources):
         def _task():
