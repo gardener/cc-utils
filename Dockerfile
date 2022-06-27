@@ -21,7 +21,7 @@ RUN pip3 install --upgrade --no-cache-dir \
   gardener-cicd-dso==$(cat /metadata/VERSION) \
   pycryptodome \
 # backwards-compatibility
-&& ln -sf /bin/helm /bin/helm3
+&& ln -sf /cc/utils/bin/helm /bin/helm3
 
 RUN EFFECTIVE_VERSION="$(cat /metadata/VERSION)" REPO_DIR=/cc/utils \
   /cc/utils/.ci/bump_job_image_version.py
