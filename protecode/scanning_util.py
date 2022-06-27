@@ -288,11 +288,7 @@ class ProtecodeProcessor:
         image_reference = resource.access.imageReference
         image_path, image_tag = image_reference.split(':')
         image_name = resource.name
-        return '{i}_{v}_{c}'.format(
-            i=image_name,
-            v=image_tag,
-            c=component.name,
-        )
+        return f'{image_name}_{image_tag}_{component.name}'
 
     def _upload_name2(
         self,
