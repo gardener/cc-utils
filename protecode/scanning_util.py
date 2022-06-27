@@ -609,8 +609,15 @@ class ProtecodeProcessor:
         # - protecode-apps to remove
         # - triages to import
 
-        logger.info(f'Processing component resource group for {self.component_name=} and '
-            f'{self.resource_name=} {len(self.component_resources)=}')
+        cversions = {cr.component.version for cr in self.component_resources}
+        rversions = {cr.resource.version for cr in self.component_resources}
+
+        logger.info(textwrap.dedent(
+            f'''\
+            Processing component resource group for {self.component_name=}, {cversions=}
+            {self.resource_name=} {len(self.component_resources)=} {rversions=}
+            '''
+        ))
 
         metadata = self._image_group_metadata(
             component_name=self.component_name,
@@ -631,6 +638,7 @@ class ProtecodeProcessor:
 
         # for each protecode app get the scan results
         scan_results = tuple(self._get_existing_protecode_apps())
+
         logger.info('Found existing protecode apps:')
         for r in scan_results:
             logger.info(f'... {r.name()=}, {r.product_id()=}, {r.greatest_cve_score()=}')
