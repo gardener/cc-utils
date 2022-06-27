@@ -610,7 +610,7 @@ class ProtecodeProcessor:
         # - triages to import
 
         logger.info(f'Processing component resource group for {self.component_name=} and '
-            f'{self.resource_name=}')
+            f'{self.resource_name=} {len(self.component_resources)=}')
 
         metadata = self._image_group_metadata(
             component_name=self.component_name,
