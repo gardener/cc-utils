@@ -172,7 +172,7 @@ def filter_and_display_upload_results(
 
         if greatest_cve >= cve_threshold:
             try:
-                # XXX HACK: just one any image ref
+                # XXX HACK: just any image ref from group
                 image_ref = resource.access.imageReference
                 grafeas_client = ccc.gcp.GrafeasClient.for_image(image_ref)
                 gcr_cve = -1
@@ -181,7 +181,6 @@ def filter_and_display_upload_results(
                     cvss_threshold=cve_threshold,
                 ):
                     gcr_cve = max(gcr_cve, r.vulnerability.cvssScore)
-                logger.debug(f'gcr says max CVSS=={gcr_cve} (-1 means no vulnerability was found)')
                 # TODO: skip if < threshold - just report for now
             except Exception:
                 import traceback

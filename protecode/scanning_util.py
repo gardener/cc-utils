@@ -857,8 +857,8 @@ class GcrSynchronizer:
             return scan_result
 
         if worst_cvss >= self.cvss_threshold:
-            logger.info(f'GCR\'s worst CVSS rating is above threshold: {worst_cvss}')
-            logger.info(f'however, consider: {worst_effective_vuln=}  ({scan_result.product_id()})')
+            logger.debug(f'GCR\'s worst CVSS rating is above threshold: {worst_cvss}')
+            logger.debug(f'however, consider: {worst_effective_vuln=}  ({scan_result.product_id()})')
             triage_remainder = False
         else:
             # worst finding below our threshold -> we may safely triage everything
@@ -907,7 +907,7 @@ class GcrSynchronizer:
                             '[ci] vulnerability was not reported by GCR'
                     elif worst_cve >= self.cvss_threshold:
                         triaged_due_to_gcr_optimism += 1
-                        logger.info(
+                        logger.debug(
                             f'found {component.name()}, but is above threshold {worst_cve=}'
                         )
                         continue
