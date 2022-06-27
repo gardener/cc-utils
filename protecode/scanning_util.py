@@ -618,8 +618,9 @@ class ProtecodeProcessor:
         )
 
         # Get all protecode appps where group-id matches and metadata
-        logger.info(f'Found all protecode apps in group: {self._group_id}, {self.component_name}, '
-            f'{self.resource_name}')
+        logger.info(f'retrieve protecode apps from {self._group_id=}, {self.component_name=}, '
+            f'{self.resource_name=}')
+
         self.existing_protecode_products = self._api.list_apps(
             group_id=self._group_id,
             custom_attribs=metadata,
