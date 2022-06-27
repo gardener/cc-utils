@@ -734,7 +734,7 @@ class ProtecodeProcessor:
     def _import_triages_from_gcr(
         self,
         scan_result: AnalysisResult
-    ) -> AnalysisResult:
+    ) -> AnalysisResult | None:
         image_ref = scan_result.custom_data().get('IMAGE_REFERENCE', None)
         scan_result_triages = list(self._existing_triages([scan_result]))
 
@@ -742,7 +742,11 @@ class ProtecodeProcessor:
             logging.warning(f'no image-ref-name custom-prop for {scan_result.product_id()}')
             return scan_result
 
-        gcr_scanner = GcrSynchronizer(image_ref, self.cvss_threshold, self._api)
+        try:
+            gcr_scanner = GcrSynchronizer(image_ref, self.cvss_threshold, self._api)
+        except ccc.gcp.VulnerabilitiesRetrievalFailed as e:
+            logger.warning(f'Skipping import of vulnerabilites from gcr: {e}')
+            return None
         return gcr_scanner.sync(scan_result, scan_result_triages)
 
 
