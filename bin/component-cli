@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -eu
+set -o pipefail
+
+COMPONENT_CLI_PATH=/bin/component-cli_binary
+
+if [ ! -f "${COMPONENT_CLI_PATH}" ]; then
+    DOWNLOAD_URL=$(curl -s https://api.github.com/repos/gardener/component-cli/releases/latest | jq -r ".assets[] | select(.name | test(\"${componentcli-linux-amd64.gz}\")) | .browser_download_url")
+    auth_user_and_token=$(cli.py gh auth_user_and_token --url github.com/gardener/component-cli)
+    tmp="$(mktemp)"
+    curl -u "${auth_user_and_token}" $DOWNLOAD_URL -L | gunzip > ${tmp} && chmod +x "${tmp}" && mv "${tmp}" "${COMPONENT_CLI_PATH}"
+fi
+
+exec ${COMPONENT_CLI_PATH} "$@"
