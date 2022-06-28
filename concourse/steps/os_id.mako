@@ -74,7 +74,7 @@ for result in determine_os_ids(
   oci_client=oci_client,
 ):
   component = result.component
-  resource = result.resource
+  resource = result.artifact
   os_info = result.os_id
 
   logger.info(f'uploading os-info for {component.name} {resource.name}')

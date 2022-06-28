@@ -72,7 +72,7 @@ def base_image_os_id(
 
     return gcres.OsIdScanResult(
         component=component,
-        resource=resource,
+        artifact=resource,
         os_id=os_info,
     )
 
