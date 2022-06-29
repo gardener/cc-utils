@@ -153,9 +153,9 @@ def scan_result_group_collection_for_outdated_os_ids(
         if not os_id.ID in os_infos:
             return None
 
-        relation = result.resource.relation
+        relation = result.artifact.relation
         if not relation is cm.ResourceRelation.LOCAL:
-            logger.info(f'{result.resource.name=} is not "local" - will ignore findings')
+            logger.info(f'{result.artifact.name=} is not "local" - will ignore findings')
             return False
 
         if branch_reached_eol(os_id=os_id):
