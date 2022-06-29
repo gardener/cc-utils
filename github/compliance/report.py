@@ -3,6 +3,7 @@ import enum
 import functools
 import logging
 import textwrap
+import time
 import typing
 import urllib.parse
 
@@ -382,6 +383,7 @@ def create_or_update_github_issues(
             result_group=result_group,
             action='report',
         )
+        time.sleep(1) # throttle github-api-requests
 
     for result_group in result_groups_without_findings:
         logger.info(f'discarding issue for {result_group.name=} vulnerabilities')
@@ -389,6 +391,7 @@ def create_or_update_github_issues(
             result_group=result_group,
             action='discard',
         )
+        time.sleep(1) # throttle github-api-requests
 
     if overwrite_repository:
         close_issues_for_absent_resources(
