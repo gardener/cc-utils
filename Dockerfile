@@ -19,7 +19,6 @@ RUN pip3 install --upgrade --no-cache-dir \
   --find-links /cc/utils/dist \
   gardener-cicd-libs==$(cat /metadata/VERSION) \
   gardener-cicd-cli==$(cat /metadata/VERSION) \
-  gardener-cicd-whd==$(cat /metadata/VERSION) \
   gardener-cicd-dso==$(cat /metadata/VERSION) \
   pycryptodome \
 # backwards-compatibility
