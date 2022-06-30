@@ -445,10 +445,6 @@ class ImageScanTrait(Trait, ImageFilterMixin):
 
     def validate(self):
         super().validate()
-        if not (self.protecode() or self.clam_av()):
-            raise ModelValidationError(
-                "at least one of 'protecode' or 'clam_av' must be defined."
-            )
 
 
 class ImageScanTraitTransformer(TraitTransformer):
