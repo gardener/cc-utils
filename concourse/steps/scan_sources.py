@@ -35,7 +35,7 @@ def scan_result_group_collection(
 
     def findings_callback(result: cmx_model.ScanResult):
         max_sev = checkmarx.util.greatest_severity(result)
-        return max_sev >= threshold
+        return max_sev and max_sev >= threshold
 
     threshold = cmx_model.Severity.from_str(severity_threshold)
 

@@ -19,6 +19,7 @@ class ScanLabelName(enum.Enum):
     BINARY_ID = 'cloud.gardener.cnudie/dso/scanning-hints/binary_id/v1'
     SOURCE_SCAN = 'cloud.gardener.cnudie/dso/scanning-hints/source_analysis/v1'
     SOURCE_ID = 'cloud.gardener.cnudie/dso/scanning-hints/source_id/v1'
+    SOURCE_PROJECT = 'cloud.gardener.cnudie/dso/scanning-hints/checkmarx-project-name/v1'
 
 
 @dataclasses.dataclass(frozen=True)
@@ -40,4 +41,9 @@ class BinaryScanHint(ScanningHint):
 
 @dataclasses.dataclass(frozen=True)
 class SourceIdHint(ScanningHint):
+    pass
+
+
+@dataclasses.dataclass(frozen=True)
+class SourceProjectHint(ScanningHint):
     pass
