@@ -70,14 +70,21 @@ def _get_scan_artifacts_from_components(
 
             cx_label = get_source_scan_label_from_labels(source.labels)
 
+            # if not cx_label or cx_label.policy is dso.labels.ScanPolicy.SCAN:
             if not cx_label or cx_label.policy is dso.labels.ScanPolicy.SCAN:
+                scan_artifact_name = get_source_scan_name_label(source.labels)
+                if scan_artifact_name:
+                    logger.info(f'Using project name from cd-label {scan_artifact_name}')
+                else:
+                    scan_artifact_name = f'{component.name}_{source.name}'
                 yield dso.model.ScanArtifact(
                     source=source,
-                    name=f'{component.name}_{source.identity(peers=component.sources)}',
+                    name=scan_artifact_name,
                     label=cx_label,
                     component=component,
                 )
             elif cx_label.policy is dso.labels.ScanPolicy.SKIP:
+                logger.info('Note: No source scanning is configured according to ScanPolicy label')
                 continue
             else:
                 raise NotImplementedError
@@ -96,6 +103,15 @@ def get_source_scan_label_from_labels(labels: typing.Sequence[cm.Label]):
                     data=label.value,
                     config=dacite.Config(cast=[dso.labels.ScanPolicy])
                 )
+
+
+def get_source_scan_name_label(labels: typing.Sequence[cm.Label]):
+    global scan_label_names
+    for label in labels:
+        if label.name in scan_label_names:
+            if dso.labels.ScanLabelName(label.name) is dso.labels.ScanLabelName.SOURCE_PROJECT:
+                return label.value
+    return None
 
 
 def scan_artifacts(
@@ -187,7 +203,11 @@ def upload_and_scan_gh_artifact(
             repo=gh_repo,
             path_filter_func=path_filter_func,
         )
-        return cx_project.poll_and_retrieve_scan(scan_id=scan_id, source=artifact.source)
+        return cx_project.poll_and_retrieve_scan(
+            scan_id=scan_id,
+            component=artifact.component,
+            source=artifact.source,
+        )
 
     last_scan = last_scans[0]
     scan_id = last_scan.id
@@ -293,8 +313,10 @@ def print_scans(
     threshold: model.Severity,
     routes: checkmarx.client.CheckmarxRoutes,
 ):
-    scans_above_threshold = [s for s in scans.scans if greatest_severity(s) >= threshold]
-    scans_below_threshold = [s for s in scans.scans if greatest_severity(s) < threshold]
+    scans_above_threshold = [s for s in scans.scans
+        if greatest_severity(s) and greatest_severity(s) >= threshold]
+    scans_below_threshold = [s for s in scans.scans
+        if greatest_severity(s) and greatest_severity(s) < threshold]
 
     if scans_above_threshold:
         print('\n')
