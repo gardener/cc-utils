@@ -113,6 +113,7 @@ class PullRequestAction(enum.Enum):
     SYNCHRONIZE = 'synchronize'
     READY_FOR_REVIEW = 'ready_for_review'
     CONVERTED_TO_DRAFT = 'converted_to_draft'
+    AUTO_MERGE_ENABLED = 'auto_merge_enabled'
 
 
 class PullRequestEvent(EventBase):
