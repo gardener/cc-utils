@@ -8,6 +8,7 @@ import github3
 import gci.componentmodel as cm
 
 import ci.log
+import github.retry
 
 '''
 functionality for creating and maintaining github-issues for tracking compliance issues
@@ -71,6 +72,7 @@ def repository_labels(
         yield from extra_labels
 
 
+@github.retry.retry_and_throttle
 def enumerate_issues(
     component: cm.Component | None,
     artifact: cm.Artifact | None,
@@ -94,6 +96,7 @@ def enumerate_issues(
         yield issue
 
 
+@github.retry.retry_and_throttle
 def _create_issue(
     component: cm.Component,
     artifact: cm.Artifact,
@@ -132,6 +135,7 @@ def _create_issue(
         raise ghe
 
 
+@github.retry.retry_and_throttle
 def _update_issue(
     component: cm.Component,
     artifact: cm.Artifact,
@@ -241,6 +245,7 @@ def create_or_update_issue(
         raise RuntimeError('this line should never be reached') # all cases should be handled before
 
 
+@github.retry.retry_and_throttle
 def close_issue_if_present(
     component: cm.Component,
     artifact: cm.Artifact,
