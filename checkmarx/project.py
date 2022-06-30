@@ -17,9 +17,11 @@ def _create_or_get_project(
 ):
     try:
         project_id = client.get_project_id_by_name(project_name=name, team_id=team_id)
+        logger.info(f'Use existing Checkmarx project: {name}')
         return project_id
     except checkmarx.client.CXNotOkayException as e:
         if e.res.status_code == 404:
+            logger.info(f'Create Checkmarx project: {name}')
             return client.create_project(name, team_id, is_public).json().get('id')
         else:
             raise e
