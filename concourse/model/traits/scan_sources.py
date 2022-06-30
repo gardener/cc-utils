@@ -36,7 +36,7 @@ CHECKMARX_ATTRIBUTES = (
     ),
     AttributeSpec.optional(
         name='severity_threshold',
-        default=30, # TODO: should be replaced by'medium',
+        default='medium',
         doc='threshold for creating issues (high, medium, low, info)',
         type=str,
     ),
