@@ -29,14 +29,19 @@ class OsIdScanResult(ScanResult):
     os_id: unixutil.model.OperatingSystemId
 
 
+FindingsCallback = typing.Callable[[ScanResult], bool]
 '''
 callback type accepting a ScanResult; expected to return True iff argument has a "finding" and False
 otherwise.
 
 Definition of "finding" is type-specific
 '''
-FindingsCallback = typing.Callable[[ScanResult], bool]
 ClassificationCallback = typing.Callable[[ScanResult], Severity]
+
+CommentCallback = typing.Callable[[ScanResult], str]
+'''
+callback expected to return a comment to be posted upon creation/update
+'''
 
 
 @dataclasses.dataclass
@@ -57,6 +62,7 @@ class ScanResultGroup:
     issue_type: str
     findings_callback: FindingsCallback
     classification_callback: ClassificationCallback
+    comment_callback: CommentCallback
 
     @property
     def component(self) -> cm.Component:
@@ -109,6 +115,7 @@ class ScanResultGroupCollection:
     issue_type: str
     classification_callback: ClassificationCallback
     findings_callback: FindingsCallback
+    comment_callback: CommentCallback = None
 
     @property
     def result_groups(self) -> tuple[ScanResultGroup]:
@@ -130,6 +137,7 @@ class ScanResultGroupCollection:
                 issue_type=self.issue_type,
                 findings_callback=self.findings_callback,
                 classification_callback=self.classification_callback,
+                comment_callback=self.comment_callback,
             ) for group_name, results in results_grouped_by_name.items()
         ))
 

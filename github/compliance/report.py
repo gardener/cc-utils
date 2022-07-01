@@ -356,7 +356,7 @@ def create_or_update_github_issues(
             body = issue_cfg.body.format(**template_variables)
 
             try:
-                github.compliance.issue.create_or_update_issue(
+                issue = github.compliance.issue.create_or_update_issue(
                     component=component,
                     artifact=artifact,
                     issue_type=issue_type,
@@ -369,6 +369,15 @@ def create_or_update_github_issues(
                     ),
                     preserve_labels_regexes=preserve_labels_regexes,
                 )
+                if result_group.comment_callback:
+                    def single_comment(result: gcm.ScanResult):
+                        a = result.artifact
+                        header = f'**{a.name}:{a.version}**\n'
+
+                        return header + result_group.comment_callback(result)
+
+                    comment = '\n'.join((single_comment(result) for result in results))
+                    issue.create_comment(comment)
             except github3.exceptions.GitHubError as ghe:
                 err_count += 1
                 logger.warning('error whilst trying to create or update issue - will keep going')
