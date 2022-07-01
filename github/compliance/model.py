@@ -1,3 +1,4 @@
+import collections
 import dataclasses
 import enum
 import typing
@@ -47,7 +48,7 @@ class ScanResultGroup:
     components and resources are understood as defined by the OCM (gci.componentmodel)
     '''
     name: str # {component.name}:{resource.name}
-    results: list[ScanResult]
+    results: tuple[ScanResult]
     issue_type: str
     findings_callback: FindingsCallback
     classification_callback: ClassificationCallback
@@ -106,7 +107,7 @@ class ScanResultGroupCollection:
 
     @property
     def result_groups(self) -> tuple[ScanResultGroup]:
-        result_groups = {}
+        results_grouped_by_name = collections.defaultdict(list)
 
         if not self.results:
             return ()
@@ -114,18 +115,18 @@ class ScanResultGroupCollection:
         for result in self.results:
             artifact_name = result.artifact.name
             group_name = f'{result.component.name}:{artifact_name}'
-            if not group_name in result_groups:
-                result_groups[group_name] = ScanResultGroup(
-                    name=group_name,
-                    results=[result],
-                    issue_type=self.issue_type,
-                    findings_callback=self.findings_callback,
-                    classification_callback=self.classification_callback,
-                )
-            else:
-                result_groups[group_name].results.append(result)
 
-        return tuple(result_groups.values())
+            results_grouped_by_name[group_name].append(result)
+
+        return tuple((
+            ScanResultGroup(
+                name=group_name,
+                results=results,
+                issue_type=self.issue_type,
+                findings_callback=self.findings_callback,
+                classification_callback=self.classification_callback,
+            ) for group_name, results in results_grouped_by_name.items()
+        ))
 
     @property
     def result_groups_with_findings(self) -> tuple[ScanResultGroup]:
