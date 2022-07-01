@@ -28,6 +28,7 @@ import github.compliance.report as gcrep
 import github.compliance.issue as gciss
 import saf.model
 import protecode.model as pm
+import protecode.report as pr
 
 logger = logging.getLogger()
 
@@ -50,11 +51,15 @@ def scan_result_group_collection_for_vulnerabilities(
             return False
         return cve_score >= cve_threshold
 
+    def comment_callback(result: pm.BDBA_ScanResult):
+        return pr.analysis_result_to_report_str(result.result)
+
     return gcm.ScanResultGroupCollection(
         results=tuple(results),
         issue_type=gciss._label_bdba,
         classification_callback=classification_callback,
         findings_callback=findings_callback,
+        comment_callback=comment_callback,
     )
 
 
