@@ -204,6 +204,7 @@ def upload_and_scan_gh_artifact(
                      f'Starting new scan hash={source_commit_hash}')
         scan_id = download_repo_and_create_scan(
             artifact_name=artifact.name,
+            artifact_version=artifact.source.version,
             cx_project=cx_project,
             hash=source_commit_hash,
             repo=gh_repo,
@@ -226,6 +227,7 @@ def upload_and_scan_gh_artifact(
                          f'New scan started for hash={source_commit_hash}')
             scan_id = download_repo_and_create_scan(
                 artifact_name=artifact.name,
+                artifact_version=artifact.source.version,
                 cx_project=cx_project,
                 hash=source_commit_hash,
                 repo=gh_repo,
@@ -395,6 +397,7 @@ def _download_and_zip_repo(
 
 def download_repo_and_create_scan(
     artifact_name: str,
+    artifact_version: str,
     hash:str,
     cx_project: checkmarx.project.CheckmarxProject,
     path_filter_func: typing.Callable,
@@ -422,7 +425,10 @@ def download_repo_and_create_scan(
         attribute_key=model.CustomFieldKeys.COMPONENT_NAME,
         value=artifact_name,
     )
-
+    cx_project.project_details.set_custom_field(
+        attribute_key=model.CustomFieldKeys.VERSION,
+        value=artifact_version,
+    )
     cx_project.update_remote_project()
     scan_id = cx_project.start_scan()
     clogger.info(f'started scan id={scan_id} project id={cx_project.project_details.id}')
