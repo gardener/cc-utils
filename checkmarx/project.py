@@ -71,8 +71,7 @@ class CheckmarxProject:
     def update_remote_project(self):
         self.client.update_project(self.project_details)
 
-    def start_scan(self):
-        scan_settings = model.ScanSettings(projectId=self.project_details.id)
+    def start_scan(self, scan_settings: model.ScanSettings):
         return self.client.start_scan(scan_settings)
 
     def _poll_scan(self, scan_id: int, polling_interval_seconds=60):
