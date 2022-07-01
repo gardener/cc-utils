@@ -166,7 +166,7 @@ def github_api(
     if username:
         github_auth_token = github_cfg.credentials(username).auth_token()
     else:
-        github_auth_token = github_cfg.credentials().auth_token()
+        github_auth_token = github_cfg.credentials_with_most_remaining_quota().auth_token()
 
     verify_ssl = github_cfg.tls_validation()
 

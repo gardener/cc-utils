@@ -20,6 +20,8 @@ import typing
 
 from urllib.parse import urlparse
 
+import github3.github
+
 from model.base import (
     BasicCredentials,
     NamedModelElement,
@@ -80,6 +82,27 @@ class GithubConfig(NamedModelElement):
             )
 
         return random.choice(technical_users)
+
+    def credentials_with_most_remaining_quota(self):
+        credentials = self._technical_user_credentials()
+        if len(credentials) < 2:
+            return credentials[0]
+
+        if self.hostname() == 'github.com':
+            ApiCtor = github3.github.GitHub
+            api_kwargs = {}
+        else:
+            ApiCtor = github3.github.GitHubEnterprise
+            api_kwargs = {'url': self.http_url()}
+
+        def rate_limit_remaining(credentials) -> int:
+            api = ApiCtor(token=credentials.auth_token(), **api_kwargs)
+            print(api.ratelimit_remaining)
+            return api.ratelimit_remaining
+
+        best_credentials = max(credentials, key=rate_limit_remaining)
+
+        return best_credentials
 
     def _technical_user_credentials(self) -> typing.Iterable["GithubCredentials"]:
         return [
