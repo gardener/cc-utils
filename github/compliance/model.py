@@ -1,6 +1,7 @@
 import collections
 import dataclasses
 import enum
+import functools
 import typing
 
 import gci.componentmodel as cm
@@ -46,6 +47,10 @@ class ScanResultGroup:
     targets" (github issues if used in the context of this package)
 
     components and resources are understood as defined by the OCM (gci.componentmodel)
+
+    ScanResultGroup caches calculated values to reduce amount of (potentially expensive) callbacks.
+    Altering `results`, or external state passed-in callbacks rely on will thus result in
+    inconsistent state.
     '''
     name: str # {component.name}:{resource.name}
     results: tuple[ScanResult]
@@ -61,7 +66,7 @@ class ScanResultGroup:
     def artifact(self) -> cm.Artifact:
         return self.results[0].artifact
 
-    @property
+    @functools.cached_property
     def has_findings(self) -> bool:
         for r in self.results:
             if self.findings_callback(r):
@@ -69,14 +74,14 @@ class ScanResultGroup:
         else:
             return False
 
-    @property
+    @functools.cached_property
     def worst_severity(self) -> Severity:
         if not self.has_findings:
             return None
         classifications = [self.classification_callback(r) for r in self.results_with_findings]
         return max(classifications)
 
-    @property
+    @functools.cached_property
     def worst_result(self) -> ScanResult:
         if not self.has_findings:
             return None
@@ -89,13 +94,13 @@ class ScanResultGroup:
 
         return None
 
-    @property
-    def results_with_findings(self) -> list[ScanResult]:
-        return [r for r in self.results if self.findings_callback(r)]
+    @functools.cached_property
+    def results_with_findings(self) -> tuple[ScanResult]:
+        return tuple((r for r in self.results if self.findings_callback(r)))
 
-    @property
-    def results_without_findings(self) -> list[ScanResult]:
-        return [r for r in self.results if not self.findings_callback(r)]
+    @functools.cached_property
+    def results_without_findings(self) -> tuple[ScanResult]:
+        return tuple((r for r in self.results if not self.findings_callback(r)))
 
 
 @dataclasses.dataclass
