@@ -38,7 +38,7 @@ Example label:
 
 .. code-block:: yaml
 
-  - name: 'cloud.gardener.cnudie/sdo/scanning-hints/source_analysis/v1'
+  - name: 'cloud.gardener.cnudie/dso/scanning-hints/source_analysis/v1'
     value:
       policy: 'scan' # | 'skip'
       path_config:
@@ -68,7 +68,7 @@ To skip the whitesource scan the source_id label has to be set with the policy: 
 
 .. code-block:: yaml
 
-  - name: 'cloud.gardener.cnudie/sdo/scanning-hints/source_id/v1'
+  - name: 'cloud.gardener.cnudie/dso/scanning-hints/source_id/v1'
     value:
       policy: 'scan' # | 'skip' | 'scan_source'
       path_config:
