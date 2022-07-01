@@ -23,7 +23,7 @@ import typing
 import tabulate
 
 import concourse.model.traits.image_scan as image_scan
-import github.compliance.result as gcres
+import github.compliance.model as gcm
 import github.compliance.report as gcrep
 import github.compliance.issue as gciss
 import saf.model
@@ -50,7 +50,7 @@ def scan_result_group_collection_for_vulnerabilities(
             return False
         return cve_score >= cve_threshold
 
-    return gcres.ScanResultGroupCollection(
+    return gcm.ScanResultGroupCollection(
         results=tuple(results),
         github_issue_label=gciss._label_bdba,
         issue_type=gciss._label_bdba,
@@ -76,11 +76,11 @@ def scan_result_group_collection_for_licenses(
 
     def classification_callback(result: pm.BDBA_ScanResult):
         if has_prohibited_licenses(result=result):
-            return gcres.Severity.CRITICAL
+            return gcm.Severity.CRITICAL
 
         return None
 
-    return gcres.ScanResultGroupCollection(
+    return gcm.ScanResultGroupCollection(
         results=tuple(results),
         github_issue_label=gciss._label_licenses,
         issue_type=gciss._label_licenses,

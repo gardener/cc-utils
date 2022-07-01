@@ -17,7 +17,7 @@ import dataclasses
 from enum import Enum
 import typing
 
-import github.compliance.result as gcr
+import github.compliance.model as gcm
 
 from model.base import ModelBase
 
@@ -269,7 +269,7 @@ class UploadStatus(Enum):
 
 
 @dataclasses.dataclass
-class BDBA_ScanResult(gcr.ScanResult):
+class BDBA_ScanResult(gcm.ScanResult):
     # component: cm.Component
     # resource: cm.Resource
     status: UploadStatus
