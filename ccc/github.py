@@ -135,7 +135,6 @@ def pr_helper(
 github_repo_helper = repo_helper
 
 
-@functools.lru_cache()
 def github_api(
     github_cfg: 'model.GithubConfig'=None,
     repo_url: str=None,
