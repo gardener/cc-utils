@@ -430,7 +430,13 @@ def download_repo_and_create_scan(
         value=artifact_version,
     )
     cx_project.update_remote_project()
-    scan_id = cx_project.start_scan()
+
+    scan_settings = model.ScanSettings(
+        projectId=cx_project.project_details.id,
+        comment=f'Scanning artifact name: {artifact_name}, version: {artifact_version}, '
+            f'commit: {hash}'
+    )
+    scan_id = cx_project.start_scan(scan_settings)
     clogger.info(f'started scan id={scan_id} project id={cx_project.project_details.id}')
 
     return scan_id
