@@ -79,7 +79,7 @@ exit(1)
 % endif
 
 % if checkmarx_cfg:
-scan_results = scan_sources_and_notify(
+scan_results = scan_sources(
     checkmarx_cfg_name='${checkmarx_cfg.checkmarx_cfg_name()}',
     component_descriptor=component_descriptor,
     team_id='${checkmarx_cfg.team_id()}',

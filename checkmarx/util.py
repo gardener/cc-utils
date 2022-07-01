@@ -38,6 +38,7 @@ def scan_sources(
     max_workers: int = 4, # only two scan will be run per user
     exclude_paths: typing.Sequence[str] = (),
     include_paths: typing.Sequence[str] = (),
+    force: bool = False,
 ) -> model.FinishedScans:
 
     components = tuple(cnudie.retrieve.components(component=component_descriptor))
@@ -54,6 +55,7 @@ def scan_sources(
         max_workers=max_workers,
         scan_artifacts=artifacts_gen,
         team_id=team_id,
+        force=force,
     )
 
 
@@ -70,7 +72,6 @@ def _get_scan_artifacts_from_components(
 
             cx_label = get_source_scan_label_from_labels(source.labels)
 
-            # if not cx_label or cx_label.policy is dso.labels.ScanPolicy.SCAN:
             if not cx_label or cx_label.policy is dso.labels.ScanPolicy.SCAN:
                 scan_artifact_name = get_source_scan_name_label(source.labels)
                 if scan_artifact_name:
@@ -93,7 +94,9 @@ def _get_scan_artifacts_from_components(
 scan_label_names = set(item.value for item in dso.labels.ScanLabelName)
 
 
-def get_source_scan_label_from_labels(labels: typing.Sequence[cm.Label]):
+def get_source_scan_label_from_labels(
+    labels: typing.Sequence[cm.Label],
+) -> dso.labels.SourceScanHint | None:
     global scan_label_names
     for label in labels:
         if label.name in scan_label_names:
@@ -121,6 +124,7 @@ def scan_artifacts(
     team_id: str,
     exclude_paths: typing.Sequence[str] = (),
     include_paths: typing.Sequence[str] = (),
+    force: bool = False,
 ) -> model.FinishedScans:
 
     finished_scans = model.FinishedScans()
@@ -135,6 +139,7 @@ def scan_artifacts(
         scan_gh_artifact,
         exclude_paths=exclude_paths,
         include_paths=include_paths,
+        force=force,
     )
 
     def init_scan(
@@ -186,7 +191,8 @@ def upload_and_scan_gh_artifact(
     gh_repo: github3.repos.repo.Repository,
     cx_project: checkmarx.project.CheckmarxProject,
     path_filter_func: typing.Callable,
-    source_commit_hash,
+    source_commit_hash: str,
+    force: bool,
 ) -> model.ScanResult:
 
     clogger = component_logger(artifact_name=artifact.name)
@@ -215,7 +221,7 @@ def upload_and_scan_gh_artifact(
     if cx_project.is_scan_finished(last_scan):
         clogger.info('no running scan found. Comparing hashes')
 
-        if cx_project.is_scan_necessary(hash=source_commit_hash):
+        if force or cx_project.is_scan_necessary(hash=source_commit_hash):
             clogger.info('current hash differs from remote hash in cx. '
                          f'New scan started for hash={source_commit_hash}')
             scan_id = download_repo_and_create_scan(
@@ -242,6 +248,7 @@ def scan_gh_artifact(
     scan_artifact: dso.model.ScanArtifact,
     exclude_paths: typing.Sequence[str] = (),
     include_paths: typing.Sequence[str] = (),
+    force: bool = False,
 ) -> model.ScanResult:
 
     github_api = ccc.github.github_api_from_gh_access(access=scan_artifact.source.access)
@@ -279,6 +286,7 @@ def scan_gh_artifact(
         gh_repo=gh_repo,
         source_commit_hash=commit_hash,
         path_filter_func=path_filter_func,
+        force=force,
     )
 
 

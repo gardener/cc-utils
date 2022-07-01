@@ -48,13 +48,14 @@ def scan_result_group_collection(
     )
 
 
-def scan_sources_and_notify(
+def scan_sources(
     checkmarx_cfg_name: str,
     component_descriptor: gci.componentmodel.ComponentDescriptor,
     team_id: str = None,
     threshold: str = 'medium',
     exclude_paths: typing.Sequence[str] = (),
     include_paths: typing.Sequence[str] = (),
+    force: bool = False,
 ) -> cmx_model.FinishedScans:
     checkmarx_cfg = checkmarx.util.get_checkmarx_cfg(checkmarx_cfg_name)
     if not team_id:
@@ -70,6 +71,7 @@ def scan_sources_and_notify(
         team_id=team_id,
         exclude_paths=exclude_paths,
         include_paths=include_paths,
+        force=force,
     )
 
     checkmarx.util.print_scans(
