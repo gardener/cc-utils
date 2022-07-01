@@ -9,7 +9,7 @@ import checkmarx.model as cmx_model
 import checkmarx.util
 import cnudie.retrieve
 import gci
-import github.compliance.result as gcres
+import github.compliance.model as gcm
 import github.compliance.issue as gciss
 import whitesource.component
 import whitesource.model
@@ -29,7 +29,7 @@ def scan_result_group_collection(
     results: tuple[cmx_model.ScanResult],
     severity_threshold: str,
 ):
-    def classification_callback(result: cmx_model.ScanResult) -> gcres.Severity:
+    def classification_callback(result: cmx_model.ScanResult) -> gcm.Severity:
         max_sev = checkmarx.util.greatest_severity(result)
         return checkmarx.util.checkmarx_severity_to_github_severity(max_sev)
 
@@ -39,9 +39,8 @@ def scan_result_group_collection(
 
     threshold = cmx_model.Severity.from_str(severity_threshold)
 
-    return gcres.ScanResultGroupCollection(
+    return gcm.ScanResultGroupCollection(
         results=tuple(results),
-        github_issue_label=gciss._label_checkmarx,
         issue_type=gciss._label_checkmarx,
         classification_callback=classification_callback,
         findings_callback=findings_callback,
