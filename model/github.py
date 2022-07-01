@@ -97,7 +97,6 @@ class GithubConfig(NamedModelElement):
 
         def rate_limit_remaining(credentials) -> int:
             api = ApiCtor(token=credentials.auth_token(), **api_kwargs)
-            print(api.ratelimit_remaining)
             return api.ratelimit_remaining
 
         best_credentials = max(credentials, key=rate_limit_remaining)
