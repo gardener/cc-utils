@@ -26,7 +26,7 @@ import dso.labels
 import dso.model
 
 import gci.componentmodel as cm
-import github.compliance.result as gcr
+import github.compliance.model as gcm
 
 logger = logging.getLogger(__name__)
 
@@ -305,13 +305,13 @@ def greatest_severity(result: model.ScanResult) -> model.Severity | None:
         return None
 
 
-def checkmarx_severity_to_github_severity(severity: model.Severity) -> gcr.Severity:
+def checkmarx_severity_to_github_severity(severity: model.Severity) -> gcm.Severity:
     if severity is model.Severity.HIGH:
-        return gcr.Severity.HIGH
+        return gcm.Severity.HIGH
     elif severity is model.Severity.MEDIUM:
-        return gcr.Severity.MEDIUM
+        return gcm.Severity.MEDIUM
     elif severity is model.Severity.LOW:
-        return gcr.Severity.LOW
+        return gcm.Severity.LOW
     elif severity is model.Severity.INFO:
         return None
     else:

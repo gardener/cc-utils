@@ -19,7 +19,7 @@ from concourse.model.base import (
     ScriptType,
 )
 import concourse.model.traits.component_descriptor
-import github.compliance.result
+import github.compliance.model as gcm
 
 from concourse.model.traits.image_scan import (
     GithubIssueTemplateCfg,
@@ -161,8 +161,8 @@ class MaxProcessingTimesDays:
     medium: int = 90
     low: int = 120
 
-    def for_severity(self, severity: github.compliance.result.Severity):
-        S = github.compliance.result.Severity
+    def for_severity(self, severity: gcm.Severity):
+        S = gcm.Severity
         if severity is S.CRITICAL:
             return self.very_high_or_greater
         elif severity is S.HIGH:

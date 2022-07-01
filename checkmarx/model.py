@@ -4,7 +4,7 @@ from enum import Enum, IntEnum
 from functools import total_ordering
 import typing
 
-import github.compliance.result as gcr
+import github.compliance.model as gcm
 
 
 class ScanStatusValues(Enum):
@@ -141,7 +141,7 @@ class ScanSettings:
 
 # below types are not used for http body deserialization
 @dataclasses.dataclass
-class ScanResult(gcr.ScanResult):
+class ScanResult(gcm.ScanResult):
     """
     ScanResult is a data container for a scan result for a component version
     """
