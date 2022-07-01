@@ -100,7 +100,6 @@ class ScanResultGroup:
 @dataclasses.dataclass
 class ScanResultGroupCollection:
     results: tuple[ScanResult]
-    github_issue_label: str
     issue_type: str
     classification_callback: ClassificationCallback
     findings_callback: FindingsCallback

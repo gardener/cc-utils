@@ -52,7 +52,6 @@ def scan_result_group_collection_for_vulnerabilities(
 
     return gcm.ScanResultGroupCollection(
         results=tuple(results),
-        github_issue_label=gciss._label_bdba,
         issue_type=gciss._label_bdba,
         classification_callback=classification_callback,
         findings_callback=findings_callback,
@@ -82,7 +81,6 @@ def scan_result_group_collection_for_licenses(
 
     return gcm.ScanResultGroupCollection(
         results=tuple(results),
-        github_issue_label=gciss._label_licenses,
         issue_type=gciss._label_licenses,
         classification_callback=classification_callback,
         findings_callback=has_prohibited_licenses,

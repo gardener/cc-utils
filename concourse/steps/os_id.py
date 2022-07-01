@@ -167,7 +167,6 @@ def scan_result_group_collection_for_outdated_os_ids(
 
     return gcm.ScanResultGroupCollection(
         results=tuple(results),
-        github_issue_label=gciss._label_os_outdated,
         issue_type=gciss._label_os_outdated,
         classification_callback=classification_callback,
         findings_callback=findings_callback,
