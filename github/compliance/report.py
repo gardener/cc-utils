@@ -19,7 +19,7 @@ import delivery.client
 import delivery.model
 import github.compliance.issue
 import github.compliance.milestone
-import github.compliance.result as gcr
+import github.compliance.model as gcm
 import github.user
 import model.delivery
 
@@ -30,22 +30,22 @@ _compliance_label_licenses = github.compliance.issue._label_licenses
 _compliance_label_os_outdated = github.compliance.issue._label_os_outdated
 
 
-def _criticality_label(classification: gcr.Severity):
+def _criticality_label(classification: gcm.Severity):
     return f'compliance-priority/{str(classification)}'
 
 
-def _criticality_classification(cve_score: float) -> gcr.Severity:
+def _criticality_classification(cve_score: float) -> gcm.Severity:
     if not cve_score or cve_score <= 0:
         return None
 
     if cve_score < 4.0:
-        return gcr.Severity.LOW
+        return gcm.Severity.LOW
     if cve_score < 7.0:
-        return gcr.Severity.MEDIUM
+        return gcm.Severity.MEDIUM
     if cve_score < 9.0:
-        return gcr.Severity.HIGH
+        return gcm.Severity.HIGH
     if cve_score >= 9.0:
-        return gcr.Severity.CRITICAL
+        return gcm.Severity.CRITICAL
 
 
 def _delivery_dashboard_url(
@@ -112,7 +112,7 @@ def _compliance_status_summary(
 
 
 def _template_vars(
-    result_group: gcr.ScanResultGroup,
+    result_group: gcm.ScanResultGroup,
     license_cfg: image_scan.LicenseCfg,
     delivery_dashboard_url: str='',
 ):
@@ -171,7 +171,7 @@ def _template_vars(
             issue_description='Prohibited Licenses',
             report_urls=[ar.report_url() for ar in analysis_results],
         )
-        template_variables['criticality_classification'] = str(gcr.Severity.CRITICAL)
+        template_variables['criticality_classification'] = str(gcm.Severity.CRITICAL)
     elif issue_type == _compliance_label_os_outdated:
         worst_result = result_group.worst_result
         os_info = worst_result.os_id
@@ -222,7 +222,7 @@ def _latest_processing_date(
 
 
 def create_or_update_github_issues(
-    result_group_collection: gcr.ScanResultGroupCollection,
+    result_group_collection: gcm.ScanResultGroupCollection,
     max_processing_days: image_scan.MaxProcessingTimesDays,
     gh_api: github3.GitHub,
     overwrite_repository: github3.repos.Repository=None,
@@ -246,7 +246,7 @@ def create_or_update_github_issues(
     err_count = 0
 
     def process_result(
-        result_group: gcr.ScanResultGroup,
+        result_group: gcm.ScanResultGroup,
         action: str,
     ):
         nonlocal gh_api
@@ -406,7 +406,7 @@ def create_or_update_github_issues(
 
 
 def close_issues_for_absent_resources(
-    result_groups: list[gcr.ScanResultGroup],
+    result_groups: list[gcm.ScanResultGroup],
     repository: github3.repos.Repository,
     issue_type: str | None,
 ):
