@@ -194,12 +194,6 @@ class OciBlobRef:
     size: int
     annotations: typing.Optional[typing.Dict] = None
 
-    def as_dict(self) -> dict:
-        raw = dataclasses.asdict(self)
-        # fields that are None should not be included in the output
-        raw = {k:v for k,v in raw.items() if v is not None}
-        return raw
-
 
 @dataclasses.dataclass
 class OciImageManifest:
@@ -207,14 +201,6 @@ class OciImageManifest:
     layers: typing.Sequence[OciBlobRef]
     mediaType: str = OCI_MANIFEST_SCHEMA_V2_MIME
     schemaVersion: int = 2
-
-    def as_dict(self) -> dict:
-        return {
-            'config': self.config.as_dict(),
-            'layers': [layer.as_dict() for layer in self.layers],
-            'mediaType': self.mediaType,
-            'schemaVersion': self.schemaVersion,
-        }
 
     def blobs(self) -> typing.Sequence[OciBlobRef]:
         yield self.config
@@ -287,12 +273,13 @@ class OciPlatform:
 
 @dataclasses.dataclass(frozen=True)
 class OciImageManifestListEntry(OciBlobRef):
+    # platform is an optional attribute according to the oci image spec.
+    # it must also be optional to not have a non-default attribute after
+    # the default attribute "annotations" in parent class OciBlobRef.
     platform: typing.Optional[OciPlatform] = None
 
     def as_dict(self) -> dict:
-        raw = OciBlobRef.as_dict(self)
-        # platform is an optional attribute according to oci spec
-        # => only include in the output if set
+        raw = dataclasses.asdict(self)
         if self.platform:
             raw['platform'] = self.platform.as_dict()
         return raw
