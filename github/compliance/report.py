@@ -377,7 +377,13 @@ def create_or_update_github_issues(
                         return header + result_group.comment_callback(result)
 
                     comment = '\n'.join((single_comment(result) for result in results))
-                    issue.create_comment(comment)
+
+                    # only add comment if not already present
+                    for comment in issue.comments():
+                        if comment.body.strip() == comment.strip():
+                            break
+                    else:
+                        issue.create_comment(comment)
             except github3.exceptions.GitHubError as ghe:
                 err_count += 1
                 logger.warning('error whilst trying to create or update issue - will keep going')
