@@ -1,5 +1,7 @@
+import collections
 import dataclasses
 import enum
+import functools
 import typing
 
 import gci.componentmodel as cm
@@ -19,7 +21,7 @@ class Severity(enum.IntEnum):
 @dataclasses.dataclass
 class ScanResult:
     component: cm.Component
-    resource: cm.Resource
+    artifact: cm.Artifact
 
 
 @dataclasses.dataclass
@@ -27,14 +29,19 @@ class OsIdScanResult(ScanResult):
     os_id: unixutil.model.OperatingSystemId
 
 
+FindingsCallback = typing.Callable[[ScanResult], bool]
 '''
 callback type accepting a ScanResult; expected to return True iff argument has a "finding" and False
 otherwise.
 
 Definition of "finding" is type-specific
 '''
-FindingsCallback = typing.Callable[[ScanResult], bool]
 ClassificationCallback = typing.Callable[[ScanResult], Severity]
+
+CommentCallback = typing.Callable[[ScanResult], str]
+'''
+callback expected to return a comment to be posted upon creation/update
+'''
 
 
 @dataclasses.dataclass
@@ -45,22 +52,27 @@ class ScanResultGroup:
     targets" (github issues if used in the context of this package)
 
     components and resources are understood as defined by the OCM (gci.componentmodel)
+
+    ScanResultGroup caches calculated values to reduce amount of (potentially expensive) callbacks.
+    Altering `results`, or external state passed-in callbacks rely on will thus result in
+    inconsistent state.
     '''
     name: str # {component.name}:{resource.name}
-    results: list[ScanResult]
+    results: tuple[ScanResult]
     issue_type: str
     findings_callback: FindingsCallback
     classification_callback: ClassificationCallback
+    comment_callback: CommentCallback
 
     @property
     def component(self) -> cm.Component:
         return self.results[0].component
 
     @property
-    def resource_name(self) -> cm.Resource:
-        return self.results[0].resource
+    def artifact(self) -> cm.Artifact:
+        return self.results[0].artifact
 
-    @property
+    @functools.cached_property
     def has_findings(self) -> bool:
         for r in self.results:
             if self.findings_callback(r):
@@ -68,14 +80,14 @@ class ScanResultGroup:
         else:
             return False
 
-    @property
+    @functools.cached_property
     def worst_severity(self) -> Severity:
         if not self.has_findings:
             return None
         classifications = [self.classification_callback(r) for r in self.results_with_findings]
         return max(classifications)
 
-    @property
+    @functools.cached_property
     def worst_result(self) -> ScanResult:
         if not self.has_findings:
             return None
@@ -88,44 +100,46 @@ class ScanResultGroup:
 
         return None
 
-    @property
-    def results_with_findings(self) -> list[ScanResult]:
-        return [r for r in self.results if self.findings_callback(r)]
+    @functools.cached_property
+    def results_with_findings(self) -> tuple[ScanResult]:
+        return tuple((r for r in self.results if self.findings_callback(r)))
 
-    @property
-    def results_without_findings(self) -> list[ScanResult]:
-        return [r for r in self.results if not self.findings_callback(r)]
+    @functools.cached_property
+    def results_without_findings(self) -> tuple[ScanResult]:
+        return tuple((r for r in self.results if not self.findings_callback(r)))
 
 
 @dataclasses.dataclass
 class ScanResultGroupCollection:
     results: tuple[ScanResult]
-    github_issue_label: str
     issue_type: str
     classification_callback: ClassificationCallback
     findings_callback: FindingsCallback
+    comment_callback: CommentCallback = None
 
     @property
     def result_groups(self) -> tuple[ScanResultGroup]:
-        result_groups = {}
+        results_grouped_by_name = collections.defaultdict(list)
 
         if not self.results:
             return ()
 
         for result in self.results:
-            group_name = f'{result.component.name}:{result.resource.name}'
-            if not group_name in result_groups:
-                result_groups[group_name] = ScanResultGroup(
-                    name=group_name,
-                    results=[result],
-                    issue_type=self.issue_type,
-                    findings_callback=self.findings_callback,
-                    classification_callback=self.classification_callback,
-                )
-            else:
-                result_groups[group_name].results.append(result)
+            artifact_name = result.artifact.name
+            group_name = f'{result.component.name}:{artifact_name}'
 
-        return tuple(result_groups.values())
+            results_grouped_by_name[group_name].append(result)
+
+        return tuple((
+            ScanResultGroup(
+                name=group_name,
+                results=results,
+                issue_type=self.issue_type,
+                findings_callback=self.findings_callback,
+                classification_callback=self.classification_callback,
+                comment_callback=self.comment_callback,
+            ) for group_name, results in results_grouped_by_name.items()
+        ))
 
     @property
     def result_groups_with_findings(self) -> tuple[ScanResultGroup]:

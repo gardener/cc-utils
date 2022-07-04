@@ -135,7 +135,6 @@ def pr_helper(
 github_repo_helper = repo_helper
 
 
-@functools.lru_cache()
 def github_api(
     github_cfg: 'model.GithubConfig'=None,
     repo_url: str=None,
@@ -166,7 +165,7 @@ def github_api(
     if username:
         github_auth_token = github_cfg.credentials(username).auth_token()
     else:
-        github_auth_token = github_cfg.credentials().auth_token()
+        github_auth_token = github_cfg.credentials_with_most_remaining_quota().auth_token()
 
     verify_ssl = github_cfg.tls_validation()
 

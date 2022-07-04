@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -eu
+set -o pipefail
+
+DOWNLOAD_URL="https://get.helm.sh/helm-${HELM_V3_VERSION}-linux-amd64.tar.gz"
+HELM_PATH=/bin/helm_binary
+
+if [ ! -f "${HELM_PATH}" ]; then
+    tmp="$(mktemp -d)"
+    curl $DOWNLOAD_URL -L | tar -xz -C "${tmp}" && mv "${tmp}/linux-amd64/helm" "${HELM_PATH}"
+fi
+
+exec ${HELM_PATH} "$@"

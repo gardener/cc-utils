@@ -8,6 +8,7 @@ import github3
 import gci.componentmodel as cm
 
 import ci.log
+import github.retry
 
 '''
 functionality for creating and maintaining github-issues for tracking compliance issues
@@ -22,9 +23,9 @@ _label_licenses = 'licenses/bdba'
 _label_os_outdated = 'os/outdated'
 
 
-def resource_digest_label(
+def artifact_digest_label(
     component: cm.Component,
-    resource: cm.Resource | str,
+    artifact: cm.Artifact | str,
     length=18,
 ):
     '''
@@ -32,12 +33,12 @@ def resource_digest_label(
 
     this is useful as GitHub labels are limited to 50 characters
     '''
-    if isinstance(resource, cm.Resource):
-        resource_name = resource.name
+    if isinstance(artifact, cm.Resource):
+        name = artifact.name
     else:
-        resource_name = resource
+        name = artifact
 
-    label_str = f'{component.name}:{resource_name}'
+    label_str = f'{component.name}:{name}'
 
     label_dig =  hashlib.shake_128(label_str.encode('utf-8')).hexdigest(length=length)
 
@@ -51,11 +52,11 @@ def resource_digest_label(
 
 def repository_labels(
     component: cm.Component | None,
-    resource: cm.Resource | None,
+    artifact: cm.Artifact | None,
     issue_type: str | None=_label_bdba,
     extra_labels: typing.Iterable[str]=None
 ):
-    if any((component, resource)) and not all((component, resource)):
+    if any((component, artifact)) and not all((component, artifact)):
         raise ValueError('either all or none of component, resource must be given')
 
     yield 'area/security'
@@ -65,15 +66,16 @@ def repository_labels(
         yield f'cicd/{issue_type}'
 
     if component:
-        yield resource_digest_label(component=component, resource=resource)
+        yield artifact_digest_label(component=component, artifact=artifact)
 
     if extra_labels:
         yield from extra_labels
 
 
+@github.retry.retry_and_throttle
 def enumerate_issues(
     component: cm.Component | None,
-    resource: cm.Resource | None,
+    artifact: cm.Artifact | None,
     repository: github3.repos.Repository,
     issue_type: str | None,
     state: str | None = None, # 'open' | 'closed'
@@ -81,7 +83,7 @@ def enumerate_issues(
     labels = set(
         repository_labels(
             component=component,
-            resource=resource,
+            artifact=artifact,
             issue_type=issue_type,
         ),
     )
@@ -94,9 +96,10 @@ def enumerate_issues(
         yield issue
 
 
+@github.retry.retry_and_throttle
 def _create_issue(
     component: cm.Component,
-    resource: cm.Resource,
+    artifact: cm.Artifact,
     repository: github3.repos.Repository,
     body:str,
     title:typing.Optional[str],
@@ -106,13 +109,13 @@ def _create_issue(
     extra_labels: typing.Iterable[str]=None,
 ) -> github3.issues.issue.ShortIssue:
     if not title:
-        title = f'[{issue_type}] - {component.name}:{resource.name}'
+        title = f'[{issue_type}] - {component.name}:{artifact.name}'
 
     assignees = tuple(assignees)
 
     labels = sorted(repository_labels(
         component=component,
-        resource=resource,
+        artifact=artifact,
         issue_type=issue_type,
         extra_labels=extra_labels,
     ))
@@ -128,13 +131,14 @@ def _create_issue(
     except github3.exceptions.GitHubError as ghe:
         logger.warning(f'received error trying to create issue: {ghe=}')
         logger.warning(f'{ghe.message=} {ghe.code=} {ghe.errors=}')
-        logger.warning(f'{component.name=} {resource.name=} {assignees=} {labels=}')
+        logger.warning(f'{component.name=} {artifact.name=} {assignees=} {labels=}')
         raise ghe
 
 
+@github.retry.retry_and_throttle
 def _update_issue(
     component: cm.Component,
-    resource: cm.Resource,
+    artifact: cm.Artifact,
     repository: github3.repos.Repository,
     body:str,
     title:typing.Optional[str],
@@ -156,7 +160,7 @@ def _update_issue(
 
     labels = sorted(repository_labels(
         component=component,
-        resource=resource,
+        artifact=artifact,
         issue_type=issue_type,
         extra_labels=extra_labels,
     ))
@@ -173,7 +177,7 @@ def _update_issue(
 
 def create_or_update_issue(
     component: cm.Component,
-    resource: cm.Resource,
+    artifact: cm.Artifact,
     repository: github3.repos.Repository,
     body:str,
     title:str=None,
@@ -186,7 +190,7 @@ def create_or_update_issue(
     open_issues = tuple(
         enumerate_issues(
             component=component,
-            resource=resource,
+            artifact=artifact,
             issue_type=issue_type,
             repository=repository,
             state='open',
@@ -194,11 +198,11 @@ def create_or_update_issue(
     )
 
     if (issues_count := len(open_issues)) > 1:
-        raise RuntimeError(f'more than one open issue found for {component.name=}{resource.name=}')
+        raise RuntimeError(f'more than one open issue found for {component.name=}{artifact.name=}')
     elif issues_count == 0:
         return _create_issue(
             component=component,
-            resource=resource,
+            artifact=artifact,
             repository=repository,
             issue_type=issue_type,
             body=body,
@@ -227,7 +231,7 @@ def create_or_update_issue(
 
         return _update_issue(
             component=component,
-            resource=resource,
+            artifact=artifact,
             repository=repository,
             issue_type=issue_type,
             body=body,
@@ -241,16 +245,17 @@ def create_or_update_issue(
         raise RuntimeError('this line should never be reached') # all cases should be handled before
 
 
+@github.retry.retry_and_throttle
 def close_issue_if_present(
     component: cm.Component,
-    resource: cm.Resource,
+    artifact: cm.Artifact,
     repository: github3.repos.Repository,
     issue_type: str,
 ):
     open_issues = tuple(
         enumerate_issues(
             component=component,
-            resource=resource,
+            artifact=artifact,
             issue_type=issue_type,
             repository=repository,
             state='open',
@@ -260,9 +265,9 @@ def close_issue_if_present(
     logger.info(f'{len(open_issues)=} found for closing {open_issues=} {issue_type=}')
 
     if (issues_count := len(open_issues)) > 1:
-        logger.warning(f'more than one open issue found for {component.name=}{resource=}')
+        logger.warning(f'more than one open issue found for {component.name=}{artifact=}')
     elif issues_count == 0:
-        logger.info(f'no open issue found for {component.name=}{resource.name=}')
+        logger.info(f'no open issue found for {component.name=}{artifact.name=}')
         return # nothing to do
 
     open_issue = open_issues[0]

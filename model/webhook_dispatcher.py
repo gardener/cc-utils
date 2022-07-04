@@ -15,6 +15,7 @@
 import deprecated
 
 from . import cluster_domain_from_kubernetes_config
+import concourse.paths
 from model.base import (
     NamedModelElement,
     ModelDefaultsMixin,
@@ -34,8 +35,8 @@ class WebhookDispatcherConfig(NamedModelElement, ModelDefaultsMixin):
 
     def _defaults_dict(self):
         return {
-            'pipeline_templates_path': ['/cc/utils/concourse/templates'],
-            'pipeline_include_path': '/cc/utils/concourse',
+            'pipeline_templates_path': [concourse.paths.template_dir],
+            'pipeline_include_path': concourse.paths.own_dir,
         }
 
     def pipeline_templates_path(self):
