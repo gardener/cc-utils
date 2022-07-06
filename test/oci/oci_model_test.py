@@ -1,4 +1,3 @@
-import dataclasses
 import hashlib
 import pytest
 
@@ -132,6 +131,25 @@ def test_parsed_digest_tag():
 
 
 def test_oci_image_manifest_serialisation():
+    manifest = om.OciImageManifest(
+        config=om.OciBlobRef(
+            digest='',
+            mediaType='',
+            size=0,
+        ),
+        layers=[
+            om.OciBlobRef(
+                digest='',
+                mediaType='',
+                size=0,
+            ),
+        ],
+    )
+    manifest_dict = manifest.as_dict()
+
+    assert 'annotations' not in manifest_dict['config']
+    assert 'annotations' not in manifest_dict['layers'][0]
+
     annotations = {
         'key': 'val',
     }
@@ -151,7 +169,7 @@ def test_oci_image_manifest_serialisation():
             ),
         ],
     )
-    manifest_dict = dataclasses.asdict(manifest)
+    manifest_dict = manifest.as_dict()
 
     assert 'annotations' in manifest_dict['config']
     assert manifest_dict['config']['annotations'] == annotations
@@ -160,6 +178,20 @@ def test_oci_image_manifest_serialisation():
 
 
 def test_oci_image_manifest_list_serialisation():
+    manifest_list = om.OciImageManifestList(
+        manifests=[
+            om.OciImageManifestListEntry(
+                digest='',
+                mediaType='',
+                size=0,
+            )
+        ]
+    )
+    manifest_list_dict = manifest_list.as_dict()
+
+    assert 'annotations' not in manifest_list_dict['manifests'][0]
+    assert 'platform' not in manifest_list_dict['manifests'][0]
+
     annotations = {
         'key': 'val',
     }
