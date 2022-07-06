@@ -192,6 +192,7 @@ class OciBlobRef:
     digest: str
     mediaType: str
     size: int
+    annotations: typing.Optional[typing.Dict] = None
 
 
 @dataclasses.dataclass
@@ -272,11 +273,15 @@ class OciPlatform:
 
 @dataclasses.dataclass(frozen=True)
 class OciImageManifestListEntry(OciBlobRef):
-    platform: OciPlatform
+    # platform is an optional attribute according to the oci image spec.
+    # it must also be optional to not have a non-default attribute after
+    # the default attribute "annotations" in parent class OciBlobRef.
+    platform: typing.Optional[OciPlatform] = None
 
     def as_dict(self) -> dict:
         raw = dataclasses.asdict(self)
-        raw['platform'] = self.platform.as_dict()
+        if self.platform:
+            raw['platform'] = self.platform.as_dict()
         return raw
 
 
