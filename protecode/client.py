@@ -233,7 +233,7 @@ class ProtecodeApi:
 
         return AnalysisResult(raw_dict=result)
 
-    def wait_for_scan_result(self, product_id: int, polling_interval_seconds=60):
+    def wait_for_scan_result(self, product_id: int, polling_interval_seconds=60) -> AnalysisResult:
         def scan_finished():
             result = self.scan_result(product_id=product_id)
             if result.status() in (ProcessingStatus.READY, ProcessingStatus.FAILED):
@@ -438,7 +438,7 @@ class ProtecodeApi:
         if not self._session_id:
             raise RuntimeError('authentication failed: ' + str(relevant_response.text))
 
-    def scan_result_short(self, product_id: int):
+    def scan_result_short(self, product_id: int) -> ScanResult:
         url = self._routes.product(product_id=product_id)
 
         result = self._get(
