@@ -47,8 +47,10 @@ import protecode.util
 
 
 from concourse.model.traits.image_scan import Notify
-from protecode.model import CVSSVersion
-from protecode.scanning_util import ProcessingMode
+from protecode.model import (
+  CVSSVersion,
+  ProcessingMode,
+)
 
 logger = logging.getLogger('scan_container_images.step')
 
@@ -61,11 +63,20 @@ cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
 component_descriptor = parse_component_descriptor()
 
-filter_function = create_composite_filter_function(
+image_filter_function = create_composite_filter_function(
   include_image_references=${filter_cfg.include_image_references()},
   exclude_image_references=${filter_cfg.exclude_image_references()},
   include_image_names=${filter_cfg.include_image_names()},
   exclude_image_names=${filter_cfg.exclude_image_names()},
+  include_component_names=${filter_cfg.include_component_names()},
+  exclude_component_names=${filter_cfg.exclude_component_names()},
+)
+
+tar_filter_function = create_composite_filter_function(
+  include_image_references=(),
+  exclude_image_references=(),
+  include_image_names=(),
+  exclude_image_names=(),
   include_component_names=${filter_cfg.include_component_names()},
   exclude_component_names=${filter_cfg.exclude_component_names()},
 )
@@ -103,8 +114,8 @@ results = protecode.util.upload_grouped_images(
   processing_mode = ProcessingMode('${protecode_scan.processing_mode().value}'),
   parallel_jobs=${protecode_scan.parallel_jobs()},
   cve_threshold=cve_threshold,
-  image_reference_filter=filter_function,
-  cvss_version = CVSSVersion('${protecode_scan.cvss_version().value}'),
+  image_filter_function=image_filter_function,
+  tar_filter_function=tar_filter_function,
 )
 
 % if license_cfg:
