@@ -39,6 +39,17 @@ class CVSSVersion(enum.Enum):
     V3 = 'CVSSv3'
 
 
+class Product(ModelBase):
+    def product_id(self) -> int:
+        return self.raw['product_id']
+
+    def custom_data(self) -> typing.Dict[str, str]:
+        return self.raw.get('custom_data', dict())
+
+    def name(self) -> str:
+        return self.raw['name']
+
+
 class AnalysisResult(ModelBase):
     def product_id(self) -> int:
         return self.raw.get('product_id')
