@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import dataclasses
-from enum import Enum
+import enum
 import typing
 
 import github.compliance.model as gcm
@@ -22,31 +22,31 @@ import github.compliance.model as gcm
 from model.base import ModelBase
 
 
-class VersionOverrideScope(Enum):
+class VersionOverrideScope(enum.Enum):
     APP = 1
     GROUP = 2
     GLOBAL = 3
 
 
-class ProcessingStatus(Enum):
+class ProcessingStatus(enum.Enum):
     BUSY = 'B'
     READY = 'R'
     FAILED = 'F'
 
 
-class CVSSVersion(Enum):
+class CVSSVersion(enum.Enum):
     V2 = 'CVSSv2'
     V3 = 'CVSSv3'
 
 
 class AnalysisResult(ModelBase):
-    def product_id(self):
+    def product_id(self) -> int:
         return self.raw.get('product_id')
 
     def report_url(self):
         return self.raw.get('report_url')
 
-    def display_name(self):
+    def display_name(self) -> str:
         return self.raw.get('filename', '<None>')
 
     def name(self):
@@ -58,7 +58,7 @@ class AnalysisResult(ModelBase):
     def components(self) -> 'typing.Generator[Component, None, None]':
         return (Component(raw_dict=raw) for raw in self.raw.get('components', []))
 
-    def custom_data(self):
+    def custom_data(self) -> dict[str, str]:
         return self.raw.get('custom_data')
 
     def greatest_cve_score(self) -> float:
@@ -74,7 +74,7 @@ class AnalysisResult(ModelBase):
 
 
 class Component(ModelBase):
-    def name(self):
+    def name(self) -> str:
         return self.raw.get('lib')
 
     def version(self):
@@ -184,7 +184,7 @@ class Vulnerability(ModelBase):
         return f'{self.__class__.__name__}: {self.cve()}'
 
 
-class TriageScope(Enum):
+class TriageScope(enum.Enum):
     ACCOUNT_WIDE = 'CA'
     FILE_NAME = 'FN'
     FILE_HASH = 'FH'
@@ -262,7 +262,7 @@ class ScanResult(ModelBase):
 #############################################################################
 ## upload result model
 
-class UploadStatus(Enum):
+class UploadStatus(enum.Enum):
     SKIPPED = 1
     PENDING = 2
     DONE = 4
