@@ -134,13 +134,17 @@ class CheckmarxProject:
         return res
 
 
+def get_project_name(source_name: str):
+    return source_name.replace('/', '_')
+
+
 def init_checkmarx_project(
     checkmarx_client: checkmarx.client.CheckmarxClient,
     source_name: str,
     team_id: str,
 ) -> CheckmarxProject:
 
-    project_name = source_name.replace('/', '_')
+    project_name = get_project_name(source_name)
 
     project_id = _create_or_get_project(
         client=checkmarx_client,
