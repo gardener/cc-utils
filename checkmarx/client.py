@@ -4,7 +4,7 @@ import urllib.parse
 
 from dacite import from_dict
 import requests
-
+import typing as t
 import ci.util
 import checkmarx.model as cxmodel
 import model.checkmarx
@@ -151,6 +151,18 @@ class CheckmarxClient:
             files={'zippedSource': zipped_source},
         )
         return res
+
+    def get_projects(self, team_id: str) -> t.List[cxmodel.ProjectDetails]:
+        res = self.request(
+            method='GET',
+            url=self.routes.projects(),
+            params={
+                'teamId': team_id,
+            },
+            print_error=False,
+        )
+        projects = res.json()
+        return [from_dict(data_class=cxmodel.ProjectDetails, data=p) for p in projects]
 
     def get_project_id_by_name(self, project_name: str, team_id: str):
         res = self.request(
