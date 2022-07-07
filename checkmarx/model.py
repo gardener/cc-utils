@@ -97,7 +97,7 @@ class AuthResponse:
     expires_at: datetime.datetime = None
 
     def is_valid(self):
-        return datetime.datetime.now() > self.expires_at
+        return datetime.datetime.now() < self.expires_at
 
 
 @dataclasses.dataclass
