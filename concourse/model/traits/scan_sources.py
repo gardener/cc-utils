@@ -1,4 +1,3 @@
-import dataclasses
 import typing
 
 import ci.util
@@ -19,7 +18,6 @@ from concourse.model.base import (
     ScriptType,
 )
 import concourse.model.traits.component_descriptor
-import github.compliance.model as gcm
 
 from concourse.model.traits.image_scan import (
     GithubIssueTemplateCfg,
@@ -143,34 +141,6 @@ class CheckmarxCfg(ModelBase):
 
     def exclude_path_regexes(self):
         return self.raw['exclude_path_regexes']
-
-
-@dataclasses.dataclass(frozen=True)
-class MaxProcessingTimesDays:
-    '''
-    defines maximum processing time in days, based on issue "criticality"
-
-    in the case of vulnerabilities, those map to CVE scores:
-    >= 9.0: very high / critical
-    >= 7.0: high
-    >= 4.0: medium
-    <  4.0: low
-    '''
-    very_high_or_greater: int = 30
-    high: int = 30
-    medium: int = 90
-    low: int = 120
-
-    def for_severity(self, severity: gcm.Severity):
-        S = gcm.Severity
-        if severity is S.CRITICAL:
-            return self.very_high_or_greater
-        elif severity is S.HIGH:
-            return self.high
-        elif severity is S.MEDIUM:
-            return self.medium
-        elif severity is S.LOW:
-            return self.low
 
 
 ATTRIBUTES = (

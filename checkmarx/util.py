@@ -315,7 +315,7 @@ def checkmarx_severity_to_github_severity(severity: model.Severity) -> gcm.Sever
     elif severity is model.Severity.INFO:
         return None
     else:
-        return None
+        raise NotImplementedError(f'Unknown severity {severity}')
 
 
 def print_scans(
