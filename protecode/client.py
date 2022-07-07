@@ -29,6 +29,7 @@ from protecode.model import (
     AnalysisResult,
     CVSSVersion,
     ProcessingStatus,
+    Product,
     ScanResult,
     Triage,
     TriageScope,
@@ -247,7 +248,7 @@ class ProtecodeApi:
             result = scan_finished()
         return result
 
-    def list_apps(self, group_id, custom_attribs={}) -> List[AnalysisResult]:
+    def list_apps(self, group_id, custom_attribs={}) -> List[Product]:
         # Protecode checks for substring match only.
         def full_match(analysis_result_attribs):
             if not custom_attribs:
@@ -267,7 +268,7 @@ class ProtecodeApi:
             for product in products:
                 if not full_match(product.get('custom_data')):
                     continue
-                yield AnalysisResult(product)
+                yield Product(product)
 
             if next_page_url := res.get('next'):
                 yield from _iter_matching_products(url=next_page_url)
