@@ -32,7 +32,7 @@ class CustomField:
 
 
 @total_ordering
-class Severity(Enum):
+class Severity(IntEnum):
     INFO = 0
     LOW = 1
     MEDIUM = 2

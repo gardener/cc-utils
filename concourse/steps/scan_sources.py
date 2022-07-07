@@ -1,4 +1,3 @@
-import dataclasses
 import logging
 import typing
 
@@ -17,12 +16,6 @@ import whitesource.util
 
 
 logger: logging.Logger = logging.getLogger(__name__)
-
-
-@dataclasses.dataclass
-class GithubIssueTemplateCfg:
-    body: str
-    type: str
 
 
 def scan_result_group_collection(
