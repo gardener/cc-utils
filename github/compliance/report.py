@@ -126,7 +126,14 @@ def _template_vars(
     results = result_group.results_with_findings
 
     artifact_versions = ', '.join((r.artifact.version for r in results))
-    artifact_types = ', '.join(set((r.artifact.type.value for r in results)))
+    artifact_types = ', '.join(set(
+        (
+            r.artifact.type.value
+            if isinstance(r.artifact.type, cm.ResourceType)
+            else r.artifact.type
+            for r in results
+        )
+    ))
 
     template_variables = {
         'component_name': component.name,

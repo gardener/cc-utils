@@ -13,12 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import collections
 import dataclasses
+import dso.labels
 import enum
+import tarfile
+import tarutil
 import typing
 
-import github.compliance.model as gcm
+import boto3
+import botocore
+import botocore.client
+import dacite
 
+import ccc
+import ccc.oci
+import gci.componentmodel
+import github.compliance.model as gcr
+import oci
+
+from concourse.model.base import (
+    AttribSpecMixin,
+    AttributeSpec,
+)
 from model.base import ModelBase
 
 
@@ -280,14 +297,210 @@ class UploadStatus(enum.Enum):
 
 
 @dataclasses.dataclass
-class BDBA_ScanResult(gcm.ScanResult):
-    # component: cm.Component
-    # resource: cm.Resource
+class BDBA_ScanResult(gcr.ScanResult):
     status: UploadStatus
     result: AnalysisResult
-    licenses: set[License]
-    greatest_cve_score: float = None
 
     @property
-    def license_names(self):
+    def license_names(self) -> typing.Iterable[str]:
         return {l.name() for l in self.licenses}
+
+    @property
+    def licenses(self) -> typing.Sequence[License]:
+        return [c.license() for c in self.result.components() if c.license()]
+
+    @property
+    def greatest_cve_score(self) -> float:
+        return self.result.greatest_cve_score()
+
+
+@dataclasses.dataclass(frozen=True)
+class Binary:
+    def auto_triage(self) -> bool: pass
+    def display_name(self) -> str: pass
+    def metadata(self) -> dict[str, str]:  pass
+    def upload_data(self) -> typing.Generator[bytes, None, None]: pass
+
+
+@dataclasses.dataclass(frozen=True)
+class OciResourceBinary(Binary):
+    artifact: gci.componentmodel.Resource
+
+    def display_name(self):
+        image_reference = self.artifact.access.imageReference
+        _, image_tag = image_reference.split(':')
+        return f'{self.artifact.name}_{image_tag}'
+
+    def upload_data(self) -> typing.Iterable[bytes]:
+        image_reference = self.artifact.access.imageReference
+        oci_client = ccc.oci.oci_client()
+        yield from oci.image_layers_as_tarfile_generator(
+            image_reference=image_reference,
+            oci_client=oci_client,
+            include_config_blob=False,
+        )
+
+    def auto_triage(
+        self,
+    ) -> bool:
+        # check for scanning labels on resource
+        if (
+            (label := self.artifact.find_label(name=dso.labels.ScanLabelName.BINARY_ID.value))
+            or (label := self.artifact.find_label(name=dso.labels.ScanLabelName.BINARY_SCAN.value))
+        ):
+            if label.name == dso.labels.ScanLabelName.BINARY_SCAN.value:
+                return True
+            else:
+                scanning_hint = dacite.from_dict(
+                    data_class=dso.labels.BinaryScanHint,
+                    data=label.value,
+                    config=dacite.Config(cast=[dso.labels.ScanPolicy]),
+                )
+                return scanning_hint.policy is dso.labels.ScanPolicy.SKIP
+
+        return False
+
+
+@dataclasses.dataclass(frozen=True)
+class TarRootfsAggregateResourceBinary(Binary):
+    artifacts: typing.Iterable[gci.componentmodel.Resource]
+
+    def display_name(self):
+        return f'{self.artifacts[0].name}_{self.artifacts[0].version}'
+
+    def upload_data(self):
+        # For these kinds of binaries, we aggregate all (tar) artifacts that we're given.
+        known_tar_sizes = collections.defaultdict(set)
+
+        def process_tarinfo(
+            tar_info: tarfile.TarInfo,
+        ) -> bool:
+            if not tar_info.isfile():
+                return True
+
+            file_name = tar_info.name
+            if any((size == tar_info.size for size in known_tar_sizes[file_name])):
+                # we already have seen a file with the same name and size
+                return False
+
+            known_tar_sizes[file_name].add(tar_info.size)
+            return True
+
+        def s3_fileobj(
+            resource: gci.componentmodel.Resource,
+        ):
+            # get a file-like object to stream from the given resource's access
+            access: gci.componentmodel.S3Access = resource.access
+            s3_client = boto3.client(
+                's3',
+                # anonymous access
+                config=botocore.client.Config(signature_version=botocore.UNSIGNED)
+            )
+            s3_object = s3_client.get_object(Bucket=access.bucketName, Key=access.objectKey)
+            return s3_object['Body']
+
+        rootfs_artifacts = self.artifacts[:2]
+        src_tarfiles = (
+            tarfile.open(fileobj=s3_fileobj(resource), mode='r|*')
+            for resource in rootfs_artifacts
+        )
+        yield from tarutil.filtered_tarfile_generator(
+            src_tf=src_tarfiles,
+            filter_func=process_tarinfo,
+        )
+
+    def auto_triage(self) -> bool:
+        return False
+
+
+@dataclasses.dataclass(frozen=True)
+class ComponentArtifact:
+    component: gci.componentmodel.Component
+    artifact: gci.componentmodel.Resource
+
+
+@dataclasses.dataclass
+class ScanRequest:
+    # The pair of component and artifact this ScanRequest is created for.
+    component_artifacts: ComponentArtifact
+    # The actual content to be scanned.
+    scan_content: Binary
+    display_name: str
+    target_product_id: int | None
+    custom_metadata: dict
+
+    def auto_triage_scan(self) -> bool:
+        # only the actual scan_content has access to the resource/labels required to decide
+        # whether to scan or not, so delegate
+        return self.scan_content.auto_triage()
+
+
+@dataclasses.dataclass(frozen=True)
+class ArtifactGroup:
+    '''
+    A set of similar Resources sharing a common declaring Component (not necessarily in the same
+    version) and a common logical name.
+
+    Artifact groups are intended to be handled as "virtual Protecode Groups".
+    This particularly means they share triages.
+
+    As a very common "special case", a resource group may contain exactly one container image.
+
+    @param component: the Component declaring dependency towards the given images
+    @param resources: iterable of Resources; must share logical name
+    '''
+    name: str
+    component_artifacts: typing.MutableSequence[ComponentArtifact] = dataclasses.field(
+        default_factory=list
+    )
+
+    def component_name(self):
+        return self.component_artifacts[0].component.name
+
+    def resource_name(self):
+        return self.component_artifacts[0].artifact.name
+
+    def resource_type(self):
+        return self.component_artifacts[0].artifact.type
+
+    def __str__(self):
+        return f'{self.name}[{len(self.component_artifacts)}]'
+
+
+@dataclasses.dataclass(frozen=True)
+class OciArtifactGroup(ArtifactGroup):
+    pass
+
+
+@dataclasses.dataclass(frozen=True)
+class TarRootfsArtifactGroup(ArtifactGroup):
+    # For these artifact groups, all component versions are the same
+    def component_version(self):
+        return self.component_artifacts[0].component.version
+
+
+class ProcessingMode(AttribSpecMixin, enum.Enum):
+    RESCAN = 'rescan'
+    FORCE_UPLOAD = 'force_upload'
+
+    @classmethod
+    def _attribute_specs(cls):
+        return (
+            AttributeSpec.optional(
+                name=cls.RESCAN.value,
+                default=None,
+                doc='''
+                    (re-)scan container images if Protecode indicates this might bear new results.
+                    Upload absent images.
+                ''',
+                type=str,
+            ),
+            AttributeSpec.optional(
+                name=cls.FORCE_UPLOAD.value,
+                default=None,
+                doc='''
+                    `always` upload and scan all images.
+                ''',
+                type=str,
+            ),
+        )
