@@ -338,8 +338,6 @@ def create_or_update_github_issues(
                         target_milestone = None
                     else:
                         raise
-                else:
-                    raise
 
                 try:
                     max_days = max_processing_days.for_severity(

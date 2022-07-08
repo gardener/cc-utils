@@ -1,10 +1,12 @@
 import datetime
 import dataclasses
 import urllib.parse
+import typing as t
+
 
 from dacite import from_dict
 import requests
-import typing as t
+
 import ci.util
 import checkmarx.model as cxmodel
 import model.checkmarx
@@ -152,7 +154,7 @@ class CheckmarxClient:
         )
         return res
 
-    def get_projects(self, team_id: str) -> t.List[cxmodel.ProjectDetails]:
+    def get_projects(self, team_id: int) -> t.List[cxmodel.ProjectDetails]:
         res = self.request(
             method='GET',
             url=self.routes.projects(),
@@ -164,7 +166,7 @@ class CheckmarxClient:
         projects = res.json()
         return [from_dict(data_class=cxmodel.ProjectDetails, data=p) for p in projects]
 
-    def get_project_id_by_name(self, project_name: str, team_id: str):
+    def get_project_id_by_name(self, project_name: str, team_id: int):
         res = self.request(
             method='GET',
             url=self.routes.projects(),

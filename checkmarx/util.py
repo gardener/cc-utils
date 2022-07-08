@@ -108,7 +108,7 @@ def get_source_scan_label_from_labels(
                 )
 
 
-def get_source_scan_name_label(labels: typing.Sequence[cm.Label]):
+def get_source_scan_name_label(labels: typing.Sequence[cm.Label]) -> str | None:
     global scan_label_names
     for label in labels:
         if label.name in scan_label_names:
