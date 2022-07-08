@@ -30,7 +30,6 @@ from protecode.model import (
     CVSSVersion,
     ProcessingStatus,
     Product,
-    ScanResult,
     Triage,
     TriageScope,
     VersionOverrideScope,
@@ -166,7 +165,6 @@ class ProtecodeApi:
             )
         else:
             raise NotImplementedError(auth_scheme)
-
         return partial(
             method,
             verify=self._tls_verify,
@@ -439,17 +437,8 @@ class ProtecodeApi:
         if not self._session_id:
             raise RuntimeError('authentication failed: ' + str(relevant_response.text))
 
-    def scan_result_short(self, product_id: int) -> ScanResult:
-        url = self._routes.product(product_id=product_id)
-
-        result = self._get(
-            url=url,
-        ).json()['results']
-
-        return ScanResult(raw_dict=result)
-
     def set_product_name(self, product_id: int, name: str):
-        url = self._routes.scans(product_id)
+        url = self._routes.product(product_id)
 
         self._patch(
             url=url,

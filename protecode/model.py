@@ -97,6 +97,22 @@ class AnalysisResult(ModelBase):
 
         return greatest_cve_score
 
+    def is_stale(self) -> bool:
+        '''
+        Returns a boolean value indicating whether or not the stored scan result
+        has become "stale" (meaning that a rescan would potentially return different
+        results).
+        '''
+        return self.raw.get('stale')
+
+    def has_binary(self) -> bool:
+        '''
+        Returns a boolean value indicating whether or not the uploaded file is still present.
+        In case the uploaded file is no longer present, it needs to be re-uploaded prior to
+        rescanning.
+        '''
+        return self.raw.get('rescan-possible')
+
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.display_name()}({self.product_id()})'
 
@@ -261,30 +277,6 @@ class Triage(ModelBase):
 
     def __hash__(self):
         return hash((self.vulnerability_id(), self.component_name(), self.description()))
-
-
-# --- wrappers for inofficial protecode API responses
-
-
-class ScanResult(ModelBase):
-    def name(self):
-        return self.raw.get('filename', '<None>')
-
-    def is_stale(self) -> bool:
-        '''
-        Returns a boolean value indicating whether or not the stored scan result
-        has become "stale" (meaning that a rescan would potentially return different
-        results).
-        '''
-        return self.raw.get('stale')
-
-    def has_binary(self) -> bool:
-        '''
-        Returns a boolean value indicating whether or not the uploaded file is still present.
-        In case the uploaded file is no longer present, it needs to be re-uploaded prior to
-        rescanning.
-        '''
-        return self.raw.get('rescan-possible')
 
 
 #############################################################################
