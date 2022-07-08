@@ -52,11 +52,6 @@ class Severity(IntEnum):
         else:
             return None
 
-    def __lt__(self, other):
-        if self.__class__ is other.__class__:
-            return self.value < other.value
-        return self.value < other
-
     def __str__(self):
         return self.name.lower()
 
