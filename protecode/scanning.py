@@ -145,7 +145,7 @@ class ResourceGroupProcessor:
         elif processing_mode is pm.ProcessingMode.RESCAN:
             if (existing_id := scan_request.target_product_id):
                 # check if result can be reused
-                scan_result = self.protecode_api.scan_result_short(product_id=existing_id)
+                scan_result = self.protecode_client.scan_result(product_id=existing_id)
                 if scan_result.is_stale() and not scan_result.has_binary():
                     # no choice but to upload
                     return self.protecode_client.upload(
