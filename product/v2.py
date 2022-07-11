@@ -336,9 +336,10 @@ def upload_component_descriptor_v2_to_oci_registry(
             mediaType='application/vnd.gardener.cloud.cnudie.component.config.v1+json',
         ),
         layers=[
-            gci.oci.ComponentDescriptorOciBlobRef(
+            om.OciBlobRef(
                 digest=cd_digest_with_alg,
                 size=cd_octets,
+                mediaType='application/vnd.gardener.cloud.cnudie.component-descriptor.v2+yaml+tar',
             ),
         ],
     )
