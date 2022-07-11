@@ -330,9 +330,10 @@ def upload_component_descriptor_v2_to_oci_registry(
     )
 
     manifest = om.OciImageManifest(
-        config=gci.oci.ComponentDescriptorOciCfgBlobRef(
+        config=om.OciBlobRef(
             digest=f'sha256:{cfg_digest}',
             size=cfg_octets,
+            mediaType='application/vnd.gardener.cloud.cnudie.component.config.v1+json',
         ),
         layers=[
             gci.oci.ComponentDescriptorOciBlobRef(
