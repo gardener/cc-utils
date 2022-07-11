@@ -1,6 +1,5 @@
 import dataclasses
 import datetime
-import typing
 
 import gci.componentmodel as cm
 
@@ -12,13 +11,9 @@ import unixutil.model
 @dataclasses.dataclass
 class ScanArtifact:
     name: str
-    access: typing.Union[
-        cm.OciAccess,
-        cm.GithubAccess,
-        cm.HttpAccess,
-        cm.ResourceAccess,
-    ]
     label: dso.labels.ScanningHint
+    component: cm.Component
+    source: cm.ComponentSource
 
 
 class Datasource:

@@ -4,7 +4,7 @@ import time
 import checkmarx.client
 import checkmarx.model as model
 import checkmarx.util
-
+import gci.componentmodel as cm
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +17,11 @@ def _create_or_get_project(
 ):
     try:
         project_id = client.get_project_id_by_name(project_name=name, team_id=team_id)
+        logger.info(f'Use existing Checkmarx project: {name}')
         return project_id
     except checkmarx.client.CXNotOkayException as e:
         if e.res.status_code == 404:
+            logger.info(f'Create Checkmarx project: {name}')
             return client.create_project(name, team_id, is_public).json().get('id')
         else:
             raise e
@@ -36,7 +38,12 @@ class CheckmarxProject:
         self.client = checkmarx_client
         self.project_details = project_details
 
-    def poll_and_retrieve_scan(self, scan_id: int):
+    def poll_and_retrieve_scan(
+        self,
+        scan_id: int,
+        component: cm.Component,
+        source: cm.ComponentSource,
+    ) -> model.ScanResult:
         scan_response = self._poll_scan(scan_id=scan_id)
 
         if scan_response.status_value() is not model.ScanStatusValues.FINISHED:
@@ -48,17 +55,23 @@ class CheckmarxProject:
         statistics = self.scan_statistics(scan_id=scan_response.id)
 
         return model.ScanResult(
+            component=component,
+            artifact=source,
             project_id=self.project_details.id,
             artifact_name=self.artifact_name,
             scan_response=scan_response,
             scan_statistic=statistics,
+            report_url=self.client.routes.web_ui_scan_viewer(
+                scan_id=scan_response.id,
+                project_id=self.project_details.id
+            ),
+            overview_url=self.client.routes.web_ui_scan_history(project_id=self.project_details.id),
         )
 
     def update_remote_project(self):
         self.client.update_project(self.project_details)
 
-    def start_scan(self):
-        scan_settings = model.ScanSettings(projectId=self.project_details.id)
+    def start_scan(self, scan_settings: model.ScanSettings):
         return self.client.start_scan(scan_settings)
 
     def _poll_scan(self, scan_id: int, polling_interval_seconds=60):
@@ -121,13 +134,17 @@ class CheckmarxProject:
         return res
 
 
+def get_project_name(source_name: str):
+    return source_name.replace('/', '_')
+
+
 def init_checkmarx_project(
     checkmarx_client: checkmarx.client.CheckmarxClient,
     source_name: str,
     team_id: str,
 ) -> CheckmarxProject:
 
-    project_name = source_name.replace('/', '_')
+    project_name = get_project_name(source_name)
 
     project_id = _create_or_get_project(
         client=checkmarx_client,

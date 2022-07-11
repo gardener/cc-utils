@@ -1,6 +1,8 @@
 import datetime
 import dataclasses
 import urllib.parse
+import typing as t
+
 
 from dacite import from_dict
 import requests
@@ -41,7 +43,7 @@ class CheckmarxRoutes:
         return ci.util.urljoin(self.base_url, 'cxrestapi', *parts)
 
     def _web_url(self, *parts):
-        return ci.util.urljoin(self.base_url, 'CxWebClient', *parts)
+        return ci.util.urljoin(self.base_url, 'cxwebclient', *parts)
 
     def auth(self):
         return self._api_url('auth', 'identity', 'connect', 'token')
@@ -67,8 +69,8 @@ class CheckmarxRoutes:
     def remote_settings_git(self, project_id: int):
         return ci.util.urljoin(self.scan_by_id(project_id), 'sourceCode', 'remoteSettings', 'git')
 
-    def web_ui_scan_history(self, scan_id: int):
-        query = urllib.parse.urlencode({'id': scan_id, 'ProjectState': 'true'})
+    def web_ui_scan_history(self, project_id: int):
+        query = urllib.parse.urlencode({'id': project_id, 'ProjectState': 'true'})
         return ci.util.urljoin(self._web_url(), 'projectscans.aspx?' + query)
 
     def web_ui_scan_viewer(self, scan_id: int, project_id: int):
@@ -152,7 +154,19 @@ class CheckmarxClient:
         )
         return res
 
-    def get_project_id_by_name(self, project_name: str, team_id: str):
+    def get_projects(self, team_id: int) -> t.List[cxmodel.ProjectDetails]:
+        res = self.request(
+            method='GET',
+            url=self.routes.projects(),
+            params={
+                'teamId': team_id,
+            },
+            print_error=False,
+        )
+        projects = res.json()
+        return [from_dict(data_class=cxmodel.ProjectDetails, data=p) for p in projects]
+
+    def get_project_id_by_name(self, project_name: str, team_id: int):
         res = self.request(
             method='GET',
             url=self.routes.projects(),

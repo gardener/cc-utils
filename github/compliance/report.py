@@ -10,6 +10,7 @@ import urllib.parse
 import github3.repos
 
 import gci.componentmodel as cm
+import requests
 
 import ccc.delivery
 import ci.util
@@ -28,6 +29,7 @@ logger = logging.getLogger(__name__)
 _compliance_label_vulnerabilities = github.compliance.issue._label_bdba
 _compliance_label_licenses = github.compliance.issue._label_licenses
 _compliance_label_os_outdated = github.compliance.issue._label_os_outdated
+_compliance_label_checkmarx = github.compliance.issue._label_checkmarx
 
 
 def _criticality_label(classification: gcm.Severity):
@@ -185,6 +187,24 @@ def _template_vars(
             issue_description='Outdated OS-Version',
             report_urls=(),
         )
+    elif issue_type == _compliance_label_checkmarx:
+        stat = result_group.worst_result.scan_statistic
+        report_urls = [
+                f'[Checkmarx Editor]({r.report_url}), [Checkmarx Summary]({r.overview_url})'
+                for r in results
+            ]
+        summary_str = (f'Findings: High: {stat.highSeverity}, Medium: {stat.mediumSeverity}, '
+            f'Low: {stat.lowSeverity}, Info: {stat.infoSeverity}')
+        template_variables['summary'] = _compliance_status_summary(
+            component=component,
+            artifacts=artifacts,
+            issue_value=summary_str,
+            issue_description='Checkmarx Scan Summary',
+            report_urls=report_urls,
+        )
+        crit = (f'Risk: {result_group.worst_result.scan_response.scanRisk}, '
+            f'Risk Severity: {result_group.worst_result.scan_response.scanRiskSeverity}')
+        template_variables['criticality_classification'] = crit
     else:
         raise NotImplementedError(issue_type)
 
@@ -294,21 +314,30 @@ def create_or_update_github_issues(
             )
         elif action == 'report':
             if delivery_svc_client:
-                assignees = delivery.client.github_users_from_responsibles(
-                    responsibles=delivery_svc_client.component_responsibles(
-                        component=component,
-                        artifact=artifact,
-                    ),
-                    github_url=repository.url,
-                )
-
-                assignees = tuple((
-                    u.username for u in assignees
-                    if github.user.is_user_active(
-                        username=u.username,
-                        github=gh_api,
+                try:
+                    assignees = delivery.client.github_users_from_responsibles(
+                        responsibles=delivery_svc_client.component_responsibles(
+                            component=component,
+                            artifact=artifact,
+                        ),
+                        github_url=repository.url,
                     )
-                ))
+
+                    assignees = tuple((
+                        u.username for u in assignees
+                        if github.user.is_user_active(
+                            username=u.username,
+                            github=gh_api,
+                        )
+                    ))
+                except requests.exceptions.HTTPError as e:
+                    if e.response.status_code == 404:
+                        logger.warning(f'Delivery Service returned 404 for {component.name=}, '
+                            f'{artifact.name=}')
+                        assignees = ()
+                        target_milestone = None
+                    else:
+                        raise
 
                 try:
                     max_days = max_processing_days.for_severity(
@@ -346,7 +375,6 @@ def create_or_update_github_issues(
                 license_cfg=license_cfg,
                 delivery_dashboard_url=delivery_dashboard_url,
             )
-
             for issue_cfg in github_issue_template_cfgs:
                 if issue_cfg.type == issue_type:
                     break
@@ -453,7 +481,8 @@ def close_issues_for_absent_resources(
             component=result_group.component,
             artifact=result_group.artifact,
         )
-
+        logger.info(f'Digest-Label for {result_group.component.name=}, {result_group.name=} is: '
+            f'{resource_label=}')
         component_resources_to_issues.pop(resource_label, None)
 
     # any issues that have not been removed thus far were not referenced by given result_groups

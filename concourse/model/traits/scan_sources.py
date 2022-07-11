@@ -1,7 +1,7 @@
-import enum
 import typing
 
 import ci.util
+import dacite
 
 from concourse.model.job import (
     JobVariant,
@@ -19,11 +19,11 @@ from concourse.model.base import (
 )
 import concourse.model.traits.component_descriptor
 
-
-class Notify(enum.Enum):
-    EMAIL_RECIPIENTS = 'email_recipients'
-    NOBODY = 'nobody'
-    COMPONENT_OWNERS = 'component_owners'
+from concourse.model.traits.image_scan import (
+    GithubIssueTemplateCfg,
+    IssuePolicies,
+    Notify,
+)
 
 
 CHECKMARX_ATTRIBUTES = (
@@ -34,9 +34,9 @@ CHECKMARX_ATTRIBUTES = (
     ),
     AttributeSpec.optional(
         name='severity_threshold',
-        default=30,
-        doc='threshold above which to notify recipients',
-        type=int,
+        default='medium',
+        doc='threshold for creating issues (high, medium, low, info)',
+        type=str,
     ),
     AttributeSpec.required(
         name='cfg_name',
@@ -131,7 +131,7 @@ class CheckmarxCfg(ModelBase):
         return self.raw['team_id']
 
     def severity_threshold(self) -> int:
-        return int(self.raw.get('severity_threshold'))
+        return self.raw.get('severity_threshold')
 
     def checkmarx_cfg_name(self):
         return self.raw.get('cfg_name')
@@ -174,6 +174,43 @@ ATTRIBUTES = (
         default=(),
         doc='if present, perform whitesource scanning',
     ),
+    AttributeSpec.optional(
+        name='issue_policies',
+        default=IssuePolicies(),
+        type=IssuePolicies,
+        doc='defines issues policies (e.g. SLAs for maximum processing times',
+    ),
+    AttributeSpec.optional(
+        name='overwrite_github_issues_tgt_repository_url',
+        default=None,
+        doc='if set, and notify is set to github_issues, overwrite target github repository',
+    ),
+    AttributeSpec.optional(
+        name='github_issue_templates',
+        default=None,
+        doc='''\
+        use to configure custom github-issue-templates (sub-attr: `body`)
+        use python3's format-str syntax
+        available variables:
+        - summary # contains name, version, etc in a table
+        - component_name
+        - component_version
+        - resource_name
+        - resource_version
+        - resource_type
+        - greatest_cve
+        - report_url
+        - delivery_dashboard_url
+        ''',
+        type=list[GithubIssueTemplateCfg],
+    ),
+    AttributeSpec.optional(
+        name='github_issue_labels_to_preserve',
+        default=None,
+        doc='optional list of regexes for labels that will never be removed upon ticket-update',
+        type=list[str],
+    ),
+
 )
 
 
@@ -217,6 +254,44 @@ class SourceScanTrait(Trait):
         else:
             # TODO should actually raise something, but breaks docu generation
             ci.util.warning('At least one of whitesource / checkmarx should be defined.')
+
+    def issue_policies(self) -> IssuePolicies:
+        if isinstance((v := self.raw['issue_policies']), IssuePolicies):
+            return v
+
+        return dacite.from_dict(
+            data_class=IssuePolicies,
+            data=v,
+        )
+
+    def overwrite_github_issues_tgt_repository_url(self) -> typing.Optional[str]:
+        return self.raw.get('overwrite_github_issues_tgt_repository_url')
+
+    def github_issue_templates(self) -> list[GithubIssueTemplateCfg]:
+        if not (raw := self.raw.get('github_issue_templates')):
+            return None
+
+        template_cfgs = [
+            dacite.from_dict(
+                data_class=GithubIssueTemplateCfg,
+                data=cfg,
+            ) for cfg in raw
+        ]
+
+        return template_cfgs
+
+    def github_issue_template(self, type: str) -> typing.Optional[GithubIssueTemplateCfg]:
+        if not (template_cfgs := self.github_issue_templates()):
+            return None
+
+        for cfg in template_cfgs:
+            if cfg.type == type:
+                return cfg
+
+        return None
+
+    def github_issue_labels_to_preserve(self) -> typing.Optional[list[str]]:
+        return self.raw['github_issue_labels_to_preserve']
 
 
 class SourceScanTraitTransformer(TraitTransformer):

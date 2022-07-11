@@ -1,7 +1,10 @@
 import datetime
 import dataclasses
-from enum import Enum
+from enum import Enum, IntEnum
+from functools import total_ordering
 import typing
+
+import github.compliance.model as gcm
 
 
 class ScanStatusValues(Enum):
@@ -26,6 +29,31 @@ class CustomFieldKeys(Enum):
 class CustomField:
     id: int
     value: str
+
+
+@total_ordering
+class Severity(IntEnum):
+    INFO = 0
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 3
+
+    @classmethod
+    def from_str(cls, s: str) -> IntEnum | None:
+        su = s.upper()
+        if su == 'INFO':
+            return Severity.INFO
+        elif su == 'LOW':
+            return Severity.LOW
+        elif su == 'MEDIUM':
+            return Severity.MEDIUM
+        elif su == 'HIGH':
+            return Severity.HIGH
+        else:
+            return None
+
+    def __str__(self):
+        return self.name.lower()
 
 
 @dataclasses.dataclass
@@ -64,7 +92,7 @@ class AuthResponse:
     expires_at: datetime.datetime = None
 
     def is_valid(self):
-        return datetime.datetime.now() > self.expires_at
+        return datetime.datetime.now() < self.expires_at
 
 
 @dataclasses.dataclass
@@ -108,7 +136,7 @@ class ScanSettings:
 
 # below types are not used for http body deserialization
 @dataclasses.dataclass
-class ScanResult:
+class ScanResult(gcm.ScanResult):
     """
     ScanResult is a data container for a scan result for a component version
     """
@@ -116,13 +144,14 @@ class ScanResult:
     project_id: int
     scan_response: ScanResponse
     scan_statistic: ScanStatistic
+    report_url: str
+    overview_url: str
 
 
 @dataclasses.dataclass
 class FinishedScans:
     failed_scans: typing.List[str] = dataclasses.field(default_factory=list)
-    scans_above_threshold: typing.List[ScanResult] = dataclasses.field(default_factory=list)
-    scans_below_threshold: typing.List[ScanResult] = dataclasses.field(default_factory=list)
+    scans: typing.List[str] = dataclasses.field(default_factory=list)
 
 
 @dataclasses.dataclass
