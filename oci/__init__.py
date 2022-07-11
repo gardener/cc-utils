@@ -1,4 +1,3 @@
-import dataclasses
 import enum
 import hashlib
 import json
@@ -343,7 +342,7 @@ def replicate_artifact(
             data=fake_cfg_raw,
         )
 
-        manifest_dict = dataclasses.asdict(manifest)
+        manifest_dict = manifest.as_dict()
         # patch-on altered cfg-digest
         manifest_dict['config']['digest'] = cfg_digest
         manifest_dict['config']['size'] = len(fake_cfg_raw)
@@ -451,7 +450,7 @@ def publish_container_image_from_kaniko_tarfile(
             )
 
         # optionally patch manifest's mimetype (e.g. required for docker-hub)
-        manifest_dict = dataclasses.asdict(image.oci_manifest())
+        manifest_dict = image.oci_manifest().as_dict()
         manifest_dict['mediaType'] = manifest_mimetype
 
         manifest_bytes = json.dumps(

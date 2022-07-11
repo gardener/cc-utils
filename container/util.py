@@ -297,7 +297,7 @@ def filter_image(
 
     manifest.config = dataclasses.replace(manifest.config, digest=cfg_digest, size=cfg_leng)
 
-    manifest_raw = json.dumps(dataclasses.asdict(manifest)).encode('utf-8')
+    manifest_raw = json.dumps(manifest.as_dict()).encode('utf-8')
 
     if target_ref.has_tag:
         target_ref = str(target_ref)

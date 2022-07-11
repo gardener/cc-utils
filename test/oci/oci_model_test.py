@@ -128,3 +128,92 @@ def test_parsed_digest_tag():
 
     assert alg == 'sha256'
     assert dig == example_digest.split(':')[-1]
+
+
+def test_oci_image_manifest_serialisation():
+    manifest = om.OciImageManifest(
+        config=om.OciBlobRef(
+            digest='',
+            mediaType='',
+            size=0,
+        ),
+        layers=[
+            om.OciBlobRef(
+                digest='',
+                mediaType='',
+                size=0,
+            ),
+        ],
+    )
+    manifest_dict = manifest.as_dict()
+
+    assert 'annotations' not in manifest_dict['config']
+    assert 'annotations' not in manifest_dict['layers'][0]
+
+    annotations = {
+        'key': 'val',
+    }
+    manifest = om.OciImageManifest(
+        config=om.OciBlobRef(
+            digest='',
+            mediaType='',
+            size=0,
+            annotations=annotations,
+        ),
+        layers=[
+            om.OciBlobRef(
+                digest='',
+                mediaType='',
+                size=0,
+                annotations=annotations,
+            ),
+        ],
+    )
+    manifest_dict = manifest.as_dict()
+
+    assert 'annotations' in manifest_dict['config']
+    assert manifest_dict['config']['annotations'] == annotations
+    assert 'annotations' in manifest_dict['layers'][0]
+    assert manifest_dict['layers'][0]['annotations'] == annotations
+
+
+def test_oci_image_manifest_list_serialisation():
+    manifest_list = om.OciImageManifestList(
+        manifests=[
+            om.OciImageManifestListEntry(
+                digest='',
+                mediaType='',
+                size=0,
+            )
+        ]
+    )
+    manifest_list_dict = manifest_list.as_dict()
+
+    assert 'annotations' not in manifest_list_dict['manifests'][0]
+    assert 'platform' not in manifest_list_dict['manifests'][0]
+
+    annotations = {
+        'key': 'val',
+    }
+    platform = om.OciPlatform(
+        architecture='amd64',
+        os='linux'
+    )
+    manifest_list = om.OciImageManifestList(
+        manifests=[
+            om.OciImageManifestListEntry(
+                digest='',
+                mediaType='',
+                size=0,
+                annotations=annotations,
+                platform=platform,
+            )
+        ]
+    )
+    manifest_list_dict = manifest_list.as_dict()
+
+    assert 'annotations' in manifest_list_dict['manifests'][0]
+    assert manifest_list_dict['manifests'][0]['annotations'] == annotations
+
+    assert 'platform' in manifest_list_dict['manifests'][0]
+    assert manifest_list_dict['manifests'][0]['platform'] == platform.as_dict()
