@@ -1,4 +1,3 @@
-import dataclasses
 import enum
 import hashlib
 import pprint
@@ -63,7 +62,7 @@ def manifest(
             accept=accept,
         )
 
-        pprint.pprint(dataclasses.asdict(manifest))
+        pprint.pprint(manifest.as_dict())
 
         if isinstance(manifest, om.OciImageManifest):
             total_size = sum(blob.size for blob in manifest.blobs())

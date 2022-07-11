@@ -342,7 +342,7 @@ def upload_component_descriptor_v2_to_oci_registry(
         ],
     )
 
-    manifest_dict = dataclasses.asdict(manifest)
+    manifest_dict = manifest.as_dict()
     manifest_bytes = json.dumps(manifest_dict).encode('utf-8')
 
     client.put_manifest(

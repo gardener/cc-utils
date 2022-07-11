@@ -98,7 +98,7 @@ def sanitise_image(
         ),
     )
 
-    manifest_bytes = json.dumps(dataclasses.asdict(manifest)).encode('utf-8')
+    manifest_bytes = json.dumps(manifest.as_dict()).encode('utf-8')
 
     oci_client.put_manifest(image_reference=image_ref, manifest=manifest_bytes)
 
