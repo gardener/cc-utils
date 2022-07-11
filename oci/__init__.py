@@ -451,7 +451,6 @@ def publish_container_image_from_kaniko_tarfile(
 
         # optionally patch manifest's mimetype (e.g. required for docker-hub)
         manifest_dict = image.oci_manifest().as_dict()
-
         manifest_dict['mediaType'] = manifest_mimetype
 
         manifest_bytes = json.dumps(
