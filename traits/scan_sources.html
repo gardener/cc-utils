@@ -235,6 +235,41 @@
 <td><p>WhitesourceCfg</p></td>
 <td><p>if present, perform whitesource scanning</p></td>
 </tr>
+<tr class="row-odd"><td><p>issue_policies</p></td>
+<td><p>no</p></td>
+<td><p>IssuePolicies(max_processing_time_days=MaxProcessingTimesDays(very_high_or_greater=30, high=30, medium=90, low=120))</p></td>
+<td><p>IssuePolicies</p></td>
+<td><p>defines issues policies (e.g. SLAs for maximum processing times</p></td>
+</tr>
+<tr class="row-even"><td><p>overwrite_github_issues_tgt_repository_url</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>if set, and notify is set to github_issues, overwrite target github repository</p></td>
+</tr>
+<tr class="row-odd"><td><p>github_issue_templates</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>list</p></td>
+<td><p>use to configure custom github-issue-templates (sub-attr: <code class="code docutils literal notranslate"><span class="pre">body</span></code>)
+use python3’s format-str syntax
+available variables:
+- summary # contains name, version, etc in a table
+- component_name
+- component_version
+- resource_name
+- resource_version
+- resource_type
+- greatest_cve
+- report_url
+- delivery_dashboard_url</p></td>
+</tr>
+<tr class="row-even"><td><p>github_issue_labels_to_preserve</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>list</p></td>
+<td><p>optional list of regexes for labels that will never be removed upon ticket-update</p></td>
+</tr>
 </tbody>
 </table>
 <h2>notify Enumeration Values<a class="headerlink" href="#trait-scan-sources" title="Permalink to this heading">¶</a></h2>
@@ -242,6 +277,7 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">email_recipients</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">nobody</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">component_owners</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">github_issues</span></code></p></li>
 </ul>
 <h2>filters <em>(FilterCfg)</em> Attributes<a class="headerlink" href="#trait-scan-sources" title="Permalink to this heading">¶</a></h2>
 <table class="colwidths-auto docutils align-default">
@@ -298,9 +334,9 @@
 </tr>
 <tr class="row-odd"><td><p>severity_threshold</p></td>
 <td><p>no</p></td>
-<td><p>30</p></td>
-<td><p>int</p></td>
-<td><p>threshold above which to notify recipients</p></td>
+<td><p>medium</p></td>
+<td><p>str</p></td>
+<td><p>threshold for creating issues (high, medium, low, info)</p></td>
 </tr>
 <tr class="row-even"><td><p>cfg_name</p></td>
 <td><p>yes</p></td>
