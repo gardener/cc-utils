@@ -72,7 +72,7 @@ delivery_svc_endpoints = ccc.delivery.endpoints(cfg_set=cfg_set)
 delivery_svc_client = ccc.delivery.default_client_if_available()
 
 % if issue_tgt_repo_url:
-gh_api = ccc.github.github_api(repo_url='${  issue_tgt_repo_url}')
+gh_api = ccc.github.github_api(repo_url='${issue_tgt_repo_url}')
 overwrite_repository = gh_api.repository('${tgt_repo_org}', '${tgt_repo_name}')
 % else:
 print('currently, overwrite-repo must be configured!')
