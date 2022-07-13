@@ -104,7 +104,7 @@ if os.path.isdir(os.path.join(ci.paths.repo_root, '.git')):
   except:
     pass
 
-if version_interface is version_trait.VersionInterface.CALLBACK:
+if version_interface is version_trait.VersionInterface.CALLBACK and write_callback is not None:
   write_version(
     version_interface=version_interface,
     version_str=effective_version,
