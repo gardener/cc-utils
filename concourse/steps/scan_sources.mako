@@ -66,7 +66,7 @@ max_processing_days = dacite.from_dict(
   data_class=MaxProcessingTimesDays,
   data=${dataclasses.asdict(issue_policies.max_processing_time_days)},
 )
-severity_threshold = ${checkmarx_cfg.severity_threshold()}
+severity_threshold = '${checkmarx_cfg.severity_threshold()}'
 
 delivery_svc_endpoints = ccc.delivery.endpoints(cfg_set=cfg_set)
 delivery_svc_client = ccc.delivery.default_client_if_available()
