@@ -114,11 +114,21 @@ class PullRequestAction(enum.Enum):
     READY_FOR_REVIEW = 'ready_for_review'
     CONVERTED_TO_DRAFT = 'converted_to_draft'
     AUTO_MERGE_ENABLED = 'auto_merge_enabled'
+    UNKNOWN = 'unknown'
 
 
 class PullRequestEvent(EventBase):
-    def action(self):
-        return PullRequestAction(self.raw['action'])
+    def action(self) -> PullRequestAction:
+        action = self.raw['action']
+
+        if not action in [
+            pr_action.value
+            for pr_action
+            in PullRequestAction
+        ]:
+            return PullRequestAction.UNKNOWN
+
+        return PullRequestAction(action)
 
     def number(self):
         '''
