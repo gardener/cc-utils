@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import time
 import traceback
-import logging
+import typing
 
 from functools import partial
-from typing import List
 from urllib.parse import urlencode, quote_plus
 
 import ci.log
@@ -203,9 +203,18 @@ class ProtecodeApi:
             for k,v in custom_attributes.items()
         }
 
-    def upload(self, application_name, group_id, data, custom_attribs={}) -> AnalysisResult:
+    def upload(self,
+        application_name: str,
+        group_id: str,
+        data: typing.Generator[bytes, None, None],
+        replace_id: int = None,
+        custom_attribs={},
+    ) -> AnalysisResult:
         url = self._routes.upload(file_name=application_name)
+
         headers = {'Group': str(group_id)}
+        if replace_id:
+            headers['Replace'] = str(replace_id)
         headers.update(self._metadata_dict(custom_attribs))
 
         result = self._put(
@@ -246,7 +255,7 @@ class ProtecodeApi:
             result = scan_finished()
         return result
 
-    def list_apps(self, group_id, custom_attribs={}) -> List[Product]:
+    def list_apps(self, group_id, custom_attribs={}) -> typing.List[Product]:
         # Protecode checks for substring match only.
         def full_match(analysis_result_attribs):
             if not custom_attribs:
@@ -455,7 +464,7 @@ class ProtecodeApi:
         self,
         component_name:str,
         component_version:str,
-        objects: List[str],
+        objects: typing.List[str],
         scope:VersionOverrideScope=VersionOverrideScope.APP,
         app_id:int = None,
         group_id:int = None,
