@@ -69,7 +69,7 @@ def components(
 
     def resolve_component_dependencies(
         component: cm.Component,
-    ):
+    ) -> typing.Generator[cm.Component, None, None]:
         nonlocal cache_dir
         nonlocal delivery_client
         nonlocal validation_mode

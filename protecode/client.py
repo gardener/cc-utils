@@ -29,7 +29,7 @@ from protecode.model import (
     AnalysisResult,
     CVSSVersion,
     ProcessingStatus,
-    ScanResult,
+    Product,
     Triage,
     TriageScope,
     VersionOverrideScope,
@@ -165,7 +165,6 @@ class ProtecodeApi:
             )
         else:
             raise NotImplementedError(auth_scheme)
-
         return partial(
             method,
             verify=self._tls_verify,
@@ -233,7 +232,7 @@ class ProtecodeApi:
 
         return AnalysisResult(raw_dict=result)
 
-    def wait_for_scan_result(self, product_id: int, polling_interval_seconds=60):
+    def wait_for_scan_result(self, product_id: int, polling_interval_seconds=60) -> AnalysisResult:
         def scan_finished():
             result = self.scan_result(product_id=product_id)
             if result.status() in (ProcessingStatus.READY, ProcessingStatus.FAILED):
@@ -247,7 +246,7 @@ class ProtecodeApi:
             result = scan_finished()
         return result
 
-    def list_apps(self, group_id, custom_attribs={}) -> List[AnalysisResult]:
+    def list_apps(self, group_id, custom_attribs={}) -> List[Product]:
         # Protecode checks for substring match only.
         def full_match(analysis_result_attribs):
             if not custom_attribs:
@@ -267,7 +266,7 @@ class ProtecodeApi:
             for product in products:
                 if not full_match(product.get('custom_data')):
                     continue
-                yield AnalysisResult(product)
+                yield Product(product)
 
             if next_page_url := res.get('next'):
                 yield from _iter_matching_products(url=next_page_url)
@@ -438,17 +437,8 @@ class ProtecodeApi:
         if not self._session_id:
             raise RuntimeError('authentication failed: ' + str(relevant_response.text))
 
-    def scan_result_short(self, product_id: int):
-        url = self._routes.product(product_id=product_id)
-
-        result = self._get(
-            url=url,
-        ).json()['results']
-
-        return ScanResult(raw_dict=result)
-
     def set_product_name(self, product_id: int, name: str):
-        url = self._routes.scans(product_id)
+        url = self._routes.product(product_id)
 
         self._patch(
             url=url,
