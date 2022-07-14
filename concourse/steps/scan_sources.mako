@@ -40,7 +40,6 @@ import ccc.github
 import ci.log
 ci.log.configure_default_logging()
 import ci.util
-import concourse.model.traits.scan_sources as scan_sources
 import delivery.client
 import github.compliance.report
 from concourse.model.traits.image_scan import (
