@@ -97,12 +97,6 @@ def print_protecode_info_table(
     protecode_group_id: int,
     reference_protecode_group_ids: typing.List[int],
     cvss_version: pm.CVSSVersion,
-    include_image_references: typing.List[str],
-    exclude_image_references: typing.List[str],
-    include_image_names: typing.List[str],
-    exclude_image_names: typing.List[str],
-    include_component_names: typing.List[str],
-    exclude_component_names: typing.List[str],
 ):
     headers = ('Protecode Scan Configuration', '')
     entries = (
@@ -110,12 +104,6 @@ def print_protecode_info_table(
         ('Protecode group URL', protecode_group_url),
         ('Protecode reference group IDs', reference_protecode_group_ids),
         ('Used CVSS version', cvss_version.value),
-        ('Image reference filter (include)', include_image_references),
-        ('Image reference filter (exclude)', exclude_image_references),
-        ('Image name filter (include)', include_image_names),
-        ('Image name filter (exclude)', exclude_image_names),
-        ('Component name filter (include)', include_component_names),
-        ('Component name filter (exclude)', exclude_component_names),
     )
     print(tabulate.tabulate(entries, headers=headers))
 
