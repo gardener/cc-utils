@@ -313,6 +313,13 @@ def artifact_groups(
     artifact_groups: typing.Dict[str, pm.ArtifactGroup] = dict()
     for component in components:
         for resource in component.resources:
+
+            if resource.type not in [
+                cm.ResourceType.OCI_IMAGE,
+                'application/tar+vm-image-rootfs',
+            ]:
+                continue
+
             match resource.access:
                 case cm.OciAccess():
                     _update_artifact_groups(
@@ -327,12 +334,7 @@ def artifact_groups(
                         component=component,
                         resource=resource,
                         artifact_group_ctor=pm.TarRootfsArtifactGroup,
-                        filter=(
-                            lambda c,r: (
-                                r.type == 'application/tar+vm-image-rootfs'
-                                and tar_filter_function(c,r)
-                            )
-                        ),
+                        filter=tar_filter_function,
                         artifact_groups=artifact_groups,
                     )
     logger.info(f'Built {len(artifact_groups.values())} artifact groups')
