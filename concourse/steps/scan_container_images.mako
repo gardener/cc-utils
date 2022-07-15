@@ -95,12 +95,6 @@ print_protecode_info_table(
   reference_protecode_group_ids = ${protecode_scan.reference_protecode_group_ids()},
   protecode_group_url = protecode_group_url,
   cvss_version = CVSSVersion('${protecode_scan.cvss_version().value}'),
-  include_image_references=${filter_cfg.include_image_references()},
-  exclude_image_references=${filter_cfg.exclude_image_references()},
-  include_image_names=${filter_cfg.include_image_names()},
-  exclude_image_names=${filter_cfg.exclude_image_names()},
-  include_component_names=${filter_cfg.include_component_names()},
-  exclude_component_names=${filter_cfg.exclude_component_names()},
 )
 
 cve_threshold = ${protecode_scan.cve_threshold()}
