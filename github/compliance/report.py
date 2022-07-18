@@ -129,7 +129,7 @@ def _template_vars(
     artifact_types = ', '.join(set(
         (
             r.artifact.type.value
-            if isinstance(r.artifact.type, cm.ResourceType)
+            if isinstance(r.artifact.type, enum.Enum)
             else r.artifact.type
             for r in results
         )
