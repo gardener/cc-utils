@@ -147,12 +147,7 @@ repo = job_variant.main_repository()
     status: ${status}
 </%def>
 
-<%def name="notification(
-  indent,
-  job_variant,
-  job_step,
-  status,
-)" filter="indent_func(indent),trim">
+<%def name="notification(indent, job_variant, job_step, status)" filter="indent_func(indent),trim">
 <%
 if has_pr_trait(job_variant):
   pr_notification_policy = job_step.pull_request_notification_policy()
@@ -166,9 +161,8 @@ else:
   notify_pull_requests = False
 
 send_email_notification = not has_pr_trait(job_variant) and status == 'error'
-publish_to_repos = job_step.publish_repository_names() and not job_variant.has_trait('pull-request')
 %>
-% if any([notify_pull_requests, send_email_notification, publish_to_repos]):
+% if notify_pull_requests or send_email_notification:
 on_failure:
   do:
 % endif
@@ -233,24 +227,6 @@ if secret_cfg:
     inputs=notification_inputs,
     indent=2,
   )}
-% if publish_to_repos:
-<%
-publish_to_repo_dict = job_step.publish_repository_dict()
-%>
-    ensure:
-      in_parallel:
-% for publish_to_repo_name, publish_options in publish_to_repo_dict.items():
-<%
-if not publish_options:
-  publish_options = {}
-%>
-        - put: ${job_variant.publish_repository(publish_to_repo_name).resource_name()}
-          params:
-            repository: ${job_variant.publish_repository(publish_to_repo_name).resource_name()}
-            rebase: ${not (publish_options.get('force_push', False))}
-            force: ${publish_options.get('force_push', False)}
-% endfor
-% endif
 % endif
 </%def>
 
@@ -324,7 +300,6 @@ for repository in job_variant.repositories():
     job_variant.has_publish_repository(repository.logical_name())
     and repository.logical_name() in job_step.publish_repository_names()
   ):
-    env_var_repo = job_variant.publish_repository(repository.logical_name())
     if repository.is_main_repo():
       main_repo_name = job_variant.publish_repository(repository.logical_name()).resource_name()
     clone_repositories.append((repository.resource_name(), env_var_repo.resource_name()))
@@ -350,24 +325,6 @@ on_abort:
           cmd=job_step.execute(prefix=prefix, hook=TaskHook.ON_ABORT),
           indent=4,
         )}
-% if job_step.publish_repository_names() and not job_variant.has_trait('pull-request'):
-<%
-publish_to_repo_dict = job_step.publish_repository_dict()
-%>
-  ensure:
-    in_parallel:
-% for publish_to_repo_name, publish_options in publish_to_repo_dict.items():
-<%
-if not publish_options:
-  publish_options = {}
-%>
-      - put: ${job_variant.publish_repository(publish_to_repo_name).resource_name()}
-        params:
-          repository: ${job_variant.publish_repository(publish_to_repo_name).resource_name()}
-          rebase: ${not (publish_options.get('force_push', False))}
-          force: ${publish_options.get('force_push', False)}
-% endfor
-% endif
 </%def>
 
 <%def name="execute(indent, job_step, job_variant, source_repo, source_repo_github_cfg_name)" filter="indent_func(indent),trim">
@@ -572,7 +529,24 @@ else:
         ${replicate_secrets_step(step=job_step, job=job_variant, job_mapping=job_mapping, indent=8)}
 % endif
 % endif
-
+% if job_step.publish_repository_names() and not job_variant.has_trait('pull-request'):
+<%
+publish_to_repo_dict = job_step.publish_repository_dict()
+%>
+  ensure:
+    in_parallel:
+% for publish_to_repo_name, publish_options in publish_to_repo_dict.items():
+<%
+if not publish_options:
+  publish_options = {}
+%>
+      - put: ${job_variant.publish_repository(publish_to_repo_name).resource_name()}
+        params:
+          repository: ${job_variant.publish_repository(publish_to_repo_name).resource_name()}
+          rebase: ${not (publish_options.get('force_push', False))}
+          force: ${publish_options.get('force_push', False)}
+% endfor
+% endif
 </%def>
 
 <%def name="step(indent, job_variant, job_step)" filter="indent_func(indent),trim">
