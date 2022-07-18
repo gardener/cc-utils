@@ -3,6 +3,7 @@ import logging
 import re
 import typing
 
+import cachetools
 import github3
 
 import gci.componentmodel as cm
@@ -22,6 +23,13 @@ _label_checkmarx = 'vulnerabilities/checkmarx'
 _label_bdba = 'vulnerabilities/bdba'
 _label_licenses = 'licenses/bdba'
 _label_os_outdated = 'os/outdated'
+
+
+@cachetools.cached(cache={})
+def _issue_labels(
+    issue,
+):
+    return frozenset((l.name for l in issue.labels()))
 
 
 def artifact_digest_label(
@@ -77,11 +85,14 @@ def repository_labels(
 def enumerate_issues(
     component: cm.Component | None,
     artifact: cm.Artifact | None,
-    repository: github3.repos.Repository,
+    known_issues: typing.Sequence[github3.issues.issue.ShortIssue],
     issue_type: str | None,
     state: str | None = None, # 'open' | 'closed'
 ) -> typing.Generator[github3.issues.ShortIssue, None, None]:
-    labels = set(
+    '''Return an iterator iterating over those issues from `known_issues` that match the given
+    parameters.
+    '''
+    labels = frozenset(
         repository_labels(
             component=component,
             artifact=artifact,
@@ -89,11 +100,14 @@ def enumerate_issues(
         ),
     )
 
-    for issue in repository.issues(state=state, labels=labels):
-        issue_labels = set((l.name for l in issue.labels()))
-        # workaround: skip if - even though we requested this - not all requested labels are present
-        if not issue_labels & labels == labels:
-            continue
+    def filter_relevant_issues(issue):
+        if issue.state != state:
+            return False
+        if not _issue_labels(issue) & labels == labels:
+            return False
+        return True
+
+    for issue in filter(filter_relevant_issues, known_issues):
         yield issue
 
 
@@ -140,7 +154,6 @@ def _create_issue(
 def _update_issue(
     component: cm.Component,
     artifact: cm.Artifact,
-    repository: github3.repos.Repository,
     body:str,
     title:typing.Optional[str],
     issue: github3.issues.Issue,
@@ -181,6 +194,7 @@ def create_or_update_issue(
     artifact: cm.Artifact,
     repository: github3.repos.Repository,
     body:str,
+    known_issues: typing.Iterable[github3.issues.issue.ShortIssue],
     title:str=None,
     assignees: typing.Iterable[str]=(),
     milestone: github3.issues.milestone.Milestone=None,
@@ -192,12 +206,11 @@ def create_or_update_issue(
         enumerate_issues(
             component=component,
             artifact=artifact,
+            known_issues=known_issues,
             issue_type=issue_type,
-            repository=repository,
             state='open',
         )
     )
-
     if (issues_count := len(open_issues)) > 1:
         raise RuntimeError(f'more than one open issue found for {component.name=}{artifact.name=}')
     elif issues_count == 0:
@@ -233,7 +246,6 @@ def create_or_update_issue(
         return _update_issue(
             component=component,
             artifact=artifact,
-            repository=repository,
             issue_type=issue_type,
             body=body,
             title=title,
@@ -252,13 +264,14 @@ def close_issue_if_present(
     artifact: cm.Artifact,
     repository: github3.repos.Repository,
     issue_type: str,
+    known_issues: typing.Iterable[github3.issues.issue.ShortIssue],
 ):
     open_issues = tuple(
         enumerate_issues(
             component=component,
             artifact=artifact,
+            known_issues=known_issues,
             issue_type=issue_type,
-            repository=repository,
             state='open',
         )
     )

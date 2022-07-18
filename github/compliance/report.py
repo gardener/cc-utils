@@ -7,6 +7,7 @@ import time
 import typing
 import urllib.parse
 
+import cachetools
 import github3.repos
 
 import gci.componentmodel as cm
@@ -21,6 +22,7 @@ import delivery.model
 import github.compliance.issue
 import github.compliance.milestone
 import github.compliance.model as gcm
+import github.retry
 import github.user
 import model.delivery
 
@@ -34,6 +36,14 @@ _compliance_label_checkmarx = github.compliance.issue._label_checkmarx
 
 def _criticality_label(classification: gcm.Severity):
     return f'compliance-priority/{str(classification)}'
+
+
+@cachetools.cached(cache={})
+@github.retry.retry_and_throttle
+def _all_issues(
+    repository,
+):
+    return set(repository.issues())
 
 
 def _criticality_classification(cve_score: float) -> gcm.Severity:
@@ -308,12 +318,15 @@ def create_or_update_github_issues(
 
             repository = gh_api.repository(org, name)
 
+        known_issues = _all_issues(repository)
+
         if action == 'discard':
             github.compliance.issue.close_issue_if_present(
                 component=component,
                 artifact=artifact,
                 repository=repository,
                 issue_type=issue_type,
+                known_issues=known_issues,
             )
 
             logger.info(
@@ -403,6 +416,7 @@ def create_or_update_github_issues(
                         _criticality_label(classification=criticality_classification),
                     ),
                     preserve_labels_regexes=preserve_labels_regexes,
+                    known_issues=known_issues,
                 )
                 if result_group.comment_callback:
                     def single_comment(result: gcm.ScanResult):
@@ -424,7 +438,10 @@ def create_or_update_github_issues(
                 logger.warning('error whilst trying to create or update issue - will keep going')
                 logger.warning(f'error: {ghe} {ghe.code=} {ghe.message=}')
 
-            logger.info(f'updated gh-issue for {component.name=} {artifact.name=} {issue_type=}')
+            logger.info(
+                f'updated gh-issue for {component.name=} {artifact.name=} '
+                f'{issue_type=}: {issue.html_url=}'
+            )
         else:
             raise NotImplementedError(action)
 
@@ -444,9 +461,10 @@ def create_or_update_github_issues(
         time.sleep(1) # throttle github-api-requests
 
     if overwrite_repository:
+        known_issues = _all_issues(overwrite_repository)
         close_issues_for_absent_resources(
             result_groups=result_groups,
-            repository=overwrite_repository,
+            known_issues=known_issues,
             issue_type=result_group_collection.issue_type,
         )
 
@@ -457,7 +475,7 @@ def create_or_update_github_issues(
 
 def close_issues_for_absent_resources(
     result_groups: list[gcm.ScanResultGroup],
-    repository: github3.repos.Repository,
+    known_issues: typing.Iterator[github3.issues.issue.ShortIssue],
     issue_type: str | None,
 ):
     '''
@@ -469,8 +487,8 @@ def close_issues_for_absent_resources(
     all_issues = github.compliance.issue.enumerate_issues(
         component=None,
         artifact=None,
-        repository=repository,
         issue_type=issue_type,
+        known_issues=known_issues,
         state='open',
     )
 
