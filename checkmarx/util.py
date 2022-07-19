@@ -77,7 +77,8 @@ def _get_scan_artifacts_from_components(
                 if scan_artifact_name:
                     logger.info(f'Using project name from cd-label {scan_artifact_name}')
                 else:
-                    scan_artifact_name = f'{component.name}_{source.name}'
+                    scan_artifact_name = f'{source.name}'
+                    logger.info(f'Using project name from cd source name: {scan_artifact_name}')
                 yield dso.model.ScanArtifact(
                     source=source,
                     name=scan_artifact_name,
