@@ -2,6 +2,31 @@ from copy import copy
 import logging
 import logging.config
 import sys
+import tempfile
+
+
+__debug_handler = None
+
+
+def setup_debug_handler(
+    custom_format_string: str = '',
+    print_thread_id: bool = False,
+):
+    global __debug_handler
+    if not __debug_handler:
+        tmpfile = tempfile.NamedTemporaryFile(delete=False)
+        handler = logging.FileHandler(filename=tmpfile.name)
+        handler.setLevel(logging.DEBUG)
+        __debug_handler = handler
+
+    if custom_format_string:
+        __debug_handler.setFormatter(CCFormatter(fmt=custom_format_string))
+    else:
+        __debug_handler.setFormatter(CCFormatter(
+            fmt=default_fmt_string(print_thread_id=print_thread_id))
+        )
+
+    return __debug_handler
 
 
 class CCFormatter(logging.Formatter):
@@ -48,6 +73,7 @@ def configure_default_logging(
     stdout_level=None,
     force=True,
     print_thread_id=False,
+    setup_debug_logger=False,
     custom_format_string: str = '',
 ):
     if not stdout_level:
@@ -67,9 +93,17 @@ def configure_default_logging(
         sh.setFormatter(CCFormatter(fmt=custom_format_string))
     else:
         sh.setFormatter(CCFormatter(fmt=default_fmt_string(print_thread_id=print_thread_id)))
-
     logging.root.addHandler(hdlr=sh)
-    logging.root.setLevel(level=stdout_level)
+
+    if setup_debug_logger:
+        dh = setup_debug_handler(
+            custom_format_string=custom_format_string,
+            print_thread_id=print_thread_id,
+        )
+        logging.root.addHandler(hdlr=dh)
+        logging.root.setLevel(level=logging.DEBUG)
+    else:
+        logging.root.setLevel(level=stdout_level)
 
     # both too verbose ...
     logging.getLogger('github3').setLevel(logging.WARNING)
@@ -87,6 +121,7 @@ def disable_logging(
         logging.ERROR,
         logging.WARNING,
         logging.INFO,
+        logging.DEBUG,
     ),
 ):
     for log_level in log_levels:
