@@ -77,11 +77,17 @@ class ProjectDetails:
         self.get_custom_field(attribute_key=attribute_key, pop=True)
         self.customFields.append(CustomField(id=attribute_key.value, value=value))
 
+@dataclasses.dataclass
+class ScanStatusDetails:
+    stage: str
+    step: str
+
 
 @dataclasses.dataclass
 class ScanStatus:
     id: int
     name: str
+    details: ScanStatusDetails
 
 
 @dataclasses.dataclass

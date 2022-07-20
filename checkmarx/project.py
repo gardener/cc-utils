@@ -78,7 +78,8 @@ class CheckmarxProject:
         def scan_finished():
             scan = self.client.get_scan_state(scan_id=scan_id)
             clogger = checkmarx.util.component_logger(artifact_name=self.artifact_name)
-            clogger.info(f'polling for {scan_id=}. {scan.status.name=}')
+            clogger.info(f'polling for {scan_id=}. {scan.status.name=}, {scan.status.details.stage=}'
+                f'{scan.status.details.step=}')
             if self.is_scan_finished(scan):
                 return scan
             return False
