@@ -62,6 +62,7 @@ class Datatype:
     MALWARE = 'malware'
     LICENSES_AGGREGATED = 'licenses/aggregated'
     COMPONENTS = 'components'
+    FILESYSTEM_PATHS = 'filesystem/paths'
     OS_IDS = 'os_ids'
 
 
@@ -97,6 +98,17 @@ class ComponentVersion:
 @dataclasses.dataclass(frozen=True)
 class ComponentSummary:
     components: list[ComponentVersion]
+
+
+@dataclasses.dataclass(frozen=True)
+class FilesystemPath:
+    path: str
+    digest: str
+
+
+@dataclasses.dataclass(frozen=True)
+class FilesystemPaths:
+    paths: list[FilesystemPath]
 
 
 @dataclasses.dataclass(frozen=True)
