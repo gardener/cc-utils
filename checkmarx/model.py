@@ -79,9 +79,16 @@ class ProjectDetails:
 
 
 @dataclasses.dataclass
+class ScanStatusDetails:
+    stage: str
+    step: str
+
+
+@dataclasses.dataclass
 class ScanStatus:
     id: int
     name: str
+    details: ScanStatusDetails
 
 
 @dataclasses.dataclass

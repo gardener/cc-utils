@@ -247,10 +247,11 @@ class ConfigFactory:
                 else:
                     raise NotImplementedError(cfg_src)
 
-                for k,v in parsed_cfg.items():
-                    if k in cfg_dict and cfg_dict[k] != v:
-                        raise ValueError(f'conflicting definition for {k=} in src {cfg_src}')
-                    cfg_dict[k] = v
+                if parsed_cfg and parsed_cfg.items():
+                    for k,v in parsed_cfg.items():
+                        if k in cfg_dict and cfg_dict[k] != v:
+                            raise ValueError(f'conflicting definition for {k=} in src {cfg_src}')
+                        cfg_dict[k] = v
 
             return cfg_dict
 
