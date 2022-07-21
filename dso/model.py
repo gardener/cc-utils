@@ -62,6 +62,7 @@ class Datatype:
     MALWARE = 'malware'
     LICENSES_AGGREGATED = 'licenses/aggregated'
     COMPONENTS = 'components'
+    FILESYSTEM_PATHS = 'filesystem/paths'
     OS_IDS = 'os_ids'
 
 
@@ -100,6 +101,17 @@ class ComponentSummary:
 
 
 @dataclasses.dataclass(frozen=True)
+class FilesystemPath:
+    path: str
+    digest: str
+
+
+@dataclasses.dataclass(frozen=True)
+class FilesystemPaths:
+    paths: list[FilesystemPath]
+
+
+@dataclasses.dataclass(frozen=True)
 class MalwareSummary:
     '''
     empty list of findings states "no malware found"
@@ -111,4 +123,4 @@ class MalwareSummary:
 class ArtefactMetadata:
     artefact: ComponentArtefactId
     meta: Metadata
-    data: GreatestCVE | LicenseSummary | ComponentSummary | OsID | MalwareSummary | dict
+    data: GreatestCVE | LicenseSummary | ComponentSummary | OsID | MalwareSummary | FilesystemPaths | dict # noqa: E501

@@ -265,6 +265,52 @@ def iter_artefact_metadata(
             data=component,
         )
 
+        meta = dso.model.Metadata(
+            datasource=dso.model.Datasource.BDBA,
+            type=dso.model.Datatype.FILESYSTEM_PATHS,
+            creation_date=datetime.datetime.now()
+        )
+
+        # avoid duplicates
+        filesystem_paths = set(
+            dso.model.FilesystemPath(
+                path=path,
+                digest=digest,
+            )
+            for component in result.result.components()
+            for path, digest in iter_filesystem_paths(component=component)
+        )
+
+        filesystem_paths = dso.model.FilesystemPaths(
+            paths=list(filesystem_paths),
+        )
+
+        yield dso.model.ArtefactMetadata(
+            artefact=artefact_ref,
+            meta=meta,
+            data=filesystem_paths,
+        )
+
+
+def iter_filesystem_paths(
+    component: pm.Component,
+    file_type: str | None = 'elf'
+) -> typing.Generator[tuple[str, str], None, None]:
+    for ext_obj in component.extended_objects():
+        for path_infos in ext_obj.raw.get('extended-fullpath', []):
+
+            # be defensive, dont break
+            if not (fullpath := path_infos.get('path')):
+                continue
+            if not (path_info_type := path_infos.get('type')):
+                continue
+
+            if not file_type:
+                yield fullpath, ext_obj.sha1()
+
+            if path_info_type == file_type:
+                yield fullpath, ext_obj.sha1()
+
 
 def corresponding_artifact_group_name(
     component: cm.Component,
