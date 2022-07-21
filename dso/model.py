@@ -123,4 +123,4 @@ class MalwareSummary:
 class ArtefactMetadata:
     artefact: ComponentArtefactId
     meta: Metadata
-    data: GreatestCVE | LicenseSummary | ComponentSummary | OsID | MalwareSummary | dict
+    data: GreatestCVE | LicenseSummary | ComponentSummary | OsID | MalwareSummary | FilesystemPaths | dict
