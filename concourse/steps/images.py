@@ -12,10 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import reutil
+import enum
+import typing
 
 import gci.componentmodel
+
+import reutil
+import version
+
+
+class ComponentVersionFilterType(enum.Enum):
+    INCLUDE = enum.auto()
+    EXCLUDE = enum.auto()
 
 
 def _ensure_resource_is_oci(resource):
@@ -83,6 +91,64 @@ def component_ref_component_name_filter(include_regexes=(), exclude_regexes=()):
     )
 
 
+def _component_version_filter(
+    component_name: str,
+    filter_type: ComponentVersionFilterType,
+    component_versions: typing.Iterable[str]=(),
+):
+    # Creates a filter function for a single component name and a set of component versions
+    versions = [version.parse_to_semver(v) for v in component_versions]
+
+    def to_component_name(component: gci.componentmodel.Component):
+        return component.name
+
+    name_filter_func = reutil.re_filter(
+        include_regexes=[component_name],
+        value_transformation=to_component_name,
+    )
+
+    def version_filter_func(component: gci.componentmodel.ComponentReference):
+        if not versions:
+            # if this is an exclusion filter, nothing can be excluded. Otherwise,
+            # we defined the absence of a version config as "do not filter"
+            return True
+
+        in_versions = version.parse_to_semver(component.version) in versions
+
+        if filter_type is ComponentVersionFilterType.INCLUDE:
+            return in_versions
+
+        elif filter_type is ComponentVersionFilterType.EXCLUDE:
+            return not in_versions
+
+        else:
+            raise NotImplementedError(filter_type)
+
+    def filter_func(component: gci.componentmodel.ComponentReference):
+        if name_filter_func(component):
+            return version_filter_func(component)
+        else:
+            # only care about the component we're responsible for
+            return True
+
+    return filter_func
+
+
+def component_version_filter(
+    component_version_filter_config: typing.Collection[typing.Dict],
+    filter_type: ComponentVersionFilterType,
+):
+    filters = [
+        _component_version_filter(
+            component_name=entry['component_name'],
+            component_versions=entry['component_versions'],
+            filter_type=filter_type,
+        )
+        for entry in component_version_filter_config
+    ]
+    return lambda component: all(f(component) for f in filters)
+
+
 def create_composite_filter_function(
   include_image_references,
   exclude_image_references,
@@ -90,6 +156,8 @@ def create_composite_filter_function(
   exclude_image_names,
   include_component_names,
   exclude_component_names,
+  include_component_versions=[],
+  exclude_component_versions=[],
 ):
     image_reference_filter_function = image_reference_filter(
         include_image_references,
@@ -103,6 +171,14 @@ def create_composite_filter_function(
         include_component_names,
         exclude_component_names,
     )
+    component_version_exclusion_filter = component_version_filter(
+        exclude_component_versions,
+        ComponentVersionFilterType.EXCLUDE,
+    )
+    component_version_inclusion_filter = component_version_filter(
+        include_component_versions,
+        ComponentVersionFilterType.INCLUDE,
+    )
 
     def filter_function(
         component: gci.componentmodel.Component,
@@ -112,6 +188,8 @@ def create_composite_filter_function(
             image_reference_filter_function(resource)
             and image_name_filter_function(resource)
             and component_name_filter_function(component)
+            and component_version_exclusion_filter(component)
+            and component_version_inclusion_filter(component)
         )
 
     return filter_function

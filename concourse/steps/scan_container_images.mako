@@ -70,6 +70,8 @@ image_filter_function = create_composite_filter_function(
   exclude_image_names=${filter_cfg.exclude_image_names()},
   include_component_names=${filter_cfg.include_component_names()},
   exclude_component_names=${filter_cfg.exclude_component_names()},
+  include_component_versions=${filter_cfg.include_component_versions()},
+  exclude_component_versions=${filter_cfg.exclude_component_versions()},
 )
 
 tar_filter_function = create_composite_filter_function(
@@ -79,6 +81,8 @@ tar_filter_function = create_composite_filter_function(
   exclude_image_names=(),
   include_component_names=${filter_cfg.include_component_names()},
   exclude_component_names=${filter_cfg.exclude_component_names()},
+  include_component_versions=${filter_cfg.include_component_versions()},
+  exclude_component_versions=${filter_cfg.exclude_component_versions()},
 )
 
 % if not protecode_scan.protecode_cfg_name():

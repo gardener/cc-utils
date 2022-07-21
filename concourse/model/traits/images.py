@@ -92,6 +92,23 @@ class FilterCfg(ModelBase):
                 include_component_names.
                 ''',
             ),
+            AttributeSpec.optional(
+                name='include_component_versions',
+                default=[],
+                doc='''
+                a list of mappings of component-names to versions to be included. If
+                configured, only these versions will be included for the given components.
+                ''',
+            ),
+            AttributeSpec.optional(
+                name='exclude_component_versions',
+                default=[],
+                doc='''
+                a list of mappings of component-names to versions to be excluded. If
+                configured, the given versions will be excluded for the given components.
+                Takes precedence over include_component_versions.
+                ''',
+            ),
         )
 
     def include_image_references(self):
@@ -112,6 +129,12 @@ class FilterCfg(ModelBase):
     def exclude_component_names(self):
         return self.raw['exclude_component_names']
 
+    def include_component_versions(self):
+        return self.raw['include_component_versions']
+
+    def exclude_component_versions(self):
+        return self.raw['exclude_component_versions']
+
 
 class ImageFilterMixin(ModelBase):
     def filters(self):
@@ -128,6 +151,8 @@ IMAGE_ATTRS = (
             'exclude_image_names': (),
             'include_component_names': (),
             'exclude_component_names': (),
+            'include_component_versions': [],
+            'exclude_component_versions': [],
         },
         doc='optional filters to restrict container images to process',
         type=FilterCfg,
