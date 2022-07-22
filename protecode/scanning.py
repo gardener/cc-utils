@@ -106,10 +106,21 @@ class ResourceGroupProcessor:
                 else:
                     logger.info(f'No existing scan for {artifact_group} - will create new one.')
 
+                # TODO: This is a special case for Gardenlinux (which is the only component that
+                # currently creates these kinds of ArtifactGroups). Rm this once we can filter this
+                # more generally with a ResourceIdentityFilter or something similar
+                artifacts_to_consider = [
+                    component_artifact.artifact
+                    for component_artifact in artifact_group.component_artifacts
+                    if component_artifact.artifact.extraIdentity.get('platform') in [
+                        'ali', 'vmware', 'aws', 'gcp', 'openstack', 'azure',
+                    ]
+                ]
+
                 yield pm.ScanRequest(
                     component_artifacts=artifact_group.component_artifacts[0],
                     scan_content=pm.TarRootfsAggregateResourceBinary(
-                        artifacts=[a.artifact for a in artifact_group.component_artifacts]
+                        artifacts=artifacts_to_consider,
                     ),
                     display_name=artifact_group.name,
                     target_product_id=target_product_id,
