@@ -300,6 +300,7 @@ for repository in job_variant.repositories():
     job_variant.has_publish_repository(repository.logical_name())
     and repository.logical_name() in job_step.publish_repository_names()
   ):
+    env_var_repo = job_variant.publish_repository(repository.logical_name())
     if repository.is_main_repo():
       main_repo_name = job_variant.publish_repository(repository.logical_name()).resource_name()
     clone_repositories.append((repository.resource_name(), env_var_repo.resource_name()))
