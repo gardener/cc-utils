@@ -202,7 +202,7 @@ class ResourceGroupProcessor:
             # Fetch it (it _must_ exist) and process
             products = self.protecode_client.list_apps(
                 group_id=self.group_id,
-                custom_attribs=scan_request.custom_metadata(),
+                custom_attribs=scan_request.custom_metadata,
             )
 
             if (p := len(products)) == 0:
