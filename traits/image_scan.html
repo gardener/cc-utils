@@ -213,9 +213,11 @@ with different contents, all variants are subject to being scanned.</p>
 <tr class="row-even"><td><p>filters</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">exclude_component_names</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
+<span class="nt">exclude_component_versions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
 <span class="nt">exclude_image_names</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
 <span class="nt">exclude_image_references</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
 <span class="nt">include_component_names</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
+<span class="nt">include_component_versions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
 <span class="nt">include_image_names</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
 <span class="nt">include_image_references</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
 </pre></div>
@@ -362,6 +364,27 @@ whose name matches are considered.</p></td>
 <td><p>a list of regular expressions. If configured, image references from components whose
 name matches are excluded from further processing. Has precedence over
 include_component_names.</p></td>
+</tr>
+<tr class="row-even"><td><p>include_component_versions</p></td>
+<td><p>no</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span><span class="w"></span>
+</pre></div>
+</div>
+</p></td>
+<td><p>str</p></td>
+<td><p>a list of mappings of component-names to versions to be included. If
+configured, only these versions will be included for the given components.</p></td>
+</tr>
+<tr class="row-odd"><td><p>exclude_component_versions</p></td>
+<td><p>no</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span><span class="w"></span>
+</pre></div>
+</div>
+</p></td>
+<td><p>str</p></td>
+<td><p>a list of mappings of component-names to versions to be excluded. If
+configured, the given versions will be excluded for the given components.
+Takes precedence over include_component_versions.</p></td>
 </tr>
 </tbody>
 </table>
