@@ -512,5 +512,9 @@ def close_issues_for_absent_resources(
 
     # any issues that have not been removed thus far were not referenced by given result_groups
     for issue in component_resources_to_issues.values():
+        logger.info(
+            f"Closing issue '{issue.title}'({issue.html_url}) since no scan contained a resource "
+            "matching its digest."
+        )
         issue.create_comment('closing, because component/resource no longer present in BoM')
         issue.close()
