@@ -14,10 +14,10 @@
 # limitations under the License.
 
 import collections
-from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
 import datetime
-import logging
 import functools
+import logging
 import tabulate
 import typing
 
@@ -52,7 +52,7 @@ def upload_grouped_images(
         lambda component, resource: True
     ),
     reference_group_ids=(),
-) -> typing.Sequence[pm.BDBA_ScanResult]:
+) -> typing.Generator[pm.BDBA_ScanResult, None, None]:
     protecode_api = ccc.protecode.client(protecode_cfg)
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
     protecode_api.login()
@@ -86,31 +86,33 @@ def upload_grouped_images(
             processing_mode=processing_mode,
         ))
 
-    with ThreadPoolExecutor(max_workers=parallel_jobs) as tpe:
+    delivery_client = ccc.delivery.default_client_if_available()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=parallel_jobs) as tpe:
         # queue one execution per artifact group
-        futures = [
+        futures = {
             tpe.submit(task_function, g, processing_mode)
             for g in groups
-        ]
-        # wait until all runs are finished and gather results
-        results = tuple((
-            result
-            for future in futures
-            for result in future.result()
-        ))
+        }
+        for results in concurrent.futures.as_completed(futures):
+            if delivery_client:
+                upload_results_to_deliverydb(delivery_client=delivery_client, results=results)
+            else:
+                logger.warning('not uploading results to deliverydb, client not available')
+            yield from results
 
-    if (delivery_client := ccc.delivery.default_client_if_available()):
-        logger.info('uploading results to deliverydb')
-        try:
-            for artefact_metadata in iter_artefact_metadata(results):
-                delivery_client.upload_metadata(data=artefact_metadata)
-        except:
-            import traceback
-            traceback.print_exc()
-    else:
-        logger.warning('not uploading results to deliverydb, client not available')
 
-    return results
+def upload_results_to_deliverydb(
+    delivery_client,
+    results: typing.Iterable[pm.BDBA_ScanResult],
+):
+    logger.info('uploading results to deliverydb')
+    try:
+        for artefact_metadata in iter_artefact_metadata(results):
+            delivery_client.upload_metadata(data=artefact_metadata)
+    except:
+        import traceback
+        traceback.print_exc()
 
 
 def filter_and_display_upload_results(

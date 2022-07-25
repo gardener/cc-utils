@@ -110,7 +110,7 @@ print_protecode_info_table(
 cve_threshold = ${protecode_scan.cve_threshold()}
 
 logger.info('running protecode scan for all components')
-results = protecode.util.upload_grouped_images(
+results_generator = protecode.util.upload_grouped_images(
   protecode_cfg=protecode_cfg,
   protecode_group_id = protecode_group_id,
   component_descriptor = component_descriptor,
@@ -121,6 +121,7 @@ results = protecode.util.upload_grouped_images(
   image_filter_function=image_filter_function,
   tar_filter_function=tar_filter_function,
 )
+results = tuple(results_generator)
 
 % if license_cfg:
 license_cfg = dacite.from_dict(
