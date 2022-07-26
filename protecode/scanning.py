@@ -201,11 +201,7 @@ class ResourceGroupProcessor:
     def apply_auto_triage(
         self,
         scan_request: pm.ScanRequest,
-    ):
-        if not scan_request.auto_triage_scan():
-            # nothing to do
-            return
-
+    ) -> pm.AnalysisResult:
         if (product_id := scan_request.target_product_id):
             scan_result = self.protecode_client.scan_result(product_id=product_id)
         else:
@@ -233,26 +229,32 @@ class ResourceGroupProcessor:
             protecode_api=self.protecode_client,
         )
 
-    def _upload_and_wrap_into_bdba_results(
+        # return updated scan result
+        return self.protecode_client.scan_result(product_id=product_id)
+
+    def _wrap_into_bdba_results(
         self,
-        scan_requests: typing.Iterable[pm.ScanRequest],
-        processing_mode: pm.ProcessingMode,
+        scan_requests_and_results: typing.Iterable[typing.Tuple[pm.ScanRequest, pm.AnalysisResult]],
     ) -> typing.Generator[pm.BDBA_ScanResult, None, None]:
-        for scan_request in scan_requests:
-            scan_result = self.process_scan_request(
-                scan_request=scan_request,
-                processing_mode=processing_mode,
-            )
-            scan_result = protecode.util.wait_for_scan_to_finish(
-                scan=scan_result,
-                protecode_api=self.protecode_client,
-            )
+        for scan_request, scan_result in scan_requests_and_results:
             yield pm.BDBA_ScanResult(
                 component=scan_request.component_artifacts.component,
                 artifact=scan_request.component_artifacts.artifact,
                 status=pm.UploadStatus.DONE,
                 result=scan_result,
             )
+
+    def _upload_and_wait_for_scans(
+        self,
+        scan_requests: typing.Iterable[pm.ScanRequest],
+        processing_mode: pm.ProcessingMode,
+    ) -> typing.Generator[typing.Tuple[pm.ScanRequest, pm.AnalysisResult], None, None]:
+        for scan_request in scan_requests:
+            scan_result = self.process_scan_request(
+                scan_request=scan_request,
+                processing_mode=processing_mode,
+            )
+            yield scan_request, protecode.util.wait_for_scan_to_finish(scan_result)
 
     def process(
         self,
@@ -267,12 +269,13 @@ class ResourceGroupProcessor:
 
         logger.info(f'Generated {len(scan_requests)} scan requests for {artifact_group}')
 
-        scan_results = list(
-            self._upload_and_wrap_into_bdba_results(
+        scan_requests_and_results = list(
+            self._upload_and_wait_for_scans(
                 scan_requests=scan_requests,
                 processing_mode=processing_mode,
             )
         )
+
         # fetch all relevant scans from all reference protecode groups
         products_with_triages = list(
             self.products_with_relevant_triages(
@@ -291,13 +294,16 @@ class ResourceGroupProcessor:
         )
         protecode.util.copy_triages(
             from_results=scans_with_triages,
-            to_results=[r.result for r in scan_results],
+            to_results=[result for _, result in scan_requests_and_results],
             to_group_id=self.group_id,
             protecode_api=self.protecode_client,
         )
 
-        # finally, auto-triage remaining vulnerabilities if configured
-        for scan_request in scan_requests:
-            self.apply_auto_triage(scan_request=scan_request)
+        # finally, auto-triage remaining vulnerabilities (updates fetched result) if configured.
+        scan_requests_and_results = [
+            (request, result) if not request.auto_triage_scan()
+            else (request, self.apply_auto_triage(scan_request=request))
+            for request, result in scan_requests_and_results
+        ]
 
-        yield from scan_results
+        yield from self._wrap_into_bdba_results(scan_requests_and_results)
