@@ -54,7 +54,7 @@ def from_single_image(
 
 
 def single_platform_manifest(
-    image_reference: om.OciImageReference | str,
+    image_reference: typing.Union[om.OciImageReference, str],
     oci_client: oc.Client,
     platform: om.OciPlatform=None,
 ):
