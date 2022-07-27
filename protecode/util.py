@@ -94,12 +94,13 @@ def upload_grouped_images(
             tpe.submit(task_function, g, processing_mode)
             for g in groups
         }
-        for results in concurrent.futures.as_completed(futures):
+        for completed_future in concurrent.futures.as_completed(futures):
+            scan_results = completed_future.result()
             if delivery_client:
-                upload_results_to_deliverydb(delivery_client=delivery_client, results=results)
+                upload_results_to_deliverydb(delivery_client=delivery_client, results=scan_results)
             else:
-                logger.warning('not uploading results to deliverydb, client not available')
-            yield from results
+                logger.warning('Not uploading results to deliverydb, client not available')
+            yield from scan_results
 
 
 def upload_results_to_deliverydb(
