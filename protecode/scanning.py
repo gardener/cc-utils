@@ -254,7 +254,10 @@ class ResourceGroupProcessor:
                 scan_request=scan_request,
                 processing_mode=processing_mode,
             )
-            yield scan_request, protecode.util.wait_for_scan_to_finish(scan_result)
+            yield scan_request, protecode.util.wait_for_scan_to_finish(
+                scan=scan_result,
+                protecode_api=self.protecode_client,
+            )
 
     def process(
         self,
