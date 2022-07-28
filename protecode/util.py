@@ -35,7 +35,7 @@ import protecode.scanning as ps
 import model.protecode
 
 logger = logging.getLogger(__name__)
-ci.log.configure_default_logging(print_thread_id=True)
+ci.log.configure_default_logging(print_thread_id=True, setup_debug_logger=True)
 
 
 def upload_grouped_images(
