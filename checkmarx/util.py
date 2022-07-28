@@ -1,4 +1,5 @@
 import concurrent.futures
+import datetime
 import functools
 import logging
 import shutil
@@ -199,7 +200,7 @@ def upload_and_scan_gh_artifact(
     clogger = component_logger(artifact_name=artifact.name)
 
     last_scans = cx_project.get_last_scans()
-
+    tm_start = datetime.datetime.now()
     if len(last_scans) < 1:
         clogger.info('no scans found in project history. '
                      f'Starting new scan hash={source_commit_hash}')
@@ -239,11 +240,14 @@ def upload_and_scan_gh_artifact(
     else:
         clogger.info(f'found a running scan id={last_scan.id}. Polling it')
 
-    return cx_project.poll_and_retrieve_scan(
+    scan_result = cx_project.poll_and_retrieve_scan(
         scan_id=scan_id,
         component=artifact.component,
         source=artifact.source
     )
+    duration = datetime.datetime.now() - tm_start
+    clogger.info(f'Scan for component {artifact.name} took: {duration}')
+    return scan_result
 
 
 def scan_gh_artifact(
