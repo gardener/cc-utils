@@ -21,6 +21,8 @@ import logging
 import tabulate
 import typing
 
+import requests.exceptions
+
 import ccc.delivery
 import ccc.gcp
 import ccc.protecode
@@ -650,12 +652,20 @@ def copy_triages(
                             f'Adding triage {triage} to {component_name} in version '
                             f'{component_version} to {to_result_id} ({to_result_name})'
                         )
-                        protecode_api.add_triage(
-                            triage=triage,
-                            product_id=to_result.product_id(),
-                            group_id=to_group_id,
-                            component_version=to_component_version,
-                        )
+                        try:
+                            protecode_api.add_triage(
+                                triage=triage,
+                                product_id=to_result_id,
+                                group_id=to_group_id,
+                                component_version=to_component_version,
+                            )
+                        except requests.exceptions.HTTPError as e:
+                            logger.error(
+                                f'An error occurred when importing {triage} to {component_name} '
+                                f'in version {component_version} for scan {to_result_id} '
+                                f'({to_result_name}): {e}'
+                            )
+                            raise
 
 
 def auto_triage(
