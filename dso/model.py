@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import enum
 
 import gci.componentmodel as cm
 
@@ -16,7 +17,7 @@ class ScanArtifact:
     source: cm.ComponentSource
 
 
-class Datasource:
+class Datasource(enum.Enum):
     WHITESOURCE = 'whitesource'
     BDBA = 'bdba' # formerly protecode
     CHECKMARX = 'checkmarx'
@@ -56,7 +57,7 @@ def component_artefact_id_from_ocm(
     )
 
 
-class Datatype:
+class Datatype(enum.Enum):
     VULNERABILITIES_AGGREGATED = 'vulnerabilities/aggregated'
     VULNERABILITIES_RAW = 'vulnerabilities/raw'
     MALWARE = 'malware'
