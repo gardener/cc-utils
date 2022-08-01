@@ -36,6 +36,9 @@ cc-utils:
               inputs:
                 steps:
                   build_python_packages: ~
+              resource_labelsx:
+              - name: 'xxx-test'
+                value: 'this is a test'
             kaniko-image:
               registry: 'gcr-readwrite'
               image: 'eu.gcr.io/gardener-project/cc/job-image-kaniko'
