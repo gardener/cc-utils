@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 import time
 
@@ -74,7 +75,7 @@ class CheckmarxProject:
     def start_scan(self, scan_settings: model.ScanSettings):
         return self.client.start_scan(scan_settings)
 
-    def _poll_scan(self, scan_id: int, polling_interval_seconds=60):
+    def _poll_scan(self, scan_id: int, polling_interval_seconds=60, timeout_seconds=1200):
         def scan_finished():
             scan = self.client.get_scan_state(scan_id=scan_id)
             clogger = checkmarx.util.component_logger(artifact_name=self.artifact_name)
@@ -84,11 +85,16 @@ class CheckmarxProject:
                 return scan
             return False
 
+        tm_start = datetime.datetime.now()
         result = scan_finished()
-        while not result:
+        while not result and  datetime.datetime.now() - tm_start < timeout_seconds:
             # keep polling until result is ready
             time.sleep(polling_interval_seconds)
             result = scan_finished()
+        if  tm_start >= timeout_seconds:
+            scan = self.client.get_scan_state(scan_id=scan_id)
+            raise RuntimeError(f'Scan of artifact "{scan.status.name=}", '
+                f'{scan_id} aborted after timeout {timeout_seconds}s')
         return result
 
     def scan_statistics(self, scan_id: int):
