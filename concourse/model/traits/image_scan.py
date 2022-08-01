@@ -41,8 +41,8 @@ from protecode.model import CVSSVersion
 
 import concourse.model.traits.component_descriptor
 import github.compliance.model
-from .images import (
-    IMAGE_ATTRS,
+from .filter import (
+    FILTER_ATTRS,
     ImageFilterMixin,
 )
 
@@ -276,7 +276,7 @@ class IssuePolicies:
 
 
 ATTRIBUTES = (
-    *IMAGE_ATTRS,
+    *FILTER_ATTRS,
     AttributeSpec.optional(
         name='notify',
         default=Notify.EMAIL_RECIPIENTS,

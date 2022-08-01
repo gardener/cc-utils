@@ -47,10 +47,7 @@ def upload_grouped_images(
     parallel_jobs=8,
     cve_threshold=7,
     processing_mode=pm.ProcessingMode.RESCAN,
-    image_filter_function: typing.Callable[[cm.Component, cm.Resource], bool]=(
-        lambda component, resource: True
-    ),
-    tar_filter_function: typing.Callable[[cm.Component, cm.Resource], bool]=(
+    filter_function: typing.Callable[[cm.Component, cm.Resource], bool]=(
         lambda component, resource: True
     ),
     reference_group_ids=(),
@@ -61,8 +58,7 @@ def upload_grouped_images(
     groups = list(
         artifact_groups(
             component_descriptor=component_descriptor,
-            image_filter_function=image_filter_function,
-            tar_filter_function=tar_filter_function,
+            filter_function=filter_function,
         )
     )
     # build lookup structure for existing scans
@@ -355,8 +351,7 @@ def _update_artifact_groups(
 
 def artifact_groups(
     component_descriptor: cm.ComponentDescriptor,
-    image_filter_function: typing.Callable[[cm.Component, cm.Resource], bool],
-    tar_filter_function: typing.Callable[[cm.Component, cm.Resource], bool],
+    filter_function: typing.Callable[[cm.Component, cm.Resource], bool],
 ) -> typing.Iterator[pm.ArtifactGroup]:
     '''Build artifact groups from the given component-descriptor
     '''
@@ -373,21 +368,17 @@ def artifact_groups(
 
             match resource.access:
                 case cm.OciAccess():
-                    _update_artifact_groups(
-                        component=component,
-                        resource=resource,
-                        artifact_group_ctor=pm.OciArtifactGroup,
-                        filter=image_filter_function,
-                        artifact_groups=artifact_groups,
-                    )
+                    constructor = pm.OciArtifactGroup
                 case cm.S3Access():
-                    _update_artifact_groups(
-                        component=component,
-                        resource=resource,
-                        artifact_group_ctor=pm.TarRootfsArtifactGroup,
-                        filter=tar_filter_function,
-                        artifact_groups=artifact_groups,
-                    )
+                    constructor = pm.TarRootfsArtifactGroup
+
+            _update_artifact_groups(
+                component=component,
+                resource=resource,
+                artifact_group_ctor=constructor,
+                filter=filter_function,
+                artifact_groups=artifact_groups,
+            )
     logger.info(f'Built {len(artifact_groups.values())} artifact groups')
     yield from artifact_groups.values()
 
