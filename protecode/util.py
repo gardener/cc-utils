@@ -21,8 +21,6 @@ import logging
 import tabulate
 import typing
 
-import requests.exceptions
-
 import ccc.delivery
 import ccc.gcp
 import ccc.protecode
@@ -659,7 +657,7 @@ def copy_triages(
                                 group_id=to_group_id,
                                 component_version=to_component_version,
                             )
-                        except requests.exceptions.HTTPError as e:
+                        except Exception as e:
                             logger.error(
                                 f'An error occurred when importing {triage} to {component_name} '
                                 f'in version {component_version} for scan {to_result_id} '
