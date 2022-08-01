@@ -13,7 +13,7 @@ issue_policies = image_scan_trait.issue_policies()
 protecode_scan = image_scan_trait.protecode()
 clam_av = image_scan_trait.clam_av()
 
-filter_cfg = image_scan_trait.filters()
+filter_cfg = image_scan_trait.matching_config()
 
 license_cfg = image_scan_trait.licenses()
 
@@ -41,6 +41,7 @@ import ci.log
 ci.log.configure_default_logging()
 import ci.util
 import concourse.model.traits.image_scan as image_scan
+import concourse.model.traits.filter
 import delivery.client
 import github.compliance.report
 import protecode.util
@@ -55,7 +56,6 @@ from protecode.model import (
 logger = logging.getLogger('scan_container_images.step')
 
 ${step_lib('scan_container_images')}
-${step_lib('images')}
 ${step_lib('component_descriptor_util')}
 
 cfg_factory = ci.util.ctx().cfg_factory()
@@ -63,26 +63,12 @@ cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
 component_descriptor = parse_component_descriptor()
 
-image_filter_function = create_composite_filter_function(
-  include_image_references=${filter_cfg.include_image_references()},
-  exclude_image_references=${filter_cfg.exclude_image_references()},
-  include_image_names=${filter_cfg.include_image_names()},
-  exclude_image_names=${filter_cfg.exclude_image_names()},
-  include_component_names=${filter_cfg.include_component_names()},
-  exclude_component_names=${filter_cfg.exclude_component_names()},
-  include_component_versions=${filter_cfg.include_component_versions()},
-  exclude_component_versions=${filter_cfg.exclude_component_versions()},
+matching_configs = concourse.model.traits.filter.matching_configs_from_dicts(
+  dicts=${filter_cfg}
 )
 
-tar_filter_function = create_composite_filter_function(
-  include_image_references=(),
-  exclude_image_references=(),
-  include_image_names=(),
-  exclude_image_names=(),
-  include_component_names=${filter_cfg.include_component_names()},
-  exclude_component_names=${filter_cfg.exclude_component_names()},
-  include_component_versions=${filter_cfg.include_component_versions()},
-  exclude_component_versions=${filter_cfg.exclude_component_versions()},
+filter_function = concourse.model.traits.filter.filter_for_matching_configs(
+  configs=matching_configs
 )
 
 % if not protecode_scan.protecode_cfg_name():
@@ -99,12 +85,6 @@ print_protecode_info_table(
   reference_protecode_group_ids = ${protecode_scan.reference_protecode_group_ids()},
   protecode_group_url = protecode_group_url,
   cvss_version = CVSSVersion('${protecode_scan.cvss_version().value}'),
-  include_image_references=${filter_cfg.include_image_references()},
-  exclude_image_references=${filter_cfg.exclude_image_references()},
-  include_image_names=${filter_cfg.include_image_names()},
-  exclude_image_names=${filter_cfg.exclude_image_names()},
-  include_component_names=${filter_cfg.include_component_names()},
-  exclude_component_names=${filter_cfg.exclude_component_names()},
 )
 
 cve_threshold = ${protecode_scan.cve_threshold()}
@@ -118,8 +98,7 @@ results_generator = protecode.util.upload_grouped_images(
   processing_mode = ProcessingMode('${protecode_scan.processing_mode().value}'),
   parallel_jobs=${protecode_scan.parallel_jobs()},
   cve_threshold=cve_threshold,
-  image_filter_function=image_filter_function,
-  tar_filter_function=tar_filter_function,
+  filter_function=filter_function,
 )
 results = tuple(results_generator)
 
