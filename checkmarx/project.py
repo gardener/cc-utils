@@ -86,12 +86,14 @@ class CheckmarxProject:
             return False
 
         tm_start = datetime.datetime.now()
+        tm_now = tm_start
         result = scan_finished()
-        while not result and  datetime.datetime.now() - tm_start < timeout_seconds:
+        while not result and (tm_now - tm_start).total_seconds() < timeout_seconds:
             # keep polling until result is ready
             time.sleep(polling_interval_seconds)
             result = scan_finished()
-        if  tm_start >= timeout_seconds:
+            tm_now = datetime.datetime.now()
+        if  (tm_now - tm_start).total_seconds() >= timeout_seconds:
             scan = self.client.get_scan_state(scan_id=scan_id)
             raise RuntimeError(f'Scan of artifact "{scan.status.name=}", '
                 f'{scan_id} aborted after timeout {timeout_seconds}s')
