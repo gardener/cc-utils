@@ -113,9 +113,9 @@ def check_http_code(function):
     @functools.wraps(function)
     def http_checker(*args, **kwargs):
         result = function(*args, **kwargs)
-        if result.status_code < 200 or result.status_code >= 300:
+        if not result.ok:
             url = kwargs.get('url', None)
-            logger.warning('{c} - {m}: {u}'.format(c=result.status_code, m=result.content, u=url))
+            logger.warning(f'{result.status_code=} - {result.content=}: {url=}')
         result.raise_for_status()
         return result
     return http_checker
