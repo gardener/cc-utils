@@ -591,8 +591,9 @@ def copy_triages(
                     result += len(d[key])
         return result
 
-    from_triages = collections.defaultdict(lambda: collections.defaultdict(set))
-    to_triages = collections.defaultdict(lambda: collections.defaultdict(set))
+    datastructure_type = typing.Dict[str, typing.Dict[str, typing.Set[pm.Triage]]]
+    from_triages: datastructure_type = collections.defaultdict(lambda: collections.defaultdict(set))
+    to_triages: datastructure_type = collections.defaultdict(lambda: collections.defaultdict(set))
 
     # prepare datastructure for all known triages
     for from_result in from_results:
@@ -637,12 +638,16 @@ def copy_triages(
                         continue
 
                     for to_component_version in  to_component_versions[component_name]:
-                        if triage in to_triages[component_name][component_version]:
-                            # the triage is already present for this component and version
+                        if any(
+                            triage.applies_to_same_vulnerability_as(existing_triage)
+                            for existing_triage in to_triages[component_name][component_version]
+                        ):
+                            # a triage is already present for this vulnerability on this
+                            # component and version
                             logger.debug(
                                 f'Skipping triage {triage} for {component_name} in version '
-                                f'{component_version} as it is already present '
-                                f'on {to_result_id} ({to_result_name})'
+                                f'{component_version} as a triage for that vulnerability'
+                                f'it is already present on {to_result_id} ({to_result_name})'
                             )
                             continue
 

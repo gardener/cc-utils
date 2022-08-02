@@ -258,6 +258,11 @@ class Triage(ModelBase):
     def description(self):
         return self.raw.get('description')
 
+    def applies_to_same_vulnerability_as(self, other) -> bool:
+        if not isinstance(other, Triage):
+            return False
+        return self.vulnerability_id() == other.vulnerability_id()
+
     def __repr__(self):
         return (
             f'{self.__class__.__name__}: {self.id()} '
