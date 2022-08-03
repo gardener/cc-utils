@@ -637,7 +637,11 @@ def copy_triages(
                         )
                         continue
 
-                    for to_component_version in  to_component_versions[component_name]:
+                    for to_component_version in to_component_versions[component_name]:
+                        if triage.component_version() != to_component_version:
+                            # triage applies to another version of the component
+                            continue
+
                         if any(
                             triage.applies_to_same_vulnerability_as(existing_triage)
                             for existing_triage in to_triages[component_name][component_version]
