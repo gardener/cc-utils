@@ -234,7 +234,14 @@ with different contents, all variants are subject to being scanned.</p>
 </tr>
 <tr class="row-even"><td><p>issue_policies</p></td>
 <td><p>no</p></td>
-<td><p>IssuePolicies(max_processing_time_days=MaxProcessingTimesDays(very_high_or_greater=30, high=30, medium=90, low=120))</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">max_processing_time_days</span><span class="p">:</span><span class="w"></span>
+<span class="w">  </span><span class="nt">high</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span><span class="w"></span>
+<span class="w">  </span><span class="nt">low</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">120</span><span class="w"></span>
+<span class="w">  </span><span class="nt">medium</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">90</span><span class="w"></span>
+<span class="w">  </span><span class="nt">very_high_or_greater</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span><span class="w"></span>
+</pre></div>
+</div>
+</p></td>
 <td><p>IssuePolicies</p></td>
 <td><p>defines issues policies (e.g. SLAs for maximum processing times</p></td>
 </tr>
