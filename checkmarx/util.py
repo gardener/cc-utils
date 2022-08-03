@@ -261,10 +261,17 @@ def scan_gh_artifact(
     github_api = ccc.github.github_api_from_gh_access(access=scan_artifact.source.access)
 
     # access type has to be github thus we can call these methods
-    gh_repo = github_api.repository(
-        owner=scan_artifact.source.access.org_name(),
-        repository=scan_artifact.source.access.repository_name(),
-    )
+    try:
+        gh_repo = github_api.repository(
+            owner=scan_artifact.source.access.org_name(),
+            repository=scan_artifact.source.access.repository_name(),
+        )
+    except Exception as e:
+        logger.error(f'Failed to access Github repository, {scan_artifact.source.access.org_name()},'
+            f'{scan_artifact.source.access.repository_name()}, on: '
+            f'{scan_artifact.source.access.hostname()}')
+        raise e
+
     try:
         commit_hash = product.util.guess_commit_from_source(
             artifact_name=scan_artifact.name,
