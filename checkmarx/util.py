@@ -1,5 +1,6 @@
 import concurrent.futures
 import datetime
+from dateutil import parser
 import functools
 import logging
 import shutil
@@ -212,33 +213,40 @@ def upload_and_scan_gh_artifact(
             repo=gh_repo,
             path_filter_func=path_filter_func,
         )
-        return cx_project.poll_and_retrieve_scan(
-            scan_id=scan_id,
-            component=artifact.component,
-            source=artifact.source,
-        )
-
-    last_scan = last_scans[0]
-    scan_id = last_scan.id
-
-    if cx_project.is_scan_finished(last_scan):
-        clogger.info('no running scan found. Comparing hashes')
-
-        if force or cx_project.is_scan_necessary(hash=source_commit_hash):
-            clogger.info('current hash differs from remote hash in cx. '
-                         f'New scan started for hash={source_commit_hash}')
-            scan_id = download_repo_and_create_scan(
-                artifact_name=artifact.name,
-                artifact_version=artifact.source.version,
-                cx_project=cx_project,
-                hash=source_commit_hash,
-                repo=gh_repo,
-                path_filter_func=path_filter_func,
-            )
-        else:
-            clogger.info('version of hash has already been scanned. Getting results of last scan')
     else:
-        clogger.info(f'found a running scan id={last_scan.id}. Polling it')
+        last_scan = last_scans[0]
+        scan_id = last_scan.id
+
+        if cx_project.is_scan_finished(last_scan):
+            clogger.info('no running scan found. Comparing hashes')
+            if force or cx_project.is_scan_necessary(hash=source_commit_hash):
+                clogger.info('current hash differs from remote hash in cx. '
+                            f'New scan started for hash={source_commit_hash}')
+                scan_id = download_repo_and_create_scan(
+                    artifact_name=artifact.name,
+                    artifact_version=artifact.source.version,
+                    cx_project=cx_project,
+                    hash=source_commit_hash,
+                    repo=gh_repo,
+                    path_filter_func=path_filter_func,
+                )
+            else:
+                clogger.info('version/hash has already been scanned. Getting results of last scan')
+        else:
+            clogger.info(f'found a running scan id={last_scan.id}. Polling it')
+            start_time = parser.parse(last_scan.dateAndTime.startedOn)
+            # ignore if older than two hours, sometimes scans keep hanging and never end
+            if (datetime.datetime.now() - start_time).total_seconds() > 2 * 60 * 60:
+                clogger.info(f'running scan id={last_scan.id} found but older than two hours. '
+                    f'Starting new scan hash={source_commit_hash}')
+                scan_id = download_repo_and_create_scan(
+                    artifact_name=artifact.name,
+                    artifact_version=artifact.source.version,
+                    cx_project=cx_project,
+                    hash=source_commit_hash,
+                    repo=gh_repo,
+                    path_filter_func=path_filter_func,
+                )
 
     scan_result = cx_project.poll_and_retrieve_scan(
         scan_id=scan_id,
