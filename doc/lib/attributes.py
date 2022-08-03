@@ -13,11 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
+import enum
 import os
 import sys
 import textwrap
 import typing
-import enum
 import yaml
 
 
@@ -86,6 +87,13 @@ class AttributesDocumentation:
     def _default_value(self, default_value):
         if callable(default_value):
             return default_value.__name__
+
+        elif dataclasses.is_dataclass(default_value):
+            as_yaml = yaml.dump(dataclasses.asdict(default_value), Dumper=SafeEnumDumper)
+            return (
+                '.. code-block:: yaml\n\n'
+                f'{textwrap.indent(as_yaml, "  ")}'
+            )
 
         elif isinstance(default_value, enum.Enum):
             return f'`{default_value.value}`'
