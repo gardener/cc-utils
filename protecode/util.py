@@ -21,6 +21,8 @@ import logging
 import tabulate
 import typing
 
+import requests.exceptions
+
 import ccc.delivery
 import ccc.gcp
 import ccc.protecode
@@ -709,13 +711,13 @@ def copy_triages(
                             group_id=to_group_id,
                             component_version=component_version,
                         )
-                    except Exception as e:
-                        logger.error(
+                    except requests.exceptions.HTTPError as e:
+                        # we will re-try importing every scan, so just print a warning
+                        logger.warning(
                             f'An error occurred when importing {triage} to {component_name} '
                             f'in version {component_version} for scan {to_result_id} '
                             f'({to_result_name}): {e}'
                         )
-                        raise
 
 
 def auto_triage(
