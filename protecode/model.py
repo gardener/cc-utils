@@ -266,7 +266,8 @@ class Triage(ModelBase):
     def __repr__(self):
         return (
             f'{self.__class__.__name__}: {self.id()} '
-            f'({self.component_name()} {self.component_version()}, {self.vulnerability_id()})'
+            f'({self.component_name()} {self.component_version()}, '
+            f'{self.vulnerability_id()}, Scope: {self.scope().value})'
         )
 
     def __eq__(self, other):
