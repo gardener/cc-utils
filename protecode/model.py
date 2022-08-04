@@ -121,7 +121,7 @@ class Component(ModelBase):
     def name(self) -> str:
         return self.raw.get('lib')
 
-    def version(self):
+    def version(self) -> str:
         return self.raw.get('version')
 
     def vulnerabilities(self) -> 'typing.Generator[Vulnerability,None, None]':
@@ -192,7 +192,7 @@ class Vulnerability(ModelBase):
     def historical(self):
         return not self.raw.get('exact')
 
-    def cve(self):
+    def cve(self) -> str:
         return self.raw.get('vuln').get('cve')
 
     def cve_severity(self, cvss_version=CVSSVersion.V3) -> float:

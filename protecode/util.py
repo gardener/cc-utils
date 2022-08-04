@@ -391,7 +391,7 @@ def artifact_groups(
 
 
 def enum_triages(
-    result: pm.AnalysisResult
+    result: pm.AnalysisResult,
 ) -> typing.Iterator[typing.Tuple[pm.Component, pm.Triage]]:
     for component in result.components():
         for vulnerability in component.vulnerabilities():
