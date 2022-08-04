@@ -399,6 +399,19 @@ def enum_triages(
                 yield component, triage
 
 
+def enum_vulnerabilities(
+    result: pm.AnalysisResult,
+    component_name: str = None,
+    component_version: str = None,
+) -> typing.Iterator[pm.Vulnerability]:
+    for component in result.components():
+        if component_name and component.name() != component_name:
+            continue
+        if component_version and component.version() != component_version:
+            continue
+        yield from component.vulnerabilities()
+
+
 def enum_component_versions(
     scan_result: pm.AnalysisResult,
     component_name: str,
@@ -627,52 +640,82 @@ def copy_triages(
         # - if the component is present in the given version AND
         # - if the triage is not already present for this version
         for component_name in from_triages.keys():
+
+            if not component_name in to_component_versions.keys():
+                # the target scan result does not have a component with the same name
+                logger.debug(
+                    f'Skipping triages for {component_name} as component is not present '
+                    f'on {to_result_id} ({to_result_name})'
+                )
+                continue
+
             for component_version in from_triages[component_name].keys():
+
+                if not component_version in to_component_versions[component_name]:
+                # the target scan result does not have the component in the same version
+                    logger.debug(
+                        f'Skipping triages for {component_name} in version {component_version} '
+                        f'as the component is not present in that version on {to_result_id} '
+                        f'({to_result_name})'
+                    )
+                    continue
+
+                to_vulnerabilities = {
+                    v.cve(): v
+                    for v in enum_vulnerabilities(
+                        result=to_result,
+                        component_name=component_name,
+                        component_version=component_version,
+                    )
+                }
                 for triage in from_triages[component_name][component_version]:
-                    if not component_name in to_component_versions.keys():
-                        # the target scan result does not have a component with the same name
+                    # at this point we know that the triages we get are potentially relevant (i.e.
+                    # they are for an existing component name and version on the target result)
+                    # Perform some final checks to avoid redundant imports
+                    if any(
+                        triage.applies_to_same_vulnerability_as(existing_triage)
+                        for existing_triage in to_triages[component_name][component_version]
+                    ):
+                        # a triage is already present for this vulnerability on this
+                        # component and version
                         logger.debug(
-                            f'Skipping triage for {component_name} as component is not present '
-                            f'on {to_result_id} ({to_result_name})'
+                            f'Skipping triage {triage} for {component_name} in version '
+                            f'{component_version} as a triage for that vulnerability'
+                            f'it is already present on {to_result_id} ({to_result_name})'
                         )
                         continue
 
-                    for to_component_version in to_component_versions[component_name]:
-                        if triage.component_version() != to_component_version:
-                            # triage applies to another version of the component
-                            continue
-
-                        if any(
-                            triage.applies_to_same_vulnerability_as(existing_triage)
-                            for existing_triage in to_triages[component_name][component_version]
-                        ):
-                            # a triage is already present for this vulnerability on this
-                            # component and version
-                            logger.debug(
-                                f'Skipping triage {triage} for {component_name} in version '
-                                f'{component_version} as a triage for that vulnerability'
-                                f'it is already present on {to_result_id} ({to_result_name})'
-                            )
-                            continue
-
+                    if (
+                        (cve := triage.vulnerability_id()) in to_vulnerabilities
+                        and to_vulnerabilities[cve].historical()
+                    ):
+                        # the vulnerability is historical. Protecode returns an error if we try
+                        # to triage it
                         logger.debug(
-                            f'Adding triage {triage} to {component_name} in version '
-                            f'{component_version} to {to_result_id} ({to_result_name})'
+                            f'Skipping triage {triage} for {component_name} in version '
+                            f'{component_version} as a the vulnerability is classified '
+                            f'as historical on {to_result_id} ({to_result_name})'
                         )
-                        try:
-                            protecode_api.add_triage(
-                                triage=triage,
-                                product_id=to_result_id,
-                                group_id=to_group_id,
-                                component_version=to_component_version,
-                            )
-                        except Exception as e:
-                            logger.error(
-                                f'An error occurred when importing {triage} to {component_name} '
-                                f'in version {component_version} for scan {to_result_id} '
-                                f'({to_result_name}): {e}'
-                            )
-                            raise
+                        continue
+
+                    logger.debug(
+                        f'Adding triage {triage} to {component_name} in version '
+                        f'{component_version} to {to_result_id} ({to_result_name})'
+                    )
+                    try:
+                        protecode_api.add_triage(
+                            triage=triage,
+                            product_id=to_result_id,
+                            group_id=to_group_id,
+                            component_version=component_version,
+                        )
+                    except Exception as e:
+                        logger.error(
+                            f'An error occurred when importing {triage} to {component_name} '
+                            f'in version {component_version} for scan {to_result_id} '
+                            f'({to_result_name}): {e}'
+                        )
+                        raise
 
 
 def auto_triage(
