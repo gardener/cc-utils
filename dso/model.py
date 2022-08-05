@@ -1,6 +1,5 @@
 import dataclasses
 import datetime
-import enum
 
 import gci.componentmodel as cm
 
