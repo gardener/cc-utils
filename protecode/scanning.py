@@ -302,6 +302,7 @@ class ResourceGroupProcessor:
             protecode.util.add_assessments_if_none_exist(
                 tgt=target,
                 tgt_group_id=self.group_id,
+                assessments=component_vulnerabilities_with_assessments,
                 protecode_client=self.protecode_client,
             )
 
