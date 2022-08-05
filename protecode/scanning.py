@@ -294,8 +294,7 @@ class ResourceGroupProcessor:
         )
 
         logger.info(
-            f'found {len(component_vulnerabilities_with_assessments)} relevant triages to import for'
-            f'{artifact_group=}.'
+            f'found {len(component_vulnerabilities_with_assessments)} relevant triages to import'
         )
 
         for target in target_results:
