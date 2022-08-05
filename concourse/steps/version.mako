@@ -18,7 +18,8 @@ legacy_version_file = os.path.join(job_step.output('version_path'), 'number')
 if (read_callback := version_trait.read_callback()):
   read_callback = os.path.join(main_repo.resource_name(), read_callback)
 
-if (write_callback := version_trait.write_callback()):
+# Assign empty string if None, as we'd template 'None' (the string) later otherwise
+if (write_callback := version_trait.write_callback() or ''):
   write_callback = os.path.join(main_repo.resource_name(), write_callback)
 
 version_operation = version_trait._preprocess()
@@ -104,11 +105,12 @@ if os.path.isdir(os.path.join(ci.paths.repo_root, '.git')):
   except:
     pass
 
-if version_interface is version_trait.VersionInterface.CALLBACK and write_callback is not None:
+write_callback = '${write_callback}' ## Either a path or an empty string
+if version_interface is version_trait.VersionInterface.CALLBACK and write_callback:
   write_version(
     version_interface=version_interface,
     version_str=effective_version,
-    path='${write_callback}',
+    path=write_callback,
   )
 elif version_interface is version_trait.VersionInterface.FILE:
   write_version(
