@@ -390,16 +390,11 @@ class ProtecodeApi:
     ):
         url = self._routes.triage()
         try:
-            res = self._session.put(
+            res = self._put(
                 url=url,
                 json=triage_dict,
-            )
-            res.raise_for_status()
-            if not res.ok:
-                logger.warning(
-                    f'{res.url=}: {res.status_code=} {res.content=}'
-                )
-            return res.json()
+            ).json()
+            return res
         except requests.exceptions.HTTPError as e:
             resp: requests.Response = e.response
             logger.warning(f'{url=} {resp.status_code=} {resp.content=} {triage_dict=}')
