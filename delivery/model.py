@@ -40,8 +40,8 @@ class Sprint:
 @dataclasses.dataclass(frozen=True) # deduplicate w/ modelclass in delivery-service/osinfo/model.py
 class OsReleaseInfo:
     name: str
-    greatest_version: str | None
-    eol_date: datetime.date | None
+    greatest_version: str | None = None
+    eol_date: datetime.date | None = None
 
     @property
     def parsed_version(self) -> awesomeversion.AwesomeVersion:
