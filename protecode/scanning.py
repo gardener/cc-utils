@@ -26,7 +26,7 @@ class ResourceGroupProcessor:
         self.cvss_threshold = cvss_threshold
         self.protecode_client = protecode_client
 
-    def products_with_relevant_triages(
+    def _products_with_relevant_triages(
         self,
         artifact_group: pm.ArtifactGroup,
     ) -> typing.Iterator[pm.Product]:
@@ -50,6 +50,14 @@ class ResourceGroupProcessor:
                 f'Group {id}'
             )
             yield from products
+
+    def iter_components_with_vulnerabilities_and_assessments(self, artifact_group: pm.ArtifactGroup):
+        for product in self._products_with_relevant_triages(artifact_group=artifact_group):
+            result = self.protecode_client.wait_for_scan_result(product_id=product.id())
+
+            yield from protecode.util.iter_vulnerabilities_with_assessments(
+                result=result
+            )
 
     def scan_requests(
         self,
@@ -278,29 +286,24 @@ class ResourceGroupProcessor:
                 processing_mode=processing_mode,
             )
         )
+        target_results = [result for _, result in scan_requests_and_results]
 
-        # fetch all relevant scans from all reference protecode groups
-        products_with_triages = list(
-            self.products_with_relevant_triages(
-                artifact_group=artifact_group,
-            )
+        # todo: deduplicate/merge assessments
+        component_vulnerabilities_with_assessments = tuple(
+            self.iter_components_with_vulnerabilities_and_assessments(artifact_group=artifact_group)
         )
-        # We could (should?) cache these requests.
-        scans_with_triages = [
-            self.protecode_client.scan_result(product_id=p.product_id())
-            for p in products_with_triages
-        ]
 
         logger.info(
-            f'found {len(scans_with_triages)} scans with relevant triages to import for artifact '
-            f'group {artifact_group}.'
+            f'found {len(component_vulnerabilities_with_assessments)} relevant triages to import for'
+            f'{artifact_group=}.'
         )
-        protecode.util.copy_triages(
-            from_results=scans_with_triages,
-            to_results=[result for _, result in scan_requests_and_results],
-            to_group_id=self.group_id,
-            protecode_api=self.protecode_client,
-        )
+
+        for target in target_results:
+            protecode.util.add_assessments_if_none_exist(
+                tgt=target,
+                tgt_group_id=self.group_id,
+                protecode_client=self.protecode_client,
+            )
 
         # finally, auto-triage remaining vulnerabilities (updates fetched result) if configured.
         scan_requests_and_results = [

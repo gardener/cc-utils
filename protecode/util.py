@@ -584,140 +584,78 @@ def _find_scan_results(
     return scan_results
 
 
-def copy_triages(
-    from_results: typing.Iterable[pm.AnalysisResult],
-    to_results: typing.Iterable[pm.AnalysisResult],
-    to_group_id: int,
-    protecode_api: protecode.client.ProtecodeApi,
+def iter_vulnerabilities(
+    result: pm.AnalysisResult,
+) -> typing.Generator[tuple[pm.Component, pm.Vulnerability], None, None]:
+    for component in result.components():
+        for vulnerability in component.vulnerabilities():
+            yield component, vulnerability
+
+
+def iter_vulnerabilities_with_assessments(
+    result: pm.AnalysisResult,
 ):
-    '''Copy triages from a number of source scans to several target scans.
+    for component, vulnerability in iter_vulnerabilities(result=result):
+        if not vulnerability.has_triage():
+            continue
+        yield component, vulnerability, tuple(vulnerability.triages())
 
-    Triages are deduplicated when copying. Also, triages will only be imported if the triaged
-    component is present on the target and the triage isn't already in place.
+
+def add_assessments_if_none_exist(
+    tgt: pm.AnalysisResult,
+    tgt_group_id: int,
+    assessments: typing.Iterable[tuple[pm.Component, pm.Vulnerability, tuple[pm.Triage]]],
+    protecode_client: protecode.client.ProtecodeApi,
+):
     '''
-    # helper function for logging
-    def _len(d: typing.Dict) -> int:
-        result = 0
-        for key in d.keys():
-            match d[key]:
-                case dict():
-                    result += _len(d[key])
-                case set():
-                    result += len(d[key])
-        return result
+    add assessments to given protecode "app"; skip given assessments that are not relevant for
+    target "app" (either because there are already assessments, or vulnerabilities do not exit).
+    Assessments are added "optimistically", ignoring version differences between source and target
+    component versions (assumption: assessments are valid for all component-versions).
+    '''
+    tgt_components_by_name = collections.defaultdict(list)
+    for c in tgt.components():
+        tgt_components_by_name[c.name()].append(c)
 
-    datastructure_type = typing.Dict[str, typing.Dict[str, typing.Set[pm.Triage]]]
-    from_triages: datastructure_type = collections.defaultdict(lambda: collections.defaultdict(set))
-    to_triages: datastructure_type = collections.defaultdict(lambda: collections.defaultdict(set))
+    for component, vulnerability, triages in assessments:
+        if not component.name() in tgt_components_by_name:
+            continue
+        print(f' {component.name()=}')
 
-    # prepare datastructure for all known triages
-    for from_result in from_results:
-        for component, triage in enum_triages(from_result):
-            from_triages[component.name()][component.version()].add(triage)
-
-    to_ids = {p.product_id() for p in to_results}
-    if not (source_triages := _len(from_triages)):
-        from_ids = {p.product_id() for p in from_results}
-        logger.debug(f'No triages to transport from {from_ids} to {to_ids}')
-        return
-
-    logger.info(f'Found {source_triages} triages to import to products {to_ids}')
-
-    for to_result in to_results:
-        to_result_id = to_result.product_id()
-        to_result_name = to_result.display_name()
-        for component, triage in enum_triages(to_result):
-            to_triages[component.name()][component.version()].add(triage)
-
-        logger.debug(
-            f'{_len(to_triages)} already present on {to_result_id} ({to_result_name})'
-        )
-
-        to_component_versions = {
-            component.name(): list(enum_component_versions(to_result, component.name()))
-            for component in to_result.components()
-        }
-
-        # apply triages
-        # - if the component is present in the given version AND
-        # - if the triage is not already present for this version
-        for component_name in from_triages.keys():
-
-            if not component_name in to_component_versions.keys():
-                # the target scan result does not have a component with the same name
-                logger.debug(
-                    f'Skipping triages for {component_name} as component is not present '
-                    f'on {to_result_id} ({to_result_name})'
-                )
+        for tgt_component in tgt_components_by_name[component.name()]:
+            for tgt_vulnerability in tgt_component.vulnerabilities():
+                if tgt_vulnerability.cve() != vulnerability.cve():
+                    continue
+                if tgt_vulnerability.historical():
+                    continue
+                if tgt_vulnerability.has_triage():
+                    continue
+                # vulnerability is still "relevant" (not obsolete and unassessed)
+                break
+            else:
+                # vulnerability is not longer "relevant" -> skip
                 continue
 
-            for component_version in from_triages[component_name].keys():
-
-                if not component_version in to_component_versions[component_name]:
-                # the target scan result does not have the component in the same version
-                    logger.debug(
-                        f'Skipping triages for {component_name} in version {component_version} '
-                        f'as the component is not present in that version on {to_result_id} '
-                        f'({to_result_name})'
+            product_id = tgt.product_id()
+            for triage in triages:
+                try:
+                    cve = vulnerability.cve()
+                    print(
+                        f'adding assessments to {product_id=} {component.name()=} {cve=}'
                     )
-                    continue
-
-                to_vulnerabilities = {
-                    v.cve(): v
-                    for v in enum_vulnerabilities(
-                        result=to_result,
-                        component_name=component_name,
-                        component_version=component_version,
+                    protecode_client.add_triage(
+                        triage=triage,
+                        product_id=product_id,
+                        group_id=tgt_group_id,
+                        component_version=tgt_component.version(),
                     )
-                }
-                for triage in from_triages[component_name][component_version]:
-                    # at this point we know that the triages we get are potentially relevant (i.e.
-                    # they are for an existing component name and version on the target result)
-                    # Perform some final checks to avoid redundant imports
-                    if any(
-                        triage.applies_to_same_vulnerability_as(existing_triage)
-                        for existing_triage in to_triages[component_name][component_version]
-                    ):
-                        # a triage is already present for this vulnerability on this
-                        # component and version
-                        logger.debug(
-                            f'Skipping triage {triage} for {component_name} in version '
-                            f'{component_version} as a triage for that vulnerability'
-                            f'it is already present on {to_result_id} ({to_result_name})'
-                        )
-                        continue
-
-                    if (
-                        (cve := triage.vulnerability_id()) in to_vulnerabilities
-                        and to_vulnerabilities[cve].historical()
-                    ):
-                        # the vulnerability is historical. Protecode returns an error if we try
-                        # to triage it
-                        logger.debug(
-                            f'Skipping triage {triage} for {component_name} in version '
-                            f'{component_version} as a the vulnerability is classified '
-                            f'as historical on {to_result_id} ({to_result_name})'
-                        )
-                        continue
-
-                    logger.debug(
-                        f'Adding triage {triage} to {component_name} in version '
-                        f'{component_version} to {to_result_id} ({to_result_name})'
+                except requests.exceptions.HTTPError as e:
+                    # we will re-try importing every scan, so just print a warning
+                    logger.warning(
+                        f'An error occurred importing {triage=} to {component.name()=} '
+                        f'in version {component.version()} for scan {product_id} '
+                        f'{e}'
                     )
-                    try:
-                        protecode_api.add_triage(
-                            triage=triage,
-                            product_id=to_result_id,
-                            group_id=to_group_id,
-                            component_version=component_version,
-                        )
-                    except requests.exceptions.HTTPError as e:
-                        # we will re-try importing every scan, so just print a warning
-                        logger.warning(
-                            f'An error occurred when importing {triage} to {component_name} '
-                            f'in version {component_version} for scan {to_result_id} '
-                            f'({to_result_name}): {e}'
-                        )
 
 
 def auto_triage(
