@@ -53,7 +53,7 @@ class ResourceGroupProcessor:
 
     def iter_components_with_vulnerabilities_and_assessments(self, artifact_group: pm.ArtifactGroup):
         for product in self._products_with_relevant_triages(artifact_group=artifact_group):
-            result = self.protecode_client.wait_for_scan_result(product_id=product.id())
+            result = self.protecode_client.wait_for_scan_result(product_id=product.product_id())
 
             yield from protecode.util.iter_vulnerabilities_with_assessments(
                 result=result
