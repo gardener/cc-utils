@@ -620,7 +620,6 @@ def add_assessments_if_none_exist(
     for component, vulnerability, triages in assessments:
         if not component.name() in tgt_components_by_name:
             continue
-        print(f' {component.name()=}')
 
         for tgt_component in tgt_components_by_name[component.name()]:
             for tgt_vulnerability in tgt_component.vulnerabilities():
@@ -639,10 +638,6 @@ def add_assessments_if_none_exist(
             product_id = tgt.product_id()
             for triage in triages:
                 try:
-                    cve = vulnerability.cve()
-                    print(
-                        f'adding assessments to {product_id=} {component.name()=} {cve=}'
-                    )
                     protecode_client.add_triage(
                         triage=triage,
                         product_id=product_id,
