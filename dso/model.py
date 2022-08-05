@@ -17,7 +17,7 @@ class ScanArtifact:
     source: cm.ComponentSource
 
 
-class Datasource(enum.Enum):
+class Datasource:
     WHITESOURCE = 'whitesource'
     BDBA = 'bdba' # formerly protecode
     CHECKMARX = 'checkmarx'
@@ -57,7 +57,7 @@ def component_artefact_id_from_ocm(
     )
 
 
-class Datatype(enum.Enum):
+class Datatype:
     VULNERABILITIES_AGGREGATED = 'vulnerabilities/aggregated'
     VULNERABILITIES_RAW = 'vulnerabilities/raw'
     MALWARE = 'malware'
