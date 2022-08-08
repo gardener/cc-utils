@@ -149,6 +149,18 @@ class PullRequestEvent(EventBase):
             label.get('name') for label in self.raw.get('pull_request').get('labels')
         ]
 
+    def updated_label_name(self) -> str:
+        '''return the name of the label that caused this event to be sent
+
+        Will raise an error unless the action of the event is 'labeled' or 'unlabeled'. The returned
+        name will be the name of the label that was added or removed respectively.
+        '''
+        if not self.action() in [PullRequestAction.LABELED, PullRequestAction.UNLABELED]:
+            raise RuntimeError(
+                "Unable to determine updated label for actions other than 'labeled' and 'unlabeled'"
+            )
+        return self.raw['label']['name']
+
     def fork(self):
         if (pr_info := self.raw.get('pull_request')):
             if (head_info := pr_info.get('head')):

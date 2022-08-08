@@ -60,9 +60,21 @@ def process_pr_event(
             )
         return
 
+    validate_pipeline_definition = pr_event.action() in [
+        PullRequestAction.OPENED, PullRequestAction.SYNCHRONIZE
+    ]
+    # also trigger a validation if the label was removed. This is included to allow manual
+    # unlabeling to trigger a validation.
+    # If the label was removed automatically this is, of course, redundant since the check already
+    # succeeded previously.
+    pipeline_validation_tagging_label = 'ci/broken-pipeline-definition'
+    validate_pipeline_definition |= (
+        pr_event.action() is PullRequestAction.UNLABELED
+        and pr_event.updated_label_name() == pipeline_validation_tagging_label
+    )
     if (
         pr_modified_pipeline_definitions(pr_event, cfg_set)
-        and pr_event.action() in [PullRequestAction.OPENED, PullRequestAction.SYNCHRONIZE]
+        and validate_pipeline_definition
     ):
         logger.info(f'Validating .ci/pipeline-definition for PR #{pr_event.number()}')
         validate_pipeline_definitions(
@@ -71,7 +83,7 @@ def process_pr_event(
             whd_cfg=whd_cfg,
             pr_event=pr_event,
             github_helper=github_helper,
-            tagging_label='ci/broken-pipeline-definition',
+            tagging_label=pipeline_validation_tagging_label,
         )
 
     for concourse_api in concourse_clients:
