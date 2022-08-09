@@ -203,6 +203,23 @@ def validate_pipeline_definitions(
             branch=pr_event.head_ref(),
             job_mapping=job_mapping,
         )
+    except concourse.replicator.PipelineValidationError as e:
+        # If validation fails add a comment on the PR iff we haven't already commented, as
+        # tracked by label
+        logger.warning(
+            f'Pipeline-definition in PR #{pr_number} of repository {repo_url} failed '
+            'validation. Commenting on PR.'
+        )
+        github_helper.add_comment_to_pr(
+            pull_request_number=pr_number,
+            comment=(
+                'This PR proposes changes that would break the pipeline definition:\n'
+                f'```\n{e}\n```\n'
+            ),
+        )
+        if tagging_label not in pr_event.label_names():
+            github_helper.add_labels_to_pull_request(pr_number, tagging_label)
+    else:
         # validation succeeded. Remove the label again, if it is currently set.
         if tagging_label in pr_event.label_names():
             logger.info(
@@ -214,22 +231,6 @@ def validate_pipeline_definitions(
                 pull_request_number=pr_number,
                 comment='The pipeline-definition has been fixed.',
             )
-    except concourse.replicator.PipelineValidationError as e:
-        # If validation fails add a comment on the PR iff we haven't already commented, as
-        # tracked by label
-        if tagging_label not in pr_event.label_names():
-            logger.warning(
-                f'Pipeline-definition in PR #{pr_number} of repository {repo_url} failed '
-                'validation. Commenting on PR.'
-            )
-            github_helper.add_comment_to_pr(
-                pull_request_number=pr_number,
-                comment=(
-                    'This PR proposes changes that would break the pipeline definition:\n'
-                    f'```\n{e}\n```\n'
-                ),
-            )
-            github_helper.add_labels_to_pull_request(pr_number, tagging_label)
 
 
 def set_pr_labels(
