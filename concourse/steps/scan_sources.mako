@@ -108,7 +108,7 @@ scan_results_grouped = scan_result_group_collection(
   severity_threshold=severity_threshold,
 )
 
-logger.info(f'processing {result_group.issue_type=}')
+logger.info('Creating and updating github issues')
 github.compliance.report.create_or_update_github_issues(
   result_group_collection=scan_results_grouped,
   max_processing_days=max_processing_days,
