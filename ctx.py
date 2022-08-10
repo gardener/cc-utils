@@ -48,6 +48,13 @@ class CtxCfg:
     github_repo_mappings: tuple[GithubRepoMapping, ...] = ()
     cache_dir: str | None = None # used (e.g.) for caching component-descriptors
 
+    @property
+    def component_descriptor_cache_dir(self) -> str | None:
+        if not self.cache_dir:
+            return None
+        else:
+            return os.path.join(self.cache_dir, 'component-descriptors')
+
 
 @dataclasses.dataclass
 class GlobalConfig:
