@@ -210,21 +210,14 @@ with different contents, all variants are subject to being scanned.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>filters</p></td>
+<tr class="row-even"><td><p>matching_config</p></td>
 <td><p>no</p></td>
-<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">exclude_component_names</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
-<span class="nt">exclude_component_versions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
-<span class="nt">exclude_image_names</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
-<span class="nt">exclude_image_references</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
-<span class="nt">include_component_names</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
-<span class="nt">include_component_versions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
-<span class="nt">include_image_names</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
-<span class="nt">include_image_references</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span><span class="w"></span>
 </pre></div>
 </div>
 </p></td>
-<td><p>FilterCfg</p></td>
-<td><p>optional filters to restrict container images to process</p></td>
+<td><p>list</p></td>
+<td><p>a list of configs to use for matching</p></td>
 </tr>
 <tr class="row-odd"><td><p>notify</p></td>
 <td><p>no</p></td>
@@ -313,85 +306,6 @@ available variables:
 <td><p>LicenseCfg</p></td>
 <td><p>if present, license checks will be done using available scanners (currently, this is
 only implemented for “protecode” / BDBA)</p></td>
-</tr>
-</tbody>
-</table>
-<h2>filters <em>(FilterCfg)</em> Attributes<a class="headerlink" href="#trait-image-scan" title="Permalink to this heading">¶</a></h2>
-<table class="colwidths-auto docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>name</p></th>
-<th class="head"><p>required?</p></th>
-<th class="head"><p>default</p></th>
-<th class="head"><p>type</p></th>
-<th class="head"><p>explanation</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p>include_image_references</p></td>
-<td><p>no</p></td>
-<td><p>()</p></td>
-<td><p>str</p></td>
-<td><p>a list of regular expressions. If configured, only matching image references are
-processed. By default, all image references are considered.</p></td>
-</tr>
-<tr class="row-odd"><td><p>exclude_image_references</p></td>
-<td><p>no</p></td>
-<td><p>()</p></td>
-<td><p>str</p></td>
-<td><p>a list of regular expressions. If configured, matching image references are
-exempted from processing. Has precedence over include_image_references.
-By default, no image references are excluded.</p></td>
-</tr>
-<tr class="row-even"><td><p>include_image_names</p></td>
-<td><p>no</p></td>
-<td><p>()</p></td>
-<td><p>str</p></td>
-<td><p>a list of regular expressions. If configured, only matching image names are
-processed. By default, all image references are considered.</p></td>
-</tr>
-<tr class="row-odd"><td><p>exclude_image_names</p></td>
-<td><p>no</p></td>
-<td><p>()</p></td>
-<td><p>str</p></td>
-<td><p>a list of regular expressions. If configured, matching image names are
-exempted from processing. Has precedence over include_image_references.
-By default, no image references are excluded.</p></td>
-</tr>
-<tr class="row-even"><td><p>include_component_names</p></td>
-<td><p>no</p></td>
-<td><p>()</p></td>
-<td><p>str</p></td>
-<td><p>a list of regular expressions. If configured, only image references from components
-whose name matches are considered.</p></td>
-</tr>
-<tr class="row-odd"><td><p>exclude_component_names</p></td>
-<td><p>no</p></td>
-<td><p>()</p></td>
-<td><p>str</p></td>
-<td><p>a list of regular expressions. If configured, image references from components whose
-name matches are excluded from further processing. Has precedence over
-include_component_names.</p></td>
-</tr>
-<tr class="row-even"><td><p>include_component_versions</p></td>
-<td><p>no</p></td>
-<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span><span class="w"></span>
-</pre></div>
-</div>
-</p></td>
-<td><p>str</p></td>
-<td><p>a list of mappings of component-names to versions to be included. If
-configured, only these versions will be included for the given components.</p></td>
-</tr>
-<tr class="row-odd"><td><p>exclude_component_versions</p></td>
-<td><p>no</p></td>
-<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span><span class="w"></span>
-</pre></div>
-</div>
-</p></td>
-<td><p>str</p></td>
-<td><p>a list of mappings of component-names to versions to be excluded. If
-configured, the given versions will be excluded for the given components.
-Takes precedence over include_component_versions.</p></td>
 </tr>
 </tbody>
 </table>
