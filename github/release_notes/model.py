@@ -69,7 +69,7 @@ class ReleaseNote:
     text: str
     reference: Reference
     user_login: str
-    is_current_repo: bool = field(compare=False)
+    is_current_repo: bool
     from_same_github_instance: str
     source_component: gci.componentmodel.Component = field(compare=False)
 
