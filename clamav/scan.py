@@ -48,7 +48,7 @@ class ResourceScanResult:
 
 
 @dataclasses.dataclass
-class MalwarescanEvidenceRequestV1(saf.model.EvidenceRequestV1):
+class MalwarescanEvidenceRequest(saf.model.EvidenceRequest):
     EvidenceDataBinary: typing.List[ResourceScanResult]
 
 
