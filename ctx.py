@@ -46,6 +46,7 @@ class GithubRepoMapping:
 class CtxCfg:
     config_dir: typing.Optional[str] = None # points to "root" cfg-repo dir
     github_repo_mappings: tuple[GithubRepoMapping, ...] = ()
+    cache_dir: str | None = None # used (e.g.) for caching component-descriptors
 
 
 @dataclasses.dataclass
