@@ -103,13 +103,13 @@ class LabelDiff:
     label_pairs_changed: typing.List[typing.Tuple[cm.Label, cm.Label]] = dataclasses.field(default_factory=list) # noqa:E501
 
 
-empty_list = dataclasses.field(default_factory=list)
+empty_list = lambda: dataclasses.field(default_factory=list)
 
 
 @dataclasses.dataclass
 class ComponentDiff:
-    cidentities_only_left: set = empty_list
-    cidentities_only_right: set = empty_list
+    cidentities_only_left: set = empty_list()
+    cidentities_only_right: set = empty_list()
     cpairs_version_changed: list[tuple[cm.Component, cm.Component]] = empty_list
     # only set when new component is added/removed
     names_only_left: set = dataclasses.field(default_factory=set)
