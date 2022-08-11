@@ -49,7 +49,7 @@ def diff(
     left_version: str=None,
     right_version: str=None,
     ctx_repo_url: str=None,
-    cache_dir: str=_cfg.ctx.cache_dir,
+    cache_dir: str=None,
     defaults_file: str=None,
 ):
     if defaults_file:
