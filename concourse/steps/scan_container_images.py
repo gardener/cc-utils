@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import dataclasses
+import datetime
 import enum
 import json
 import logging
@@ -22,12 +23,15 @@ import typing
 
 import tabulate
 
+import clamav.cnudie
+import clamav.scan
 import concourse.model.traits.image_scan as image_scan
+import github.compliance.issue as gciss
 import github.compliance.model as gcm
 import github.compliance.report as gcrep
-import github.compliance.issue as gciss
 import protecode.model as pm
 import protecode.report as pr
+import saf.model
 
 logger = logging.getLogger()
 
@@ -121,3 +125,39 @@ def dump_malware_scan_request(request):
     request_dict = dataclasses.asdict(request)
     with tempfile.NamedTemporaryFile(delete=False, mode='wt') as tmp_file:
         tmp_file.write(json.dumps(request_dict, cls=EnumJSONEncoder))
+
+
+def prepare_evidence_request(
+    scan_results: typing.Iterable[clamav.scan.ResourceScanResult],
+    evidence_id: str = 'gardener-mm6',
+    pipeline_url: str = None,
+) -> clamav.scan.MalwarescanEvidenceRequest:
+    '''Prepare an evidence request for the given scan results and return it.
+
+    The returned evidence request contains the _actual_ clamav scans as payload (i.e. the contents
+    of the `scan_results` arg without component or resource information), together with meta-
+    information for every entry.
+
+    A link between meta-information and scan-results is also created by setting up the `id` attribute
+    of the meta-information entry to be the index of the correspondign scan-result.
+    '''
+    targets = []
+    clamav_scan_results = []
+    for i, scan_result in enumerate(scan_results):
+        clamav_scan_results.append(scan_result.scan_result)
+        targets.append(saf.model.ResourceTarget(
+            id=i,
+            name=scan_result.resource.name,
+            version=scan_result.resource.version,
+            extra_id=scan_result.resource.extraIdentity or None,
+        ))
+
+    return clamav.scan.MalwarescanEvidenceRequest(
+        meta=saf.model.EvidenceMetadata(
+            pipeline_url=pipeline_url,
+            evidence_id=evidence_id,
+            collection_date=datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+            targets=targets,
+        ),
+        EvidenceDataBinary=clamav_scan_results,
+    )
