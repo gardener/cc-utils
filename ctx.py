@@ -27,7 +27,7 @@ Execution context. Filled upon invocation of cli.py, read by submodules
 '''
 
 args = None # the parsed command line arguments
-cfg = None # initialised upon importing this module
+cfg: 'GlobalConfig' = None # initialised upon importing this module
 
 
 @dataclasses.dataclass
