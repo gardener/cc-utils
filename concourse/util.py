@@ -164,7 +164,7 @@ def _current_concourse_config():
     return ctx().cfg_set().concourse()
 
 
-def own_running_build_url(cfg_factory=None):
+def own_running_build_url(cfg_factory=None) -> str:
     if not _running_on_ci():
         raise RuntimeError('Can only determine own build url if running on CI infrastructure')
 
