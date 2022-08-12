@@ -21,6 +21,8 @@ import logging
 import tabulate
 import typing
 
+import boto3
+import botocore
 import requests.exceptions
 
 import ccc.delivery
@@ -695,3 +697,26 @@ def auto_triage(
                 protecode_api.add_triage_raw(
                     triage_dict=triage_dict,
                 )
+
+
+def fileobj_for_s3_access(
+    resource: cm.Resource,
+) -> typing.BinaryIO:
+    '''returns a filelike object that can be used to read the contents of a resource that
+    has an access of type 's3'
+
+    The s3-object the access points at must be publicly readable, no authentication is attempted.
+    '''
+    # get a file-like object to stream from the given resource's access
+    access = resource.access
+    if not isinstance(access, cm.S3Access):
+        raise RuntimeError(
+            "Can only acces content in s3 for resources whose access is of type 's3'"
+    )
+    s3_client = boto3.client(
+        's3',
+        # anonymous access
+        config=botocore.client.Config(signature_version=botocore.UNSIGNED)
+    )
+    s3_object = s3_client.get_object(Bucket=access.bucketName, Key=access.objectKey)
+    return s3_object['Body']
