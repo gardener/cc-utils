@@ -25,10 +25,11 @@ def filtered_tarfile_generator(
     filter_func: typing.Callable[[tarfile.TarInfo], bool]=lambda tarinfo: True,
     chunk_size=tarfile.BLOCKSIZE,
     chunk_callback: typing.Callable[[bytes], None]=None,
+    finalise: bool = True,
 ) -> typing.Generator[bytes, None, None]:
     '''
     returns a generator yielding a tarfile that will by default contain the same members as
-    the passed tarfile(s) (src_tf). If a filter-function is given, any entries (TarInfo objects)
+    the passed tarfile (src_tf). If a filter-function is given, any entries (TarInfo objects)
     for which this function will return a "falsy" value will be removed from the resulting
     tarfile stream (which is the actual value-add from this function).
 
@@ -38,6 +39,10 @@ def filtered_tarfile_generator(
     In combination, this can be used to - in a streaming manner - retrieve a tarfile-stream, e.g.
     using a http-request (e.g. with requests), and upload the filtered tarfile-stream (e.g. again
     with a http-request send e.g. with requests).
+    Finally, the `finalise` parameter controls whether the end-of-file marker (two 512-byte blocks
+    filled with binary zeros) will be yielded by the returned generator. This can be used to combine
+    several archives by by streaming their contents but only sending the EOF marker for the last
+    one.
     '''
     offset = 0
 
@@ -107,25 +112,15 @@ def filtered_tarfile_generator(
                     # TODO: handle symlinks (will not work for streaming-mode)
                     raise NotImplementedError(member.type)
 
-    if isinstance(src_tf, tarfile.TarFile):
-        yield from filter_tarfile(
-            src_tf=src_tf,
-            filter_func=filter_func,
-            chunk_size=chunk_size,
-            chunk_callback=chunk_callback,
-        )
-    elif isinstance(src_tf, typing.Iterable):
-        for tf in src_tf:
-            yield from filter_tarfile(
-                src_tf=tf,
-                filter_func=filter_func,
-                chunk_size=chunk_size,
-                chunk_callback=chunk_callback,
-            )
-    else:
-        raise ValueError(src_tf)
+    yield from filter_tarfile(
+        src_tf=src_tf,
+        filter_func=filter_func,
+        chunk_size=chunk_size,
+        chunk_callback=chunk_callback,
+    )
 
-    final_padding = 2 * tarfile.BLOCKSIZE * tarfile.NUL # tarfiles should end w/ two empty blocks
-    yield final_padding
-    if chunk_callback:
-        chunk_callback(final_padding)
+    if finalise:
+        final_padding = 2 * tarfile.BLOCKSIZE * tarfile.NUL # tarfiles should end w/ two empty blocks
+        yield final_padding
+        if chunk_callback:
+            chunk_callback(final_padding)
