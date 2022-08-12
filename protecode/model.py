@@ -397,20 +397,43 @@ class TarRootfsAggregateResourceBinary(Binary):
             s3_object = s3_client.get_object(Bucket=access.bucketName, Key=access.objectKey)
             return s3_object['Body']
 
-        src_tarfiles = list(
-            tarfile.open(fileobj=s3_fileobj(resource), mode='r|*')
+        tarfiles_and_names = list(
+            (
+                tarfile.open(fileobj=s3_fileobj(resource), mode='r|*'),
+                resource.extraIdentity['platform'],
+            )
             for resource in self.artifacts
         )
-        for tarfile in src_tarfiles[:-1]:
+
+        def tarinfo_callback(
+            tarfile_name: str,
+        ) -> typing.Callable[[tarfile.TarInfo], tarfile.TarInfo]:
+            def callback(tarinfo: tarfile.TarInfo) -> tarfile.TarInfo:
+                if not tarinfo.isfile():
+                    return tarinfo
+                tarinfo.name = tarfile_name + '/' + tarinfo.name
+                return tarinfo
+            return callback
+
+        # stream a combined tarfile by omitting the end-of-file marker for all but the last tar-
+        # archive we stream. Also, prefix the filenames of the archive we stream so that the
+        # origin can be determined when looking at the protecode scan results.
+        # Note: This means that a file being prefixed does not necessarily mean that it was _only_
+        # included in the tarfile corresponding, but merely that it was present in the _first_
+        # file scanned.
+        for src_tarfile, tarfile_name in tarfiles_and_names[:-1]:
             yield from tarutil.filtered_tarfile_generator(
-                src_tf=tarfile,
+                src_tf=src_tarfile,
                 filter_func=process_tarinfo,
+                tarinfo_callback=tarinfo_callback(tarfile_name=tarfile_name),
                 finalise=False,
             )
 
+        final_tarfile, tarfile_name = tarfiles_and_names[-1]
         yield from tarutil.filtered_tarfile_generator(
-            src_tf=src_tarfiles[-1],
+            src_tf=final_tarfile,
             filter_func=process_tarinfo,
+            tarinfo_callback=tarinfo_callback(tarfile_name=tarfile_name),
             finalise=True,
         )
 
