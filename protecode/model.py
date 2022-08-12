@@ -397,10 +397,9 @@ class TarRootfsAggregateResourceBinary(Binary):
             s3_object = s3_client.get_object(Bucket=access.bucketName, Key=access.objectKey)
             return s3_object['Body']
 
-        rootfs_artifacts = self.artifacts[:2]
         src_tarfiles = list(
             tarfile.open(fileobj=s3_fileobj(resource), mode='r|*')
-            for resource in rootfs_artifacts
+            for resource in self.artifacts
         )
         for tarfile in src_tarfiles[:-1]:
             yield from tarutil.filtered_tarfile_generator(
