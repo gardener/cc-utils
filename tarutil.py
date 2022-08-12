@@ -67,7 +67,7 @@ def filtered_tarfile_generator(
                 member_info['offset_data'] = offset + len(member_raw)
 
                 member_buf = member.create_pax_header(
-                    info=member.get_info(),
+                    info=member_info,
                     encoding=tarfile.ENCODING
                 )
             else:
