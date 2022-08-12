@@ -2,6 +2,8 @@ import ccc.clamav
 import ccc.delivery
 import ccc.oci
 import clamav.cnudie
+import cnudie.retrieve
+import cnudie.iter
 import concourse.steps.component_descriptor_util as component_descriptor_util
 import dso.model
 
@@ -20,11 +22,23 @@ def scan_component(
     cd = component_descriptor_util.component_descriptor_from_component_descriptor_path(
         cd_path=component_descriptor_path,
     )
+    component = cd.component
+    lookup = cnudie.iter.dictbased_lookup(components=cnudie.retrieve.components(component=component))
+
+    def to_component_resource_tuple(node: cnudie.iter.ResourceNode):
+        return node.component, node.resource
+
+    component_resources = cnudie.iter.iter(
+        component=component,
+        lookup=lookup,
+        node_filter=cnudie.iter.Filter.resources,
+    )
+
     clamav_client = ccc.clamav.client(url=clamav_url)
     oci_client = ccc.oci.oci_client()
 
     for result in clamav.cnudie.scan_resources(
-        component=cd,
+        component_resources=(to_component_resource_tuple(node) for node in component_resources),
         oci_client=oci_client,
         clamav_client=clamav_client,
         max_workers=max_worker,
