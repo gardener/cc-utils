@@ -58,7 +58,7 @@ def scan_resources(
             fileobj = s3_client.Object(
                 access.bucketName,
                 access.objectKey,
-            )['Body']
+            ).get()['Body']
 
             tf = tarfile.open(fileobj=fileobj, mode='r|*')
 
