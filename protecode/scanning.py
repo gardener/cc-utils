@@ -121,6 +121,10 @@ class ResourceGroupProcessor:
                             component_artifact.artifact
                             for component_artifact in artifact_group.component_artifacts
                         ],
+                        tarfile_retrieval_function=protecode.util.fileobj_for_s3_access,
+                        tarfile_naming_function=(
+                            lambda resource: resource.extraIdentity['platform']
+                        )
                     ),
                     display_name=artifact_group.name,
                     target_product_id=target_product_id,

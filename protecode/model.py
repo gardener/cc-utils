@@ -21,9 +21,6 @@ import tarfile
 import tarutil
 import typing
 
-import boto3
-import botocore
-import botocore.client
 import dacite
 
 import ccc
@@ -362,6 +359,8 @@ class OciResourceBinary(Binary):
 @dataclasses.dataclass(frozen=True)
 class TarRootfsAggregateResourceBinary(Binary):
     artifacts: typing.Iterable[gci.componentmodel.Resource]
+    tarfile_retrieval_function: typing.Callable[[gci.componentmodel.Resource], typing.BinaryIO]
+    tarfile_naming_function: typing.Callable[[gci.componentmodel.Resource], str]
 
     def display_name(self):
         return f'{self.artifacts[0].name}_{self.artifacts[0].version}'
@@ -384,23 +383,10 @@ class TarRootfsAggregateResourceBinary(Binary):
             known_tar_sizes[file_name].add(tar_info.size)
             return True
 
-        def s3_fileobj(
-            resource: gci.componentmodel.Resource,
-        ):
-            # get a file-like object to stream from the given resource's access
-            access: gci.componentmodel.S3Access = resource.access
-            s3_client = boto3.client(
-                's3',
-                # anonymous access
-                config=botocore.client.Config(signature_version=botocore.UNSIGNED)
-            )
-            s3_object = s3_client.get_object(Bucket=access.bucketName, Key=access.objectKey)
-            return s3_object['Body']
-
         tarfiles_and_names = list(
             (
-                tarfile.open(fileobj=s3_fileobj(resource), mode='r|*'),
-                resource.extraIdentity['platform'],
+                tarfile.open(fileobj=self.tarfile_retrieval_function(resource), mode='r|*'),
+                self.tarfile_naming_function(resource)
             )
             for resource in self.artifacts
         )
