@@ -58,7 +58,7 @@ class CtxCfg:
 
 @dataclasses.dataclass
 class GlobalConfig:
-    ctx: typing.Optional[CtxCfg] = None
+    ctx: CtxCfg = CtxCfg()
     terminal: typing.Optional[TerminalCfg] = None
 
 
