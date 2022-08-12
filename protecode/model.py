@@ -398,13 +398,21 @@ class TarRootfsAggregateResourceBinary(Binary):
             return s3_object['Body']
 
         rootfs_artifacts = self.artifacts[:2]
-        src_tarfiles = (
+        src_tarfiles = list(
             tarfile.open(fileobj=s3_fileobj(resource), mode='r|*')
             for resource in rootfs_artifacts
         )
+        for tarfile in src_tarfiles[:-1]:
+            yield from tarutil.filtered_tarfile_generator(
+                src_tf=tarfile,
+                filter_func=process_tarinfo,
+                finalise=False,
+            )
+
         yield from tarutil.filtered_tarfile_generator(
-            src_tf=src_tarfiles,
+            src_tf=src_tarfiles[-1],
             filter_func=process_tarinfo,
+            finalise=True,
         )
 
     def auto_triage(self) -> bool:
