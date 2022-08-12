@@ -1,7 +1,9 @@
 import concurrent.futures
 import dataclasses
 import datetime
+import enum
 import logging
+import tarfile
 import typing
 
 import gci.componentmodel as cm
@@ -21,13 +23,14 @@ ci.log.configure_default_logging()
 class ResourceScanResult:
     component: cm.Component
     resource: cm.Resource
-    scan_result: clamav.scan.ImageScanResult
+    scan_result: clamav.scan.AggregatedScanResult
 
 
 def scan_resources(
     component_resources: typing.Iterable[tuple[cm.Component, cm.Resource]],
     oci_client: oci.client.Client,
     clamav_client: clamav.client.ClamAVClient,
+    s3_client=None,
     max_workers:int = 16,
 ) -> typing.Generator[ResourceScanResult, None, None]:
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
@@ -35,19 +38,40 @@ def scan_resources(
     def scan_resource(component_resource: typing.Tuple[cm.Component, cm.Resource]):
         component, resource = component_resource
 
-        if not isinstance(resource.access, cm.OciAccess):
-            raise NotImplementedError(type(resource.access))
-
-        access: cm.OciAccess = resource.access
-        image_reference = access.imageReference
-
-        scan_result = clamav.scan.aggregate_scan_result(
-            image_reference=image_reference,
-            results=clamav.scan.scan_oci_image(
+        if isinstance(resource.access, cm.OciAccess):
+            access: cm.OciAccess = resource.access
+            image_reference = access.imageReference
+            results = clamav.scan.scan_oci_image(
                 image_reference=image_reference,
                 oci_client=oci_client,
                 clamav_client=clamav_client,
-            ),
+            )
+        elif isinstance(resource.access, cm.S3Access):
+            access: cm.S3Access = resource.access
+            if isinstance(resource.type, enum.Enum):
+                rtype = resource.type.value
+            else:
+                rtype = resource.type
+            if not rtype.startswith('application/tar'):
+                raise NotImplementedError(resource.type)
+
+            fileobj = s3_client.Object(
+                access.bucketName,
+                access.objectKey,
+            )['Body']
+
+            tf = tarfile.open(fileobj=fileobj, mode='r|*')
+
+            results = clamav.scan.scan_tarfile(
+                clamav_client=clamav_client,
+                tf=tf,
+            )
+        else:
+            raise NotImplementedError(type(resource.access))
+
+        scan_result = clamav.scan.aggregate_scan_result(
+            resource=resource,
+            results=results,
             name=f'{component.name}/{resource.name}',
         )
 

@@ -6,6 +6,8 @@ import tarfile
 import tempfile
 import typing
 
+import gci.componentmodel as cm
+
 import ci.log
 import clamav.client
 import oci.client
@@ -17,11 +19,11 @@ ci.log.configure_default_logging()
 
 
 @dataclasses.dataclass
-class ImageScanResult:
+class AggregatedScanResult:
     '''
-    overall (aggregated) scan result for an OCI Image
+    overall (aggregated) scan result for a scanned resource
     '''
-    image_reference: str
+    resource_url: str
     name: str
     malware_status: clamav.client.MalwareStatus
     findings: typing.Collection[clamav.client.ScanResult] # if empty, there were no findings
@@ -32,10 +34,10 @@ class ImageScanResult:
 
 
 def aggregate_scan_result(
-    image_reference,
+    resource: cm.Resource,
     results: typing.Iterable[clamav.client.ScanResult],
     name: str=None,
-) -> ImageScanResult:
+) -> AggregatedScanResult:
     count = 0
     succeeded = True
     scanned_octets = 0
@@ -73,8 +75,16 @@ def aggregate_scan_result(
     else:
         malware_status = clamav.client.MalwareStatus.UNKNOWN
 
-    return ImageScanResult(
-        image_reference=image_reference,
+    if isinstance(resource.access, cm.OciAccess):
+        resource_url = resource.access.imageReference
+    elif isinstance(resource.access, cm.S3Access):
+        a = resource.access
+        resource_url = f's3://{a.bucketName}/{a.objectKey}'
+    else:
+        resource_url = '<unknown>'
+
+    return AggregatedScanResult(
+        resource_url=resource_url,
         name=name,
         malware_status=malware_status,
         findings=findings,
@@ -83,6 +93,22 @@ def aggregate_scan_result(
         scan_duration_seconds=scan_duration_seconds,
         upload_duration_seconds=upload_duration_seconds,
     )
+
+
+def scan_tarfile(
+    clamav_client: clamav.client.ClamAVClient,
+    tf: tarfile.TarFile,
+) -> typing.Generator[clamav.client.ScanResult, None, None]:
+    for tar_info in tf:
+        if not tar_info.isfile():
+            continue
+        data = tf.extractfile(member=tar_info)
+
+        scan_result = clamav_client.scan(
+            data=data,
+            name=f'{tar_info.name}',
+        )
+        yield scan_result
 
 
 def _iter_layers(
