@@ -25,13 +25,16 @@ def filtered_tarfile_generator(
     filter_func: typing.Callable[[tarfile.TarInfo], bool]=lambda tarinfo: True,
     chunk_size=tarfile.BLOCKSIZE,
     chunk_callback: typing.Callable[[bytes], None]=None,
+    tarinfo_callback: typing.Callable[[tarfile.TarInfo], tarfile.TarInfo] = lambda tarinfo: tarinfo,
     finalise: bool = True,
 ) -> typing.Generator[bytes, None, None]:
     '''
     returns a generator yielding a tarfile that will by default contain the same members as
     the passed tarfile (src_tf). If a filter-function is given, any entries (TarInfo objects)
     for which this function will return a "falsy" value will be removed from the resulting
-    tarfile stream (which is the actual value-add from this function).
+    tarfile stream (which is the actual value-add from this function). Additionally, a callback
+    function can be given that will be passed all TarInfo objects after filtering to perform
+    modifications like renaming.
 
     This function is particularly useful for streaming. Note that `_FilelikeProxy` can be used
     to wrap a generator yielding an (input-) tarfile-stream.
@@ -39,6 +42,7 @@ def filtered_tarfile_generator(
     In combination, this can be used to - in a streaming manner - retrieve a tarfile-stream, e.g.
     using a http-request (e.g. with requests), and upload the filtered tarfile-stream (e.g. again
     with a http-request send e.g. with requests).
+
     Finally, the `finalise` parameter controls whether the end-of-file marker (two 512-byte blocks
     filled with binary zeros) will be yielded by the returned generator. This can be used to combine
     several archives by by streaming their contents but only sending the EOF marker for the last
@@ -51,12 +55,15 @@ def filtered_tarfile_generator(
         filter_func: typing.Callable[[tarfile.TarInfo], bool],
         chunk_size,
         chunk_callback: typing.Callable[[bytes], None],
+        tarinfo_callback: typing.Callable[[tarfile.TarInfo], tarfile.TarInfo],
     ):
         nonlocal offset
         for member in src_tf:
             if not filter_func(member):
                 logger.debug(f'filtered out {member=}')
                 continue
+
+            member = tarinfo_callback(member)
 
             # need to create a cp (to patch offsets w/o modifying original members, which would
             # break accessing file-contents)
@@ -117,6 +124,7 @@ def filtered_tarfile_generator(
         filter_func=filter_func,
         chunk_size=chunk_size,
         chunk_callback=chunk_callback,
+        tarinfo_callback=tarinfo_callback,
     )
 
     if finalise:
