@@ -39,6 +39,11 @@ class ResourceNode(Node):
     resource: cm.Resource
 
 
+@dataclasses.dataclass
+class SourceNode(Node):
+    source: cm.ComponentSource
+
+
 class Filter:
     @staticmethod
     def components(node: Node):
@@ -47,6 +52,10 @@ class Filter:
     @staticmethod
     def resources(node: Node):
         return isinstance(node, ResourceNode)
+
+    @staticmethod
+    def sources(node: Node):
+        return isinstance(node, SourceNode)
 
 
 def iter(
@@ -84,6 +93,12 @@ def iter(
             yield ResourceNode(
                 path=path,
                 resource=resource,
+            )
+
+        for source in component.sources:
+            yield SourceNode(
+                path=path,
+                source=source,
             )
 
         for cref in component.componentReferences:

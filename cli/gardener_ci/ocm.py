@@ -45,3 +45,7 @@ def traverse(
             prefix = 'r'
             indent += 1
             print(f'{prefix}{" " * indent}{node.resource.name}')
+        if isinstance(node, cnudie.iter.SourceNode):
+            prefix = 'r'
+            indent += 1
+            print(f'{prefix}{" " * indent}{node.source.name}')
