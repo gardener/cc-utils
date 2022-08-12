@@ -6,10 +6,13 @@ import gci.componentmodel as cm
 
 import ccc.delivery
 import cnudie.util
+import ctx
 import delivery.client
 import product.v2
 
 logger = logging.getLogger(__name__)
+_cfg = ctx.cfg
+_cache_dir = _cfg.ctx.component_descriptor_cache_dir
 
 
 def component_descriptor(
@@ -18,7 +21,7 @@ def component_descriptor(
     ctx_repo_url: str=None,
     ctx_repo: cm.RepositoryContext=None,
     delivery_client: delivery.client.DeliveryServiceClient=None,
-    cache_dir: str=None,
+    cache_dir: str=_cache_dir,
     validation_mode: cm.ValidationMode=cm.ValidationMode.NONE,
 ) -> cm.ComponentDescriptor:
     '''
@@ -52,7 +55,7 @@ def component_descriptor(
 
 def components(
     component: typing.Union[cm.ComponentDescriptor, cm.Component],
-    cache_dir: str=None,
+    cache_dir: str=_cache_dir,
     delivery_client: delivery.client.DeliveryServiceClient=None,
     validation_mode: cm.ValidationMode=cm.ValidationMode.NONE,
 ):
@@ -108,7 +111,7 @@ def component_diff(
     right_component: typing.Union[cm.Component, cm.ComponentDescriptor],
     ignore_component_names=(),
     delivery_client: delivery.client.DeliveryServiceClient=None,
-    cache_dir: str=None,
+    cache_dir: str=_cache_dir,
 ):
     left_component = cnudie.util.to_component(left_component)
     right_component = cnudie.util.to_component(right_component)
@@ -145,7 +148,7 @@ def _component_descriptor(
     version: str,
     ctx_repo: cm.RepositoryContext,
     delivery_client: delivery.client.DeliveryServiceClient=None,
-    cache_dir=None,
+    cache_dir=_cache_dir,
     validation_mode=cm.ValidationMode.NONE,
 ):
     if not delivery_client:
