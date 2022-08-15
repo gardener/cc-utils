@@ -15,6 +15,7 @@
 
 import dataclasses
 import enum
+import logging
 import typing
 
 import dacite
@@ -26,6 +27,8 @@ from concourse.model.base import (
 )
 import gci.componentmodel as cm
 import reutil
+
+logger = logging.getLogger(__name__)
 
 
 class ImageFilterMixin(ModelBase):
@@ -96,16 +99,29 @@ def filter_for_matching_config(
 def filter_for_rule(
     rule: ConfigRule,
 ) -> typing.Callable[[cm.Component, cm.Resource], bool]:
+    def to_str(value):
+        if isinstance(value, str):
+            return value
+        elif isinstance(value, bool):
+            return 'true' if value else 'false'
+        elif isinstance(value, int) or isinstance(value, float):
+            return str(value)
+        elif isinstance(value, enum.Enum):
+            return value.value
+        else:
+            logger.warning(f'selected {value=} is no scalar - matching will likely fail')
+            return str(value)
+
     match rule.matching_semantics:
         case ComponentFilterSemantics.INCLUDE:
             re_filter = reutil.re_filter(
                 include_regexes=[rule.expression],
-                value_transformation=str
+                value_transformation=to_str,
             )
         case ComponentFilterSemantics.EXCLUDE:
             re_filter = reutil.re_filter(
                 exclude_regexes=[rule.expression],
-                value_transformation=str
+                value_transformation=to_str,
             )
         case _:
             raise NotImplementedError(rule.matching_semantics)
