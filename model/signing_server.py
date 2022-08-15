@@ -82,6 +82,9 @@ class SigningServerConfig(NamedModelElement):
     def host(self) -> str:
         return self.raw['host']
 
+    def cosign_repository(self) -> str:
+        return self.raw.get('cosign_repository', '')
+
     def ingress_config(self) -> SigningServerIngressConfig:
         return SigningServerIngressConfig(self.raw['ingress'])
 
