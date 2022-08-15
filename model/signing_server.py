@@ -83,7 +83,7 @@ class SigningServerConfig(NamedModelElement):
         return self.raw['host']
 
     def cosign_repository(self) -> str:
-        return self.raw.get('cosign_repository', '')
+        return self.raw['cosign_repository']
 
     def ingress_config(self) -> SigningServerIngressConfig:
         return SigningServerIngressConfig(self.raw['ingress'])
@@ -104,4 +104,5 @@ class SigningServerConfig(NamedModelElement):
             'disable_auth',
             'host',
             'ingress',
+            'cosign_repository',
         }
