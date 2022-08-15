@@ -1,5 +1,6 @@
 import concurrent.futures
 import dataclasses
+import enum
 import functools
 import logging
 import tarfile
@@ -7,6 +8,7 @@ import tempfile
 import typing
 
 import gci.componentmodel as cm
+import saf.model
 
 import ci.log
 import clamav.client
@@ -16,6 +18,11 @@ import oci.model
 
 logger = logging.getLogger(__name__)
 ci.log.configure_default_logging()
+
+
+class MalwareScanState(enum.Enum):
+    FINISHED_SUCCESSFULLY = 'finished_successfully'
+    FINISHED_WITH_ERRORS = 'finished_with_errors'
 
 
 @dataclasses.dataclass
@@ -31,6 +38,25 @@ class AggregatedScanResult:
     scanned_octets: int
     scan_duration_seconds: float
     upload_duration_seconds: float
+
+
+@dataclasses.dataclass
+class ResourceScanResult:
+    component: cm.Component
+    resource: cm.Resource
+    scan_result: AggregatedScanResult
+
+
+@dataclasses.dataclass
+class MalwarescanEvidenceRequestV1(saf.model.EvidenceRequestV1):
+    EvidenceDataBinary: typing.List[ResourceScanResult]
+
+
+@dataclasses.dataclass
+class MalwarescanResult:
+    resource: cm.Resource
+    scan_state: MalwareScanState
+    findings: typing.List[str]
 
 
 def aggregate_scan_result(

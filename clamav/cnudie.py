@@ -1,5 +1,4 @@
 import concurrent.futures
-import dataclasses
 import datetime
 import enum
 import logging
@@ -19,20 +18,13 @@ logger = logging.getLogger(__name__)
 ci.log.configure_default_logging()
 
 
-@dataclasses.dataclass
-class ResourceScanResult:
-    component: cm.Component
-    resource: cm.Resource
-    scan_result: clamav.scan.AggregatedScanResult
-
-
 def scan_resources(
     component_resources: typing.Iterable[tuple[cm.Component, cm.Resource]],
     oci_client: oci.client.Client,
     clamav_client: clamav.client.ClamAVClient,
     s3_client=None,
     max_workers:int = 16,
-) -> typing.Generator[ResourceScanResult, None, None]:
+) -> typing.Generator[clamav.scan.ResourceScanResult, None, None]:
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
 
     def scan_resource(component_resource: typing.Tuple[cm.Component, cm.Resource]):
@@ -75,7 +67,7 @@ def scan_resources(
             name=f'{component.name}/{resource.name}',
         )
 
-        return ResourceScanResult(
+        return clamav.scan.ResourceScanResult(
             component=component,
             resource=resource,
             scan_result=scan_result,
@@ -101,7 +93,7 @@ def scan_resources(
 
 
 def resource_scan_result_to_artefact_metadata(
-    resource_scan_result: ResourceScanResult,
+    resource_scan_result: clamav.scan.ResourceScanResult,
     datasource: str = dso.model.Datasource.CLAMAV,
     datatype: str = dso.model.Datatype.MALWARE,
     creation_date: datetime.datetime = datetime.datetime.now(),

@@ -11,11 +11,12 @@ import requests.exceptions
 
 import ccc.oci
 import clamav.client
+import clamav.cnudie
+import clamav.scan
 import gci.componentmodel
 import oci.client as oc
 import oci.model as om
 import product
-import saf.model
 import tarutil
 
 
@@ -75,7 +76,7 @@ def _scan_oci_image(
     clamav_client: clamav.client.ClamAVClient,
     oci_client: oc.Client,
     image_reference: str,
-) -> typing.Generator[saf.model.MalwarescanResult, None, None]:
+) -> typing.Generator[clamav.scan.MalwarescanResult, None, None]:
     start_time = datetime.datetime.now()
     logger.info(f'starting to scan {image_reference=}')
 
@@ -129,9 +130,9 @@ def _try_scan_image(
             image_reference=access.imageReference,
         )
 
-        return saf.model.MalwarescanResult(
+        return clamav.scan.MalwarescanResult(
                 resource=oci_resource,
-                scan_state=saf.model.MalwareScanState.FINISHED_SUCCESSFULLY,
+                scan_state=clamav.scan.MalwareScanState.FINISHED_SUCCESSFULLY,
                 findings=[
                     f'{path}: {scan_result.virus_signature()}'
                     for scan_result, path in clamav_findings
@@ -143,9 +144,9 @@ def _try_scan_image(
         logger.warning(warning)
         traceback.print_exc()
 
-        return saf.model.MalwarescanResult(
+        return clamav.scan.MalwarescanResult(
                 resource=oci_resource,
-                scan_state=saf.model.MalwareScanState.FINISHED_WITH_ERRORS,
+                scan_state=clamav.scan.MalwareScanState.FINISHED_WITH_ERRORS,
                 findings=[warning],
             )
 
@@ -156,7 +157,7 @@ def virus_scan_images(
     clamav_client: clamav.client.ClamAVClient,
     oci_client: oc.Client=None,
     max_workers=8,
-) -> typing.Generator[saf.model.MalwarescanResult, None, None]:
+) -> typing.Generator[clamav.scan.MalwarescanResult, None, None]:
     '''Scans components of the given Component Descriptor using ClamAV
 
     Used by image-scan-trait

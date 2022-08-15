@@ -1,9 +1,6 @@
 import dataclasses
-import enum
 import typing
 
-import clamav.cnudie
-import gci.componentmodel as cm
 
 dc = dataclasses.dataclass
 
@@ -18,20 +15,3 @@ class EvidenceMetadata:
 class EvidenceRequestV1:
     meta: EvidenceMetadata
     EvidenceDataBinary: typing.Dict
-
-
-class MalwareScanState(enum.Enum):
-    FINISHED_SUCCESSFULLY = 'finished_successfully'
-    FINISHED_WITH_ERRORS = 'finished_with_errors'
-
-
-@dc
-class MalwarescanResult:
-    resource: cm.Resource
-    scan_state: MalwareScanState
-    findings: typing.List[str]
-
-
-@dc
-class MalwarescanEvidenceRequestV1(EvidenceRequestV1):
-    EvidenceDataBinary: typing.List[clamav.cnudie.ResourceScanResult]
