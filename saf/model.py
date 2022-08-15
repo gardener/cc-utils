@@ -28,9 +28,6 @@ class EvidenceRequestV1:
     EvidenceDataBinary: typing.Dict
 
 
-# special-case evidence for gardener-mm5 (malware)
-
-
 class MalwareScanState(enum.Enum):
     FINISHED_SUCCESSFULLY = 'finished_successfully'
     FINISHED_WITH_ERRORS = 'finished_with_errors'
