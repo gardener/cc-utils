@@ -39,21 +39,5 @@ class MalwarescanResult:
 
 
 @dc
-class MalwarescanEvidenceData:
-    pipeline_url: str
-    component_name: str
-    component_version: str
-    scanning_endpoint: str
-    scanning_cfg: str
-    scan_results: typing.List[MalwarescanResult]
-    scan_log: str
-
-
-@dc
-class MalwarescanEvidenceRequest(EvidenceRequest):
-    data: MalwarescanEvidenceData
-
-
-@dc
 class MalwarescanEvidenceRequestV1(EvidenceRequestV1):
     EvidenceDataBinary: typing.List[clamav.cnudie.ResourceScanResult]
