@@ -113,6 +113,7 @@ def test_resource_attr_excluded():
 
 
 def test_multiple_component_rules():
+    # rules are ANDed - expect no matches
     test_config = examinee.MatchingConfig(
         name='Some Config Name',
         rules=[
@@ -131,10 +132,10 @@ def test_multiple_component_rules():
     test_filter = examinee.filter_for_matching_config(test_config)
 
     component_dummy = Dummy(name='AName')
-    assert test_filter(component_dummy, None)
+    assert not test_filter(component_dummy, None)
 
     component_dummy = Dummy(name='AnotherName')
-    assert test_filter(component_dummy, None)
+    assert not test_filter(component_dummy, None)
 
     component_dummy = Dummy(name='YetAnotherName')
     assert not test_filter(component_dummy, None)
@@ -159,16 +160,17 @@ def test_multiple_resource_rules():
     test_filter = examinee.filter_for_matching_config(test_config)
 
     resource_dummy = Dummy(name='AName')
-    assert test_filter(None, resource_dummy)
+    assert not test_filter(None, resource_dummy)
 
     resource_dummy = Dummy(name='AnotherName')
-    assert test_filter(None, resource_dummy)
+    assert not test_filter(None, resource_dummy)
 
     resource_dummy = Dummy(name='YetAnotherName')
     assert not test_filter(None, resource_dummy)
 
 
 def test_multiple_configs():
+    # matching-configs are OR-ed
     test_configs = [
         examinee.MatchingConfig(
             name='Some Config Name',
@@ -199,9 +201,9 @@ def test_multiple_configs():
     assert test_filter(matching_component_dummy, matching_resource_dummy)
 
     resource_dummy = Dummy(name='AnotherResource')
-    assert not test_filter(matching_component_dummy, resource_dummy)
+    assert test_filter(matching_component_dummy, resource_dummy)
 
     component_dummy = Dummy(name='AnotherComponent')
-    assert not test_filter(component_dummy, matching_resource_dummy)
+    assert test_filter(component_dummy, matching_resource_dummy)
 
     assert not test_filter(component_dummy, resource_dummy)
