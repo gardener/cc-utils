@@ -15,12 +15,6 @@ class EvidenceMetadata:
 
 
 @dc
-class EvidenceRequest:
-    meta: EvidenceMetadata
-    data: typing.Dict
-
-
-@dc
 class EvidenceRequestV1:
     meta: EvidenceMetadata
     EvidenceDataBinary: typing.Dict

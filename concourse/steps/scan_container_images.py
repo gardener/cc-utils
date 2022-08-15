@@ -26,7 +26,6 @@ import concourse.model.traits.image_scan as image_scan
 import github.compliance.model as gcm
 import github.compliance.report as gcrep
 import github.compliance.issue as gciss
-import saf.model
 import protecode.model as pm
 import protecode.report as pr
 
@@ -118,7 +117,7 @@ class EnumJSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-def dump_malware_scan_request(request: saf.model.EvidenceRequest):
+def dump_malware_scan_request(request):
     request_dict = dataclasses.asdict(request)
     with tempfile.NamedTemporaryFile(delete=False, mode='wt') as tmp_file:
         tmp_file.write(json.dumps(request_dict, cls=EnumJSONEncoder))
