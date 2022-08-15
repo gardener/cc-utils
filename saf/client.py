@@ -29,7 +29,7 @@ class SafClient:
 
     def post_evidence(
         self,
-        evidence: typing.Union[saf.model.EvidenceRequest, saf.model.EvidenceRequestV1, dict],
+        evidence: typing.Union[saf.model.EvidenceRequestV1, dict],
     ):
         if dataclasses.is_dataclass(evidence):
             raw = dataclasses.asdict(evidence)
