@@ -3,16 +3,16 @@ import typing
 import tabulate
 
 import clamav.client
-import clamav.cnudie
+import clamav.scan
 
 
 def as_table(
-    scan_results: typing.Iterable[clamav.cnudie.ResourceScanResult],
+    scan_results: typing.Iterable[clamav.scan.ResourceScanResult],
     tablefmt: str='simple', # see tabulate module
 ):
     headers = ('resource', 'status', 'details')
 
-    def row_from_result(scan_result: clamav.cnudie.ResourceScanResult):
+    def row_from_result(scan_result: clamav.scan.ResourceScanResult):
         resource = f'{scan_result.component.name}/{scan_result.resource.name}'
         res = scan_result.scan_result
 
