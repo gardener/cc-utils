@@ -29,9 +29,12 @@ class SafClient:
 
     def post_evidence(
         self,
-        evidence: typing.Union[saf.model.EvidenceRequest, saf.model.EvidenceRequestV1],
+        evidence: typing.Union[saf.model.EvidenceRequest, saf.model.EvidenceRequestV1, dict],
     ):
-        raw = dataclasses.asdict(evidence)
+        if dataclasses.is_dataclass(evidence):
+            raw = dataclasses.asdict(evidence)
+        elif isinstance(evidence, dict):
+            raw = evidence
 
         return self._post_evidence_dict(raw=raw)
 
