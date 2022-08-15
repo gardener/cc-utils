@@ -7,8 +7,6 @@ import gci.componentmodel as cm
 
 dc = dataclasses.dataclass
 
-# generic evidence-model
-
 
 @dc
 class EvidenceMetadata:
