@@ -76,7 +76,7 @@ def filter_for_matching_configs(
             config=config,
         ) for config in configs
     ]
-    return lambda component, resource: all(
+    return lambda component, resource: any(
         filter_func(component, resource) for filter_func in filters_from_configs
     )
 
@@ -91,7 +91,7 @@ def filter_for_matching_config(
             rule=rule,
         ) for rule in config.rules
     ]
-    return lambda component, resource: any(
+    return lambda component, resource: all(
         filter_func(component, resource) for filter_func in rule_filters
     )
 
