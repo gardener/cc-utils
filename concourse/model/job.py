@@ -43,6 +43,8 @@ class JobVariant(ModelBase):
         self.variant_name = name
         self._publish_repos_dict = {}
         self._repos_dict = {}
+        self._traits_dict = {}
+        self._steps_dict = {}
         super().__init__(raw_dict=raw_dict, *args, **kwargs)
 
     @classmethod
