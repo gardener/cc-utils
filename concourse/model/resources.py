@@ -399,8 +399,7 @@ class RepositoryConfig(Resource):
         super().validate()
 
         try:
-            label = None # linter
             for label in self.source_labels():
                 pass # source_labels converts into cm.Label
         except dacite.DaciteError as e:
-            raise ModelValidationError(f'Invalid {label=}') from e
+            raise ModelValidationError(f'Invalid {label=}') from e # pylint: disable=E0601
