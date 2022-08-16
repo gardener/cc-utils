@@ -55,17 +55,9 @@ def webhook_dispatcher_app(
         # raise HTTP error to not leak logs to client
         raise falcon.HTTPInternalServerError # noqa
 
-    # falcon.API will be removed with falcon 4.0.0
-    # see: https://github.com/falconry/falcon/
-    # blob/a5e72b287efb2b3da632cf6547ed3f07d8ec5380/falcon/app.py#L1058
-    if app := getattr(falcon, 'App', None):
-        app = app(
-            middleware=[],
-        )
-    else:
-        app = falcon.API(
-            middleware=[],
-        )
+    app = falcon.App(
+        middleware=[],
+    )
 
     app.add_route('/github-webhook',
         GithubWebhook(
