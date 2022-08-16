@@ -1,6 +1,7 @@
 import sys
 
 import ccc.oci
+import ctx
 import gci.componentmodel as cm
 import product.v2
 import version
@@ -41,11 +42,16 @@ def retrieve(
 def ls(
     name: str,
     greatest: bool=False,
-    ctx_base_url: str=None,
+    ocm_repo_base_url: str=None,
 ):
+    if not ocm_repo_base_url:
+        ocm_repo_base_url = ctx.cfg.ctx.ocm_repo_base_url
+
     oci_name = product.v2._target_oci_repository_from_component_name(
         component_name=name,
-        ctx_repo_base_url=ctx_base_url,
+        ctx_repo=cm.OciRepositoryContext(
+            baseUrl=ocm_repo_base_url,
+        ),
     )
     client = ccc.oci.oci_client()
     tags = client.tags(image_reference=oci_name)
