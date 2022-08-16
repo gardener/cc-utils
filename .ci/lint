@@ -14,7 +14,7 @@ pip install pylama
 (
     pushd "${src_dir}"
     set -x
-    if pylama -iW,R,C  lpylint --options "${src_dir}/pylama.ini" "${src_dir}"; then
+    if pylama -iW,R,C  -lpylint --options "${src_dir}/pylama.ini" "${src_dir}"; then
         echo 'pylama succeeded'
     else
         ((error|=1))
