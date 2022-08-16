@@ -13,7 +13,8 @@ echo 'running pylama for all modules (errors only)'
 pip install pylama
 (
     pushd "${src_dir}"
-    if pylama -iW,R,C --options "${src_dir}/pylama.ini" "${src_dir}"; then
+    set -x
+    if pylama -iW,R,C  lpylint --options "${src_dir}/pylama.ini" "${src_dir}"; then
         echo 'pylama succeeded'
     else
         ((error|=1))
