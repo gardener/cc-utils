@@ -74,7 +74,7 @@ def filter_for_matching_configs(
         def match_all(component, resource):
             return True
 
-        return filter_function
+        return match_all
 
     # A filter for several matching configs is the combination of its constituent filters joined
     # with a boolean AND
