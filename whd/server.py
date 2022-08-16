@@ -15,7 +15,7 @@
 import logging
 import traceback
 
-import falcon
+import falcon # pylint: disable=E0401
 
 import ccc.elasticsearch
 from .webhook import GithubWebhook
