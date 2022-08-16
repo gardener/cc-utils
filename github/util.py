@@ -29,7 +29,7 @@ import requests
 import github3
 from github3.github import GitHub
 from github3.repos.release import Release
-from github3.exceptions import NotFoundError, ForbiddenError
+from github3.exceptions import NotFoundError
 from github3.orgs import Team
 
 import gci.componentmodel
