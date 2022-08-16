@@ -17,86 +17,15 @@ import urllib
 from ci.util import (
     ctx,
 )
-from gitutil import GitHelper
 from github.util import (
     GitHubRepositoryHelper,
-    GitHubRepoBranch,
     find_greatest_github_release_version,
     outdated_draft_releases,
 
 )
-from github.release_notes.util import (
-    ReleaseNotes,
-)
 import ccc.github
 
 import github3
-
-
-def generate_release_notes_cli(
-    repo_dir: str,
-    github_cfg_name: str,
-    github_repository_owner: str,
-    github_repository_name: str,
-    repository_branch: str,
-    commit_range: str=None
-):
-    github_cfg = ctx().cfg_factory().github(github_cfg_name)
-
-    githubrepobranch = GitHubRepoBranch(
-        github_config=github_cfg,
-        repo_owner=github_repository_owner,
-        repo_name=github_repository_name,
-        branch=repository_branch,
-    )
-
-    helper = GitHubRepositoryHelper.from_githubrepobranch(
-        githubrepobranch=githubrepobranch,
-    )
-    git_helper = GitHelper.from_githubrepobranch(
-        repo_path=repo_dir,
-        githubrepobranch=githubrepobranch,
-    )
-
-    ReleaseNotes.create(
-        github_helper=helper,
-        git_helper=git_helper,
-        repository_branch=repository_branch,
-        commit_range=commit_range
-    ).to_markdown()
-
-
-def release_note_blocks_cli(
-    repo_dir: str,
-    github_cfg_name: str,
-    github_repository_owner: str,
-    github_repository_name: str,
-    repository_branch: str=None,
-    commit_range: str=None
-):
-    github_cfg = ctx().cfg_factory().github(github_cfg_name)
-
-    githubrepobranch = GitHubRepoBranch(
-        github_config=github_cfg,
-        repo_owner=github_repository_owner,
-        repo_name=github_repository_name,
-        branch=repository_branch,
-    )
-
-    helper = GitHubRepositoryHelper.from_githubrepobranch(
-        githubrepobranch=githubrepobranch,
-    )
-    git_helper = GitHelper.from_githubrepobranch(
-        repo_path=repo_dir,
-        githubrepobranch=githubrepobranch,
-    )
-
-    ReleaseNotes.create(
-        github_helper=helper,
-        git_helper=git_helper,
-        repository_branch=repository_branch,
-        commit_range=commit_range
-    ).release_note_blocks()
 
 
 def list_draft_releases(
