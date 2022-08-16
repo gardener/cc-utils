@@ -8,7 +8,7 @@ src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
 echo 'Running flake8 for all python modules..'
 error=0
 
-PYTHONPATH="${src_dir}"
+export PYTHONPATH="${src_dir}"
 
 echo 'running pylama for all modules (errors only)'
 (
