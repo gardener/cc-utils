@@ -249,7 +249,7 @@ class OciImageManifestV1:
         if not self.layers:
             raise ValueError('instance was not properly initialised')
 
-        yield from self.layers
+        yield from self.layers # noqa
 
 
 @dataclasses.dataclass(frozen=True)

@@ -718,7 +718,7 @@ class Client:
             raise_for_status=False,
         )
 
-        if absent_ok and res.status_code == requests.codes.NOT_FOUND:
+        if absent_ok and res.status_code == requests.codes.NOT_FOUND: # noqa
             return None
         res.raise_for_status()
 

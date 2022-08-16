@@ -47,6 +47,7 @@ def from_single_image(
         raise ValueError(f'{image_reference=} did not yield OciImageManifest: {type(manifest)=}')
 
     return from_manifest(
+        image_reference=image_reference,
         manifest=manifest,
         oci_client=oci_client,
         base_platform=base_platform,
@@ -89,6 +90,7 @@ def single_platform_manifest(
             return manifest
 
         actual_platform = from_manifest(
+            image_reference=image_reference,
             manifest=manifest,
             oci_client=oci_client,
         )
