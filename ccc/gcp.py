@@ -143,7 +143,7 @@ class GrafeasClient:
         )
 
     def _list_occurrences(self, project, filter_expression):
-        projects = self._api_client.projects() # noqa
+        projects = self._api_client.projects() # noqa; pylint: disable=E1101
         occurrences = projects.occurrences()
 
         request = occurrences.list(
