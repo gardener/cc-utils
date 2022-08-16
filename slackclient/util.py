@@ -87,7 +87,7 @@ class SlackHelper:
         logger.info(f"deleting file with id '{file_id}' from Slack")
         client = slack.WebClient(token=api_token)
         response = client.files_delete(
-            id=file_id,
+            file=file_id,
         )
         if not response['ok']:
             raise RuntimeError(f"failed to delete file with id {file_id}")
