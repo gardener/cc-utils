@@ -10,7 +10,6 @@ error=0
 
 
 echo 'running pylama for all modules (errors only)'
-pip install pylint pylama
 (
     pushd "${src_dir}"
     set -x
