@@ -143,7 +143,7 @@ class GrafeasClient:
         )
 
     def _list_occurrences(self, project, filter_expression):
-        projects = self._api_client.projects()
+        projects = self._api_client.projects() # noqa
         occurrences = projects.occurrences()
 
         request = occurrences.list(
