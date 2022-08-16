@@ -16,6 +16,13 @@ else
     ((error|=1))
 fi
 
+echo 'running pylama for all modules (errors only)'
+if pylama -iW,R,C "${src_dir}"; then
+    echo 'pylama succeeded'
+else
+    ((error|=1))
+fi
+
 if [ $error -eq 0 ]; then
     exit 0
 elif [ $error -gt 0 ]; then
