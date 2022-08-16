@@ -49,7 +49,8 @@ def artifact_digest_label(
 
     label_str = f'{component.name}:{name}'
 
-    label_dig =  hashlib.shake_128(label_str.encode('utf-8')).hexdigest(length=length)
+    # pylint does not know `length` parameter (it is even required, though!)
+    label_dig =  hashlib.shake_128(label_str.encode('utf-8')).hexdigest(length=length) # noqa
 
     label = f'ocm/resource/{label_dig}'
 
