@@ -5,28 +5,28 @@ import sys
 import tempfile
 
 
-__debug_handler = None
+_debug_handler = None
 
 
 def setup_debug_handler(
     custom_format_string: str = '',
     print_thread_id: bool = False,
 ):
-    global __debug_handler
-    if not __debug_handler:
+    global _debug_handler
+    if not _debug_handler:
         tmpfile = tempfile.NamedTemporaryFile(delete=False)
         handler = logging.FileHandler(filename=tmpfile.name)
         handler.setLevel(logging.DEBUG)
-        __debug_handler = handler
+        _debug_handler = handler
 
     if custom_format_string:
-        __debug_handler.setFormatter(CCFormatter(fmt=custom_format_string))
+        _debug_handler.setFormatter(CCFormatter(fmt=custom_format_string))
     else:
-        __debug_handler.setFormatter(CCFormatter(
+        _debug_handler.setFormatter(CCFormatter(
             fmt=default_fmt_string(print_thread_id=print_thread_id))
         )
 
-    return __debug_handler
+    return _debug_handler
 
 
 class CCFormatter(logging.Formatter):

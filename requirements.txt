@@ -34,6 +34,7 @@ oss2==2.12.1
 passlib<2.0.0
 pycryptodome
 pydash<5.0.0
+pylama
 pymongo
 pytest
 python-dateutil

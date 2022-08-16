@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -e
+
+# usage: $1: <src-dir>
+
+src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
+
+echo 'Running pylama for all python modules..'
+error=0
+
+# flake8 / the linter it instruments cannot handle our special type-hints (CliHint)
+if pylama \
+    --options "${src_dir}/pylama.ini" \
+    "${src_dir}" \
+    ;
+then
+    echo 'pylama succeeded'
+else
+    echo 'pylama found errors (see above)'
+    ((error|=1))
+fi
+
+if [ $error -eq 0 ]; then
+    exit 0
+elif [ $error -gt 0 ]; then
+    exit 1
+fi

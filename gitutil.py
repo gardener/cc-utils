@@ -42,7 +42,7 @@ def _ssh_auth_env(github_cfg):
     credentials = github_cfg.credentials()
     logger.info(f'using github-credentials with {credentials.username()=}')
 
-    tmp_id = tempfile.NamedTemporaryFile(mode='w', delete=False) # attention: callers must unlink
+    tmp_id = tempfile.NamedTemporaryFile(mode='w', delete=False) # noqa; callers must unlink
     tmp_id.write(credentials.private_key())
     tmp_id.flush()
 
@@ -232,7 +232,7 @@ class GitHelper:
                 if not results:
                     return # according to remote.push's documentation, empty results indicate
                     # an error. however, the documentation seems to be wrong
-                elif len(results) > 1:
+                if len(results) > 1:
                     raise NotImplementedError('more than one result (do not know how to handle')
 
                 push_info: git.remote.PushInfo = results[0]
@@ -307,7 +307,7 @@ def update_submodule(
 
     not_empty(submodule_path)
     if '/' in submodule_path:
-        fail('This implementation only supports toplevel submodules: {s}'.format(s=submodule_path))
+        fail(f'This implementation only supports toplevel submodules: {submodule_path}')
 
     not_empty(tree_ish)
     not_empty(commit_hash)
@@ -339,10 +339,7 @@ def update_submodule(
       repo=repo,
       tree=new_sha,
       parent_commits=[parent_commit],
-      message='Upgrade submodule {s} to commit {c}'.format(
-          s=submodule_path,
-          c=commit_hash,
-      ),
+      message=f'Upgrade submodule {submodule_path} to commit {commit_hash}',
       author=actor,
       committer=actor,
     )
@@ -400,4 +397,4 @@ def _ensure_submodule_exists(repo: git.Repo, path: str):
     for submodule in repo.submodules:
         if submodule.path == path:
             return
-    fail('No submodule with path {p} exists in the repository.'.format(p=path))
+    fail(f'No submodule with {path=} exists in the repository.')
