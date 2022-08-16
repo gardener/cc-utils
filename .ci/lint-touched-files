@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+# usage: $1: <src-dir>
+
+src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
+
+touched_files=$(\
+    GIT_DIR="${src_dir}/.git" \
+    git show --name-only --oneline | tail -n-1 | grep -q -e '.*\.py$'
+)
+set -e
+
+if [ -z "${touched_files}" ]; then
+    echo 'no python files were touched - early-exiting'
+    exit 0
+fi
+
+echo 'Running pylint for touched files from head-commit:'
+echo ''
+echo "${touched_files}"
+
+(
+    pushd "${src_dir}"
+    set -e
+    pylint \
+        --errors-only \
+        ${touched_files}
+    popd
+)
+
+exit $?
