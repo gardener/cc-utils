@@ -41,16 +41,10 @@ def scan_without_notification(
     cvss_version = CVSSVersion.V3
 
     concourse.steps.scan_container_images.print_protecode_info_table(
+        protecode_group_url=protecode_group_url,
         protecode_group_id=protecode_group_id,
         reference_protecode_group_ids=reference_protecode_group_ids,
-        protecode_group_url=protecode_group_url,
         cvss_version=cvss_version,
-        include_image_references=[],
-        exclude_image_references=[],
-        include_image_names=[],
-        exclude_image_names=[],
-        include_component_names=[],
-        exclude_component_names=[],
     )
 
     logger.info('running protecode scan for all components')
