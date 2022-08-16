@@ -42,6 +42,7 @@ class JobVariant(ModelBase):
         self._resource_registry = not_none(resource_registry)
         self.variant_name = name
         self._publish_repos_dict = {}
+        self._repos_dict = {}
         super().__init__(raw_dict=raw_dict, *args, **kwargs)
 
     @classmethod

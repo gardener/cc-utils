@@ -92,7 +92,7 @@ class DefinitionEnumerator:
         pipeline_definition_committish: str=None,
     ) -> 'DefinitionDescriptor':
         if not target_team:
-            target_team = self.job_mapping.team_name()
+            target_team = self.job_mapping.team_name() # noqa
 
         for name, definition in raw_definitions.items():
             pipeline_definition = deepcopy(definition)
@@ -100,7 +100,7 @@ class DefinitionEnumerator:
                 pipeline_name=name,
                 pipeline_definition=pipeline_definition or {},
                 main_repo={'path': repo_path, 'branch': branch, 'hostname': repo_hostname},
-                concourse_target_cfg=self.cfg_set.concourse(),
+                concourse_target_cfg=self.cfg_set.concourse(), # noqa
                 concourse_target_team=target_team,
                 override_definitions=[override_definitions.get(name,{}),],
                 secret_cfg=secret_cfg,
@@ -290,7 +290,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
         repo_path = f'{org_name}/{repository.name}'
 
         if not target_team:
-            target_team = self.job_mapping.team_name()
+            target_team = self.job_mapping.team_name() # noqa
 
         try:
             branches_and_cfg_entries = [
@@ -304,7 +304,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                 pipeline_name='<invalid YAML>',
                 pipeline_definition=None,
                 main_repo={'path': repo_path, 'branch': 'refs/meta/ci', 'hostname': repo_hostname},
-                concourse_target_cfg=self.cfg_set.concourse(),
+                concourse_target_cfg=self.cfg_set.concourse(), # noqa
                 concourse_target_team=target_team,
                 override_definitions=(),
                 exception=e,
@@ -336,7 +336,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                     pipeline_name='<invalid YAML>',
                     pipeline_definition={},
                     main_repo={'path': repo_path, 'branch': branch_name, 'hostname': repo_hostname},
-                    concourse_target_cfg=self.cfg_set.concourse(),
+                    concourse_target_cfg=self.cfg_set.concourse(), # noqa
                     concourse_target_team=target_team,
                     override_definitions=(),
                     exception=e,
