@@ -5,18 +5,13 @@ set -e
 
 src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
 
-echo 'Running pylama for all python modules..'
 error=0
 
 # flake8 / the linter it instruments cannot handle our special type-hints (CliHint)
-if pylama \
-    --options "${src_dir}/pylama.ini" \
-    "${src_dir}" \
-    ;
-then
-    echo 'pylama succeeded'
+if flake8 --max-line-length=101 --select=E101,E117,E201,E202,E203,E225,E251,E3,E4,E5,E703,E9,W1,W2,W3,W6,F --count --format=pylint --ignore=F722,F821 ${src_dir}; then
+    echo 'flake8 succeeded'
 else
-    echo 'pylama found errors (see above)'
+    echo 'flake8 found errors (see above)'
     ((error|=1))
 fi
 
