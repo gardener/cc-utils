@@ -35,6 +35,7 @@ passlib<2.0.0
 pycryptodome
 pydash<5.0.0
 pylama
+pylint
 pymongo
 pytest
 python-dateutil
