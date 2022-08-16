@@ -69,6 +69,13 @@ class MatchingConfig:
 def filter_for_matching_configs(
     configs: typing.Collection[MatchingConfig]
 ) -> typing.Callable[[cm.Component, cm.Resource], bool]:
+    configs = tuple(configs) if configs else ()
+    if not configs:
+        def match_all(component, resource):
+            return True
+
+        return filter_function
+
     # A filter for several matching configs is the combination of its constituent filters joined
     # with a boolean AND
     filters_from_configs = [
