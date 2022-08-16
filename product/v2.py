@@ -25,7 +25,6 @@ import gci.oci
 import ccc.oci
 import ci.util
 import oci.model as om
-import oci.client as oc
 import version
 
 logger = logging.getLogger(__name__)
@@ -461,34 +460,6 @@ def resolve_dependencies(
         include_component=False,
         cache_dir=cache_dir,
     )
-
-
-def rm_component_descriptor(
-    component: gci.componentmodel.Component,
-    recursive=True,
-    oci_client: oc.Client=None,
-):
-    if not oci_client:
-        oci_client = ccc.oci.oci_client()
-
-    target_ref = _target_oci_ref(
-        component=component,
-        component_ref=component,
-    )
-
-    if recursive:
-        for component_ref in component.componentReferences:
-            component_descriptor = _resolve_dependency(
-                component,
-                component_ref,
-                repository_ctx_base_url=None,
-            )
-            rm_component_descriptor(
-                component=component_descriptor.component,
-                recursive=recursive,
-            )
-
-    oci_client.delete_manifest(image_reference=target_ref)
 
 
 @deprecated.deprecated
