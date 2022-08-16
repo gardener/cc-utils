@@ -21,9 +21,6 @@ from gitutil import GitHelper
 from github.util import (
     GitHubRepositoryHelper,
     GitHubRepoBranch,
-    _add_user_to_team,
-    _add_all_repos_to_team,
-    _create_team,
     find_greatest_github_release_version,
     outdated_draft_releases,
 
@@ -34,51 +31,6 @@ from github.release_notes.util import (
 import ccc.github
 
 import github3
-
-
-def assign_github_team_to_repo(
-    github_cfg_name: str,
-    github_org_name: str,
-    auth_token: str, # token must have 'admin:org' scope
-    team_name: str='ci'
-):
-    '''
-    Assign team 'team_name' to all repositories in organization 'github_org_name' and
-    give the team admin rights on those repositories. The team will be created if it does not exist
-    and the technical github user (from github_cfg_name) will be assigned to the team.
-    The token of the technical github user must have the privilege to create webhooks
-    (scope admin:repo_hook)
-    'auth_token'  must grant 'admin:org' privileges.
-    '''
-    cfg_factory = ctx().cfg_factory()
-    github_cfg = cfg_factory.github(github_cfg_name)
-    github_username = github_cfg.credentials().username()
-
-    # overwrite auth_token
-    github_cfg.credentials().set_auth_token(auth_token=auth_token)
-
-    github = ccc.github.github_api(
-        github_cfg=github_cfg,
-    )
-
-    _create_team(
-        github=github,
-        organization_name=github_org_name,
-        team_name=team_name
-    )
-
-    _add_user_to_team(
-        github=github,
-        organization_name=github_org_name,
-        team_name=team_name,
-        user_name=github_username
-    )
-
-    _add_all_repos_to_team(
-        github=github,
-        organization_name=github_org_name,
-        team_name=team_name
-    )
 
 
 def generate_release_notes_cli(
