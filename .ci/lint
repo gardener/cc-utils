@@ -10,6 +10,7 @@ error=0
 
 
 echo 'running pylama for all modules (errors only)'
+pip install pylama
 if pylama -iW,R,C "${src_dir}"; then
     echo 'pylama succeeded'
 else
