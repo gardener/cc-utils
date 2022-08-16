@@ -14,7 +14,6 @@ repo_name = main_repo.logical_name().upper()
 
 source_scan_trait = job_variant.trait('scan_sources')
 checkmarx_cfg = source_scan_trait.checkmarx()
-whitesource_cfg = source_scan_trait.whitesource()
 email_recipients = source_scan_trait.email_recipients()
 issue_policies = source_scan_trait.issue_policies()
 component_trait = job_variant.trait('component_descriptor')
@@ -125,18 +124,6 @@ github.compliance.report.create_or_update_github_issues(
   delivery_svc_client=delivery_svc_client,
   delivery_svc_endpoints=delivery_svc_endpoints,
   license_cfg=None,
-)
-% endif
-
-% if whitesource_cfg:
-component_name = '${component_trait.component_name()}'
-scan_component_with_whitesource(
-    component_descriptor=component_descriptor,
-    cve_threshold=${whitesource_cfg.cve_threshold()},
-    extra_whitesource_config={},
-    notification_recipients=${email_recipients},
-    whitesource_cfg_name='${whitesource_cfg.cfg_name()}',
-    filters=${scan_sources_filter},
 )
 % endif
 

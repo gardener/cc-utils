@@ -58,21 +58,6 @@ CHECKMARX_ATTRIBUTES = (
 )
 
 
-WHITESOURCE_ATTRIBUTES = (
-    AttributeSpec.optional(
-        name='cve_threshold',
-        doc='defines threshold for cve table generation',
-        type=float,
-        default=7.0,
-    ),
-    AttributeSpec.required(
-        name='cfg_name',
-        doc='whitesource cfg_name',
-        type=str,
-    ),
-)
-
-
 FILTER_ATTRIBUTES = (
     AttributeSpec.required(
         name='type',
@@ -105,21 +90,6 @@ class FilterCfg(ModelBase):
 
     def action(self):
         return self.raw['action']
-
-
-class WhitesourceCfg(ModelBase):
-    @classmethod
-    def _attribute_specs(cls):
-        return WHITESOURCE_ATTRIBUTES
-
-    def cve_threshold(self):
-        return self.raw['cve_threshold']
-
-    def cfg_name(self):
-        return self.raw['cfg_name']
-
-    def requester_mail(self):
-        return self.raw['requester_mail']
 
 
 class CheckmarxCfg(ModelBase):
@@ -167,12 +137,6 @@ ATTRIBUTES = (
         type=CheckmarxCfg,
         default=(),
         doc='if present, perform checkmarx scanning',
-    ),
-    AttributeSpec.optional(
-        name='whitesource',
-        type=WhitesourceCfg,
-        default=(),
-        doc='if present, perform whitesource scanning',
     ),
     AttributeSpec.optional(
         name='issue_policies',
@@ -233,10 +197,6 @@ class SourceScanTrait(Trait):
         if checkmarx := self.raw.get('checkmarx'):
             return CheckmarxCfg(checkmarx)
 
-    def whitesource(self):
-        if whitesource := self.raw.get('whitesource'):
-            return WhitesourceCfg(whitesource)
-
     def filters(self):
         if filters := self.raw.get('filters'):
             return FilterCfg(filters)
@@ -249,11 +209,11 @@ class SourceScanTrait(Trait):
         return SourceScanTraitTransformer(trait=self)
 
     def custom_init(self, raw_dict: dict):
-        if self.checkmarx() or self.whitesource():
+        if self.checkmarx():
             return True
         else:
             # TODO should actually raise something, but breaks docu generation
-            ci.util.warning('At least one of whitesource / checkmarx should be defined.')
+            ci.util.warning('checkmarx should be defined.')
 
     def issue_policies(self) -> IssuePolicies:
         if isinstance((v := self.raw['issue_policies']), IssuePolicies):

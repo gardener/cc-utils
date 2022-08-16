@@ -17,7 +17,6 @@ class ScanArtifact:
 
 
 class Datasource:
-    WHITESOURCE = 'whitesource'
     BDBA = 'bdba' # formerly protecode
     CHECKMARX = 'checkmarx'
     CLAMAV = 'clamav'
