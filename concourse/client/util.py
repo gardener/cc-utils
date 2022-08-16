@@ -152,7 +152,7 @@ def has_job_been_triggered(
             build_plan = build.plan()
         except requests.exceptions.HTTPError as e:
             # a job that just now went into running state could still have no build plan
-            if e.response.status_code is not requests.status_codes.codes.NOT_FOUND:
+            if e.response.status_code is not requests.status_codes.codes.NOT_FOUND: # noqa
                 raise e
             continue
         if build_plan.contains_version_ref(resource_version.version()['ref']):

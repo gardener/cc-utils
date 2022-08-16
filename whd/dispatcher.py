@@ -319,7 +319,7 @@ class GithubWebhookDispatcher:
                 pipeline_config = client.pipeline_cfg(pipeline.pipeline_name)
             except requests.exceptions.HTTPError as e:
                 # might not exist yet if the pipeline was just rendered by the WHD
-                if e.response.status_code is not requests.status_codes.codes.NOT_FOUND:
+                if e.response.status_code is not requests.status_codes.codes.NOT_FOUND: # noqa
                     raise e
                 logger.warning(f"could not retrieve pipeline config for '{pipeline.pipeline_name}'")
                 return

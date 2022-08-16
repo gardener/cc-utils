@@ -145,7 +145,7 @@ def prepare_evidence_request(
     clamav_scan_results = []
     for i, scan_result in enumerate(scan_results):
         clamav_scan_results.append(scan_result.scan_result)
-        targets.append(saf.model.ResourceTarget(
+        targets.append(saf.model.ResourceTarget( # noqa
             id=i,
             name=scan_result.resource.name,
             version=scan_result.resource.version,

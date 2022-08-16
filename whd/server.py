@@ -53,7 +53,7 @@ def webhook_dispatcher_app(
             index_name=whd.metric.index_name(exception_metric),
         )
         # raise HTTP error to not leak logs to client
-        raise falcon.HTTPInternalServerError
+        raise falcon.HTTPInternalServerError # noqa
 
     # falcon.API will be removed with falcon 4.0.0
     # see: https://github.com/falconry/falcon/
