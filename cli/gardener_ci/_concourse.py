@@ -38,7 +38,6 @@ from concourse.replicator import (
 
 import ccc.concourse
 import ci.log
-import concourse.model as ccm
 import model.concourse
 import model.github
 
@@ -175,7 +174,7 @@ def render_pipelines(
 
     job_mappings = []
     for job_mapping in job_mapping_set.job_mappings().values():
-        job_mapping: ccm.JobMapping
+        job_mapping: model.concourse.JobMapping
 
         if org and not org in org_names(job_mapping):
             continue
