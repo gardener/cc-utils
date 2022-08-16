@@ -16,13 +16,6 @@ else
     ((error|=1))
 fi
 
-if pyflakes "${src_dir}"; then
-    echo 'pyflakes succeeded'
-else
-    echo 'pyflakes found errors (see above)'
-    ((error|=3))
-fi
-
 if [ $error -eq 0 ]; then
     exit 0
 elif [ $error -gt 0 ]; then
