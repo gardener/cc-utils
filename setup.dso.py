@@ -35,7 +35,6 @@ setuptools.setup(
         'checkmarx',
         'clamav',
         'protecode',
-        'whitesource',
     ],
     package_data={
         'ci':['version'],
