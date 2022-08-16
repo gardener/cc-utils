@@ -20,7 +20,6 @@ import typing
 import gci.componentmodel as cm
 
 import cnudie.util
-import mail.model
 import product.v2
 from model.email import EmailConfig
 from ci.util import (
@@ -89,7 +88,6 @@ def _send_mail(
     recipients: typing.Iterable[str],
     mail_template: str,
     subject: str,
-    attachments: typing.Sequence[mail.model.Attachment]=(),
     replace_tokens: dict={},
     cc_recipients: typing.Iterable[str]=[],
     mimetype='text',
@@ -127,7 +125,6 @@ def _send_mail(
         cc_recipients=cc_recipients,
         text=mail_body,
         mimetype=mimetype,
-        attachments=attachments,
     )
 
     recipients.update(cc_recipients)
