@@ -137,6 +137,7 @@ class AttributeSpec:
         ci.util.check_type(attr, AttributeSpec)
         return attr.name()
 
+    @staticmethod
     def select_name_and_default(attr):
         ci.util.check_type(attr, AttributeSpec)
         return attr.name(), attr.default_value()
