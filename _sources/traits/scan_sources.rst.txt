@@ -50,34 +50,6 @@ Example label:
         - 'pkg/hack.*'
 
 
-whitesource
------------
-The whitesource scan will be triggered if the `source_id` label is absent or defined with the policy set to `scan`.
-
-To skip the whitesource scan the source_id label has to be set with the policy: 'skip'.
-
-+---------------+-----------+--------------------------------------------------------------------+
-| name          | type      | description                                                        |
-+===============+===========+====================================================================+
-| policy        | enum      | whether to scan source or not. Must either be 'scan' or 'skip'     |
-+---------------+-----------+--------------------------------------------------------------------+
-| exclude_paths | list[str] | (optional) regex paths of your source to exclude from the scan     |
-+---------------+-----------+--------------------------------------------------------------------+
-| include_paths | list[str] | (optional) regex paths of your source to include from the scan     |
-+---------------+-----------+--------------------------------------------------------------------+
-
-.. code-block:: yaml
-
-  - name: 'cloud.gardener.cnudie/dso/scanning-hints/source_id/v1'
-    value:
-      policy: 'scan' # | 'skip' | 'scan_source'
-      path_config:
-        exclude_paths:
-        - 'test.*'
-        - 'foo.*'
-        - '.*bar.*'
-
-
 protecode
 ---------
 
