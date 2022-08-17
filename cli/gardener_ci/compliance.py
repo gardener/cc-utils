@@ -41,6 +41,7 @@ class DiffArguments:
     right_version: str
     ctx_repo_url: str
     exclude_component_names: list[str] = None
+    name_template: str = None
 
 
 def diff(
@@ -48,6 +49,7 @@ def diff(
     right_name: str=None,
     left_version: str=None,
     right_version: str=None,
+    name_template: str=None,
     ctx_repo_url: str=None,
     cache_dir: str=_cfg.ctx.cache_dir,
     defaults_file: str=None,
@@ -67,6 +69,8 @@ def diff(
         params['right_version'] = right_version
     if ctx_repo_url:
         params['ctx_repo_url'] = ctx_repo_url
+    if name_template:
+        params['name_template'] = name_template
 
     try:
         parsed = dacite.from_dict(
@@ -156,10 +160,24 @@ def diff(
         else:
             src_url = '<unknown>'
 
+        if isinstance(resource.access, cm.OciAccess):
+            pull_cmd = {'pull_cmd': f'docker pull {resource.access.imageReference}'}
+        else:
+            pull_cmd = {}
+
+        if parsed.name_template:
+            name = parsed.name_template.format(
+                resource=resource,
+                component=component,
+            )
+        else:
+            name = resource.name
+
         return {
-            'name': resource.name,
+            'name': name,
             'version': resource.version,
             'src_url': src_url,
+            **pull_cmd,
         }
 
     print(f'{left_cd.component.name}:{left_cd.component.version} -> {right_cd.component.version}')
