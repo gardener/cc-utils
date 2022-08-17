@@ -195,6 +195,7 @@ def download_component_descriptor_v2(
                 Dumper=cm.EnumValueYamlDumper,
                 stream=f.file,
             )
+            f.close() # need to close filehandle for NT
             shutil.move(f.name, descriptor_path)
         except:
             os.unlink(f.name)
