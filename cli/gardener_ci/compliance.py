@@ -42,6 +42,7 @@ class DiffArguments:
     ctx_repo_url: str
     exclude_component_names: list[str] = None
     name_template: str = None
+    outfile_prefix: str = 'resource-diff'
 
 
 def diff(
@@ -53,6 +54,7 @@ def diff(
     ctx_repo_url: str=None,
     cache_dir: str=_cfg.ctx.cache_dir,
     defaults_file: str=None,
+    outfile_prefix: str='resource-diff'
 ):
     if defaults_file:
         params = ci.util.parse_yaml_file(defaults_file)
@@ -187,9 +189,9 @@ def diff(
     print('listing new resource-versions')
     print()
 
-    print(yaml.safe_dump([
+    print(yaml.safe_dump((new_resources := [
         resource_as_dict(c,r,i) for c,r,i in new_resource_version_ids
-    ]))
+    ])))
 
     print()
     print()
@@ -198,6 +200,26 @@ def diff(
     print('listing removed resource-versions')
     print()
 
-    print(yaml.safe_dump([
+    print(yaml.safe_dump((removed_resources := [
         resource_as_dict(c,r,i) for c,r,i in removed_resource_version_ids
-    ]))
+    ])))
+
+    outfile_new = f'{parsed.outfile_prefix}-added.yaml'
+    outfile_removed = f'{parsed.outfile_prefix}-removed.yaml'
+
+    print()
+
+    with open(outfile_new, 'w') as f:
+        print(f'writing added resource-versions to {outfile_new=}')
+        yaml.safe_dump(
+            new_resources,
+            f,
+        )
+        print()
+
+    with open(outfile_removed, 'w') as f:
+        print(f'writing removed resource-versions to {outfile_removed=}')
+        yaml.safe_dump(
+            removed_resources,
+            f,
+        )
