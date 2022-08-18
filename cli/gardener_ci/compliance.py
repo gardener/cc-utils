@@ -18,6 +18,7 @@ ctx_repo_url: eu.gcr.io/example/example-repo
 
 import dataclasses
 import functools
+import re
 
 import dacite
 import yaml
@@ -34,6 +35,12 @@ _cfg = ctx.cfg
 
 
 @dataclasses.dataclass
+class ComponentResourceNames:
+    component_name: str
+    resource_name: str
+
+
+@dataclasses.dataclass
 class DiffArguments:
     left_name: str
     right_name: str
@@ -41,6 +48,7 @@ class DiffArguments:
     right_version: str
     ctx_repo_url: str
     exclude_component_names: list[str] = None
+    exclude_component_resource_names: list[ComponentResourceNames] = None
     name_template: str = None
     name_template_expr: str = None
     outfile_prefix: str = 'resource-diff'
@@ -143,6 +151,19 @@ def diff(
     def iter_resources_with_ids(components):
         for c in components:
             for r in c.resources:
+                if parsed.exclude_component_resource_names:
+                    skip = True
+                    for component_resource_name in parsed.exclude_component_resource_names:
+                        if re.fullmatch(component_resource_name.component_name, c.name) \
+                            and \
+                            re.fullmatch(component_resource_name.resource_name, r.name):
+                            break
+                    else:
+                        skip = False
+
+                    if skip:
+                        continue
+
                 yield c, r, resource_version_id(c, r)
 
     left_resource_version_ids = {
