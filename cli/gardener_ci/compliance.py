@@ -170,7 +170,14 @@ def diff(
             src_url = '<unknown>'
 
         if isinstance(resource.access, cm.OciAccess):
-            pull_cmd = {'pull_cmd': f'docker pull {resource.access.imageReference}'}
+            if orig_label := resource.find_label(
+                'cloud.gardener.cnudie/migration/original_ref'
+            ):
+                img_ref = orig_label.value
+            else:
+                img_ref = resource.access.imageReference
+
+            pull_cmd = {'pull_cmd': f'docker pull {img_ref}'}
         else:
             pull_cmd = {}
 
