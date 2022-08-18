@@ -42,6 +42,7 @@ class DiffArguments:
     ctx_repo_url: str
     exclude_component_names: list[str] = None
     name_template: str = None
+    name_template_expr: str = None
     outfile_prefix: str = 'resource-diff'
 
 
@@ -51,6 +52,7 @@ def diff(
     left_version: str=None,
     right_version: str=None,
     name_template: str=None,
+    name_template_expr: str=None,
     ctx_repo_url: str=None,
     cache_dir: str=_cfg.ctx.cache_dir,
     defaults_file: str=None,
@@ -73,6 +75,8 @@ def diff(
         params['ctx_repo_url'] = ctx_repo_url
     if name_template:
         params['name_template'] = name_template
+    if name_template_expr:
+        params['name_template_expr'] = name_template
 
     try:
         parsed = dacite.from_dict(
@@ -82,6 +86,9 @@ def diff(
     except:
         print('missing arguments (check either CLI or defaults_file)')
         raise
+
+    if parsed.name_template and parsed.name_template_expr:
+        raise ValueError('at most one of name_template_expr, name_template must be specified')
 
     print('retrieving component-descriptors (might take a few seconds')
 
@@ -172,6 +179,8 @@ def diff(
                 resource=resource,
                 component=component,
             )
+        elif parsed.name_template_expr:
+            name = eval(parsed.name_template_expr)
         else:
             name = resource.name
 
