@@ -73,7 +73,7 @@ def _get_scan_artifacts_from_components(
                 raise NotImplementedError
 
             cx_label = source.find_label(
-                name=dso.labels.ScanLabelName.SOURCE_SCAN,
+                name=dso.labels.LabelName.SOURCE_SCAN,
             )
             if cx_label:
                 cx_label = dacite.from_dict(
@@ -98,7 +98,7 @@ def _get_scan_artifacts_from_components(
                 raise NotImplementedError(scan_policy)
 
             source_project_label = source.find_label(
-                name=dso.labels.ScanLabelName.SOURCE_PROJECT,
+                name=dso.labels.LabelName.SOURCE_PROJECT,
             )
 
             if source_project_label:

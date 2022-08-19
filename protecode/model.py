@@ -340,10 +340,10 @@ class OciResourceBinary(Binary):
     ) -> bool:
         # check for scanning labels on resource
         if (
-            (label := self.artifact.find_label(name=dso.labels.ScanLabelName.BINARY_ID))
-            or (label := self.artifact.find_label(name=dso.labels.ScanLabelName.BINARY_SCAN))
+            (label := self.artifact.find_label(name=dso.labels.LabelName.BINARY_ID))
+            or (label := self.artifact.find_label(name=dso.labels.LabelName.BINARY_SCAN))
         ):
-            if label.name == dso.labels.ScanLabelName.BINARY_SCAN:
+            if label.name == dso.labels.LabelName.BINARY_SCAN:
                 return True
             else:
                 scanning_hint = dacite.from_dict(
