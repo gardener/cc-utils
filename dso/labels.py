@@ -14,7 +14,7 @@ class ScanPolicy(enum.Enum):
     SKIP = 'skip'
 
 
-class ScanLabelName(enum.Enum):
+class ScanLabelName:
     BINARY_SCAN = 'cloud.gardener.cnudie/dso/scanning-hints/binary/v1' # deprecated
     BINARY_ID = 'cloud.gardener.cnudie/dso/scanning-hints/binary_id/v1'
     SOURCE_SCAN = 'cloud.gardener.cnudie/dso/scanning-hints/source_analysis/v1'

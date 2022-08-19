@@ -72,52 +72,51 @@ def _get_scan_artifacts_from_components(
             if source.access.type is not cm.AccessType.GITHUB:
                 raise NotImplementedError
 
-            cx_label = get_source_scan_label_from_labels(source.labels)
-
-            if not cx_label or cx_label.policy is dso.labels.ScanPolicy.SCAN:
-                scan_artifact_name = get_source_scan_name_label(source.labels)
-                if scan_artifact_name:
-                    logger.info(f'Using project name from cd-label {scan_artifact_name}')
-                else:
-                    scan_artifact_name = f'{source.name}'
-                    logger.info(f'Using project name from cd source name: {scan_artifact_name}')
-                yield dso.model.ScanArtifact(
-                    source=source,
-                    name=scan_artifact_name,
-                    label=cx_label,
-                    component=component,
+            cx_label = source.find_label(
+                name=dso.labels.ScanLabelName.SOURCE_SCAN,
+            )
+            if cx_label:
+                cx_label = dacite.from_dict(
+                    dso.labels.SourceScanHint,
+                    data=cx_label.value,
+                    config=dacite.Config(
+                        cast=[dso.labels.ScanPolicy],
+                    ),
                 )
-            elif cx_label.policy is dso.labels.ScanPolicy.SKIP:
+
+            scan_policy = dso.labels.ScanPolicy.SCAN
+
+            if cx_label:
+                scan_policy = cx_label.policy
+
+            if scan_policy is dso.labels.ScanPolicy.SKIP:
                 logger.info('Note: No source scanning is configured according to ScanPolicy label')
                 continue
+            elif scan_policy is dso.labels.ScanPolicy.SCAN:
+                pass # do scan
             else:
-                raise NotImplementedError
+                raise NotImplementedError(scan_policy)
 
+            source_project_label = source.find_label(
+                name=dso.labels.ScanLabelName.SOURCE_PROJECT,
+            )
 
-scan_label_names = set(item.value for item in dso.labels.ScanLabelName)
+            if source_project_label:
+                scan_artifact_name = source_project_label.value
+            else:
+                scan_artifact_name = None
 
+            if not scan_artifact_name:
+                scan_artifact_name = source.name
 
-def get_source_scan_label_from_labels(
-    labels: typing.Sequence[cm.Label],
-) -> dso.labels.SourceScanHint | None:
-    global scan_label_names
-    for label in labels:
-        if label.name in scan_label_names:
-            if dso.labels.ScanLabelName(label.name) is dso.labels.ScanLabelName.SOURCE_SCAN:
-                return dacite.from_dict(
-                    dso.labels.SourceScanHint,
-                    data=label.value,
-                    config=dacite.Config(cast=[dso.labels.ScanPolicy])
-                )
+            logger.info(f'Using project name from cd-label {scan_artifact_name}')
 
-
-def get_source_scan_name_label(labels: typing.Sequence[cm.Label]) -> str | None:
-    global scan_label_names
-    for label in labels:
-        if label.name in scan_label_names:
-            if dso.labels.ScanLabelName(label.name) is dso.labels.ScanLabelName.SOURCE_PROJECT:
-                return label.value
-    return None
+            yield dso.model.ScanArtifact(
+                source=source,
+                name=scan_artifact_name,
+                label=cx_label,
+                component=component,
+            )
 
 
 def scan_artifacts(
