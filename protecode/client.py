@@ -469,13 +469,18 @@ class ProtecodeApi:
         app_id:int = None,
         group_id:int = None,
     ):
+        '''
+        @param component_name: component name as reported by bdba
+        @param component_version: version to set as override
+        @param objects: list of sha1-digests (as reported by protecode)
+        @param scope: see VersionOverrideScope enum
+        '''
         url = self._routes.version_override()
 
         override_dict = {
             'component': component_name,
             'version': component_version,
             'objects': objects,
-            'group_scope': None,
             'scope': scope.value,
         }
 
