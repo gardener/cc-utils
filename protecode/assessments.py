@@ -4,12 +4,12 @@ import typing
 import requests.exceptions
 
 import dso.labels
-import protecode.model
+import protecode.model as pm
 import protecode.client
 
 
 def upload_version_hints(
-    scan_result: protecode.model.AnalysisResult,
+    scan_result: pm.AnalysisResult,
     hints: typing.Iterable[dso.labels.PackageVersionHint],
     client: protecode.client.ProtecodeApi,
 ):
