@@ -20,6 +20,13 @@ class LabelName:
     SOURCE_SCAN = 'cloud.gardener.cnudie/dso/scanning-hints/source_analysis/v1'
     SOURCE_ID = 'cloud.gardener.cnudie/dso/scanning-hints/source_id/v1'
     SOURCE_PROJECT = 'cloud.gardener.cnudie/dso/scanning-hints/checkmarx-project-name/v1'
+    PACKAGE_VERSION_HINTS = 'cloud.gardener.cnudie/dso/scanning-hints/package-versions'
+
+
+@dataclasses.dataclass(frozen=True)
+class PackageVersionHint:
+    name: str
+    version: str
 
 
 @dataclasses.dataclass(frozen=True)
