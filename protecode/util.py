@@ -57,11 +57,9 @@ def upload_grouped_images(
     protecode_api = ccc.protecode.client(protecode_cfg)
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
     protecode_api.login()
-    groups = list(
-        artifact_groups(
-            component_descriptor=component_descriptor,
-            filter_function=filter_function,
-        )
+    groups = _artifact_groups(
+        component_descriptor=component_descriptor,
+        filter_function=filter_function,
     )
     # build lookup structure for existing scans
     known_results = _find_scan_results(
@@ -315,50 +313,19 @@ def iter_filesystem_paths(
                 yield fullpath, ext_obj.sha1()
 
 
-def corresponding_artifact_group_name(
-    component: cm.Component,
-    resource: cm.Resource,
-):
-    if isinstance(resource.access, cm.OciAccess):
-        image_reference = resource.access.imageReference
-        _, image_tag = image_reference.split(':')
-        return (
-            f'{resource.name}_{image_tag}_{component.name}'.replace('/', '_')
-        )
-
-    return (
-        f'{resource.name}_{resource.version}_{component.name}'.replace('/', '_')
-    )
-
-
-def _update_artifact_groups(
-    component: cm.Component,
-    resource: cm.Resource,
-    artifact_groups: typing.Dict[str, pm.ArtifactGroup],
-    artifact_group_ctor: typing.Callable[[str], pm.ArtifactGroup],
-    filter: typing.Callable[[cm.Component, cm.Resource], bool] | None = None,
-):
-    if filter and not filter(component, resource):
-        return
-
-    name = corresponding_artifact_group_name(component, resource)
-
-    if name not in artifact_groups:
-        artifact_groups[name] = artifact_group_ctor(name)
-
-    artifact_groups[name].component_artifacts.append(
-        pm.ComponentArtifact(component, resource)
-    )
-
-
-def artifact_groups(
+def _artifact_groups(
     component_descriptor: cm.ComponentDescriptor,
     filter_function: typing.Callable[[cm.Component, cm.Resource], bool],
-) -> typing.Iterator[pm.ArtifactGroup]:
-    '''Build artifact groups from the given component-descriptor
+) -> tuple[pm.ArtifactGroup]:
+    '''
+    group resources of same component name and resource version name
+
+    this grouping is done in order to deduplicate identical resource versions shared between
+    different component versions.
     '''
     components = list(cnudie.retrieve.components(component=component_descriptor))
     artifact_groups: typing.Dict[str, pm.ArtifactGroup] = dict()
+
     for component in components:
         for resource in component.resources:
 
@@ -368,21 +335,33 @@ def artifact_groups(
             ]:
                 continue
 
-            match resource.access:
-                case cm.OciAccess():
-                    constructor = pm.OciArtifactGroup
-                case cm.S3Access():
-                    constructor = pm.TarRootfsArtifactGroup
+            if filter_function and not filter_function(component, resource):
+                continue
 
-            _update_artifact_groups(
-                component=component,
-                resource=resource,
-                artifact_group_ctor=constructor,
-                filter=filter_function,
-                artifact_groups=artifact_groups,
-            )
-    logger.info(f'Built {len(artifact_groups.values())} artifact groups')
-    yield from artifact_groups.values()
+            group_name = f'{resource.name}_{resource.version}_{component.name}'.replace('/', '_')
+            component_resource = pm.ComponentArtifact(component, resource)
+
+            if not (group := artifact_groups.get(group_name)):
+                if resource.type is cm.ResourceType.OCI_IMAGE:
+                    group = pm.OciArtifactGroup(
+                        name=group_name,
+                        component_artifacts=[],
+                    )
+                elif str(resource.type).startswith('application/tar'):
+                    group = pm.TarRootfsArtifactGroup(
+                        name=group_name,
+                        component_artifacts=[],
+                    )
+                else:
+                    raise NotImplementedError(resource.type)
+
+            group.component_artifacts.append(component_resource)
+
+    artifact_groups = tuple(artifact_groups.values())
+
+    logger.info(f'{len(artifact_groups)=}')
+
+    return artifact_groups
 
 
 def enum_triages(
