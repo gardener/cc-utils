@@ -252,13 +252,13 @@ class ResourceGroupProcessor:
         self,
         scan_requests: typing.Iterable[pm.ScanRequest],
         processing_mode: pm.ProcessingMode,
-    ) -> typing.Generator[typing.Tuple[pm.ScanRequest, pm.AnalysisResult], None, None]:
+    ) -> typing.Generator[pm.AnalysisResult, None, None]:
         for scan_request in scan_requests:
             scan_result = self.process_scan_request(
                 scan_request=scan_request,
                 processing_mode=processing_mode,
             )
-            yield scan_request, protecode.util.wait_for_scan_to_finish(
+            yield protecode.util.wait_for_scan_to_finish(
                 scan=scan_result,
                 protecode_api=self.protecode_client,
             )
@@ -276,13 +276,12 @@ class ResourceGroupProcessor:
 
         logger.info(f'Generated {len(scan_requests)} scan requests for {artifact_group}')
 
-        scan_requests_and_results = list(
+        target_results = list(
             self._upload_and_wait_for_scans(
                 scan_requests=scan_requests,
                 processing_mode=processing_mode,
             )
         )
-        target_results = [result for _, result in scan_requests_and_results]
 
         # todo: deduplicate/merge assessments
         component_vulnerabilities_with_assessments = tuple(
