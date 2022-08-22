@@ -87,10 +87,9 @@ cc-utils:
                   build_python_packages: ~
               resource_labels:
                 - name: 'cloud.cnudie/dso/scanning-hints/package-versions'
-                  value: [
+                  value:
                   - name: 'containerd'
                     version: 'v1.6.6' # found via DOCKER_VERSION -> github.com/moby/moby
-                  ]
             kaniko-image:
               registry: 'gcr-readwrite'
               image: 'eu.gcr.io/gardener-project/cc/job-image-kaniko'
