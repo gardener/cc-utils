@@ -2,6 +2,7 @@ import logging
 import typing
 
 import ci.log
+import protecode.assessments
 import protecode.client
 import protecode.model as pm
 import protecode.util
@@ -227,7 +228,7 @@ class ResourceGroupProcessor:
                 )
             scan_result = self.protecode_client.scan_result(product_id=products[0].product_id())
 
-        protecode.util.auto_triage(
+        protecode.assessments.auto_triage(
             analysis_result=scan_result,
             cvss_threshold=self.cvss_threshold,
             protecode_api=self.protecode_client,
@@ -293,7 +294,7 @@ class ResourceGroupProcessor:
         )
 
         for target in target_results:
-            protecode.util.add_assessments_if_none_exist(
+            protecode.assessments.add_assessments_if_none_exist(
                 tgt=target,
                 tgt_group_id=self.group_id,
                 assessments=component_vulnerabilities_with_assessments,
