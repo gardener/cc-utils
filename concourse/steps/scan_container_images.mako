@@ -89,9 +89,13 @@ print_protecode_info_table(
 
 cve_threshold = ${protecode_scan.cve_threshold()}
 
+protecode_client = ccc.protecode.client(protecode_cfg)
+delivery_svc_endpoints = ccc.delivery.endpoints(cfg_set=cfg_set)
+delivery_svc_client = ccc.delivery.default_client_if_available()
+
 logger.info('running protecode scan for all components')
 results_generator = protecode.util.upload_grouped_images(
-  protecode_cfg=protecode_cfg,
+  protecode_api=protecode_client,
   protecode_group_id = protecode_group_id,
   component_descriptor = component_descriptor,
   reference_group_ids = ${protecode_scan.reference_protecode_group_ids()},
@@ -99,6 +103,7 @@ results_generator = protecode.util.upload_grouped_images(
   parallel_jobs=${protecode_scan.parallel_jobs()},
   cve_threshold=cve_threshold,
   filter_function=filter_function,
+  delivery_client=delivery_svc_client,
 )
 results = tuple(results_generator)
 
@@ -136,8 +141,6 @@ max_processing_days = dacite.from_dict(
   data=${dataclasses.asdict(issue_policies.max_processing_time_days)},
 )
 
-delivery_svc_endpoints = ccc.delivery.endpoints(cfg_set=cfg_set)
-delivery_svc_client = ccc.delivery.default_client_if_available()
 
 % if issue_tgt_repo_url:
 gh_api = ccc.github.github_api(repo_url='${issue_tgt_repo_url}')

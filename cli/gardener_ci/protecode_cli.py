@@ -8,7 +8,7 @@ import concourse.steps.component_descriptor_util as component_descriptor_util
 import concourse.steps.images
 import concourse.steps.scan_container_images
 from protecode.model import CVSSVersion
-from protecode.util import upload_grouped_images as _upload_grouped_images
+from protecode.scanning import upload_grouped_images as _upload_grouped_images
 
 
 __cmd_name__ = 'protecode'
@@ -49,8 +49,10 @@ def scan_without_notification(
 
     logger.info('running protecode scan for all components')
 
+    client = ccc.protecode.client(protecode_cfg_name)
+
     results = _upload_grouped_images(
-        protecode_cfg=protecode_cfg,
+        protecode_api=client,
         protecode_group_id=protecode_group_id,
         component_descriptor=cd,
     )

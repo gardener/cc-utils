@@ -1,7 +1,13 @@
+import concurrent.futures
+import functools
 import logging
 import typing
 
+import gci.componentmodel as cm
+
 import ci.log
+import cnudie.retrieve
+import cnudie.util
 import protecode.assessments
 import protecode.client
 import protecode.model as pm
@@ -310,3 +316,171 @@ class ResourceGroupProcessor:
         ]
 
         yield from self._wrap_into_bdba_results(scan_requests_and_results)
+
+
+def _find_scan_results(
+    protecode_client: protecode.client.ProtecodeApi,
+    group_id: int,
+    artifact_groups: typing.Iterable[pm.ArtifactGroup],
+) -> typing.Dict[str, pm.Product]:
+    # This function populates a dict that contains all relevant scans for all artifact groups
+    # in a given protecode group.
+    # The created dict is later used to lookup existing scans when creating scan requests
+    scan_results = dict()
+    for artifact_group in artifact_groups:
+        match artifact_group:
+            case pm.OciArtifactGroup():
+                # prepare prototypical metadata for the artifact group, i.e. without any version
+                # information
+                prototype_metadata = protecode.util.component_artifact_metadata(
+                    component_artifact=artifact_group.component_artifacts[0],
+                    omit_component_version=True,
+                    omit_resource_version=True,
+                )
+            case pm.TarRootfsArtifactGroup():
+                prototype_metadata = protecode.util.component_artifact_metadata(
+                    component_artifact=artifact_group.component_artifacts[0],
+                    omit_component_version=False,
+                    omit_resource_version=True,
+                )
+        # TODO: since we ignore all versions for some of these artifact groups we potentially request
+        # the same information multiple times. This is a quick hacked-in cache. Look into doing this
+        # properly.
+        # Note to self: adding LRU-Cache on classes is potentially a bad idea
+        meta = frozenset([(k, v) for k,v in prototype_metadata.items()])
+        scans = list(_proxy_list_apps(
+            protecode_client=protecode_client,
+            group_id=group_id,
+            prototype_metadata=meta,
+        ))
+        scan_results[artifact_group.name] = scans
+
+    return scan_results
+
+
+def _artifact_groups(
+    component_descriptor: cm.ComponentDescriptor,
+    filter_function: typing.Callable[[cm.Component, cm.Resource], bool],
+) -> tuple[pm.ArtifactGroup]:
+    '''
+    group resources of same component name and resource version name
+
+    this grouping is done in order to deduplicate identical resource versions shared between
+    different component versions.
+    '''
+    components = list(cnudie.retrieve.components(component=component_descriptor))
+    artifact_groups: typing.Dict[str, pm.ArtifactGroup] = dict()
+
+    for component in components:
+        for resource in component.resources:
+
+            if resource.type not in [
+                cm.ResourceType.OCI_IMAGE,
+                'application/tar+vm-image-rootfs',
+            ]:
+                continue
+
+            if filter_function and not filter_function(component, resource):
+                continue
+
+            group_name = f'{resource.name}_{resource.version}_{component.name}'.replace('/', '_')
+            component_resource = pm.ComponentArtifact(component, resource)
+
+            if not (group := artifact_groups.get(group_name)):
+                if resource.type is cm.ResourceType.OCI_IMAGE:
+                    group = pm.OciArtifactGroup(
+                        name=group_name,
+                        component_artifacts=[],
+                    )
+                elif str(resource.type).startswith('application/tar'):
+                    group = pm.TarRootfsArtifactGroup(
+                        name=group_name,
+                        component_artifacts=[],
+                    )
+                else:
+                    raise NotImplementedError(resource.type)
+
+            group.component_artifacts.append(component_resource)
+
+    artifact_groups = tuple(artifact_groups.values())
+
+    logger.info(f'{len(artifact_groups)=}')
+
+    return artifact_groups
+
+
+# TODO: Hacky cache. See _find_scan_results
+@functools.lru_cache
+def _proxy_list_apps(
+    protecode_client: protecode.client.ProtecodeApi,
+    group_id: int,
+    prototype_metadata: typing.FrozenSet[typing.Tuple[str, str]],
+):
+    meta = {
+        k: v
+        for k,v in prototype_metadata
+    }
+    return list(protecode_client.list_apps(
+            group_id=group_id,
+            custom_attribs=meta,
+        ))
+
+
+def upload_grouped_images(
+    protecode_api: protecode.client.ProtecodeApi,
+    component_descriptor,
+    protecode_group_id=5,
+    parallel_jobs=8,
+    cve_threshold=7,
+    processing_mode=pm.ProcessingMode.RESCAN,
+    filter_function: typing.Callable[[cm.Component, cm.Resource], bool]=(
+        lambda component, resource: True
+    ),
+    reference_group_ids=(),
+    delivery_client=None,
+) -> typing.Generator[pm.BDBA_ScanResult, None, None]:
+    protecode_api.set_maximum_concurrent_connections(parallel_jobs)
+    protecode_api.login()
+    groups = _artifact_groups(
+        component_descriptor=component_descriptor,
+        filter_function=filter_function,
+    )
+    # build lookup structure for existing scans
+    known_results = _find_scan_results(
+        protecode_client=protecode_api,
+        group_id=protecode_group_id,
+        artifact_groups=groups
+    )
+    processor = ResourceGroupProcessor(
+        group_id=protecode_group_id,
+        scan_results=known_results,
+        reference_group_ids=reference_group_ids,
+        cvss_threshold=cve_threshold,
+        protecode_client=protecode_api,
+    )
+
+    def task_function(
+        artifact_group: pm.ArtifactGroup,
+        processing_mode: pm.ProcessingMode,
+    ) -> typing.Sequence[pm.BDBA_ScanResult]:
+        return list(processor.process(
+            artifact_group=artifact_group,
+            processing_mode=processing_mode,
+        ))
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=parallel_jobs) as tpe:
+        # queue one execution per artifact group
+        futures = {
+            tpe.submit(task_function, g, processing_mode)
+            for g in groups
+        }
+        for completed_future in concurrent.futures.as_completed(futures):
+            scan_results = completed_future.result()
+            if delivery_client:
+                protecode.util.upload_results_to_deliverydb(
+                    delivery_client=delivery_client,
+                    results=scan_results
+                )
+            else:
+                logger.warning('Not uploading results to deliverydb, client not available')
+            yield from scan_results

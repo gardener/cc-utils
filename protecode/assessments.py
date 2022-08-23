@@ -1,4 +1,5 @@
 import collections
+import logging
 import typing
 
 import requests.exceptions
@@ -6,6 +7,8 @@ import requests.exceptions
 import dso.labels
 import protecode.model as pm
 import protecode.client
+
+logger = logging.getLogger(__name__)
 
 
 def upload_version_hints(
