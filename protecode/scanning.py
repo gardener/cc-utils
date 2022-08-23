@@ -59,10 +59,25 @@ class ResourceGroupProcessor:
             yield from products
 
     def iter_components_with_vulnerabilities_and_assessments(self, artifact_group: pm.ArtifactGroup):
+        def _iter_vulnerabilities(
+            result: pm.AnalysisResult,
+        ) -> typing.Generator[tuple[pm.Component, pm.Vulnerability], None, None]:
+            for component in result.components():
+                for vulnerability in component.vulnerabilities():
+                    yield component, vulnerability
+
+        def iter_vulnerabilities_with_assessments(
+            result: pm.AnalysisResult,
+        ):
+            for component, vulnerability in _iter_vulnerabilities(result=result):
+                if not vulnerability.has_triage():
+                    continue
+                yield component, vulnerability, tuple(vulnerability.triages())
+
         for product in self._products_with_relevant_triages(artifact_group=artifact_group):
             result = self.protecode_client.wait_for_scan_result(product_id=product.product_id())
 
-            yield from protecode.util.iter_vulnerabilities_with_assessments(
+            yield from iter_vulnerabilities_with_assessments(
                 result=result
             )
 
@@ -421,23 +436,6 @@ def _proxy_list_apps(
             group_id=group_id,
             custom_attribs=meta,
         ))
-
-
-def _iter_vulnerabilities(
-    result: pm.AnalysisResult,
-) -> typing.Generator[tuple[pm.Component, pm.Vulnerability], None, None]:
-    for component in result.components():
-        for vulnerability in component.vulnerabilities():
-            yield component, vulnerability
-
-
-def iter_vulnerabilities_with_assessments(
-    result: pm.AnalysisResult,
-):
-    for component, vulnerability in _iter_vulnerabilities(result=result):
-        if not vulnerability.has_triage():
-            continue
-        yield component, vulnerability, tuple(vulnerability.triages())
 
 
 def upload_grouped_images(
