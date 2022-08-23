@@ -3,11 +3,14 @@ import functools
 import logging
 import typing
 
+import dacite
+
 import gci.componentmodel as cm
 
 import ci.log
 import cnudie.retrieve
 import cnudie.util
+import dso.labels
 import protecode.assessments
 import protecode.client
 import protecode.model as pm
@@ -301,7 +304,7 @@ class ResourceGroupProcessor:
                 processing_mode=processing_mode,
             )
         )
-        target_results = [result for _, result in scan_requests_and_results]
+        results = [result for _, result in scan_requests_and_results]
 
         # todo: deduplicate/merge assessments
         component_vulnerabilities_with_assessments = tuple(
@@ -312,9 +315,9 @@ class ResourceGroupProcessor:
             f'found {len(component_vulnerabilities_with_assessments)} relevant triages to import'
         )
 
-        for target in target_results:
+        for result in results:
             protecode.assessments.add_assessments_if_none_exist(
-                tgt=target,
+                tgt=result,
                 tgt_group_id=self.group_id,
                 assessments=component_vulnerabilities_with_assessments,
                 protecode_client=self.protecode_client,
@@ -328,6 +331,56 @@ class ResourceGroupProcessor:
         ]
 
         yield from self._wrap_into_bdba_results(scan_requests_and_results)
+
+
+def iter_version_hints(
+    artifact_group: pm.ArtifactGroup,
+    scan_results: typing.Iterable[pm.AnalysisResult],
+):
+    def find_scan_results(resource: cm.Resource):
+        '''
+        find matching result for package-version-hint
+        note: we require strict matching of both component-version and resource-version
+        '''
+        for result in scan_results:
+            cd = result.custom_data()
+            if not cd.get('COMPONENT_VERSION') == artifact_group.component_version():
+                continue
+            if not cd.get('COMPONENT_NAME') == artifact_group.component_name():
+                continue
+            if not cd.get('IMAGE_REFERENCE_NAME') == artifact_group.resource_name():
+                continue
+            if not cd.get('IMAGE_VERSION') == artifact_group.resource_version():
+                continue
+
+            yield result
+
+        return None
+
+    for artefact in artifact_group.artefacts:
+        if not isinstance(artefact, cm.Resource):
+            raise NotImplementedError(artefact)
+        artefact: cm.Resource
+
+        package_hints_label = artefact.find_label(name=dso.labels.LabelName.PACKAGE_VERSION_HINTS)
+        if not package_hints_label:
+            continue
+
+        package_hints = [
+            dacite.from_dict(hint) for hint in
+            package_hints_label.value
+        ]
+
+        scan_results = tuple(find_scan_result(resource=artefact))
+
+        if not scan_result:
+            continue
+
+        logger.info(f'uploading package-version-hints for {artefact.name}:{artefact.version}')
+        protecode.assessments.upload_version_hints(
+            scan_results=scan_results,
+            hints=package_hints,
+        )
 
 
 def _find_scan_results(
