@@ -471,11 +471,21 @@ class ArtifactGroup:
     def component_name(self):
         return self.component_artifacts[0].component.name
 
+    def component_version(self):
+        return self.component_artifacts[0].component.version
+
     def resource_name(self):
         return self.component_artifacts[0].artifact.name
 
     def resource_type(self):
         return self.component_artifacts[0].artifact.type
+
+    def resource_version(self):
+        return self.component_artifacts[0].artifact.version
+
+    @property
+    def artefacts(self) -> tuple[gci.componentmodel.Artifact]:
+        return tuple((ca.artifact for ca in self.component_artifacts))
 
     def __str__(self):
         return f'{self.name}[{len(self.component_artifacts)}]'
