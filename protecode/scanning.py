@@ -348,7 +348,7 @@ class ResourceGroupProcessor:
 def iter_version_hints(
     artifact_group: pm.ArtifactGroup,
     scan_results: typing.Iterable[pm.AnalysisResult],
-) -> typing.Generator[tuple[pm.AnalysisResult, list[dso.labels.PackageVersionHint]]]:
+) -> typing.Generator[tuple[pm.AnalysisResult, list[dso.labels.PackageVersionHint]], None, None]:
     def find_scan_results(resource: cm.Resource):
         '''
         find matching result for package-version-hint
