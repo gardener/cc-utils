@@ -476,6 +476,8 @@ def _artifact_groups(
                 else:
                     raise NotImplementedError(resource.type)
 
+                artifact_groups[group_name] = group
+
             group.component_artifacts.append(component_resource)
 
     artifact_groups = tuple(artifact_groups.values())
