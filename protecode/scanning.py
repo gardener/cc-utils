@@ -306,6 +306,18 @@ class ResourceGroupProcessor:
         )
         results = [result for _, result in scan_requests_and_results]
 
+        # upload package-version-hints if any
+        for result, package_hints in iter_version_hints(
+            artifact_group=artifact_group,
+            scan_results=results,
+        ):
+            logger.info(f'uploading package-version-hints for {result.display_name()}')
+            protecode.assessments.upload_version_hints(
+                scan_result=result,
+                hints=package_hints,
+                client=self.protecode_client,
+            )
+
         # todo: deduplicate/merge assessments
         component_vulnerabilities_with_assessments = tuple(
             self.iter_components_with_vulnerabilities_and_assessments(artifact_group=artifact_group)
@@ -336,7 +348,7 @@ class ResourceGroupProcessor:
 def iter_version_hints(
     artifact_group: pm.ArtifactGroup,
     scan_results: typing.Iterable[pm.AnalysisResult],
-):
+) -> typing.Generator[tuple[pm.AnalysisResult, list[dso.labels.PackageVersionHint]]]:
     def find_scan_results(resource: cm.Resource):
         '''
         find matching result for package-version-hint
@@ -367,20 +379,19 @@ def iter_version_hints(
             continue
 
         package_hints = [
-            dacite.from_dict(hint) for hint in
-            package_hints_label.value
+            dacite.from_dict(
+                data_class=dso.labels.PackageVersionHint,
+                data=hint,
+            ) for hint in package_hints_label.value
         ]
 
-        scan_results = tuple(find_scan_result(resource=artefact))
+        scan_results = tuple(find_scan_results(resource=artefact))
 
-        if not scan_result:
+        if not scan_results:
             continue
 
-        logger.info(f'uploading package-version-hints for {artefact.name}:{artefact.version}')
-        protecode.assessments.upload_version_hints(
-            scan_results=scan_results,
-            hints=package_hints,
-        )
+        for scan_result in scan_results:
+            yield scan_result, package_hints
 
 
 def _find_scan_results(
