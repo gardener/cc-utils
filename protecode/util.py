@@ -16,7 +16,6 @@
 import datetime
 import functools
 import logging
-import tabulate
 import typing
 
 import boto3
@@ -28,7 +27,6 @@ import ccc.protecode
 import ci.log
 import dso.model
 import gci.componentmodel as cm
-import protecode.client
 import protecode.model as pm
 
 logger = logging.getLogger(__name__)
@@ -46,91 +44,6 @@ def upload_results_to_deliverydb(
     except:
         import traceback
         traceback.print_exc()
-
-
-def filter_and_display_upload_results(
-    upload_results: typing.Sequence[pm.BDBA_ScanResult],
-    cve_threshold=7,
-) -> typing.Sequence[pm.BDBA_ScanResult]:
-    # we only require the analysis_results for now
-
-    results_without_components = []
-    results_below_cve_thresh = []
-    results_above_cve_thresh = []
-
-    for upload_result in upload_results:
-        resource = upload_result.artifact
-
-        if isinstance(upload_result, pm.BDBA_ScanResult):
-            result = upload_result.result
-        else:
-            result = upload_result
-
-        components = result.components()
-        if not components:
-            results_without_components.append(upload_result)
-            continue
-
-        greatest_cve = upload_result.greatest_cve_score
-
-        if greatest_cve >= cve_threshold:
-            try:
-                # XXX HACK: just any image ref from group
-                image_ref = resource.access.imageReference
-                grafeas_client = ccc.gcp.GrafeasClient.for_image(image_ref)
-                gcr_cve = -1
-                for r in grafeas_client.filter_vulnerabilities(
-                    image_ref,
-                    cvss_threshold=cve_threshold,
-                ):
-                    gcr_cve = max(gcr_cve, r.vulnerability.cvssScore)
-                # TODO: skip if < threshold - just report for now
-            except Exception:
-                import traceback
-                logger.warning(
-                    f'failed to retrieve vulnerabilies from gcr {traceback.format_exc()}'
-                )
-
-            results_above_cve_thresh.append(upload_result)
-            continue
-        else:
-            results_below_cve_thresh.append(upload_result)
-            continue
-
-    if results_without_components:
-        logger.warning(
-            f'Protecode did not identify components for {len(results_without_components)=}:\n'
-        )
-        for result in results_without_components:
-            print(result.result.display_name())
-        print('')
-
-    def render_results_table(upload_results: typing.Sequence[pm.BDBA_ScanResult]):
-        header = ('Component Name', 'Greatest CVE')
-        results = sorted(upload_results, key=lambda e: e.greatest_cve_score)
-
-        def to_result(result):
-            if isinstance(result, pm.BDBA_ScanResult):
-                return result.result
-            return result
-
-        result = tabulate.tabulate(
-            [(to_result(r).display_name(), r.greatest_cve_score) for r in results],
-            headers=header,
-            tablefmt='fancy_grid',
-        )
-        print(result)
-
-    if results_below_cve_thresh:
-        logger.info(f'The following components were below configured cve threshold {cve_threshold}')
-        render_results_table(upload_results=results_below_cve_thresh)
-        print('')
-
-    if results_above_cve_thresh:
-        logger.warning('The following components have critical vulnerabilities:')
-        render_results_table(upload_results=results_above_cve_thresh)
-
-    return results_above_cve_thresh, results_below_cve_thresh
 
 
 def iter_artefact_metadata(
@@ -256,46 +169,6 @@ def enum_triages(
                 yield component, triage
 
 
-def enum_vulnerabilities(
-    result: pm.AnalysisResult,
-    component_name: str = None,
-    component_version: str = None,
-) -> typing.Iterator[pm.Vulnerability]:
-    for component in result.components():
-        if component_name and component.name() != component_name:
-            continue
-        if component_version and component.version() != component_version:
-            continue
-        yield from component.vulnerabilities()
-
-
-def enum_component_versions(
-    scan_result: pm.AnalysisResult,
-    component_name: str,
-) -> typing.Iterator[str]:
-    for component in scan_result.components():
-        if component.name() == component_name:
-            yield component.version()
-
-
-def wait_for_scans_to_finish(
-    scans: typing.Iterable[pm.AnalysisResult],
-    protecode_api: protecode.client.ProtecodeApi
-) -> typing.Generator[pm.AnalysisResult, None, None]:
-    for scan in scans:
-        yield wait_for_scan_to_finish(scan, protecode_api)
-        logger.info(f'finished waiting for {scan.product_id()}')
-
-
-def wait_for_scan_to_finish(
-    scan: pm.AnalysisResult,
-    protecode_api: protecode.client.ProtecodeApi,
-) -> pm.AnalysisResult:
-    product_id = scan.product_id()
-    logger.info(f'waiting for {product_id}')
-    return protecode_api.wait_for_scan_result(product_id)
-
-
 @functools.lru_cache
 def _image_digest(image_reference: str) -> str:
     oci_client = ccc.oci.oci_client()
@@ -380,23 +253,6 @@ def _matching_analysis_result_id(
         return result.product_id()
     else:
         return None
-
-
-def iter_vulnerabilities(
-    result: pm.AnalysisResult,
-) -> typing.Generator[tuple[pm.Component, pm.Vulnerability], None, None]:
-    for component in result.components():
-        for vulnerability in component.vulnerabilities():
-            yield component, vulnerability
-
-
-def iter_vulnerabilities_with_assessments(
-    result: pm.AnalysisResult,
-):
-    for component, vulnerability in iter_vulnerabilities(result=result):
-        if not vulnerability.has_triage():
-            continue
-        yield component, vulnerability, tuple(vulnerability.triages())
 
 
 def fileobj_for_s3_access(
