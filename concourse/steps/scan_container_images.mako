@@ -44,7 +44,7 @@ import concourse.model.traits.image_scan as image_scan
 import concourse.model.traits.filter
 import delivery.client
 import github.compliance.report
-import protecode.util
+import protecode.scanning
 
 
 from concourse.model.traits.image_scan import Notify
@@ -94,7 +94,7 @@ delivery_svc_endpoints = ccc.delivery.endpoints(cfg_set=cfg_set)
 delivery_svc_client = ccc.delivery.default_client_if_available()
 
 logger.info('running protecode scan for all components')
-results_generator = protecode.util.upload_grouped_images(
+results_generator = protecode.scanning.upload_grouped_images(
   protecode_api=protecode_client,
   protecode_group_id = protecode_group_id,
   component_descriptor = component_descriptor,
