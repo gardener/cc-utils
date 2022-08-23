@@ -148,6 +148,15 @@ def has_job_been_triggered(
         if build.status() == BuildStatus.PENDING:
             # cannot retrieve build plan for a pending job
             continue
+        if build.status() in [
+            BuildStatus.ABORTED,
+            BuildStatus.ERRORED,
+            BuildStatus.FAILED,
+            BuildStatus.SUCCEEDED,
+        ]:
+            # don't consider finished jobs
+            continue
+
         try:
             build_plan = build.plan()
         except requests.exceptions.HTTPError as e:
