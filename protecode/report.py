@@ -3,32 +3,22 @@ import typing
 import protecode.model as pm
 
 
-def _components_with_greatest_cves(
+def _components_with_cves(
     result: pm.AnalysisResult
 ) -> typing.Generator[tuple[pm.Component, list[pm.Vulnerability]], None, None]:
     '''
-    determines the greatest cve for given result and returns a generator yielding two-tuples of
-    each component and corresponding (unassessed) vulnerabilities that match determined worst CVE
-    score.
-
-    if given result does not contain any findings, the iterator will yield nothing
+    yields two-tuples of components and unassessed, relevant CVEs
     '''
-    worst_cve = result.greatest_cve_score()
-
-    if worst_cve <= 0:
-        return
-
     for component in result.components():
-        if component.greatest_cve_score() < worst_cve:
-            continue
-
         vulnerabilities = [
             v for v in component.vulnerabilities()
-            if not v.historical() and not v.has_triage() and
-                v.cve_severity() >= worst_cve
+            if not v.historical() and not v.has_triage()
         ]
 
-        yield component, vulnerabilities
+        if not vulnerabilities:
+            continue
+
+        yield component, sorted(vulnerabilities, key=lambda v: v.cve())
 
 
 def _component_and_results_to_report_str(
@@ -46,7 +36,12 @@ def _component_and_results_to_report_str(
 
 
 def analysis_result_to_report_str(result: pm.AnalysisResult) -> str:
+    components_and_cves = sorted(
+        _components_with_cves(result=result),
+        key=lambda comp_and_vulns: f'{comp_and_vulns[0].name()}:{comp_and_vulns[0].version()}',
+    )
+
     return '\n'.join((
         _component_and_results_to_report_str(comp, results)
-        for comp, results in _components_with_greatest_cves(result=result)
+        for comp, results in components_and_cves
     ))
