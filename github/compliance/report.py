@@ -425,7 +425,17 @@ def create_or_update_github_issues(
 
                         return header + result_group.comment_callback(result)
 
-                    comment_body = '\n'.join((single_comment(result) for result in results))
+                    def sortable_result_str(result: gcm.ScanResult):
+                        c = result.component
+                        a = result.artifact
+                        return f'{c.name}:{c.version}/{a.name}:{a.version}'
+
+                    sorted_results = sorted(
+                        results,
+                        key=sortable_result_str,
+                    )
+
+                    comment_body = '\n'.join((single_comment(result) for result in sorted_results))
 
                     # only add comment if not already present
                     for comment in issue.comments():
