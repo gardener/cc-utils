@@ -30,7 +30,7 @@ def _component_and_results_to_report_str(
         f'{v.cve()} ({v.cve_severity()})' for v in vulnerabilities
     ))
 
-    report = f'{comp} - {vulns}'
+    report = f'`{comp}` - `{vulns}`'
 
     return report
 
