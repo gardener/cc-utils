@@ -190,7 +190,7 @@ def _template_vars(
             issue_description='Prohibited Licenses',
             report_urls=[ar.report_url() for ar in analysis_results],
         )
-        template_variables['criticality_classification'] = str(gcm.Severity.CRITICAL)
+        template_variables['criticality_classification'] = str(gcm.Severity.BLOCKER)
     elif issue_type == _compliance_label_os_outdated:
         worst_result = result_group.worst_result
         os_info = worst_result.os_id
