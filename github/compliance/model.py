@@ -9,10 +9,11 @@ import unixutil.model
 
 
 class Severity(enum.IntEnum):
-    LOW = 0
-    MEDIUM = 1
-    HIGH = 3
-    CRITICAL = 7
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 4
+    CRITICAL = 8
+    BLOCKER = 16
 
     def __str__(self):
         return self.name.lower()

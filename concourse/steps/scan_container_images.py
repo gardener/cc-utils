@@ -83,7 +83,7 @@ def scan_result_group_collection_for_licenses(
 
     def classification_callback(result: pm.BDBA_ScanResult):
         if has_prohibited_licenses(result=result):
-            return gcm.Severity.CRITICAL
+            return gcm.Severity.BLOCKER
 
         return None
 

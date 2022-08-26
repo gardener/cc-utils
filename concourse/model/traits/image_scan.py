@@ -243,6 +243,7 @@ class MaxProcessingTimesDays:
     >= 4.0: medium
     <  4.0: low
     '''
+    blocker: int = 0
     very_high_or_greater: int = 30
     high: int = 30
     medium: int = 90
@@ -250,7 +251,9 @@ class MaxProcessingTimesDays:
 
     def for_severity(self, severity: github.compliance.model.Severity):
         S = github.compliance.model.Severity
-        if severity is S.CRITICAL:
+        if severity is S.BLOCKER:
+            return self.blocker
+        elif severity is S.CRITICAL:
             return self.very_high_or_greater
         elif severity is S.HIGH:
             return self.high
