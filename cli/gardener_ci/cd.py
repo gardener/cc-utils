@@ -13,6 +13,9 @@ def retrieve(
     ctx_base_url: str=None,
     out: str=None
 ):
+    if not ctx_base_url:
+        ctx_base_url = ctx.cfg.ctx.ocm_repo_base_url
+
     ctx_repo = cm.OciRepositoryContext(
             baseUrl=ctx_base_url,
             componentNameMapping=cm.OciComponentNameMapping.URL_PATH,
