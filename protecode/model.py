@@ -448,6 +448,12 @@ class ScanRequest:
         # whether to scan or not, so delegate
         return self.scan_content.auto_triage()
 
+    def __str__(self):
+        return (
+            f"ScanRequest(name='{self.display_name}', target_product_id='{self.target_product_id}' "
+            f"custom_metadata='{self.custom_metadata}')"
+        )
+
 
 @dataclasses.dataclass(frozen=True)
 class ArtifactGroup:
