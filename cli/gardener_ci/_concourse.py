@@ -38,6 +38,7 @@ from concourse.replicator import (
 
 import ccc.concourse
 import ci.log
+import concourse.paths
 import model.concourse
 import model.github
 
@@ -128,7 +129,7 @@ def render_pipeline(
 def render_pipelines(
     cfg_name: str,
     out_dir: str,
-    template_path: str=_template_path(),
+    template_include_dir: str=concourse.paths.template_include_dir,
     org: str=None, # if set, filter for org
     repo: str=None, # if set, filter for repo
     host: str=None, # if set, filter for gh-host
@@ -141,8 +142,6 @@ def render_pipelines(
 
     concourse_cfg = config_set.concourse()
     job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
-
-    template_include_dir = template_path
 
     if repo:
         repository_filter = lambda repo_obj: repo_obj.name == repo
@@ -194,7 +193,7 @@ def render_pipelines(
 
     preprocessor = DefinitionDescriptorPreprocessor()
 
-    template_retriever = TemplateRetriever(template_path=[template_path])
+    template_retriever = TemplateRetriever(template_path=[template_include_dir])
     renderer = Renderer(
         template_retriever=template_retriever,
         template_include_dir=template_include_dir,
