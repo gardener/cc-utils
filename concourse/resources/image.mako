@@ -5,7 +5,7 @@ from makoutil import indent_func
 %>
 platform: linux
 image_resource:
-  type: docker-image
+  type: registry-image
   source:
 % if registry_cfg is not None:
 <%
