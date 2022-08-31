@@ -8,6 +8,7 @@ import os
 from makoutil import indent_func
 from concourse.steps import step_lib
 import concourse.model.traits.publish as cm_publish
+import model.concourse
 container_registry_cfgs = cfg_set._cfg_elements(cfg_type_name='container_registry')
 
 image_descriptor = job_step._extra_args['image_descriptor']
@@ -39,7 +40,11 @@ oci_builder = publish_trait.oci_builder()
 platform = image_descriptor.platform()
 
 need_qemu = True
-normalised_platform = ''
+
+if platform:
+  normalised_oci_platform_name = model.concourse.Platform.normalise_oci_platform_name(platform)
+else:
+  normalised_oci_platform_name = ''
 
 if platform and (worker_node_tags := job_step.worker_node_tags):
   concourse_cfg = cfg_set.concourse()
