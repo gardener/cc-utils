@@ -97,9 +97,6 @@ class Platform:
 
         return f'{osname}/{arch}'
 
-    def __post_init__(self):
-        pass
-
 
 @dataclasses.dataclass
 class WorkerNodeConfig:
