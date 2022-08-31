@@ -257,6 +257,19 @@ class PipelineStep(ModelBase):
         *args,
         **kwargs
     ):
+        '''
+        A single pipeline step.
+
+        name: step's name (displayed to end-users + used e.g. for retrieving logs)
+        is_synthetic: if True, step was injected by a trait; otherwise by user from
+                      pipeline-definition (by end-user)
+        script_type: influences which executable is called for executing body
+        notification_policy: see enum-values
+        extra_args: passed to step-specific template-processing during render-time
+        injecting_trait_name: name of the trait that injected this ("synthetic") step
+        worker_node_tags: if set, step will be restricted to run on worker-nodes bearing all of
+                          the given tags
+        '''
         self.name = ci.util.not_empty(name)
         self.is_synthetic = is_synthetic
         self._script_type = script_type
