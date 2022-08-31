@@ -37,6 +37,20 @@ eff_version_replace_token = '${EFFECTIVE_VERSION}'
 publish_trait = job_variant.trait('publish')
 oci_builder = publish_trait.oci_builder()
 platform = image_descriptor.platform()
+
+need_qemu = True
+normalised_platform = ''
+
+if platform and (worker_node_tags := job_step.worker_node_tags):
+  concourse_cfg = cfg_set.concourse()
+  node_cfg = concourse_cfg.worker_node_cfg
+  if worker_platform := node_cfg.platform_for_oci_platform(
+    oci_platform_name=platform,
+    absent_ok=True,
+  ):
+    if worker_platform.worker_tag in worker_node_tags:
+      need_qemu = False
+    normalised_platform = worker_platform.normalised_oci_platform_name
 %>
 import json
 import logging
@@ -169,6 +183,7 @@ import tempfile
 import ccc.oci
 import dockerutil
 import model.container_registry as mc
+import model.concourse
 import oci.auth as oa
 import oci.workarounds as ow
 
@@ -180,10 +195,25 @@ write_docker_cfg(
     docker_cfg_path=f'{docker_cfg_dir}/config.json',
 )
 
-%   if oci_builder is cm_publish.OciBuilder.DOCKER_BUILDX:
-logger.info('preparing crossplatform build')
-prepare_qemu_and_binfmt_misc()
-logger.info('done preparing crossplatform build. Now running actual build')
+%   if oci_builder is cm_publish.OciBuilder.DOCKER_BUILDX and need_qemu:
+%     if normalised_oci_platform_name:
+import platform
+platform_name = model.concourse.Platform.normalise_oci_platform_name(
+  f'{platform.system().lower()}/{platform.machine()}'
+)
+if platform_name == '${normalised_oci_platform_name}':
+  need_qemu = False
+else:
+  need_qemu = True
+%     else:
+need_qemu = True
+%     endif
+if need_qemu:
+  logger.info('preparing crossplatform build')
+  prepare_qemu_and_binfmt_misc()
+  logger.info('done preparing crossplatform build. Now running actual build')
+else:
+  logger.info('skipping setup of qemu - requested tgt platform matches local platform')
 %   endif
 
 docker_argv = (
