@@ -348,7 +348,10 @@ class PublishTraitTransformer(TraitTransformer):
         super().__init__(*args, **kwargs)
         self.trait = not_none(trait)
         cfg_set = trait.cfg_set
-        self.worker_node_cfg = cfg_set.concourse().worker_node_cfg
+
+        # XXX workaround for documentation-rendering
+        if cfg_set:
+            self.worker_node_cfg = cfg_set.concourse().worker_node_cfg
         self._build_steps = []
 
     def inject_steps(self):
