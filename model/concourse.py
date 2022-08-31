@@ -13,10 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
 from enum import Enum
 import typing
 import re
 import urllib.parse
+
+import dacite
 
 import ci.util
 import reutil
@@ -43,6 +46,88 @@ class ConcourseOAuthConfig(NamedModelElement):
             'client_id',
             'client_secret'
         ]
+
+
+@dataclasses.dataclass
+class Platform:
+    '''
+    a slightly opinionated platform name, describing a combination of an operating system and
+    hardware (/CPU) architecture.
+
+    name: arbitrary, chosen name to reference the platform (agnostic of 3rd-parties, should not
+          be exposed externally)
+    oci_name: the name this platform is named in the context of OCI/Docker
+    worker_tag: the tag (concourse) workers of this platform are marked with
+
+    all values are _not_ intended for being parsed/interpreted (except by e.g. containerd when being
+    passed oci_name).
+
+    --
+    see https://github.com/containerd/containerd/blob/v1.5.7/platforms/platforms.go#L63 for
+    allowed/known platform names
+
+    different than stated there, oci_names *must* always specify os and  architecture here.
+    '''
+    name: str
+    oci_name: str
+    worker_tag: str | None
+
+    def matches_oci_platform_name(self, oci_platform_name: str):
+        return Platform.normalise_oci_platform_name(self.oci_name) == \
+            Platform.normalise_oci_platform_name(oci_platform_name)
+
+    @staticmethod
+    def normalise_oci_platform_name(name: str):
+        osname, arch = name.split('/', 1) # we want to fail if no / present
+
+        if arch == 'aarch64':
+            arch = 'arm64'
+        elif arch == 'armhf':
+            arch = 'arm'
+        elif arch == 'armel':
+            arch = 'arm/v6'
+        elif arch == 'i386':
+            arch = '386'
+        elif arch in ('x86_64', 'x86-64'):
+            arch = 'amd64'
+
+        return f'{osname}/{arch}'
+
+    def __post_init__(self):
+        pass
+
+
+@dataclasses.dataclass
+class WorkerNodeConfig:
+    '''
+    concourse worker node configuration. For now, configuration only contains platform (os/arch).
+
+    if not configured, all nodes are assumed to run on the same, implicit default platform
+    '''
+    default_platform_name: str = None
+    platforms: typing.List[Platform] | None = None
+
+    def platform_for_oci_platform(self, oci_platform_name: str, absent_ok=True):
+        if absent_ok and not self.platforms:
+            return None
+
+        for platform in self.platforms:
+            if platform.matches_oci_platform_name(oci_platform_name):
+                return platform
+        if absent_ok:
+            return None
+        raise ValueError(f'no platform for {oci_platform_name=} found')
+
+    @property
+    def default_platform(self):
+        if not self.default_platform_name:
+            return None
+
+        for platform in self.platforms:
+            if platform.name == self.default_platform_name:
+                return platform
+
+        raise ValueError('default platform name was configured, but not found in platforms')
 
 
 class ConcourseConfig(NamedModelElement):
@@ -112,6 +197,13 @@ class ConcourseConfig(NamedModelElement):
     def concourse_endpoint_name(self):
         return self.raw.get('concourse_endpoint_name')
 
+    @property
+    def worker_node_cfg(self) -> WorkerNodeConfig:
+        return dacite.from_dict(
+            data_class=WorkerNodeConfig,
+            data=self.raw.get('worker_node_cfg', {}),
+        )
+
     def is_accessible_from(self, url: str) -> bool:
         if not (domain_rules := self.raw.get('domain_rules', [])):
             return True
@@ -149,6 +241,7 @@ class ConcourseConfig(NamedModelElement):
             'github_enterprise_host',
             'ingress_host', # TODO: Remove
             'proxy',
+            'worker_node_cfg',
         }
 
     def validate(self):

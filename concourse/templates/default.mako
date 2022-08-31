@@ -335,6 +335,9 @@ on_abort:
 % if job_step.timeout():
   timeout: '${job_step.timeout()}'
 % endif
+% if job_step.worker_node_tags:
+  tags: ${list(job_step.worker_node_tags)}
+% endif
 % if job_step.retries():
   attempts: ${job_step.retries()}
 % endif
