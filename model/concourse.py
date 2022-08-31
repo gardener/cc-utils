@@ -76,6 +76,10 @@ class Platform:
         return Platform.normalise_oci_platform_name(self.oci_name) == \
             Platform.normalise_oci_platform_name(oci_platform_name)
 
+    @property
+    def normalised_oci_platform_name(self):
+        return Platform.normalise_oci_platform_name(self.oci_name)
+
     @staticmethod
     def normalise_oci_platform_name(name: str):
         osname, arch = name.split('/', 1) # we want to fail if no / present
