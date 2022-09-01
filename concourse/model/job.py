@@ -167,7 +167,7 @@ class JobVariant(ModelBase):
         updated_dependencies = copy.deepcopy(dependencies)
         if (
             len(cycle_info) == 3
-            and len(unique_steps:=set(cycle_info)) == 2
+            and len(unique_steps := set(cycle_info)) == 2
             and 'release' in unique_steps # be defensive
         ):
             # We have a cycle that is represented as step -> release -> step. These
