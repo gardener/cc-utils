@@ -165,18 +165,34 @@ class JobVariant(ModelBase):
         cycle_info: typing.Sequence[str],
     ):
         updated_dependencies = copy.deepcopy(dependencies)
-        for step_name in cycle_info:
-            step = self.step(step_name)
-            if not step.is_synthetic:
-                continue # only patch away synthetic steps' dependencies
+        if (
+            len(cycle_info) == 3
+            and len(unique_steps:=set(cycle_info)) == 2
+            and 'release' in unique_steps # be defensive
+        ):
+            # We have a cycle that is represented as step -> release -> step. These
+            # steps can actually be resolved easily by removing the dependency of the release-step
+            # as they are only possible if the pipeline definition explicitly specifies
+            # a step to depend on the release-trait.
+            first_name, second_name = unique_steps
+            if first_name == 'release':
+                updated_dependencies[first_name].remove(second_name)
+            else:
+                # 'release' was the second entry
+                updated_dependencies[second_name].remove(first_name)
+        else:
+            for step_name in cycle_info:
+                step = self.step(step_name)
+                if not step.is_synthetic:
+                    continue # only patch away synthetic steps' dependencies
 
-            for step_dependency_name in step._dependencies():
-                step_dependency = self.step(step_dependency_name)
-                if step_dependency.is_synthetic:
-                    continue # leave dependencies between synthetic steps
-                # patch out dependency from synthetic step to custom step
-                if step_dependency_name in updated_dependencies[step_name]:
-                    updated_dependencies[step_name].remove(step_dependency_name)
+                for step_dependency_name in step._dependencies():
+                    step_dependency = self.step(step_dependency_name)
+                    if step_dependency.is_synthetic:
+                        continue # leave dependencies between synthetic steps
+                    # patch out dependency from synthetic step to custom step
+                    if step_dependency_name in updated_dependencies[step_name]:
+                        updated_dependencies[step_name].remove(step_dependency_name)
 
         return updated_dependencies
 
