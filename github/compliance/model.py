@@ -19,10 +19,26 @@ class Severity(enum.IntEnum):
         return self.name.lower()
 
 
-@dataclasses.dataclass
+class ScanState(enum.Enum):
+    '''
+    indicates the scan outcome of a scan (regardless of yielded contents).
+
+    SUCCEEDED: scan succeeded without errors (but potentially with findings)
+    FAILED:    scan failed (which typically implies there are not scan results)
+    '''
+    SUCCEEDED = 'succeeded'
+    FAILED = 'failed'
+
+
+@dataclasses.dataclass(kw_only=True)
 class ScanResult:
     component: cm.Component
     artifact: cm.Artifact
+    state: ScanState = ScanState.SUCCEEDED
+
+    @property
+    def scan_succeeded(self) -> bool:
+        return self.state is ScanState.SUCCEEDED
 
 
 @dataclasses.dataclass
@@ -66,6 +82,10 @@ class ScanResultGroup:
     comment_callback: CommentCallback
 
     @property
+    def results_with_successful_scans(self):
+        return tuple((r for r in self.results_with_successful_scans if r.scan_succeeded))
+
+    @property
     def component(self) -> cm.Component:
         return self.results[0].component
 
@@ -75,11 +95,19 @@ class ScanResultGroup:
 
     @functools.cached_property
     def has_findings(self) -> bool:
-        for r in self.results:
+        for r in self.results_with_successful_scans:
             if self.findings_callback(r):
                 return True
         else:
             return False
+
+    @functools.cached_property
+    def has_scan_errors(self) -> bool:
+        for result in self.results:
+            if not result.scan_succeeded:
+                return True
+
+        return False
 
     @functools.cached_property
     def worst_severity(self) -> Severity:
@@ -103,11 +131,14 @@ class ScanResultGroup:
 
     @functools.cached_property
     def results_with_findings(self) -> tuple[ScanResult]:
-        return tuple((r for r in self.results if self.findings_callback(r)))
+        return tuple((r for r in self.results_with_successful_scans if self.findings_callback(r)))
 
     @functools.cached_property
     def results_without_findings(self) -> tuple[ScanResult]:
-        return tuple((r for r in self.results if not self.findings_callback(r)))
+        return tuple((
+            r for r in self.results_with_successful_scans
+            if not self.findings_callback(r)
+        ))
 
 
 @dataclasses.dataclass
@@ -151,5 +182,14 @@ class ScanResultGroupCollection:
     @property
     def result_groups_without_findings(self) -> tuple[ScanResultGroup]:
         return tuple(
-            (rg for rg in self.result_groups if not rg.has_findings)
+            (
+                rg for rg in self.result_groups
+                if not rg.has_findings and not rg.has_scan_errors
+            )
+        )
+
+    @property
+    def result_groups_with_scan_errors(self) -> tuple[ScanResultGroup]:
+        return tuple(
+            (rg for rg in self.result_groups if rg.has_scan_errors)
         )

@@ -470,6 +470,10 @@ def create_or_update_github_issues(
         )
         time.sleep(1) # throttle github-api-requests
 
+    if groups_with_scan_error := result_group_collection.result_groups_with_scan_errors:
+        logger.warning(f'{len(groups_with_scan_error)=} had scanning errors (check log)')
+        # do not fail job (for now); might choose to, later
+
     if overwrite_repository:
         known_issues = _all_issues(overwrite_repository)
         close_issues_for_absent_resources(
