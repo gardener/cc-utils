@@ -19,6 +19,7 @@ import dso.labels
 import enum
 import tarfile
 import tarutil
+import traceback
 import typing
 
 import dacite
@@ -453,6 +454,34 @@ class ScanRequest:
             f"ScanRequest(name='{self.display_name}', target_product_id='{self.target_product_id}' "
             f"custom_metadata='{self.custom_metadata}')"
         )
+
+
+class BdbaScanError(Exception):
+    def __init__(
+        self,
+        scan_request: ScanRequest,
+        component: gci.componentmodel.Component,
+        artefact: gci.componentmodel.Artifact,
+        exception=None,
+        *args,
+        **kwargs,
+    ):
+        self.scan_request = scan_request
+        self.component = component
+        self.artefact = artefact
+        self.exception = exception
+
+        super().__init__(*args, **kwargs)
+
+    def print_stacktrace(self):
+        c = self.component
+        a = self.artefact
+        name = f'{c.name}:{c.version}/{a.name}:{a.version}'
+
+        if not self.exception:
+            return name + ' - no exception available'
+
+        return name + '\n' + ''.join(traceback.format_tb(self.exception.__traceback__))
 
 
 @dataclasses.dataclass(frozen=True)

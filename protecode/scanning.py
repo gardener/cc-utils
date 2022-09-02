@@ -4,6 +4,7 @@ import logging
 import typing
 
 import dacite
+import requests
 
 import gci.componentmodel as cm
 
@@ -11,6 +12,7 @@ import ci.log
 import cnudie.retrieve
 import cnudie.util
 import dso.labels
+import github.compliance.model as gcm
 import protecode.assessments
 import protecode.client
 import protecode.model as pm
@@ -164,37 +166,56 @@ class ResourceGroupProcessor:
         scan_request: pm.ScanRequest,
         processing_mode: pm.ProcessingMode,
     ) -> pm.AnalysisResult:
+        def raise_on_error(exception):
+            comp_artefact = scan_request.component_artifacts
+
+            raise pm.BdbaScanError(
+                scan_request=scan_request,
+                component=comp_artefact.component,
+                artefact=comp_artefact.artifact,
+                exception=exception,
+            )
+
         if processing_mode is pm.ProcessingMode.FORCE_UPLOAD:
             if (job_id := scan_request.target_product_id):
                 # reupload binary
-                return self.protecode_client.upload(
-                    application_name=scan_request.display_name,
-                    group_id=self.group_id,
-                    data=scan_request.scan_content.upload_data(),
-                    replace_id=job_id,
-                    custom_attribs=scan_request.custom_metadata,
-                )
+                try:
+                    return self.protecode_client.upload(
+                        application_name=scan_request.display_name,
+                        group_id=self.group_id,
+                        data=scan_request.scan_content.upload_data(),
+                        replace_id=job_id,
+                        custom_attribs=scan_request.custom_metadata,
+                    )
+                except requests.exceptions.HTTPError as e:
+                    raise_on_error(e)
             else:
                 # upload new product
-                return self.protecode_client.upload(
-                    application_name=scan_request.display_name,
-                    group_id=self.group_id,
-                    data=scan_request.scan_content.upload_data(),
-                    custom_attribs=scan_request.custom_metadata,
-                )
+                try:
+                    return self.protecode_client.upload(
+                        application_name=scan_request.display_name,
+                        group_id=self.group_id,
+                        data=scan_request.scan_content.upload_data(),
+                        custom_attribs=scan_request.custom_metadata,
+                    )
+                except requests.exceptions.HTTPError as e:
+                    raise_on_error(e)
         elif processing_mode is pm.ProcessingMode.RESCAN:
             if (existing_id := scan_request.target_product_id):
                 # check if result can be reused
                 scan_result = self.protecode_client.scan_result(product_id=existing_id)
                 if scan_result.is_stale() and not scan_result.has_binary():
                     # no choice but to upload
-                    return self.protecode_client.upload(
-                        application_name=scan_request.display_name,
-                        group_id=self.group_id,
-                        data=scan_request.scan_content.upload_data(),
-                        replace_id=existing_id,
-                        custom_attribs=scan_request.custom_metadata,
-                    )
+                    try:
+                        return self.protecode_client.upload(
+                            application_name=scan_request.display_name,
+                            group_id=self.group_id,
+                            data=scan_request.scan_content.upload_data(),
+                            replace_id=existing_id,
+                            custom_attribs=scan_request.custom_metadata,
+                        )
+                    except requests.exceptions.HTTPError as e:
+                        raise_on_error(e)
 
                 # update name/metadata unless identical
                 if scan_result.name() != scan_request.display_name:
@@ -216,14 +237,20 @@ class ResourceGroupProcessor:
                         f'Triggering rescan for {existing_id} ({scan_request.display_name()})'
                     )
                     self.protecode_client.rescan(product_id=existing_id)
-                return self.protecode_client.scan_result(product_id=existing_id)
+                try:
+                    return self.protecode_client.scan_result(product_id=existing_id)
+                except requests.exceptions.HTTPError as e:
+                    raise_on_error(e)
             else:
-                return self.protecode_client.upload(
-                    application_name=scan_request.display_name,
-                    group_id=self.group_id,
-                    data=scan_request.scan_content.upload_data(),
-                    custom_attribs=scan_request.custom_metadata,
-                )
+                try:
+                    return self.protecode_client.upload(
+                        application_name=scan_request.display_name,
+                        group_id=self.group_id,
+                        data=scan_request.scan_content.upload_data(),
+                        custom_attribs=scan_request.custom_metadata,
+                    )
+                except requests.exceptions.HTTPError as e:
+                    raise_on_error(e)
         else:
             raise NotImplementedError(processing_mode)
 
@@ -265,13 +292,22 @@ class ResourceGroupProcessor:
         self,
         scan_requests: typing.Iterable[pm.ScanRequest],
         processing_mode: pm.ProcessingMode,
-    ) -> typing.Generator[typing.Tuple[pm.ScanRequest, pm.AnalysisResult], None, None]:
+    ) -> typing.Generator[tuple[pm.ScanRequest, pm.AnalysisResult|pm.BdbaScanError], None, None]:
         for scan_request in scan_requests:
-            scan_result = self.process_scan_request(
-                scan_request=scan_request,
-                processing_mode=processing_mode,
-            )
-            yield scan_request, self.protecode_client.wait_for_scan_result(scan_result.product_id())
+            try:
+                scan_result = self.process_scan_request(
+                    scan_request=scan_request,
+                    processing_mode=processing_mode,
+                )
+                yield (
+                    scan_request,
+                    self.protecode_client.wait_for_scan_result(scan_result.product_id()),
+                )
+            except pm.BdbaScanError as bse:
+                yield (
+                    scan_request,
+                    bse,
+                )
 
     def process(
         self,
@@ -286,7 +322,7 @@ class ResourceGroupProcessor:
 
         logger.info(f'Generated {len(scan_requests)} scan requests for {artifact_group}')
 
-        scan_requests_and_results = list(
+        scan_requests_and_results = tuple(
             self._upload_and_wait_for_scans(
                 scan_requests=scan_requests,
                 processing_mode=processing_mode,
@@ -294,10 +330,28 @@ class ResourceGroupProcessor:
         )
         results = [result for _, result in scan_requests_and_results]
 
+        def scan_failed(result: pm.AnalysisResult|pm.BdbaScanError):
+            if isinstance(result, pm.AnalysisResult):
+                return False
+            if isinstance(result, pm.BdbaScanError):
+                return True
+
+            raise ValueError(result)
+
+        results_from_successful_scans = [r for r in results if not scan_failed(r)]
+        results_with_errors = [r for r in results if scan_failed(r)]
+
+        if results_with_errors:
+            logger.warning(f'{len(results_with_errors)=} - printing stacktraces')
+
+        for result in results_with_errors:
+            result: pm.BdbaScanError
+            logger.warning(result.print_stacktrace())
+
         # upload package-version-hints if any
         for result, package_hints in iter_version_hints(
             artifact_group=artifact_group,
-            scan_results=results,
+            scan_results=results_from_successful_scans,
         ):
             logger.info(f'uploading package-version-hints for {result.display_name()}')
             protecode.assessments.upload_version_hints(
@@ -315,7 +369,7 @@ class ResourceGroupProcessor:
             f'found {len(component_vulnerabilities_with_assessments)} relevant triages to import'
         )
 
-        for result in results:
+        for result in results_from_successful_scans:
             protecode.assessments.add_assessments_if_none_exist(
                 tgt=result,
                 tgt_group_id=self.group_id,
@@ -328,15 +382,19 @@ class ResourceGroupProcessor:
             (request, result) if not request.auto_triage_scan()
             else (request, self.apply_auto_triage(scan_request=request))
             for request, result in scan_requests_and_results
+            if not scan_failed(result)
         ]
 
         for scan_request, scan_result in scan_requests_and_results:
+            state = gcm.ScanState.SUCCEEDED if not scan_failed(scan_result) else gcm.ScanState.FAILED
+
             # pylint: disable=E1123
             yield pm.BDBA_ScanResult(
                 component=scan_request.component_artifacts.component,
                 artifact=scan_request.component_artifacts.artifact,
                 status=pm.UploadStatus.DONE,
                 result=scan_result,
+                state=state,
             )
 
 
@@ -536,7 +594,7 @@ def upload_grouped_images(
         artifact_group: pm.ArtifactGroup,
         processing_mode: pm.ProcessingMode,
     ) -> typing.Sequence[pm.BDBA_ScanResult]:
-        return list(processor.process(
+        return tuple(processor.process(
             artifact_group=artifact_group,
             processing_mode=processing_mode,
         ))
