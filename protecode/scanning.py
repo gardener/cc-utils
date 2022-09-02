@@ -261,19 +261,6 @@ class ResourceGroupProcessor:
         # return updated scan result
         return self.protecode_client.scan_result(product_id=product_id)
 
-    def _wrap_into_bdba_results(
-        self,
-        scan_requests_and_results: typing.Iterable[typing.Tuple[pm.ScanRequest, pm.AnalysisResult]],
-    ) -> typing.Generator[pm.BDBA_ScanResult, None, None]:
-        for scan_request, scan_result in scan_requests_and_results:
-            # pylint: disable=E1123
-            yield pm.BDBA_ScanResult(
-                component=scan_request.component_artifacts.component,
-                artifact=scan_request.component_artifacts.artifact,
-                status=pm.UploadStatus.DONE,
-                result=scan_result,
-            )
-
     def _upload_and_wait_for_scans(
         self,
         scan_requests: typing.Iterable[pm.ScanRequest],
@@ -343,7 +330,14 @@ class ResourceGroupProcessor:
             for request, result in scan_requests_and_results
         ]
 
-        yield from self._wrap_into_bdba_results(scan_requests_and_results)
+        for scan_request, scan_result in scan_requests_and_results:
+            # pylint: disable=E1123
+            yield pm.BDBA_ScanResult(
+                component=scan_request.component_artifacts.component,
+                artifact=scan_request.component_artifacts.artifact,
+                status=pm.UploadStatus.DONE,
+                result=scan_result,
+            )
 
 
 def iter_version_hints(
