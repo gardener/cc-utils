@@ -3,6 +3,7 @@ import functools
 import logging
 import typing
 
+import botocore.exceptions
 import dacite
 import requests
 
@@ -189,6 +190,8 @@ class ResourceGroupProcessor:
                     )
                 except requests.exceptions.HTTPError as e:
                     raise_on_error(e)
+                except botocore.exceptions.BotoCoreError as e:
+                    raise_on_error(e)
             else:
                 # upload new product
                 try:
@@ -199,6 +202,8 @@ class ResourceGroupProcessor:
                         custom_attribs=scan_request.custom_metadata,
                     )
                 except requests.exceptions.HTTPError as e:
+                    raise_on_error(e)
+                except botocore.exceptions.BotoCoreError as e:
                     raise_on_error(e)
         elif processing_mode is pm.ProcessingMode.RESCAN:
             if (existing_id := scan_request.target_product_id):
@@ -215,6 +220,8 @@ class ResourceGroupProcessor:
                             custom_attribs=scan_request.custom_metadata,
                         )
                     except requests.exceptions.HTTPError as e:
+                        raise_on_error(e)
+                    except botocore.exceptions.BotoCoreError as e:
                         raise_on_error(e)
 
                 # update name/metadata unless identical
@@ -241,6 +248,8 @@ class ResourceGroupProcessor:
                     return self.protecode_client.scan_result(product_id=existing_id)
                 except requests.exceptions.HTTPError as e:
                     raise_on_error(e)
+                except botocore.exceptions.BotoCoreError as e:
+                    raise_on_error(e)
             else:
                 try:
                     return self.protecode_client.upload(
@@ -250,6 +259,8 @@ class ResourceGroupProcessor:
                         custom_attribs=scan_request.custom_metadata,
                     )
                 except requests.exceptions.HTTPError as e:
+                    raise_on_error(e)
+                except botocore.exceptions.BotoCoreError as e:
                     raise_on_error(e)
         else:
             raise NotImplementedError(processing_mode)
