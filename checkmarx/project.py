@@ -55,6 +55,7 @@ class CheckmarxProject:
         clogger.info('scan finished. Retrieving scan statistics')
         statistics = self.scan_statistics(scan_id=scan_response.id)
 
+        # pylint: disable=E1123
         return model.ScanResult(
             component=component,
             artifact=source,

@@ -266,6 +266,7 @@ class ResourceGroupProcessor:
         scan_requests_and_results: typing.Iterable[typing.Tuple[pm.ScanRequest, pm.AnalysisResult]],
     ) -> typing.Generator[pm.BDBA_ScanResult, None, None]:
         for scan_request, scan_result in scan_requests_and_results:
+            # pylint: disable=E1123
             yield pm.BDBA_ScanResult(
                 component=scan_request.component_artifacts.component,
                 artifact=scan_request.component_artifacts.artifact,

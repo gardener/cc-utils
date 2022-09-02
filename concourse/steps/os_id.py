@@ -72,6 +72,7 @@ def base_image_os_id(
 
         os_info = us.determine_osinfo(tarfh=tf)
 
+    # pylint: disable=E1123
     return gcm.OsIdScanResult(
         component=component,
         artifact=resource,
