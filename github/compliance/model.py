@@ -83,7 +83,7 @@ class ScanResultGroup:
 
     @property
     def results_with_successful_scans(self):
-        return tuple((r for r in self.results_with_successful_scans if r.scan_succeeded))
+        return tuple((r for r in self.results if r.scan_succeeded))
 
     @property
     def component(self) -> cm.Component:
