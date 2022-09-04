@@ -604,7 +604,7 @@ def upload_grouped_images(
     def task_function(
         artifact_group: pm.ArtifactGroup,
         processing_mode: pm.ProcessingMode,
-    ) -> typing.Sequence[pm.BDBA_ScanResult]:
+    ) -> tuple[pm.BDBA_ScanResult]:
         return tuple(processor.process(
             artifact_group=artifact_group,
             processing_mode=processing_mode,

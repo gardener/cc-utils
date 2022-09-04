@@ -94,18 +94,20 @@ delivery_svc_endpoints = ccc.delivery.endpoints(cfg_set=cfg_set)
 delivery_svc_client = ccc.delivery.default_client_if_available()
 
 logger.info('running protecode scan for all components')
-results_generator = protecode.scanning.upload_grouped_images(
-  protecode_api=protecode_client,
-  protecode_group_id = protecode_group_id,
-  component_descriptor = component_descriptor,
-  reference_group_ids = ${protecode_scan.reference_protecode_group_ids()},
-  processing_mode = ProcessingMode('${protecode_scan.processing_mode().value}'),
-  parallel_jobs=${protecode_scan.parallel_jobs()},
-  cve_threshold=cve_threshold,
-  filter_function=filter_function,
-  delivery_client=delivery_svc_client,
+results = tuple(
+  protecode.scanning.upload_grouped_images(
+    protecode_api=protecode_client,
+    protecode_group_id = protecode_group_id,
+    component_descriptor = component_descriptor,
+    reference_group_ids = ${protecode_scan.reference_protecode_group_ids()},
+    processing_mode = ProcessingMode('${protecode_scan.processing_mode().value}'),
+    parallel_jobs=${protecode_scan.parallel_jobs()},
+    cve_threshold=cve_threshold,
+    filter_function=filter_function,
+    delivery_client=delivery_svc_client,
+  )
 )
-results = tuple(results_generator)
+logger.info(f'bdba scan yielded {len(results)=}')
 
 % if license_cfg:
 license_cfg = dacite.from_dict(
