@@ -520,8 +520,7 @@ def close_issues_for_absent_resources(
             component=result_group.component,
             artifact=result_group.artifact,
         )
-        logger.info(f'Digest-Label for {result_group.component.name=}, {result_group.name=} is: '
-            f'{resource_label=}')
+        logger.info(f'Digest-Label for {result_group.name=}: {resource_label=}')
         component_resources_to_issues.pop(resource_label, None)
 
     # any issues that have not been removed thus far were not referenced by given result_groups
