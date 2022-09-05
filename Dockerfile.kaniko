@@ -1,15 +1,18 @@
-FROM eu.gcr.io/gardener-project/cc/job-image-base:0.76.0
-COPY --from=gcr.io/kaniko-project/executor:v1.6.0 /kaniko/executor /kaniko/executor.tmp
-
-COPY . /cc/utils/
-
+ARG BASE_IMAGE_TAG=0.80.0
+FROM eu.gcr.io/gardener-project/cc/job-image-base:$BASE_IMAGE_TAG as builder
 RUN pip3 install --upgrade \
   pip \
   wheel \
-&& pip3 install --upgrade \
+&& pip3 install --root /pkgs --upgrade \
   --find-links /cc/utils/dist \
   gardener-cicd-libs \
   pycryptodome \
-&& pip3 install gardener-component-model jsonschema
+&& pip3 install --root /pkgs gardener-component-model jsonschema
+
+FROM eu.gcr.io/gardener-project/cc/job-image-base:$BASE_IMAGE_TAG
+COPY --from=gcr.io/kaniko-project/executor:v1.6.0 /kaniko/executor /kaniko/executor.tmp
+COPY --from=builder /pkgs/usr /usr
+
+COPY . /cc/utils/
 
 RUN mv /kaniko/executor.tmp /bin/kaniko
