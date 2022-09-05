@@ -27,7 +27,7 @@ import dacite
 import ccc
 import ccc.oci
 import gci.componentmodel
-import github.compliance.model as gcr
+import github.compliance.model as gcm
 import oci
 
 from concourse.model.base import (
@@ -293,7 +293,7 @@ class UploadStatus(enum.Enum):
 
 
 @dataclasses.dataclass
-class BDBA_ScanResult(gcr.ScanResult):
+class BDBA_ScanResult(gcm.ScanResult):
     status: UploadStatus
     result: AnalysisResult
 
