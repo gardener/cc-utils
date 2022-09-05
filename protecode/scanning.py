@@ -397,7 +397,7 @@ class ResourceGroupProcessor:
             # pylint: disable=E1123
             yield pm.BDBA_ScanResult(
                 component=component,
-                artifact=artifact,
+                artifact=artefact,
                 status=pm.UploadStatus.DONE,
                 result=scan_result,
                 state=state,
