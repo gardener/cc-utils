@@ -389,7 +389,7 @@ class ResourceGroupProcessor:
         for scan_request, scan_result in scan_requests_and_results:
             state = gcm.ScanState.SUCCEEDED if not scan_failed(scan_result) else gcm.ScanState.FAILED
             component = scan_request.component_artifacts.component
-            artefact = scan_reqeust.component_artifacts.artifact
+            artefact = scan_request.component_artifacts.artifact
 
             if scan_failed(scan_result):
                 logger.info(f'scan failed: {component.name=}/{artefact.name=}{artefact.version=}')
