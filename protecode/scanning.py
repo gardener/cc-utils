@@ -387,7 +387,7 @@ class ResourceGroupProcessor:
                 logger.info(f'scan failed: {component.name=}/{artefact.name=}{artefact.version=}')
             elif scan_request.auto_triage_scan():
                 # auto-assess + re-retrieve results afterwards
-                scan_result = self.apply_auto_triage(scan_result)
+                scan_result = self.apply_auto_triage(scan_request)
 
             # pylint: disable=E1123
             yield pm.BDBA_ScanResult(
