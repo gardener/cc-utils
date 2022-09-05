@@ -385,7 +385,7 @@ class ResourceGroupProcessor:
 
             if scan_failed(scan_result):
                 logger.info(f'scan failed: {component.name=}/{artefact.name=}{artefact.version=}')
-            elif request.auto_triage_scan():
+            elif scan_request.auto_triage_scan():
                 # auto-assess + re-retrieve results afterwards
                 scan_result = self.apply_auto_triage(scan_result)
 
