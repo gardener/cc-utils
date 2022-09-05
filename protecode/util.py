@@ -265,9 +265,7 @@ def fileobj_for_s3_access(
     # get a file-like object to stream from the given resource's access
     access = resource.access
     if not isinstance(access, cm.S3Access):
-        raise RuntimeError(
-            "Can only acces content in s3 for resources whose access is of type 's3'"
-    )
+        raise ValueError(access.type)
     s3_client = boto3.client(
         's3',
         # anonymous access
