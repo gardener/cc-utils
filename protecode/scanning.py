@@ -58,10 +58,6 @@ class ResourceGroupProcessor:
                 group_id=id,
                 custom_attribs=metadata,
             ))
-            logger.info(
-                f'Found {len(products)} relevant scans for artifact group {artifact_group.name} in '
-                f'Group {id}'
-            )
             yield from products
 
     def iter_components_with_vulnerabilities_and_assessments(self, artifact_group: pm.ArtifactGroup):
@@ -331,8 +327,6 @@ class ResourceGroupProcessor:
             known_artifact_scans=self.scan_results,
         ))
 
-        logger.info(f'Generated {len(scan_requests)} scan requests for {artifact_group}')
-
         scan_requests_and_results = tuple(
             self._upload_and_wait_for_scans(
                 scan_requests=scan_requests,
@@ -374,10 +368,6 @@ class ResourceGroupProcessor:
         # todo: deduplicate/merge assessments
         component_vulnerabilities_with_assessments = tuple(
             self.iter_components_with_vulnerabilities_and_assessments(artifact_group=artifact_group)
-        )
-
-        logger.info(
-            f'found {len(component_vulnerabilities_with_assessments)} relevant triages to import'
         )
 
         for result in results_from_successful_scans:

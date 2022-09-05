@@ -37,7 +37,6 @@ def upload_results_to_deliverydb(
     delivery_client,
     results: typing.Iterable[pm.BDBA_ScanResult],
 ):
-    logger.info('uploading results to deliverydb')
     try:
         for artefact_metadata in iter_artefact_metadata(results):
             delivery_client.upload_metadata(data=artefact_metadata)
