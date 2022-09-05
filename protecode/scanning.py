@@ -378,14 +378,6 @@ class ResourceGroupProcessor:
                 protecode_client=self.protecode_client,
             )
 
-        # finally, auto-triage remaining vulnerabilities (updates fetched result) if configured.
-        scan_requests_and_results = [
-            (request, result) if not request.auto_triage_scan()
-            else (request, self.apply_auto_triage(scan_request=request))
-            for request, result in scan_requests_and_results
-            if not scan_failed(result)
-        ]
-
         for scan_request, scan_result in scan_requests_and_results:
             state = gcm.ScanState.SUCCEEDED if not scan_failed(scan_result) else gcm.ScanState.FAILED
             component = scan_request.component_artifacts.component
@@ -393,6 +385,9 @@ class ResourceGroupProcessor:
 
             if scan_failed(scan_result):
                 logger.info(f'scan failed: {component.name=}/{artefact.name=}{artefact.version=}')
+            elif request.auto_triage_scan():
+                # auto-assess + re-retrieve results afterwards
+                scan_result = self.apply_auto_triage(scan_result)
 
             # pylint: disable=E1123
             yield pm.BDBA_ScanResult(
