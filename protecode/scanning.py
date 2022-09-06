@@ -60,7 +60,10 @@ class ResourceGroupProcessor:
             ))
             yield from products
 
-    def iter_components_with_vulnerabilities_and_assessments(self, artifact_group: pm.ArtifactGroup):
+    def iter_components_with_vulnerabilities_and_assessments(
+        self,
+        products_to_import_from: tuple[pm.Product],
+    ) -> typing.Generator[tuple[pm.Component, pm.Vulnerability, tuple[pm.Triage]], None, None]:
         def _iter_vulnerabilities(
             result: pm.AnalysisResult,
         ) -> typing.Generator[tuple[pm.Component, pm.Vulnerability], None, None]:
@@ -76,7 +79,7 @@ class ResourceGroupProcessor:
                     continue
                 yield component, vulnerability, tuple(vulnerability.triages())
 
-        for product in self._products_with_relevant_triages(artifact_group=artifact_group):
+        for product in products_to_import_from:
             result = self.protecode_client.wait_for_scan_result(product_id=product.product_id())
 
             yield from iter_vulnerabilities_with_assessments(
@@ -87,44 +90,13 @@ class ResourceGroupProcessor:
         self,
         artifact_group: pm.ArtifactGroup,
         known_artifact_scans: typing.Dict[str, typing.Iterable[pm.Product]]
-    ) -> typing.Iterable[pm.ScanRequest]:
-        match artifact_group:
-            case pm.OciArtifactGroup():
-                for component_artifact in artifact_group.component_artifacts:
-                    # generate one ScanRequest for each ComponentArtifact
-                    # First, find product ID by meta-data
-                    component_artifact_metadata = protecode.util.component_artifact_metadata(
-                        component_artifact=component_artifact,
-                        omit_component_version=False,
-                        omit_resource_version=False,
-                    )
-                    target_product_id = protecode.util._matching_analysis_result_id(
-                        component_artifact_metadata=component_artifact_metadata,
-                        analysis_results=known_artifact_scans.get(artifact_group.name),
-                    )
-                    if target_product_id:
-                        logger.info(
-                            f'Found existing scan ({target_product_id}) for {artifact_group}'
-                        )
-                    else:
-                        logger.info(f'No existing scan for {artifact_group} - will create new one.')
-                    yield pm.ScanRequest(
-                        component_artifacts=component_artifact,
-                        scan_content=pm.OciResourceBinary(
-                            artifact=component_artifact.artifact
-                        ),
-                        display_name=artifact_group.name,
-                        target_product_id=target_product_id,
-                        custom_metadata=component_artifact_metadata,
-                    )
-
-            case pm.TarRootfsArtifactGroup():
-                # Generate one ScanRequest for all ComponentArtifacts. For this kind of ArtifactGroup
-                # we merge all appropriate (tar)artifacts into one big tararchive
+    ) -> typing.Generator[pm.ScanRequest, None, None]:
+        if isinstance(artifact_group, pm.OciArtifactGroup):
+            for component_artifact in artifact_group.component_artifacts:
+                # generate one ScanRequest for each ComponentArtifact
+                # First, find product ID by meta-data
                 component_artifact_metadata = protecode.util.component_artifact_metadata(
-                    # All components have the same version so we can use any
-                    # ComponentArtifacts for the metadata-calculation.
-                    component_artifact=artifact_group.component_artifacts[0],
+                    component_artifact=component_artifact,
                     omit_component_version=False,
                     omit_resource_version=False,
                 )
@@ -132,28 +104,57 @@ class ResourceGroupProcessor:
                     component_artifact_metadata=component_artifact_metadata,
                     analysis_results=known_artifact_scans.get(artifact_group.name),
                 )
-
                 if target_product_id:
-                    logger.info(f'Found existing scan ({target_product_id}) for {artifact_group}')
+                    logger.info(
+                        f'Found existing scan ({target_product_id}) for {artifact_group}'
+                    )
                 else:
                     logger.info(f'No existing scan for {artifact_group} - will create new one.')
-
                 yield pm.ScanRequest(
-                    component_artifacts=artifact_group.component_artifacts[0],
-                    scan_content=pm.TarRootfsAggregateResourceBinary(
-                        artifacts=[
-                            component_artifact.artifact
-                            for component_artifact in artifact_group.component_artifacts
-                        ],
-                        tarfile_retrieval_function=protecode.util.fileobj_for_s3_access,
+                    component_artifacts=component_artifact,
+                    scan_content=pm.OciResourceBinary(
+                        artifact=component_artifact.artifact
                     ),
                     display_name=artifact_group.name,
                     target_product_id=target_product_id,
                     custom_metadata=component_artifact_metadata,
                 )
+            return
+        elif isinstance(artifact_group, pm.TarRootfsArtifactGroup):
+            # Generate one ScanRequest for all ComponentArtifacts. For this kind of ArtifactGroup
+            # we merge all appropriate (tar)artifacts into one big tararchive
+            component_artifact_metadata = protecode.util.component_artifact_metadata(
+                # All components have the same version so we can use any
+                # ComponentArtifacts for the metadata-calculation.
+                component_artifact=artifact_group.component_artifacts[0],
+                omit_component_version=False,
+                omit_resource_version=False,
+            )
+            target_product_id = protecode.util._matching_analysis_result_id(
+                component_artifact_metadata=component_artifact_metadata,
+                analysis_results=known_artifact_scans.get(artifact_group.name),
+            )
 
-            case _:
-                raise NotImplementedError(artifact_group)
+            if target_product_id:
+                logger.info(f'Found existing scan ({target_product_id}) for {artifact_group}')
+            else:
+                logger.info(f'No existing scan for {artifact_group} - will create new one.')
+
+            yield pm.ScanRequest(
+                component_artifacts=artifact_group.component_artifacts[0],
+                scan_content=pm.TarRootfsAggregateResourceBinary(
+                    artifacts=[
+                        component_artifact.artifact
+                        for component_artifact in artifact_group.component_artifacts
+                    ],
+                    tarfile_retrieval_function=protecode.util.fileobj_for_s3_access,
+                ),
+                display_name=artifact_group.name,
+                target_product_id=target_product_id,
+                custom_metadata=component_artifact_metadata,
+            )
+        else:
+            raise NotImplementedError(artifact_group)
 
     def process_scan_request(
         self,
@@ -292,98 +293,44 @@ class ResourceGroupProcessor:
         # return updated scan result
         return self.protecode_client.scan_result(product_id=product_id)
 
-    def _upload_and_wait_for_scans(
-        self,
-        scan_requests: typing.Iterable[pm.ScanRequest],
-        processing_mode: pm.ProcessingMode,
-    ) -> typing.Generator[tuple[pm.ScanRequest, pm.AnalysisResult|pm.BdbaScanError], None, None]:
-        for scan_request in scan_requests:
-            try:
-                scan_result = self.process_scan_request(
-                    scan_request=scan_request,
-                    processing_mode=processing_mode,
-                )
-                yield (
-                    scan_request,
-                    self.protecode_client.wait_for_scan_result(scan_result.product_id()),
-                )
-            except pm.BdbaScanError as bse:
-                yield (
-                    scan_request,
-                    bse,
-                )
-
     def process(
         self,
         artifact_group: pm.ArtifactGroup,
         processing_mode: pm.ProcessingMode,
     ) -> typing.Iterator[pm.BDBA_ScanResult]:
         logger.info(f'Processing ArtifactGroup {artifact_group}')
-        scan_requests_and_results = tuple(
-            self._upload_and_wait_for_scans(
-                scan_requests=self.scan_requests(
-                  artifact_group=artifact_group,
-                  known_artifact_scans=self.scan_results,
-                ),
-                processing_mode=processing_mode,
-            )
-        )
-        results = [result for _, result in scan_requests_and_results]
 
-        def scan_failed(result: pm.AnalysisResult|pm.BdbaScanError):
-            if isinstance(result, pm.AnalysisResult):
-                return False
-            if isinstance(result, pm.BdbaScanError):
-                return True
-
-            raise ValueError(result)
-
-        results_from_successful_scans = [r for r in results if not scan_failed(r)]
-        results_with_errors = [r for r in results if scan_failed(r)]
-
-        if results_with_errors:
-            logger.warning(f'{len(results_with_errors)=} - printing stacktraces')
-
-        for result in results_with_errors:
-            result: pm.BdbaScanError
-            logger.warning(result.print_stacktrace())
-
-        # upload package-version-hints if any
-        for result, package_hints in iter_version_hints(
+        products_to_import_from = tuple(self._products_with_relevant_triages(
             artifact_group=artifact_group,
-            scan_results=results_from_successful_scans,
-        ):
-            logger.info(f'uploading package-version-hints for {result.display_name()}')
-            protecode.assessments.upload_version_hints(
-                scan_result=result,
-                hints=package_hints,
-                client=self.protecode_client,
-            )
-
+        ))
         # todo: deduplicate/merge assessments
         component_vulnerabilities_with_assessments = tuple(
-            self.iter_components_with_vulnerabilities_and_assessments(artifact_group=artifact_group)
+            self.iter_components_with_vulnerabilities_and_assessments(
+                products_to_import_from=products_to_import_from,
+            )
         )
 
-        for result in results_from_successful_scans:
-            protecode.assessments.add_assessments_if_none_exist(
-                tgt=result,
-                tgt_group_id=self.group_id,
-                assessments=component_vulnerabilities_with_assessments,
-                protecode_client=self.protecode_client,
-            )
+        for scan_request in self.scan_requests(
+          artifact_group=artifact_group,
+          known_artifact_scans=self.scan_results,
+        ):
+          try:
+              scan_result = self.process_scan_request(
+                  scan_request=scan_request,
+                  processing_mode=processing_mode,
+              )
+              scan_result = self.protecode_client.wait_for_scan_result(scan_result.product_id())
+              scan_failed = False
+          except pm.BdbaScanError as bse:
+              scan_result = bse
+              scan_failed = True
+              logger.warning(bse.print_stacktrace())
 
-        for scan_request, scan_result in scan_requests_and_results:
-            state = gcm.ScanState.SUCCEEDED if not scan_failed(scan_result) else gcm.ScanState.FAILED
-            component = scan_request.component_artifacts.component
-            artefact = scan_request.component_artifacts.artifact
+          state = gcm.ScanState.FAILED if scan_failed else gcm.ScanState.SUCCEEDED
+          component = scan_request.component_artifacts.component
+          artefact = scan_request.component_artifacts.artifact
 
-            if scan_failed(scan_result):
-                logger.info(f'scan failed: {component.name=}/{artefact.name=}{artefact.version=}')
-            elif scan_request.auto_triage_scan():
-                # auto-assess + re-retrieve results afterwards
-                scan_result = self.apply_auto_triage(scan_request)
-
+          if scan_failed:
             # pylint: disable=E1123
             yield pm.BDBA_ScanResult(
                 component=component,
@@ -392,55 +339,82 @@ class ResourceGroupProcessor:
                 result=scan_result,
                 state=state,
             )
+            return
+
+          # scan succeeded
+          logger.info(f'uploading package-version-hints for {scan_result.display_name()}')
+          protecode.assessments.upload_version_hints(
+              scan_result=scan_result,
+              hints=_package_version_hints(
+                component=component,
+                artefact=artefact,
+                result=scan_result,
+              ),
+              client=self.protecode_client,
+          )
+          if scan_request.auto_triage_scan():
+              # auto-assess + re-retrieve results afterwards
+              scan_result = self.apply_auto_triage(scan_request)
+
+          protecode.assessments.add_assessments_if_none_exist(
+              tgt=scan_result,
+              tgt_group_id=self.group_id,
+              assessments=component_vulnerabilities_with_assessments,
+              protecode_client=self.protecode_client,
+          )
+
+          # pylint: disable=E1123
+          yield pm.BDBA_ScanResult(
+              component=component,
+              artifact=artefact,
+              status=pm.UploadStatus.DONE,
+              result=scan_result,
+              state=state,
+          )
 
 
-def iter_version_hints(
-    artifact_group: pm.ArtifactGroup,
-    scan_results: typing.Iterable[pm.AnalysisResult],
-) -> typing.Generator[tuple[pm.AnalysisResult, list[dso.labels.PackageVersionHint]], None, None]:
-    def find_scan_results(resource: cm.Resource):
+def _package_version_hints(
+    component: cm.Component,
+    artefact: cm.Artifact,
+    result: pm.AnalysisResult,
+) -> list[dso.labels.PackageVersionHint] | None:
+    def result_matches(resource: cm.Resource, result: pm.AnalysisResult):
         '''
         find matching result for package-version-hint
         note: we require strict matching of both component-version and resource-version
         '''
-        for result in scan_results:
-            cd = result.custom_data()
-            if not cd.get('COMPONENT_VERSION') == artifact_group.component_version():
-                continue
-            if not cd.get('COMPONENT_NAME') == artifact_group.component_name():
-                continue
-            if not cd.get('IMAGE_REFERENCE_NAME') == artifact_group.resource_name():
-                continue
-            if not cd.get('IMAGE_VERSION') == artifact_group.resource_version():
-                continue
+        cd = result.custom_data()
+        if not cd.get('COMPONENT_VERSION') == component.version:
+            return False
+        if not cd.get('COMPONENT_NAME') == component.name:
+            return False
+        if not cd.get('IMAGE_REFERENCE_NAME') == artefact.name:
+            return False
+        if not cd.get('IMAGE_VERSION') == artefact.version:
+            return False
 
-            yield result
+        return True
 
+    if not result_matches(resource=artefact, result=result):
         return None
 
-    for artefact in artifact_group.artefacts:
-        if not isinstance(artefact, cm.Resource):
-            raise NotImplementedError(artefact)
-        artefact: cm.Resource
+    if not isinstance(artefact, cm.Resource):
+        raise NotImplementedError(artefact)
 
-        package_hints_label = artefact.find_label(name=dso.labels.LabelName.PACKAGE_VERSION_HINTS)
-        if not package_hints_label:
-            continue
+    artefact: cm.Resource
 
-        package_hints = [
-            dacite.from_dict(
-                data_class=dso.labels.PackageVersionHint,
-                data=hint,
-            ) for hint in package_hints_label.value
-        ]
+    package_hints_label = artefact.find_label(name=dso.labels.LabelName.PACKAGE_VERSION_HINTS)
+    if not package_hints_label:
+        return None
 
-        scan_results = tuple(find_scan_results(resource=artefact))
+    package_hints = [
+        dacite.from_dict(
+            data_class=dso.labels.PackageVersionHint,
+            data=hint,
+        ) for hint in package_hints_label.value
+    ]
 
-        if not scan_results:
-            continue
-
-        for scan_result in scan_results:
-            yield scan_result, package_hints
+    return package_hints
 
 
 def _find_scan_results(
