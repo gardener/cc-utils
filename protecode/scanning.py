@@ -319,14 +319,12 @@ class ResourceGroupProcessor:
         processing_mode: pm.ProcessingMode,
     ) -> typing.Iterator[pm.BDBA_ScanResult]:
         logger.info(f'Processing ArtifactGroup {artifact_group}')
-        scan_requests = list(self.scan_requests(
-            artifact_group=artifact_group,
-            known_artifact_scans=self.scan_results,
-        ))
-
         scan_requests_and_results = tuple(
             self._upload_and_wait_for_scans(
-                scan_requests=scan_requests,
+                scan_requests=self.scan_requests(
+                  artifact_group=artifact_group,
+                  known_artifact_scans=self.scan_results,
+                ),
                 processing_mode=processing_mode,
             )
         )
