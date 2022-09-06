@@ -27,10 +27,11 @@ from pydash import _
 import requests
 
 import github3
-from github3.github import GitHub
-from github3.repos.release import Release
 from github3.exceptions import NotFoundError
+from github3.github import GitHub
 from github3.orgs import Team
+from github3.pulls import PullRequest
+from github3.repos.release import Release
 
 import gci.componentmodel
 import gci.componentmodel as cm
@@ -136,11 +137,12 @@ class RepositoryHelperBase:
 
 
 class UpgradePullRequest:
-    def __init__(self,
-            pull_request,
-            from_ref: typing.Union[cm.Resource, cm.ComponentReference],
-            to_ref: typing.Union[cm.Resource, cm.ComponentReference],
-        ):
+    def __init__(
+        self,
+        pull_request: PullRequest,
+        from_ref: typing.Union[cm.Resource, cm.ComponentReference],
+        to_ref: typing.Union[cm.Resource, cm.ComponentReference],
+    ):
         self.pull_request = ci.util.not_none(pull_request)
 
         if from_ref.name != to_ref.name:
