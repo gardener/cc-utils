@@ -102,17 +102,17 @@ def close_obsolete_pull_requests(
 def upgrade_pr_exists(
     component_reference: gci.componentmodel.ComponentReference,
     component_version: str,
-    upgrade_requests,
-):
-    return any(
-        [
-            upgrade_rq.target_matches(
-                reference=component_reference,
-                reference_version=component_version,
-            )
-            for upgrade_rq in upgrade_requests
-        ]
-    )
+    upgrade_requests: typing.Iterable[github.util.UpgradePullRequest],
+) -> github.util.UpgradePullRequest | None:
+    if any(
+        (matching_rq := upgrade_rq).target_matches(
+            reference=component_reference,
+            reference_version=component_version,
+        )
+        for upgrade_rq in upgrade_requests
+    ):
+        return matching_rq
+    return None
 
 
 def latest_component_version_from_upstream(
@@ -194,7 +194,7 @@ def determine_reference_versions(
 def determine_upgrade_prs(
     upstream_component_name: str,
     upstream_update_policy: UpstreamUpdatePolicy,
-    upgrade_pull_requests,
+    upgrade_pull_requests : typing.Iterable[github.util.UpgradePullRequest],
     ctx_repo: gci.componentmodel.OciRepositoryContext,
     ignore_prerelease_versions=False,
 ) -> typing.Iterable[typing.Tuple[
@@ -230,7 +230,7 @@ def determine_upgrade_prs(
                     f'found: {greatest_version=}'
                 )
                 continue
-            elif upgrade_pr_exists(
+            elif matching_pr := upgrade_pr_exists(
                 component_reference=greatest_component_reference,
                 component_version=greatest_version,
                 upgrade_requests=upgrade_pull_requests,
@@ -238,7 +238,7 @@ def determine_upgrade_prs(
                 logger.info(
                     'skipping upgrade (PR already exists): '
                     f'{greatest_component_reference=} '
-                    f'to {greatest_version=}'
+                    f'to {greatest_version=} ({matching_pr.pull_request.html_url})'
                 )
                 continue
             else:
