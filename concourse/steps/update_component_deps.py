@@ -194,7 +194,7 @@ def determine_reference_versions(
 def determine_upgrade_prs(
     upstream_component_name: str,
     upstream_update_policy: UpstreamUpdatePolicy,
-    upgrade_pull_requests : typing.Iterable[github.util.UpgradePullRequest],
+    upgrade_pull_requests: typing.Iterable[github.util.UpgradePullRequest],
     ctx_repo: gci.componentmodel.OciRepositoryContext,
     ignore_prerelease_versions=False,
 ) -> typing.Iterable[typing.Tuple[
