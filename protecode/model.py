@@ -361,7 +361,6 @@ class OciResourceBinary(Binary):
 class TarRootfsAggregateResourceBinary(Binary):
     artifacts: typing.Iterable[gci.componentmodel.Resource]
     tarfile_retrieval_function: typing.Callable[[gci.componentmodel.Resource], typing.BinaryIO]
-    tarfile_naming_function: typing.Callable[[gci.componentmodel.Resource], str]
 
     def display_name(self):
         return f'{self.artifacts[0].name}_{self.artifacts[0].version}'
@@ -387,7 +386,7 @@ class TarRootfsAggregateResourceBinary(Binary):
         tarfiles_and_names = list(
             (
                 tarfile.open(fileobj=self.tarfile_retrieval_function(resource), mode='r|*'),
-                self.tarfile_naming_function(resource)
+                resource.extraIdentity.get('platform', 'n/a'),
             )
             for resource in self.artifacts
         )
