@@ -47,23 +47,7 @@ logger = logging.getLogger(__name__)
 ci.log.configure_default_logging()
 
 
-own_dir = os.path.abspath(os.path.dirname(__file__))
-repo_root = os.path.abspath(
-    os.path.join(
-        own_dir,
-        os.pardir,
-        os.pardir,
-    )
-)
-
 __cmd_name__ = 'concourse'
-
-
-def _template_path():
-    return os.path.join(
-        repo_root,
-        'concourse',
-    )
 
 
 def render_pipeline(
@@ -73,7 +57,7 @@ def render_pipeline(
     repo_path: str = 'example/example',
     repo_branch: str = 'master',
     repo_host: str = 'github.com',
-    template_path: str=_template_path(),
+    template_path: str=concourse.paths.template_include_dir,
     template_include_dir: str=None,
 ):
     cfg_factory = ctx().cfg_factory()
