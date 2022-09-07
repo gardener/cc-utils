@@ -312,7 +312,6 @@ class BDBA_ScanResult(gcm.ScanResult):
 
 @dataclasses.dataclass(frozen=True)
 class Binary:
-    def auto_triage(self) -> bool: pass
     def display_name(self) -> str: pass
     def metadata(self) -> dict[str, str]:  pass
     def upload_data(self) -> typing.Generator[bytes, None, None]: pass
@@ -335,26 +334,6 @@ class OciResourceBinary(Binary):
             oci_client=oci_client,
             include_config_blob=False,
         )
-
-    def auto_triage(
-        self,
-    ) -> bool:
-        # check for scanning labels on resource
-        if (
-            (label := self.artifact.find_label(name=dso.labels.LabelName.BINARY_ID))
-            or (label := self.artifact.find_label(name=dso.labels.LabelName.BINARY_SCAN))
-        ):
-            if label.name == dso.labels.LabelName.BINARY_SCAN:
-                return True
-            else:
-                scanning_hint = dacite.from_dict(
-                    data_class=dso.labels.BinaryScanHint,
-                    data=label.value,
-                    config=dacite.Config(cast=[dso.labels.ScanPolicy]),
-                )
-                return scanning_hint.policy is dso.labels.ScanPolicy.SKIP
-
-        return False
 
 
 @dataclasses.dataclass(frozen=True)
@@ -423,9 +402,6 @@ class TarRootfsAggregateResourceBinary(Binary):
             finalise=True,
         )
 
-    def auto_triage(self) -> bool:
-        return False
-
 
 @dataclasses.dataclass(frozen=True)
 class ComponentArtifact:
@@ -444,9 +420,22 @@ class ScanRequest:
     custom_metadata: dict
 
     def auto_triage_scan(self) -> bool:
-        # only the actual scan_content has access to the resource/labels required to decide
-        # whether to scan or not, so delegate
-        return self.scan_content.auto_triage()
+        # hardcode auto-triage to be determined by artefact
+        if not (
+            (label := self.artifact.find_label(name=dso.labels.LabelName.BINARY_ID))
+            and not (label := self.artifact.find_label(name=dso.labels.LabelName.BINARY_SCAN))
+        ):
+            return False
+
+        if label.name == dso.labels.LabelName.BINARY_SCAN:
+            return True
+
+        scanning_hint = dacite.from_dict(
+            data_class=dso.labels.BinaryScanHint,
+            data=label.value,
+            config=dacite.Config(cast=[dso.labels.ScanPolicy]),
+        )
+        return scanning_hint.policy is dso.labels.ScanPolicy.SKIP
 
     def __str__(self):
         return (
