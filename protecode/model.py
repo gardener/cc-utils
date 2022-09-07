@@ -396,8 +396,8 @@ class ComponentArtifact:
 
 @dataclasses.dataclass
 class ScanRequest:
-    # The pair of component and artifact this ScanRequest is created for.
-    component_artifacts: ComponentArtifact
+    component: cm.Component
+    artefact: cm.Artifact
     # The actual content to be scanned.
     scan_content: typing.Generator[bytes, None, None]
     display_name: str
@@ -406,7 +406,7 @@ class ScanRequest:
 
     def auto_triage_scan(self) -> bool:
         # hardcode auto-triage to be determined by artefact
-        artefact = self.component_artifacts.artifact
+        artefact = self.artefact
         if not (
             (label := artefact.find_label(name=dso.labels.LabelName.BINARY_ID))
             and not (label := artefact.find_label(name=dso.labels.LabelName.BINARY_SCAN))

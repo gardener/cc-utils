@@ -114,7 +114,8 @@ class ResourceGroupProcessor:
                 else:
                     logger.info(f'{artifact_group.name=}: did not find old scan')
                 yield pm.ScanRequest(
-                    component_artifacts=component_artifact,
+                    component=component_artifact.component,
+                    artefact=component_artifact.artifact,
                     scan_content=pm.OciResourceBinary(
                         artifact=component_artifact.artifact
                     ).upload_data(),
@@ -145,7 +146,8 @@ class ResourceGroupProcessor:
                 logger.info(f'No existing scan for {artifact_group} - will create new one.')
 
             yield pm.ScanRequest(
-                component_artifacts=artifact_group.component_artifacts[0],
+                component=artifact_group.component_artifacts[0].component,
+                artefact=artifact_group.component_artifacts[0].artifact,
                 scan_content=pm.TarRootfsAggregateResourceBinary(
                     artifacts=[
                         component_artifact.artifact
@@ -166,12 +168,10 @@ class ResourceGroupProcessor:
         processing_mode: pm.ProcessingMode,
     ) -> pm.AnalysisResult:
         def raise_on_error(exception):
-            comp_artefact = scan_request.component_artifacts
-
             raise pm.BdbaScanError(
                 scan_request=scan_request,
-                component=comp_artefact.component,
-                artefact=comp_artefact.artifact,
+                component=scan_request.component,
+                artefact=scan_request.artefact,
                 exception=exception,
             )
 
@@ -331,8 +331,8 @@ class ResourceGroupProcessor:
               logger.warning(bse.print_stacktrace())
 
           state = gcm.ScanState.FAILED if scan_failed else gcm.ScanState.SUCCEEDED
-          component = scan_request.component_artifacts.component
-          artefact = scan_request.component_artifacts.artifact
+          component = scan_request.component
+          artefact = scan_request.artefact
 
           if scan_failed:
             # pylint: disable=E1123
