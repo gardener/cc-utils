@@ -117,7 +117,7 @@ class ResourceGroupProcessor:
                     component_artifacts=component_artifact,
                     scan_content=pm.OciResourceBinary(
                         artifact=component_artifact.artifact
-                    ),
+                    ).upload_data(),
                     display_name=artifact_group.name,
                     target_product_id=target_product_id,
                     custom_metadata=component_artifact_metadata,
@@ -152,7 +152,7 @@ class ResourceGroupProcessor:
                         for component_artifact in artifact_group.component_artifacts
                     ],
                     tarfile_retrieval_function=protecode.util.fileobj_for_s3_access,
-                ),
+                ).upload_data(),
                 display_name=artifact_group.name,
                 target_product_id=target_product_id,
                 custom_metadata=component_artifact_metadata,
@@ -182,7 +182,7 @@ class ResourceGroupProcessor:
                     return self.protecode_client.upload(
                         application_name=scan_request.display_name,
                         group_id=self.group_id,
-                        data=scan_request.scan_content.upload_data(),
+                        data=scan_request.scan_content,
                         replace_id=job_id,
                         custom_attribs=scan_request.custom_metadata,
                     )
@@ -196,7 +196,7 @@ class ResourceGroupProcessor:
                     return self.protecode_client.upload(
                         application_name=scan_request.display_name,
                         group_id=self.group_id,
-                        data=scan_request.scan_content.upload_data(),
+                        data=scan_request.scan_content,
                         custom_attribs=scan_request.custom_metadata,
                     )
                 except requests.exceptions.HTTPError as e:
@@ -213,7 +213,7 @@ class ResourceGroupProcessor:
                         return self.protecode_client.upload(
                             application_name=scan_request.display_name,
                             group_id=self.group_id,
-                            data=scan_request.scan_content.upload_data(),
+                            data=scan_request.scan_content,
                             replace_id=existing_id,
                             custom_attribs=scan_request.custom_metadata,
                         )
@@ -253,7 +253,7 @@ class ResourceGroupProcessor:
                     return self.protecode_client.upload(
                         application_name=scan_request.display_name,
                         group_id=self.group_id,
-                        data=scan_request.scan_content.upload_data(),
+                        data=scan_request.scan_content,
                         custom_attribs=scan_request.custom_metadata,
                     )
                 except requests.exceptions.HTTPError as e:

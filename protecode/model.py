@@ -311,20 +311,8 @@ class BDBA_ScanResult(gcm.ScanResult):
 
 
 @dataclasses.dataclass(frozen=True)
-class Binary:
-    def display_name(self) -> str: pass
-    def metadata(self) -> dict[str, str]:  pass
-    def upload_data(self) -> typing.Generator[bytes, None, None]: pass
-
-
-@dataclasses.dataclass(frozen=True)
-class OciResourceBinary(Binary):
+class OciResourceBinary:
     artifact: gci.componentmodel.Resource
-
-    def display_name(self):
-        image_reference = self.artifact.access.imageReference
-        _, image_tag = image_reference.split(':')
-        return f'{self.artifact.name}_{image_tag}'
 
     def upload_data(self) -> typing.Iterable[bytes]:
         image_reference = self.artifact.access.imageReference
@@ -337,12 +325,9 @@ class OciResourceBinary(Binary):
 
 
 @dataclasses.dataclass(frozen=True)
-class TarRootfsAggregateResourceBinary(Binary):
+class TarRootfsAggregateResourceBinary:
     artifacts: typing.Iterable[gci.componentmodel.Resource]
     tarfile_retrieval_function: typing.Callable[[gci.componentmodel.Resource], typing.BinaryIO]
-
-    def display_name(self):
-        return f'{self.artifacts[0].name}_{self.artifacts[0].version}'
 
     def upload_data(self):
         # For these kinds of binaries, we aggregate all (tar) artifacts that we're given.
@@ -414,7 +399,7 @@ class ScanRequest:
     # The pair of component and artifact this ScanRequest is created for.
     component_artifacts: ComponentArtifact
     # The actual content to be scanned.
-    scan_content: Binary
+    scan_content: typing.Generator[bytes, None, None]
     display_name: str
     target_product_id: int | None
     custom_metadata: dict
