@@ -186,32 +186,29 @@ def component_artifact_metadata(
     The resulting dict is usually referred to as "Custom data" by Protecode and is used to filter
     results when searching.
     '''
-    metadata = {
-        'COMPONENT_NAME': component_artifact.component.name,
-    }
+    metadata = {'COMPONENT_NAME': component_artifact.component.name}
+
     if not omit_component_version:
-        metadata.update({
-            'COMPONENT_VERSION': component_artifact.component.version,
-        })
-    match component_artifact.artifact.access:
-        case cm.OciAccess():
-            metadata['IMAGE_REFERENCE_NAME'] = component_artifact.artifact.name
-            metadata['RESOURCE_TYPE'] = 'ociImage'
-            if not omit_resource_version:
-                img_ref_with_digest = _image_digest(
-                    image_reference=component_artifact.artifact.access.imageReference
-                )
-                digest = img_ref_with_digest.split('@')[-1]
-                metadata['IMAGE_REFERENCE'] = component_artifact.artifact.access.imageReference
-                metadata['IMAGE_VERSION'] = component_artifact.artifact.version
-                metadata['IMAGE_DIGEST'] = digest
-                metadata['DIGEST_IMAGE_REFERENCE'] = str(img_ref_with_digest)
-        case cm.S3Access():
-            metadata['RESOURCE_TYPE'] = 'application/tar+vm-image-rootfs'
-            if not omit_resource_version:
-                metadata['IMAGE_VERSION'] = component_artifact.artifact.version
-        case _:
-            raise NotImplementedError(component_artifact.artifact.access)
+        metadata |= {'COMPONENT_VERSION': component_artifact.component.version}
+
+    if isinstance(component_artifact.artifact.access, cm.OciAccess):
+        metadata['IMAGE_REFERENCE_NAME'] = component_artifact.artifact.name
+        metadata['RESOURCE_TYPE'] = 'ociImage'
+        if not omit_resource_version:
+            img_ref_with_digest = _image_digest(
+                image_reference=component_artifact.artifact.access.imageReference
+            )
+            digest = img_ref_with_digest.split('@')[-1]
+            metadata['IMAGE_REFERENCE'] = component_artifact.artifact.access.imageReference
+            metadata['IMAGE_VERSION'] = component_artifact.artifact.version
+            metadata['IMAGE_DIGEST'] = digest
+            metadata['DIGEST_IMAGE_REFERENCE'] = str(img_ref_with_digest)
+    elif isinstance(component_artifact.artifact.access, cm.S3Access):
+        metadata['RESOURCE_TYPE'] = 'application/tar+vm-image-rootfs'
+        if not omit_resource_version:
+            metadata['IMAGE_VERSION'] = component_artifact.artifact.version
+    else:
+        raise NotImplementedError(component_artifact.artifact.access)
 
     return metadata
 
