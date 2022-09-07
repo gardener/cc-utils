@@ -341,15 +341,17 @@ class ResourceGroupProcessor:
 
           # scan succeeded
           logger.info(f'uploading package-version-hints for {scan_result.display_name()}')
-          protecode.assessments.upload_version_hints(
-              scan_result=scan_result,
-              hints=_package_version_hints(
-                component=component,
-                artefact=artefact,
-                result=scan_result,
-              ),
-              client=self.protecode_client,
-          )
+          if version_hints := _package_version_hints(
+            component=component,
+            artefact=artefact,
+            result=scan_result,
+          ):
+              protecode.assessments.upload_version_hints(
+                  scan_result=scan_result,
+                  hints=version_hints,
+                  client=self.protecode_client,
+              )
+
           if scan_request.auto_triage_scan():
               # auto-assess + re-retrieve results afterwards
               scan_result = self.apply_auto_triage(scan_request)
