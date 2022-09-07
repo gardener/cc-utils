@@ -105,11 +105,9 @@ class ResourceGroupProcessor:
                     analysis_results=known_artifact_scans.get(artifact_group.name),
                 )
                 if target_product_id:
-                    logger.info(
-                        f'Found existing scan ({target_product_id}) for {artifact_group}'
-                    )
+                    logger.info(f'{artifact_group.name=}: found {target_product_id=}')
                 else:
-                    logger.info(f'No existing scan for {artifact_group} - will create new one.')
+                    logger.info(f'{artifact_group.name=}: did not find old scan')
                 yield pm.ScanRequest(
                     component_artifacts=component_artifact,
                     scan_content=pm.OciResourceBinary(
