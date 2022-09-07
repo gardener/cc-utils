@@ -177,7 +177,8 @@ def _image_digest(image_reference: str) -> str:
 
 
 def component_artifact_metadata(
-    component_artifact: pm.ComponentArtifact,
+    component: cm.Component,
+    artefact: cm.Artifact,
     omit_component_version: bool,
     omit_resource_version: bool,
 ):
@@ -186,29 +187,29 @@ def component_artifact_metadata(
     The resulting dict is usually referred to as "Custom data" by Protecode and is used to filter
     results when searching.
     '''
-    metadata = {'COMPONENT_NAME': component_artifact.component.name}
+    metadata = {'COMPONENT_NAME': component.name}
 
     if not omit_component_version:
-        metadata |= {'COMPONENT_VERSION': component_artifact.component.version}
+        metadata |= {'COMPONENT_VERSION': component.version}
 
-    if isinstance(component_artifact.artifact.access, cm.OciAccess):
-        metadata['IMAGE_REFERENCE_NAME'] = component_artifact.artifact.name
+    if isinstance(artefact.access, cm.OciAccess):
+        metadata['IMAGE_REFERENCE_NAME'] = artefact.name
         metadata['RESOURCE_TYPE'] = 'ociImage'
         if not omit_resource_version:
             img_ref_with_digest = _image_digest(
-                image_reference=component_artifact.artifact.access.imageReference
+                image_reference=artefact.access.imageReference
             )
             digest = img_ref_with_digest.split('@')[-1]
-            metadata['IMAGE_REFERENCE'] = component_artifact.artifact.access.imageReference
-            metadata['IMAGE_VERSION'] = component_artifact.artifact.version
+            metadata['IMAGE_REFERENCE'] = artefact.access.imageReference
+            metadata['IMAGE_VERSION'] = artefact.version
             metadata['IMAGE_DIGEST'] = digest
             metadata['DIGEST_IMAGE_REFERENCE'] = str(img_ref_with_digest)
-    elif isinstance(component_artifact.artifact.access, cm.S3Access):
+    elif isinstance(artefact.access, cm.S3Access):
         metadata['RESOURCE_TYPE'] = 'application/tar+vm-image-rootfs'
         if not omit_resource_version:
-            metadata['IMAGE_VERSION'] = component_artifact.artifact.version
+            metadata['IMAGE_VERSION'] = artefact.version
     else:
-        raise NotImplementedError(component_artifact.artifact.access)
+        raise NotImplementedError(artefact.access)
 
     return metadata
 

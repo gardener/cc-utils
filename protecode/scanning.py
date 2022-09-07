@@ -46,8 +46,12 @@ class ResourceGroupProcessor:
         relevant_group_ids = set(self.reference_group_ids)
         relevant_group_ids.add(self.group_id)
 
+        component = artifact_group.component_artifacts[0].component
+        artefact = artifact_group.component_artifacts[0].artifact
+
         metadata = protecode.util.component_artifact_metadata(
-            component_artifact=artifact_group.component_artifacts[0],
+            component=component,
+            artefact=artefact,
             # we want to find all possibly relevant scans, so omit all version data
             omit_component_version=True,
             omit_resource_version=True,
@@ -96,7 +100,8 @@ class ResourceGroupProcessor:
                 # generate one ScanRequest for each ComponentArtifact
                 # First, find product ID by meta-data
                 component_artifact_metadata = protecode.util.component_artifact_metadata(
-                    component_artifact=component_artifact,
+                    component=component_artifact.component,
+                    artefact=component_artifact.artifact,
                     omit_component_version=False,
                     omit_resource_version=False,
                 )
@@ -124,7 +129,8 @@ class ResourceGroupProcessor:
             component_artifact_metadata = protecode.util.component_artifact_metadata(
                 # All components have the same version so we can use any
                 # ComponentArtifacts for the metadata-calculation.
-                component_artifact=artifact_group.component_artifacts[0],
+                component=artifact_group.component_artifacts[0].component,
+                artefact=artifact_group.component_artifacts[0].artifact,
                 omit_component_version=False,
                 omit_resource_version=False,
             )
@@ -432,13 +438,15 @@ def _find_scan_results(
                 # prepare prototypical metadata for the artifact group, i.e. without any version
                 # information
                 prototype_metadata = protecode.util.component_artifact_metadata(
-                    component_artifact=artifact_group.component_artifacts[0],
+                    component=artifact_group.component_artifacts[0].component,
+                    artefact=artifact_group.component_artifacts[0].artifact,
                     omit_component_version=True,
                     omit_resource_version=True,
                 )
             case pm.TarRootfsArtifactGroup():
                 prototype_metadata = protecode.util.component_artifact_metadata(
-                    component_artifact=artifact_group.component_artifacts[0],
+                    component=artifact_group.component_artifacts[0].component,
+                    artefact=artifact_group.component_artifacts[0].artifact,
                     omit_component_version=False,
                     omit_resource_version=True,
                 )
