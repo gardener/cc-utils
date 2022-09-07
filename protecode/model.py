@@ -24,6 +24,8 @@ import typing
 
 import dacite
 
+import gci.componentmodel as cm
+
 import ccc
 import ccc.oci
 import gci.componentmodel
