@@ -182,10 +182,7 @@ def component_artifact_metadata(
     omit_component_version: bool,
     omit_resource_version: bool,
 ):
-    '''Build a metadata-dict for the given ComponentArtifact.
-
-    The resulting dict is usually referred to as "Custom data" by Protecode and is used to filter
-    results when searching.
+    ''' returns a dict for querying bdba scan results (use for custom-data query)
     '''
     metadata = {'COMPONENT_NAME': component.name}
 

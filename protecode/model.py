@@ -390,12 +390,6 @@ class TarRootfsAggregateResourceBinary:
         )
 
 
-@dataclasses.dataclass(frozen=True)
-class ComponentArtifact:
-    component: gci.componentmodel.Component
-    artifact: gci.componentmodel.Resource
-
-
 @dataclasses.dataclass
 class ScanRequest:
     component: cm.Component

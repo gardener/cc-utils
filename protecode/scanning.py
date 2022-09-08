@@ -131,8 +131,7 @@ class ResourceGroupProcessor:
                 component = resource_node.component
                 resource = resource_node.resource
 
-                # generate one ScanRequest for each ComponentArtifact
-                # First, find product ID by meta-data
+                # find product existing bdba scans (if any)
                 component_artifact_metadata = protecode.util.component_artifact_metadata(
                     component=component,
                     artefact=resource,
@@ -165,8 +164,6 @@ class ResourceGroupProcessor:
             # hardcoded semantics for vm-images:
             # merge all appropriate (tar)artifacts into one big tararchive
             component_artifact_metadata = protecode.util.component_artifact_metadata(
-                # All components have the same version so we can use any
-                # ComponentArtifacts for the metadata-calculation.
                 component=component,
                 artefact=resource,
                 omit_component_version=False,
