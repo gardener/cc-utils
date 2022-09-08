@@ -54,7 +54,7 @@ def scan_without_notification(
     results = _upload_grouped_images(
         protecode_api=client,
         protecode_group_id=protecode_group_id,
-        component_descriptor=cd,
+        component=cd,
     )
 
     results_above_threshold = [r for r in results if r.greatest_cve_score >= cve_threshold]

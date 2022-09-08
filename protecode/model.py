@@ -462,60 +462,6 @@ class BdbaScanError(Exception):
         return name + '\n' + ''.join(traceback.format_tb(self.exception.__traceback__))
 
 
-@dataclasses.dataclass(frozen=True)
-class ArtifactGroup:
-    '''
-    A set of similar Resources sharing a common declaring Component (not necessarily in the same
-    version) and a common logical name.
-
-    Artifact groups are intended to be handled as "virtual Protecode Groups".
-    This particularly means they share triages.
-
-    As a very common "special case", a resource group may contain exactly one container image.
-
-    @param component: the Component declaring dependency towards the given images
-    @param resources: iterable of Resources; must share logical name
-    '''
-    name: str
-    component_artifacts: typing.MutableSequence[ComponentArtifact] = dataclasses.field(
-        default_factory=list
-    )
-
-    def component_name(self):
-        return self.component_artifacts[0].component.name
-
-    def component_version(self):
-        return self.component_artifacts[0].component.version
-
-    def resource_name(self):
-        return self.component_artifacts[0].artifact.name
-
-    def resource_type(self):
-        return self.component_artifacts[0].artifact.type
-
-    def resource_version(self):
-        return self.component_artifacts[0].artifact.version
-
-    @property
-    def artefacts(self) -> tuple[gci.componentmodel.Artifact]:
-        return tuple((ca.artifact for ca in self.component_artifacts))
-
-    def __str__(self):
-        return f'{self.name}[{len(self.component_artifacts)}]'
-
-
-@dataclasses.dataclass(frozen=True)
-class OciArtifactGroup(ArtifactGroup):
-    pass
-
-
-@dataclasses.dataclass(frozen=True)
-class TarRootfsArtifactGroup(ArtifactGroup):
-    # For these artifact groups, all component versions are the same
-    def component_version(self):
-        return self.component_artifacts[0].component.version
-
-
 class ProcessingMode(AttribSpecMixin, enum.Enum):
     RESCAN = 'rescan'
     FORCE_UPLOAD = 'force_upload'

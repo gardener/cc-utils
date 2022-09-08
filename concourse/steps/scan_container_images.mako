@@ -98,7 +98,7 @@ results = tuple(
   protecode.scanning.upload_grouped_images(
     protecode_api=protecode_client,
     protecode_group_id = protecode_group_id,
-    component_descriptor = component_descriptor,
+    component = component_descriptor,
     reference_group_ids = ${protecode_scan.reference_protecode_group_ids()},
     processing_mode = ProcessingMode('${protecode_scan.processing_mode().value}'),
     parallel_jobs=${protecode_scan.parallel_jobs()},

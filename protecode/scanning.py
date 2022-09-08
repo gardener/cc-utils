@@ -1,4 +1,5 @@
 import concurrent.futures
+import collections
 import functools
 import logging
 import typing
@@ -10,6 +11,7 @@ import requests
 import gci.componentmodel as cm
 
 import ci.log
+import cnudie.iter
 import cnudie.retrieve
 import cnudie.util
 import dso.labels
@@ -22,6 +24,23 @@ import protecode.util
 
 logger = logging.getLogger(__name__)
 ci.log.configure_default_logging(print_thread_id=True)
+
+
+def _resource_group_id(resource_group: tuple[cnudie.iter.ResourceNode]):
+    '''
+    return resource-group-id, identifying resource-group by
+    - component-name
+    - resource-name, resource-version ("simple id")
+    - resource-type
+    '''
+    r = resource_group[0]
+    # hack: we shortcut full identity contract and assume name+version is sufficient
+    # (peers=()) - this saves us from having to collect all resources for each component)
+    return tuple(
+        r.component.name,
+        r.resource.identity(peers=()),
+        r.resource.type,
+    )
 
 
 class ResourceGroupProcessor:
@@ -39,17 +58,17 @@ class ResourceGroupProcessor:
 
     def _products_with_relevant_triages(
         self,
-        artifact_group: pm.ArtifactGroup,
+        resource_group: tuple[cnudie.iter.ResourceNode],
     ) -> typing.Iterator[pm.Product]:
         relevant_group_ids = set(self.reference_group_ids)
         relevant_group_ids.add(self.group_id)
 
-        component = artifact_group.component_artifacts[0].component
-        artefact = artifact_group.component_artifacts[0].artifact
+        component = resource_group[0].component
+        resource = resource_group[0].resource
 
         metadata = protecode.util.component_artifact_metadata(
             component=component,
-            artefact=artefact,
+            artefact=resource,
             # we want to find all possibly relevant scans, so omit all version data
             omit_component_version=True,
             omit_resource_version=True,
@@ -90,75 +109,97 @@ class ResourceGroupProcessor:
 
     def scan_requests(
         self,
-        artifact_group: pm.ArtifactGroup,
+        resource_group: tuple[cnudie.iter.ResourceNode],
         known_artifact_scans: typing.Dict[str, typing.Iterable[pm.Product]]
     ) -> typing.Generator[pm.ScanRequest, None, None]:
-        if isinstance(artifact_group, pm.OciArtifactGroup):
-            for component_artifact in artifact_group.component_artifacts:
+        # assumption: resource-groups share same component(-name) and resource(name + version), as
+        # well as resource-type
+        # hard-coded special-handling:
+        # - upload oci-images individually
+        # - upload vm-images in a combined single upload
+        component = resource_group[0].component
+        resource = resource_group[0].resource
+        resource_type = resource.type
+
+        group_id = _resource_group_id(resource_group)
+        group_name = f'{component.name}/{resource.name}:{resource.version} {resource.type}'
+        known_results = known_artifact_scans.get(group_id)
+        display_name = f'{resource.name}_{resource.version}_{component.name}'.replace(
+            '/', '_'
+        )
+
+        if isinstance(resource_type, cm.ResourceType.OCI_IMAGE):
+            for resource_node in resource_group:
+                component = resource_node.component
+                resource = resource_node.resource
+
                 # generate one ScanRequest for each ComponentArtifact
                 # First, find product ID by meta-data
                 component_artifact_metadata = protecode.util.component_artifact_metadata(
-                    component=component_artifact.component,
-                    artefact=component_artifact.artifact,
+                    component=component,
+                    artefact=resource,
                     omit_component_version=False,
                     omit_resource_version=False,
                 )
                 target_product_id = protecode.util._matching_analysis_result_id(
                     component_artifact_metadata=component_artifact_metadata,
-                    analysis_results=known_artifact_scans.get(artifact_group.name),
+                    analysis_results=known_results,
                 )
                 if target_product_id:
-                    logger.info(f'{artifact_group.name=}: found {target_product_id=}')
+                    logger.info(f'{group_name=}: found {target_product_id=}')
                 else:
-                    logger.info(f'{artifact_group.name=}: did not find old scan')
+                    logger.info(f'{group_name=}: did not find old scan')
                 yield pm.ScanRequest(
-                    component=component_artifact.component,
-                    artefact=component_artifact.artifact,
+                    component=component,
+                    artefact=resource,
                     scan_content=pm.OciResourceBinary(
-                        artifact=component_artifact.artifact
+                        artifact=resource,
                     ).upload_data(),
-                    display_name=artifact_group.name,
+                    display_name=display_name,
                     target_product_id=target_product_id,
                     custom_metadata=component_artifact_metadata,
                 )
             return
-        elif isinstance(artifact_group, pm.TarRootfsArtifactGroup):
-            # Generate one ScanRequest for all ComponentArtifacts. For this kind of ArtifactGroup
-            # we merge all appropriate (tar)artifacts into one big tararchive
+        elif (
+            isinstance(resource_type, str)
+            and resource_type == 'application/tar+vm-image-rootfs'
+        ):
+            # hardcoded semantics for vm-images:
+            # merge all appropriate (tar)artifacts into one big tararchive
             component_artifact_metadata = protecode.util.component_artifact_metadata(
                 # All components have the same version so we can use any
                 # ComponentArtifacts for the metadata-calculation.
-                component=artifact_group.component_artifacts[0].component,
-                artefact=artifact_group.component_artifacts[0].artifact,
+                component=component,
+                artefact=resource,
                 omit_component_version=False,
                 omit_resource_version=False,
             )
             target_product_id = protecode.util._matching_analysis_result_id(
                 component_artifact_metadata=component_artifact_metadata,
-                analysis_results=known_artifact_scans.get(artifact_group.name),
+                analysis_results=known_results,
             )
 
             if target_product_id:
-                logger.info(f'Found existing scan ({target_product_id}) for {artifact_group}')
+                logger.info(f'{group_name=}: found {target_product_id=}')
             else:
-                logger.info(f'No existing scan for {artifact_group} - will create new one.')
+                logger.info(f'{group_name=}: did not find old scan')
 
             yield pm.ScanRequest(
-                component=artifact_group.component_artifacts[0].component,
-                artefact=artifact_group.component_artifacts[0].artifact,
+                component=component,
+                artefact=resource,
                 scan_content=pm.TarRootfsAggregateResourceBinary(
                     artifacts=[
-                        component_artifact.artifact
-                        for component_artifact in artifact_group.component_artifacts
+                        node.resource
+                        for node in resource_group
                     ],
                     tarfile_retrieval_function=protecode.util.fileobj_for_s3_access,
                 ).upload_data(),
-                display_name=artifact_group.name,
+                display_name=display_name,
                 target_product_id=target_product_id,
                 custom_metadata=component_artifact_metadata,
             )
         else:
-            raise NotImplementedError(artifact_group)
+            raise NotImplementedError(resource_type)
 
     def process_scan_request(
         self,
@@ -297,14 +338,18 @@ class ResourceGroupProcessor:
 
     def process(
         self,
-        artifact_group: pm.ArtifactGroup,
+        resource_group: tuple[cnudie.iter.ResourceNode],
         processing_mode: pm.ProcessingMode,
         known_scan_results: dict[str, tuple[pm.Product]],
     ) -> typing.Iterator[pm.BDBA_ScanResult]:
-        logger.info(f'Processing ArtifactGroup {artifact_group}')
+        resource_node = resource_group[0]
+        r = resource_node.resource
+        c = resource_node.component
+        group_name = f'{c.name}/{r.name}:{r.version} - {r.type}'
+        logger.info(f'Processing {group_name}')
 
         products_to_import_from = tuple(self._products_with_relevant_triages(
-            artifact_group=artifact_group,
+            resource_group=resource_group,
         ))
         # todo: deduplicate/merge assessments
         component_vulnerabilities_with_assessments = tuple(
@@ -314,7 +359,7 @@ class ResourceGroupProcessor:
         )
 
         for scan_request in self.scan_requests(
-          artifact_group=artifact_group,
+          resource_group=resource_group,
           known_artifact_scans=known_scan_results,
         ):
           try:
@@ -422,101 +467,97 @@ def _package_version_hints(
     return package_hints
 
 
-def _find_scan_results(
+def _retrieve_existing_scan_results(
     protecode_client: protecode.client.ProtecodeApi,
     group_id: int,
-    artifact_groups: typing.Iterable[pm.ArtifactGroup],
-) -> typing.Dict[str, pm.Product]:
+    resource_groups: typing.Iterable[tuple[cnudie.iter.ResourceNode]],
+) -> dict[tuple[str, cm.ResourceIdentity, cm.ResourceType|str], pm.Product]:
     # This function populates a dict that contains all relevant scans for all artifact groups
     # in a given protecode group.
     # The created dict is later used to lookup existing scans when creating scan requests
     scan_results = dict()
-    for artifact_group in artifact_groups:
-        if isinstance(artifact_group, pm.OciArtifactGroup):
-            # prepare prototypical metadata for the artifact group, i.e. without any version
-            # information
-            prototype_metadata = protecode.util.component_artifact_metadata(
-                component=artifact_group.component_artifacts[0].component,
-                artefact=artifact_group.component_artifacts[0].artifact,
-                omit_component_version=True,
-                omit_resource_version=True,
-            )
-        elif isinstance(artifact_group, pm.TarRootfsArtifactGroup):
-            prototype_metadata = protecode.util.component_artifact_metadata(
-                component=artifact_group.component_artifacts[0].component,
-                artefact=artifact_group.component_artifacts[0].artifact,
+    for resource_group in resource_groups:
+        # groups are assumed to belong to same component + resource (name), and type so it is okay to
+        # choose first one as representative
+        component = resource_group[0].component
+        resource = resource_group[0].resource
+        resource_type = resource.type
+
+        # special-handling for vm-image-rootfs - we keep different component-versions in parallel
+        # for those
+        if (
+            isinstance(resource_type, str)
+            and resource_type.startswith('application/tar+vm-image-rootfs')
+        ):
+            query_data = protecode.util.component_artifact_metadata(
+                component=component,
+                artefact=resource,
                 omit_component_version=False,
                 omit_resource_version=True,
             )
+        else:
+            query_data = protecode.util.component_artifact_metadata(
+                component=component,
+                artefact=resource,
+                omit_component_version=True,
+                omit_resource_version=True,
+            )
+
         # TODO: since we ignore all versions for some of these artifact groups we potentially request
         # the same information multiple times. This is a quick hacked-in cache. Look into doing this
         # properly.
         # Note to self: adding LRU-Cache on classes is potentially a bad idea
-        meta = frozenset([(k, v) for k,v in prototype_metadata.items()])
+        meta = frozenset([(k, v) for k,v in query_data.items()])
         scans = list(_proxy_list_apps(
             protecode_client=protecode_client,
             group_id=group_id,
             prototype_metadata=meta,
         ))
-        scan_results[artifact_group.name] = scans
+        group_id = _resource_group_id(resource_group)
+        scan_results[group_id] = scans
 
     return scan_results
 
 
-def _artifact_groups(
-    component_descriptor: cm.ComponentDescriptor,
+def _resource_groups(
+    resource_nodes: typing.Generator[cnudie.iter.ResourceNode, None, None],
     filter_function: typing.Callable[[cm.Component, cm.Resource], bool],
-) -> tuple[pm.ArtifactGroup]:
+    artefact_types=(
+        cm.ResourceType.OCI_IMAGE,
+        'application/tar+vm-image-rootfs',
+    ),
+) -> typing.Generator[tuple[cnudie.iter.ResourceNode], None, None]:
     '''
     group resources of same component name and resource version name
 
     this grouping is done in order to deduplicate identical resource versions shared between
     different component versions.
     '''
-    components = list(cnudie.retrieve.components(component=component_descriptor))
-    artifact_groups: typing.Dict[str, pm.ArtifactGroup] = dict()
 
-    for component in components:
-        for resource in component.resources:
+    # artefact-groups are grouped by:
+    # component-name, resource-name, resource-version, resource-type
+    # (thus implicitly deduplicating same resource-versions on different components)
+    resource_groups: dict[tuple(str, cm.ResourceIdentity, str), list[cnudie.iter.ResourceNode]] \
+        = collections.defaultdict(list)
 
-            if resource.type not in [
-                cm.ResourceType.OCI_IMAGE,
-                'application/tar+vm-image-rootfs',
-            ]:
-                continue
+    for resource_node in resource_nodes:
+        c = resource_node.component
+        r = resource_node.resource
 
-            if filter_function and not filter_function(component, resource):
-                continue
+        if not r.type in artefact_types:
+            continue
 
-            group_name = f'{resource.name}_{resource.version}_{component.name}'.replace('/', '_')
-            component_resource = pm.ComponentArtifact(component, resource)
+        if filter_function and not filter_function(c, r):
+            continue
 
-            if not (group := artifact_groups.get(group_name)):
-                if resource.type is cm.ResourceType.OCI_IMAGE:
-                    group = pm.OciArtifactGroup(
-                        name=group_name,
-                        component_artifacts=[],
-                    )
-                elif str(resource.type).startswith('application/tar'):
-                    group = pm.TarRootfsArtifactGroup(
-                        name=group_name,
-                        component_artifacts=[],
-                    )
-                else:
-                    raise NotImplementedError(resource.type)
+        group_id = _resource_group_id((resource_node,))
+        resource_groups[group_id].append(resource_node)
 
-                artifact_groups[group_name] = group
-
-            group.component_artifacts.append(component_resource)
-
-    artifact_groups = tuple(artifact_groups.values())
-
-    logger.info(f'{len(artifact_groups)=}')
-
-    return artifact_groups
+    logger.info(f'{len(resource_groups)=}')
+    yield from (tuple(g) for g in resource_groups.values())
 
 
-# TODO: Hacky cache. See _find_scan_results
+# TODO: Hacky cache. See _retrieve_existing_scan_results
 @functools.lru_cache
 def _proxy_list_apps(
     protecode_client: protecode.client.ProtecodeApi,
@@ -535,7 +576,7 @@ def _proxy_list_apps(
 
 def upload_grouped_images(
     protecode_api: protecode.client.ProtecodeApi,
-    component_descriptor,
+    component: cm.Component|cm.ComponentDescriptor,
     protecode_group_id=5,
     parallel_jobs=8,
     cve_threshold=7,
@@ -548,15 +589,27 @@ def upload_grouped_images(
 ) -> typing.Generator[pm.BDBA_ScanResult, None, None]:
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
     protecode_api.login()
-    groups = _artifact_groups(
-        component_descriptor=component_descriptor,
+
+    if isinstance(component, cm.ComponentDescriptor):
+        component = component.component
+
+    groups = _resource_groups(
+        resource_nodes=cnudie.iter.iter(
+            component=component,
+            lookup=cnudie.iter.dictbased_lookup(
+                components=cnudie.retrieve.components(
+                    component=component,
+                )
+            ),
+            node_filter=cnudie.iter.Filter.resources,
+        ),
         filter_function=filter_function,
     )
 
-    known_scan_results = _find_scan_results(
+    known_scan_results = _retrieve_existing_scan_results(
         protecode_client=protecode_api,
         group_id=protecode_group_id,
-        artifact_groups=groups
+        resource_groups=groups
     )
     processor = ResourceGroupProcessor(
         group_id=protecode_group_id,
@@ -566,11 +619,11 @@ def upload_grouped_images(
     )
 
     def task_function(
-        artifact_group: pm.ArtifactGroup,
+        resource_group: tuple[cnudie.iter.ResourceNode],
         processing_mode: pm.ProcessingMode,
     ) -> tuple[pm.BDBA_ScanResult]:
         return tuple(processor.process(
-            artifact_group=artifact_group,
+            resource_group=resource_group,
             processing_mode=processing_mode,
             known_scan_results=known_scan_results,
         ))
