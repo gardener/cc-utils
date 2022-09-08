@@ -36,11 +36,11 @@ def _resource_group_id(resource_group: tuple[cnudie.iter.ResourceNode]):
     r = resource_group[0]
     # hack: we shortcut full identity contract and assume name+version is sufficient
     # (peers=()) - this saves us from having to collect all resources for each component)
-    return tuple(
+    return tuple((
         r.component.name,
         r.resource.identity(peers=()),
         r.resource.type,
-    )
+    ))
 
 
 class ResourceGroupProcessor:
