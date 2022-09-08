@@ -594,17 +594,19 @@ def upload_grouped_images(
     if isinstance(component, cm.ComponentDescriptor):
         component = component.component
 
-    groups = _resource_groups(
-        resource_nodes=cnudie.iter.iter(
-            component=component,
-            lookup=cnudie.iter.dictbased_lookup(
-                components=cnudie.retrieve.components(
-                    component=component,
-                )
+    groups = tuple(
+        _resource_groups(
+            resource_nodes=cnudie.iter.iter(
+                component=component,
+                lookup=cnudie.iter.dictbased_lookup(
+                    components=cnudie.retrieve.components(
+                        component=component,
+                    )
+                ),
+                node_filter=cnudie.iter.Filter.resources,
             ),
-            node_filter=cnudie.iter.Filter.resources,
-        ),
-        filter_function=filter_function,
+            filter_function=filter_function,
+        )
     )
 
     known_scan_results = _retrieve_existing_scan_results(
