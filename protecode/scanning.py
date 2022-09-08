@@ -513,8 +513,9 @@ def _retrieve_existing_scan_results(
             group_id=group_id,
             prototype_metadata=meta,
         ))
-        group_id = _resource_group_id(resource_group)
-        scan_results[group_id] = scans
+
+        resource_group_id = _resource_group_id(resource_group)
+        scan_results[resource_group_id] = scans
 
     return scan_results
 
