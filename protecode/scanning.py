@@ -128,7 +128,7 @@ class ResourceGroupProcessor:
             '/', '_'
         )
 
-        if isinstance(resource_type, cm.ResourceType.OCI_IMAGE):
+        if resource_type is cm.ResourceType.OCI_IMAGE:
             for resource_node in resource_group:
                 component = resource_node.component
                 resource = resource_node.resource
