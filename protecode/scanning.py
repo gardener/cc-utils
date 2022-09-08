@@ -433,23 +433,22 @@ def _find_scan_results(
     # The created dict is later used to lookup existing scans when creating scan requests
     scan_results = dict()
     for artifact_group in artifact_groups:
-        match artifact_group:
-            case pm.OciArtifactGroup():
-                # prepare prototypical metadata for the artifact group, i.e. without any version
-                # information
-                prototype_metadata = protecode.util.component_artifact_metadata(
-                    component=artifact_group.component_artifacts[0].component,
-                    artefact=artifact_group.component_artifacts[0].artifact,
-                    omit_component_version=True,
-                    omit_resource_version=True,
-                )
-            case pm.TarRootfsArtifactGroup():
-                prototype_metadata = protecode.util.component_artifact_metadata(
-                    component=artifact_group.component_artifacts[0].component,
-                    artefact=artifact_group.component_artifacts[0].artifact,
-                    omit_component_version=False,
-                    omit_resource_version=True,
-                )
+        if isinstance(artifact_group, pm.OciArtifactGroup):
+            # prepare prototypical metadata for the artifact group, i.e. without any version
+            # information
+            prototype_metadata = protecode.util.component_artifact_metadata(
+                component=artifact_group.component_artifacts[0].component,
+                artefact=artifact_group.component_artifacts[0].artifact,
+                omit_component_version=True,
+                omit_resource_version=True,
+            )
+        elif isinstance(artifact_group, pm.TarRootfsArtifactGroup):
+            prototype_metadata = protecode.util.component_artifact_metadata(
+                component=artifact_group.component_artifacts[0].component,
+                artefact=artifact_group.component_artifacts[0].artifact,
+                omit_component_version=False,
+                omit_resource_version=True,
+            )
         # TODO: since we ignore all versions for some of these artifact groups we potentially request
         # the same information multiple times. This is a quick hacked-in cache. Look into doing this
         # properly.
