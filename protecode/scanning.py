@@ -27,13 +27,11 @@ ci.log.configure_default_logging(print_thread_id=True)
 class ResourceGroupProcessor:
     def __init__(
         self,
-        scan_results: typing.Dict[str, typing.Iterable[pm.Product]],
         protecode_client: protecode.client.ProtecodeApi,
         group_id: int=None,
         reference_group_ids: typing.Sequence[int]=(),
         cvss_threshold: float=7.0,
     ):
-        self.scan_results = scan_results
         self.group_id = group_id
         self.reference_group_ids = reference_group_ids
         self.cvss_threshold = cvss_threshold
@@ -301,6 +299,7 @@ class ResourceGroupProcessor:
         self,
         artifact_group: pm.ArtifactGroup,
         processing_mode: pm.ProcessingMode,
+        known_scan_results: dict[str, tuple[pm.Product]],
     ) -> typing.Iterator[pm.BDBA_ScanResult]:
         logger.info(f'Processing ArtifactGroup {artifact_group}')
 
@@ -316,7 +315,7 @@ class ResourceGroupProcessor:
 
         for scan_request in self.scan_requests(
           artifact_group=artifact_group,
-          known_artifact_scans=self.scan_results,
+          known_artifact_scans=known_scan_results,
         ):
           try:
               scan_result = self.process_scan_request(
@@ -553,15 +552,14 @@ def upload_grouped_images(
         component_descriptor=component_descriptor,
         filter_function=filter_function,
     )
-    # build lookup structure for existing scans
-    known_results = _find_scan_results(
+
+    known_scan_results = _find_scan_results(
         protecode_client=protecode_api,
         group_id=protecode_group_id,
         artifact_groups=groups
     )
     processor = ResourceGroupProcessor(
         group_id=protecode_group_id,
-        scan_results=known_results,
         reference_group_ids=reference_group_ids,
         cvss_threshold=cve_threshold,
         protecode_client=protecode_api,
@@ -574,6 +572,7 @@ def upload_grouped_images(
         return tuple(processor.process(
             artifact_group=artifact_group,
             processing_mode=processing_mode,
+            known_scan_results=known_scan_results,
         ))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=parallel_jobs) as tpe:
