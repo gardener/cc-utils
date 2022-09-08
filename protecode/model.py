@@ -409,11 +409,12 @@ class ScanRequest:
     def auto_triage_scan(self) -> bool:
         # hardcode auto-triage to be determined by artefact
         artefact = self.artefact
+
         # pylint: disable=E1101
-        if not (
-            (label := artefact.find_label(name=dso.labels.LabelName.BINARY_ID))
-            and not (label := artefact.find_label(name=dso.labels.LabelName.BINARY_SCAN))
-        ):
+        label = artefact.find_label(name=dso.labels.LabelName.BINARY_ID)
+        if not label:
+            label = artefact.find_label(name=dso.labels.LabelName.BINARY_SCAN)
+        if not label:
             return False
 
         if label.name == dso.labels.LabelName.BINARY_SCAN:
