@@ -357,6 +357,7 @@ class ResourceGroupProcessor:
         processing_mode: pm.ProcessingMode,
         known_scan_results: dict[str, tuple[pm.Product]],
         oci_client: oci.client.Client,
+        s3_client: 'botocore.client.S3',
     ) -> typing.Iterator[pm.BDBA_ScanResult]:
         resource_node = resource_group[0]
         r = resource_node.resource
@@ -378,6 +379,7 @@ class ResourceGroupProcessor:
           resource_group=resource_group,
           known_artifact_scans=known_scan_results,
           oci_client=oci_client,
+          s3_client=s3_client,
         ):
           try:
               scan_result = self.process_scan_request(
