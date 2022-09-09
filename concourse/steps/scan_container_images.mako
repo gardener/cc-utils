@@ -37,6 +37,7 @@ faulthandler.enable() # print stacktraces upon fatal signals
 # end of debugging block
 
 import ccc.github
+import ccc.oci
 import ci.log
 ci.log.configure_default_logging()
 import ci.util
@@ -93,6 +94,8 @@ protecode_client = ccc.protecode.client(protecode_cfg)
 delivery_svc_endpoints = ccc.delivery.endpoints(cfg_set=cfg_set)
 delivery_svc_client = ccc.delivery.default_client_if_available()
 
+oci_client = ccc.oci.oci_client()
+
 logger.info('running protecode scan for all components')
 results = tuple(
   protecode.scanning.upload_grouped_images(
@@ -105,6 +108,7 @@ results = tuple(
     cve_threshold=cve_threshold,
     filter_function=filter_function,
     delivery_client=delivery_svc_client,
+    oci_client=oci_client,
   )
 )
 logger.info(f'bdba scan yielded {len(results)=}')

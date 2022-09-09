@@ -16,6 +16,7 @@ import cnudie.retrieve
 import cnudie.util
 import dso.labels
 import github.compliance.model as gcm
+import oci.client
 import protecode.assessments
 import protecode.client
 import protecode.model as pm
@@ -109,6 +110,7 @@ class ResourceGroupProcessor:
         self,
         resource_group: tuple[cnudie.iter.ResourceNode],
         known_artifact_scans: typing.Dict[str, typing.Iterable[pm.Product]]
+        oci_client: oci.client.OciClient,
     ) -> typing.Generator[pm.ScanRequest, None, None]:
         # assumption: resource-groups share same component(-name) and resource(name + version), as
         # well as resource-type
@@ -336,6 +338,7 @@ class ResourceGroupProcessor:
         resource_group: tuple[cnudie.iter.ResourceNode],
         processing_mode: pm.ProcessingMode,
         known_scan_results: dict[str, tuple[pm.Product]],
+        oci_client=oci_client,
     ) -> typing.Iterator[pm.BDBA_ScanResult]:
         resource_node = resource_group[0]
         r = resource_node.resource
@@ -356,6 +359,7 @@ class ResourceGroupProcessor:
         for scan_request in self.scan_requests(
           resource_group=resource_group,
           known_artifact_scans=known_scan_results,
+          oci_client=oci_client,
         ):
           try:
               scan_result = self.process_scan_request(
@@ -582,6 +586,7 @@ def upload_grouped_images(
     ),
     reference_group_ids=(),
     delivery_client=None,
+    oci_client: oci.client.OciClient=None,
 ) -> typing.Generator[pm.BDBA_ScanResult, None, None]:
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
     protecode_api.login()
@@ -624,6 +629,7 @@ def upload_grouped_images(
             resource_group=resource_group,
             processing_mode=processing_mode,
             known_scan_results=known_scan_results,
+            oci_client=oci_client,
         ))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=parallel_jobs) as tpe:
