@@ -98,7 +98,7 @@ delivery_svc_client = ccc.delivery.default_client_if_available()
 oci_client = ccc.oci.oci_client()
 s3_session = ccc.aws.default_session()
 if s3_session:
-  s3_client =  sess.client('s3')
+  s3_client =  s3_session.client('s3')
 else:
   s3_client = None
 
