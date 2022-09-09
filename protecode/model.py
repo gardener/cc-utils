@@ -26,11 +26,8 @@ import dacite
 
 import gci.componentmodel as cm
 
-import ccc
-import ccc.oci
 import gci.componentmodel
 import github.compliance.model as gcm
-import oci
 
 from concourse.model.base import (
     AttribSpecMixin,
@@ -310,20 +307,6 @@ class BDBA_ScanResult(gcm.ScanResult):
     @property
     def greatest_cve_score(self) -> float:
         return self.result.greatest_cve_score()
-
-
-@dataclasses.dataclass(frozen=True)
-class OciResourceBinary:
-    artifact: gci.componentmodel.Resource
-
-    def upload_data(self) -> typing.Iterable[bytes]:
-        image_reference = self.artifact.access.imageReference
-        oci_client = ccc.oci.oci_client()
-        yield from oci.image_layers_as_tarfile_generator(
-            image_reference=image_reference,
-            oci_client=oci_client,
-            include_config_blob=False,
-        )
 
 
 @dataclasses.dataclass(frozen=True)

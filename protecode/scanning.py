@@ -109,7 +109,7 @@ class ResourceGroupProcessor:
     def scan_requests(
         self,
         resource_group: tuple[cnudie.iter.ResourceNode],
-        known_artifact_scans: typing.Dict[str, typing.Iterable[pm.Product]]
+        known_artifact_scans: typing.Dict[str, typing.Iterable[pm.Product]],
         oci_client: oci.client.OciClient,
     ) -> typing.Generator[pm.ScanRequest, None, None]:
         # assumption: resource-groups share same component(-name) and resource(name + version), as
@@ -148,12 +148,19 @@ class ResourceGroupProcessor:
                     logger.info(f'{group_name=}: found {target_product_id=}')
                 else:
                     logger.info(f'{group_name=}: did not find old scan')
+
+                def iter_content():
+                    image_reference = resource.access.imageReference
+                    yield from oci.image_layers_as_tarfile_generator(
+                        image_reference=image_reference,
+                        oci_client=oci_client,
+                        include_config_blob=False,
+                    )
+
                 yield pm.ScanRequest(
                     component=component,
                     artefact=resource,
-                    scan_content=pm.OciResourceBinary(
-                        artifact=resource,
-                    ).upload_data(),
+                    scan_content=iter_content(),
                     display_name=display_name,
                     target_product_id=target_product_id,
                     custom_metadata=component_artifact_metadata,
