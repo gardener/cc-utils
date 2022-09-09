@@ -11,6 +11,7 @@ import requests
 import gci.componentmodel as cm
 
 import ci.log
+import cnudie.access
 import cnudie.iter
 import cnudie.retrieve
 import cnudie.util
@@ -21,6 +22,7 @@ import protecode.assessments
 import protecode.client
 import protecode.model as pm
 import protecode.util
+import tarutil
 
 
 logger = logging.getLogger(__name__)
@@ -110,7 +112,8 @@ class ResourceGroupProcessor:
         self,
         resource_group: tuple[cnudie.iter.ResourceNode],
         known_artifact_scans: typing.Dict[str, typing.Iterable[pm.Product]],
-        oci_client: oci.client.OciClient,
+        oci_client: oci.client.Client,
+        s3_client: 'botocore.client.S3',
     ) -> typing.Generator[pm.ScanRequest, None, None]:
         # assumption: resource-groups share same component(-name) and resource(name + version), as
         # well as resource-type
@@ -188,16 +191,24 @@ class ResourceGroupProcessor:
             else:
                 logger.info(f'{group_name=}: did not find old scan')
 
+            # hardcode assumption about all accesses being of s3-type
+            def as_blob_descriptors():
+                for idx, resource in enumerate(resource_group):
+                    name = resource.resource.extraIdentity.get('platform', str(idx))
+
+                    access: cm.S3Access = resource.resource.access
+                    yield cnudie.access.s3_access_as_blob_descriptor(
+                        s3_client=s3_client,
+                        s3_access=access,
+                        name=name,
+                    )
+
             yield pm.ScanRequest(
                 component=component,
                 artefact=resource,
-                scan_content=pm.TarRootfsAggregateResourceBinary(
-                    artifacts=[
-                        node.resource
-                        for node in resource_group
-                    ],
-                    tarfile_retrieval_function=protecode.util.fileobj_for_s3_access,
-                ).upload_data(),
+                scan_content=tarutil.concat_blobs_as_tarstream(
+                    blobs=as_blob_descriptors(),
+                ),
                 display_name=display_name,
                 target_product_id=target_product_id,
                 custom_metadata=component_artifact_metadata,
@@ -345,7 +356,7 @@ class ResourceGroupProcessor:
         resource_group: tuple[cnudie.iter.ResourceNode],
         processing_mode: pm.ProcessingMode,
         known_scan_results: dict[str, tuple[pm.Product]],
-        oci_client=oci_client,
+        oci_client: oci.client.Client,
     ) -> typing.Iterator[pm.BDBA_ScanResult]:
         resource_node = resource_group[0]
         r = resource_node.resource
@@ -593,7 +604,8 @@ def upload_grouped_images(
     ),
     reference_group_ids=(),
     delivery_client=None,
-    oci_client: oci.client.OciClient=None,
+    oci_client: oci.client.Client=None,
+    s3_client: 'botocore.client.S3'=None,
 ) -> typing.Generator[pm.BDBA_ScanResult, None, None]:
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
     protecode_api.login()
@@ -637,6 +649,7 @@ def upload_grouped_images(
             processing_mode=processing_mode,
             known_scan_results=known_scan_results,
             oci_client=oci_client,
+            s3_client=s3_client,
         ))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=parallel_jobs) as tpe:

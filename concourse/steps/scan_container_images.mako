@@ -36,6 +36,7 @@ import faulthandler
 faulthandler.enable() # print stacktraces upon fatal signals
 # end of debugging block
 
+import ccc.aws
 import ccc.github
 import ccc.oci
 import ci.log
@@ -95,6 +96,11 @@ delivery_svc_endpoints = ccc.delivery.endpoints(cfg_set=cfg_set)
 delivery_svc_client = ccc.delivery.default_client_if_available()
 
 oci_client = ccc.oci.oci_client()
+s3_session = ccc.aws.default_session()
+if s3_session:
+  s3_client =  sess.client('s3')
+else:
+  s3_client = None
 
 logger.info('running protecode scan for all components')
 results = tuple(
@@ -109,6 +115,7 @@ results = tuple(
     filter_function=filter_function,
     delivery_client=delivery_svc_client,
     oci_client=oci_client,
+    s3_client=s3_client,
   )
 )
 logger.info(f'bdba scan yielded {len(results)=}')

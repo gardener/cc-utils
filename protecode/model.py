@@ -13,12 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import collections
 import dataclasses
 import dso.labels
 import enum
-import tarfile
-import tarutil
 import traceback
 import typing
 
@@ -307,70 +304,6 @@ class BDBA_ScanResult(gcm.ScanResult):
     @property
     def greatest_cve_score(self) -> float:
         return self.result.greatest_cve_score()
-
-
-@dataclasses.dataclass(frozen=True)
-class TarRootfsAggregateResourceBinary:
-    artifacts: typing.Iterable[gci.componentmodel.Resource]
-    tarfile_retrieval_function: typing.Callable[[gci.componentmodel.Resource], typing.BinaryIO]
-
-    def upload_data(self):
-        # For these kinds of binaries, we aggregate all (tar) artifacts that we're given.
-        known_tar_sizes = collections.defaultdict(set)
-
-        def process_tarinfo(
-            tar_info: tarfile.TarInfo,
-        ) -> bool:
-            if not tar_info.isfile():
-                return True
-
-            file_name = tar_info.name
-            if any((size == tar_info.size for size in known_tar_sizes[file_name])):
-                # we already have seen a file with the same name and size
-                return False
-
-            known_tar_sizes[file_name].add(tar_info.size)
-            return True
-
-        tarfiles_and_names = list(
-            (
-                tarfile.open(fileobj=self.tarfile_retrieval_function(resource), mode='r|*'),
-                resource.extraIdentity.get('platform', 'n/a'),
-            )
-            for resource in self.artifacts
-        )
-
-        def tarinfo_callback(
-            tarfile_name: str,
-        ) -> typing.Callable[[tarfile.TarInfo], tarfile.TarInfo]:
-            def callback(tarinfo: tarfile.TarInfo) -> tarfile.TarInfo:
-                if not tarinfo.isfile():
-                    return tarinfo
-                tarinfo.name = tarfile_name + '/' + tarinfo.name
-                return tarinfo
-            return callback
-
-        # stream a combined tarfile by omitting the end-of-file marker for all but the last tar-
-        # archive we stream. Also, prefix the filenames of the archive we stream so that the
-        # origin can be determined when looking at the protecode scan results.
-        # Note: This means that a file being prefixed does not necessarily mean that it was _only_
-        # included in the tarfile corresponding, but merely that it was present in the _first_
-        # file scanned.
-        for src_tarfile, tarfile_name in tarfiles_and_names[:-1]:
-            yield from tarutil.filtered_tarfile_generator(
-                src_tf=src_tarfile,
-                filter_func=process_tarinfo,
-                tarinfo_callback=tarinfo_callback(tarfile_name=tarfile_name),
-                finalise=False,
-            )
-
-        final_tarfile, tarfile_name = tarfiles_and_names[-1]
-        yield from tarutil.filtered_tarfile_generator(
-            src_tf=final_tarfile,
-            filter_func=process_tarinfo,
-            tarinfo_callback=tarinfo_callback(tarfile_name=tarfile_name),
-            finalise=True,
-        )
 
 
 @dataclasses.dataclass
