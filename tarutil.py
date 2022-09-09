@@ -2,6 +2,8 @@ import logging
 import tarfile
 import typing
 
+import ioutil
+
 logger = logging.getLogger(__name__)
 
 
@@ -18,6 +20,44 @@ class FilelikeProxy:
             return next(self.generator)
         except StopIteration:
             return b''
+
+
+def concat_blobs_as_tarstream(
+    blobs: typing.Iterable[ioutil.BlobDescriptor],
+) -> typing.Generator[bytes, None, None]:
+    '''
+    returns a generator yielding tarfile stream containing the passed blobs as members.
+
+    In comparison to regularily creating a tarfile, member-contents are accepted as generators,
+    thus allowing to concatenate multiple input streams into a concatenated output stream.
+    '''
+    offset = 0
+
+    for idx, blob in enumerate(blobs):
+        name = blob.name or f'{str(idx)}.tar'
+        tarinfo = tarfile.TarInfo(name=name)
+        tarinfo.size = blob.size
+        tarinfo.offset = offset
+        tarinfo.offset_data = offset + tarfile.BLOCKSIZE
+
+        offset += blob.size + tarfile.BLOCKSIZE
+
+        tarinfo_bytes = tarinfo.tobuf()
+        yield tarinfo_bytes
+
+        uploaded_bytes = len(tarinfo_bytes)
+
+        for chunk in blob.content:
+            uploaded_bytes += len(chunk)
+            yield chunk
+
+        # pad to full blocks
+        if (missing := tarfile.BLOCKSIZE - (uploaded_bytes % tarfile.BLOCKSIZE)):
+            offset += missing
+            yield tarfile.NUL * missing
+
+    # terminate tarchive w/ two empty blocks
+    yield tarfile.NUL * tarfile.BLOCKSIZE * 2
 
 
 def filtered_tarfile_generator(
