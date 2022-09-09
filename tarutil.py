@@ -21,7 +21,7 @@ class _FilelikeProxy:
 
 
 def filtered_tarfile_generator(
-    src_tf: tarfile.TarFile | typing.Iterable[tarfile.TarFile],
+    src_tf: tarfile.TarFile,
     filter_func: typing.Callable[[tarfile.TarInfo], bool]=lambda tarinfo: True,
     chunk_size=tarfile.BLOCKSIZE,
     chunk_callback: typing.Callable[[bytes], None]=None,
