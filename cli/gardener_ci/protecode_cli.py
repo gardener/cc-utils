@@ -3,6 +3,7 @@ import logging
 import typing
 
 import ccc.protecode
+import ccc.oci
 import ci.util
 import concourse.steps.component_descriptor_util as component_descriptor_util
 import concourse.steps.images
@@ -25,6 +26,8 @@ def scan_without_notification(
 ):
     cfg_factory = ci.util.ctx().cfg_factory()
     protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
+
+    oci_client = ccc.oci.oci_client()
 
     if not protecode_api_url:
         protecode_api_url = protecode_cfg.api_url()
@@ -53,8 +56,9 @@ def scan_without_notification(
 
     results = _upload_grouped_images(
         protecode_api=client,
-        protecode_group_id=protecode_group_id,
         component=cd,
+        protecode_group_id=protecode_group_id,
+        oci_client=oci_client,
     )
 
     results_above_threshold = [r for r in results if r.greatest_cve_score >= cve_threshold]
