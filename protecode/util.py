@@ -18,9 +18,6 @@ import functools
 import logging
 import typing
 
-import boto3
-import botocore
-
 import ccc.delivery
 import ccc.gcp
 import ccc.protecode
@@ -247,24 +244,3 @@ def _matching_analysis_result_id(
         return result.product_id()
     else:
         return None
-
-
-def fileobj_for_s3_access(
-    resource: cm.Resource,
-) -> typing.BinaryIO:
-    '''returns a filelike object that can be used to read the contents of a resource that
-    has an access of type 's3'
-
-    The s3-object the access points at must be publicly readable, no authentication is attempted.
-    '''
-    # get a file-like object to stream from the given resource's access
-    access = resource.access
-    if not isinstance(access, cm.S3Access):
-        raise ValueError(access.type)
-    s3_client = boto3.client(
-        's3',
-        # anonymous access
-        config=botocore.client.Config(signature_version=botocore.UNSIGNED)
-    )
-    s3_object = s3_client.get_object(Bucket=access.bucketName, Key=access.objectKey)
-    return s3_object['Body']
