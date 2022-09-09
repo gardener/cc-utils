@@ -49,7 +49,7 @@ def iter_image_files(
             stream=True,
         )
 
-        fileobj = tarutil._FilelikeProxy(
+        fileobj = tarutil.FilelikeProxy(
             generator=blob_resp.iter_content(
                 chunk_size=tarfile.RECORDSIZE,
                 decode_unicode=False,

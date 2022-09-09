@@ -5,7 +5,7 @@ import typing
 logger = logging.getLogger(__name__)
 
 
-class _FilelikeProxy:
+class FilelikeProxy:
     def __init__(self, generator):
         '''
         a fake filelike-object that will mimic the required behaviour (read) "good enough" for
@@ -36,7 +36,7 @@ def filtered_tarfile_generator(
     function can be given that will be passed all TarInfo objects after filtering to perform
     modifications like renaming.
 
-    This function is particularly useful for streaming. Note that `_FilelikeProxy` can be used
+    This function is particularly useful for streaming. Note that _FilelikeProxy` can be used
     to wrap a generator yielding an (input-) tarfile-stream.
 
     In combination, this can be used to - in a streaming manner - retrieve a tarfile-stream, e.g.

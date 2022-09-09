@@ -214,7 +214,7 @@ def filter_image(
                 digest=layer.digest,
                 stream=True,
             ).iter_content(chunk_size=tarfile.BLOCKSIZE * 64)
-            src_tar_fobj = tarutil._FilelikeProxy(generator=src_tar_stream)
+            src_tar_fobj = tarutil.FilelikeProxy(generator=src_tar_stream)
             filtered_stream = tarutil.filtered_tarfile_generator(
                 src_tf=tarfile.open(fileobj=src_tar_fobj, mode='r|*'),
                 filter_func=tarmember_filter,
