@@ -8,14 +8,6 @@ def requirements():
     yield 'gardener-cicd-libs'
     yield 'gardener-cicd-cli'
 
-    with open(os.path.join(own_dir, 'requirements.dso.txt')) as f:
-        for line in f.readlines():
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-
-            yield line
-
 
 def modules(): return []
 
