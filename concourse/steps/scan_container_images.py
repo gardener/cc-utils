@@ -23,6 +23,7 @@ import typing
 
 import tabulate
 
+import clamav.client
 import clamav.cnudie
 import clamav.scan
 import concourse.model.traits.image_scan as image_scan
@@ -95,6 +96,32 @@ def scan_result_group_collection_for_licenses(
     )
 
 
+def scan_result_group_collection_for_malware(
+    results: tuple[clamav.scan.ClamAV_ResourceScanResult],
+):
+    def malware_found(result: clamav.scan.ClamAV_ResourceScanResult):
+        if not result.scan_succeeded():
+            return False
+
+        if result.scan_result.malware_status is clamav.client.MalwareStatus.FOUND_MALWARE:
+            return True
+        else:
+            return False
+
+    def classification_callback(result: clamav.scan.ClamAV_ResourceScanResult):
+        if malware_found(result):
+            return gcm.Severity.BLOCKER
+
+        return None
+
+    return gcm.ScanResultGroupCollection(
+        results=tuple(results),
+        issue_type=gciss._label_malware,
+        classification_callback=classification_callback,
+        findings_callback=malware_found,
+    )
+
+
 def print_protecode_info_table(
     protecode_group_url: str,
     protecode_group_id: int,
@@ -128,7 +155,7 @@ def dump_malware_scan_request(request):
 
 
 def prepare_evidence_request(
-    scan_results: typing.Iterable[clamav.scan.ResourceScanResult],
+    scan_results: typing.Iterable[clamav.scan.ClamAV_ResourceScanResult],
     evidence_id: str = 'gardener-mm6',
     pipeline_url: str = None,
 ) -> clamav.scan.MalwarescanEvidenceRequest:
@@ -147,9 +174,9 @@ def prepare_evidence_request(
         clamav_scan_results.append(scan_result.scan_result)
         targets.append(saf.model.ResourceTarget( # noqa
             id=i,
-            name=scan_result.resource.name,
-            version=scan_result.resource.version,
-            extra_id=scan_result.resource.extraIdentity or None,
+            name=scan_result.artifact.name,
+            version=scan_result.artifact.version,
+            extra_id=scan_result.artifact.extraIdentity or None,
         ))
 
     return clamav.scan.MalwarescanEvidenceRequest(

@@ -24,7 +24,7 @@ def scan_resources(
     clamav_client: clamav.client.ClamAVClient,
     s3_client=None,
     max_workers:int = 16,
-) -> typing.Generator[clamav.scan.ResourceScanResult, None, None]:
+) -> typing.Generator[clamav.scan.ClamAV_ResourceScanResult, None, None]:
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
 
     def scan_resource(component_resource: typing.Tuple[cm.Component, cm.Resource]):
@@ -67,9 +67,10 @@ def scan_resources(
             name=f'{component.name}/{resource.name}',
         )
 
-        return clamav.scan.ResourceScanResult(
+        # pylint: disable=E1123
+        return clamav.scan.ClamAV_ResourceScanResult(
             component=component,
-            resource=resource,
+            artifact=resource,
             scan_result=scan_result,
         )
 
@@ -93,7 +94,7 @@ def scan_resources(
 
 
 def resource_scan_result_to_artefact_metadata(
-    resource_scan_result: clamav.scan.ResourceScanResult,
+    resource_scan_result: clamav.scan.ClamAV_ResourceScanResult,
     datasource: str = dso.model.Datasource.CLAMAV,
     datatype: str = dso.model.Datatype.MALWARE,
     creation_date: datetime.datetime = datetime.datetime.now(),
@@ -101,7 +102,7 @@ def resource_scan_result_to_artefact_metadata(
 
     artefact_ref = dso.model.component_artefact_id_from_ocm(
         component=resource_scan_result.component,
-        artefact=resource_scan_result.resource,
+        artefact=resource_scan_result.artifact,
     )
 
     meta = dso.model.Metadata(

@@ -7,13 +7,13 @@ import clamav.scan
 
 
 def as_table(
-    scan_results: typing.Iterable[clamav.scan.ResourceScanResult],
+    scan_results: typing.Iterable[clamav.scan.ClamAV_ResourceScanResult],
     tablefmt: str='simple', # see tabulate module
 ):
     headers = ('resource', 'status', 'details')
 
-    def row_from_result(scan_result: clamav.scan.ResourceScanResult):
-        resource = f'{scan_result.component.name}/{scan_result.resource.name}'
+    def row_from_result(scan_result: clamav.scan.ClamAV_ResourceScanResult):
+        resource = f'{scan_result.component.name}/{scan_result.artifact.name}'
         res = scan_result.scan_result
 
         status = res.malware_status

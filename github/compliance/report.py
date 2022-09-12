@@ -32,6 +32,7 @@ _compliance_label_vulnerabilities = github.compliance.issue._label_bdba
 _compliance_label_licenses = github.compliance.issue._label_licenses
 _compliance_label_os_outdated = github.compliance.issue._label_os_outdated
 _compliance_label_checkmarx = github.compliance.issue._label_checkmarx
+_compliance_label_malware = github.compliance.issue._label_malware
 
 
 def _criticality_label(classification: gcm.Severity):
@@ -222,6 +223,19 @@ def _template_vars(
         crit = (f'Risk: {result_group.worst_result.scan_response.scanRisk}, '
             f'Risk Severity: {result_group.worst_result.scan_response.scanRiskSeverity}')
         template_variables['criticality_classification'] = crit
+    elif issue_type == _compliance_label_malware:
+        summary_str = '\n'.join((
+            result.sumary() for result in results
+        ))
+
+        template_variables['summary'] = _compliance_status_summary(
+            component=component,
+            artifacts=artifacts,
+            issue_value=summary_str,
+            issue_description='ClamAV Scan Result',
+            report_urls=(),
+        )
+        template_variables['criticality_classification'] = str(gcm.Severity.BLOCKER)
     else:
         raise NotImplementedError(issue_type)
 

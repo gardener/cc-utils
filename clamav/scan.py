@@ -5,9 +5,11 @@ import functools
 import logging
 import tarfile
 import tempfile
+import textwrap
 import typing
 
 import gci.componentmodel as cm
+import github.compliance.model as gcm
 import saf.model
 
 import ci.log
@@ -39,17 +41,25 @@ class AggregatedScanResult:
     scan_duration_seconds: float
     upload_duration_seconds: float
 
+    def summary(self) -> str:
+        def details_for_finding(scan_result: clamav.client.ScanResult):
+            return f'{scan_result.name}: {scan_result.details}'
+
+        newline = '\n'
+        return textwrap.dedent(f'''\
+            {self.resource_url} - findings:
+            {newline.join(("- " + details_for_finding(res) for res in self.findings))}
+        ''')
+
 
 @dataclasses.dataclass
-class ResourceScanResult:
-    component: cm.Component
-    resource: cm.Resource
+class ClamAV_ResourceScanResult(gcm.ScanResult):
     scan_result: AggregatedScanResult
 
 
 @dataclasses.dataclass
 class MalwarescanEvidenceRequest(saf.model.EvidenceRequest):
-    EvidenceDataBinary: typing.List[ResourceScanResult]
+    EvidenceDataBinary: typing.List[ClamAV_ResourceScanResult]
 
 
 @dataclasses.dataclass

@@ -23,6 +23,7 @@ _label_checkmarx = 'vulnerabilities/checkmarx'
 _label_bdba = 'vulnerabilities/bdba'
 _label_licenses = 'licenses/bdba'
 _label_os_outdated = 'os/outdated'
+_label_malware = 'malware/clamav'
 
 
 @cachetools.cached(cache={})
