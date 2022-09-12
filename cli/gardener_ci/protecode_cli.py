@@ -16,7 +16,7 @@ __cmd_name__ = 'protecode'
 logger = logging.getLogger(__name__)
 
 
-def scan_without_notification(
+def scan(
     protecode_cfg_name: str,
     protecode_group_id: str,
     component_descriptor_path: str,
