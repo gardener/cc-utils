@@ -225,7 +225,7 @@ def _template_vars(
         template_variables['criticality_classification'] = crit
     elif issue_type == _compliance_label_malware:
         summary_str = '\n'.join((
-            result.sumary() for result in results
+            result.summary() for result in results
         ))
 
         template_variables['summary'] = _compliance_status_summary(
