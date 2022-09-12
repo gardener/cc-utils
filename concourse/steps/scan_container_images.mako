@@ -11,7 +11,6 @@ import ci.util
 image_scan_trait = job_variant.trait('image_scan')
 issue_policies = image_scan_trait.issue_policies()
 protecode_scan = image_scan_trait.protecode()
-clam_av = image_scan_trait.clam_av()
 
 filter_cfg = image_scan_trait.matching_config()
 
