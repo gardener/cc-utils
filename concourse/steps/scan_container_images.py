@@ -100,7 +100,7 @@ def scan_result_group_collection_for_malware(
     results: tuple[clamav.scan.ClamAV_ResourceScanResult],
 ):
     def malware_found(result: clamav.scan.ClamAV_ResourceScanResult):
-        if not result.scan_succeeded():
+        if not result.scan_succeeded:
             return False
 
         if result.scan_result.malware_status is clamav.client.MalwareStatus.FOUND_MALWARE:
