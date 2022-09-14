@@ -5,7 +5,6 @@ import functools
 import logging
 import tarfile
 import tempfile
-import textwrap
 import typing
 
 import gci.componentmodel as cm
@@ -41,15 +40,20 @@ class AggregatedScanResult:
     scan_duration_seconds: float
     upload_duration_seconds: float
 
-    def summary(self) -> str:
-        def details_for_finding(scan_result: clamav.client.ScanResult):
-            return f'{scan_result.name}: {scan_result.details}'
+    def summary(self, fmt:str='html') -> str:
+        if not fmt == 'html':
+            raise NotImplementedError(fmt)
 
-        newline = '\n'
-        return textwrap.dedent(f'''\
-            {self.resource_url} - findings:
-            {newline.join(("- " + details_for_finding(res) for res in self.findings))}
-        ''')
+        def details_for_finding(scan_result: clamav.client.ScanResult):
+            return f'<li>{scan_result.name}: {scan_result.details}</li>'
+
+        return f'''\
+          <ul>
+            <li>{self.resource_url}:
+              <ul>{newline.join(("- " + details_for_finding(res) for res in self.findings))}</ul>
+            </li>
+          </ul>
+        '''
 
 
 @dataclasses.dataclass
