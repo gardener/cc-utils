@@ -78,7 +78,7 @@ image_tag = '${image_descriptor.tag_template()}'.replace(
 )
 
 % if platform:
-image_tag += '-${platform.replace("/", "-")}'
+image_tag += '-${normalised_oci_platform_name.replace("/", "-")}'
 % endif
 
 image_ref = f'${image_ref}:{image_tag}'

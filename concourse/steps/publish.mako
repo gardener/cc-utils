@@ -4,6 +4,8 @@ from makoutil import indent_func
 import collections
 import os
 
+import model.concourse
+
 publish_trait = job_variant.trait('publish')
 
 if not (platforms := publish_trait.platforms()):
@@ -25,7 +27,10 @@ for image_descriptor in image_descriptors:
   base_image_ref_template = f'{image_descriptor.image_reference()}:{image_descriptor.tag_template()}'
 
   if image_descriptor._platform:
-    specific_tag = base_image_ref_template + f'-{image_descriptor._platform.replace("/", "-")}'
+    normalised_platform = model.concourse.Platform.normalise_oci_platform_name(
+      image_descriptor._platform
+    )
+    specific_tag = base_image_ref_template + f'-{normalised_platform.replace("/", "-")}'
   else:
     specific_tag = base_image_ref_template
 
