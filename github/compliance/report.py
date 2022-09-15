@@ -112,7 +112,7 @@ def _compliance_status_summary(
         | Artifact  | {artifacts[0].name} |
         | {pluralise('Artifact-Version', len(artifacts))}  | {artifact_versions} |
         | Artifact-Type | {artifact_type} |
-        | {issue_description} | **{issue_value}** |
+        | {issue_description} | {issue_value} |
 
         The aforementioned {pluralise(artifact_type, len(artifacts))} yielded findings
         relevant for future release decisions.
@@ -224,7 +224,7 @@ def _template_vars(
             f'Risk Severity: {result_group.worst_result.scan_response.scanRiskSeverity}')
         template_variables['criticality_classification'] = crit
     elif issue_type == _compliance_label_malware:
-        summary_str = '\n'.join((
+        summary_str = ''.join((
             result.scan_result.summary() for result in results
         ))
 
