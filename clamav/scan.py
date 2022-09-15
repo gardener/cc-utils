@@ -47,6 +47,8 @@ class AggregatedScanResult:
         def details_for_finding(scan_result: clamav.client.ScanResult):
             return f'<li>{scan_result.name}: {scan_result.details}</li>'
 
+        newline = '\n'
+
         return f'''\
           <ul>
             <li>{self.resource_url}:
