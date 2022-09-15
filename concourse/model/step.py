@@ -19,6 +19,7 @@ import string
 import shlex
 
 import ci.util
+import model.concourse
 
 from concourse.model.base import (
     AttributeSpec,
@@ -254,6 +255,7 @@ class PipelineStep(ModelBase):
         extra_args=None,
         injecting_trait_name=None,
         worker_node_tags: tuple[str]=(),
+        platform: model.concourse.Platform=None,
         *args,
         **kwargs
     ):
@@ -282,6 +284,7 @@ class PipelineStep(ModelBase):
         self._injecting_trait_name = injecting_trait_name
         self._extra_args = extra_args
         self._worker_node_tags = tuple(worker_node_tags)
+        self._platform = platform
         super().__init__(*args, **kwargs)
 
     @classmethod
@@ -340,6 +343,10 @@ class PipelineStep(ModelBase):
     @property
     def worker_node_tags(self):
         return self._worker_node_tags
+
+    @property
+    def platform(self) -> model.concourse.Platform | None:
+        return self._platform
 
     def _execute(self):
         # by default, run an executable named as the step

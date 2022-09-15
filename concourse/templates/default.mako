@@ -366,7 +366,11 @@ else:
         indent=4,
     )}
 % else:
-    ${task_image_defaults(registry_cfg=default_container_registry, indent=4)}
+    ${task_image_defaults(
+      registry_cfg=default_container_registry,
+      platform=job_step.platform,
+      indent=4,
+    )}
 % endif
     inputs:
 % for repository in job_variant.repositories():
