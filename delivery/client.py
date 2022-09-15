@@ -127,9 +127,9 @@ class DeliveryServiceClient:
     ) -> dict:
         '''
         retrieves component-responsibles. Responsibles are returned as a list of typed user
-        identities. Optionally, a resource (or resource name) may be passed. In this case,
+        identities. Optionally, an artifact (or artifact name) may be passed. In this case,
         responsibles are filtered for the given resource definition. Note that an error will
-        be raised if the given resource does not declare a resource of the given name.
+        be raised if the given artifact does not declare a artifact of the given name.
 
         known types: githubUser, emailAddress, personalName
         example (single user entry): [
@@ -161,11 +161,11 @@ class DeliveryServiceClient:
 
         if artifact:
             if isinstance(artifact, cm.Artifact):
-                resource_name = artifact.name
+                artifact_name = artifact.name
             else:
-                resource_name = artifact
+                artifact_name = artifact
 
-            params['resource_name'] = resource_name
+            params['artifact_name'] = artifact_name
 
         logger.info(f'{component.identity()=} {params=}')
 
