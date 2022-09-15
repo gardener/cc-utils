@@ -404,6 +404,8 @@ class PublishTraitTransformer(TraitTransformer):
                     )
                     if platform and platform.worker_tag:
                         worker_node_tags = (platform.worker_tag,)
+                else:
+                    platform = None
 
                 build_step = PipelineStep(
                     name=f'build_oci_image_{img.name()}',
@@ -417,6 +419,7 @@ class PublishTraitTransformer(TraitTransformer):
                     injecting_trait_name=self.name,
                     script_type=ScriptType.PYTHON3,
                     worker_node_tags=worker_node_tags,
+                    platform=platform,
                     extra_args={
                         'image_descriptor': img,
                     }
