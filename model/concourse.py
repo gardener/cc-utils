@@ -80,6 +80,10 @@ class Platform:
     def normalised_oci_platform_name(self):
         return Platform.normalise_oci_platform_name(self.oci_name)
 
+    @property
+    def normalised_oci_platform_tag_suffix(self):
+        return self.normalised_oci_platform_name.replace('/', '-')
+
     @staticmethod
     def normalise_oci_platform_name(name: str):
         osname, arch = name.split('/', 1) # we want to fail if no / present
