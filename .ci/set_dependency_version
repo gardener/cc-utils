@@ -3,7 +3,7 @@
 import fileinput
 import os
 
-import util
+import ci.util
 
 COMPONENT_SPEC_PYPI_PROJECT_NAME = 'gardener-component-model'
 COMPONENT_SPEC_COMPONENT_NAME = 'github.com/gardener/component-spec'
