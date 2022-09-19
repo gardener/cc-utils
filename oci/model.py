@@ -284,6 +284,16 @@ class OciPlatform:
 
         return True
 
+    def normalise(self):
+        os = normalise_os(self.os)
+        arch, variant = normalise_arch(self.architecture, self.variant)
+
+        return OciPlatform(
+            os=os,
+            architecture=arch,
+            variant=variant
+        )
+
 
 @dataclasses.dataclass(frozen=True)
 class OciImageManifestListEntry(OciBlobRef):
@@ -310,3 +320,53 @@ class OciImageManifestList:
             'mediaType': self.mediaType,
             'schemaVersion': self.schemaVersion,
         }
+
+
+def normalise_os(os: str) -> str:
+    '''
+    https://github.com/containerd/containerd/blob/8686ededfc90076914c5238eb96c883ea093a8ba/platforms/database.go#L69
+    '''
+    os = os or ''
+
+    os = os.lower()
+    match os:
+        case "macos":
+            os = "darwin"
+
+    return os
+
+
+def normalise_arch(arch: str, variant: str) -> typing.Tuple:
+    '''
+    https://github.com/containerd/containerd/blob/8686ededfc90076914c5238eb96c883ea093a8ba/platforms/database.go#L83
+    '''
+    arch = arch or ''
+    variant = variant or ''
+
+    arch, variant = arch.lower(), variant.lower()
+    match arch:
+        case "i386":
+            arch = "386"
+            variant = ""
+        case "x86_64", "x86-64":
+            arch = "amd64"
+            variant = ""
+        case "aarch64", "arm64":
+            arch = "arm64"
+            match variant:
+                case "8", "v8":
+                    variant = ""
+        case "armhf":
+            arch = "arm"
+            variant = "v7"
+        case "armel":
+            arch = "arm"
+            variant = "v6"
+        case "arm":
+            match variant:
+                case "", "7":
+                    variant = "v7"
+                case "5", "6", "8":
+                    variant = "v" + variant
+
+    return (arch, variant)

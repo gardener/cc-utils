@@ -1,10 +1,61 @@
 import dataclasses
+import enum
 import typing
 
 import dacite
 
 import oci.client as oc
 import oci.model as om
+
+
+class OperatingSystem(enum.Enum):
+    '''
+    OperatingSystem contains the values for the 'os' property in an oci multiarch image.
+    See https://go.dev/doc/install/source#environment.
+    '''
+    AIX = 'aix'
+    ANDROID = 'android'
+    DARWIN = 'darwin'
+    DRAGONFLY = 'dragonfly'
+    FREEBSD = 'freebsd'
+    ILLUMOS = 'illumos'
+    IOS = 'ios'
+    JS = 'js'
+    LINUX = 'linux'
+    NETBSD = 'netbsd'
+    OPENBSD = 'openbsd'
+    PLAN9 = 'plan9'
+    SOLARIS = 'solaris'
+    WINDOWS = 'windows'
+
+    @classmethod
+    def contains_value(cls, value: str):
+        return value in [v.value for v in OperatingSystem]
+
+
+class Architecture(enum.Enum):
+    '''
+    Architecture contains the values for the 'architecture' property in an oci multiarch image.
+    See https://go.dev/doc/install/source#environment.
+    '''
+    PPC64 = 'ppc64'
+    _386 = '386'
+    AMD64 = 'amd64'
+    ARM = 'arm'
+    ARM64 = 'arm64'
+    WASM = 'wasm'
+    LOONG64 = 'loong64'
+    MIPS = 'mips'
+    MIPSLE = 'mipsle'
+    MIPS64 = 'mips64'
+    MIPS64LE = 'mips64le'
+    PPC64le = 'ppc64le'
+    RISCV64 = 'riscv64'
+    S390X = 's390x'
+
+    @classmethod
+    def contains_value(cls, value: str):
+        return value in [v.value for v in Architecture]
 
 
 def from_manifest(
@@ -160,3 +211,57 @@ def iter_platforms(
         )
 
         yield (sub_img_ref, platform)
+
+
+class PlatformFilter:
+    @staticmethod
+    def create(
+        included_platforms: typing.List[str],
+    ) -> typing.Callable[[om.OciPlatform], bool]:
+        matchers = []
+        for included_platform in included_platforms:
+            matchers.append(PlatformFilter._parse_expr(included_platform))
+
+        def filter(platform_to_match: om.OciPlatform) -> bool:
+            for m in matchers:
+                if PlatformFilter._match(m, platform_to_match):
+                    return True
+
+            return False
+
+        return filter
+
+    @staticmethod
+    def _parse_expr(platform_expr: str) -> dict:
+        splitted = platform_expr.split('/')
+        if len(splitted) < 2 or len(splitted) > 3:
+            raise ValueError(f'invalid oci platform expression {platform_expr=}.'
+                              ' expression must have the format os/architecture[/variant]')
+
+        os = splitted[0]
+        if os != '*' and not OperatingSystem.contains_value(os):
+            raise ValueError(f'invalid os in oci platform expression {platform_expr=}.'
+                             f' allowed values are {["*"] + [o.value for o in OperatingSystem]}')
+
+        architecture = splitted[1]
+        if architecture != '*' and not Architecture.contains_value(architecture):
+            raise ValueError(f'invalid architecture in oci platform expression {platform_expr=}.'
+                             f' allowed values are {["*"] + [a.value for a in Architecture]}')
+
+        variant = '*'
+        if len(splitted) == 3:
+            variant = splitted[2]
+
+        return {
+            'os': os,
+            'architecture': architecture,
+            'variant': variant,
+        }
+
+    @staticmethod
+    def _match(m: dict, p: om.OciPlatform) -> bool:
+        normalised_p = p.normalise()
+        return ((m['os'] == '*' or m['os'] == normalised_p.os) and
+                (m['architecture'] == '*' or m['architecture'] == normalised_p.architecture) and
+                (m['variant'] == '*' or m['variant'] == normalised_p.variant)
+               )
