@@ -50,6 +50,16 @@ class ReplicationMode(enum.Enum):
     PREFER_MULTIARCH = 'prefer_multiarch'
     NORMALISE_TO_MULTIARCH = 'normalise_to_multiarch'
 
+    def accept_header(self):
+        if self is ReplicationMode.REGISTRY_DEFAULTS:
+            return None
+        elif self is ReplicationMode.PREFER_MULTIARCH:
+            return om.MimeTypes.prefer_multiarch
+        elif self is ReplicationMode.NORMALISE_TO_MULTIARCH:
+            return om.MimeTypes.prefer_multiarch
+        else:
+            raise NotImplementedError(self)
+
 
 def replicate_artifact(
     src_image_reference: typing.Union[str, om.OciImageReference],
@@ -100,14 +110,7 @@ def replicate_artifact(
     else:
         client = oci_client
 
-    if mode is ReplicationMode.REGISTRY_DEFAULTS:
-        accept = None
-    elif mode is ReplicationMode.PREFER_MULTIARCH:
-        accept = om.MimeTypes.prefer_multiarch
-    elif mode is ReplicationMode.NORMALISE_TO_MULTIARCH:
-        accept = om.MimeTypes.prefer_multiarch
-    else:
-        raise NotImplementedError(mode)
+    accept = mode.accept_header()
 
     # we need the unaltered - manifest for verbatim replication
     raw_manifest = client.manifest_raw(
