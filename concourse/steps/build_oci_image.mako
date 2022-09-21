@@ -38,7 +38,6 @@ eff_version_replace_token = '${EFFECTIVE_VERSION}'
 publish_trait = job_variant.trait('publish')
 oci_builder = publish_trait.oci_builder()
 platform = image_descriptor.platform()
-
 need_qemu = True
 
 if platform:
@@ -76,6 +75,10 @@ image_tag = '${image_descriptor.tag_template()}'.replace(
   '${eff_version_replace_token}',
    effective_version
 )
+
+build_args = ${image_descriptor.build_args()}
+if 'EFFECTIVE_VERSION' not in build_args: ## preserve existing value if explicitly given by user
+  build_args['EFFECTIVE_VERSION'] = effective_version
 
 % if platform:
 image_tag += '-${normalised_oci_platform_name.replace("/", "-")}'
@@ -142,13 +145,13 @@ kaniko_argv = (
   '--context', '${build_ctx_dir}',
   '--tarPath', image_outfile,
   '--destination', image_ref,
-% for k,v in image_descriptor.build_args().items():
-  '--build-arg', '${k}=${v}',
-% endfor
 % if (target := image_descriptor.target_name()):
-    '--target', '${target}',
+  '--target', '${target}',
 % endif
 )
+
+for key in build_args:
+  kaniko_argv += '--build-arg', f'{key}={build_args[key]}'
 
 logger.info(f'running kaniko-build {kaniko_argv=}')
 
@@ -230,9 +233,12 @@ docker_argv = (
   % endif
   'build',
   '--progress', 'plain',
-% for k,v in image_descriptor.build_args().items():
-  '--build-arg', '${k}=${v}',
-% endfor
+)
+
+for key in build_args:
+  docker_argv += '--build-arg', f'{key}={build_args[key]}'
+
+docker_argv += (
 % if platform:
   '--platform', '${platform}',
 % endif
