@@ -77,7 +77,7 @@ def filter_for_matching_configs(
         return match_all
 
     # A filter for several matching configs is the combination of its constituent filters joined
-    # with a boolean AND
+    # with a boolean OR
     filters_from_configs = [
         filter_for_matching_config(
             config=config,
@@ -92,7 +92,7 @@ def filter_for_matching_config(
     config: MatchingConfig,
 ) -> typing.Callable[[cm.Component, cm.Resource], bool]:
     # A filter for a single matching configs is the combination of the filters for its rules joined
-    # with a boolean OR
+    # with a boolean AND
     rule_filters = [
         filter_for_rule(
             rule=rule,
