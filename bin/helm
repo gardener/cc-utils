@@ -3,7 +3,8 @@
 set -eu
 set -o pipefail
 
-DOWNLOAD_URL="https://get.helm.sh/helm-${HELM_V3_VERSION}-linux-amd64.tar.gz"
+HELM_ARCH="${HELM_ARCH:-amd64}"
+DOWNLOAD_URL="https://get.helm.sh/helm-${HELM_V3_VERSION}-linux-${HELM_ARCH}.tar.gz"
 HELM_PATH=/bin/helm_binary
 
 if [ ! -f "${HELM_PATH}" ]; then

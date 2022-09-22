@@ -18,6 +18,8 @@ RUN cat /cc/utils/gardener-cicd-libs.apk-packages \
 FROM eu.gcr.io/gardener-project/component/cli:latest AS component-cli
 FROM eu.gcr.io/gardener-project/cc/job-image-base:$BASE_IMAGE_TAG
 
+ARG TARGETARCH
+
 COPY . /cc/utils/
 COPY --from=component-cli /component-cli /bin/component-cli
 COPY --from=builder /pkgs/usr /usr
@@ -29,6 +31,7 @@ COPY VERSION /metadata/VERSION
 # XXX backards compatibility (remove eventually)
 ENV PATH /cc/utils/:/cc/utils/bin:$PATH
 ENV HELM_V3_VERSION=v3.8.0
+ENV HELM_ARCH="${TARGETARCH}"
 
 # backwards-compatibility
 RUN ln -sf /cc/utils/bin/helm /bin/helm3
