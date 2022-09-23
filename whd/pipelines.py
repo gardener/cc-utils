@@ -16,11 +16,11 @@
 import logging
 
 import concourse.enumerator
+import concourse.paths
 import concourse.replicator
 import model
 import model.concourse
 import model.webhook_dispatcher
-
 
 logger = logging.getLogger(__name__)
 
@@ -35,12 +35,10 @@ def validate_repository_pipelines(
     logger.info(f'validating pipeline(s) for {repo_url=} using {cfg_set.name()}')
 
     preprocessor = concourse.enumerator.DefinitionDescriptorPreprocessor()
-    template_retriever = concourse.enumerator.TemplateRetriever(
-        template_path=whd_cfg.pipeline_templates_path(),
-    )
+    template_retriever = concourse.enumerator.TemplateRetriever()
     renderer = concourse.replicator.Renderer(
         template_retriever=template_retriever,
-        template_include_dir=whd_cfg.pipeline_include_path(),
+        template_include_dir=concourse.paths.template_include_dir,
         cfg_set=cfg_set,
         render_origin=concourse.replicator.RenderOrigin.WEBHOOK_DISPATCHER,
     )
@@ -74,12 +72,10 @@ def replicate_repository_pipelines(
     logger.info(f'replicating pipeline(s) for {repo_url=} using {cfg_set.name()}')
 
     preprocessor = concourse.enumerator.DefinitionDescriptorPreprocessor()
-    template_retriever = concourse.enumerator.TemplateRetriever(
-        template_path=whd_cfg.pipeline_templates_path(),
-    )
+    template_retriever = concourse.enumerator.TemplateRetriever()
     renderer = concourse.replicator.Renderer(
         template_retriever=template_retriever,
-        template_include_dir=whd_cfg.pipeline_include_path(),
+        template_include_dir=concourse.paths.template_include_dir,
         cfg_set=cfg_set,
         render_origin=concourse.replicator.RenderOrigin.WEBHOOK_DISPATCHER,
     )
