@@ -303,16 +303,20 @@ ATTRIBUTES = (
         doc='''\
         use to configure custom github-issue-templates (sub-attr: `body`)
         use python3's format-str syntax
-        available variables:
-        - summary # contains name, version, etc in a table
-        - component_name
-        - component_version
-        - resource_name
-        - resource_version
-        - resource_type
-        - greatest_cve
-        - report_url
-        - delivery_dashboard_url
+
+        .. code-block::
+          :caption: available variables
+
+          - summary # contains name, version, etc in a table
+          - component_name
+          - component_version
+          - resource_name
+          - resource_version
+          - resource_type
+          - greatest_cve
+          - report_url
+          - delivery_dashboard_url
+
         ''',
         type=list[GithubIssueTemplateCfg],
     ),
