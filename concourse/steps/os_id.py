@@ -113,7 +113,7 @@ def scan_result_group_collection_for_outdated_os_ids(
             logger.warning(f'no greatest version known for {os_id.NAME=} {os_id.VERSION_ID=}')
             return False
 
-        return branch_info.parsed_version > awesomeversion.AwesomeVersion(os_id.VERSION_ID)
+        return branch_info.greatest_version > awesomeversion.AwesomeVersion(os_id.VERSION_ID)
 
     def classification_callback(result: gcm.OsIdScanResult):
         os_id = result.os_id
