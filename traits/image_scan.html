@@ -249,18 +249,23 @@ with different contents, all variants are subject to being scanned.</p>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>list</p></td>
-<td><p>use to configure custom github-issue-templates (sub-attr: <code class="code docutils literal notranslate"><span class="pre">body</span></code>)
-use python3’s format-str syntax
-available variables:
-- summary # contains name, version, etc in a table
-- component_name
-- component_version
-- resource_name
-- resource_version
-- resource_type
-- greatest_cve
-- report_url
-- delivery_dashboard_url</p></td>
+<td><p><p>use to configure custom github-issue-templates (sub-attr: <code class="code docutils literal notranslate"><span class="pre">body</span></code>)
+use python3’s format-str syntax</p>
+<div class="literal-block-wrapper docutils container" id="id1">
+<div class="code-block-caption"><span class="caption-text">available variables</span><a class="headerlink" href="#id1" title="Permalink to this code">¶</a></div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span> <span class="n">summary</span> <span class="c1"># contains name, version, etc in a table</span>
+<span class="o">-</span> <span class="n">component_name</span>
+<span class="o">-</span> <span class="n">component_version</span>
+<span class="o">-</span> <span class="n">resource_name</span>
+<span class="o">-</span> <span class="n">resource_version</span>
+<span class="o">-</span> <span class="n">resource_type</span>
+<span class="o">-</span> <span class="n">greatest_cve</span>
+<span class="o">-</span> <span class="n">report_url</span>
+<span class="o">-</span> <span class="n">delivery_dashboard_url</span>
+</pre></div>
+</div>
+</div>
+</p></td>
 </tr>
 <tr class="row-odd"><td><p>github_issue_labels_to_preserve</p></td>
 <td><p>no</p></td>
