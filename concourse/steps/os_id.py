@@ -4,8 +4,6 @@ import tarfile
 import tempfile
 import typing
 
-import awesomeversion
-
 import gci.componentmodel as cm
 
 import ci.log
@@ -91,38 +89,20 @@ def scan_result_group_collection_for_outdated_os_ids(
         if (info := delivery_svc_client.os_release_infos(os_id=os_name, absent_ok=True)) is not None
     }
 
-    def branch_reached_eol(os_id: um.OperatingSystemId):
-        branch_info = delivery.util.find_branch_info(
-            os_id=os_id,
-            os_infos=os_infos[os_id.ID],
-        )
-        if not branch_info:
-            return False
-
-        return branch_info.reached_eol()
-
-    def update_available(os_id: um.OperatingSystemId):
-        branch_info = delivery.util.find_branch_info(
-            os_id=os_id,
-            os_infos=os_infos[os_id.ID],
-        )
-        if not branch_info:
-            return False
-
-        if not branch_info.greatest_version:
-            logger.warning(f'no greatest version known for {os_id.NAME=} {os_id.VERSION_ID=}')
-            return False
-
-        return branch_info.greatest_version > awesomeversion.AwesomeVersion(os_id.VERSION_ID)
-
     def classification_callback(result: gcm.OsIdScanResult):
         os_id = result.os_id
         if not os_id.ID in os_infos:
             return None
 
-        if branch_reached_eol(os_id=os_id):
+        if delivery.util.branch_reached_eol(
+            os_id=os_id,
+            os_infos=os_infos[os_id.ID],
+        ):
             return gcm.Severity.HIGH
-        elif update_available(os_id=os_id):
+        elif delivery.util.update_available(
+            os_id=os_id,
+            os_infos=os_infos[os_id.ID],
+        ):
             return gcm.Severity.MEDIUM
         else:
             return None
@@ -137,9 +117,15 @@ def scan_result_group_collection_for_outdated_os_ids(
             logger.info(f'{result.artifact.name=} is not "local" - will ignore findings')
             return False
 
-        if branch_reached_eol(os_id=os_id):
+        if delivery.util.branch_reached_eol(
+            os_id=os_id,
+            os_infos=os_infos[os_id.ID],
+        ):
             return True
-        elif update_available(os_id=os_id):
+        elif delivery.util.update_available(
+            os_id=os_id,
+            os_infos=os_infos[os_id.ID],
+        ):
             return True
         else:
             return False
