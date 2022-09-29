@@ -325,16 +325,17 @@ def greatest_severity(result: model.ScanResult) -> model.Severity | None:
 
 
 def checkmarx_severity_to_github_severity(severity: model.Severity) -> gcm.Severity:
-    if severity is model.Severity.HIGH:
-        return gcm.Severity.HIGH
-    elif severity is model.Severity.MEDIUM:
-        return gcm.Severity.MEDIUM
+    if severity in (
+        model.Severity.HIGH,
+        model.Severity.MEDIUM,
+    ):
+        return gcm.Severity.BLOCKER
     elif severity is model.Severity.LOW:
         return gcm.Severity.LOW
     elif severity is model.Severity.INFO:
         return None
     else:
-        raise NotImplementedError(f'Unknown severity {severity}')
+        raise NotImplementedError(severity)
 
 
 def print_scans(
