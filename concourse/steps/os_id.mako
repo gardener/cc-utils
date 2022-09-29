@@ -57,7 +57,7 @@ if not '${delivery_svc_cfg_name}':
 % if issue_tgt_repo_url:
 gh_api = ccc.github.github_api(repo_url='${issue_tgt_repo_url}')
 overwrite_repository = gh_api.repository('${tgt_repo_org}', '${tgt_repo_name}')
-% else
+% else:
 gh_api = None
 overwrite_repository = None
 % endif
