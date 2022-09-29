@@ -17,11 +17,9 @@ root_component_name = component_trait.component_name()
 delivery_svc_cfg_name = cfg_set.delivery_endpoints().name()
 
 issue_tgt_repo_url = image_scan_trait.overwrite_github_issues_tgt_repository_url()
-if not issue_tgt_repo_url:
-  raise ValueError('overwrite-repo-url must be configured')
-
-parsed_repo_url = ci.util.urlparse(issue_tgt_repo_url)
-tgt_repo_org, tgt_repo_name = parsed_repo_url.path.strip('/').split('/')
+if issue_tgt_repo_url:
+  parsed_repo_url = ci.util.urlparse(issue_tgt_repo_url)
+  tgt_repo_org, tgt_repo_name = parsed_repo_url.path.strip('/').split('/')
 
 github_issue_labels_to_preserve = image_scan_trait.github_issue_labels_to_preserve()
 github_issue_templates = image_scan_trait.github_issue_templates()
@@ -56,8 +54,13 @@ if not '${delivery_svc_cfg_name}':
   logger.error('no deliverydb-client available - exiting now')
   exit(1)
 
+% if issue_tgt_repo_url:
 gh_api = ccc.github.github_api(repo_url='${issue_tgt_repo_url}')
 overwrite_repository = gh_api.repository('${tgt_repo_org}', '${tgt_repo_name}')
+% else
+gh_api = None
+overwrite_repository = None
+% endif
 
 % if github_issue_templates:
 github_issue_template_cfgs = [dacite.from_dict(

@@ -275,7 +275,7 @@ def _latest_processing_date(
 def create_or_update_github_issues(
     result_group_collection: gcm.ScanResultGroupCollection,
     max_processing_days: image_scan.MaxProcessingTimesDays,
-    gh_api: github3.GitHub,
+    gh_api: github3.GitHub=None,
     overwrite_repository: github3.repos.Repository=None,
     preserve_labels_regexes: typing.Iterable[str]=(),
     github_issue_template_cfgs: list[image_scan.GithubIssueTemplateCfg]=None,

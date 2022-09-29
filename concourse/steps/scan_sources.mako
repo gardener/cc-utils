@@ -20,14 +20,14 @@ component_trait = job_variant.trait('component_descriptor')
 component_descriptor_dir = job_step.input('component_descriptor_dir')
 scan_sources_filter = source_scan_trait.filters_raw()
 issue_tgt_repo_url = source_scan_trait.overwrite_github_issues_tgt_repository_url()
-if not issue_tgt_repo_url:
-  raise ValueError('overwrite-repo-url must be configured')
+
+if issue_tgt_repo_url:
+  parsed_repo_url = ci.util.urlparse(issue_tgt_repo_url)
+  tgt_repo_org, tgt_repo_name = parsed_repo_url.path.strip('/').split('/')
 
 github_issue_templates = source_scan_trait.github_issue_templates()
 github_issue_labels_to_preserve = source_scan_trait.github_issue_labels_to_preserve()
 
-parsed_repo_url = ci.util.urlparse(issue_tgt_repo_url)
-tgt_repo_org, tgt_repo_name = parsed_repo_url.path.strip('/').split('/')
 %>
 
 ${step_lib('component_descriptor_util')}
