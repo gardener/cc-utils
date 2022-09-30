@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 @functools.lru_cache
-def oci_cfg_lookup() -> typing.Callable[[str, oa.Privileges, bool], oa.OciCredentials]:
+def oci_cfg_lookup(
+    cfg_factory=None,
+) -> typing.Callable[[str, oa.Privileges, bool], oa.OciCredentials]:
     def find_credentials(
         image_reference: str,
         privileges: oa.Privileges=oa.Privileges.READONLY,
@@ -25,6 +27,7 @@ def oci_cfg_lookup() -> typing.Callable[[str, oa.Privileges, bool], oa.OciCreden
         registry_cfg = model.container_registry.find_config(
             image_reference=image_reference,
             privileges=privileges,
+            cfg_factory=cfg_factory,
         )
         if not registry_cfg:
             if absent_ok:
@@ -57,13 +60,15 @@ def oci_request_handler_requirements_fulfilled() -> bool:
 
 
 def oci_client(
-    credentials_lookup: typing.Callable = oci_cfg_lookup(),
-    install_logging_handler: bool = True
+    credentials_lookup: typing.Callable=None,
+    install_logging_handler: bool=True,
+    cfg_factory=None,
 ) -> oc.Client:
     def base_api_lookup(image_reference):
         registry_cfg = model.container_registry.find_config(
             image_reference=image_reference,
             privileges=None,
+            cfg_factory=cfg_factory,
         )
         if registry_cfg and (base_url := registry_cfg.api_base_url()):
             return base_url
@@ -82,6 +87,9 @@ def oci_client(
             # do not fail just because of logging-issue
             import traceback
             traceback.print_exc()
+
+    if not credentials_lookup:
+        credentials_lookup = oci_cfg_lookup(cfg_factory=cfg_factory)
 
     return oc.Client(
         credentials_lookup=credentials_lookup,

@@ -177,9 +177,11 @@ def find_config(
     image_reference: typing.Union[str, om.OciImageReference],
     privileges:oa.Privileges=None,
     _normalised_image_reference=False,
+    cfg_factory=None,
 ) -> typing.Optional[ContainerRegistryConfig]:
     image_reference = str(image_reference)
-    cfg_factory = ci.util.ctx().cfg_factory()
+    if not cfg_factory:
+        cfg_factory = ci.util.ctx().cfg_factory()
 
     if isinstance(image_reference, om.OciImageReference):
         image_reference = image_reference.normalised_image_reference()
