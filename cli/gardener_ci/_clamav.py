@@ -23,14 +23,17 @@ def scan_component(
         cd_path=component_descriptor_path,
     )
     component = cd.component
-    lookup = cnudie.iter.dictbased_lookup(components=cnudie.retrieve.components(component=component))
+
+    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        default_ctx_repo=component.current_repository_ctx(),
+    )
 
     def to_component_resource_tuple(node: cnudie.iter.ResourceNode):
         return node.component, node.resource
 
     component_resources = cnudie.iter.iter(
         component=component,
-        lookup=lookup,
+        lookup=component_descriptor_lookup,
         node_filter=cnudie.iter.Filter.resources,
     )
 

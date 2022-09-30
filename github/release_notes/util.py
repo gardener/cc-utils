@@ -482,16 +482,18 @@ def create_release_note_block(
             # try to fetch cd for the parsed source repo. The actual version does not matter,
             # we're only interested in the components GithubAccess (we assume it does not
             # change).
-            ctx_repo_url = current_component.current_repository_ctx().baseUrl
-            source_component = cnudie.retrieve.component_descriptor(
+            ctx_repo = current_component.current_repository_ctx()
+            component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+                default_ctx_repo=ctx_repo,
+            )
+            source_component = component_descriptor_lookup(gci.componentmodel.ComponentIdentity(
                 name=source_repo,
                 version=product.v2.greatest_component_version(
                     component_name=source_repo,
-                    ctx_repo_base_url=ctx_repo_url,
+                    ctx_repo=ctx_repo,
                     ignore_prerelease_versions=True,
                 ),
-                ctx_repo_url=ctx_repo_url,
-            ).component
+            )).component
         except requests.exceptions.HTTPError:
             logger.warning(
                 f'Unable to retrieve component descriptor for source repository {source_repo}'

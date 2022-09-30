@@ -615,15 +615,15 @@ def upload_grouped_images(
     if isinstance(component, cm.ComponentDescriptor):
         component = component.component
 
+    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        default_ctx_repo=component.current_repository_ctx(),
+    )
+
     groups = tuple(
         _resource_groups(
             resource_nodes=cnudie.iter.iter(
                 component=component,
-                lookup=cnudie.iter.dictbased_lookup(
-                    components=cnudie.retrieve.components(
-                        component=component,
-                    )
-                ),
+                lookup=component_descriptor_lookup,
                 node_filter=cnudie.iter.Filter.resources,
             ),
             filter_function=filter_function,

@@ -119,11 +119,15 @@ def component_diff_since_last_release(
     greatest_release_version = str(greatest_release_version)
     logger.info('last released version: ' + str(greatest_release_version))
 
-    greatest_released_cd = cnudie.retrieve.component_descriptor(
+    ctx_repo = cm.OciRepositoryContext(baseUrl=ctx_repo_url)
+    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        default_ctx_repo=ctx_repo,
+    )
+
+    greatest_released_cd = component_descriptor_lookup(cm.ComponentIdentity(
         name=component.name,
         version=greatest_release_version,
-        ctx_repo_url=ctx_repo_url,
-    )
+    ))
     greatest_released_component = greatest_released_cd.component
 
     if not greatest_released_component:
@@ -133,6 +137,7 @@ def component_diff_since_last_release(
         left_component=component,
         right_component=greatest_released_component,
         ignore_component_names=(component.name,),
+        component_descriptor_lookup=component_descriptor_lookup,
     )
 
 

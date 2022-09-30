@@ -1,3 +1,4 @@
+import functools
 import logging
 import os
 import subprocess
@@ -34,6 +35,11 @@ logger = logging.getLogger('step.update_component_deps')
 
 
 UpstreamUpdatePolicy = concourse.model.traits.update_component_deps.UpstreamUpdatePolicy
+
+
+@functools.cached_property
+def component_descriptor_lookup() -> cnudie.retrieve.ComponentDescriptorLookupById:
+    return cnudie.retrieve.create_default_component_descriptor_lookup()
 
 
 def current_product_descriptor():
@@ -132,9 +138,11 @@ def latest_component_version_from_upstream(
             f'did not find any versions for {upstream_component_name=}, {ctx_repo=}'
         )
 
-    upstream_component_descriptor = cnudie.retrieve.component_descriptor(
-        name=upstream_component_name,
-        version=upstream_component_version,
+    upstream_component_descriptor = component_descriptor_lookup()(
+        component_id=gci.componentmodel.ComponentIdentity(
+            name=upstream_component_name,
+            version=upstream_component_version,
+        ),
         ctx_repo=ctx_repo,
     )
     upstream_component = upstream_component_descriptor.component
@@ -298,9 +306,11 @@ def create_upgrade_pr(
 
     ls_repo = pull_request_util.repository
 
-    from_component_descriptor = cnudie.retrieve.component_descriptor(
-        name=from_ref.componentName,
-        version=from_ref.version,
+    from_component_descriptor = component_descriptor_lookup()(
+        component_id=gci.componentmodel.ComponentIdentity(
+            name=from_ref.componentName,
+            version=from_ref.version,
+        ),
         ctx_repo=component.current_repository_ctx(),
     )
     from_component = from_component_descriptor.component

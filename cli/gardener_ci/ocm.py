@@ -4,6 +4,7 @@ import cnudie.retrieve
 import cnudie.iter
 import ctx
 
+
 _cfg = ctx.cfg
 
 
@@ -16,26 +17,22 @@ def traverse(
         ctx_base_url = _cfg.ctx.ocm_repo_base_url
 
     ctx_repo = cm.OciRepositoryContext(
-            baseUrl=ctx_base_url,
-            componentNameMapping=cm.OciComponentNameMapping.URL_PATH,
+        baseUrl=ctx_base_url,
     )
 
-    component_descriptor = cnudie.retrieve.component_descriptor(
+    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        default_ctx_repo=ctx_repo,
+    )
+
+    component_descriptor = component_descriptor_lookup(cm.ComponentIdentity(
         name=name,
         version=version,
-        ctx_repo=ctx_repo,
-    )
+    ))
     component = component_descriptor.component
-
-    lookup = cnudie.iter.dictbased_lookup(
-        components=cnudie.retrieve.components(
-            component=component,
-        )
-    )
 
     for node in cnudie.iter.iter(
         component=component,
-        lookup=lookup,
+        lookup=component_descriptor_lookup,
     ):
         indent = len(node.path * 2)
         if isinstance(node, cnudie.iter.ComponentNode):
