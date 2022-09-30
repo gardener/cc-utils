@@ -1,18 +1,377 @@
+import dataclasses
 import functools
+import io
+import json
 import logging
+import os
+import shutil
+import tempfile
 import typing
+import yaml
 
+import cachetools
+import dacite
 import gci.componentmodel as cm
+import gci.oci
 
 import ccc.delivery
+import ccc.oci
+import ci.util
 import cnudie.util
 import ctx
 import delivery.client
+import oci.client as oc
 import product.v2
+
 
 logger = logging.getLogger(__name__)
 _cfg = ctx.cfg
 _cache_dir = _cfg.ctx.component_descriptor_cache_dir
+
+ComponentDescriptorLookupById = typing.Callable[
+    [cm.ComponentIdentity, cm.RepositoryContext],
+    cm.ComponentDescriptor
+]
+
+
+class WriteBack:
+    '''
+    Wraps a writeback function which can be used to fill the lookup in case the required
+    component descriptor was not found.
+    '''
+    def __init__(
+        self,
+        writeback: typing.Callable[[cm.ComponentIdentity, cm.ComponentDescriptor], None],
+    ):
+        self.writeback = writeback
+
+    def __call__(
+        self,
+        component_id: cm.ComponentIdentity,
+        component_descriptor: cm.ComponentDescriptor,
+    ):
+        self.writeback(component_id, component_descriptor)
+
+
+def in_memory_cache_component_descriptor_lookup(
+    default_ctx_repo: cm.RepositoryContext=None,
+    cache_ctor: cachetools.Cache=cachetools.LRUCache,
+    **cache_kwargs,
+) -> ComponentDescriptorLookupById:
+    '''
+    Used to lookup referenced component descriptors in the in-memory cache.
+    In case of a cache miss, the required component descriptor can be added
+    to the cache by using the writeback function.
+
+    @param default_ctx_repo: ctx_repo to be used if none is specified in the lookup function
+    @param cache_ctor:       specification of the cache implementation
+    @param cache_kwargs:     further args used for cache initialization, maxsize is defaulted to 2048
+    '''
+    cache_kwargs['maxsize'] = cache_kwargs.get('maxsize', 2048)
+    cache = cache_ctor(**cache_kwargs)
+
+    def writeback(
+        component_id: cm.ComponentIdentity,
+        component_descriptor: cm.ComponentDescriptor,
+    ):
+        if (ctx_repo := component_descriptor.component.current_repository_ctx()):
+            cache.__setitem__((component_id, ctx_repo), component_descriptor)
+        else:
+            raise ValueError(ctx_repo)
+
+    _writeback = WriteBack(writeback)
+
+    def lookup(
+        component_id: cm.ComponentIdentity,
+        ctx_repo: cm.RepositoryContext=default_ctx_repo,
+    ):
+        if not ctx_repo:
+            raise ValueError(ctx_repo)
+
+        if not isinstance(ctx_repo, cm.OciRepositoryContext):
+            raise NotImplementedError(ctx_repo)
+
+        try:
+            if (component_descriptor := cache.get((component_id, ctx_repo))):
+                return component_descriptor
+        except KeyError:
+            pass
+
+        # component descriptor not found in lookup
+        return _writeback
+
+    return lookup
+
+
+def file_system_cache_component_descriptor_lookup(
+    default_ctx_repo: cm.RepositoryContext=None,
+    cache_dir: str=_cache_dir,
+) -> ComponentDescriptorLookupById:
+    '''
+    Used to lookup referenced component descriptors in the file-system cache.
+    In case of a cache miss, the required component descriptor can be added
+    to the cache by using the writeback function. If cache_dir is not specified,
+    it is tried to retrieve it from configuration (see `ctx`).
+
+    @param default_ctx_repo: ctx_repo to be used if none is specified in the lookup function
+    @param cache_dir:        directory used for caching. Must exist, other a ValueError is raised
+    '''
+    if not cache_dir:
+        raise ValueError(cache_dir)
+
+    def writeback(
+        component_id: cm.ComponentIdentity,
+        component_descriptor: cm.ComponentDescriptor,
+    ):
+        if not (ctx_repo := component_descriptor.component.current_repository_ctx()):
+            raise ValueError(ctx_repo)
+
+        try:
+            f = tempfile.NamedTemporaryFile(mode='w', delete=False)
+            # write to tempfile, followed by a mv to avoid collisions through concurrent
+            # processes or threads (assuming mv is an atomic operation)
+            yaml.dump(
+                data=dataclasses.asdict(component_descriptor),
+                Dumper=cm.EnumValueYamlDumper,
+                stream=f.file,
+            )
+            f.close() # need to close filehandle for NT
+
+            descriptor_path = os.path.join(
+                cache_dir,
+                ctx_repo.baseUrl.replace('/', '-'),
+                f'{component_id.name}-{component_id.version}',
+            )
+            shutil.move(f.name, descriptor_path)
+        except:
+            os.unlink(f.name)
+            raise
+
+    _writeback = WriteBack(writeback)
+
+    def lookup(
+        component_id: cm.ComponentIdentity,
+        ctx_repo: cm.RepositoryContext=default_ctx_repo,
+    ):
+        if not ctx_repo:
+            raise ValueError(ctx_repo)
+
+        if not isinstance(ctx_repo, cm.OciRepositoryContext):
+            raise NotImplementedError(ctx_repo)
+
+        descriptor_path = os.path.join(
+            cache_dir,
+            ctx_repo.baseUrl.replace('/', '-'),
+            f'{component_id.name}-{component_id.version}',
+        )
+        if os.path.isfile(descriptor_path):
+            return cm.ComponentDescriptor.from_dict(
+                ci.util.parse_yaml_file(descriptor_path)
+            )
+        else:
+            base_dir = os.path.dirname(descriptor_path)
+            os.makedirs(name=base_dir, exist_ok=True)
+
+        # component descriptor not found in lookup
+        return _writeback
+
+    return lookup
+
+
+def delivery_service_component_descriptor_lookup(
+    default_ctx_repo: cm.RepositoryContext=None,
+    delivery_client=ccc.delivery.default_client_if_available(),
+) -> ComponentDescriptorLookupById:
+    '''
+    Used to lookup referenced component descriptors in the delivery-service.
+
+    @param default_ctx_repo: ctx_repo to be used if none is specified in the lookup function
+    @param delivery_client:  client to establish the connection to the delivery-service. If \
+                             the client cannot be created, a ValueError is raised
+    '''
+    if not delivery_client:
+        raise ValueError(delivery_client)
+
+    def lookup(
+        component_id: cm.ComponentIdentity,
+        ctx_repo: cm.RepositoryContext=default_ctx_repo,
+    ):
+        if not ctx_repo:
+            raise ValueError(ctx_repo)
+
+        if not isinstance(ctx_repo, cm.OciRepositoryContext):
+            raise NotImplementedError(ctx_repo)
+
+        try:
+            return delivery_client.component_descriptor(
+                name=component_id.name,
+                version=component_id.version,
+                ctx_repo_url=ctx_repo.baseUrl,
+            )
+        except:
+            import traceback
+            traceback.print_exc()
+
+        # component descriptor not found in lookup
+        return None
+
+    return lookup
+
+
+def oci_component_descriptor_lookup(
+    default_ctx_repo: cm.RepositoryContext=None,
+    oci_client: oc.Client=ccc.oci.oci_client(),
+) -> ComponentDescriptorLookupById:
+    '''
+    Used to lookup referenced component descriptors in the oci-registry.
+
+    @param default_ctx_repo: ctx_repo to be used if none is specified in the lookup function
+    @param oci_client:       client to establish the connection to the oci-registry. If the \
+                             client cannot be created, a ValueError is raised
+    '''
+    if not oci_client:
+        raise ValueError(oci_client)
+
+    def lookup(
+        component_id: cm.ComponentIdentity,
+        ctx_repo: cm.RepositoryContext=default_ctx_repo,
+    ):
+        if not ctx_repo:
+            raise ValueError(ctx_repo)
+
+        if not isinstance(ctx_repo, cm.OciRepositoryContext):
+            raise NotImplementedError(ctx_repo)
+
+        component_name = component_id.name.lower() # oci-spec allows only lowercase
+
+        target_ref = ci.util.urljoin(
+            ctx_repo.baseUrl,
+            'component-descriptors',
+            f'{component_name}:{component_id.version}',
+        )
+
+        manifest = oci_client.manifest(
+            image_reference=target_ref,
+            absent_ok=True,
+        )
+
+        if not manifest:
+            # component descriptor not found in lookup
+            return None
+
+        try:
+            cfg_dict = json.loads(
+                oci_client.blob(
+                    image_reference=target_ref,
+                    digest=manifest.config.digest,
+                ).text
+            )
+            cfg = dacite.from_dict(
+                data_class=gci.oci.ComponentDescriptorOciCfg,
+                data=cfg_dict,
+            )
+            layer_digest = cfg.componentDescriptorLayer.digest
+            layer_mimetype = cfg.componentDescriptorLayer.mediaType
+        except Exception as e:
+            logger.warning(
+                f'Failed to parse or retrieve component-descriptor-cfg: {e=}. '
+                'falling back to single-layer'
+            )
+
+            # by contract, there must be exactly one layer (tar w/ component-descriptor)
+            if not (layers_count := len(manifest.layers) == 1):
+                logger.warning(f'XXX unexpected amount of {layers_count=}')
+
+            layer_digest = manifest.layers[0].digest
+            layer_mimetype = manifest.layers[0].mediaType
+
+        if not layer_mimetype == gci.oci.component_descriptor_mimetype:
+            logger.warning(f'{target_ref=} {layer_mimetype=} was unexpected')
+            # XXX: check for non-tar-variant
+
+        blob_res = oci_client.blob(
+            image_reference=target_ref,
+            digest=layer_digest,
+            stream=False, # manifests are typically small - do not bother w/ streaming
+        )
+        # wrap in fobj
+        blob_fobj = io.BytesIO(blob_res.content)
+        component_descriptor = gci.oci.component_descriptor_from_tarfileobj(
+            fileobj=blob_fobj,
+        )
+
+        return component_descriptor
+
+    return lookup
+
+
+def composite_component_descriptor_lookup(
+    lookups: typing.Tuple[ComponentDescriptorLookupById, ...],
+    default_ctx_repo: cm.RepositoryContext=None,
+) -> ComponentDescriptorLookupById:
+    '''
+    Used to combine multiple ComponentDescriptorLookupByIds. The single lookups are used in
+    the order they are specified. If the required component descriptor is found, it is
+    written back to the prior lookups (if they have a WriteBack defined).
+
+    @param lookups:          a tuple of ComponentDescriptorLookupByIds which should be combined
+    @param default_ctx_repo: ctx_repo to be used if none is specified in the lookup function
+    '''
+    def lookup(
+        component_id: cm.ComponentIdentity,
+        ctx_repo: cm.RepositoryContext=default_ctx_repo,
+    ):
+        writebacks = []
+        for lookup in lookups:
+            if ctx_repo:
+                res = lookup(component_id, ctx_repo)
+            else:
+                res = lookup(component_id)
+
+            if isinstance(res, cm.ComponentDescriptor):
+                for wb in writebacks: wb(component_id, res)
+                return res
+            elif res is None: continue
+            elif isinstance(res, WriteBack): writebacks.append(res)
+
+    return lookup
+
+
+def create_default_component_descriptor_lookup(
+    default_ctx_repo: cm.RepositoryContext=None,
+    cache_dir: str=_cache_dir,
+    delivery_client=ccc.delivery.default_client_if_available(),
+) -> ComponentDescriptorLookupById:
+    '''
+    This is a convenience function combining commonly used/recommended lookups, using global
+    configuration if available. It combines (in this order) an in-memory cache, file-system cache,
+    delivery-service based, and oci-registry based lookup.
+
+    @param default_ctx_repo: ctx_repo to be used if none is specified in the lookup function
+    @param cache_dir:        directory used for caching. If cache_dir does not exist, the file-\
+                             system cache lookup is not included in the returned lookup
+    @param delivery_client:  client to establish the connection to the delivery-service. If the \
+                             client cannot be created, the delivery-service based lookup is not \
+                             included in the returned lookup
+    '''
+    lookups = [in_memory_cache_component_descriptor_lookup()]
+
+    if cache_dir:
+        lookups.append(file_system_cache_component_descriptor_lookup(
+            cache_dir=cache_dir,
+        ))
+
+    if delivery_client:
+        lookups.append(delivery_service_component_descriptor_lookup(
+            delivery_client=delivery_client,
+        ))
+
+    lookups.append(oci_component_descriptor_lookup())
+
+    return composite_component_descriptor_lookup(
+        lookups=tuple(lookups),
+        default_ctx_repo=default_ctx_repo,
+    )
 
 
 def component_descriptor(
