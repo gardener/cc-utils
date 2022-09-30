@@ -22,6 +22,7 @@ import ctx
 import delivery.client
 import oci.client as oc
 import product.v2
+import version
 
 
 logger = logging.getLogger(__name__)
@@ -543,3 +544,66 @@ def _component_descriptor(
         cache_dir=cache_dir,
         validation_mode=validation_mode,
     )
+
+
+def component_versions(
+    component_name: str,
+    ctx_repo: cm.RepositoryContext,
+    oci_client: oc.Client=ccc.oci.oci_client(),
+) -> typing.Sequence[str]:
+    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+        raise NotImplementedError(ctx_repo)
+
+    ctx_repo: cm.OciRepositoryContext
+
+    oci_ref = ci.util.urljoin(
+        ctx_repo.baseUrl,
+        'component-descriptors',
+        component_name,
+    )
+
+    return oci_client.tags(image_reference=oci_ref)
+
+
+def greatest_component_version(
+    component_name: str,
+    ctx_repo: cm.RepositoryContext,
+    oci_client: oc.Client=ccc.oci.oci_client(),
+    ignore_prerelease_versions: bool=False
+) -> str:
+    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+        raise NotImplementedError(ctx_repo)
+
+    image_tags = component_versions(
+        component_name=component_name,
+        ctx_repo=ctx_repo,
+        oci_client=oci_client,
+    )
+    return version.find_latest_version(image_tags, ignore_prerelease_versions)
+
+
+def greatest_component_versions(
+    component_name: str,
+    ctx_repo: cm.RepositoryContext,
+    max_versions: int = 5,
+    greatest_version: str = None,
+    oci_client: oc.Client=ccc.oci.oci_client(),
+) -> list[str]:
+    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+        raise NotImplementedError(ctx_repo)
+
+    versions = component_versions(
+        component_name=component_name,
+        ctx_repo=ctx_repo,
+        oci_client=oci_client,
+    )
+
+    if not versions:
+        return []
+
+    versions = sorted(versions, key=version.parse_to_semver)
+
+    if greatest_version:
+        versions = versions[:versions.index(greatest_version)+1]
+
+    return versions[-max_versions:]
