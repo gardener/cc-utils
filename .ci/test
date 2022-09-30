@@ -14,9 +14,9 @@ pip3 install awesomeversion
 
 src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
 
-# pip3 install --upgrade -r "${src_dir}/requirements.txt"
+export PYTHONPATH="${src_dir}:${src_dir}/cli/gardener_ci:${PYTHONPATH:-}"
 
-if PYTHONPATH="${src_dir}:${PYTHONPATH:-}" pytest "${src_dir}" "${@}"; then
+if pytest "${src_dir}" "${@}"; then
     echo 'Unittest executions succeeded'
     exit 0
 else
