@@ -181,7 +181,7 @@ def file_system_cache_component_descriptor_lookup(
 
 def delivery_service_component_descriptor_lookup(
     default_ctx_repo: cm.RepositoryContext=None,
-    delivery_client=ccc.delivery.default_client_if_available(),
+    delivery_client=None,
 ) -> ComponentDescriptorLookupById:
     '''
     Used to lookup referenced component descriptors in the delivery-service.
@@ -190,6 +190,8 @@ def delivery_service_component_descriptor_lookup(
     @param delivery_client:  client to establish the connection to the delivery-service. If \
                              the client cannot be created, a ValueError is raised
     '''
+    if not delivery_client:
+        delivery_client = ccc.delivery.default_client_if_available()
     if not delivery_client:
         raise ValueError(delivery_client)
 
