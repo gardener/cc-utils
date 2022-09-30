@@ -418,6 +418,7 @@ def components(
     cache_dir: str=_cache_dir,
     delivery_client: delivery.client.DeliveryServiceClient=None,
     validation_mode: cm.ValidationMode=cm.ValidationMode.NONE,
+    component_descriptor_lookup: ComponentDescriptorLookupById=None,
 ):
     if isinstance(component, cm.ComponentDescriptor):
         component = component.component
@@ -448,14 +449,23 @@ def components(
             else:
                 _visited_component_versions.append(cref)
 
-            resolved_component = component_descriptor(
-                name=component_ref.componentName,
-                version=component_ref.version,
-                ctx_repo=component.current_repository_ctx(),
-                delivery_client=delivery_client,
-                cache_dir=cache_dir,
-                validation_mode=validation_mode,
-            )
+            if component_descriptor_lookup:
+                resolved_component = component_descriptor_lookup(
+                    component_id=cm.ComponentIdentity(
+                        name=component_ref.componentName,
+                        version=component_ref.version,
+                    ),
+                    ctx_repo=component.current_repository_ctx(),
+                )
+            else:
+                resolved_component = component_descriptor(
+                    name=component_ref.componentName,
+                    version=component_ref.version,
+                    ctx_repo=component.current_repository_ctx(),
+                    delivery_client=delivery_client,
+                    cache_dir=cache_dir,
+                    validation_mode=validation_mode,
+                )
 
             yield from resolve_component_dependencies(
                 component=resolved_component.component,
@@ -472,6 +482,7 @@ def component_diff(
     ignore_component_names=(),
     delivery_client: delivery.client.DeliveryServiceClient=None,
     cache_dir: str=_cache_dir,
+    component_descriptor_lookup: ComponentDescriptorLookupById=None,
 ):
     left_component = cnudie.util.to_component(left_component)
     right_component = cnudie.util.to_component(right_component)
@@ -482,6 +493,7 @@ def component_diff(
             component=left_component,
             delivery_client=delivery_client,
             cache_dir=cache_dir,
+            component_descriptor_lookup=component_descriptor_lookup,
         )
         if c.name not in ignore_component_names
     )
@@ -491,6 +503,7 @@ def component_diff(
             component=right_component,
             delivery_client=delivery_client,
             cache_dir=cache_dir,
+            component_descriptor_lookup=component_descriptor_lookup,
         )
         if c.name not in ignore_component_names
     )
