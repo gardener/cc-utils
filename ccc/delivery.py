@@ -31,7 +31,7 @@ def default_client_if_available(cfg_set=None):
         )
         return delivery.client.DeliveryServiceClient(routes=routes)
     except Exception:
-        logger.warning('unable to build delivery client')
+        logger.info('unable to build delivery client')
 
 
 def client(
