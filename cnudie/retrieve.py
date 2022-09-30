@@ -343,7 +343,7 @@ def composite_component_descriptor_lookup(
 def create_default_component_descriptor_lookup(
     default_ctx_repo: cm.RepositoryContext=None,
     cache_dir: str=_cache_dir,
-    delivery_client=ccc.delivery.default_client_if_available(),
+    delivery_client=None,
 ) -> ComponentDescriptorLookupById:
     '''
     This is a convenience function combining commonly used/recommended lookups, using global
@@ -358,12 +358,13 @@ def create_default_component_descriptor_lookup(
                              included in the returned lookup
     '''
     lookups = [in_memory_cache_component_descriptor_lookup()]
-
     if cache_dir:
         lookups.append(file_system_cache_component_descriptor_lookup(
             cache_dir=cache_dir,
         ))
 
+    if not delivery_client:
+        delivery_client = ccc.delivery.default_client_if_available()
     if delivery_client:
         lookups.append(delivery_service_component_descriptor_lookup(
             delivery_client=delivery_client,
