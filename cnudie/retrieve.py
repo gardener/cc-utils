@@ -223,7 +223,7 @@ def delivery_service_component_descriptor_lookup(
 
 def oci_component_descriptor_lookup(
     default_ctx_repo: cm.RepositoryContext=None,
-    oci_client: oc.Client=ccc.oci.oci_client(),
+    oci_client: oc.Client=None,
 ) -> ComponentDescriptorLookupById:
     '''
     Used to lookup referenced component descriptors in the oci-registry.
@@ -232,6 +232,8 @@ def oci_component_descriptor_lookup(
     @param oci_client:       client to establish the connection to the oci-registry. If the \
                              client cannot be created, a ValueError is raised
     '''
+    if not oci_client:
+        oci_client = ccc.oci.oci_client()
     if not oci_client:
         raise ValueError(oci_client)
 
@@ -565,10 +567,13 @@ def _component_descriptor(
 def component_versions(
     component_name: str,
     ctx_repo: cm.RepositoryContext,
-    oci_client: oc.Client=ccc.oci.oci_client(),
+    oci_client: oc.Client=None,
 ) -> typing.Sequence[str]:
     if not isinstance(ctx_repo, cm.OciRepositoryContext):
         raise NotImplementedError(ctx_repo)
+
+    if not oci_client:
+        oci_client = ccc.oci.oci_client()
 
     ctx_repo: cm.OciRepositoryContext
 
@@ -584,11 +589,14 @@ def component_versions(
 def greatest_component_version(
     component_name: str,
     ctx_repo: cm.RepositoryContext,
-    oci_client: oc.Client=ccc.oci.oci_client(),
+    oci_client: oc.Client=None,
     ignore_prerelease_versions: bool=False
 ) -> str:
     if not isinstance(ctx_repo, cm.OciRepositoryContext):
         raise NotImplementedError(ctx_repo)
+
+    if not oci_client:
+        oci_client = ccc.oci.oci_client()
 
     image_tags = component_versions(
         component_name=component_name,
@@ -603,10 +611,13 @@ def greatest_component_versions(
     ctx_repo: cm.RepositoryContext,
     max_versions: int = 5,
     greatest_version: str = None,
-    oci_client: oc.Client=ccc.oci.oci_client(),
+    oci_client: oc.Client=None,
 ) -> list[str]:
     if not isinstance(ctx_repo, cm.OciRepositoryContext):
         raise NotImplementedError(ctx_repo)
+
+    if not oci_client:
+        oci_client = ccc.oci.oci_client()
 
     versions = component_versions(
         component_name=component_name,
