@@ -217,11 +217,13 @@ def retr_component(component_name: str):
     component_name=component_name,
     ctx_repo=ctx_repo,
   )
-  comp_descr = cnudie.retrieve.component_descriptor(
+  component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+    default_ctx_repo=ctx_repo,
+  )
+  comp_descr = component_descriptor_lookup(cm.ComponentIdentity(
     name=component_name,
     version=greatest_version,
-    ctx_repo=ctx_repo,
-  )
+  ))
   return comp_descr.component
 
 

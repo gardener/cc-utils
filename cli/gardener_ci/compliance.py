@@ -17,7 +17,6 @@ ctx_repo_url: eu.gcr.io/example/example-repo
 '''
 
 import dataclasses
-import functools
 import re
 
 import dacite
@@ -30,6 +29,7 @@ import cnudie.util
 import cnudie.retrieve
 import ctx
 import reutil
+
 
 _cfg = ctx.cfg
 
@@ -100,12 +100,10 @@ def diff(
 
     print('retrieving component-descriptors (might take a few seconds')
 
-    retrieve_cd = functools.partial(
-        cnudie.retrieve.component_descriptor,
-        ctx_repo_url=parsed.ctx_repo_url,
+    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        default_ctx_repo=parsed.ctx_repo_url,
         cache_dir=cache_dir,
     )
-    retrieve_cd = functools.cache(retrieve_cd)
 
     def _components(
         component,
@@ -123,23 +121,23 @@ def diff(
             c for c in
             cnudie.retrieve.components(
                 component=component,
-                cache_dir=cache_dir,
+                component_descriptor_lookup=component_descriptor_lookup,
             )
             if not component_filter or (component_filter and component_filter(c))
         ])
 
-    left_cd = retrieve_cd(
+    left_cd = component_descriptor_lookup(cm.ComponentIdentity(
         name=parsed.left_name,
         version=parsed.left_version,
-    )
-
+    ))
     left_components = _components(
         component=left_cd,
     )
-    right_cd = retrieve_cd(
+
+    right_cd = component_descriptor_lookup(cm.ComponentIdentity(
         name=parsed.right_name,
         version=parsed.right_version,
-    )
+    ))
     right_components = _components(
         component=right_cd,
     )

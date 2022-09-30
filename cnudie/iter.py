@@ -2,18 +2,7 @@ import dataclasses
 import typing
 
 import gci.componentmodel as cm
-
-
-ComponentLookupById = typing.Callable[[cm.ComponentIdentity], cm.Component]
-
-
-def dictbased_lookup(components: typing.Iterable[ComponentLookupById]):
-    lookup_dict = {c.identity(): c for c in components}
-
-    def lookup(component_id: cm.ComponentIdentity):
-        return lookup_dict[component_id]
-
-    return lookup
+import cnudie.retrieve
 
 
 @dataclasses.dataclass
@@ -60,7 +49,7 @@ class Filter:
 
 def iter(
     component: cm.Component,
-    lookup: ComponentLookupById,
+    lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     prune_unique: bool=True,
     node_filter: typing.Callable[[Node], bool]=None
 ):
@@ -70,7 +59,7 @@ def iter(
     See `cnudie.retrieve` for retrieving components/component descriptors.
 
     @param component:    root component for iteration
-    @param lookup:       used to lookup referenced components
+    @param lookup:       used to lookup referenced components descriptors
                          (thus abstracting from retrieval method)
     @param prune_unique: if true, redundant component-versions will only be traversed once
     @node_filter:        use to filter emitted nodes (see Filter for predefined filters)
@@ -80,7 +69,7 @@ def iter(
     # need to nest actual iterator to keep global state of seen component-IDs
     def inner_iter(
         component: cm.Component,
-        lookup: ComponentLookupById,
+        lookup: cnudie.retrieve.ComponentDescriptorLookupById,
         path: tuple[cm.ComponentIdentity]=(),
     ):
         path = (*path, component)
@@ -106,7 +95,8 @@ def iter(
                 name=cref.componentName,
                 version=cref.version,
             )
-            referenced_component = lookup(cref_id)
+            referenced_component_descriptor = lookup(cref_id)
+            referenced_component = referenced_component_descriptor.component
 
             yield from inner_iter(
                 component=referenced_component,
