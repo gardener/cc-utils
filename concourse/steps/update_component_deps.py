@@ -37,7 +37,7 @@ logger = logging.getLogger('step.update_component_deps')
 UpstreamUpdatePolicy = concourse.model.traits.update_component_deps.UpstreamUpdatePolicy
 
 
-@functools.cached_property
+@functools.cache
 def component_descriptor_lookup() -> cnudie.retrieve.ComponentDescriptorLookupById:
     return cnudie.retrieve.create_default_component_descriptor_lookup()
 
@@ -138,8 +138,7 @@ def latest_component_version_from_upstream(
             f'did not find any versions for {upstream_component_name=}, {ctx_repo=}'
         )
 
-    #pylint: disable=E1111,E1123
-    upstream_component_descriptor = component_descriptor_lookup(
+    upstream_component_descriptor = component_descriptor_lookup()(
         component_id=gci.componentmodel.ComponentIdentity(
             name=upstream_component_name,
             version=upstream_component_version,
@@ -307,8 +306,7 @@ def create_upgrade_pr(
 
     ls_repo = pull_request_util.repository
 
-    #pylint: disable=E1111,E1123
-    from_component_descriptor = component_descriptor_lookup(
+    from_component_descriptor = component_descriptor_lookup()(
         component_id=gci.componentmodel.ComponentIdentity(
             name=from_ref.componentName,
             version=from_ref.version,
