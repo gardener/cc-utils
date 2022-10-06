@@ -1,5 +1,6 @@
 import dataclasses
 import functools
+import hashlib
 import io
 import json
 import logging
@@ -577,11 +578,23 @@ def component_versions(
 
     ctx_repo: cm.OciRepositoryContext
 
-    oci_ref = ci.util.urljoin(
-        ctx_repo.baseUrl,
-        'component-descriptors',
-        component_name,
-    )
+    if ctx_repo.componentNameMapping is cm.OciComponentNameMapping.URL_PATH:
+        oci_ref = ci.util.urljoin(
+            ctx_repo.baseUrl,
+            'component-descriptors',
+            component_name.lower(),  # oci-spec allows only lowercase
+        )
+    elif ctx_repo.componentNameMapping is cm.OciComponentNameMapping.SHA256_DIGEST:
+        component_name_digest = hashlib.sha256(
+            component_name.lower().encode('utf-8')  # oci-spec allows only lowercase
+        ).hexdigest().lower()
+
+        oci_ref = ci.util.urljoin(
+            ctx_repo.baseUrl,
+            component_name_digest,
+        )
+    else:
+        raise NotImplementedError(ctx_repo.componentNameMapping)
 
     return oci_client.tags(image_reference=oci_ref)
 
@@ -590,7 +603,7 @@ def greatest_component_version(
     component_name: str,
     ctx_repo: cm.RepositoryContext,
     oci_client: oc.Client=None,
-    ignore_prerelease_versions: bool=False
+    ignore_prerelease_versions: bool=False,
 ) -> str:
     if not isinstance(ctx_repo, cm.OciRepositoryContext):
         raise NotImplementedError(ctx_repo)
@@ -634,3 +647,88 @@ def greatest_component_versions(
         versions = versions[:versions.index(greatest_version)+1]
 
     return versions[-max_versions:]
+
+
+def greatest_version_before(
+    component_name: str,
+    component_version: str,
+    ctx_repo: cm.RepositoryContext,
+    oci_client: oc.Client=None,
+) -> str | None:
+    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+        raise NotImplementedError(ctx_repo)
+
+    if not oci_client:
+        oci_client = ccc.oci.oci_client()
+
+    versions = component_versions(
+        component_name=component_name,
+        ctx_repo=ctx_repo,
+        oci_client=oci_client,
+    )
+    versions = sorted(versions, key=version.parse_to_semver)
+    versions = [
+        v for v in versions
+        if version.parse_to_semver(v) < version.parse_to_semver(component_version)
+    ]
+    if not versions:
+        return None # no release before current was found
+    return versions[-1]
+
+
+def greatest_component_version_with_matching_minor(
+    component_name: str,
+    ctx_repo: cm.RepositoryContext,
+    reference_version: str,
+    ignore_prerelease_versions: bool=False,
+    oci_client: oc.Client=None,
+) -> str:
+    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+        raise NotImplementedError(ctx_repo)
+
+    if not oci_client:
+        oci_client = ccc.oci.oci_client()
+
+    versions = component_versions(
+        component_name=component_name,
+        ctx_repo=ctx_repo,
+        oci_client=oci_client,
+    )
+
+    return version.find_latest_version_with_matching_minor(
+        reference_version=reference_version,
+        versions=versions,
+        ignore_prerelease_versions=ignore_prerelease_versions,
+    )
+
+
+def greatest_component_version_by_name(
+    component_name: str,
+    ctx_repo: cm.RepositoryContext,
+    ignore_prerelease_versions: bool=False,
+    oci_client: oc.Client=None,
+    component_descriptor_lookup: ComponentDescriptorLookupById=None,
+) -> cm.Component:
+    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+        raise NotImplementedError(ctx_repo)
+
+    if not oci_client:
+        oci_client = ccc.oci.oci_client()
+
+    if not component_descriptor_lookup:
+        component_descriptor_lookup = create_default_component_descriptor_lookup()
+
+    greatest_version = greatest_component_version(
+        component_name=component_name,
+        ctx_repo=ctx_repo,
+        oci_client=oci_client,
+        ignore_prerelease_versions=ignore_prerelease_versions,
+    )
+    component_descriptor = component_descriptor_lookup(
+        component_id=cm.ComponentIdentity(
+            name=component_name,
+            version=greatest_version,
+        ),
+        ctx_repo=ctx_repo,
+    )
+    return component_descriptor.component
