@@ -72,7 +72,6 @@ import ci.util
 import ci.log
 import github
 import mailutil
-import product.v2
 
 from ci.util import ctx
 
@@ -213,7 +212,7 @@ ctx_repo = cm.OciRepositoryContext(
 
 ## Finally, determine recipients for all component names gathered
 def retr_component(component_name: str):
-  greatest_version = product.v2.greatest_component_version(
+  greatest_version = cnudie.retrieve.greatest_component_version(
     component_name=component_name,
     ctx_repo=ctx_repo,
   )

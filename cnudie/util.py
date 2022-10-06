@@ -525,6 +525,7 @@ def determine_main_component(
                 ' that matches the main repository')
 
 
+@deprecated.deprecated
 def greatest_component_versions(
     component_name: str,
     ctx_repo: cm.RepositoryContext,

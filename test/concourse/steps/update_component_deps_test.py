@@ -84,8 +84,8 @@ def test_determine_reference_versions():
         component_name=component_name,
         ctx_repo=ctx_repo,
     )
-    with unittest.mock.patch('product.v2') as product_mock:
-        product_mock.greatest_component_version.return_value = greatest_version
+    with unittest.mock.patch('cnudie.retrieve') as cnudie_retrieve_mock:
+        cnudie_retrieve_mock.greatest_component_version.return_value = greatest_version
 
         # no upstream component -> expect latest version to be returned
         assert examinee(
@@ -93,20 +93,20 @@ def test_determine_reference_versions():
                 upstream_component_name=None,
             ) == (greatest_version,)
 
-        product_mock.greatest_component_version.assert_called_with(
+        cnudie_retrieve_mock.greatest_component_version.assert_called_with(
             component_name=component_name,
             ctx_repo=ctx_repo,
             ignore_prerelease_versions=False,
         )
 
-        product_mock.greatest_component_version.reset_mock()
+        cnudie_retrieve_mock.greatest_component_version.reset_mock()
 
         assert examinee(
                 reference_version='2.2.0', # same result, if our version is already greater
                 upstream_component_name=None,
             ) == (greatest_version,)
 
-        product_mock.greatest_component_version.assert_called_with(
+        cnudie_retrieve_mock.greatest_component_version.assert_called_with(
             component_name=component_name,
             ctx_repo=ctx_repo,
             ignore_prerelease_versions=False,
@@ -158,11 +158,11 @@ def test_determine_reference_versions():
 
         upstream_version_mock.reset_mock()
 
-        with unittest.mock.patch('product.v2') as product_mock:
+        with unittest.mock.patch('cnudie.retrieve') as cnudie_retrieve_mock:
             # if not strictly following, should consider hotfix
             reference_version = '1.2.3'
             upstream_hotfix_version = '2.2.3'
-            product_mock.greatest_component_version_with_matching_minor.return_value = \
+            cnudie_retrieve_mock.greatest_component_version_with_matching_minor.return_value = \
                 upstream_hotfix_version
 
             assert examinee(
@@ -176,7 +176,8 @@ def test_determine_reference_versions():
                 ctx_repo=ctx_repo,
                 ignore_prerelease_versions=False,
             )
-            product_mock.greatest_component_version_with_matching_minor.assert_called_once_with(
+            cnudie_retrieve_mock.greatest_component_version_with_matching_minor.\
+                assert_called_once_with(
                 component_name=component_name,
                 ctx_repo=ctx_repo,
                 reference_version=reference_version,

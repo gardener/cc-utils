@@ -19,8 +19,8 @@ import typing
 
 import gci.componentmodel as cm
 
+import cnudie.retrieve
 import cnudie.util
-import product.v2
 from model.email import EmailConfig
 from ci.util import (
     existing_dir,
@@ -261,9 +261,11 @@ def _codeowners_parser_from_component_name(
     ctx_repo_url: str,
     branch_name='master',
 ):
-    component = product.v2.greatest_component_version_by_name(
+    ctx_repo = cm.OciRepositoryContext(baseUrl=ctx_repo_url)
+
+    component = cnudie.retrieve.greatest_component_version_by_name(
         component_name=component_name,
-        ctx_repo_base_url=ctx_repo_url,
+        ctx_repo=ctx_repo,
     )
     return _codeowners_parser_from_component(
         component=component,

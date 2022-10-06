@@ -26,7 +26,6 @@ import ci.log
 import cnudie.retrieve
 import cnudie.util
 import gci.componentmodel
-import product.v2
 import version
 
 from git.exc import GitError
@@ -488,7 +487,7 @@ def create_release_note_block(
             )
             source_component = component_descriptor_lookup(gci.componentmodel.ComponentIdentity(
                 name=source_repo,
-                version=product.v2.greatest_component_version(
+                version=cnudie.retrieve.greatest_component_version(
                     component_name=source_repo,
                     ctx_repo=ctx_repo,
                     ignore_prerelease_versions=True,
