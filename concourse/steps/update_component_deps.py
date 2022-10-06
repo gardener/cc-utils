@@ -127,7 +127,7 @@ def latest_component_version_from_upstream(
     ctx_repo: gci.componentmodel.OciRepositoryContext,
     ignore_prerelease_versions: bool=False,
 ):
-    upstream_component_version = product.v2.latest_component_version(
+    upstream_component_version = cnudie.retrieve.greatest_component_version(
         component_name=upstream_component_name,
         ctx_repo=ctx_repo,
         ignore_prerelease_versions=ignore_prerelease_versions,
@@ -162,10 +162,10 @@ def determine_reference_versions(
 ) -> typing.Sequence[str]:
     if upstream_component_name is None:
         # no upstream component defined - look for greatest released version
-        latest_component_version = product.v2.greatest_component_version(
-                component_name=component_name,
-                ctx_repo=ctx_repo,
-                ignore_prerelease_versions=ignore_prerelease_versions,
+        latest_component_version = cnudie.retrieve.greatest_component_version(
+            component_name=component_name,
+            ctx_repo=ctx_repo,
+            ignore_prerelease_versions=ignore_prerelease_versions,
         )
         if not latest_component_version:
             raise RuntimeError(
@@ -187,7 +187,7 @@ def determine_reference_versions(
         return (version_candidate,)
 
     elif upstream_update_policy is UpstreamUpdatePolicy.ACCEPT_HOTFIXES:
-        hotfix_candidate = product.v2.greatest_component_version_with_matching_minor(
+        hotfix_candidate = cnudie.retrieve.greatest_component_version_with_matching_minor(
             component_name=component_name,
             ctx_repo=ctx_repo,
             reference_version=reference_version,

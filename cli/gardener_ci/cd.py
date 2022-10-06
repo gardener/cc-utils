@@ -1,10 +1,8 @@
 import sys
 
-import ccc.oci
+import cnudie.retrieve
 import ctx
 import gci.componentmodel as cm
-import product.v2
-import version
 
 
 def retrieve(
@@ -21,15 +19,12 @@ def retrieve(
             componentNameMapping=cm.OciComponentNameMapping.URL_PATH,
         )
 
-    target_ref = product.v2._target_oci_ref_from_ctx_base_url(
-        component_name=name,
-        component_version=version,
+    component_descriptor = cnudie.retrieve.oci_component_descriptor_lookup()(
+        component_id=cm.ComponentIdentity(
+            name=name,
+            version=version,
+        ),
         ctx_repo=ctx_repo,
-    )
-
-    component_descriptor = product.v2.retrieve_component_descriptor_from_oci_ref(
-        manifest_oci_image_ref=target_ref,
-        absent_ok=False,
     )
 
     if out:
@@ -50,15 +45,15 @@ def ls(
     if not ocm_repo_base_url:
         ocm_repo_base_url = ctx.cfg.ctx.ocm_repo_base_url
 
-    oci_name = product.v2._target_oci_repository_from_component_name(
-        component_name=name,
-        ctx_repo=cm.OciRepositoryContext(
-            baseUrl=ocm_repo_base_url,
-        ),
-    )
-    client = ccc.oci.oci_client()
-    tags = client.tags(image_reference=oci_name)
+    ctx_repo = cm.OciRepositoryContext(baseUrl=ocm_repo_base_url)
+
     if greatest:
-        print(version.greatest_version(tags))
+        print(cnudie.retrieve.greatest_component_version(
+            component_name=name,
+            ctx_repo=ctx_repo,
+        ))
     else:
-        print(tags)
+        print(cnudie.retrieve.component_versions(
+            component_name=name,
+            ctx_repo=ctx_repo,
+        ))
