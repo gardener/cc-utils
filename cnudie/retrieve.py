@@ -1,5 +1,4 @@
 import dataclasses
-import functools
 import hashlib
 import io
 import json
@@ -20,9 +19,7 @@ import ccc.oci
 import ci.util
 import cnudie.util
 import ctx
-import delivery.client
 import oci.client as oc
-import product.v2
 import version
 
 
@@ -381,57 +378,16 @@ def create_default_component_descriptor_lookup(
     )
 
 
-def component_descriptor(
-    name: str,
-    version: str,
-    ctx_repo_url: str=None,
-    ctx_repo: cm.RepositoryContext=None,
-    delivery_client: delivery.client.DeliveryServiceClient=None,
-    cache_dir: str=_cache_dir,
-    validation_mode: cm.ValidationMode=cm.ValidationMode.NONE,
-) -> cm.ComponentDescriptor:
-    '''
-    retrieves the requested, deserialised component-descriptor, preferring delivery-service,
-    with a fallback to the underlying oci-registry
-    '''
-    if not (bool(ctx_repo_url) ^ bool(ctx_repo)):
-        raise ValueError('exactly one of ctx_repo, ctx_repo_url must be passed')
-
-    if ctx_repo_url:
-        logger.warning('passing ctx_repo_url is deprecated - pass ctx_repo')
-        ctx_repo = cm.OciRepositoryContext(
-            baseUrl=ctx_repo_url,
-            componentNameMapping=cm.OciComponentNameMapping.URL_PATH,
-        )
-
-    if not isinstance(ctx_repo, cm.OciRepositoryContext):
-        raise NotImplementedError(ctx_repo)
-
-    ctx_repo: cm.OciRepositoryContext
-
-    return _component_descriptor(
-        name=name,
-        version=version,
-        ctx_repo=ctx_repo,
-        delivery_client=delivery_client,
-        cache_dir=cache_dir,
-        validation_mode=validation_mode,
-    )
-
-
 def components(
     component: typing.Union[cm.ComponentDescriptor, cm.Component],
-    cache_dir: str=_cache_dir,
-    delivery_client: delivery.client.DeliveryServiceClient=None,
-    validation_mode: cm.ValidationMode=cm.ValidationMode.NONE,
     component_descriptor_lookup: ComponentDescriptorLookupById=None,
 ):
-    if isinstance(component, cm.ComponentDescriptor):
-        component = component.component
-    elif isinstance(component, cm.Component):
-        component = component
-    else:
-        raise TypeError(component)
+    component = cnudie.util.to_component(component)
+
+    if not component_descriptor_lookup:
+        component_descriptor_lookup = create_default_component_descriptor_lookup(
+            default_ctx_repo=component.current_repository_ctx(),
+        )
 
     _visited_component_versions = [
         (component.name, component.version)
@@ -440,9 +396,6 @@ def components(
     def resolve_component_dependencies(
         component: cm.Component,
     ) -> typing.Generator[cm.Component, None, None]:
-        nonlocal cache_dir
-        nonlocal delivery_client
-        nonlocal validation_mode
         nonlocal _visited_component_versions
 
         yield component
@@ -455,26 +408,16 @@ def components(
             else:
                 _visited_component_versions.append(cref)
 
-            if component_descriptor_lookup:
-                resolved_component = component_descriptor_lookup(
-                    component_id=cm.ComponentIdentity(
-                        name=component_ref.componentName,
-                        version=component_ref.version,
-                    ),
-                    ctx_repo=component.current_repository_ctx(),
-                )
-            else:
-                resolved_component = component_descriptor(
+            resolved_component_descriptor = component_descriptor_lookup(
+                component_id=cm.ComponentIdentity(
                     name=component_ref.componentName,
                     version=component_ref.version,
-                    ctx_repo=component.current_repository_ctx(),
-                    delivery_client=delivery_client,
-                    cache_dir=cache_dir,
-                    validation_mode=validation_mode,
-                )
+                ),
+                ctx_repo=component.current_repository_ctx(),
+            )
 
             yield from resolve_component_dependencies(
-                component=resolved_component.component,
+                component=resolved_component_descriptor.component,
             )
 
     yield from resolve_component_dependencies(
@@ -486,19 +429,18 @@ def component_diff(
     left_component: typing.Union[cm.Component, cm.ComponentDescriptor],
     right_component: typing.Union[cm.Component, cm.ComponentDescriptor],
     ignore_component_names=(),
-    delivery_client: delivery.client.DeliveryServiceClient=None,
-    cache_dir: str=_cache_dir,
     component_descriptor_lookup: ComponentDescriptorLookupById=None,
 ):
     left_component = cnudie.util.to_component(left_component)
     right_component = cnudie.util.to_component(right_component)
 
+    if not component_descriptor_lookup:
+        component_descriptor_lookup = create_default_component_descriptor_lookup()
+
     left_components = tuple(
         c for c in
         components(
             component=left_component,
-            delivery_client=delivery_client,
-            cache_dir=cache_dir,
             component_descriptor_lookup=component_descriptor_lookup,
         )
         if c.name not in ignore_component_names
@@ -507,8 +449,6 @@ def component_diff(
         c for c in
         components(
             component=right_component,
-            delivery_client=delivery_client,
-            cache_dir=cache_dir,
             component_descriptor_lookup=component_descriptor_lookup,
         )
         if c.name not in ignore_component_names
@@ -518,50 +458,6 @@ def component_diff(
         left_components=left_components,
         right_components=right_components,
         ignore_component_names=ignore_component_names,
-    )
-
-
-@functools.lru_cache(maxsize=2048)
-def _component_descriptor(
-    name: str,
-    version: str,
-    ctx_repo: cm.RepositoryContext,
-    delivery_client: delivery.client.DeliveryServiceClient=None,
-    cache_dir=_cache_dir,
-    validation_mode=cm.ValidationMode.NONE,
-):
-    if not delivery_client:
-        delivery_client = ccc.delivery.default_client_if_available()
-
-    if not isinstance(ctx_repo, cm.OciRepositoryContext):
-        raise NotImplementedError(ctx_repo)
-
-    ctx_repo: cm.OciRepositoryContext
-
-    ctx_repo_url = ctx_repo.baseUrl
-
-    # delivery-client may still be None
-    if delivery_client:
-        try:
-            return delivery_client.component_descriptor(
-                name=name,
-                version=version,
-                ctx_repo_url=ctx_repo_url,
-            )
-        except:
-            import traceback
-            traceback.print_exc()
-
-    # fallback to resolving from oci-registry
-    if delivery_client:
-        logger.warning(f'{name=} {version=} {ctx_repo_url=} - falling back to oci-registry')
-
-    return product.v2.download_component_descriptor_v2(
-        component_name=name,
-        component_version=version,
-        ctx_repo=ctx_repo,
-        cache_dir=cache_dir,
-        validation_mode=validation_mode,
     )
 
 
