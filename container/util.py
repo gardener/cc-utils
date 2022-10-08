@@ -87,37 +87,38 @@ def filter_image(
         src_name = source_ref.ref_without_tag
         tgt_name = target_ref.ref_without_tag
 
-        for idx, sub_manifest in enumerate(tuple(manifest.manifests)):
-           source_ref = f'{src_name}@{sub_manifest.digest}'
+        patched_manifests = []
+        for sub_manifest in tuple(manifest.manifests):
+            source_ref = f'{src_name}@{sub_manifest.digest}'
 
-           if platform_filter:
-               platform = oci.platform.from_single_image(
-                   image_reference=source_ref,
-                   oci_client=oci_client,
-                   base_platform=sub_manifest.platform,
-                )
-               if not platform_filter(platform):
-                   logger.info(f'skipping {platform=} for {source_ref=}')
-                   manifest.manifests.remove(sub_manifest)
-                   continue
+            if platform_filter:
+                platform = oci.platform.from_single_image(
+                    image_reference=source_ref,
+                    oci_client=oci_client,
+                    base_platform=sub_manifest.platform,
+                    )
+                if not platform_filter(platform):
+                    logger.info(f'skipping {platform=} for {source_ref=}')
+                    continue
 
-           logger.info(f'filtering to {tgt_name=}')
+            logger.info(f'filtering to {tgt_name=}')
 
-           res, tgt_ref, manifest_bytes = filter_image(
-               source_ref=source_ref,
-               target_ref=tgt_name,
-               remove_files=remove_files,
-               oci_client=oci_client,
+            res, tgt_ref, manifest_bytes = filter_image(
+                source_ref=source_ref,
+                target_ref=tgt_name,
+                remove_files=remove_files,
+                oci_client=oci_client,
             )
 
-           # patch (potentially) modified manifest-digest
-           patched_manifest = dataclasses.replace(
-               sub_manifest,
-               digest=f'sha256:{hashlib.sha256(manifest_bytes).hexdigest()}',
-               size=len(manifest_bytes),
-           )
-           manifest.manifests[idx] = patched_manifest
+            # patch (potentially) modified manifest-digest
+            patched_manifest = dataclasses.replace(
+                sub_manifest,
+                digest=f'sha256:{hashlib.sha256(manifest_bytes).hexdigest()}',
+                size=len(manifest_bytes),
+            )
+            patched_manifests.append(patched_manifest)
 
+        manifest.manifests = patched_manifests
         manifest_dict = manifest.as_dict()
         manifest_raw = json.dumps(manifest_dict).encode('utf-8')
         res = oci_client.put_manifest(
