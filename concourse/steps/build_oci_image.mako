@@ -267,10 +267,12 @@ subprocess.run(
 )
 
 for img_ref in (image_ref, *${additional_img_refs}):
-  container_registry_cfg = mc.find_config(
+  if not (container_registry_cfg := mc.find_config(
     image_reference=img_ref,
     privileges=oa.Privileges.READWRITE,
-  )
+  )):
+    raise RuntimeError(f'No container registry config found for {img_ref=} with write privilege.')
+
   docker_cfg_dir = tempfile.mkdtemp()
   with open(os.path.join(docker_cfg_dir, 'config.json'), 'w') as f:
     json.dump({'auths': container_registry_cfg.as_docker_auths()}, f)
