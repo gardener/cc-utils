@@ -145,9 +145,20 @@ class PullRequestEvent(EventBase):
         return self.raw['pull_request']['id']
 
     def label_names(self):
+        '''Return the labels attached to the pull request as per the event received.
+        '''
         return [
             label.get('name') for label in self.raw.get('pull_request').get('labels')
         ]
+
+    def label(self) -> str:
+        '''Return the Label that was set for `pull_request.labeled` events.
+        '''
+        if not self.action is PullRequestAction.LABELED:
+            raise RuntimeError(
+                "Retrieving the triggering label is only valid for PRs with action 'labeled'"
+            )
+        return self.raw['label']['name']
 
     def fork(self):
         if (pr_info := self.raw.get('pull_request')):
