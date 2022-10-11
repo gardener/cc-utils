@@ -85,6 +85,20 @@ def process_pr_event(
         if len(resources) == 0:
             continue
 
+        if pr_event.action() is PullRequestAction.LABELED:
+            required_labels = {
+                resource.source.get('label')
+                for resource in resources if resource.source.get('label') is not None
+            }
+            if not (l := pr_event.label()) in required_labels:
+                # Label that was set will not trigger any pr-job.
+                logger.info(
+                    f"Label '{l}' was set, but is not required for any job that builds "
+                    f"PR #{pr_event.number()} for repository "
+                    f"'{pr_event.repository().repository_path()}'. Will not trigger "
+                    'resource check.'
+                )
+                continue
         if (
             pr_event.action() in [PullRequestAction.OPENED, PullRequestAction.SYNCHRONIZE]
             and not set_pr_labels(pr_event, github_helper, resources)
