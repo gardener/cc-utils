@@ -10,10 +10,27 @@ import concourse.steps.images
 import concourse.steps.scan_container_images
 from protecode.model import CVSSVersion
 from protecode.scanning import upload_grouped_images as _upload_grouped_images
+import protecode.assessments as pa
 
 
 __cmd_name__ = 'protecode'
 logger = logging.getLogger(__name__)
+
+
+def assess(
+    protecode_cfg_name: str,
+    product_id: int,
+    assessment: str,
+):
+    cfg_factory = ci.util.ctx().cfg_factory()
+    protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
+    client = ccc.protecode.client(protecode_cfg)
+
+    pa.auto_triage(
+        protecode_client=client,
+        product_id=product_id,
+        assessment_txt=assessment,
+    )
 
 
 def scan(
