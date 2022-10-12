@@ -90,7 +90,7 @@ def add_assessments_if_none_exist(
 
 
 def auto_triage(
-    protecode_api: protecode.client.ProtecodeApi,
+    protecode_client: protecode.client.ProtecodeApi,
     analysis_result: pm.AnalysisResult=None,
     product_id: int=None,
 ):
@@ -107,7 +107,7 @@ def auto_triage(
         product_id = analysis_result.product_id()
 
     if product_id:
-        analysis_result = protecode_api.wait_for_scan_result(product_id=product_id)
+        analysis_result = protecode_client.wait_for_scan_result(product_id=product_id)
 
     product_name = analysis_result.name()
 
@@ -125,7 +125,7 @@ def auto_triage(
             vulnerability_cve = vulnerability.cve()
             if not component_version:
                 component_version = '[ci]-auto-triage'
-                protecode_api.set_component_version(
+                protecode_client.set_component_version(
                     component_name=component_name,
                     component_version=component_version,
                     scope=pm.VersionOverrideScope.APP,
@@ -145,6 +145,6 @@ def auto_triage(
             logger.debug(
                 f'Auto-triaging {vulnerability_cve=} {component_name=} {product_id=} {product_name=}'
             )
-            protecode_api.add_triage_raw(
+            protecode_client.add_triage_raw(
                 triage_dict=triage_dict,
             )

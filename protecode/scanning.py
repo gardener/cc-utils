@@ -389,7 +389,7 @@ class ResourceGroupProcessor:
           if scan_request.auto_triage_scan():
               protecode.assessments.auto_triage(
                   analysis_result=scan_result,
-                  protecode_api=self.protecode_client,
+                  protecode_client=self.protecode_client,
               )
 
               scan_result = self.protecode_client.wait_for_scan_result(
