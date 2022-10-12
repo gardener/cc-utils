@@ -389,7 +389,6 @@ class ResourceGroupProcessor:
           if scan_request.auto_triage_scan():
               protecode.assessments.auto_triage(
                   analysis_result=scan_result,
-                  cvss_threshold=self.cvss_threshold,
                   protecode_api=self.protecode_client,
               )
 

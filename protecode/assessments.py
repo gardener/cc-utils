@@ -90,7 +90,6 @@ def add_assessments_if_none_exist(
 
 
 def auto_triage(
-    cvss_threshold: float,
     protecode_api: protecode.client.ProtecodeApi,
     analysis_result: pm.AnalysisResult=None,
     product_id: int=None,
@@ -115,37 +114,37 @@ def auto_triage(
     for component in analysis_result.components():
         component_version = component.version()
         for vulnerability in component.vulnerabilities():
-            if (
-                vulnerability.cve_severity() >= cvss_threshold and not vulnerability.historical()
-                and not vulnerability.has_triage()
-            ):
-                # component version needs to be set to triage. If we actually have a vulnerability
-                # we want to auto-triage we need to set the version first.
-                component_name = component.name()
-                vulnerability_cve = vulnerability.cve()
-                if not component_version:
-                    component_version = '[ci]-auto-triage'
-                    protecode_api.set_component_version(
-                        component_name=component_name,
-                        component_version=component_version,
-                        scope=pm.VersionOverrideScope.APP,
-                        objects=list(o.sha1() for o in component.extended_objects()),
-                        app_id=product_id,
-                    )
+            if vulnerability.historical():
+                continue
+            if vulnerability.has_triage():
+                continue
 
-                triage_dict = {
-                    'component': component_name,
-                    'version': component_version,
-                    'vulns': [vulnerability_cve],
-                    'scope': pm.TriageScope.RESULT.value,
-                    'reason': 'OT', # "other"
-                    'description': 'Auto-generated due to skip-scan label',
-                    'product_id': product_id,
-                }
-                logger.debug(
-                    f'Auto-triaging {vulnerability_cve} for {component_name} '
-                    f'in product {product_id} ({product_name})'
+            # component version needs to be set to triage. If we actually have a vulnerability
+            # we want to auto-triage we need to set the version first.
+            component_name = component.name()
+            vulnerability_cve = vulnerability.cve()
+            if not component_version:
+                component_version = '[ci]-auto-triage'
+                protecode_api.set_component_version(
+                    component_name=component_name,
+                    component_version=component_version,
+                    scope=pm.VersionOverrideScope.APP,
+                    objects=list(o.sha1() for o in component.extended_objects()),
+                    app_id=product_id,
                 )
-                protecode_api.add_triage_raw(
-                    triage_dict=triage_dict,
-                )
+
+            triage_dict = {
+                'component': component_name,
+                'version': component_version,
+                'vulns': [vulnerability_cve],
+                'scope': pm.TriageScope.RESULT.value,
+                'reason': 'OT', # "other"
+                'description': 'Auto-generated due to skip-scan label',
+                'product_id': product_id,
+            }
+            logger.debug(
+                f'Auto-triaging {vulnerability_cve=} {component_name=} {product_id=} {product_name=}'
+            )
+            protecode_api.add_triage_raw(
+                triage_dict=triage_dict,
+            )
