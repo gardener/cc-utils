@@ -90,9 +90,10 @@ def add_assessments_if_none_exist(
 
 
 def auto_triage(
-    analysis_result: pm.AnalysisResult,
     cvss_threshold: float,
     protecode_api: protecode.client.ProtecodeApi,
+    analysis_result: pm.AnalysisResult=None,
+    product_id: int=None,
 ):
     '''Automatically triage all current vulnerabilities below the given CVSS-threshold on the given
     Protecode scan.
@@ -100,7 +101,15 @@ def auto_triage(
     Components with matching vulnerabilities will be assigned an arbitrary version
     (`[ci]-auto-triage`) since a version is required by Protecode to be able to triage.
     '''
-    product_id = analysis_result.product_id()
+    if not ((product_id is not None) ^ (analysis_result is not None)):
+        raise ValueError('exactly one of product_id, analysis_result must be passed')
+
+    if analysis_result:
+        product_id = analysis_result.product_id()
+
+    if product_id:
+        analysis_result = protecode_api.wait_for_scan_result(product_id=product_id)
+
     product_name = analysis_result.name()
 
     for component in analysis_result.components():
