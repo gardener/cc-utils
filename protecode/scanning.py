@@ -230,14 +230,14 @@ class ResourceGroupProcessor:
             )
 
         if processing_mode is pm.ProcessingMode.FORCE_UPLOAD:
-            if (job_id := scan_request.target_product_id):
+            if (product_id := scan_request.target_product_id):
                 # reupload binary
                 try:
                     return self.protecode_client.upload(
                         application_name=scan_request.display_name,
                         group_id=self.group_id,
                         data=scan_request.scan_content,
-                        replace_id=job_id,
+                        replace_id=product_id,
                         custom_attribs=scan_request.custom_metadata,
                     )
                 except requests.exceptions.HTTPError as e:
