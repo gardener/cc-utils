@@ -288,10 +288,9 @@ class ResourceGroupProcessor:
                         custom_attribs=scan_request.custom_metadata,
                     )
 
-                if not scan_result.is_stale():
-                    pass # no special handling required
-                if scan_result.has_binary():
-                    # binary is still available, trigger rescan
+                if scan_result.has_binary() and scan_result.is_stale():
+                    # binary is still available, and "result is stale" (there was an engine-
+                    # update), trigger rescan
                     logger.info(
                         f'Triggering rescan for {existing_id} ({scan_request.display_name()})'
                     )
