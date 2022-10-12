@@ -14,13 +14,9 @@
 # limitations under the License.
 
 import datetime
-import functools
 import logging
 import typing
 
-import ccc.delivery
-import ccc.gcp
-import ccc.protecode
 import ci.log
 import dso.model
 import gci.componentmodel as cm
@@ -165,14 +161,6 @@ def enum_triages(
                 yield component, triage
 
 
-@functools.lru_cache
-def _image_digest(image_reference: str) -> str:
-    oci_client = ccc.oci.oci_client()
-    return oci_client.to_digest_hash(
-        image_reference=image_reference,
-    )
-
-
 def component_artifact_metadata(
     component: cm.Component,
     artefact: cm.Artifact,
@@ -190,14 +178,8 @@ def component_artifact_metadata(
         metadata['IMAGE_REFERENCE_NAME'] = artefact.name
         metadata['RESOURCE_TYPE'] = 'ociImage'
         if not omit_resource_version:
-            img_ref_with_digest = _image_digest(
-                image_reference=artefact.access.imageReference
-            )
-            digest = img_ref_with_digest.split('@')[-1]
             metadata['IMAGE_REFERENCE'] = artefact.access.imageReference
             metadata['IMAGE_VERSION'] = artefact.version
-            metadata['IMAGE_DIGEST'] = digest
-            metadata['DIGEST_IMAGE_REFERENCE'] = str(img_ref_with_digest)
     elif isinstance(artefact.access, cm.S3Access):
         metadata['RESOURCE_TYPE'] = 'application/tar+vm-image-rootfs'
         if not omit_resource_version:
