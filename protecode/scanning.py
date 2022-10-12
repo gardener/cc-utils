@@ -316,40 +316,6 @@ class ResourceGroupProcessor:
         else:
             raise NotImplementedError(processing_mode)
 
-    def apply_auto_triage(
-        self,
-        scan_request: pm.ScanRequest,
-    ) -> pm.AnalysisResult:
-        if (product_id := scan_request.target_product_id):
-            scan_result = self.protecode_client.scan_result(product_id=product_id)
-        else:
-            # no product id present means the scan result created a new scan in protecode.
-            # Fetch it (it _must_ exist) and process
-            products = self.protecode_client.list_apps(
-                group_id=self.group_id,
-                custom_attribs=scan_request.custom_metadata,
-            )
-
-            if not products:
-                raise RuntimeError(
-                    f'Unable to find scan created by {scan_request=} for auto-triage.'
-                )
-            elif len(products) > 1:
-                raise RuntimeError(
-                    f'Found {len(products)=} scans possibly created by {scan_request=} '
-                    '- expected exactly one'
-                )
-            scan_result = self.protecode_client.scan_result(product_id=products[0].product_id())
-
-        protecode.assessments.auto_triage(
-            analysis_result=scan_result,
-            cvss_threshold=self.cvss_threshold,
-            protecode_api=self.protecode_client,
-        )
-
-        # return updated scan result
-        return self.protecode_client.scan_result(product_id=product_id)
-
     def process(
         self,
         resource_group: tuple[cnudie.iter.ResourceNode],
@@ -421,8 +387,15 @@ class ResourceGroupProcessor:
               )
 
           if scan_request.auto_triage_scan():
-              # auto-assess + re-retrieve results afterwards
-              scan_result = self.apply_auto_triage(scan_request)
+              protecode.assessments.auto_triage(
+                  analysis_result=scan_result,
+                  cvss_threshold=self.cvss_threshold,
+                  protecode_api=self.protecode_client,
+              )
+
+              scan_result = self.protecode_client.wait_for_scan_result(
+                product_id=scan_result.product_id(),
+              )
 
           protecode.assessments.add_assessments_if_none_exist(
               tgt=scan_result,
