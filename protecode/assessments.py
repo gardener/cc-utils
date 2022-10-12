@@ -93,6 +93,7 @@ def auto_triage(
     protecode_client: protecode.client.ProtecodeApi,
     analysis_result: pm.AnalysisResult=None,
     product_id: int=None,
+    assessment_text: str=None,
 ):
     '''Automatically triage all current vulnerabilities below the given CVSS-threshold on the given
     Protecode scan.
@@ -110,6 +111,7 @@ def auto_triage(
         analysis_result = protecode_client.wait_for_scan_result(product_id=product_id)
 
     product_name = analysis_result.name()
+    assessment_txt = assessment_txt or 'Auto-generated due to skip-scan label'
 
     for component in analysis_result.components():
         component_version = component.version()
@@ -139,7 +141,7 @@ def auto_triage(
                 'vulns': [vulnerability_cve],
                 'scope': pm.TriageScope.RESULT.value,
                 'reason': 'OT', # "other"
-                'description': 'Auto-generated due to skip-scan label',
+                'description': assessment_txt,
                 'product_id': product_id,
             }
             logger.debug(
