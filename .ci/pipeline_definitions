@@ -5,6 +5,11 @@ cc-utils:
       - name: 'gh_pages'
         path: 'gardener/cc-utils'
         branch: 'gh-pages'
+        source_labels:
+          - name: 'cloud.gardener.cnudie/dso/scanning-hints/source_analysis/v1'
+            value:
+              policy: 'skip'
+              comment: 'used for publishing documentation on github.com - not part of payload'
 
   background_image: https://media1.giphy.com/media/VkMV9TldsPd28/giphy.gif
   template: 'default'
