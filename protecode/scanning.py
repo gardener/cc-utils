@@ -331,14 +331,14 @@ class ResourceGroupProcessor:
                 custom_attribs=scan_request.custom_metadata,
             )
 
-            if (p := len(products)) == 0:
+            if not products:
                 raise RuntimeError(
-                    f'Unable to find scan created by scan request {scan_request} to auto-triage.'
+                    f'Unable to find scan created by {scan_request=} for auto-triage.'
                 )
-            if p >= 2:
+            elif len(products) > 1:
                 raise RuntimeError(
-                    f'Found {p} scans possibly created by scan request {scan_request} '
-                    'to auto-triage.'
+                    f'Found {len(products)=} scans possibly created by {scan_request=} '
+                    '- expected exactly one'
                 )
             scan_result = self.protecode_client.scan_result(product_id=products[0].product_id())
 
