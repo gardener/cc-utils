@@ -38,6 +38,7 @@ faulthandler.enable() # print stacktraces upon fatal signals
 import ccc.aws
 import ccc.github
 import ccc.oci
+import ccc.protecode
 import ci.log
 ci.log.configure_default_logging()
 import ci.util
