@@ -20,6 +20,7 @@ import ci.util
 import cnudie.util
 import ctx
 import oci.client as oc
+import oci.model as om
 import version
 
 
@@ -196,6 +197,7 @@ def delivery_service_component_descriptor_lookup(
     def lookup(
         component_id: cm.ComponentIdentity,
         ctx_repo: cm.RepositoryContext=default_ctx_repo,
+        absent_ok=False,
     ):
         if not ctx_repo:
             raise ValueError(ctx_repo)
@@ -214,7 +216,9 @@ def delivery_service_component_descriptor_lookup(
             traceback.print_exc()
 
         # component descriptor not found in lookup
-        return None
+        if absent_ok:
+            return None
+        raise om.OciImageNotFoundException
 
     return lookup
 
@@ -238,6 +242,7 @@ def oci_component_descriptor_lookup(
     def lookup(
         component_id: cm.ComponentIdentity,
         ctx_repo: cm.RepositoryContext=default_ctx_repo,
+        absent_ok=False,
     ):
         if not ctx_repo:
             raise ValueError(ctx_repo)
@@ -258,9 +263,11 @@ def oci_component_descriptor_lookup(
             absent_ok=True,
         )
 
-        if not manifest:
-            # component descriptor not found in lookup
+        # check if component descriptor not found in lookup
+        if not manifest and absent_ok:
             return None
+        elif not manifest:
+            raise om.OciImageNotFoundException
 
         try:
             cfg_dict = json.loads(
@@ -323,19 +330,29 @@ def composite_component_descriptor_lookup(
     def lookup(
         component_id: cm.ComponentIdentity,
         ctx_repo: cm.RepositoryContext=default_ctx_repo,
+        absent_ok=False,
     ):
         writebacks = []
         for lookup in lookups:
-            if ctx_repo:
-                res = lookup(component_id, ctx_repo)
-            else:
-                res = lookup(component_id)
+            res = None
+            try:
+                if ctx_repo:
+                    res = lookup(component_id, ctx_repo)
+                else:
+                    res = lookup(component_id)
+            except om.OciImageNotFoundException:
+                pass
 
             if isinstance(res, cm.ComponentDescriptor):
                 for wb in writebacks: wb(component_id, res)
                 return res
             elif res is None: continue
             elif isinstance(res, WriteBack): writebacks.append(res)
+
+        # component descriptor not found in lookup
+        if absent_ok:
+            return None
+        raise om.OciImageNotFoundException
 
     return lookup
 
