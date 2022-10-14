@@ -457,15 +457,16 @@ def create_or_update_github_issues(
                             break
                     else:
                         issue.create_comment(comment_body)
+
+                logger.info(
+                    f'updated gh-issue for {component.name=} {artifact.name=} '
+                    f'{issue_type=}: {issue.html_url=}'
+                )
             except github3.exceptions.GitHubError as ghe:
                 err_count += 1
                 logger.warning('error whilst trying to create or update issue - will keep going')
                 logger.warning(f'error: {ghe} {ghe.code=} {ghe.message=}')
 
-            logger.info(
-                f'updated gh-issue for {component.name=} {artifact.name=} '
-                f'{issue_type=}: {issue.html_url=}'
-            )
         else:
             raise NotImplementedError(action)
 
