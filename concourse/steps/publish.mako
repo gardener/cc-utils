@@ -23,6 +23,7 @@ image_descriptors = publish_trait.dockerimages()
 # - '/' need to be replaced w/ '-' (done redundantly in build_oci_image.mako)
 # - tag_templates need to be evaluated (at runtime)
 image_ref_groups = collections.defaultdict(set)
+extra_tags = collections.defaultdict(set)
 for image_descriptor in image_descriptors:
   base_image_ref_template = f'{image_descriptor.image_reference()}:{image_descriptor.tag_template()}'
 
@@ -35,6 +36,8 @@ for image_descriptor in image_descriptors:
     specific_tag = base_image_ref_template
 
   image_ref_groups[base_image_ref_template].add(specific_tag)
+  for tag in image_descriptor.additional_tags():
+    extra_tags[base_image_ref_template].add(tag)
 %>
 
 import logging
@@ -99,5 +102,11 @@ logger.info(f'publishing image-list: {target_ref=} | {manifest_digest=}')
 pprint.pprint(manifest_list.as_dict())
 
 oci_client.put_manifest(image_reference=target_ref, manifest=manifest_bytes)
+%   for extra_tag in extra_tags[target_ref]:
+image_ref = om.OciImageReference(
+  eval_tag_template(template='${target_ref}')
+).ref_without_tag + ':${extra_tag}'
+oci_client.put_manifest(image_reference=image_ref, manifest=manifest_bytes)
+%   endfor
 % endfor
 </%def>

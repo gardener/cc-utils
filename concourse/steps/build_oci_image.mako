@@ -11,10 +11,19 @@ import concourse.model.traits.publish as cm_publish
 import model.concourse
 container_registry_cfgs = cfg_set._cfg_elements(cfg_type_name='container_registry')
 
+publish_trait = job_variant.trait('publish')
+is_platform_aware = bool(publish_trait.platforms())
 image_descriptor = job_step._extra_args['image_descriptor']
+if platform := image_descriptor.platform():
+  normalised_oci_platform_name = model.concourse.Platform.normalise_oci_platform_name(platform)
+  platform_suffix = f'-{normalised_oci_platform_name}'.replace('/', '-')
+else:
+  normalised_oci_platform_name = ''
+  platform_suffix = ''
+
 image_ref = image_descriptor.image_reference()
 additional_img_refs = set(
-  f'{image_descriptor.image_reference()}:{t}'
+  f'{image_descriptor.image_reference()}:{t}{platform_suffix}'
   for t in image_descriptor.additional_tags()
 )
 
@@ -35,15 +44,8 @@ version_path = os.path.join(job_step.input('version_path'), 'version')
 
 eff_version_replace_token = '${EFFECTIVE_VERSION}'
 
-publish_trait = job_variant.trait('publish')
 oci_builder = publish_trait.oci_builder()
-platform = image_descriptor.platform()
 need_qemu = True
-
-if platform:
-  normalised_oci_platform_name = model.concourse.Platform.normalise_oci_platform_name(platform)
-else:
-  normalised_oci_platform_name = ''
 
 if platform and (worker_node_tags := job_step.worker_node_tags):
   concourse_cfg = cfg_set.concourse()
