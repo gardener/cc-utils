@@ -226,7 +226,7 @@ def _template_vars(
     elif issue_type == _compliance_label_malware:
         summary_str = ''.join((
             result.scan_result.summary() for result in results
-        ))
+        )).replace('\n', '')
 
         template_variables['summary'] = _compliance_status_summary(
             component=component,
