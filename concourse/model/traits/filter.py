@@ -25,7 +25,7 @@ from concourse.model.base import (
     AttributeSpec,
     ModelBase,
 )
-import gci.componentmodel as cm
+import cnudie.iter
 import reutil
 
 logger = logging.getLogger(__name__)
@@ -68,10 +68,10 @@ class MatchingConfig:
 
 def filter_for_matching_configs(
     configs: typing.Collection[MatchingConfig]
-) -> typing.Callable[[cm.Component, cm.Resource], bool]:
+) -> typing.Callable[[cnudie.iter.ResourceNode], bool]:
     configs = tuple(configs) if configs else ()
     if not configs:
-        def match_all(component, resource):
+        def match_all(node: cnudie.iter.ResourceNode):
             return True
 
         return match_all
@@ -83,14 +83,14 @@ def filter_for_matching_configs(
             config=config,
         ) for config in configs
     ]
-    return lambda component, resource: any(
-        filter_func(component, resource) for filter_func in filters_from_configs
+    return lambda node: any(
+        filter_func(node) for filter_func in filters_from_configs
     )
 
 
 def filter_for_matching_config(
     config: MatchingConfig,
-) -> typing.Callable[[cm.Component, cm.Resource], bool]:
+) -> typing.Callable[[cnudie.iter.ResourceNode], bool]:
     # A filter for a single matching configs is the combination of the filters for its rules joined
     # with a boolean AND
     rule_filters = [
@@ -98,14 +98,14 @@ def filter_for_matching_config(
             rule=rule,
         ) for rule in config.rules
     ]
-    return lambda component, resource: all(
-        filter_func(component, resource) for filter_func in rule_filters
+    return lambda node: all(
+        filter_func(node) for filter_func in rule_filters
     )
 
 
 def filter_for_rule(
     rule: ConfigRule,
-) -> typing.Callable[[cm.Component, cm.Resource], bool]:
+) -> typing.Callable[[cnudie.iter.Node], bool]:
     def to_str(value):
         if isinstance(value, str):
             return value
@@ -133,12 +133,12 @@ def filter_for_rule(
         case _:
             raise NotImplementedError(rule.matching_semantics)
 
-    def filter_func(component: cm.Component, resource:cm.Resource):
+    def filter_func(node: cnudie.iter.ResourceNode):
         match rule.target.split('.'):
             case ['component', *tail]:
-                return re_filter(pydash.get(component, tail))
+                return re_filter(pydash.get(node.component, tail))
             case ['resource', *tail]:
-                return re_filter(pydash.get(resource, tail))
+                return re_filter(pydash.get(node.resource, tail))
             case _:
                 raise ValueError(f"Unable to parse matching rule '{rule.target}'")
 

@@ -1,10 +1,12 @@
+import gci.componentmodel as cm
+
 import ccc.clamav
 import ccc.delivery
 import ccc.oci
+import ci.util
 import clamav.cnudie
 import cnudie.retrieve
 import cnudie.iter
-import concourse.steps.component_descriptor_util as component_descriptor_util
 import dso.model
 
 
@@ -19,19 +21,15 @@ def scan_component(
     '''
     send component to clamav scanner and write results to stdout.
     '''
-    cd = component_descriptor_util.component_descriptor_from_component_descriptor_path(
-        cd_path=component_descriptor_path,
-    )
-    component = cd.component
+    component = cm.ComponentDescriptor.from_dict(
+        ci.util.parse_yaml_file(component_descriptor_path)
+    ).component
 
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
         default_ctx_repo=component.current_repository_ctx(),
     )
 
-    def to_component_resource_tuple(node: cnudie.iter.ResourceNode):
-        return node.component, node.resource
-
-    component_resources = cnudie.iter.iter(
+    resource_nodes = cnudie.iter.iter(
         component=component,
         lookup=component_descriptor_lookup,
         node_filter=cnudie.iter.Filter.resources,
@@ -41,7 +39,7 @@ def scan_component(
     oci_client = ccc.oci.oci_client()
 
     for result in clamav.cnudie.scan_resources(
-        component_resources=(to_component_resource_tuple(node) for node in component_resources),
+        resource_nodes=resource_nodes,
         oci_client=oci_client,
         clamav_client=clamav_client,
         max_workers=max_worker,

@@ -512,7 +512,7 @@ def _retrieve_existing_scan_results(
 
 def _resource_groups(
     resource_nodes: typing.Generator[cnudie.iter.ResourceNode, None, None],
-    filter_function: typing.Callable[[cm.Component, cm.Resource], bool],
+    filter_function: typing.Callable[[cnudie.iter.ResourceNode], bool],
     artefact_types=(
         cm.ResourceType.OCI_IMAGE,
         'application/tar+vm-image-rootfs',
@@ -532,13 +532,10 @@ def _resource_groups(
         = collections.defaultdict(list)
 
     for resource_node in resource_nodes:
-        c = resource_node.component
-        r = resource_node.resource
-
-        if not r.type in artefact_types:
+        if not resource_node.resource.type in artefact_types:
             continue
 
-        if filter_function and not filter_function(c, r):
+        if filter_function and not filter_function(resource_node):
             continue
 
         group_id = _resource_group_id((resource_node,))
@@ -572,8 +569,8 @@ def upload_grouped_images(
     parallel_jobs=8,
     cve_threshold=7,
     processing_mode=pm.ProcessingMode.RESCAN,
-    filter_function: typing.Callable[[cm.Component, cm.Resource], bool]=(
-        lambda component, resource: True
+    filter_function: typing.Callable[[cnudie.iter.ResourceNode], bool]=(
+        lambda node: True
     ),
     reference_group_ids=(),
     delivery_client=None,

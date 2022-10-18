@@ -11,6 +11,7 @@ import ci.log
 import ci.util
 import clamav.client
 import clamav.scan
+import cnudie.iter
 import dso.model
 import oci.client
 
@@ -19,7 +20,7 @@ ci.log.configure_default_logging()
 
 
 def scan_resources(
-    component_resources: typing.Iterable[tuple[cm.Component, cm.Resource]],
+    resource_nodes: typing.Iterable[cnudie.iter.ResourceNode],
     oci_client: oci.client.Client,
     clamav_client: clamav.client.ClamAVClient,
     s3_client=None,
@@ -27,8 +28,11 @@ def scan_resources(
 ) -> typing.Generator[clamav.scan.ClamAV_ResourceScanResult, None, None]:
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
 
-    def scan_resource(component_resource: typing.Tuple[cm.Component, cm.Resource]):
-        component, resource = component_resource
+    def scan_resource(
+        resource_node: cnudie.iter.ResourceNode,
+    ):
+        component = resource_node.component
+        resource = resource_node.resource
 
         if isinstance(resource.access, cm.OciAccess):
             access: cm.OciAccess = resource.access
@@ -75,8 +79,8 @@ def scan_resources(
         )
 
     tasks = [
-        executor.submit(scan_resource, component_resource)
-       for component_resource in component_resources
+        executor.submit(scan_resource, resource_node)
+       for resource_node in resource_nodes
     ]
 
     logger.info(f'will scan {len(tasks)=} with {max_workers=}')

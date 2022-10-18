@@ -1,18 +1,30 @@
-import dataclasses
-
 import pytest
 
+import gci.componentmodel as cm
+
 import concourse.model.traits.filter as examinee
+import cnudie.iter
 
 
-# Dummy dataclass for testing.
-# We could also test using dicts, but since the actual objects the filter will be applied to
-# will usually be dataclasses, use this simple dataclass instead.
-# We could of course also test using the actual gci.componentmodel classes, but that would expose
-# the test to changes in the model.
-@dataclasses.dataclass
-class Dummy:
-    name: str
+def component(name='TestComponent', version='1.2.3', resources=()):
+    return cm.Component(
+        name=name,
+        version=version,
+        repositoryContexts=(),
+        provider=None,
+        sources=resources,
+        resources=(),
+        componentReferences=(),
+    )
+
+
+def resource(name='resourceName', version='1.2.3'):
+    return cm.Resource(
+        name=name,
+        version=version,
+        type='some-type',
+        access=None,
+    )
 
 
 def test_unspecific_target_fails():
@@ -27,9 +39,10 @@ def test_unspecific_target_fails():
         ]
     )
     test_filter = examinee.filter_for_matching_config(test_config)
-    component_dummy = Dummy(name='TestComponent')
+
+    node = cnudie.iter.ComponentNode(path=())
     with pytest.raises(ValueError):
-        test_filter(component_dummy, None)
+        test_filter(node)
 
 
 def test_component_attr_included():
@@ -45,11 +58,17 @@ def test_component_attr_included():
     )
     test_filter = examinee.filter_for_matching_config(test_config)
 
-    component_dummy = Dummy(name='TestComponent')
-    assert test_filter(component_dummy, None)
+    assert test_filter(
+        cnudie.iter.ComponentNode(path=(
+            component(),
+        ))
+    )
 
-    component_dummy = Dummy(name='AnotherName')
-    assert not test_filter(component_dummy, None)
+    assert not test_filter(
+        cnudie.iter.ComponentNode(path=(
+            component(name='unknown-component'),
+        )
+    ))
 
 
 def test_component_attr_excluded():
@@ -65,11 +84,17 @@ def test_component_attr_excluded():
     )
     test_filter = examinee.filter_for_matching_config(test_config)
 
-    component_dummy = Dummy(name='AnotherName')
-    assert test_filter(component_dummy, None)
+    assert test_filter(
+        cnudie.iter.ComponentNode(path=(
+            component(name='excluded-component'),
+        )
+    ))
 
-    component_dummy = Dummy(name='TestComponent')
-    assert not test_filter(component_dummy, None)
+    assert not test_filter(
+        cnudie.iter.ComponentNode(path=(
+            component(name='TestComponent'),
+        )
+    ))
 
 
 def test_resource_attr_included():
@@ -85,11 +110,17 @@ def test_resource_attr_included():
     )
     test_filter = examinee.filter_for_matching_config(test_config)
 
-    resource_dummy = Dummy(name='TestResource')
-    assert test_filter(None, resource_dummy)
+    assert test_filter(
+        cnudie.iter.ResourceNode(
+            path=(),
+            resource=resource(name='TestResource'),
+    ))
 
-    resource_dummy = Dummy(name='AnotherName')
-    assert not test_filter(None, resource_dummy)
+    assert not test_filter(
+        cnudie.iter.ResourceNode(
+            path=(),
+            resource=resource(name='another-resource-name'),
+    ))
 
 
 def test_resource_attr_excluded():
@@ -105,11 +136,17 @@ def test_resource_attr_excluded():
     )
     test_filter = examinee.filter_for_matching_config(test_config)
 
-    resource_dummy = Dummy(name='AnotherName')
-    assert test_filter(None, resource_dummy)
+    assert not test_filter(
+        cnudie.iter.ResourceNode(
+            path=(),
+            resource=resource(name='TestResource'),
+    ))
 
-    resource_dummy = Dummy(name='TestResource')
-    assert not test_filter(None, resource_dummy)
+    assert test_filter(
+        cnudie.iter.ResourceNode(
+            path=(),
+            resource=resource(name='another-resource-name'),
+    ))
 
 
 def test_multiple_component_rules():
@@ -131,14 +168,23 @@ def test_multiple_component_rules():
     )
     test_filter = examinee.filter_for_matching_config(test_config)
 
-    component_dummy = Dummy(name='AName')
-    assert not test_filter(component_dummy, None)
+    assert not test_filter(
+        cnudie.iter.ComponentNode(path=(
+            component(name='AName'),
+        )
+    ))
 
-    component_dummy = Dummy(name='AnotherName')
-    assert not test_filter(component_dummy, None)
+    assert not test_filter(
+        cnudie.iter.ComponentNode(path=(
+            component(name='AnotherName'),
+        )
+    ))
 
-    component_dummy = Dummy(name='YetAnotherName')
-    assert not test_filter(component_dummy, None)
+    assert not test_filter(
+        cnudie.iter.ComponentNode(path=(
+            component(name='YetAnotherName'),
+        )
+    ))
 
 
 def test_multiple_resource_rules():
@@ -159,14 +205,23 @@ def test_multiple_resource_rules():
     )
     test_filter = examinee.filter_for_matching_config(test_config)
 
-    resource_dummy = Dummy(name='AName')
-    assert not test_filter(None, resource_dummy)
+    assert not test_filter(
+        cnudie.iter.ResourceNode(
+            path=(),
+            resource=resource(name='another-resource-name'),
+    ))
 
-    resource_dummy = Dummy(name='AnotherName')
-    assert not test_filter(None, resource_dummy)
+    assert not test_filter(
+        cnudie.iter.ResourceNode(
+            path=(),
+            resource=resource(name='AnotherName'),
+    ))
 
-    resource_dummy = Dummy(name='YetAnotherName')
-    assert not test_filter(None, resource_dummy)
+    assert not test_filter(
+        cnudie.iter.ResourceNode(
+            path=(),
+            resource=resource(name='YetAnotherName'),
+    ))
 
 
 def test_multiple_configs():
@@ -195,15 +250,26 @@ def test_multiple_configs():
     ]
     test_filter = examinee.filter_for_matching_configs(test_configs)
 
-    matching_component_dummy = Dummy(name='ComponentName')
-    matching_resource_dummy = Dummy(name='ResourceName')
+    assert test_filter(
+        cnudie.iter.ResourceNode(
+            path=(
+                component(name='ComponentName'),
+            ),
+            resource=resource(name='YetAnotherName'),
+    ))
 
-    assert test_filter(matching_component_dummy, matching_resource_dummy)
+    assert test_filter(
+        cnudie.iter.ResourceNode(
+            path=(
+                component(name='ComponentName'),
+            ),
+            resource=resource(name='AnotherResource'),
+    ))
 
-    resource_dummy = Dummy(name='AnotherResource')
-    assert test_filter(matching_component_dummy, resource_dummy)
-
-    component_dummy = Dummy(name='AnotherComponent')
-    assert test_filter(component_dummy, matching_resource_dummy)
-
-    assert not test_filter(component_dummy, resource_dummy)
+    assert test_filter(
+        cnudie.iter.ResourceNode(
+            path=(
+                component(name='another-component'),
+            ),
+            resource=resource(name='ResourceName'),
+    ))
