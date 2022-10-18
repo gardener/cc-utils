@@ -6,7 +6,6 @@ COPY . /cc/utils/
 RUN cat /cc/utils/gardener-cicd-libs.apk-packages \
     | xargs apk add --no-cache \
 && pip3 install --root /pkgs --upgrade --no-cache-dir \
-  pip \
   wheel \
 && pip3 install --root /pkgs --upgrade --no-cache-dir \
   --find-links /cc/utils/dist \
