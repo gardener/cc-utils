@@ -101,11 +101,28 @@ cc-utils:
                   value:
                   - name: 'containerd'
                     version: 'v1.6.6' # found via DOCKER_VERSION -> github.com/moby/moby
+                - name: 'gardener.cloud/cve-categorisation'
+                  value:
+                    network_exposure: 'protected'
+                    authentication_enforced: true
+                    user_interaction: 'gardener-operator'
+                    confidentiality_requirement: 'high'
+                    integrity_requirement: 'high'
+                    availability_requirement: 'low'
             kaniko-image:
               registry: 'gcr-readwrite'
               image: 'eu.gcr.io/gardener-project/cc/job-image-kaniko'
               dockerfile: 'Dockerfile.kaniko'
               tag_as_latest: True
+              resource_labels:
+                - name: 'gardener.cloud/cve-categorisation'
+                  value:
+                    network_exposure: 'protected'
+                    authentication_enforced: true
+                    user_interaction: 'gardener-operator'
+                    confidentiality_requirement: 'high'
+                    integrity_requirement: 'high'
+                    availability_requirement: 'low'
               inputs:
                 steps:
                   build_python_packages: ~
