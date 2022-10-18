@@ -2,6 +2,7 @@ import logging
 import typing
 
 import cfg_mgmt
+import cfg_mgmt.aws as cmaws
 import cfg_mgmt.azure as cma
 import cfg_mgmt.btp_application_certificate as cmbac
 import cfg_mgmt.btp_service_binding as cmb
@@ -48,6 +49,9 @@ def delete_expired_secret(
 
     elif type_name == 'btp_application_certificate':
         delete_func = cmbac.delete_config_secret
+
+    elif type_name == 'aws':
+        delete_func = cmaws.delete_config_secret
 
     elif type_name == 'kubernetes':
         try:
@@ -127,6 +131,9 @@ def rotate_cfg_element(
 
     elif type_name == 'btp_application_certificate':
         update_secret_function = cmbac.rotate_cfg_element
+
+    elif type_name == 'aws':
+        update_secret_function = cmaws.rotate_cfg_element
 
     elif type_name == 'kubernetes':
         try:
