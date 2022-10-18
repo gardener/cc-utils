@@ -46,6 +46,7 @@ class Meta:
     scanned_octets: int
     receive_duration_seconds: float
     scan_duration_seconds: float
+    scanned_content_digest: str | None = None
 
 
 @dataclasses.dataclass
