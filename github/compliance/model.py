@@ -9,6 +9,7 @@ import unixutil.model
 
 
 class Severity(enum.IntEnum):
+    NONE = 0
     LOW = 1
     MEDIUM = 2
     HIGH = 4
@@ -17,6 +18,17 @@ class Severity(enum.IntEnum):
 
     def __str__(self):
         return self.name.lower()
+
+    @staticmethod
+    def parse(value: int | str):
+        '''
+        convenience method that will behave like default-c'tor, but also accept str-values
+        (ignoring type for additional convenience)
+        '''
+        if isinstance(value, str):
+            return Severity[value.upper()]
+
+        return Severity(value)
 
 
 class ScanState(enum.Enum):
