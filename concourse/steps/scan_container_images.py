@@ -133,7 +133,7 @@ def scan_result_group_collection_for_malware(
             worst_severity = max(
                 worst_severity,
                 rescore(
-                    result=finding,
+                    scan_result=finding,
                     default=gcm.Severity.BLOCKER,
                 ),
             )
