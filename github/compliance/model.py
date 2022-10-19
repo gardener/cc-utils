@@ -19,6 +19,9 @@ class Severity(enum.IntEnum):
     def __str__(self):
         return self.name.lower()
 
+    def __repr__(self):
+        return self.name.lower()
+
     @staticmethod
     def parse(value: int | str):
         '''
