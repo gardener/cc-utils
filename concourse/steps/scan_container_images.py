@@ -98,6 +98,7 @@ def scan_result_group_collection_for_licenses(
 
 def scan_result_group_collection_for_malware(
     results: tuple[clamav.scan.ClamAV_ResourceScanResult],
+    rescoring_entries: tuple[image_scan.ClamAVRescoringEntry],
 ):
     def malware_found(result: clamav.scan.ClamAV_ResourceScanResult):
         if not result.scan_succeeded:
@@ -108,11 +109,36 @@ def scan_result_group_collection_for_malware(
         else:
             return False
 
-    def classification_callback(result: clamav.scan.ClamAV_ResourceScanResult):
-        if malware_found(result):
-            return gcm.Severity.BLOCKER
+    def rescore(scan_result: clamav.client.ScanResult, default: gcm.Severity):
+        for entry in rescoring_entries:
+            if not entry.digest == scan_result.meta.scanned_content_digest:
+                continue
+            if not entry.malware_name.lower() in scan_result.name.lower():
+                continue
 
-        return None
+            logger.info(f'rescoring {scan_result=}, according to {entry=} to {entry.severity}')
+            return entry.severity
+
+        return default
+
+    def classification_callback(result: clamav.scan.ClamAV_ResourceScanResult):
+        if not malware_found(result):
+            return None
+
+        if not result.scan_result.findings:
+            logger.warning(f'{result=} reports malware-found, but has no findings - might be a bug')
+
+        worst_severity = gcm.Severity.NONE
+        for finding in result.scan_result.findings:
+            worst_severity = max(
+                worst_severity,
+                rescore(
+                    result=finding,
+                    default=gcm.Severity.BLOCKER,
+                ),
+            )
+
+        return worst_severity
 
     return gcm.ScanResultGroupCollection(
         results=tuple(results),

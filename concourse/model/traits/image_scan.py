@@ -34,6 +34,7 @@ from concourse.model.base import (
     ModelBase,
     ScriptType,
 )
+import github.compliance.model as gcm
 from model.base import ModelValidationError
 from protecode.model import ProcessingMode
 
@@ -142,6 +143,13 @@ class ProtecodeScanCfg(ModelBase):
         ProcessingMode(self.processing_mode())
 
 
+@dataclasses.dataclass
+class ClamAVRescoringEntry:
+    malware_name: str
+    digest: str
+    severity: gcm.Severity
+
+
 CLAMAV_ATTRS = (
     AttributeSpec.required(
         name='clamav_cfg_name',
@@ -159,6 +167,12 @@ CLAMAV_ATTRS = (
         type=str,
         default=None,
     ),
+    AttributeSpec.optional(
+        name='rescore',
+        doc='rescoring hints (e.g. to mark false-positives / accept certain scan-abortions)',
+        type=list[ClamAVRescoringEntry],
+        default=(),
+    )
 )
 
 
@@ -175,6 +189,18 @@ class ClamAVScanCfg(ModelBase):
 
     def parallel_jobs(self) -> int:
         return int(self.raw['parallel_jobs'])
+
+    def rescorings(self) -> tuple[ClamAVRescoringEntry]:
+        return tuple((
+            dacite.from_dict(
+                data=raw,
+                data_class=ClamAVRescoringEntry,
+                config=dacite.Config(
+                    type_hooks={gcm.Severity: gcm.Severity.parse},
+                ),
+            ) for raw in
+            self.raw.get('rescore', ())
+        ))
 
     def validate(self):
         super().validate()
