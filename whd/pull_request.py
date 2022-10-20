@@ -15,6 +15,7 @@ import concourse.client.model
 import concourse.enumerator
 import concourse.replicator
 import model
+import model.concourse
 import model.webhook_dispatcher
 import whd.dispatcher
 
@@ -101,7 +102,7 @@ def process_pr_event(
                 continue
         if (
             pr_event.action() in [PullRequestAction.OPENED, PullRequestAction.SYNCHRONIZE]
-            and not set_pr_labels(pr_event, github_helper, resources)
+            and not set_pr_labels(pr_event, github_helper, cfg_set, resources)
         ):
             logger.warning(
                 f'Unable to set required labels for PR #{pr_event.number()} for '
@@ -247,9 +248,34 @@ def validate_pipeline_definitions(
             )
 
 
+def _should_label(
+    job_mapping: model.concourse.JobMapping,
+    github_helper: GitHubRepositoryHelper,
+    sender_login: str,
+    owner: str,
+) -> bool:
+    trusted_teams = job_mapping.trusted_teams()
+    if trusted_teams:
+        if (
+            any(
+                github_helper.is_team_member(team_name=t, user_login=sender_login)
+                for t in trusted_teams
+            )
+        ):
+            return True
+        else:
+            return False
+
+    elif github_helper.is_org_member(organization_name=owner, user_login=sender_login):
+        return True
+
+    return False
+
+
 def set_pr_labels(
     pr_event: PullRequestEvent,
     github_helper: GitHubRepositoryHelper,
+    cfg_set: model.ConfigurationSet,
     resources,
 ) -> bool:
     '''
@@ -261,18 +287,23 @@ def set_pr_labels(
     }
     if not required_labels:
         return True
+
     pr_number = pr_event.number()
+    sender_login = pr_event.sender()['login']
 
     repo = pr_event.repository()
     repository_path = repo.repository_path()
     owner, _ = repository_path.split('/')
+    job_mapping_set: model.concourse.JobMappingSet = cfg_set.job_mapping()
+    job_mapping = job_mapping_set.job_mapping_for_repo_url(
+        repo.repository_url(), cfg_set
+    )
 
-    sender_login = pr_event.sender()['login']
-    if pr_event.action() is PullRequestAction.OPENED:
-        if github_helper.is_pr_created_by_org_member(pr_number):
+    if pr_event.action() in PullRequestAction.OPENED:
+        if _should_label(job_mapping, github_helper, sender_login, owner):
             logger.info(
-                f"New pull request by member of '{owner}' in '{repository_path}' found. "
-                f"Setting required labels '{required_labels}'."
+                f"New pull request by trusted member '{sender_login}' in "
+                f"'{repository_path}' found. Setting required labels '{required_labels}'."
             )
             github_helper.add_labels_to_pull_request(pr_number, *required_labels)
             return True
@@ -292,10 +323,11 @@ def set_pr_labels(
             )
             return False
     elif pr_event.action() is PullRequestAction.SYNCHRONIZE:
-        if github_helper.is_org_member(organization_name=owner, user_login=sender_login):
+        if _should_label(job_mapping, github_helper, sender_login, owner):
             logger.info(
-                f"Update to pull request #{pr_event.number()} by org member '{sender_login}' "
-                f" in '{repository_path}' found. Setting required labels '{required_labels}'."
+                f"Update to pull request #{pr_event.number()} by trusted member '{sender_login}' "
+                f" in '{repository_path}' found. "
+                f"Setting required labels '{required_labels}'."
             )
             github_helper.add_labels_to_pull_request(pr_number, *required_labels)
             return True
