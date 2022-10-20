@@ -575,10 +575,10 @@ class JobMapping(NamedModelElement):
 
         return False
 
-    '''
-        when set the secrets replication pipline will be rendered into the defined team
-    '''
     def secrets_replication_pipeline_target_cc_team_cfg_name(self) -> typing.Optional[str]:
+        '''
+            when set the secrets replication pipline will be rendered into the defined team
+        '''
         return self.raw.get('secrets_replication_pipeline_target_cc_team_cfg_name')
 
     def unpause_new_pipelines(self) -> bool:
