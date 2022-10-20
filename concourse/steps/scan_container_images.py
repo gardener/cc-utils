@@ -140,11 +140,22 @@ def scan_result_group_collection_for_malware(
 
         return worst_severity
 
+    def findings_callback(result: clamav.scan.ClamAV_ResourceScanResult):
+        if not malware_found(result=result):
+            return False
+
+        severity = classification_callback(result=result)
+
+        if severity is None or severity is gcm.Severity.NONE:
+            return False
+        else:
+            return True
+
     return gcm.ScanResultGroupCollection(
         results=tuple(results),
         issue_type=gciss._label_malware,
         classification_callback=classification_callback,
-        findings_callback=malware_found,
+        findings_callback=findings_callback,
     )
 
 
