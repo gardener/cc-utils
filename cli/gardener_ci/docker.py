@@ -6,13 +6,13 @@ import oci.auth as oa
 
 def cfg(
     image_ref_prefixes: [str],
-    privileges='readwrite',
+    privileges: str ='readwrite',
 ):
     cfgs = set()
     if privileges == 'readwrite':
         privileges = oa.Privileges.READWRITE
     elif privileges in ('readonly', 'read'):
-        privileges == oa.Privileges.READONLY
+        privileges = oa.Privileges.READONLY
     else:
         raise ValueError(privileges)
 
