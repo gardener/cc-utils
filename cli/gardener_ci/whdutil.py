@@ -86,7 +86,6 @@ def start_whd(
             log_level='info',
             log_config=_logging_config(),
             workers=workers,
-            debug=False,
             reload=False,
         )
 
@@ -100,6 +99,5 @@ def start_whd(
             log_level='debug',
             log_config=_logging_config(stdout_level=logging.DEBUG),
             workers=workers,
-            debug=True,
             reload=True,
         )
