@@ -113,7 +113,7 @@ def scan_result_group_collection_for_malware(
         for entry in rescoring_entries:
             if not entry.digest == scan_result.meta.scanned_content_digest:
                 continue
-            if not entry.malware_name.lower() in scan_result.name.lower():
+            if not entry.malware_name.lower() in scan_result.details.lower():
                 continue
 
             logger.info(f'rescoring {scan_result=}, according to {entry=} to {entry.severity}')
