@@ -674,6 +674,23 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         organization = self.github.organization(organization_name)
         return organization.is_member(user_login)
 
+    def is_team_member(self, team_name, user_login) -> bool:
+        '''Returns a bool indicating team-membership to the given team for the given user-login
+
+        The team-name is expected in the format `<org-name>/<team-name>`.
+        Note: If the team cannot be seen by the user used for the lookup or does not exist `False`
+        will be returned.
+        '''
+        o, t = team_name.split('/')
+        org = self.github.organization(o)
+        try:
+            team = org.team_by_name(t)
+            team.membership_for(user_login)
+        except github3.exceptions.NotFoundError:
+            return False
+        else:
+            return True
+
     def delete_outdated_draft_releases(self) -> Iterable[Tuple[github3.repos.release.Release, bool]]:
         '''Find outdated draft releases and try to delete them
 
