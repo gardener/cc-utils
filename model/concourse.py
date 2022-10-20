@@ -599,6 +599,12 @@ class JobMapping(NamedModelElement):
         '''
         return self.raw.get('expose_pipelines', True)
 
+    def trusted_teams(self) -> typing.Iterable[str]:
+        '''Pull requests created/synchronized by members of this team will automatically have
+        the required label set by the webhook-dispatcher
+        '''
+        return self.raw.get('trusted_teams', [])
+
     def _required_attributes(self):
         return [
             'concourse_target_team',
@@ -612,6 +618,7 @@ class JobMapping(NamedModelElement):
             'secret_cfg',
             'secrets_replication_pipeline_target_cc_team_cfg_name',
             'secrets_repo',
+            'trusted_teams',
             'unpause_deployed_pipelines',
             'unpause_new_pipelines',
         ]
