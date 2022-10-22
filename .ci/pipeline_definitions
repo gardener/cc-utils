@@ -97,7 +97,7 @@ cc-utils:
                 steps:
                   build_python_packages: ~
               resource_labels:
-                - name: 'cloud.cnudie/dso/scanning-hints/package-versions'
+                - name: 'cloud.gardener.cnudie/dso/scanning-hints/package-versions'
                   value:
                   - name: 'containerd'
                     version: 'v1.6.6' # found via DOCKER_VERSION -> github.com/moby/moby
