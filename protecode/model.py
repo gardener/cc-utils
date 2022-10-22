@@ -19,8 +19,6 @@ import enum
 import traceback
 import typing
 
-import dacite
-
 import gci.componentmodel as cm
 
 import gci.componentmodel
@@ -326,21 +324,16 @@ class ScanRequest:
         artefact = self.artefact
 
         # pylint: disable=E1101
-        label = artefact.find_label(name=dso.labels.LabelName.BINARY_ID)
-        if not label:
-            label = artefact.find_label(name=dso.labels.LabelName.BINARY_SCAN)
+        if not (label := artefact.find_label(name=dso.labels.BinaryIdScanLabel.name)):
+            label = artefact.find_label(name=dso.labels.BinaryIdScanLabel._alt_name)
+            if label:
+                return True
         if not label:
             return False
 
-        if label.name == dso.labels.LabelName.BINARY_SCAN:
-            return True
+        label: dso.labels.BinaryIdScanLabel = dso.labels.deserialise_label(label=label)
 
-        scanning_hint = dacite.from_dict(
-            data_class=dso.labels.BinaryScanHint,
-            data=label.value,
-            config=dacite.Config(cast=[dso.labels.ScanPolicy]),
-        )
-        return scanning_hint.policy is dso.labels.ScanPolicy.SKIP
+        return label.value.policy is dso.labels.ScanPolicy.SKIP
 
     def __str__(self):
         return (

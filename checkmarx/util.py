@@ -10,7 +10,6 @@ import traceback
 import typing
 import zipfile
 
-import dacite
 import github3.exceptions
 import github3.repos
 
@@ -72,22 +71,12 @@ def _get_scan_artifacts_from_components(
             if source.access.type is not cm.AccessType.GITHUB:
                 raise NotImplementedError
 
-            cx_label = source.find_label(
-                name=dso.labels.LabelName.SOURCE_SCAN,
-            )
+            cx_label = source.find_label(name=dso.labels.SourceScanLabel.name)
             if cx_label:
-                cx_label = dacite.from_dict(
-                    dso.labels.SourceScanHint,
-                    data=cx_label.value,
-                    config=dacite.Config(
-                        cast=[dso.labels.ScanPolicy],
-                    ),
-                )
-
-            scan_policy = dso.labels.ScanPolicy.SCAN
-
-            if cx_label:
-                scan_policy = cx_label.policy
+                cx_label: dso.labels.SourceScanLabel = dso.labels.deserialise_label(label=cx_label)
+                scan_policy = cx_label.value.policy
+            else:
+                scan_policy = dso.labels.ScanPolicy.SCAN
 
             if scan_policy is dso.labels.ScanPolicy.SKIP:
                 logger.info('Note: No source scanning is configured according to ScanPolicy label')
@@ -98,10 +87,13 @@ def _get_scan_artifacts_from_components(
                 raise NotImplementedError(scan_policy)
 
             source_project_label = source.find_label(
-                name=dso.labels.LabelName.SOURCE_PROJECT,
+                name=dso.labels.SourceProjectLabel.name
             )
 
             if source_project_label:
+                source_project_label = dso.labels.deserialise_label(label=source_project_label)
+                source_project_label: dso.labels.SourceProjectLabel
+
                 scan_artifact_name = source_project_label.value
             else:
                 scan_artifact_name = None

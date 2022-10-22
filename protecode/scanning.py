@@ -5,7 +5,6 @@ import logging
 import typing
 
 import botocore.exceptions
-import dacite
 import requests
 
 import gci.componentmodel as cm
@@ -443,16 +442,14 @@ def _package_version_hints(
 
     artefact: cm.Resource
 
-    package_hints_label = artefact.find_label(name=dso.labels.LabelName.PACKAGE_VERSION_HINTS)
+    package_hints_label = artefact.find_label(name=dso.labels.PackageVersionHintLabel.name)
     if not package_hints_label:
         return None
 
-    package_hints = [
-        dacite.from_dict(
-            data_class=dso.labels.PackageVersionHint,
-            data=hint,
-        ) for hint in package_hints_label.value
-    ]
+    package_hints_label = dso.labels.deserialise_label(label=package_hints_label)
+    package_hints_label: dso.labels.PackageVersionHintLabel
+
+    package_hints = package_hints_label.value
 
     return package_hints
 
