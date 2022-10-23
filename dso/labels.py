@@ -85,6 +85,40 @@ class SourceIdHint(ScanningHint):
     pass
 
 
+class NetworkExposure(enum.Enum):
+    PRIVATE = 'private'
+    PROTECTED = 'protected'
+    PUBLIC = 'public'
+
+
+class UserInteraction(enum.Enum):
+    GARDENER_OPERATOR = 'gardener-operator'
+    END_USER = 'end-user'
+
+
+class CVESeverity:
+    NONE = 'none'
+    LOW = 'low'
+    HIGH = 'high'
+
+
+@dataclasses.dataclass(frozen=True)
+class CveCategorisation:
+    network_exposure: typing.Optional[NetworkExposure]
+    authentication_enforced: typing.Optional[bool]
+    user_interaction: typing.Optional[UserInteraction]
+    confidentiality_requirement: typing.Optional[CVESeverity]
+    integrity_requirement: typing.Optional[CVESeverity]
+    availability_requirement: typing.Optional[CVESeverity]
+    comment: typing.Optional[str]
+
+
+@dataclasses.dataclass(frozen=True)
+class CveCategorisationLabel(Label):
+    name = 'gardener.cloud/cve-categorisation'
+    value: CveCategorisation
+
+
 @functools.cache
 def _label_to_type() -> dict[str, Label]:
     own_module = sys.modules[__name__]
