@@ -118,6 +118,6 @@ def deserialise_label(
         data_class=t,
         data=label,
         config=dacite.Config(
-            cast=(tuple,)
+            cast=(tuple, enum.Enum)
         ),
     )
