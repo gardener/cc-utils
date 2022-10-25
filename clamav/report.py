@@ -13,7 +13,8 @@ def as_table(
     headers = ('resource', 'status', 'details')
 
     def row_from_result(scan_result: clamav.scan.ClamAV_ResourceScanResult):
-        resource = f'{scan_result.component.name}/{scan_result.artifact.name}'
+        a = scan_result.artifact
+        resource = f'{scan_result.component.name}/{a.name}:{a.version}'
         res = scan_result.scan_result
 
         status = res.malware_status
