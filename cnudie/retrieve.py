@@ -364,6 +364,7 @@ def create_default_component_descriptor_lookup(
     default_ctx_repo: cm.RepositoryContext=None,
     cache_dir: str=_cache_dir,
     delivery_client=None,
+    default_absent_ok=False,
 ) -> ComponentDescriptorLookupById:
     '''
     This is a convenience function combining commonly used/recommended lookups, using global
@@ -395,6 +396,7 @@ def create_default_component_descriptor_lookup(
     return composite_component_descriptor_lookup(
         lookups=tuple(lookups),
         default_ctx_repo=default_ctx_repo,
+        default_absent_ok=default_absent_ok,
     )
 
 
