@@ -154,7 +154,7 @@ class PullRequestEvent(EventBase):
     def label(self) -> str:
         '''Return the Label that was set for `pull_request.labeled` events.
         '''
-        if not self.action is PullRequestAction.LABELED:
+        if not self.action() is PullRequestAction.LABELED:
             raise RuntimeError(
                 "Retrieving the triggering label is only valid for PRs with action 'labeled'"
             )

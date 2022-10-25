@@ -299,7 +299,7 @@ def set_pr_labels(
         repo.repository_url(), cfg_set
     )
 
-    if pr_event.action() in PullRequestAction.OPENED:
+    if pr_event.action() is PullRequestAction.OPENED:
         if _should_label(job_mapping, github_helper, sender_login, owner):
             logger.info(
                 f"New pull request by trusted member '{sender_login}' in "
