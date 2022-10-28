@@ -1,4 +1,4 @@
-import github3
+import github3.repos
 
 import delivery.model
 
@@ -29,7 +29,7 @@ def find_or_create_sprint_milestone(
         title=title,
         state='open',
         description=f'used to track issues for upcoming sprint {title}',
-        due_on=f'{sprint.release_decision.isoformat()}T00:00:00Z',
+        due_on=sprint.release_decision.isoformat(),
     )
 
     return ms
