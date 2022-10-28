@@ -9,7 +9,7 @@ import dateutil.parser
 def _parse_date_if_present(date: str):
     if not date:
         return None
-    return dateutil.parser.isoparse(date).date()
+    return dateutil.parser.isoparse(date)
 
 
 @dataclasses.dataclass # TODO: deduplicate w/ modelclass in delivery-service
@@ -21,10 +21,10 @@ class GithubUser:
 @dataclasses.dataclass(frozen=True) # TODO: deduplicate w/ modelclass in delivery-service/yp.py
 class Sprint:
     name: str
-    end_date: datetime.date
-    release_decision: datetime.date
-    rtc: datetime.date
-    canary_freeze: datetime.date
+    end_date: datetime.datetime
+    release_decision: datetime.datetime
+    rtc: datetime.datetime
+    canary_freeze: datetime.datetime
 
     @staticmethod
     def from_dict(raw: dict):
@@ -32,7 +32,7 @@ class Sprint:
             data_class=Sprint,
             data=raw,
             config=dacite.Config(
-                type_hooks={datetime.date: _parse_date_if_present},
+                type_hooks={datetime.datetime: _parse_date_if_present},
             ),
         )
 
