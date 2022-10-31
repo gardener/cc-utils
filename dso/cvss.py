@@ -68,6 +68,7 @@ class CVSSV3:
         return CVSSV3(
             access_vector=AccessVector(parts['AV']),
             attack_complexity=AttackComplexity(parts['AC']),
+            privileges_required=PrivilegesRequired(parts['PR']),
             user_interaction=UserInteraction(parts['UI']),
             scope=Scope(parts['S']),
             confidentiality=Confidentiality(parts['C']),
