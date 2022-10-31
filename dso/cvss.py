@@ -75,3 +75,27 @@ class CVSSV3:
             integrity=Integrity(parts['I']),
             availability=Availability(parts['A']),
         )
+
+
+@dataclasses.dataclass
+class CveCategorisation:
+    network_exposure: typing.Optional[NetworkExposure]
+    authentication_enforced: typing.Optional[bool]
+    user_interaction: typing.Optional[UserInteraction]
+    confidentiality_requirement: typing.Optional[CVESeverity]
+    integrity_requirement: typing.Optional[CVESeverity]
+    availability_requirement: typing.Optional[CVESeverity]
+    comment: typing.Optional[str]
+
+
+class Rescore(enum.Enum):
+    REDUCE = 'reduce'
+    NOT_EXPLOITABLE = 'not-exploitable'
+    NO_CHNAGE = 'no-change'
+
+
+@dataclasses.dataclass
+class RescoringRule:
+    category_value: str
+    cve_values: tuple[str]
+    rescore: Rescore

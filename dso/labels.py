@@ -8,6 +8,7 @@ import sys
 import dacite
 
 import gci.componentmodel as cm
+import dso.cvss
 
 
 @dataclasses.dataclass(frozen=True)
@@ -103,20 +104,9 @@ class CVESeverity:
 
 
 @dataclasses.dataclass(frozen=True)
-class CveCategorisation:
-    network_exposure: typing.Optional[NetworkExposure]
-    authentication_enforced: typing.Optional[bool]
-    user_interaction: typing.Optional[UserInteraction]
-    confidentiality_requirement: typing.Optional[CVESeverity]
-    integrity_requirement: typing.Optional[CVESeverity]
-    availability_requirement: typing.Optional[CVESeverity]
-    comment: typing.Optional[str]
-
-
-@dataclasses.dataclass(frozen=True)
 class CveCategorisationLabel(Label):
     name = 'gardener.cloud/cve-categorisation'
-    value: CveCategorisation
+    value: dso.cvss.CveCategorisation
 
 
 @functools.cache
