@@ -86,23 +86,6 @@ class SourceIdHint(ScanningHint):
     pass
 
 
-class NetworkExposure(enum.Enum):
-    PRIVATE = 'private'
-    PROTECTED = 'protected'
-    PUBLIC = 'public'
-
-
-class UserInteraction(enum.Enum):
-    GARDENER_OPERATOR = 'gardener-operator'
-    END_USER = 'end-user'
-
-
-class CVESeverity:
-    NONE = 'none'
-    LOW = 'low'
-    HIGH = 'high'
-
-
 @dataclasses.dataclass(frozen=True)
 class CveCategorisationLabel(Label):
     name = 'gardener.cloud/cve-categorisation'
