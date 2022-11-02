@@ -72,6 +72,8 @@ def _get_scan_artifacts_from_components(
                 raise NotImplementedError
 
             cx_label = source.find_label(name=dso.labels.SourceScanLabel.name)
+            if not cx_label:
+                cx_label = component.find_label(name=dso.labels.SourceScanLabel.name)
             if cx_label:
                 cx_label: dso.labels.SourceScanLabel = dso.labels.deserialise_label(label=cx_label)
                 scan_policy = cx_label.value.policy
