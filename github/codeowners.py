@@ -199,9 +199,11 @@ def resolve_email_addresses(
     Users are resolved to exposed email addresses.
     If no email address is exposed the User is skipped.
     '''
+    unique_email_addresses = set()
+
     for codeowner_entry in codeowners_entries:
         if isinstance(codeowner_entry, EmailAddress):
-            yield codeowner_entry
+            unique_email_addresses.add(codeowner_entry)
             continue
 
         if isinstance(codeowner_entry, Username):
@@ -209,18 +211,21 @@ def resolve_email_addresses(
                 github_user_name=codeowner_entry,
                 github_api=github_api,
             )):
-                yield email_address
+                unique_email_addresses.add(email_address)
                 continue
 
         if isinstance(codeowner_entry, Team):
-            yield from resolve_email_addresses(
+            for email_address in resolve_email_addresses(
                 codeowners_entries=resolve_team_members(
                     team=codeowner_entry,
                     github_api=github_api,
                 ),
                 github_api=github_api,
-            )
+            ):
+                unique_email_addresses.add(email_address)
             continue
+
+    yield from unique_email_addresses
 
 
 def resolve_usernames(
