@@ -283,31 +283,37 @@ use python3’s format-str syntax</p>
 <td><p>List[str]</p></td>
 <td><p>optional list of email recipients to be notified about critical scan results</p></td>
 </tr>
-<tr class="row-odd"><td><p>protecode</p></td>
+<tr class="row-odd"><td><p>cve_rescoring_rules</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>list</p></td>
+<td><p>rescoring rules to honour for artefacts that declare a cve-categorisation</p></td>
+</tr>
+<tr class="row-even"><td><p>protecode</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>ProtecodeScanCfg</p></td>
 <td><p>if present, perform protecode scanning</p></td>
 </tr>
-<tr class="row-even"><td><p>clam_av</p></td>
+<tr class="row-odd"><td><p>clam_av</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>ClamAVScanCfg</p></td>
 <td><p>if present, perform ClamAV scanning</p></td>
 </tr>
-<tr class="row-odd"><td><p>os_id</p></td>
+<tr class="row-even"><td><p>os_id</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>OsIdScan</p></td>
 <td><p>if present, identify operating system</p></td>
 </tr>
-<tr class="row-even"><td><p>trait_depends</p></td>
+<tr class="row-odd"><td><p>trait_depends</p></td>
 <td><p>no</p></td>
 <td><p>()</p></td>
 <td><p>List[str]</p></td>
 <td><p>if present, generated build steps depend on those generated from specified traits</p></td>
 </tr>
-<tr class="row-odd"><td><p>licenses</p></td>
+<tr class="row-even"><td><p>licenses</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>LicenseCfg</p></td>
