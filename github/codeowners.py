@@ -156,7 +156,7 @@ def determine_email_address(
     return EmailAddress(user.email)
 
 
-def find_users_with_email_address(
+def usernames_with_email_address(
     email_address: EmailAddress,
     gh_api: GitHub | GitHubEnterprise,
 ) -> typing.Generator[Username, None, None]:
@@ -164,7 +164,7 @@ def find_users_with_email_address(
     Return generator yielding usernames found for email addresse.
     '''
     yield from (
-        res.user
+        Username(res.user.login)
         for res in gh_api.search_users(query=f'{email_address} in:email')
     )
 
@@ -237,24 +237,32 @@ def resolve_usernames(
     Emails are resolved to users.
     If no username is found for given email address, its skipped.
     '''
+    unique_usernames = set()
+
     for codeowner_entry in codeowners_entries:
         if isinstance(codeowner_entry, Username):
-            yield codeowner_entry
+            unique_usernames.add(codeowner_entry)
             continue
 
         if isinstance(codeowner_entry, EmailAddress):
-            yield from find_users_with_email_address(
+            for username in usernames_with_email_address(
                 email_address=codeowner_entry,
                 gh_api=github_api,
-            )
+            ):
+                unique_usernames.add(username)
+
             continue
 
         if isinstance(codeowner_entry, Team):
-            yield from resolve_usernames(
+            for username in resolve_usernames(
                 codeowners_entries=resolve_team_members(
                     team=codeowner_entry,
                     github_api=github_api,
                 ),
                 github_api=github_api,
-            )
+            ):
+                unique_usernames.add(username)
+
             continue
+
+    yield from unique_usernames
