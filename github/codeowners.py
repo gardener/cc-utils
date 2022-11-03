@@ -16,10 +16,11 @@ from pathlib import Path
 import logging
 import typing
 
-from github3 import GitHub
+from github3 import GitHub, GitHubEnterprise
 from github3.exceptions import NotFoundError
 import github3.orgs
 import github3.repos.repo
+import github3.search.user
 import github3.users
 
 from ci.util import existing_dir, existing_file, not_none
@@ -155,6 +156,19 @@ def determine_email_address(
     return EmailAddress(user.email)
 
 
+def find_users_with_email_address(
+    email_address: EmailAddress,
+    gh_api: GitHub | GitHubEnterprise,
+) -> typing.Generator[Username, None, None]:
+    '''
+    Return generator yielding usernames found for email addresse.
+    '''
+    yield from (
+        res.user
+        for res in gh_api.search_users(query=f'{email_address} in:email')
+    )
+
+
 def resolve_team_members(
     team: Team,
     github_api: GitHub,
@@ -186,7 +200,7 @@ def resolve_email_addresses(
     github codeowners entries.
     Teams are resolved to Users recursively.
     Users are resolved to exposed email addresses.
-    If not email address is exposed the User is skipped.
+    If no email address is exposed the User is skipped.
     '''
     for codeowner_entry in codeowners_entries:
         if isinstance(codeowner_entry, EmailAddress):
@@ -203,6 +217,40 @@ def resolve_email_addresses(
 
         if isinstance(codeowner_entry, Team):
             yield from resolve_email_addresses(
+                codeowners_entries=resolve_team_members(
+                    team=codeowner_entry,
+                    github_api=github_api,
+                ),
+                github_api=github_api,
+            )
+            continue
+
+
+def resolve_usernames(
+    codeowners_entries: typing.Iterable[Username | EmailAddress | Team],
+    github_api: GitHub,
+) -> typing.Generator[Username, None, None]:
+    '''
+    Returns a generator yielding the resolved usernames for the given iterable of
+    github codeowners entries.
+    Teams are resolved to Users recursively.
+    Emails are resolved to users.
+    If no username is found for given email address, its skipped.
+    '''
+    for codeowner_entry in codeowners_entries:
+        if isinstance(codeowner_entry, Username):
+            yield codeowner_entry
+            continue
+
+        if isinstance(codeowner_entry, EmailAddress):
+            yield from find_users_with_email_address(
+                email_address=codeowner_entry,
+                gh_api=github_api,
+            )
+            continue
+
+        if isinstance(codeowner_entry, Team):
+            yield from resolve_usernames(
                 codeowners_entries=resolve_team_members(
                     team=codeowner_entry,
                     github_api=github_api,
