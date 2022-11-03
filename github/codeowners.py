@@ -178,30 +178,35 @@ def resolve_team_members(
 
 
 def resolve_email_addresses(
-    codeowners_entries,
+    codeowners_entries: typing.Iterable[Username | EmailAddress | Team],
     github_api: GitHub,
-) -> typing.Generator[str, None, None]:
+) -> typing.Generator[EmailAddress, None, None]:
     '''
-    returns a generator yielding the resolved email addresses for the given iterable of
+    Returns a generator yielding the resolved email addresses for the given iterable of
     github codeowners entries.
+    Teams are resolved to Users recursively.
+    Users are resolved to exposed email addresses.
+    If not email address is exposed the User is skipped.
     '''
     for codeowner_entry in codeowners_entries:
-        if '@' not in codeowner_entry:
-            logger.warning(f'invalid codeowners-entry: {codeowner_entry}')
+        if isinstance(codeowner_entry, EmailAddress):
+            yield codeowner_entry
             continue
-        if not codeowner_entry.startswith('@'):
-            yield codeowner_entry # plain email address
-        elif '/' not in codeowner_entry:
-            email_addr = determine_email_address(
-                github_user_name=codeowner_entry[1:],
+
+        if isinstance(codeowner_entry, Username):
+            if (email_address := determine_email_address(
+                github_user_name=codeowner_entry,
                 github_api=github_api,
-            )
-            if email_addr:
-                yield email_addr
-            else:
+            )):
+                yield email_address
                 continue
-        else:
-            yield from resolve_team_members(
-                github_team_name=codeowner_entry[1:],
+
+        if isinstance(codeowner_entry, Team):
+            yield from resolve_email_addresses(
+                codeowners_entries=resolve_team_members(
+                    team=codeowner_entry,
+                    github_api=github_api,
+                ),
                 github_api=github_api,
             )
+            continue
