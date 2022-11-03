@@ -135,7 +135,7 @@ license_cfg = None
 % if rescoring_rules:
 import dso.cvss
 rescoring_rules = tuple(
-  dso.cvss.dso.cvss.rescoring_rules_from_dicts(
+  dso.cvss.rescoring_rules_from_dicts(
     ${rescoring_rules_raw}
   )
 )
