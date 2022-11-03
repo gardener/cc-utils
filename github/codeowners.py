@@ -18,6 +18,7 @@ import typing
 
 from github3 import GitHub
 from github3.exceptions import NotFoundError
+import github3.orgs
 import github3.repos.repo
 
 from ci.util import existing_dir, existing_file, not_none
@@ -123,15 +124,6 @@ def filter_codeowners_entries(
         yield from line.split()[1:]
 
 
-def _first(
-    iterable: typing.Iterable,
-):
-    try:
-        return next(iterable)
-    except StopIteration:
-        return None
-
-
 def determine_email_address(
     github_user_name: str,
     github_api: GitHub,
@@ -147,22 +139,25 @@ def determine_email_address(
 
 
 def resolve_team_members(
-    github_team_name: str,
+    team: Team,
     github_api: GitHub,
-) -> typing.Union[typing.Generator[str, None, None], list]:
-    not_none(github_team_name)
-    org_name, team_name = github_team_name.split('/') # always of form 'org/name'
-    organisation = github_api.organization(org_name)
-    # unfortunately, we have to look-up the team (no api to retrieve it by name)
-    team_or_none = _first(filter(lambda team: team.slug == team_name, organisation.teams()))
-    if not team_or_none:
-        logger.warning('failed to lookup team {t}'.format(t=team_name))
-        return []
-    for member in map(github_api.user, team_or_none.members()):
-        if member.email:
-            yield member.email
-        else:
-            logger.warning(f'no email found for GitHub user {member}')
+) -> typing.Generator[Username, None, None]:
+    '''
+    Return generator yielding usernames resolved recursively from given team.
+    If no team found for given team, no users are returned.
+    '''
+    organisation = github_api.organization(team.org_name)
+    try:
+        team = organisation.team_by_name(team.name)
+        team: github3.orgs.Team
+    except NotFoundError:
+        logger.warning('failed to lookup team {t}'.format(t=team.name))
+        return
+
+    yield from (
+        Username(member.login)
+        for member in team.members()
+    )
 
 
 def resolve_email_addresses(
