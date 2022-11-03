@@ -27,6 +27,7 @@ import clamav.client
 import clamav.cnudie
 import clamav.scan
 import concourse.model.traits.image_scan as image_scan
+import dso.cvss
 import github.compliance.issue as gciss
 import github.compliance.model as gcm
 import github.compliance.report as gcrep
@@ -43,6 +44,7 @@ tabulate.htmlescape = lambda x: x
 def scan_result_group_collection_for_vulnerabilities(
     results: tuple[pm.BDBA_ScanResult],
     cve_threshold: float,
+    rescoring_rules: tuple[dso.cvss.RescoringRule]=None,
 ):
     def classification_callback(result: pm.BDBA_ScanResult):
         if not (cve_score := result.greatest_cve_score):
@@ -56,7 +58,22 @@ def scan_result_group_collection_for_vulnerabilities(
         return cve_score >= cve_threshold
 
     def comment_callback(result: pm.BDBA_ScanResult):
-        return pr.analysis_result_to_report_str(result.result)
+        rescore_label = result.artifact.find_label(name=dso.labels.CveCategorisationLabel.name)
+        if not rescore_label:
+            rescore_label = result.component.find_label(name=dso.labels.CveCategorisationLabel.name)
+
+        if rescore_label:
+            rescore_label = dso.labels.deserialise_label(label=rescore_label)
+            rescore_label: dso.labels.CveCategorisationLabel
+            cve_categoriation = rescore_label.value
+        else:
+            cve_categoriation = None
+
+        return pr.analysis_result_to_report_str(
+            result.result,
+            rescoring_rules=rescoring_rules,
+            cve_categorisation=cve_categoriation,
+        )
 
     return gcm.ScanResultGroupCollection(
         results=tuple(results),

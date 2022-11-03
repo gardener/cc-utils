@@ -24,6 +24,9 @@ if issue_tgt_repo_url:
 
 github_issue_templates = image_scan_trait.github_issue_templates()
 github_issue_labels_to_preserve = image_scan_trait.github_issue_labels_to_preserve()
+
+rescoring_rules = image_scan_trait.cve_rescoring_rules()
+rescoring_rules_raw = image_scan_trait.cve_rescoring_rules(raw=True)
 %>
 import logging
 import sys
@@ -129,8 +132,17 @@ license_cfg = dacite.from_dict(
 license_cfg = None
 % endif
 
+% if rescoring_rules:
+import dso.cvss
+rescoring_rules = tuple(
+  dso.cvss.dso.cvss.rescoring_rules_from_dicts(
+    ${rescoring_rules_raw}
+  )
+)
+% else:
+rescoring_rules = None
+% endif
 
-# only include results below threshold if email recipients are explicitly configured
 notification_policy = Notify('${image_scan_trait.notify().value}')
 
 if notification_policy is Notify.NOBODY:
@@ -163,6 +175,7 @@ overwrite_repository = gh_api.repository('${tgt_repo_org}', '${tgt_repo_name}')
 scan_results_vulnerabilities = scan_result_group_collection_for_vulnerabilities(
   results=results,
   cve_threshold=cve_threshold,
+  rescoring_rules=rescoring_rules,
 )
 scan_results_licenses = scan_result_group_collection_for_licenses(
   results=results,

@@ -34,6 +34,7 @@ from concourse.model.base import (
     ModelBase,
     ScriptType,
 )
+import dso.cvss
 import github.compliance.model as gcm
 from model.base import ModelValidationError
 from protecode.model import ProcessingMode
@@ -359,6 +360,12 @@ ATTRIBUTES = (
         type=typing.List[str],
     ),
     AttributeSpec.optional(
+        name='cve_rescoring_rules',
+        default=None,
+        type=list[dso.cvss.RescoringRule],
+        doc='rescoring rules to honour for artefacts that declare a cve-categorisation',
+    ),
+    AttributeSpec.optional(
         name='protecode',
         default=None,
         type=ProtecodeScanCfg,
@@ -448,6 +455,17 @@ class ImageScanTrait(Trait, ImageFilterMixin):
 
     def email_recipients(self):
         return self.raw['email_recipients']
+
+    def cve_rescoring_rules(self, raw=False) -> tuple[dso.cvss.RescoringRule]:
+        if not (rules := self.raw.get('cve_rescoring_rules', False)):
+            return None
+
+        if raw:
+            return rules
+
+        return tuple(
+            dso.cvss.rescoring_rules_from_dicts(rules=rules)
+        )
 
     def protecode(self):
         if self.raw['protecode']:
