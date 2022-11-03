@@ -40,6 +40,8 @@ def _component_and_results_to_report_str(
             )
             if orig_sev is rescored:
                 rescore = False
+            else:
+                rescore = True
 
         v = vulnerability
         if not rescore:
