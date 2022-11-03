@@ -20,6 +20,7 @@ from github3 import GitHub
 from github3.exceptions import NotFoundError
 import github3.orgs
 import github3.repos.repo
+import github3.users
 
 from ci.util import existing_dir, existing_file, not_none
 import ci.log
@@ -134,9 +135,13 @@ def filter_codeowners_entries(
 
 
 def determine_email_address(
-    github_user_name: str,
+    github_user_name: str | Username,
     github_api: GitHub,
-) -> typing.Optional[str]:
+) -> EmailAddress | None:
+    '''
+    Return email address exposed for given user.
+    `None` returned if either user not found, or no email address is exposed.
+    '''
     not_none(github_user_name)
     try:
         user = github_api.user(github_user_name)
@@ -144,7 +149,10 @@ def determine_email_address(
         logger.warning(f'failed to lookup {github_user_name=} {github_api._github_url=}')
         return None
 
-    return user.email
+    if not user.email:
+        return None
+
+    return EmailAddress(user.email)
 
 
 def resolve_team_members(
