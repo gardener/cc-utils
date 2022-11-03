@@ -156,13 +156,10 @@ def determine_email_address(
     return EmailAddress(user.email)
 
 
-def usernames_with_email_address(
+def usernames_from_email_address(
     email_address: EmailAddress,
     gh_api: GitHub | GitHubEnterprise,
 ) -> typing.Generator[Username, None, None]:
-    '''
-    Return generator yielding usernames found for email addresse.
-    '''
     yield from (
         Username(res.user.login)
         for res in gh_api.search_users(query=f'{email_address} in:email')
@@ -245,7 +242,7 @@ def resolve_usernames(
             continue
 
         if isinstance(codeowner_entry, EmailAddress):
-            for username in usernames_with_email_address(
+            for username in usernames_from_email_address(
                 email_address=codeowner_entry,
                 gh_api=github_api,
             ):
