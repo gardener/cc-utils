@@ -27,6 +27,48 @@ logger = logging.getLogger(__name__)
 ci.log.configure_default_logging()
 
 
+class Username(str):
+    pass
+
+
+class Team(str):
+    @property
+    def org_name(self) -> str:
+        return self.split('/')[0]
+
+    @property
+    def name(self) -> str:
+        return self.split('/')[1]
+
+
+class EmailAddress(str):
+    pass
+
+
+def _parse_codeowner_entry(
+    entry: str,
+) -> Username | EmailAddress | Team:
+    '''
+    Parse codeowner entry to Username, Email or Team.
+    Invalid entries return `None`.
+    '''
+
+    if '@' not in entry:
+        logger.warning(f'invalid codeowners-entry: {entry}')
+        return
+
+    if not entry.startswith('@'):
+        return EmailAddress(entry) # plain email address
+
+    entry = entry.removeprefix('@')
+
+    if '/' not in entry:
+        return Username(entry)
+
+    else:
+        return Team(entry)
+
+
 def enumerate_codeowners_from_remote_repo(
     repo: github3.repos.repo.Repository,
     paths: typing.Iterable[str] = ('CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'),
