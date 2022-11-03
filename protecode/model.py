@@ -200,8 +200,14 @@ class Vulnerability(ModelBase):
         return str(self.cve_severity(cvss_version=cvss_version))
 
     @property
-    def cvss(self) -> dso.cvss.CVSSV3:
-        return dso.cvss.CVSSV3.parse(self.raw['vuln']['cvss3_vector'])
+    def cvss(self) -> dso.cvss.CVSSV3 | None:
+        cvss_vector = self.raw['vuln']['cvss3_vector']
+        # ignore cvss2_vector for now
+
+        if not cvss_vector:
+            return None
+
+        return dso.cvss.CVSSV3.parse(cvss_vector)
 
     def has_triage(self) -> bool:
         return bool(self.raw.get('triage')) or bool(self.raw.get('triages'))
