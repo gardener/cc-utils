@@ -21,6 +21,7 @@ import typing
 
 import gci.componentmodel as cm
 
+import dso.cvss
 import gci.componentmodel
 import github.compliance.model as gcm
 
@@ -197,6 +198,10 @@ class Vulnerability(ModelBase):
 
     def cve_severity_str(self, cvss_version=CVSSVersion.V3):
         return str(self.cve_severity(cvss_version=cvss_version))
+
+    @property
+    def cvss(self) -> dso.cvss.CVSSV3:
+        return dso.cvss.CVSSV3.parse(self.raw['vuln']['cvss3_vector'])
 
     def has_triage(self) -> bool:
         return bool(self.raw.get('triage')) or bool(self.raw.get('triages'))
