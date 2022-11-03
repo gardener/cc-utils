@@ -6,10 +6,16 @@ import dacite
 import dateutil.parser
 
 
-def _parse_date_if_present(date: str):
+def _parse_datetime_if_present(date: str):
     if not date:
         return None
     return dateutil.parser.isoparse(date)
+
+
+def _parse_date_if_present(date: str):
+    if not date:
+        return None
+    return dateutil.parser.isoparse(date).date()
 
 
 @dataclasses.dataclass # TODO: deduplicate w/ modelclass in delivery-service
@@ -32,7 +38,7 @@ class Sprint:
             data_class=Sprint,
             data=raw,
             config=dacite.Config(
-                type_hooks={datetime.datetime: _parse_date_if_present},
+                type_hooks={datetime.datetime: _parse_datetime_if_present},
             ),
         )
 
