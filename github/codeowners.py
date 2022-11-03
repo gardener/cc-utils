@@ -73,11 +73,14 @@ def _parse_codeowner_entry(
 def enumerate_codeowners_from_remote_repo(
     repo: github3.repos.repo.Repository,
     paths: typing.Iterable[str] = ('CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'),
-) -> typing.Generator[str, None, None]:
+) -> typing.Generator[Username | Team | EmailAddress, None, None]:
     for path in paths:
         try:
-            yield from filter_codeowners_entries(
-                repo.file_contents(path=path).decoded.decode('utf-8').split('\n')
+            yield from (
+                _parse_codeowner_entry(entry)
+                for entry in filter_codeowners_entries(
+                    repo.file_contents(path=path).decoded.decode('utf-8').split('\n'),
+                )
             )
         except NotFoundError:
             pass # ignore absent files
@@ -85,16 +88,19 @@ def enumerate_codeowners_from_remote_repo(
 
 def enumerate_codeowners_from_file(
     file_path: str,
-) -> typing.Generator[str, None, None]:
+) -> typing.Generator[Username | Team | EmailAddress, None, None]:
     file_path = existing_file(file_path)
     with open(file_path) as f:
-        yield from filter_codeowners_entries(f.readlines())
+        yield from (
+            _parse_codeowner_entry(entry)
+            for entry in filter_codeowners_entries(f.readlines())
+        )
 
 
 def enumerate_codeowners_from_local_repo(
     repo_dir: str,
     paths: typing.Iterable[str] = ('CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'),
-) -> typing.Generator[str, None, None]:
+) -> typing.Generator[Username | Team | EmailAddress, None, None]:
     repo_dir = existing_dir(Path(repo_dir))
     if not repo_dir.joinpath('.git').is_dir():
         raise ValueError(f'not a git root directory: {repo_dir}')
@@ -103,7 +109,10 @@ def enumerate_codeowners_from_local_repo(
         codeowners_file = repo_dir.joinpath(path)
         if codeowners_file.is_file():
             with open(codeowners_file) as f:
-                yield from filter_codeowners_entries(f.readlines())
+                yield from (
+                    _parse_codeowner_entry(entry)
+                    for entry in filter_codeowners_entries(f.readlines())
+                )
 
 
 def filter_codeowners_entries(
