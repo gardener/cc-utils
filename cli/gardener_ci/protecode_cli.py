@@ -1,5 +1,6 @@
 import itertools
 import logging
+import os
 import typing
 
 import ccc.protecode
@@ -8,6 +9,7 @@ import ci.util
 import concourse.steps.component_descriptor_util as component_descriptor_util
 import concourse.steps.images
 import concourse.steps.scan_container_images
+import dso.cvss
 from protecode.model import CVSSVersion
 from protecode.scanning import upload_grouped_images as _upload_grouped_images
 import protecode.assessments as pa
@@ -15,6 +17,85 @@ import protecode.assessments as pa
 
 __cmd_name__ = 'protecode'
 logger = logging.getLogger(__name__)
+
+
+def rescore(
+    protecode_cfg_name: str,
+    product_id: int,
+    categorisation: str,
+    rescoring_rules: str,
+):
+    cfg_factory = ci.util.ctx().cfg_factory()
+    protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
+    client = ccc.protecode.client(protecode_cfg)
+
+    if not os.path.isfile(categorisation):
+        print(f'{categorisation} must point to an existing file w/ CveCategorisation')
+        exit(1)
+
+    if not os.path.isfile(rescoring_rules):
+        print(f'{rescoring_rules} must point to an existing file w/ RescoringRules')
+        exit(1)
+
+    categorisation = dso.cvss.CveCategorisation.from_dict(
+        ci.util.parse_yaml_file(categorisation),
+    )
+
+    rescoring_rules = tuple(
+        dso.cvss.rescoring_rules_from_dicts(
+            ci.util.parse_yaml_file(rescoring_rules)
+        )
+    )
+
+    result = client.scan_result(product_id=product_id)
+
+    all_components = tuple(result.components())
+    components_with_vulnerabilities = [c for c in all_components if tuple(c.vulnerabilities())]
+
+    print(f'{len(all_components)=}, {len(components_with_vulnerabilities)=}')
+
+    components_with_vulnerabilities = sorted(
+        components_with_vulnerabilities,
+        key=lambda c: c.name()
+    )
+
+    total_vulns = 0
+    total_rescored = 0
+
+    for c in components_with_vulnerabilities:
+        print(f'{c.name()}:{c.version()}')
+        vulns_count = 0
+        rescored_count = 0
+
+        for v in c.vulnerabilities():
+            vulns_count += 1
+
+            if not v.cvss:
+                continue # happens if only cvss-v2 is available - ignore for now
+
+            rules = dso.cvss.matching_rescore_rules(
+                rescoring_rules=rescoring_rules,
+                categorisation=categorisation,
+                cvss=v.cvss,
+            )
+            rules = tuple(rules)
+            orig_severity = dso.cvss.CVESeverity.from_cve_score(v.cve_severity())
+            rescored = dso.cvss.rescore(
+                rescoring_rules=rescoring_rules,
+                severity=orig_severity,
+            )
+
+            if orig_severity is not rescored:
+                rescored_count += 1
+
+                print(f'  rescored {orig_severity.name} -> {rescored.name} - {v.cve()}')
+
+        print(f'{vulns_count=}, {rescored_count=}')
+        total_vulns += vulns_count
+        total_rescored += rescored_count
+
+    print()
+    print(f'{total_vulns=}, {total_rescored=}')
 
 
 def assess(
