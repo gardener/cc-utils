@@ -82,6 +82,8 @@ class CVSSV3:
             return 'integrity'
         elif name == 'A':
             return 'availability'
+        elif name == 'PR':
+            return 'privileges_required'
         else:
             raise ValueError(name)
 
