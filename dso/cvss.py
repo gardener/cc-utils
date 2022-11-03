@@ -11,6 +11,29 @@ utils/model classes for CVSS (https://www.first.org/cvss/user-guide)
 '''
 
 
+class CVESeverity(enum.IntEnum):
+    NONE = 0
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 3
+    CRITICAL = 4
+
+    def reduce(self, severity_classes=1) -> 'CVESeverity':
+        return CVESeverity(max(0, self.value - severity_classes))
+
+    @staticmethod
+    def from_cve_score(score: float):
+        if score <= 0:
+            return CVESeverity.NONE
+        if score < 4.0:
+            return CVESeverity.LOW
+        if score < 7.0:
+            return CVESeverity.MEDIUM
+        if score < 9.0:
+            return CVESeverity.HIGH
+        return CVESeverity.CRITICAL
+
+
 class AccessVector(enum.Enum):
     NETWORK = 'N'
     ADJACENT = 'A'
@@ -113,7 +136,7 @@ class InteractingUserCategory(enum.Enum):
     END_USER = 'end-user'
 
 
-class CVESeverity:
+class CVENoneLowHigh(enum.Enum):
     NONE = 'none'
     LOW = 'low'
     HIGH = 'high'
@@ -124,10 +147,18 @@ class CveCategorisation:
     network_exposure: typing.Optional[NetworkExposure]
     authentication_enforced: typing.Optional[bool]
     user_interaction: typing.Optional[InteractingUserCategory]
-    confidentiality_requirement: typing.Optional[CVESeverity]
-    integrity_requirement: typing.Optional[CVESeverity]
-    availability_requirement: typing.Optional[CVESeverity]
+    confidentiality_requirement: typing.Optional[CVENoneLowHigh]
+    integrity_requirement: typing.Optional[CVENoneLowHigh]
+    availability_requirement: typing.Optional[CVENoneLowHigh]
     comment: typing.Optional[str]
+
+    @staticmethod
+    def from_dict(raw: dict):
+        return dacite.from_dict(
+            data_class=CveCategorisation,
+            data=raw,
+            config=dacite.Config(cast=(enum.Enum,)),
+        )
 
 
 class Rescore(enum.Enum):
@@ -156,6 +187,7 @@ class RescoringRule:
     category_value: str
     cve_values: list[str]
     rescore: Rescore
+    name: typing.Optional[str] = None
 
     @property
     def category_attr(self):
@@ -211,16 +243,16 @@ class RescoringRule:
 
         return attr_values
 
-    def matches_cve(self, cve: CVSSV3) -> bool:
+    def matches_cvss(self, cvss: CVSSV3) -> bool:
         '''
-        returns a boolean indicating whether this rule matches the given CVE.
+        returns a boolean indicating whether this rule matches the given CVSS.
 
-        Only CVE-Attributes that are specified by this rule w/ at least one value are checked.
+        Only CVSS-Attributes that are specified by this rule w/ at least one value are checked.
         If more than one value for the same attribute is specified, matching will be assumed if
-        the given CVE's attr-value is contained in the rule's values.
+        the given CVSS's attr-value is contained in the rule's values.
         '''
         cve_values = self.parsed_cve_values
-        for attr, value in dataclasses.asdict(cve).items():
+        for attr, value in dataclasses.asdict(cvss).items():
             if not attr in cve_values:
                 continue
 
@@ -264,3 +296,34 @@ def rescoring_rules_from_dicts(rules: list[dict]) -> typing.Generator[RescoringR
                     cast=(enum.Enum, tuple),
                 )
             )
+
+
+def matching_rescore_rules(
+    rescoring_rules: typing.Iterable[RescoringRule],
+    categorisation: CveCategorisation,
+    cvss: CVSSV3,
+) -> typing.Generator[RescoringRule, None, None]:
+    for rescoring_rule in rescoring_rules:
+        if not rescoring_rule.matches_categorisation(categorisation):
+            continue
+        if not rescoring_rule.matches_cvss(cvss):
+            continue
+
+        yield rescoring_rule
+
+
+def rescore(
+    rescoring_rules: typing.Iterable[RescoringRule],
+    severity: CVESeverity,
+) -> CVESeverity:
+    for rule in rescoring_rules:
+        if rule.rescore is Rescore.NO_CHANGE:
+            continue
+        elif rule.rescore is Rescore.REDUCE:
+            severity = severity.reduce(severity_classes=1)
+        elif rule.rescore is Rescore.NOT_EXPLOITABLE:
+            return CVESeverity.NONE
+        else:
+            raise NotImplementedError(rule.rescore)
+
+    return severity
