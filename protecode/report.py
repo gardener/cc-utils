@@ -47,7 +47,7 @@ def _component_and_results_to_report_str(
         if not rescore:
             return f'{v.cve()} ({v.cve_severity()})'
 
-        return f'{v.cve()} ({v.cve_severity()}) [rescore: {rescored.name}]'
+        return f'{v.cve()} ({v.cve_severity()}) [rescore to: {rescored.name}]'
 
     comp = f'{component.name()}:{component.version()}'
     vulns = ', '.join((
