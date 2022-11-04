@@ -107,9 +107,14 @@ class _OciRequestHandler(logging.Handler):
         **kwargs,
     ) -> None:
         self.es_client = es_client
+        self.shortcut = False
         super().__init__(level=level, *args, **kwargs)
 
     def emit(self, record: logging.LogRecord) -> None:
+        if self.shortcut:
+            logger.info('oci-request-reporting to elasticsearch was shortcut due to previous error')
+            return
+
         method = record.__dict__.get('method')
         url = record.__dict__.get('url')
         try:
@@ -124,6 +129,7 @@ class _OciRequestHandler(logging.Handler):
         except:
             logger.warning(traceback.format_exc())
             logger.warning('could not send oci request log to elastic search')
+            self.shortcut = True
 
 
 _client_sentinel = object()
