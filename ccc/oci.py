@@ -59,6 +59,7 @@ def oci_request_handler_requirements_fulfilled() -> bool:
         return False
 
 
+@functools.cache
 def oci_client(
     credentials_lookup: typing.Callable=None,
     install_logging_handler: bool=True,
