@@ -258,7 +258,11 @@ def _target_sprint(
     delivery_svc_client: delivery.client.DeliveryServiceClient,
     latest_processing_date: datetime.date,
 ):
-    target_sprint = delivery_svc_client.sprint_current(before=latest_processing_date)
+    try:
+        target_sprint = delivery_svc_client.sprint_current(before=latest_processing_date)
+    except requests.HTTPError as http_error:
+        logger.warning(f'error determining tgt-sprint {http_error=} - falling back to current')
+        target_sprint = delivery_svc_client.sprint_current()
 
     return target_sprint
 
