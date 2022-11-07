@@ -191,14 +191,19 @@ class DeliveryServiceClient:
     def sprint_current(self, offset: int=0, before: datetime.date=None) -> dm.Sprint:
         extra_args = {}
         if before:
-            extra_args['before'] = before.isoformat()
+            if isinstance(before, datetime.date) or isinstance(before, datetime.date):
+                extra_args['before'] = before.isoformat()
+            else:
+                extra_args['before'] = before
 
-        return dm.Sprint.from_dict(
-            requests.get(
-                url=self._routes.sprint_current(),
-                params={'offset': offset, **extra_args},
-            ).json()
+        resp = requests.get(
+            url=self._routes.sprint_current(),
+            params={'offset': offset, **extra_args},
         )
+
+        resp.raise_for_status()
+
+        return dm.Sprint.from_dict(resp.json())
 
     def query_metadata_raw(self, components: typing.Iterable[cm.Component]):
         query = {
