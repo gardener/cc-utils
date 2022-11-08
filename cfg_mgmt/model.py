@@ -157,7 +157,7 @@ class CfgResponsibleMapping:
     targets: list[CfgTarget]
     responsibles: list[CfgResponsible]
 
-    def  matches(
+    def matches(
         self,
         element: typing.Union[str, mb.NamedModelElement],
         type: typing.Optional[str]=None,
