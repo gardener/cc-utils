@@ -109,4 +109,4 @@ def delete_config_secret(
     )
     access_key_id = cfg_queue_entry.secretId['accessKeyId']
     # deactivate key instead of deleting it to make manual recovery possible.
-    iam_client.update_access_key(AccessKeyId=access_key_id, status='Inactive')
+    iam_client.update_access_key(AccessKeyId=access_key_id, Status='Inactive')
