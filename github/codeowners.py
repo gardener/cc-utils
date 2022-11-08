@@ -48,7 +48,7 @@ class EmailAddress(str):
     pass
 
 
-def _parse_codeowner_entry(
+def parse_codeowner_entry(
     entry: str,
 ) -> Username | EmailAddress | Team:
     '''
@@ -79,7 +79,7 @@ def enumerate_codeowners_from_remote_repo(
     for path in paths:
         try:
             yield from (
-                _parse_codeowner_entry(entry)
+                parse_codeowner_entry(entry)
                 for entry in filter_codeowners_entries(
                     repo.file_contents(path=path).decoded.decode('utf-8').split('\n'),
                 )
@@ -94,7 +94,7 @@ def enumerate_codeowners_from_file(
     file_path = existing_file(file_path)
     with open(file_path) as f:
         yield from (
-            _parse_codeowner_entry(entry)
+            parse_codeowner_entry(entry)
             for entry in filter_codeowners_entries(f.readlines())
         )
 
@@ -112,7 +112,7 @@ def enumerate_codeowners_from_local_repo(
         if codeowners_file.is_file():
             with open(codeowners_file) as f:
                 yield from (
-                    _parse_codeowner_entry(entry)
+                    parse_codeowner_entry(entry)
                     for entry in filter_codeowners_entries(f.readlines())
                 )
 
