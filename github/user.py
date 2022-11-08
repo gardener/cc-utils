@@ -14,7 +14,7 @@ def is_user_active(
     github: github3.github.GitHub,
     retries: int=3,
     cache: cachetools.Cache=_user_cache,
-):
+) -> bool:
     have_cache = isinstance(cache, cachetools.Cache)
 
     if have_cache and (github, username) in cache:
