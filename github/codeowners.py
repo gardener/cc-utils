@@ -160,10 +160,13 @@ def usernames_from_email_address(
     email_address: EmailAddress,
     gh_api: GitHub | GitHubEnterprise,
 ) -> typing.Generator[Username, None, None]:
-    yield from (
-        Username(res.user.login)
-        for res in gh_api.search_users(query=f'{email_address} in:email')
-    )
+    no_user = True
+    for res in gh_api.search_users(query=f'{email_address} in:email'):
+        no_user = False
+        yield Username(res.user.login)
+
+    if no_user:
+        logger.warning(f'no user found for {email_address=}')
 
 
 def resolve_team_members(
