@@ -1,10 +1,15 @@
 import hashlib
+import itertools
 import logging
 import re
 import typing
 
 import cachetools
 import github3
+import github3.issues
+import github3.issues.issue
+import github3.issues.milestone
+import github3.repos
 
 import gci.componentmodel as cm
 
@@ -36,7 +41,7 @@ def _issue_labels(
 def artifact_digest_label(
     component: cm.Component,
     artifact: cm.Artifact | str,
-    length=18,
+    length: int=18,
 ):
     '''
     calculates and returns a digest for the given component/resource
@@ -66,7 +71,7 @@ def repository_labels(
     artifact: cm.Artifact | None,
     issue_type: str | None=_label_bdba,
     extra_labels: typing.Iterable[str]=None
-):
+) -> typing.Generator[str, None, None]:
     if any((component, artifact)) and not all((component, artifact)):
         raise ValueError('either all or none of component, resource must be given')
 
@@ -85,23 +90,13 @@ def repository_labels(
 
 @github.retry.retry_and_throttle
 def enumerate_issues(
-    component: cm.Component | None,
-    artifact: cm.Artifact | None,
+    labels: frozenset[str],
     known_issues: typing.Sequence[github3.issues.issue.ShortIssue],
-    issue_type: str | None,
     state: str | None = None, # 'open' | 'closed'
 ) -> typing.Generator[github3.issues.ShortIssue, None, None]:
     '''Return an iterator iterating over those issues from `known_issues` that match the given
     parameters.
     '''
-    labels = frozenset(
-        repository_labels(
-            component=component,
-            artifact=artifact,
-            issue_type=issue_type,
-        ),
-    )
-
     def filter_relevant_issues(issue):
         if issue.state != state:
             return False
@@ -115,27 +110,14 @@ def enumerate_issues(
 
 @github.retry.retry_and_throttle
 def _create_issue(
-    component: cm.Component,
-    artifact: cm.Artifact,
+    labels: frozenset[str],
     repository: github3.repos.Repository,
-    body:str,
-    title:typing.Optional[str],
+    body: str,
+    title: str,
     assignees: typing.Iterable[str]=(),
     milestone: github3.issues.milestone.Milestone=None,
-    issue_type: str=_label_bdba,
-    extra_labels: typing.Iterable[str]=None,
 ) -> github3.issues.issue.ShortIssue:
-    if not title:
-        title = f'[{issue_type}] - {component.name}:{artifact.name}'
-
     assignees = tuple(assignees)
-
-    labels = sorted(repository_labels(
-        component=component,
-        artifact=artifact,
-        issue_type=issue_type,
-        extra_labels=extra_labels,
-    ))
 
     try:
         return repository.create_issue(
@@ -143,26 +125,23 @@ def _create_issue(
             body=body,
             assignees=assignees,
             milestone=milestone.number if milestone else None,
-            labels=labels,
+            labels=sorted(labels),
         )
     except github3.exceptions.GitHubError as ghe:
         logger.warning(f'received error trying to create issue: {ghe=}')
         logger.warning(f'{ghe.message=} {ghe.code=} {ghe.errors=}')
-        logger.warning(f'{component.name=} {artifact.name=} {assignees=} {labels=}')
+        logger.warning(f'{labels=} {assignees=}')
         raise ghe
 
 
 @github.retry.retry_and_throttle
 def _update_issue(
-    component: cm.Component,
-    artifact: cm.Artifact,
+    labels: frozenset[str],
     body:str,
     title:typing.Optional[str],
     issue: github3.issues.Issue,
     milestone: github3.issues.milestone.Milestone=None,
     assignees: typing.Iterable[str]=(),
-    issue_type: str=_label_bdba,
-    extra_labels: typing.Iterable[str]=None,
 ) -> github3.issues.issue.ShortIssue:
     kwargs = {}
     if not issue.assignees and assignees:
@@ -174,14 +153,7 @@ def _update_issue(
     if milestone and not issue.milestone:
         kwargs['milestone'] = milestone.number
 
-    labels = sorted(repository_labels(
-        component=component,
-        artifact=artifact,
-        issue_type=issue_type,
-        extra_labels=extra_labels,
-    ))
-
-    kwargs['labels'] = labels
+    kwargs['labels'] = sorted(labels)
 
     issue.edit(
         body=body,
@@ -192,42 +164,39 @@ def _update_issue(
 
 
 def create_or_update_issue(
-    component: cm.Component,
-    artifact: cm.Artifact,
+    labels: frozenset[str],
     repository: github3.repos.Repository,
-    body:str,
+    body: str,
     known_issues: typing.Iterable[github3.issues.issue.ShortIssue],
-    title:str=None,
+    title: str,
     assignees: typing.Iterable[str]=(),
     milestone: github3.issues.milestone.Milestone=None,
-    issue_type: str=_label_bdba,
     extra_labels: typing.Iterable[str]=None,
     preserve_labels_regexes: typing.Iterable[str]=(),
 ) -> github3.issues.issue.ShortIssue:
     open_issues = tuple(
         enumerate_issues(
-            component=component,
-            artifact=artifact,
+            labels=labels,
             known_issues=known_issues,
-            issue_type=issue_type,
             state='open',
         )
     )
     if (issues_count := len(open_issues)) > 1:
-        raise RuntimeError(f'more than one open issue found for {component.name=}{artifact.name=}')
+        raise RuntimeError(f'more than one open issue found for {labels=}')
     elif issues_count == 0:
         return _create_issue(
-            component=component,
-            artifact=artifact,
+            labels=frozenset(itertools.chain(
+                labels,
+                extra_labels,
+            )),
             repository=repository,
-            issue_type=issue_type,
             body=body,
             title=title,
             assignees=assignees,
             milestone=milestone,
-            extra_labels=extra_labels,
         )
     elif issues_count == 1:
+
         open_issue = open_issues[0] # we checked there is exactly one
 
         def labels_to_preserve():
@@ -246,15 +215,15 @@ def create_or_update_issue(
             extra_labels = labels_to_preserve()
 
         return _update_issue(
-            component=component,
-            artifact=artifact,
-            issue_type=issue_type,
+            labels=frozenset(itertools.chain(
+                labels,
+                extra_labels,
+            )),
             body=body,
             title=title,
             assignees=assignees,
             milestone=milestone,
             issue=open_issue,
-            extra_labels=extra_labels,
         )
     else:
         raise RuntimeError('this line should never be reached') # all cases should be handled before
@@ -262,28 +231,25 @@ def create_or_update_issue(
 
 @github.retry.retry_and_throttle
 def close_issue_if_present(
-    component: cm.Component,
-    artifact: cm.Artifact,
+    labels: frozenset[str],
     repository: github3.repos.Repository,
-    issue_type: str,
     known_issues: typing.Iterable[github3.issues.issue.ShortIssue],
 ):
     open_issues = tuple(
         enumerate_issues(
-            component=component,
-            artifact=artifact,
+            labels=labels,
             known_issues=known_issues,
-            issue_type=issue_type,
             state='open',
         )
     )
+    open_issues: tuple[github3.issues.ShortIssue]
 
-    logger.info(f'{len(open_issues)=} found for closing {open_issues=} {issue_type=}')
+    logger.info(f'{len(open_issues)=} found for closing {open_issues=}')
 
     if (issues_count := len(open_issues)) > 1:
-        logger.warning(f'more than one open issue found for {component.name=}{artifact=}')
+        logger.warning(f'more than one open issue found for {labels=}')
     elif issues_count == 0:
-        logger.info(f'no open issue found for {component.name=}{artifact.name=}')
+        logger.info(f'no open issue found for {labels=}')
         return # nothing to do
 
     open_issue = open_issues[0]
