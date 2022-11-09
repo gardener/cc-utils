@@ -1,5 +1,4 @@
 import hashlib
-import itertools
 import logging
 import re
 import typing
@@ -11,6 +10,7 @@ import github3.issues.issue
 import github3.issues.milestone
 import github3.repos
 
+import cnudie.iter
 import gci.componentmodel as cm
 
 import ci.log
@@ -88,15 +88,48 @@ def repository_labels(
         yield from extra_labels
 
 
+def labels_from_target(
+    target: cnudie.iter.SourceNode | cnudie.iter.ResourceNode | None,
+    issue_type: str | None,
+    extra_labels: typing.Iterable[str]=None,
+) -> typing.Generator[str, None, None]:
+
+    if not target:
+        yield from repository_labels(
+            component=None,
+            artifact=None,
+            issue_type=issue_type,
+            extra_labels=extra_labels,
+        )
+        return
+
+    if isinstance(target, (cnudie.iter.SourceNode, cnudie.iter.ResourceNode)):
+        yield from repository_labels(
+            component=target.component,
+            artifact=target_artifact(target),
+            issue_type=issue_type,
+            extra_labels=extra_labels,
+        )
+        return
+
+    raise NotImplementedError(f'{target=}')
+
+
 @github.retry.retry_and_throttle
 def enumerate_issues(
-    labels: frozenset[str],
+    target: cnudie.iter.SourceNode | cnudie.iter.ResourceNode | None,
     known_issues: typing.Sequence[github3.issues.issue.ShortIssue],
+    issue_type: str | None,
     state: str | None = None, # 'open' | 'closed'
 ) -> typing.Generator[github3.issues.ShortIssue, None, None]:
     '''Return an iterator iterating over those issues from `known_issues` that match the given
     parameters.
     '''
+    labels = frozenset(labels_from_target(
+        target=target,
+        issue_type=issue_type,
+    ))
+
     def filter_relevant_issues(issue):
         if issue.state != state:
             return False
@@ -110,14 +143,22 @@ def enumerate_issues(
 
 @github.retry.retry_and_throttle
 def _create_issue(
-    labels: frozenset[str],
+    target: cnudie.iter.ResourceNode | cnudie.iter.SourceNode,
+    issue_type: str,
     repository: github3.repos.Repository,
     body: str,
     title: str,
+    extra_labels: typing.Iterable[str]=None,
     assignees: typing.Iterable[str]=(),
     milestone: github3.issues.milestone.Milestone=None,
 ) -> github3.issues.issue.ShortIssue:
     assignees = tuple(assignees)
+
+    labels = frozenset(labels_from_target(
+        target=target,
+        issue_type=issue_type,
+        extra_labels=extra_labels,
+    ))
 
     try:
         return repository.create_issue(
@@ -136,10 +177,12 @@ def _create_issue(
 
 @github.retry.retry_and_throttle
 def _update_issue(
-    labels: frozenset[str],
+    target: cnudie.iter.ResourceNode | cnudie.iter.SourceNode,
+    issue_type: str,
     body:str,
     title:typing.Optional[str],
     issue: github3.issues.Issue,
+    extra_labels: typing.Iterable[str]=None,
     milestone: github3.issues.milestone.Milestone=None,
     assignees: typing.Iterable[str]=(),
 ) -> github3.issues.issue.ShortIssue:
@@ -153,7 +196,13 @@ def _update_issue(
     if milestone and not issue.milestone:
         kwargs['milestone'] = milestone.number
 
-    kwargs['labels'] = sorted(labels)
+    labels = sorted(labels_from_target(
+        target=target,
+        issue_type=issue_type,
+        extra_labels=extra_labels,
+    ))
+
+    kwargs['labels'] = labels
 
     issue.edit(
         body=body,
@@ -164,7 +213,8 @@ def _update_issue(
 
 
 def create_or_update_issue(
-    labels: frozenset[str],
+    target: cnudie.iter.ResourceNode | cnudie.iter.SourceNode,
+    issue_type: str,
     repository: github3.repos.Repository,
     body: str,
     known_issues: typing.Iterable[github3.issues.issue.ShortIssue],
@@ -176,19 +226,20 @@ def create_or_update_issue(
 ) -> github3.issues.issue.ShortIssue:
     open_issues = tuple(
         enumerate_issues(
-            labels=labels,
+            target=target,
+            issue_type=issue_type,
             known_issues=known_issues,
             state='open',
         )
     )
     if (issues_count := len(open_issues)) > 1:
-        raise RuntimeError(f'more than one open issue found for {labels=}')
+        raise RuntimeError(f'more than one open issue found for {target.component.name=} '
+            f'{target_artifact(target).name}')
     elif issues_count == 0:
         return _create_issue(
-            labels=frozenset(itertools.chain(
-                labels,
-                extra_labels,
-            )),
+            target=target,
+            issue_type=issue_type,
+            extra_labels=extra_labels,
             repository=repository,
             body=body,
             title=title,
@@ -215,10 +266,9 @@ def create_or_update_issue(
             extra_labels = labels_to_preserve()
 
         return _update_issue(
-            labels=frozenset(itertools.chain(
-                labels,
-                extra_labels,
-            )),
+            target=target,
+            issue_type=issue_type,
+            extra_labels=extra_labels,
             body=body,
             title=title,
             assignees=assignees,
@@ -229,15 +279,26 @@ def create_or_update_issue(
         raise RuntimeError('this line should never be reached') # all cases should be handled before
 
 
+def target_artifact(
+    target: cnudie.iter.SourceNode | cnudie.iter.ResourceNode,
+) -> cm.ComponentSource | cm.Resource:
+    if isinstance(target, cnudie.iter.SourceNode):
+        return target.source
+    if isinstance(target, cnudie.iter.ResourceNode):
+        return target.resource
+
+
 @github.retry.retry_and_throttle
 def close_issue_if_present(
-    labels: frozenset[str],
+    target: cnudie.iter.SourceNode | cnudie.iter.ResourceNode,
+    issue_type: str,
     repository: github3.repos.Repository,
     known_issues: typing.Iterable[github3.issues.issue.ShortIssue],
 ):
     open_issues = tuple(
         enumerate_issues(
-            labels=labels,
+            target=target,
+            issue_type=issue_type,
             known_issues=known_issues,
             state='open',
         )
@@ -247,9 +308,11 @@ def close_issue_if_present(
     logger.info(f'{len(open_issues)=} found for closing {open_issues=}')
 
     if (issues_count := len(open_issues)) > 1:
-        logger.warning(f'more than one open issue found for {labels=}')
+        logger.warning(f'more than one open issue found for {target.component.name=} '
+            f'{target_artifact(target).name}')
     elif issues_count == 0:
-        logger.info(f'no open issue found for {labels=}')
+        logger.info(f'no open issue found for{target.component.name=} '
+            f'{target_artifact(target).name}')
         return # nothing to do
 
     open_issue = open_issues[0]

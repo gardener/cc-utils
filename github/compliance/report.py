@@ -22,6 +22,7 @@ import requests
 import ccc.delivery
 import ccc.github
 import ci.util
+import cnudie.iter
 import cnudie.util
 import concourse.model.traits.image_scan as image_scan
 import delivery.client
@@ -285,6 +286,26 @@ def _latest_processing_date(
     )
 
 
+def target_from_component_artifact(
+    component: cm.Component,
+    artifact: cm.Resource | cm.ComponentSource,
+) -> cnudie.iter.ResourceNode | cnudie.iter.SourceNode:
+    path = (component,)
+
+    if isinstance(artifact, cm.ComponentSource):
+        return cnudie.iter.SourceNode(
+            path=path,
+            source=artifact,
+        )
+    if isinstance(artifact, cm.Resource):
+        return cnudie.iter.ResourceNode(
+            path=path,
+            resource=artifact,
+        )
+
+    raise RuntimeError(f'{artifact=}')
+
+
 def create_or_update_github_issues(
     result_group_collection: gcm.ScanResultGroupCollection,
     max_processing_days: image_scan.MaxProcessingTimesDays,
@@ -331,6 +352,11 @@ def create_or_update_github_issues(
         artifacts = [r.artifact for r in results]
         artifact = artifacts[0]
 
+        target = target_from_component_artifact(
+            component=component,
+            artifact=artifact,
+        )
+
         if overwrite_repository:
             repository = overwrite_repository
         else:
@@ -347,17 +373,10 @@ def create_or_update_github_issues(
 
         known_issues = _all_issues(repository)
 
-        labels = frozenset(
-            github.compliance.issue.repository_labels(
-                component=component,
-                artifact=artifact,
-                issue_type=issue_type,
-            ),
-        )
-
         if action == 'discard':
             github.compliance.issue.close_issue_if_present(
-                labels=labels,
+                target=target,
+                issue_type=issue_type,
                 repository=repository,
                 known_issues=known_issues,
             )
@@ -438,7 +457,8 @@ def create_or_update_github_issues(
 
             try:
                 issue = github.compliance.issue.create_or_update_issue(
-                    labels=labels,
+                    target=target,
+                    issue_type=issue_type,
                     repository=repository,
                     body=body,
                     assignees=assignees,
@@ -510,11 +530,7 @@ def create_or_update_github_issues(
     if overwrite_repository:
         known_issues = _all_issues(overwrite_repository)
         close_issues_for_absent_labels(
-            labels=frozenset(github.compliance.issue.repository_labels(
-                component=None,
-                artifact=None,
-                issue_type=result_group_collection.issue_type,
-            )),
+            issue_type=result_group_collection.issue_type,
             present_digest_labels=[
                 github.compliance.issue.artifact_digest_label(
                     component=result_group.component,
@@ -532,7 +548,7 @@ def create_or_update_github_issues(
 
 
 def close_issues_for_absent_labels(
-    labels: frozenset[str],
+    issue_type: str,
     present_digest_labels: frozenset[str],
     known_issues: typing.Iterator[github3.issues.issue.ShortIssue],
     close_comment: str,
@@ -544,7 +560,8 @@ def close_issues_for_absent_labels(
     have been removed from BoM.
     '''
     all_issues = github.compliance.issue.enumerate_issues(
-        labels=labels,
+        target=None,
+        issue_type=issue_type,
         known_issues=known_issues,
         state='open',
     )
