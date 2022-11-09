@@ -8,22 +8,32 @@ import typing
 import urllib.parse
 
 import cachetools
+import github3
+import github3.issues
+import github3.issues.milestone
+import github3.issues.issue
+import github3.orgs
 import github3.repos
+import github3.users
 
 import gci.componentmodel as cm
 import requests
 
 import ccc.delivery
+import ccc.github
 import ci.util
+import cnudie.iter
 import cnudie.util
 import concourse.model.traits.image_scan as image_scan
 import delivery.client
 import delivery.model
+import github.codeowners
 import github.compliance.issue
 import github.compliance.milestone
 import github.compliance.model as gcm
 import github.retry
 import github.user
+import github.util
 import model.delivery
 
 logger = logging.getLogger(__name__)
@@ -276,6 +286,26 @@ def _latest_processing_date(
     )
 
 
+def target_from_component_artifact(
+    component: cm.Component,
+    artifact: cm.Resource | cm.ComponentSource,
+) -> cnudie.iter.ResourceNode | cnudie.iter.SourceNode:
+    path = (component,)
+
+    if isinstance(artifact, cm.ComponentSource):
+        return cnudie.iter.SourceNode(
+            path=path,
+            source=artifact,
+        )
+    if isinstance(artifact, cm.Resource):
+        return cnudie.iter.ResourceNode(
+            path=path,
+            resource=artifact,
+        )
+
+    raise RuntimeError(f'{artifact=}')
+
+
 def create_or_update_github_issues(
     result_group_collection: gcm.ScanResultGroupCollection,
     max_processing_days: image_scan.MaxProcessingTimesDays,
@@ -322,6 +352,11 @@ def create_or_update_github_issues(
         artifacts = [r.artifact for r in results]
         artifact = artifacts[0]
 
+        target = target_from_component_artifact(
+            component=component,
+            artifact=artifact,
+        )
+
         if overwrite_repository:
             repository = overwrite_repository
         else:
@@ -340,10 +375,9 @@ def create_or_update_github_issues(
 
         if action == 'discard':
             github.compliance.issue.close_issue_if_present(
-                component=component,
-                artifact=artifact,
-                repository=repository,
+                target=target,
                 issue_type=issue_type,
+                repository=repository,
                 known_issues=known_issues,
             )
 
@@ -423,8 +457,7 @@ def create_or_update_github_issues(
 
             try:
                 issue = github.compliance.issue.create_or_update_issue(
-                    component=component,
-                    artifact=artifact,
+                    target=target,
                     issue_type=issue_type,
                     repository=repository,
                     body=body,
@@ -435,6 +468,7 @@ def create_or_update_github_issues(
                     ),
                     preserve_labels_regexes=preserve_labels_regexes,
                     known_issues=known_issues,
+                    title=f'[{issue_type}] - {component.name}:{artifact.name}',
                 )
                 if result_group.comment_callback:
                     def single_comment(result: gcm.ScanResult):
@@ -495,10 +529,17 @@ def create_or_update_github_issues(
 
     if overwrite_repository:
         known_issues = _all_issues(overwrite_repository)
-        close_issues_for_absent_resources(
-            result_groups=result_groups,
-            known_issues=known_issues,
+        close_issues_for_absent_labels(
             issue_type=result_group_collection.issue_type,
+            present_digest_labels=[
+                github.compliance.issue.artifact_digest_label(
+                    component=result_group.component,
+                    artifact=result_group.artifact,
+                )
+                for result_group in result_groups
+            ],
+            known_issues=known_issues,
+            close_comment='closing, because component/resource no longer present in BoM',
         )
 
     if err_count > 0:
@@ -506,47 +547,41 @@ def create_or_update_github_issues(
         raise ValueError('not all gh-issues could be created/updated/deleted')
 
 
-def close_issues_for_absent_resources(
-    result_groups: list[gcm.ScanResultGroup],
+def close_issues_for_absent_labels(
+    issue_type: str,
+    present_digest_labels: frozenset[str],
     known_issues: typing.Iterator[github3.issues.issue.ShortIssue],
-    issue_type: str | None,
+    close_comment: str,
 ):
     '''
-    closes all open issues for component-resources that are not present in given result-groups.
+    closes all open issues for ocm/resource labels that are not present in present_digest_labels.
 
     this is intended to automatically close issues for components or component-resources that
     have been removed from BoM.
     '''
     all_issues = github.compliance.issue.enumerate_issues(
-        component=None,
-        artifact=None,
+        target=None,
         issue_type=issue_type,
         known_issues=known_issues,
         state='open',
     )
 
-    def component_resource_label(issue: github3.issues.Issue) -> str:
+    def ocm_resource_label(issue: github3.issues.Issue) -> str:
         for label in issue.labels():
             if label.name.startswith('ocm/resource'):
                 return label.name
 
-    component_resources_to_issues = {
-        component_resource_label(issue): issue for issue in all_issues
+    ocm_resource_labels_to_issues = {
+        ocm_resource_label(issue): issue for issue in all_issues
     }
 
-    for result_group in result_groups:
-        resource_label = github.compliance.issue.artifact_digest_label(
-            component=result_group.component,
-            artifact=result_group.artifact,
-        )
-        logger.info(f'Digest-Label for {result_group.name=}: {resource_label=}')
-        component_resources_to_issues.pop(resource_label, None)
+    for label in present_digest_labels:
+        logger.info(f'Digest-Label {label=}')
+        ocm_resource_labels_to_issues.pop(label, None)
 
-    # any issues that have not been removed thus far were not referenced by given result_groups
-    for issue in component_resources_to_issues.values():
-        logger.info(
-            f"Closing issue '{issue.title}'({issue.html_url}) since no scan contained a resource "
-            "matching its digest."
-        )
-        issue.create_comment('closing, because component/resource no longer present in BoM')
+    # any issues that have not been removed thus far were not referenced by given digest labels
+    for issue in ocm_resource_labels_to_issues.values():
+        issue: github3.issues.ShortIssue
+        logger.info(f"Closing issue '{issue.title}'({issue.html_url}), no digest matching")
+        issue.create_comment(close_comment)
         issue.close()
