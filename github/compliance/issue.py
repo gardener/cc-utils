@@ -165,7 +165,7 @@ def _update_issue(
     extra_labels: typing.Iterable[str]=None,
 ) -> github3.issues.issue.ShortIssue:
     kwargs = {}
-    if not issue.assignees:
+    if not issue.assignees and assignees:
         kwargs['assignees'] = tuple(assignees)
 
     if title:
