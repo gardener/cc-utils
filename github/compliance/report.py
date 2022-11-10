@@ -309,6 +309,11 @@ def target_from_component_artifact(
     raise RuntimeError(f'{artifact=}')
 
 
+class PROCESSING_ACTION(enum.Enum):
+    DISCARD = 'discard'
+    REPORT = 'report'
+
+
 def create_or_update_github_issues(
     result_group_collection: gcm.ScanResultGroupCollection,
     max_processing_days: image_scan.MaxProcessingTimesDays,
@@ -335,15 +340,15 @@ def create_or_update_github_issues(
 
     def process_result(
         result_group: gcm.ScanResultGroup,
-        action: str,
+        action: PROCESSING_ACTION,
     ):
         nonlocal gh_api
         nonlocal err_count
         issue_type = result_group.issue_type
 
-        if action == 'discard':
+        if action == PROCESSING_ACTION.DISCARD:
             results = result_group.results_without_findings
-        elif action == 'report':
+        elif action == PROCESSING_ACTION.REPORT:
             results = result_group.results_with_findings
 
         criticality_classification = result_group.worst_severity
@@ -376,7 +381,7 @@ def create_or_update_github_issues(
 
         known_issues = _all_issues(repository)
 
-        if action == 'discard':
+        if action == PROCESSING_ACTION.DISCARD:
             github.compliance.issue.close_issue_if_present(
                 target=target,
                 issue_type=issue_type,
@@ -387,7 +392,7 @@ def create_or_update_github_issues(
             logger.info(
                 f'closed (if existing) gh-issue for {component.name=} {artifact.name=} {issue_type=}'
             )
-        elif action == 'report':
+        elif action == PROCESSING_ACTION.REPORT:
             if delivery_svc_client:
                 try:
                     assignees = delivery.client.github_users_from_responsibles(
@@ -514,7 +519,7 @@ def create_or_update_github_issues(
     for result_group in result_groups_with_findings:
         process_result(
             result_group=result_group,
-            action='report',
+            action=PROCESSING_ACTION.REPORT,
         )
         time.sleep(1) # throttle github-api-requests
 
@@ -522,7 +527,7 @@ def create_or_update_github_issues(
         logger.info(f'discarding issue for {result_group.name=} vulnerabilities')
         process_result(
             result_group=result_group,
-            action='discard',
+            action=PROCESSING_ACTION.DISCARD,
         )
         time.sleep(1) # throttle github-api-requests
 
