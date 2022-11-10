@@ -10,7 +10,7 @@ import concourse.steps.component_descriptor_util as component_descriptor_util
 import concourse.steps.images
 import concourse.steps.scan_container_images
 import dso.cvss
-from protecode.model import CVSSVersion
+from protecode.model import CVSSVersion, TriageScope
 from protecode.scanning import upload_grouped_images as _upload_grouped_images
 import protecode.assessments as pa
 
@@ -24,6 +24,7 @@ def rescore(
     product_id: int,
     categorisation: str,
     rescoring_rules: str,
+    assess: bool=False,
 ):
     cfg_factory = ci.util.ctx().cfg_factory()
     protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
@@ -66,8 +67,14 @@ def rescore(
         print(f'{c.name()}:{c.version()}')
         vulns_count = 0
         rescored_count = 0
+        vulns_to_assess = []
 
         for v in c.vulnerabilities():
+            if v.historical():
+                continue
+            if v.has_triage():
+                continue
+
             vulns_count += 1
 
             if not v.cvss:
@@ -89,6 +96,29 @@ def rescore(
                 rescored_count += 1
 
                 print(f'  rescored {orig_severity.name} -> {rescored.name} - {v.cve()}')
+                if assess and rescored is dso.cvss.CVESeverity.NONE:
+                    if not c.version():
+                        print(f'setting dummy-version for {c.name()}')
+                        client.set_component_version(
+                            component_name=c.name(),
+                            component_version='does-not-matter',
+                            objects=[eo.sha1() for eo in c.extended_objects()],
+                            app_id=product_id,
+                        )
+                    else:
+                        vulns_to_assess.append(v)
+
+        if assess and vulns_to_assess:
+            client.add_triage_raw({
+                'component': c.name(),
+                'version': c.version() or 'does-not-matter',
+                'vulns': [v.cve() for v in vulns_to_assess],
+                'scope': TriageScope.RESULT.value,
+                'reason': 'OT',
+                'description': 'assessed as irrelevant based on cve-categorisation',
+                'product_id': product_id,
+            })
+            print(f'auto-assessed {len(vulns_to_assess)=}')
 
         print(f'{vulns_count=}, {rescored_count=}')
         total_vulns += vulns_count
