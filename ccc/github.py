@@ -47,6 +47,7 @@ class SessionAdapter(enum.Enum):
 
 def github_api_ctor(
     github_url: str,
+    es_client: typing.Optional['ccc.elasticsearch.ElasticSearchClient']=None,
     verify_ssl: bool=True,
     session_adapter: SessionAdapter=SessionAdapter.RETRY,
 ):
@@ -55,6 +56,8 @@ def github_api_ctor(
     In case github_url does not refer to github.com, the c'tor for GithubEnterprise is
     returned with the url argument preset, thus disburdening users to differentiate
     between github.com and non-github.com cases.
+
+    If es_client is passed, all requests against github-api will be logged to Elasticsearch.
     '''
     parsed = urllib.parse.urlparse(github_url)
     if parsed.scheme:
@@ -63,6 +66,33 @@ def github_api_ctor(
         raise ValueError('failed to parse url: ' + str(github_url))
 
     session = github3.session.GitHubSession()
+    original_request = session.request
+
+    def intercepted_request(
+        method: str,
+        url: str,
+        **kwargs,
+    ):
+        req = original_request(method, url, **kwargs)
+
+        try:
+            es_client.store_document(
+                index='github_request',
+                body={
+                    'method': method,
+                    'url': url,
+                    'data': kwargs,
+                    'creation_date': datetime.datetime.now().isoformat(),
+                },
+            )
+        except:
+            logger.warning('unable to log github api request to Elasticsearch')
+
+        return req
+
+    if es_client:
+        session.request = intercepted_request
+
     session_adapter = SessionAdapter(session_adapter)
     if session_adapter is SessionAdapter.NONE or not session_adapter:
         pass
@@ -172,6 +202,7 @@ def github_api(
     github_ctor = github_api_ctor(
         github_url=github_url, verify_ssl=verify_ssl,
         session_adapter=session_adapter,
+        es_client=ccc.elasticsearch.default_client_if_available(),
     )
     github_api = github_ctor(
         token=github_auth_token,
