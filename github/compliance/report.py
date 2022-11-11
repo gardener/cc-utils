@@ -216,19 +216,22 @@ def _template_vars(
             report_urls=(),
         )
     elif issue_type == _compliance_label_checkmarx:
+        def iter_report_urls():
+            for r in results:
+                name = f'{r.artifact.name}:{r.artifact.version}'
+                yield f'[Assessments for {name}]({r.report_url})'
+                yield f'[Summary for {name}]({r.overview_url})'
+
         stat = result_group.worst_result.scan_statistic
-        report_urls = [
-                f'[Checkmarx Editor]({r.report_url}), [Checkmarx Summary]({r.overview_url})'
-                for r in results
-            ]
         summary_str = (f'Findings: High: {stat.highSeverity}, Medium: {stat.mediumSeverity}, '
             f'Low: {stat.lowSeverity}, Info: {stat.infoSeverity}')
+
         template_variables['summary'] = _compliance_status_summary(
             component=component,
             artifacts=artifacts,
             issue_value=summary_str,
             issue_description='Checkmarx Scan Summary',
-            report_urls=report_urls,
+            report_urls=tuple(iter_report_urls()),
         )
         crit = (f'Risk: {result_group.worst_result.scan_response.scanRisk}, '
             f'Risk Severity: {result_group.worst_result.scan_response.scanRiskSeverity}')
