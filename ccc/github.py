@@ -47,7 +47,8 @@ class SessionAdapter(enum.Enum):
 
 def github_api_ctor(
     github_url: str,
-    es_client: ccc.elasticsearch.ElasticSearchClient | None=ccc.elasticsearch.default_client_if_available(), # noqa: E501
+    # can't use bitwise-or for forward reference
+    es_client: typing.Optional['ccc.elasticsearch.ElasticSearchClient']=None,
     verify_ssl: bool=True,
     session_adapter: SessionAdapter=SessionAdapter.RETRY,
 ):
@@ -200,6 +201,7 @@ def github_api(
     github_ctor = github_api_ctor(
         github_url=github_url, verify_ssl=verify_ssl,
         session_adapter=session_adapter,
+        es_client=ccc.elasticsearch.default_client_if_available(),
     )
     github_api = github_ctor(
         token=github_auth_token,
