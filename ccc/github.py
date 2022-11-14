@@ -47,7 +47,6 @@ class SessionAdapter(enum.Enum):
 
 def github_api_ctor(
     github_url: str,
-    # can't use bitwise-or for forward reference
     es_client: typing.Optional['ccc.elasticsearch.ElasticSearchClient']=None,
     verify_ssl: bool=True,
     session_adapter: SessionAdapter=SessionAdapter.RETRY,
@@ -58,7 +57,7 @@ def github_api_ctor(
     returned with the url argument preset, thus disburdening users to differentiate
     between github.com and non-github.com cases.
 
-    If es_client is provided, session requests are logged to ES.
+    If es_client is passed, all requests against github-api will be logged to Elasticsearch.
     '''
     parsed = urllib.parse.urlparse(github_url)
     if parsed.scheme:
@@ -69,11 +68,14 @@ def github_api_ctor(
     session = github3.session.GitHubSession()
     original_request = session.request
 
-    def intercepted_request(*args, **kwargs):
-        req = original_request(*args, **kwargs)
+    def intercepted_request(
+        method: str,
+        url: str,
+        **kwargs,
+    ):
+        req = original_request(method, url, **kwargs)
 
         try:
-            method, url = args
             es_client.store_document(
                 index='github_request',
                 body={
@@ -84,8 +86,7 @@ def github_api_ctor(
                 },
             )
         except:
-            # dont raise due to logging
-            logger.warning('unable to log session requests to ES')
+            logger.warning('unable to log github api request to Elasticsearch')
 
         return req
 
