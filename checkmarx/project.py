@@ -5,6 +5,7 @@ import time
 import checkmarx.client
 import checkmarx.model as model
 import checkmarx.util
+import cnudie.iter
 import gci.componentmodel as cm
 
 logger = logging.getLogger(__name__)
@@ -57,8 +58,10 @@ class CheckmarxProject:
 
         # pylint: disable=E1123
         return model.ScanResult(
-            component=component,
-            artifact=source,
+            scanned_element=cnudie.iter.SourceNode(
+                path=(component,),
+                source=source,
+            ),
             project_id=self.project_details.id,
             artifact_name=self.artifact_name,
             scan_response=scan_response,

@@ -26,8 +26,10 @@ import tabulate
 import clamav.client
 import clamav.cnudie
 import clamav.scan
+import cnudie.iter
 import concourse.model.traits.image_scan as image_scan
 import dso.cvss
+import dso.labels
 import github.compliance.issue as gciss
 import github.compliance.model as gcm
 import github.compliance.report as gcrep
@@ -58,9 +60,14 @@ def scan_result_group_collection_for_vulnerabilities(
         return cve_score >= cve_threshold
 
     def comment_callback(result: pm.BDBA_ScanResult):
-        rescore_label = result.artifact.find_label(name=dso.labels.CveCategorisationLabel.name)
+        scanned_element: cnudie.iter.ResourceNode = result.scanned_element
+        rescore_label = scanned_element.resource.find_label(
+            name=dso.labels.CveCategorisationLabel.name,
+        )
         if not rescore_label:
-            rescore_label = result.component.find_label(name=dso.labels.CveCategorisationLabel.name)
+            rescore_label = scanned_element.component.find_label(
+                name=dso.labels.CveCategorisationLabel.name,
+            )
 
         if rescore_label:
             rescore_label = dso.labels.deserialise_label(label=rescore_label)

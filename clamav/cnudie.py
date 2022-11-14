@@ -73,9 +73,11 @@ def scan_resources(
 
         # pylint: disable=E1123
         return clamav.scan.ClamAV_ResourceScanResult(
-            component=component,
-            artifact=resource,
             scan_result=scan_result,
+            scanned_element=cnudie.iter.ResourceNode(
+                path=(component,),
+                resource=resource,
+            ),
         )
 
     tasks = [

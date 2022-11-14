@@ -21,7 +21,9 @@ import requests
 
 import ccc.delivery
 import ccc.github
+import checkmarx.model
 import ci.util
+import clamav.scan
 import cnudie.iter
 import cnudie.util
 import concourse.model.traits.image_scan as image_scan
@@ -35,6 +37,7 @@ import github.retry
 import github.user
 import github.util
 import model.delivery
+import protecode.model as pm
 
 logger = logging.getLogger(__name__)
 
@@ -141,18 +144,18 @@ def _template_vars(
 ):
     component = result_group.component
     artifact_name = result_group.artifact
-    artifacts = [res.artifact for res in result_group.results]
+    artifacts = [cnudie.iter.artifact_from_node(res.scanned_element) for res in result_group.results]
     issue_type = result_group.issue_type
 
     results = result_group.results_with_findings
 
-    artifact_versions = ', '.join((r.artifact.version for r in results))
+    artifact_versions = ', '.join((artifact.version for artifact in artifacts))
     artifact_types = ', '.join(set(
         (
-            r.artifact.type.value
-            if isinstance(r.artifact.type, enum.Enum)
-            else r.artifact.type
-            for r in results
+            artifact.type.value
+            if isinstance(artifact.type, enum.Enum)
+            else artifact.type
+            for artifact in artifacts
         )
     ))
 
@@ -169,6 +172,7 @@ def _template_vars(
     }
 
     if issue_type == _compliance_label_vulnerabilities:
+        results: tuple[pm.BDBA_ScanResult]
         analysis_results = [r.result for r in results]
         greatest_cve = max((r.greatest_cve_score for r in results))
         template_variables['summary'] = _compliance_status_summary(
@@ -183,6 +187,7 @@ def _template_vars(
             cve_score=greatest_cve
         ))
     elif issue_type == _compliance_label_licenses:
+        results: tuple[pm.BDBA_ScanResult]
         analysis_results = [r.result for r in results]
         prohibited_licenses = set()
         all_licenses = set()
@@ -203,7 +208,9 @@ def _template_vars(
         )
         template_variables['criticality_classification'] = str(gcm.Severity.BLOCKER)
     elif issue_type == _compliance_label_os_outdated:
+        results: tuple[gcm.OsIdScanResult]
         worst_result = result_group.worst_result
+        worst_result: gcm.OsIdScanResult
         os_info = worst_result.os_id
 
         os_name_and_version = f'{os_info.ID}:{os_info.VERSION_ID}'
@@ -216,13 +223,16 @@ def _template_vars(
             report_urls=(),
         )
     elif issue_type == _compliance_label_checkmarx:
+        results: tuple[checkmarx.model.ScanResult]
+
         def iter_report_urls():
             for r in results:
-                name = f'{r.artifact.name}:{r.artifact.version}'
+                name = f'{r.scanned_element.source.name}:{r.scanned_element.source.version}'
                 yield f'[Assessments for {name}]({r.report_url})'
                 yield f'[Summary for {name}]({r.overview_url})'
 
-        stat = result_group.worst_result.scan_statistic
+        worst_result: checkmarx.model.ScanResult = result_group.worst_result
+        stat = worst_result.scan_statistic
         summary_str = (f'Findings: High: {stat.highSeverity}, Medium: {stat.mediumSeverity}, '
             f'Low: {stat.lowSeverity}, Info: {stat.infoSeverity}')
 
@@ -233,10 +243,11 @@ def _template_vars(
             issue_description='Checkmarx Scan Summary',
             report_urls=tuple(iter_report_urls()),
         )
-        crit = (f'Risk: {result_group.worst_result.scan_response.scanRisk}, '
-            f'Risk Severity: {result_group.worst_result.scan_response.scanRiskSeverity}')
+        crit = (f'Risk: {worst_result.scan_response.scanRisk}, '
+            f'Risk Severity: {worst_result.scan_response.scanRiskSeverity}')
         template_variables['criticality_classification'] = crit
     elif issue_type == _compliance_label_malware:
+        results: tuple[clamav.scan.ClamAV_ResourceScanResult]
         summary_str = ''.join((
             result.scan_result.summary() for result in results
         )).replace('\n', '')
@@ -353,12 +364,11 @@ def create_or_update_github_issues(
 
         criticality_classification = result_group.worst_severity
 
-        if not len({r.component.name for r in results}) == 1:
+        if not len({r.scanned_element.component.name for r in results}) == 1:
             raise ValueError('not all component names are identical')
 
         component = result_group.component
-        artifacts = [r.artifact for r in results]
-        artifact = artifacts[0]
+        artifact = result_group.artifact
 
         target = target_from_component_artifact(
             component=component,
@@ -482,14 +492,14 @@ def create_or_update_github_issues(
                 )
                 if result_group.comment_callback:
                     def single_comment(result: gcm.ScanResult):
-                        a = result.artifact
+                        a = cnudie.iter.artifact_from_node(result.scanned_element)
                         header = f'**{a.name}:{a.version}**\n'
 
                         return header + result_group.comment_callback(result)
 
                     def sortable_result_str(result: gcm.ScanResult):
-                        c = result.component
-                        a = result.artifact
+                        c = result.scanned_element.component
+                        a = cnudie.iter.artifact_from_node(result.scanned_element)
                         return f'{c.name}:{c.version}/{a.name}:{a.version}'
 
                     sorted_results = sorted(

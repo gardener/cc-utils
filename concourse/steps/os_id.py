@@ -8,6 +8,7 @@ import gci.componentmodel as cm
 
 import ci.log
 import ci.util
+import cnudie.iter
 import delivery.client
 import delivery.model
 import delivery.util
@@ -72,8 +73,10 @@ def base_image_os_id(
 
     # pylint: disable=E1123
     return gcm.OsIdScanResult(
-        component=component,
-        artifact=resource,
+        scanned_element=cnudie.iter.ResourceNode(
+            path=(component,),
+            resource=resource,
+        ),
         os_id=os_info,
     )
 
@@ -112,9 +115,10 @@ def scan_result_group_collection_for_outdated_os_ids(
         if not os_id.ID in os_infos:
             return None
 
-        relation = result.artifact.relation
+        relation = result.scanned_element.resource.relation
         if not relation is cm.ResourceRelation.LOCAL:
-            logger.info(f'{result.artifact.name=} is not "local" - will ignore findings')
+            logger.info(f'{result.scanned_element.resource.name=} '
+                f'is not "local" - will ignore findings')
             return False
 
         if delivery.util.branch_reached_eol(

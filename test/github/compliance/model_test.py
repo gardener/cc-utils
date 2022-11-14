@@ -1,5 +1,6 @@
 import dataclasses
 
+import cnudie.iter
 import github.compliance.model as gcm
 
 
@@ -15,8 +16,10 @@ class Artefact:
 
 @dataclasses.dataclass
 class ScanResult(gcm.ScanResult):
-    component = Component()
-    artifact = Artefact()
+    scanned_element = cnudie.iter.ResourceNode(
+        path=(Component(),),
+        resource=Artefact(),
+    )
     state = gcm.ScanState.SUCCEEDED
     severity: gcm.Severity = gcm.Severity.HIGH
 
@@ -40,13 +43,17 @@ def test_ScanResultGroup():
     assert empty_group.results_without_findings == ()
 
     result_medium = ScanResult(
-        component=Component(),
-        artifact=Artefact(),
+        scanned_element=cnudie.iter.ResourceNode(
+            path=(Component(),),
+            resource=Artefact(),
+        ),
         severity=gcm.Severity.MEDIUM,
     )
     result_critical = ScanResult(
-        component=Component(),
-        artifact=Artefact(),
+        scanned_element=cnudie.iter.ResourceNode(
+            path=(Component(),),
+            resource=Artefact(),
+        ),
         severity=gcm.Severity.CRITICAL,
     )
 
@@ -70,8 +77,10 @@ def test_ScanResultGroup():
     assert group_with_findings.results_without_findings == ()
 
     result_with_scan_error = ScanResult(
-        component=Component(),
-        artifact=Artefact(),
+        scanned_element=cnudie.iter.ResourceNode(
+            path=(Component(),),
+            resource=Artefact(),
+        ),
         state=gcm.ScanState.FAILED,
     )
 
@@ -109,12 +118,16 @@ def test_ScanResultGroupCollection_result_groups():
     # one group (same component-name/artefact-name)
     results = (
         gcm.ScanResult(
-            component=Component(name='c1'),
-            artifact=Artefact(name='a1'),
+            scanned_element=cnudie.iter.ResourceNode(
+                path=(Component(name='c1'),),
+                resource=Artefact(name='a1'),
+            ),
         ),
         gcm.ScanResult(
-            component=Component(name='c1'),
-            artifact=Artefact(name='a1'),
+            scanned_element=cnudie.iter.ResourceNode(
+                path=(Component(name='c1'),),
+                resource=Artefact(name='a1'),
+            ),
         ),
     )
 
@@ -132,12 +145,16 @@ def test_ScanResultGroupCollection_result_groups():
     # two groups (different component-name/artefact-name)
     results = (
         gcm.ScanResult(
-            component=Component(name='c1'),
-            artifact=Artefact(name='a1'),
+            scanned_element=cnudie.iter.ResourceNode(
+                path=(Component(name='c1'),),
+                resource=Artefact(name='a1'),
+            ),
         ),
         gcm.ScanResult(
-            component=Component(name='c2'),
-            artifact=Artefact(name='a2'),
+            scanned_element=cnudie.iter.ResourceNode(
+                path=(Component(name='c2'),),
+                resource=Artefact(name='a2'),
+            ),
         ),
     )
 

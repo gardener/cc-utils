@@ -119,3 +119,14 @@ def iter(
                 seen_component_ids.add(node.component_id)
 
         yield node
+
+
+def artifact_from_node(
+    node: ResourceNode | SourceNode,
+) -> cm.ComponentSource | cm.Resource:
+    if isinstance(node, SourceNode):
+        return node.source
+    elif isinstance(node, ResourceNode):
+        return node.resource
+    else:
+        raise TypeError(f'unable to get artifact from {type(node)}')

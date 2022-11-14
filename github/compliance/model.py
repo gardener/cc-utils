@@ -4,6 +4,7 @@ import enum
 import functools
 import typing
 
+import cnudie.iter
 import gci.componentmodel as cm
 import unixutil.model
 
@@ -47,8 +48,8 @@ class ScanState(enum.Enum):
 
 @dataclasses.dataclass(kw_only=True)
 class ScanResult:
-    component: cm.Component
-    artifact: cm.Artifact
+    scanned_element: cnudie.iter.ResourceNode | cnudie.iter.SourceNode
+
     state: ScanState = ScanState.SUCCEEDED
 
     @property
@@ -79,17 +80,17 @@ callback expected to return a comment to be posted upon creation/update
 @dataclasses.dataclass
 class ScanResultGroup:
     '''
-    a group of scan results (grouped by component-name and resource-name)
-    grouping is done so different component-resource-versions are grouped into common "reporting
+    a group of scan results (grouped by component-name and artifact-name)
+    grouping is done so different component-artifact-versions are grouped into common "reporting
     targets" (github issues if used in the context of this package)
 
-    components and resources are understood as defined by the OCM (gci.componentmodel)
+    components and artifacts are understood as defined by the OCM (gci.componentmodel)
 
     ScanResultGroup caches calculated values to reduce amount of (potentially expensive) callbacks.
     Altering `results`, or external state passed-in callbacks rely on will thus result in
     inconsistent state.
     '''
-    name: str # {component.name}:{resource.name}
+    name: str # {component.name}:{artifact.name}
     results: tuple[ScanResult]
     issue_type: str
     findings_callback: FindingsCallback
@@ -102,11 +103,12 @@ class ScanResultGroup:
 
     @property
     def component(self) -> cm.Component:
-        return self.results[0].component
+        return self.results[0].scanned_element.component
 
     @property
-    def artifact(self) -> cm.Artifact:
-        return self.results[0].artifact
+    def artifact(self) -> cm.ComponentSource | cm.Resource:
+        result = self.results[0]
+        return cnudie.iter.artifact_from_node(result.scanned_element)
 
     @functools.cached_property
     def has_findings(self) -> bool:
@@ -172,8 +174,8 @@ class ScanResultGroupCollection:
             return ()
 
         for result in self.results:
-            artifact_name = result.artifact.name
-            group_name = f'{result.component.name}:{artifact_name}'
+            artifact = cnudie.iter.artifact_from_node(result.scanned_element)
+            group_name = f'{result.scanned_element.component.name}:{artifact.name}'
 
             results_grouped_by_name[group_name].append(result)
 

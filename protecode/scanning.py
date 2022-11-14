@@ -364,8 +364,10 @@ class ResourceGroupProcessor:
           if scan_failed:
             # pylint: disable=E1123
             yield pm.BDBA_ScanResult(
-                component=component,
-                artifact=artefact,
+                scanned_element=cnudie.iter.ResourceNode(
+                    path=(component,),
+                    resource=artefact,
+                ),
                 status=pm.UploadStatus.DONE,
                 result=scan_result,
                 state=state,
@@ -404,8 +406,10 @@ class ResourceGroupProcessor:
 
           # pylint: disable=E1123
           yield pm.BDBA_ScanResult(
-              component=component,
-              artifact=artefact,
+              scanned_element=cnudie.iter.ResourceNode(
+                path=(component,),
+                resource=artefact,
+              ),
               status=pm.UploadStatus.DONE,
               result=scan_result,
               state=state,
