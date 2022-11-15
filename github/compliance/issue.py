@@ -66,55 +66,37 @@ def artifact_digest_label(
     return label
 
 
-def _repository_labels(
-    component: cm.Component | None,
-    artifact: cm.Artifact | None,
-    issue_type: str | None=_label_bdba,
-    extra_labels: typing.Iterable[str]=None
-) -> typing.Generator[str, None, None]:
-    if any((component, artifact)) and not all((component, artifact)):
-        raise ValueError('either all or none of component, resource must be given')
-
-    yield 'area/security'
-    yield 'cicd/auto-generated'
-
-    if issue_type:
-        yield f'cicd/{issue_type}'
-
-    if component:
-        yield artifact_digest_label(component=component, artifact=artifact)
-
-    if extra_labels:
-        yield from extra_labels
-
-
-def labels_from_target(
+def _search_labels(
     target: cnudie.iter.SourceNode | cnudie.iter.ResourceNode | None,
     issue_type: str,
-    extra_labels: typing.Iterable[str]=None,
+    extra_labels: typing.Iterable[str]=(),
 ) -> typing.Generator[str, None, None]:
     if not issue_type:
         raise ValueError('issue_type must not be None or empty')
 
-    if not target:
-        yield from _repository_labels(
-            component=None,
-            artifact=None,
-            issue_type=issue_type,
-            extra_labels=extra_labels,
-        )
-        return
+    if extra_labels:
+        yield from extra_labels
 
-    if isinstance(target, (cnudie.iter.SourceNode, cnudie.iter.ResourceNode)):
-        yield from _repository_labels(
+    yield 'area/security'
+    yield 'cicd/auto-generated'
+    yield f'cicd/{issue_type}'
+
+    if isinstance(target, cnudie.iter.SourceNode):
+        target: cnudie.iter.SourceNode
+
+        yield artifact_digest_label(
             component=target.component,
-            artifact=target_artifact(target),
-            issue_type=issue_type,
-            extra_labels=extra_labels,
+            artifact=target.source,
         )
-        return
+    elif isinstance(target, cnudie.iter.ResourceNode):
+        target: cnudie.iter.ResourceNode
 
-    raise NotImplementedError(f'{target=}')
+        yield artifact_digest_label(
+            component=target.component,
+            artifact=target.resource,
+        )
+    else:
+        raise NotImplementedError(target)
 
 
 @github.retry.retry_and_throttle
@@ -127,7 +109,7 @@ def enumerate_issues(
     '''Return an iterator iterating over those issues from `known_issues` that match the given
     parameters.
     '''
-    labels = frozenset(labels_from_target(
+    labels = frozenset(_search_labels(
         target=target,
         issue_type=issue_type,
     ))
@@ -156,7 +138,7 @@ def _create_issue(
 ) -> github3.issues.issue.ShortIssue:
     assignees = tuple(assignees)
 
-    labels = frozenset(labels_from_target(
+    labels = frozenset(_search_labels(
         target=target,
         issue_type=issue_type,
         extra_labels=extra_labels,
@@ -198,7 +180,7 @@ def _update_issue(
     if milestone and not issue.milestone:
         kwargs['milestone'] = milestone.number
 
-    labels = sorted(labels_from_target(
+    labels = sorted(_search_labels(
         target=target,
         issue_type=issue_type,
         extra_labels=extra_labels,
