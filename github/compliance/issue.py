@@ -66,7 +66,7 @@ def artifact_digest_label(
     return label
 
 
-def repository_labels(
+def _repository_labels(
     component: cm.Component | None,
     artifact: cm.Artifact | None,
     issue_type: str | None=_label_bdba,
@@ -97,7 +97,7 @@ def labels_from_target(
         raise ValueError('issue_type must not be None or empty')
 
     if not target:
-        yield from repository_labels(
+        yield from _repository_labels(
             component=None,
             artifact=None,
             issue_type=issue_type,
@@ -106,7 +106,7 @@ def labels_from_target(
         return
 
     if isinstance(target, (cnudie.iter.SourceNode, cnudie.iter.ResourceNode)):
-        yield from repository_labels(
+        yield from _repository_labels(
             component=target.component,
             artifact=target_artifact(target),
             issue_type=issue_type,
