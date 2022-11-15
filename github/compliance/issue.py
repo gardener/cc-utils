@@ -66,6 +66,17 @@ def artifact_digest_label(
     return label
 
 
+def _target_name(
+    target: cnudie.iter.SourceNode | cnudie.iter.ResourceNode,
+):
+    if isinstance(target, cnudie.iter.SourceNode):
+        return f'{target.component.name}:{target.source.name}'
+    elif isinstance(target, cnudie.iter.ResourceNode):
+        return f'{target.component.name}:{target.resource.name}'
+    else:
+        raise NotImplementedError(target)
+
+
 def _search_labels(
     target: cnudie.iter.SourceNode | cnudie.iter.ResourceNode | None,
     issue_type: str,
@@ -132,7 +143,7 @@ def _create_issue(
     repository: github3.repos.Repository,
     body: str,
     title: str,
-    extra_labels: typing.Iterable[str]=None,
+    extra_labels: typing.Iterable[str]=(),
     assignees: typing.Iterable[str]=(),
     milestone: github3.issues.milestone.Milestone=None,
 ) -> github3.issues.issue.ShortIssue:
@@ -166,7 +177,7 @@ def _update_issue(
     body:str,
     title:typing.Optional[str],
     issue: github3.issues.Issue,
-    extra_labels: typing.Iterable[str]=None,
+    extra_labels: typing.Iterable[str]=(),
     milestone: github3.issues.milestone.Milestone=None,
     assignees: typing.Iterable[str]=(),
 ) -> github3.issues.issue.ShortIssue:
@@ -217,8 +228,7 @@ def create_or_update_issue(
         )
     )
     if (issues_count := len(open_issues)) > 1:
-        raise RuntimeError(f'more than one open issue found for {target.component.name=} '
-            f'{target_artifact(target).name}')
+        raise RuntimeError(f'more than one open issue found for {_target_name(target)=}')
     elif issues_count == 0:
         return _create_issue(
             target=target,
@@ -263,15 +273,6 @@ def create_or_update_issue(
         raise RuntimeError('this line should never be reached') # all cases should be handled before
 
 
-def target_artifact(
-    target: cnudie.iter.SourceNode | cnudie.iter.ResourceNode,
-) -> cm.ComponentSource | cm.Resource:
-    if isinstance(target, cnudie.iter.SourceNode):
-        return target.source
-    if isinstance(target, cnudie.iter.ResourceNode):
-        return target.resource
-
-
 @github.retry.retry_and_throttle
 def close_issue_if_present(
     target: cnudie.iter.SourceNode | cnudie.iter.ResourceNode,
@@ -292,11 +293,9 @@ def close_issue_if_present(
     logger.info(f'{len(open_issues)=} found for closing {open_issues=}')
 
     if (issues_count := len(open_issues)) > 1:
-        logger.warning(f'more than one open issue found for {target.component.name=} '
-            f'{target_artifact(target).name}')
+        logger.warning(f'more than one open issue found for {_target_name(target)=}')
     elif issues_count == 0:
-        logger.info(f'no open issue found for{target.component.name=} '
-            f'{target_artifact(target).name}')
+        logger.info(f'no open issue found for {_target_name(target)=}')
         return # nothing to do
 
     open_issue = open_issues[0]
