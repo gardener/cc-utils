@@ -90,9 +90,11 @@ def repository_labels(
 
 def labels_from_target(
     target: cnudie.iter.SourceNode | cnudie.iter.ResourceNode | None,
-    issue_type: str | None,
+    issue_type: str,
     extra_labels: typing.Iterable[str]=None,
 ) -> typing.Generator[str, None, None]:
+    if not issue_type:
+        raise ValueError('issue_type must not be None or empty')
 
     if not target:
         yield from repository_labels(
@@ -119,7 +121,7 @@ def labels_from_target(
 def enumerate_issues(
     target: cnudie.iter.SourceNode | cnudie.iter.ResourceNode | None,
     known_issues: typing.Sequence[github3.issues.issue.ShortIssue],
-    issue_type: str | None,
+    issue_type: str,
     state: str | None = None, # 'open' | 'closed'
 ) -> typing.Generator[github3.issues.ShortIssue, None, None]:
     '''Return an iterator iterating over those issues from `known_issues` that match the given
