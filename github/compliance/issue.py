@@ -92,6 +92,9 @@ def _search_labels(
     yield 'cicd/auto-generated'
     yield f'cicd/{issue_type}'
 
+    if not target:
+        return
+
     if isinstance(target, cnudie.iter.SourceNode):
         target: cnudie.iter.SourceNode
 
