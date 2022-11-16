@@ -300,26 +300,6 @@ def _latest_processing_date(
     )
 
 
-def target_from_component_artifact(
-    component: cm.Component,
-    artifact: cm.Resource | cm.ComponentSource,
-) -> cnudie.iter.ResourceNode | cnudie.iter.SourceNode:
-    path = (component,)
-
-    if isinstance(artifact, cm.ComponentSource):
-        return cnudie.iter.SourceNode(
-            path=path,
-            source=artifact,
-        )
-    if isinstance(artifact, cm.Resource):
-        return cnudie.iter.ResourceNode(
-            path=path,
-            resource=artifact,
-        )
-
-    raise RuntimeError(f'{artifact=}')
-
-
 class PROCESSING_ACTION(enum.Enum):
     DISCARD = 'discard'
     REPORT = 'report'
@@ -369,11 +349,7 @@ def create_or_update_github_issues(
 
         component = result_group.component
         artifact = result_group.artifact
-
-        target = target_from_component_artifact(
-            component=component,
-            artifact=artifact,
-        )
+        scan_result = result_group.results[0]
 
         if overwrite_repository:
             repository = overwrite_repository
@@ -393,7 +369,7 @@ def create_or_update_github_issues(
 
         if action == PROCESSING_ACTION.DISCARD:
             github.compliance.issue.close_issue_if_present(
-                target=target,
+                scanned_element=scan_result.scanned_element,
                 issue_type=issue_type,
                 repository=repository,
                 known_issues=known_issues,
@@ -476,7 +452,7 @@ def create_or_update_github_issues(
 
             try:
                 issue = github.compliance.issue.create_or_update_issue(
-                    target=target,
+                    scanned_element=scan_result.scanned_element,
                     issue_type=issue_type,
                     repository=repository,
                     body=body,
@@ -549,10 +525,11 @@ def create_or_update_github_issues(
 
     if overwrite_repository:
         known_issues = _all_issues(overwrite_repository)
+        issue_type = result_group_collection.issue_type
         close_issues_for_absent_resources(
             result_groups=result_groups,
             known_issues=known_issues,
-            issue_type=result_group_collection.issue_type,
+            issue_type=issue_type,
         )
 
     if err_count > 0:
@@ -568,11 +545,10 @@ def close_issues_for_absent_resources(
     '''
     closes all open issues for component-resources that are not present in given result-groups.
 
-    this is intended to automatically close issues for components or component-resources that
-    have been removed from BoM.
+    this is intended to automatically close issues for scan targets that are no longer present.
     '''
     all_issues = github.compliance.issue.enumerate_issues(
-        target=None,
+        scanned_element=None,
         issue_type=issue_type,
         known_issues=known_issues,
         state='open',
@@ -580,6 +556,7 @@ def close_issues_for_absent_resources(
 
     def component_resource_label(issue: github3.issues.Issue) -> str:
         for label in issue.labels():
+            label: github3.issues.label.ShortLabel
             if label.name.startswith('ocm/resource'):
                 return label.name
 
@@ -588,9 +565,9 @@ def close_issues_for_absent_resources(
     }
 
     for result_group in result_groups:
-        resource_label = github.compliance.issue.artifact_digest_label(
-            component=result_group.component,
-            artifact=result_group.artifact,
+        resource_label = github.compliance.issue.digest_label(
+            scanned_element=result_group.results[0].scanned_element,
+            issue_type=issue_type,
         )
         logger.info(f'Digest-Label for {result_group.name=}: {resource_label=}')
         component_resources_to_issues.pop(resource_label, None)

@@ -12,7 +12,6 @@ import github3.issues.milestone
 import github3.repos
 
 import cnudie.iter
-import gci.componentmodel as cm
 
 import ci.log
 import github.retry
@@ -39,47 +38,66 @@ def _issue_labels(
     return frozenset((l.name for l in issue.labels()))
 
 
-def artifact_digest_label(
-    component: cm.Component,
-    artifact: cm.Artifact | str,
-    length: int=18,
+Target = cnudie.iter.ResourceNode | cnudie.iter.SourceNode
+
+
+def _is_ocm_artefact_node(
+    element: cnudie.iter.SourceNode | cnudie.iter.ResourceNode | object,
 ):
+    if isinstance(element, (cnudie.iter.SourceNode, cnudie.iter.ResourceNode)):
+        return True
+
+    return False
+
+
+def _name_for_element(
+    scanned_element: Target,
+) -> str:
+    if _is_ocm_artefact_node(scanned_element):
+        artifact = cnudie.iter.artifact_from_node(scanned_element)
+        return f'{scanned_element.component.name}:{artifact.name}'
+
+    else:
+        raise TypeError(scanned_element)
+
+
+def digest_label(
+    scanned_element: Target,
+    issue_type: str,
+    max_length: int=50,
+) -> str:
     '''
-    calculates and returns a digest for the given component/resource
+    calculates and returns a digest for the given scan_result and issue_type.
 
     this is useful as GitHub labels are limited to 50 characters
     '''
-    if isinstance(artifact, cm.Resource):
-        name = artifact.name
-    else:
-        name = artifact
 
-    label_str = f'{component.name}:{name}'
+    name = _name_for_element(scanned_element)
+
+    if _is_ocm_artefact_node(scan_result.scanned_element):
+        prefix = 'ocm/resource'
+    else:
+        raise TypeError(scan_result)
+
+    digest_length = max_length - (len(prefix) + 1) # prefix + slash
+    digest_length = int(digest_length / 2) # hexdigest is of double length
 
     # pylint does not know `length` parameter (it is even required, though!)
-    label_dig =  hashlib.shake_128(label_str.encode('utf-8')).hexdigest(length=length) # noqa
+    digest = hashlib.shake_128(name.encode('utf-8')).hexdigest( # noqa: E1123
+        length=digest_length,
+    )
 
-    label = f'ocm/resource/{label_dig}'
+    label = f'{prefix}/{digest}'
 
-    if len(label) > 50:
-        raise ValueError(f'{length=} would result in label exceeding 50 characters')
+    if len(label) > max_length:
+        raise ValueError(f'{scanned_element=} and {issue_type=} would result '
+            f'in label exceeding length of {max_length=}')
 
     return label
 
 
-def _target_name(
-    target: cnudie.iter.SourceNode | cnudie.iter.ResourceNode,
-):
-    if isinstance(target, cnudie.iter.SourceNode):
-        return f'{target.component.name}:{target.source.name}'
-    elif isinstance(target, cnudie.iter.ResourceNode):
-        return f'{target.component.name}:{target.resource.name}'
-    else:
-        raise NotImplementedError(target)
-
-
 def _search_labels(
-    target: cnudie.iter.SourceNode | cnudie.iter.ResourceNode | None,
+    scanned_element: Target | None,
     issue_type: str,
     extra_labels: typing.Iterable[str]=(),
 ) -> typing.Generator[str, None, None]:
@@ -93,30 +111,16 @@ def _search_labels(
     yield 'cicd/auto-generated'
     yield f'cicd/{issue_type}'
 
-    if not target:
-        return
-
-    if isinstance(target, cnudie.iter.SourceNode):
-        target: cnudie.iter.SourceNode
-
-        yield artifact_digest_label(
-            component=target.component,
-            artifact=target.source,
+    if scanned_element:
+        yield digest_label(
+            scanned_element=scanned_element,
+            issue_type=issue_type,
         )
-    elif isinstance(target, cnudie.iter.ResourceNode):
-        target: cnudie.iter.ResourceNode
-
-        yield artifact_digest_label(
-            component=target.component,
-            artifact=target.resource,
-        )
-    else:
-        raise NotImplementedError(target)
 
 
 @github.retry.retry_and_throttle
 def enumerate_issues(
-    target: cnudie.iter.SourceNode | cnudie.iter.ResourceNode | None,
+    scanned_element: Target | None,
     known_issues: typing.Sequence[github3.issues.issue.ShortIssue],
     issue_type: str,
     state: str | None = None, # 'open' | 'closed'
@@ -125,7 +129,7 @@ def enumerate_issues(
     parameters.
     '''
     labels = frozenset(_search_labels(
-        target=target,
+        scanned_element=scanned_element,
         issue_type=issue_type,
     ))
 
@@ -142,7 +146,7 @@ def enumerate_issues(
 
 @github.retry.retry_and_throttle
 def _create_issue(
-    target: cnudie.iter.ResourceNode | cnudie.iter.SourceNode,
+    scanned_element: Target,
     issue_type: str,
     repository: github3.repos.Repository,
     body: str,
@@ -155,7 +159,7 @@ def _create_issue(
     assignees = tuple(assignees)
 
     labels = frozenset(_search_labels(
-        target=target,
+        scanned_element=scanned_element,
         issue_type=issue_type,
         extra_labels=extra_labels,
     ))
@@ -183,7 +187,7 @@ def _create_issue(
 
 @github.retry.retry_and_throttle
 def _update_issue(
-    target: cnudie.iter.ResourceNode | cnudie.iter.SourceNode,
+    scanned_element: Target,
     issue_type: str,
     body:str,
     title:typing.Optional[str],
@@ -203,7 +207,7 @@ def _update_issue(
         kwargs['milestone'] = milestone.number
 
     labels = sorted(_search_labels(
-        target=target,
+        scanned_element=scanned_element,
         issue_type=issue_type,
         extra_labels=extra_labels,
     ))
@@ -219,7 +223,7 @@ def _update_issue(
 
 
 def create_or_update_issue(
-    target: cnudie.iter.ResourceNode | cnudie.iter.SourceNode,
+    scanned_element: Target,
     issue_type: str,
     repository: github3.repos.Repository,
     body: str,
@@ -233,17 +237,19 @@ def create_or_update_issue(
 ) -> github3.issues.issue.ShortIssue:
     open_issues = tuple(
         enumerate_issues(
-            target=target,
+            scanned_element=scanned_element,
             issue_type=issue_type,
             known_issues=known_issues,
             state='open',
         )
     )
     if (issues_count := len(open_issues)) > 1:
-        raise RuntimeError(f'more than one open issue found for {_target_name(target)=}')
+        raise RuntimeError(
+            f'more than one open issue found for {_name_for_element(scanned_element)=}'
+        )
     elif issues_count == 0:
         return _create_issue(
-            target=target,
+            scanned_element=scanned_element,
             issue_type=issue_type,
             extra_labels=extra_labels,
             repository=repository,
@@ -273,7 +279,7 @@ def create_or_update_issue(
             extra_labels = labels_to_preserve()
 
         return _update_issue(
-            target=target,
+            scanned_element=scanned_element,
             issue_type=issue_type,
             extra_labels=extra_labels,
             body=body,
@@ -288,14 +294,14 @@ def create_or_update_issue(
 
 @github.retry.retry_and_throttle
 def close_issue_if_present(
-    target: cnudie.iter.SourceNode | cnudie.iter.ResourceNode,
+    scanned_element: Target,
     issue_type: str,
     repository: github3.repos.Repository,
     known_issues: typing.Iterable[github3.issues.issue.ShortIssue],
 ):
     open_issues = tuple(
         enumerate_issues(
-            target=target,
+            scanned_element=scanned_element,
             issue_type=issue_type,
             known_issues=known_issues,
             state='open',
@@ -306,9 +312,11 @@ def close_issue_if_present(
     logger.info(f'{len(open_issues)=} found for closing {open_issues=}')
 
     if (issues_count := len(open_issues)) > 1:
-        logger.warning(f'more than one open issue found for {_target_name(target)=}')
+        logger.warning(
+            f'more than one open issue found for {_name_for_element(scanned_element)=}'
+        )
     elif issues_count == 0:
-        logger.info(f'no open issue found for {_target_name(target)=}')
+        logger.info(f'no open issue found for {_name_for_element(scanned_element)=}')
         return # nothing to do
 
     open_issue = open_issues[0]
