@@ -29,6 +29,10 @@ class CfgElementStatusReport:
     responsible: typing.Optional[cmm.CfgResponsibleMapping]
     status: typing.Optional[cmm.CfgStatus]
 
+    @property
+    def name(self) -> str:
+        return f'{self.element_storage}/{self.element_type}/{self.element_name}'
+
 
 def evaluate_cfg_element_status(
     cfg_element_status: CfgElementStatusReport,
@@ -239,15 +243,12 @@ def create_report(
         if evaluation_result.fullyCompliant:
             fully_compliant.append(cfg_element_status)
 
-    def cfg_element_status_name(status: CfgElementStatusReport):
-        return f'{status.element_storage}/{status.element_type}/{status.element_name}'
-
     def print_paragraph(header: str, statuses: typing.List[CfgElementStatusReport]):
         print(f'({len(statuses)}) {header}')
         print(2*'\n')
 
         for status in statuses:
-            print(cfg_element_status_name(status=status))
+            print(status.name)
 
         print('')
         print(40 * '-')
