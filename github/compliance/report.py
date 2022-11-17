@@ -440,6 +440,7 @@ def create_or_update_github_issues(
             else:
                 assignees = ()
                 target_milestone = None
+                latest_processing_date = None
 
             if delivery_svc_endpoints:
                 delivery_dashboard_url = _delivery_dashboard_url(
@@ -471,6 +472,7 @@ def create_or_update_github_issues(
                     body=body,
                     assignees=assignees,
                     milestone=target_milestone,
+                    latest_processing_date=latest_processing_date,
                     extra_labels=(
                         _criticality_label(classification=criticality_classification),
                     ),

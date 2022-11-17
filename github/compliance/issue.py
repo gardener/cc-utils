@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 import logging
 import re
@@ -149,6 +150,7 @@ def _create_issue(
     extra_labels: typing.Iterable[str]=(),
     assignees: typing.Iterable[str]=(),
     milestone: github3.issues.milestone.Milestone=None,
+    latest_processing_date: datetime.date|datetime.datetime=None,
 ) -> github3.issues.issue.ShortIssue:
     assignees = tuple(assignees)
 
@@ -159,13 +161,19 @@ def _create_issue(
     ))
 
     try:
-        return repository.create_issue(
+        issue = repository.create_issue(
             title=title,
             body=body,
             assignees=assignees,
             milestone=milestone.number if milestone else None,
             labels=sorted(labels),
         )
+
+        if latest_processing_date:
+            latest_processing_date = latest_processing_date.isoformat()
+            issue.create_comment(f'{latest_processing_date=}')
+
+        return issue
     except github3.exceptions.GitHubError as ghe:
         logger.warning(f'received error trying to create issue: {ghe=}')
         logger.warning(f'{ghe.message=} {ghe.code=} {ghe.errors=}')
@@ -219,6 +227,7 @@ def create_or_update_issue(
     title: str,
     assignees: typing.Iterable[str]=(),
     milestone: github3.issues.milestone.Milestone=None,
+    latest_processing_date: datetime.date|datetime.datetime=None,
     extra_labels: typing.Iterable[str]=None,
     preserve_labels_regexes: typing.Iterable[str]=(),
 ) -> github3.issues.issue.ShortIssue:
@@ -242,6 +251,7 @@ def create_or_update_issue(
             title=title,
             assignees=assignees,
             milestone=milestone,
+            latest_processing_date=latest_processing_date,
         )
     elif issues_count == 1:
 
