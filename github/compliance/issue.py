@@ -11,6 +11,7 @@ import github3.issues.issue
 import github3.issues.milestone
 import github3.repos
 
+import cfg_mgmt.reporting as cmr
 import ci.log
 import github.compliance.model as gcm
 import github.retry
@@ -28,6 +29,10 @@ _label_bdba = 'vulnerabilities/bdba'
 _label_licenses = 'licenses/bdba'
 _label_os_outdated = 'os/outdated'
 _label_malware = 'malware/clamav'
+_label_cfg_policy_violation = 'cfg-element/policy-violation'
+
+_label_prefix_ocm_resource = 'ocm/resource'
+_label_prefix_cicd_cfg_element = 'cicd-cfg-element'
 
 
 @cachetools.cached(cache={})
@@ -37,12 +42,28 @@ def _issue_labels(
     return frozenset((l.name for l in issue.labels()))
 
 
+def prefix_for_element(
+    scanned_element: gcm.Target,
+) -> str:
+    if gcm.is_ocm_artefact_node(scanned_element):
+        return _label_prefix_ocm_resource
+
+    elif isinstance(scanned_element, cmr.CfgElementStatusReport):
+        return _label_prefix_cicd_cfg_element
+
+    else:
+        raise TypeError(scanned_element)
+
+
 def name_for_element(
     scanned_element: gcm.Target,
 ) -> str:
     if gcm.is_ocm_artefact_node(scanned_element):
         artifact = gcm.artifact_from_node(scanned_element)
         return f'{scanned_element.component.name}:{artifact.name}'
+
+    elif isinstance(scanned_element, cmr.CfgElementStatusReport):
+        return scanned_element.name
 
     else:
         raise TypeError(scanned_element)
@@ -60,11 +81,7 @@ def digest_label(
     '''
 
     name = name_for_element(scanned_element)
-
-    if gcm.is_ocm_artefact_node(scanned_element):
-        prefix = 'ocm/resource'
-    else:
-        raise TypeError(scanned_element)
+    prefix = prefix_for_element(scanned_element)
 
     digest_length = max_length - (len(prefix) + 1) # prefix + slash
     digest_length = int(digest_length / 2) # hexdigest is of double length

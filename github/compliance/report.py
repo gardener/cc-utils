@@ -22,6 +22,8 @@ import requests
 import ccc.delivery
 import ccc.github
 import checkmarx.model
+import cfg_mgmt.model as cmm
+import cfg_mgmt.reporting as cmr
 import ci.util
 import clamav.scan
 import cnudie.util
@@ -45,6 +47,7 @@ _compliance_label_licenses = github.compliance.issue._label_licenses
 _compliance_label_os_outdated = github.compliance.issue._label_os_outdated
 _compliance_label_checkmarx = github.compliance.issue._label_checkmarx
 _compliance_label_malware = github.compliance.issue._label_malware
+_compliance_label_cfg_policy_violation = github.compliance.issue._label_cfg_policy_violation
 
 
 def _criticality_label(classification: gcm.Severity):
@@ -93,6 +96,12 @@ def _delivery_dashboard_url(
     return f'{url}?{query}'
 
 
+def _pluralise(prefix: str, count: int):
+    if count == 1:
+        return prefix
+    return f'{prefix}s'
+
+
 def _compliance_status_summary(
     component: cm.Component,
     artifacts: typing.Sequence[cm.Artifact],
@@ -104,11 +113,6 @@ def _compliance_status_summary(
         artifact_type = artifacts[0].type.value
     else:
         artifact_type = artifacts[0].type
-
-    def pluralise(prefix: str, count: int):
-        if count == 1:
-            return prefix
-        return f'{prefix}s'
 
     artifact_versions = ', '.join((r.version for r in artifacts))
 
@@ -122,18 +126,47 @@ def _compliance_status_summary(
         | Component | {component.name} |
         | Component-Version | {component.version} |
         | Artifact  | {artifacts[0].name} |
-        | {pluralise('Artifact-Version', len(artifacts))}  | {artifact_versions} |
+        | {_pluralise('Artifact-Version', len(artifacts))}  | {artifact_versions} |
         | Artifact-Type | {artifact_type} |
         | {issue_description} | {issue_value} |
 
-        The aforementioned {pluralise(artifact_type, len(artifacts))} yielded findings
+        The aforementioned {_pluralise(artifact_type, len(artifacts))} yielded findings
         relevant for future release decisions.
 
-        For viewing detailed scan {pluralise('report', len(artifacts))}, see the following
-        {pluralise('Scan Report', len(artifacts))}:
+        For viewing detailed scan {_pluralise('report', len(artifacts))}, see the following
+        {_pluralise('Scan Report', len(artifacts))}:
     ''')
 
     return summary + '- ' + report_urls
+
+
+def _cfg_policy_violation_status_summary(
+    scanned_element: gcm.Target,
+    issue_description: str,
+    issue_value: str,
+):
+    if scanned_element.responsible:
+        # remove foremost "@" to prevent notification mails
+        responsibles = '<br/>'.join([
+            f'{r.name.removeprefix("@")} ({r.type.value})'
+            for r in scanned_element.responsible.responsibles
+        ])
+        responsibles_len = len(scanned_element.responsible.responsibles)
+
+    else:
+        responsibles = 'unknown'
+        responsibles_len = 1
+
+    return textwrap.dedent(f'''\
+        # Compliance Status Summary
+        |    |    |
+        | -- | -- |
+        | Element Storage | {scanned_element.element_storage} |
+        | Element Type | {scanned_element.element_type} |
+        | Element Name | {scanned_element.element_name} |
+        | {_pluralise("Responsible", responsibles_len)} | {responsibles} |
+        | {issue_description} | {issue_value} |
+    ''')
 
 
 def _ocm_result_group_template_vars(
@@ -297,6 +330,23 @@ def _malware_template_vars(
     }
 
 
+def _cfg_policy_violation_template_vars(
+    result_group: gcm.ScanResultGroup,
+) -> dict:
+    scanned_element: cmr.CfgElementStatusReport = result_group.results[0].scanned_element
+
+    evaluation_result = cmr.evaluate_cfg_element_status(scanned_element)
+    summary_str = ', '.join(r.value for r in evaluation_result.nonCompliantReasons)
+
+    return {
+        'summary': _cfg_policy_violation_status_summary(
+            scanned_element=scanned_element,
+            issue_value=summary_str,
+            issue_description='Policy Violation',
+        )
+    }
+
+
 def _template_vars(
     result_group: gcm.ScanResultGroup,
     license_cfg: image_scan.LicenseCfg,
@@ -310,6 +360,13 @@ def _template_vars(
             result_group=result_group,
             delivery_dashboard_url=delivery_dashboard_url,
         )
+
+    elif isinstance(scanned_element, cmr.CfgElementStatusReport):
+        template_variables = {
+            'cfg_element_name': scanned_element.element_name,
+            'cfg_element_type': scanned_element.element_type,
+            'cfg_element_storage': scanned_element.element_storage,
+        }
 
     else:
         raise TypeError(result_group)
@@ -332,6 +389,9 @@ def _template_vars(
     elif issue_type == _compliance_label_malware:
         template_variables |= _malware_template_vars(result_group)
 
+    elif issue_type == _compliance_label_cfg_policy_violation:
+        template_variables |= _cfg_policy_violation_template_vars(result_group)
+
     else:
         raise NotImplementedError(issue_type)
 
@@ -353,6 +413,15 @@ def _scanned_element_repository(
 
         return gh_api.repository(org, name)
 
+    elif isinstance(scanned_element, cmr.CfgElementStatusReport):
+        gh_api = ccc.github.github_api(repo_url=scanned_element.element_storage)
+
+        parsed_url = ci.util.urlparse(scanned_element.element_storage)
+        path = parsed_url.path.strip('/')
+        org, repo = path.split('/')
+
+        return gh_api.repository(org, repo)
+
     else:
         raise TypeError(scanned_element)
 
@@ -363,6 +432,29 @@ def _scanned_element_assignees(
     repository: github3.repos.repo.Repository,
     gh_api: github3.GitHub | github3.GitHubEnterprise,
 ) -> tuple[str]:
+
+    def iter_gh_usernames_from_responsibles_mapping(
+        gh_api: github3.GitHub | github3.GitHubEnterprise,
+        responsibles_mapping: cmm.CfgResponsibleMapping,
+    ) -> typing.Generator[github.codeowners.Username, None, None]:
+        unique_usernames = set()
+        for responsible in responsibles_mapping.responsibles:
+            if responsible.type == cmm.CfgResponsibleType.EMAIL:
+                for username in github.codeowners.usernames_from_email_address(
+                    email_address=responsible.name,
+                    gh_api=gh_api,
+                ):
+                    unique_usernames.add(username)
+            elif responsible.type == cmm.CfgResponsibleType.GITHUB:
+                parsed = github.codeowners.parse_codeowner_entry(responsible.name)
+                for username in github.codeowners.resolve_usernames(
+                    codeowners_entries=[parsed],
+                    github_api=gh_api,
+                ):
+                    unique_usernames.add(username)
+            else:
+                logger.warning(f'unable to process {responsible.type=}')
+        yield from unique_usernames
 
     if gcm.is_ocm_artefact_node(scanned_element):
         if not delivery_svc_client:
@@ -393,6 +485,20 @@ def _scanned_element_assignees(
             else:
                 raise
 
+    elif isinstance(scanned_element, cmr.CfgElementStatusReport):
+        if not scanned_element.responsible:
+            return ()
+
+        return tuple((
+            username for username in iter_gh_usernames_from_responsibles_mapping(
+                responsibles_mapping=scanned_element.responsible,
+                gh_api=gh_api,
+            )
+            if github.user.is_user_active(
+                username=username,
+                github=gh_api,
+            )
+        ))
     else:
         raise TypeError(scanned_element)
 
@@ -404,6 +510,9 @@ def _scanned_element_title(
     if gcm.is_ocm_artefact_node(scanned_element):
         artifact = gcm.artifact_from_node(scanned_element)
         return f'[{issue_type}] - {scanned_element.component.name}:{artifact.name}'
+
+    elif isinstance(scanned_element, cmr.CfgElementStatusReport):
+        return f'[{issue_type}] - {scanned_element.name}'
 
     else:
         raise TypeError(scanned_element)
@@ -590,6 +699,9 @@ def create_or_update_github_issues(
                             a = gcm.artifact_from_node(result.scanned_element)
                             header = f'**{a.name}:{a.version}**\n'
 
+                        elif isinstance(result.scanned_element, cmr.CfgElementStatusReport):
+                            header = '**Policy Violations**\n'
+
                         else:
                             raise TypeError(result)
 
@@ -600,6 +712,9 @@ def create_or_update_github_issues(
                             c = result.scanned_element.component
                             a = gcm.artifact_from_node(result.scanned_element)
                             result_str = f'{c.name}:{c.version}/{a.name}:{a.version}'
+
+                        elif isinstance(result.scanned_element, cmr.CfgElementStatusReport):
+                            result_str = result.scanned_element.name
 
                         else:
                             raise TypeError(result)
@@ -672,7 +787,7 @@ def close_issues_for_absent_resources(
     issue_type: str | None,
 ):
     '''
-    closes all open issues for component-resources that are not present in given result-groups.
+    closes all open issues for scanned elements that are not present in given result-groups.
 
     this is intended to automatically close issues for scan targets that are no longer present.
     '''
@@ -683,10 +798,13 @@ def close_issues_for_absent_resources(
         state='open',
     )
 
+    scanned_element = result_groups[0].results[0].scanned_element
+    prefix = github.compliance.issue.prefix_for_element(scanned_element)
+
     def component_resource_label(issue: github3.issues.Issue) -> str:
         for label in issue.labels():
             label: github3.issues.label.ShortLabel
-            if label.name.startswith('ocm/resource'):
+            if label.name.startswith(prefix):
                 return label.name
 
     component_resources_to_issues = {
