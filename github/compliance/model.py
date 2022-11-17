@@ -4,6 +4,7 @@ import enum
 import functools
 import typing
 
+import cfg_mgmt.reporting as cmr
 import cnudie.iter
 import gci.componentmodel as cm
 import unixutil.model
@@ -46,7 +47,7 @@ class ScanState(enum.Enum):
     FAILED = 'failed'
 
 
-Target = cnudie.iter.ResourceNode | cnudie.iter.SourceNode
+Target = cnudie.iter.ResourceNode | cnudie.iter.SourceNode | cmr.CfgElementStatusReport
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -102,7 +103,8 @@ class ScanResultGroup:
     Altering `results`, or external state passed-in callbacks rely on will thus result in
     inconsistent state.
     '''
-    name: str # {component.name}:{artifact.name}
+    name: str
+    # {component.name}:{artifact.name} | {cfg_element_storage}/{cfg_element_type}/{cfg_element_name}
     results: tuple[ScanResult]
     issue_type: str
     findings_callback: FindingsCallback
@@ -198,6 +200,8 @@ class ScanResultGroupCollection:
             if is_ocm_artefact_node(result.scanned_element):
                 artifact = artifact_from_node(result.scanned_element)
                 group_name = f'{result.scanned_element.component.name}:{artifact.name}'
+            elif isinstance(result.scanned_element, cmr.CfgElementStatusReport):
+                group_name = result.scanned_element.name
             else:
                 raise TypeError(result)
 
