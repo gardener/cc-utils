@@ -20,6 +20,14 @@ DOCKER_OPTS="${DOCKER_OPTS:-}"
 DOCKERD_PID_FILE="/tmp/docker.pid"
 DOCKERD_LOG_FILE="/tmp/docker.log"
 
+if grep -q cgroup2 /proc/filesystems; then
+  cgroups_version='v2'
+else
+  cgroups_version='v1'
+fi
+
+echo "cgroups-version: ${cgroups_version}"
+
 sanitize_cgroups() {
   local cgroup="/sys/fs/cgroup"
 
@@ -90,7 +98,11 @@ start_docker() {
   mkdir -p /var/log
   mkdir -p /var/run
 
-  sanitize_cgroups
+  if [ "${cgroups_version}" == 'v1' ]; then
+    sanitize_cgroups
+  else
+    echo "cgroups-version ${cgroups_version} - will not sanitise /sys/fs/cgroup"
+  fi
 
   # check for /proc/sys being mounted readonly, as systemd does
   if grep '/proc/sys\s\+\w\+\s\+ro,' /proc/mounts >/dev/null; then
