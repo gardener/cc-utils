@@ -106,9 +106,10 @@ def resource_scan_result_to_artefact_metadata(
     creation_date: datetime.datetime = datetime.datetime.now(),
 ) -> dso.model.ArtefactMetadata:
 
+    artefact = cnudie.iter.artifact_from_node(resource_scan_result.scanned_element)
     artefact_ref = dso.model.component_artefact_id_from_ocm(
-        component=resource_scan_result.component,
-        artefact=resource_scan_result.artifact,
+        component=resource_scan_result.scanned_element.component,
+        artefact=artefact,
     )
 
     meta = dso.model.Metadata(

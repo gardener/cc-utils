@@ -18,6 +18,7 @@ import logging
 import typing
 
 import ci.log
+import cnudie.iter
 import dso.model
 import gci.componentmodel as cm
 import protecode.model as pm
@@ -42,9 +43,10 @@ def iter_artefact_metadata(
     results: typing.Collection[pm.BDBA_ScanResult],
 ) -> typing.Generator[dso.model.GreatestCVE, None, None]:
     for result in results:
+        artefact = cnudie.iter.artifact_from_node(result.scanned_element)
         artefact_ref = dso.model.component_artefact_id_from_ocm(
-            component=result.component,
-            artefact=result.artifact,
+            component=result.scanned_element.component,
+            artefact=artefact,
         )
         meta = dso.model.Metadata(
             datasource=dso.model.Datasource.BDBA,
