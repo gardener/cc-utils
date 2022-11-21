@@ -37,7 +37,7 @@ def _issue_labels(
     return frozenset((l.name for l in issue.labels()))
 
 
-def _name_for_element(
+def name_for_element(
     scanned_element: gcm.Target,
 ) -> str:
     if gcm.is_ocm_artefact_node(scanned_element):
@@ -59,7 +59,7 @@ def digest_label(
     this is useful as GitHub labels are limited to 50 characters
     '''
 
-    name = _name_for_element(scanned_element)
+    name = name_for_element(scanned_element)
 
     if gcm.is_ocm_artefact_node(scanned_element):
         prefix = 'ocm/resource'
@@ -232,7 +232,7 @@ def create_or_update_issue(
     )
     if (issues_count := len(open_issues)) > 1:
         raise RuntimeError(
-            f'more than one open issue found for {_name_for_element(scanned_element)=}'
+            f'more than one open issue found for {name_for_element(scanned_element)=}'
         )
     elif issues_count == 0:
         return _create_issue(
@@ -300,10 +300,10 @@ def close_issue_if_present(
 
     if (issues_count := len(open_issues)) > 1:
         logger.warning(
-            f'more than one open issue found for {_name_for_element(scanned_element)=}'
+            f'more than one open issue found for {name_for_element(scanned_element)=}'
         )
     elif issues_count == 0:
-        logger.info(f'no open issue found for {_name_for_element(scanned_element)=}')
+        logger.info(f'no open issue found for {name_for_element(scanned_element)=}')
         return # nothing to do
 
     open_issue = open_issues[0]
