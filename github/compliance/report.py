@@ -136,17 +136,13 @@ def _compliance_status_summary(
     return summary + '- ' + report_urls
 
 
-def _template_vars(
+def _ocm_result_group_template_vars(
     result_group: gcm.ScanResultGroup,
-    license_cfg: image_scan.LicenseCfg,
-    delivery_dashboard_url: str='',
-):
+    delivery_dashboard_url: str,
+) -> dict:
     component = result_group.component
     artifact_name = result_group.artifact
     artifacts = [gcm.artifact_from_node(res.scanned_element) for res in result_group.results]
-    issue_type = result_group.issue_type
-
-    results = result_group.results_with_findings
 
     artifact_versions = ', '.join((artifact.version for artifact in artifacts))
     artifact_types = ', '.join(set(
@@ -158,7 +154,7 @@ def _template_vars(
         )
     ))
 
-    template_variables = {
+    return {
         'component_name': component.name,
         'component_version': component.version,
         'resource_name': artifact_name, # TODO: to be removed at some point use artifact_name instead
@@ -170,95 +166,172 @@ def _template_vars(
         'delivery_dashboard_url': delivery_dashboard_url,
     }
 
-    if issue_type == _compliance_label_vulnerabilities:
-        results: tuple[pm.BDBA_ScanResult]
-        analysis_results = [r.result for r in results]
-        greatest_cve = max((r.greatest_cve_score for r in results))
-        template_variables['summary'] = _compliance_status_summary(
+
+def _vulnerability_template_vars(
+    result_group: gcm.ScanResultGroup,
+) -> dict:
+    results: tuple[pm.BDBA_ScanResult] = result_group.results_with_findings
+    analysis_results = [r.result for r in results]
+    greatest_cve = max((r.greatest_cve_score for r in results))
+    component = result_group.component
+    artifacts = [gcm.artifact_from_node(res.scanned_element) for res in result_group.results]
+
+    return {
+        'summary': _compliance_status_summary(
             component=component,
             artifacts=artifacts,
             issue_value=greatest_cve,
             issue_description='Greatest CVE Score',
             report_urls=[ar.report_url() for ar in analysis_results],
-        )
-        template_variables['greatest_cve'] = greatest_cve
-        template_variables['criticality_classification'] = str(_criticality_classification(
+        ),
+        'greatest_cve': greatest_cve,
+        'criticality_classification': str(_criticality_classification(
             cve_score=greatest_cve
-        ))
-    elif issue_type == _compliance_label_licenses:
-        results: tuple[pm.BDBA_ScanResult]
-        analysis_results = [r.result for r in results]
-        prohibited_licenses = set()
-        all_licenses = set()
+        )),
+    }
 
-        for r in results:
-            all_licenses |= r.license_names
 
-        for license_name in all_licenses:
-            if not license_cfg.is_allowed(license_name):
-                prohibited_licenses.add(license_name)
+def _license_template_vars(
+    result_group: gcm.ScanResultGroup,
+    license_cfg: image_scan.LicenseCfg,
+) -> dict:
+    results: tuple[pm.BDBA_ScanResult] = result_group.results_with_findings
+    analysis_results = [r.result for r in results]
+    prohibited_licenses = set()
+    all_licenses = set()
+    component = result_group.component
+    artifacts = [gcm.artifact_from_node(res.scanned_element) for res in result_group.results]
 
-        template_variables['summary'] = _compliance_status_summary(
+    for r in results:
+        all_licenses |= r.license_names
+
+    for license_name in all_licenses:
+        if not license_cfg.is_allowed(license_name):
+            prohibited_licenses.add(license_name)
+
+    return {
+        'summary': _compliance_status_summary(
             component=component,
             artifacts=artifacts,
             issue_value=' ,'.join(prohibited_licenses),
             issue_description='Prohibited Licenses',
             report_urls=[ar.report_url() for ar in analysis_results],
-        )
-        template_variables['criticality_classification'] = str(gcm.Severity.BLOCKER)
-    elif issue_type == _compliance_label_os_outdated:
-        results: tuple[gcm.OsIdScanResult]
-        worst_result = result_group.worst_result
-        worst_result: gcm.OsIdScanResult
-        os_info = worst_result.os_id
+        ),
+        'criticality_classification': str(gcm.Severity.BLOCKER),
+    }
 
-        os_name_and_version = f'{os_info.ID}:{os_info.VERSION_ID}'
 
-        template_variables['summary'] = _compliance_status_summary(
+def _os_info_template_vars(
+    result_group: gcm.ScanResultGroup,
+) -> dict:
+    worst_result = result_group.worst_result
+    worst_result: gcm.OsIdScanResult
+    os_info = worst_result.os_id
+    os_name_and_version = f'{os_info.ID}:{os_info.VERSION_ID}'
+    component = result_group.component
+    artifacts = [gcm.artifact_from_node(res.scanned_element) for res in result_group.results]
+
+    return {
+        'summary': _compliance_status_summary(
             component=component,
             artifacts=artifacts,
             issue_value=os_name_and_version,
             issue_description='Outdated OS-Version',
             report_urls=(),
-        )
-    elif issue_type == _compliance_label_checkmarx:
-        results: tuple[checkmarx.model.ScanResult]
+        ),
+    }
 
-        def iter_report_urls():
-            for r in results:
-                name = f'{r.scanned_element.source.name}:{r.scanned_element.source.version}'
-                yield f'[Assessments for {name}]({r.report_url})'
-                yield f'[Summary for {name}]({r.overview_url})'
 
-        worst_result: checkmarx.model.ScanResult = result_group.worst_result
-        stat = worst_result.scan_statistic
-        summary_str = (f'Findings: High: {stat.highSeverity}, Medium: {stat.mediumSeverity}, '
-            f'Low: {stat.lowSeverity}, Info: {stat.infoSeverity}')
+def _checkmarx_template_vars(
+    result_group: gcm.ScanResultGroup,
+) -> dict:
 
-        template_variables['summary'] = _compliance_status_summary(
+    def iter_report_urls():
+        for r in results:
+            name = f'{r.scanned_element.source.name}:{r.scanned_element.source.version}'
+            yield f'[Assessments for {name}]({r.report_url})'
+            yield f'[Summary for {name}]({r.overview_url})'
+
+    results: tuple[checkmarx.model.ScanResult] = result_group.results_with_findings
+    worst_result: checkmarx.model.ScanResult = result_group.worst_result
+    stat = worst_result.scan_statistic
+    summary_str = (f'Findings: High: {stat.highSeverity}, Medium: {stat.mediumSeverity}, '
+        f'Low: {stat.lowSeverity}, Info: {stat.infoSeverity}')
+    artifacts = [gcm.artifact_from_node(res.scanned_element) for res in result_group.results]
+    component = result_group.component
+
+    crit = (f'Risk: {worst_result.scan_response.scanRisk}, '
+        f'Risk Severity: {worst_result.scan_response.scanRiskSeverity}')
+
+    return {
+        'summary': _compliance_status_summary(
             component=component,
             artifacts=artifacts,
             issue_value=summary_str,
             issue_description='Checkmarx Scan Summary',
             report_urls=tuple(iter_report_urls()),
-        )
-        crit = (f'Risk: {worst_result.scan_response.scanRisk}, '
-            f'Risk Severity: {worst_result.scan_response.scanRiskSeverity}')
-        template_variables['criticality_classification'] = crit
-    elif issue_type == _compliance_label_malware:
-        results: tuple[clamav.scan.ClamAV_ResourceScanResult]
-        summary_str = ''.join((
-            result.scan_result.summary() for result in results
-        )).replace('\n', '')
+        ),
+        'criticality_classification': crit,
+    }
 
-        template_variables['summary'] = _compliance_status_summary(
+
+def _malware_template_vars(
+    result_group: gcm.ScanResultGroup,
+) -> dict:
+    results: tuple[clamav.scan.ClamAV_ResourceScanResult] = result_group.results_with_findings
+    summary_str = ''.join((
+        result.scan_result.summary() for result in results
+    )).replace('\n', '')
+    component = result_group.component
+    artifacts = [gcm.artifact_from_node(res.scanned_element) for res in result_group.results]
+
+    return {
+        'summary': _compliance_status_summary(
             component=component,
             artifacts=artifacts,
             issue_value=summary_str,
             issue_description='ClamAV Scan Result',
             report_urls=(),
+        ),
+        'criticality_classification': str(gcm.Severity.BLOCKER),
+    }
+
+
+def _template_vars(
+    result_group: gcm.ScanResultGroup,
+    license_cfg: image_scan.LicenseCfg,
+    delivery_dashboard_url: str='',
+) -> dict:
+    scanned_element = result_group.results[0].scanned_element
+    issue_type = result_group.issue_type
+
+    if gcm.is_ocm_artefact_node(scanned_element):
+        template_variables = _ocm_result_group_template_vars(
+            result_group=result_group,
+            delivery_dashboard_url=delivery_dashboard_url,
         )
-        template_variables['criticality_classification'] = str(gcm.Severity.BLOCKER)
+
+    else:
+        raise TypeError(result_group)
+
+    if issue_type == _compliance_label_vulnerabilities:
+        template_variables |= _vulnerability_template_vars(result_group)
+
+    elif issue_type == _compliance_label_licenses:
+        template_variables |= _license_template_vars(
+            result_group=result_group,
+            license_cfg=license_cfg,
+        )
+
+    elif issue_type == _compliance_label_os_outdated:
+        template_variables |= _os_info_template_vars(result_group)
+
+    elif issue_type == _compliance_label_checkmarx:
+        template_variables |= _checkmarx_template_vars(result_group)
+
+    elif issue_type == _compliance_label_malware:
+        template_variables |= _malware_template_vars(result_group)
+
     else:
         raise NotImplementedError(issue_type)
 
