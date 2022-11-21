@@ -791,12 +791,29 @@ def close_issues_for_absent_resources(
 
     this is intended to automatically close issues for scan targets that are no longer present.
     '''
+
+    def close_issues(
+        issues: typing.Iterable[github3.issues.Issue],
+    ):
+        for issue in issues:
+            logger.info(
+                f"Closing issue '{issue.title}'({issue.html_url}) since no scan contained a "
+                "scanned element matching its digest."
+            )
+            issue.create_comment('closing, because scanned element no longer present in BoM')
+            issue.close()
+
     all_issues = github.compliance.issue.enumerate_issues(
         scanned_element=None,
         issue_type=issue_type,
         known_issues=known_issues,
         state='open',
     )
+
+    if not result_groups:
+        logger.info(f'no scan results, will close all issues for {issue_type=}')
+        close_issues(all_issues)
+        return
 
     scanned_element = result_groups[0].results[0].scanned_element
     prefix = github.compliance.issue.prefix_for_element(scanned_element)
@@ -820,10 +837,4 @@ def close_issues_for_absent_resources(
         component_resources_to_issues.pop(resource_label, None)
 
     # any issues that have not been removed thus far were not referenced by given result_groups
-    for issue in component_resources_to_issues.values():
-        logger.info(
-            f"Closing issue '{issue.title}'({issue.html_url}) since no scan contained a resource "
-            "matching its digest."
-        )
-        issue.create_comment('closing, because component/resource no longer present in BoM')
-        issue.close()
+    close_issues(component_resources_to_issues.values())
