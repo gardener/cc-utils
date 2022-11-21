@@ -46,9 +46,12 @@ class ScanState(enum.Enum):
     FAILED = 'failed'
 
 
+Target = cnudie.iter.ResourceNode | cnudie.iter.SourceNode
+
+
 @dataclasses.dataclass(kw_only=True)
 class ScanResult:
-    scanned_element: cnudie.iter.ResourceNode | cnudie.iter.SourceNode
+    scanned_element: Target
 
     state: ScanState = ScanState.SUCCEEDED
 
@@ -77,11 +80,20 @@ callback expected to return a comment to be posted upon creation/update
 '''
 
 
+def is_ocm_artefact_node(
+    element: cnudie.iter.SourceNode | cnudie.iter.ResourceNode | object,
+):
+    if isinstance(element, (cnudie.iter.SourceNode, cnudie.iter.ResourceNode)):
+        return True
+
+    return False
+
+
 @dataclasses.dataclass
 class ScanResultGroup:
     '''
-    a group of scan results (grouped by component-name and artifact-name)
-    grouping is done so different component-artifact-versions are grouped into common "reporting
+    a group of scan results (grouped by scanned_element)
+    grouping is done so alike scanned_elements are grouped into common "reporting
     targets" (github issues if used in the context of this package)
 
     components and artifacts are understood as defined by the OCM (gci.componentmodel)
@@ -103,11 +115,21 @@ class ScanResultGroup:
 
     @property
     def component(self) -> cm.Component:
-        return self.results[0].scanned_element.component
+        result = self.results[0]
+        if not is_ocm_artefact_node(result.scanned_element):
+            raise RuntimeError('property not allowed to be used if scanned_element is '
+                'not either a ResourceNode or a SourceNode')
+
+        return result.scanned_element.component
 
     @property
     def artifact(self) -> cm.ComponentSource | cm.Resource:
-        return artifact_from_node(self.results[0].scanned_element)
+        result = self.results[0]
+        if not is_ocm_artefact_node(result.scanned_element):
+            raise RuntimeError('property not allowed to be used if scanned_element is '
+                'not either a ResourceNode or a SourceNode')
+
+        return artifact_from_node(result.scanned_element)
 
     @functools.cached_property
     def has_findings(self) -> bool:
@@ -173,8 +195,11 @@ class ScanResultGroupCollection:
             return ()
 
         for result in self.results:
-            artifact = artifact_from_node(result.scanned_element)
-            group_name = f'{result.scanned_element.component.name}:{artifact.name}'
+            if is_ocm_artefact_node(result.scanned_element):
+                artifact = artifact_from_node(result.scanned_element)
+                group_name = f'{result.scanned_element.component.name}:{artifact.name}'
+            else:
+                raise TypeError(result)
 
             results_grouped_by_name[group_name].append(result)
 

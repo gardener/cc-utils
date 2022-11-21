@@ -12,7 +12,7 @@ import github3.issues.milestone
 import github3.repos
 
 import ci.log
-import cnudie.iter
+import github.compliance.model as gcm
 import github.retry
 
 '''
@@ -37,23 +37,11 @@ def _issue_labels(
     return frozenset((l.name for l in issue.labels()))
 
 
-Target = cnudie.iter.ResourceNode | cnudie.iter.SourceNode
-
-
-def _is_ocm_artefact_node(
-    element: cnudie.iter.SourceNode | cnudie.iter.ResourceNode | object,
-):
-    if isinstance(element, (cnudie.iter.SourceNode, cnudie.iter.ResourceNode)):
-        return True
-
-    return False
-
-
 def _name_for_element(
-    scanned_element: Target,
+    scanned_element: gcm.Target,
 ) -> str:
-    if _is_ocm_artefact_node(scanned_element):
-        artifact = cnudie.iter.artifact_from_node(scanned_element)
+    if gcm.is_ocm_artefact_node(scanned_element):
+        artifact = gcm.artifact_from_node(scanned_element)
         return f'{scanned_element.component.name}:{artifact.name}'
 
     else:
@@ -61,7 +49,7 @@ def _name_for_element(
 
 
 def digest_label(
-    scanned_element: Target,
+    scanned_element: gcm.Target,
     issue_type: str,
     max_length: int=50,
 ) -> str:
@@ -73,7 +61,7 @@ def digest_label(
 
     name = _name_for_element(scanned_element)
 
-    if _is_ocm_artefact_node(scan_result.scanned_element):
+    if gcm.is_ocm_artefact_node(scanned_element):
         prefix = 'ocm/resource'
     else:
         raise TypeError(scan_result)
@@ -96,7 +84,7 @@ def digest_label(
 
 
 def _search_labels(
-    scanned_element: Target | None,
+    scanned_element: gcm.Target | None,
     issue_type: str,
     extra_labels: typing.Iterable[str]=(),
 ) -> typing.Generator[str, None, None]:
@@ -119,7 +107,7 @@ def _search_labels(
 
 @github.retry.retry_and_throttle
 def enumerate_issues(
-    scanned_element: Target | None,
+    scanned_element: gcm.Target | None,
     known_issues: typing.Sequence[github3.issues.issue.ShortIssue],
     issue_type: str,
     state: str | None = None, # 'open' | 'closed'
@@ -145,7 +133,7 @@ def enumerate_issues(
 
 @github.retry.retry_and_throttle
 def _create_issue(
-    scanned_element: Target,
+    scanned_element: gcm.Target,
     issue_type: str,
     repository: github3.repos.Repository,
     body: str,
@@ -186,7 +174,7 @@ def _create_issue(
 
 @github.retry.retry_and_throttle
 def _update_issue(
-    scanned_element: Target,
+    scanned_element: gcm.Target,
     issue_type: str,
     body:str,
     title:typing.Optional[str],
@@ -222,7 +210,7 @@ def _update_issue(
 
 
 def create_or_update_issue(
-    scanned_element: Target,
+    scanned_element: gcm.Target,
     issue_type: str,
     repository: github3.repos.Repository,
     body: str,
@@ -293,7 +281,7 @@ def create_or_update_issue(
 
 @github.retry.retry_and_throttle
 def close_issue_if_present(
-    scanned_element: Target,
+    scanned_element: gcm.Target,
     issue_type: str,
     repository: github3.repos.Repository,
     known_issues: typing.Iterable[github3.issues.issue.ShortIssue],
