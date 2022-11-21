@@ -508,8 +508,9 @@ def create_or_update_github_issues(
                 known_issues=known_issues,
             )
 
-            element_name = github.compliance.issue._name_for_element(scan_result.scanned_element)
+            element_name = github.compliance.issue.name_for_element(scan_result.scanned_element)
             logger.info(f'closed (if existing) gh-issue for {element_name=}')
+
         elif action == PROCESSING_ACTION.REPORT:
             assignees = _scanned_element_assignees(
                 scanned_element=scan_result.scanned_element,
@@ -609,7 +610,7 @@ def create_or_update_github_issues(
                     else:
                         issue.create_comment(comment_body)
 
-                element_name = github.compliance.issue._name_for_element(scan_result.scanned_element)
+                element_name = github.compliance.issue.name_for_element(scan_result.scanned_element)
                 logger.info(
                     f'updated gh-issue for {element_name=} '
                     f'{issue_type=}: {issue.html_url=}'
