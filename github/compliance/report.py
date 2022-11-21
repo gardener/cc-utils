@@ -265,6 +265,77 @@ def _template_vars(
     return template_variables
 
 
+def _scanned_element_repository(
+    scanned_element: gcm.Target,
+) -> github3.repos.repo.Repository:
+    if gcm.is_ocm_artefact_node(scanned_element):
+        source = cnudie.util.main_source(component=scanned_element.component)
+
+        if not source.access.type is cm.AccessType.GITHUB:
+            raise NotImplementedError(source)
+
+        org = source.access.org_name()
+        name = source.access.repository_name()
+        gh_api = ccc.github.github_api(repo_url=source.access.repoUrl)
+
+        return gh_api.repository(org, name)
+
+    else:
+        raise TypeError(scanned_element)
+
+
+def _scanned_element_assignees(
+    scanned_element: gcm.Target,
+    delivery_svc_client: delivery.client.DeliveryServiceClient | None,
+    repository: github3.repos.repo.Repository,
+    gh_api: github3.GitHub | github3.GitHubEnterprise,
+) -> tuple[str]:
+
+    if gcm.is_ocm_artefact_node(scanned_element):
+        if not delivery_svc_client:
+            return ()
+
+        artifact = gcm.artifact_from_node(scanned_element)
+        try:
+            assignees = delivery.client.github_users_from_responsibles(
+                responsibles=delivery_svc_client.component_responsibles(
+                    component=scanned_element.component,
+                    artifact=artifact,
+                ),
+                github_url=repository.url,
+            )
+
+            return tuple((
+                u.username for u in assignees
+                if github.user.is_user_active(
+                    username=u.username,
+                    github=gh_api,
+                )
+            ))
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                logger.warning(f'Delivery Service returned 404 for '
+                    f'{scanned_element.component.name=}, {artifact.name=}')
+                return ()
+            else:
+                raise
+
+    else:
+        raise TypeError(scanned_element)
+
+
+def _scanned_element_title(
+    scanned_element: gcm.Target,
+    issue_type: str,
+) -> str:
+    if gcm.is_ocm_artefact_node(scanned_element):
+        artifact = gcm.artifact_from_node(scanned_element)
+        return f'[{issue_type}] - {scanned_element.component.name}:{artifact.name}'
+
+    else:
+        raise TypeError(scanned_element)
+
+
 @functools.cache
 def _target_milestone(
     repo: github3.repos.Repository,
@@ -343,26 +414,16 @@ def create_or_update_github_issues(
 
         criticality_classification = result_group.worst_severity
 
-        if not len({r.scanned_element.component.name for r in results}) == 1:
-            raise ValueError('not all component names are identical')
-
-        component = result_group.component
-        artifact = result_group.artifact
         scan_result = result_group.results[0]
+
+        if gcm.is_ocm_artefact_node(scan_result.scanned_element):
+            if not len({r.scanned_element.component.name for r in results}) == 1:
+                raise ValueError('not all component names are identical')
 
         if overwrite_repository:
             repository = overwrite_repository
         else:
-            source = cnudie.util.main_source(component=component)
-
-            if not source.access.type is cm.AccessType.GITHUB:
-                raise NotImplementedError(source)
-
-            org = source.access.org_name()
-            name = source.access.repository_name()
-            gh_api = ccc.github.github_api(repo_url=source.access.repoUrl)
-
-            repository = gh_api.repository(org, name)
+            repository = _scanned_element_repository(scan_result.scanned_element)
 
         known_issues = _all_issues(repository)
 
@@ -378,36 +439,22 @@ def create_or_update_github_issues(
                 f'closed (if existing) gh-issue for {component.name=} {artifact.name=} {issue_type=}'
             )
         elif action == PROCESSING_ACTION.REPORT:
+            assignees = _scanned_element_assignees(
+                scanned_element=scan_result.scanned_element,
+                delivery_svc_client=delivery_svc_client,
+                repository=repository,
+                gh_api=gh_api,
+            )
+
+            target_milestone = None
+            latest_processing_date = None
+
             if delivery_svc_client:
-                try:
-                    assignees = delivery.client.github_users_from_responsibles(
-                        responsibles=delivery_svc_client.component_responsibles(
-                            component=component,
-                            artifact=artifact,
-                        ),
-                        github_url=repository.url,
-                    )
-
-                    assignees = tuple((
-                        u.username for u in assignees
-                        if github.user.is_user_active(
-                            username=u.username,
-                            github=gh_api,
-                        )
-                    ))
-                except requests.exceptions.HTTPError as e:
-                    if e.response.status_code == 404:
-                        logger.warning(f'Delivery Service returned 404 for {component.name=}, '
-                            f'{artifact.name=}')
-                        assignees = ()
-                        target_milestone = None
-                    else:
-                        raise
-
                 try:
                     max_days = max_processing_days.for_severity(
                         criticality_classification
                     )
+
                     latest_processing_date = datetime.date.today() + \
                         datetime.timedelta(days=max_days)
 
@@ -422,14 +469,10 @@ def create_or_update_github_issues(
                 except Exception as e:
                     logger.warning(f'{e=}')
                     target_milestone = None
-            else:
-                assignees = ()
-                target_milestone = None
-                latest_processing_date = None
 
-            if delivery_svc_endpoints:
+            if gcm.is_ocm_artefact_node(scan_result.scanned_element) and delivery_svc_endpoints:
                 delivery_dashboard_url = _delivery_dashboard_url(
-                    component=component,
+                    component=scan_result.scanned_element.component,
                     base_url=delivery_svc_endpoints.dashboard_url(),
                 )
                 delivery_dashboard_url = f'[Delivery-Dashboard]({delivery_dashboard_url})'
@@ -463,7 +506,10 @@ def create_or_update_github_issues(
                     ),
                     preserve_labels_regexes=preserve_labels_regexes,
                     known_issues=known_issues,
-                    title=f'[{issue_type}] - {component.name}:{artifact.name}',
+                    title=_scanned_element_title(
+                        scanned_element=scan_result.scanned_element,
+                        issue_type=issue_type,
+                    ),
                 )
                 if result_group.comment_callback:
                     def single_comment(result: gcm.ScanResult):
