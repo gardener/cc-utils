@@ -586,15 +586,25 @@ def create_or_update_github_issues(
                 )
                 if result_group.comment_callback:
                     def single_comment(result: gcm.ScanResult):
-                        a = gcm.artifact_from_node(result.scanned_element)
-                        header = f'**{a.name}:{a.version}**\n'
+                        if gcm.is_ocm_artefact_node(result.scanned_element):
+                            a = gcm.artifact_from_node(result.scanned_element)
+                            header = f'**{a.name}:{a.version}**\n'
+
+                        else:
+                            raise TypeError(result)
 
                         return header + result_group.comment_callback(result)
 
                     def sortable_result_str(result: gcm.ScanResult):
-                        c = result.scanned_element.component
-                        a = gcm.artifact_from_node(result.scanned_element)
-                        return f'{c.name}:{c.version}/{a.name}:{a.version}'
+                        if gcm.is_ocm_artefact_node(result.scanned_element):
+                            c = result.scanned_element.component
+                            a = gcm.artifact_from_node(result.scanned_element)
+                            result_str = f'{c.name}:{c.version}/{a.name}:{a.version}'
+
+                        else:
+                            raise TypeError(result)
+
+                        return result_str
 
                     sorted_results = sorted(
                         results,
