@@ -549,17 +549,10 @@ def create_or_update_github_issues(
 
     if overwrite_repository:
         known_issues = _all_issues(overwrite_repository)
-        close_issues_for_absent_labels(
-            issue_type=result_group_collection.issue_type,
-            present_digest_labels=[
-                github.compliance.issue.artifact_digest_label(
-                    component=result_group.component,
-                    artifact=result_group.artifact,
-                )
-                for result_group in result_groups
-            ],
+        close_issues_for_absent_resources(
+            result_groups=result_groups,
             known_issues=known_issues,
-            close_comment='closing, because component/resource no longer present in BoM',
+            issue_type=result_group_collection.issue_type,
         )
 
     if err_count > 0:
@@ -567,14 +560,13 @@ def create_or_update_github_issues(
         raise ValueError('not all gh-issues could be created/updated/deleted')
 
 
-def close_issues_for_absent_labels(
-    issue_type: str,
-    present_digest_labels: frozenset[str],
+def close_issues_for_absent_resources(
+    result_groups: list[gcm.ScanResultGroup],
     known_issues: typing.Iterator[github3.issues.issue.ShortIssue],
-    close_comment: str,
+    issue_type: str | None,
 ):
     '''
-    closes all open issues for ocm/resource labels that are not present in present_digest_labels.
+    closes all open issues for component-resources that are not present in given result-groups.
 
     this is intended to automatically close issues for components or component-resources that
     have been removed from BoM.
@@ -586,22 +578,28 @@ def close_issues_for_absent_labels(
         state='open',
     )
 
-    def ocm_resource_label(issue: github3.issues.Issue) -> str:
+    def component_resource_label(issue: github3.issues.Issue) -> str:
         for label in issue.labels():
             if label.name.startswith('ocm/resource'):
                 return label.name
 
-    ocm_resource_labels_to_issues = {
-        ocm_resource_label(issue): issue for issue in all_issues
+    component_resources_to_issues = {
+        component_resource_label(issue): issue for issue in all_issues
     }
 
-    for label in present_digest_labels:
-        logger.info(f'Digest-Label {label=}')
-        ocm_resource_labels_to_issues.pop(label, None)
+    for result_group in result_groups:
+        resource_label = github.compliance.issue.artifact_digest_label(
+            component=result_group.component,
+            artifact=result_group.artifact,
+        )
+        logger.info(f'Digest-Label for {result_group.name=}: {resource_label=}')
+        component_resources_to_issues.pop(resource_label, None)
 
-    # any issues that have not been removed thus far were not referenced by given digest labels
-    for issue in ocm_resource_labels_to_issues.values():
-        issue: github3.issues.ShortIssue
-        logger.info(f"Closing issue '{issue.title}'({issue.html_url}), no digest matching")
-        issue.create_comment(close_comment)
+    # any issues that have not been removed thus far were not referenced by given result_groups
+    for issue in component_resources_to_issues.values():
+        logger.info(
+            f"Closing issue '{issue.title}'({issue.html_url}) since no scan contained a resource "
+            "matching its digest."
+        )
+        issue.create_comment('closing, because component/resource no longer present in BoM')
         issue.close()
