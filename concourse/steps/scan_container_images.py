@@ -232,7 +232,7 @@ def prepare_evidence_request(
     targets = []
     clamav_scan_results = []
     for i, scan_result in enumerate(scan_results):
-        artefact = cnudie.iter.artifact_from_node(scan_result.scanned_element)
+        artefact = gcm.artifact_from_node(scan_result.scanned_element)
 
         clamav_scan_results.append(scan_result.scan_result)
         targets.append(saf.model.ResourceTarget( # noqa

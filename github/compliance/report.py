@@ -24,7 +24,6 @@ import ccc.github
 import checkmarx.model
 import ci.util
 import clamav.scan
-import cnudie.iter
 import cnudie.util
 import concourse.model.traits.image_scan as image_scan
 import delivery.client
@@ -144,7 +143,7 @@ def _template_vars(
 ):
     component = result_group.component
     artifact_name = result_group.artifact
-    artifacts = [cnudie.iter.artifact_from_node(res.scanned_element) for res in result_group.results]
+    artifacts = [gcm.artifact_from_node(res.scanned_element) for res in result_group.results]
     issue_type = result_group.issue_type
 
     results = result_group.results_with_findings
@@ -468,14 +467,14 @@ def create_or_update_github_issues(
                 )
                 if result_group.comment_callback:
                     def single_comment(result: gcm.ScanResult):
-                        a = cnudie.iter.artifact_from_node(result.scanned_element)
+                        a = gcm.artifact_from_node(result.scanned_element)
                         header = f'**{a.name}:{a.version}**\n'
 
                         return header + result_group.comment_callback(result)
 
                     def sortable_result_str(result: gcm.ScanResult):
                         c = result.scanned_element.component
-                        a = cnudie.iter.artifact_from_node(result.scanned_element)
+                        a = gcm.artifact_from_node(result.scanned_element)
                         return f'{c.name}:{c.version}/{a.name}:{a.version}'
 
                     sorted_results = sorted(

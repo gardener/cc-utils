@@ -13,6 +13,7 @@ import clamav.client
 import clamav.scan
 import cnudie.iter
 import dso.model
+import github.compliance.model
 import oci.client
 
 logger = logging.getLogger(__name__)
@@ -106,7 +107,7 @@ def resource_scan_result_to_artefact_metadata(
     creation_date: datetime.datetime = datetime.datetime.now(),
 ) -> dso.model.ArtefactMetadata:
 
-    artefact = cnudie.iter.artifact_from_node(resource_scan_result.scanned_element)
+    artefact = github.compliance.model.artifact_from_node(resource_scan_result.scanned_element)
     artefact_ref = dso.model.component_artefact_id_from_ocm(
         component=resource_scan_result.scanned_element.component,
         artefact=artefact,

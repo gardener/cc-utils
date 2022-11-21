@@ -107,8 +107,7 @@ class ScanResultGroup:
 
     @property
     def artifact(self) -> cm.ComponentSource | cm.Resource:
-        result = self.results[0]
-        return cnudie.iter.artifact_from_node(result.scanned_element)
+        return artifact_from_node(self.results[0].scanned_element)
 
     @functools.cached_property
     def has_findings(self) -> bool:
@@ -174,7 +173,7 @@ class ScanResultGroupCollection:
             return ()
 
         for result in self.results:
-            artifact = cnudie.iter.artifact_from_node(result.scanned_element)
+            artifact = artifact_from_node(result.scanned_element)
             group_name = f'{result.scanned_element.component.name}:{artifact.name}'
 
             results_grouped_by_name[group_name].append(result)
@@ -210,3 +209,14 @@ class ScanResultGroupCollection:
         return tuple(
             (rg for rg in self.result_groups if rg.has_scan_errors)
         )
+
+
+def artifact_from_node(
+    node: cnudie.iter.ResourceNode | cnudie.iter.SourceNode,
+) -> cm.ComponentSource | cm.Resource:
+    if isinstance(node, cnudie.iter.SourceNode):
+        return node.source
+    elif isinstance(node, cnudie.iter.ResourceNode):
+        return node.resource
+    else:
+        raise TypeError(node)

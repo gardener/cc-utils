@@ -4,7 +4,7 @@ import tabulate
 
 import clamav.client
 import clamav.scan
-import cnudie.iter
+import github.compliance.model
 
 
 def as_table(
@@ -15,7 +15,7 @@ def as_table(
 
     def row_from_result(scan_result: clamav.scan.ClamAV_ResourceScanResult):
         c = scan_result.scanned_element.component
-        a = cnudie.iter.artifact_from_node(scan_result.scanned_element)
+        a = github.compliance.model.artifact_from_node(scan_result.scanned_element)
         resource = f'{c.name}:{c.version}/{a.name}:{a.version}'
         res = scan_result.scan_result
 

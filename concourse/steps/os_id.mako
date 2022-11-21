@@ -31,8 +31,8 @@ import ccc.github
 import ccc.oci
 import ci.util
 import concourse.model.traits.image_scan as image_scan
-import cnudie.iter
 import cnudie.retrieve
+import github.compliance.model
 import github.compliance.report
 
 ${concourse.steps.step_lib('os_id')}
@@ -78,7 +78,7 @@ for result in determine_os_ids(
   oci_client=oci_client,
 ):
   component = result.scanned_element.component
-  resource = cnudie.iter.artifact_from_node(result.scanned_element)
+  resource = github.compliance.model.artifact_from_node(result.scanned_element)
   os_info = result.os_id
 
   logger.info(f'uploading os-info for {component.name} {resource.name}')

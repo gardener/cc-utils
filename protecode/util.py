@@ -18,10 +18,11 @@ import logging
 import typing
 
 import ci.log
-import cnudie.iter
 import dso.model
 import gci.componentmodel as cm
+import github.compliance.model
 import protecode.model as pm
+
 
 logger = logging.getLogger(__name__)
 ci.log.configure_default_logging(print_thread_id=True)
@@ -43,7 +44,7 @@ def iter_artefact_metadata(
     results: typing.Collection[pm.BDBA_ScanResult],
 ) -> typing.Generator[dso.model.GreatestCVE, None, None]:
     for result in results:
-        artefact = cnudie.iter.artifact_from_node(result.scanned_element)
+        artefact = github.compliance.model.artifact_from_node(result.scanned_element)
         artefact_ref = dso.model.component_artefact_id_from_ocm(
             component=result.scanned_element.component,
             artefact=artefact,
