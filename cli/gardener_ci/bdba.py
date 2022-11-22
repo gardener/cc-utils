@@ -3,15 +3,21 @@ import logging
 import os
 import typing
 
-import ccc.protecode
+import gci.componentmodel as cm
+
+from protecode.model import CVSSVersion, TriageScope
+from protecode.scanning import upload_grouped_images as _upload_grouped_images
 import ccc.oci
+import ccc.protecode
 import ci.util
+import cnudie.retrieve as cr
 import concourse.steps.component_descriptor_util as component_descriptor_util
 import concourse.steps.images
 import concourse.steps.scan_container_images
+import ctx
 import dso.cvss
-from protecode.model import CVSSVersion, TriageScope
-from protecode.scanning import upload_grouped_images as _upload_grouped_images
+import dso.labels
+import oci.model as om
 import protecode.assessments as pa
 
 
@@ -22,15 +28,16 @@ logger = logging.getLogger(__name__)
 def rescore(
     protecode_cfg_name: str,
     product_id: int,
-    categorisation: str,
     rescoring_rules: str,
+    ctx_repo: str=None,
+    categorisation: str=None,
     assess: bool=False,
 ):
     cfg_factory = ci.util.ctx().cfg_factory()
     protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
     client = ccc.protecode.client(protecode_cfg)
 
-    if not os.path.isfile(categorisation):
+    if categorisation and not os.path.isfile(categorisation):
         print(f'{categorisation} must point to an existing file w/ CveCategorisation')
         exit(1)
 
@@ -38,9 +45,63 @@ def rescore(
         print(f'{rescoring_rules} must point to an existing file w/ RescoringRules')
         exit(1)
 
-    categorisation = dso.cvss.CveCategorisation.from_dict(
-        ci.util.parse_yaml_file(categorisation),
-    )
+    logger.info(f'retrieving bdba {product_id=}')
+    result = client.scan_result(product_id=product_id)
+
+    if categorisation:
+        categorisation = dso.cvss.CveCategorisation.from_dict(
+            ci.util.parse_yaml_file(categorisation),
+        )
+    else:
+        if not ctx_repo:
+            ctx_repo = ctx.cfg.ctx.ocm_repo_base_url
+        if not ctx_repo:
+            logger.error('must specify ctx_repo')
+            exit(1)
+
+        custom_data = result.custom_data()
+        component_name = custom_data['COMPONENT_NAME']
+        component_version = custom_data['COMPONENT_VERSION']
+        image_name = custom_data['IMAGE_REFERENCE_NAME']
+        image_version = custom_data['IMAGE_VERSION']
+        logger.info(f'retrieving component descriptor for {component_name}:{component_version}')
+
+        lookup = cr.create_default_component_descriptor_lookup(
+            default_ctx_repo=cm.OciRepositoryContext(baseUrl=ctx_repo),
+        )
+        try:
+            component_descriptor = lookup(
+                cm.ComponentIdentity(
+                    name=component_name,
+                    version=component_version,
+                ),
+            )
+        except om.OciImageNotFoundException:
+            logger.error(f'could not find {component_name}:{component_version} in {ctx_repo}')
+            exit(1)
+
+        logger.info(f'looking for {image_name}:{image_version} in component-descriptor')
+        for resource in component_descriptor.component.resources:
+            if resource.name != image_name:
+                continue
+            if resource.version != image_version:
+                continue
+            break # found it
+        else:
+            logger.error(
+                'did not find {image_name}:{image_version} in {component_name}:{component_version}'
+            )
+            exit(1)
+
+        label_name = dso.labels.CveCategorisationLabel.name
+        categorisation_label = resource.find_label(label_name)
+        if not categorisation_label:
+            logger.error(f'found image, but it did not have expected {label_name=}')
+            logger.error('consider passing categorisation via ARGV')
+            exit(1)
+
+        categorisation_label = dso.labels.deserialise_label(categorisation_label)
+        categorisation = categorisation_label.value
 
     rescoring_rules = tuple(
         dso.cvss.rescoring_rules_from_dicts(
@@ -48,12 +109,10 @@ def rescore(
         )
     )
 
-    result = client.scan_result(product_id=product_id)
-
     all_components = tuple(result.components())
     components_with_vulnerabilities = [c for c in all_components if tuple(c.vulnerabilities())]
 
-    print(f'{len(all_components)=}, {len(components_with_vulnerabilities)=}')
+    logger.info(f'{len(all_components)=}, {len(components_with_vulnerabilities)=}')
 
     components_with_vulnerabilities = sorted(
         components_with_vulnerabilities,
