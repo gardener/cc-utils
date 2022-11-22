@@ -14,6 +14,7 @@ import github3.repos
 import cnudie.iter
 
 import ci.log
+import cnudie.iter
 import github.retry
 
 '''
