@@ -15,7 +15,7 @@ from protecode.scanning import upload_grouped_images as _upload_grouped_images
 import protecode.assessments as pa
 
 
-__cmd_name__ = 'protecode'
+__cmd_name__ = 'bdba'
 logger = logging.getLogger(__name__)
 
 
