@@ -154,7 +154,7 @@ def rescore(
             if orig_severity is not rescored:
                 rescored_count += 1
 
-                print(f'  rescored {orig_severity.name} -> {rescored.name} - {v.cve()}')
+                print(f'  rescore {orig_severity.name} -> {rescored.name} - {v.cve()}')
                 if assess and rescored is dso.cvss.CVESeverity.NONE:
                     if not c.version():
                         print(f'setting dummy-version for {c.name()}')
@@ -179,7 +179,6 @@ def rescore(
             })
             print(f'auto-assessed {len(vulns_to_assess)=}')
 
-        print(f'{vulns_count=}, {rescored_count=}')
         total_vulns += vulns_count
         total_rescored += rescored_count
 
