@@ -31,7 +31,7 @@ _label_os_outdated = 'os/outdated'
 _label_malware = 'malware/clamav'
 _label_cfg_policy_violation = 'cfg-element/policy-violation'
 
-_label_prefix_ocm_resource = 'ocm/resource'
+_label_prefix_ocm_artefact = 'ocm/artefact'
 _label_prefix_cicd_cfg_element = 'cicd-cfg-element'
 
 
@@ -46,7 +46,7 @@ def prefix_for_element(
     scanned_element: gcm.Target,
 ) -> str:
     if gcm.is_ocm_artefact_node(scanned_element):
-        return _label_prefix_ocm_resource
+        return _label_prefix_ocm_artefact
 
     elif isinstance(scanned_element, cmr.CfgElementStatusReport):
         return _label_prefix_cicd_cfg_element
