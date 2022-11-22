@@ -435,9 +435,8 @@ def create_or_update_github_issues(
                 known_issues=known_issues,
             )
 
-            logger.info(
-                f'closed (if existing) gh-issue for {component.name=} {artifact.name=} {issue_type=}'
-            )
+            element_name = github.compliance.issue._name_for_element(scanned_element)
+            logger.info(f'closed (if existing) gh-issue for {element_name=}')
         elif action == PROCESSING_ACTION.REPORT:
             assignees = _scanned_element_assignees(
                 scanned_element=scan_result.scanned_element,

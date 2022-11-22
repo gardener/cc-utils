@@ -64,7 +64,7 @@ def digest_label(
     if gcm.is_ocm_artefact_node(scanned_element):
         prefix = 'ocm/resource'
     else:
-        raise TypeError(scan_result)
+        raise TypeError(scanned_element)
 
     digest_length = max_length - (len(prefix) + 1) # prefix + slash
     digest_length = int(digest_length / 2) # hexdigest is of double length
