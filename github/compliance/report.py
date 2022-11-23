@@ -49,6 +49,8 @@ _compliance_label_checkmarx = github.compliance.issue._label_checkmarx
 _compliance_label_malware = github.compliance.issue._label_malware
 _compliance_label_cfg_policy_violation = github.compliance.issue._label_cfg_policy_violation
 
+_ctx_label_prefix = github.compliance.issue._label_prefix_ctx
+
 
 def _criticality_label(classification: gcm.Severity):
     return f'compliance-priority/{str(classification)}'
@@ -518,6 +520,23 @@ def _scanned_element_title(
         raise TypeError(scanned_element)
 
 
+def _scanned_element_ctx_label(
+    scanned_element: gcm.Target,
+) -> tuple[str]:
+    if gcm.is_ocm_artefact_node(scanned_element):
+        return ()
+
+    elif isinstance(scanned_element, cmr.CfgElementStatusReport):
+        digest_label = github.compliance.issue.digest_label(
+            prefix=_ctx_label_prefix,
+            digest_str=scanned_element.element_storage,
+        )
+        return (digest_label, )
+
+    else:
+        raise TypeError(scanned_element)
+
+
 @functools.cache
 def _target_milestone(
     repo: github3.repos.Repository,
@@ -597,6 +616,7 @@ def create_or_update_github_issues(
         criticality_classification = result_group.worst_severity
 
         scan_result = result_group.results[0]
+        ctx_labels = _scanned_element_ctx_label(scan_result.scanned_element)
 
         if gcm.is_ocm_artefact_node(scan_result.scanned_element):
             if not len({r.scanned_element.component.name for r in results}) == 1:
@@ -615,6 +635,7 @@ def create_or_update_github_issues(
                 issue_type=issue_type,
                 repository=repository,
                 known_issues=known_issues,
+                ctx_labels=ctx_labels,
             )
 
             element_name = github.compliance.issue.name_for_element(scan_result.scanned_element)
@@ -686,6 +707,7 @@ def create_or_update_github_issues(
                     extra_labels=(
                         _criticality_label(classification=criticality_classification),
                     ),
+                    ctx_labels=ctx_labels,
                     preserve_labels_regexes=preserve_labels_regexes,
                     known_issues=known_issues,
                     title=_scanned_element_title(
@@ -770,10 +792,23 @@ def create_or_update_github_issues(
     if overwrite_repository:
         known_issues = _all_issues(overwrite_repository)
         issue_type = result_group_collection.issue_type
+
+        all_ctx_labels = set()
+
+        if result_groups:
+            for result_group in result_groups:
+                scanned_element = result_group.results[0].scanned_element
+                if (ctx_labels := _scanned_element_ctx_label(scanned_element)):
+                    all_ctx_labels = all_ctx_labels | set(ctx_labels)
+
+        else:
+            logger.info('no scan results, will skip issues with ctx label')
+
         close_issues_for_absent_resources(
             result_groups=result_groups,
             known_issues=known_issues,
             issue_type=issue_type,
+            ctx_labels=all_ctx_labels,
         )
 
     if err_count > 0:
@@ -785,6 +820,7 @@ def close_issues_for_absent_resources(
     result_groups: list[gcm.ScanResultGroup],
     known_issues: typing.Iterator[github3.issues.issue.ShortIssue],
     issue_type: str | None,
+    ctx_labels: typing.Iterable[str]=(),
 ):
     '''
     closes all open issues for scanned elements that are not present in given result-groups.
@@ -803,15 +839,31 @@ def close_issues_for_absent_resources(
             issue.create_comment('closing, because scanned element no longer present in BoM')
             issue.close()
 
+    def has_ctx_label(
+        issue: github3.issues.Issue,
+    ) -> bool:
+        return any([
+            l.name.startswith(_ctx_label_prefix)
+            for l in issue.labels()]
+        )
+
     all_issues = github.compliance.issue.enumerate_issues(
         scanned_element=None,
         issue_type=issue_type,
         known_issues=known_issues,
         state='open',
+        extra_labels=ctx_labels,
     )
 
+    if not ctx_labels:
+        all_issues = (
+            issue
+            for issue in all_issues
+            if not has_ctx_label(issue)
+        )
+
     if not result_groups:
-        logger.info(f'no scan results, will close all issues for {issue_type=}')
+        logger.info(f'no scan results, will close all issues for {issue_type=} and {ctx_labels=}')
         close_issues(all_issues)
         return
 
