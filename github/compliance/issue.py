@@ -33,6 +33,7 @@ _label_cfg_policy_violation = 'cfg-element/policy-violation'
 
 _label_prefix_ocm_artefact = 'ocm/artefact'
 _label_prefix_cicd_cfg_element = 'cicd-cfg-element'
+_label_prefix_ctx = 'ctx'
 
 
 @cachetools.cached(cache={})
@@ -123,6 +124,7 @@ def enumerate_issues(
     scanned_element: gcm.Target | None,
     known_issues: typing.Sequence[github3.issues.issue.ShortIssue],
     issue_type: str,
+    extra_labels: typing.Iterable[str]=(),
     state: str | None = None, # 'open' | 'closed'
 ) -> typing.Generator[github3.issues.ShortIssue, None, None]:
     '''Return an iterator iterating over those issues from `known_issues` that match the given
@@ -131,6 +133,7 @@ def enumerate_issues(
     labels = frozenset(_search_labels(
         scanned_element=scanned_element,
         issue_type=issue_type,
+        extra_labels=extra_labels,
     ))
 
     def filter_relevant_issues(issue):
@@ -234,13 +237,26 @@ def create_or_update_issue(
     latest_processing_date: datetime.date|datetime.datetime=None,
     extra_labels: typing.Iterable[str]=None,
     preserve_labels_regexes: typing.Iterable[str]=(),
+    ctx_labels: typing.Iterable[str]=(),
 ) -> github3.issues.issue.ShortIssue:
+    '''
+    Creates or updates a github issue for the given scanned_element. If no issue exists, yet, it will
+    be created, otherwise, it is checked that at most one matching issue exists; which will then be
+    updated.
+    Issues are found by labels. Some of those are derived from the scanned_element. If given,
+    ctx_labels are also included in search-query (i.e. an issue must have all of the given ctx_labels
+    to be considered a match). All of those labels + any given extra_labels are assigned to the
+    issue, both in case it is created anew, or updated. Extra labels that are not ignored via the
+    preserve_labels_regexes argument are dropped.
+    '''
+
     open_issues = tuple(
         enumerate_issues(
             scanned_element=scanned_element,
             issue_type=issue_type,
             known_issues=known_issues,
             state='open',
+            extra_labels=ctx_labels,
         )
     )
     if (issues_count := len(open_issues)) > 1:
@@ -248,6 +264,11 @@ def create_or_update_issue(
             f'more than one open issue found for {name_for_element(scanned_element)=}'
         )
     elif issues_count == 0:
+        if extra_labels:
+            extra_labels = set(extra_labels) | set(ctx_labels)
+        else:
+            extra_labels = set(ctx_labels)
+
         return _create_issue(
             scanned_element=scanned_element,
             issue_type=issue_type,
@@ -264,8 +285,11 @@ def create_or_update_issue(
         open_issue = open_issues[0] # we checked there is exactly one
 
         def labels_to_preserve():
-            if not preserve_labels_regexes:
-                return
+            nonlocal preserve_labels_regexes
+
+            # always keep ctx_labels
+            ctx_label_regex = f'{_label_prefix_ctx}.*'
+            preserve_labels_regexes = set(preserve_labels_regexes) | set({ctx_label_regex})
 
             for label in open_issue.labels():
                 for r in preserve_labels_regexes:
@@ -298,6 +322,7 @@ def close_issue_if_present(
     issue_type: str,
     repository: github3.repos.Repository,
     known_issues: typing.Iterable[github3.issues.issue.ShortIssue],
+    ctx_labels: typing.Iterable[str]=(),
 ):
     open_issues = tuple(
         enumerate_issues(
@@ -305,6 +330,7 @@ def close_issue_if_present(
             issue_type=issue_type,
             known_issues=known_issues,
             state='open',
+            extra_labels=ctx_labels,
         )
     )
     open_issues: tuple[github3.issues.ShortIssue]
