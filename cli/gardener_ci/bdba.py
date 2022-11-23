@@ -123,10 +123,10 @@ def rescore(
     total_rescored = 0
 
     for c in components_with_vulnerabilities:
-        print(f'{c.name()}:{c.version()}')
         vulns_count = 0
         rescored_count = 0
         vulns_to_assess = []
+        printed_cname = False
 
         for v in c.vulnerabilities():
             if v.historical():
@@ -153,6 +153,10 @@ def rescore(
 
             if orig_severity is not rescored:
                 rescored_count += 1
+
+                if not printed_cname:
+                    print(f'{c.name()}:{c.version()}')
+                    printed_cname = True
 
                 print(f'  rescore {orig_severity.name} -> {rescored.name} - {v.cve()}')
                 if assess and rescored is dso.cvss.CVESeverity.NONE:
