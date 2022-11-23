@@ -70,31 +70,27 @@ def name_for_element(
 
 
 def digest_label(
-    scanned_element: gcm.Target,
-    issue_type: str,
+    prefix: str,
+    digest_str: str,
     max_length: int=50,
 ) -> str:
     '''
-    calculates and returns a digest for the given scan_result and issue_type.
+    concatenates and returns a fixed prefix with digest calculated from `digest_str`.
 
     this is useful as GitHub labels are limited to 50 characters
     '''
-
-    name = name_for_element(scanned_element)
-    prefix = prefix_for_element(scanned_element)
-
     digest_length = max_length - (len(prefix) + 1) # prefix + slash
     digest_length = int(digest_length / 2) # hexdigest is of double length
 
     # pylint does not know `length` parameter (it is even required, though!)
-    digest = hashlib.shake_128(name.encode('utf-8')).hexdigest( # noqa: E1123
+    digest = hashlib.shake_128(digest_str.encode('utf-8')).hexdigest( # noqa: E1123
         length=digest_length,
     )
 
     label = f'{prefix}/{digest}'
 
     if len(label) > max_length:
-        raise ValueError(f'{scanned_element=} and {issue_type=} would result '
+        raise ValueError(f'{digest_str=} and {prefix=} would result '
             f'in label exceeding length of {max_length=}')
 
     return label
@@ -117,8 +113,8 @@ def _search_labels(
 
     if scanned_element:
         yield digest_label(
-            scanned_element=scanned_element,
-            issue_type=issue_type,
+            prefix=prefix_for_element(scanned_element),
+            digest_str=name_for_element(scanned_element),
         )
 
 

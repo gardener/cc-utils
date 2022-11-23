@@ -829,10 +829,15 @@ def close_issues_for_absent_resources(
     }
 
     for result_group in result_groups:
+        scanned_element = result_group.results[0].scanned_element
+        name = github.compliance.issue.name_for_element(scanned_element)
+        prefix = github.compliance.issue.prefix_for_element(scanned_element)
+
         resource_label = github.compliance.issue.digest_label(
-            scanned_element=result_group.results[0].scanned_element,
-            issue_type=issue_type,
+            prefix=prefix,
+            digest_str=name,
         )
+
         logger.info(f'Digest-Label for {result_group.name=}: {resource_label=}')
         component_resources_to_issues.pop(resource_label, None)
 
