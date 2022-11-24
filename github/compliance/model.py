@@ -4,6 +4,7 @@ import enum
 import functools
 import typing
 
+import cfg_mgmt.model as cmm
 import cfg_mgmt.reporting as cmr
 import cnudie.iter
 import gci.componentmodel as cm
@@ -64,6 +65,11 @@ class ScanResult:
 @dataclasses.dataclass
 class OsIdScanResult(ScanResult):
     os_id: unixutil.model.OperatingSystemId
+
+
+@dataclasses.dataclass
+class CfgScanResult(ScanResult):
+    evaluation_result: cmm.CfgStatusEvaluationResult
 
 
 FindingsCallback = typing.Callable[[ScanResult], bool]

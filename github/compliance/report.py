@@ -335,14 +335,14 @@ def _malware_template_vars(
 def _cfg_policy_violation_template_vars(
     result_group: gcm.ScanResultGroup,
 ) -> dict:
-    scanned_element: cmr.CfgElementStatusReport = result_group.results[0].scanned_element
+    results: tuple[gcm.CfgScanResult] = result_group.results_with_findings
+    result = results[0]
 
-    evaluation_result = cmr.evaluate_cfg_element_status(scanned_element)
-    summary_str = ', '.join(r.value for r in evaluation_result.nonCompliantReasons)
+    summary_str = ', '.join(r.value for r in result.evaluation_result.nonCompliantReasons)
 
     return {
         'summary': _cfg_policy_violation_status_summary(
-            scanned_element=scanned_element,
+            scanned_element=result.scanned_element,
             issue_value=summary_str,
             issue_description='Policy Violation',
         )
