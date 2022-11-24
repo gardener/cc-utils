@@ -61,8 +61,8 @@ def _component_and_results_to_report_str(
 
 def _worst_severity_and_worst_rescored_severity(
     result: pm.AnalysisResult,
-    rescoring_rules: typing.Iterable[dso.cvss.RescoringRule] | None=None,
-    cve_categorisation: dso.cvss.CveCategorisation | None=None,
+    cve_categorisation: dso.cvss.CveCategorisation,
+    rescoring_rules: typing.Iterable[dso.cvss.RescoringRule],
 ):
     worst_severity = dso.cvss.CVESeverity.NONE
     worst_rescored = dso.cvss.CVESeverity.NONE
@@ -100,6 +100,9 @@ def analysis_result_to_report_str(
         )
         for comp, results in components_and_cves
     ))
+
+    if not cve_categorisation or not rescoring_rules:
+        return report
 
     worst_severity, worst_rescored = _worst_severity_and_worst_rescored_severity(
         result=result,
