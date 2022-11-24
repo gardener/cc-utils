@@ -605,6 +605,13 @@ class JobMapping(NamedModelElement):
         '''
         return self.raw.get('trusted_teams', [])
 
+    def compliance_reporting_repo_url(self) -> str:
+        '''Target repo for compliance issues based on cfg policy violations.
+
+        If not set, reporting will still be active, just the issue generation will be disabled.
+        '''
+        return self.raw.get('compliance_reporting_repo_url', None)
+
     def _required_attributes(self):
         return [
             'concourse_target_team',
@@ -613,6 +620,7 @@ class JobMapping(NamedModelElement):
 
     def _optional_attributes(self):
         return [
+            'compliance_reporting_repo_url',
             'concourse_team_cfg_name',
             'expose_pipelines',
             'secret_cfg',
