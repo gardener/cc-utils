@@ -584,7 +584,7 @@ def create_or_update_github_issues(
     gh_api: github3.GitHub=None,
     overwrite_repository: github3.repos.Repository=None,
     preserve_labels_regexes: typing.Iterable[str]=(),
-    github_issue_template_cfgs: list[image_scan.GithubIssueTemplateCfg] | str=None,
+    github_issue_template_cfgs: list[image_scan.GithubIssueTemplateCfg]=None,
     delivery_svc_client: delivery.client.DeliveryServiceClient=None,
     delivery_svc_endpoints: model.delivery.DeliveryEndpointsCfg=None,
     license_cfg: image_scan.LicenseCfg=None, # XXX -> callback
@@ -689,19 +689,13 @@ def create_or_update_github_issues(
                 license_cfg=license_cfg,
                 delivery_dashboard_url=delivery_dashboard_url,
             )
-
-            if isinstance(github_issue_template_cfgs, str):
-                template_body = github_issue_template_cfgs
-
+            for issue_cfg in github_issue_template_cfgs:
+                if issue_cfg.type == issue_type:
+                    break
             else:
-                for issue_cfg in github_issue_template_cfgs:
-                    if issue_cfg.type == issue_type:
-                        template_body = issue_cfg.body
-                        break
-                else:
-                    raise ValueError(f'no template for {issue_type=}')
+                raise ValueError(f'no template for {issue_type=}')
 
-            body = template_body.format(**template_variables)
+            body = issue_cfg.body.format(**template_variables)
 
             try:
                 issue = github.compliance.issue.create_or_update_issue(
