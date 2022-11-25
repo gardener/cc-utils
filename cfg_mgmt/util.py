@@ -20,7 +20,13 @@ import model
 logger = logging.getLogger(__name__)
 
 
-def generate_cfg_element_status_reports(cfg_dir: str) -> list[cmr.CfgElementStatusReport]:
+def generate_cfg_element_status_reports(
+    cfg_dir: str,
+    element_storage: str | None=None,
+) -> list[cmr.CfgElementStatusReport]:
+    '''
+    If not passed explicitly, the element_storage defaults to cfg_dir.
+    '''
     ci.util.existing_dir(cfg_dir)
 
     cfg_factory = model.ConfigFactory._from_cfg_dir(
@@ -35,6 +41,9 @@ def generate_cfg_element_status_reports(cfg_dir: str) -> list[cmr.CfgElementStat
     statuses = cfg_metadata.statuses
     responsibles = cfg_metadata.responsibles
 
+    if not element_storage:
+        element_storage = cfg_dir
+
     return [
         determine_status(
             element=element,
@@ -42,7 +51,7 @@ def generate_cfg_element_status_reports(cfg_dir: str) -> list[cmr.CfgElementStat
             rules=rules,
             statuses=statuses,
             responsibles=responsibles,
-            element_storage=cfg_dir,
+            element_storage=element_storage,
         ) for element in iter_cfg_elements(cfg_factory=cfg_factory)
     ]
 
