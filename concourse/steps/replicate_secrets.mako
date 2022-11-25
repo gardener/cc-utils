@@ -122,7 +122,7 @@ report_cfg_policy_status(
   status_reports=status_reports,
   compliance_reporting_repo_url='${compliance_reporting_repo_url}',
   delivery_svc_client=delivery_svc_client,
-  github_issue_template_cfgs='${github_issue_template}',
+  github_issue_template='${github_issue_template}',
 )
 % else:
 logger.info('will not generate reporting issues as no reporting repo is defined')

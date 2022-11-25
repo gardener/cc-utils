@@ -158,7 +158,7 @@ def report_cfg_policy_status(
     status_reports: typing.Iterable[cmr.CfgElementStatusReport],
     compliance_reporting_repo_url: str,
     delivery_svc_client: delivery.client.DeliveryServiceClient,
-    github_issue_template_cfgs: list[image_scan.GithubIssueTemplateCfg] | str,
+    github_issue_template: str,
 ):
     gh_api = ccc.github.github_api(
         repo_url=compliance_reporting_repo_url,
@@ -184,5 +184,5 @@ def report_cfg_policy_status(
         gh_api=gh_api,
         overwrite_repository=repository,
         delivery_svc_client=delivery_svc_client,
-        github_issue_template_cfgs=github_issue_template_cfgs,
+        github_issue_template=github_issue_template,
     )
