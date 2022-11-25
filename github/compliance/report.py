@@ -159,6 +159,8 @@ def _cfg_policy_violation_status_summary(
         responsibles = 'unknown'
         responsibles_len = 1
 
+    policy_violation_count = issue_value.count(',') + 1 # separated by "," start with one
+
     return textwrap.dedent(f'''\
         # Compliance Status Summary
         |    |    |
@@ -167,7 +169,7 @@ def _cfg_policy_violation_status_summary(
         | Element Type | {scanned_element.element_type} |
         | Element Name | {scanned_element.element_name} |
         | {_pluralise("Responsible", responsibles_len)} | {responsibles} |
-        | {issue_description} | {issue_value} |
+        | {_pluralise(issue_description, policy_violation_count)} | {issue_value} |
     ''')
 
 
