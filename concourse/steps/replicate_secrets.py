@@ -4,12 +4,18 @@ import typing
 import pprint
 import re
 
+import ccc.delivery
 import cfg_mgmt.model as cmm
+import cfg_mgmt.reporting as cmr
 import cfg_mgmt.util as cmu
 import ccc.github
 import ccc.secrets_server
 import ci.log
 import ci.util
+import concourse.model.traits.image_scan as image_scan
+import delivery.client
+import github.compliance.model as gcm
+import github.compliance.report as gcr
 import kube.ctx
 import model
 import model.concourse
@@ -145,3 +151,38 @@ def replicate_secrets(
             logger.warning(f'ignoring unmatched key: {k}')
 
     logger.info(f'deployed encrypted secret for team: {team_name}')
+
+
+def report_cfg_policy_status(
+    cfg_factory: model.ConfigFactory,
+    status_reports: typing.Iterable[cmr.CfgElementStatusReport],
+    compliance_reporting_repo_url: str,
+    delivery_svc_client: delivery.client.DeliveryServiceClient,
+    github_issue_template_cfgs: list[image_scan.GithubIssueTemplateCfg] | str,
+):
+    gh_api = ccc.github.github_api(
+        repo_url=compliance_reporting_repo_url,
+        cfg_factory=cfg_factory,
+    )
+    parsed_repo_url = ci.util.urlparse(compliance_reporting_repo_url)
+    org, repo_name = parsed_repo_url.path.strip('/').split('/')
+    repository = gh_api.repository(owner=org, repository=repo_name)
+
+    results = [
+        gcm.CfgScanResult(
+            evaluation_result=cmr.evaluate_cfg_element_status(status_report),
+            scanned_element=status_report,
+        )
+        for status_report in status_reports
+    ]
+
+    result_group_collection = cmu.scan_result_group_collection(results)
+
+    gcr.create_or_update_github_issues(
+        result_group_collection=result_group_collection,
+        max_processing_days=image_scan.MaxProcessingTimesDays(),
+        gh_api=gh_api,
+        overwrite_repository=repository,
+        delivery_svc_client=delivery_svc_client,
+        github_issue_template_cfgs=github_issue_template_cfgs,
+    )
