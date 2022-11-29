@@ -11,9 +11,6 @@ raw_secret_cfg = extra_args['secret_cfg']
 raw_job_mapping = extra_args['raw_job_mapping']
 job_mapping_name = extra_args['job_mapping_name']
 secrets_repo_url = extra_args['secrets_repo_url']
-compliance_reporting_repo_url = extra_args['compliance_reporting_repo_url']
-delivery_endpoints_cfg_name = extra_args['delivery_endpoints_cfg_name']
-github_issue_template_cfgs = extra_args['github_issue_template_cfgs']
 cfg_repo_url = extra_args['cfg_repo_url']
 do_rotate_secrets = bool(extra_args.get('rotate_secrets', False))
 %>
@@ -109,23 +106,6 @@ status_reports = cmr.generate_cfg_element_status_reports(
 cmr.create_report(status_reports)
 cfg_report_summary_gen = cmr.cfg_element_statuses_storage_summaries(status_reports)
 cfg_responsible_summary_gen = cmr.cfg_element_statuses_responsible_summaries(status_reports)
-
-% if compliance_reporting_repo_url:
-delivery_svc_client = ccc.delivery.client(
-  cfg_name='${delivery_endpoints_cfg_name}',
-  cfg_factory=cfg_factory,
-)
-
-report_cfg_policy_status(
-  cfg_factory=cfg_factory,
-  status_reports=status_reports,
-  compliance_reporting_repo_url='${compliance_reporting_repo_url}',
-  delivery_svc_client=delivery_svc_client,
-  github_issue_template_cfgs=${github_issue_template_cfgs},
-)
-% else:
-logger.info('will not generate reporting issues as no reporting repo is defined')
-% endif
 
 if (es_client := ccc.elasticsearch.from_cfg(cfg_set.elasticsearch())):
     logger.info('writing cfg metrics to elasticsearch')

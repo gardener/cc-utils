@@ -12,11 +12,6 @@ import ccc.github
 import ccc.secrets_server
 import ci.log
 import ci.util
-import concourse.model.traits.image_scan as image_scan
-import delivery.client
-import github.compliance.issue as gci
-import github.compliance.model as gcm
-import github.compliance.report as gcr
 import kube.ctx
 import model
 import model.concourse
@@ -152,62 +147,3 @@ def replicate_secrets(
             logger.warning(f'ignoring unmatched key: {k}')
 
     logger.info(f'deployed encrypted secret for team: {team_name}')
-
-
-def scan_result_group_collection(
-    results: tuple[gcm.CfgScanResult],
-) -> gcm.ScanResultGroupCollection:
-    def classification_callback(result: gcm.CfgScanResult) -> gcm.Severity:
-        return gcm.Severity.HIGH
-
-    def findings_callback(result: gcm.CfgScanResult) -> bool:
-        if not result.evaluation_result.nonCompliantReasons:
-            return False
-
-        return True
-
-    def comment_callback(result: gcm.CfgScanResult):
-        return '\n'.join(r.value for r in result.evaluation_result.nonCompliantReasons)
-
-    return gcm.ScanResultGroupCollection(
-        results=tuple(results),
-        issue_type=gci._label_cfg_policy_violation,
-        classification_callback=classification_callback,
-        findings_callback=findings_callback,
-        comment_callback=comment_callback,
-    )
-
-
-def report_cfg_policy_status(
-    cfg_factory: model.ConfigFactory,
-    status_reports: typing.Iterable[cmr.CfgElementStatusReport],
-    compliance_reporting_repo_url: str,
-    delivery_svc_client: delivery.client.DeliveryServiceClient,
-    github_issue_template_cfgs: list[image_scan.GithubIssueTemplateCfg],
-):
-    gh_api = ccc.github.github_api(
-        repo_url=compliance_reporting_repo_url,
-        cfg_factory=cfg_factory,
-    )
-    parsed_repo_url = ci.util.urlparse(compliance_reporting_repo_url)
-    org, repo_name = parsed_repo_url.path.strip('/').split('/')
-    repository = gh_api.repository(owner=org, repository=repo_name)
-
-    results = [
-        gcm.CfgScanResult(
-            evaluation_result=cmr.evaluate_cfg_element_status(status_report),
-            scanned_element=status_report,
-        )
-        for status_report in status_reports
-    ]
-
-    result_group_collection = scan_result_group_collection(results)
-
-    gcr.create_or_update_github_issues(
-        result_group_collection=result_group_collection,
-        max_processing_days=image_scan.MaxProcessingTimesDays(),
-        gh_api=gh_api,
-        overwrite_repository=repository,
-        delivery_svc_client=delivery_svc_client,
-        github_issue_template_cfgs=github_issue_template_cfgs,
-    )

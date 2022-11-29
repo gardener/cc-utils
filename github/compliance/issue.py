@@ -29,7 +29,12 @@ _label_bdba = 'vulnerabilities/bdba'
 _label_licenses = 'licenses/bdba'
 _label_os_outdated = 'os/outdated'
 _label_malware = 'malware/clamav'
-_label_cfg_policy_violation = 'cfg-element/policy-violation'
+
+_label_no_responsible = 'cfg/policy-violation/no-responsible'
+_label_no_rule = 'cfg/policy-violation/no-rule'
+_label_no_status = 'cfg/policy-violation/no-status'
+_label_outdated_credentials = 'cfg/policy-violation/credentials-outdated'
+_label_undefined_policy = 'cfg/policy-violation/undefined-policy'
 
 _label_prefix_ocm_artefact = 'ocm/artefact'
 _label_prefix_cicd_cfg_element = 'cicd-cfg-element'
