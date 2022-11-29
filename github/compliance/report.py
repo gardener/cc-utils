@@ -47,7 +47,11 @@ _compliance_label_licenses = github.compliance.issue._label_licenses
 _compliance_label_os_outdated = github.compliance.issue._label_os_outdated
 _compliance_label_checkmarx = github.compliance.issue._label_checkmarx
 _compliance_label_malware = github.compliance.issue._label_malware
-_compliance_label_cfg_policy_violation = github.compliance.issue._label_cfg_policy_violation
+_compliance_label_credentials_outdated = github.compliance.issue._label_outdated_credentials
+_compliance_label_no_responsible = github.compliance.issue._label_no_responsible
+_compliance_label_no_rule = github.compliance.issue._label_no_rule
+_compliance_label_no_status = github.compliance.issue._label_no_status
+_compliance_label_undefined_policy = github.compliance.issue._label_undefined_policy
 
 _ctx_label_prefix = github.compliance.issue._label_prefix_ctx
 
@@ -140,37 +144,6 @@ def _compliance_status_summary(
     ''')
 
     return summary + '- ' + report_urls
-
-
-def _cfg_policy_violation_status_summary(
-    scanned_element: gcm.Target,
-    issue_description: str,
-    issue_value: str,
-):
-    if scanned_element.responsible:
-        # remove foremost "@" to prevent notification mails
-        responsibles = '<br/>'.join([
-            f'{r.name.removeprefix("@")} ({r.type.value})'
-            for r in scanned_element.responsible.responsibles
-        ])
-        responsibles_len = len(scanned_element.responsible.responsibles)
-
-    else:
-        responsibles = 'unknown'
-        responsibles_len = 1
-
-    policy_violation_count = issue_value.count(',') + 1 # separated by "," start with one
-
-    return textwrap.dedent(f'''\
-        # Compliance Status Summary
-        |    |    |
-        | -- | -- |
-        | Element Storage | {scanned_element.element_storage} |
-        | Element Type | {scanned_element.element_type} |
-        | Element Name | {scanned_element.element_name} |
-        | {_pluralise("Responsible", responsibles_len)} | {responsibles} |
-        | {_pluralise(issue_description, policy_violation_count)} | {issue_value} |
-    ''')
 
 
 def _ocm_result_group_template_vars(
@@ -334,20 +307,34 @@ def _malware_template_vars(
     }
 
 
-def _cfg_policy_violation_template_vars(
-    result_group: gcm.ScanResultGroup,
-) -> dict:
+def _cfg_policy_violation_template_vars(result_group: gcm.ScanResultGroup) -> dict:
     results: tuple[gcm.CfgScanResult] = result_group.results_with_findings
     result = results[0]
 
-    summary_str = ', '.join(r.value for r in result.evaluation_result.nonCompliantReasons)
+    if result.scanned_element.responsible:
+        # remove foremost "@" to prevent notification mails
+        responsibles = '<br/>'.join([
+            f'{r.name.removeprefix("@")} ({r.type.value})'
+            for r in result.scanned_element.responsible.responsibles
+        ])
+        responsibles_len = len(result.scanned_element.responsible.responsibles)
+
+    else:
+        responsibles = 'unknown'
+        responsibles_len = 1
+
+    summary = textwrap.dedent(f'''\
+        # Compliance Status Summary
+        |    |    |
+        | -- | -- |
+        | Element Storage | {result.scanned_element.element_storage} |
+        | Element Type | {result.scanned_element.element_type} |
+        | Element Name | {result.scanned_element.element_name} |
+        | {_pluralise("Responsible", responsibles_len)} | {responsibles} |
+    ''')
 
     return {
-        'summary': _cfg_policy_violation_status_summary(
-            scanned_element=result.scanned_element,
-            issue_value=summary_str,
-            issue_description='Policy Violation',
-        )
+        'summary': summary
     }
 
 
@@ -393,7 +380,13 @@ def _template_vars(
     elif issue_type == _compliance_label_malware:
         template_variables |= _malware_template_vars(result_group)
 
-    elif issue_type == _compliance_label_cfg_policy_violation:
+    elif issue_type in (
+        _compliance_label_credentials_outdated,
+        _compliance_label_no_responsible,
+        _compliance_label_no_rule,
+        _compliance_label_no_status,
+        _compliance_label_undefined_policy,
+    ):
         template_variables |= _cfg_policy_violation_template_vars(result_group)
 
     else:
