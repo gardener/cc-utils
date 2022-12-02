@@ -43,7 +43,7 @@ delivery_db_client = ccc.delivery.default_client_if_available()
 oci_client = ccc.oci.oci_client()
 
 max_processing_days = dacite.from_dict(
-  data_class=image_scan.MaxProcessingTimesDays,
+  data_class=github.compliance.model.MaxProcessingTimesDays,
   data=${dataclasses.asdict(issue_policies.max_processing_time_days)},
 )
 

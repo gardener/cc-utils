@@ -259,49 +259,8 @@ class LicenseCfg:
 
 
 @dataclasses.dataclass(frozen=True)
-class MaxProcessingTimesDays:
-    '''
-    defines maximum processing time in days, based on issue "criticality"
-
-    in the case of vulnerabilities, those map to CVE scores:
-    >= 9.0: very high / critical
-    >= 7.0: high
-    >= 4.0: medium
-    <  4.0: low
-    '''
-    blocker: int = 0
-    very_high_or_greater: int = 30
-    high: int = 30
-    medium: int = 90
-    low: int = 120
-
-    def for_severity(self, severity: gcm.Severity):
-        S = gcm.Severity
-        if severity is S.BLOCKER:
-            return self.blocker
-        elif severity is S.CRITICAL:
-            return self.very_high_or_greater
-        elif severity is S.HIGH:
-            return self.high
-        elif severity is S.MEDIUM:
-            return self.medium
-        elif severity is S.LOW:
-            return self.low
-
-    def for_cve(self, cve_score: float):
-        if cve_score >= 9.0:
-            return self.very_high_or_greater
-        if cve_score < 9.0 and cve_score >= 7.0:
-            return self.high
-        if cve_score < 7.0 and cve_score >= 4.0:
-            return self.medium
-        else:
-            return self.low
-
-
-@dataclasses.dataclass(frozen=True)
 class IssuePolicies:
-    max_processing_time_days: MaxProcessingTimesDays = MaxProcessingTimesDays()
+    max_processing_time_days: gcm.MaxProcessingTimesDays = gcm.MaxProcessingTimesDays()
 
 
 ATTRIBUTES = (

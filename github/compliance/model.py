@@ -37,6 +37,32 @@ class Severity(enum.IntEnum):
         return Severity(value)
 
 
+@dataclasses.dataclass(frozen=True)
+class MaxProcessingTimesDays:
+    '''
+    defines maximum processing time in days, based on issue "criticality"
+
+    used for deserialisation from pipeline-definitions
+    '''
+    blocker: int = 0
+    very_high_or_greater: int = 30
+    high: int = 30
+    medium: int = 90
+    low: int = 120
+
+    def for_severity(self, severity: Severity):
+        if severity is Severity.BLOCKER:
+            return self.blocker
+        elif severity is Severity.CRITICAL:
+            return self.very_high_or_greater
+        elif severity is Severity.HIGH:
+            return self.high
+        elif severity is Severity.MEDIUM:
+            return self.medium
+        elif severity is Severity.LOW:
+            return self.low
+
+
 class ScanState(enum.Enum):
     '''
     indicates the scan outcome of a scan (regardless of yielded contents).
