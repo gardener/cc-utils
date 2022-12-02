@@ -13,7 +13,7 @@ job_mapping_name = extra_args['job_mapping_name']
 secrets_repo_url = extra_args['secrets_repo_url']
 compliance_reporting_repo_url = extra_args['compliance_reporting_repo_url']
 delivery_endpoints_cfg_name = extra_args['delivery_endpoints_cfg_name']
-github_issue_template = extra_args['github_issue_template']
+github_issue_template_cfgs = extra_args['github_issue_template_cfgs']
 cfg_repo_url = extra_args['cfg_repo_url']
 do_rotate_secrets = bool(extra_args.get('rotate_secrets', False))
 %>
@@ -122,7 +122,7 @@ report_cfg_policy_status(
   status_reports=status_reports,
   compliance_reporting_repo_url='${compliance_reporting_repo_url}',
   delivery_svc_client=delivery_svc_client,
-  github_issue_template='''${github_issue_template}''',
+  github_issue_template_cfgs=${github_issue_template_cfgs},
 )
 % else:
 logger.info('will not generate reporting issues as no reporting repo is defined')

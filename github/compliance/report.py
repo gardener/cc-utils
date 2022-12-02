@@ -585,7 +585,6 @@ def create_or_update_github_issues(
     overwrite_repository: github3.repos.Repository=None,
     preserve_labels_regexes: typing.Iterable[str]=(),
     github_issue_template_cfgs: list[image_scan.GithubIssueTemplateCfg]=None,
-    github_issue_template: str=None,
     delivery_svc_client: delivery.client.DeliveryServiceClient=None,
     delivery_svc_endpoints: model.delivery.DeliveryEndpointsCfg=None,
     license_cfg: image_scan.LicenseCfg=None, # XXX -> callback
@@ -602,10 +601,6 @@ def create_or_update_github_issues(
     result_groups_without_findings = result_group_collection.result_groups_without_findings
 
     err_count = 0
-
-    if not (bool(github_issue_template) ^ bool(github_issue_template_cfgs)):
-        raise ValueError('exactly one of github_issue_template, \
-            github_issue_template_cfgs must be passed')
 
     def process_result(
         result_group: gcm.ScanResultGroup,
@@ -695,18 +690,13 @@ def create_or_update_github_issues(
                 delivery_dashboard_url=delivery_dashboard_url,
             )
 
-            if github_issue_template:
-                template_body = github_issue_template
-
+            for issue_cfg in github_issue_template_cfgs:
+                if issue_cfg.type == issue_type:
+                    break
             else:
-                for issue_cfg in github_issue_template_cfgs:
-                    if issue_cfg.type == issue_type:
-                        template_body = issue_cfg.body
-                        break
-                else:
-                    raise ValueError(f'no template for {issue_type=}')
+                raise ValueError(f'no template for {issue_type=}')
 
-            body = template_body.format(**template_variables)
+            body = issue_cfg.body.format(**template_variables)
 
             try:
                 issue = github.compliance.issue.create_or_update_issue(
