@@ -557,15 +557,6 @@ def _target_sprint(
     return target_sprint
 
 
-def _latest_processing_date(
-    cve_score: float,
-    max_processing_days: image_scan.MaxProcessingTimesDays,
-):
-    return datetime.date.today() + datetime.timedelta(
-        days=max_processing_days.for_cve(cve_score=cve_score),
-    )
-
-
 class PROCESSING_ACTION(enum.Enum):
     DISCARD = 'discard'
     REPORT = 'report'
@@ -573,7 +564,7 @@ class PROCESSING_ACTION(enum.Enum):
 
 def create_or_update_github_issues(
     result_group_collection: gcm.ScanResultGroupCollection,
-    max_processing_days: image_scan.MaxProcessingTimesDays,
+    max_processing_days: gcm.MaxProcessingTimesDays,
     gh_api: github3.GitHub=None,
     overwrite_repository: github3.repos.Repository=None,
     preserve_labels_regexes: typing.Iterable[str]=(),

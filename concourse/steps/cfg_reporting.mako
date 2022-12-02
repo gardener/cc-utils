@@ -20,7 +20,6 @@ import ccc.github
 import cfg_mgmt.reporting as cmr
 import cfg_mgmt.util as cmu
 import ci.util
-import concourse.model.traits.image_scan as image_scan
 import github.compliance.model as gcm
 import github.compliance.report as gcr
 import model
@@ -73,7 +72,7 @@ for result_group_collection in (
 ):
   gcr.create_or_update_github_issues(
     result_group_collection=result_group_collection,
-    max_processing_days=image_scan.MaxProcessingTimesDays(),
+    max_processing_days=gcm.MaxProcessingTimesDays(),
     gh_api=gh_api,
     overwrite_repository=repository,
     delivery_svc_client=delivery_svc_client,

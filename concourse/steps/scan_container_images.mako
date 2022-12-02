@@ -48,6 +48,7 @@ import ci.util
 import concourse.model.traits.image_scan as image_scan
 import concourse.model.traits.filter
 import delivery.client
+import github.compliance.model
 import github.compliance.report
 import protecode.scanning
 
@@ -162,7 +163,7 @@ github_issue_template_cfgs = [dacite.from_dict(
 % endif
 
 max_processing_days = dacite.from_dict(
-  data_class=image_scan.MaxProcessingTimesDays,
+  data_class=github.compliance.model.MaxProcessingTimesDays,
   data=${dataclasses.asdict(issue_policies.max_processing_time_days)},
 )
 

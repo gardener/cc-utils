@@ -40,11 +40,11 @@ import ci.log
 ci.log.configure_default_logging()
 import ci.util
 import delivery.client
+import github.compliance.model
 import github.compliance.report
 from concourse.model.traits.image_scan import (
     GithubIssueTemplateCfg,
     IssuePolicies,
-    MaxProcessingTimesDays,
     Notify,
 )
 cfg_factory = ci.util.ctx().cfg_factory()
@@ -61,7 +61,7 @@ github_issue_template_cfgs = [dacite.from_dict(
 % endif
 
 max_processing_days = dacite.from_dict(
-  data_class=MaxProcessingTimesDays,
+  data_class=github.compliance.model.MaxProcessingTimesDays,
   data=${dataclasses.asdict(issue_policies.max_processing_time_days)},
 )
 severity_threshold = '${checkmarx_cfg.severity_threshold()}'
