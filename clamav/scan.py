@@ -146,11 +146,15 @@ def scan_tarfile(
             continue
         data = tf.extractfile(member=tar_info)
 
-        scan_result = clamav_client.scan(
-            data=data,
-            name=f'{tar_info.name}',
-        )
-        yield scan_result
+        with tempfile.TemporaryFile() as tmp_file:
+            tmp_file.write(data.read())
+            tmp_file.seek(0)
+
+            scan_result = clamav_client.scan(
+                data=tmp_file,
+                name=f'{tar_info.name}',
+            )
+            yield scan_result
 
 
 def _iter_layers(
