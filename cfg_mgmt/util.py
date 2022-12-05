@@ -11,8 +11,6 @@ import cfg_mgmt.model as cmm
 import cfg_mgmt.reporting as cmr
 import cfg_mgmt.rotate as cmro
 import ci.util
-import github.compliance.issue as gci
-import github.compliance.model as gcm
 import gitutil
 import model
 
@@ -427,27 +425,3 @@ def process_cfg_queue_and_persist_in_repo(
         git_helper.repo.git.reset('--hard', '@~')
 
     return True
-
-
-def scan_result_group_collection(
-    results: tuple[gcm.CfgScanResult],
-) -> gcm.ScanResultGroupCollection:
-    def classification_callback(result: gcm.CfgScanResult) -> gcm.Severity:
-        return gcm.Severity.HIGH
-
-    def findings_callback(result: gcm.CfgScanResult) -> bool:
-        if not result.evaluation_result.nonCompliantReasons:
-            return False
-
-        return True
-
-    def comment_callback(result: gcm.CfgScanResult):
-        return '\n'.join(r.value for r in result.evaluation_result.nonCompliantReasons)
-
-    return gcm.ScanResultGroupCollection(
-        results=tuple(results),
-        issue_type=gci._label_cfg_policy_violation,
-        classification_callback=classification_callback,
-        findings_callback=findings_callback,
-        comment_callback=comment_callback,
-    )

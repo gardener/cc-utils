@@ -14,6 +14,7 @@ import ci.log
 import ci.util
 import concourse.model.traits.image_scan as image_scan
 import delivery.client
+import github.compliance.issue as gci
 import github.compliance.model as gcm
 import github.compliance.report as gcr
 import kube.ctx
@@ -153,6 +154,30 @@ def replicate_secrets(
     logger.info(f'deployed encrypted secret for team: {team_name}')
 
 
+def scan_result_group_collection(
+    results: tuple[gcm.CfgScanResult],
+) -> gcm.ScanResultGroupCollection:
+    def classification_callback(result: gcm.CfgScanResult) -> gcm.Severity:
+        return gcm.Severity.HIGH
+
+    def findings_callback(result: gcm.CfgScanResult) -> bool:
+        if not result.evaluation_result.nonCompliantReasons:
+            return False
+
+        return True
+
+    def comment_callback(result: gcm.CfgScanResult):
+        return '\n'.join(r.value for r in result.evaluation_result.nonCompliantReasons)
+
+    return gcm.ScanResultGroupCollection(
+        results=tuple(results),
+        issue_type=gci._label_cfg_policy_violation,
+        classification_callback=classification_callback,
+        findings_callback=findings_callback,
+        comment_callback=comment_callback,
+    )
+
+
 def report_cfg_policy_status(
     cfg_factory: model.ConfigFactory,
     status_reports: typing.Iterable[cmr.CfgElementStatusReport],
@@ -176,7 +201,7 @@ def report_cfg_policy_status(
         for status_report in status_reports
     ]
 
-    result_group_collection = cmu.scan_result_group_collection(results)
+    result_group_collection = scan_result_group_collection(results)
 
     gcr.create_or_update_github_issues(
         result_group_collection=result_group_collection,
