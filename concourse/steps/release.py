@@ -24,8 +24,10 @@ from ci.util import (
     not_empty,
     not_none,
 )
+import cnudie.iter
 import cnudie.retrieve
 import cnudie.util
+import cnudie.validate
 import dockerutil
 
 from gitutil import GitHelper
@@ -676,6 +678,28 @@ class UploadComponentDescriptorStep(TransactionalStep):
 
         if not components:
             ci.util.fail('No component descriptor found')
+
+        def iter_component_descriptors():
+            for component in components:
+                yield from cnudie.iter.iter(
+                    component=component,
+                    recursion_depth=0,
+                )
+
+        validation_errors = tuple(
+            cnudie.validate.iter_violations(nodes=iter_component_descriptors())
+        )
+
+        if not validation_errors:
+            return
+
+        for validation_error in validation_errors:
+            logger.error(validation_error.as_error_message)
+
+        logger.error(
+            'there were validation-errors in component-descriptor - aborting release (see above)'
+        )
+        exit(1)
 
     def apply(self):
         if self.release_on_github:
