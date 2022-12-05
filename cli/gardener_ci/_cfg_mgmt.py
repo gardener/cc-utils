@@ -17,7 +17,7 @@ def report(
     cfg_dir: str,
     responsible_names: [str]=[]
 ):
-    status_reports = cmu.generate_cfg_element_status_reports(cfg_dir)
+    status_reports = cmr.generate_cfg_element_status_reports(cfg_dir)
 
     def matches_any(name: str):
         for responsible_name in responsible_names:

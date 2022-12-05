@@ -4,54 +4,15 @@ import logging
 import os
 import typing
 
-import dateutil.parser
 import ruamel.yaml
 
 import cfg_mgmt.model as cmm
-import cfg_mgmt.reporting as cmr
 import cfg_mgmt.rotate as cmro
-import ci.util
 import gitutil
 import model
 
 
 logger = logging.getLogger(__name__)
-
-
-def generate_cfg_element_status_reports(
-    cfg_dir: str,
-    element_storage: str | None=None,
-) -> list[cmr.CfgElementStatusReport]:
-    '''
-    If not passed explicitly, the element_storage defaults to cfg_dir.
-    '''
-    ci.util.existing_dir(cfg_dir)
-
-    cfg_factory = model.ConfigFactory._from_cfg_dir(
-        cfg_dir,
-        disable_cfg_element_lookup=True,
-    )
-
-    cfg_metadata = cmm.cfg_metadata_from_cfg_dir(cfg_dir)
-
-    policies = cfg_metadata.policies
-    rules = cfg_metadata.rules
-    statuses = cfg_metadata.statuses
-    responsibles = cfg_metadata.responsibles
-
-    if not element_storage:
-        element_storage = cfg_dir
-
-    return [
-        determine_status(
-            element=element,
-            policies=policies,
-            rules=rules,
-            statuses=statuses,
-            responsibles=responsibles,
-            element_storage=element_storage,
-        ) for element in iter_cfg_elements(cfg_factory=cfg_factory)
-    ]
 
 
 def iter_cfg_elements(
@@ -88,99 +49,6 @@ def iter_cfg_queue_entries_to_be_deleted(
             continue
 
         yield cfg_queue_entry
-
-
-def iter_cfg_elements_requiring_rotation(
-    cfg_elements: typing.Iterable[model.NamedModelElement],
-    cfg_metadata: cmm.CfgMetadata,
-    cfg_target: typing.Optional[cmm.CfgTarget]=None,
-    element_filter: typing.Callable[[model.NamedModelElement], bool]=None,
-    rotation_method: cmm.RotationMethod=None,
-) -> typing.Generator[model.NamedModelElement, None, None]:
-    for cfg_element in cfg_elements:
-        if cfg_target and not cfg_target.matches(element=cfg_element):
-            continue
-
-        if element_filter and not element_filter(cfg_element):
-            continue
-
-        status = determine_status(
-            element=cfg_element,
-            policies=cfg_metadata.policies,
-            rules=cfg_metadata.rules,
-            responsibles=cfg_metadata.responsibles,
-            statuses=cfg_metadata.statuses,
-        )
-
-        # hardcode rule: ignore elements w/o rule and policy
-        if not status.policy or not status.rule:
-            continue
-
-        # hardcode: ignore all policies we cannot handle (currently, only MAX_AGE)
-        if not status.policy.type is cmm.PolicyType.MAX_AGE:
-            continue
-
-        if rotation_method and status.policy.rotation_method is not rotation_method:
-            continue
-
-        # if there is no status, assume rotation be required
-        if not status.status:
-            yield cfg_element
-            continue
-
-        last_update = dateutil.parser.isoparse(status.status.credential_update_timestamp)
-        if status.policy.check(last_update=last_update):
-            continue
-        else:
-            yield cfg_element
-
-
-def determine_status(
-    element: model.NamedModelElement,
-    policies: list[cmm.CfgPolicy],
-    rules: list[cmm.CfgRule],
-    responsibles: list[cmm.CfgResponsibleMapping],
-    statuses: list[cmm.CfgStatus],
-    element_storage: str=None,
-) -> cmr.CfgElementStatusReport:
-    for rule in rules:
-        if rule.matches(element=element):
-            break
-    else:
-        rule = None # no rule was configured
-
-    rule: typing.Optional[cmm.CfgRule]
-
-    if rule:
-        for policy in policies:
-            if policy.name == rule.policy:
-                break
-        else:
-            rule = None # inconsistent cfg: rule with specified name does not exist
-    else:
-        policy = None
-
-    for responsible in responsibles:
-        if responsible.matches(element=element):
-            break
-    else:
-        responsible = None
-
-    for status in statuses:
-        if status.matches(element):
-            break
-    else:
-        status = None
-
-    return cmr.CfgElementStatusReport(
-        element_storage=element_storage,
-        element_type=element._type_name,
-        element_name=element._name,
-        policy=policy,
-        rule=rule,
-        status=status,
-        responsible=responsible,
-    )
 
 
 def create_config_queue_entry(

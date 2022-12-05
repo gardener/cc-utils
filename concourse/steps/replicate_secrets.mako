@@ -23,7 +23,6 @@ ${step_lib('replicate_secrets')}
 import ccc.elasticsearch
 import ccc.github
 import cfg_mgmt.reporting as cmr
-import cfg_mgmt.util as cmu
 import model
 import model.concourse
 
@@ -103,7 +102,7 @@ replicate_secrets(
 
 logger.info('generating cfg element status report')
 
-status_reports = cmu.generate_cfg_element_status_reports(
+status_reports = cmr.generate_cfg_element_status_reports(
   cfg_dir='${cfg_repo_relpath}',
   element_storage='${cfg_repo_url}',
 )

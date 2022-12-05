@@ -82,7 +82,7 @@ def rotate_secrets(
         cfg_factory=cfg_factory,
     )
 
-    for cfg_element in cmu.iter_cfg_elements_requiring_rotation(
+    for cfg_element in cmr.iter_cfg_elements_requiring_rotation(
         cmu.iter_cfg_elements(cfg_factory=cfg_factory),
         cfg_metadata=cfg_metadata,
         rotation_method=cmm.RotationMethod.AUTOMATED,
