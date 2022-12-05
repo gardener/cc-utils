@@ -42,7 +42,6 @@ from protecode.model import ProcessingMode
 from protecode.model import CVSSVersion
 
 import concourse.model.traits.component_descriptor
-import github.compliance.model
 from .filter import (
     FILTER_ATTRS,
     ImageFilterMixin,
@@ -276,8 +275,8 @@ class MaxProcessingTimesDays:
     medium: int = 90
     low: int = 120
 
-    def for_severity(self, severity: github.compliance.model.Severity):
-        S = github.compliance.model.Severity
+    def for_severity(self, severity: gcm.Severity):
+        S = gcm.Severity
         if severity is S.BLOCKER:
             return self.blocker
         elif severity is S.CRITICAL:
