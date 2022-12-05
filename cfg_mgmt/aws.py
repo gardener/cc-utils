@@ -1,10 +1,10 @@
-import boto3
 import copy
 import dataclasses
 import datetime
 import logging
 import typing
 
+import boto3
 import dacite
 
 import cfg_mgmt
