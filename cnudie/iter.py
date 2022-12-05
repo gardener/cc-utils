@@ -49,7 +49,8 @@ class Filter:
 
 def iter(
     component: cm.Component,
-    lookup: cnudie.retrieve.ComponentDescriptorLookupById,
+    lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
+    recursion_depth: int=-1,
     prune_unique: bool=True,
     node_filter: typing.Callable[[Node], bool]=None
 ):
@@ -61,15 +62,23 @@ def iter(
     @param component:    root component for iteration
     @param lookup:       used to lookup referenced components descriptors
                          (thus abstracting from retrieval method)
+                         optional iff recursion_depth is set to 0
+    @param recursion_depth: if set to a positive value, limit recursion for resolving component
+                            dependencies; -1 will resolve w/o recursion limit, 0 will not resolve
+                            component dependencies
     @param prune_unique: if true, redundant component-versions will only be traversed once
     @node_filter:        use to filter emitted nodes (see Filter for predefined filters)
     '''
     seen_component_ids = set()
 
+    if not lookup and not recursion_depth == 0:
+        raise ValueError('lookup is required if recusion is not disabled (recursion_depth==0)')
+
     # need to nest actual iterator to keep global state of seen component-IDs
     def inner_iter(
         component: cm.Component,
         lookup: cnudie.retrieve.ComponentDescriptorLookupById,
+        recursion_depth,
         path: tuple[cm.ComponentIdentity]=(),
     ):
         path = (*path, component)
@@ -90,6 +99,11 @@ def iter(
                 source=source,
             )
 
+        if recursion_depth == 0:
+            return # stop resolving referenced components
+        elif recursion_depth > 0:
+            recursion_depth -= 1
+
         for cref in component.componentReferences:
             cref_id = cm.ComponentIdentity(
                 name=cref.componentName,
@@ -101,12 +115,14 @@ def iter(
             yield from inner_iter(
                 component=referenced_component,
                 lookup=lookup,
+                recursion_depth=recursion_depth,
                 path=path,
             )
 
     for node in inner_iter(
         component=component,
         lookup=lookup,
+        recursion_depth=recursion_depth,
         path=(),
     ):
         if node_filter and not node_filter(node):
