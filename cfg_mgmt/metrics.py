@@ -88,7 +88,7 @@ class CcCfgComplianceResponsible:
         is_compliant: bool,
         responsible: cmm.CfgResponsibleMapping,
         rotation_method: cmm.RotationMethod,
-        non_compliant_reasons: typing.List[cmm.CfgStatusEvaluationAspects]
+        non_compliant_reasons: typing.List[cmm.CfgElementPolicyViolation]
     ):
         '''
         convenience method to create a `CcCfgComplianceResponsible`

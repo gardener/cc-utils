@@ -181,7 +181,7 @@ class CfgMetadata:
     queue: list[CfgQueueEntry]
 
 
-class CfgStatusEvaluationAspects(enum.Enum):
+class CfgElementPolicyViolation(enum.Enum):
     ASSIGNED_RULE_REFERS_TO_UNDEFINED_POLICY = 'assignedRuleRefersToUndefinedPolicy'
     CREDENTIALS_OUTDATED = 'credentialsOutdated'
     NO_RESPONSIBLE = 'noResponsible'
@@ -198,7 +198,7 @@ class CfgStatusEvaluationResult:
     hasStatus: bool
     requiresStatus: typing.Optional[bool]
     credentialsOutdated: typing.Optional[bool]
-    nonCompliantReasons: typing.List[CfgStatusEvaluationAspects]
+    nonCompliantReasons: typing.List[CfgElementPolicyViolation]
 
 
 @dataclasses.dataclass
