@@ -4,6 +4,8 @@ import typing
 
 import dateutil.parser as dp
 
+import ccc.elasticsearch
+import cfg_mgmt.metrics
 import cfg_mgmt.model as cmm
 import ci.log
 import ci.util
@@ -281,3 +283,66 @@ def create_report(
         header='Fully compliant cfg-elements *.*',
         statuses=fully_compliant,
     )
+
+
+def cfg_compliance_status_to_es(
+    es_client: ccc.elasticsearch.ElasticSearchClient,
+    cfg_report_summary_gen: typing.Generator[cmm.CfgStorageSummary, None, None],
+):
+    for cfg_report_summary in cfg_report_summary_gen:
+        cc_cfg_compliance_status = cfg_mgmt.metrics.CcCfgComplianceStatus.create(
+            url=cfg_report_summary.url,
+            compliant_count=cfg_report_summary.compliantElementsCount,
+            non_compliant_count=cfg_report_summary.noncompliantElementsCount,
+        )
+
+        ccc.elasticsearch.metric_to_es(
+            es_client=es_client,
+            metric=cc_cfg_compliance_status,
+            index_name=cfg_mgmt.metrics.index_name(cc_cfg_compliance_status),
+        )
+
+
+def cfg_compliance_storage_responsibles_to_es(
+    es_client: ccc.elasticsearch.ElasticSearchClient,
+    cfg_responsible_summary_gen: typing.Generator[cmm.CfgResponsibleSummary, None, None],
+):
+    for cfg_responsible_sum in cfg_responsible_summary_gen:
+        cc_cfg_compliance_storage_responsibles = \
+            cfg_mgmt.metrics.CcCfgComplianceStorageResponsibles.create(
+            url=cfg_responsible_sum.url,
+            compliant_count=cfg_responsible_sum.compliantElementsCount,
+            non_compliant_count=cfg_responsible_sum.noncompliantElementsCount,
+            responsible=cfg_responsible_sum.responsible,
+        )
+
+        ccc.elasticsearch.metric_to_es(
+            es_client=es_client,
+            metric=cc_cfg_compliance_storage_responsibles,
+            index_name=cfg_mgmt.metrics.index_name(cc_cfg_compliance_storage_responsibles),
+        )
+
+
+def cfg_compliance_responsibles_to_es(
+    es_client: ccc.elasticsearch.ElasticSearchClient,
+    cfg_element_statuses: typing.Iterable[CfgElementStatusReport],
+):
+    for cfg_element_status in cfg_element_statuses:
+
+        status_evaluation = evaluate_cfg_element_status(cfg_element_status)
+
+        cc_cfg_compliance_responsible = cfg_mgmt.metrics.CcCfgComplianceResponsible.create(
+            element_name=cfg_element_status.element_name,
+            element_type=cfg_element_status.element_type,
+            element_storage=cfg_element_status.element_storage,
+            is_compliant=status_evaluation.fullyCompliant,
+            responsible=cfg_element_status.responsible,
+            rotation_method=cfg_element_status.policy.rotation_method,
+            non_compliant_reasons=status_evaluation.nonCompliantReasons,
+        )
+
+        ccc.elasticsearch.metric_to_es(
+            es_client=es_client,
+            metric=cc_cfg_compliance_responsible,
+            index_name=cfg_mgmt.metrics.index_name(cc_cfg_compliance_responsible),
+        )

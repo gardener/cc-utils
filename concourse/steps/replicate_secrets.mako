@@ -130,15 +130,15 @@ logger.info('will not generate reporting issues as no reporting repo is defined'
 
 if (es_client := ccc.elasticsearch.from_cfg(cfg_set.elasticsearch())):
     logger.info('writing cfg metrics to elasticsearch')
-    cmu.cfg_compliance_status_to_es(
+    cmr.cfg_compliance_status_to_es(
         es_client=es_client,
         cfg_report_summary_gen=cfg_report_summary_gen,
     )
-    cmu.cfg_compliance_responsibles_to_es(
+    cmr.cfg_compliance_responsibles_to_es(
         es_client=es_client,
         cfg_element_statuses=status_reports,
     )
-    cmu.cfg_compliance_storage_responsibles_to_es(
+    cmr.cfg_compliance_storage_responsibles_to_es(
         es_client=es_client,
         cfg_responsible_summary_gen=cfg_responsible_summary_gen,
     )
