@@ -7,14 +7,15 @@ if ! which pytest &>/dev/null; then
   exit 1
 fi
 
-# HACK: install awesomeversion to fix unittests until next release -> remove again
-pip3 install awesomeversion
-
 # usage: $1: <src-dir>
 
 src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
 
 export PYTHONPATH="${src_dir}:${src_dir}/cli/gardener_ci:${PYTHONPATH:-}"
+
+# ensure that all required packages are installed (useful for PRs)
+echo "Making sure that packages are installed ..."
+pip3 install -r "${src_dir}/requirements.txt" --quiet
 
 if pytest "${src_dir}" "${@}"; then
     echo 'Unittest executions succeeded'
