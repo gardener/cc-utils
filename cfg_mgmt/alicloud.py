@@ -8,10 +8,11 @@ import typing
 
 import dacite
 import aliyunsdkcore.client
-from  aliyunsdkram.request.v20150501.ListAccessKeysRequest import ListAccessKeysRequest
-from  aliyunsdkram.request.v20150501.CreateAccessKeyRequest import CreateAccessKeyRequest
-from  aliyunsdkram.request.v20150501.DeleteAccessKeyRequest import DeleteAccessKeyRequest
-from  aliyunsdkram.request.v20150501.UpdateAccessKeyRequest import UpdateAccessKeyRequest
+from aliyunsdkram.request.v20150501.ListAccessKeysRequest import ListAccessKeysRequest
+from aliyunsdkram.request.v20150501.CreateAccessKeyRequest import CreateAccessKeyRequest
+from aliyunsdkram.request.v20150501.DeleteAccessKeyRequest import DeleteAccessKeyRequest
+from aliyunsdkram.request.v20150501.UpdateAccessKeyRequest import UpdateAccessKeyRequest
+from aliyunsdkcore.acs_exception.exceptions import ServerException
 
 import cfg_mgmt
 import ci.log
@@ -76,7 +77,15 @@ def rotate_cfg_element(
 
     # If no parameters are set on the request, the user whose access key is used will be used
     request = ListAccessKeysRequest()
-    response = client.do_action_with_exception(request)
+    try:
+        response = client.do_action_with_exception(request)
+    except ServerException as e:
+        if e.get_http_status() == 403:
+            logger.warning(
+                'User is not allowed to list its own access keys. Please make sure that the '
+                'Account is configured to allow users to manage their own keys.'
+            )
+            raise
 
     response: ListAccessKeysResponse = dacite.from_dict(
         data_class=ListAccessKeysResponse,
@@ -96,12 +105,28 @@ def rotate_cfg_element(
         oldest_key_id = sorted_metadata[0].AccessKeyId
         request = DeleteAccessKeyRequest()
         request.set_UserAccessKeyId(oldest_key_id)
-        client.do_action_with_exception(request)
+        try:
+            response = client.do_action_with_exception(request)
+        except ServerException as e:
+            if e.get_http_status() == 403:
+                logger.warning(
+                    'User is not allowed to delete its own access key. Please make sure that the '
+                    'Account is configured to allow users to manage their own keys.'
+                )
+            raise
 
         logger.info(f'Deleted SecretAccessKey {oldest_key_id}')
 
     request = CreateAccessKeyRequest()
-    response = client.do_action_with_exception(request)
+    try:
+        response = client.do_action_with_exception(request)
+    except ServerException as e:
+        if e.get_http_status() == 403:
+            logger.warning(
+                'User is not allowed to create a new access key. Please make sure that the '
+                'Account is configured to allow users to manage their own keys.'
+            )
+        raise
 
     response: CreateAccessKeyResponse = dacite.from_dict(
         data_class=CreateAccessKeyResponse,
@@ -143,4 +168,12 @@ def delete_config_secret(
     request.set_UserAccessKeyId(access_key_id)
     request.set_Status('Inactive')
 
-    client.do_action_with_exception(request)
+    try:
+        client.do_action_with_exception(request)
+    except ServerException as e:
+        if e.get_http_status() == 403:
+            logger.warning(
+                'User is not allowed to update the status of its access key. Please make sure that '
+                'the Account is configured to allow users to manage their own keys.'
+            )
+        raise
