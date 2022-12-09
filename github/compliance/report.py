@@ -357,6 +357,7 @@ def _template_vars(
             'cfg_element_name': scanned_element.element_name,
             'cfg_element_type': scanned_element.element_type,
             'cfg_element_storage': scanned_element.element_storage,
+            'cfg_element_qualified_name': scanned_element.name,
         }
 
     else:
