@@ -18,7 +18,6 @@ ${step_lib('cfg_reporting')}
 import ccc.delivery
 import ccc.github
 import cfg_mgmt.reporting as cmr
-import cfg_mgmt.util as cmu
 import ci.util
 import github.compliance.model as gcm
 import github.compliance.report as gcr
@@ -31,7 +30,7 @@ cfg_factory: model.ConfigFactory = model.ConfigFactory.from_cfg_dir(cfg_dir=cfg_
 org_job_mapping = model.concourse.JobMapping(name='${job_mapping_name}', raw_dict=${raw_job_mapping})
 cfg_set = cfg_factory.cfg_set(org_job_mapping.replication_ctx_cfg_set())
 
-status_reports = cmu.generate_cfg_element_status_reports(
+status_reports = cmr.generate_cfg_element_status_reports(
   cfg_dir='${cfg_repo_relpath}',
   element_storage='${cfg_repo_url}',
 )
