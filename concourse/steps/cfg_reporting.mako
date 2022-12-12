@@ -9,16 +9,18 @@ raw_job_mapping = extra_args['raw_job_mapping']
 job_mapping_name = extra_args['job_mapping_name']
 compliance_reporting_repo_url = extra_args['compliance_reporting_repo_url']
 delivery_endpoints_cfg_name = extra_args['delivery_endpoints_cfg_name']
-github_issue_template_cfgs = extra_args['github_issue_template_cfgs']
+github_issue_template_cfgs_raw = extra_args['github_issue_template_cfgs_raw']
 cfg_repo_url = extra_args['cfg_repo_url']
 %>
 
 ${step_lib('cfg_reporting')}
+import dacite
 
 import ccc.delivery
 import ccc.github
 import cfg_mgmt.reporting as cmr
 import ci.util
+import concourse.model.traits.image_scan
 import github.compliance.model as gcm
 import github.compliance.report as gcr
 import model
@@ -62,6 +64,14 @@ grouped_no_rule = scan_result_group_collection_for_no_rule(results)
 grouped_no_outdated = scan_result_group_collection_for_outdated(results)
 grouped_no_undefined_policy = scan_result_group_collection_for_undefined_policy(results)
 
+github_issue_template_cfgs = [
+  dacite.from_dict(
+    data_class=concourse.model.traits.image_scan.GithubIssueTemplateCfg,
+    data=template_cfg_raw,
+  )
+  for template_cfg_raw in ${github_issue_template_cfgs_raw}
+]
+
 for result_group_collection in (
   grouped_no_status,
   grouped_no_responsible,
@@ -75,7 +85,7 @@ for result_group_collection in (
     gh_api=gh_api,
     overwrite_repository=repository,
     delivery_svc_client=delivery_svc_client,
-    github_issue_template_cfgs=${github_issue_template_cfgs},
+    github_issue_template_cfgs=github_issue_template_cfgs,
   )
 
 </%def>
