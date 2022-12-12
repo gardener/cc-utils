@@ -323,11 +323,13 @@ def _cfg_policy_violation_template_vars(result_group: gcm.ScanResultGroup) -> di
         responsibles = 'unknown'
         responsibles_len = 1
 
+    element_storage = result.scanned_element.element_storage
+
     summary = textwrap.dedent(f'''\
         # Compliance Status Summary
         |    |    |
         | -- | -- |
-        | Element Storage | {result.scanned_element.element_storage} |
+        | Element Storage | [{element_storage}](https://{element_storage}) |
         | Element Type | {result.scanned_element.element_type} |
         | Element Name | {result.scanned_element.element_name} |
         | {_pluralise("Responsible", responsibles_len)} | {responsibles} |
