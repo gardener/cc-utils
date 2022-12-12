@@ -6,6 +6,7 @@ import cnudie.retrieve
 import cnudie.validate
 import ctx
 import gci.componentmodel as cm
+import version
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +91,7 @@ def validate(
 def ls(
     name: str,
     greatest: bool=False,
+    final: bool=False,
     ocm_repo_base_url: str=None,
 ):
     if not ocm_repo_base_url:
@@ -102,8 +104,16 @@ def ls(
             component_name=name,
             ctx_repo=ctx_repo,
         ))
-    else:
-        print(cnudie.retrieve.component_versions(
-            component_name=name,
-            ctx_repo=ctx_repo,
-        ))
+        return
+
+    versions = cnudie.retrieve.component_versions(
+        component_name=name,
+        ctx_repo=ctx_repo,
+    )
+
+    for v in versions:
+        if final:
+            parsed_version = version.parse_to_semver(v)
+            if parsed_version.prerelease:
+                continue
+        print(v)
