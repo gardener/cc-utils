@@ -573,6 +573,7 @@ def create_or_update_github_issues(
     delivery_svc_client: delivery.client.DeliveryServiceClient=None,
     delivery_svc_endpoints: model.delivery.DeliveryEndpointsCfg=None,
     license_cfg: image_scan.LicenseCfg=None, # XXX -> callback
+    gh_quota_minimum: int = 2000, # skip issue updates if remaining quota falls below this threshold
 ):
     # workaround / hack:
     # we map findings to <component-name>:<resource-name>
@@ -586,6 +587,13 @@ def create_or_update_github_issues(
     result_groups_without_findings = result_group_collection.result_groups_without_findings
 
     err_count = 0
+
+    def is_remaining_quota_too_low() -> bool:
+        ratelimit_remaining = gh_api.ratelimit_remaining
+        logger.info(f'{ratelimit_remaining=}')
+        if ratelimit_remaining < gh_quota_minimum:
+            return True
+        return False
 
     def process_result(
         result_group: gcm.ScanResultGroup,
@@ -758,12 +766,20 @@ def create_or_update_github_issues(
         else:
             raise NotImplementedError(action)
 
+    if is_remaining_quota_too_low():
+        logger.warning(f'skipping issue updates, quota too low; {gh_quota_minimum=}')
+        return
+
     for result_group in result_groups_with_findings:
         process_result(
             result_group=result_group,
             action=PROCESSING_ACTION.REPORT,
         )
         time.sleep(1) # throttle github-api-requests
+
+    if is_remaining_quota_too_low():
+        logger.warning(f'skipping issue updates, quota too low; {gh_quota_minimum=}')
+        return
 
     for result_group in result_groups_without_findings:
         logger.info(f'discarding issue for {result_group.name=} vulnerabilities')
@@ -776,6 +792,10 @@ def create_or_update_github_issues(
     if groups_with_scan_error := result_group_collection.result_groups_with_scan_errors:
         logger.warning(f'{len(groups_with_scan_error)=} had scanning errors (check log)')
         # do not fail job (for now); might choose to, later
+
+    if is_remaining_quota_too_low():
+        logger.warning(f'skipping issue updates, quota too low; {gh_quota_minimum=}')
+        return
 
     if overwrite_repository:
         known_issues = _all_issues(overwrite_repository)
@@ -802,6 +822,8 @@ def create_or_update_github_issues(
     if err_count > 0:
         logger.warning(f'{err_count=} - there were errors - will raise')
         raise ValueError('not all gh-issues could be created/updated/deleted')
+
+    logger.info(f'{gh_api.ratelimit_remaining=}')
 
 
 def close_issues_for_absent_resources(
