@@ -70,6 +70,11 @@ def manifest(
 
             print()
             print(f'{total_size=} {manifest_digest=}')
+        elif isinstance(manifest, om.OciImageManifestList):
+            manifest_digest = hashlib.sha256(manifest_raw.content).hexdigest()
+            print()
+            print(f'{manifest_digest=}')
+
     else:
         manifest = oci_client.manifest_raw(
             image_reference=image_reference,
