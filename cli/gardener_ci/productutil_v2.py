@@ -21,10 +21,16 @@ parse = yaml.safe_load
 
 
 def _raw_component_dep_to_v2(raw: dict):
-  name = raw['name']
+  if not 'componentName' in raw:
+    component_name = raw['name']
+    name = product.v2.mangle_name(component_name)
+  else:
+    component_name = raw['componentName']
+    name = raw['name']
+
   args = {
-    'componentName': name,
-    'name': product.v2.mangle_name(name),
+    'componentName': component_name,
+    'name': name,
     'version': raw['version'],
   }
 
