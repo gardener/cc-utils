@@ -145,20 +145,22 @@ class ScanSettings:
 @dataclasses.dataclass
 class ScanResult(gcm.ScanResult):
     """
-    ScanResult is a data container for a scan result for a component version
+    ScanResult is a data container for a scan result for a component version.
+    Successful scans must provide not None values for `scan_response`, `scan_statistic`, and
+    `report_url`.
     """
     artifact_name: str
     project_id: int
-    scan_response: ScanResponse
-    scan_statistic: ScanStatistic
-    report_url: str
+    scan_response: ScanResponse | None
+    scan_statistic: ScanStatistic | None
+    report_url: str | None
     overview_url: str
 
 
 @dataclasses.dataclass
 class FinishedScans:
-    failed_scans: typing.List[str] = dataclasses.field(default_factory=list)
-    scans: typing.List[str] = dataclasses.field(default_factory=list)
+    failed_scans: typing.List[ScanResult] = dataclasses.field(default_factory=list)
+    scans: typing.List[ScanResult] = dataclasses.field(default_factory=list)
 
 
 @dataclasses.dataclass

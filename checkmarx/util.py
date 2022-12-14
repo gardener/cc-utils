@@ -6,7 +6,6 @@ import logging
 import shutil
 import tarfile
 import tempfile
-import traceback
 import typing
 import zipfile
 
@@ -140,7 +139,7 @@ def scan_artifacts(
 
     def init_scan(
         scan_artifact: dso.model.ScanArtifact,
-    ) -> typing.Union[model.ScanResult, model.FailedScan]:
+    ) -> model.ScanResult:
         nonlocal cx_client
         nonlocal scan_func
         nonlocal team_id
@@ -152,14 +151,10 @@ def scan_artifacts(
         )
 
         if scan_artifact.source.access.type is cm.AccessType.GITHUB:
-            try:
-                return scan_func(
-                    cx_project=cx_project,
-                    scan_artifact=scan_artifact,
-                )
-            except:
-                traceback.print_exc()
-                return model.FailedScan(scan_artifact.name)
+            return scan_func(
+                cx_project=cx_project,
+                scan_artifact=scan_artifact,
+            )
         else:
             raise NotImplementedError
 
@@ -171,10 +166,12 @@ def scan_artifacts(
             )
         for future in concurrent.futures.as_completed(futures):
             scan_result = future.result()
-            if isinstance(scan_result, model.FailedScan):
-                finished_scans.failed_scans.append(scan_result.artifact_name)
-            else:
+            scan_result: model.ScanResult
+
+            if scan_result.scan_succeeded:
                 finished_scans.scans.append(scan_result)
+            else:
+                finished_scans.failed_scans.append(scan_result)
 
             finished += 1
             logger.info(f'remaining: {artifact_count - finished}')
@@ -306,6 +303,9 @@ def scan_gh_artifact(
 
 
 def greatest_severity(result: model.ScanResult) -> model.Severity | None:
+    if not result.scan_statistic:
+        raise RuntimeError('must only be called for successful scans')
+
     if result.scan_statistic.highSeverity > 0:
         return model.Severity.HIGH
     elif result.scan_statistic.mediumSeverity > 0:
@@ -319,6 +319,9 @@ def greatest_severity(result: model.ScanResult) -> model.Severity | None:
 
 
 def checkmarx_severity_to_github_severity(severity: model.Severity) -> gcm.Severity:
+    if not severity:
+        raise RuntimeError('must only be called for successful scans')
+
     if severity in (
         model.Severity.HIGH,
         model.Severity.MEDIUM,
@@ -366,7 +369,7 @@ def print_scans(
         print('\n')
         failed_artifacts_str = '\n'.join(
             (
-                f'- {artifact_name}' for artifact_name in scans.failed_scans
+                f'- {scan_result.artifact_name}' for scan_result in scans.failed_scans
             )
         )
         logger.warning(f'failed scan artifacts:\n\n{failed_artifacts_str}\n')

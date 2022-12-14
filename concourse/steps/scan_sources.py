@@ -18,7 +18,7 @@ def scan_result_group_collection(
         max_sev = checkmarx.util.greatest_severity(result)
         return checkmarx.util.checkmarx_severity_to_github_severity(max_sev)
 
-    def findings_callback(result: cmx_model.ScanResult):
+    def findings_callback(result: cmx_model.ScanResult) -> bool:
         max_sev = checkmarx.util.greatest_severity(result)
         return max_sev and max_sev >= threshold
 
