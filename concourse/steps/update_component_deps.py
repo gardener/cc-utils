@@ -8,6 +8,7 @@ import typing
 
 import gci.componentmodel
 import github3.exceptions
+import github3.repos.repo
 
 import ccc.github
 import ci.util
@@ -290,7 +291,7 @@ def create_upgrade_pr(
     from_ref: gci.componentmodel.ComponentReference,
     to_ref: gci.componentmodel.ComponentReference,
     to_version: str,
-    pull_request_util,
+    pull_request_util: github.util.PullRequestUtil,
     upgrade_script_path,
     upgrade_script_relpath,
     githubrepobranch: GitHubRepoBranch,
@@ -435,9 +436,9 @@ def create_upgrade_pr(
 
 
 def push_upgrade_commit(
-    ls_repo,
+    ls_repo: github3.repos.repo.Repository,
     commit_message: str,
-    githubrepobranch,
+    githubrepobranch: GitHubRepoBranch,
     repo_dir: str,
 ) -> str:
     # mv diff into commit and push it
