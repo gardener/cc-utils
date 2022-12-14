@@ -103,7 +103,7 @@ if not notification_policy is Notify.GITHUB_ISSUES:
   raise NotImplementedError(notification_policy)
 
 scan_results_grouped = scan_result_group_collection(
-  results=scan_results.scans,
+  results=scan_results.scans + scan_results.failed_scans,
   severity_threshold=severity_threshold,
 )
 

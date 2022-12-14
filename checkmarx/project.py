@@ -1,12 +1,14 @@
 import datetime
 import logging
 import time
+import traceback
 
 import checkmarx.client
 import checkmarx.model as model
 import checkmarx.util
 import cnudie.iter
 import gci.componentmodel as cm
+import github.compliance.model
 
 logger = logging.getLogger(__name__)
 
@@ -46,18 +48,34 @@ class CheckmarxProject:
         component: cm.Component,
         source: cm.ComponentSource,
     ) -> model.ScanResult:
-        scan_response = self._poll_scan(scan_id=scan_id)
+        try:
+            scan_response = self._poll_scan(scan_id=scan_id)
 
-        if scan_response.status_value() is not model.ScanStatusValues.FINISHED:
+            if scan_response.status_value() is not model.ScanStatusValues.FINISHED:
+                raise RuntimeError(f'Scan of artifact "{self.artifact_name}" finished with errors')
+
+            scan_state = github.compliance.model.ScanState.SUCCEEDED
+            report_url = self.client.routes.web_ui_scan_viewer(
+                scan_id=scan_response.id,
+                project_id=self.project_details.id,
+            )
+
+            clogger = checkmarx.util.component_logger(artifact_name=self.artifact_name)
+            clogger.info('scan finished. Retrieving scan statistics')
+            statistics = self.scan_statistics(scan_id=scan_response.id)
+
+        except:
             logger.error(f'scan for {self.artifact_name} failed with {scan_response.status=}')
-            raise RuntimeError(f'Scan of artifact "{self.artifact_name}" finished with errors')
+            traceback.print_exc()
 
-        clogger = checkmarx.util.component_logger(artifact_name=self.artifact_name)
-        clogger.info('scan finished. Retrieving scan statistics')
-        statistics = self.scan_statistics(scan_id=scan_response.id)
+            scan_response = None
+            scan_state = github.compliance.model.ScanState.FAILED
+            report_url = None
+            statistics = None
 
         # pylint: disable=E1123
         return model.ScanResult(
+            state=scan_state,
             scanned_element=cnudie.iter.SourceNode(
                 path=(component,),
                 source=source,
@@ -66,10 +84,7 @@ class CheckmarxProject:
             artifact_name=self.artifact_name,
             scan_response=scan_response,
             scan_statistic=statistics,
-            report_url=self.client.routes.web_ui_scan_viewer(
-                scan_id=scan_response.id,
-                project_id=self.project_details.id
-            ),
+            report_url=report_url,
             overview_url=self.client.routes.web_ui_scan_history(project_id=self.project_details.id),
         )
 
@@ -79,7 +94,12 @@ class CheckmarxProject:
     def start_scan(self, scan_settings: model.ScanSettings):
         return self.client.start_scan(scan_settings)
 
-    def _poll_scan(self, scan_id: int, polling_interval_seconds=60, timeout_seconds=1200):
+    def _poll_scan(
+        self,
+        scan_id: int,
+        polling_interval_seconds=60,
+        timeout_seconds=1200,
+    ) -> model.ScanResponse:
         def scan_finished():
             scan = self.client.get_scan_state(scan_id=scan_id)
             clogger = checkmarx.util.component_logger(artifact_name=self.artifact_name)
@@ -97,10 +117,11 @@ class CheckmarxProject:
             time.sleep(polling_interval_seconds)
             result = scan_finished()
             tm_now = datetime.datetime.now()
-        if  (tm_now - tm_start).total_seconds() >= timeout_seconds:
+        if (tm_now - tm_start).total_seconds() >= timeout_seconds:
             scan = self.client.get_scan_state(scan_id=scan_id)
             raise RuntimeError(f'Scan of artifact "{scan.status.name=}", '
                 f'{scan_id} aborted after timeout {timeout_seconds}s')
+
         return result
 
     def scan_statistics(self, scan_id: int):
