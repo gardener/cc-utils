@@ -576,12 +576,12 @@ def greatest_references(
 ) -> gci.componentmodel.ComponentReference:
     '''
     yields the component references from the specified iterable of ComponentReference that
-    have the greates version (grouped by component name).
+    have the greatest version (grouped by component name).
     Id est: if the sequence contains exactly one version of each contained component name,
     the sequence is returned unchanged.
     '''
     references = tuple(references)
-    names = [r.name for r in references]
+    names = {r.name for r in references}
 
     for name in names:
         matching_refs = [r for r in references if r.name == name]
