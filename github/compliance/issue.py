@@ -4,7 +4,6 @@ import logging
 import re
 import typing
 
-import cachetools
 import github3
 import github3.issues
 import github3.issues.issue
@@ -39,13 +38,6 @@ _label_undefined_policy = 'cfg/policy-violation/undefined-policy'
 _label_prefix_ocm_artefact = 'ocm/artefact'
 _label_prefix_cicd_cfg_element = 'cicd-cfg-element'
 _label_prefix_ctx = 'ctx'
-
-
-@cachetools.cached(cache={})
-def _issue_labels(
-    issue,
-):
-    return frozenset((l.name for l in issue.labels()))
 
 
 def prefix_for_element(
@@ -141,10 +133,12 @@ def enumerate_issues(
         extra_labels=extra_labels,
     ))
 
-    def filter_relevant_issues(issue):
+    def filter_relevant_issues(issue: github3.issues.issue.ShortIssue):
         if issue.state != state:
             return False
-        if not _issue_labels(issue) & labels == labels:
+
+        issue_labels = frozenset((l.name for l in issue.original_labels))
+        if not issue_labels & labels == labels:
             return False
         return True
 
@@ -288,6 +282,7 @@ def create_or_update_issue(
     elif issues_count == 1:
 
         open_issue = open_issues[0] # we checked there is exactly one
+        open_issue: github3.issues.issue.ShortIssue
 
         def labels_to_preserve():
             nonlocal preserve_labels_regexes
@@ -296,7 +291,7 @@ def create_or_update_issue(
             ctx_label_regex = f'{_label_prefix_ctx}.*'
             preserve_labels_regexes = set(preserve_labels_regexes) | set({ctx_label_regex})
 
-            for label in open_issue.labels():
+            for label in open_issue.original_labels:
                 for r in preserve_labels_regexes:
                     if re.fullmatch(pattern=r, string=label.name):
                         yield label.name
@@ -351,7 +346,7 @@ def close_issue_if_present(
         return # nothing to do
 
     open_issue = open_issues[0]
-    logger.info(f'labels for issue for closing: {[l.name for l in open_issue.labels()]}')
+    logger.info(f'labels for issue for closing: {[l.name for l in open_issue.original_labels]}')
 
     succ = True
 

@@ -856,7 +856,7 @@ def close_issues_for_absent_resources(
     ) -> bool:
         return any([
             l.name.startswith(_ctx_label_prefix)
-            for l in issue.labels()]
+            for l in issue.original_labels]
         )
 
     all_issues = github.compliance.issue.enumerate_issues(
@@ -883,7 +883,7 @@ def close_issues_for_absent_resources(
     prefix = github.compliance.issue.prefix_for_element(scanned_element)
 
     def component_resource_label(issue: github3.issues.Issue) -> str:
-        for label in issue.labels():
+        for label in issue.original_labels:
             label: github3.issues.label.ShortLabel
             if label.name.startswith(prefix):
                 return label.name
