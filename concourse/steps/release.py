@@ -664,7 +664,7 @@ class UploadComponentDescriptorStep(TransactionalStep):
                     component_descriptor_dict=ci.util.parse_yaml_file(
                         self.component_descriptor_v2_path
                     ),
-                    validation_mode=cm.ValidationMode.FAIL,
+                    validation_mode=cm.ValidationMode.WARN,
             )
             yield component_descriptor
             return
