@@ -108,7 +108,7 @@ pull_request_util = github.util.PullRequestUtil(
     github_cfg=github_cfg,
 )
 
-# hack / workaround: rebase to workaround concourse sometimes not refresing git-resource
+## hack / workaround: rebase to workaround concourse sometimes not refreshing git-resource
 git_helper = gitutil.GitHelper(
     repo=REPO_ROOT,
     github_cfg=github_cfg,
