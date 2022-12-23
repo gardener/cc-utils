@@ -226,28 +226,35 @@ is calculated relative to <code class="code docutils literal notranslate"><span 
 </ul>
 </p></td>
 </tr>
-<tr class="row-odd"><td><p>notifications_cfg</p></td>
+<tr class="row-odd"><td><p>escape_argv</p></td>
+<td><p>no</p></td>
+<td><p>True</p></td>
+<td><p>str</p></td>
+<td><p>defines whether or not ARGV (execute attr) should be escaped
+setting to <code class="code docutils literal notranslate"><span class="pre">False</span></code> will allow for e.g. environment-variable expansion</p></td>
+</tr>
+<tr class="row-even"><td><p>notifications_cfg</p></td>
 <td><p>no</p></td>
 <td><p>default</p></td>
 <td><p>str</p></td>
 <td><p>Configures build notification policies (see
 <a class="reference internal" href="traits/notifications.html#trait-notifications"><span class="std std-ref">notifications trait</span></a>)</p></td>
 </tr>
-<tr class="row-even"><td><p>image</p></td>
+<tr class="row-odd"><td><p>image</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>the container image reference to use for the executing container.
 If not set, the default image will be used.</p></td>
 </tr>
-<tr class="row-odd"><td><p>registry</p></td>
+<tr class="row-even"><td><p>registry</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>The container image registry cfg_name. Required when retrieving container images
 from a non-default image registry that requires authentication.</p></td>
 </tr>
-<tr class="row-even"><td><p>inputs</p></td>
+<tr class="row-odd"><td><p>inputs</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">{}</span><span class="w"></span>
 </pre></div>
@@ -259,7 +266,7 @@ from a non-default image registry that requires authentication.</p></td>
 <code class="code docutils literal notranslate"><span class="pre">input_name</span></code> is converted to UPPER_CASE and exposed to the step as an environment
 variable containing the relative path to the output.</p></td>
 </tr>
-<tr class="row-odd"><td><p>output_dir</p></td>
+<tr class="row-even"><td><p>output_dir</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
@@ -269,7 +276,7 @@ Any files placed into this directory are passed to subsequent steps declaring th
 as input. The unchanged value configured is used as input name.
 e.g.: <code class="code docutils literal notranslate"><span class="pre">output_dir:</span> <span class="pre">out</span></code> results in env var <code class="code docutils literal notranslate"><span class="pre">OUT_PATH</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p>publish_to</p></td>
+<tr class="row-odd"><td><p>publish_to</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">{}</span><span class="w"></span>
 </pre></div>
@@ -296,7 +303,7 @@ pushing them.</p>
 </div>
 </p></td>
 </tr>
-<tr class="row-odd"><td><p>vars</p></td>
+<tr class="row-even"><td><p>vars</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">{}</span><span class="w"></span>
 </pre></div>
@@ -310,7 +317,7 @@ An instance of the current pipeline_model is accessible through the
 The evaluation result is exposed to this build step via the specified environment
 variable.</p></td>
 </tr>
-<tr class="row-even"><td><p>cache_paths</p></td>
+<tr class="row-odd"><td><p>cache_paths</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span><span class="w"></span>
 </pre></div>
@@ -324,26 +331,26 @@ variable.</p></td>
 <p>a list of paths (relative to initial PWD) that should be cached.</p>
 </p></td>
 </tr>
-<tr class="row-odd"><td><p>privilege_mode</p></td>
+<tr class="row-even"><td><p>privilege_mode</p></td>
 <td><p>no</p></td>
 <td><p><code class="code docutils literal notranslate"><span class="pre">unprivileged</span></code></p></td>
 <td><p>PrivilegeMode</p></td>
 <td><p>privilege mode for step. Use carefully when running potentially untrusted code.</p></td>
 </tr>
-<tr class="row-even"><td><p>timeout</p></td>
+<tr class="row-odd"><td><p>timeout</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>go-style time interval (e.g.: ‘1h30m’) after which the step will be interrupted and fail.</p></td>
 </tr>
-<tr class="row-odd"><td><p>retries</p></td>
+<tr class="row-even"><td><p>retries</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>positive integer specifying the maximum amount of failures until the step is
 counted as failed</p></td>
 </tr>
-<tr class="row-even"><td><p>on_abort</p></td>
+<tr class="row-odd"><td><p>on_abort</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
