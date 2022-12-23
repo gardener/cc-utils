@@ -84,6 +84,14 @@ def attrs(pipeline_step):
             ''',
         ),
         AttributeSpec.optional(
+            name='escape_argv',
+            default=True,
+            doc='''\
+                defines whether or not ARGV (execute attr) should be escaped
+                setting to `False` will allow for e.g. environment-variable expansion
+            ''',
+        ),
+        AttributeSpec.optional(
             name='notifications_cfg',
             default='default',
             doc='''
@@ -348,6 +356,10 @@ class PipelineStep(ModelBase):
     def platform(self) -> model.concourse.Platform | None:
         return self._platform
 
+    @property
+    def escape_argv(self):
+        return self.raw.get('escape_argv', True)
+
     def _execute(self):
         # by default, run an executable named as the step
         execute_value = self.raw.get('execute', self.name)
@@ -371,7 +383,11 @@ class PipelineStep(ModelBase):
 
         if not isinstance(execute, list):
             return [str(execute)]
-        return [shlex.quote(str(e)) for e in execute]
+
+        if self.escape_argv:
+            return [shlex.quote(str(e)) for e in execute]
+        else:
+            return execute
 
     def executable(self, prefix='', hook: TaskHook = TaskHook.NONE):
         argv = self._argv(hook)
