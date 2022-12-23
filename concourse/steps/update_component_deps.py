@@ -434,6 +434,8 @@ def create_upgrade_pr(
             env=cmd_env
         )
 
+    return pull_request
+
 
 def push_upgrade_commit(
     ls_repo: github3.repos.repo.Repository,

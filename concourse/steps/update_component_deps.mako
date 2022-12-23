@@ -146,6 +146,7 @@ ctx_repo = dacite.from_dict(
 
 # we at most need to do this once
 os.environ['DOCKERD_STARTED'] = 'no'
+created_pull_requests = []
 
 # find components that need to be upgraded
 for from_ref, to_version in determine_upgrade_prs(
@@ -173,7 +174,7 @@ for from_ref, to_version in determine_upgrade_prs(
         merge_policy = applicable_merge_policy[0].merge_mode()
         merge_method = applicable_merge_policy[0].merge_method()
 
-    create_upgrade_pr(
+    pull_request = create_upgrade_pr(
         component=own_component,
         from_ref=from_ref,
         to_ref=from_ref,
@@ -195,4 +196,14 @@ for from_ref, to_version in determine_upgrade_prs(
         container_image = None
 % endif
     )
+    created_pull_requests.append(
+        pull_request_util._pr_to_upgrade_pull_request(
+            pull_request,
+        )
+    )
+
+for upgrade_pull_request in github.util.iter_obsolete_upgrade_pull_requests(
+    created_pull_requests + list(upgrade_pull_requests)
+):
+    upgrade_pull_request.purge()
 </%def>

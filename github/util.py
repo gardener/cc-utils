@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import collections
 import datetime
 import deprecated
 import enum
@@ -230,6 +231,33 @@ class UpgradePullRequest:
         self.pull_request.repository.ref(head_ref).delete()
 
 
+def iter_obsolete_upgrade_pull_requests(
+    upgrade_pull_requests: typing.Iterable[UpgradePullRequest],
+) -> typing.Generator[UpgradePullRequest, None, None]:
+    grouped_upgrade_pull_requests = collections.defaultdict(list)
+
+    for upgrade_pull_request in upgrade_pull_requests:
+        if upgrade_pull_request.pull_request.state != 'open':
+            continue
+        component_name = upgrade_pull_request.to_ref.componentName
+        grouped_upgrade_pull_requests[component_name].append(upgrade_pull_request)
+
+    for upgrade_pull_request_group in grouped_upgrade_pull_requests.values():
+        if len(upgrade_pull_request_group) < 2:
+            continue
+
+        # greatest version will be sorted as last element
+        ordered_by_version = sorted(
+            upgrade_pull_request_group,
+            key=lambda upr: version.parse_to_semver(upr.to_ref.version),
+        )
+
+        greatest_version = version.parse_to_semver(ordered_by_version[-1].to_ref.version)
+        for upgrade_pr in ordered_by_version:
+            if version.parse_to_semver(upgrade_pr.to_ref.version) < greatest_version:
+                yield upgrade_pr
+
+
 class PullRequestUtil(RepositoryHelperBase):
     PR_TITLE_PATTERN = re.compile(r'^\[ci:(\S*):(\S*):(\S*)->(\S*)\]$')
 
@@ -326,7 +354,7 @@ class PullRequestUtil(RepositoryHelperBase):
                         content.refresh()
                         return content.decoded.decode('utf-8')
             except github3.exceptions.NotFoundError:
-                pass  # directory does not exists
+                pass  # directory does not exist
 
         return None
 
