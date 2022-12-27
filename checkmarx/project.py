@@ -48,6 +48,7 @@ class CheckmarxProject:
         component: cm.Component,
         source: cm.ComponentSource,
     ) -> model.ScanResult:
+        scan_response = None
         try:
             scan_response = self._poll_scan(scan_id=scan_id)
 
@@ -65,7 +66,12 @@ class CheckmarxProject:
             statistics = self.scan_statistics(scan_id=scan_response.id)
 
         except:
-            logger.error(f'scan for {self.artifact_name} failed with {scan_response.status=}')
+            if scan_response:
+                scan_status = scan_response.status
+            else:
+                scan_status = '<error occurred before scan-response was returned>'
+
+            logger.error(f'scan for {self.artifact_name} failed with {scan_status=}')
             traceback.print_exc()
 
             scan_response = None
