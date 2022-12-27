@@ -179,12 +179,42 @@ def _ocm_result_group_template_vars(
 
 def _vulnerability_template_vars(
     result_group: gcm.ScanResultGroup,
+    cfg_set=None,
 ) -> dict:
     results: tuple[pm.BDBA_ScanResult] = result_group.results_with_findings
     analysis_results = [r.result for r in results]
     greatest_cve = max((r.greatest_cve_score for r in results))
     component = result_group.component
     artifacts = [gcm.artifact_from_node(res.scanned_element) for res in result_group.results]
+
+    def bdba_rescoring_cmd(cfg_set):
+        nonlocal component
+
+        try:
+            protecode_cfg = cfg_set.protecode()
+        except Exception as e:
+            rescoring_cmd = f'warning: {e}'
+            return rescoring_cmd
+
+        bdba_product_ids = [ar.product_id() for ar in analysis_results]
+        ctx_repo = component.current_repository_ctx()
+        ctx_repo_url = ctx_repo.baseUrl
+
+        return textwrap.dedent(f'''\
+            for app in {' '.join(bdba_product_ids)}; do
+                gardener-ci bdba rescore \
+                    --ctx-repo {ctx_repo_url} \
+                    --protecode-cfg {protecode_cfg._name} \
+                    --product-id $app \
+                    --rescoring-rules rescoring-rules.yaml \
+                    --assess
+            done
+        ''')
+
+    if cfg_set:
+        rescoring_cmd = bdba_rescoring_cmd(cfg_set=cfg_set)
+    else:
+        rescoring_cmd = 'warning: bdba-command not available (check scanlog)'
 
     return {
         'summary': _compliance_status_summary(
@@ -198,6 +228,7 @@ def _vulnerability_template_vars(
         'criticality_classification': str(_criticality_classification(
             cve_score=greatest_cve
         )),
+        'rescoring_cmd': rescoring_cmd,
     }
 
 
@@ -344,6 +375,7 @@ def _template_vars(
     result_group: gcm.ScanResultGroup,
     license_cfg: image_scan.LicenseCfg,
     delivery_dashboard_url: str='',
+    cfg_set=None,
 ) -> dict:
     scanned_element = result_group.results[0].scanned_element
     issue_type = result_group.issue_type
@@ -366,7 +398,10 @@ def _template_vars(
         raise TypeError(result_group)
 
     if issue_type == _compliance_label_vulnerabilities:
-        template_variables |= _vulnerability_template_vars(result_group)
+        template_variables |= _vulnerability_template_vars(
+            result_group,
+            cfg_set=cfg_set,
+        )
 
     elif issue_type == _compliance_label_licenses:
         template_variables |= _license_template_vars(
@@ -576,6 +611,7 @@ def create_or_update_github_issues(
     delivery_svc_endpoints: model.delivery.DeliveryEndpointsCfg=None,
     license_cfg: image_scan.LicenseCfg=None, # XXX -> callback
     gh_quota_minimum: int = 2000, # skip issue updates if remaining quota falls below this threshold
+    cfg_set=None,
 ):
     # workaround / hack:
     # we map findings to <component-name>:<resource-name>
@@ -601,6 +637,7 @@ def create_or_update_github_issues(
         result_group: gcm.ScanResultGroup,
         action: PROCESSING_ACTION,
     ):
+        nonlocal cfg_set
         nonlocal gh_api
         nonlocal err_count
         issue_type = result_group.issue_type
@@ -683,6 +720,7 @@ def create_or_update_github_issues(
                 result_group=result_group,
                 license_cfg=license_cfg,
                 delivery_dashboard_url=delivery_dashboard_url,
+                cfg_set=cfg_set,
             )
 
             for issue_cfg in github_issue_template_cfgs:

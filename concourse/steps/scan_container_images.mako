@@ -205,5 +205,6 @@ for result_group in scan_results_vulnerabilities, scan_results_licenses:
     delivery_svc_client=delivery_svc_client,
     delivery_svc_endpoints=delivery_svc_endpoints,
     license_cfg=license_cfg,
+    cfg_set=cfg_set,
   )
 </%def>
