@@ -7,8 +7,22 @@ src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
 
 error=0
 
+# ignore files that are not under version-ctrl (helpful for local runs)
+GIT_DIR="${src_dir}/.git" \
+GIT_WORKTREE="${src_dir}" \
+    untracked=$(git status --porcelain=v2 | grep -e '^? ' | sed 's/^? //g')
+
+exclude_args=$(echo -n "${untracked}" | tr \\n ,)
+
 # flake8 / the linter it instruments cannot handle our special type-hints (CliHint)
-if flake8 --max-line-length=101 --select=E101,E117,E201,E202,E203,E225,E251,E3,E4,E5,E703,E9,W1,W2,W3,W6,F --count --format=pylint --ignore=F722,F821 ${src_dir}; then
+if flake8 \
+    --max-line-length=101 \
+    --select=E101,E117,E201,E202,E203,E225,E251,E3,E4,E5,E703,E9,W1,W2,W3,W6,F \
+    --count \
+    --format=pylint \
+    --ignore=F722,F821 \
+    --exclude ${exclude_args} \
+    ${src_dir}; then
     echo 'flake8 succeeded'
 else
     echo 'flake8 found errors (see above)'
