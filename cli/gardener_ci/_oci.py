@@ -1,3 +1,4 @@
+import concurrent.futures
 import enum
 import hashlib
 import pprint
@@ -49,6 +50,9 @@ def purge(image: str):
 
 def purge_old(image: str, keep:int=128):
     oci_client = ccc.oci.oci_client()
+    pool = concurrent.futures.ThreadPoolExecutor(
+        max_workers=8,
+    )
 
     def sloppy_semver_parse(v: str):
         if v.count('-') > 2:
@@ -71,16 +75,23 @@ def purge_old(image: str, keep:int=128):
 
     print(f'found {len(tags)} image(s) - will purge {remove_count}')
 
-    for idx, tag in enumerate(tags, 1):
-        if idx == remove_count:
-            print(f'stopping the purge now at {idx}')
-            return
-        img_ref = f'{image}:{tag}'
-        print(f'purging {img_ref}')
+    def purge_image(image_ref: str):
+        print(f'purging {image_ref}')
         oci_client.delete_manifest(
-            image_reference=img_ref,
+            image_reference=image_ref,
             purge=True,
         )
+
+    def iter_image_refs_to_purge():
+        for idx, tag in enumerate(tags, 1):
+            if idx == remove_count:
+                print(f'stopping the purge at {idx}')
+                return
+
+            yield f'{image}:{tag}'
+
+    for _ in pool.map(purge_image, iter_image_refs_to_purge()):
+        pass
 
 
 def manifest(
