@@ -10,6 +10,7 @@ import oci
 import oci.model as om
 import oci.workarounds as ow
 import unixutil.scan as us
+import version
 
 __cmd_name__ = 'oci'
 
@@ -34,6 +35,50 @@ def ls(image: str):
     oci_client = ccc.oci.oci_client()
 
     print('\n'.join(oci_client.tags(image_reference=image)))
+
+
+def purge(image: str):
+    oci_client = ccc.oci.oci_client()
+
+    oci_client.delete_manifest(
+        image_reference=image,
+        purge=True,
+    )
+    print(f'purged {image}')
+
+
+def purge_old(image: str, keep:int=128):
+    oci_client = ccc.oci.oci_client()
+
+    def sloppy_semver_parse(v: str):
+        if v.count('-') > 2:
+            v = v.split('-', 1)[0] + '-suffix' # discard other suffixes
+
+        return version.parse_to_semver(v)
+
+    tags = sorted([
+        sloppy_semver_parse(tag) for tag in oci_client.tags(image_reference=image)
+        if not tag.startswith('latest')
+    ]) # smallest version comes first
+
+    remove_count = len(tags) - keep
+
+    if remove_count < 1:
+        print(f'will not remove images - there were less than {keep}')
+        return
+
+    print(f'found {len(tags)} image(s) - will purge {remove_count}')
+
+    for idx, tag in enumerate(tags, 1):
+        if idx == remove_count:
+            print(f'stopping the purge now at {idx}')
+            return
+        img_ref = f'{image}:{tag}'
+        print(f'purging {img_ref}')
+        oci_client.delete_manifest(
+            image_reference=img_ref,
+            purge=True,
+        )
 
 
 def manifest(
