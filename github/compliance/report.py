@@ -196,7 +196,7 @@ def _vulnerability_template_vars(
             rescoring_cmd = f'warning: {e}'
             return rescoring_cmd
 
-        bdba_product_ids = [ar.product_id() for ar in analysis_results]
+        bdba_product_ids = [str(ar.product_id()) for ar in analysis_results]
         ctx_repo = component.current_repository_ctx()
         ctx_repo_url = ctx_repo.baseUrl
 
