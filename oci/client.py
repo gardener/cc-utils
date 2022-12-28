@@ -685,17 +685,62 @@ class Client:
 
         return res
 
-    def delete_manifest(self, image_reference: str):
+    def delete_manifest(
+        self,
+        image_reference: om.OciImageReference | str,
+        purge: bool=False,
+        accept: str=None,
+    ):
+        '''
+        deletes the specified manifest. Depending on whether the passed image_reference contains
+        a digest or a symbolic tag, the resulting semantics (and error cases) differs.
+
+        If the image-reference contains a symbolic tag, the tag will be removed (a.k.a. untagged).
+        The manifest will still be accessible, either through other tags, or through digest-tag.
+
+        If the image-reference contains a digest, the manifest will be removed and no longer be
+        accessible. However, this operation will fail if there are tags referencing the manifest.
+
+        If `purge` is set to `True`, _and_ the image-reference contains a symbolic tag, then the
+        manifest will be retrieved (to calculate the digest), then it will be untagged, then the
+        manifest will be deleted. Note that the last operation may still fail if there are other
+        tags referencing the same manifest.
+        '''
+        image_reference = om.OciImageReference(image_reference)
         scope = _scope(image_reference=image_reference, action='push,pull')
 
-        res = self._request(
-            url=self.routes.manifest_url(image_reference=image_reference),
-            image_reference=image_reference,
-            scope=scope,
-            method='DELETE',
-        )
+        if not purge or image_reference.has_digest_tag:
+            if accept:
+                headers = {'Accept': accept}
+            else:
+                headers = {}
 
-        return res
+            return self._request(
+                url=self.routes.manifest_url(image_reference=image_reference),
+                image_reference=image_reference,
+                scope=scope,
+                headers=headers,
+                method='DELETE',
+            )
+        elif image_reference.has_symbolical_tag:
+            manifest_raw = self.manifest_raw(
+                image_reference=image_reference,
+                accept=accept,
+            )
+            manifest_digest = f'sha256:{hashlib.sha256(manifest_raw.content).hexdigest()}'
+
+            res = self.delete_manifest(
+                image_reference=image_reference,
+                purge=False,
+                accept=accept,
+            )
+            res.raise_for_status()
+            return self.delete_manifest(
+                image_reference=f'{image_reference.ref_without_tag}@{manifest_digest}',
+                purge=False,
+            )
+        else:
+            raise RuntimeError('this case should not occur (this is a bug)')
 
     def blob(
         self,
