@@ -10,10 +10,6 @@ error=0
 
 export PYTHONPATH="${src_dir}"
 
-# ensure that all required packages are installed (useful for PRs)
-echo "Making sure that packages are installed ..."
-pip3 install -r "${src_dir}/requirements.txt" --quiet
-
 echo 'running pylama for all modules (errors only)'
 (
     pushd "${src_dir}"
