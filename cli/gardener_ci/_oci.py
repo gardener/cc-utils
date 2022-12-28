@@ -57,9 +57,11 @@ def purge_old(image: str, keep:int=128):
         return version.parse_to_semver(v)
 
     tags = sorted([
-        sloppy_semver_parse(tag) for tag in oci_client.tags(image_reference=image)
+        tag for tag in oci_client.tags(image_reference=image)
         if not tag.startswith('latest')
-    ]) # smallest version comes first
+        ],
+      key=sloppy_semver_parse,
+    ) # smallest version comes first
 
     remove_count = len(tags) - keep
 
