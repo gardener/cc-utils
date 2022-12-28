@@ -24,3 +24,7 @@ class OperatingSystemId:
     BUILD_ID: optional_str = None
     IMAGE_ID: optional_str = None
     IMAGE_VERSION: optional_str = None
+
+    @property
+    def is_distroless(self) -> bool:
+        return self.PRETTY_NAME == 'Distroless'
