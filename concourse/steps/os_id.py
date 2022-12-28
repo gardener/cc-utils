@@ -97,6 +97,9 @@ def scan_result_group_collection_for_outdated_os_ids(
         if not os_id.ID in os_infos:
             return None
 
+        if os_id.is_distroless: # hardcode: never require distroless-images to be updated
+            return None
+
         if delivery.util.branch_reached_eol(
             os_id=os_id,
             os_infos=os_infos[os_id.ID],
@@ -113,6 +116,9 @@ def scan_result_group_collection_for_outdated_os_ids(
     def findings_callback(result: gcm.OsIdScanResult):
         os_id = result.os_id
         if not os_id.ID in os_infos:
+            return None
+
+        if os_id.is_distroless: # hardcode: never require distroless-images to be updated
             return None
 
         relation = result.scanned_element.resource.relation
