@@ -85,8 +85,8 @@ def purge_old(image: str, keep:int=128):
 
     def iter_image_refs_to_purge():
         for idx, tag in enumerate(tags, 1):
-            if idx == remove_count:
-                print(f'stopping the purge at {idx}')
+            if idx > remove_count:
+                print(f'stopping the purge at {tag}')
                 return
 
             yield f'{image}:{tag}'
