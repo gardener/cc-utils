@@ -80,6 +80,7 @@ def purge_old(image: str, keep:int=128):
         oci_client.delete_manifest(
             image_reference=image_ref,
             purge=True,
+            accept=om.MimeTypes.prefer_multiarch,
         )
 
     def iter_image_refs_to_purge():
