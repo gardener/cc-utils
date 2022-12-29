@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import base64
 import hashlib
 import hmac
@@ -25,12 +26,34 @@ from model.base import (
     NamedModelElement,
 )
 
-# These values are required to calculate the credentials for AWS SES. Do not change them.
-DATE = "11111111"
-SERVICE = "ses"
-MESSAGE = "SendRawEmail"
-TERMINAL = "aws4_request"
-VERSION = 0x04
+
+def smtp_password_from_aws_access_key(
+    aws_secret_access_key: str,
+    aws_region: str,
+):
+    '''
+    computes a password that be used for smtp-basic-auth for amazon's SES (simple email service)
+    from given aws-secret-key and region
+
+    stolen from https://docs.aws.amazon.com/ses/latest/dg/smtp-credentials.html
+    '''
+    # These values are required to calculate the credentials for AWS SES. Do not change them.
+    date = "11111111"
+    version = b'\x04'
+
+    def sign(key, msg):
+        return hmac.new(key, msg.encode('utf-8'), hashlib.sha256).digest()
+
+    # do not change order or hard-coded values (see linked documentation above)
+    signature = sign(f'AWS4{aws_secret_access_key}'.encode('utf-8'), date)
+    signature = sign(signature, aws_region)
+    signature = sign(signature, 'ses') # service
+    signature = sign(signature, 'aws4_request') # terminal
+    signature = sign(signature, 'SendRawEmail') # message
+    signature_and_version = version + signature
+    smtp_password = base64.b64encode(signature_and_version)
+
+    return smtp_password.decode('utf-8')
 
 
 class EmailCredentials(BasicCredentials):
@@ -50,32 +73,21 @@ class AwsSesCredentials(EmailCredentials):
         return cfg_factory.aws(self.aws_config_name()).access_key_id()
 
     def passwd(self, cfg_factory=None) -> str:
-        return self._calculate_ses_key(cfg_factory=cfg_factory)
-
-    def _required_attributes(self):
-        return ['aws_config_name']
-
-    def _calculate_ses_key(self, cfg_factory=None) -> str:
         if not cfg_factory:
             cfg_factory = ctx.cfg_factory()
 
         aws_config = cfg_factory.aws(self.aws_config_name())
 
-        # taken and adjusted from from
-        # https://docs.aws.amazon.com/ses/latest/dg/smtp-credentials.html
+        aws_secret_access_key = aws_config.secret_access_key()
+        aws_region = aws_config.region()
 
-        def sign(key, msg):
-            return hmac.new(key, msg.encode('utf-8'), hashlib.sha256).digest()
+        return smtp_password_from_aws_access_key(
+            aws_secret_access_key=aws_secret_access_key,
+            aws_region=aws_region,
+        )
 
-        signature = sign(("AWS4" + aws_config.secret_access_key()).encode('utf-8'), DATE)
-        signature = sign(signature, aws_config.region())
-        signature = sign(signature, SERVICE)
-        signature = sign(signature, TERMINAL)
-        signature = sign(signature, MESSAGE)
-        signature_and_version = bytes([VERSION]) + signature
-        smtp_password = base64.b64encode(signature_and_version)
-
-        return smtp_password.decode('utf-8')
+    def _required_attributes(self):
+        return ['aws_config_name']
 
 
 class EmailConfig(NamedModelElement):
