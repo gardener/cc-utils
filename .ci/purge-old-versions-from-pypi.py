@@ -140,14 +140,14 @@ def iter_package_versions(
         versions = sorted(
             versions,
             key=version.parse_to_semver,
-        ) # smalles versions come first
+        ) # smallest versions come first
 
         if len(versions) <= keep:
             continue # not enough versions present
 
-        remove_idx = keep - len(versions) - 1
+        remove_idx = len(versions) - keep - 1
 
-        versions = versions[remove_idx:]
+        versions = versions[:remove_idx]
         for keep_version in keep_versions:
             if keep_version in versions:
                 versions.remove(keep_version)
