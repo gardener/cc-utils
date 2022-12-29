@@ -26,6 +26,23 @@ cc-utils:
         lint: ~
         build_python_packages:
           output_dir: 'pypi'
+        purge_old_packages_from_pypi:
+          execute:
+            - 'purge-old-versions-from-pypi.py'
+            - '--keep'
+            - '300'
+            - '--cfg-name'
+            - 'gardener'
+            - '--package'
+            - 'gardener-cicd-libs'
+            - '--package'
+            - 'gardener-cicd-whd'
+            - '--package'
+            - 'gardener-cicd-dso'
+            - '--package'
+            - 'gardener-cicd-cli'
+            - '--package'
+            - 'gardener-cicd-base'
       traits:
         notifications:
           default:
