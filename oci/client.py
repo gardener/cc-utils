@@ -249,10 +249,14 @@ class Client:
         routes: OciRoutes=OciRoutes(),
         disable_tls_validation=False,
         timeout_seconds: int=None,
+        session: requests.Session=None,
     ):
         self.credentials_lookup = credentials_lookup
         self.token_cache = OauthTokenCache()
-        self.session = requests.Session()
+        if not session:
+            self.session = requests.Session()
+        else:
+            self.session = session
         self.routes = routes
         self.disable_tls_validation = disable_tls_validation
 
