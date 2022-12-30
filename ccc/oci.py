@@ -3,6 +3,8 @@ import logging
 import traceback
 import typing
 
+import requests
+
 import ci.util
 import ccc.concourse
 import ccc.elasticsearch
@@ -64,6 +66,7 @@ def oci_client(
     credentials_lookup: typing.Callable=None,
     install_logging_handler: bool=True,
     cfg_factory=None,
+    http_connection_pool_size:int=16,
 ) -> oc.Client:
     def base_api_lookup(image_reference):
         registry_cfg = model.container_registry.find_config(
@@ -92,9 +95,18 @@ def oci_client(
     if not credentials_lookup:
         credentials_lookup = oci_cfg_lookup(cfg_factory=cfg_factory)
 
+    # increase poolsize (defaults: 10) to allow for greater parallelism
+    session = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(
+        pool_connections=http_connection_pool_size,
+        pool_maxsize=http_connection_pool_size,
+    )
+    session.mount('https://', adapter)
+
     return oc.Client(
         credentials_lookup=credentials_lookup,
         routes=routes,
+        session=session,
     )
 
 
