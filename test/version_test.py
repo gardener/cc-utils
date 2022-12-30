@@ -16,7 +16,7 @@
 import semver
 import pytest
 
-import version as examinee
+import version
 
 
 def test_find_latest_version():
@@ -27,7 +27,7 @@ def test_find_latest_version():
             '3.0.1',
             '1.0.0',
     ))
-    result = examinee.find_latest_version(versions)
+    result = version.find_latest_version(versions)
     assert str(result) == '3.0.1'
 
 
@@ -38,25 +38,25 @@ def test_ignore_prerelease_versions():
             '1.0.0',
             '3.1.0-foo-bar',
     ))
-    result = examinee.find_latest_version(versions, ignore_prerelease_versions=True)
+    result = version.find_latest_version(versions, ignore_prerelease_versions=True)
     assert str(result) == '3.0.1'
 
 
 def test_argument_validation():
     with pytest.raises(ValueError):
-        examinee.process_version(version_str='invalid', operation='noop')
+        version.process_version(version_str='invalid', operation='noop')
 
     # prerelease arg missing
     with pytest.raises(ValueError):
-        examinee.process_version(version_str='1.2.3', operation='set_prerelease')
+        version.process_version(version_str='1.2.3', operation='set_prerelease')
 
     # build_metadata_missing
     with pytest.raises(ValueError):
-        examinee.process_version(version_str='1.2.3', operation='set_build_metadata')
+        version.process_version(version_str='1.2.3', operation='set_build_metadata')
 
     # metadata-len-smaller-than-zero
     with pytest.raises(ValueError):
-        examinee.process_version(
+        version.process_version(
         version_str='3.5.4',
         operation='set_build_metadata',
         build_metadata='someRandomString',
@@ -65,14 +65,14 @@ def test_argument_validation():
 
     # prerelease present (in version) if using append_prerelease
     with pytest.raises(ValueError):
-        examinee.process_version(
+        version.process_version(
         version_str='3.5.4-foo',
         operation='append_prerelease'
     )
 
     # prerelease missing if using append_prerelease
     with pytest.raises(ValueError):
-        examinee.process_version(
+        version.process_version(
         version_str='3.5.4',
         operation='append_prerelease',
         prerelease='foo'
@@ -80,7 +80,7 @@ def test_argument_validation():
 
     # version_str missing if using "set_verbatim"
     with pytest.raises(ValueError):
-        examinee.process_version(
+        version.process_version(
             version_str='3.1.4-foo',
             operation='set_verbatim',
             prerelease='baz'
@@ -88,12 +88,12 @@ def test_argument_validation():
 
 
 def test_noop():
-    parsed = examinee.process_version(version_str='1.2.3-abc', operation='noop')
+    parsed = version.process_version(version_str='1.2.3-abc', operation='noop')
     assert parsed == '1.2.3-abc'
 
 
 def test_set_build_metadata_length():
-    parsed = examinee.process_version(
+    parsed = version.process_version(
         version_str='1.3.5',
         operation='set_build_metadata',
         build_metadata='someRandomString',
@@ -103,7 +103,7 @@ def test_set_build_metadata_length():
 
 
 def test_set_prerelease_without_suffix():
-    parsed = examinee.process_version(
+    parsed = version.process_version(
         version_str='1.2.3',
         operation='set_prerelease',
         prerelease='dev'
@@ -112,7 +112,7 @@ def test_set_prerelease_without_suffix():
 
 
 def test_set_build_metadata_without_suffix():
-    parsed = examinee.process_version(
+    parsed = version.process_version(
         version_str='3.3.3',
         operation='set_build_metadata',
         build_metadata='build'
@@ -121,7 +121,7 @@ def test_set_build_metadata_without_suffix():
 
 
 def test_set_prerelease_with_prerelease():
-    parsed = examinee.process_version(
+    parsed = version.process_version(
         version_str='1.2.3-foo',
         operation='set_prerelease',
         prerelease='dev'
@@ -130,7 +130,7 @@ def test_set_prerelease_with_prerelease():
 
 
 def test_set_build_metadata_with_prerelease():
-    parsed = examinee.process_version(
+    parsed = version.process_version(
         version_str='3.3.3-foo',
         operation='set_build_metadata',
         build_metadata='build'
@@ -139,7 +139,7 @@ def test_set_build_metadata_with_prerelease():
 
 
 def test_set_prerelease_with_build_metadata():
-    parsed = examinee.process_version(
+    parsed = version.process_version(
         version_str='1.2.3+foo',
         operation='set_prerelease',
         prerelease='dev'
@@ -148,7 +148,7 @@ def test_set_prerelease_with_build_metadata():
 
 
 def test_set_build_metadata_with_build_metadata():
-    parsed = examinee.process_version(
+    parsed = version.process_version(
         version_str='3.3.3+foo',
         operation='set_build_metadata',
         build_metadata='build'
@@ -157,7 +157,7 @@ def test_set_build_metadata_with_build_metadata():
 
 
 def test_append_prerelease():
-    parsed = examinee.process_version(
+    parsed = version.process_version(
         version_str='4.9.16-foo',
         operation='append_prerelease',
         prerelease='bar',
@@ -166,7 +166,7 @@ def test_append_prerelease():
 
 
 def test_set_verbatim_with_verbatim_version():
-    parsed = examinee.process_version(
+    parsed = version.process_version(
         version_str='3.1.4-foo+bar',
         operation='set_verbatim',
         verbatim_version='master',
@@ -176,13 +176,13 @@ def test_set_verbatim_with_verbatim_version():
 
 def test_bumping():
     # major
-    parsed = examinee.process_version(version_str='2.4.6', operation='bump_major')
+    parsed = version.process_version(version_str='2.4.6', operation='bump_major')
     assert parsed == '3.0.0'
 
     # minor
-    parsed = examinee.process_version(version_str='2.4.6', operation='bump_minor')
+    parsed = version.process_version(version_str='2.4.6', operation='bump_minor')
     assert parsed == '2.5.0'
 
     # patch
-    parsed = examinee.process_version(version_str='2.4.6', operation='bump_patch')
+    parsed = version.process_version(version_str='2.4.6', operation='bump_patch')
     assert parsed  == '2.4.7'
