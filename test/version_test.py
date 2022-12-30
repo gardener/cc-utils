@@ -186,3 +186,11 @@ def test_bumping():
     # patch
     parsed = version.process_version(version_str='2.4.6', operation='bump_patch')
     assert parsed  == '2.4.7'
+
+
+def test_smallest_versions():
+    # no filtering if keep >= amount of versions
+    assert set(version.smallest_versions({'1.2.3', '2.3.4'}, keep=2)) == {'1.2.3', '2.3.4'}
+
+    # keep greatest (returned versions are intended to be removed)
+    assert set(version.smallest_versions({'1.2.3', '2.3.4', '3.0'}, keep=1)) == {'1.2.3', '2.3.4'}

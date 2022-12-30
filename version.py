@@ -22,6 +22,7 @@ from typing import (
     Set,
     Union,
 )
+import typing
 
 import ci.util
 
@@ -344,3 +345,36 @@ def is_semver_parseable(version_string: str):
         ci.util.verbose(f"Could not parse '{version_string}' as semver version")
         return False
     return True
+
+
+T = typing.TypeVar('T')
+
+
+def smallest_versions(
+    versions: typing.Sequence[T],
+    keep: int,
+    converter: typing.Callable[[T], str]=None,
+) -> list[T]:
+    '''
+    find smallest versions from given sequence of versions, excluding the given amount of
+    greatest versions (keep parameter). This is useful, e.g. to cleanup old versions.
+
+    `keep`:      specifies how many versions to keep
+    `converter`: optional value-conversion-callback (for convenience)
+    '''
+    if (versions_count := len(versions)) <= keep:
+        return versions
+
+    def _parse_version(version: T):
+        if converter:
+            version = converter(version)
+        return parse_to_semver(version)
+
+    versions = sorted(
+        versions,
+        key=_parse_version,
+    ) # smallest versions come first
+
+    purge_idx = versions_count - keep
+
+    return versions[:purge_idx]
