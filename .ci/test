@@ -13,7 +13,7 @@ src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
 
 export PYTHONPATH="${src_dir}:${src_dir}/cli/gardener_ci:${PYTHONPATH:-}"
 
-if pytest "${src_dir}" "${@}"; then
+if python3 -m pytest "${src_dir}" "${@}"; then
     echo 'Unittest executions succeeded'
     exit 0
 else
