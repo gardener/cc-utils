@@ -269,9 +269,16 @@ def write_component_descriptor_to_dir(
 
 @deprecated.deprecated
 def upload_component_descriptor_v2_to_oci_registry(
-    component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
+    component_descriptor_v2: cm.ComponentDescriptor|cm.Component,
     on_exist=UploadMode.SKIP,
 ):
+    if isinstance(component_descriptor_v2, cm.Component):
+        component_descriptor_v2 = cm.ComponentDescriptor(
+            component=component_descriptor_v2,
+            meta=cm.Metadata(),
+            signatures=[],
+        )
+
     ensure_is_v2(component_descriptor_v2)
     client = ccc.oci.oci_client()
 
