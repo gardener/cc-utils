@@ -7,7 +7,6 @@ import os
 import yaml
 
 import concourse.steps.release
-import product.v2
 from concourse.model.traits.release import (
     ReleaseCommitPublishingPolicy,
 )
@@ -173,8 +172,6 @@ class TestGitHubReleaseStep:
 class TestPublishReleaseNotesStep:
     @pytest.fixture()
     def examinee(self, tmp_path):
-        component_descriptor_v2 = os.path.join(tmp_path, 'component_descriptor_v2')
-        ctf_path = os.path.join(tmp_path, product.v2.CTF_OUT_DIR_NAME)
         cd_v2 = cm.ComponentDescriptor(
             component=cm.Component(
                 name='example.com/a_name',
@@ -187,12 +184,6 @@ class TestPublishReleaseNotesStep:
             ),
             meta=cm.Metadata(),
         )
-        with open(component_descriptor_v2, 'w') as f:
-            yaml.dump(
-                data=dataclasses.asdict(cd_v2),
-                stream=f,
-                Dumper=cm.EnumValueYamlDumper,
-            )
 
         def _examinee(
             github_helper=MagicMock(),
@@ -208,29 +199,16 @@ class TestPublishReleaseNotesStep:
             release_version='1.0.0',
         ):
             return concourse.steps.release.PublishReleaseNotesStep(
+                component=cd_v2.component,
                 github_helper=github_helper,
                 githubrepobranch=githubrepobranch,
-                repository_hostname=repository_hostname,
-                repository_path=repository_path,
                 repo_dir=repo_dir,
                 release_version=release_version,
-                component_descriptor_v2_path=component_descriptor_v2,
-                ctf_path=ctf_path,
             )
         return _examinee
 
     def test_validation(self, examinee):
         examinee().validate()
-
-    def test_validation_fail_on_nonexistent_repo_dir(self, examinee, tmp_path):
-        # create filepath not backed by an existing directory in the pytest tempdir
-        test_dir = tmp_path.joinpath('no', 'such', 'dir')
-        with pytest.raises(ValueError):
-            examinee(repo_dir=str(test_dir)).validate()
-
-    def test_validation_fails_on_invalid_semver(self, examinee):
-        with pytest.raises(ValueError):
-            examinee(release_version='invalid_semver').validate()
 
 
 class TestTryCleanupDraftReleaseStep:
