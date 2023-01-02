@@ -1,5 +1,5 @@
 # Install with: pip(3) install -r requirements.txt --upgrade
-GitPython<3.0.0
+GitPython
 Mako<2.0.0
 Sphinx
 aliyun-python-sdk-core==2.13.36
