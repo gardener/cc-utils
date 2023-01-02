@@ -31,7 +31,7 @@ git_tags = release_trait.git_tags()
 
 repo = job_variant.main_repository()
 
-component_descriptor_v2_path = os.path.join(
+component_descriptor_path = os.path.join(
   job_step.input('component_descriptor_dir'),
   cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
 )
@@ -39,6 +39,9 @@ ctf_path = os.path.join(
   job_step.input('component_descriptor_dir'),
   product.v2.CTF_OUT_DIR_NAME,
 )
+
+component_descriptor_trait = job_variant.trait('component_descriptor')
+component_name = component_descriptor_trait.component_name()
 
 release_callback_path = release_trait.release_callback_path()
 next_version_callback_path = release_trait.next_version_callback_path()
@@ -74,9 +77,7 @@ try:
   )
   component_name = component_descriptor.component.name
 except NotImplementedError:
-  # fallback: We might have a ctf-archive with several component-descriptors. Use github
-  # repo path instead.
-  component_name = '${repo.repo_hostname()}/${repo.repo_path()}'
+  component_name = '${component_name}'
 
 % if release_commit_callback_image_reference:
 release_commit_callback_image_reference = '${release_commit_callback_image_reference}'
@@ -86,7 +87,7 @@ release_commit_callback_image_reference = None
 
 release_and_prepare_next_dev_cycle(
   component_name=component_name,
-  component_descriptor_v2_path='${component_descriptor_v2_path}',
+  component_descriptor_path='${component_descriptor_path}',
   ctf_path='${ctf_path}',
   % if has_slack_trait:
   slack_channel_configs=${slack_channel_cfgs},
@@ -100,8 +101,6 @@ release_and_prepare_next_dev_cycle(
   rebase_before_release=${release_trait.rebase_before_release()},
   release_on_github=${release_trait.release_on_github()},
   githubrepobranch=githubrepobranch,
-  repo_hostname='${repo.repo_hostname()}',
-  repo_path='${repo.repo_path()}',
   repo_dir=repo_dir,
   repository_version_file_path='${version_trait.versionfile_relpath()}',
   release_version=version_str,

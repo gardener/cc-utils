@@ -488,37 +488,3 @@ def determine_components(
             raise ValueError(f'No component descriptor found in CTF archive at {ctf_path}')
 
         return component_descriptors
-
-
-def determine_main_component(
-    repository_hostname: str,
-    repository_path: str,
-    component_descriptor_v2_path: str,
-    ctf_path: str,
-) -> cm.Component:
-    have_ctf = os.path.exists(ctf_path)
-    have_cd = os.path.exists(component_descriptor_v2_path)
-    if not have_ctf ^ have_cd:
-        raise ValueError('exactly one of component-descriptor, or ctf-archive must exist')
-    elif have_cd:
-        return cm.ComponentDescriptor.from_dict(
-            ci.util.parse_yaml_file(component_descriptor_v2_path),
-        )
-    elif have_ctf:
-        component_descriptors = list(component_descriptors_from_ctf_archive(
-            ctf_path,
-        ))
-        if not component_descriptors:
-            raise ValueError(f'No component descriptor found in CTF archive at {ctf_path}')
-
-        # only use the main component to generate the release notes
-        main_component_name = determine_component_name(
-            repository_hostname=repository_hostname,
-            repository_path=repository_path,
-        )
-        for component_descriptor in component_descriptors:
-            if component_descriptor.component.name == main_component_name:
-                return component_descriptor
-
-        raise ValueError(f'No component descriptor found in CTF archive at {ctf_path}'
-                ' that matches the main repository')

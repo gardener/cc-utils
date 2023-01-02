@@ -52,6 +52,29 @@ import oci.model
 logger = logging.getLogger('step.release')
 
 
+def component_descriptors(
+    component_descriptor_path: str,
+    ctf_path: str,
+):
+    have_ctf = os.path.exists(ctf_path)
+    have_cd = os.path.exists(component_descriptor_path)
+
+    if not have_ctf ^ have_cd:
+        ci.util.fail('exactly one of component-descriptor, or ctf-archive must exist')
+
+    if have_cd:
+        component_descriptor = cm.ComponentDescriptor.from_dict(
+                component_descriptor_dict=ci.util.parse_yaml_file(
+                    component_descriptor_path,
+                ),
+                validation_mode=cm.ValidationMode.WARN,
+        )
+        yield component_descriptor
+        return
+    elif have_ctf:
+        yield from cnudie.util.component_descriptors_from_ctf_archive(ctf_path)
+
+
 class TransactionContext:
     def __init__(self):
         self._step_outputs = {}
@@ -638,12 +661,12 @@ class UploadComponentDescriptorStep(TransactionalStep):
     def __init__(
         self,
         github_helper: GitHubRepositoryHelper,
-        component_descriptor_v2_path: str,
+        components: tuple[cm.Component],
         ctf_path:str,
         release_on_github: bool,
     ):
         self.github_helper = not_none(github_helper)
-        self.component_descriptor_v2_path = component_descriptor_v2_path
+        self.components = components
         self.ctf_path = ctf_path
         self.release_on_github = release_on_github
 
@@ -653,33 +676,17 @@ class UploadComponentDescriptorStep(TransactionalStep):
     def _have_ctf(self) -> bool:
         return os.path.exists(self.ctf_path)
 
-    def component_descriptors(self):
-        have_ctf = self._have_ctf()
-        have_cd = os.path.exists(self.component_descriptor_v2_path)
-        if not have_ctf ^ have_cd:
-            ci.util.fail('exactly one of component-descriptor, or ctf-archive must exist')
-        # either cds _XOR_ ctf must exist
-        elif have_cd:
-            component_descriptor = cm.ComponentDescriptor.from_dict(
-                    component_descriptor_dict=ci.util.parse_yaml_file(
-                        self.component_descriptor_v2_path
-                    ),
-                    validation_mode=cm.ValidationMode.WARN,
-            )
-            yield component_descriptor
-            return
-        elif have_ctf:
-            yield from cnudie.util.component_descriptors_from_ctf_archive(self.ctf_path)
-
     def validate(self):
         components: tuple[cm.Component] = tuple(
-            cnudie.util.iter_sorted(self.component_descriptors())
+            cnudie.util.iter_sorted(
+                self.components,
+            )
         )
 
         if not components:
             ci.util.fail('No component descriptor found')
 
-        def iter_component_descriptors():
+        def iter_components():
             for component in components:
                 yield from cnudie.iter.iter(
                     component=component,
@@ -687,7 +694,7 @@ class UploadComponentDescriptorStep(TransactionalStep):
                 )
 
         validation_errors = tuple(
-            cnudie.validate.iter_violations(nodes=iter_component_descriptors())
+            cnudie.validate.iter_violations(nodes=iter_components())
         )
 
         if not validation_errors:
@@ -706,10 +713,13 @@ class UploadComponentDescriptorStep(TransactionalStep):
             create_release_step_output = self.context().step_output('Create Release')
             release_tag_name = create_release_step_output['release_tag_name']
 
-        component_descriptors = tuple(self.component_descriptors())
-        component_id_to_cd = {cd.component.identity(): cd for cd in component_descriptors}
-        components = tuple(cnudie.util.iter_sorted(component_descriptors))
+        components = tuple(cnudie.util.iter_sorted(self.components))
+        components_by_id = {
+            component.identity(): component
+            for component in components
+        }
 
+        # todo: mv to `validate`
         def resolve_dependencies(component: cm.Component):
             for _ in cnudie.retrieve.components(component=component):
                 pass
@@ -724,13 +734,13 @@ class UploadComponentDescriptorStep(TransactionalStep):
                     )
                     raise e
 
-                component_descriptor = component_id_to_cd[component.identity()]
+                component = components_by_id[component.identity()]
 
                 tgt_ref = product.v2._target_oci_ref(component=component)
 
                 logger.info(f'publishing CNUDIE-Component-Descriptor to {tgt_ref=}')
                 product.v2.upload_component_descriptor_v2_to_oci_registry(
-                    component_descriptor_v2=component_descriptor,
+                    component_descriptor_v2=component,
                 )
 
         def upload_ctf(ctf_path: str):
@@ -782,39 +792,25 @@ class PublishReleaseNotesStep(TransactionalStep):
         self,
         githubrepobranch: GitHubRepoBranch,
         github_helper: GitHubRepositoryHelper,
-        repository_hostname: str,
-        repository_path: str,
-        component_descriptor_v2_path: str,
+        component: cm.Component,
         release_version: str,
-        ctf_path: str,
         repo_dir: str,
     ):
-        self.repository_hostname = repository_hostname
-        self.repository_path = repository_path
         self.githubrepobranch = not_none(githubrepobranch)
         self.github_helper = not_none(github_helper)
-        self.release_version = not_empty(release_version)
+        self.component = component
+        self.release_version = release_version
         self.repo_dir = os.path.abspath(not_empty(repo_dir))
-        self.component_descriptor_v2_path = component_descriptor_v2_path
-        self.ctf_path = ctf_path
 
     def validate(self):
-        version.parse_to_semver(self.release_version)
-        existing_dir(self.repo_dir)
-
-        self.component_descriptor_v2 = cnudie.util.determine_main_component(
-            repository_hostname=self.repository_hostname,
-            repository_path=self.repository_path,
-            component_descriptor_v2_path=self.component_descriptor_v2_path,
-            ctf_path=self.ctf_path,
-        )
+        pass
 
     def apply(self):
         create_release_step_output = self.context().step_output('Create Release')
         release_tag = create_release_step_output['release_tag_name']
 
         release_notes = fetch_release_notes(
-            self.component_descriptor_v2.component,
+            self.component,
             repo_dir=self.repo_dir,
             repository_branch=self.githubrepobranch.branch(),
         )
@@ -822,7 +818,7 @@ class PublishReleaseNotesStep(TransactionalStep):
         self.github_helper.update_release_notes(
             tag_name=release_tag,
             body=release_notes_md,
-            component_name=self.component_descriptor_v2.component.name,
+            component_name=self.component.name,
         )
         return {
             'release notes': release_notes,
@@ -1015,14 +1011,12 @@ def release_and_prepare_next_dev_cycle(
     release_commit_publishing_policy: str,
     release_notes_policy: str,
     release_version: str,
-    repo_hostname: str,
-    repo_path: str,
     repo_dir: str,
     repository_version_file_path: str,
     git_tags: list,
     github_release_tag: dict,
     release_commit_callback_image_reference: str,
-    component_descriptor_v2_path: str=None,
+    component_descriptor_path: str=None,
     ctf_path: str=None,
     next_cycle_commit_message_prefix: str=None,
     next_version_callback: str=None,
@@ -1032,8 +1026,29 @@ def release_and_prepare_next_dev_cycle(
     release_commit_callback: str=None,
     release_commit_message_prefix: str=None,
     slack_channel_configs: list=[],
-    version_operation: str="bump_minor",
+    version_operation: str='bump_minor',
 ):
+    components = tuple(
+        component_descriptors(
+            component_descriptor_path=component_descriptor_path,
+            ctf_path=ctf_path,
+        )
+    )
+    if len(components) == 1:
+        component = components[0]
+    elif len(components) == 0:
+        logger.fatal('no component-descriptors could be found - aborting release')
+        exit(1)
+    else:
+        for component in components:
+            if component.name == component_name:
+                break # found it - `component` is used later
+        else:
+            logger.fatal(f'could not find component w/ {component_name=} - aborting release')
+            exit(1)
+
+    version.parse_to_semver(release_version)
+
     transaction_ctx = TransactionContext() # shared between all steps/trxs
 
     release_notes_policy = ReleaseNotesPolicy(release_notes_policy)
@@ -1105,10 +1120,11 @@ def release_and_prepare_next_dev_cycle(
 
     upload_component_descriptor_step = UploadComponentDescriptorStep(
         github_helper=github_helper,
-        component_descriptor_v2_path=component_descriptor_v2_path,
+        components=components,
         ctf_path=ctf_path,
         release_on_github=release_on_github,
     )
+
     step_list.append(upload_component_descriptor_step)
 
     release_transaction = Transaction(
@@ -1124,11 +1140,8 @@ def release_and_prepare_next_dev_cycle(
         publish_release_notes_step = PublishReleaseNotesStep(
             githubrepobranch=githubrepobranch,
             github_helper=github_helper,
-            repository_hostname=repo_hostname,
-            repository_path=repo_path,
+            component=component,
             release_version=release_version,
-            component_descriptor_v2_path=component_descriptor_v2_path,
-            ctf_path=ctf_path,
             repo_dir=repo_dir,
         )
 
