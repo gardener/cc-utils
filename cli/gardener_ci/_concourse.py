@@ -22,7 +22,6 @@ from ci.util import (
     CliHints,
 )
 
-from concourse.util import sync_org_webhooks
 from concourse.enumerator import (
     DefinitionDescriptorPreprocessor,
     GithubOrganisationDefinitionEnumerator,
@@ -195,17 +194,6 @@ def render_pipelines(
     )
 
     replicator.replicate()
-
-
-def sync_org_webhooks_from_cfg(
-    whd_deployment_config_name: str,
-):
-    '''
-    Set or update all org-webhooks for the given configs.
-    '''
-    cfg_factory = ctx().cfg_factory()
-    whd_deployment_cfg = cfg_factory.webhook_dispatcher_deployment(whd_deployment_config_name)
-    sync_org_webhooks(whd_deployment_cfg)
 
 
 def trigger_resource_check(
