@@ -202,17 +202,17 @@ def _vulnerability_template_vars(
 
         return textwrap.dedent(f'''\
             for app in {' '.join(bdba_product_ids)}; do
-                gardener-ci bdba rescore \
-                    --ctx-repo {ctx_repo_url} \
-                    --protecode-cfg {protecode_cfg._name} \
-                    --product-id $app \
-                    --rescoring-rules rescoring-rules.yaml \
+                gardener-ci bdba rescore \\
+                    --ctx-repo {ctx_repo_url} \\
+                    --protecode-cfg {protecode_cfg._name} \\
+                    --product-id $app \\
+                    --rescoring-rules rescoring-rules.yaml \\
                     --assess
             done
         ''')
 
     if cfg_set:
-        rescoring_cmd = bdba_rescoring_cmd(cfg_set=cfg_set)
+        rescoring_cmd = f'```\n{bdba_rescoring_cmd(cfg_set=cfg_set)}\n```'
     else:
         rescoring_cmd = 'warning: bdba-command not available (check scanlog)'
 
