@@ -69,10 +69,11 @@ def component_descriptors(
                 ),
                 validation_mode=cm.ValidationMode.WARN,
         )
-        yield component_descriptor
+        yield component_descriptor.component
         return
     elif have_ctf:
-        yield from cnudie.util.component_descriptors_from_ctf_archive(ctf_path)
+        for component_descriptor in cnudie.util.component_descriptors_from_ctf_archive(ctf_path):
+            yield component_descriptor.component
 
 
 class TransactionContext:
