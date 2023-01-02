@@ -759,7 +759,11 @@ class UploadComponentDescriptorStep(TransactionalStep):
                 release = self.github_helper.repository.release_from_tag(release_tag_name)
 
                 for component in components:
-                    component_descriptor = component_id_to_cd[component.identity()]
+                    component_descriptor = cm.ComponentDescriptor(
+                        component=component,
+                        meta=cm.Metadata(),
+                        signatures=[],
+                    )
 
                     descriptor_str = yaml.dump(
                         data=dataclasses.asdict(component_descriptor),
