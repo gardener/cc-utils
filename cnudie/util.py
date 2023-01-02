@@ -10,7 +10,6 @@ import deprecated
 import ci.util
 import gci.componentmodel as cm
 import product.v2
-import version
 
 
 def iter_sorted(components: typing.Iterable[cm.Component], /) \
@@ -523,28 +522,3 @@ def determine_main_component(
 
         raise ValueError(f'No component descriptor found in CTF archive at {ctf_path}'
                 ' that matches the main repository')
-
-
-@deprecated.deprecated
-def greatest_component_versions(
-    component_name: str,
-    ctx_repo: cm.RepositoryContext,
-    max_versions: int = 5,
-    greatest_version: str = None,
-) -> list[str]:
-    if not isinstance(ctx_repo, cm.OciRepositoryContext):
-        raise NotImplementedError(ctx_repo)
-
-    versions = product.v2.component_versions(
-        component_name=component_name,
-        ctx_repo=ctx_repo,
-    )
-    if not versions:
-        return []
-
-    versions = sorted(versions, key=version.parse_to_semver)
-
-    if greatest_version:
-        versions = versions[:versions.index(greatest_version)+1]
-
-    return versions[-max_versions:]
