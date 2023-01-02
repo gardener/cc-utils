@@ -18,26 +18,15 @@ import functools
 import json
 import logging
 import os
-import urllib.parse
-
-import github3
 
 import concourse.client.model
 import concourse.model.traits.meta
 import concourse.steps.meta
-import github.webhook
 
 from concourse.client.routes import ConcourseApiRoutesBase
-from model.concourse import (
-    JobMappingSet,
-)
-from model.webhook_dispatcher import (
-    WebhookDispatcherDeploymentConfig,
-)
 from ci.util import (
     _running_on_ci,
     check_env,
-    create_url_from_attributes,
     ctx,
 )
 import ccc.concourse
@@ -54,90 +43,6 @@ class PipelineMetaData:
     job_name: str
     current_config_set_name: str
     team_name: str
-
-
-def _github_api_hostname(github_api) -> str:
-    # retrieve the hostname from a github3 github-api instance. Unfortunately the public-github
-    # class neither has a proper repr nor does it expose its url in a way that is consistent with
-    # the class for enterprise-github instances
-    if isinstance(github_api, github3.github.GitHubEnterprise):
-        return urllib.parse.urlparse(github_api.url).hostname
-    elif isinstance(github_api, github3.github.GitHub):
-        return 'github.com'
-
-
-def sync_org_webhooks(whd_deployment_cfg: WebhookDispatcherDeploymentConfig,):
-    '''Syncs required organization webhooks for a given webhook dispatcher instance'''
-
-    for organization_name, github_api, webhook_url in \
-            _enumerate_required_org_webhooks(whd_deployment_cfg=whd_deployment_cfg):
-
-        webhook_syncer = github.webhook.GithubWebHookSyncer(github_api)
-        failed_hooks = 0
-
-        try:
-            webhook_syncer.create_or_update_org_hook(
-                organization_name=organization_name,
-                events=whd_deployment_cfg.events(),
-                webhook_url=webhook_url,
-                skip_ssl_validation=False,
-            )
-            logger.info(
-                f'Created/updated organization hook on {_github_api_hostname(github_api)} '
-                f'for {organization_name=}: {webhook_url}'
-            )
-        except Exception as e:
-            failed_hooks += 1
-            logger.warning(f'{organization_name=} - error: {e}')
-
-    if failed_hooks != 0:
-        logger.warning('Some webhooks could not be set - see above')
-
-
-def _enumerate_required_org_webhooks(
-    whd_deployment_cfg: WebhookDispatcherDeploymentConfig,
-):
-    '''Returns tuples of 'github orgname', 'github api object' and 'webhook url' '''
-    cfg_factory = ctx().cfg_factory()
-
-    whd_cfg_name = whd_deployment_cfg.webhook_dispatcher_config_name()
-    whd_cfg = cfg_factory.webhook_dispatcher(whd_cfg_name)
-
-    concourse_cfg_names = whd_cfg.concourse_config_names()
-    concourse_cfgs = map(cfg_factory.concourse, concourse_cfg_names)
-
-    for concourse_cfg in concourse_cfgs:
-        job_mapping_set = cfg_factory.job_mapping(concourse_cfg.job_mapping_cfg_name())
-
-        for github_orgname, github_cfg_name in _enumerate_github_org_configs(job_mapping_set):
-            github_cfg = cfg_factory.github(github_cfg_name)
-            github_api = ccc.github.github_api(github_cfg=github_cfg)
-
-            if not concourse_cfg.is_accessible_from(github_cfg.http_url()):
-                continue
-
-            webhook_url = create_url_from_attributes(
-                netloc=whd_deployment_cfg.external_url(),
-                scheme='https',
-                path='github-webhook',
-                params='',
-                query='{name}={value}'.format(
-                    name=github.webhook.DEFAULT_ORG_HOOK_QUERY_KEY,
-                    value=whd_cfg_name
-                ),
-                fragment=''
-            )
-
-            yield (github_orgname, github_api, webhook_url)
-
-
-def _enumerate_github_org_configs(job_mapping_set: JobMappingSet,):
-    '''Returns tuples of github org names and github config names'''
-    for _, job_mapping in job_mapping_set.job_mappings().items():
-        github_org_configs = job_mapping.github_organisations()
-
-        for github_org_config in github_org_configs:
-            yield (github_org_config.org_name(), github_org_config.github_cfg_name())
 
 
 def get_pipeline_metadata():

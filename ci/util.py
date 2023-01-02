@@ -17,7 +17,6 @@ import collections
 import datetime
 import enum
 import functools
-import hashlib
 import logging
 import os
 import pathlib
@@ -32,7 +31,6 @@ import yamllint.config
 
 import deprecated
 import termcolor
-from urllib.parse import urlunparse
 
 import ci.paths
 
@@ -242,83 +240,6 @@ def not_none(value):
     return value
 
 
-def none(value):
-    if value is not None:
-        fail('value must be None')
-    return value
-
-
-class Checksum():
-    '''
-    Manage checksum from files
-
-    Args:
-        algo (str): Algorithm to use, default to SHA256
-    '''
-    def __init__(self, algo="sha256"):
-        self.algo = hashlib.new(name=algo)
-
-    def compute(self, path: str) -> str:
-        buf_size = 1024 * 1024 # 1MiB
-
-        with open(path, 'rb') as f:
-            while True:
-                data = f.read(buf_size)
-                if not data:
-                    break
-                self.algo.update(data)
-
-        return self.algo.hexdigest()
-
-    def _build_checksum_path_name(self, path: str) -> str:
-        return '.'.join((path, self.algo.name))
-
-    def _find_checksum(self, checksum_file: str, filename: str) -> str:
-        with open(checksum_file, 'r') as f:
-            content = f.readlines()
-
-        checksums = (x.strip().rsplit(' ', 2) for x in content)
-        for csum, tfile in checksums:
-            if filename == tfile:
-                return csum
-
-        return
-
-    def create_file(self, path: str):
-        checksum = self.compute(path)
-        target_file = os.path.basename(path)
-        checksum_file = self._build_checksum_path_name(path)
-
-        with open(checksum_file, 'w') as out_fh:
-            out_fh.write(f"{checksum} {target_file}")
-
-    def check_file_with_checksum(self, path: str, checksum: str) -> str:
-        return self.compute(path) == checksum
-
-    def check_file_from_sumfile(self, path: str, checksum_file=None) -> str:
-        if checksum_file is None:
-            checksum_file = self._build_checksum_path_name(checksum_file)
-
-        checksum = self._find_checksum(
-            checksum_file,
-            os.path.basename(path),
-        )
-
-        return self.check_file_with_checksum(path, checksum)
-
-
-def is_yaml_file(path):
-    with open(path) as f:
-        try:
-            if yaml.load(f, Loader=yaml.SafeLoader):
-                return True
-        except Exception:
-            if not _quiet():
-                warning('an error occurred whilst trying to parse {f}'.format(f=path))
-            raise
-    return False
-
-
 def load_yaml(stream, lint=False, linter_config=None, *args, **kwargs):
     '''
     Parses YAML from the given stream in a (by default) safe manner. The given stream and any
@@ -446,17 +367,6 @@ def random_str(
     else:
         prefix = ''
     return prefix + ''.join(random.choice(alphabet) for _ in range(length))
-
-
-def create_url_from_attributes(
-    netloc: str,
-    scheme='https',
-    path='',
-    params='',
-    query='',
-    fragment=''
-):
-    return urlunparse((scheme, netloc, path, params, query, fragment))
 
 
 def check_env(name: str):
