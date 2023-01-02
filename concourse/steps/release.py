@@ -802,15 +802,12 @@ class PublishReleaseNotesStep(TransactionalStep):
         version.parse_to_semver(self.release_version)
         existing_dir(self.repo_dir)
 
-        try:
-            self.component_descriptor_v2 = cnudie.util.determine_main_component(
-                repository_hostname=self.repository_hostname,
-                repository_path=self.repository_path,
-                component_descriptor_v2_path=self.component_descriptor_v2_path,
-                ctf_path=self.ctf_path,
-            )
-        except ValueError as err:
-            ci.util.fail(str(err))
+        self.component_descriptor_v2 = cnudie.util.determine_main_component(
+            repository_hostname=self.repository_hostname,
+            repository_path=self.repository_path,
+            component_descriptor_v2_path=self.component_descriptor_v2_path,
+            ctf_path=self.ctf_path,
+        )
 
     def apply(self):
         create_release_step_output = self.context().step_output('Create Release')
