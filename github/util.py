@@ -316,10 +316,8 @@ class PullRequestUtil(RepositoryHelperBase):
             to_ref=to_ref,
         )
 
-    def enumerate_upgrade_pull_requests(self, state_filter: str='open'):
+    def enumerate_upgrade_pull_requests(self):
         '''returns a sequence of `UpgradePullRequest` for all found pull-requests
-
-        @param state_filter: all|open|closed (as defined by github api)
         '''
         def pr_to_upgrade_pr(pull_request):
             return self._pr_to_upgrade_pull_request(pull_request=pull_request)
@@ -329,10 +327,7 @@ class PullRequestUtil(RepositoryHelperBase):
             return pull_request
 
         parsed_prs = ci.util.FluentIterable(
-            self.repository.pull_requests(
-                state=state_filter,
-                number=128, # avoid enumerations to become too expensive w/ growing repositories
-            )
+            self.repository.pull_requests()
         ) \
             .map(strip_title) \
             .filter(self._has_upgrade_pr_title) \
