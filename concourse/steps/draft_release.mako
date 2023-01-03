@@ -24,7 +24,7 @@ ctf_path = os.path.join(
 )
 %>
 import version
-import pathlib
+import os
 
 import ci.util
 import ccc.github
@@ -47,7 +47,7 @@ if '${version_operation}' != 'finalize':
         "Version-processing other than 'finalize' is not supported for draft release creation"
     )
 
-version_file = ci.util.existing_file(pathlib.Path('${version_file}'))
+version_file = ci.util.existing_file('${version_file}')
 
 processed_version = version.process_version(
     version_str=version_file.read_text().strip(),
