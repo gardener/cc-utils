@@ -477,7 +477,7 @@ class Client:
         returns the parsed OCI Manifest for the given image reference. If the optional `accept`
         argument is passed, the given value will be set as `Accept` HTTP Header when retrieving
         the manifest (defaults to
-            application/vnd.docker.distribution.manifest.list.v2+json,
+            application/vnd.oci.image.manifest.v1+json
             application/vnd.docker.distribution.manifest.v2+json
         , which requests a single Oci Image manifest, with a preference for the mimetype defined
         by OCI, and accepting docker's mimetype as a fallback)
