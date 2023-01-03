@@ -12,6 +12,52 @@ import gci.componentmodel as cm
 import product.v2
 
 
+def to_component_id_and_repository_url(
+    component: cm.Component | cm.ComponentDescriptor | cm.ComponentIdentity | str,
+    repository: cm.OciRepositoryContext|str=None,
+):
+    if isinstance(component, str):
+        name, version = component.rsplit(':', 1)
+        component = cm.ComponentIdentity(
+            name=name,
+            version=version,
+        )
+
+    if isinstance(component, cm.ComponentDescriptor):
+        component = component.component
+    elif isinstance(component, cm.ComponentIdentity) and not repository:
+        raise ValueError('repository must be passed if calling w/ component-identity')
+
+    if not repository: # component is sure to be of type cm.Component by now (checked above)
+        component: cm.Component
+        repository = component.current_repository_ctx()
+
+    if isinstance(repository, cm.OciRepositoryContext):
+        repo_base_url = repository.baseUrl
+    elif isinstance(repository, str):
+        repo_base_url = repository
+    else:
+        raise ValueError(f'only OciRepositoryContext is supported - got: {repository=}')
+
+    return component, repo_base_url
+
+
+def oci_ref(
+    component: cm.Component | cm.ComponentDescriptor | cm.ComponentIdentity | str,
+    repository: cm.OciRepositoryContext|str=None,
+):
+    component, repo_base_url = to_component_id_and_repository_url(
+        component=component,
+        repository=repository,
+    )
+
+    return ci.util.urljoin(
+        repo_base_url,
+        'component-descriptors',
+        f'{component.name.lower()}:{component.version}',
+    )
+
+
 def iter_sorted(components: typing.Iterable[cm.Component], /) \
 -> typing.Generator[cm.Component, None, None]:
     '''

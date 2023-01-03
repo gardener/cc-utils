@@ -4,6 +4,7 @@ import sys
 
 import ccc.oci
 import cnudie.iter
+import cnudie.purge
 import cnudie.retrieve
 import cnudie.validate
 import ctx
@@ -124,14 +125,14 @@ def ls(
 def purge_old(
     name: str,
     final: bool=False,
-    ocm_repo_base_url: str=None,
+    repo_base_url: str=None,
     keep: int=256,
     threads: int=32,
 ):
-    if not ocm_repo_base_url:
-        ocm_repo_base_url = ctx.cfg.ctx.ocm_repo_base_url
+    if not repo_base_url:
+        repo_base_url = ctx.cfg.ctx.ocm_repo_base_url
 
-    ctx_repo = cm.OciRepositoryContext(baseUrl=ocm_repo_base_url)
+    ctx_repo = cm.OciRepositoryContext(baseUrl=repo_base_url)
 
     versions = cnudie.retrieve.component_versions(
         component_name=name,
@@ -165,7 +166,7 @@ def purge_old(
 
     def iter_oci_refs_to_rm():
         for v in versions:
-            ref = f'{ocm_repo_base_url}/component-descriptors/{name}:{v}'
+            ref = f'{repo_base_url}/component-descriptors/{name}:{v}'
             yield pool.submit(
                 purge_component_descriptor,
                 ref=ref,
@@ -173,3 +174,35 @@ def purge_old(
 
     for ref in concurrent.futures.as_completed(iter_oci_refs_to_rm()):
         pass
+
+
+def purge(
+    name: str,
+    recursive: bool=False,
+    version: str=None,
+    repo_base_url: str=None,
+):
+    if not version:
+        name, version = name.rsplit(':', 1)
+
+    if not repo_base_url:
+        repo_base_url = ctx.cfg.ctx.ocm_repo_base_url
+
+    lookup = cnudie.retrieve.oci_component_descriptor_lookup()
+
+    component_descriptor = lookup(
+        component_id=cm.ComponentIdentity(
+            name=name,
+            version=version,
+        ),
+        ctx_repo=cm.OciRepositoryContext(baseUrl=repo_base_url),
+    )
+
+    oci_client = ccc.oci.oci_client()
+
+    cnudie.purge.remove_component_descriptor_and_referenced_artefacts(
+        component=component_descriptor.component,
+        oci_client=oci_client,
+        lookup=lookup,
+        recursive=recursive,
+    )
