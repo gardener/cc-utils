@@ -76,7 +76,6 @@ elif have_ctf:
             break
     else:
         ci.util.fail(f'did not find component-descriptor for ${component_name}')
-)
 
 github_cfg = ccc.github.github_cfg_for_repo_url(
   ci.util.urljoin(
