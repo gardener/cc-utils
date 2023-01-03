@@ -48,7 +48,7 @@ if '${version_operation}' != 'finalize':
     )
 
 with open('${version_file}') as f:
-  version_str = r.read().strip()
+  version_str = f.read().strip()
 
 processed_version = version.process_version(
     version_str=version_str,
