@@ -152,7 +152,7 @@ def iter_package_versions(
             if keep_version in versions:
                 versions.remove(keep_version)
 
-        yield package, versions[remove_idx:]
+        yield package, versions
 
 
 def main():
