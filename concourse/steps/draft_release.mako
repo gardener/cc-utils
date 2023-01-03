@@ -11,8 +11,10 @@ import product.v2
 version_file = job_step.input('version_path') + '/version'
 repo = job_variant.main_repository()
 draft_release_trait = job_variant.trait('draft_release')
+component_descriptor_trait = job_variant.trait('component_descriptor')
+component_name = component_descriptor_trait.component_name()
 version_operation = draft_release_trait._preprocess()
-component_descriptor_v2_path = os.path.join(
+component_descriptor_path = os.path.join(
     job_step.input('component_descriptor_dir'),
     cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
 )
@@ -54,12 +56,26 @@ processed_version = version.process_version(
 
 repo_dir = ci.util.existing_dir('${repo.resource_name()}')
 
+have_ctf = os.path.exists(ctf_path := '${ctf_path}')
+have_cd = os.path.exists(component_descriptor_path := '${component_descriptor_path}')
 
-component_descriptor_v2 = cnudie.util.determine_main_component(
-    repository_hostname='${repo.repo_hostname()}',
-    repository_path='${repo.repo_path()}',
-    component_descriptor_v2_path='${component_descriptor_v2_path}',
-    ctf_path='${ctf_path}',
+if not have_ctf ^ have_cd:
+    ci.util.fail('exactly one of component-descriptor, or ctf-archive must exist')
+
+if have_cd:
+    component = cm.ComponentDescriptor.from_dict(
+            component_descriptor_dict=ci.util.parse_yaml_file(
+                component_descriptor_path,
+            ),
+            validation_mode=cm.ValidationMode.WARN,
+    ).component
+elif have_ctf:
+    for component_descriptor in cnudie.util.component_descriptors_from_ctf_archive(ctf_path):
+        component = component_descriptor.component
+        if component.name == '${component_name}':
+            break
+    else:
+        ci.util.fail(f'did not find component-descriptor for ${component_name}')
 )
 
 github_cfg = ccc.github.github_cfg_for_repo_url(
@@ -81,7 +97,7 @@ github_helper = GitHubRepositoryHelper.from_githubrepobranch(
 )
 
 release_notes = ReleaseNotes(
-    component=component_descriptor_v2.component,
+    component=component,
     repo_dir=repo_dir,
 )
 
@@ -98,7 +114,7 @@ if not draft_release:
         name=draft_name,
         body=release_notes_md,
         component_version=processed_version,
-        component_name=component_descriptor_v2.component.name,
+        component_name=component.name,
     )
 else:
     if not draft_release.body == release_notes_md:
