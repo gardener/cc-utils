@@ -36,7 +36,7 @@ class VersionRetentionPolicy:
             other_version = version.parse_to_semver(other_version)
             return ref_version.minor == other_version.minor
         else:
-            raise RuntimeException(f'not implemented: {self.restrict}')
+            raise RuntimeError(f'not implemented: {self.restrict}')
 
     @property
     def keep_all(self) -> bool:
