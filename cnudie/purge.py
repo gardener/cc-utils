@@ -36,7 +36,7 @@ class VersionRetentionPolicy:
             other_version = version.parse_to_semver(other_version)
             return ref_version.minor == other_version.minor
         else:
-            raise RuntimeEror(f'not implemented: {self.restrict}')
+            raise RuntimeException(f'not implemented: {self.restrict}')
 
     @property
     def keep_all(self) -> bool:
@@ -88,7 +88,7 @@ def iter_componentversions_to_purge(
         keep=policy.snapshots.keep,
     )
 
-    yield from versions.smallest_versions(
+    yield from version.smallest_versions(
         versions=releases,
         keep=policy.releases.keep,
     )
