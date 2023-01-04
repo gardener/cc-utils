@@ -244,7 +244,7 @@ def iter_obsolete_upgrade_pull_requests(
         therefore, to prevent hotfix-upgrades from being removed, collect hotfixes in a separate
         group.
         '''
-        cname = upgrade_pull_reques.to_ref.componentName
+        cname = upgrade_pull_request.to_ref.componentName
 
         if not keep_hotfix_versions:
             return cname
