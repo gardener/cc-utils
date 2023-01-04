@@ -152,9 +152,12 @@ class ComponentDescriptorTrait(Trait):
     def step_name(self):
         return self.raw['step']['name']
 
-    def retention_policy(self) -> cnudie.purge.VersionRetentionPolicies | None:
+    def retention_policy(self, raw=True) -> cnudie.purge.VersionRetentionPolicies | None:
         if not (policy := self.raw.get('retention_policy', None)):
             return None
+
+        if raw:
+            return policy
 
         return dacite.from_dict(
             data_class=cnudie.purge.VersionRetentionPolicies,
