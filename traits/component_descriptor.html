@@ -233,7 +233,14 @@
 <td><p>str</p></td>
 <td><p>Specifies additional environment variables passed to .ci/component_descriptor script</p></td>
 </tr>
-<tr class="row-even"><td><p>validation_policies</p></td>
+<tr class="row-even"><td><p>retention_policy</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>Experimental - do not use (yet) - define retention/cleanup policies
+for component-descriptors</p></td>
+</tr>
+<tr class="row-odd"><td><p>validation_policies</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ignore-me</span><span class="w"></span>
 </pre></div>
@@ -242,21 +249,21 @@
 <td><p>List[str]</p></td>
 <td><p>obsolete</p></td>
 </tr>
-<tr class="row-odd"><td><p>ctx_repository_base_url</p></td>
+<tr class="row-even"><td><p>ctx_repository_base_url</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>the component descriptor context repository base_url (for component descriptor v2).
 If not configured, the CICD-landscape’s default ctx will be used.</p></td>
 </tr>
-<tr class="row-even"><td><p>ctx_repository</p></td>
+<tr class="row-odd"><td><p>ctx_repository</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>the component descriptor context repository cfg name (for component descriptor v2).
 If not configured, the CICD-landscape’s default ctx will be used.</p></td>
 </tr>
-<tr class="row-odd"><td><p>snapshot_ctx_repository</p></td>
+<tr class="row-even"><td><p>snapshot_ctx_repository</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
@@ -264,7 +271,7 @@ If not configured, the CICD-landscape’s default ctx will be used.</p></td>
 i.e. component descriptors that are not for release-versions.
 If not configured, the CICD_landscape’s default ctx will be used.</p></td>
 </tr>
-<tr class="row-even"><td><p>component_labels</p></td>
+<tr class="row-odd"><td><p>component_labels</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span><span class="w"></span>
 </pre></div>
@@ -273,7 +280,7 @@ If not configured, the CICD_landscape’s default ctx will be used.</p></td>
 <td><p>List[Label]</p></td>
 <td><p>a list of labels to add to the component in the base Component Descriptor</p></td>
 </tr>
-<tr class="row-odd"><td><p>inputs</p></td>
+<tr class="row-even"><td><p>inputs</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span><span class="w"></span>
 </pre></div>
