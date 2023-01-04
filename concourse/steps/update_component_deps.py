@@ -411,7 +411,7 @@ def create_upgrade_pr(
     )
 
     if merge_policy is MergePolicy.MANUAL:
-        return
+        return pull_request
 
     if merge_method is MergeMethod.MERGE:
         pull_request.merge(merge_method='merge')
