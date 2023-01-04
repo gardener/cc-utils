@@ -9,6 +9,7 @@ import deprecated
 
 import ci.util
 import gci.componentmodel as cm
+import oci.model as om
 import product.v2
 
 
@@ -45,16 +46,18 @@ def to_component_id_and_repository_url(
 def oci_ref(
     component: cm.Component | cm.ComponentDescriptor | cm.ComponentIdentity | str,
     repository: cm.OciRepositoryContext|str=None,
-):
+) -> om.OciImageReference:
     component, repo_base_url = to_component_id_and_repository_url(
         component=component,
         repository=repository,
     )
 
-    return ci.util.urljoin(
-        repo_base_url,
-        'component-descriptors',
-        f'{component.name.lower()}:{component.version}',
+    return om.OciImageReference(
+        ci.util.urljoin(
+            repo_base_url,
+            'component-descriptors',
+            f'{component.name.lower()}:{component.version}',
+        )
     )
 
 

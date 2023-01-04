@@ -15,6 +15,7 @@ main_repo_labels = main_repo.source_labels()
 main_repo_path_env_var = main_repo.logical_name().replace('-', '_').upper() + '_PATH'
 other_repos = [r for r in job_variant.repositories() if not r.is_main_repo()]
 ctx_repository_base_url = descriptor_trait.ctx_repository_base_url()
+retention_policy = descriptor_trait.retention_policy()
 
 snapshot_ctx_repository_base_url = descriptor_trait.snapshot_ctx_repository_base_url() or ""
 
@@ -33,16 +34,21 @@ for image_descriptor in output_image_descriptors.values():
   images_by_base_name[image_descriptor._base_name].append(image_descriptor)
 %>
 import dataclasses
-import git
+import enum
 import json
 import logging
 import os
+import pprint
 import shutil
 import stat
 import subprocess
 import sys
+
+import dacite
+import git
 import yaml
 
+import cnudie.purge
 import gci.componentmodel as cm
 # required for deserializing labels
 Label = cm.Label
@@ -294,4 +300,28 @@ else:
   )
   with open(dependencies_path) as f:
     print(f.read())
+% if retention_policy:
+if have_ctf:
+  logger.warning('purging not implemented for ctf')
+  exit(0)
+
+logger.info('will honour retention-policy (dry-run only for now):')
+retention_policy = dacite.from_dict(
+  data_class=cnudie.purge.VersionRetentionPolicies,
+  data=${retention_policy},
+  config=dacite.Config(cast=(enum.Enum,)),
+)
+pprint.pprint(retention_policy)
+
+logger.info('the following versions were identified for being purged')
+component = descriptor_v2.component
+for v in cnudie.purge.iter_componentversions_to_purge(
+  component=component,
+  policy=retention_policy,
+  oci_client=oci_client,
+):
+  print(v)
+% else:
+logger.info('no retention-policy was defined - will not purge component-descriptors')
+% endif
 </%def>

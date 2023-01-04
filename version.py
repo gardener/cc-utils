@@ -41,7 +41,7 @@ class _VersionMetadata:
 
 def parse_to_semver(
     version,
-):
+) -> semver.VersionInfo:
     '''
     parses the given version into a semver.VersionInfo object.
 
@@ -74,7 +74,7 @@ def parse_to_semver(
     return semver_version_info
 
 
-def _parse_to_semver_and_metadata(version: str):
+def _parse_to_semver_and_metadata(version: str) -> semver.VersionInfo:
     def raise_invalid():
         raise ValueError(f'not a valid (semver) version: `{version}`')
 

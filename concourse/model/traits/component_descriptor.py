@@ -14,12 +14,14 @@
 # limitations under the License.
 
 import dataclasses
+import enum
 import typing
 
 import dacite
 
 from ci.util import not_none
 from gci.componentmodel import Label
+import cnudie.purge
 import gci.componentmodel as cm
 
 from concourse.model.job import (
@@ -71,6 +73,14 @@ ATTRIBUTES = (
         name='callback_env',
         default={},
         doc='Specifies additional environment variables passed to .ci/component_descriptor script',
+    ),
+    AttributeSpec.optional(
+        name='retention_policy',
+        default=None,
+        doc='''
+            Experimental - do not use (yet) - define retention/cleanup policies
+            for component-descriptors
+        ''',
     ),
     AttributeSpec.deprecated(
         name='validation_policies',
@@ -141,6 +151,18 @@ class ComponentDescriptorTrait(Trait):
 
     def step_name(self):
         return self.raw['step']['name']
+
+    def retention_policy(self) -> cnudie.purge.VersionRetentionPolicies | None:
+        if not (policy := self.raw.get('retention_policy', None)):
+            return None
+
+        return dacite.from_dict(
+            data_class=cnudie.purge.VersionRetentionPolicies,
+            data=policy,
+            config=dacite.Config(
+                cast=(enum.Enum,),
+            ),
+        )
 
     def resolve_dependencies(self):
         return self.raw['resolve_dependencies']

@@ -1,5 +1,8 @@
+import dataclasses
+import enum
 import logging
 import traceback
+import typing
 
 import gci.componentmodel as cm
 
@@ -9,8 +12,86 @@ import cnudie.retrieve
 import cnudie.util
 import oci.client as oc
 import oci.model as om
+import version
 
 logger = logging.getLogger(__name__)
+
+
+class VersionRestriction(enum.Enum):
+    SAME_MINOR = 'same-minor'
+    NONE = 'none'
+
+
+@dataclasses.dataclass
+class VersionRetentionPolicy:
+    keep: typing.Union[str, int] = 'all'
+    restrict: VersionRestriction = VersionRestriction.NONE
+    recursive: bool = False
+
+    def matches_version_restriction(self, ref_version, other_version) -> bool:
+        if self.restrict is VersionRestriction.NONE:
+            return True
+        elif self.restrict is VersionRestriction.SAME_MINOR:
+            ref_version = version.parse_to_semver(ref_version)
+            other_version = version.parse_to_semver(other_version)
+            return ref_version.minor == other_version.minor
+        else:
+            raise RuntimeEror(f'not implemented: {self.restrict}')
+
+    @property
+    def keep_all(self) -> bool:
+        return self.keep == 'all'
+
+
+@dataclasses.dataclass
+class VersionRetentionPolicies:
+    name: str
+    snapshots: VersionRetentionPolicy
+    releases: VersionRetentionPolicy
+
+
+def iter_componentversions_to_purge(
+    component: cm.Component | cm.ComponentDescriptor,
+    policy: VersionRetentionPolicies,
+    oci_client: oc.Client=None,
+    lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
+):
+    oci_ref = cnudie.util.oci_ref(component=component)
+    if isinstance(component, cm.ComponentDescriptor):
+        component = component.component
+
+    snapshots = []
+    releases = []
+
+    for v in (version.parse_to_semver(v) for v in oci_client.tags(oci_ref.ref_without_tag)):
+        if v.build or v.prerelease:
+            if policy.snapshots.keep_all:
+                continue
+            if not policy.snapshots.matches_version_restriction(
+                ref_version=component.version,
+                other_version=v
+            ):
+                continue
+            snapshots.append(v)
+        else:
+            if policy.releases.keep_all:
+                continue
+            if not policy.snapshots.matches_version_restriction(
+                ref_version=component.version,
+                other_version=v
+            ):
+                continue
+            releases.append(v)
+
+    yield from version.smallest_versions(
+        versions=snapshots,
+        keep=policy.snapshots.keep,
+    )
+
+    yield from versions.smallest_versions(
+        versions=releases,
+        keep=policy.releases.keep,
+    )
 
 
 def remove_component_descriptor_and_referenced_artefacts(
