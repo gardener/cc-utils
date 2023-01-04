@@ -120,11 +120,6 @@ def _remove_resource(
     else:
         raise ValueError(f'cannot remove image w/o tag: {str(image_reference)}')
 
-    def mock_delete(image_reference, purge):
-        logger.info(f'remove {image_reference} {purge=}')
-
-    oci_client.delete_manifest = mock_delete
-
     oci_client.delete_manifest(
         image_reference=image_reference,
         purge=purge,
