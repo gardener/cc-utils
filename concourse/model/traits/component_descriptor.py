@@ -21,8 +21,8 @@ import dacite
 
 from ci.util import not_none
 from gci.componentmodel import Label
-import cnudie.purge
 import gci.componentmodel as cm
+import version
 
 from concourse.model.job import (
     JobVariant,
@@ -152,7 +152,7 @@ class ComponentDescriptorTrait(Trait):
     def step_name(self):
         return self.raw['step']['name']
 
-    def retention_policy(self, raw=True) -> cnudie.purge.VersionRetentionPolicies | None:
+    def retention_policy(self, raw=True) -> version.VersionRetentionPolicies | None:
         if not (policy := self.raw.get('retention_policy', None)):
             return None
 
@@ -160,7 +160,7 @@ class ComponentDescriptorTrait(Trait):
             return policy
 
         return dacite.from_dict(
-            data_class=cnudie.purge.VersionRetentionPolicies,
+            data_class=version.VersionRetentionPolicies,
             data=policy,
             config=dacite.Config(
                 cast=(enum.Enum,),

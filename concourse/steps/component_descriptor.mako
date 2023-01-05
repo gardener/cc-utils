@@ -51,6 +51,7 @@ import yaml
 import ccc.oci
 import cnudie.purge
 import gci.componentmodel as cm
+import version
 # required for deserializing labels
 Label = cm.Label
 
@@ -308,7 +309,7 @@ if have_ctf:
 
 logger.info('will honour retention-policy (dry-run only for now):')
 retention_policy = dacite.from_dict(
-  data_class=cnudie.purge.VersionRetentionPolicies,
+  data_class=version.VersionRetentionPolicies,
   data=${retention_policy},
   config=dacite.Config(cast=(enum.Enum,)),
 )

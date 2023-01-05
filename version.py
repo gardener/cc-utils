@@ -14,6 +14,9 @@
 # limitations under the License.
 
 import collections
+import dataclasses
+import enum
+import logging
 import semver
 
 from typing import (
@@ -25,12 +28,120 @@ import typing
 
 import ci.util
 
+logger = logging.getLogger(__name__)
+
+Version = semver.VersionInfo | str
+
 NOOP = 'noop'
 SET_PRERELEASE = 'set_prerelease'
 APPEND_PRERELEASE = 'append_prerelease'
 SET_BUILD_METADATA = 'set_build_metadata'
 SET_PRERELEASE_AND_BUILD = 'set_prerelease_and_build'
 SET_VERBATIM = 'set_verbatim'
+
+
+class VersionRestriction(enum.Enum):
+    SAME_MINOR = 'same-minor'
+    NONE = 'none'
+
+
+class VersionType(enum.Enum):
+    SNAPSHOT = 'snapshots'
+    RELEASE = 'releases'
+    ANY = 'any'
+
+
+@dataclasses.dataclass(frozen=True)
+class VersionRetentionPolicy:
+    name: str = None
+    keep: typing.Union[str, int] = 'all'
+    match: VersionType = VersionType.ANY
+    restrict: VersionRestriction = VersionRestriction.NONE
+    recursive: bool = False
+
+    def matches_version_restriction(self, version, ref_version) -> bool:
+        version = parse_to_semver(version)
+        final = is_final(version)
+
+        if self.match is VersionType.ANY:
+            pass
+        if self.match is VersionType.SNAPSHOT and final:
+            return False
+        if self.match is VersionType.RELEASE and not final:
+            return False
+
+        # if this line is reached, version-type matches
+
+        if self.restrict is VersionRestriction.NONE:
+            return True
+        elif self.restrict is VersionRestriction.SAME_MINOR:
+            ref_version = version.parse_to_semver(ref_version)
+            return ref_version.minor == version.minor
+        else:
+            raise RuntimeError(f'not implemented: {self.restrict}')
+
+    @property
+    def keep_all(self) -> bool:
+        return self.keep == 'all'
+
+
+@dataclasses.dataclass
+class VersionRetentionPolicies:
+    name: str
+    rules: list[VersionRetentionPolicy]
+
+
+T = typing.TypeVar('T')
+
+
+def is_final(
+    version: Version,
+    converter: typing.Callable[[T], Version]=None,
+) -> bool:
+    if converter:
+        version = converter(version)
+    version = parse_to_semver(version=version)
+    return not version.build and not version.prerelease
+
+
+def versions_to_purge(
+    versions: typing.Iterable[T],
+    reference_version: Version,
+    policy: VersionRetentionPolicies,
+    converter: typing.Callable[[T], Version]=None,
+) -> typing.Generator[T, None, None]:
+    versions_by_policy = collections.defaultdict(list)
+
+    def to_version(v: T):
+        if converter:
+            v = converter(v)
+        return v
+
+    for v in versions:
+        converted_version = to_version(v)
+        for rule in policy.rules:
+            rule: VersionRetentionPolicy
+            if rule.matches_version_restriction(
+                version=converted_version,
+                ref_version=reference_version,
+            ):
+                versions_by_policy[rule].append(v)
+                break # first rule matches
+            else:
+                continue
+        else:
+            logger.info(f'no rule matched {converted_version}')
+
+    for policy, versions in versions_by_policy.items():
+        policy: VersionRetentionPolicy
+        if policy.keep_all:
+            continue
+
+        yield from smallest_versions(
+            versions=versions,
+            keep=policy.keep,
+            converter=converter,
+        )
 
 
 def parse_to_semver(
@@ -341,9 +452,6 @@ def is_semver_parseable(version_string: str):
         ci.util.verbose(f"Could not parse '{version_string}' as semver version")
         return False
     return True
-
-
-T = typing.TypeVar('T')
 
 
 def smallest_versions(
