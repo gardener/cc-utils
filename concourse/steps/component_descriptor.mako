@@ -345,7 +345,7 @@ for v in cnudie.purge.iter_componentversions_to_purge(
     )
   )
   if not component_to_purge:
-    logger.warning(f'{component_to_purge.name}:{v} was not found - ignore')
+    logger.warning(f'{component.name}:{v} was not found - ignore')
     continue
 
   try:
