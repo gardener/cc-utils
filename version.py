@@ -58,6 +58,8 @@ def parse_to_semver(
     '''
     if isinstance(version, str):
         version_str = version
+    elif isinstance(version, semver.VersionInfo):
+        return version
     else:
         if hasattr(version, 'version'):
             if callable(version.version):
