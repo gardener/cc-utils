@@ -213,8 +213,7 @@ def delivery_service_component_descriptor_lookup(
                 ctx_repo_url=ctx_repo.baseUrl,
             )
         except:
-            import traceback
-            traceback.print_exc()
+            logger.info(f'{component_id.name}:{component_id.version} not found in delivery-svc')
 
         # component descriptor not found in lookup
         if absent_ok:
