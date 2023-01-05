@@ -89,6 +89,7 @@ class VersionRetentionPolicy:
 class VersionRetentionPolicies:
     name: str
     rules: list[VersionRetentionPolicy]
+    dry_run: bool = True
 
 
 T = typing.TypeVar('T')

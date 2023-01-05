@@ -50,6 +50,7 @@ import yaml
 
 import ccc.oci
 import cnudie.purge
+import cnudie.retrieve
 import gci.componentmodel as cm
 import version
 # required for deserializing labels
@@ -307,7 +308,7 @@ if have_ctf:
   logger.warning('purging not implemented for ctf')
   exit(0)
 
-logger.info('will honour retention-policy (dry-run only for now):')
+logger.info('will honour retention-policy')
 retention_policy = dacite.from_dict(
   data_class=version.VersionRetentionPolicies,
   data=${retention_policy},
@@ -315,14 +316,46 @@ retention_policy = dacite.from_dict(
 )
 pprint.pprint(retention_policy)
 
+if retention_policy.dry_run:
+  logger.info('dry-run - will only print versions to remove, but not actually remove them')
+else:
+  logger.info('!! will attempt to remove listed component-versions, according to policy')
+
 logger.info('the following versions were identified for being purged')
 component = descriptor_v2.component
+oci_client = ccc.oci_client()
+
+lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+  default_ctx_repo=component.current_repository_ctx(),
+  default_absent_ok=True,
+)
+
 for v in cnudie.purge.iter_componentversions_to_purge(
   component=component,
   policy=retention_policy,
-  oci_client=ccc.oci.oci_client(),
+  oci_client=oci_client,
 ):
   print(v)
+  if retention_policy.dry_run:
+   continue
+  component_to_purge = lookup(
+    cm.ComponentIdentity(
+      name=component.name,
+      version=v,
+    )
+  )
+  if not component_to_purge:
+    logger.warning(f'{component_to_purge.name}:{v} was not found - ignore')
+    continue
+
+  try:
+   cnudie.purge.remove_component_descriptor_and_referenced_artefacts(
+    component=component_to_purge,
+    oci_client=oci_client,
+   )
+  except Exception as e:
+   logger.warning(f'error occurred while trying to purge {v}: {e}')
+   traceback.print_exc()
 % else:
 logger.info('no retention-policy was defined - will not purge component-descriptors')
 % endif
