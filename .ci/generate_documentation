@@ -29,10 +29,6 @@ fi
 echo "cc-utils from: ${repo_dir}"
 echo "out-dir: ${out_dir}"
 
-# ensure that all required packages are installed
-echo "Making sure that packages are installed ..."
-pip3 install -r "${repo_dir}/requirements.txt" --quiet
-
 export SOURCE_DIR="${repo_dir}/doc"
 export OUT_DIR="${out_dir}"
 export PYTHONPATH="${repo_dir}"
