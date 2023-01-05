@@ -1,39 +1,67 @@
-============================
-Gardener CI/CD Documentation
-============================
+
+.. _build_pipeline_reference_manual:
+
+==========================================
+CC-Utils - Build Pipeline Reference Manual
+==========================================
 
 .. toctree::
-    :includehidden:
     :hidden:
     :titlesonly:
     :maxdepth: 2
-    :caption: Contents:
 
-    pipeline_contract
-
-
-This documentation describes how the components of the `Gardener <https://github.com/gardener>`_ project
-are produced. See the linked documentation for more details on Gardener itself.
-
-
-Overview
-========
-
-.. image:: res/overview.svg
+    pipeline
+    pipeline_job
+    pipeline_step
+    traits
+    release_notes
 
 
-Gardener is tightly integrated into GitHub. In particular, each Gardener
-Component is represented by exactly one GitHub repository. Releases of Gardener
-Components are represented by GitHub releases.
+Introduction
+============
 
-As is common practice in the Kubernetes eco-system, the main deliverables of
-each Gardener Component are container images. Each release of a Gardener
-Component thus also encompasses a `Component Descriptor`, which declares
-references to any container images that have been created for a given component
-release.
+In order to run continuous delivery workloads for all components contributing to the
+`Gardener <https://github.com/gardener>`_ project, we operate a central service.
+
+Typical workloads encompass the execution of tests and builds of a variety of technologies,
+as well as building and publishing container images, typically containing build results.
+
+We are building our CI/CD offering around some principles:
+
+*  **container-native** - each workload is executed within a container
+   environment. Components may customise used container images
+* **automation** - pipelines are generated without manual interaction
+* **self-service** - components customise their pipelines by changing their sources
+* **standardisation**
+
+As an execution environment for CI/CD workloads, we use `Concourse <https://concourse-ci.org>`_.
+We however abstract from the underlying "build executor" and instead offer a
+`Pipeline Definition Contract`, through which components declare their build pipelines as
+required.
+
+Terms, Definitions and Concepts
+===============================
+
+Although we are using `Concourse <https://concourse-ci.org>`_ as underlying build scheduler, we
+use some terms differently as done in the context of concourse.
+
++------------------------------+-----------------------------------------------------+
+| term                         |  in Gardener CI/CD                                  |
++==============================+=====================================================+
+| :doc:`Pipeline <pipeline>`   | a set of jobs defined in                            |
+|                              | `.ci/pipeline_definitions`                          |
++------------------------------+-----------------------------------------------------+
+| :doc:`Job <pipeline_job>`    |  a graph of build steps                             |
++------------------------------+-----------------------------------------------------+
+| :doc:`Step <pipeline_step>`  | an executable with a container image as environment |
++------------------------------+-----------------------------------------------------+
+| :doc:`Trait <traits>`        | adds certain semantics to a build job (does not     |
+|                              | exist in concourse)                                 |
++------------------------------+-----------------------------------------------------+
 
 
-Indices and Tables
+
+Indices and tables
 ==================
 
 * :ref:`genindex`
