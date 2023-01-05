@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import collections
-import dataclasses
 import semver
 
 from typing import (
@@ -32,11 +31,6 @@ APPEND_PRERELEASE = 'append_prerelease'
 SET_BUILD_METADATA = 'set_build_metadata'
 SET_PRERELEASE_AND_BUILD = 'set_prerelease_and_build'
 SET_VERBATIM = 'set_verbatim'
-
-
-@dataclasses.dataclass
-class _VersionMetadata:
-    prefix: str = None
 
 
 def parse_to_semver(
@@ -72,11 +66,11 @@ def parse_to_semver(
             ci.util.warning(f'unexpected type for version: {type(version)}')
             version_str = str(version) # fallback
 
-    semver_version_info, _ = _parse_to_semver_and_metadata(version_str)
+    semver_version_info, _ = _parse_to_semver_and_prefix(version_str)
     return semver_version_info
 
 
-def _parse_to_semver_and_metadata(version: str) -> semver.VersionInfo:
+def _parse_to_semver_and_prefix(version: str) -> semver.VersionInfo:
     def raise_invalid():
         raise ValueError(f'not a valid (semver) version: `{version}`')
 
@@ -84,16 +78,16 @@ def _parse_to_semver_and_metadata(version: str) -> semver.VersionInfo:
         raise_invalid()
 
     semver_version = version
-    metadata = _VersionMetadata()
+    prefix = None
 
     # strip leading `v`
     if version[0] == 'v':
         semver_version = version[1:]
-        metadata.prefix = 'v'
+        prefix = 'v'
 
     # in most cases, we should be fine now
     try:
-        return semver.VersionInfo.parse(semver_version), metadata
+        return semver.VersionInfo.parse(semver_version), prefix
     except ValueError:
         pass # try extending `.0` as patch-level
 
@@ -108,7 +102,7 @@ def _parse_to_semver_and_metadata(version: str) -> semver.VersionInfo:
         numeric += '.0'
 
     try:
-        return semver.VersionInfo.parse(numeric + sep + suffix), metadata
+        return semver.VersionInfo.parse(numeric + sep + suffix), prefix
     except ValueError:
         pass # last try: strip leading zeroes
 
@@ -120,7 +114,7 @@ def _parse_to_semver_and_metadata(version: str) -> semver.VersionInfo:
     ))
 
     try:
-        return semver.VersionInfo.parse(numeric + sep + suffix), metadata
+        return semver.VersionInfo.parse(numeric + sep + suffix), prefix
     except ValueError:
         # re-raise with original version str
         raise_invalid()
@@ -196,7 +190,7 @@ def process_version(
     if operation == SET_VERBATIM and (not verbatim_version or prerelease or build_metadata):
         raise ValueError('Exactly verbatim-version must be given when using operation set_verbatim')
 
-    parsed_version, metadata = _parse_to_semver_and_metadata(version_str)
+    parsed_version, prefix = _parse_to_semver_and_prefix(version_str)
     version_str = str(parsed_version)
 
     if operation == APPEND_PRERELEASE and not parsed_version.prerelease:
@@ -222,8 +216,8 @@ def process_version(
             parsed_version = parsed_version.replace(build=build_metadata[:build_metadata_length])
         processed_version = str(parsed_version)
 
-    if metadata.prefix:
-        return metadata.prefix + processed_version
+    if prefix:
+        return prefix + processed_version
 
     return processed_version
 
