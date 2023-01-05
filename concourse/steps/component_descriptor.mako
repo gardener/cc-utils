@@ -48,6 +48,7 @@ import dacite
 import git
 import yaml
 
+import ccc.oci
 import cnudie.purge
 import gci.componentmodel as cm
 # required for deserializing labels
@@ -318,7 +319,7 @@ component = descriptor_v2.component
 for v in cnudie.purge.iter_componentversions_to_purge(
   component=component,
   policy=retention_policy,
-  oci_client=oci_client,
+  oci_client=ccc.oci.oci_client(),
 ):
   print(v)
 % else:
