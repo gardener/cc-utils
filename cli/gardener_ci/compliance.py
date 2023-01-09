@@ -98,7 +98,7 @@ def diff(
     if parsed.name_template and parsed.name_template_expr:
         raise ValueError('at most one of name_template_expr, name_template must be specified')
 
-    print('retrieving component-descriptors (might take a few seconds')
+    print('retrieving component-descriptors (might take a few seconds)')
 
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
         default_ctx_repo=parsed.ctx_repo_url,
