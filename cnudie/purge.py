@@ -1,5 +1,6 @@
 import logging
 import traceback
+import typing
 
 import gci.componentmodel as cm
 
@@ -19,7 +20,7 @@ def iter_componentversions_to_purge(
     policy: version.VersionRetentionPolicies,
     oci_client: oc.Client=None,
     lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
-):
+) -> typing.Generator[ComponentIdentity, None, None]:
     oci_ref = cnudie.util.oci_ref(component=component)
     if isinstance(component, cm.ComponentDescriptor):
         component = component.component
