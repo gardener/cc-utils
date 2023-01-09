@@ -40,7 +40,7 @@ def remove_component_descriptor_and_referenced_artefacts(
     component: cm.Component | cm.ComponentDescriptor,
     oci_client: oc.Client=None,
     lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
-    recursive: bool=True,
+    recursive: bool=False,
     on_error: str='abort', # todo: implement, e.g. patch-component-descriptor-and-abort
 ):
     current_component = None
