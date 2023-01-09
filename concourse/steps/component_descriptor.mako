@@ -330,22 +330,22 @@ lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
   default_absent_ok=True,
 )
 
-for v in cnudie.purge.iter_componentversions_to_purge(
+for component_id in cnudie.purge.iter_componentversions_to_purge(
   component=component,
   policy=retention_policy,
   oci_client=oci_client,
 ):
-  print(v)
+  print(f'{component_id.name}:{component_id.version}')
   if retention_policy.dry_run:
    continue
   component_to_purge = lookup(
     cm.ComponentIdentity(
       name=component.name,
-      version=v,
+      version=component_id.version,
     )
   )
   if not component_to_purge:
-    logger.warning(f'{component.name}:{v} was not found - ignore')
+    logger.warning(f'{component.name}:{component_id.version} was not found - ignore')
     continue
 
   try:
@@ -354,7 +354,7 @@ for v in cnudie.purge.iter_componentversions_to_purge(
     oci_client=oci_client,
    )
   except Exception as e:
-   logger.warning(f'error occurred while trying to purge {v}: {e}')
+   logger.warning(f'error occurred while trying to purge {component_id}: {e}')
    traceback.print_exc()
 % else:
 logger.info('no retention-policy was defined - will not purge component-descriptors')
