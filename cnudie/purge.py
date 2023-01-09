@@ -43,6 +43,9 @@ def remove_component_descriptor_and_referenced_artefacts(
     recursive: bool=False,
     on_error: str='abort', # todo: implement, e.g. patch-component-descriptor-and-abort
 ):
+    if isinstance(component, cm.ComponentDescriptor):
+        component = component.component
+
     current_component = None
     resources_with_removal_errors = []
     if not oci_client:
