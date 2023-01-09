@@ -352,6 +352,8 @@ for component_id in cnudie.purge.iter_componentversions_to_purge(
    cnudie.purge.remove_component_descriptor_and_referenced_artefacts(
     component=component_to_purge,
     oci_client=oci_client,
+    lookup=lookup,
+    recursive=False,
    )
   except Exception as e:
    logger.warning(f'error occurred while trying to purge {component_id}: {e}')
