@@ -69,6 +69,9 @@ def iter(
     @param prune_unique: if true, redundant component-versions will only be traversed once
     @node_filter:        use to filter emitted nodes (see Filter for predefined filters)
     '''
+    if isinstance(component, cm.ComponentDescriptor):
+        component = component.component
+
     seen_component_ids = set()
 
     if not lookup and not recursion_depth == 0:
