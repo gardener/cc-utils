@@ -224,10 +224,10 @@ def main():
 
     for res in concurrent.futures.as_completed(iter_jobs()):
         version, http_res = res.result()
-        if http_res.ok:
-            print(f'{version}: okay')
-        else:
-            print(f'{version}: {http_res.status_code}')
+        print(f'{version}: {http_res.status_code}')
+
+        if not http_res.ok:
+            print(f'warning: {version}: {http_res.text}')
 
 
 if __name__ == '__main__':
