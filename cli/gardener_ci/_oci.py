@@ -103,6 +103,7 @@ def purge_old(
 
             for e in errors:
                 if e['code'] == 'GOOGLE_MANIFEST_DANGLING_PARENT_IMAGE':
+                    msg = e['message']
                     parent_image_digest = msg.rsplit(' ', 1)[-1]
                     parent_img_ref = om.OciImageReference(image_ref)
                     print(f'warning: will purge dangling {parent_image_digest=}')
