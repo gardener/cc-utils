@@ -16,17 +16,20 @@ logger = logging.getLogger(__name__)
 
 def retrieve(
     name: str,
-    version: str,
-    ctx_base_url: str=None,
+    version: str=None,
+    ocm_repo: str=None,
     out: str=None
 ):
-    if not ctx_base_url:
-        ctx_base_url = ctx.cfg.ctx.ocm_repo_base_url
+    if not ocm_repo:
+        ocm_repo = ctx.cfg.ctx.ocm_repo_base_url
 
     ctx_repo = cm.OciRepositoryContext(
-            baseUrl=ctx_base_url,
+            baseUrl=ocm_repo,
             componentNameMapping=cm.OciComponentNameMapping.URL_PATH,
         )
+
+    if not version:
+        name, version = name.rsplit(':', 1)
 
     component_descriptor = cnudie.retrieve.oci_component_descriptor_lookup()(
         component_id=cm.ComponentIdentity(
@@ -35,6 +38,10 @@ def retrieve(
         ),
         ctx_repo=ctx_repo,
     )
+
+    if not component_descriptor:
+        print(f'Error: did not find {name}:{version}')
+        exit(1)
 
     if out:
         outfh = open(out, 'w')
