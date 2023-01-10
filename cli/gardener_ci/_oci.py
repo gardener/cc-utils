@@ -6,6 +6,8 @@ import sys
 import tarfile
 import tempfile
 
+import requests
+
 import ccc.oci
 import oci
 import oci.model as om
@@ -48,11 +50,19 @@ def purge(image: str):
     print(f'purged {image}')
 
 
-def purge_old(image: str, keep:int=128):
+def purge_old(
+    image: str,
+    keep:int=128,
+    skip_non_semver:bool=True,
+):
     oci_client = ccc.oci.oci_client()
     pool = concurrent.futures.ThreadPoolExecutor(
         max_workers=8,
     )
+    tags = [
+        t for t in oci_client.tags(image_reference=image)
+        if not skip_non_semver or version.is_semver_parseable(t)
+    ]
 
     def sloppy_semver_parse(v: str):
         if v.count('-') > 1:
@@ -61,7 +71,7 @@ def purge_old(image: str, keep:int=128):
         return version.parse_to_semver(v)
 
     tags = sorted([
-        tag for tag in oci_client.tags(image_reference=image)
+        tag for tag in tags
         if not tag.startswith('latest')
         ],
       key=sloppy_semver_parse,
@@ -77,11 +87,57 @@ def purge_old(image: str, keep:int=128):
 
     def purge_image(image_ref: str):
         print(f'purging {image_ref}')
-        oci_client.delete_manifest(
+        manifest = oci_client.manifest(
             image_reference=image_ref,
-            purge=True,
             accept=om.MimeTypes.prefer_multiarch,
         )
+        try:
+            oci_client.delete_manifest(
+                image_reference=image_ref,
+                purge=True,
+                accept=om.MimeTypes.prefer_multiarch,
+            )
+        except requests.HTTPError as http_error:
+            error_dict = http_error.response.json()
+            errors = error_dict['errors']
+
+            for e in errors:
+                if e['code'] == 'GOOGLE_MANIFEST_DANGLING_PARENT_IMAGE':
+                    parent_image_digest = msg.rsplit(' ', 1)[-1]
+                    parent_img_ref = om.OciImageReference(image_ref)
+                    print(f'warning: will purge dangling {parent_image_digest=}')
+                    oci_client.delete_manifest(
+                        image_reference=f'{parent_img_ref.ref_without_tag}@{parent_image_digest}',
+                    )
+            raise http_error
+
+        if isinstance(manifest, om.OciImageManifest):
+            return
+        elif not isinstance(manifest, om.OciImageManifestList):
+            raise ValueError(manifest)
+
+        # manifest-list (aka multi-arch)
+        image_ref = om.OciImageReference(image_ref)
+
+        def iter_platform_refs():
+            repository = image_ref.ref_without_tag
+            base_tag = image_ref.tag
+
+            for submanifest in manifest.manifests:
+                p = submanifest.platform
+                yield f'{repository}:{base_tag}-{p.os}-{p.architecture}'
+
+        for ref in iter_platform_refs():
+            if not oci_client.head_manifest(
+                image_reference=ref,
+                absent_ok=True,
+            ):
+                continue
+
+            oci_client.delete_manifest(
+                image_reference=ref,
+                purge=True,
+            )
 
     def iter_image_refs_to_purge():
         for idx, tag in enumerate(tags, 1):
