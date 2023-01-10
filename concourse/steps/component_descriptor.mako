@@ -43,6 +43,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import traceback
 
 import dacite
 import git
