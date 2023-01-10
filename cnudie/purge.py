@@ -149,6 +149,7 @@ def _remove_resource(
     oci_client.delete_manifest(
         image_reference=image_reference,
         purge=purge,
+        accept=om.MimeTypes.prefer_multiarch,
     )
 
     if isinstance(manifest, om.OciImageManifest):
