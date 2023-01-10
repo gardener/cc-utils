@@ -70,9 +70,6 @@ class GithubConfig(NamedModelElement):
         '''
         return [Protocol(value) for value in self.raw.get('available_protocols')]
 
-    def elasticsearch_cfg(self):
-        return self.raw.get('elasticsearchCfg')
-
     def credentials(self, technical_user_name: str = None):
         technical_users = self._technical_user_credentials()
         if technical_user_name:
@@ -143,8 +140,7 @@ class GithubConfig(NamedModelElement):
             'httpUrl',
             'purpose_labels',
             'sshUrl',
-            'repo_urls',
-            'elasticsearchCfg',
+            'repo_urls'
         )
 
     def _required_attributes(self):
