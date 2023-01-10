@@ -55,7 +55,7 @@ def purge_old(image: str, keep:int=128):
     )
 
     def sloppy_semver_parse(v: str):
-        if v.count('-') > 2:
+        if v.count('-') > 1:
             v = v.split('-', 1)[0] + '-suffix' # discard other suffixes
 
         return version.parse_to_semver(v)
