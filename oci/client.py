@@ -693,7 +693,7 @@ class Client:
         self,
         image_reference: om.OciImageReference | str,
         purge: bool=False,
-        accept: str=None,
+        accept: str=om.MimeTypes.prefer_multiarch,
     ):
         '''
         deletes the specified manifest. Depending on whether the passed image_reference contains
