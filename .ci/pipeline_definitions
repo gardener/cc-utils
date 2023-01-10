@@ -19,32 +19,6 @@ cc-utils:
     traits:
       version: ~
       component_descriptor:
-        retention_policy:
-        name: 'purge-old'
-          rules:
-            - name: 'snapshots'
-              match: 'snapshots'
-              restrict: same-minor
-              keep: 256 # | all
-            - name: 'releases'
-              match: 'releases'
-              restrict: ~
-              keep: all
-        retention_policies:
-          - name: 'keep-all'
-            snapshots:
-              keep: all
-            releases:
-              keep: all
-          - name: 'default'
-            snapshots:
-              keep: 512
-              restrict: same-minor
-              recursive: False
-            releases:
-              keep: 512
-              restrict: None
-              recursive: False
   jobs:
     head-update:
       steps:
