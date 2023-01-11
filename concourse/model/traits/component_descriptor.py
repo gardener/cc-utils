@@ -218,6 +218,7 @@ class ComponentDescriptorTrait(Trait):
                     raise ValueError(candidate)
 
                 if name == policy:
+                    policy = candidate
                     break
             else:
                 raise ValueError(f'did not find {policy=} in retention_policies')
