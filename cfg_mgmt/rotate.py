@@ -116,6 +116,7 @@ def rotate_cfg_element(
 
     if type_name == 'container_registry':
         if cfg_element.registry_type() == om.OciRegistryType.GCR:
+            # service accounts require role "Service Account Key Admin"
             logger.info(f'rotating {cfg_element.name()} {type_name=}')
             update_secret_function = cmg.rotate_cfg_element
         else:
