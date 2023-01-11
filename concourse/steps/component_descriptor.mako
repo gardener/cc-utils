@@ -341,7 +341,7 @@ for idx, component_id in enumerate(cnudie.purge.iter_componentversions_to_purge(
     print('this is done to limit execution-time - the purge will continue on next execution')
     exit(0)
   print(f'{idx} {component_id.name}:{component_id.version}')
-  if retention_policy.dry_run:
+  if retention_policy.dry_run or True:
    continue
   component_to_purge = lookup(
     cm.ComponentIdentity(
