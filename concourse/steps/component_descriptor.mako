@@ -331,12 +331,16 @@ lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
   default_absent_ok=True,
 )
 
-for component_id in cnudie.purge.iter_componentversions_to_purge(
-  component=component,
-  policy=retention_policy,
-  oci_client=oci_client,
-):
-  print(f'{component_id.name}:{component_id.version}')
+for idx, component_id in enumerate(cnudie.purge.iter_componentversions_to_purge(
+    component=component,
+    policy=retention_policy,
+    oci_client=oci_client,
+)):
+  if idx >= 64:
+    print('will abort the purge, considering there seem to be more than 64 versions to cleanup')
+    print('this is done to limit execution-time - the purge will continue on next execution')
+    exit(0)
+  print(f'{idx} {component_id.name}:{component_id.version}')
   if retention_policy.dry_run:
    continue
   component_to_purge = lookup(
