@@ -21,6 +21,7 @@ import dacite
 
 from ci.util import not_none
 from gci.componentmodel import Label
+import ci.util
 import gci.componentmodel as cm
 import version
 
