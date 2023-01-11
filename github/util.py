@@ -340,7 +340,10 @@ class PullRequestUtil(RepositoryHelperBase):
             to_ref=to_ref,
         )
 
-    def enumerate_upgrade_pull_requests(self):
+    def enumerate_upgrade_pull_requests(
+        self,
+        state: str='all',
+    ):
         '''returns a sequence of `UpgradePullRequest` for all found pull-requests
         '''
         def pr_to_upgrade_pr(pull_request):
@@ -351,7 +354,10 @@ class PullRequestUtil(RepositoryHelperBase):
             return pull_request
 
         parsed_prs = ci.util.FluentIterable(
-            self.repository.pull_requests()
+            self.repository.pull_requests(
+                state=state,
+                number=128, # avoid issueing more than one github-api-request
+            )
         ) \
             .map(strip_title) \
             .filter(self._has_upgrade_pr_title) \

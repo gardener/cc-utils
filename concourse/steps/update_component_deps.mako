@@ -118,7 +118,9 @@ git_helper.rebase(
     commit_ish=REPO_BRANCH,
 )
 
-upgrade_pull_requests = pull_request_util.enumerate_upgrade_pull_requests()
+upgrade_pull_requests = pull_request_util.enumerate_upgrade_pull_requests(
+    state='all',
+)
 
 own_component = current_component()
 logger.info(f'{own_component.name=} {own_component.version=}')
