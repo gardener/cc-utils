@@ -102,6 +102,12 @@ class AttributesDocumentation:
             return default_value
 
         elif isinstance(default_value, (dict, list)):
+            if isinstance(default_value, list) and default_value \
+                and dataclasses.is_dataclass(default_value[0]):
+                default_value = [
+                    dataclasses.asdict(e, dict_factory=ci.util.dict_factory_enum_serialisiation)
+                    for e in default_value
+                ]
             return (
                 '.. code-block:: yaml\n\n'
                 f'{textwrap.indent(yaml.dump(default_value, Dumper=SafeEnumDumper), "  ")}'
