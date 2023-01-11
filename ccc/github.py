@@ -49,12 +49,15 @@ def github_api_ctor(
     github_url: str,
     verify_ssl: bool=True,
     session_adapter: SessionAdapter=SessionAdapter.RETRY,
+    cfg_factory: model.ConfigFactory=None,
 ):
     '''returns the appropriate github3.GitHub constructor for the given github URL
 
     In case github_url does not refer to github.com, the c'tor for GithubEnterprise is
     returned with the url argument preset, thus disburdening users to differentiate
     between github.com and non-github.com cases.
+
+    github-api requests will be logged to Elasticsearch if a default Elasticsearch config is found.
     '''
     parsed = urllib.parse.urlparse(github_url)
     if parsed.scheme:
@@ -63,6 +66,41 @@ def github_api_ctor(
         raise ValueError('failed to parse url: ' + str(github_url))
 
     session = github3.session.GitHubSession()
+    original_request = session.request
+
+    def intercepted_request(
+        method: str,
+        url: str,
+        **kwargs,
+    ):
+        req = original_request(method, url, **kwargs)
+
+        try:
+            es_client.store_document(
+                index='github_request',
+                body={
+                    'method': method,
+                    'url': url,
+                    'data': kwargs,
+                    'creation_date': datetime.datetime.now().isoformat(),
+                },
+            )
+        except:
+            logger.warning('unable to log github api request to Elasticsearch, '
+                'will disable logging for future requests')
+            session.request = original_request
+
+        return req
+
+    try:
+        es_client = ccc.elasticsearch.default_client_if_available(cfg_factory)
+        if es_client:
+            logger.info('logging github api requests to elasticsearch')
+            session.request = intercepted_request
+
+    except:
+        logger.warning('unable to create elasticsearch client, will not log github-api requests')
+
     session_adapter = SessionAdapter(session_adapter)
     if session_adapter is SessionAdapter.NONE or not session_adapter:
         pass
@@ -173,6 +211,7 @@ def github_api(
         github_url=github_url,
         verify_ssl=verify_ssl,
         session_adapter=session_adapter,
+        cfg_factory=cfg_factory,
     )
     github_api = github_ctor(
         token=github_auth_token,
