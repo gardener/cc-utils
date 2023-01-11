@@ -127,6 +127,7 @@ ATTRIBUTES = (
                 dry_run=False,
             ),
         ],
+        type=typing.List[version.VersionRetentionPolicies],
         doc='''
             predefined retention policies (see default value). may be referenced via
             `retention_policy` attribute (adding additional policies here has no immediate effect)
