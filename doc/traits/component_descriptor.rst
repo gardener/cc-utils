@@ -91,3 +91,55 @@ How to declare dependencies towards:
       '{"image_reference": "alpine:3.6", "version": "3.6", "name": "alpine"}'
   # don't forget to expose the image
   cp "${BASE_DEFINITION_PATH}" "${COMPONENT_DESCRIPTOR_PATH}"
+
+
+Retention Policies (aka cleaning up old versions)
+=================================================
+
+The `retention_policies` attribute can be used to configure automated removal of
+component descriptors and referenced `resources` (mostly OCI Container Images).
+
+.. attention::
+   Removal of component descriptors and referenced resources is _permanent_. There is no
+   backup mechanism in place. Use with care. For example, if multiple component descriptors
+   share reference to the same OCI Artefact (using the same registry, repository, and tag)
+   removal of any of the referencing component descriptors will lead to stale references
+   in other component descriptors.
+
+Cleanup Semantics and Use-Case
+------------------------------
+
+If frequently publishing component-descriptors as snapshot-versions (e.g. for each head-update,
+or for pull-request-validation), thus-produced build artefacts and component descriptors
+typically are only relevant for a short period of time. In such cases, automated cleanup
+of snapshot-versions can be configured (see attribute-documentation above).
+
+It is possible to further narrow-down versions to cleanup, by setting the `restrict`-attribute
+to `same-minor`. If thus-configured, cleanup will only be done among component descriptors that
+share the same minor version w/ the current component version.
+
+Policy rules are evaluated in the order they are defined. When cleanup is run, all existing
+versions (in current component descriptor repository) are retrieved, and grouped by defined
+cleanup rules (each version is added exactly to the first matching rule; if no rule matches,
+versions are dropped (thus exempted from cleanup)).
+
+Each thus-collected group of versions is ordered, acccording to "relaxed" semver-arithmetics,
+from smallest to greatest. Depending on the amount of versions to "keep" (`keep` attribute),
+starting from smallest, progressing to greatest, versions to be removed are determined. It is
+possible that no version is identified as being subject for cleanup.
+
+For each version to be removed the component-descriptor to be removed is fetched and processed:
+
+Sources are ignored.
+
+From declared resources, all resources that are supported for removal are removed.
+
+A resource is considered to be supported for removal if it has been declared of `relation: local`
+(i.e. it was built along w/ the component-descriptor), and if its access-type is supported
+by underlying CICD Infrastructure. This is currently limited to OCI Artefacts (including
+"multi-arch" Images), and subject to being extended over time. Blobs that are inlined within
+component descriptor OCI Artefact will be implicitly along with the component descriptor.
+
+Once all supported resources have been removed, the declaring component descriptor is removed.
+
+For performance reasons, cleanup may be limited to an internally defined amount of versions.

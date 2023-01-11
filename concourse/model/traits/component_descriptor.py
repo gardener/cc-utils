@@ -77,10 +77,59 @@ ATTRIBUTES = (
     AttributeSpec.optional(
         name='retention_policy',
         default=None,
+        type=typing.Union[version.VersionRetentionPolicies, str],
         doc='''
-            Experimental - do not use (yet) - define retention/cleanup policies
-            for component-descriptors
+            specifies how (old) component-descriptors and their referenced resources should be
+            handled. This is foremostly intended as an option for automated cleanup for
+            components with frequent (shortlived) releases and/or frequent (shortlived) snapshots.
+
+            if no retention_policy is defined, no cleanup will be done.
+
+            retention policy may either be defined "inline" (as a mapping value) or by referencing
+            a pre-defined policy by name (see `retentions_policies` attribute). In the latter case,
+            use the policie's name as (string) attribute value.
         ''',
+    ),
+    AttributeSpec.optional(
+        name='retention_policies',
+        default=[
+            version.VersionRetentionPolicies(
+                name='clean-snapshots',
+                rules=[
+                    version.VersionRetentionPolicy(
+                        name='clean-snapshots',
+                        keep=64,
+                        match=version.VersionType.SNAPSHOT,
+                    ),
+                    version.VersionRetentionPolicy(
+                        name='keep-releases',
+                        keep='all',
+                        match=version.VersionType.RELEASE,
+                    ),
+                ],
+                dry_run=False,
+            ),
+            version.VersionRetentionPolicies(
+                name='clean-snapshots-and-releases',
+                rules=[
+                    version.VersionRetentionPolicy(
+                        name='clean-snapshots',
+                        keep=64,
+                        match=version.VersionType.SNAPSHOT,
+                    ),
+                    version.VersionRetentionPolicy(
+                        name='clean-releases',
+                        keep=128,
+                        match=version.VersionType.RELEASE,
+                    ),
+                ],
+                dry_run=False,
+            ),
+        ],
+        doc='''
+            predefined retention policies (see default value). may be referenced via
+            `retention_policy` attribute (adding additional policies here has no immediate effect)
+        '''
     ),
     AttributeSpec.deprecated(
         name='validation_policies',
@@ -156,7 +205,30 @@ class ComponentDescriptorTrait(Trait):
         if not (policy := self.raw.get('retention_policy', None)):
             return None
 
+        if isinstance(policy, str):
+            # lookup name
+            for candidate in self.raw.get('retention_policies', ()):
+                if isinstance(candidate, dict):
+                    name = candidate['name']
+                elif isinstance(candidate, version.VersionRetentionPolicies):
+                    name = candidate.name
+                else:
+                    raise ValueError(candidate)
+
+                if name == policy:
+                    break
+            else:
+                raise ValueError(f'did not find {policy=} in retention_policies')
+
         if raw:
+            if isinstance(policy, version.VersionRetentionPolicies):
+                policy = dataclasses.asdict(
+                    policy,
+                    dict_factory=ci.util.dict_factory_enum_serialisiation,
+                )
+            return policy
+
+        if isinstance(policy, version.VersionRetentionPolicies):
             return policy
 
         return dacite.from_dict(
