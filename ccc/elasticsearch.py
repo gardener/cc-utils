@@ -24,17 +24,26 @@ import elasticsearch
 
 import ci.util
 import concourse.util
+import model
 import model.elasticsearch
 
 
 logger = logging.getLogger(__name__)
 
 
-def default_client_if_available():
+def default_client_if_available(cfg_factory=None) -> 'ElasticSearchClient | None':
+    '''
+    Returns elasticsearch client if a default config is found.
+    '''
     if not ci.util._running_on_ci():
         return None
 
-    cfg_factory = ci.util.ctx().cfg_factory()
+    if not cfg_factory:
+        cfg_factory = ci.util.ctx().cfg_factory()
+
+    if isinstance(cfg_factory, model.ConfigurationSet):
+        return from_cfg(cfg_factory.elasticsearch())
+
     cfg_set = cfg_factory.cfg_set(ci.util.current_config_set_name())
     es_config = cfg_set.elasticsearch()
 
