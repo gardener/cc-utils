@@ -468,7 +468,7 @@ def smallest_versions(
     `converter`: optional value-conversion-callback (for convenience)
     '''
     if (versions_count := len(versions)) <= keep:
-        return versions
+        return []
 
     def _parse_version(version: T):
         if converter:

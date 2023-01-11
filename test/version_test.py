@@ -190,7 +190,8 @@ def test_bumping():
 
 def test_smallest_versions():
     # no filtering if keep >= amount of versions
-    assert set(version.smallest_versions({'1.2.3', '2.3.4'}, keep=2)) == {'1.2.3', '2.3.4'}
+    assert set(version.smallest_versions({'1.2.3', '2.3.4'}, keep=2)) == set()
+    assert set(version.smallest_versions({'1.2.3', '2.3.4'}, keep=10)) == set()
 
     # keep greatest (returned versions are intended to be removed)
     assert set(version.smallest_versions({'1.2.3', '2.3.4', '3.0'}, keep=1)) == {'1.2.3', '2.3.4'}
