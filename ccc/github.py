@@ -170,7 +170,8 @@ def github_api(
     verify_ssl = github_cfg.tls_validation()
 
     github_ctor = github_api_ctor(
-        github_url=github_url, verify_ssl=verify_ssl,
+        github_url=github_url,
+        verify_ssl=verify_ssl,
         session_adapter=session_adapter,
     )
     github_api = github_ctor(
