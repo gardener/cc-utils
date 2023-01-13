@@ -10,6 +10,12 @@ class GcpServiceAccount(NamedModelElement):
         '''
         return self.raw['service_account_key']
 
+    def service_account_credentials(self): # -> 'google.oauth2.service_account.Credentials':
+        import google.oauth2.service_account
+        return google.oauth2.service_account.Credentials.from_service_account_info(
+            self.service_account_key()
+        )
+
     def project(self):
         return self.raw['project']
 
