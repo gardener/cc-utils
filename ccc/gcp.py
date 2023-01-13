@@ -8,6 +8,7 @@ import google.cloud.storage
 
 import ccc.oci
 import model.container_registry
+import model.gcp
 
 import ci.util
 import oci.util
@@ -88,10 +89,12 @@ def qualified_service_account_key_name(
 
 
 def create_iam_client(
-    cfg_element: model.container_registry.ContainerRegistryConfig,
+    cfg_element: model.container_registry.ContainerRegistryConfig | model.gcp.GcpServiceAccount,
 ) -> googleapiclient.discovery.Resource:
     if isinstance(cfg_element, model.container_registry.ContainerRegistryConfig):
         credentials = cfg_element.credentials().service_account_credentials()
+    elif isinstance(cfg_element, model.gcp.GcpServiceAccount):
+        credentials = cfg_element.service_account_credentials()
     else:
         raise NotImplementedError
 
