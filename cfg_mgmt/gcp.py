@@ -81,7 +81,9 @@ def rotate_cfg_element(
 
     raw_cfg['password'] = json.dumps(new_key)
     updated_elem = model.container_registry.ContainerRegistryConfig(
-        name=cfg_element.name(), raw_dict=raw_cfg, type_name=cfg_element._type_name
+        name=cfg_element.name(),
+        raw_dict=raw_cfg,
+        type_name=cfg_element._type_name,
     )
 
     secret_id = {'gcp_secret_key': old_key_id}
