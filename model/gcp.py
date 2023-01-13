@@ -10,7 +10,7 @@ class GcpServiceAccount(NamedModelElement):
         '''
         return self.raw['service_account_key']
 
-    def service_account_credentials(self): # -> 'google.oauth2.service_account.Credentials':
+    def service_account_credentials(self) -> 'google.oauth2.service_account.Credentials':
         import google.oauth2.service_account
         return google.oauth2.service_account.Credentials.from_service_account_info(
             self.service_account_key()
@@ -18,6 +18,12 @@ class GcpServiceAccount(NamedModelElement):
 
     def project(self):
         return self.raw['project']
+
+    def client_email(self) -> str:
+        return self.service_account_key()['client_email']
+
+    def private_key_id(self) -> str:
+        return self.service_account_key()['private_key_id']
 
     def _required_attributes(self):
         return ['service_account_key','project']

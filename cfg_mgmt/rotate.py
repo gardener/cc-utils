@@ -125,6 +125,9 @@ def rotate_cfg_element(
             )
             return None
 
+    elif type_name == 'gcp':
+        update_secret_function = cmg.rotate_cfg_element
+
     elif type_name == 'github':
         update_secret_function = cmgh.rotate_cfg_element
 
