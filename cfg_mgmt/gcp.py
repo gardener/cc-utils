@@ -14,6 +14,7 @@ import ci.log
 import ci.util
 import model
 import model.container_registry
+import model.gcp
 
 
 ci.log.configure_default_logging()
@@ -53,7 +54,7 @@ def delete_service_account_key(
 
 
 def rotate_cfg_element(
-    cfg_element: model.container_registry.ContainerRegistryConfig,
+    cfg_element: model.container_registry.ContainerRegistryConfig | model.gcp.GcpServiceAccount,
     cfg_factory: model.ConfigFactory,
 ) ->  typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]:
     client_email = cfg_element.client_email()
@@ -79,8 +80,15 @@ def rotate_cfg_element(
 
     raw_cfg = copy.deepcopy(cfg_element.raw)
 
-    raw_cfg['password'] = json.dumps(new_key)
-    updated_elem = model.container_registry.ContainerRegistryConfig(
+    if isinstance(cfg_element, model.container_registry.ContainerRegistryConfig):
+        raw_cfg['password'] = json.dumps(new_key)
+    elif isinstance(cfg_element, model.gcp.GcpServiceAccount):
+        raw_cfg['service_account_key'] = new_key
+    else:
+        raise ValueError(cfg_element)
+
+    updated_elem = type(cfg_element)(
+        # checked for correct type already
         name=cfg_element.name(),
         raw_dict=raw_cfg,
         type_name=cfg_element._type_name,
