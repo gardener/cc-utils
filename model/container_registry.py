@@ -59,6 +59,12 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
             'password',
         }
 
+    def client_email(self) -> str:
+        return json.loads(self.password())['client_email']
+
+    def private_key_id(self) -> str:
+        return json.loads(self.password())['private_key_id']
+
     def registry_type(self):
         try:
             return om.OciRegistryType(self.raw.get('registry_type'))

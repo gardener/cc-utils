@@ -56,7 +56,7 @@ def rotate_cfg_element(
     cfg_element: model.container_registry.ContainerRegistryConfig,
     cfg_factory: model.ConfigFactory,
 ) ->  typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]:
-    client_email = json.loads(cfg_element.password())['client_email']
+    client_email = cfg_element.client_email()
 
     iam_client = ccc.gcp.create_iam_client(
         cfg_element=cfg_element,
@@ -66,7 +66,7 @@ def rotate_cfg_element(
         client_email,
     )
 
-    old_key_id = json.loads(cfg_element.password())['private_key_id']
+    old_key_id = cfg_element.private_key_id()
     old_key_id = ccc.gcp.qualified_service_account_key_name(
         service_account_name=client_email,
         key_name=old_key_id,
