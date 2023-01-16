@@ -1,5 +1,13 @@
+import logging
+import reutil
+
+import ccc.github
+import checkmarx.util
 import concourse.steps.scan_sources
 import concourse.steps.component_descriptor_util as cdu
+
+
+logger = logging.getLogger(__name__)
 
 
 def upload_and_scan_from_component_descriptor(
@@ -18,3 +26,43 @@ def upload_and_scan_from_component_descriptor(
         component_descriptor=component_descriptor,
         force=force,
     )
+
+
+def generate_scan_archive(
+    repo_url: str, # github.com/gardener/cc-utils
+    commit_hash: str | None=None,
+    exclude_regex: [str] = [],
+    include_regex: [str] = [],
+    out_file_path: str='checkmarx_archive',
+):
+    '''
+    create checkmarx scan archive with filters applied
+    does not upload to scan API
+
+    commit_hash defaults to repo main branch
+    '''
+
+    path_filter_func = reutil.re_filter(
+        include_regexes=include_regex,
+        exclude_regexes=exclude_regex,
+    )
+
+    gh_api = ccc.github.github_api(repo_url=repo_url)
+    _, org, repo = repo_url.split('/')
+    repo = gh_api.repository(org, repo)
+
+    if not commit_hash:
+        commit_hash = repo.default_branch
+
+    logger.info(f'{commit_hash=}')
+    logger.info(f'{out_file_path=}')
+
+    with open(out_file_path, 'wb') as f:
+        checkmarx.util._download_and_zip_repo(
+            clogger=logger,
+            repo=repo,
+            ref=commit_hash,
+            tmp_file=f,
+            path_filter_func=path_filter_func,
+        )
+        f.seek(0)
