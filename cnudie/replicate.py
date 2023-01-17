@@ -34,7 +34,6 @@ def replicate_oci_artifact_with_patched_component_descriptor(
         logger.warning('passing src_ctx_repo_base_url is deprecated - pass src_ctx_repo')
         src_ctx_repo = cm.OciRepositoryContext(
             baseUrl=src_ctx_repo_base_url,
-            componentNameMapping=cm.OciComponentNameMapping.URL_PATH,
         )
 
     if not isinstance(src_ctx_repo, cm.OciRepositoryContext):
@@ -59,10 +58,9 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     else:
         raise NotImplementedError(on_exist)
 
-    src_ref = v2._target_oci_ref_from_ctx_base_url(
-        component_name=src_name,
-        component_version=src_version,
-        ctx_repo=src_ctx_repo,
+    src_ref = src_ctx_repo.component_oci_ref(
+        name=src_name,
+        version=src_version,
     )
 
     src_manifest = client.manifest(

@@ -149,19 +149,13 @@ def test_target_matches():
         name='res1',
         version='1.2.3',
         type=cm.ResourceType.GENERIC,
-        access=cm.HttpAccess(
-            url='made-up-url',
-            type=cm.AccessType.HTTP,
-        ),
+        access=cm.ResourceAccess(),
     )
     new_resource = cm.Resource(
         name='res1',
         version='2.0.0',
         type=cm.ResourceType.GENERIC,
-        access=cm.HttpAccess(
-            url='made-up-url.2',
-            type=cm.AccessType.HTTP,
-        ),
+        access=cm.ResourceAccess(),
     )
 
     examinee = create_upgrade_pr(
@@ -189,10 +183,7 @@ def test_target_matches():
             name='different-name',
             version='2.0.0',
             type=cm.ResourceType.GENERIC,
-            access=cm.HttpAccess(
-                url='made-up-url.2',
-                type=cm.AccessType.HTTP,
-            ),
+            access=cm.ResourceAccess(),
         )
     )
 
@@ -202,10 +193,7 @@ def test_target_matches():
             name='res1',
             version='8.7.9',
             type=cm.ResourceType.GENERIC,
-            access=cm.HttpAccess(
-                url='made-up-url.2',
-                type=cm.AccessType.HTTP,
-            ),
+            access=cm.ResourceAccess(),
         )
     )
 
@@ -215,9 +203,6 @@ def test_target_matches():
             name='res1',
             version='2.0.0',
             type=cm.ResourceType.GENERIC,
-            access=cm.HttpAccess(
-                url='made-up-url.2',
-                type=cm.AccessType.HTTP,
-            ),
+            access=cm.ResourceAccess(),
         )
     )

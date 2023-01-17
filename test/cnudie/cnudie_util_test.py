@@ -43,7 +43,9 @@ def comp(
     return cm.Component(
         name=name,
         version=version,
-        provider=cm.Provider.INTERNAL,
+        provider={
+            'name': 'some company',
+        },
         repositoryContexts=[],
         componentReferences=componentReferences or [],
         sources=[],

@@ -141,7 +141,6 @@ ctx_repo = dacite.from_dict(
   config=dacite.Config(
     cast=[
         gci.componentmodel.AccessType,
-        gci.componentmodel.OciComponentNameMapping,
     ]
   )
 )

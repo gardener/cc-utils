@@ -123,7 +123,9 @@ class TestGitHubReleaseStep:
                 name='test.url/foo/bar',
                 version='1.2.3',
                 repositoryContexts=[],
-                provider=cm.Provider.INTERNAL,
+                provider={
+                    'name': 'some provider',
+                },
                 sources=[],
                 componentReferences=[],
                 resources=[],
@@ -177,7 +179,9 @@ class TestPublishReleaseNotesStep:
                 name='example.com/a_name',
                 version='1.2.3',
                 repositoryContexts=[],
-                provider=cm.Provider.INTERNAL,
+                provider={
+                    'name': 'some provider',
+                },
                 sources=[],
                 componentReferences=[],
                 resources=[],

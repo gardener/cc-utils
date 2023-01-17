@@ -22,6 +22,7 @@ import yaml
 import ci.util
 import cnudie.util
 import cnudie.retrieve
+import cnudie.migrate
 
 import gci.componentmodel as cm
 
@@ -46,6 +47,7 @@ def base_component_descriptor_v2(
     ctx_repository_base_url: str,
     commit: str,
 ):
+    import cnudie.migrate
     import gci.componentmodel as cm
     import version as version_util
     parsed_version = version_util.parse_to_semver(effective_version)
@@ -62,6 +64,13 @@ def base_component_descriptor_v2(
     # logical names must not contain slashes or dots
     logical_name = component_name_v2.replace('/', '_').replace('.', '_')
 
+    if cnudie.migrate.emit_compatible_to_cnudie_v2:
+        provider = 'internal'
+    else:
+        provider = {
+            'name': 'SAP SE',
+        }
+
     base_descriptor_v2 = cm.ComponentDescriptor(
       meta=cm.Metadata(schemaVersion=cm.SchemaVersion.V2),
       component=cm.Component(
@@ -73,7 +82,7 @@ def base_component_descriptor_v2(
             type=cm.AccessType.OCI_REGISTRY,
           )
         ],
-        provider=cm.Provider.INTERNAL,
+        provider=provider,
         sources=[
           cm.ComponentSource(
             name=logical_name,

@@ -279,7 +279,6 @@ class ComponentDescriptorTrait(Trait):
 
         return cm.OciRepositoryContext(
             baseUrl=ctx_repo_cfg.base_url(),
-            componentNameMapping=ctx_repo_cfg.component_name_mapping(),
         )
 
     def ctx_repository_base_url(self):

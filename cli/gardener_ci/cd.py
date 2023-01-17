@@ -25,7 +25,6 @@ def retrieve(
 
     ctx_repo = cm.OciRepositoryContext(
             baseUrl=ocm_repo,
-            componentNameMapping=cm.OciComponentNameMapping.URL_PATH,
         )
 
     if not version:
@@ -63,9 +62,8 @@ def validate(
         ctx_base_url = ctx.cfg.ctx.ocm_repo_base_url
 
     ctx_repo = cm.OciRepositoryContext(
-            baseUrl=ctx_base_url,
-            componentNameMapping=cm.OciComponentNameMapping.URL_PATH,
-        )
+        baseUrl=ctx_base_url,
+    )
 
     logger.info('retrieving component-descriptor..')
     component_descriptor = cnudie.retrieve.oci_component_descriptor_lookup()(

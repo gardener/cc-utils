@@ -1,5 +1,4 @@
 import dataclasses
-import hashlib
 import io
 import json
 import logging
@@ -296,7 +295,7 @@ def oci_component_descriptor_lookup(
             layer_digest = manifest.layers[0].digest
             layer_mimetype = manifest.layers[0].mediaType
 
-        if not layer_mimetype == gci.oci.component_descriptor_mimetype:
+        if not layer_mimetype in gci.oci.component_descriptor_mimetypes:
             logger.warning(f'{target_ref=} {layer_mimetype=} was unexpected')
             # XXX: check for non-tar-variant
 
@@ -494,24 +493,7 @@ def component_versions(
         oci_client = ccc.oci.oci_client()
 
     ctx_repo: cm.OciRepositoryContext
-
-    if ctx_repo.componentNameMapping is cm.OciComponentNameMapping.URL_PATH:
-        oci_ref = ci.util.urljoin(
-            ctx_repo.baseUrl,
-            'component-descriptors',
-            component_name.lower(),  # oci-spec allows only lowercase
-        )
-    elif ctx_repo.componentNameMapping is cm.OciComponentNameMapping.SHA256_DIGEST:
-        component_name_digest = hashlib.sha256(
-            component_name.lower().encode('utf-8')  # oci-spec allows only lowercase
-        ).hexdigest().lower()
-
-        oci_ref = ci.util.urljoin(
-            ctx_repo.baseUrl,
-            component_name_digest,
-        )
-    else:
-        raise NotImplementedError(ctx_repo.componentNameMapping)
+    oci_ref = ctx_repo.component_oci_ref(component_name)
 
     return oci_client.tags(image_reference=oci_ref)
 

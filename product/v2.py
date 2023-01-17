@@ -60,36 +60,6 @@ def ensure_is_v2(
         raise RuntimeError(f'unsupported component-descriptor-version: {schema_version=}')
 
 
-def _target_oci_repository_from_component_name(
-    component_name: str,
-    ctx_repo: cm.RepositoryContext,
-):
-    if not isinstance(ctx_repo, cm.OciRepositoryContext):
-        raise NotImplementedError(ctx_repo)
-
-    ctx_repo: cm.OciRepositoryContext
-
-    component_name = _normalise_component_name(component_name)
-
-    if ctx_repo.componentNameMapping is cm.OciComponentNameMapping.URL_PATH:
-        return ci.util.urljoin(
-            ctx_repo.baseUrl,
-            'component-descriptors',
-            component_name,
-        )
-    elif ctx_repo.componentNameMapping is cm.OciComponentNameMapping.SHA256_DIGEST:
-        component_name_digest = hashlib.sha256(
-            component_name.encode('utf-8')
-        ).hexdigest().lower()
-
-        return ci.util.urljoin(
-            ctx_repo.baseUrl,
-            component_name_digest,
-        )
-    else:
-        raise NotImplementedError(ctx_repo.componentNameMapping)
-
-
 def _target_oci_ref(
     component: gci.componentmodel.Component,
     component_ref: gci.componentmodel.ComponentReference=None,
@@ -108,30 +78,9 @@ def _target_oci_ref(
     # last ctx-repo is target-repository
     last_ctx_repo = component.repositoryContexts[-1]
 
-    repository = _target_oci_repository_from_component_name(
-        component_name=component_name,
-        ctx_repo=last_ctx_repo,
-    )
-
-    return f'{repository}:{component_version}'
-
-
-def _target_oci_ref_from_ctx_base_url(
-    component_name: str,
-    component_version: str,
-    ctx_repo: cm.RepositoryContext,
-):
-    if not isinstance(ctx_repo, cm.RepositoryContext):
-        raise NotImplementedError(ctx_repo)
-
-    ctx_repo: cm.OciRepositoryContext
-
-    component_name = _normalise_component_name(component_name)
-
-    return ci.util.urljoin(
-        ctx_repo.baseUrl,
-        'component-descriptors',
-        f'{component_name}:{component_version}',
+    return last_ctx_repo.component_version_oci_ref(
+        name=component_name,
+        version=component_version,
     )
 
 
@@ -155,16 +104,15 @@ def download_component_descriptor_v2(
 
     ctx_repo: cm.OciRepositoryContext
 
-    target_ref = _target_oci_ref_from_ctx_base_url(
+    target_ref = ctx_repo.component_version_oci_ref(
         component_name=component_name,
         component_version=component_version,
-        ctx_repo=ctx_repo,
     )
 
     if cache_dir:
         descriptor_path = os.path.join(
             cache_dir,
-            ctx_repo.baseUrl.replace('/', '-'),
+            ctx_repo.oci_ref.replace('/', '-'),
             f'{component_name}-{component_version}',
         )
         if os.path.isfile(descriptor_path):
@@ -224,13 +172,13 @@ def write_component_descriptor_to_dir(
         logger.warning('passing ctx_repo_base_url is deprectead - pass ctx_repo instead')
 
     if not ctx_repo_base_url and not ctx_repo:
-        ctx_repo_base_url = component_descriptor.component.current_repository_ctx().baseUrl
+        ctx_repo_base_url = component_descriptor.component.current_repository_ctx().oci_ref
     elif ctx_repo:
         if not isinstance(ctx_repo, cm.OciRepositoryContext):
             raise NotImplementedError(ctx_repo)
         ctx_repo: cm.OciRepositoryContext
 
-        ctx_repo_base_url = ctx_repo.baseUrl
+        ctx_repo_base_url = ctx_repo.oci_ref
 
     component = component_descriptor.component
     descriptor_path = os.path.join(
@@ -401,7 +349,7 @@ def retrieve_component_descriptor_from_oci_ref(
         layer_digest = manifest.layers[0].digest
         layer_mimetype = manifest.layers[0].mediaType
 
-    if not layer_mimetype == gci.oci.component_descriptor_mimetype:
+    if not layer_mimetype in gci.oci.component_descriptor_mimetypes:
         logger.warning(f'{manifest_oci_image_ref=} {layer_mimetype=} was unexpected')
         # XXX: check for non-tar-variant
 
@@ -668,10 +616,7 @@ def component_versions(
 
     ctx_repo: cm.OciRepositoryContext
 
-    oci_ref = _target_oci_repository_from_component_name(
-        component_name,
-        ctx_repo=ctx_repo,
-    )
+    oci_ref = ctx_repo.component_oci_ref(component_name)
     client = ccc.oci.oci_client()
     return client.tags(image_reference=oci_ref)
 
@@ -692,10 +637,7 @@ def greatest_component_version_with_matching_minor(
     if not isinstance(ctx_repo, cm.OciRepositoryContext):
         raise NotImplementedError(ctx_repo)
 
-    oci_image_repo = _target_oci_repository_from_component_name(
-        component_name,
-        ctx_repo=ctx_repo,
-    )
+    oci_image_repo = ctx_repo.component_oci_ref(component_name)
     client = ccc.oci.oci_client()
     image_tags = client.tags(image_reference=oci_image_repo)
     return version.find_latest_version_with_matching_minor(
