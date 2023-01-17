@@ -12,6 +12,7 @@ import zipfile
 import github3.exceptions
 import github3.repos
 
+import ccc.delivery
 import ccc.github
 import cnudie.retrieve
 import checkmarx.client
@@ -19,6 +20,7 @@ import checkmarx.model as model
 import checkmarx.project
 import checkmarx.tablefmt
 import ci.util
+import github.compliance.model
 import model.checkmarx as cmmmodel
 import product.util
 import reutil
@@ -481,3 +483,36 @@ def get_checkmarx_cfg(checkmarx_cfg_name: str) -> cmmmodel.CheckmarxConfig:
 @functools.lru_cache()
 def create_checkmarx_client(checkmarx_cfg: cmmmodel.CheckmarxConfig):
     return checkmarx.client.CheckmarxClient(checkmarx_cfg)
+
+
+def iter_artefact_metadata(results: typing.Iterable[model.ScanResult]) \
+    -> typing.Generator[dso.model.ArtefactMetadata, None, None]:
+    for result in results:
+        artefact = github.compliance.model.artifact_from_node(result.scanned_element)
+        artefact_ref = dso.model.component_artefact_id_from_ocm(
+            component=result.scanned_element.component,
+            artefact=artefact,
+        )
+        meta = dso.model.Metadata(
+            datasource=dso.model.Datasource.CHECKMARX,
+            type=dso.model.Datatype.CODECHECKS_AGGREGATED,
+            creation_date=datetime.datetime.now(),
+        )
+        codecheck = dso.model.CodecheckSummary(
+            findings=dso.model.CodecheckFindings(
+                high=result.scan_statistic.highSeverity,
+                medium=result.scan_statistic.mediumSeverity,
+                low=result.scan_statistic.lowSeverity,
+                info=result.scan_statistic.infoSeverity,
+            ),
+            risk_rating=result.scan_response.scanRisk,
+            risk_severity=result.scan_response.scanRiskSeverity,
+            overview_url=result.overview_url,
+            report_url=result.report_url,
+        )
+
+        yield dso.model.ArtefactMetadata(
+            artefact=artefact_ref,
+            meta=meta,
+            data=codecheck,
+        )
