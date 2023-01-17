@@ -97,6 +97,35 @@ class PipelineConfig:
         return [r for r in self.resources if r.type in types]
 
 
+class Pipeline:
+    '''
+    Wrapper around the dictionary received from invoking the concourse
+    `pipelines/<pipeline>` REST API
+
+    Not intended to be instantiated by users of this module
+    '''
+    def __init__(self, raw: dict):
+        self.raw = raw
+
+    def name(self) -> str:
+        return self.raw['name']
+
+    def team_name(self) -> str:
+        return self.raw['team_name']
+
+    def id(self) -> int:
+        return self.raw['id']
+
+    def is_paused(self) -> bool:
+        return self.raw['paused']
+
+    def is_public(self) -> bool:
+        return self.raw['public']
+
+    def is_archived(self) -> bool:
+        return self.raw['archived']
+
+
 class Job:
     '''
     Wrapper around the dictionary representing a job as part of a

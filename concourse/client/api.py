@@ -30,6 +30,7 @@ from concourse.client.model import (
     BuildEvents,
     BuildPlan,
     ConcourseJob,
+    Pipeline,
     PipelineConfig,
     PipelineConfigResource,
     PipelineResource,
@@ -181,6 +182,11 @@ class ConcourseApiBase:
     def delete_pipeline(self, name: str):
         url = self.routes.pipeline(pipeline_name=name)
         self._delete(url)
+
+    @ensure_annotations
+    def get_pipeline(self, name: str):
+        url = self.routes.pipeline(pipeline_name=name)
+        return Pipeline(self._get(url))
 
     def pipelines(self):
         pipelines_url = self.routes.pipelines()
