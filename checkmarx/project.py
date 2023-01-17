@@ -53,7 +53,8 @@ class CheckmarxProject:
             scan_response = self._poll_scan(scan_id=scan_id)
 
             if scan_response.status_value() is not model.ScanStatusValues.FINISHED:
-                raise RuntimeError(f'Scan of artifact "{self.artifact_name}" finished with errors')
+                raise RuntimeError(f'Scan of artifact "{self.artifact_name}:{source.version}" '
+                    'finished with errors')
 
             scan_state = github.compliance.model.ScanState.SUCCEEDED
             report_url = self.client.routes.web_ui_scan_viewer(
