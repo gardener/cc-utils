@@ -270,10 +270,17 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                     # branches)
                     yield branch, None
             else:
+                yielded = False
                 for branch in repository.branches():
                     cfg_entry = branch_cfg.cfg_entry_for_branch(branch.name)
                     if cfg_entry:
+                        yielded = True
                         yield (branch.name, cfg_entry)
+                if not yielded:
+                    logger.warning(
+                        'Applying branch.cfg resulted in no pipeline-definition for repository '
+                        f"'{repository}'. Do the branches configured in the branch config exist?"
+                    )
 
     def _scan_repository_for_definitions(
         self,
