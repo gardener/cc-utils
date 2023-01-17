@@ -56,6 +56,7 @@ def component_artefact_id_from_ocm(
 
 
 class Datatype:
+    CODECHECKS_AGGREGATED = 'codechecks/aggregated'
     VULNERABILITIES_AGGREGATED = 'vulnerabilities/aggregated'
     VULNERABILITIES_RAW = 'vulnerabilities/raw'
     MALWARE = 'malware'
@@ -119,7 +120,24 @@ class MalwareSummary:
 
 
 @dataclasses.dataclass(frozen=True)
+class CodecheckFindings:
+    high: int
+    medium: int
+    low: int
+    info: int
+
+
+@dataclasses.dataclass(frozen=True)
+class CodecheckSummary:
+    findings: CodecheckFindings
+    risk_rating: int
+    risk_severity: int
+    overview_url: str
+    report_url: str | None
+
+
+@dataclasses.dataclass(frozen=True)
 class ArtefactMetadata:
     artefact: ComponentArtefactId
     meta: Metadata
-    data: GreatestCVE | LicenseSummary | ComponentSummary | OsID | MalwareSummary | FilesystemPaths | dict # noqa: E501
+    data: GreatestCVE | LicenseSummary | ComponentSummary | OsID | MalwareSummary | FilesystemPaths | CodecheckSummary | dict # noqa: E501
