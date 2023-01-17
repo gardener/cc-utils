@@ -105,8 +105,8 @@ def download_component_descriptor_v2(
     ctx_repo: cm.OciRepositoryContext
 
     target_ref = ctx_repo.component_version_oci_ref(
-        component_name=component_name,
-        component_version=component_version,
+        name=component_name,
+        version=component_version,
     )
 
     if cache_dir:
