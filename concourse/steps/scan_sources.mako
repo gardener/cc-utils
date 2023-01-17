@@ -35,7 +35,9 @@ ${step_lib('scan_sources')}
 
 import sys
 import dacite
+import ccc.delivery
 import ccc.github
+import checkmarx.util
 import ci.log
 ci.log.configure_default_logging()
 import ci.util
@@ -128,5 +130,13 @@ github.compliance.report.create_or_update_github_issues(
   license_cfg=None,
 )
 % endif
+
+delivery_service_client = ccc.delivery.default_client_if_available()
+if delivery_service_client:
+    logger.info('Uploading result to delivery-service')
+    for artefact_metadata in checkmarx.util.iter_artefact_metadata(scan_results.scans):
+        delivery_service_client.upload_metadata(artefact_metadata)
+else:
+    logger.warning('Not uploading results to delivery-service, client not available')
 
 </%def>
