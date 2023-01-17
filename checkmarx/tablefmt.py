@@ -10,7 +10,7 @@ def get_scan_info_table(
     scan_results: typing.Iterable[model.ScanResult],
     tablefmt: str = 'simple',
 ):
-    scan_info_header = ('Scan ID', 'Artifact Name', 'Scan State', 'Start', 'End')
+    scan_info_header = ('Scan ID', 'Artifact Name', 'Artifact Version', 'Scan State', 'Start', 'End')
 
     def started_on(scan_result: model.ScanResult):
         if scan_result.scan_response:
@@ -28,6 +28,7 @@ def get_scan_info_table(
         (
             scan_result.scan_response.id,
             scan_result.artifact_name,
+            scan_result.scanned_element.source.version,
             scan_result.scan_response.status.name,
             started_on(scan_result),
             ended_on(scan_result),
@@ -70,6 +71,7 @@ def get_scan_statistics_tables(
 
     scan_statistics_header = (
         'Artifact Name',
+        'Artifact Version',
         'Overall Severity',
         'High',
         'Medium',
@@ -80,6 +82,7 @@ def get_scan_statistics_tables(
     scan_statistics_data = [
         (
             artifact_name(scan_result),
+            scan_result.scanned_element.source.version,
             scan_severity(scan_result),
             scan_result.scan_statistic.highSeverity,
             scan_result.scan_statistic.mediumSeverity,

@@ -369,7 +369,8 @@ def print_scans(
         print('\n')
         failed_artifacts_str = '\n'.join(
             (
-                f'- {scan_result.artifact_name}' for scan_result in scans.failed_scans
+                f'- {scan_result.artifact_name}:{scan_result.scanned_element.source.version}'
+                for scan_result in scans.failed_scans
             )
         )
         logger.warning(f'failed scan artifacts:\n\n{failed_artifacts_str}\n')
