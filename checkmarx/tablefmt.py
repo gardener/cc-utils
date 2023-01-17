@@ -101,8 +101,8 @@ def get_scan_statistics_tables(
 
 
 def print_scan_result(
-        scan_results: typing.Iterable[model.ScanResult],
-        routes: checkmarx.client.CheckmarxRoutes,
+    scan_results: typing.Iterable[model.ScanResult],
+    routes: checkmarx.client.CheckmarxRoutes,
 ):
     scan_info_table = get_scan_info_table(scan_results=scan_results, tablefmt='simple')
     scan_statistics_table = get_scan_statistics_tables(
