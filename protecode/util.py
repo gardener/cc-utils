@@ -18,6 +18,7 @@ import logging
 import typing
 
 import ci.log
+import delivery.client
 import dso.model
 import gci.componentmodel as cm
 import github.compliance.model
@@ -29,7 +30,7 @@ ci.log.configure_default_logging(print_thread_id=True)
 
 
 def upload_results_to_deliverydb(
-    delivery_client,
+    delivery_client: delivery.client.DeliveryServiceClient,
     results: typing.Iterable[pm.BDBA_ScanResult],
 ):
     try:
