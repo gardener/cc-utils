@@ -42,7 +42,7 @@ def upload_results_to_deliverydb(
 
 def iter_artefact_metadata(
     results: typing.Collection[pm.BDBA_ScanResult],
-) -> typing.Generator[dso.model.GreatestCVE, None, None]:
+) -> typing.Generator[dso.model.ArtefactMetadata, None, None]:
     for result in results:
         artefact = github.compliance.model.artifact_from_node(result.scanned_element)
         artefact_ref = dso.model.component_artefact_id_from_ocm(
