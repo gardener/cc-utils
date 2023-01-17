@@ -15,6 +15,8 @@ def upload_and_scan_from_component_descriptor(
     component_descriptor_path: str,
     team_id: str=None,
     force: bool=False,
+    exclude_regex: [str] = [],
+    include_regex: [str] = [],
 ):
     component_descriptor = cdu.component_descriptor_from_component_descriptor_path(
         cd_path=component_descriptor_path,
@@ -25,6 +27,8 @@ def upload_and_scan_from_component_descriptor(
         team_id=team_id,
         component_descriptor=component_descriptor,
         force=force,
+        exclude_paths=exclude_regex,
+        include_paths=include_regex,
     )
 
 
