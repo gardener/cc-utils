@@ -104,7 +104,7 @@ class CheckmarxProject:
         self,
         scan_id: int,
         polling_interval_seconds=60,
-        timeout_seconds=1200,
+        timeout_seconds=3600,
     ) -> model.ScanResponse:
         def scan_finished():
             scan = self.client.get_scan_state(scan_id=scan_id)
