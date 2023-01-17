@@ -495,6 +495,9 @@ def resources(
         raise NotImplementedError
 
     for resource in (r for r in resources if resource_types is None or r.type in resource_types):
+        if isinstance(resource.access, dict):
+            logger.warning(f'ignoring {resource=}')
+            continue
         if resource.access is None and None in resource_access_types:
             yield resource
         elif resource.access and resource.access.type in resource_access_types:
