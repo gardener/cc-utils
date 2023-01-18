@@ -95,7 +95,7 @@ def github_api_ctor(
     try:
         es_client = ccc.elasticsearch.default_client_if_available(cfg_factory)
         if es_client:
-            logger.info('logging github api requests to elasticsearch')
+            logger.debug('logging github api requests to elasticsearch')
             session.request = intercepted_request
 
     except Exception as e:
