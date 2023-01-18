@@ -58,7 +58,7 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     else:
         raise NotImplementedError(on_exist)
 
-    src_ref = src_ctx_repo.component_oci_ref(
+    src_ref = src_ctx_repo.component_version_oci_ref(
         name=src_name,
         version=src_version,
     )
