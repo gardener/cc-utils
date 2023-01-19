@@ -159,7 +159,12 @@ class UpgradePullRequest:
         self.from_ref = from_ref
         self.to_ref = to_ref
         if isinstance(from_ref, cm.Resource):
-            self.reference_type_name = from_ref.type.value
+            if isinstance(from_ref.type, enum.Enum):
+                self.reference_type_name = from_ref.type.value
+            elif isinstance(from_ref.type, str):
+                self.reference_type_name = from_ref.type
+            else:
+                raise ValueError(from_ref.type)
         elif isinstance(from_ref, cm.ComponentReference):
             self.reference_type_name = product.v2.COMPONENT_TYPE_NAME
         else:
@@ -216,7 +221,13 @@ class UpgradePullRequest:
         else: # cm.Resource, already checked above
             if reference.name != self.ref_name:
                 return False
-            if reference.type.value != self.reference_type_name:
+            if isinstance(reference.type, enum.Enum):
+                reference_type = reference.type.value
+            elif isinstance(reference.type, str):
+                reference_type = reference.type
+            else:
+                raise ValueError(reference.type)
+            if reference_type != self.reference_type_name:
                 return False
 
         reference_version = reference_version or reference.version
