@@ -64,7 +64,7 @@ def _raw_generic_dep_to_v2(raw: dict):
   return cm.Resource(
     name=name,
     version=version,
-    type=cm.ResourceType.GENERIC,
+    type='generic', # removed in later OCM versions, kept for backwards compatibility
     relation=rel,
     access=None,
   )
