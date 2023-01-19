@@ -55,6 +55,12 @@ CHECKMARX_ATTRIBUTES = (
         name='exclude_path_regexes',
         type=typing.List[str],
     ),
+    AttributeSpec.optional(
+        name='scan_timeout',
+        doc='consider scan as failed if scan time exceeds timeout (in seconds)',
+        default=3600,
+        type=int,
+    ),
 )
 
 
@@ -111,6 +117,9 @@ class CheckmarxCfg(ModelBase):
 
     def exclude_path_regexes(self):
         return self.raw['exclude_path_regexes']
+
+    def scan_timeout(self) -> int:
+        return self.raw.get('scan_timeout')
 
 
 ATTRIBUTES = (

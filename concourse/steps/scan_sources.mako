@@ -65,6 +65,7 @@ max_processing_days = dacite.from_dict(
   data=${dataclasses.asdict(issue_policies.max_processing_time_days)},
 )
 severity_threshold = '${checkmarx_cfg.severity_threshold()}'
+scan_timeout = ${checkmarx_cfg.scan_timeout()}
 
 delivery_svc_endpoints = ccc.delivery.endpoints(cfg_set=cfg_set)
 delivery_svc_client = ccc.delivery.default_client_if_available()
@@ -83,6 +84,7 @@ scan_results = scan_sources(
     component_descriptor=component_descriptor,
     team_id='${checkmarx_cfg.team_id()}',
     threshold=severity_threshold,
+    scan_timeout=scan_timeout,
     include_paths=${checkmarx_cfg.include_path_regexes()},
     exclude_paths=${checkmarx_cfg.exclude_path_regexes()},
 )

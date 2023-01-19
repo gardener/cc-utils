@@ -35,6 +35,7 @@ def scan_result_group_collection(
 def scan_sources(
     checkmarx_cfg_name: str,
     component_descriptor: gci.componentmodel.ComponentDescriptor,
+    timeout_seconds: int=3600,
     team_id: str = None,
     threshold: str = 'medium',
     exclude_paths: typing.Sequence[str] = (),
@@ -56,6 +57,7 @@ def scan_sources(
         exclude_paths=exclude_paths,
         include_paths=include_paths,
         force=force,
+        timeout_seconds=timeout_seconds,
     )
 
     checkmarx.util.print_scans(

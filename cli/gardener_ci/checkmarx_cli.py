@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 def upload_and_scan_from_component_descriptor(
     checkmarx_cfg_name: str,
     component_descriptor_path: str,
+    scan_timeout: int=3600,
     team_id: str=None,
     force: bool=False,
     exclude_regex: [str] = [],
@@ -29,6 +30,7 @@ def upload_and_scan_from_component_descriptor(
         force=force,
         exclude_paths=exclude_regex,
         include_paths=include_regex,
+        timeout_seconds=scan_timeout,
     )
 
 

@@ -47,10 +47,14 @@ class CheckmarxProject:
         scan_id: int,
         component: cm.Component,
         source: cm.ComponentSource,
+        timeout_seconds: int,
     ) -> model.ScanResult:
         scan_response = None
         try:
-            scan_response = self._poll_scan(scan_id=scan_id)
+            scan_response = self._poll_scan(
+                scan_id=scan_id,
+                timeout_seconds=timeout_seconds,
+            )
 
             if scan_response.status_value() is not model.ScanStatusValues.FINISHED:
                 raise RuntimeError(f'Scan of artifact "{self.artifact_name}:{source.version}" '
@@ -105,7 +109,7 @@ class CheckmarxProject:
         self,
         scan_id: int,
         polling_interval_seconds=60,
-        timeout_seconds=3600,
+        timeout_seconds: int=3600,
     ) -> model.ScanResponse:
         def scan_finished():
             scan = self.client.get_scan_state(scan_id=scan_id)

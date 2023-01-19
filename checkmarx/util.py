@@ -35,6 +35,7 @@ def scan_sources(
     component_descriptor: cm.ComponentDescriptor,
     cx_client: checkmarx.client.CheckmarxClient,
     team_id: str,
+    timeout_seconds: int,
     max_workers: int = 4, # only two scan will be run per user
     exclude_paths: typing.Sequence[str] = (),
     include_paths: typing.Sequence[str] = (),
@@ -56,6 +57,7 @@ def scan_sources(
         scan_artifacts=artifacts_gen,
         team_id=team_id,
         force=force,
+        timeout_seconds=timeout_seconds,
     )
 
 
@@ -117,6 +119,7 @@ def scan_artifacts(
     max_workers: int,
     scan_artifacts: typing.Tuple[dso.model.ScanArtifact],
     team_id: str,
+    timeout_seconds: int,
     exclude_paths: typing.Sequence[str] = (),
     include_paths: typing.Sequence[str] = (),
     force: bool = False,
@@ -135,6 +138,7 @@ def scan_artifacts(
         exclude_paths=exclude_paths,
         include_paths=include_paths,
         force=force,
+        timeout_seconds=timeout_seconds,
     )
 
     def init_scan(
@@ -186,6 +190,7 @@ def upload_and_scan_gh_artifact(
     path_filter_func: typing.Callable,
     source_commit_hash: str,
     force: bool,
+    timeout_seconds: int,
 ) -> model.ScanResult:
 
     clogger = component_logger(artifact_name=artifact.name)
@@ -241,7 +246,8 @@ def upload_and_scan_gh_artifact(
     scan_result = cx_project.poll_and_retrieve_scan(
         scan_id=scan_id,
         component=artifact.component,
-        source=artifact.source
+        source=artifact.source,
+        timeout_seconds=timeout_seconds,
     )
     duration = datetime.datetime.now() - tm_start
     clogger.info(f'Scan for component {artifact.name} took: {duration}')
@@ -251,6 +257,7 @@ def upload_and_scan_gh_artifact(
 def scan_gh_artifact(
     cx_project: checkmarx.project.CheckmarxProject,
     scan_artifact: dso.model.ScanArtifact,
+    timeout_seconds: int,
     exclude_paths: typing.Sequence[str] = (),
     include_paths: typing.Sequence[str] = (),
     force: bool = False,
@@ -299,6 +306,7 @@ def scan_gh_artifact(
         source_commit_hash=commit_hash,
         path_filter_func=path_filter_func,
         force=force,
+        timeout_seconds=timeout_seconds,
     )
 
 
