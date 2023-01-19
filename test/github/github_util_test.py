@@ -45,13 +45,13 @@ def test_ctor():
         from_ref=cm.Resource(
             name='dep_red',
             version='1.2.3',
-            type=cm.ResourceType.GENERIC,
+            type=cm.ArtefactType.BLOB,
             access=None,
         ),
         to_ref=cm.Resource(
             name='dep_red',
             version='2.0.0',
-            type=cm.ResourceType.GENERIC,
+            type=cm.ArtefactType.BLOB,
             access=None,
         ),
     )
@@ -74,7 +74,7 @@ def test_ctor():
             to_ref=cm.Resource(
                 name='dep_red',
                 version='2.0.0',
-                type=cm.ResourceType.GENERIC,
+                type=cm.ArtefactType.BLOB,
                 access=None,
             ),
         )
@@ -131,7 +131,7 @@ def test_is_obsolete():
         cm.Resource(
             name='c1',
             version='6.0.0',
-            type=cm.ResourceType.GENERIC,
+            type=cm.ArtefactType.BLOB,
             access=None,
         ),
     )
@@ -148,13 +148,13 @@ def test_target_matches():
     old_resource = cm.Resource(
         name='res1',
         version='1.2.3',
-        type=cm.ResourceType.GENERIC,
+        type=cm.ArtefactType.BLOB,
         access=cm.ResourceAccess(),
     )
     new_resource = cm.Resource(
         name='res1',
         version='2.0.0',
-        type=cm.ResourceType.GENERIC,
+        type=cm.ArtefactType.BLOB,
         access=cm.ResourceAccess(),
     )
 
@@ -182,7 +182,7 @@ def test_target_matches():
         cm.Resource(
             name='different-name',
             version='2.0.0',
-            type=cm.ResourceType.GENERIC,
+            type=cm.ArtefactType.BLOB,
             access=cm.ResourceAccess(),
         )
     )
@@ -192,7 +192,7 @@ def test_target_matches():
         cm.Resource(
             name='res1',
             version='8.7.9',
-            type=cm.ResourceType.GENERIC,
+            type=cm.ArtefactType.BLOB,
             access=cm.ResourceAccess(),
         )
     )
@@ -202,7 +202,7 @@ def test_target_matches():
         cm.Resource(
             name='res1',
             version='2.0.0',
-            type=cm.ResourceType.GENERIC,
+            type=cm.ArtefactType.BLOB,
             access=cm.ResourceAccess(),
         )
     )
