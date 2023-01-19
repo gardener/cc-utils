@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 import logging
 import typing
 
@@ -76,6 +77,7 @@ def base_component_descriptor_v2(
       component=cm.Component(
         name=component_name_v2,
         version=effective_version,
+        creationTime=datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
         repositoryContexts=[
           cm.OciRepositoryContext(
             baseUrl=ctx_repository_base_url,
