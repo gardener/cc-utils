@@ -84,7 +84,7 @@ scan_results = scan_sources(
     component_descriptor=component_descriptor,
     team_id='${checkmarx_cfg.team_id()}',
     threshold=severity_threshold,
-    scan_timeout=scan_timeout,
+    timeout_seconds=scan_timeout,
     include_paths=${checkmarx_cfg.include_path_regexes()},
     exclude_paths=${checkmarx_cfg.exclude_path_regexes()},
 )
