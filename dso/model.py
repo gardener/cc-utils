@@ -11,7 +11,7 @@ import unixutil.model
 @dataclasses.dataclass
 class ScanArtifact:
     name: str
-    label: dso.labels.ScanningHint
+    label: dso.labels.SourceScanLabel
     component: cm.Component
     source: cm.ComponentSource
 

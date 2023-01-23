@@ -290,9 +290,10 @@ def scan_gh_artifact(
         raise product.util.RefGuessingFailedError(e)
 
     if scan_artifact.label is not None:
-        if scan_artifact.label.path_config is not None:
-            include_paths = set((*include_paths, *scan_artifact.label.path_config.include_paths))
-            exclude_paths = set((*exclude_paths, *scan_artifact.label.path_config.exclude_paths))
+        if scan_artifact.label.value.path_config is not None:
+            path_config = scan_artifact.label.value.path_config
+            include_paths = set((*include_paths, *path_config.include_paths))
+            exclude_paths = set((*exclude_paths, *path_config.exclude_paths))
 
     # if the scan_artifact has no label we will implicitly scan everything
     # since all images have to specify a label in order to be scanned
