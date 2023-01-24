@@ -46,7 +46,7 @@ class KubernetesConfig(NamedModelElement):
         else:
             return None
 
-    def kubeconfig(self):
+    def kubeconfig(self) -> dict:
         return self.raw.get('kubeconfig')
 
     def cluster_domain(self):
