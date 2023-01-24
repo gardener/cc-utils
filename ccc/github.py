@@ -99,8 +99,8 @@ def github_api_ctor(
             session.request = intercepted_request
 
     except Exception as e:
-        logger.warning(e)
-        logger.warning('unable to create elasticsearch client, will not log github-api requests')
+        logger.debug(e)
+        logger.debug('unable to create elasticsearch client, will not log github-api requests')
 
     session_adapter = SessionAdapter(session_adapter)
     if session_adapter is SessionAdapter.NONE or not session_adapter:
