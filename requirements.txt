@@ -51,7 +51,7 @@ requests_toolbelt<1
 ruamel.yaml
 semver<3.0.0
 slackclient<3.0.0
-sphinx_rtd_theme<1.0.0
+sphinx_rtd_theme<2.0.0
 sseclient-py<2.0.0
 tabulate<1.0.0
 termcolor<2.0.0
