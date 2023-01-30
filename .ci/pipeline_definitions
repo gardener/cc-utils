@@ -130,7 +130,7 @@ cc-utils:
                 - name: 'cloud.gardener.cnudie/dso/scanning-hints/package-versions'
                   value:
                   - name: 'containerd'
-                    version: 'v1.6.6' # found via DOCKER_VERSION -> github.com/moby/moby
+                    version: 'v1.6.15' # found via DOCKER_VERSION -> github.com/moby/moby
                 - name: 'gardener.cloud/cve-categorisation'
                   value:
                     network_exposure: 'protected'
