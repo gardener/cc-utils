@@ -3,6 +3,8 @@ import logging
 import os
 import typing
 
+import tabulate
+
 import gci.componentmodel as cm
 
 from protecode.model import CVSSVersion, TriageScope
@@ -19,6 +21,7 @@ import dso.cvss
 import dso.labels
 import oci.model as om
 import protecode.assessments as pa
+import protecode.model as pm
 
 
 __cmd_name__ = 'bdba'
@@ -251,12 +254,28 @@ def scan(
         oci_client=oci_client,
     )
 
-    results_above_threshold = [r for r in results if r.greatest_cve_score >= cve_threshold]
-    results_below_threshold = [r for r in results if r.greatest_cve_score < cve_threshold]
+    results_above_threshold: list[pm.BDBA_ScanResult] = [
+        r for r in results if r.greatest_cve_score >= cve_threshold
+    ]
+    results_below_threshold: list[pm.BDBA_ScanResult] = [
+        r for r in results if r.greatest_cve_score < cve_threshold
+    ]
 
     logger.info('Summary of found vulnerabilities:')
     logger.info(f'{len(results_above_threshold)=}; {results_above_threshold=}')
     logger.info(f'{len(results_below_threshold)=}; {results_below_threshold=}')
+
+    def iter_summary_tuple():
+        for r in results_above_threshold + results_below_threshold:
+            c_id = f'{r.scanned_element.component.name}:{r.scanned_element.component.version}'
+            a_id = f'{r.scanned_element.resource.name}:{r.scanned_element.resource.version}'
+            cve = r.greatest_cve_score
+            yield c_id, a_id, cve
+
+    print(tabulate.tabulate(
+        iter_summary_tuple(),
+        headers=['Component ID', 'Artefact ID', 'Greatest CVSSV3']),
+    )
 
 
 def transport_triages(
