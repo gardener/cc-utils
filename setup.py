@@ -63,7 +63,7 @@ setuptools.setup(
     name='gardener-cicd-libs',
     version=version(),
     description='Gardener CI/CD Libraries',
-    python_requires='>=3.9.*',
+    python_requires='>=3.10',
     py_modules=modules(),
     packages=packages(),
     package_data={
