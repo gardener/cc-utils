@@ -10,11 +10,17 @@ _cfg = ctx.cfg
 
 def traverse(
     name: str,
-    version: str,
+    version: str=None,
     ctx_base_url: str=None,
+    components: bool=True,
+    sources: bool=True,
+    resources: bool=True,
 ):
     if not ctx_base_url:
         ctx_base_url = _cfg.ctx.ocm_repo_base_url
+
+    if not version:
+        name, version = name.rsplit(':', 1)
 
     ctx_repo = cm.OciRepositoryContext(
         baseUrl=ctx_base_url,
@@ -36,13 +42,19 @@ def traverse(
     ):
         indent = len(node.path * 2)
         if isinstance(node, cnudie.iter.ComponentNode):
+            if not components:
+                continue
             prefix = 'c'
-            print(f'{prefix}{" " * indent}{node.component.name}')
+            print(f'{prefix}{" " * indent}{node.component.name}:{node.component.version}')
         if isinstance(node, cnudie.iter.ResourceNode):
+            if not resources:
+                continue
             prefix = 'r'
             indent += 1
             print(f'{prefix}{" " * indent}{node.resource.name}')
         if isinstance(node, cnudie.iter.SourceNode):
+            if not sources:
+                continue
             prefix = 'r'
             indent += 1
             print(f'{prefix}{" " * indent}{node.source.name}')
