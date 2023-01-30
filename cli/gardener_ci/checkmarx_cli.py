@@ -10,7 +10,7 @@ import concourse.steps.component_descriptor_util as cdu
 logger = logging.getLogger(__name__)
 
 
-def upload_and_scan_from_component_descriptor(
+def scan(
     checkmarx_cfg_name: str,
     component_descriptor_path: str,
     scan_timeout: int=3600,
