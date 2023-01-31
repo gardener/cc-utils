@@ -135,6 +135,9 @@ def delegate_to_component_cli():
 
 
 def main():
+  if os.environ.get('force_legacy_component_cli', False):
+    delegate_to_component_cli()
+
   try:
     cmd = sys.argv[1]
     if cmd in ('component-archive', 'componentarchive', 'archive', 'ca'):
