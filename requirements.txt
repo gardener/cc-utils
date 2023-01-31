@@ -21,7 +21,7 @@ ensure<1.0.0,>=0.8
 flake8>=3.9
 gardener-component-model==v0.0.78
 gardener-oci
-github3.py<3.0.0
+github3.py<4.0.0
 google-api-core<3
 google-api-python-client<3
 google-auth<3
