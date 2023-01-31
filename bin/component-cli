@@ -12,41 +12,6 @@ import gci.componentmodel as cm
 own_dir = os.path.dirname(__file__)
 
 
-'''
-# migration helper script for removing component-cli (https://github.com/gardener/component-cli)
-# from job-image. This script is expected to "shadow" original component-cli thus allowing to
-# dispatch either to original component-cli, or to successor
-
-delegate_to_component_cli() {
-  # assuming this script is first in PATH, hardcode to delagating to second match
-  component_cli="$(which -a component-cli | tail -1 | head -1)"
-
-  exec "${component_cli}" $*
-}
-
-first_arg=$1
-second_arg=$2
-third_arg=$3
-
-# first sub-command (only one variant is implemented: component-archive resources add
-if [ "$first_arg" == 'component-archive' \
-  -o "$first_arg" == 'ca' \
-  -o "$first_arg" == 'componentarchive' \
-  -o "$first_arg" == 'archive' \
-  ]; then
-  if [ "$second_arg" == "resources" \
-    -o "$second_arg" == "resource" \
-    -o "$second_arg" == "res" \
-  ]; then
-    echo "component-archive resources add"
-  else
-    delegate_to_component_cli
-  fi
-else
-  delegate_to_component_cli
-fi
-'''
-
 def component_archive_resource_add(argv):
   subcmd = argv[0]
   if not subcmd in ('resources', 'resource', 'res'):
