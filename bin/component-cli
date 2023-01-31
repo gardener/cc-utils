@@ -58,7 +58,12 @@ def component_archive_resource_add(argv):
     delegate_to_component_cli()
 
   component_descriptor_dir = argv[2]
-  resources_file = argv[3]
+  try:
+    resources_file = argv[3]
+    if not os.path.isfile(resources_file):
+      resources_file = None
+  except IndexError:
+    resources_file = None
 
   component_descriptor_file = os.path.join(component_descriptor_dir, 'component-descriptor.yaml')
 
@@ -78,8 +83,20 @@ def component_archive_resource_add(argv):
     template_vars[k] = v
 
   def iter_resources():
-    with open(resources_file) as f:
-      raw = f.read()
+    if resources_file:
+      with open(resources_file) as f:
+        raw = f.read()
+        for k,v in template_vars.items():
+          raw = raw.replace('${' + k + '}', v)
+
+        for parsed in yaml.safe_load_all(raw):
+          if 'resources' in parsed:
+            yield from parsed['resources']
+            continue
+          yield parsed
+
+    if not sys.stdin.isatty():
+      raw = sys.stdin.read()
       for k,v in template_vars.items():
         raw = raw.replace('${' + k + '}', v)
 
