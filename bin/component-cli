@@ -87,7 +87,7 @@ def component_archive_resource_add(argv):
     rid = resource_id(resource)
     # existing resources w/ same id are overwritten by newly added ones
     component.resources = [
-      r for r if not resource_id(r) == rid
+      r for r in component.resources if not resource_id(r) == rid
     ]
     component.resources.append(resource)
   added_resources_count = len(component.resources) - resources_len
