@@ -24,8 +24,6 @@ if issue_tgt_repo_url:
 github_issue_labels_to_preserve = image_scan_trait.github_issue_labels_to_preserve()
 github_issue_templates = image_scan_trait.github_issue_templates()
 %>
-import time
-
 import dacite
 
 import ccc.delivery
@@ -91,7 +89,6 @@ for result in determine_os_ids(
         os_info=os_info,
   )
   results.append(result)
-  time.sleep(1) # throttle delivery-service requests
 
 logger.info(f'uploaded {len(results)=} os-infos')
 
