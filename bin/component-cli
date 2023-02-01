@@ -9,6 +9,8 @@ import yaml
 
 import gci.componentmodel as cm
 
+import ci.util
+
 own_dir = os.path.dirname(__file__)
 
 
@@ -81,6 +83,8 @@ def component_archive_resource_add(argv):
   resources_len = len(component.resources)
 
   def resource_id(resource: dict):
+    if dataclasses.is_dataclass(resource):
+      resource = dataclasses.asdict(resource, dict_factory=ci.util.dict_factory_enum_serialisiation)
     return resource.get('name'), resource.get('version'), resource.get('type')
 
   for resource in iter_resources():
