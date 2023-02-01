@@ -1,77 +1,36 @@
-
-
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8" />
-  
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  
   <title>Release Notes Process &mdash; cc-utils  documentation</title>
-  
-
-  
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
-
-  
-  
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
     <link rel="shortcut icon" href="_static/favicon.ico"/>
-  
-
-  
-  
-
-  
-
-  
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/sphinx_highlight.js"></script>
-    
-    <script type="text/javascript" src="_static/js/theme.js"></script>
-
-    
+    <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="prev" title="version Trait" href="traits/version.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
-
-   
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
-    
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-          
-
-          
             <a href="index.html" class="icon icon-home"> cc-utils
-          
-
-          
           </a>
-
-          
-            
-            
-          
-
-          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -79,18 +38,7 @@
     <input type="hidden" name="area" value="default" />
   </form>
 </div>
-
-          
-        </div>
-
-        
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-              
-            
-            
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="pipeline.html">Pipeline Definition</a></li>
 <li class="toctree-l1"><a class="reference internal" href="pipeline_job.html">Pipeline Job</a></li>
@@ -99,78 +47,37 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Release Notes Process</a></li>
 </ul>
 
-            
-          
         </div>
-        
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" aria-label="top navigation">
-        
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">cc-utils</a>
-        
       </nav>
 
-
       <div class="wy-nav-content">
-        
         <div class="rst-content">
-        
-          
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-
+          <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-    
-      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-        
-      <li>Release Notes Process</li>
-    
-    
+      <li><a href="index.html" class="icon icon-home"></a></li>
+      <li class="breadcrumb-item active">Release Notes Process</li>
       <li class="wy-breadcrumbs-aside">
-        
-          
             <a href="_sources/release_notes.rst.txt" rel="nofollow"> View page source</a>
-          
-        
       </li>
-    
   </ul>
-
-  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-            
+             
   <div class="section" id="release-notes-process">
-<h1>Release Notes Process<a class="headerlink" href="#release-notes-process" title="Permalink to this heading">¶</a></h1>
+<h1>Release Notes Process<a class="headerlink" href="#release-notes-process" title="Permalink to this heading"></a></h1>
 <p>In order to support the developers when creating a new release of a
 component, a new process is established to gather all release-relevant
 information since the last release to build the release notes text.</p>
 <div class="section" id="format">
-<h2>Format<a class="headerlink" href="#format" title="Permalink to this heading">¶</a></h2>
+<h2>Format<a class="headerlink" href="#format" title="Permalink to this heading"></a></h2>
 <p>The release-relevant information has to be flagged as such, thus we
 introduce the following format, which is based on the format that
 <a class="reference external" href="https://raw.githubusercontent.com/kubernetes/kubernetes/master/.github/PULL_REQUEST_TEMPLATE.md">kubernetes</a>
@@ -199,7 +106,7 @@ This is my first release note
 </div>
 <p>If no release note is required, just write <code class="docutils literal notranslate"><span class="pre">NONE</span></code> within the block or delete the block altogether.</p>
 <div class="section" id="category-title-mapping">
-<h3>Category - Title Mapping<a class="headerlink" href="#category-title-mapping" title="Permalink to this heading">¶</a></h3>
+<h3>Category - Title Mapping<a class="headerlink" href="#category-title-mapping" title="Permalink to this heading"></a></h3>
 <table class="docutils align-default">
 <colgroup>
 <col style="width: 33%" />
@@ -224,7 +131,7 @@ This is my first release note
 </table>
 </div>
 <div class="section" id="how-to-contribute-to-release-notes">
-<h3>How to Contribute to Release Notes<a class="headerlink" href="#how-to-contribute-to-release-notes" title="Permalink to this heading">¶</a></h3>
+<h3>How to Contribute to Release Notes<a class="headerlink" href="#how-to-contribute-to-release-notes" title="Permalink to this heading"></a></h3>
 <p>Now that we know the format for tagging release-relevant information,
 where do we put it so that it can be fetched automatically?</p>
 <p>There are two options:</p>
@@ -233,7 +140,7 @@ where do we put it so that it can be fetched automatically?</p>
 <li><p>As <em>commit message</em></p></li>
 </ol>
 <div class="section" id="pull-requests">
-<h4>Pull Requests<a class="headerlink" href="#pull-requests" title="Permalink to this heading">¶</a></h4>
+<h4>Pull Requests<a class="headerlink" href="#pull-requests" title="Permalink to this heading"></a></h4>
 <p>The preferred option is to create a pull request that contains your
 proposed changes (to the code-basis) and in the description a code-block
 like above.</p>
@@ -257,7 +164,7 @@ used for the gardener dashboard.</p>
 on how to create pull request template for your repository.</p>
 </div>
 <div class="section" id="commits">
-<h4>Commits<a class="headerlink" href="#commits" title="Permalink to this heading">¶</a></h4>
+<h4>Commits<a class="headerlink" href="#commits" title="Permalink to this heading"></a></h4>
 <p>A second option on how to contribute to the release notes is to add a
 code-block like above to your commit message. This option is not
 preferred as once you have pushed your changes to the remote repository
@@ -265,7 +172,7 @@ it cannot easily be changed anymore so you have to be very cautious.</p>
 </div>
 </div>
 <div class="section" id="draft-release">
-<h3>Draft Release<a class="headerlink" href="#draft-release" title="Permalink to this heading">¶</a></h3>
+<h3>Draft Release<a class="headerlink" href="#draft-release" title="Permalink to this heading"></a></h3>
 <p>In order to see how the release notes would look like, draft releases
 are created/updated - usually on every head update.</p>
 <div class="admonition note">
@@ -278,7 +185,7 @@ trait to your job that has (or inherits) the <em>version</em> trait.
 Usually you would add it to the <em>head-update</em> job.</p>
 </div>
 <div class="section" id="transporting-release-notes">
-<h3>Transporting Release Notes<a class="headerlink" href="#transporting-release-notes" title="Permalink to this heading">¶</a></h3>
+<h3>Transporting Release Notes<a class="headerlink" href="#transporting-release-notes" title="Permalink to this heading"></a></h3>
 <p>A component can depend upon other components. When releasing a
 component, ideally the release notes of the source repository (for which
 the release was created) should be included in the target component.
@@ -293,19 +200,19 @@ above:</p>
 </ol>
 </div>
 <div class="section" id="posting-release-notes-to-slack">
-<h3>Posting Release Notes To Slack<a class="headerlink" href="#posting-release-notes-to-slack" title="Permalink to this heading">¶</a></h3>
+<h3>Posting Release Notes To Slack<a class="headerlink" href="#posting-release-notes-to-slack" title="Permalink to this heading"></a></h3>
 <p>When naming a <code class="docutils literal notranslate"><span class="pre">default_channel</span></code> and adding channel_cfgs as shown in the example below to the <code class="docutils literal notranslate"><span class="pre">slack</span></code> trait of your pipeline definition, the release notes will be posted to specified channel (channel name or channel id). The <code class="docutils literal notranslate"><span class="pre">slack_cfg_name</span></code> has to correspond to the config element name of a known slack config on our Concourse.</p>
 <p>Example:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">release</span><span class="p">:</span><span class="w"></span>
-<span class="w">  </span><span class="nt">traits</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="nt">release</span><span class="p">:</span><span class="w"></span>
-<span class="w">      </span><span class="nt">nextversion</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;bump_minor&#39;</span><span class="w"></span>
-<span class="w">    </span><span class="nt">slack</span><span class="p">:</span><span class="w"></span>
-<span class="w">      </span><span class="nt">default_channel</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;channel_cfg&#39;</span><span class="w"> </span><span class="c1"># This channel config will be used for posting the release notes to</span><span class="w"></span>
-<span class="w">      </span><span class="nt">channel_cfgs</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="nt">channel_cfg</span><span class="p">:</span><span class="w"> </span><span class="c1"># channel config name</span><span class="w"></span>
-<span class="w">          </span><span class="nt">channel_name</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;my_slack_channel_name&#39;</span><span class="w"> </span><span class="c1"># you can specify the channel name or channel id</span><span class="w"></span>
-<span class="w">          </span><span class="nt">slack_cfg_name</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;example_slack_workspace&#39;</span><span class="w"> </span><span class="c1"># Specifies the slack configuration that holds the slack api key (which is bound to a slack workspace)</span><span class="w"></span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">release</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">traits</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">release</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">nextversion</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;bump_minor&#39;</span>
+<span class="w">    </span><span class="nt">slack</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">default_channel</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;channel_cfg&#39;</span><span class="w"> </span><span class="c1"># This channel config will be used for posting the release notes to</span>
+<span class="w">      </span><span class="nt">channel_cfgs</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">channel_cfg</span><span class="p">:</span><span class="w"> </span><span class="c1"># channel config name</span>
+<span class="w">          </span><span class="nt">channel_name</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;my_slack_channel_name&#39;</span><span class="w"> </span><span class="c1"># you can specify the channel name or channel id</span>
+<span class="w">          </span><span class="nt">slack_cfg_name</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;example_slack_workspace&#39;</span><span class="w"> </span><span class="c1"># Specifies the slack configuration that holds the slack api key (which is bound to a slack workspace)</span>
 </pre></div>
 </div>
 </div>
@@ -314,49 +221,32 @@ above:</p>
 
 
            </div>
-           
           </div>
-          <footer>
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="traits/version.html" class="btn btn-neutral float-left" title="version Trait" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>
-        &#169; Copyright 2019-2020, SAP SE or an SAP affiliate company..
-
-    </p>
+    <p>&#169; Copyright 2019-2020, SAP SE or an SAP affiliate company..</p>
   </div>
-    
-    
-    
-    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    
-    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
 
 </footer>
         </div>
       </div>
-
     </section>
-
   </div>
-  
-
-  <script type="text/javascript">
+  <script>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>
