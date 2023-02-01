@@ -887,7 +887,7 @@ def close_issues_for_absent_resources(
                 "scanned element matching its digest."
             )
             issue.create_comment('closing, because scanned element no longer present in BoM')
-            issue.close()
+            github.util.close_issue(issue)
 
     def has_ctx_label(
         issue: github3.issues.Issue,

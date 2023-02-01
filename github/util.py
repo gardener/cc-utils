@@ -28,6 +28,7 @@ from pydash import _
 import requests
 
 import github3
+import github3.issues
 from github3.exceptions import NotFoundError
 from github3.github import GitHub
 from github3.orgs import Team
@@ -941,3 +942,33 @@ def outdated_draft_releases(
     ]
 
     return outdated_draft_releases
+
+
+def close_issue(
+    issue: github3.issues.ShortIssue,
+) -> bool:
+    '''
+    handle known corner-cases where regular issue close will fail
+    comment on issue if closing still fails
+
+    returns True if close was successful, False otherwise
+    '''
+
+    def try_close() -> bool:
+        try:
+            return issue.close()
+
+        except github3.exceptions.UnprocessableEntity:
+            # likely that assignee was suspended from github
+
+            if not issue.assignees:
+                raise
+
+            issue.remove_assignees(issue.assignees)
+            return issue.close()
+
+    closed = try_close()
+    if not closed:
+        issue.create_comment('unable to close ticket')
+
+    return closed

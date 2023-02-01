@@ -14,6 +14,7 @@ import cfg_mgmt.reporting as cmr
 import ci.log
 import github.compliance.model as gcm
 import github.retry
+import github.util
 
 '''
 functionality for creating and maintaining github-issues for tracking compliance issues
@@ -351,7 +352,7 @@ def close_issue_if_present(
     for issue in open_issues:
         issue: github3.issues.ShortIssue
         issue.create_comment('closing ticket, because there are no longer unassessed findings')
-        if not issue.close():
+        if not github.util.close_issue(issue):
             logger.warning(f'failed to close {issue.id=}, {repository.url=}')
 
     return issue
