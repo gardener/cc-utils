@@ -348,13 +348,10 @@ def close_issue_if_present(
     open_issue = open_issues[0]
     logger.info(f'labels for issue for closing: {[l.name for l in open_issue.original_labels]}')
 
-    succ = True
-
     for issue in open_issues:
         issue: github3.issues.ShortIssue
         issue.create_comment('closing ticket, because there are no longer unassessed findings')
-        succ &= issue.close()
-        if not succ:
+        if not issue.close():
             logger.warning(f'failed to close {issue.id=}, {repository.url=}')
 
     return issue
