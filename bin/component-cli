@@ -79,7 +79,17 @@ def component_archive_resource_add(argv):
   print(f'adding resources from {resources_file=} to {component_descriptor_file=}')
 
   resources_len = len(component.resources)
-  component.resources.extend(iter_resources())
+
+  def resource_id(resource: dict):
+    return resource.get('name'), resource.get('version'), resource.get('type')
+
+  for resource in iter_resources():
+    rid = resource_id(resource)
+    # existing resources w/ same id are overwritten by newly added ones
+    component.resources = [
+      r for r if not resource_id(r) == rid
+    ]
+    component.resources.append(resource)
   added_resources_count = len(component.resources) - resources_len
 
   with open(component_descriptor_file, 'w') as f:
