@@ -20,16 +20,16 @@ from model.base import (
 
 class VictoropsConfig(NamedModelElement):
     def api_id(self):
-        return self.raw.get('api_token')
+        return self.raw['api_token']
 
     def api_key(self):
-        return self.raw.get('api_key')
+        return self.raw['api_key']
 
     def team_slug(self):
-        return self.raw.get('team_slug')
+        return self.raw['team_slug']
 
     def dod_policy_slug(self):
-        return self.raw.get('dod_policy_slug')
+        return self.raw['dod_policy_slug']
 
     def mod_policy_slug(self):
-        return self.raw.get('mod_policy_slug')
+        return self.raw['mod_policy_slug']
