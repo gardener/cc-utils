@@ -15,7 +15,6 @@
 import urllib
 
 from model.base import NamedModelElement
-from model.proxy import DockerImageConfig
 
 
 class FreshclamConfig(NamedModelElement):
