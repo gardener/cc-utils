@@ -42,16 +42,18 @@ class ResourceIdentifier:
         self,
         type_name,
         base_name,
+        branch_name,
         qualifier=None,
         logical_name=None,
     ):
         self._type_name = not_none(type_name)
         self._base_name = not_none(base_name)
+        self._branch_name = not_none(branch_name)
         self._qualifier = qualifier if qualifier else ''
         self._logical_name = logical_name
 
     def name(self):
-        parts = [self._type_name, self._base_name]
+        parts = [self._type_name, self._base_name, self._branch_name]
         if len(self._qualifier) > 0:
             parts.append(self._qualifier)
 
@@ -59,6 +61,9 @@ class ResourceIdentifier:
 
     def base_name(self):
         return self._base_name
+
+    def branch_name(self) -> str:
+        return self._branch_name
 
     def qualifier(self):
         return self._qualifier
@@ -259,14 +264,12 @@ class RepositoryConfig(Resource):
 
         base_name = kwargs['raw_dict']['path'].replace('/', '.')
 
-        # hack: use branch name as qualifier to support referencing the same repo
-        #       multiple times (if branch differs)
-        if not qualifier:
-            qualifier = kwargs['raw_dict'].get('branch')
+        branch_name = kwargs['raw_dict'].get('branch')
 
         resource_identifier = ResourceIdentifier(
             type_name=type_name,
             base_name=base_name,
+            branch_name=branch_name,
             qualifier=qualifier,
             logical_name=logical_name
         )
@@ -292,7 +295,7 @@ class RepositoryConfig(Resource):
 
     def resource_name(self):
         # TODO: replace usages with access to resource_id
-        return self._resource_identifier.name() + '.' + self.branch()
+        return self._resource_identifier.name()
 
     def name(self):
         # TODO: replace usages with access to resource_id
