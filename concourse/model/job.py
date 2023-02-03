@@ -86,12 +86,6 @@ class JobVariant(ModelBase):
 
         return '-'.join(parts)
 
-    def meta_resource_name(self):
-        meta_res = self._resource_registry.resource(
-            ResourceIdentifier(type_name='meta', base_name=self.variant_name)
-        )
-        return meta_res.resource_identifier().name()
-
     def steps(self):
         return self._steps_dict.values()
 
