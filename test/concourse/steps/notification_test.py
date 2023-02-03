@@ -42,7 +42,11 @@ class NotificationStepTest(unittest.TestCase):
         )
         self.job_step._notifications_cfg = NotificationCfgSet('default', {}, type_name='cfg_set')
         resource_registry = ResourceRegistry()
-        meta_resource_identifier = ResourceIdentifier(type_name='meta', base_name='a_job')
+        meta_resource_identifier = ResourceIdentifier(
+            type_name='meta',
+            base_name='a_job',
+            branch_name='a_branch',
+        )
         meta_resource = Resource(resource_identifier=meta_resource_identifier, raw_dict={})
         resource_registry.add_resource(meta_resource)
         self.job_variant = JobVariant(
