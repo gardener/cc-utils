@@ -377,6 +377,10 @@ def create_default_component_descriptor_lookup(
                              included in the returned lookup
     '''
     lookups = [in_memory_cache_component_descriptor_lookup()]
+    if not cache_dir:
+        if ctx and ctx.cfg:
+            cache_dir = ctx.cfg.ctx.cache_dir
+
     if cache_dir:
         lookups.append(file_system_cache_component_descriptor_lookup(
             cache_dir=cache_dir,
