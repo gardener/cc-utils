@@ -23,7 +23,7 @@ from concourse.model.base import (
     select_attr,
 )
 from ci.util import not_none
-from concourse.model.resources import RepositoryConfig, ResourceIdentifier
+from concourse.model.resources import RepositoryConfig
 import concourse.model.step
 
 
