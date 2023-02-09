@@ -39,6 +39,9 @@ def delete_expired_secret(
             f'{cfg_element.registry_type()} is not (yet) supported for automated deletion'
             return False
 
+    elif type_name == 'gcp':
+        delete_func = cmg.delete_config_secret
+
     elif type_name == 'github':
         delete_func = cmgh.delete_config_secret
 

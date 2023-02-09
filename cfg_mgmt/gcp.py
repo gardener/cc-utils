@@ -109,7 +109,7 @@ def rotate_cfg_element(
 
 
 def delete_config_secret(
-    cfg_element: model.container_registry.ContainerRegistryConfig,
+    cfg_element: model.container_registry.ContainerRegistryConfig | model.gcp.GcpServiceAccount,
     cfg_queue_entry: cmm.CfgQueueEntry,
     cfg_factory: model.ConfigFactory,
 ):
