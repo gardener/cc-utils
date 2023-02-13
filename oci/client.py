@@ -455,6 +455,7 @@ class Client:
                 url=self.routes.manifest_url(image_reference=image_reference),
                 image_reference=image_reference,
                 scope=scope,
+                warn_if_not_ok=not absent_ok,
                 headers={
                     'Accept': accept,
                 },
