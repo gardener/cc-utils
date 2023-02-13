@@ -109,6 +109,29 @@
 <td><p>str</p></td>
 <td><p>go-style time interval between job executions. Supported suffixes are: <code class="code docutils literal notranslate"><span class="pre">s</span></code>, <code class="code docutils literal notranslate"><span class="pre">m</span></code>, <code class="code docutils literal notranslate"><span class="pre">h</span></code></p></td>
 </tr>
+<tr class="row-odd"><td><p>timezone</p></td>
+<td><p>no</p></td>
+<td><p>Europe/Berlin</p></td>
+<td><p>str</p></td>
+<td><p>timezone to use for start/end-times (if not configured, timezone has no effect)
+<a class="reference external" href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of timezones</a></p></td>
+</tr>
+<tr class="row-even"><td><p>days</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>If set, specifies the weekdays on which to run the job. Has two forms:
+- list of strings (Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday)
+- single string (WORKING_DAYS - i.e. MO..FR)</p></td>
+</tr>
+<tr class="row-odd"><td><p>timerange</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p><p>If set, specifies the time range in between which to run the job.</p>
+<p>Currently, the only supported value is <code class="code docutils literal notranslate"><span class="pre">WORKING_HOURS</span></code>, which limits the job to be
+triggered between 08:00 and 18:00 (relative to configured timezone)</p>
+</p></td>
+</tr>
 </tbody>
 </table>
 <h2>Dependencies<a class="headerlink" href="#trait-cronjob" title="Permalink to this heading"></a></h2>
