@@ -145,6 +145,8 @@ class AttributesDocumentation:
                     or issubclass(type_.__args__[0], enum.Enum)
                 ):
                     self.add_child(model_element_type=type_.__args__[0], element_name=name)
+        elif isinstance(type_, types.UnionType):
+            pass # no special handling for union-types (yet)
         elif (
             issubclass(type_, base_model.AttribSpecMixin)
             or issubclass(type_, enum.Enum)
