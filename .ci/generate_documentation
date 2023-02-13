@@ -32,7 +32,7 @@ echo "out-dir: ${out_dir}"
 export SOURCE_DIR="${repo_dir}/doc"
 export OUT_DIR="${out_dir}"
 export PYTHONPATH="${repo_dir}"
-sphinx-build -E -a "${SOURCE_DIR}" "${OUT_DIR}"
+sphinx-build -E -av "${SOURCE_DIR}" "${OUT_DIR}"
 
 # disable github's theme
 touch "${out_dir}/.nojekyll"
