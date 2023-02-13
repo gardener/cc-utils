@@ -91,8 +91,13 @@ def process_pr_event(
                 resource.source.get('label')
                 for resource in resources if resource.source.get('label') is not None
             }
-            if (l := pr_event.label()) == 'lgtm':
-                # special case for label set by gardener-robot in reaction to "\lgtm".
+            if (l := pr_event.label()) in ['lgtm', 'reviewed/lgtm']:
+                # special case for label set by gardener-robot/prow in reaction to "\lgtm".
+
+                if l in required_labels:
+                    # don't set the required labels if the required labels were set
+                    continue
+
                 if not set_pr_labels(pr_event, github_helper, cfg_set, resources):
                     logger.warning(
                         f'Unable to set required labels for PR #{pr_event.number()} for '
@@ -346,9 +351,9 @@ def set_pr_labels(
             )
             return False
     elif pr_event.action() is PullRequestAction.LABELED:
-        if pr_event.label() == 'lgtm':
+        if (l := pr_event.label()) in ['lgtm', 'reviewed/lgtm']:
             logger.info(
-                f"The label 'lgtm' was added to pull request #{pr_event.number()} on "
+                f"The label '{l}' was added to pull request #{pr_event.number()} on "
                 f"'{repository_path}' by '{sender_login}'. "
                 f"Setting required labels '{required_labels}'."
             )
