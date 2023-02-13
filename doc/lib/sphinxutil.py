@@ -117,6 +117,8 @@ class TableBuilder:
         for text_line in column_texts:
             node = nodes.paragraph('')
             vl = ViewList()
+            if text_line is None:
+                continue
             for text in text_line.split('\n'):
                 vl.append(text, '%s:%d' % (source, line))
             with switch_source_input(self.state, vl):
