@@ -83,7 +83,7 @@ class AttributesDocumentation:
             else:
                 raise NotImplementedError
         elif isinstance(type_, types.UnionType):
-            str(type_)
+            return str(type_)
         else:
             return type_.__name__
 
