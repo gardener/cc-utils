@@ -129,10 +129,9 @@ ${render_repositories(pipeline_definition=pipeline_definition, cfg_set=config_se
   % if has_cron_trait(variant):
 <%
 trait = variant.trait('cronjob')
-interval = trait.interval()
 resource_name = trait.resource_name()
 %>
-${time_resource(name=resource_name, interval=interval)}
+${time_resource(name=resource_name, cron_trait=trait)}
   % endif
 % endfor
 % endif
