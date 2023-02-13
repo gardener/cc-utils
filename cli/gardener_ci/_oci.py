@@ -31,6 +31,7 @@ def cp(src:str, tgt:str):
         src_image_reference=src,
         tgt_image_reference=tgt,
         oci_client=oci_client,
+        mode=oci.ReplicationMode.PREFER_MULTIARCH,
     )
 
 
