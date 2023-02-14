@@ -511,7 +511,10 @@ def resources(
                 )
                 continue
             elif resource_policy is ResourcePolicy.FAIL_ON_NONMATCHING_ACCESS_TYPES:
-                raise ValueError(resource)
+                raise ValueError(
+                    f"Found resource of matching resource type but with non-matching access type: "
+                    f"{resource}. Raising error due to resource policy."
+                )
             else:
                 raise NotImplementedError
 
