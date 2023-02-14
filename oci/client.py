@@ -91,7 +91,7 @@ class OauthToken:
                     .isoformat()
             else:
                 # hard-code a value in the future since it is not given
-                self.expires_in = datetime.timedelta(hours=1).seconds
+                self.expires_in = datetime.timedelta(minutes=10).seconds
 
 
 class OauthTokenCache:
