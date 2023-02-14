@@ -69,7 +69,7 @@ class OauthToken:
             self.issued_at = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
         if not self.expires_in:
             # check if format seems to be jwt
-            if self.token.count('.') == 3:
+            if self.token.count('.') >= 2:
                 payload = self.token.split('.')[1]
                 # add padding (JWT by convention has unpadded base64)
                 payload = _append_b64_padding_if_missing(b64_str=payload)
