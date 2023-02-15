@@ -22,6 +22,12 @@ class ServiceBindingInfo:
     id: str
     name: str
     service_instance_id: str
+    created_at: str
+    updated_at: str
+
+@dataclass
+class ServiceBindingDetailedInfo(ServiceBindingInfo):
+    credentials: dict
 
 
 def _find_next_service_binding_serial_number(
@@ -62,7 +68,7 @@ class SBClient:
             raise requests.HTTPError(msg)
         logger.info(f'Deleted service binding {name} ({id})')
 
-    def create_service_binding(self, instance_id: str, binding_name: str) -> tuple[str, dict]:
+    def create_service_binding(self, instance_id: str, binding_name: str) -> ServiceBindingDetailedInfo:
         url = f'{self.sm_url}/v1/service_bindings'
         data = {
             'name': binding_name,
@@ -80,7 +86,21 @@ class SBClient:
         result = resp.json()
         id = result['id']
         logger.info(f'Creating service binding {binding_name} ({id})')
-        return id, result['credentials']
+        return self.__response_json_to_sb_detailed_info(result)
+
+    def get_service_binding(self, id: str) -> ServiceBindingDetailedInfo:
+        url = f'{self.sm_url}/v1/service_bindings/{id}'
+        headers = {
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {self.access_token}',
+        }
+        resp = requests.get(url, headers=headers)
+        if not resp.ok:
+            msg = f'get_service_binding failed: {resp.status_code} {resp.text}'
+            logger.error(msg)
+            raise requests.HTTPError(msg)
+        result = resp.json()
+        return self.__response_json_to_sb_detailed_info(result)
 
     def get_service_bindings(self) -> list[ServiceBindingInfo]:
         url = f'{self.sm_url}/v1/service_bindings'
@@ -98,9 +118,21 @@ class SBClient:
             id = item['id']
             name = item['name']
             instance_id = item['service_instance_id']
-            bindings.append(ServiceBindingInfo(id=id, name=name, service_instance_id=instance_id))
+            created_at = item['created_at']
+            updated_at = item['updated_at']
+            bindings.append(ServiceBindingInfo(
+                id=id, name=name, service_instance_id=instance_id, created_at=created_at, updated_at=updated_at))
         return bindings
 
+    def __response_json_to_sb_detailed_info(self, resp_json) -> ServiceBindingDetailedInfo:
+        id = resp_json['id']
+        name = resp_json['name']
+        instance_id = resp_json['service_instance_id']
+        credentials = resp_json["credentials"]
+        created_at = resp_json['created_at']
+        updated_at = resp_json['updated_at']
+        return ServiceBindingDetailedInfo(id=id, name=name, service_instance_id=instance_id,
+                                          credentials=credentials, created_at=created_at, updated_at=updated_at)
 
 def _get_oauth_token(credentials: dict) -> str:
     url = f'{credentials["url"]}/oauth/token'
@@ -145,12 +177,12 @@ def rotate_cfg_element(
     instance_id = cfg_element.instance_id()
     next_sn = _find_next_service_binding_serial_number(bindings, prefix, instance_id)
     binding_name = f'{prefix}{next_sn}'
-    id, newcreds = client.create_service_binding(instance_id, binding_name)
+    created_binding = client.create_service_binding(instance_id, binding_name)
 
     secret_id = {'binding_id': old_binding_id, 'binding_name': old_binding_name}
     raw_cfg = copy.deepcopy(cfg_element.raw)
-    raw_cfg['credentials'] = newcreds
-    raw_cfg['binding_id'] = id
+    raw_cfg['credentials'] = created_binding.credentials
+    raw_cfg['binding_id'] = created_binding.id
     raw_cfg['binding_name'] = binding_name
     updated_elem = model.btp_service_binding.BtpServiceBinding(
         name=cfg_element.name(), raw_dict=raw_cfg, type_name=cfg_element._type_name
