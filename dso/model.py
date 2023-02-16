@@ -77,6 +77,7 @@ class Metadata:
 class GreatestCVE:
     greatestCvss3Score: float
     reportUrl: str
+    productId: int
 
 
 @dataclasses.dataclass(frozen=True)
