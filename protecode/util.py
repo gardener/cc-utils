@@ -19,6 +19,7 @@ import typing
 
 import ci.log
 import delivery.client
+import dso.cvss
 import dso.model
 import gci.componentmodel as cm
 import github.compliance.model
@@ -231,3 +232,28 @@ def _matching_analysis_result_id(
         return result.product_id()
     else:
         return None
+
+
+def iter_vulnerability_rescoring(
+    vulnerabilities: typing.Iterable[pm.Vulnerability],
+    rescoring_rules: tuple[dso.cvss.RescoringRule],
+    categorisation: dso.cvss.CveCategorisation,
+) -> typing.Generator[tuple[pm.Vulnerability, dso.cvss.CVESeverity], None, None]:
+    '''
+    Generator, yielding tuple of vulnerability and severity rescored according to provided
+    `rescoring_rules` and `categorisation`.
+    '''
+    for vulnerability in vulnerabilities:
+        rules = tuple(dso.cvss.matching_rescore_rules(
+            rescoring_rules=rescoring_rules,
+            categorisation=categorisation,
+            cvss=vulnerability.cvss,
+        ))
+
+        orig_severity = dso.cvss.CVESeverity.from_cve_score(vulnerability.cve_severity())
+        rescored = dso.cvss.rescore(
+            rescoring_rules=rules,
+            severity=orig_severity,
+        )
+
+        yield vulnerability, rescored

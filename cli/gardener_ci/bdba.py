@@ -22,6 +22,7 @@ import dso.labels
 import oci.model as om
 import protecode.assessments as pa
 import protecode.model as pm
+import protecode.util as pu
 
 
 __cmd_name__ = 'bdba'
@@ -131,28 +132,23 @@ def rescore(
         vulns_to_assess = []
         printed_cname = False
 
-        for v in c.vulnerabilities():
-            if v.historical():
-                continue
-            if v.has_triage():
-                continue
+        vulnerabilities = (
+            v
+            for v in c.vulnerabilities()
+            if (
+                not v.historical() and
+                not v.has_triage() and
+                v.cvss # happens if only cvss-v2 is available - ignore for now
+            )
+        )
 
+        for vulnerability, rescored in pu.iter_vulnerability_rescoring(
+            vulnerabilities=vulnerabilities,
+            rescoring_rules=rescoring_rules,
+            categorisation=categorisation,
+        ):
             vulns_count += 1
-
-            if not v.cvss:
-                continue # happens if only cvss-v2 is available - ignore for now
-
-            rules = dso.cvss.matching_rescore_rules(
-                rescoring_rules=rescoring_rules,
-                categorisation=categorisation,
-                cvss=v.cvss,
-            )
-            rules = tuple(rules)
-            orig_severity = dso.cvss.CVESeverity.from_cve_score(v.cve_severity())
-            rescored = dso.cvss.rescore(
-                rescoring_rules=rescoring_rules,
-                severity=orig_severity,
-            )
+            orig_severity = dso.cvss.CVESeverity.from_cve_score(vulnerability.cve_severity())
 
             if orig_severity is not rescored:
                 rescored_count += 1
@@ -161,7 +157,7 @@ def rescore(
                     print(f'{c.name()}:{c.version()}')
                     printed_cname = True
 
-                print(f'  rescore {orig_severity.name} -> {rescored.name} - {v.cve()}')
+                print(f'  rescore {orig_severity.name} -> {rescored.name} - {vulnerability.cve()}')
                 if assess and rescored is dso.cvss.CVESeverity.NONE:
                     if not c.version():
                         print(f'setting dummy-version for {c.name()}')
@@ -172,7 +168,7 @@ def rescore(
                             app_id=product_id,
                         )
                     else:
-                        vulns_to_assess.append(v)
+                        vulns_to_assess.append(vulnerability)
 
         if assess and vulns_to_assess:
             client.add_triage_raw({
