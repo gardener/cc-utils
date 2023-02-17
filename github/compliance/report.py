@@ -334,7 +334,7 @@ def _malware_template_vars(
             issue_description='ClamAV Scan Result',
             report_urls=(),
         ),
-        'criticality_classification': str(gcm.Severity.BLOCKER),
+        'criticality_classification': str(gcm.Severity.HIGH),
     }
 
 
