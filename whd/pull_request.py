@@ -338,7 +338,7 @@ def set_pr_labels(
     elif pr_event.action() is PullRequestAction.SYNCHRONIZE:
         if _should_label(job_mapping, github_helper, sender_login, owner):
             logger.info(
-                f"Update to pull request #{pr_event.number()} by trusted member '{sender_login}' "
+                f"Update to pull request #{pr_number} by trusted member '{sender_login}' "
                 f" in '{repository_path}' found. "
                 f"Setting required labels '{required_labels}'."
             )
@@ -346,14 +346,14 @@ def set_pr_labels(
             return True
         else:
             logger.debug(
-                f"Update to pull request #{pr_event.number()} by '{sender_login}' "
+                f"Update to pull request #{pr_number} by '{sender_login}' "
                 f" in '{repository_path}' found. Ignoring, since they are not an org member'."
             )
             return False
     elif pr_event.action() is PullRequestAction.LABELED:
         if (l := pr_event.label()) in ['lgtm', 'reviewed/lgtm']:
             logger.info(
-                f"The label '{l}' was added to pull request #{pr_event.number()} on "
+                f"The label '{l}' was added to pull request #{pr_number} on "
                 f"'{repository_path}' by '{sender_login}'. "
                 f"Setting required labels '{required_labels}'."
             )
