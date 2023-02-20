@@ -3,7 +3,7 @@
 from concourse.client.model import ResourceType
 %>
 - name: ${ResourceType.PULL_REQUEST.value}
-  type: docker-image
+  type: registry-image
   source:
     repository: eu.gcr.io/gardener-project/cc/pr-resource
 </%def>
