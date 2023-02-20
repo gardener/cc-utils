@@ -1,4 +1,4 @@
-ARG BASE_IMAGE_TAG=0.84.0
+ARG BASE_IMAGE_TAG=0.85.0
 FROM eu.gcr.io/gardener-project/cc/job-image-base:$BASE_IMAGE_TAG as builder
 COPY VERSION /metadata/VERSION
 COPY . /cc/utils/
