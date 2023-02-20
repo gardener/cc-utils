@@ -273,6 +273,7 @@ def rescoring_rules_from_dicts(rules: list[dict]) -> typing.Generator[RescoringR
     deserialises rescoring rules. Each dict is expected to have the following form:
 
     category_value: <CveCategorisation-attr>:<value>
+    name: <str> (optional)
     rules:
       - cve_values:
         - <CVSSV3-attr>: <value>
@@ -280,6 +281,7 @@ def rescoring_rules_from_dicts(rules: list[dict]) -> typing.Generator[RescoringR
     '''
     for rule in rules:
         category_value = rule['category_value']
+        name = rule.get('name')
 
         for subrule in rule['rules']:
             cve_values = subrule['cve_values']
@@ -291,6 +293,7 @@ def rescoring_rules_from_dicts(rules: list[dict]) -> typing.Generator[RescoringR
                     'category_value': category_value,
                     'cve_values': cve_values,
                     'rescore': rescore,
+                    'name': name,
                 },
                 config=dacite.Config(
                     cast=(enum.Enum, tuple),
