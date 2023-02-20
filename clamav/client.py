@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import dataclasses
+import datetime
 import enum
 import json
 import logging
@@ -57,6 +58,12 @@ class ScanResult:
     meta: typing.Optional[Meta]
     name: str
 
+@dataclasses.dataclass
+class ClamAVVersionInfo:
+    clamav_version_str: str # as returned by clamAV, example: "ClamAV 0.105.1"
+    signature_version: int # seems to increase strictly monotonically by 1 each day
+    signature_date: datetime.datetime
+
 
 class ClamAVRoutes:
     def __init__(
@@ -67,6 +74,9 @@ class ClamAVRoutes:
 
     def scan(self):
         return ci.util.urljoin(self._base_url, 'scan')
+
+    def version(self):
+        return ci.util.urljoin(self._base_url, 'version')
 
 
 def _make_latin1_encodable(value: str, /) -> str:
@@ -173,4 +183,17 @@ class ClamAVClient:
             malware_status=malware_status,
             meta=Meta(**response.get('meta')),
             name=name,
+        )
+
+    def clamav_version_info(
+        self,
+    ) -> ClamAVVersionInfo:
+        parsed_response = self._request(
+            method='GET',
+            url=self.routes.version(),
+        )
+        return ClamAVVersionInfo(
+            clamav_version_str=parsed_response['clamav_version_str'],
+            signature_version=parsed_response['signature_version'],
+            signature_date=datetime.datetime.fromisoformat(parsed_response['signature_date']),
         )

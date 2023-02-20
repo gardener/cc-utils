@@ -102,6 +102,7 @@ def scan_resources(
 
 def resource_scan_result_to_artefact_metadata(
     resource_scan_result: clamav.scan.ClamAV_ResourceScanResult,
+    clamav_version_info: clamav.client.ClamAVVersionInfo,
     datasource: str = dso.model.Datasource.CLAMAV,
     datatype: str = dso.model.Datatype.MALWARE,
     creation_date: datetime.datetime = datetime.datetime.now(),
@@ -121,6 +122,11 @@ def resource_scan_result_to_artefact_metadata(
 
     finding = dso.model.MalwareSummary(
         findings=resource_scan_result.scan_result.findings,
+        metadata=dso.model.ClamAVMetadata(
+            clamav_version_str=clamav_version_info.clamav_version_str,
+            signature_version=clamav_version_info.signature_version,
+            virus_definition_timestamp=clamav_version_info.signature_date,
+        )
     )
 
     return dso.model.ArtefactMetadata(
