@@ -120,6 +120,8 @@ inherit:
 ${configure_webhook(webhook_token=github.webhook_secret())}
 resource_types:
 ${include_pull_request_resource_type()}
+${include_git_resource_type()}
+${include_time_resource_type()}
 
 % if len(resource_registry) > 0:
 resources:
