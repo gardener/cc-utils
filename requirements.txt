@@ -29,7 +29,7 @@ google-cloud-storage<2
 google-crc32c>1.1.4
 html2text
 jira
-kubernetes<24.0.0,>=23.0.0
+kubernetes>=26.0.0
 msal<2
 openstacksdk
 oss2==2.16.0
