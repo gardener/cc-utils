@@ -38,6 +38,8 @@ def scan_component(
     clamav_client = ccc.clamav.client(url=clamav_url)
     oci_client = ccc.oci.oci_client()
 
+    clamav_version_info = clamav_client.clamav_version_info()
+
     for result in clamav.cnudie.scan_resources(
         resource_nodes=resource_nodes,
         oci_client=oci_client,
@@ -46,6 +48,7 @@ def scan_component(
     ):
         findings_data = clamav.cnudie.resource_scan_result_to_artefact_metadata(
             resource_scan_result=result,
+            clamav_version_info=clamav_version_info,
             datasource=dso.model.Datasource.CLAMAV,
             datatype=dso.model.Datatype.MALWARE,
         )

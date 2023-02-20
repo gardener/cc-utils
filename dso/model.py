@@ -72,7 +72,6 @@ class Metadata:
     type: str
     creation_date: datetime.datetime
 
-
 @dataclasses.dataclass(frozen=True)
 class GreatestCVE:
     greatestCvss3Score: float
@@ -113,11 +112,19 @@ class FilesystemPaths:
 
 
 @dataclasses.dataclass(frozen=True)
+class ClamAVMetadata:
+    clamav_version_str: str
+    signature_version: int
+    virus_definition_timestamp: datetime.datetime
+
+
+@dataclasses.dataclass(frozen=True)
 class MalwareSummary:
     '''
     empty list of findings states "no malware found"
     '''
     findings: list[clamav.client.ScanResult]
+    metadata: ClamAVMetadata
 
 
 @dataclasses.dataclass(frozen=True)
