@@ -104,6 +104,18 @@ IMG_DESCRIPTOR_ATTRIBS = (
         type=typing.Dict[str, str],
         doc='build-time arguments to pass to docker-build',
     ),
+    AttributeSpec.optional(
+        name='platforms',
+        doc=textwrap.dedent('''\
+        If `platforms` is defined at toplevel, then defining it again for a single image-build
+        can be done in order to only build this image for a subset of platforms.
+
+        see toplevel documentation for `platforms` for reference.
+        '''
+        ),
+        type=list[str],
+        default=None,
+    ),
 )
 
 
@@ -190,6 +202,9 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
         domain = parts[0]
         image_name = parts[-1]
         return '_'.join([self.name(), domain, image_name])
+
+    def platforms(self) -> list[str] | None:
+        return self.raw['platforms']
 
     def platform(self) -> typing.Optional[str]:
         '''
@@ -296,6 +311,22 @@ class PublishTrait(Trait):
         if not (platforms := self.platforms()):
             platforms = (None, )
 
+        def matches_platform(platform, image_args):
+            if platform is None:
+                return True
+
+            if (platforms := image_args.get('platforms', None)) is None:
+                return True
+
+            if platform in platforms:
+                return True
+
+            # special-case: normalise x86_64 -> arm64
+            if platform == 'linux/x86_64':
+                return 'linux/amd64' in platforms
+            if platform == 'linux/arm64':
+                return 'linux/x86_64' in platforms
+
         for platform in platforms:
             yield from (
                 PublishDockerImageDescriptor(
@@ -305,6 +336,7 @@ class PublishTrait(Trait):
                 )
                 for name, args
                 in image_dict.items()
+                if matches_platform(platform=platform, image_args=args)
             )
 
     def platforms(self) -> typing.Optional[list[str]]:
