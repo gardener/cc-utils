@@ -191,37 +191,53 @@ must be explicitly specified.</p>
 <td><p>dict</p></td>
 <td><p>configures the inputs that are made available to image build</p></td>
 </tr>
-<tr class="row-odd"><td><p>tag_as_latest</p></td>
+<tr class="row-odd"><td><p>prebuild_hook</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p><p>if configured, a callback is executed prior to running image-build. the value is
+interpreted as relative path to main-repository root directory, and must be an
+executable file.
+It can be used, for example, to preprocess the “Dockerfile” to use, or to prepare
+contents within the build directory.
+The following environment variables are passed (all paths are absolute):
+- BUILD_DIR # path to build directory
+- DOCKERFILE # path to dockerfile</p>
+<p>Only supported for oci-builder docker or docker-buildx.
+dockerd will be available and running (docker excecutable accessible from PATH).</p>
+</p></td>
+</tr>
+<tr class="row-even"><td><p>tag_as_latest</p></td>
 <td><p>no</p></td>
 <td><p>False</p></td>
 <td><p>bool</p></td>
 <td><p>whether or not published container images should <strong>also</strong> be labeled as latest</p></td>
 </tr>
-<tr class="row-even"><td><p>tag_template</p></td>
+<tr class="row-odd"><td><p>tag_template</p></td>
 <td><p>no</p></td>
 <td><p>${EFFECTIVE_VERSION}</p></td>
 <td><p>str</p></td>
 <td><p>the template to use for the image-tag (only variable: EFFECTIVE_VERSION)</p></td>
 </tr>
-<tr class="row-odd"><td><p>dockerfile</p></td>
+<tr class="row-even"><td><p>dockerfile</p></td>
 <td><p>no</p></td>
 <td><p>Dockerfile</p></td>
 <td><p>str</p></td>
 <td><p>the file to use for building the container image</p></td>
 </tr>
-<tr class="row-even"><td><p>dir</p></td>
+<tr class="row-odd"><td><p>dir</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>the relative path to the container image build file</p></td>
 </tr>
-<tr class="row-odd"><td><p>target</p></td>
+<tr class="row-even"><td><p>target</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>only for multistage builds: the target up to which to build</p></td>
 </tr>
-<tr class="row-even"><td><p>resource_labels</p></td>
+<tr class="row-odd"><td><p>resource_labels</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span>
 </pre></div>
@@ -230,7 +246,7 @@ must be explicitly specified.</p>
 <td><p>List[Label]</p></td>
 <td><p>labels to add to the resource declaration for this image in base-component-descriptor</p></td>
 </tr>
-<tr class="row-odd"><td><p>build_args</p></td>
+<tr class="row-even"><td><p>build_args</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">{}</span>
 </pre></div>
@@ -239,7 +255,7 @@ must be explicitly specified.</p>
 <td><p>Dict[str, str]</p></td>
 <td><p>build-time arguments to pass to docker-build</p></td>
 </tr>
-<tr class="row-even"><td><p>platforms</p></td>
+<tr class="row-odd"><td><p>platforms</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>list</p></td>
