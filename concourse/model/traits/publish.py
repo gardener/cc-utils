@@ -67,6 +67,24 @@ IMG_DESCRIPTOR_ATTRIBS = (
         type=dict, # todo: define types
     ),
     AttributeSpec.optional(
+        name='prebuild_hook',
+        default=None,
+        doc='''
+            if configured, a callback is executed prior to running image-build. the value is
+            interpreted as relative path to main-repository root directory, and must be an
+            executable file.
+            It can be used, for example, to preprocess the "Dockerfile" to use, or to prepare
+            contents within the build directory.
+            The following environment variables are passed (all paths are absolute):
+            - BUILD_DIR # path to build directory
+            - DOCKERFILE # path to dockerfile
+
+            Only supported for oci-builder docker or docker-buildx.
+            dockerd will be available and running (docker excecutable accessible from PATH).
+        ''',
+        type=str,
+    ),
+    AttributeSpec.optional(
         name='tag_as_latest',
         default=False,
         doc='whether or not published container images should **also** be labeled as latest',
@@ -184,6 +202,10 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
 
     def target_name(self):
         return self.raw.get('target')
+
+    @property
+    def prebuild_hook(self) -> str | None:
+        return self.raw['prebuild_hook']
 
     def dockerfile_relpath(self):
         return self.raw['dockerfile']

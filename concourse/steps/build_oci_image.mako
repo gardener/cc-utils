@@ -39,6 +39,7 @@ build_ctx_dir = os.path.join(
   job_step.input('image_path'),
   image_descriptor.builddir_relpath() or '',
 )
+build_dir = job_step.input('image_path')
 
 version_path = os.path.join(job_step.input('version_path'), 'version')
 
@@ -259,6 +260,24 @@ env = os.environ.copy()
 env['EFFECTIVE_VERSION'] = effective_version
 % if oci_builder is cm_publish.OciBuilder.DOCKER and publish_trait.use_buildkit():
 env['DOCKER_BUILDKIT'] = '1'
+% endif
+
+% if prebuild_hook := image_descriptor.prebuild_hook:
+prebuild_hook = '${prebuild_hook}'
+logger.info(f'will run {prebuild_hook=}')
+build_dir = os.path.abspath('${build_dir}')
+dockerfile = os.path.abspath('${dockerfile_relpath}')
+prebuild_env = os.environ.copy()
+prebuild_env |= {
+  'BUILD_DIR': build_dir,
+  'DOCKERFILE': dockerfile,
+}
+subprocess.run(
+  (os.path.join(build_dir, prebuild_hook),),
+  check=True,
+  env=prebuild_env,
+)
+logger.info('prebuild_hook succeeded - now running build')
 % endif
 
 logger.info(f'running docker-build with {docker_argv=}')
