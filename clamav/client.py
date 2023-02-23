@@ -13,57 +13,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import dataclasses
 import datetime
-import enum
 import json
 import logging
-import typing
 import urllib.parse
 
 import requests
 import urllib3
 import urllib3.util.retry
 
+import ci.util
+import clamav.model
 import clamav.routes
 
 
 logger = logging.getLogger(__name__)
 
 
-class ScanStatus(enum.Enum):
-    SCAN_SUCCEEDED = 'scan_succeeded'
-    SCAN_FAILED = 'scan_failed'
+class ClamAVRoutes:
+    def __init__(
+        self,
+        base_url: str,
+    ):
+        self._base_url = base_url
 
+    def scan(self):
+        return ci.util.urljoin(self._base_url, 'scan')
 
-class MalwareStatus(enum.IntEnum):
-    OK = 0
-    FOUND_MALWARE = 1
-    UNKNOWN = 2
-
-
-@dataclasses.dataclass
-class Meta:
-    scanned_octets: int
-    receive_duration_seconds: float
-    scan_duration_seconds: float
-    scanned_content_digest: str | None = None
-
-
-@dataclasses.dataclass
-class ScanResult:
-    status: ScanStatus
-    details: str
-    malware_status: MalwareStatus
-    meta: typing.Optional[Meta]
-    name: str
-
-
-@dataclasses.dataclass
-class ClamAVVersionInfo:
-    clamav_version_str: str # as returned by clamAV, example: "ClamAV 0.105.1"
-    signature_version: int # seems to increase strictly monotonically by 1 each day
-    signature_date: datetime.datetime
+    def version(self):
+        return ci.util.urljoin(self._base_url, 'version')
 
 
 def _make_latin1_encodable(value: str, /) -> str:
@@ -111,7 +89,7 @@ class ClamAVClient:
         timeout_seconds:float=60*15,
         content_length_octets:int=None,
         name: str=None,
-    ) -> ScanResult:
+    ) -> clamav.model.ScanResult:
         url = self.routes.scan()
 
         if content_length_octets:
@@ -142,10 +120,10 @@ class ClamAVClient:
                     url = f'{url=}, {rq_url=}'
 
             logger.warning(f'{name=}: {ce=} {url=}')
-            return ScanResult(
-                status=ScanStatus.SCAN_FAILED,
+            return clamav.model.ScanResult(
+                status=clamav.model.ScanStatus.SCAN_FAILED,
                 details=f'{ce=}',
-                malware_status=MalwareStatus.UNKNOWN,
+                malware_status=clamav.model.MalwareStatus.UNKNOWN,
                 meta=None,
                 name=name,
             )
@@ -154,32 +132,32 @@ class ClamAVClient:
         details = response.get('details', 'no details available')
 
         if (malware_status_str := response['result']) == 'OK':
-            malware_status = MalwareStatus.OK
+            malware_status = clamav.model.MalwareStatus.OK
             details = message or 'no details available'
         elif malware_status_str == 'FOUND_MALWARE':
-            malware_status = MalwareStatus.FOUND_MALWARE
+            malware_status = clamav.model.MalwareStatus.FOUND_MALWARE
             details = f'{message}: {details}'
         elif malware_status_str == 'unknown':
-            malware_status = MalwareStatus.UNKNOWN
+            malware_status = clamav.model.MalwareStatus.UNKNOWN
         else:
             raise NotImplementedError(malware_status_str)
 
-        return ScanResult(
-            status=ScanStatus.SCAN_SUCCEEDED,
+        return clamav.model.ScanResult(
+            status=clamav.model.ScanStatus.SCAN_SUCCEEDED,
             details=details,
             malware_status=malware_status,
-            meta=Meta(**response.get('meta')),
+            meta=clamav.model.Meta(**response.get('meta')),
             name=name,
         )
 
     def clamav_version_info(
         self,
-    ) -> ClamAVVersionInfo:
+    ) -> clamav.model.ClamAVVersionInfo:
         parsed_response = self._request(
             method='GET',
             url=self.routes.version(),
         )
-        return ClamAVVersionInfo(
+        return clamav.model.ClamAVVersionInfo(
             clamav_version_str=parsed_response['clamav_version_str'],
             signature_version=parsed_response['signature_version'],
             signature_date=datetime.datetime.fromisoformat(parsed_response['signature_date']),

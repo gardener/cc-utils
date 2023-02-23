@@ -1,6 +1,4 @@
 import concurrent.futures
-import dataclasses
-import enum
 import functools
 import logging
 import tarfile
@@ -8,11 +6,10 @@ import tempfile
 import typing
 
 import gci.componentmodel as cm
-import github.compliance.model as gcm
-import saf.model
 
 import ci.log
 import clamav.client
+import clamav.model
 import oci.client
 import oci.model
 
@@ -21,65 +18,11 @@ logger = logging.getLogger(__name__)
 ci.log.configure_default_logging()
 
 
-class MalwareScanState(enum.Enum):
-    FINISHED_SUCCESSFULLY = 'finished_successfully'
-    FINISHED_WITH_ERRORS = 'finished_with_errors'
-
-
-@dataclasses.dataclass
-class AggregatedScanResult:
-    '''
-    overall (aggregated) scan result for a scanned resource
-    '''
-    resource_url: str
-    name: str
-    malware_status: clamav.client.MalwareStatus
-    findings: typing.Collection[clamav.client.ScanResult] # if empty, there were no findings
-    scan_count: int # amount of scanned files
-    scanned_octets: int
-    scan_duration_seconds: float
-    upload_duration_seconds: float
-
-    def summary(self, fmt:str='html') -> str:
-        if not fmt == 'html':
-            raise NotImplementedError(fmt)
-
-        def details_for_finding(scan_result: clamav.client.ScanResult):
-            return f'<li>{scan_result.name}: {scan_result.details}</li>'
-
-        newline = '\n'
-
-        return f'''\
-          <ul>
-            <li>{self.resource_url}:
-              <ul>{newline.join(("- " + details_for_finding(res) for res in self.findings))}</ul>
-            </li>
-          </ul>
-        '''
-
-
-@dataclasses.dataclass
-class ClamAV_ResourceScanResult(gcm.ScanResult):
-    scan_result: AggregatedScanResult
-
-
-@dataclasses.dataclass
-class MalwarescanEvidenceRequest(saf.model.EvidenceRequest):
-    EvidenceDataBinary: typing.List[ClamAV_ResourceScanResult]
-
-
-@dataclasses.dataclass
-class MalwarescanResult:
-    resource: cm.Resource
-    scan_state: MalwareScanState
-    findings: typing.List[str]
-
-
 def aggregate_scan_result(
     resource: cm.Resource,
-    results: typing.Iterable[clamav.client.ScanResult],
+    results: typing.Iterable[clamav.model.ScanResult],
     name: str=None,
-) -> AggregatedScanResult:
+) -> clamav.model.AggregatedScanResult:
     count = 0
     succeeded = True
     scanned_octets = 0
@@ -89,7 +32,7 @@ def aggregate_scan_result(
 
     for result in results:
         count += 1
-        if result.status is clamav.client.ScanStatus.SCAN_FAILED:
+        if result.status is clamav.model.ScanStatus.SCAN_FAILED:
             succeeded = False
             continue
 
@@ -97,11 +40,11 @@ def aggregate_scan_result(
         scan_duration_seconds += result.meta.scan_duration_seconds
         upload_duration_seconds += result.meta.receive_duration_seconds
 
-        if result.malware_status is clamav.client.MalwareStatus.OK:
+        if result.malware_status is clamav.model.MalwareStatus.OK:
             continue
-        elif result.malware_status is clamav.client.MalwareStatus.UNKNOWN:
+        elif result.malware_status is clamav.model.MalwareStatus.UNKNOWN:
             raise ValueError('state cannot be unknown if scan succeeded')
-        elif result.malware_status is clamav.client.MalwareStatus.FOUND_MALWARE:
+        elif result.malware_status is clamav.model.MalwareStatus.FOUND_MALWARE:
             findings.append(result)
         else:
             raise NotImplementedError(result.malware_status)
@@ -111,11 +54,11 @@ def aggregate_scan_result(
 
     if succeeded:
         if len(findings) < 1:
-            malware_status = clamav.client.MalwareStatus.OK
+            malware_status = clamav.model.MalwareStatus.OK
         else:
-            malware_status = clamav.client.MalwareStatus.FOUND_MALWARE
+            malware_status = clamav.model.MalwareStatus.FOUND_MALWARE
     else:
-        malware_status = clamav.client.MalwareStatus.UNKNOWN
+        malware_status = clamav.model.MalwareStatus.UNKNOWN
 
     if isinstance(resource.access, cm.OciAccess):
         resource_url = resource.access.imageReference
@@ -125,7 +68,7 @@ def aggregate_scan_result(
     else:
         resource_url = '<unknown>'
 
-    return AggregatedScanResult(
+    return clamav.model.AggregatedScanResult(
         resource_url=resource_url,
         name=name,
         malware_status=malware_status,
@@ -140,7 +83,7 @@ def aggregate_scan_result(
 def scan_tarfile(
     clamav_client: clamav.client.ClamAVClient,
     tf: tarfile.TarFile,
-) -> typing.Generator[clamav.client.ScanResult, None, None]:
+) -> typing.Generator[clamav.model.ScanResult, None, None]:
     for tar_info in tf:
         if not tar_info.isfile():
             continue
@@ -196,7 +139,7 @@ def scan_oci_image(
     image_reference: typing.Union[str, oci.model.OciImageReference],
     oci_client: oci.client.Client,
     clamav_client: clamav.client.ClamAVClient,
-) -> typing.Generator[clamav.client.ScanResult, None, None]:
+) -> typing.Generator[clamav.model.ScanResult, None, None]:
     layer_blobs = tuple(_iter_layers(image_reference=image_reference, oci_client=oci_client))
 
     scan_func = functools.partial(
@@ -220,7 +163,7 @@ def scan_oci_blob(
     image_reference: typing.Union[str, oci.model.OciImageReference],
     oci_client: oci.client.Client,
     clamav_client: clamav.client.ClamAVClient,
-) -> typing.Generator[clamav.client.ScanResult, None, None]:
+) -> typing.Generator[clamav.model.ScanResult, None, None]:
     try:
         yield from scan_oci_blob_filewise(
             blob_reference=blob_reference,
@@ -245,7 +188,7 @@ def scan_oci_blob_filewise(
     oci_client: oci.client.Client,
     clamav_client: clamav.client.ClamAVClient,
     chunk_size=8096,
-) -> typing.Generator[clamav.client.ScanResult, None, None]:
+) -> typing.Generator[clamav.model.ScanResult, None, None]:
     blob = oci_client.blob(
         image_reference=image_reference,
         digest=blob_reference.digest,
@@ -279,7 +222,7 @@ def scan_oci_blob_layerwise(
     image_reference: typing.Union[str, oci.model.OciImageReference],
     oci_client: oci.client.Client,
     clamav_client: clamav.client.ClamAVClient,
-) -> typing.Generator[clamav.client.ScanResult, None, None]:
+) -> typing.Generator[clamav.model.ScanResult, None, None]:
     blob = oci_client.blob(
         image_reference=image_reference,
         digest=blob_reference.digest,

@@ -3,7 +3,6 @@ import datetime
 
 import gci.componentmodel as cm
 
-import clamav.client
 import dso.labels
 import unixutil.model
 
@@ -123,12 +122,29 @@ class ClamAVMetadata:
     virus_definition_timestamp: datetime.datetime
 
 
+@dataclasses.dataclass
+class MalwareFindingMeta:
+    scanned_octets: int
+    receive_duration_seconds: float
+    scan_duration_seconds: float
+    scanned_content_digest: str | None = None
+
+
+@dataclasses.dataclass
+class MalwareFinding:
+    status: str
+    details: str
+    malware_status: str
+    meta: MalwareFindingMeta | None
+    name: str
+
+
 @dataclasses.dataclass(frozen=True)
 class MalwareSummary:
     '''
     empty list of findings states "no malware found"
     '''
-    findings: list[clamav.client.ScanResult]
+    findings: list[MalwareFinding]
     metadata: ClamAVMetadata
 
 

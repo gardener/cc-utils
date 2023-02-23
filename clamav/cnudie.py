@@ -11,6 +11,7 @@ import ci.log
 import ci.util
 import clamav.client
 import clamav.scan
+import clamav.model
 import cnudie.iter
 import dso.model
 import github.compliance.model
@@ -26,7 +27,7 @@ def scan_resources(
     clamav_client: clamav.client.ClamAVClient,
     s3_client=None,
     max_workers:int = 16,
-) -> typing.Generator[clamav.scan.ClamAV_ResourceScanResult, None, None]:
+) -> typing.Generator[clamav.model.ClamAV_ResourceScanResult, None, None]:
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
 
     def scan_resource(
@@ -73,7 +74,7 @@ def scan_resources(
         )
 
         # pylint: disable=E1123
-        return clamav.scan.ClamAV_ResourceScanResult(
+        return clamav.model.ClamAV_ResourceScanResult(
             scan_result=scan_result,
             scanned_element=cnudie.iter.ResourceNode(
                 path=(component,),
@@ -101,8 +102,8 @@ def scan_resources(
 
 
 def resource_scan_result_to_artefact_metadata(
-    resource_scan_result: clamav.scan.ClamAV_ResourceScanResult,
-    clamav_version_info: clamav.client.ClamAVVersionInfo,
+    resource_scan_result: clamav.model.ClamAV_ResourceScanResult,
+    clamav_version_info: clamav.model.ClamAVVersionInfo,
     datasource: str = dso.model.Datasource.CLAMAV,
     datatype: str = dso.model.Datatype.MALWARE,
     creation_date: datetime.datetime = datetime.datetime.now(),
@@ -120,8 +121,29 @@ def resource_scan_result_to_artefact_metadata(
         creation_date=creation_date,
     )
 
+    def _scan_result_to_malware_finding(
+            scan_result: clamav.model.ScanResult,
+    ) -> dso.model.MalwareFinding:
+        if (meta := scan_result.meta):
+            meta = dso.model.MalwareFindingMeta(
+                receive_duration_seconds=meta.receive_duration_seconds,
+                scanned_octets=meta.scanned_octets,
+                scanned_content_digest=meta.scanned_content_digest,
+                scan_duration_seconds=meta.scan_duration_seconds,
+            )
+        return dso.model.MalwareFinding(
+            status=scan_result.status.value,
+            details=scan_result.details,
+            meta=meta,
+            name=scan_result.name,
+            malware_status=scan_result.malware_status.name,
+        )
+
     finding = dso.model.MalwareSummary(
-        findings=resource_scan_result.scan_result.findings,
+        findings=tuple(
+            _scan_result_to_malware_finding(r)
+            for r in resource_scan_result.scan_result.findings
+        ),
         metadata=dso.model.ClamAVMetadata(
             clamav_version_str=clamav_version_info.clamav_version_str,
             signature_version=clamav_version_info.signature_version,
