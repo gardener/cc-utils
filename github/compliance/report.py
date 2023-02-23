@@ -319,7 +319,7 @@ def _checkmarx_template_vars(
 def _malware_template_vars(
     result_group: gcm.ScanResultGroup,
 ) -> dict:
-    results: tuple[clamav.model.ClamAV_ResourceScanResult] = result_group.results_with_findings
+    results: tuple[clamav.model.ClamAVResourceScanResult] = result_group.results_with_findings
     summary_str = ''.join((
         result.scan_result.summary() for result in results
     )).replace('\n', '')
