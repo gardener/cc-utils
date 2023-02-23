@@ -76,7 +76,7 @@ def _scan_oci_image(
     clamav_client: clamav.client.ClamAVClient,
     oci_client: oc.Client,
     image_reference: str,
-) -> typing.Generator[clamav.model.MalwarescanResult, None, None]:
+) -> typing.Generator[clamav.model.MalwareScanResult, None, None]:
     start_time = datetime.datetime.now()
     logger.info(f'starting to scan {image_reference=}')
 
@@ -130,7 +130,7 @@ def _try_scan_image(
             image_reference=access.imageReference,
         )
 
-        return clamav.model.MalwarescanResult(
+        return clamav.model.MalwareScanResult(
                 resource=oci_resource,
                 scan_state=clamav.model.MalwareScanState.FINISHED_SUCCESSFULLY,
                 findings=[
@@ -144,7 +144,7 @@ def _try_scan_image(
         logger.warning(warning)
         traceback.print_exc()
 
-        return clamav.model.MalwarescanResult(
+        return clamav.model.MalwareScanResult(
                 resource=oci_resource,
                 scan_state=clamav.model.MalwareScanState.FINISHED_WITH_ERRORS,
                 findings=[warning],
@@ -157,7 +157,7 @@ def virus_scan_images(
     clamav_client: clamav.client.ClamAVClient,
     oci_client: oc.Client=None,
     max_workers=8,
-) -> typing.Generator[clamav.model.MalwarescanResult, None, None]:
+) -> typing.Generator[clamav.model.MalwareScanResult, None, None]:
     '''Scans components of the given Component Descriptor using ClamAV
 
     Used by image-scan-trait

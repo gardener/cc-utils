@@ -7,12 +7,12 @@ import github.compliance.model
 
 
 def as_table(
-    scan_results: typing.Iterable[clamav.model.ClamAV_ResourceScanResult],
+    scan_results: typing.Iterable[clamav.model.ClamAVResourceScanResult],
     tablefmt: str='simple', # see tabulate module
 ):
     headers = ('resource', 'status', 'details')
 
-    def row_from_result(scan_result: clamav.model.ClamAV_ResourceScanResult):
+    def row_from_result(scan_result: clamav.model.ClamAVResourceScanResult):
         c = scan_result.scanned_element.component
         a = github.compliance.model.artifact_from_node(scan_result.scanned_element)
         resource = f'{c.name}:{c.version}/{a.name}:{a.version}'

@@ -81,17 +81,17 @@ class AggregatedScanResult:
 
 
 @dataclasses.dataclass
-class ClamAV_ResourceScanResult(gcm.ScanResult):
+class ClamAVResourceScanResult(gcm.ScanResult):
     scan_result: AggregatedScanResult
 
 
 @dataclasses.dataclass
-class MalwarescanEvidenceRequest(saf.model.EvidenceRequest):
-    EvidenceDataBinary: typing.List[ClamAV_ResourceScanResult]
+class MalwareScanEvidenceRequest(saf.model.EvidenceRequest):
+    EvidenceDataBinary: typing.List[ClamAVResourceScanResult]
 
 
 @dataclasses.dataclass
-class MalwarescanResult:
+class MalwareScanResult:
     resource: cm.Resource
     scan_state: MalwareScanState
     findings: typing.List[str]

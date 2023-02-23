@@ -121,10 +121,10 @@ def scan_result_group_collection_for_licenses(
 
 
 def scan_result_group_collection_for_malware(
-    results: tuple[clamav.model.ClamAV_ResourceScanResult],
+    results: tuple[clamav.model.ClamAVResourceScanResult],
     rescoring_entries: tuple[image_scan.ClamAVRescoringEntry],
 ):
-    def malware_found(result: clamav.model.ClamAV_ResourceScanResult):
+    def malware_found(result: clamav.model.ClamAVResourceScanResult):
         if not result.scan_succeeded:
             return False
 
@@ -145,7 +145,7 @@ def scan_result_group_collection_for_malware(
 
         return default
 
-    def classification_callback(result: clamav.model.ClamAV_ResourceScanResult):
+    def classification_callback(result: clamav.model.ClamAVResourceScanResult):
         if not malware_found(result):
             return None
 
@@ -164,7 +164,7 @@ def scan_result_group_collection_for_malware(
 
         return worst_severity
 
-    def findings_callback(result: clamav.model.ClamAV_ResourceScanResult):
+    def findings_callback(result: clamav.model.ClamAVResourceScanResult):
         if not malware_found(result=result):
             return False
 
@@ -216,10 +216,10 @@ def dump_malware_scan_request(request):
 
 
 def prepare_evidence_request(
-    scan_results: typing.Iterable[clamav.model.ClamAV_ResourceScanResult],
+    scan_results: typing.Iterable[clamav.model.ClamAVResourceScanResult],
     evidence_id: str = 'gardener-mm6',
     pipeline_url: str = None,
-) -> clamav.model.MalwarescanEvidenceRequest:
+) -> clamav.model.MalwareScanEvidenceRequest:
     '''Prepare an evidence request for the given scan results and return it.
 
     The returned evidence request contains the _actual_ clamav scans as payload (i.e. the contents
@@ -242,7 +242,7 @@ def prepare_evidence_request(
             extra_id=artefact.extraIdentity or None,
         ))
 
-    return clamav.model.MalwarescanEvidenceRequest(
+    return clamav.model.MalwareScanEvidenceRequest(
         meta=saf.model.EvidenceMetadata(
             pipeline_url=pipeline_url,
             evidence_id=evidence_id,

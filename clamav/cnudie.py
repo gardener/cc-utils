@@ -10,8 +10,8 @@ import gci.componentmodel as cm
 import ci.log
 import ci.util
 import clamav.client
-import clamav.scan
 import clamav.model
+import clamav.scan
 import cnudie.iter
 import dso.model
 import github.compliance.model
@@ -27,7 +27,7 @@ def scan_resources(
     clamav_client: clamav.client.ClamAVClient,
     s3_client=None,
     max_workers:int = 16,
-) -> typing.Generator[clamav.model.ClamAV_ResourceScanResult, None, None]:
+) -> typing.Generator[clamav.model.ClamAVResourceScanResult, None, None]:
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
 
     def scan_resource(
@@ -74,7 +74,7 @@ def scan_resources(
         )
 
         # pylint: disable=E1123
-        return clamav.model.ClamAV_ResourceScanResult(
+        return clamav.model.ClamAVResourceScanResult(
             scan_result=scan_result,
             scanned_element=cnudie.iter.ResourceNode(
                 path=(component,),
@@ -102,7 +102,7 @@ def scan_resources(
 
 
 def resource_scan_result_to_artefact_metadata(
-    resource_scan_result: clamav.model.ClamAV_ResourceScanResult,
+    resource_scan_result: clamav.model.ClamAVResourceScanResult,
     clamav_version_info: clamav.model.ClamAVVersionInfo,
     datasource: str = dso.model.Datasource.CLAMAV,
     datatype: str = dso.model.Datatype.MALWARE,
