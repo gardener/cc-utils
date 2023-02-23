@@ -2,6 +2,9 @@ import copy
 import logging
 import typing
 import requests
+import dacite
+import datetime
+import dateutil.parser
 from dataclasses import dataclass
 
 import cfg_mgmt
@@ -22,8 +25,8 @@ class ServiceBindingInfo:
     id: str
     name: str
     service_instance_id: str
-    created_at: str
-    updated_at: str
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
 
 @dataclass
 class ServiceBindingDetailedInfo(ServiceBindingInfo):
@@ -86,7 +89,7 @@ class SBClient:
         result = resp.json()
         id = result['id']
         logger.info(f'Creating service binding {binding_name} ({id})')
-        return self.__response_json_to_sb_detailed_info(result)
+        return self._response_json_to_sb_detailed_info(result)
 
     def get_service_binding(self, id: str) -> ServiceBindingDetailedInfo:
         url = f'{self.sm_url}/v1/service_bindings/{id}'
@@ -100,7 +103,7 @@ class SBClient:
             logger.error(msg)
             raise requests.HTTPError(msg)
         result = resp.json()
-        return self.__response_json_to_sb_detailed_info(result)
+        return self._response_json_to_sb_detailed_info(result)
 
     def get_service_bindings(self) -> list[ServiceBindingInfo]:
         url = f'{self.sm_url}/v1/service_bindings'
@@ -115,24 +118,29 @@ class SBClient:
             raise requests.HTTPError(msg)
         bindings = []
         for item in resp.json()['items']:
-            id = item['id']
-            name = item['name']
-            instance_id = item['service_instance_id']
-            created_at = item['created_at']
-            updated_at = item['updated_at']
-            bindings.append(ServiceBindingInfo(
-                id=id, name=name, service_instance_id=instance_id, created_at=created_at, updated_at=updated_at))
+            bindings.append(
+                dacite.from_dict(
+                    data=item,
+                    data_class = ServiceBindingInfo,
+                    config=dacite.config.Config(
+                        type_hooks= {
+                            datetime.datetime: dateutil.parser.isoparse,
+                        }
+                    )
+                )
+            )
         return bindings
 
-    def __response_json_to_sb_detailed_info(self, resp_json) -> ServiceBindingDetailedInfo:
-        id = resp_json['id']
-        name = resp_json['name']
-        instance_id = resp_json['service_instance_id']
-        credentials = resp_json["credentials"]
-        created_at = resp_json['created_at']
-        updated_at = resp_json['updated_at']
-        return ServiceBindingDetailedInfo(id=id, name=name, service_instance_id=instance_id,
-                                          credentials=credentials, created_at=created_at, updated_at=updated_at)
+    def _response_json_to_sb_detailed_info(self, resp_json) -> ServiceBindingDetailedInfo:
+        return dacite.from_dict(
+            data=resp_json,
+            data_class=ServiceBindingDetailedInfo,
+            config=dacite.config.Config(
+                type_hooks={
+                    datetime.datetime: dateutil.parser.isoparse,
+                }
+            )
+        )
 
 def _get_oauth_token(credentials: dict) -> str:
     url = f'{credentials["url"]}/oauth/token'
