@@ -25,7 +25,7 @@ import checkmarx.model
 import cfg_mgmt.model as cmm
 import cfg_mgmt.reporting as cmr
 import ci.util
-import clamav.scan
+import clamav.model
 import cnudie.util
 import concourse.model.traits.image_scan as image_scan
 import delivery.client
@@ -319,7 +319,7 @@ def _checkmarx_template_vars(
 def _malware_template_vars(
     result_group: gcm.ScanResultGroup,
 ) -> dict:
-    results: tuple[clamav.scan.ClamAV_ResourceScanResult] = result_group.results_with_findings
+    results: tuple[clamav.model.ClamAV_ResourceScanResult] = result_group.results_with_findings
     summary_str = ''.join((
         result.scan_result.summary() for result in results
     )).replace('\n', '')

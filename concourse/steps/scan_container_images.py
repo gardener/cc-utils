@@ -25,7 +25,7 @@ import tabulate
 
 import clamav.client
 import clamav.cnudie
-import clamav.scan
+import clamav.model
 import cnudie.iter
 import concourse.model.traits.image_scan as image_scan
 import dso.cvss
@@ -121,19 +121,19 @@ def scan_result_group_collection_for_licenses(
 
 
 def scan_result_group_collection_for_malware(
-    results: tuple[clamav.scan.ClamAV_ResourceScanResult],
+    results: tuple[clamav.model.ClamAV_ResourceScanResult],
     rescoring_entries: tuple[image_scan.ClamAVRescoringEntry],
 ):
-    def malware_found(result: clamav.scan.ClamAV_ResourceScanResult):
+    def malware_found(result: clamav.model.ClamAV_ResourceScanResult):
         if not result.scan_succeeded:
             return False
 
-        if result.scan_result.malware_status is clamav.client.MalwareStatus.FOUND_MALWARE:
+        if result.scan_result.malware_status is clamav.model.MalwareStatus.FOUND_MALWARE:
             return True
         else:
             return False
 
-    def rescore(scan_result: clamav.client.ScanResult, default: gcm.Severity):
+    def rescore(scan_result: clamav.model.ScanResult, default: gcm.Severity):
         for entry in rescoring_entries:
             if not entry.digest == scan_result.meta.scanned_content_digest:
                 continue
@@ -145,7 +145,7 @@ def scan_result_group_collection_for_malware(
 
         return default
 
-    def classification_callback(result: clamav.scan.ClamAV_ResourceScanResult):
+    def classification_callback(result: clamav.model.ClamAV_ResourceScanResult):
         if not malware_found(result):
             return None
 
@@ -164,7 +164,7 @@ def scan_result_group_collection_for_malware(
 
         return worst_severity
 
-    def findings_callback(result: clamav.scan.ClamAV_ResourceScanResult):
+    def findings_callback(result: clamav.model.ClamAV_ResourceScanResult):
         if not malware_found(result=result):
             return False
 
@@ -216,10 +216,10 @@ def dump_malware_scan_request(request):
 
 
 def prepare_evidence_request(
-    scan_results: typing.Iterable[clamav.scan.ClamAV_ResourceScanResult],
+    scan_results: typing.Iterable[clamav.model.ClamAV_ResourceScanResult],
     evidence_id: str = 'gardener-mm6',
     pipeline_url: str = None,
-) -> clamav.scan.MalwarescanEvidenceRequest:
+) -> clamav.model.MalwarescanEvidenceRequest:
     '''Prepare an evidence request for the given scan results and return it.
 
     The returned evidence request contains the _actual_ clamav scans as payload (i.e. the contents
@@ -242,7 +242,7 @@ def prepare_evidence_request(
             extra_id=artefact.extraIdentity or None,
         ))
 
-    return clamav.scan.MalwarescanEvidenceRequest(
+    return clamav.model.MalwarescanEvidenceRequest(
         meta=saf.model.EvidenceMetadata(
             pipeline_url=pipeline_url,
             evidence_id=evidence_id,

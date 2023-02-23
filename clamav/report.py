@@ -2,18 +2,17 @@ import typing
 
 import tabulate
 
-import clamav.client
-import clamav.scan
+import clamav.model
 import github.compliance.model
 
 
 def as_table(
-    scan_results: typing.Iterable[clamav.scan.ClamAV_ResourceScanResult],
+    scan_results: typing.Iterable[clamav.model.ClamAV_ResourceScanResult],
     tablefmt: str='simple', # see tabulate module
 ):
     headers = ('resource', 'status', 'details')
 
-    def row_from_result(scan_result: clamav.scan.ClamAV_ResourceScanResult):
+    def row_from_result(scan_result: clamav.model.ClamAV_ResourceScanResult):
         c = scan_result.scanned_element.component
         a = github.compliance.model.artifact_from_node(scan_result.scanned_element)
         resource = f'{c.name}:{c.version}/{a.name}:{a.version}'
@@ -21,11 +20,11 @@ def as_table(
 
         status = res.malware_status
 
-        if status is clamav.client.MalwareStatus.OK:
+        if status is clamav.model.MalwareStatus.OK:
             details = 'no malware found'
-        elif status is clamav.client.MalwareStatus.UNKNOWN:
+        elif status is clamav.model.MalwareStatus.UNKNOWN:
             details = 'failed to scan'
-        elif status is clamav.client.MalwareStatus.FOUND_MALWARE:
+        elif status is clamav.model.MalwareStatus.FOUND_MALWARE:
             details = '\n'.join((
                 f'{finding.name}: {finding.details}' for finding in res.findings
             ))
