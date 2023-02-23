@@ -44,11 +44,11 @@ def scan_component(
         resource_nodes=resource_nodes,
         oci_client=oci_client,
         clamav_client=clamav_client,
+        clamav_version_info=clamav_version_info,
         max_workers=max_worker,
     ):
         findings_data = clamav.cnudie.resource_scan_result_to_artefact_metadata(
             resource_scan_result=result,
-            clamav_version_info=clamav_version_info,
             datasource=dso.model.Datasource.CLAMAV,
             datatype=dso.model.Datatype.MALWARE,
         )

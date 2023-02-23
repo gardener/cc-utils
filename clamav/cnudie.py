@@ -25,6 +25,7 @@ def scan_resources(
     resource_nodes: typing.Iterable[cnudie.iter.ResourceNode],
     oci_client: oci.client.Client,
     clamav_client: clamav.client.ClamAVClient,
+    clamav_version_info: clamav.model.ClamAVVersionInfo,
     s3_client=None,
     max_workers:int = 16,
 ) -> typing.Generator[clamav.model.ClamAVResourceScanResult, None, None]:
@@ -71,6 +72,7 @@ def scan_resources(
             resource=resource,
             results=results,
             name=f'{component.name}/{resource.name}',
+            clamav_version_info=clamav_version_info,
         )
 
         # pylint: disable=E1123
@@ -103,7 +105,6 @@ def scan_resources(
 
 def resource_scan_result_to_artefact_metadata(
     resource_scan_result: clamav.model.ClamAVResourceScanResult,
-    clamav_version_info: clamav.model.ClamAVVersionInfo,
     datasource: str = dso.model.Datasource.CLAMAV,
     datatype: str = dso.model.Datatype.MALWARE,
     creation_date: datetime.datetime = datetime.datetime.now(),
@@ -139,10 +140,13 @@ def resource_scan_result_to_artefact_metadata(
             malware_status=scan_result.malware_status.name,
         )
 
+    aggregated_scan_result = resource_scan_result.scan_result
+    clamav_version_info = aggregated_scan_result.clamav_version_info
+
     finding = dso.model.MalwareSummary(
         findings=tuple(
             _scan_result_to_malware_finding(r)
-            for r in resource_scan_result.scan_result.findings
+            for r in aggregated_scan_result.findings
         ),
         metadata=dso.model.ClamAVMetadata(
             clamav_version_str=clamav_version_info.clamav_version_str,

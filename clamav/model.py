@@ -61,6 +61,7 @@ class AggregatedScanResult:
     scanned_octets: int
     scan_duration_seconds: float
     upload_duration_seconds: float
+    clamav_version_info: ClamAVVersionInfo
 
     def summary(self, fmt:str='html') -> str:
         if not fmt == 'html':

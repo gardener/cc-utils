@@ -21,6 +21,7 @@ ci.log.configure_default_logging()
 def aggregate_scan_result(
     resource: cm.Resource,
     results: typing.Iterable[clamav.model.ScanResult],
+    clamav_version_info: clamav.model.ClamAVVersionInfo,
     name: str=None,
 ) -> clamav.model.AggregatedScanResult:
     count = 0
@@ -77,6 +78,7 @@ def aggregate_scan_result(
         scanned_octets=scanned_octets,
         scan_duration_seconds=scan_duration_seconds,
         upload_duration_seconds=upload_duration_seconds,
+        clamav_version_info=clamav_version_info,
     )
 
 
