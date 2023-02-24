@@ -58,6 +58,9 @@ class ProtecodeConfig(NamedModelElement):
     def tls_verify(self) -> bool:
         return self.raw.get('tls_verify', True)
 
+    def group_ids(self) -> list[int]:
+        return self.raw.get('group_ids', [])
+
     def _required_attributes(self):
         yield from super()._required_attributes()
         yield from (
