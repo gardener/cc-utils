@@ -58,6 +58,7 @@ class ScanResult:
     meta: typing.Optional[Meta]
     name: str
 
+
 @dataclasses.dataclass
 class ClamAVVersionInfo:
     clamav_version_str: str # as returned by clamAV, example: "ClamAV 0.105.1"

@@ -72,6 +72,7 @@ class Metadata:
     type: str
     creation_date: datetime.datetime
 
+
 @dataclasses.dataclass(frozen=True)
 class GreatestCVE:
     greatestCvss3Score: float
