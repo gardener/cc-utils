@@ -12,14 +12,14 @@ from concourse.client.model import ResourceType
 - name: 'git'
   type: 'registry-image'
   source:
-    repository: eu.gcr.io/gardener-project/cc/git-resource
-    tag: latest
+    repository: eu.gcr.io/gardener-project/cc/concourse-resource-git
+    tag: '0.3.0'
 </%def>
 
 <%def name="include_time_resource_type()">
 - name: 'time'
   type: 'registry-image'
   source:
-    repository: eu.gcr.io/gardener-project/cc/time-resource
-    tag: latest
+    repository: eu.gcr.io/gardener-project/cc/concourse-resource-time
+    tag: '0.3.0'
 </%def>
