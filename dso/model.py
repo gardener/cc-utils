@@ -87,6 +87,8 @@ class OsID:
 @dataclasses.dataclass(frozen=True)
 class LicenseSummary:
     licenses: list[str]
+    reportUrl: str
+    productId: int
 
 
 @dataclasses.dataclass(frozen=True)

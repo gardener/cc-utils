@@ -80,6 +80,8 @@ def iter_artefact_metadata(
         ))
         license = dso.model.LicenseSummary(
             licenses=license_names,
+            reportUrl=result.result.report_url(),
+            productId=result.result.product_id(),
         )
         yield dso.model.ArtefactMetadata(
             artefact=artefact_ref,
