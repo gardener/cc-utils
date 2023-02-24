@@ -78,6 +78,8 @@ class GreatestCVE:
     greatestCvss3Score: float
     reportUrl: str
     productId: int
+    group_id: int
+    hostname: str
 
 
 @dataclasses.dataclass(frozen=True)

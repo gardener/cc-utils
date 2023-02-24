@@ -21,6 +21,7 @@ import typing
 
 import gci.componentmodel as cm
 
+import ci.util
 import dso.cvss
 import gci.componentmodel
 import github.compliance.model as gcm
@@ -64,7 +65,15 @@ class AnalysisResult(ModelBase):
     def product_id(self) -> int:
         return self.raw.get('product_id')
 
-    def report_url(self):
+    def group_id(self) -> int:
+        return int(self.raw.get('group_id'))
+
+    def hostname(self) -> str:
+        report_url = self.report_url()
+        parsed_url = ci.util.urlparse(report_url)
+        return parsed_url.hostname
+
+    def report_url(self) -> str:
         return self.raw.get('report_url')
 
     def display_name(self) -> str:
