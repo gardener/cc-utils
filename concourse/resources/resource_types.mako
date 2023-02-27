@@ -14,7 +14,7 @@ from concourse.client.model import ResourceType
   type: 'registry-image'
   source:
     repository: eu.gcr.io/gardener-project/cc/concourse-resource-git
-    tag: '0.4.0'
+    tag: '0.6.0'
 </%def>
 
 <%def name="include_time_resource_type()">
@@ -22,5 +22,5 @@ from concourse.client.model import ResourceType
   type: 'registry-image'
   source:
     repository: eu.gcr.io/gardener-project/cc/concourse-resource-time
-    tag: '0.4.0'
+    tag: '0.6.0'
 </%def>
