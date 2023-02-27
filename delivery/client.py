@@ -249,7 +249,7 @@ class DeliveryServiceClient:
         component_version: str=None,
         metadata_types: list[str]=[], # empty list returns _all_ metadata-types
         select: str=None, # either `greatestVersion` or `latestDate`
-    ):
+    ) -> list[dm.ArtefactMetadata]:
         '''
         returns a list of artifact-metadata for the given component
 
@@ -270,7 +270,10 @@ class DeliveryServiceClient:
 
         resp.raise_for_status()
 
-        return resp.json()
+        return [
+            dm.ArtefactMetadata.from_dict(raw)
+            for raw in resp.json()
+        ]
 
 
 def _normalise_github_hostname(github_url: str):
