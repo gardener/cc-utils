@@ -59,7 +59,7 @@ class CtxCfg:
 
 @dataclasses.dataclass
 class GlobalConfig:
-    ctx: CtxCfg = CtxCfg()
+    ctx: CtxCfg = dataclasses.field(default_factory=CtxCfg)
     terminal: typing.Optional[TerminalCfg] = None
 
 
