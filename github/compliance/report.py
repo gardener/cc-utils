@@ -822,7 +822,7 @@ def create_or_update_github_issues(
         return
 
     for result_group in result_groups_without_findings:
-        logger.info(f'discarding issue for {result_group.name=} vulnerabilities')
+        logger.info(f'discarding issue for {result_group.name=}')
         process_result(
             result_group=result_group,
             action=PROCESSING_ACTION.DISCARD,
