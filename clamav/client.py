@@ -25,7 +25,7 @@ import requests
 import urllib3
 import urllib3.util.retry
 
-import ci.util
+import clamav.routes
 
 
 logger = logging.getLogger(__name__)
@@ -66,20 +66,6 @@ class ClamAVVersionInfo:
     signature_date: datetime.datetime
 
 
-class ClamAVRoutes:
-    def __init__(
-        self,
-        base_url: str,
-    ):
-        self._base_url = base_url
-
-    def scan(self):
-        return ci.util.urljoin(self._base_url, 'scan')
-
-    def version(self):
-        return ci.util.urljoin(self._base_url, 'version')
-
-
 def _make_latin1_encodable(value: str, /) -> str:
     try:
         value.encode('latin-1')
@@ -94,7 +80,7 @@ def _make_latin1_encodable(value: str, /) -> str:
 class ClamAVClient:
     def __init__(
         self,
-        routes: ClamAVRoutes,
+        routes: clamav.routes.ClamAVRoutes,
         retry_cfg: urllib3.util.retry.Retry=None,
         max_parallel:int=8,
     ):

@@ -49,3 +49,6 @@ class ClamAVRoutes:
 
     def health(self):
         return self._api_url('mwss-health')
+
+    def version(self):
+        return self._api_url('version')
