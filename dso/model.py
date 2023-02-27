@@ -215,14 +215,14 @@ class RescoringData:
 class ArtefactMetadata:
     artefact: ComponentArtefactId
     meta: Metadata
-    data: typing.Union[
-        ComponentSummary,
-        CodecheckSummary,
-        FilesystemPaths,
-        GreatestCVE,
-        LicenseSummary,
-        MalwareSummary,
-        OsID,
-        RescoringData,
-        dict, # fallback, there should be a type
-    ]
+    data: (
+        CodecheckSummary
+        | ComponentSummary
+        | FilesystemPaths
+        | GreatestCVE
+        | LicenseSummary
+        | MalwareSummary
+        | OsID
+        | RescoringData
+        | dict # fallback, there should be a type
+    )
