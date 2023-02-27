@@ -95,7 +95,7 @@ print_protecode_info_table(
 
 cve_threshold = ${protecode_scan.cve_threshold()}
 
-protecode_client = ccc.protecode.client(protecode_cfg)
+protecode_client = ccc.protecode.client(protecode_cfg=protecode_cfg)
 delivery_svc_endpoints = ccc.delivery.endpoints(cfg_set=cfg_set)
 delivery_svc_client = ccc.delivery.default_client_if_available()
 

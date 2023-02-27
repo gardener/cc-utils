@@ -38,7 +38,7 @@ def rescore(
 ):
     cfg_factory = ci.util.ctx().cfg_factory()
     protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
-    client = ccc.protecode.client(protecode_cfg)
+    client = ccc.protecode.client(protecode_cfg=protecode_cfg)
 
     if categorisation and not os.path.isfile(categorisation):
         print(f'{categorisation} must point to an existing file w/ CveCategorisation')
@@ -200,7 +200,7 @@ def assess(
 ):
     cfg_factory = ci.util.ctx().cfg_factory()
     protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
-    client = ccc.protecode.client(protecode_cfg)
+    client = ccc.protecode.client(protecode_cfg=protecode_cfg)
 
     pa.auto_triage(
         protecode_client=client,
@@ -245,7 +245,7 @@ def scan(
 
     logger.info('running protecode scan for all components')
 
-    client = ccc.protecode.client(protecode_cfg_name)
+    client = ccc.protecode.client(protecode_cfg=protecode_cfg_name)
 
     results = _upload_grouped_images(
         protecode_api=client,
@@ -286,7 +286,7 @@ def transport_triages(
 ):
     cfg_factory = ci.util.ctx().cfg_factory()
     protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
-    api = ccc.protecode.client(protecode_cfg)
+    api = ccc.protecode.client(protecode_cfg=protecode_cfg)
 
     scan_result_from = api.scan_result(product_id=from_product_id)
     scan_results_to = {
