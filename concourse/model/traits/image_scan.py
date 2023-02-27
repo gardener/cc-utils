@@ -183,7 +183,7 @@ CLAMAV_ATTRS = (
     ),
     AttributeSpec.optional(
         name='parallel_jobs',
-        doc='the amount of (maxium) parallel workers',
+        doc='the amount of (maximum) parallel workers',
         type=int,
         default=8,
     ),
