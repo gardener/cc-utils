@@ -28,6 +28,7 @@ class ServiceBindingInfo:
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
+
 @dataclass
 class ServiceBindingDetailedInfo(ServiceBindingInfo):
     credentials: dict
@@ -71,7 +72,8 @@ class SBClient:
             raise requests.HTTPError(msg)
         logger.info(f'Deleted service binding {name} ({id})')
 
-    def create_service_binding(self, instance_id: str, binding_name: str) -> ServiceBindingDetailedInfo:
+    def create_service_binding(self, instance_id: str, binding_name: str) \
+        -> ServiceBindingDetailedInfo:
         url = f'{self.sm_url}/v1/service_bindings'
         data = {
             'name': binding_name,
@@ -121,9 +123,9 @@ class SBClient:
             bindings.append(
                 dacite.from_dict(
                     data=item,
-                    data_class = ServiceBindingInfo,
+                    data_class=ServiceBindingInfo,
                     config=dacite.config.Config(
-                        type_hooks= {
+                        type_hooks={
                             datetime.datetime: dateutil.parser.isoparse,
                         }
                     )
@@ -141,6 +143,7 @@ class SBClient:
                 }
             )
         )
+
 
 def _get_oauth_token(credentials: dict) -> str:
     url = f'{credentials["url"]}/oauth/token'
