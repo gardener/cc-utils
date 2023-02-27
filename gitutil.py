@@ -252,7 +252,11 @@ class GitHelper:
 def url_with_credentials(github_cfg, github_repo_path):
     base_url = urllib.parse.urlparse(github_cfg.http_url())
     credentials = github_cfg.credentials()
-    credentials_str = ':'.join((credentials.username(), credentials.passwd()))
+
+    # prefer auth token
+    secret = credentials.auth_token() or credentials.passwd()
+
+    credentials_str = ':'.join((credentials.username(), secret))
     url = urllib.parse.urlunparse((
         base_url.scheme,
         '@'.join((credentials_str, base_url.hostname)),
