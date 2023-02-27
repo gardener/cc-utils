@@ -1,6 +1,8 @@
 import dataclasses
 import datetime
 
+import dso.model
+
 import awesomeversion
 import dacite
 import dateutil.parser
@@ -66,5 +68,45 @@ class OsReleaseInfo:
             data=raw,
             config=dacite.Config(
                 type_hooks={datetime.date | None: _parse_date_if_present},
+            ),
+        )
+
+
+@dataclasses.dataclass(frozen=True)
+class ComponentArtefactId:
+    componentName: str
+    componentVersion: str
+    artefactName: str
+    artefactKind: str
+    artefactVersion: str
+    artefactType: str
+    artefactExtraId: dict
+
+
+@dataclasses.dataclass(frozen=True)
+class ArtefactMetadata:
+    # this is _almost_ (but not quite) dso.model.ArtefactMetadata :(. Namely, the structure
+    # of the ArtefactId differs and there is an additional `type` str.
+    artefactId: ComponentArtefactId
+    type: str
+    meta: dso.model.Metadata
+    data: (
+        dso.model.GreatestCVE
+        | dso.model.LicenseSummary
+        | dso.model.ComponentSummary
+        | dso.model.OsID
+        | dso.model.MalwareSummary
+        | dso.model.FilesystemPaths
+        | dso.model.CodecheckSummary
+        | dict
+    )
+
+    @staticmethod
+    def from_dict(raw: dict):
+        return dacite.from_dict(
+            data_class=ArtefactMetadata,
+            data=raw,
+            config=dacite.Config(
+                type_hooks={datetime.datetime: datetime.datetime.fromisoformat},
             ),
         )
