@@ -67,10 +67,12 @@ class ScanState(enum.Enum):
     '''
     indicates the scan outcome of a scan (regardless of yielded contents).
 
-    SUCCEEDED: scan succeeded without errors (but potentially with findings)
-    FAILED:    scan failed (which typically implies there are not scan results)
+    SUCCEEDED:  scan succeeded without errors (but potentially with findings)
+    SKIPPED:    No scan took place (we have an earlier scan that has not been invalidated yet)
+    FAILED:     scan failed (which typically implies there are not scan results)
     '''
     SUCCEEDED = 'succeeded'
+    SKIPPED = 'skipped'
     FAILED = 'failed'
 
 
@@ -85,7 +87,7 @@ class ScanResult:
 
     @property
     def scan_succeeded(self) -> bool:
-        return self.state is ScanState.SUCCEEDED
+        return self.state in [ScanState.SUCCEEDED, ScanState.SKIPPED]
 
 
 @dataclasses.dataclass
@@ -168,6 +170,8 @@ class ScanResultGroup:
     @functools.cached_property
     def has_findings(self) -> bool:
         for r in self.results_with_successful_scans:
+            if r.state is ScanState.SKIPPED:
+                continue
             if self.findings_callback(r):
                 return True
         else:
@@ -179,6 +183,13 @@ class ScanResultGroup:
             if not result.scan_succeeded:
                 return True
 
+        return False
+
+    @functools.cached_property
+    def has_attempted_scans(self) -> bool:
+        for result in self.results:
+            if not result.state is ScanState.SKIPPED:
+                return True
         return False
 
     @functools.cached_property
@@ -203,13 +214,16 @@ class ScanResultGroup:
 
     @functools.cached_property
     def results_with_findings(self) -> tuple[ScanResult]:
-        return tuple((r for r in self.results_with_successful_scans if self.findings_callback(r)))
+        return tuple(
+            r for r in self.results_with_successful_scans
+            if r.state is not ScanState.SKIPPED and self.findings_callback(r)
+        )
 
     @functools.cached_property
     def results_without_findings(self) -> tuple[ScanResult]:
         return tuple((
             r for r in self.results_with_successful_scans
-            if not self.findings_callback(r)
+            if r.state is not ScanState.SKIPPED and not self.findings_callback(r)
         ))
 
 

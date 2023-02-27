@@ -188,6 +188,15 @@ CLAMAV_ATTRS = (
         default=8,
     ),
     AttributeSpec.optional(
+        name='virus_db_max_age_days',
+        doc=(
+            'The maxmimum age difference (in days) the virus definition database of ClamAV may '
+            'have when being compared to the most current database before triggering rescans.'
+        ),
+        type=int,
+        default=0,
+    ),
+    AttributeSpec.optional(
         name='saf_config_name',
         doc='SAF config name to use (see cc-config)',
         type=str,
@@ -224,6 +233,9 @@ class ClamAVScanCfg(ModelBase):
 
     def parallel_jobs(self) -> int:
         return int(self.raw['parallel_jobs'])
+
+    def virus_db_max_age_days(self) -> int:
+        return self.raw['virus_db_max_age_days']
 
     def rescorings(self) -> tuple[ClamAVRescoringEntry]:
         return tuple((

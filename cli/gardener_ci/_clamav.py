@@ -46,6 +46,7 @@ def scan_component(
         clamav_client=clamav_client,
         clamav_version_info=clamav_version_info,
         max_workers=max_worker,
+        virus_db_max_age_days=0,
     ):
         findings_data = clamav.cnudie.resource_scan_result_to_artefact_metadata(
             resource_scan_result=result,
