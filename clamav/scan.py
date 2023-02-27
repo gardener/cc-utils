@@ -10,6 +10,7 @@ import gci.componentmodel as cm
 import ci.log
 import clamav.client
 import clamav.model
+import clamav.util
 import oci.client
 import oci.model
 
@@ -61,16 +62,8 @@ def aggregate_scan_result(
     else:
         malware_status = clamav.model.MalwareStatus.UNKNOWN
 
-    if isinstance(resource.access, cm.OciAccess):
-        resource_url = resource.access.imageReference
-    elif isinstance(resource.access, cm.S3Access):
-        a = resource.access
-        resource_url = f's3://{a.bucketName}/{a.objectKey}'
-    else:
-        resource_url = '<unknown>'
-
     return clamav.model.AggregatedScanResult(
-        resource_url=resource_url,
+        resource_url=clamav.util.resource_url_from_resource_access(resource.access),
         name=name,
         malware_status=malware_status,
         findings=findings,

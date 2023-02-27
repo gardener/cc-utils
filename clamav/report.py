@@ -16,22 +16,25 @@ def as_table(
         c = scan_result.scanned_element.component
         a = github.compliance.model.artifact_from_node(scan_result.scanned_element)
         resource = f'{c.name}:{c.version}/{a.name}:{a.version}'
-        res = scan_result.scan_result
 
-        status = res.malware_status
-
-        if status is clamav.model.MalwareStatus.OK:
-            details = 'no malware found'
-        elif status is clamav.model.MalwareStatus.UNKNOWN:
-            details = 'failed to scan'
-        elif status is clamav.model.MalwareStatus.FOUND_MALWARE:
-            details = '\n'.join((
-                f'{finding.name}: {finding.details}' for finding in res.findings
-            ))
+        if scan_result.state is github.compliance.model.ScanState.SKIPPED:
+            return resource, 'scan skipped', ''
         else:
-            raise NotImplementedError(status)
+            res = scan_result.scan_result
+            status = res.malware_status
 
-        return resource, status, details
+            if status is clamav.model.MalwareStatus.OK:
+                details = 'no malware found'
+            elif status is clamav.model.MalwareStatus.UNKNOWN:
+                details = 'failed to scan'
+            elif status is clamav.model.MalwareStatus.FOUND_MALWARE:
+                details = '\n'.join((
+                    f'{finding.name}: {finding.details}' for finding in res.findings
+                ))
+            else:
+                raise NotImplementedError(status)
+
+            return resource, status, details
 
     def rows():
         for result in scan_results:

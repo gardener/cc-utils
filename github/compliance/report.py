@@ -662,7 +662,7 @@ def create_or_update_github_issues(
         ctx_labels = _scanned_element_ctx_label(scan_result.scanned_element)
 
         if gcm.is_ocm_artefact_node(scan_result.scanned_element):
-            if not len({r.scanned_element.component.name for r in results}) == 1:
+            if results and not len({r.scanned_element.component.name for r in results}) == 1:
                 raise ValueError('not all component names are identical')
 
         if overwrite_repository:
@@ -849,6 +849,8 @@ def create_or_update_github_issues(
         return
 
     for result_group in result_groups_without_findings:
+        if not result_group.has_attempted_scans:
+            continue
         logger.info(f'discarding issue for {result_group.name=}')
         process_result(
             result_group=result_group,
