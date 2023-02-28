@@ -76,9 +76,16 @@ class ClamAVClient:
         if res.status < 200 or res.status > 200:
             raise urllib3.exceptions.HTTPError(f'{res.status=} {res.data=}')
 
-        body = b''
-        for chunk in res.stream():
-            body += chunk
+        if 'preload_content' in kwargs and not kwargs['preload_content']:
+            body = b''
+            for chunk in res.stream():
+                body += chunk
+
+            res.drain_conn()
+            res.release_conn()
+        else:
+            body = res.data
+
 
         parsed = json.loads(body)
         return parsed
