@@ -86,7 +86,6 @@ class ClamAVClient:
         else:
             body = res.data
 
-
         parsed = json.loads(body)
         return parsed
 
