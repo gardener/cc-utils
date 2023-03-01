@@ -60,7 +60,7 @@ def iter_artefact_metadata(
             reportUrl=result.result.report_url(),
             productId=result.result.product_id(),
             group_id=result.result.group_id(),
-            hostname=result.result.hostname(),
+            base_url=result.result.base_url(),
         )
         yield dso.model.ArtefactMetadata(
             artefact=artefact_ref,

@@ -78,7 +78,7 @@ class GreatestCVE:
     reportUrl: str
     productId: int
     group_id: int
-    hostname: str
+    base_url: str
 
 
 @dataclasses.dataclass(frozen=True)

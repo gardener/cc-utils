@@ -68,10 +68,10 @@ class AnalysisResult(ModelBase):
     def group_id(self) -> int:
         return int(self.raw.get('group_id'))
 
-    def hostname(self) -> str:
+    def base_url(self) -> str:
         report_url = self.report_url()
         parsed_url = ci.util.urlparse(report_url)
-        return parsed_url.hostname
+        return f'{parsed_url.scheme}://{parsed_url.hostname}'
 
     def report_url(self) -> str:
         return self.raw.get('report_url')
