@@ -58,7 +58,7 @@ def iter_artefact_metadata(
         cve = dso.model.GreatestCVE(
             greatestCvss3Score=result.greatest_cve_score,
             reportUrl=result.result.report_url(),
-            productId=result.result.product_id(),
+            product_id=result.result.product_id(),
             group_id=result.result.group_id(),
             base_url=result.result.base_url(),
         )

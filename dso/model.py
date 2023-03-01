@@ -76,7 +76,7 @@ class Metadata:
 class GreatestCVE:
     greatestCvss3Score: float
     reportUrl: str
-    productId: int
+    product_id: int
     group_id: int
     base_url: str
 
