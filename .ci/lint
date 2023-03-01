@@ -10,8 +10,6 @@ error=0
 
 export PYTHONPATH="${src_dir}"
 
-python3 -m pip install --upgrade gardener-component-model
-
 echo 'running pylama for all modules (errors only)'
 (
     pushd "${src_dir}"
