@@ -40,6 +40,9 @@ class CheckmarxConfig(NamedModelElement):
     def base_url(self):
         return self.raw.get('base_url')
 
+    def team_id(self):
+        return self.raw.get('team_id')
+
     def credentials(self):
         return CheckmarxCredentials(self.raw.get('credentials'))
 
