@@ -861,7 +861,7 @@ def create_or_update_github_issues(
 
     if err_count > 0:
         logger.warning(f'{err_count=} - there were errors - will raise')
-        raise ValueError('not all gh-issues could be created/updated/deleted')
+        raise RuntimeError('not all github-issues could be created/updated/deleted')
 
     logger.info(f'{gh_api.ratelimit_remaining=}')
 
