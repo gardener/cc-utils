@@ -594,6 +594,14 @@ def _target_sprint(
 
     return target_sprint
 
+@functools.cache
+def _valid_issue_assignees(
+    repository: github3.repos.Repository,
+) -> set[str]:
+    return set(
+        u.login for u in repository.assignees()
+    )
+
 
 class PROCESSING_ACTION(enum.Enum):
     DISCARD = 'discard'
@@ -682,6 +690,20 @@ def create_or_update_github_issues(
                 repository=repository,
                 gh_api=gh_api,
             )
+
+            valid_assignees = _valid_issue_assignees(repository)
+
+            if invalid_assignees := (assignees - valid_assignees):
+                logger.warning(
+                    f'Unable to assign {invalid_assignees} to issues in repository '
+                    f'{repository.url}. Please make sure the users have the necessary permissions '
+                    'to see issues in the repository.'
+                )
+                assignees -= invalid_assignees
+                logger.info(
+                    f'Removed invalid assignees {invalid_assignees} from target assignees for '
+                    f'issue. Remaining assignees: {assignees}'
+                )
 
             target_milestone = None
             latest_processing_date = None
