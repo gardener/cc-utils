@@ -466,7 +466,7 @@ def _scanned_element_assignees(
     delivery_svc_client: delivery.client.DeliveryServiceClient | None,
     repository: github3.repos.repo.Repository,
     gh_api: github3.GitHub | github3.GitHubEnterprise,
-) -> tuple[str]:
+) -> set[str]:
 
     def iter_gh_usernames_from_responsibles_mapping(
         gh_api: github3.GitHub | github3.GitHubEnterprise,
@@ -505,26 +505,26 @@ def _scanned_element_assignees(
                 github_url=repository.url,
             )
 
-            return tuple((
+            return set(
                 u.username for u in assignees
                 if github.user.is_user_active(
                     username=u.username,
                     github=gh_api,
                 )
-            ))
+            )
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
                 logger.warning(f'Delivery Service returned 404 for '
                     f'{scanned_element.component.name=}, {artifact.name=}')
-                return ()
+                return set()
             else:
                 raise
 
     elif isinstance(scanned_element, cmr.CfgElementStatusReport):
         if not scanned_element.responsible:
-            return ()
+            return set()
 
-        return tuple((
+        return set(
             username for username in iter_gh_usernames_from_responsibles_mapping(
                 responsibles_mapping=scanned_element.responsible,
                 gh_api=gh_api,
@@ -533,7 +533,7 @@ def _scanned_element_assignees(
                 username=username,
                 github=gh_api,
             )
-        ))
+        )
     else:
         raise TypeError(scanned_element)
 
