@@ -110,6 +110,7 @@ logger.info('running protecode scan for all components')
 results = tuple(
   protecode.scanning.upload_grouped_images(
     protecode_api=protecode_client,
+    bdba_cfg_name=protecode_cfg.name(),
     protecode_group_id = protecode_group_id,
     component = component_descriptor,
     reference_group_ids = ${protecode_scan.reference_protecode_group_ids()},

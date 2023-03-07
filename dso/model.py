@@ -79,6 +79,7 @@ class GreatestCVE:
     product_id: int
     group_id: int
     base_url: str
+    bdba_cfg_name: str
 
 
 @dataclasses.dataclass(frozen=True)

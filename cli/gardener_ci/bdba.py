@@ -249,6 +249,7 @@ def scan(
 
     results = _upload_grouped_images(
         protecode_api=client,
+        bdba_cfg_name=protecode_cfg_name,
         component=cd,
         protecode_group_id=protecode_group_id,
         oci_client=oci_client,

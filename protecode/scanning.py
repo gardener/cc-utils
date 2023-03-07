@@ -565,6 +565,7 @@ def _proxy_list_apps(
 
 def upload_grouped_images(
     protecode_api: protecode.client.ProtecodeApi,
+    bdba_cfg_name: str,
     component: cm.Component|cm.ComponentDescriptor,
     protecode_group_id=5,
     parallel_jobs=8,
@@ -634,7 +635,8 @@ def upload_grouped_images(
             if delivery_client:
                 protecode.util.upload_results_to_deliverydb(
                     delivery_client=delivery_client,
-                    results=scan_results
+                    results=scan_results,
+                    bdba_cfg_name=bdba_cfg_name,
                 )
             else:
                 logger.warning('Not uploading results to deliverydb, client not available')

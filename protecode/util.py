@@ -32,9 +32,13 @@ ci.log.configure_default_logging(print_thread_id=True)
 def upload_results_to_deliverydb(
     delivery_client: delivery.client.DeliveryServiceClient,
     results: typing.Iterable[pm.BDBA_ScanResult],
+    bdba_cfg_name: str,
 ):
     try:
-        for artefact_metadata in iter_artefact_metadata(results):
+        for artefact_metadata in iter_artefact_metadata(
+            results=results,
+            bdba_cfg_name=bdba_cfg_name,
+        ):
             delivery_client.upload_metadata(data=artefact_metadata)
     except:
         import traceback
@@ -43,6 +47,7 @@ def upload_results_to_deliverydb(
 
 def iter_artefact_metadata(
     results: typing.Collection[pm.BDBA_ScanResult],
+    bdba_cfg_name: str,
 ) -> typing.Generator[dso.model.ArtefactMetadata, None, None]:
     for result in results:
         artefact = github.compliance.model.artifact_from_node(result.scanned_element)
@@ -61,6 +66,7 @@ def iter_artefact_metadata(
             product_id=result.result.product_id(),
             group_id=result.result.group_id(),
             base_url=result.result.base_url(),
+            bdba_cfg_name=bdba_cfg_name,
         )
         yield dso.model.ArtefactMetadata(
             artefact=artefact_ref,
