@@ -66,7 +66,7 @@ def parse_codeowner_entry(
     entry = entry.removeprefix('@')
 
     if '/' not in entry:
-        return Username(entry)
+        return Username(entry.lower())
 
     else:
         return Team(entry)
