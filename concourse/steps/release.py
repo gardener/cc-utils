@@ -12,7 +12,6 @@ import yaml
 
 from github3.exceptions import (
     ConnectionError,
-    NotFoundError,
 )
 
 import gci.componentmodel as cm
@@ -37,7 +36,6 @@ from github.util import (
 )
 import product.v2
 from github.release_notes.util import (
-    delete_file_from_slack,
     fetch_release_notes,
     post_to_slack,
     ReleaseNotes,
@@ -108,10 +106,6 @@ class TransactionalStep(metaclass=abc.ABCMeta):
     an object (e.g.: a `dict`) that is then made available to later steps
     when part of a `Transaction`.
 
-    Subclasses *must* overwrite the `revert` method, which reverts any persistent external side
-    effects previously created by running the step's `apply` method. This should take into account
-    that the execution of the `apply` method may or may not have succeeded, failed,
-    or failed partially.
     '''
     def set_context(self, context: TransactionContext):
         self._context = context
@@ -127,10 +121,6 @@ class TransactionalStep(metaclass=abc.ABCMeta):
         return None
 
     @abc.abstractmethod
-    def revert(self):
-        pass
-
-    @abc.abstractmethod
     def name(self):
         pass
 
@@ -141,8 +131,6 @@ class Transaction:
     After creation, invoke `validate` to have the transaction validate all steps. Invoke
     `execute` to execute all steps. Both operations are done in the original step order.
 
-    Upon encountered errors, all steps that were already executed are reverted in inverse execution
-    order.
     '''
     def __init__(
         self,
@@ -171,28 +159,16 @@ class Transaction:
                 output = step.apply()
                 self._context.set_step_output(step_name, output)
             except BaseException as e:
-                logger.warning(f'An error occured while applying {step_name=} {e=}')
+                logger.warning(f'An error occured while running {step_name=} {e=}')
                 traceback.print_exc()
-                # revert the changes attempted, in reverse order
-                self._revert(reversed(executed_steps))
-                # do not execute apply for remaining steps
+                logger.info('the following steps were executed:')
+                print()
+                for step in executed_steps:
+                    print(f' - {step.name()}')
+                print()
+                logger.warning('manual cleanups may be required')
                 return False
         return True
-
-    def _revert(self, steps):
-        # attempt to revert each step. Raise an exception if not all reverts succeeded.
-        all_reverted = True
-        for step in steps:
-            step_name = step.name()
-            logger.info(f'reverting {step_name=}')
-            try:
-                step.revert()
-            except BaseException as e:
-                all_reverted = False
-                logger.warning(f'An error occured while reverting step {step_name=}: {e=}')
-                traceback.print_exc()
-        if not all_reverted:
-            raise RuntimeError('Unable to revert all steps.')
 
 
 class RebaseStep(TransactionalStep):
@@ -208,9 +184,6 @@ class RebaseStep(TransactionalStep):
             f'refs/heads/{self.repository_branch}'
         ).hexsha
         self.git_helper.rebase(commit_ish=upstream_commit_sha)
-
-    def revert(self):
-        pass
 
 
 class ReleaseCommitStep(TransactionalStep):
@@ -240,8 +213,6 @@ class ReleaseCommitStep(TransactionalStep):
 
         self.release_commit_callback = release_commit_callback
 
-        self.head_commit = None # stored while applying - used for revert
-
     def _release_commit_message(self, version: str, release_commit_message_prefix: str=''):
         message = f'Release {version}'
         if release_commit_message_prefix:
@@ -270,10 +241,6 @@ class ReleaseCommitStep(TransactionalStep):
         worktree_dirty = bool(self.git_helper._changed_file_paths())
         if worktree_dirty:
             self.git_helper.repo.head.reset(working_tree=True)
-
-        # store head-commit (type: git.Commit)
-        self.head_commit = self.git_helper.repo.head.commit
-        self.context().head_commit = self.head_commit # pass to other steps
 
         # prepare release commit
         with open(self.repository_version_file_path, 'w') as f:
@@ -312,40 +279,6 @@ class ReleaseCommitStep(TransactionalStep):
         return {
             'release_commit_sha1': release_commit.hexsha,
         }
-
-    def revert(self):
-        if not self.context().has_output(self.name()):
-            # push unsuccessful, nothing to do
-            return
-        else:
-            if self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
-                output = self.context().step_output(self.name())
-
-                # create revert commit for the release commit and push it, but first
-                # clean repository if required
-                worktree_dirty = bool(self.git_helper._changed_file_paths())
-                if worktree_dirty:
-                    self.git_helper.repo.head.reset(working_tree=True)
-
-                self.git_helper.repo.git.revert(
-                    output['release_commit_sha1'],
-                    no_edit=True,
-                    no_commit=True,
-                )
-                release_revert_commit = _add_all_and_create_commit(
-                    git_helper=self.git_helper,
-                    message=f"Revert '{self._release_commit_message(self.release_version)}'"
-                )
-                self.git_helper.push(
-                    from_ref=release_revert_commit.hexsha,
-                    to_ref=self.repository_branch,
-                )
-            elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
-                # is handled in the step that creates the tags
-                return
-
-            else:
-                raise NotImplementedError
 
 
 class CreateTagsStep(TransactionalStep):
@@ -419,19 +352,6 @@ class CreateTagsStep(TransactionalStep):
             'release_tag': self.github_release_tag,
             'tags': self.git_tags,
         }
-
-    def revert(self):
-        for tag in self.tags_created:
-            if self.publishing_policy in [
-                ReleaseCommitPublishingPolicy.TAG_ONLY,
-                ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH,
-            ]:
-                self.git_helper.push(
-                    from_ref='',
-                    to_ref=tag,
-                )
-            else:
-                raise NotImplementedError
 
 
 class NextDevCycleCommitStep(TransactionalStep):
@@ -553,41 +473,6 @@ class NextDevCycleCommitStep(TransactionalStep):
             'next cycle commit sha': next_cycle_commit.hexsha,
         }
 
-    def revert(self):
-        if not self.context().has_output(self.name()):
-            # push unsuccessful, nothing to do
-            return
-        else:
-            output = self.context().step_output(self.name())
-            # create revert commit for the next dev cycle commit and push it, but first
-            # clean repository if required
-            worktree_dirty = bool(self.git_helper._changed_file_paths())
-            if worktree_dirty:
-                self.git_helper.repo.head.reset(working_tree=True)
-
-            next_cycle_dev_version = _calculate_next_cycle_dev_version(
-                release_version=self.release_version,
-                version_operation=self.version_operation,
-                prerelease_suffix=self.prerelease_suffix,
-            )
-            commit_message = self._next_dev_cycle_commit_message(
-                version=next_cycle_dev_version,
-                message_prefix=self.next_cycle_commit_message_prefix,
-            )
-            self.git_helper.repo.git.revert(
-                output['next cycle commit sha'],
-                no_edit=True,
-                no_commit=True,
-            )
-            next_cycle_revert_commit = _add_all_and_create_commit(
-                git_helper=self.git_helper,
-                message=f"Revert '{commit_message}'"
-            )
-            self.git_helper.push(
-                from_ref=next_cycle_revert_commit.hexsha,
-                to_ref=self.repository_branch,
-            )
-
 
 class GitHubReleaseStep(TransactionalStep):
     def __init__(
@@ -645,17 +530,6 @@ class GitHubReleaseStep(TransactionalStep):
         return {
             'release_tag_name': release_tag,
         }
-
-    def revert(self):
-        # Fetch release
-        try:
-            release = self.github_helper.repository.release_from_tag(self.release_version)
-        except NotFoundError:
-            release = None
-        if release:
-            logger.info(f'Deleting {self.release_version=}')
-            if not release.delete():
-                raise RuntimeError("Release could not be deleted")
 
 
 class UploadComponentDescriptorStep(TransactionalStep):
@@ -785,9 +659,6 @@ class UploadComponentDescriptorStep(TransactionalStep):
         if self.release_on_github:
             upload_component_descriptor_as_release_asset()
 
-    def revert(self):
-        pass
-
 
 class PublishReleaseNotesStep(TransactionalStep):
     def name(self):
@@ -830,16 +701,6 @@ class PublishReleaseNotesStep(TransactionalStep):
             'release notes markdown': release_notes_md,
         }
 
-    def revert(self):
-        if not self.context().has_output(self.name()):
-            # Updating release notes was unsuccessful, nothing to do
-            return
-        # purge release notes
-        self.github_helper.update_release_notes(
-            tag_name=self.release_version,
-            body='',
-        )
-
 
 class TryCleanupDraftReleasesStep(TransactionalStep):
     def name(self):
@@ -862,10 +723,6 @@ class TryCleanupDraftReleasesStep(TransactionalStep):
             else:
                 logger.warning(f'Could not delete {release.name=}')
         return
-
-    def revert(self):
-        # nothing to revert
-        pass
 
 
 class PostSlackReleaseStep(TransactionalStep):
@@ -905,16 +762,6 @@ class PostSlackReleaseStep(TransactionalStep):
             else:
                 raise RuntimeError('Unable to get file id from Slack response')
         logger.info('successfully posted contents to slack')
-
-    def revert(self):
-        if not self.context().has_output(self.name()):
-            # Posting the release notes was unsuccessful, nothing to revert
-            return
-        uploaded_file_id = self.context().step_output(self.name()).get('uploaded file id')
-        delete_file_from_slack(
-            slack_cfg_name=self.slack_cfg_name,
-            file_id=uploaded_file_id,
-        )
 
 
 def _invoke_callback(
