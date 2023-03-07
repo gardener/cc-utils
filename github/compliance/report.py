@@ -594,6 +594,7 @@ def _target_sprint(
 
     return target_sprint
 
+
 @functools.cache
 def _valid_issue_assignees(
     repository: github3.repos.Repository,
