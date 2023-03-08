@@ -12,7 +12,6 @@ import model.concourse
 container_registry_cfgs = cfg_set._cfg_elements(cfg_type_name='container_registry')
 
 publish_trait = job_variant.trait('publish')
-is_platform_aware = bool(publish_trait.platforms())
 image_descriptor = job_step._extra_args['image_descriptor']
 if platform := image_descriptor.platform():
   normalised_oci_platform_name = model.concourse.Platform.normalise_oci_platform_name(platform)
@@ -57,7 +56,6 @@ if platform and (worker_node_tags := job_step.worker_node_tags):
   ):
     if worker_platform.worker_tag in worker_node_tags:
       need_qemu = False
-    normalised_platform = worker_platform.normalised_oci_platform_name
 %>
 import json
 import logging
