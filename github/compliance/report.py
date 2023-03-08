@@ -694,6 +694,10 @@ def create_or_update_github_issues(
 
             valid_assignees = _valid_issue_assignees(repository)
 
+            # Make sure all names are lowercase (as recommended by gh)
+            assignees = set(a.lower() for a in assignees)
+            valid_assignees = set(a.lower() for a in valid_assignees)
+
             if invalid_assignees := (assignees - valid_assignees):
                 logger.warning(
                     f'Unable to assign {invalid_assignees} to issues in repository '
