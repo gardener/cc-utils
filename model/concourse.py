@@ -112,7 +112,7 @@ class WorkerNodeConfig:
     default_platform_name: str = None
     platforms: typing.List[Platform] | None = None
 
-    def platform_for_oci_platform(self, oci_platform_name: str, absent_ok=True):
+    def platform_for_oci_platform(self, oci_platform_name: str, absent_ok=True) -> Platform | None:
         if absent_ok and not self.platforms:
             return None
 
