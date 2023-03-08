@@ -47,14 +47,18 @@ eff_version_replace_token = '${EFFECTIVE_VERSION}'
 oci_builder = publish_trait.oci_builder()
 need_qemu = True
 
-if platform and (worker_node_tags := job_step.worker_node_tags):
+if platform:
   concourse_cfg = cfg_set.concourse()
   node_cfg = concourse_cfg.worker_node_cfg
   if worker_platform := node_cfg.platform_for_oci_platform(
     oci_platform_name=platform,
     absent_ok=True,
   ):
-    if worker_platform.worker_tag in worker_node_tags:
+    worker_node_tags = job_step.worker_node_tags
+    if worker_platform.worker_tag is None and not worker_node_tags:
+      # both worker and job are "default" - platforms match
+      need_qemu = False
+    elif worker_platform.worker_tag in worker_node_tags:
       need_qemu = False
 %>
 import json
