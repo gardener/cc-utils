@@ -123,7 +123,7 @@ def enumerate_issues(
     known_issues: typing.Sequence[github3.issues.issue.ShortIssue],
     issue_type: str,
     extra_labels: typing.Iterable[str]=(),
-    state: str | None = None, # 'open' | 'closed'
+    state: str | None = None, # 'open' | 'closed ; `None` ignores issue state
 ) -> typing.Generator[github3.issues.ShortIssue, None, None]:
     '''Return an iterator iterating over those issues from `known_issues` that match the given
     parameters.
@@ -135,7 +135,8 @@ def enumerate_issues(
     ))
 
     def filter_relevant_issues(issue: github3.issues.issue.ShortIssue):
-        if issue.state != state:
+        # state is of type str, explicitly check for None
+        if state != None and issue.state != state:
             return False
 
         issue_labels = frozenset((l.name for l in issue.original_labels))
