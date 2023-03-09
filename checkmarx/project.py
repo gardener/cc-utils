@@ -1,14 +1,13 @@
 import datetime
 import logging
 import time
-import traceback
 
 import checkmarx.client
 import checkmarx.model as model
 import checkmarx.util
 import cnudie.iter
 import gci.componentmodel as cm
-import github.compliance.model
+import github.compliance.model as gcm
 
 logger = logging.getLogger(__name__)
 
@@ -49,42 +48,43 @@ class CheckmarxProject:
         source: cm.ComponentSource,
         timeout_seconds: int,
     ) -> model.ScanResult:
-        scan_response = None
-        try:
-            scan_response = self._poll_scan(
-                scan_id=scan_id,
-                timeout_seconds=timeout_seconds,
-            )
+
+        def fetch_response(
+                scan_id: int,
+                timeout_seconds: int
+            ) -> tuple[model.ScanResponse, gcm.ScanState, str, model.ScanStatistic]:
+            clogger = checkmarx.util.component_logger(artifact_name=self.artifact_name)
+            try:
+                scan_response = self._poll_scan(
+                    scan_id=scan_id,
+                    timeout_seconds=timeout_seconds,
+                )
+            except Exception as e:
+                clogger.error(f'scan with {scan_id=} failed: {e}')
+                return None, gcm.ScanState.FAILED, None, None
 
             if scan_response.status_value() is not model.ScanStatusValues.FINISHED:
-                raise RuntimeError(f'Scan of artifact "{self.artifact_name}:{source.version}" '
-                    'finished with errors')
+                clogger.error(
+                    f'Scan of artifact "{self.artifact_name}:{source.version}" '
+                    f'finished failed with {scan_response.status=}'
+                )
+                return scan_response, gcm.ScanState.FAILED, None, None
 
-            scan_state = github.compliance.model.ScanState.SUCCEEDED
+            scan_state = gcm.ScanState.SUCCEEDED
             report_url = self.client.routes.web_ui_scan_viewer(
                 scan_id=scan_response.id,
                 project_id=self.project_details.id,
             )
 
-            clogger = checkmarx.util.component_logger(artifact_name=self.artifact_name)
             clogger.info('scan finished. Retrieving scan statistics')
             statistics = self.scan_statistics(scan_id=scan_response.id)
+            return scan_response, scan_state, report_url, statistics
 
-        except:
-            if scan_response:
-                scan_status = scan_response.status
-            else:
-                scan_status = '<error occurred before scan-response was returned>'
+        scan_response, scan_state, report_url, statistics = fetch_response(
+            scan_id=scan_id,
+            timeout_seconds=timeout_seconds,
+        )
 
-            logger.error(f'scan for {self.artifact_name} failed with {scan_status=}')
-            traceback.print_exc()
-
-            scan_response = None
-            scan_state = github.compliance.model.ScanState.FAILED
-            report_url = None
-            statistics = None
-
-        # pylint: disable=E1123
         return model.ScanResult(
             state=scan_state,
             scanned_element=cnudie.iter.SourceNode(
