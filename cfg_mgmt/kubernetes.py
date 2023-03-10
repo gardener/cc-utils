@@ -49,7 +49,7 @@ def rotate_cfg_element(
         name=service_account_config.name(),
         namespace=service_account_config.namespace(),
     )
-    old_tokens = [{"name": token.name} for token in sa.secrets if sa.secrets]
+    old_tokens = [{"name": token.name} for token in sa.secrets] if sa.secrets else []
     secret_id = {
         'old_tokens': old_tokens,
     }
