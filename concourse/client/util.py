@@ -152,9 +152,8 @@ def has_job_been_triggered(
             BuildStatus.ABORTED,
             BuildStatus.ERRORED,
             BuildStatus.FAILED,
-            BuildStatus.SUCCEEDED,
         ]:
-            # don't consider finished jobs
+            # don't consider failed jobs
             continue
 
         try:
