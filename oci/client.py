@@ -1006,7 +1006,7 @@ class Client:
             raise_for_status=False,
         )
 
-        if not res.status_code == 201: # spec says it MUST be 201
+        if res.ok and not res.status_code == 201: # spec says it MUST be 201
             # also, 202 indicates the upload actually did not succeed e.g. for "docker-hub"
             logger.warning(f'{image_reference=} {res.status_code=} {digest=} - PUT may have failed')
 
