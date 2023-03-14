@@ -24,9 +24,9 @@ def _find_previous_version(available_versions: list[semver.VersionInfo],
 def _iter_tags(repo: git.Repo, newest_tag: git.TagReference, oldest_tag: git.TagReference) -> tuple[git.Commit]:
     """ Iterates between two tags, even if they aren't linear.
     """
-    # even though it's a list, it contains max. 1 commit since the --all flag is not passed.
     if not (merge_commit_list := repo.merge_base(newest_tag, oldest_tag)):
         raise RuntimeError("cannot find merge base")
+    # even though it's a list, it contains max. 1 commit since the --all flag is not passed.
     merge_commit: git.Commit = merge_commit_list.pop()
 
     # if the previous tag is after the merge-base, return all commits between merge-base and current tag
@@ -56,11 +56,6 @@ class ReleaseNotesComponentAccess:
                 continue
             self.component_versions[parsed_version] = ver
 
-        # TODO: remove this. just for debugging.
-        # fakes (tag-) versions to the component descriptor
-        for ver in ["v1.66.0", "v1.66.1", "v1.67.0", "v1.67.1", "v1.67.2"]:
-            self.component_versions[version.parse_to_semver(ver)] = ver
-
         if current_version is None:
             if self.source.version is None:
                 raise ValueError(f"current_version not passed and not found in component source")
@@ -73,11 +68,9 @@ class ReleaseNotesComponentAccess:
             self.current_version_tag = self.git_helper.repo.tag(self.component_versions[current_version])
         self.current_version = current_version
 
-        # find tag in repository
         if not self.current_version_tag:
             raise RuntimeError(f"cannot find ref {self.source.access.ref} in repo")
 
-        # find previous version
         self.previous_version = _find_previous_version(list(self.component_versions.keys()), current_version)
         if self.previous_version is not None:
             self.previous_version_tag = self.git_helper.repo.tag(self.component_versions[self.previous_version])
