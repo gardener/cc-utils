@@ -21,6 +21,7 @@ import typing
 from urllib.parse import urlparse
 
 import github3.github
+import github3.exceptions
 
 from model.base import (
     BasicCredentials,
@@ -97,7 +98,10 @@ class GithubConfig(NamedModelElement):
 
         def rate_limit_remaining(credentials) -> int:
             api = ApiCtor(token=credentials.auth_token(), **api_kwargs)
-            return api.ratelimit_remaining
+            try:
+                return api.ratelimit_remaining
+            except github3.exceptions.ConnectionError:
+                return 0
 
         best_credentials = max(credentials, key=rate_limit_remaining)
 
