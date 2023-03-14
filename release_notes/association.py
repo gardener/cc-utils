@@ -72,9 +72,7 @@ def request_pulls_from_api(repo: git.Repo,
     result = collections.defaultdict(list)
 
     for commit in commits:
-        # get pull request from note
         if nums := _find_pull_numbers_from_git_notes(repo, commit):
-            # mark all found pull request numbers as pending
             for num in nums:
                 pending[num].append(commit.hexsha)
             continue
