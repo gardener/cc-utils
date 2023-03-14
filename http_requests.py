@@ -60,10 +60,6 @@ class LoggingRetry(Retry):
     ):
         # super().increment will either raise an exception indicating that no retry is to
         # be performed or return a new, modified instance of this class
-        logger.warning(
-            f'{method=} {url=} returned {response=} {error=} - checking '
-            f'eligibility for retry {self.read=} {self.connect=}'
-        )
         retry = super().increment(method, url, response, error, _pool, _stacktrace)
         # Use the Retry history to determine the number of retries.
         num_retries = len(self.history) if self.history else 0
