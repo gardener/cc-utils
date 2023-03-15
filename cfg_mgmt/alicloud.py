@@ -123,17 +123,15 @@ def delete_config_secret(
     )
     access_key_id = cfg_queue_entry.secretId['accessKeyId']
 
-    # deactivate key instead of deleting it to make manual recovery possible.
-    request = UpdateAccessKeyRequest()
+    request = DeleteAccessKeyRequest()
     request.set_UserAccessKeyId(access_key_id)
-    request.set_Status('Inactive')
 
     try:
         client.do_action_with_exception(request)
     except ServerException as e:
         if e.get_http_status() == 403:
             logger.warning(
-                'User is not allowed to update the status of its access key. Please make sure that '
+                'User is not allowed to delete its own access key. Please make sure that '
                 'the Account is configured to allow users to manage their own keys.'
             )
         raise
