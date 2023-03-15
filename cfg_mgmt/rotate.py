@@ -116,6 +116,7 @@ def rotate_cfg_element(
         [model.NamedModelElement, model.ConfigFactory],
         typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]
     ] = None
+    rotation_validation_function: typing.Callable[[model.NamedModelElement], None] = None
 
     if type_name == 'container_registry':
         if cfg_element.registry_type() == om.OciRegistryType.GCR:
@@ -150,14 +151,7 @@ def rotate_cfg_element(
         update_secret_function = cmali.rotate_cfg_element
 
     elif type_name == 'kubernetes':
-        try:
-            cmk.validate_for_rotation(cfg_element)
-        except cmm.ValidationError as e:
-            logger.warning(
-                f"Cannot rotate cfg-type '{type_name}' with name '{cfg_element.name()}': {e}"
-            )
-            return None
-
+        rotation_validation_function = cmk.validate_for_rotation
         update_secret_function = cmk.rotate_cfg_element
 
     if not update_secret_function:
@@ -165,10 +159,20 @@ def rotate_cfg_element(
         return None
 
     try:
+        if rotation_validation_function:
+            rotation_validation_function(cfg_element)
+
         return update_secret_function(
             cfg_element=cfg_element,
             cfg_factory=cfg_factory,
         )
+
+    except cmm.ValidationError as e:
+        logger.warning(
+            f"Cannot rotate cfg-type '{type_name}' with name '{cfg_element.name()}': {e}"
+        )
+        return None
+
     except Exception as e:
         logger.warning(f'an error occured whilst trying to update secret for {cfg_element=}: {e}')
         raise
