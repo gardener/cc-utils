@@ -12,7 +12,10 @@ import ci.log
 import model
 import model.aws
 
-from cfg_mgmt.model import CfgQueueEntry
+from cfg_mgmt.model import (
+    CfgQueueEntry,
+    ValidationError,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -59,23 +62,6 @@ def rotate_cfg_element(
         aws_secret_access_key=cfg_element.secret_access_key(),
     )
 
-    response: ListAccessKeysResponse = dacite.from_dict(
-        data_class=ListAccessKeysResponse,
-        data=iam_client.list_access_keys(),
-    )
-    key_metadata = response.AccessKeyMetadata
-
-    # We either have one or two access keys as AWS does not allow more than two and we used one to
-    # get access. For the first case just create a new one. If there are already two, determine the
-    # oldest key and delete it beforehand.
-    # Note: This cannot be undone.
-    if len(key_metadata) == 2:
-        logger.info('There are already two SecretAccessKeys present. Deleting oldest key ...')
-        sorted_metadata = sorted(key_metadata, key=lambda m: m.CreateDate)
-        oldest_key_id = sorted_metadata[0].AccessKeyId
-        iam_client.delete_access_key(AccessKeyId=oldest_key_id)
-        logger.info(f'Deleted SecretAccessKey {oldest_key_id}')
-
     response: CreateAccessKeyResponse = dacite.from_dict(
         data_class=CreateAccessKeyResponse,
         data=iam_client.create_access_key(),
@@ -110,3 +96,25 @@ def delete_config_secret(
     access_key_id = cfg_queue_entry.secretId['accessKeyId']
     # deactivate key instead of deleting it to make manual recovery possible.
     iam_client.update_access_key(AccessKeyId=access_key_id, Status='Inactive')
+
+
+def validate_for_rotation(
+    cfg_element: model.aws.AwsProfile,
+):
+    access_key_id = cfg_element.access_key_id()
+    iam_client = boto3.client(
+        'iam',
+        aws_access_key_id=access_key_id,
+        aws_secret_access_key=cfg_element.secret_access_key(),
+    )
+    response: ListAccessKeysResponse = dacite.from_dict(
+        data_class=ListAccessKeysResponse,
+        data=iam_client.list_access_keys(),
+    )
+    key_metadata = response.AccessKeyMetadata
+
+    if len(key_metadata) == 2:
+        raise ValidationError(
+            'There are already two keys present in AWS for Access Key '
+            f"'{access_key_id}'. Will not attempt rotation."
+        )
