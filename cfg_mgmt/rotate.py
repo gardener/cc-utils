@@ -145,6 +145,7 @@ def rotate_cfg_element(
         update_secret_function = cmbac.rotate_cfg_element
 
     elif type_name == 'aws':
+        rotation_validation_function = cmaws.validate_for_rotation
         update_secret_function = cmaws.rotate_cfg_element
 
     elif type_name == 'alicloud':
