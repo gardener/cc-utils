@@ -94,8 +94,7 @@ def delete_config_secret(
         aws_secret_access_key=cfg_element.secret_access_key(),
     )
     access_key_id = cfg_queue_entry.secretId['accessKeyId']
-    # deactivate key instead of deleting it to make manual recovery possible.
-    iam_client.update_access_key(AccessKeyId=access_key_id, Status='Inactive')
+    iam_client.delete_access_key(AccessKeyId=access_key_id)
 
 
 def validate_for_rotation(
