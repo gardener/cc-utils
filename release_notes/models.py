@@ -21,18 +21,18 @@ class Author:
 
     def __str__(self) -> str:
         if self.username and self.username.strip():
-            return f"@{self.username}"
+            return f'@{self.username}'
         if self.display_name and self.display_name.strip():
-            return f"`{self.display_name} <{self.email}>`"
-        return ""
+            return f'`{self.display_name} <{self.email}>`'
+        return ''
 
 
 def author_from_commit(commit: git.Commit) -> Author:
-    return Author("", commit.author.name, commit.author.email)
+    return Author('', commit.author.name, commit.author.email)
 
 
 def author_from_pull_request(pull_request: github3.pulls.ShortPullRequest) -> Author:
-    return Author(pull_request.user.login, "", "")
+    return Author(pull_request.user.login, '', '')
 
 
 #
@@ -43,8 +43,8 @@ class ReferenceType:
     prefix: str  # prefix for generated release notes
 
 
-REF_TYPE_PULL = ReferenceType(identifier="#", prefix="#")
-REF_TYPE_COMMIT = ReferenceType(identifier="$", prefix="@")
+REF_TYPE_PULL = ReferenceType(identifier='#', prefix='#')
+REF_TYPE_COMMIT = ReferenceType(identifier='$', prefix='@')
 
 REF_TYPES = [REF_TYPE_PULL, REF_TYPE_COMMIT]
 
@@ -54,7 +54,7 @@ class Reference:
     type: ReferenceType
 
     def get_identifier(self) -> str:
-        raise NotImplementedError("get_content not implemented yet")
+        raise NotImplementedError('get_content not implemented yet')
 
 
 @dataclasses.dataclass
@@ -88,16 +88,16 @@ class SourceBlock:
     note_message: str
 
     def get_identifier(self) -> str:
-        """ returns a human-readable identifier which can be used e.g. for duplicate checking.
+        ''' returns a human-readable identifier which can be used e.g. for duplicate checking.
         does not include line breaks or spaces
-        """
-        return f"[{self.category}<{self.target_group}>]{self.note_message}" \
-            .lower().strip().replace(" ", "").replace("\n", "")
+        '''
+        return f'[{self.category}<{self.target_group}>]{self.note_message}' \
+            .lower().strip().replace(' ', '').replace('\n', '')
 
     def has_content(self) -> bool:
-        """ checks if there is any content in the source note block
-        """
-        if self.note_message.strip().lower() == "none":
+        ''' checks if there is any content in the source note block
+        '''
+        if self.note_message.strip().lower() == 'none':
             return False
         return all(z and z.strip() for z in (self.category, self.target_group, self.note_message))
 
@@ -112,23 +112,23 @@ class SourceBlock:
         return False
 
 
-pattern = re.compile(r"\x60{3}(?P<category>\w+)\s+(?P<target_group>\w+)\n(?P<note>.+?)\n\x60{3}",
+pattern = re.compile(r'\x60{3}(?P<category>\w+)\s+(?P<target_group>\w+)\n(?P<note>.+?)\n\x60{3}',
                      flags=re.DOTALL | re.IGNORECASE | re.MULTILINE)
 
 
 def list_source_blocks(content: str) -> typing.Generator[SourceBlock, None, None]:
-    """ Searches for code blocks in release note notation and returns all found.
+    ''' Searches for code blocks in release note notation and returns all found.
     Only valid note blocks are returned, which means that the format has been followed.
     However, it does not check if the category / group exists.
 
     :param content: the content to look for release notes in
     :return: a list of valid note blocks
-    """
-    for res in pattern.finditer(content.replace("\r\n", "\n")):
+    '''
+    for res in pattern.finditer(content.replace('\r\n', '\n')):
         try:
-            block = SourceBlock(category=res.group("category"),
-                                target_group=res.group("target_group"),
-                                note_message=res.group("note"))
+            block = SourceBlock(category=res.group('category'),
+                                target_group=res.group('target_group'),
+                                note_message=res.group('note'))
             if block.has_content():
                 yield block
         except IndexError:
@@ -159,15 +159,15 @@ class ReleaseNote:
         return str(self.author)
 
     def get_reference_str(self) -> str:
-        return f"{self.reference.type.identifier}{self.reference.get_identifier()}"
+        return f'{self.reference.type.identifier}{self.reference.get_identifier()}'
 
     def to_block_str(self) -> str:
-        return "```{category} {group} {src_repo} {ref} {author}\n{message}\n```".format(
+        return '```{category} {group} {src_repo} {ref} {author}\n{message}\n```'.format(
             category=self.source_block.category,
             group=self.source_block.target_group,
             src_repo=self.source_component.name,
             ref=self.get_reference_str(),
-            author=self.author.username or self.author.display_name.replace(" ", "-"),
+            author=self.author.username or self.author.display_name.replace(' ', '-'),
             message=self.source_block.note_message
         )
 
@@ -189,7 +189,7 @@ def create_release_note_obj(
     elif isinstance(targets, github3.pulls.ShortPullRequest):
         ref = create_pull_request_ref(targets)
     else:
-        raise ValueError("either target pull request or commit has to be passed")
+        raise ValueError('either target pull request or commit has to be passed')
 
     # access
     source_component_access = cnudie.util.determine_main_source_for_component(

@@ -1,2 +1,2 @@
-""" Release Note Gen v2
-"""
+''' Release Note Gen v2
+'''
