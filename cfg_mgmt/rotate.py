@@ -148,6 +148,7 @@ def rotate_cfg_element(
         update_secret_function = cmaws.rotate_cfg_element
 
     elif type_name == 'alicloud':
+        rotation_validation_function = cmali.validate_for_rotation
         update_secret_function = cmali.rotate_cfg_element
 
     elif type_name == 'kubernetes':
