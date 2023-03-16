@@ -153,7 +153,11 @@ class GcrCredentials(BasicCredentials):
     Not intended to be instantiated by users of this module
     '''
     def _optional_attributes(self):
-        return {'image_reference_prefixes'}
+        return {'image_reference_prefixes', 'host'}
+
+    def host(self):
+        # used in lss
+        return self.raw.get('host')
 
     def has_service_account_credentials(self):
         '''
