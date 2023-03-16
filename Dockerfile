@@ -14,7 +14,7 @@ RUN cat /cc/utils/gardener-cicd-libs.apk-packages \
   gardener-cicd-dso==$(cat /metadata/VERSION) \
   pycryptodome
 
-FROM eu.gcr.io/gardener-project/component/cli:v0.51.0 AS component-cli
+FROM eu.gcr.io/gardener-project/component/cli:v0.52.0 AS component-cli
 FROM eu.gcr.io/gardener-project/cc/job-image-base:$BASE_IMAGE_TAG
 
 ARG TARGETARCH
