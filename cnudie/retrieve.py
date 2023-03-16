@@ -138,7 +138,7 @@ def file_system_cache_component_descriptor_lookup(
 
             descriptor_path = os.path.join(
                 cache_dir,
-                ctx_repo.baseUrl.replace('/', '-'),
+                ctx_repo.oci_ref.replace('/', '-'),
                 f'{component_id.name}-{component_id.version}',
             )
             shutil.move(f.name, descriptor_path)
@@ -160,7 +160,7 @@ def file_system_cache_component_descriptor_lookup(
 
         descriptor_path = os.path.join(
             cache_dir,
-            ctx_repo.baseUrl.replace('/', '-'),
+            ctx_repo.oci_ref.replace('/', '-'),
             f'{component_id.name}-{component_id.version}',
         )
         if os.path.isfile(descriptor_path):
@@ -209,7 +209,7 @@ def delivery_service_component_descriptor_lookup(
             return delivery_client.component_descriptor(
                 name=component_id.name,
                 version=component_id.version,
-                ctx_repo_url=ctx_repo.baseUrl,
+                ctx_repo_url=ctx_repo.oci_ref,
             )
         except:
             logger.info(f'{component_id.name}:{component_id.version} not found in delivery-svc')
@@ -253,7 +253,7 @@ def oci_component_descriptor_lookup(
         component_name = component_id.name.lower() # oci-spec allows only lowercase
 
         target_ref = ci.util.urljoin(
-            ctx_repo.baseUrl,
+            ctx_repo.oci_ref,
             'component-descriptors',
             f'{component_name}:{component_id.version}',
         )
