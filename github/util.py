@@ -295,7 +295,7 @@ def iter_obsolete_upgrade_pull_requests(
 
 
 class PullRequestUtil(RepositoryHelperBase):
-    PR_TITLE_PATTERN = re.compile(r'^\[ci:(\S*):(\S*):(\S*)->(\S*)\]$')
+    _pr_title_pattern = re.compile(r'^\[ci:(\S*):(\S*):(\S*)->(\S*)\]$')
 
     @staticmethod
     def calculate_pr_title(
@@ -311,13 +311,17 @@ class PullRequestUtil(RepositoryHelperBase):
 
         return f'[ci:{type_name}:{reference_name}:{from_version}->{to_version}]'
 
-    def _has_upgrade_pr_title(self, pull_request) -> bool:
-        return bool(self.PR_TITLE_PATTERN.fullmatch(pull_request.title))
-
-    def _pr_to_upgrade_pull_request(self, pull_request):
+    def _pr_to_upgrade_pull_request(
+        self,
+        pull_request,
+        pattern: re.Pattern=None,
+    ) -> UpgradePullRequest:
         ci.util.not_none(pull_request)
 
-        match = self.PR_TITLE_PATTERN.fullmatch(pull_request.title)
+        if not pattern:
+            pattern = self._pr_title_pattern
+
+        match = pattern.fullmatch(pull_request.title)
         if match is None:
             raise ValueError("PR-title '{t}' did not match title-schema".format(
                 t=pull_request.title)
@@ -355,15 +359,25 @@ class PullRequestUtil(RepositoryHelperBase):
     def enumerate_upgrade_pull_requests(
         self,
         state: str='all',
+        pattern: re.Pattern=None,
     ):
         '''returns a sequence of `UpgradePullRequest` for all found pull-requests
         '''
+        def has_upgrade_pr_title(pull_request):
+            return bool(pattern.fullmatch(pull_request.title))
+
         def pr_to_upgrade_pr(pull_request):
-            return self._pr_to_upgrade_pull_request(pull_request=pull_request)
+            return self._pr_to_upgrade_pull_request(
+                pull_request=pull_request,
+                pattern=pattern,
+            )
 
         def strip_title(pull_request):
             pull_request.title = pull_request.title.strip()
             return pull_request
+
+        if not pattern:
+            pattern = self._pr_title_pattern
 
         parsed_prs = ci.util.FluentIterable(
             self.repository.pull_requests(
@@ -372,7 +386,7 @@ class PullRequestUtil(RepositoryHelperBase):
             )
         ) \
             .map(strip_title) \
-            .filter(self._has_upgrade_pr_title) \
+            .filter(has_upgrade_pr_title) \
             .map(pr_to_upgrade_pr) \
             .filter(lambda e: e) \
             .as_list()
