@@ -67,6 +67,9 @@ def _pipeline_definitions(
 
     cfg_entry = branch_cfg.cfg_entry_for_branch(branch=branch_name)
 
+    if not cfg_entry:
+        return raw
+
     return ci.util.merge_dicts(
         raw,
         cfg_entry.override_definitions(),
@@ -395,7 +398,6 @@ def component_descriptor(
     cli = os.path.join(own_dir, 'cli_gen.py')
     dependencies_cmd = ' '.join((
         cli,
-        'gardener-ci',
         'productutil_v2',
         'add_dependencies',
         '--descriptor-src-file', base_component_descriptor_file.name,
