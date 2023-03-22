@@ -7,13 +7,13 @@ from typing import Optional
 
 import git
 import git.exc
-from github3 import GitHub
 import github3.exceptions as gh3e
 import github3.pulls as gh3p
 import github3.structs as gh3s
 import semver
 import yaml
 import yaml.scanner
+from github3 import GitHub
 
 import release_notes.model as rnm
 
@@ -66,8 +66,12 @@ def shorten(message: str, max_len: int = 128) -> str:
     return message
 
 
+def create_release_notes_blocks(release_notes: set[rnm.ReleaseNote]) -> str:
+    return '\n\n'.join(z.block_str for z in release_notes)
+
+
 def find_next_smallest_version(available_versions: list[semver.VersionInfo],
-                                current_version: semver.VersionInfo) -> Optional[semver.VersionInfo]:
+                               current_version: semver.VersionInfo) -> Optional[semver.VersionInfo]:
     # find version before the requested version and sort by semver
     return max((v for v in sorted(available_versions) if v < current_version), default=None)
 

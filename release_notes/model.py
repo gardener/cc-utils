@@ -9,6 +9,9 @@ from git import Commit
 
 import cnudie.util
 
+_source_block_pattern = re.compile(r'\x60{3}(?P<category>\w+)\s+(?P<target_group>\w+)\n(?P<note>.+?)\n\x60{3}',
+                                   flags=re.DOTALL | re.IGNORECASE | re.MULTILINE)
+
 
 @dataclasses.dataclass
 class Author:
@@ -28,48 +31,68 @@ class Author:
 
 
 def author_from_commit(commit: git.Commit) -> Author:
-    return Author('', commit.author.name, commit.author.email)
+    return Author(
+        username='',
+        display_name=commit.author.name,
+        email=commit.author.email
+    )
 
 
 def author_from_pull_request(pull_request: github3.pulls.ShortPullRequest) -> Author:
-    return Author(pull_request.user.login, '', '')
+    return Author(
+        username=pull_request.user.login,
+        display_name='',
+        email=''
+    )
 
-
-#
 
 @dataclasses.dataclass
-class ReferenceType:
+class _ReferenceType:
     identifier: str  # identifier for release note block
     prefix: str  # prefix for generated release notes
 
 
-_ref_type_pull = ReferenceType(identifier='#', prefix='#')
-_ref_type_commit = ReferenceType(identifier='$', prefix='@')
+_ref_type_pull = _ReferenceType(identifier='#', prefix='#')
+_ref_type_commit = _ReferenceType(identifier='$', prefix='@')
 
 _ref_types = (_ref_type_pull, _ref_type_commit)
 
 
 @dataclasses.dataclass
-class Reference:
-    type: ReferenceType
+class _Reference:
+    ''' Represents where a release note comes from, for example through a commit or a pull request.
 
-    def get_identifier(self) -> str:
+    _Reference is only a superclass for a commit- or pull request-reference, which have their own classes to access the
+    pull request or the commit objects: `CommitReference` and `PullRequestReference`.
+    '''
+    type: _ReferenceType
+
+    @property
+    def identifier(self) -> str:
+        ''' The identifier for the reference - can be a commit hash, for example, or the number of the pull request.
+        '''
         raise NotImplementedError('get_content not implemented yet')
 
 
 @dataclasses.dataclass
-class CommitReference(Reference):
+class CommitReference(_Reference):
+    ''' Represents the commit where the release note came from
+    '''
     commit: git.Commit
 
-    def get_identifier(self) -> str:
+    @property
+    def identifier(self) -> str:
         return self.commit.hexsha
 
 
 @dataclasses.dataclass
-class PullRequestReference(Reference):
+class PullRequestReference(_Reference):
+    ''' Represents the pull requests where the release note came from
+    '''
     pull_request: github3.pulls.ShortPullRequest
 
-    def get_identifier(self) -> str:
+    @property
+    def identifier(self) -> str:
         return str(self.pull_request.number)
 
 
@@ -83,11 +106,18 @@ def create_pull_request_ref(pull_request: github3.pulls.ShortPullRequest) -> Pul
 
 @dataclasses.dataclass
 class SourceBlock:
+    '''Represents the parsed release note code block within a pull request body or a commit message.
+
+    ```{category} {note_message}
+    {note_message}
+    ```
+    '''
     category: str
     target_group: str
     note_message: str
 
-    def get_identifier(self) -> str:
+    @property
+    def identifier(self) -> str:
         ''' returns a human-readable identifier which can be used e.g. for duplicate checking.
         does not include line breaks or spaces
         '''
@@ -102,7 +132,7 @@ class SourceBlock:
         return all(z and z.strip() for z in (self.category, self.target_group, self.note_message))
 
     def __hash__(self):
-        return hash(self.get_identifier())
+        return hash(self.identifier)
 
     def __eq__(self, other):
         if isinstance(other, ReleaseNote):
@@ -110,10 +140,6 @@ class SourceBlock:
         if isinstance(other, SourceBlock):
             return hash(other) == hash(self)
         return False
-
-
-pattern = re.compile(r'\x60{3}(?P<category>\w+)\s+(?P<target_group>\w+)\n(?P<note>.+?)\n\x60{3}',
-                     flags=re.DOTALL | re.IGNORECASE | re.MULTILINE)
 
 
 def iter_source_blocks(content: str) -> typing.Generator[SourceBlock, None, None]:
@@ -124,7 +150,7 @@ def iter_source_blocks(content: str) -> typing.Generator[SourceBlock, None, None
     :param content: the content to look for release notes in
     :return: a list of valid note blocks
     '''
-    for res in pattern.finditer(content.replace('\r\n', '\n')):
+    for res in _source_block_pattern.finditer(content.replace('\r\n', '\n')):
         try:
             block = SourceBlock(category=res.group('category'),
                                 target_group=res.group('target_group'),
@@ -143,51 +169,42 @@ class ReleaseNote:
 
     raw_body: str  # the raw body of the commit / pull request
     author: typing.Optional[Author]  # the author of the commit / pull request
-    reference: Reference
+    reference: _Reference
 
-    source_component: gci.componentmodel.Component = dataclasses.field(compare=False)
+    source_component: gci.componentmodel.Component
     is_current_repo: bool
     from_same_github_instance: bool
 
     def __hash__(self):
-        return hash(self.source_block.get_identifier())
+        return hash(self.source_block.identifier)
 
     def __eq__(self, other) -> bool:
         return self.source_block.__eq__(other)
 
-    def get_author_str(self) -> str:
-        return str(self.author)
+    @property
+    def reference_str(self) -> str:
+        return f'{self.reference.type.identifier}{self.reference.identifier}'
 
-    def get_reference_str(self) -> str:
-        return f'{self.reference.type.identifier}{self.reference.get_identifier()}'
-
-    def to_block_str(self) -> str:
-        return '```{category} {group} {src_repo} {ref} {author}\n{message}\n```'.format(
-            category=self.source_block.category,
-            group=self.source_block.target_group,
-            src_repo=self.source_component.name,
-            ref=self.get_reference_str(),
-            author=self.author.username or self.author.display_name.replace(' ', '-'),
-            message=self.source_block.note_message
-        )
+    @property
+    def block_str(self) -> str:
+        return f'```{self.source_block.category} {self.source_block.target_group} {self.source_component.name} ' \
+               f'{self.reference_str} {self.author.username or self.author.display_name.replace(" ", "-")}\n' \
+               f'{self.source_block.note_message}\n```'
 
 
 def create_release_note_obj(
-        block: SourceBlock,
-
+        source_block: SourceBlock,
         source_commit: Commit,
         raw_body: str,
-        author: typing.Optional[Author],
-
-        targets: typing.Union[git.Commit, github3.pulls.ShortPullRequest],
-
+        author: Author,
+        target: typing.Union[git.Commit, github3.pulls.ShortPullRequest],
         source_component: gci.componentmodel.Component,
         current_component: gci.componentmodel.Component
 ) -> ReleaseNote:
-    if isinstance(targets, git.Commit):
-        ref = create_commit_ref(targets)
-    elif isinstance(targets, github3.pulls.ShortPullRequest):
-        ref = create_pull_request_ref(targets)
+    if isinstance(target, git.Commit):
+        ref = create_commit_ref(target)
+    elif isinstance(target, github3.pulls.ShortPullRequest):
+        ref = create_pull_request_ref(target)
     else:
         raise ValueError('either target pull request or commit has to be passed')
 
@@ -205,7 +222,7 @@ def create_release_note_obj(
     is_current_repo = current_component.name == source_component.name
 
     return ReleaseNote(
-        source_commit, block, raw_body, author, ref, source_component,
+        source_commit, source_block, raw_body, author, ref, source_component,
         is_current_repo, from_same_github_instance
     )
 
