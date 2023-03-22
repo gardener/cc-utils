@@ -135,6 +135,75 @@ repository's working tree):
    not evaluated, which may lead to different image-tags in "base-component-descriptors").
 
 
+Special-handling for "charts/images.yaml" / deprecating component-cli
+=====================================================================
+
+`component-cli` has been deprecated as of 2023-04-06. `component-cli` was tailored as an
+opinionated tool considering some special-cases useful for many of Gardener's repositories in
+mind. It's successor - `OCM-CLI <https://github.com/open-component-model/ocm#ocm-cli>`_ might
+replace `component-cli`, however it will not feature said gardener-specific special-case-handling.
+
+To phase-out `component-cli`, with little efforts all relevant commands are
+re-implemented as part of CICD-Pipeline-Template as a drop-in-replacement.
+Implementation can be found
+`here <https://github.com/gardener/cc-utils/blob/master/bin/component-cli>`_.
+
+The default instrumentation of component-cli commands can be found
+`here <https://github.com/gardener/gardener/blob/master/hack/.ci/component_descriptor>`_.
+
+"imagevector add" command / charts/images.yaml contract
+-------------------------------------------------------
+
+Some Gardener-Repositories use a standardised format to declare images to be exposed to both
+helm-charts and `Component-Descriptors` via a regular file located at `charts/images.yaml` below
+repository root.
+
+The (deprecated) `component-cli` features a command `imagevector add` that converts data from such
+`images.yaml` files to component-descriptors.
+
+`images.yaml` is expected to be a YAML document (or multi-document) containing (oci-)image-entries.
+Those are stored as a list below an attribute `images`. Depending on the defined attributes,
+entries are handled differently.
+
+In addition to attributes being absent, or present, there is also a list of "component-prefixes",
+which defaults to `eu.gcr.io/gardener-project/gardener`, which influences whether an entry is
+considered to be "local" (built by component's pipeline) or "external" (built by someone else).
+
+Gardener-Components have a name that is by convention the github-repo-url (w/o scheme). If the
+`sourceRepository` is different from current component name, a component-reference is added.
+
+*Example*
+
+.. code-block::
+   # current component: github.com/gardener/gardener
+   # current version: 1.67.0
+   # github-repo: github.com/gardener/gardener
+
+   images:
+   - name: gardenlet
+     sourceRepository: github.com/gardener/gardener # same as current component in this example
+     repository: eu.gcr.io/gardener-project/gardener/gardenlet
+
+*Results in:*
+
+.. code-block::
+   resources:
+   - name: gardenlet # from name-attribute
+     relation: local # from repository's prefix matching eu.gcr.io/gardener-project/gardener
+     type: ociImage # hard-coded
+     version: 1.67.0 # from current version
+     access:
+      imageReference: eu.gcr.io/gardener-project/gardener/gardenlet:1.67.0 # <repo>:<version>
+      type: ociRegistry # hard-coded
+    labels:
+    - name: imagevector.gardener.cloud/name
+      value: gardenlet # from name-attribute
+    - name: imagevector.gardener.cloud/repository
+      value: eu.gcr.io/gardener-project/gardener/gardenlet # from repository-attribute
+    - name: imagevector.gardener.cloud/source-repository
+      value: github.com/gardener/gardener # github-repo
+
+
 Retention Policies (aka cleaning up old versions)
 =================================================
 

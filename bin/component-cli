@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import argparse
+import copy
 import dataclasses
 import os
 import shutil
@@ -104,13 +106,230 @@ def component_archive_resource_add(argv):
     )
 
   print(f'added {added_resources_count} resource(s)')
+  log_argv(delegated=False)
 
+
+def image_vector(argv):
+  subcmd = argv[0]
+  if not subcmd in ('add',):
+    delegate_to_component_cli()
+
+  # command `image-vector add`
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--comp-desc', required=True, dest='component_descriptor_path')
+  parser.add_argument('--image-vector', required=True,  dest='images_yaml_path')
+  parser.add_argument(
+    '--component-prefixes',
+    default='',
+    help='comma-separated image-prefixes (calculate component-names by stripping off)',
+  )
+  # todo: --generic-dependencies seems to have no effect in original component-cli
+  parser.add_argument(
+    '--generic-dependencies',
+    action='append',
+    required=False,
+    default=[],
+  )
+
+  parsed = parser.parse_args(argv[1:]) # strip subcommand (`add`)
+
+  with open(parsed.component_descriptor_path) as f:
+    component_descriptor = cm.ComponentDescriptor.from_dict(yaml.safe_load(f))
+
+  component = component_descriptor.component
+
+  # images_yaml_path, as found e.g. at github.com/gardener/gardener charts/images.yaml
+  def iter_images():
+    images_yaml_path = parsed.images_yaml_path
+    with open(images_yaml_path) as f:
+      for part in yaml.safe_load_all(f):
+        yield from part['images']
+
+
+  imagevector_label_name = 'imagevector.gardener.cloud/images'
+  imagevector_label = component.find_label(imagevector_label_name)
+  if not imagevector_label:
+    component.labels.append(
+      imagevector_label := cm.Label(
+        name=imagevector_label_name,
+        value={'images': []}
+      )
+    )
+
+  component_prefixes = parsed.component_prefixes.split(',')
+
+  for image_dict in iter_images():
+    name = image_dict['name']
+    resource_id = image_dict.get('resourceId', {'name': name})
+    source_repo = image_dict.get('sourceRepository', None)
+    img_repo = image_dict['repository']
+    extra_identity = image_dict.get('extraIdentity', {})
+    labels = copy.copy(image_dict.get('labels', []))
+    tag = image_dict.get('tag', None)
+    target_version = image_dict.get('targetVersion', None)
+
+    for prefix in (component_prefixes or ()):
+      if img_repo.startswith(prefix):
+        relation = 'local'
+        is_local = True
+        break
+    else:
+      relation = 'external'
+      is_local = False
+
+    # special-case: if images.yaml does not specify a tag, but resource is already present,
+    # use tag from existing resource, but otherwise replace it
+    # in this specific case, do not add extraIdentity to behave exactly as component-cli
+    suppress_extra_id = False
+    resource_name = None
+    resource = None
+    if not tag:
+      if resource_id:
+        resource_name = resource_id['name']
+        image_dict['name'] = resource_name
+      else:
+        resource_name = name
+
+      for resource in component.resources:
+        if resource.name != resource_name:
+          continue
+
+        tag = resource.version
+        component.resources.remove(resource)
+        suppress_extra_id = True # special-case for compatibility w/ component-cli; might be omitted
+        if not 'relation' in image_dict:
+          relation = resource.relation.value
+          pass
+        break
+
+    if not tag: # and not resource:
+      # special-case: if there is no tag, the image is only added to `images`-label on
+      # component-level
+      imagevector_label.value['images'].append(image_dict)
+      continue
+
+    if not suppress_extra_id:
+      extra_identity |= {
+        'imagevector-gardener-cloud+tag': tag,
+      }
+
+    is_current_component = source_repo == component.name
+
+    if not is_current_component and is_local:
+      # if we have a tag, and repository is "local" (as passed-in via --component-prefixes),
+      # then we add a component-reference, and add the image to a label of this reference
+      for component_reference in component.componentReferences:
+        if component_reference.name == name and component_reference.version == tag:
+          break
+      else:
+        component_reference = cm.ComponentReference(
+          name=name,
+          componentName=source_repo,
+          version=tag,
+          extraIdentity=extra_identity,
+          labels=[cm.Label(
+            name='imagevector.gardener.cloud/images',
+            value={'images': []},
+          )],
+        )
+        component.componentReferences.append(component_reference)
+
+      cref_images_label = component_reference.find_label(name='imagevector.gardener.cloud/images')
+
+      cref_images_label.value['images'].append(
+        image_dict | {'resourceId': resource_id}
+      )
+      continue
+
+    labels.append({
+      'name': 'imagevector.gardener.cloud/name',
+      'value': name,
+    })
+    labels.append({
+      'name': 'imagevector.gardener.cloud/repository',
+      'value': img_repo,
+    })
+    if source_repo:
+      labels.append({
+        'name': 'imagevector.gardener.cloud/source-repository',
+        'value': source_repo,
+      })
+    if target_version:
+      labels.append({
+        'name': 'imagevector.gardener.cloud/target-version',
+        'value': target_version,
+      })
+
+    img_resource = cm.Resource(
+      name=resource_name or name,
+      version=tag,
+      extraIdentity=extra_identity,
+      labels=labels,
+      relation=relation,
+      type=cm.ArtefactType.OCI_IMAGE,
+      access=cm.OciAccess(
+        type=cm.AccessType.OCI_REGISTRY,
+        imageReference=f'{img_repo}:{tag}',
+      )
+    )
+
+    component.resources.append(img_resource)
+
+  if not imagevector_label.value['images']:
+    component.labels.remove(imagevector_label)
+
+  # XXXXX hack (purge signatures) - remove before committing
+  component_descriptor_dict = dataclasses.asdict(component_descriptor)
+  component_descriptor_dict.pop('signatures')
+  component_dict = component_descriptor_dict['component']
+  #component_dict['creationTime'] = '2022-03-01 00:00:00'
+  del component_dict['creationTime']
+  if not component_dict.get('labels'):
+    del component_dict['labels']
+  for r in component_dict['resources']:
+    r.pop('digest', None)
+    r.pop('srcRefs', None)
+    if not r.get('extraIdentity'):
+      r.pop('extraIdentity', None)
+    if not r.get('labels'):
+      r.pop('labels', None)
+
+  for r in component_dict['sources']:
+    if not r.get('extraIdentity'):
+      r.pop('extraIdentity', None)
+
+  for cr in component_dict['componentReferences']:
+    cr.pop('digest', None)
+
+
+  with open(parsed.component_descriptor_path, 'w') as f:
+    yaml.dump(
+      data=component_descriptor_dict,
+      stream=f,
+      Dumper=cm.EnumValueYamlDumper,
+    )
+    f.write('\n#generated by cc-utils\n')
 
 def delegate_to_component_cli():
+  log_argv(delegated=True)
   path = os.environ['PATH'].replace(own_dir, '')
   component_cli = shutil.which('component-cli', path=path)
 
   os.execv(component_cli, sys.argv)
+
+
+def log_argv(delegated=False):
+  if not (logfile := os.environ.get('commands_log')):
+    return
+
+  with open(logfile, 'a') as f:
+    entry = ''
+    if delegated:
+      entry = 'delegated: '
+
+    entry += ' '.join(sys.argv) + '\n'
+
+    f.write(entry)
 
 
 def main():
@@ -121,6 +340,8 @@ def main():
     cmd = sys.argv[1]
     if cmd in ('component-archive', 'componentarchive', 'archive', 'ca'):
       return component_archive_resource_add(sys.argv[2:])
+    elif cmd in ('image-vector', 'imagevector', 'iv'):
+      return image_vector(sys.argv[2:])
 
     delegate_to_component_cli()
   except (KeyError, IndexError):
