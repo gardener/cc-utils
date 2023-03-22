@@ -23,7 +23,7 @@ def _list_commits_between_tags(repo: git.Repo,
     all commits between the tags are returned. Otherwise, all commits between the merge base (first common ancestor)
     and the main_branch are returned.
 
-    :return: a list of commits between the two tags
+    :return: a tuple of commits between the two tags
     '''
     if repo.is_ancestor(main_tag.commit, other_tag.commit) or repo.is_ancestor(other_tag.commit, main_tag.commit):
         return tuple(repo.iter_commits(f'{main_tag.commit.hexsha}...{other_tag.commit.hexsha}'))
@@ -120,10 +120,6 @@ def get_release_note_commits_tuple(previous_version: semver.VersionInfo,
     return _list_commits_between_tags(git_helper.repo, current_version_tag, previous_version_tag), tuple()
 
 
-def create_release_notes_blocks(release_notes: set[rnm.ReleaseNote]) -> str:
-    return '\n\n'.join(z.to_block_str() for z in release_notes)
-
-
 def fetch_release_notes(
         component: gci.componentmodel.Component,
         repo_path: str,
@@ -210,21 +206,21 @@ def fetch_release_notes(
         # by associated pull requests
         for pr in commit_pulls[filter_in_commit.hexsha]:
             release_notes.update(rnm.create_release_note_obj(
-                block=z,
+                source_block=z,
                 source_commit=filter_in_commit,
                 raw_body=pr.body,
                 author=rnm.author_from_pull_request(pr),
-                targets=pr,
+                target=pr,
                 source_component=component,
                 current_component=component,
             ) for z in rnm.iter_source_blocks(pr.body))
         # by commit
         release_notes.update(rnm.create_release_note_obj(
-            block=z,
+            source_block=z,
             source_commit=filter_in_commit,
             raw_body=filter_in_commit.message,
             author=rnm.author_from_commit(filter_in_commit),
-            targets=filter_in_commit,
+            target=filter_in_commit,
             source_component=component,
             current_component=component,
         ) for z in rnm.iter_source_blocks(filter_in_commit.message))
