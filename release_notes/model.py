@@ -43,10 +43,10 @@ class ReferenceType:
     prefix: str  # prefix for generated release notes
 
 
-REF_TYPE_PULL = ReferenceType(identifier='#', prefix='#')
-REF_TYPE_COMMIT = ReferenceType(identifier='$', prefix='@')
+_ref_type_pull = ReferenceType(identifier='#', prefix='#')
+_ref_type_commit = ReferenceType(identifier='$', prefix='@')
 
-REF_TYPES = [REF_TYPE_PULL, REF_TYPE_COMMIT]
+_ref_types = (_ref_type_pull, _ref_type_commit)
 
 
 @dataclasses.dataclass
@@ -74,11 +74,11 @@ class PullRequestReference(Reference):
 
 
 def create_commit_ref(commit: git.Commit) -> CommitReference:
-    return CommitReference(type=REF_TYPE_COMMIT, commit=commit)
+    return CommitReference(type=_ref_type_commit, commit=commit)
 
 
 def create_pull_request_ref(pull_request: github3.pulls.ShortPullRequest) -> PullRequestReference:
-    return PullRequestReference(type=REF_TYPE_PULL, pull_request=pull_request)
+    return PullRequestReference(type=_ref_type_pull, pull_request=pull_request)
 
 
 @dataclasses.dataclass
@@ -116,7 +116,7 @@ pattern = re.compile(r'\x60{3}(?P<category>\w+)\s+(?P<target_group>\w+)\n(?P<not
                      flags=re.DOTALL | re.IGNORECASE | re.MULTILINE)
 
 
-def list_source_blocks(content: str) -> typing.Generator[SourceBlock, None, None]:
+def iter_source_blocks(content: str) -> typing.Generator[SourceBlock, None, None]:
     ''' Searches for code blocks in release note notation and returns all found.
     Only valid note blocks are returned, which means that the format has been followed.
     However, it does not check if the category / group exists.
@@ -208,3 +208,21 @@ def create_release_note_obj(
         source_commit, block, raw_body, author, ref, source_component,
         is_current_repo, from_same_github_instance
     )
+
+
+@dataclasses.dataclass
+class ReleaseNotesMetadata:
+    checked_at: int
+    prs: list[int]
+
+
+@dataclasses.dataclass
+class MetaPayload:
+    type: str
+    data: object
+
+
+def get_meta_obj(typ: str, data: object) -> dict:
+    return {
+        "meta": dataclasses.asdict(MetaPayload(typ, data))
+    }
