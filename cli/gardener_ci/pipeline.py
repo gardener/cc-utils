@@ -16,7 +16,7 @@ logger = logging.getLogger('pipeline-cli')
 
 
 def _branch_cfg(
-    repo: git.Repo(),
+    repo: git.Repo,
     meta_ci_ref: str,
     absent_ok: bool,
 ) -> ce.BranchCfg | None:
