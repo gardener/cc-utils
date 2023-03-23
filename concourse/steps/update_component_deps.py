@@ -420,19 +420,23 @@ def create_upgrade_pr(
     else:
         pr_body = split_release_notes[0] + max_body_length_exceeded_remark
 
-    pull_request = ls_repo.create_pull(
-        title=github.util.PullRequestUtil.calculate_pr_title(
-            reference=to_ref,
-            from_version=from_version,
-            to_version=to_version
-        ),
-        base=githubrepobranch.branch(),
-        head=upgrade_branch_name,
-        body=pr_body,
-    )
+    try:
+        pull_request = ls_repo.create_pull(
+            title=github.util.PullRequestUtil.calculate_pr_title(
+                reference=to_ref,
+                from_version=from_version,
+                to_version=to_version
+            ),
+            base=githubrepobranch.branch(),
+            head=upgrade_branch_name,
+            body=pr_body,
+        )
 
-    for release_note_part in additional_notes:
-        pull_request.create_comment(body=release_note_part)
+        for release_note_part in additional_notes:
+            pull_request.create_comment(body=release_note_part)
+    except github3.exceptions.UnprocessableEntity as e:
+        logger.info(f'Intercepted UnprocessableEntity exception. Listed errors: {e.errors}')
+        raise
 
     if merge_policy is MergePolicy.MANUAL:
         return pull_request
