@@ -184,11 +184,15 @@ def base_component_descriptor(
     if not pipeline_name:
         pipeline_name, pipeline_definition = next(pipeline_definitions.items().__iter__())
     else:
-        pipeline_name, pipeline_definition = pipeline_definitions[pipeline_name]
+        pipeline_definition = pipeline_definitions[pipeline_name]
 
     logger.info(f'{pipeline_name=}')
 
-    jobs = pipeline_definition['jobs']
+    if not (jobs := pipeline_definition.get('jobs', None)):
+        logger.error(f'local {pipeline_name=} contained no jobs')
+        logger.info('hint:fetch refs/meta/ci (--meta-ci=fetch)')
+        exit(1)
+
     base_definition = pipeline_definition.get('base_definition', {})
 
     for name, job in jobs.items():
@@ -227,6 +231,11 @@ def base_component_descriptor(
         job_name = best_job_name
     else:
         job = jobs[job_name]
+
+    if not job_name:
+        logger.error('did not find any job w/ at least component_descriptor trait')
+        logger.info('hint: fetch refs/meta/ci (--meta-ci=fetch)')
+        exit(1)
 
     logger.info(f'{job_name=}')
 
