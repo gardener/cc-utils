@@ -1,19 +1,28 @@
 import dataclasses
+import logging
 import re
 import typing
 
 import gci.componentmodel
 import git
 import github3.pulls
-from git import Commit
 
 import cnudie.util
 
+logger = logging.getLogger(__name__)
+
+'''
+This pattern matches code-blocks in the following format:   
+```{category} {note_message}
+{note_message}
+```
+\x60 -> `
+'''
 _source_block_pattern = re.compile(r'\x60{3}(?P<category>\w+)\s+(?P<target_group>\w+)\n(?P<note>.+?)\n\x60{3}',
                                    flags=re.DOTALL | re.IGNORECASE | re.MULTILINE)
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class Author:
     # for pull requests
     username: str  # the GitHub username
@@ -46,7 +55,7 @@ def author_from_pull_request(pull_request: github3.pulls.ShortPullRequest) -> Au
     )
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class _ReferenceType:
     identifier: str  # identifier for release note block
     prefix: str  # prefix for generated release notes
@@ -58,7 +67,7 @@ _ref_type_commit = _ReferenceType(identifier='$', prefix='@')
 _ref_types = (_ref_type_pull, _ref_type_commit)
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class _Reference:
     ''' Represents where a release note comes from, for example through a commit or a pull request.
 
@@ -74,7 +83,7 @@ class _Reference:
         raise NotImplementedError('get_content not implemented yet')
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class CommitReference(_Reference):
     ''' Represents the commit where the release note came from
     '''
@@ -85,7 +94,7 @@ class CommitReference(_Reference):
         return self.commit.hexsha
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class PullRequestReference(_Reference):
     ''' Represents the pull requests where the release note came from
     '''
@@ -104,7 +113,7 @@ def create_pull_request_ref(pull_request: github3.pulls.ShortPullRequest) -> Pul
     return PullRequestReference(type=_ref_type_pull, pull_request=pull_request)
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class SourceBlock:
     '''Represents the parsed release note code block within a pull request body or a commit message.
 
@@ -157,14 +166,15 @@ def iter_source_blocks(content: str) -> typing.Generator[SourceBlock, None, None
                                 note_message=res.group('note'))
             if block.has_content():
                 yield block
-        except IndexError:
+        except IndexError as e:
+            logger.debug(f'cannot find group in content: {e}')
             # group not found, ignore
             continue
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class ReleaseNote:
-    source_commit: Commit  # the commit where the release notes were initially gathered from
+    source_commit: git.Commit  # the commit where the release notes were initially gathered from
     source_block: SourceBlock
 
     raw_body: str  # the raw body of the commit / pull request
@@ -194,7 +204,7 @@ class ReleaseNote:
 
 def create_release_note_obj(
         source_block: SourceBlock,
-        source_commit: Commit,
+        source_commit: git.Commit,
         raw_body: str,
         author: Author,
         target: typing.Union[git.Commit, github3.pulls.ShortPullRequest],
@@ -222,24 +232,33 @@ def create_release_note_obj(
     is_current_repo = current_component.name == source_component.name
 
     return ReleaseNote(
-        source_commit, source_block, raw_body, author, ref, source_component,
-        is_current_repo, from_same_github_instance
+        source_commit=source_commit,
+        source_block=source_block,
+        raw_body=raw_body,
+        author=author,
+        reference=ref,
+        source_component=source_component,
+        is_current_repo=is_current_repo,
+        from_same_github_instance=from_same_github_instance
     )
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class ReleaseNotesMetadata:
     checked_at: int
     prs: list[int]
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class MetaPayload:
     type: str
     data: object
 
 
-def get_meta_obj(typ: str, data: object) -> dict:
+def get_meta_obj(
+        typ: str,
+        data: object
+) -> dict:
     return {
-        "meta": dataclasses.asdict(MetaPayload(typ, data))
+        'meta': dataclasses.asdict(MetaPayload(typ, data))
     }

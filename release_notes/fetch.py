@@ -8,17 +8,19 @@ import semver
 
 import cnudie.retrieve
 import cnudie.util
+import github.release_notes.util as ghrnu
 import release_notes.model as rnm
 import release_notes.utils as rnu
 import version
-from github.release_notes.util import git_helper_from_github_access, github_helper_from_github_access
 
 logger = logging.getLogger(__name__)
 
 
-def _list_commits_between_tags(repo: git.Repo,
-                               main_tag: git.TagReference,
-                               other_tag: git.TagReference) -> tuple[git.Commit]:
+def _list_commits_between_tags(
+        repo: git.Repo,
+        main_tag: git.TagReference,
+        other_tag: git.TagReference
+) -> tuple[git.Commit]:
     ''' If the tags are linear to each other (main_tag ancestor of other_tag or vice versa),
     all commits between the tags are returned. Otherwise, all commits between the merge base (first common ancestor)
     and the main_branch are returned.
@@ -33,12 +35,13 @@ def _list_commits_between_tags(repo: git.Repo,
     return tuple(repo.iter_commits(f'{main_tag.commit.hexsha}...{merge_commit.hexsha}'))
 
 
-def _get_release_note_commits_tuple_for_minor_release(previous_version: semver.VersionInfo,
-                                                      component_versions: dict[semver.VersionInfo, str],
-                                                      git_helper,
-                                                      github_repo: github3.repos.Repository,
-                                                      current_version_tag: git.TagReference,
-                                                      ) -> tuple[tuple[git.Commit], tuple[git.Commit]]:
+def _get_release_note_commits_tuple_for_minor_release(
+        previous_version: semver.VersionInfo,
+        component_versions: dict[semver.VersionInfo, str],
+        git_helper,
+        github_repo: github3.repos.Repository,
+        current_version_tag: git.TagReference,
+) -> tuple[tuple[git.Commit], tuple[git.Commit]]:
     '''
     :return: a tuple of commits which should be included in the release notes
     and a tuple of commits which should not be included in the release notes
@@ -56,7 +59,7 @@ def _get_release_note_commits_tuple_for_minor_release(previous_version: semver.V
     if git_helper.repo.is_ancestor(previous_minor_version_tag.commit, current_version_tag.commit):
         logger.info('it\'s an ancestor. simple range should be enough.')
         return tuple(git_helper.repo.iter_commits(
-            f"{current_version_tag.commit.hexsha}...{previous_minor_version_tag.commit.hexsha}")
+            f'{current_version_tag.commit.hexsha}...{previous_minor_version_tag.commit.hexsha}')
         ), tuple()
 
     # otherwise, use the new method
@@ -81,20 +84,21 @@ def _get_release_note_commits_tuple_for_minor_release(previous_version: semver.V
     return tuple(filter_in_commits), tuple(filter_out_commits)
 
 
-def get_release_note_commits_tuple(previous_version: semver.VersionInfo,
-                                   previous_version_tag: git.TagReference,
-                                   component_versions: dict[semver.VersionInfo, str],
-                                   git_helper,
-                                   current_version_tag: git.TagReference,
-                                   current_version: semver.VersionInfo,
-                                   github_repo: github3.repos.Repository,
-                                   ) -> tuple[tuple[git.Commit], tuple[git.Commit]]:
+def get_release_note_commits_tuple(
+        previous_version: semver.VersionInfo,
+        previous_version_tag: git.TagReference,
+        component_versions: dict[semver.VersionInfo, str],
+        git_helper,
+        current_version_tag: git.TagReference,
+        current_version: semver.VersionInfo,
+        github_repo: github3.repos.Repository,
+) -> tuple[tuple[git.Commit], tuple[git.Commit]]:
     '''
     :return: a tuple of commits which should be included in the release notes
     and a tuple of commits which should not be included in the release notes
     '''
     # initial release
-    if previous_version is None or len(component_versions) == 1:
+    if not previous_version or len(component_versions) == 1:
         logger.info('version appears to be an initial release.')
         # just return all commits starting from the current_version_tag
         return tuple(git_helper.repo.iter_commits(current_version_tag)), tuple()
@@ -133,8 +137,8 @@ def fetch_release_notes(
     :return: A set of ReleaseNote objects for the specified component.
     '''
     source = cnudie.util.determine_main_source_for_component(component)
-    github_helper = github_helper_from_github_access(source.access)
-    git_helper = git_helper_from_github_access(source.access, repo_path)
+    github_helper = ghrnu.github_helper_from_github_access(source.access)
+    git_helper = ghrnu.git_helper_from_github_access(source.access, repo_path)
 
     # find all available versions
     component_versions: dict[semver.VersionInfo, str] = {}
@@ -144,8 +148,8 @@ def fetch_release_notes(
             continue
         component_versions[parsed_version] = ver
 
-    if current_version is None:
-        if source.version is None:
+    if not current_version:
+        if not source.version:
             raise ValueError(f'current_version not passed and not found in component source')
         current_version = version.parse_to_semver(source.version)
         # access tag from component
@@ -158,7 +162,7 @@ def fetch_release_notes(
 
     previous_version = rnu.find_next_smallest_version(list(component_versions.keys()), current_version)
     previous_version_tag: typing.Optional[git.TagReference] = None
-    if previous_version is not None:
+    if previous_version:
         previous_version_tag = git_helper.repo.tag(component_versions[previous_version])
 
     logger.debug(f'current: {current_version=}, {current_version_tag=}, ' +
