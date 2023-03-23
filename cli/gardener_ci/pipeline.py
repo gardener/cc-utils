@@ -18,11 +18,16 @@ logger = logging.getLogger('pipeline-cli')
 def _branch_cfg(
     repo: git.Repo,
     meta_ci_ref: str,
-    absent_ok: bool,
+    fetch: bool=False,
+    absent_ok: bool=True,
 ) -> ce.BranchCfg | None:
     '''
     parses `branch.cfg` from repo, assuming it is a valid yaml-file named `branch.cfg`
     '''
+    if fetch:
+        remote = repo.remote()
+        remote.fetch(f'refs/meta/ci:{meta_ci_ref}')
+
     for ref in repo.refs:
         if ref.path == meta_ci_ref:
             break
@@ -126,7 +131,7 @@ def _iter_resources(
 
 def base_component_descriptor(
     repo: str=None,
-    meta_ci: str='if-local',
+    meta_ci: str='if-local', # | fetch
     meta_ci_ref: str='refs/meta/ci',
     pipeline_name: str=None, # only required if there is more than one
     job_name: str=None,
@@ -153,6 +158,7 @@ def base_component_descriptor(
     branch_cfg = _branch_cfg(
         repo=repo,
         meta_ci_ref=meta_ci_ref,
+        fetch=meta_ci == 'fetch',
         absent_ok=meta_ci == 'if-local',
     )
     if not branch_cfg:
