@@ -29,13 +29,13 @@ def _branch_cfg(
     else:
         if absent_ok:
             return None
-        raise RuntimError(f'{meta_ci_ref=} not available in local {repo=}')
+        raise RuntimeError(f'{meta_ci_ref=} not available in local {repo=}')
 
     for blob in ref.object.tree.blobs:
         if blob.name == 'branch.cfg':
             break
     else:
-        raise RuntimError(f'did not find regular file `branch.cfg` in {meta_ci_ref}')
+        raise RuntimeError(f'did not find regular file `branch.cfg` in {meta_ci_ref}')
 
     branch_cfg = yaml.safe_load(blob.data_stream)
     return ce.BranchCfg(raw_dict=branch_cfg)
