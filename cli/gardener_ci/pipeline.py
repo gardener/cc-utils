@@ -100,7 +100,7 @@ def _main_source(
             repoUrl=next(repo.remote().urls),
             ref=repo.active_branch.name,
         ),
-    ),
+    )
 
 
 def _iter_resources(
