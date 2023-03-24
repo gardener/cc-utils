@@ -238,6 +238,7 @@ def base_component_descriptor(
             job = best_candidate
 
     job_name = best_job_name
+    job = best_candidate
 
     if not job_name:
         logger.error('did not find any job w/ at least component_descriptor trait')
