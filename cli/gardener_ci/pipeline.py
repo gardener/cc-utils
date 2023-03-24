@@ -129,6 +129,24 @@ def _iter_resources(
         )
 
 
+def _repo(repo: str=None):
+    if isinstance(repo, git.Repo):
+        return repo
+
+    if not repo:
+        repo = os.getcwd()
+
+    try:
+        repo = git.Repo(
+            path=repo,
+            search_parent_directories=True,
+        )
+        return repo
+    except git.exc.InvalidGitRepositoryError:
+        logger.error(f'not a git-repository: {repo}. Hint: change PWD, or pass --repo')
+        exit(1)
+
+
 def base_component_descriptor(
     repo: str=None,
     meta_ci: str='if-local', # | fetch
@@ -139,17 +157,7 @@ def base_component_descriptor(
     version: str=None,
     outfile: str=None,
 ):
-    if not repo:
-        repo = os.getcwd()
-
-    try:
-        repo = git.Repo(
-            path=repo,
-            search_parent_directories=True,
-        )
-    except git.exc.InvalidGitRepositoryError:
-        logger.error(f'not a git-repository: {repo}. Hint: change PWD, or pass --repo')
-        exit(1)
+    repo = _repo(repo=repo)
 
     try:
         branch_name = repo.active_branch.name
