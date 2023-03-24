@@ -69,6 +69,13 @@ class DeliveryServiceRoutes:
             'branches',
         )
 
+    def components_metadata(self):
+        return ci.util.urljoin(
+            self._base_url,
+            'components',
+            'metadata',
+        )
+
 
 class DeliveryServiceClient:
     def __init__(
@@ -235,6 +242,35 @@ class DeliveryServiceClient:
         return [
             dm.OsReleaseInfo.from_dict(ri) for ri in res.json()
         ]
+
+    def components_metadata(
+        self,
+        component_name: str,
+        component_version: str=None,
+        metadata_types: list[str]=[], # empty list returns _all_ metadata-types
+        select: str=None, # either `greatestVersion` or `latestDate`
+    ):
+        '''
+        returns a list of artifact-metadata for the given component
+
+        One of 'select' and 'component_version' must be given. However, if 'select' is given as
+        `greatestVersion`, 'version' must _not_ be given.
+        '''
+        url = self._routes.components_metadata()
+
+        resp = requests.get(
+            url=url,
+            params={
+                'name': component_name,
+                'version': component_version,
+                'type': metadata_types,
+                'select': select,
+            }
+        )
+
+        resp.raise_for_status()
+
+        return resp.json()
 
 
 def _normalise_github_hostname(github_url: str):
