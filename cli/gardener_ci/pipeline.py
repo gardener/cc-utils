@@ -179,11 +179,7 @@ def base_component_descriptor(
         exit(1)
 
     if not pipeline_name and len(pipeline_definitions) > 1:
-        logger.error('more than one pipeline found - must specify name')
-        logger.info('pipeline-names:')
-        for name in pipeline_definitions:
-            print(name)
-        exit(1)
+        logger.info('more than one pipeline found - will guess')
 
     if not pipeline_name:
         pipeline_name, pipeline_definition = next(pipeline_definitions.items().__iter__())
@@ -192,23 +188,31 @@ def base_component_descriptor(
 
     logger.info(f'{pipeline_name=}')
 
-    if not (jobs := pipeline_definition.get('jobs', None)):
-        logger.error(f'local {pipeline_name=} contained no jobs')
-        logger.info('hint:fetch refs/meta/ci (--meta-ci=fetch)')
-        exit(1)
-
-    base_definition = pipeline_definition.get('base_definition', {})
-
-    for name, job in jobs.items():
-        jobs[name] = ci.util.merge_dicts(job, base_definition)
+    best_score = 0
+    best_candidate = None
+    best_job_name = None
 
     if not job_name:
         logger.info('guessing best job-name, as none was specified')
-        best_score = 0
-        best_candidate = None
-        best_job_name = None
 
-        for job_name, job in jobs.items():
+    for p_name, pipeline_definition in pipeline_definitions.items():
+        if pipeline_name and pipeline_name != p_name:
+            continue
+
+        if not (jobs := pipeline_definition.get('jobs', None)):
+            logger.error(f'local {pipeline_name=} contained no jobs')
+            logger.info('hint:fetch refs/meta/ci (--meta-ci=fetch)')
+            exit(1)
+
+        base_definition = pipeline_definition.get('base_definition', {})
+
+        for j_name, job in jobs.items():
+            jobs[j_name] = ci.util.merge_dicts(job, base_definition)
+
+        for j_name, job in jobs.items():
+            if job_name and job_name != j_name:
+                continue
+
             traits = job.get('traits', {})
             score = 0
             if not 'component_descriptor' in traits:
@@ -228,13 +232,12 @@ def base_component_descriptor(
 
             best_candidate = job
             best_score = score
-            best_job_name = job_name
+            best_job_name = j_name
 
-        logger.info('guessed job-name (pass explicitly if guessed wrong)')
-        job = best_candidate
-        job_name = best_job_name
-    else:
-        job = jobs[job_name]
+            logger.info('guessed job-name (pass explicitly if guessed wrong)')
+            job = best_candidate
+
+    job_name = best_job_name
 
     if not job_name:
         logger.error('did not find any job w/ at least component_descriptor trait')
