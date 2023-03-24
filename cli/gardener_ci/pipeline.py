@@ -147,7 +147,7 @@ def _repo(repo: str=None):
             search_parent_directories=True,
         )
         return repo
-    except git.exc.InvalidGitRepositoryError:
+    except git.exc.InvalidGitRepositoryError: # pylint: disable=E1101
         logger.error(f'not a git-repository: {repo}. Hint: change PWD, or pass --repo')
         exit(1)
 
