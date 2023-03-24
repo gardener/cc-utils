@@ -142,10 +142,14 @@ def base_component_descriptor(
     if not repo:
         repo = os.getcwd()
 
-    repo = git.Repo(
-        path=repo,
-        search_parent_directories=True,
-    )
+    try:
+        repo = git.Repo(
+            path=repo,
+            search_parent_directories=True,
+        )
+    except git.exc.InvalidGitRepositoryError:
+        logger.error(f'not a git-repository: {repo}. Hint: change PWD, or pass --repo')
+        exit(1)
 
     try:
         branch_name = repo.active_branch.name
