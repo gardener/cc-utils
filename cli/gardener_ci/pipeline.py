@@ -1,7 +1,10 @@
 import dataclasses
 import logging
 import os
+import shutil
+import subprocess
 import sys
+import tempfile
 import urllib.parse
 
 import git
@@ -13,6 +16,8 @@ import ci.util
 import concourse.enumerator as ce
 
 logger = logging.getLogger('pipeline-cli')
+
+own_dir = os.path.abspath(os.path.dirname(__file__))
 
 
 def _branch_cfg(
@@ -299,3 +304,89 @@ def base_component_descriptor(
         stream=outfileh,
         Dumper=cm.EnumValueYamlDumper,
     )
+
+    return component_descriptor
+
+
+def component_descriptor(
+    repo: str=None,
+    meta_ci: str='if-local', # | fetch
+    meta_ci_ref: str='refs/meta/ci',
+    pipeline_name: str=None, # only required if there is more than one
+    job_name: str=None,
+    component_name: str=None,
+    version: str=None,
+    outfile: str=None,
+    component_repo: str='eu.gcr.io/gardener-project/development',
+    component_descriptor_script: str=None,
+):
+    repo = _repo(repo=repo)
+    if not outfile:
+        outfile = os.path.join(os.getcwd(), 'component-descriptor.yaml')
+
+    if not component_descriptor_script:
+        component_descriptor_script = os.path.join(
+            repo.working_tree_dir,
+            '.ci',
+            'component_descriptor',
+        )
+
+    base_component_descriptor_file = tempfile.NamedTemporaryFile()
+    logger.info(f'{base_component_descriptor_file.name=}')
+    logger.info(f'{outfile=}')
+
+    base_descriptor  = base_component_descriptor(
+        repo=repo,
+        meta_ci=meta_ci,
+        meta_ci_ref=meta_ci_ref,
+        pipeline_name=pipeline_name,
+        job_name=job_name,
+        component_name=component_name,
+        version=version,
+        outfile=base_component_descriptor_file.name,
+    )
+    base_component = base_descriptor.component
+
+    if not os.path.isfile(component_descriptor_script):
+        logger.info(f'{component_descriptor_script=} is not a file - skipping callback')
+
+        shutil.copyfile(
+            base_component_descriptor_file.name,
+            outfile,
+        )
+        logger.info(f'copied to {outfile=}')
+        exit(0)
+
+    cli = os.path.join(own_dir, 'cli_gen.py')
+    dependencies_cmd = ' '.join((
+        cli,
+        'gardener-ci',
+        'productutil_v2',
+        'add_dependencies',
+        '--descriptor-src-file', base_component_descriptor_file.name,
+        '--descriptor-out-file', base_component_descriptor_file.name,
+        '--component-version', base_component.version,
+        '--component-name', base_component.name,
+    ))
+
+    env = os.environ.copy()
+    env |= {
+        'MAIN_REPO_DIR': repo.working_tree_dir,
+        'BASE_DEFINITION_PATH': base_component_descriptor_file.name,
+        # BASE_CTF_PATH - XXX
+        'COMPONENT_DESCRIPTOR_PATH': outfile,
+        # CTF_PATH - XXX
+        'COMPONENT_NAME': base_component.name,
+        'COMPONENT_VERSION': base_component.version,
+        'EFFECTIVE_VERSION': base_component.version,
+        'CURRENT_COMPONENT_REPOSITORY': component_repo,
+        'ADD_DEPENDENCIES_CMD': dependencies_cmd,
+    }
+
+    subprocess.run(
+        (component_descriptor_script,),
+        env=env,
+        check=True,
+    )
+
+    logger.info(f'component-descriptor should be at: {outfile=}')
