@@ -55,12 +55,23 @@ ATTRIBUTES = (
     AttributeSpec.optional(
         name='timerange',
         default=None,
-        type=str,
+        type=str | dict,
         doc='''
         If set, specifies the time range in between which to run the job.
 
-        Currently, the only supported value is `WORKING_HOURS`, which limits the job to be
-        triggered between 08:00 and 18:00 (relative to configured timezone)
+        Has two forms:
+
+            - `WORKING_HOURS`, which limits the job to be triggered between 08:00 and 18:00.
+            - A dict with `begin` and `end` in the format of `HH:MM`, e.g.:
+
+                .. code-block:: yaml
+
+                    timerange:
+                        begin: '09:45'
+                        end: '13:30'
+
+            The timerange is interpreted relative to the configured timezone
+
         ''',
     ),
 )
@@ -118,10 +129,18 @@ class CronTrait(Trait):
         if not (timerange := self.raw['timerange']):
             return None
 
-        if timerange == 'WORKING_HOURS':
+        if isinstance(timerange, str):
+            if timerange == 'WORKING_HOURS':
+                return TimeRange(
+                    begin=datetime.time(hour=8, minute=0),
+                    end=datetime.time(hour=20, minute=0),
+                )
+            else:
+                raise ValueError(timerange)
+        elif isinstance(timerange, dict):
             return TimeRange(
-                begin=datetime.time(hour=8, minute=0),
-                end=datetime.time(hour=20, minute=0),
+                begin=datetime.time.fromisoformat(timerange['begin']),
+                end=datetime.time.fromisoformat(timerange['end']),
             )
         else:
             raise ValueError(timerange)
@@ -130,11 +149,17 @@ class CronTrait(Trait):
         # variant-names must be unique, so this should suffice, unless there are different
         # cron-resources (e.g. different days/timeranges)
 
-        return '-'.join((
+        name = '-'.join((
             self.variant_name,
             self.interval,
-            'cron',
         ))
+
+        if tr := self.timerange:
+            name += f'-{tr.begin.strftime("%H%M")}-{tr.end.strftime("%H%M")}'
+
+        name += '-cron'
+
+        return name
 
     def transformer(self):
         return CronTraitTransformer()
