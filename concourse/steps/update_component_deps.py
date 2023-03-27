@@ -399,26 +399,30 @@ def create_upgrade_pr(
         traceback.print_exc()
         release_notes = 'failed to retrieve release-notes'
 
-    max_pr_body_length = 65536 # also: max comment body length
-    # If the size of the release-notes exceeds the max. body-length for PRs, split the notes
-    # into MAX_PR_BODY_LENGTH-sized chunks and add subsequent chunks to the PR as comments.
-    max_body_length_exceeded_remark = (
-        '\n\nRelease notes were shortened since they exceeded the maximum length allowed for a '
-        'pull request body. The remaining release notes will be added as comments to this PR.'
-    )
-    if max_pr_body_length < len(release_notes):
-        step_size = max_pr_body_length - len(max_body_length_exceeded_remark)
-        split_release_notes = [
-            release_notes[start:start+step_size]
-            for start in range(0, len(release_notes), step_size)
-        ]
-    else:
-        split_release_notes = [release_notes]
+    if release_notes:
+        max_pr_body_length = 65536 # also: max comment body length
+        # If the size of the release-notes exceeds the max. body-length for PRs, split the notes
+        # into MAX_PR_BODY_LENGTH-sized chunks and add subsequent chunks to the PR as comments.
+        max_body_length_exceeded_remark = (
+            '\n\nRelease notes were shortened since they exceeded the maximum length allowed for a '
+            'pull request body. The remaining release notes will be added as comments to this PR.'
+        )
+        if max_pr_body_length < len(release_notes):
+            step_size = max_pr_body_length - len(max_body_length_exceeded_remark)
+            split_release_notes = [
+                release_notes[start:start+step_size]
+                for start in range(0, len(release_notes), step_size)
+            ]
+        else:
+            split_release_notes = [release_notes]
 
-    if not (additional_notes := split_release_notes[1:]):
-        pr_body = split_release_notes[0]
+        if not (additional_notes := split_release_notes[1:]):
+            pr_body = split_release_notes[0]
+        else:
+            pr_body = split_release_notes[0] + max_body_length_exceeded_remark
     else:
-        pr_body = split_release_notes[0] + max_body_length_exceeded_remark
+        pr_body = None
+        additional_notes = []
 
     try:
         pull_request = ls_repo.create_pull(
