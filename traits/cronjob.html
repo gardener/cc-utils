@@ -131,10 +131,24 @@
 <tr class="row-odd"><td><p>timerange</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
-<td><p>str</p></td>
+<td><p>str | dict</p></td>
 <td><p><p>If set, specifies the time range in between which to run the job.</p>
-<p>Currently, the only supported value is <code class="code docutils literal notranslate"><span class="pre">WORKING_HOURS</span></code>, which limits the job to be
-triggered between 08:00 and 18:00 (relative to configured timezone)</p>
+<p>Has two forms:</p>
+<blockquote>
+<div><ul>
+<li><p><code class="code docutils literal notranslate"><span class="pre">WORKING_HOURS</span></code>, which limits the job to be triggered between 08:00 and 18:00.</p></li>
+<li><p>A dict with <code class="code docutils literal notranslate"><span class="pre">begin</span></code> and <code class="code docutils literal notranslate"><span class="pre">end</span></code> in the format of <code class="code docutils literal notranslate"><span class="pre">HH:MM</span></code>, e.g.:</p>
+<blockquote>
+<div><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">timerange</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">begin</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;09:45&#39;</span>
+<span class="w">    </span><span class="nt">end</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;13:30&#39;</span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ul>
+<p>The timerange is interpreted relative to the configured timezone</p>
+</div></blockquote>
 </p></td>
 </tr>
 </tbody>
