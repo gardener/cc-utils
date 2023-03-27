@@ -5,7 +5,7 @@ import time
 import typing
 
 import git
-import git.exc
+import git.exc as gitexc
 import github3
 import github3.exceptions as gh3e
 import github3.pulls as gh3p
@@ -103,7 +103,7 @@ def _find_git_notes_for_commit(
 ) -> typing.Optional[str]:
     try:
         return repo.git.notes('show', commit.hexsha)
-    except git.exc.GitCommandError as e:
+    except gitexc.GitCommandError as e:
         logger.debug(f'commit {commit.hexsha} does not have a git note: {e}')
         return None
 
