@@ -275,6 +275,34 @@ class DeliveryServiceClient:
             for raw in resp.json()
         ]
 
+    def artefact_metadata_for_resource_node(
+        self,
+        resource_node: 'cnudie.iter.ResourceNode',
+        types: list[str],
+    ) -> typing.Iterable[dm.ArtefactMetadata]:
+        '''Return an iterable that contains all stored `ArtefactMetadata` of the given type for the
+        given resource node.
+
+        For possible values for `type` see `dso.model.Datatype`.
+        '''
+
+        component = resource_node.component
+        resource = resource_node.resource
+
+        for component_metadata in self.components_metadata(
+            component_name=component.name,
+            metadata_types=types,
+            component_version=component.version,
+        ):
+            if not component_metadata.artefactId.componentName == component.name:
+                continue
+            if not component_metadata.artefactId.artefactName == resource.name:
+                continue
+            if not component_metadata.artefactId.artefactVersion == resource.version:
+                continue
+
+            yield component_metadata
+
 
 def _normalise_github_hostname(github_url: str):
     # hack: for github.com, we might get a different subdomain (api.github.com)
