@@ -65,6 +65,7 @@ class Datatype:
     COMPONENTS = 'components'
     FILESYSTEM_PATHS = 'filesystem/paths'
     OS_IDS = 'os_ids'
+    RESCORING_VULNERABILITIES = 'rescoring/vulnerabilities'
 
 
 class RelationKind:
@@ -186,6 +187,36 @@ class CodecheckSummary:
 
 
 @dataclasses.dataclass(frozen=True)
+class VulnerabilityCve:
+    cve: str
+
+
+@dataclasses.dataclass(frozen=True)
+class VulnerabilityRescoring:
+    vulnerability: VulnerabilityCve
+    rescored_severity: str
+    matching_rules: list[str]
+
+
+@dataclasses.dataclass(frozen=True)
+class Component:
+    name: str
+    version: str | None # bdba might be unable to determine a version
+    source: str
+
+
+@dataclasses.dataclass(frozen=True)
+class Rescoring:
+    component: Component
+    rescore_to: list[VulnerabilityRescoring]
+
+
+@dataclasses.dataclass(frozen=True)
+class RescoringData:
+    rescorings: list[Rescoring]
+
+
+@dataclasses.dataclass(frozen=True)
 class ArtefactMetadata:
     artefact: ComponentArtefactId
     meta: Metadata
@@ -197,5 +228,6 @@ class ArtefactMetadata:
         LicenseSummary,
         MalwareSummary,
         OsID,
+        RescoringData,
         dict, # fallback, there should be a type
     ]
