@@ -46,7 +46,8 @@ class SessionAdapter(enum.Enum):
 
 
 def github_api_ctor(
-    github_url: str,
+    github_cfg: model.github.GithubConfig,
+    github_username: str,
     verify_ssl: bool=True,
     session_adapter: SessionAdapter=SessionAdapter.RETRY,
     cfg_factory: model.ConfigFactory=None,
@@ -59,6 +60,8 @@ def github_api_ctor(
 
     github-api requests will be logged to Elasticsearch if a default Elasticsearch config is found.
     '''
+    github_url = github_cfg.http_url()
+
     parsed = urllib.parse.urlparse(github_url)
     if parsed.scheme:
         hostname = parsed.hostname
@@ -83,6 +86,9 @@ def github_api_ctor(
                     'url': url,
                     'data': kwargs,
                     'creation_date': datetime.datetime.now().isoformat(),
+                    'github_cfg': github_cfg.name(),
+                    'github_hostname': hostname,
+                    'github_username': github_username,
                 },
             )
         except:
@@ -200,16 +206,19 @@ def github_api(
             cfg_factory=cfg_factory,
         )
 
-    github_url = github_cfg.http_url()
     if username:
-        github_auth_token = github_cfg.credentials(username).auth_token()
+        github_credentials = github_cfg.credentials(username)
     else:
-        github_auth_token = github_cfg.credentials_with_most_remaining_quota().auth_token()
+        github_credentials = github_cfg.credentials_with_most_remaining_quota()
+
+    github_auth_token = github_credentials.auth_token()
+    github_username = github_credentials.username()
 
     verify_ssl = github_cfg.tls_validation()
 
     github_ctor = github_api_ctor(
-        github_url=github_url,
+        github_cfg=github_cfg,
+        github_username=github_username,
         verify_ssl=verify_ssl,
         session_adapter=session_adapter,
         cfg_factory=cfg_factory,
@@ -219,7 +228,7 @@ def github_api(
     )
 
     if not github_api:
-        ci.util.fail(f'Could not connect to GitHub-instance {github_url}')
+        ci.util.fail(f'Could not connect to GitHub-instance {github_cfg.http_url()}')
 
     if not 'github.com' in github_cfg.api_url():
         github_api._github_url = github_cfg.api_url()
