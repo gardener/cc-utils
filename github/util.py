@@ -863,7 +863,7 @@ def _retrieve_team_by_name_or_none(
 
 
 def find_greatest_github_release_version(
-    releases: typing.List[github3.repos.release.Release],
+    releases: list[Release],
     warn_for_unparseable_releases: bool = True,
     ignore_prerelease_versions: bool = False,
 ):
@@ -901,7 +901,7 @@ def find_greatest_github_release_version(
 
 
 def outdated_draft_releases(
-    draft_releases: [github3.repos.release.Release],
+    draft_releases: list[Release],
     greatest_release_version: str,
 ):
     '''Find outdated draft releases from a list of draft releases and return them. This is achieved
