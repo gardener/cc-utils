@@ -720,12 +720,15 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
                 pass # ignore
 
     def release_tags(self):
-        return _ \
-            .chain(self.repository.releases()) \
-            .filter(lambda release: not release.draft and not release.prerelease) \
-            .map('tag_name') \
-            .filter(lambda tag: tag is not None) \
-            .value()
+        return _.chain(
+            self.repository.releases()
+        ).filter(
+            lambda release: not release.draft and not release.prerelease
+        ).map(
+            'tag_name'
+        ).filter(
+            lambda tag: tag is not None
+        ).value()
 
     def search_issues_in_repo(self, query: str):
         query = f'repo:{self.owner}/{self.repository_name} {query}'
