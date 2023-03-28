@@ -219,7 +219,7 @@ def github_api(
     )
 
     if not github_api:
-        ci.util.fail("Could not connect to GitHub-instance {url}".format(url=github_url))
+        ci.util.fail(f'Could not connect to GitHub-instance {github_url}')
 
     if not 'github.com' in github_cfg.api_url():
         github_api._github_url = github_cfg.api_url()
