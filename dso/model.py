@@ -71,7 +71,7 @@ class Datatype:
 class Metadata:
     datasource: str
     type: str
-    creation_date: datetime.datetime
+    creation_date: datetime.datetime = datetime.datetime.now()
 
 
 @dataclasses.dataclass(frozen=True)
