@@ -67,10 +67,27 @@ class Datatype:
     OS_IDS = 'os_ids'
 
 
+class RelationKind:
+    RESCORE = 'rescore'
+
+
+@dataclasses.dataclass(frozen=True)
+class Relation:
+    '''
+    Describes relation between artefact_metadata.
+    This is necessary as "rescorings" (type: "rescoring/vulnerabilities") are stored as
+    artefact_metadata, but relate to artefact_metadata (of type "vulnerabilities/aggregated") as they
+    rescore vulnerability findings.
+    '''
+    refers_to: str # see `Datatype` for supported values
+    relation_kind: str # see `RelationKind` for supported values
+
+
 @dataclasses.dataclass(frozen=True)
 class Metadata:
     datasource: str
     type: str
+    relation: Relation = None
     creation_date: datetime.datetime = datetime.datetime.now()
 
 
