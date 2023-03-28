@@ -36,6 +36,7 @@ class ComponentArtefactId:
     component_name: str
     component_version: str
     artefact: LocalArtefactId
+    artefact_kind: str = 'artefact' # artefact | resource | source
 
 
 def component_artefact_id_from_ocm(
