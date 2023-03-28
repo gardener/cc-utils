@@ -57,7 +57,8 @@ class Reference:
 def reference_type_for_type_identifier(
     reference_type_identifier: str
 ):
-    return _.find(REFERENCE_TYPES,
+    return _.find(
+        REFERENCE_TYPES,
         lambda ref_type: ref_type.identifier == reference_type_identifier
     )
 
