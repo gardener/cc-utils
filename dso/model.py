@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import typing
 
 import gci.componentmodel as cm
 
@@ -170,4 +171,13 @@ class CodecheckSummary:
 class ArtefactMetadata:
     artefact: ComponentArtefactId
     meta: Metadata
-    data: GreatestCVE | LicenseSummary | ComponentSummary | OsID | MalwareSummary | FilesystemPaths | CodecheckSummary | dict # noqa: E501
+    data: typing.Union[
+        ComponentSummary,
+        CodecheckSummary,
+        FilesystemPaths,
+        GreatestCVE,
+        LicenseSummary,
+        MalwareSummary,
+        OsID,
+        dict, # fallback, there should be a type
+    ]
