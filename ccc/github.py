@@ -175,7 +175,7 @@ github_repo_helper = repo_helper
 
 
 def github_api(
-    github_cfg: 'model.GithubConfig'=None,
+    github_cfg: model.github.GithubConfig=None,
     repo_url: str=None,
     session_adapter: SessionAdapter=SessionAdapter.RETRY,
     cfg_factory=None,
