@@ -3,7 +3,7 @@ GitPython
 Mako<2.0.0
 Sphinx
 aliyun-python-sdk-core==2.13.36
-aliyun-python-sdk-ecs==4.24.30
+aliyun-python-sdk-ecs==4.24.31
 aliyun-python-sdk-ram==3.3.0
 awesomeversion
 bcrypt<5.0.0
