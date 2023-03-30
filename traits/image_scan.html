@@ -286,7 +286,14 @@ only implemented for “protecode” / BDBA)</p></td>
 <td><p>CVSSVersion</p></td>
 <td><p>CVSS version used to evaluate the severity of vulnerabilities</p></td>
 </tr>
-<tr class="row-odd"><td><p>allowed_licenses</p></td>
+<tr class="row-odd"><td><p>timeout</p></td>
+<td><p>no</p></td>
+<td><p>12h</p></td>
+<td><p>str</p></td>
+<td><p>go-style time interval (e.g.: ‘1h30m’) after which the image-scan-step will be interrupted
+and fail.</p></td>
+</tr>
+<tr class="row-even"><td><p>allowed_licenses</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span>
 </pre></div>
@@ -295,7 +302,7 @@ only implemented for “protecode” / BDBA)</p></td>
 <td><p>list</p></td>
 <td><p>use toplevel <code class="code docutils literal notranslate"><span class="pre">licences</span></code> attr</p></td>
 </tr>
-<tr class="row-even"><td><p>prohibited_licenses</p></td>
+<tr class="row-odd"><td><p>prohibited_licenses</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span>
 </pre></div>
@@ -351,6 +358,13 @@ only implemented for “protecode” / BDBA)</p></td>
 <td><p>list</p></td>
 <td><p>rescoring hints (e.g. to mark false-positives / accept certain scan-abortions)</p></td>
 </tr>
+<tr class="row-even"><td><p>timeout</p></td>
+<td><p>no</p></td>
+<td><p>18h</p></td>
+<td><p>str</p></td>
+<td><p>go-style time interval (e.g.: ‘1h30m’) after which the image-scan-step will be interrupted
+and fail.</p></td>
+</tr>
 </tbody>
 </table>
 <h2>os_id <em>(OsIdScan)</em> Attributes<a class="headerlink" href="#trait-image-scan" title="Permalink to this heading"></a></h2>
@@ -369,6 +383,13 @@ only implemented for “protecode” / BDBA)</p></td>
 <td><p>8</p></td>
 <td><p>int</p></td>
 <td><p>amount of parallel jobs to run</p></td>
+</tr>
+<tr class="row-odd"><td><p>timeout</p></td>
+<td><p>no</p></td>
+<td><p>2h</p></td>
+<td><p>str</p></td>
+<td><p>go-style time interval (e.g.: ‘1h30m’) after which the image-scan-step will be interrupted
+and fail.</p></td>
 </tr>
 </tbody>
 </table>
