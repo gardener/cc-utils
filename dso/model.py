@@ -89,7 +89,7 @@ class Metadata:
     datasource: str
     type: str
     relation: Relation | None = None
-    creation_date: datetime.datetime = datetime.datetime.now()
+    creation_date: datetime.datetime | str = datetime.datetime.now()
 
 
 @dataclasses.dataclass(frozen=True)
