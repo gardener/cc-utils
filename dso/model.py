@@ -88,7 +88,7 @@ class Relation:
 class Metadata:
     datasource: str
     type: str
-    relation: Relation = None
+    relation: Relation | None = None
     creation_date: datetime.datetime = datetime.datetime.now()
 
 
