@@ -31,6 +31,7 @@ class CfgPolicy:
     max_age: typing.Optional[str]
     type: PolicyType = PolicyType.MAX_AGE
     rotation_method: RotationMethod = RotationMethod.MANUAL
+    grace_period: str | None = '1d'
     comment: typing.Optional[str] = None
 
     def check(self, last_update: datetime.date) -> bool:
@@ -43,8 +44,15 @@ class CfgPolicy:
 
         max_age_seconds = pytimeparse.parse(self.max_age)
 
+        if self.grace_period:
+            grace_period = datetime.timedelta(seconds=pytimeparse.parse(self.grace_period))
+        else:
+            grace_period = datetime.timedelta(seconds=0)
+
         today = datetime.datetime.now()
-        latest_required_update_date = last_update + datetime.timedelta(seconds=max_age_seconds)
+        latest_required_update_date = (
+            last_update + datetime.timedelta(seconds=max_age_seconds) + grace_period
+        )
 
         return today < latest_required_update_date
 
