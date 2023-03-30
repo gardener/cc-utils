@@ -90,6 +90,15 @@ PROTECODE_ATTRS = (
         doc='CVSS version used to evaluate the severity of vulnerabilities',
         type=CVSSVersion,
     ),
+    AttributeSpec.optional(
+        name='timeout',
+        default='12h',
+        doc='''
+        go-style time interval (e.g.: '1h30m') after which the image-scan-step will be interrupted
+        and fail.
+        ''',
+        type=str,
+    ),
     AttributeSpec.deprecated(
         name='allowed_licenses',
         default=[],
@@ -137,6 +146,9 @@ class ProtecodeScanCfg(ModelBase):
     def prohibited_licenses(self):
         return self.raw.get('prohibited_licenses')
 
+    def timeout(self):
+        return self.raw.get('timeout')
+
     def validate(self):
         super().validate()
         # Use enum.Enum's validation to validate configured processing mode.
@@ -172,7 +184,16 @@ CLAMAV_ATTRS = (
         doc='rescoring hints (e.g. to mark false-positives / accept certain scan-abortions)',
         type=list[ClamAVRescoringEntry],
         default=(),
-    )
+    ),
+    AttributeSpec.optional(
+        name='timeout',
+        default='18h',
+        doc='''
+        go-style time interval (e.g.: '1h30m') after which the image-scan-step will be interrupted
+        and fail.
+        ''',
+        type=str,
+    ),
 )
 
 
@@ -202,6 +223,9 @@ class ClamAVScanCfg(ModelBase):
             self.raw.get('rescore', ())
         ))
 
+    def timeout(self):
+        return self.raw.get('timeout')
+
     def validate(self):
         super().validate()
 
@@ -213,6 +237,15 @@ OS_ID_SCAN_ATTRS = (
         doc='amount of parallel jobs to run',
         type=int,
     ),
+    AttributeSpec.optional(
+        name='timeout',
+        default='2h',
+        doc='''
+        go-style time interval (e.g.: '1h30m') after which the image-scan-step will be interrupted
+        and fail.
+        ''',
+        type=str,
+    ),
 )
 
 
@@ -223,6 +256,9 @@ class OsIdScan(ModelBase):
 
     def parallel_jobs(self) -> int:
         return int(self.raw['parallel_jobs'])
+
+    def timeout(self):
+        return self.raw.get('timeout')
 
 
 class Notify(enum.Enum):
@@ -477,7 +513,7 @@ class ImageScanTraitTransformer(TraitTransformer):
                 name=concourse.model.traits.component_descriptor.DIR_NAME,
                 variable_name=concourse.model.traits.component_descriptor.ENV_VAR_NAME,
             )
-            self.image_scan_step.set_timeout(duration_string='12h')
+            self.image_scan_step.set_timeout(duration_string=self.trait.protecode().timeout())
             yield self.image_scan_step
 
         if self.trait.clam_av():
@@ -493,7 +529,7 @@ class ImageScanTraitTransformer(TraitTransformer):
                 name=concourse.model.traits.component_descriptor.DIR_NAME,
                 variable_name=concourse.model.traits.component_descriptor.ENV_VAR_NAME,
             )
-            self.malware_scan_step.set_timeout(duration_string='18h')
+            self.malware_scan_step.set_timeout(duration_string=self.trait.clam_av().timeout())
             yield self.malware_scan_step
 
         if self.trait.os_id():
@@ -509,7 +545,7 @@ class ImageScanTraitTransformer(TraitTransformer):
                 name=concourse.model.traits.component_descriptor.DIR_NAME,
                 variable_name=concourse.model.traits.component_descriptor.ENV_VAR_NAME,
             )
-            self.os_id_step.set_timeout(duration_string='2h')
+            self.os_id_step.set_timeout(duration_string=self.trait.os_id().timeout())
             yield self.os_id_step
 
     def process_pipeline_args(self, pipeline_args: JobVariant):
