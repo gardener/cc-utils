@@ -192,7 +192,7 @@ class OciBlobRef:
     digest: str
     mediaType: str
     size: int
-    annotations: typing.Optional[typing.Dict] = None
+    annotations: dict | None = None
 
     def as_dict(self) -> dict:
         raw = dataclasses.asdict(self)
@@ -287,7 +287,10 @@ class OciPlatform:
 
 @dataclasses.dataclass(frozen=True)
 class OciImageManifestListEntry(OciBlobRef):
-    platform: typing.Optional[OciPlatform] = None
+    artifactType: str | None = None
+    data: str | None = None
+    platform: OciPlatform | None = None
+    urls: list[str] | None = None
 
     def as_dict(self) -> dict:
         raw = OciBlobRef.as_dict(self)
@@ -295,13 +298,21 @@ class OciImageManifestListEntry(OciBlobRef):
         # => only include in the output if set
         if self.platform:
             raw['platform'] = self.platform.as_dict()
+        # fields that are None should not be included in the output
+        raw = {k:v for k,v in raw.items() if v is not None}
         return raw
 
 
 @dataclasses.dataclass
 class OciImageManifestList:
-    manifests: typing.List[OciImageManifestListEntry]
-    mediaType: str = DOCKER_MANIFEST_LIST_MIME
+    '''Covers both Docker Manifest List
+        (https://github.com/distribution/distribution/blob/main/docs/spec/manifest-v2-2.md#manifest-list)
+        and OCI Image Index
+        (https://github.com/opencontainers/image-spec/blob/main/image-index.md)
+    '''
+    manifests: list[OciImageManifestListEntry]
+    mediaType: str = DOCKER_MANIFEST_LIST_MIME  # or OCI_IMAGE_INDEX_MIME. Keep previous default for
+                                                # backwards compatibility
     schemaVersion: int = 2
 
     def as_dict(self):
