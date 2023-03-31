@@ -286,7 +286,7 @@ class CreateTagsStep(TransactionalStep):
         self,
         github_release_tag,
         git_tags,
-        github_helper,
+        github_helper: GitHubRepositoryHelper,
         git_helper,
         release_version,
         publishing_policy: ReleaseCommitPublishingPolicy
@@ -314,7 +314,11 @@ class CreateTagsStep(TransactionalStep):
 
     def validate(self):
         tags_to_set = [self.github_release_tag] + self.git_tags
-        _, existing_tags = self.git_helper.check_tag_availability(tags_to_set)
+        existing_tags = set()
+        for tag_name in tags_to_set:
+            if self.github_helper.tag_exists(tag_name):
+                existing_tags.add(tag_name)
+
         if(existing_tags):
             ci.util.fail(
                 'Cannot create the following tags as they already exist in the '
