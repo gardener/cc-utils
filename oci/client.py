@@ -512,8 +512,10 @@ class Client:
 
         manifest_dict = res.json()
 
-        distribution_list_mediatype = 'application/vnd.docker.distribution.manifest.list.v2+json'
-        if manifest_dict.get('mediaType') == distribution_list_mediatype:
+        if manifest_dict.get('mediaType') in (
+            om.DOCKER_MANIFEST_LIST_MIME,
+            om.OCI_IMAGE_INDEX_MIME,
+        ):
             manifest = dacite.from_dict(
                 data_class=om.OciImageManifestList,
                 data=manifest_dict,
