@@ -168,6 +168,7 @@ def base_component_descriptor(
     pipeline_name: str=None, # only required if there is more than one
     job_name: str=None,
     component_name: str=None,
+    ctx_repo: str='eu.gcr.io/sap-se-gcr-k8s-private/cnudie/gardener/development',
     version: str=None,
     outfile: str=None,
 ):
@@ -284,8 +285,13 @@ def base_component_descriptor(
         component=cm.Component(
             name=component_name,
             version=version,
-            repositoryContexts=[],
-            provider='sap-se',
+            repositoryContexts=[
+                cm.OciRepositoryContext(
+                    type=cm.AccessType.OCI_REGISTRY,
+                    baseUrl=ctx_repo,
+                    subPath='',
+                ),
+            ],
             componentReferences=[],
             resources=[
                 r for r in _iter_resources(
