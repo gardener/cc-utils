@@ -319,6 +319,7 @@ def component_descriptor(
     outfile: str=None,
     component_repo: str='eu.gcr.io/gardener-project/development',
     component_descriptor_script: str=None,
+    base_component_descriptor_path: str=None,
 ):
     repo = _repo(repo=repo)
     if not outfile:
@@ -335,16 +336,23 @@ def component_descriptor(
     logger.info(f'{base_component_descriptor_file.name=}')
     logger.info(f'{outfile=}')
 
-    base_descriptor  = base_component_descriptor(
-        repo=repo,
-        meta_ci=meta_ci,
-        meta_ci_ref=meta_ci_ref,
-        pipeline_name=pipeline_name,
-        job_name=job_name,
-        component_name=component_name,
-        version=version,
-        outfile=base_component_descriptor_file.name,
-    )
+    if not base_component_descriptor_path:
+        base_descriptor  = base_component_descriptor(
+            repo=repo,
+            meta_ci=meta_ci,
+            meta_ci_ref=meta_ci_ref,
+            pipeline_name=pipeline_name,
+            job_name=job_name,
+            component_name=component_name,
+            version=version,
+            outfile=base_component_descriptor_file.name,
+        )
+    else:
+        shutil.copyfile(base_component_descriptor_path, base_component_descriptor_file.name)
+        with open(base_component_descriptor_path) as f:
+            raw = yaml.safe_load(f)
+        base_descriptor = cm.ComponentDescriptor.from_dict(raw)
+
     base_component = base_descriptor.component
 
     if not os.path.isfile(component_descriptor_script):
