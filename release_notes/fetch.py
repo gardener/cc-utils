@@ -21,16 +21,18 @@ def _list_commits_between_tags(
         main_tag: git.TagReference,
         other_tag: git.TagReference
 ) -> tuple[git.Commit]:
-    ''' If the tags are linear to each other (main_tag ancestor of other_tag or vice versa),
-    all commits between the tags are returned. Otherwise, all commits between the merge base (first common ancestor)
-    and the main_branch are returned.
+    ''' If the tags are linear to each other (main_tag ancestor of other_tag or
+    vice versa), all commits between the tags are returned. Otherwise, all
+    commits between the merge base (first common ancestor) and the main_branch
+    are returned.
 
-    :return: a tuple of commits between the two tags
-    '''
-    if repo.is_ancestor(main_tag.commit, other_tag.commit) or repo.is_ancestor(other_tag.commit, main_tag.commit):
+    :return: a tuple of commits between the two tags '''
+    if repo.is_ancestor(main_tag.commit, other_tag.commit) or \
+            repo.is_ancestor(other_tag.commit, main_tag.commit):
         return tuple(repo.iter_commits(f'{main_tag.commit.hexsha}...{other_tag.commit.hexsha}'))
 
-    if not (merge_commit_list := repo.merge_base(main_tag, other_tag)) or not (merge_commit := merge_commit_list.pop()):
+    if not (merge_commit_list := repo.merge_base(main_tag, other_tag)) or not \
+            (merge_commit := merge_commit_list.pop()):
         raise RuntimeError('cannot find merge base')
     return tuple(repo.iter_commits(f'{main_tag.commit.hexsha}...{merge_commit.hexsha}'))
 
@@ -55,7 +57,8 @@ def _get_release_note_commits_tuple_for_minor_release(
         raise RuntimeError('cannot find previous minor version in component versions / tags')
     logger.info(f'found previous minor tag: {previous_minor_version_tag}')
 
-    # if the current version tag and the previous minor tag are ancestors, just add the range (old method)
+    # if the current version tag and the previous minor tag are ancestors, just
+    # add the range (old method)
     if git_helper.repo.is_ancestor(previous_minor_version_tag.commit, current_version_tag.commit):
         logger.info('it\'s an ancestor. simple range should be enough.')
         return tuple(git_helper.repo.iter_commits(
@@ -64,14 +67,18 @@ def _get_release_note_commits_tuple_for_minor_release(
 
     # otherwise, use the new method
     # find start of previous minor-release tag
-    if not (previous_branch_starts := git_helper.repo.merge_base(github_repo.default_branch,
-                                                                 previous_minor_version_tag.commit.hexsha)):
+    if not (previous_branch_starts := git_helper.repo.merge_base(
+        github_repo.default_branch,
+        previous_minor_version_tag.commit.hexsha)):
         raise RuntimeError('cannot find the branch start for the previous version')
+
     previous_branch_start: git.Commit = previous_branch_starts.pop()
     logger.info(f'it\'s not an ancestor. the branch start appears to be {previous_branch_start}')
 
-    # all commits from the branch start to the previous minor-release tag should be removed from the release notes
-    filter_out_commits_range = f'{previous_minor_version_tag.commit.hexsha}...{previous_branch_start}'
+    # all commits from the branch start to the previous minor-release tag
+    # should be removed from the release notes
+    filter_out_commits_range = \
+        f'{previous_minor_version_tag.commit.hexsha}...{previous_branch_start}'
     logger.debug(f'{filter_out_commits_range=}')
     filter_out_commits = git_helper.repo.iter_commits(filter_out_commits_range)
 
@@ -105,7 +112,9 @@ def get_release_note_commits_tuple(
 
     # new major release (not supported yet)
     if current_version.major != previous_version.major:
-        raise NotImplementedError('generating release notes for new major releases is not supported yet.')
+        raise NotImplementedError(
+            'generating release notes for new major releases is not supported yet.'
+        )
 
     # new minor release
     if current_version.minor != previous_version.minor:
@@ -120,8 +129,15 @@ def get_release_note_commits_tuple(
     # new patch release
     logger.info(f'creating new patch release from {current_version_tag} to {previous_version_tag}')
     if previous_version_tag is None:
-        raise RuntimeError('cannot create patch-release notes because previous version cannot be found')
-    return _list_commits_between_tags(git_helper.repo, current_version_tag, previous_version_tag), tuple()
+        raise RuntimeError(
+            'cannot create patch-release notes because previous version cannot be found'
+        )
+    return _list_commits_between_tags(
+            git_helper.repo,
+            current_version_tag,
+            previous_version_tag
+    ),
+    tuple()
 
 
 def fetch_release_notes(
@@ -142,7 +158,10 @@ def fetch_release_notes(
 
     # find all available versions
     component_versions: dict[semver.VersionInfo, str] = {}
-    for ver in cnudie.retrieve.component_versions(component.name, component.current_repository_ctx()):
+    for ver in cnudie.retrieve.component_versions(
+            component.name,
+            component.current_repository_ctx()
+    ):
         parsed_version = version.parse_to_semver(ver)
         if parsed_version.prerelease:  # ignore pre-releases
             continue
@@ -150,7 +169,7 @@ def fetch_release_notes(
 
     if not current_version:
         if not source.version:
-            raise ValueError(f'current_version not passed and not found in component source')
+            raise ValueError('current_version not passed and not found in component source')
         current_version = version.parse_to_semver(source.version)
         # access tag from component
         current_version_tag = git_helper.repo.tag(source.access.ref)
@@ -160,7 +179,9 @@ def fetch_release_notes(
     if not current_version_tag:
         raise RuntimeError(f'cannot find ref {source.access.ref} in repo')
 
-    previous_version = rnu.find_next_smallest_version(list(component_versions.keys()), current_version)
+    previous_version = rnu.find_next_smallest_version(
+        list(component_versions.keys()), current_version
+    )
     previous_version_tag: typing.Optional[git.TagReference] = None
     if previous_version:
         previous_version_tag = git_helper.repo.tag(component_versions[previous_version])

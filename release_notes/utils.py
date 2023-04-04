@@ -113,7 +113,8 @@ def _normalize_dict_keys(
         recursive: bool = False
 ) -> dict:
     return {
-        k.replace('-', '_').replace(' ', '_'): _normalize_dict_keys(v) if recursive and isinstance(v, dict) else v
+        k.replace('-', '_').replace(' ', '_'):
+        _normalize_dict_keys(v) if recursive and isinstance(v, dict) else v
         for k, v in dic.items()
     }
 
@@ -143,9 +144,10 @@ def _upsert_document(
         type_key: str,
         instance
 ) -> None:
-    ''' The function searches for a (meta-) document in the given list of documents with the given type.
-    If a document was found, it updates the document with the given instance,
-    otherwise it appends the instance to the list.
+    ''' The function searches for a (meta-) document in the given list of
+    documents with the given type.  If a document was found, it updates the
+    document with the given instance, otherwise it appends the instance to the
+    list.
 
     :param documents: a (mutable) list of dicts
     :param type_key: the type to search for in the list of dicts
@@ -169,16 +171,17 @@ def request_pull_requests_from_api(
         repo_name: str,
         commits: list[git.Commit]
 ) -> dict[str, list[gh3p.ShortPullRequest]]:
-    ''' This function requests pull requests from the GitHub API and returns a dictionary mapping
-    commit SHA to a list of pull requests.
+    ''' This function requests pull requests from the GitHub API and returns a
+    dictionary mapping commit SHA to a list of pull requests.
 
-    We use notes to store the associated pull request numbers to reduce requests to GitHub (rate limiting).
-    The corresponding pull request number is stored in a note.
-    We can then fetch a list of pull requests for a repository and thus (theoretically) process
-    100 pull requests with one API call in the best case.
+    We use notes to store the associated pull request numbers to reduce
+    requests to GitHub (rate limiting).  The corresponding pull request number
+    is stored in a note.  We can then fetch a list of pull requests for a
+    repository and thus (theoretically) process 100 pull requests with one API
+    call in the best case.
 
-    If there is no note, request the "normal" API route to retrieve associated pull requests and
-    store the pull-numbers in the commit note.
+    If there is no note, request the "normal" API route to retrieve associated
+    pull requests and store the pull-numbers in the commit note.
     '''
     # pr_number -> [ list of commit sha ]
     pending = collections.defaultdict(list)
@@ -208,7 +211,9 @@ def request_pull_requests_from_api(
             # or if the notes are in the YAML format already
             if note_content or not is_yaml_content:
                 continue
-            data = dataclasses.asdict(rnm.ReleaseNotesMetadata(round(time.time() * 1000), [z.number for z in prs]))
+            data = dataclasses.asdict(
+                rnm.ReleaseNotesMetadata(round(time.time() * 1000), [z.number for z in prs])
+            )
             meta = rnm.get_meta_obj(_meta_key, data)
             _upsert_document(yaml_documents, _meta_key, meta)
             _write_to_git_notes(repo, commit, yaml.safe_dump_all(yaml_documents))
@@ -222,7 +227,7 @@ def request_pull_requests_from_api(
             if len(pending) == 0:
                 break
         else:
-            logger.warning(f'one or more associated pull requests for the commits ' +
+            logger.warning('one or more associated pull requests for the commits ' +
                            f'{pending.keys()} is/are either not closed or cannot be found')
 
     return result

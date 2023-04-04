@@ -12,14 +12,16 @@ import cnudie.util
 logger = logging.getLogger(__name__)
 
 '''
-This pattern matches code-blocks in the following format:   
+This pattern matches code-blocks in the following format:
 ```{category} {note_message}
 {note_message}
 ```
 \x60 -> `
 '''
-_source_block_pattern = re.compile(r'\x60{3}(?P<category>\w+)\s+(?P<target_group>\w+)\n(?P<note>.+?)\n\x60{3}',
-                                   flags=re.DOTALL | re.IGNORECASE | re.MULTILINE)
+_source_block_pattern = re.compile(
+    r'\x60{3}(?P<category>\w+)\s+(?P<target_group>\w+)\n(?P<note>.+?)\n\x60{3}',
+   flags=re.DOTALL | re.IGNORECASE | re.MULTILINE
+)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -69,17 +71,18 @@ _ref_types = (_ref_type_pull, _ref_type_commit)
 
 @dataclasses.dataclass(frozen=True)
 class _Reference:
-    ''' Represents where a release note comes from, for example through a commit or a pull request.
+    ''' Represents where a release note comes from, for example through a
+    commit or a pull request.
 
-    _Reference is only a superclass for a commit- or pull request-reference, which have their own classes to access the
-    pull request or the commit objects: `CommitReference` and `PullRequestReference`.
-    '''
+    _Reference is only a superclass for a commit- or pull request-reference,
+    which have their own classes to access the pull request or the commit
+    objects: `CommitReference` and `PullRequestReference`.  '''
     type: _ReferenceType
 
     @property
     def identifier(self) -> str:
-        ''' The identifier for the reference - can be a commit hash, for example, or the number of the pull request.
-        '''
+        ''' The identifier for the reference - can be a commit hash, for
+        example, or the number of the pull request.  '''
         raise NotImplementedError('get_content not implemented yet')
 
 
@@ -197,9 +200,11 @@ class ReleaseNote:
 
     @property
     def block_str(self) -> str:
-        return f'```{self.source_block.category} {self.source_block.target_group} {self.source_component.name} ' \
-               f'{self.reference_str} {self.author.username or self.author.display_name.replace(" ", "-")}\n' \
-               f'{self.source_block.note_message}\n```'
+        src_blk = self.source_block
+        author = self.author.username or self.author.display_name.replace(' ', '-')
+        return f'```{src_blk.category} {src_blk.target_group} {self.source_component.name} ' \
+               f'{self.reference_str} {author}\n' \
+               f'{src_blk.note_message}\n```'
 
 
 def create_release_note_obj(
@@ -223,12 +228,12 @@ def create_release_note_obj(
         component=source_component,
         absent_ok=False
     ).access
-    current_component_access = cnudie.util.determine_main_source_for_component(
+    current_src_access = cnudie.util.determine_main_source_for_component(
         component=current_component,
         absent_ok=False
     ).access
 
-    from_same_github_instance = current_component_access.hostname() in source_component_access.hostname()
+    from_same_github_instance = current_src_access.hostname() in source_component_access.hostname()
     is_current_repo = current_component.name == source_component.name
 
     return ReleaseNote(
