@@ -292,6 +292,7 @@ def base_component_descriptor(
                     subPath='',
                 ),
             ],
+            provider='sap-se',
             componentReferences=[],
             resources=[
                 r for r in _iter_resources(
