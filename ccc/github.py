@@ -115,6 +115,7 @@ def github_api_ctor(
         session = http_requests.mount_default_adapter(
             session=session,
             flags=http_requests.AdapterFlag.RETRY,
+            max_pool_size=16, # increase with care, might cause github api "secondary-rate-limit"
         )
     elif session_adapter is SessionAdapter.CACHE:
         session = cachecontrol.CacheControl(
