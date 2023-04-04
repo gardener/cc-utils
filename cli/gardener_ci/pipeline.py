@@ -104,7 +104,16 @@ def _main_source(
             type=cm.AccessType.GITHUB,
             repoUrl=next(repo.remote().urls),
             ref=repo.active_branch.name,
+            commit=repo.head.commit.hexsha,
         ),
+        labels=[
+            cm.Label(
+                name='cloud.gardener/cicd/source',
+                value={
+                    'repository-classification': 'main',
+                },
+            ),
+        ],
     )
 
 
