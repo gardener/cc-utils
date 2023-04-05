@@ -88,7 +88,8 @@ def _component_name(
     logger.info(f'{remote.name=}')
 
     url = urllib.parse.urlparse(next(remote.urls))
-    component_name = f'{url.hostname}{url.path}'
+    hostname = url.hostname.removeprefix('gardener.')
+    component_name = f'{hostname}{url.path}'
     return component_name
 
 
@@ -278,7 +279,17 @@ def base_component_descriptor(
         logger.info(f'guessed {component_name=} (from default remote-url)')
 
     if not version:
-        version = '1.2.3'
+        if os.path.isfile(versionfile := os.path.join(repo.working_tree_dir, 'VERSION')):
+            version = open(versionfile).read().strip()
+            if version.startswith('v'):
+                prefix = 'v'
+            else:
+                prefix = ''
+            import version as version_mod
+            version = version_mod.parse_to_semver(version)
+            version = str(version.finalize_version())
+        else:
+            version = f'{prefix}1.2.3'
 
     component_descriptor = cm.ComponentDescriptor(
         meta=cm.Metadata(),
