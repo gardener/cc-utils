@@ -221,6 +221,18 @@ from traits.</p></td>
 <td><p>List[Label]</p></td>
 <td><p>labels to add to the corresponding source declaration in base-component-descriptor</p></td>
 </tr>
+<tr class="row-odd"><td><p>submodule_cfg_names</p></td>
+<td><p>no</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span>
+</pre></div>
+</div>
+</p></td>
+<td><p>list</p></td>
+<td><p>The name of github configs to provide for authentication of submodules which are not stored
+on the same git server as the repository.
+The config used by the repository itself is included by default.
+The configs given must support http-auth, otherwise they will be omitted.</p></td>
+</tr>
 </tbody>
 </table>
 <h4>preferred_protocol Enumeration Values<a class="headerlink" href="#repository-config" title="Permalink to this heading"></a></h4>
