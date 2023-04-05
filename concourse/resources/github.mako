@@ -28,11 +28,15 @@ elif github_cfg := ccc.github.github_cfg_for_repo_url(
 else:
   raise RuntimeError(f'this line should not have been reached. Function before should have raised')
 
+submodule_cfg_names = set(repo_cfg.submodule_cfg_names())
+submodule_cfg_names.add(github_cfg.name())
+submodule_cfgs = [
+  cfg_set.github(cfg_name=github_cfg_name)
+  for github_cfg_name in submodule_cfg_names
+]
 
 credentials = github_cfg.credentials()
 disable_tls_validation = not github_cfg.tls_validation()
-have_http = Protocol.HTTPS in github_cfg.available_protocols()
-have_ssh = Protocol.SSH in github_cfg.available_protocols()
 token_or_passwd = credentials.auth_token() or credentials.passwd()
 
 preferred_protocol = github_cfg.preferred_protocol()
@@ -64,12 +68,20 @@ if (overwrite_preferred_protocol := repo_cfg.preferred_protocol()):
     git_config:
     - name: 'protocol.version'
       value: '2'
-% if have_http:
-## TODO: make submodule-cfgs configurable (might not be same host)
+  % if submodule_cfgs:
     submodule_credentials:
-    - host: '${github_cfg.hostname()}'
-      username: '${credentials.username()}'
-      password: '${token_or_passwd}'
+    % for submodule_cfg in submodule_cfgs:
+      <%
+      submodule_credentials = submodule_cfg.credentials()
+      submodule_token_or_passwd = submodule_credentials.auth_token() or submodule_credentials.passwd()
+      %>
+      % if Protocol.HTTPS in submodule_cfg.available_protocols():
+    - host: '${submodule_cfg.hostname()}'
+      username: '${submodule_credentials.username()}'
+      password: '${submodule_token_or_passwd}'
+      % endif
+    % endfor
+
 % endif
 ${git_ignore_paths(repo_cfg)}
 </%def>

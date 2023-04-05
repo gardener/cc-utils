@@ -240,6 +240,17 @@ REPO_ATTRS = (
         default=[],
         type=typing.List[cm.Label],
         doc='labels to add to the corresponding source declaration in base-component-descriptor'
+    ),
+    AttributeSpec.optional(
+        name='submodule_cfg_names',
+        default=[],
+        type=list[str],
+        doc='''
+        The name of github configs to provide for authentication of submodules which are not stored
+        on the same git server as the repository.
+        The config used by the repository itself is included by default.
+        The configs given must support http-auth, otherwise they will be omitted.
+        '''
     )
 )
 
@@ -292,6 +303,9 @@ class RepositoryConfig(Resource):
 
     def cfg_name(self):
         return self.raw['cfg_name']
+
+    def submodule_cfg_names(self) -> list[str]:
+        return self.raw['submodule_cfg_names']
 
     def resource_name(self):
         # TODO: replace usages with access to resource_id
