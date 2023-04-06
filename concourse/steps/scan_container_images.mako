@@ -11,6 +11,7 @@ import ci.util
 image_scan_trait = job_variant.trait('image_scan')
 issue_policies = image_scan_trait.issue_policies()
 protecode_scan = image_scan_trait.protecode()
+auto_assess_max_severity = protecode_scan.auto_assess_max_severity.name
 
 filter_cfg = image_scan_trait.matching_config()
 
@@ -51,10 +52,12 @@ import delivery.client
 import github.compliance.model
 import github.compliance.report
 import protecode.scanning
+import protecode.rescore
 
 
 from concourse.model.traits.image_scan import Notify
 from protecode.model import (
+  BDBA_ScanResult,
   CVSSVersion,
   ProcessingMode,
 )
@@ -173,6 +176,27 @@ max_processing_days = dacite.from_dict(
 gh_api = ccc.github.github_api(repo_url='${issue_tgt_repo_url}')
 overwrite_repository = gh_api.repository('${tgt_repo_org}', '${tgt_repo_name}')
 % endif
+
+% if rescoring_rules:
+## rescorings
+def rescore_bdba_rescan_result(
+  scan_result: BDBA_ScanResult,
+):
+  resource_node = scan_result.scanned_element
+  analysis_result = scan_result.analysis_result
+
+  return protecode.rescore.rescore(
+  bdba_client=protecode_client,
+  scan_result=analysis_result,
+  resource_node=resource_node,
+  rescoring_rules=rescoring_rules,
+  max_rescore_severity=dso.cvss.CVESeverity['${auto_assess_max_severity}'],
+
+results = [
+  rescore_bdba_rescan_result(result) for result in results
+]
+% endif
+
 
 scan_results_vulnerabilities = scan_result_group_collection_for_vulnerabilities(
   results=results,

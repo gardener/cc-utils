@@ -62,6 +62,16 @@ PROTECODE_ATTRS = (
         type=int,
     ),
     AttributeSpec.optional(
+        name='auto_assess_max_severity',
+        default=dso.cvss.CVESeverity.MEDIUM.name,
+        doc='''\
+        maximum severity to allow automated assessments. Automated assessments are done if
+        there is a "CVE Categorisation" label present for the scanned resource, and a
+        rescoring-ruleset is configured.
+        ''',
+        type=dso.cvss.CVESeverity,
+    ),
+    AttributeSpec.optional(
         name='processing_mode',
         default=ProcessingMode.RESCAN,
         doc='Protecode processing mode',
@@ -133,6 +143,10 @@ class ProtecodeScanCfg(ModelBase):
 
     def cve_threshold(self):
         return self.raw.get('cve_threshold')
+
+    @property
+    def auto_assess_max_severity(self) -> gcm.Severity:
+        return gcm.Severity.parse(self.raw.get('auto_assess_max_severity'))
 
     def processing_mode(self):
         return ProcessingMode(self.raw.get('processing_mode'))
