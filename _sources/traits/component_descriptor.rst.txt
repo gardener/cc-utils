@@ -93,6 +93,48 @@ How to declare dependencies towards:
   cp "${BASE_DEFINITION_PATH}" "${COMPONENT_DESCRIPTOR_PATH}"
 
 
+Local Development and "component-cli"
+=====================================
+
+Setting up a local development environment for running the `component_descriptor` step may be
+cumbersome. Therefore, a convenience command is provided from `gardener-cicd-cli` python package
+that evaluates both `.ci/pipeline_definitions` (+ optional `branch.cfg`), and calls a
+`.ci/component_descriptor` callback script, thus creating a similar output as if running in
+cicd-pipeline.
+
+Setting up Preliminaries
+------------------------
+
+- install python3 as indicated by `gardener-cicd-cli`-package (3.10+)
+- run `pip3 install gardener-cicd-cli` (python-headers + c-compiler-toolchain might be required)
+- optional: install `component-cli` to PATH
+- install other runtime-dependencies as needed by local `.ci/component_descriptor` callback script
+
+If repository in question uses `branch.cfg` (in special ref `refs/meta/ci`), fetch it into local
+repository by running: `git fetch origin refs/meta/ci:refs/meta/ci` (use different origin as needed).
+
+.. note::
+   pass `--meta-ci fetch` to tell the command (see below) to fetch refs/meta/ci for you
+
+Rendering Component-Descriptor
+------------------------------
+
+Run the following command (available from PATH after installing `gardener-cicd-cli`) (chdir into
+repository's working tree):
+
+`gardener-ci pipeline component_descriptor`
+
+.. note::
+   The `pipeline component_descriptor` command tries to guess things like component-name, or the
+   pipeline to use (preferring a pipeline-job that is likely the release-job).
+   Pass the `-h` (or `--help`) flag to display online-help. Most heuristics can be overwritten.
+
+.. note::
+   Component-Descriptors creating this way will be close to those that will be created by
+   CICD Pipeline Jobs, but not necessarily 100% accurate (for example, image-tag-templates are
+   not evaluated, which may lead to different image-tags in "base-component-descriptors").
+
+
 Retention Policies (aka cleaning up old versions)
 =================================================
 

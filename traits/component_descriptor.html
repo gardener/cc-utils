@@ -335,6 +335,47 @@ cp<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</spa
 </pre></div>
 </div>
 </div>
+<div class="section" id="local-development-and-component-cli">
+<h2>Local Development and “component-cli”<a class="headerlink" href="#local-development-and-component-cli" title="Permalink to this heading"></a></h2>
+<p>Setting up a local development environment for running the <code class="code docutils literal notranslate"><span class="pre">component_descriptor</span></code> step may be
+cumbersome. Therefore, a convenience command is provided from <code class="code docutils literal notranslate"><span class="pre">gardener-cicd-cli</span></code> python package
+that evaluates both <code class="code docutils literal notranslate"><span class="pre">.ci/pipeline_definitions</span></code> (+ optional <code class="code docutils literal notranslate"><span class="pre">branch.cfg</span></code>), and calls a
+<code class="code docutils literal notranslate"><span class="pre">.ci/component_descriptor</span></code> callback script, thus creating a similar output as if running in
+cicd-pipeline.</p>
+<div class="section" id="setting-up-preliminaries">
+<h3>Setting up Preliminaries<a class="headerlink" href="#setting-up-preliminaries" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p>install python3 as indicated by <code class="code docutils literal notranslate"><span class="pre">gardener-cicd-cli</span></code>-package (3.10+)</p></li>
+<li><p>run <code class="code docutils literal notranslate"><span class="pre">pip3</span> <span class="pre">install</span> <span class="pre">gardener-cicd-cli</span></code> (python-headers + c-compiler-toolchain might be required)</p></li>
+<li><p>optional: install <code class="code docutils literal notranslate"><span class="pre">component-cli</span></code> to PATH</p></li>
+<li><p>install other runtime-dependencies as needed by local <code class="code docutils literal notranslate"><span class="pre">.ci/component_descriptor</span></code> callback script</p></li>
+</ul>
+<p>If repository in question uses <code class="code docutils literal notranslate"><span class="pre">branch.cfg</span></code> (in special ref <code class="code docutils literal notranslate"><span class="pre">refs/meta/ci</span></code>), fetch it into local
+repository by running: <code class="code docutils literal notranslate"><span class="pre">git</span> <span class="pre">fetch</span> <span class="pre">origin</span> <span class="pre">refs/meta/ci:refs/meta/ci</span></code> (use different origin as needed).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>pass <code class="code docutils literal notranslate"><span class="pre">--meta-ci</span> <span class="pre">fetch</span></code> to tell the command (see below) to fetch refs/meta/ci for you</p>
+</div>
+</div>
+<div class="section" id="rendering-component-descriptor">
+<h3>Rendering Component-Descriptor<a class="headerlink" href="#rendering-component-descriptor" title="Permalink to this heading"></a></h3>
+<p>Run the following command (available from PATH after installing <code class="code docutils literal notranslate"><span class="pre">gardener-cicd-cli</span></code>) (chdir into
+repository’s working tree):</p>
+<p><code class="code docutils literal notranslate"><span class="pre">gardener-ci</span> <span class="pre">pipeline</span> <span class="pre">component_descriptor</span></code></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <code class="code docutils literal notranslate"><span class="pre">pipeline</span> <span class="pre">component_descriptor</span></code> command tries to guess things like component-name, or the
+pipeline to use (preferring a pipeline-job that is likely the release-job).
+Pass the <code class="code docutils literal notranslate"><span class="pre">-h</span></code> (or <code class="code docutils literal notranslate"><span class="pre">--help</span></code>) flag to display online-help. Most heuristics can be overwritten.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Component-Descriptors creating this way will be close to those that will be created by
+CICD Pipeline Jobs, but not necessarily 100% accurate (for example, image-tag-templates are
+not evaluated, which may lead to different image-tags in “base-component-descriptors”).</p>
+</div>
+</div>
+</div>
 <div class="section" id="retention-policies-aka-cleaning-up-old-versions">
 <h2>Retention Policies (aka cleaning up old versions)<a class="headerlink" href="#retention-policies-aka-cleaning-up-old-versions" title="Permalink to this heading"></a></h2>
 <p>The <code class="code docutils literal notranslate"><span class="pre">retention_policies</span></code> attribute can be used to configure automated removal of
