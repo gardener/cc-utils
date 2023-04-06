@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pipeline Definition &mdash; cc-utils  documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -13,9 +14,6 @@
   <![endif]-->
   
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/sphinx_highlight.js"></script>
     <script src="_static/js/theme.js"></script>
@@ -76,7 +74,7 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="pipeline-definition">
+  <section id="pipeline-definition">
 <h1>Pipeline Definition<a class="headerlink" href="#pipeline-definition" title="Permalink to this heading"></a></h1>
 <p>Any GitHub repository residing below an organisation owned by the Gardener team is scanned
 for <code class="code docutils literal notranslate"><span class="pre">.ci/pipeline_definitions</span></code> files within their default branch’s source tree. If a valid pipeline
@@ -84,7 +82,7 @@ definition is found, all contained pipeline definitions are generated into conco
 pipelines.</p>
 <p>Pipeline definitions are valid <a class="reference external" href="https://yaml.org">YAML</a> files adhering to the schema defined
 in this reference documentation.</p>
-<div class="section" id="pipeline-definition-schema">
+<section id="pipeline-definition-schema">
 <h2>Pipeline Definition Schema<a class="headerlink" href="#pipeline-definition-schema" title="Permalink to this heading"></a></h2>
 <p>Pipeline definition documents may contain an arbitrary amount of pipelines. Each top-level
 attribute in a <code class="code docutils literal notranslate"><span class="pre">.ci/pipeline_definitions</span></code> file declares a pipeline. The attribute name being
@@ -94,13 +92,9 @@ the pipeline name.</p>
 <p>All pipeline names share a global namespace. So be sure not to re-use an existing name
 already in use be another component.</p>
 </div>
-<div class="section" id="attributes">
+<section id="attributes">
 <h3>Attributes<a class="headerlink" href="#attributes" title="Permalink to this heading"></a></h3>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 20%" />
-<col style="width: 80%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>attribute</p></th>
 <th class="head"><p>explanation</p></th>
@@ -130,8 +124,8 @@ already in use be another component.</p>
 <p>Pipeline names are displayed in the Concourse UI. Try to keep names reasonably short (&lt; 20 chars)
 and refrain from using whitespace of non-ASCII charaters.</p>
 </div>
-</div>
-<div class="section" id="example-ci-pipeline-definitions">
+</section>
+<section id="example-ci-pipeline-definitions">
 <h3>Example <code class="code docutils literal notranslate"><span class="pre">.ci/pipeline_definitions</span></code><a class="headerlink" href="#example-ci-pipeline-definitions" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>define a build pipeline named <code class="code docutils literal notranslate"><span class="pre">my_pipeline</span></code></p></li>
@@ -147,8 +141,8 @@ and refrain from using whitespace of non-ASCII charaters.</p>
 <span class="w">    </span><span class="nt">job_B</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="example-inheritance-base-definition">
+</section>
+<section id="example-inheritance-base-definition">
 <h3>Example - Inheritance / “base_definition”<a class="headerlink" href="#example-inheritance-base-definition" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>define a common build step “inherit_me”</p></li>
@@ -172,9 +166,9 @@ and refrain from using whitespace of non-ASCII charaters.</p>
 <li><p>job_a has two steps: <code class="code docutils literal notranslate"><span class="pre">inherit_me</span></code> (from base_definition) and <code class="code docutils literal notranslate"><span class="pre">another_step</span></code></p></li>
 <li><p>job_b has one step: <code class="code docutils literal notranslate"><span class="pre">inherit_me</span></code></p></li>
 </ul>
-</div>
-</div>
-<div class="section" id="branch-specific-configuration">
+</section>
+</section>
+<section id="branch-specific-configuration">
 <h2>Branch-specific configuration<a class="headerlink" href="#branch-specific-configuration" title="Permalink to this heading"></a></h2>
 <p>By default, only the default branch is considered. An optional <code class="code docutils literal notranslate"><span class="pre">branch.cfg</span></code> YAML file <strong>may</strong> be
 placed in a repository’s special ref <code class="code docutils literal notranslate"><span class="pre">refs/meta/ci</span></code>.</p>
@@ -185,13 +179,9 @@ found, the pipeline definition file (if present) from that branch’s head’s w
 instantiate the defined pipelines. Branch-specific pipeline definition fragments (see <code class="code docutils literal notranslate"><span class="pre">inherit</span></code>
 attribute) are optionally applied.</p>
 <p>A common usage scenario may be the declaration of hotfix release jobs for release branches.</p>
-<div class="section" id="id1">
+<section id="id1">
 <h3>Attributes<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h3>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 14%" />
-<col style="width: 86%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>attribute</p></th>
 <th class="head"><p>explanation</p></th>
@@ -212,8 +202,8 @@ attribute) are optionally applied.</p>
 </tr>
 </tbody>
 </table>
-</div>
-<div class="section" id="example-schematic">
+</section>
+<section id="example-schematic">
 <h3>Example (schematic)<a class="headerlink" href="#example-schematic" title="Permalink to this heading"></a></h3>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">cfgs</span><span class="p">:</span><span class="w">         </span><span class="c1"># root attribute, required</span>
 <span class="w">   </span><span class="nt">&lt;cfg_name&gt;</span><span class="p">:</span>
@@ -222,8 +212,8 @@ attribute) are optionally applied.</p>
 <span class="w">        </span><span class="nt">inherit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~</span><span class="w"> </span><span class="c1"># optional branch-specific pipeline definition</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="example-hotfix-branch-release-jobs">
+</section>
+<section id="example-hotfix-branch-release-jobs">
 <h3>Example (hotfix-branch release jobs)<a class="headerlink" href="#example-hotfix-branch-release-jobs" title="Permalink to this heading"></a></h3>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">cfgs</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">default</span><span class="p">:</span>
@@ -246,9 +236,9 @@ attribute) are optionally applied.</p>
 <span class="w">                                </span><span class="nt">nextversion</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;bump_patch&#39;</span>
 </pre></div>
 </div>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
            </div>

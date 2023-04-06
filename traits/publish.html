@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>publish Trait &mdash; cc-utils  documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -13,9 +14,6 @@
   <![endif]-->
   
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../_static/doctools.js"></script>
         <script src="../_static/sphinx_highlight.js"></script>
     <script src="../_static/js/theme.js"></script>
@@ -93,11 +91,11 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="publish-trait">
+  <section id="publish-trait">
 <h1><em>publish</em> Trait<a class="headerlink" href="#publish-trait" title="Permalink to this heading"></a></h1>
-<div class="section" id="trait-publish">
+<section id="trait-publish">
 <span id="trait-publish"></span><h2>Attributes<a class="headerlink" href="#trait-publish" title="Permalink to this heading"></a></h2>
-<table class="colwidths-auto docutils align-default">
+<table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>name</p></th>
 <th class="head"><p>required?</p></th>
@@ -159,7 +157,7 @@ must be explicitly specified.</p>
 </tbody>
 </table>
 <h2>dockerimages.&lt;user-chosen&gt; <em>(PublishDockerImageDescriptor)</em> Attributes<a class="headerlink" href="#trait-publish" title="Permalink to this heading"></a></h2>
-<table class="colwidths-auto docutils align-default">
+<table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>name</p></th>
 <th class="head"><p>required?</p></th>
@@ -277,14 +275,14 @@ can be done in order to only build this image for a subset of platforms.</p>
 <ul class="simple">
 <li><p><a class="reference internal" href="version.html#trait-version"><span class="std std-ref">version trait</span></a></p></li>
 </ul>
-</div>
+</section>
 <p>Used to build and publish container images in the declaring build jobs. An arbitrary amount of
 container images may be specified (at least one).</p>
 <p>The effective version is used as image tag. Optionally, created images may be tagged as
 ‘latest’.</p>
 <p>Each container image build is run in a directory with definable contents (see <code class="code docutils literal notranslate"><span class="pre">inputs</span></code> attribute)
 using the specified <code class="code docutils literal notranslate"><span class="pre">Dockerfile</span></code>.</p>
-<div class="section" id="inputs-attribute">
+<section id="inputs-attribute">
 <h2><code class="code docutils literal notranslate"><span class="pre">inputs</span></code> Attribute<a class="headerlink" href="#inputs-attribute" title="Permalink to this heading"></a></h2>
 <p>By default, the main repository’s work tree is copied into the build directory. This behaviour
 may be changed by defining different logical repository names for <code class="code docutils literal notranslate"><span class="pre">inputs.repos</span></code>.</p>
@@ -293,16 +291,16 @@ may be changed by defining different logical repository names for <code class="c
 <p>Build steps that are specified as inputs may declare the optional <code class="code docutils literal notranslate"><span class="pre">output_dir</span></code> attribute. They
 are expected to place their outputs into a directory indicated by an environment variable named
 <code class="code docutils literal notranslate"><span class="pre">&lt;OUTPUT_DIR&gt;_PATH</span></code> (defaults to <code class="code docutils literal notranslate"><span class="pre">BINARY_PATH</span></code>).</p>
-</div>
-<div class="section" id="implicitly-injected-build-steps">
+</section>
+<section id="implicitly-injected-build-steps">
 <h2>implicitly injected build steps<a class="headerlink" href="#implicitly-injected-build-steps" title="Permalink to this heading"></a></h2>
 <p>Defining this <code class="code docutils literal notranslate"><span class="pre">trait</span></code> will implicitly add two build steps, named <code class="code docutils literal notranslate"><span class="pre">prepare</span></code>, <code class="code docutils literal notranslate"><span class="pre">publish</span></code>. Thus,
 those step names are not allowed to be used in job definitions with this trait.</p>
 <p>The <code class="code docutils literal notranslate"><span class="pre">publish</span></code> step is guaranteed to always run _after_ the <code class="code docutils literal notranslate"><span class="pre">prepare</span></code> step.</p>
 <p>By default, both <code class="code docutils literal notranslate"><span class="pre">publish</span></code> and <code class="code docutils literal notranslate"><span class="pre">prepare</span></code> steps are run _after_ all other steps, with the
 notable exception of the <code class="code docutils literal notranslate"><span class="pre">release</span></code> step (from the <code class="code docutils literal notranslate"><span class="pre">release</span></code> trait).</p>
-</div>
-<div class="section" id="example">
+</section>
+<section id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h2>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">steps</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">build</span><span class="p">:</span>
@@ -324,8 +322,8 @@ notable exception of the <code class="code docutils literal notranslate"><span c
 <span class="w">        </span><span class="s">dockerfile:</span><span class="nv"> </span><span class="s">&#39;</span><span class="l l-Scalar l-Scalar-Plain">AnotherDockerfile&#39;</span>
 </pre></div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>

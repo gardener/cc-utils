@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pipeline Steps &mdash; cc-utils  documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -13,9 +14,6 @@
   <![endif]-->
   
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/sphinx_highlight.js"></script>
     <script src="_static/js/theme.js"></script>
@@ -76,7 +74,7 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="pipeline-steps">
+  <section id="pipeline-steps">
 <h1>Pipeline Steps<a class="headerlink" href="#pipeline-steps" title="Permalink to this heading"></a></h1>
 <p>Pipeline steps define the actual payloads that are run during job executions. Each pipeline
 step is run in a defined container image. Components may specify an arbitrary graph of steps.
@@ -94,9 +92,9 @@ as described in <a class="reference internal" href="pipeline_job.html#repository
 <li><p>dependendencies between steps may be declared</p></li>
 <li><p>job steps may publish changes to repositories</p></li>
 </ul>
-<div class="section" id="pipeline-step">
+<section id="pipeline-step">
 <span id="pipeline-step"></span><h2>Attributes<a class="headerlink" href="#pipeline-step" title="Permalink to this heading"></a></h2>
-<table class="colwidths-auto docutils align-default">
+<table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>name</p></th>
 <th class="head"><p>required?</p></th>
@@ -282,8 +280,8 @@ the same env-vars.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">privileged</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">unprivileged</span></code></p></li>
 </ul>
-</div>
-<div class="section" id="examples">
+</section>
+<section id="examples">
 <h2>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h2>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">steps</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">first_step</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~</span><span class="w">     </span><span class="c1"># execute .ci/first_step</span>
@@ -321,8 +319,8 @@ the same env-vars.</p>
 <span class="w">      </span><span class="nt">ANOTHER</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;pipeline_descriptor.get(&quot;name&quot;)&#39;</span><span class="w"> </span><span class="c1"># assign pipeline name to ANOTHER</span>
 </pre></div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>

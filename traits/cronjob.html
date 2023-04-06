@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>cronjob Trait &mdash; cc-utils  documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -13,9 +14,6 @@
   <![endif]-->
   
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../_static/doctools.js"></script>
         <script src="../_static/sphinx_highlight.js"></script>
     <script src="../_static/js/theme.js"></script>
@@ -93,11 +91,11 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="cronjob-trait">
+  <section id="cronjob-trait">
 <h1><em>cronjob</em> Trait<a class="headerlink" href="#cronjob-trait" title="Permalink to this heading"></a></h1>
-<div class="section" id="trait-cronjob">
+<section id="trait-cronjob">
 <span id="trait-cronjob"></span><h2>Attributes<a class="headerlink" href="#trait-cronjob" title="Permalink to this heading"></a></h2>
-<table class="colwidths-auto docutils align-default">
+<table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>name</p></th>
 <th class="head"><p>required?</p></th>
@@ -155,22 +153,22 @@
 </table>
 <h2>Dependencies<a class="headerlink" href="#trait-cronjob" title="Permalink to this heading"></a></h2>
 <p>This trait has <em>no</em> dependencies</p>
-</div>
+</section>
 <p>Declaring <a class="reference internal" href="../pipeline_job.html"><span class="doc">Build Jobs</span></a> will be triggered (executed) periodically.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The presence of this trait affects the default triggering behaviour for head updates in the
 main repository (changing it to <code class="code docutils literal notranslate"><span class="pre">false</span></code>; i.e.: head-updates will be ignored).</p>
 </div>
-<div class="section" id="example">
+<section id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h2>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">traits</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">cronjob</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">interval</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;42m&#39;</span><span class="w"> </span><span class="c1"># run every 42 minutes</span>
 </pre></div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>

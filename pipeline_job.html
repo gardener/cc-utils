@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pipeline Job &mdash; cc-utils  documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -13,9 +14,6 @@
   <![endif]-->
   
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/sphinx_highlight.js"></script>
     <script src="_static/js/theme.js"></script>
@@ -76,17 +74,13 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="pipeline-job">
+  <section id="pipeline-job">
 <h1>Pipeline Job<a class="headerlink" href="#pipeline-job" title="Permalink to this heading"></a></h1>
 <p>Each <a class="reference internal" href="pipeline.html"><span class="doc">Build Pipeline</span></a> may define an arbitrary amount of build jobs. Job definitions
 reside below a pipeline’s <code class="code docutils literal notranslate"><span class="pre">jobs</span></code> attribute. Each job defines their name as root element.</p>
-<div class="section" id="attributes">
+<section id="attributes">
 <h2>Attributes<a class="headerlink" href="#attributes" title="Permalink to this heading"></a></h2>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 20%" />
-<col style="width: 80%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>attribute</p></th>
 <th class="head"><p>explanation</p></th>
@@ -110,10 +104,10 @@ reside below a pipeline’s <code class="code docutils literal notranslate"><spa
 </tr>
 </tbody>
 </table>
-</div>
-<div class="section" id="github-repositories">
+</section>
+<section id="github-repositories">
 <h2>(GitHub) Repositories<a class="headerlink" href="#github-repositories" title="Permalink to this heading"></a></h2>
-<div class="section" id="main-repository">
+<section id="main-repository">
 <h3>Main Repository<a class="headerlink" href="#main-repository" title="Permalink to this heading"></a></h3>
 <p>Each pipeline has a main repository. It is implied by the GitHub repository from which the
 pipeline definition was read.</p>
@@ -122,8 +116,8 @@ pipeline definition was read.</p>
 <li><p>branch and repo_path are determined by repository</p></li>
 <li><p>repository path is implied by repository</p></li>
 </ul>
-</div>
-<div class="section" id="additional-repositories">
+</section>
+<section id="additional-repositories">
 <h3>Additional Repositories<a class="headerlink" href="#additional-repositories" title="Permalink to this heading"></a></h3>
 <p>Additional repositories may be referenced. Different from the main repository, all of the
 following attributes must be specified:</p>
@@ -132,12 +126,12 @@ following attributes must be specified:</p>
 <li><p>branch name</p></li>
 <li><p>repository path</p></li>
 </ul>
-</div>
-<div class="section" id="repository-attributes">
+</section>
+<section id="repository-attributes">
 <h3>Repository Attributes<a class="headerlink" href="#repository-attributes" title="Permalink to this heading"></a></h3>
-<div class="section" id="repository-config">
+<section id="repository-config">
 <span id="repository-config"></span><h4>Attributes<a class="headerlink" href="#repository-config" title="Permalink to this heading"></a></h4>
-<table class="colwidths-auto docutils align-default">
+<table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>name</p></th>
 <th class="head"><p>required?</p></th>
@@ -240,8 +234,8 @@ The configs given must support http-auth, otherwise they will be omitted.</p></t
 <li><p><code class="docutils literal notranslate"><span class="pre">ssh</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">https</span></code></p></li>
 </ul>
-</div>
-<div class="section" id="default-behaviour-for-trigger-attribute">
+</section>
+<section id="default-behaviour-for-trigger-attribute">
 <h4>Default behaviour for <code class="code docutils literal notranslate"><span class="pre">trigger</span></code> attribute<a class="headerlink" href="#default-behaviour-for-trigger-attribute" title="Permalink to this heading"></a></h4>
 <p>The <code class="code docutils literal notranslate"><span class="pre">trigger</span></code> attribute specifies whether or not head updates should trigger a job execution.</p>
 <p>If it is not explicitly configured, the default behaviour is defined as follows:</p>
@@ -255,8 +249,8 @@ The configs given must support http-auth, otherwise they will be omitted.</p></t
 </ul>
 </li>
 </ul>
-</div>
-<div class="section" id="trigger-paths-attribute">
+</section>
+<section id="trigger-paths-attribute">
 <h4><code class="code docutils literal notranslate"><span class="pre">trigger_paths</span></code> attribute<a class="headerlink" href="#trigger-paths-attribute" title="Permalink to this heading"></a></h4>
 <p>Allows to restrict build triggering by repository changes. If <code class="code docutils literal notranslate"><span class="pre">trigger</span></code> attribute evaluates to
 <code class="code docutils literal notranslate"><span class="pre">false</span></code>, this attribute has no effect.</p>
@@ -266,8 +260,8 @@ certain repository paths (globbing syntax supported).</p>
 <li><p>include: only react on specified paths - ignore all others</p></li>
 <li><p>exclude: ignore changes to specified paths (inverse of include)</p></li>
 </ul>
-</div>
-<div class="section" id="cfg-names-attribute">
+</section>
+<section id="cfg-names-attribute">
 <h4><code class="code docutils literal notranslate"><span class="pre">cfg_names</span></code> attribute<a class="headerlink" href="#cfg-names-attribute" title="Permalink to this heading"></a></h4>
 <p>Specifies the GitHub instance hosting the repository. For each Concourse instance, there is a
 default GitHub instance that is used in case no <code class="code docutils literal notranslate"><span class="pre">cfg_name</span></code> is specified.</p>
@@ -275,7 +269,7 @@ default GitHub instance that is used in case no <code class="code docutils liter
 <p>Valid cfg_names are:
 - github_com
 - github_wdf_sap_corp</p>
-<div class="section" id="examples">
+<section id="examples">
 <h5>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h5>
 <ul class="simple">
 <li><p>reference an additional repository <code class="code docutils literal notranslate"><span class="pre">github.com/foo/bar</span></code>, name it <code class="code docutils literal notranslate"><span class="pre">my_repo</span></code></p></li>
@@ -288,11 +282,11 @@ default GitHub instance that is used in case no <code class="code docutils liter
 <span class="w">  </span><span class="nt">cfg_name</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;github_com&#39;</span>
 </pre></div>
 </div>
-</div>
-</div>
-</div>
-</div>
-<div class="section" id="environment-variables">
+</section>
+</section>
+</section>
+</section>
+<section id="environment-variables">
 <h2>Environment Variables<a class="headerlink" href="#environment-variables" title="Permalink to this heading"></a></h2>
 <p>Depending on pipeline definition, build jobs are run with a set of environment variables.
 The variables that are defined depend on:</p>
@@ -308,7 +302,7 @@ any occurrence of dash <code class="code docutils literal notranslate"><span cla
 <p>For non-ASCII or non-alphanumeric characters, the behaviour is undefined. Usage of those
 characters is forbidden for user-defined identifiers.</p>
 </div>
-<div class="section" id="environment-variables-from-repositories">
+<section id="environment-variables-from-repositories">
 <span id="repository-environment-variables"></span><h3>Environment Variables from repositories<a class="headerlink" href="#environment-variables-from-repositories" title="Permalink to this heading"></a></h3>
 <p>For each repository, the following environment variable set is defined:</p>
 <ul class="simple">
@@ -318,7 +312,7 @@ characters is forbidden for user-defined identifiers.</p>
 </ul>
 <p>In addition, the <strong>relative</strong> path to the main repository is always stored in the
 <code class="docutils literal notranslate"><span class="pre">MAIN_REPO_DIR</span></code> env variable.</p>
-<div class="section" id="example">
+<section id="example">
 <h4>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h4>
 <p>In case the main repository has not been explicitly configured with a name, its default logical
 name is <code class="code docutils literal notranslate"><span class="pre">source</span></code>. Therefore, the following environment variables will then be defined:</p>
@@ -328,10 +322,10 @@ name is <code class="code docutils literal notranslate"><span class="pre">source
 <li><p>SOURCE_GITHUB_REPO_OWNER_AND_NAME</p></li>
 <li><p>MAIN_REPO_DIR</p></li>
 </ul>
-</div>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
+</section>
 
 
            </div>

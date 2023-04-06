@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>version Trait &mdash; cc-utils  documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -13,9 +14,6 @@
   <![endif]-->
   
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../_static/doctools.js"></script>
         <script src="../_static/sphinx_highlight.js"></script>
     <script src="../_static/js/theme.js"></script>
@@ -93,11 +91,11 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="version-trait">
+  <section id="version-trait">
 <h1><em>version</em> Trait<a class="headerlink" href="#version-trait" title="Permalink to this heading"></a></h1>
-<div class="section" id="trait-version">
+<section id="trait-version">
 <span id="trait-version"></span><h2>Attributes<a class="headerlink" href="#trait-version" title="Permalink to this heading"></a></h2>
-<table class="colwidths-auto docutils align-default">
+<table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>name</p></th>
 <th class="head"><p>required?</p></th>
@@ -152,19 +150,15 @@
 </ul>
 <h2>Dependencies<a class="headerlink" href="#trait-version" title="Permalink to this heading"></a></h2>
 <p>This trait has <em>no</em> dependencies</p>
-</div>
+</section>
 <p>Adds version handling for the pipeline’s <code class="code docutils literal notranslate"><span class="pre">main</span> <span class="pre">repository</span></code>. Implies that the
 <code class="code docutils literal notranslate"><span class="pre">main</span> <span class="pre">repository</span></code> hosts a <code class="code docutils literal notranslate"><span class="pre">gardener</span> <span class="pre">component</span></code>.</p>
 <p>During job execution, an <code class="code docutils literal notranslate"><span class="pre">effective</span> <span class="pre">version</span></code> is calculated and made available
 via regular file <code class="code docutils literal notranslate"><span class="pre">${VERSION_PATH}/version</span></code> or via environment variable <code class="code docutils literal notranslate"><span class="pre">EFFECTIVE_VERSION</span></code>.</p>
 <p>Component versions must be valid <a class="reference external" href="https://semver.org">SemVer</a> versions.</p>
-<div class="section" id="preprocess-attribute">
+<section id="preprocess-attribute">
 <h2><code class="code docutils literal notranslate"><span class="pre">preprocess</span></code> Attribute<a class="headerlink" href="#preprocess-attribute" title="Permalink to this heading"></a></h2>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 27%" />
-<col style="width: 73%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>value</p></th>
 <th class="head"><p>explanation</p></th>
@@ -188,8 +182,8 @@ via regular file <code class="code docutils literal notranslate"><span class="pr
 </tr>
 </tbody>
 </table>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>
