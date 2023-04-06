@@ -25,7 +25,10 @@ def attach_signature(
     '''
     attach a cosign signature to an image in a remote oci registry.
     '''
-    with tempfile.NamedTemporaryFile('wb') as payloadfile, tempfile.NamedTemporaryFile('wb') as signaturefile:
+    with (
+        tempfile.NamedTemporaryFile('wb') as payloadfile,
+        tempfile.NamedTemporaryFile('wb') as signaturefile
+    ):
         payloadfile.write(unsigned_payload)
         payloadfile.flush()
 

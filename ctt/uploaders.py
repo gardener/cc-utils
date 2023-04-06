@@ -204,7 +204,9 @@ class RBSCCustomerFacingRepoLoader:
         resource = processing_job.resource
 
         if processing_job.resource.access.type is not cm.AccessType.RELATIVE_OCI_REFERENCE:
-            raise RuntimeError('RBSCCustomerFacingRepoLoader only support access type == relativeOciReference')
+            raise RuntimeError(
+                'RBSCCustomerFacingRepoLoader only support access type == relativeOciReference'
+            )
 
         src_ref = ci.util.urljoin(self._src_ctx_repo_url, resource.access.reference)
         _, src_name, src_tag = oci.client._split_image_reference(src_ref)
