@@ -64,12 +64,22 @@ def injectCredentialsIntoRepoUrl(repo_url):
     credentials = gitlab.credentials()
     credentials_str = ':'.join((credentials.username(), credentials.passwd()))
     parsed_url = urlparse(repo_url)
-    new = ParseResult(scheme=parsed_url.scheme, netloc=f'{credentials_str}@{parsed_url.netloc}',
-                      path=parsed_url.path, params=parsed_url.params, query=parsed_url.query, fragment=parsed_url.fragment)
+    new = ParseResult(
+        scheme=parsed_url.scheme,
+        netloc=f'{credentials_str}@{parsed_url.netloc}',
+        path=parsed_url.path,
+        params=parsed_url.params,
+        query=parsed_url.query,
+        fragment=parsed_url.fragment,
+    )
     return new.geturl()
 
 
-def buildAndApplyBOM(bom_repository_url: str, bom_branch: str, bom_entries: typing.Sequence[BOMEntry]):
+def buildAndApplyBOM(
+        bom_repository_url: str,
+        bom_branch: str,
+        bom_entries: typing.Sequence[BOMEntry],
+    ):
     if bom_branch not in ["master", "val", "dev"]:
         raise ValueError("--rbsc-git-branch has to to be master, dev or val!")
 
@@ -85,8 +95,14 @@ def buildAndApplyBOM(bom_repository_url: str, bom_branch: str, bom_entries: typi
             url = 'https://{0}'.format(bom_entry.url)
 
         parsed_url = urlparse(url)
-        new = ParseResult(scheme=parsed_url.scheme, netloc="{}:{}".format(parsed_url.hostname, parsed_url.port if parsed_url.port else 443),
-                          path=parsed_url.path, params=parsed_url.params, query=parsed_url.query, fragment=parsed_url.fragment)
+        new = ParseResult(
+            scheme=parsed_url.scheme,
+            netloc=f'{parsed_url.hostname}:{parsed_url.port if parsed_url.port else 443}',
+            path=parsed_url.path,
+            params=parsed_url.params,
+            query=parsed_url.query,
+            fragment=parsed_url.fragment,
+        )
         new_url = new.geturl()
         bom_entry.url = new_url
         return bom_entry
@@ -102,7 +118,8 @@ def buildAndApplyBOM(bom_repository_url: str, bom_branch: str, bom_entries: typi
         # sort by name to have a reproducable bom with good diff highlighting
         normalized_sorted_boms = sorted(normalized_boms, key=lambda entry: entry.comp)
 
-        # Deduplicate bom list based on url (since rbsc does not support two entries with the same url)
+        # Deduplicate bom list based on url (since rbsc does not support two entries with
+        # the same url)
         deduplicated_bom_list = []
         preexisting_urls = set()
         for bom_entry in normalized_sorted_boms:

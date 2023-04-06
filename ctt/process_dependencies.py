@@ -24,6 +24,7 @@ import container.util
 import cosign.payload as cp
 import gci.componentmodel as cm
 import oci
+import oci.client
 import oci.model as om
 import product.v2
 
@@ -256,7 +257,10 @@ def create_jobs(
         for component in components:
             for oci_resource in product.v2.resources(
                 component=component,
-                resource_access_types=(cm.AccessType.OCI_REGISTRY, cm.AccessType.RELATIVE_OCI_REFERENCE),
+                resource_access_types=(
+                    cm.AccessType.OCI_REGISTRY,
+                    cm.AccessType.RELATIVE_OCI_REFERENCE,
+                ),
                 resource_types=None,  # yields all resource types
                 resource_policy=product.v2.ResourcePolicy.IGNORE_NONMATCHING_ACCESS_TYPES,
             ):
@@ -379,7 +383,9 @@ def labels_with_original_tag(
 ) -> typing.Sequence[cm.Label]:
     last_part = src_ref.split('/')[-1]
     if '@' in last_part:
-        raise RuntimeError(f'cannot extract tag from resource that is referenced via digest. {resource=}')
+        raise RuntimeError(
+            f'cannot extract tag from resource that is referenced via digest. {resource=}'
+        )
 
     _, src_tag = src_ref.rsplit(':', 1)
     original_tag_label = cm.Label(
@@ -397,6 +403,7 @@ def access_resource_via_digest(res: cm.Resource, docker_content_digest: str) -> 
     if res.access.type is cm.AccessType.OCI_REGISTRY:
         updated_labels = labels_with_original_tag(res, res.access.imageReference)
         digest_ref = set_digest(res.access.imageReference, docker_content_digest)
+        # pylint: disable-next=too-many-function-args
         digest_access = cm.OciAccess(
             cm.AccessType.OCI_REGISTRY,
             imageReference=digest_ref,
@@ -448,9 +455,12 @@ def process_images(
         raise NotImplementedError('upload-mode-image=fail is not a valid argument.')
 
     if upload_mode is not None:
-        logger.warning(f'''upload_mode is deprecated for function process_images.
-                        Please use upload_mode_cd and upload_mode_images.
-                        Setting upload_mode_cd to {upload_mode} and defaulting upload_mode_images to {upload_mode_images}''')
+        logger.warning(
+            f'''upload_mode is deprecated for function process_images.
+                Please use upload_mode_cd and upload_mode_images.
+                Setting upload_mode_cd to {upload_mode} and defaulting upload_mode_images to
+                {upload_mode_images}'''
+            )
         upload_mode_cd = upload_mode
 
     src_ctx_base_url = component_descriptor_v2.component.current_repository_ctx().baseUrl
@@ -482,7 +492,10 @@ def process_images(
                 raise RuntimeError(f'No Docker_Content_Digest returned for {processing_job=}')
 
             if generate_cosign_signatures:
-                digest_ref = set_digest(processing_job.upload_request.target_ref, docker_content_digest)
+                digest_ref = set_digest(
+                    processing_job.upload_request.target_ref,
+                    docker_content_digest,
+                )
                 cosign_sig_ref = cosign.calc_cosign_sig_ref(image_ref=digest_ref)
 
                 unsigned_payload = cp.Payload(
@@ -496,11 +509,13 @@ def process_images(
                     root_ca_cert_path=root_ca_cert_path,
                 )
 
-                # cosign every time appends the signature in the signature oci artifact, even if the exact
-                # same signature already exists there. therefore, check if the exact same signature already exists
+                # cosign every time appends the signature in the signature oci artifact, even if
+                # the exact same signature already exists there. therefore, check if the exact same
+                # signature already exists
                 signature_exists = False
 
-                # accept header should not be needed here as we are referencing the manifest via digest.
+                # accept header should not be needed here as we are referencing the manifest
+                # via digest.
                 # but set just for safety reasons.
                 accept = replication_mode.accept_header()
                 manifest_blob_ref = oci_client.head_manifest(
@@ -512,7 +527,10 @@ def process_images(
                 if bool(manifest_blob_ref):
                     cosign_sig_manifest = oci_client.manifest(cosign_sig_ref)
                     for layer in cosign_sig_manifest.layers:
-                        existing_signature = layer.annotations.get("dev.cosignproject.cosign/signature", "")
+                        existing_signature = layer.annotations.get(
+                            "dev.cosignproject.cosign/signature",
+                            "",
+                        )
                         if existing_signature == signature:
                             signature_exists = True
                             break
@@ -525,18 +543,30 @@ def process_images(
                         cosign_repository=cosign_repository,
                     )
                 else:
-                    logger.info(f'{digest_ref=} - signature for manifest already exists - skipping signature upload')
+                    logger.info(
+                        f'{digest_ref=} - signature for manifest already exists '
+                        '- skipping signature upload'
+                    )
 
             if replace_resource_tags_with_digests:
                 processing_job.upload_request = dataclasses.replace(
                     processing_job.upload_request,
-                    target_ref=set_digest(processing_job.upload_request.target_ref, docker_content_digest),
+                    target_ref=set_digest(
+                        processing_job.upload_request.target_ref,
+                        docker_content_digest,
+                    ),
                 )
 
                 if processing_job.processed_resource:
-                    processing_job.processed_resource = access_resource_via_digest(processing_job.processed_resource, docker_content_digest)
+                    processing_job.processed_resource = access_resource_via_digest(
+                        processing_job.processed_resource,
+                        docker_content_digest,
+                    )
                 else:
-                    processing_job.resource = access_resource_via_digest(processing_job.resource, docker_content_digest)
+                    processing_job.resource = access_resource_via_digest(
+                        processing_job.resource,
+                        docker_content_digest,
+                    )
 
             bom_resources.append(
                 BOMEntry(
@@ -667,7 +697,8 @@ def process_images(
         if processing_mode is ProcessingMode.REGULAR:
             if component.name == source_comp.name and component.version == source_comp.version:
                 # we must differentiate whether the input component descriptor (1) exists in the
-                # source context or (2) not (e.g. if a component descriptor from a local file is used).
+                # source context or (2) not (e.g. if a component descriptor from a local
+                # file is used).
                 # for case (2) the copying of resources isn't supported by the coding.
                 cd_exists_in_src_ctx = product.v2.download_component_descriptor_v2(
                     ctx_repo_base_url=src_ctx_repo_base_url,
