@@ -20,7 +20,7 @@ def cve_categorisation(
     if not label:
         return None
 
-    return dso.labels.deserialise_label(label)
+    return dso.labels.deserialise_label(label).value
 
 
 def rescore(
