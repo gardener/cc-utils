@@ -185,13 +185,17 @@ def rescore_bdba_rescan_result(
   resource_node = scan_result.scanned_element
   analysis_result = scan_result.result
 
-  return protecode.rescore.rescore(
+  analysis_result = protecode.rescore.rescore(
     bdba_client=protecode_client,
     scan_result=analysis_result,
     resource_node=resource_node,
     rescoring_rules=rescoring_rules,
     max_rescore_severity=dso.cvss.CVESeverity['${auto_assess_max_severity}'],
   )
+
+  ## patch-in updated bdba-scan-result (may be updated from rescoring)
+  scan_result.result = analysis_result
+  return scan_result
 
 results = [
   rescore_bdba_rescan_result(result) for result in results
