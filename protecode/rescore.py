@@ -2,6 +2,7 @@ import typing
 
 import cnudie.iter
 import dso.cvss
+import dso.labels
 import protecode.client
 import protecode.model
 
@@ -11,11 +12,15 @@ def cve_categorisation(
     absent_ok: bool=True,
 ) -> dso.cvss.CveCategorisation | None:
     label_name = dso.labels.CveCategorisationLabel.name
-    if label := resource_node.resource.find_label(name=label_name):
-        return label.value
+    label = resource_node.resource.find_label(name=label_name)
+    if not label:
+        # fallback to component
+        label = resource_node.component.find_label(name=label_name)
 
-    # fallback to component
-    return resource_node.component.find_label(name=label_name)
+    if not label:
+        return None
+
+    return dso.labels.deserialise_label(label)
 
 
 def rescore(
