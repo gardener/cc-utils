@@ -86,8 +86,8 @@ def rescore(
             if orig_severity is not rescored:
                 rescored_count += 1
 
-                if rescored is dso.cvss.CVESeverity.NONE:
-                    vulns_to_assess.append(v)
+            if rescored is dso.cvss.CVESeverity.NONE:
+                vulns_to_assess.append(v)
 
         if vulns_to_assess:
             bdba_client.add_triage_raw({
