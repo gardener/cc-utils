@@ -187,19 +187,14 @@ class CodecheckSummary:
 
 
 @dataclasses.dataclass(frozen=True)
-class VulnerabilityCve:
+class Vulnerability:
     cve: str
-
-
-@dataclasses.dataclass(frozen=True)
-class VulnerabilityRescoring:
-    vulnerability: VulnerabilityCve
     rescored_severity: str
     matching_rules: list[str]
 
 
 @dataclasses.dataclass(frozen=True)
-class Component:
+class BDBAComponent:
     name: str
     version: str | None # bdba might be unable to determine a version
     source: str
@@ -207,8 +202,8 @@ class Component:
 
 @dataclasses.dataclass(frozen=True)
 class Rescoring:
-    component: Component
-    rescore_to: list[VulnerabilityRescoring]
+    bdba_component: BDBAComponent
+    vulnerabilities: list[Vulnerability]
 
 
 @dataclasses.dataclass(frozen=True)
