@@ -92,7 +92,7 @@ def rescore(
         if vulns_to_assess:
             bdba_client.add_triage_raw({
                 'component': c.name(),
-                'version': c.version() or 'does-not-matter',
+                'version': c.version(),
                 'vulns': [v.cve() for v in vulns_to_assess],
                 'scope': protecode.model.TriageScope.RESULT.value,
                 'reason': 'OT',
