@@ -1,3 +1,4 @@
+import logging
 import typing
 
 import cnudie.iter
@@ -5,6 +6,8 @@ import dso.cvss
 import dso.labels
 import protecode.client
 import protecode.model
+
+logger = logging.getLogger(__name__)
 
 
 def cve_categorisation(
@@ -38,6 +41,10 @@ def rescore(
         return scan_result
 
     product_id = scan_result.product_id()
+    component = resource_node.component
+    resource = resource_node.resource
+
+    logger.info(f'rescoring {component.name}:{resource.name} - {product_id=}')
 
     all_components = tuple(scan_result.components())
     components_with_vulnerabilities = [c for c in all_components if tuple(c.vulnerabilities())]
@@ -47,15 +54,10 @@ def rescore(
         key=lambda c: c.name()
     )
 
-    total_vulns = 0
-    total_rescored = 0
-
     for c in components_with_vulnerabilities:
         if not c.version():
             continue # do not inject dummy-versions in fully automated mode, yet
 
-        vulns_count = 0
-        rescored_count = 0
         vulns_to_assess = []
 
         for v in c.vulnerabilities():
@@ -71,8 +73,6 @@ def rescore(
             if orig_severity > max_rescore_severity:
                 continue
 
-            vulns_count += 1
-
             matching_rules = dso.cvss.matching_rescore_rules(
                 rescoring_rules=rescoring_rules,
                 categorisation=categorisation,
@@ -83,13 +83,11 @@ def rescore(
                 severity=orig_severity,
             )
 
-            if orig_severity is not rescored:
-                rescored_count += 1
-
             if rescored is dso.cvss.CVESeverity.NONE:
                 vulns_to_assess.append(v)
 
         if vulns_to_assess:
+            logger.info(f'{len(vulns_to_assess)=}: {[v.cve() for v in vulns_to_assess]}')
             bdba_client.add_triage_raw({
                 'component': c.name(),
                 'version': c.version(),
@@ -99,14 +97,9 @@ def rescore(
                 'description': 'auto-assessed as irrelevant based on cve-categorisation',
                 'product_id': product_id,
             })
-            print(f'auto-assessed {len(vulns_to_assess)=}')
 
-        total_vulns += vulns_count
-        total_rescored += rescored_count
-
-    print(f'{total_vulns=}, {total_rescored=}')
-    if total_rescored > 0:
-        print(f'{total_rescored=} - retrieving result again from bdba (this may take a while)')
+    if vulns_to_assess:
+        logger.info('retrieving result again from bdba (this may take a while)')
         scan_result = bdba_client.scan_result(product_id=scan_result.product_id())
 
     return scan_result
