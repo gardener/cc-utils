@@ -66,6 +66,7 @@ def validate_resource_node(node: ci.ResourceNode) -> typing.Generator[Validation
     if not oci_client.head_manifest(
         image_reference=image_reference,
         absent_ok=True,
+        accept=oci.model.MimeTypes.prefer_multiarch,
     ):
         yield ValidationError(
             node=node,
