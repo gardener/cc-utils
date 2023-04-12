@@ -20,10 +20,10 @@ class ValidationError:
     def as_error_message(self):
         def _node_id(node: ci.Node | cm.Component):
             if isinstance(node, ci.ComponentNode):
-                return f'{node.component.name}{node.component.version}'
+                return f'{node.component.name}:{node.component.version}'
             elif isinstance(node, cm.Component):
                 component = node
-                return f'{component.name}{component.version}'
+                return f'{component.name}:{component.version}'
             elif isinstance(node, ci.ResourceNode):
                 artefact = node.resource
             elif isinstance(node, ci.SourceNode):
