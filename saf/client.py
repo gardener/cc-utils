@@ -1,4 +1,5 @@
 import dataclasses
+import datetime
 import enum
 import json
 import typing
@@ -20,7 +21,7 @@ class SafClient:
                 'Authorization': f'Bearer {self._saf_cfg.credentials().bearer_token}',
                 'Content-Type': 'application/json',
             },
-            data=json.dumps(raw, cls=EnumJSONEncoder),
+            data=json.dumps(raw, cls=SAFJSONEncoder),
         )
 
         res.raise_for_status()
@@ -39,11 +40,13 @@ class SafClient:
         return self._post_evidence_dict(raw=raw)
 
 
-class EnumJSONEncoder(json.JSONEncoder):
+class SAFJSONEncoder(json.JSONEncoder):
     '''
-    a json.JSONEncoder that will encode enum objects using their values
+    a json.JSONEncoder that will encode datetime and enum objects
     '''
     def default(self, o):
         if isinstance(o, enum.Enum):
             return o.value
+        if isinstance(o, datetime.datetime):
+            return o.isoformat(timespec='seconds')
         return super().default(o)
