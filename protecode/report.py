@@ -112,5 +112,6 @@ def analysis_result_to_report_str(
 
     if worst_severity is not worst_rescored:
         report += f'\n{worst_severity.name=} -> {worst_rescored.name=}'
+        report += '\nHint: Rescorings are informative - assessments still need to be done'
 
     return report
