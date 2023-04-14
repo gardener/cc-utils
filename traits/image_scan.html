@@ -358,21 +358,27 @@ and fail.</p></td>
 <td><p>no</p></td>
 <td><p>8</p></td>
 <td><p>int</p></td>
-<td><p>the amount of (maxium) parallel workers</p></td>
+<td><p>the amount of (maximum) parallel workers</p></td>
 </tr>
-<tr class="row-even"><td><p>saf_config_name</p></td>
+<tr class="row-even"><td><p>virus_db_max_age_days</p></td>
+<td><p>no</p></td>
+<td><p>0</p></td>
+<td><p>int</p></td>
+<td><p>The maxmimum age difference (in days) the virus definition database of ClamAV may have when being compared to the most current database before triggering rescans.</p></td>
+</tr>
+<tr class="row-odd"><td><p>saf_config_name</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>SAF config name to use (see cc-config)</p></td>
 </tr>
-<tr class="row-odd"><td><p>rescore</p></td>
+<tr class="row-even"><td><p>rescore</p></td>
 <td><p>no</p></td>
 <td><p>()</p></td>
 <td><p>list</p></td>
 <td><p>rescoring hints (e.g. to mark false-positives / accept certain scan-abortions)</p></td>
 </tr>
-<tr class="row-even"><td><p>timeout</p></td>
+<tr class="row-odd"><td><p>timeout</p></td>
 <td><p>no</p></td>
 <td><p>18h</p></td>
 <td><p>str</p></td>
