@@ -370,6 +370,37 @@ not evaluated, which may lead to different image-tags in “base-component-descr
 </div>
 </section>
 </section>
+<section id="special-handling-for-charts-images-yaml-deprecating-component-cli">
+<h2>Special-handling for “charts/images.yaml” / deprecating component-cli<a class="headerlink" href="#special-handling-for-charts-images-yaml-deprecating-component-cli" title="Permalink to this heading"></a></h2>
+<p><code class="code docutils literal notranslate"><span class="pre">component-cli</span></code> has been deprecated as of 2023-04-06. <code class="code docutils literal notranslate"><span class="pre">component-cli</span></code> was tailored as an
+opinionated tool considering some special-cases useful for many of Gardener’s repositories in
+mind. It’s successor - <a class="reference external" href="https://github.com/open-component-model/ocm#ocm-cli">OCM-CLI</a> might
+replace <code class="code docutils literal notranslate"><span class="pre">component-cli</span></code>, however it will not feature said gardener-specific special-case-handling.</p>
+<p>To phase-out <code class="code docutils literal notranslate"><span class="pre">component-cli</span></code>, with little efforts all relevant commands are
+re-implemented as part of CICD-Pipeline-Template as a drop-in-replacement.
+Implementation can be found
+<a class="reference external" href="https://github.com/gardener/cc-utils/blob/master/bin/component-cli">here</a>.</p>
+<p>The default instrumentation of component-cli commands can be found
+<a class="reference external" href="https://github.com/gardener/gardener/blob/master/hack/.ci/component_descriptor">here</a>.</p>
+<section id="imagevector-add-command-charts-images-yaml-contract">
+<h3>“imagevector add” command / charts/images.yaml contract<a class="headerlink" href="#imagevector-add-command-charts-images-yaml-contract" title="Permalink to this heading"></a></h3>
+<p>Some Gardener-Repositories use a standardised format to declare images to be exposed to both
+helm-charts and <code class="code docutils literal notranslate"><span class="pre">Component-Descriptors</span></code> via a regular file located at <code class="code docutils literal notranslate"><span class="pre">charts/images.yaml</span></code> below
+repository root.</p>
+<p>The (deprecated) <code class="code docutils literal notranslate"><span class="pre">component-cli</span></code> features a command <code class="code docutils literal notranslate"><span class="pre">imagevector</span> <span class="pre">add</span></code> that converts data from such
+<code class="code docutils literal notranslate"><span class="pre">images.yaml</span></code> files to component-descriptors.</p>
+<p><code class="code docutils literal notranslate"><span class="pre">images.yaml</span></code> is expected to be a YAML document (or multi-document) containing (oci-)image-entries.
+Those are stored as a list below an attribute <code class="code docutils literal notranslate"><span class="pre">images</span></code>. Depending on the defined attributes,
+entries are handled differently.</p>
+<p>In addition to attributes being absent, or present, there is also a list of “component-prefixes”,
+which defaults to <code class="code docutils literal notranslate"><span class="pre">eu.gcr.io/gardener-project/gardener</span></code>, which influences whether an entry is
+considered to be “local” (built by component’s pipeline) or “external” (built by someone else).</p>
+<p>Gardener-Components have a name that is by convention the github-repo-url (w/o scheme). If the
+<code class="code docutils literal notranslate"><span class="pre">sourceRepository</span></code> is different from current component name, a component-reference is added.</p>
+<p><em>Example</em></p>
+<p><em>Results in:</em></p>
+</section>
+</section>
 <section id="retention-policies-aka-cleaning-up-old-versions">
 <h2>Retention Policies (aka cleaning up old versions)<a class="headerlink" href="#retention-policies-aka-cleaning-up-old-versions" title="Permalink to this heading"></a></h2>
 <p>The <code class="code docutils literal notranslate"><span class="pre">retention_policies</span></code> attribute can be used to configure automated removal of
