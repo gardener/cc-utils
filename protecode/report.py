@@ -80,6 +80,9 @@ def _worst_severity_and_worst_rescored_severity(
             orig_sev = dso.cvss.CVESeverity.from_cve_score(vulnerability.cve_severity())
             worst_severity = max(worst_severity, orig_sev)
 
+            if not vulnerability.cvss: # happens if only cvss-v2 is available
+                continue
+
             rules = tuple(dso.cvss.matching_rescore_rules(
                 rescoring_rules=rescoring_rules,
                 categorisation=cve_categorisation,
