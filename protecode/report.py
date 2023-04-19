@@ -34,10 +34,18 @@ def _component_and_results_to_report_str(
             rescore = False
         else:
             orig_sev = dso.cvss.CVESeverity.from_cve_score(vulnerability.cve_severity())
-            rescored = dso.cvss.rescore(
+
+            rules = tuple(dso.cvss.matching_rescore_rules(
                 rescoring_rules=rescoring_rules,
+                categorisation=cve_categorisation,
+                cvss=vulnerability.cvss,
+            ))
+
+            rescored = dso.cvss.rescore(
+                rescoring_rules=rules,
                 severity=orig_sev,
             )
+
             if orig_sev is rescored:
                 rescore = False
             else:
@@ -72,8 +80,14 @@ def _worst_severity_and_worst_rescored_severity(
             orig_sev = dso.cvss.CVESeverity.from_cve_score(vulnerability.cve_severity())
             worst_severity = max(worst_severity, orig_sev)
 
-            rescored = dso.cvss.rescore(
+            rules = tuple(dso.cvss.matching_rescore_rules(
                 rescoring_rules=rescoring_rules,
+                categorisation=cve_categorisation,
+                cvss=vulnerability.cvss,
+            ))
+
+            rescored = dso.cvss.rescore(
+                rescoring_rules=rules,
                 severity=orig_sev,
             )
             worst_rescored = max(worst_rescored, rescored)

@@ -142,15 +142,14 @@ def rescore(
             if not v.cvss:
                 continue # happens if only cvss-v2 is available - ignore for now
 
-            rules = dso.cvss.matching_rescore_rules(
+            rules = tuple(dso.cvss.matching_rescore_rules(
                 rescoring_rules=rescoring_rules,
                 categorisation=categorisation,
                 cvss=v.cvss,
-            )
-            rules = tuple(rules)
+            ))
             orig_severity = dso.cvss.CVESeverity.from_cve_score(v.cve_severity())
             rescored = dso.cvss.rescore(
-                rescoring_rules=rescoring_rules,
+                rescoring_rules=rules,
                 severity=orig_severity,
             )
 
