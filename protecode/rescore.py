@@ -100,6 +100,8 @@ def rescore(
 
     if vulns_to_assess:
         logger.info('retrieving result again from bdba (this may take a while)')
-        scan_result = bdba_client.scan_result(product_id=scan_result.product_id())
+        scan_result = bdba_client.wait_for_scan_result(
+            product_id=scan_result.product_id()
+        )
 
     return scan_result
