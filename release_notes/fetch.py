@@ -136,8 +136,7 @@ def get_release_note_commits_tuple(
             git_helper.repo,
             current_version_tag,
             previous_version_tag
-    ),
-    tuple()
+    ), tuple()
 
 
 def fetch_release_notes(
