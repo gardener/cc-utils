@@ -992,14 +992,6 @@ def release_and_prepare_next_dev_cycle(
     if not release_transaction.execute():
         raise RuntimeError('An error occurred while creating the Release.')
 
-    if release_on_github:
-        publish_release_notes_step = PublishReleaseNotesStep(
-            githubrepobranch=githubrepobranch,
-            github_helper=github_helper,
-            component=component,
-            release_version=release_version,
-            repo_dir=repo_dir,
-        )
 
     cleanup_draft_releases_step = TryCleanupDraftReleasesStep(
         github_helper=github_helper,
@@ -1021,6 +1013,13 @@ def release_and_prepare_next_dev_cycle(
         raise NotImplementedError(release_notes_policy)
 
     if release_on_github:
+        publish_release_notes_step = PublishReleaseNotesStep(
+            githubrepobranch=githubrepobranch,
+            github_helper=github_helper,
+            component=component,
+            release_version=release_version,
+            repo_dir=repo_dir,
+        )
         release_notes_transaction = Transaction(
             ctx=transaction_ctx,
             steps=(publish_release_notes_step,),
