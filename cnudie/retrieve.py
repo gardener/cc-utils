@@ -330,7 +330,7 @@ def composite_component_descriptor_lookup(
     '''
     def lookup(
         component_id: cm.ComponentIdentity,
-        ctx_repo: cm.RepositoryContext=default_ctx_repo,
+        ctx_repo: cm.OciRepositoryContext|str=default_ctx_repo,
         absent_ok=default_absent_ok,
     ):
         writebacks = []
@@ -353,7 +353,16 @@ def composite_component_descriptor_lookup(
         # component descriptor not found in lookup
         if absent_ok:
             return
-        raise om.OciImageNotFoundException
+
+        if isinstance(ctx_repo, str):
+            ctx_repo = cm.OciRepositoryContext(
+                type=cm.OciAccess,
+                baseUrl=ctx_repo,
+            )
+
+        raise om.OciImageNotFoundException(
+            ctx_repo.component_oci_ref(component_id),
+        )
 
     return lookup
 
