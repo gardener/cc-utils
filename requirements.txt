@@ -35,7 +35,7 @@ openstacksdk
 oss2==2.17.0
 passlib<2.0.0
 pycryptodome
-pydash<7.0.0
+pydash<8.0.0
 pylama
 pylint
 pymongo
