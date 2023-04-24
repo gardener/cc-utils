@@ -18,8 +18,12 @@ class CVESeverity(enum.IntEnum):
     HIGH = 3
     CRITICAL = 4
 
-    def reduce(self, severity_classes=1) -> 'CVESeverity':
-        return CVESeverity(max(0, self.value - severity_classes))
+    def reduce(
+        self,
+        severity_classes=1,
+        minimum_severity: int=LOW,
+    ) -> 'CVESeverity':
+        return CVESeverity(max(minimum_severity, self.value - severity_classes))
 
     @staticmethod
     def from_cve_score(score: float):
