@@ -3,6 +3,7 @@ import datetime
 
 import gci.componentmodel as cm
 
+import dso.cvss
 import dso.labels
 import unixutil.model
 
@@ -188,7 +189,7 @@ class CodecheckSummary:
 @dataclasses.dataclass(frozen=True)
 class Vulnerability:
     cve: str
-    rescored_severity: str
+    rescored_severity: dso.cvss.CVESeverity
     matching_rules: list[str]
 
 
