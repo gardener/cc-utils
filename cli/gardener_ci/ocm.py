@@ -1,3 +1,5 @@
+import enum
+
 import gci.componentmodel as cm
 
 import cnudie.retrieve
@@ -16,6 +18,7 @@ def traverse(
     sources: bool=True,
     resources: bool=True,
     print_expr: str=None,
+    filter_expr: str=None,
 ):
     '''
     name: either component-name, or <component-name>:<version>
@@ -50,19 +53,44 @@ def traverse(
         lookup=component_descriptor_lookup,
     ):
         indent = len(node.path * 2)
-        if isinstance(node, cnudie.iter.ComponentNode):
-            if not components:
+
+        is_component_node = isinstance(node, cnudie.iter.ComponentNode)
+        is_source_node = isinstance(node, cnudie.iter.SourceNode)
+        is_resource_node = isinstance(node, cnudie.iter.ResourceNode)
+
+        if is_component_node and not components:
+            continue
+
+        if is_source_node and not sources:
+            continue
+
+        if is_resource_node and not resources:
+            continue
+
+        if filter_expr:
+            if is_component_node:
+                typestr = 'component'
+            elif is_source_node:
+                typestr = node.source.type
+            elif is_resource_node:
+                typestr = node.resource.type
+
+            if isinstance(typestr, enum.Enum):
+                typestr = typestr.value
+
+            if not eval(filter_expr, {
+                'node': node,
+                'type': typestr,
+            }):
                 continue
 
+        if isinstance(node, cnudie.iter.ComponentNode):
             if not print_expr:
                 prefix = 'c'
                 print(f'{prefix}{" " * indent}{node.component.name}:{node.component.version}')
             else:
                 print(eval(print_expr, {'node': node}))
         if isinstance(node, cnudie.iter.ResourceNode):
-            if not resources:
-                continue
-
             if not print_expr:
                 prefix = 'r'
                 indent += 1
@@ -70,9 +98,6 @@ def traverse(
             else:
                 print(eval(print_expr, {'node': node}))
         if isinstance(node, cnudie.iter.SourceNode):
-            if not sources:
-                continue
-
             if not print_expr:
                 prefix = 'r'
                 indent += 1
