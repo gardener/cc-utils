@@ -361,7 +361,7 @@ def composite_component_descriptor_lookup(
             )
 
         raise om.OciImageNotFoundException(
-            ctx_repo.component_oci_ref(component_id),
+            ctx_repo.component_version_oci_ref(component_id),
         )
 
     return lookup
