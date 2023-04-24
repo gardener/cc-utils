@@ -477,6 +477,7 @@ def image_layers_as_tarfile_generator(
     oci_client: oc.Client,
     chunk_size=tarfile.RECORDSIZE,
     include_config_blob=True,
+    fallback_to_first_subimage_if_index=False,
 ) -> typing.Generator[bytes, None, None]:
     '''
     returns a generator yielding a tar-archive with the passed oci-image's layer-blobs as
@@ -485,11 +486,26 @@ def image_layers_as_tarfile_generator(
     This function is useful to e.g. upload file system contents of an oci-container-image to some
     scanning-tool (provided it supports the extraction of tar-archives)
     If include_config_blob is set to False the config blob will be ignored.
+
+    If fallback_to_first_subimage_if_index is set to True, in case of oci-image-manifest-list the
+    first sub-manifest is taken.
     '''
     manifest = oci_client.manifest(
         image_reference=image_reference,
         accept=om.MimeTypes.prefer_multiarch,
     )
+
+    image_reference = om.OciImageReference.to_image_ref(image_reference)
+
+    if fallback_to_first_subimage_if_index and isinstance(manifest, om.OciImageManifestList):
+        logger.warn(
+            f'image-index handling not fully implemented - will only scan first image, '
+            f'{image_reference=}, {manifest.mediaType=}'
+        )
+        manifest_ref = manifest.manifests[0]
+        manifest = oci_client.manifest(
+            image_reference=f'{image_reference.ref_without_tag}@{manifest_ref.digest}',
+        )
 
     offset = 0
     for blob in manifest.blobs() if include_config_blob else manifest.layers:

@@ -157,6 +157,7 @@ class ResourceGroupProcessor:
                         image_reference=image_reference,
                         oci_client=oci_client,
                         include_config_blob=False,
+                        fallback_to_first_subimage_if_index=True,
                     )
 
                 yield pm.ScanRequest(
