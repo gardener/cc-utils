@@ -486,7 +486,11 @@ def image_layers_as_tarfile_generator(
     scanning-tool (provided it supports the extraction of tar-archives)
     If include_config_blob is set to False the config blob will be ignored.
     '''
-    manifest = oci_client.manifest(image_reference=image_reference)
+    manifest = oci_client.manifest(
+        image_reference=image_reference,
+        accept=om.MimeTypes.prefer_multiarch,
+    )
+
     offset = 0
     for blob in manifest.blobs() if include_config_blob else manifest.layers:
         logger.debug(f'getting blob {blob.digest}')
