@@ -185,13 +185,14 @@ def virus_scan_images(
 
     yield from results
 
+
 def resource_url_from_resource_access(
     access: gci.componentmodel.ResourceAccess,
 ) -> str:
-        # TODO: replace once a more fitting method exists in component-model
-        if isinstance(access, gci.componentmodel.OciAccess):
-            return access.imageReference
-        elif isinstance(access, gci.componentmodel.S3Access):
-            return f's3://{access.bucketName}/{access.objectKey}'
-        else:
-            raise NotImplementedError(access.type)
+    # TODO: replace once a more fitting method exists in component-model
+    if isinstance(access, gci.componentmodel.OciAccess):
+        return access.imageReference
+    elif isinstance(access, gci.componentmodel.S3Access):
+        return f's3://{access.bucketName}/{access.objectKey}'
+    else:
+        raise NotImplementedError(access.type)

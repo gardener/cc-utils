@@ -1,6 +1,5 @@
 import dataclasses
 import datetime
-import typing
 
 import gci.componentmodel as cm
 
