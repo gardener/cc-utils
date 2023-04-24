@@ -14,10 +14,13 @@
 # limitations under the License.
 
 import dataclasses
+import datetime
 import dso.labels
 import enum
 import traceback
 import typing
+
+import dateutil.parser
 
 import gci.componentmodel as cm
 
@@ -269,6 +272,10 @@ class Triage(ModelBase):
 
     def description(self):
         return self.raw.get('description')
+
+    @property
+    def modified(self) -> datetime.datetime:
+        return dateutil.parser.isoparse(self.raw.get('modified'))
 
     def applies_to_same_vulnerability_as(self, other) -> bool:
         if not isinstance(other, Triage):
