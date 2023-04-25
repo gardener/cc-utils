@@ -66,20 +66,13 @@ def fetch_release_notes(
 
 
 def post_to_slack(
-    release_notes: ReleaseNote,
+    release_notes_markdown: str,
     github_repository_name: str,
     slack_cfg_name: str,
     slack_channel: str,
     release_version: str,
     max_msg_size_bytes: int=20000,
 ):
-    # slack can't auto link pull requests, commits or users
-    # hence we force the link generation when building the markdown string
-    logger.info('Creating release-note markdown before posting to Slack')
-    release_notes_md_links = release_notes.to_markdown(
-        force_link_generation=True
-    )
-
     # XXX slack imposes a maximum msg size
     # https://api.slack.com/changelog/2018-04-truncating-really-long-messages#
 
@@ -94,20 +87,20 @@ def post_to_slack(
             title = f'[{github_repository_name}:{release_version} released'
 
             # abort on last
-            if idx + max_msg_size_bytes > len(release_notes_md_links):
+            if idx + max_msg_size_bytes > len(release_notes_markdown):
                 did_split = i > 0
                 if did_split:
                     title += ' - final]'
                 else:
                     title += ']'
 
-                msg = release_notes_md_links[idx:]
+                msg = release_notes_markdown[idx:]
                 yield slack_helper.post_to_slack(channel=slack_channel, title=title, message=msg)
                 break
 
             # post part
             title += f' - part {i} ]'
-            msg = release_notes_md_links[idx: idx+max_msg_size_bytes]
+            msg = release_notes_markdown[idx: idx+max_msg_size_bytes]
             logger.info(f"Posting release-note '{title}'")
             yield slack_helper.post_to_slack(channel=slack_channel, title=title, message=msg)
 
