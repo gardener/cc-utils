@@ -10,6 +10,7 @@ import github3
 import github3.exceptions as gh3e
 import github3.pulls as gh3p
 import github3.structs as gh3s
+import gitutil
 import semver
 import yaml
 import yaml.scanner
@@ -42,23 +43,6 @@ def list_associated_pulls(
     except gh3e.UnprocessableEntity as e:
         logger.debug(f'cannot find any pull request related to commit {sha}: {e}')
         return None
-
-
-def _write_to_git_notes(
-        repo: git.Repo,
-        commit: git.Commit,
-        body: str
-) -> None:
-    ''' Notes can be attached to a commit using
-    `$ git notes add -m <message> <sha>`
-
-    :param repo: the repository the commit belongs to
-    :param commit: the commit to add notes to
-    :param body: the body to write to the commit notes
-    :return:
-    '''
-    logger.debug(f'writing\n{body}\nto{commit.hexsha}\n')
-    repo.git.notes('add', '-f', '-m', body, commit.hexsha)
 
 
 # pylint: disable=protected-access
@@ -165,7 +149,7 @@ def _upsert_document(
 
 
 def request_pull_requests_from_api(
-        repo: git.Repo,
+        git_helper: gitutil.GitHelper,
         gh: github3.GitHub,
         owner: str,
         repo_name: str,
@@ -191,7 +175,7 @@ def request_pull_requests_from_api(
     for commit in commits:
         yaml_documents = []
         is_yaml_content = True
-        if note_content := _find_git_notes_for_commit(repo, commit):
+        if note_content := _find_git_notes_for_commit(git_helper.repo, commit):
             try:
                 yaml_documents = list(yaml.safe_load_all(note_content))
             except yaml.scanner.ScannerError as e:  # YAML parsing error
@@ -216,7 +200,7 @@ def request_pull_requests_from_api(
             )
             meta = rnm.get_meta_obj(_meta_key, data)
             _upsert_document(yaml_documents, _meta_key, meta)
-            _write_to_git_notes(repo, commit, yaml.safe_dump_all(yaml_documents))
+            git_helper.add_note(body=yaml.safe_dump_all(yaml_documents), commit=commit)
 
     if pending:
         for pull in list_pulls(gh, owner, repo_name):

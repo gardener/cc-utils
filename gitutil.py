@@ -126,7 +126,11 @@ class GitHelper:
             url = urljoin(self.github_cfg.ssh_url(), self.github_repo_path)
             cmd_env, tmp_id = _ssh_auth_env(github_cfg=self.github_cfg)
         elif protocol is Protocol.HTTPS:
-            url = url_with_credentials(self.github_cfg, self.github_repo_path, credentials)
+            url = url_with_credentials(
+                github_cfg=self.github_cfg,
+                github_repo_path=self.github_repo_path,
+                technical_user_name=credentials.username(),
+            )
             cmd_env = os.environ
         else:
             raise NotImplementedError
@@ -248,6 +252,11 @@ class GitHelper:
     def rebase(self, commit_ish: str):
         self.repo.git.rebase('--quiet', commit_ish)
 
+    def add_note(self, body: str, commit: str):
+        with self._authenticated_remote() as (cmd_env, remote):
+            with remote.repo.git.custom_environment(**cmd_env):
+                remote.repo.git.notes('add', '-f', '-m', body, commit.hexsha)
+
     def fetch_head(self, ref: str):
         with self._authenticated_remote() as (cmd_env, remote):
             with remote.repo.git.custom_environment(**cmd_env):
@@ -255,9 +264,16 @@ class GitHelper:
                 return fetch_result.commit
 
 
-def url_with_credentials(github_cfg, github_repo_path, credentials=None):
+def url_with_credentials(
+    github_cfg: GithubConfig,
+    github_repo_path: str,
+    technical_user_name: str | None =None
+):
     base_url = urllib.parse.urlparse(github_cfg.http_url())
-    if not credentials:
+
+    if technical_user_name:
+        credentials = github_cfg.credentials(technical_user_name=technical_user_name)
+    else:
         credentials = github_cfg.credentials()
 
     # prefer auth token
