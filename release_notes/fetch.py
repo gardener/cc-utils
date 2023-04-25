@@ -77,8 +77,9 @@ def _get_release_note_commits_tuple_for_minor_release(
 
     # all commits from the branch start to the previous minor-release tag
     # should be removed from the release notes
-    filter_out_commits_range = \
+    filter_out_commits_range = (
         f'{previous_minor_version_tag.commit.hexsha}...{previous_branch_start}'
+    )
     logger.debug(f'{filter_out_commits_range=}')
     filter_out_commits = git_helper.repo.iter_commits(filter_out_commits_range)
 
