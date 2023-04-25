@@ -116,6 +116,7 @@ concourse.steps.release.release_and_prepare_next_dev_cycle(
   next_cycle_commit_message_prefix='${next_cycle_commit_message_prefix}',
   % endif
   github_release_tag=${github_release_tag},
-  git_tags=${git_tags}
+  git_tags=${git_tags},
+  release_notes_handling='${release_trait.release_notes_handling().value}',
 )
 </%def>

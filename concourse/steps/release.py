@@ -28,6 +28,8 @@ import cnudie.retrieve
 import cnudie.util
 import cnudie.validate
 import dockerutil
+import release_notes.fetch
+import release_notes.markdown
 
 from gitutil import GitHelper
 from github.util import (
@@ -41,8 +43,9 @@ from github.release_notes.util import (
     ReleaseNotes,
 )
 from concourse.model.traits.release import (
-    ReleaseNotesPolicy,
     ReleaseCommitPublishingPolicy,
+    ReleaseNotesHandling,
+    ReleaseNotesPolicy,
 )
 import model.container_registry as cr
 import oci.model
@@ -287,7 +290,7 @@ class CreateTagsStep(TransactionalStep):
         github_release_tag,
         git_tags,
         github_helper: GitHubRepositoryHelper,
-        git_helper,
+        git_helper: GitHelper,
         release_version,
         publishing_policy: ReleaseCommitPublishingPolicy
     ):
@@ -738,21 +741,21 @@ class PostSlackReleaseStep(TransactionalStep):
         slack_cfg_name: str,
         slack_channel: str,
         release_version: str,
-        release_notes: ReleaseNotes,
+        release_notes_markdown: str,
         githubrepobranch: GitHubRepoBranch,
     ):
         self.slack_cfg_name = not_empty(slack_cfg_name)
         self.slack_channel = not_empty(slack_channel)
         self.release_version = not_empty(release_version)
         self.githubrepobranch = not_none(githubrepobranch)
-        self.release_notes = not_none(release_notes)
+        self.release_notes_markdown = not_none(release_notes_markdown)
 
     def validate(self):
         version.parse_to_semver(self.release_version)
 
     def apply(self):
         responses = post_to_slack(
-            release_notes=self.release_notes,
+            release_notes_markdown=self.release_notes_markdown,
             github_repository_name=self.githubrepobranch.github_repo_path(),
             slack_cfg_name=self.slack_cfg_name,
             slack_channel=self.slack_channel,
@@ -872,6 +875,7 @@ def release_and_prepare_next_dev_cycle(
     git_tags: list,
     github_release_tag: dict,
     release_commit_callback_image_reference: str,
+    release_notes_handling: str,
     component_descriptor_path: str=None,
     ctf_path: str=None,
     next_cycle_commit_message_prefix: str=None,
@@ -911,6 +915,7 @@ def release_and_prepare_next_dev_cycle(
     release_commit_publishing_policy = ReleaseCommitPublishingPolicy(
         release_commit_publishing_policy
     )
+    release_notes_handling = ReleaseNotesHandling(release_notes_handling)
     github_helper = GitHubRepositoryHelper.from_githubrepobranch(githubrepobranch)
     git_helper = GitHelper.from_githubrepobranch(
         githubrepobranch=githubrepobranch,
@@ -992,7 +997,6 @@ def release_and_prepare_next_dev_cycle(
     if not release_transaction.execute():
         raise RuntimeError('An error occurred while creating the Release.')
 
-
     cleanup_draft_releases_step = TryCleanupDraftReleasesStep(
         github_helper=github_helper,
     )
@@ -1013,27 +1017,59 @@ def release_and_prepare_next_dev_cycle(
         raise NotImplementedError(release_notes_policy)
 
     if release_on_github:
-        publish_release_notes_step = PublishReleaseNotesStep(
-            githubrepobranch=githubrepobranch,
-            github_helper=github_helper,
-            component=component,
-            release_version=release_version,
-            repo_dir=repo_dir,
-        )
-        release_notes_transaction = Transaction(
-            ctx=transaction_ctx,
-            steps=(publish_release_notes_step,),
-        )
-        release_notes_transaction.validate()
-        if not release_notes_transaction.execute():
-            raise RuntimeError('An error occurred while publishing the release notes.')
+        if release_notes_handling is ReleaseNotesHandling.DEFAULT:
+            publish_release_notes_step = PublishReleaseNotesStep(
+                githubrepobranch=githubrepobranch,
+                github_helper=github_helper,
+                component=component,
+                release_version=release_version,
+                repo_dir=repo_dir,
+            )
+            release_notes_transaction = Transaction(
+                ctx=transaction_ctx,
+                steps=(publish_release_notes_step,),
+            )
+            release_notes_transaction.validate()
+            if not release_notes_transaction.execute():
+                raise RuntimeError('An error occurred while publishing the release notes.')
+        elif release_notes_handling is ReleaseNotesHandling.PREVIEW:
+            release_note_blocks = release_notes.fetch.fetch_release_notes(
+                repo_path=repo_dir,
+                component=component,
+                current_version=version.parse_to_semver(release_version),
+            )
+            release_notes_markdown = '\n'.join(
+                str(i) for i in release_notes.markdown.render(release_note_blocks)
+            )
+            github_helper.update_release_notes(
+                tag_name=release_version,
+                body=release_notes_markdown,
+                component_name=component.name,
+            )
+        else:
+            raise NotImplementedError(release_notes_handling)
 
     if slack_channel_configs:
         if not release_on_github:
             raise RuntimeError('Cannot post to slack without a github release')
-        release_notes = transaction_ctx.step_output(
-            publish_release_notes_step.name()
+
+        if release_notes_handling is ReleaseNotesHandling.DEFAULT:
+            release_notes_raw = transaction_ctx.step_output(
+                publish_release_notes_step.name()
             ).get('release notes')
+            # slack can't auto link pull requests, commits or users
+            # hence we force the link generation when building the markdown string
+            logger.info('Creating release-note markdown before posting to Slack')
+            release_notes_markdown = release_notes_raw.to_markdown(
+                force_link_generation=True
+            )
+        elif release_notes_handling is ReleaseNotesHandling.PREVIEW:
+            # release_notes_markdown already prepared earlier albeit without special link
+            # preparation for Slack.
+            pass
+        else:
+            raise NotImplementedError(release_notes_handling)
+
         all_slack_releases_successful = True
         for slack_cfg in slack_channel_configs:
             slack_cfg_name = slack_cfg['slack_cfg_name']
@@ -1042,7 +1078,7 @@ def release_and_prepare_next_dev_cycle(
                 slack_cfg_name=slack_cfg_name,
                 slack_channel=slack_channel,
                 release_version=release_version,
-                release_notes=release_notes,
+                release_notes_markdown=release_notes_markdown,
                 githubrepobranch=githubrepobranch,
             )
             slack_transaction = Transaction(

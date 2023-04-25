@@ -242,14 +242,14 @@ class TestSlackReleaseStep:
                 repo_name='test_name',
                 branch='master',
             ),
-            release_notes=ReleaseNotes(None),
+            release_notes_markdown="",
             release_version='1.0.0',
         ):
             return concourse.steps.release.PostSlackReleaseStep(
                 slack_cfg_name=slack_cfg_name,
                 slack_channel=slack_channel,
                 githubrepobranch=githubrepobranch,
-                release_notes=release_notes,
+                release_notes_markdown=release_notes_markdown,
                 release_version=release_version,
             )
         return _examinee
