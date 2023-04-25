@@ -55,7 +55,7 @@ def _ssh_auth_env(github_cfg):
 
 
 class GitHelper:
-    def __init__(self, repo, github_cfg, github_repo_path):
+    def __init__(self, repo, github_cfg: GithubConfig, github_repo_path):
         not_none(repo)
         if not isinstance(repo, git.Repo):
             # assume it's a file path if it's not already a git.Repo
@@ -121,14 +121,20 @@ class GitHelper:
     @contextlib.contextmanager
     def _authenticated_remote(self):
         protocol = self.github_cfg.preferred_protocol()
+        credentials = self.github_cfg.credentials()
         if protocol is Protocol.SSH:
             url = urljoin(self.github_cfg.ssh_url(), self.github_repo_path)
             cmd_env, tmp_id = _ssh_auth_env(github_cfg=self.github_cfg)
         elif protocol is Protocol.HTTPS:
-            url = url_with_credentials(self.github_cfg, self.github_repo_path)
+            url = url_with_credentials(self.github_cfg, self.github_repo_path, credentials)
             cmd_env = os.environ
         else:
             raise NotImplementedError
+
+        cmd_env["GIT_AUTHOR_NAME"] = credentials.username()
+        cmd_env["GIT_AUTHOR_EMAIL"] = credentials.email_address()
+        cmd_env['GIT_COMMITTER_NAME'] = credentials.username()
+        cmd_env['GIT_COMMITTER_EMAIL'] = credentials.email_address()
 
         remote = git.remote.Remote.add(
             repo=self.repo,
@@ -249,9 +255,10 @@ class GitHelper:
                 return fetch_result.commit
 
 
-def url_with_credentials(github_cfg, github_repo_path):
+def url_with_credentials(github_cfg, github_repo_path, credentials=None):
     base_url = urllib.parse.urlparse(github_cfg.http_url())
-    credentials = github_cfg.credentials()
+    if not credentials:
+        credentials = github_cfg.credentials()
 
     # prefer auth token
     secret = credentials.auth_token() or credentials.passwd()
