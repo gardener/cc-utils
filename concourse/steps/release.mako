@@ -47,14 +47,15 @@ release_callback_path = release_trait.release_callback_path()
 next_version_callback_path = release_trait.next_version_callback_path()
 %>
 import ccc.github
+import ci.util
 import concourse.steps.component_descriptor_util as cdu
-
-${step_lib('release')}
+import concourse.steps.release
+import github.util
 
 with open('${version_file}') as f:
   version_str = f.read()
 
-repo_dir = existing_dir('${repo.resource_name()}')
+repo_dir = ci.util.existing_dir('${repo.resource_name()}')
 repository_branch = '${repo.branch()}'
 
 github_cfg = ccc.github.github_cfg_for_repo_url(
@@ -64,7 +65,7 @@ github_cfg = ccc.github.github_cfg_for_repo_url(
   )
 )
 
-githubrepobranch = GitHubRepoBranch(
+githubrepobranch = github.util.GitHubRepoBranch(
     github_config=github_cfg,
     repo_owner='${repo.repo_owner()}',
     repo_name='${repo.repo_name()}',
@@ -85,7 +86,7 @@ release_commit_callback_image_reference = '${release_commit_callback_image_refer
 release_commit_callback_image_reference = None
 % endif
 
-release_and_prepare_next_dev_cycle(
+concourse.steps.release.release_and_prepare_next_dev_cycle(
   component_name=component_name,
   component_descriptor_path='${component_descriptor_path}',
   ctf_path='${ctf_path}',
