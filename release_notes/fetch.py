@@ -215,7 +215,7 @@ def fetch_release_notes(
 
     # find associated pull requests for commits
     commit_pulls = rnu.request_pull_requests_from_api(
-        repo=git_helper.repo,
+        git_helper=git_helper,
         gh=github_helper.github,
         owner=github_repo.owner,
         repo_name=github_repo.name,
