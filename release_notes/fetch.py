@@ -9,6 +9,7 @@ import semver
 import cnudie.retrieve
 import cnudie.util
 import github.release_notes.util as ghrnu
+import gitutil
 import release_notes.model as rnm
 import release_notes.utils as rnu
 import version
@@ -40,7 +41,7 @@ def _list_commits_between_tags(
 def _get_release_note_commits_tuple_for_minor_release(
         previous_version: semver.VersionInfo,
         component_versions: dict[semver.VersionInfo, str],
-        git_helper,
+        git_helper: gitutil.GitHelper,
         github_repo: github3.repos.Repository,
         current_version_tag: git.TagReference,
 ) -> tuple[tuple[git.Commit], tuple[git.Commit]]:
@@ -59,17 +60,21 @@ def _get_release_note_commits_tuple_for_minor_release(
 
     # if the current version tag and the previous minor tag are ancestors, just
     # add the range (old method)
-    if git_helper.repo.is_ancestor(previous_minor_version_tag.commit, current_version_tag.commit):
+    previous_version_tag_commit_sha = git_helper.fetch_head(
+        f'refs/tags/{previous_minor_version_tag}'
+    )
+    current_tag_commit_sha = git_helper.fetch_head(f'refs/tags/{current_version_tag}')
+    if git_helper.repo.is_ancestor(previous_version_tag_commit_sha, current_tag_commit_sha):
         logger.info('it\'s an ancestor. simple range should be enough.')
         return tuple(git_helper.repo.iter_commits(
-            f'{current_version_tag.commit.hexsha}...{previous_minor_version_tag.commit.hexsha}')
+            f'{current_tag_commit_sha}...{previous_version_tag_commit_sha}')
         ), tuple()
 
     # otherwise, use the new method
     # find start of previous minor-release tag
     if not (previous_branch_starts := git_helper.repo.merge_base(
         github_repo.default_branch,
-        previous_minor_version_tag.commit.hexsha)):
+        previous_version_tag_commit_sha)):
         raise RuntimeError('cannot find the branch start for the previous version')
 
     previous_branch_start: git.Commit = previous_branch_starts.pop()
@@ -78,14 +83,14 @@ def _get_release_note_commits_tuple_for_minor_release(
     # all commits from the branch start to the previous minor-release tag
     # should be removed from the release notes
     filter_out_commits_range = (
-        f'{previous_minor_version_tag.commit.hexsha}...{previous_branch_start}'
+        f'{previous_version_tag_commit_sha}...{previous_branch_start}'
     )
     logger.debug(f'{filter_out_commits_range=}')
     filter_out_commits = git_helper.repo.iter_commits(filter_out_commits_range)
 
     # all commits (and release notes!) not included in {filter_out_commits} should be added to the
     # final generated release notes
-    filter_in_commits_range = f'{current_version_tag.commit.hexsha}...{previous_branch_start}'
+    filter_in_commits_range = f'{current_tag_commit_sha}...{previous_branch_start}'
     logger.debug(f'{filter_in_commits_range=}')
     filter_in_commits = git_helper.repo.iter_commits(filter_in_commits_range)
 
