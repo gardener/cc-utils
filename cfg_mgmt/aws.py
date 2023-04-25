@@ -60,6 +60,7 @@ def rotate_cfg_element(
         'iam',
         aws_access_key_id=cfg_element.access_key_id(),
         aws_secret_access_key=cfg_element.secret_access_key(),
+        region_name=cfg_element.region(),
     )
 
     response: CreateAccessKeyResponse = dacite.from_dict(
@@ -92,6 +93,7 @@ def delete_config_secret(
         'iam',
         aws_access_key_id=cfg_element.access_key_id(),
         aws_secret_access_key=cfg_element.secret_access_key(),
+        region_name=cfg_element.region(),
     )
     access_key_id = cfg_queue_entry.secretId['accessKeyId']
     iam_client.delete_access_key(AccessKeyId=access_key_id)
@@ -105,6 +107,7 @@ def validate_for_rotation(
         'iam',
         aws_access_key_id=access_key_id,
         aws_secret_access_key=cfg_element.secret_access_key(),
+        region_name=cfg_element.region(),
     )
     response: ListAccessKeysResponse = dacite.from_dict(
         data_class=ListAccessKeysResponse,
