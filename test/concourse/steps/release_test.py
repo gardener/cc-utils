@@ -2,7 +2,6 @@ import dataclasses
 import pytest
 from unittest.mock import MagicMock
 from github.util import GitHubRepositoryHelper, GitHubRepoBranch
-from github.release_notes.util import ReleaseNotes
 import os
 import yaml
 

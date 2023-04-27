@@ -40,7 +40,6 @@ import product.v2
 from github.release_notes.util import (
     fetch_release_notes,
     post_to_slack,
-    ReleaseNotes,
 )
 from concourse.model.traits.release import (
     ReleaseCommitPublishingPolicy,
