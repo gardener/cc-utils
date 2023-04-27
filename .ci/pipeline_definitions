@@ -161,6 +161,7 @@ cc-utils:
           release_callback: '.ci/bump_job_image_version.py'
           release_notes_policy: disabled
           release_on_github: False
+          release_notes_handling: preview
 
     create_upgrade_prs:
       traits:
