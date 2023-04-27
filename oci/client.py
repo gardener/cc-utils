@@ -1014,3 +1014,4 @@ class Client:
             logger.warning(f'{image_reference=} {res.status_code=} {digest=} - PUT may have failed')
 
         res.raise_for_status()
+        return res
