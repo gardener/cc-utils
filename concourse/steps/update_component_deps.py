@@ -215,24 +215,29 @@ def determine_upgrade_prs(
     for greatest_component_reference in product.v2.greatest_references(
         references=current_component().componentReferences,
     ):
-        for greatest_version in determine_reference_versions(
+        greatest_versions_to_consider = determine_reference_versions(
             component_name=greatest_component_reference.componentName,
             reference_version=greatest_component_reference.version,
             upstream_component_name=upstream_component_name,
             upstream_update_policy=upstream_update_policy,
             ctx_repo=ctx_repo,
             ignore_prerelease_versions=ignore_prerelease_versions,
-        ):
-            if not greatest_version:
-                # if None is returned, no versions at all were found
-                print(
-                    'Warning: no component versions found for '
-                    f'{greatest_component_reference.componentName=}'
-                )
-                continue
+        )
+        if greatest_versions_to_consider:
+            logger.info(
+                f'Found possible version{"s" if len(greatest_versions_to_consider)>1 else ""} to '
+                f'upgrade to: {greatest_versions_to_consider} for '
+                f'{greatest_component_reference.componentName=}'
+            )
+        else:
+            logger.warning(
+                'No component versions found for '
+                f'{greatest_component_reference.componentName=}'
+            )
+        for greatest_version in greatest_versions_to_consider:
 
             greatest_version_semver = version.parse_to_semver(greatest_version)
-            print(f'{greatest_version=}, ours: {greatest_component_reference} {ctx_repo=}')
+            logger.info(f'{greatest_version=}, ours: {greatest_component_reference} {ctx_repo=}')
             if greatest_version_semver <= version.parse_to_semver(
                 greatest_component_reference.version
             ):
