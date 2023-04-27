@@ -194,7 +194,10 @@ def determine_reference_versions(
             reference_version=reference_version,
             ignore_prerelease_versions=ignore_prerelease_versions,
         )
-        return (hotfix_candidate, version_candidate)
+        if hotfix_candidate == version_candidate:
+            return (version_candidate,)
+        else:
+            return (hotfix_candidate, version_candidate)
 
     else:
         raise NotImplementedError
