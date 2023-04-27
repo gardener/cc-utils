@@ -235,15 +235,17 @@ def fetch_release_notes(
     for filter_in_commit in filter_in_commits:
         # by associated pull requests
         for pr in commit_pulls[filter_in_commit.hexsha]:
-            release_notes.update(rnm.create_release_note_obj(
-                source_block=z,
-                source_commit=filter_in_commit,
-                raw_body=pr.body,
-                author=rnm.author_from_pull_request(pr),
-                target=pr,
-                source_component=component,
-                current_component=component,
-            ) for z in rnm.iter_source_blocks(pr.body))
+            release_notes.update(
+                rnm.create_release_note_obj(
+                    source_block=z,
+                    source_commit=filter_in_commit,
+                    raw_body=pr.body,
+                    author=rnm.author_from_pull_request(pr),
+                    target=pr,
+                    source_component=component,
+                    current_component=component,
+                ) for z in rnm.iter_source_blocks(pr.body) if pr.body is not None
+            )
         # by commit
         release_notes.update(rnm.create_release_note_obj(
             source_block=z,
