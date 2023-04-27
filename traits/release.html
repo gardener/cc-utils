@@ -189,6 +189,12 @@ placeholders are available:</p>
 <td><p>bool</p></td>
 <td><p>if true, a github release is published.</p></td>
 </tr>
+<tr class="row-odd"><td><p>release_notes_handling</p></td>
+<td><p>no</p></td>
+<td><p>default</p></td>
+<td><p>ReleaseNotesHandling</p></td>
+<td><p>configures which iteration of the code to use when generating release notes.</p></td>
+</tr>
 </tbody>
 </table>
 <h2>nextversion Enumeration Values<a class="headerlink" href="#trait-release" title="Permalink to this heading"></a></h2>
@@ -261,6 +267,35 @@ placeholders are available:</p>
 </tr>
 <tr class="row-odd"><td><p>tag_only</p></td>
 <td><p>publish release tag to dead-end</p></td>
+</tr>
+</tbody>
+</table>
+<h2>release_notes_handling Enumeration Values<a class="headerlink" href="#trait-release" title="Permalink to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>value</p></th>
+<th class="head"><p>explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>default</p></td>
+<td><p><blockquote>
+<div><p>Use default version of release note creation code. Use this if you are interested in
+stability rather than the latest features.</p>
+</div></blockquote>
+</p></td>
+</tr>
+<tr class="row-odd"><td><p>preview</p></td>
+<td><p><blockquote>
+<div><p>Use preview version of release note creation code. Use this to join new features and
+feature-rollouts.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>if no features are being tested/rolled-out, using this value is the same as using
+<code class="code docutils literal notranslate"><span class="pre">default</span></code>.</p>
+</div>
+</div></blockquote>
+</p></td>
 </tr>
 </tbody>
 </table>
