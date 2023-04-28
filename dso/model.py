@@ -191,6 +191,7 @@ class Vulnerability:
     cve: str
     rescored_severity: dso.cvss.CVESeverity
     matching_rules: list[str]
+    comment: str | None # optional additional assessment message
 
 
 @dataclasses.dataclass(frozen=True)
