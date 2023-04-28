@@ -47,7 +47,10 @@ def base_image_os_id(
 ) -> gcm.OsIdScanResult:
     image_reference = resource.access.imageReference
 
-    manifest = oci_client.manifest(image_reference=image_reference)
+    manifest = oci_client.manifest(
+        image_reference=image_reference,
+        accept=oci.model.MimeTypes.prefer_multiarch,
+    )
 
     # if multi-arch, randomly choose first entry (assumption: all variants have same os/version)
     if isinstance(manifest, oci.model.OciImageManifestList):
