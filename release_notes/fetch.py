@@ -235,6 +235,8 @@ def fetch_release_notes(
     for filter_in_commit in filter_in_commits:
         # by associated pull requests
         for pr in commit_pulls[filter_in_commit.hexsha]:
+            if pr.body is None:
+                continue
             release_notes.update(
                 rnm.create_release_note_obj(
                     source_block=z,
@@ -244,7 +246,7 @@ def fetch_release_notes(
                     target=pr,
                     source_component=component,
                     current_component=component,
-                ) for z in rnm.iter_source_blocks(pr.body) if pr.body is not None
+                ) for z in rnm.iter_source_blocks(pr.body)
             )
         # by commit
         release_notes.update(rnm.create_release_note_obj(
