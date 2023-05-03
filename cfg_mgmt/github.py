@@ -177,12 +177,12 @@ def _create_key_pair(
     if key_algorithm is KeyAlgorithm.RSA:
         private_key = RSA.generate(bits=4096)
         private_key_str = private_key.export_key(format='PEM').decode("utf-8")
-        public_key_str = private_key.public_key().export_key(format='PEM').decode("utf-8")
+        public_key_str = private_key.public_key().export_key(format='OpenSSH').decode("utf-8")
     elif key_algorithm is KeyAlgorithm.ECC:
         private_key = ECC.generate(curve='ed25519')
         # PEM/OpenSSH keys will be returned as string (not necessarily true for other formats)
         private_key_str = private_key.export_key(format='PEM')
-        public_key_str = private_key.public_key().export_key(format='PEM')
+        public_key_str = private_key.public_key().export_key(format='OpenSSH')
     else:
         raise NotImplementedError(key_algorithm)
 
