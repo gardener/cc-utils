@@ -47,7 +47,7 @@ python-swiftclient
 pytimeparse
 pyyaml
 requests<3.0.0
-requests_toolbelt<1
+requests_toolbelt<2
 ruamel.yaml
 semver<4.0.0
 slackclient<3.0.0
