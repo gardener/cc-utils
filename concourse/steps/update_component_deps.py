@@ -235,6 +235,9 @@ def determine_upgrade_prs(
                 f'{greatest_component_reference.componentName=}'
             )
         for greatest_version in greatest_versions_to_consider:
+            # we might have found 'None' as version to consider.
+            if not greatest_version:
+                continue
 
             greatest_version_semver = version.parse_to_semver(greatest_version)
             logger.info(f'{greatest_version=}, ours: {greatest_component_reference} {ctx_repo=}')
