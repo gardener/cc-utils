@@ -159,6 +159,7 @@ cc-utils:
         release:
           nextversion: 'bump_minor'
           release_callback: '.ci/bump_job_image_version.py'
+          release_commit_publishing_policy: tag_only
           release_notes_policy: disabled
           release_on_github: False
           release_notes_handling: preview
