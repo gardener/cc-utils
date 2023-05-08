@@ -71,7 +71,6 @@ def update_available(
         return False
 
     if not branch_info.greatest_version:
-        logger.warning(f'no greatest version known for {os_id.NAME=} {os_id.VERSION_ID=}')
         return False
 
     return branch_info.greatest_version > awesomeversion.AwesomeVersion(os_id.VERSION_ID)
