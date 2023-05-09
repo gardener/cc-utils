@@ -23,6 +23,8 @@ from concourse.model.step import (
 )
 from concourse.model.base import (
     AttributeSpec,
+    EnumValueWithDocumentation,
+    EnumWithDocumentation,
     ModelBase,
     ScriptType,
     Trait,
@@ -53,6 +55,27 @@ class MergeMethod(enum.Enum):
 class UpstreamUpdatePolicy(enum.Enum):
     STRICTLY_FOLLOW = 'strictly_follow'
     ACCEPT_HOTFIXES = 'accept_hotfixes'
+
+
+class ReleaseNotesHandling(EnumWithDocumentation):
+    DEFAULT = EnumValueWithDocumentation(
+        value='default',
+        doc='''
+        Use default version of release note creation code. Use this if you are interested in
+        stability rather than the latest features.
+        ''',
+    )
+    PREVIEW = EnumValueWithDocumentation(
+        value='preview',
+        doc='''
+            Use preview version of release note creation code. Use this to join new features and
+            feature-rollouts.
+
+            .. note::
+                if no features are being tested/rolled-out, using this value is the same as using
+                `default`.
+        '''
+    )
 
 
 MERGE_POLICY_CONFIG_ATTRIBUTES = (
@@ -164,7 +187,15 @@ ATTRIBUTES = (
         default={},
         doc='env vars to pass to after_merge_callback (similar to step\'s vars)',
         type=dict,
-    )
+    ),
+    AttributeSpec.optional(
+        name='release_notes_handling',
+        default=ReleaseNotesHandling.DEFAULT.value,
+        doc='''
+        configures which iteration of the code to use when generating release notes.
+        ''',
+        type=ReleaseNotesHandling,
+    ),
 )
 
 
@@ -222,6 +253,9 @@ class UpdateComponentDependenciesTrait(Trait):
 
     def ignore_prerelease_versions(self):
         return self.raw.get('ignore_prerelease_versions')
+
+    def release_notes_handling(self) -> ReleaseNotesHandling:
+        return ReleaseNotesHandling(self.raw['release_notes_handling'])
 
     def vars(self):
         return self.raw['vars']

@@ -21,6 +21,7 @@ set_dependency_version_script_path = update_component_deps_trait.set_dependency_
 after_merge_callback = update_component_deps_trait.after_merge_callback()
 upstream_update_policy = update_component_deps_trait.upstream_update_policy()
 ignore_prerelease_versions=update_component_deps_trait.ignore_prerelease_versions()
+release_notes_handling=update_component_deps_trait.release_notes_handling()
 component_descriptor_trait = job_variant.trait('component_descriptor')
 ctx_repo = component_descriptor_trait.ctx_repository()
 
@@ -95,6 +96,9 @@ merge_policy_and_filters = {
         exclude_regexes=(),
     ) for p in merge_policy_configs
 }
+release_notes_handling = concourse.model.traits.update_component_deps.ReleaseNotesHandling(
+    '${release_notes_handling.value}'
+)
 # indicates whether or not an upstream component was defined as a reference
 upstream_component_name = os.environ.get('UPSTREAM_COMPONENT_NAME', None)
 UPGRADE_TO_UPSTREAM = bool(upstream_component_name)
@@ -193,8 +197,9 @@ for from_ref, to_version in determine_upgrade_prs(
 % if set_version_script_image:
         container_image='${set_version_script_image}',
 % else:
-        container_image = None
+        container_image = None,
 % endif
+        release_notes_handling=release_notes_handling,
     )
     # add pr to the list of known upgrade pull requests, so next iteration
     # on the generator returned by determine_upgrade_prs takes it into

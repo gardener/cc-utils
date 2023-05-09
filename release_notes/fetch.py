@@ -149,6 +149,7 @@ def fetch_release_notes(
         component: gci.componentmodel.Component,
         repo_path: str,
         current_version: typing.Optional[semver.VersionInfo] = None,
+        previous_version: typing.Optional[semver.VersionInfo] = None,
 ) -> set[rnm.ReleaseNote]:
     ''' Fetches and returns a set of release notes for the specified component.
 
@@ -184,9 +185,10 @@ def fetch_release_notes(
     if not current_version_tag:
         raise RuntimeError(f'cannot find ref {source.access.ref} in repo')
 
-    previous_version = rnu.find_next_smallest_version(
-        list(component_versions.keys()), current_version
-    )
+    if not previous_version:
+        previous_version = rnu.find_next_smallest_version(
+            list(component_versions.keys()), current_version
+        )
     previous_version_tag: typing.Optional[git.TagReference] = None
     if previous_version:
         previous_version_tag = git_helper.repo.tag(component_versions[previous_version])
