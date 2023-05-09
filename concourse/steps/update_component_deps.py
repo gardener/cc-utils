@@ -312,7 +312,8 @@ def create_upgrade_pr(
     merge_method: MergeMethod,
     after_merge_callback=None,
     container_image:str=None,
-):
+) -> github.util.UpgradePullRequest:
+
     if container_image:
         dockerutil.launch_dockerd_if_not_running()
 
@@ -454,7 +455,7 @@ def create_upgrade_pr(
         raise
 
     if merge_policy is MergePolicy.MANUAL:
-        return pull_request
+        return pull_request_util._pr_to_upgrade_pull_request(pull_request)
 
     if merge_method is MergeMethod.MERGE:
         pull_request.merge(merge_method='merge')
@@ -477,7 +478,7 @@ def create_upgrade_pr(
             env=cmd_env
         )
 
-    return pull_request
+    return pull_request_util._pr_to_upgrade_pull_request(pull_request)
 
 
 def push_upgrade_commit(
