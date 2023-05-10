@@ -20,8 +20,8 @@ class CVESeverity(enum.IntEnum):
 
     def reduce(
         self,
+        minimum_severity: int,
         severity_classes=1,
-        minimum_severity: int=LOW,
     ) -> 'CVESeverity':
         return CVESeverity(max(minimum_severity, self.value - severity_classes))
 
@@ -322,14 +322,18 @@ def matching_rescore_rules(
 def rescore(
     rescoring_rules: typing.Iterable[RescoringRule],
     severity: CVESeverity,
+    minimum_severity: int=CVESeverity.LOW,
 ) -> CVESeverity:
     for rule in rescoring_rules:
         if rule.rescore is Rescore.NO_CHANGE:
             continue
         elif rule.rescore is Rescore.REDUCE:
-            severity = severity.reduce(severity_classes=1)
+            severity = severity.reduce(
+                severity_classes=1,
+                minimum_severity=minimum_severity,
+            )
         elif rule.rescore is Rescore.NOT_EXPLOITABLE:
-            return CVESeverity.NONE
+            return CVESeverity(minimum_severity)
         else:
             raise NotImplementedError(rule.rescore)
 
