@@ -34,9 +34,13 @@ class CfgPolicy:
     grace_period: str | None = '1d'
     comment: typing.Optional[str] = None
 
-    def check(self, last_update: datetime.date) -> bool:
-        '''
-        returns `True` if policy is fulfilled, `False` if it is violated
+    def check(
+            self,
+            last_update: datetime.date,
+            honour_grace_period: bool = False,
+        ) -> bool:
+        '''returns `True` if policy is fulfilled, `False` if it is violated
+
         hard-coded to only allow PolicyType.MAX_AGE for now
         '''
         if self.max_age is None:
@@ -44,7 +48,7 @@ class CfgPolicy:
 
         max_age_seconds = pytimeparse.parse(self.max_age)
 
-        if self.grace_period:
+        if self.grace_period and honour_grace_period:
             grace_period = datetime.timedelta(seconds=pytimeparse.parse(self.grace_period))
         else:
             grace_period = datetime.timedelta(seconds=0)

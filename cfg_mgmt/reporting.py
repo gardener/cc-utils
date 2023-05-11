@@ -86,7 +86,7 @@ def evaluate_cfg_element_status(
             else:
                 last_update = dp.isoparse(status.credential_update_timestamp)
 
-                if policy.check(last_update=last_update):
+                if policy.check(last_update=last_update, honour_grace_period=True):
                     credentials_outdated = False
                 else:
                     fully_compliant = False
@@ -437,7 +437,7 @@ def iter_cfg_elements_requiring_rotation(
             continue
 
         last_update = dp.isoparse(status.status.credential_update_timestamp)
-        if status.policy.check(last_update=last_update):
+        if status.policy.check(last_update=last_update, honour_grace_period=False):
             continue
         else:
             yield cfg_element
