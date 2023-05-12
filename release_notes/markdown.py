@@ -107,7 +107,10 @@ def list_item_header_from_notes(
     ) -> ListItem:
     return ListItem(
         level=1,
-        text=f'`[{group.display}]` {line} by {note.author} [{get_reference_for_note(note)}]',
+        text=(
+            f'`[{group.display}]` {line} by '
+            f'{note.source_block.author or note.author} [{get_reference_for_note(note)}]'
+        ),
     )
 
 

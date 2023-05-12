@@ -3,23 +3,32 @@ import logging
 import re
 import typing
 
+import requests
+
 import gci.componentmodel
 import git
 import github3.pulls
 
 import cnudie.util
+import cnudie.retrieve
 
 logger = logging.getLogger(__name__)
 
 '''
 This pattern matches code-blocks in the following format:
-```{category} {note_message}
+```{category} {note_message} [source component name] [reference-dependent str] [author]
 {note_message}
 ```
+with the three groups in "[]" being optional by virtue of not being present for commit-attached
+release note blocks.
 \x60 -> `
 '''
 _source_block_pattern = re.compile(
-    r'\x60{3}(?P<category>\w+)\s+(?P<target_group>\w+)\n(?P<note>.+?)\n\x60{3}',
+    pattern=(
+        r'\x60{3}\s*(?P<category>\w+)\s+(?P<target_group>\w+)\s*'
+        r'(?P<source_component_name>\S+)?\s?(?P<reference_str>\S+)?\s?(?P<author>\S+)?'
+        r'\n(?P<note>.+?)\n\x60{3}'
+    ),
    flags=re.DOTALL | re.IGNORECASE | re.MULTILINE
 )
 
@@ -102,31 +111,31 @@ class PullRequestReference(_Reference):
     ''' Represents the pull requests where the release note came from
     '''
     pull_request: github3.pulls.ShortPullRequest
+    source_block: 'SourceBlock'
 
     @property
     def identifier(self) -> str:
+        if self.source_block.reference_identifier:
+            return self.source_block.reference_identifier.strip('#')
         return str(self.pull_request.number)
-
-
-def create_commit_ref(commit: git.Commit) -> CommitReference:
-    return CommitReference(type=_ref_type_commit, commit=commit)
-
-
-def create_pull_request_ref(pull_request: github3.pulls.ShortPullRequest) -> PullRequestReference:
-    return PullRequestReference(type=_ref_type_pull, pull_request=pull_request)
 
 
 @dataclasses.dataclass(frozen=True)
 class SourceBlock:
     '''Represents the parsed release note code block within a pull request body or a commit message.
 
-    ```{category} {note_message}
+    ```{category} {note_message} [component name] [reference identifier] [author]
     {note_message}
     ```
+    with the triple of componentname, reference identifier, and author only being present for code-
+    blocks being attached to pull requests
     '''
     category: str
     target_group: str
     note_message: str
+    component_name: str | None
+    author: str | None
+    reference_identifier: str | None
 
     @property
     def identifier(self) -> str:
@@ -154,6 +163,21 @@ class SourceBlock:
         return False
 
 
+def create_commit_ref(commit: git.Commit, source_block: SourceBlock) -> CommitReference:
+    return CommitReference(type=_ref_type_commit, commit=commit)
+
+
+def create_pull_request_ref(
+        pull_request: github3.pulls.ShortPullRequest,
+        source_block: SourceBlock,
+    ) -> PullRequestReference:
+    return PullRequestReference(
+        type=_ref_type_pull,
+        pull_request=pull_request,
+        source_block=source_block,
+    )
+
+
 def iter_source_blocks(content: str) -> typing.Generator[SourceBlock, None, None]:
     ''' Searches for code blocks in release note notation and returns all found.
     Only valid note blocks are returned, which means that the format has been followed.
@@ -164,9 +188,14 @@ def iter_source_blocks(content: str) -> typing.Generator[SourceBlock, None, None
     '''
     for res in _source_block_pattern.finditer(content.replace('\r\n', '\n')):
         try:
-            block = SourceBlock(category=res.group('category'),
-                                target_group=res.group('target_group'),
-                                note_message=res.group('note'))
+            block = SourceBlock(
+                category=res.group('category'),
+                target_group=res.group('target_group'),
+                note_message=res.group('note'),
+                author=res.group('author'),
+                reference_identifier=res.group('reference_str'),
+                component_name=res.group('source_component_name')
+            )
             if block.has_content():
                 yield block
         except IndexError as e:
@@ -201,10 +230,44 @@ class ReleaseNote:
     @property
     def block_str(self) -> str:
         src_blk = self.source_block
-        author = self.author.username or self.author.display_name.replace(' ', '-')
-        return f'```{src_blk.category} {src_blk.target_group} {self.source_component.name} ' \
-               f'{self.reference_str} {author}\n' \
-               f'{src_blk.note_message}\n```'
+        author = (
+            src_blk.author or self.author.username or self.author.display_name.replace(' ', '-')
+        )
+        return (
+            f'```{src_blk.category} {src_blk.target_group} {self.source_component.name} '
+            f'{self.reference_str} {author}\n'
+            f'{src_blk.note_message}\n```'
+        )
+
+
+def _source_component(
+    current_component: gci.componentmodel.Component,
+    source_component_name: str,
+) -> gci.componentmodel.Component | None:
+    try:
+        # try to fetch cd for the parsed source repo. The actual version does not matter,
+        # we're only interested in the components GithubAccess (we assume it does not
+        # change).
+        ctx_repo = current_component.current_repository_ctx()
+        component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+            default_ctx_repo=ctx_repo,
+        )
+        source_component_descriptor = component_descriptor_lookup(
+            gci.componentmodel.ComponentIdentity(
+                name=source_component_name,
+                version=cnudie.retrieve.greatest_component_version(
+                    component_name=source_component_name,
+                    ctx_repo=ctx_repo,
+                    ignore_prerelease_versions=True,
+                ),
+            ),
+        )
+        return source_component_descriptor.component
+    except requests.exceptions.HTTPError:
+        logger.warning(
+            f'Unable to retrieve component descriptor for source component {source_component_name}'
+        )
+        return None
 
 
 def create_release_note_obj(
@@ -217,17 +280,24 @@ def create_release_note_obj(
         current_component: gci.componentmodel.Component
 ) -> ReleaseNote:
     if isinstance(target, git.Commit):
-        ref = create_commit_ref(target)
+        ref = create_commit_ref(target, source_block)
     elif isinstance(target, github3.pulls.ShortPullRequest):
-        ref = create_pull_request_ref(target)
+        ref = create_pull_request_ref(target, source_block)
     else:
         raise ValueError('either target pull request or commit has to be passed')
+
+    if source_block.component_name:
+        source_component = _source_component(
+            current_component=current_component,
+            source_component_name=source_block.component_name,
+        )
 
     # access
     source_component_access = cnudie.util.determine_main_source_for_component(
         component=source_component,
         absent_ok=False
     ).access
+
     current_src_access = cnudie.util.determine_main_source_for_component(
         component=current_component,
         absent_ok=False
