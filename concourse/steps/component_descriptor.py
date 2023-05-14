@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import logging
-import typing
 
 import git
 import yaml
@@ -41,7 +40,7 @@ def dump_component_descriptor_v2(component_descriptor_v2: cm.ComponentDescriptor
 
 def base_component_descriptor_v2(
     component_name_v2: str,
-    component_labels: typing.Iterable[cm.Label],
+    component_labels: list[cm.Label],
     effective_version: str,
     source_labels: tuple,
     ctx_repository_base_url: str,
@@ -72,12 +71,19 @@ def base_component_descriptor_v2(
             'name': 'SAP SE',
         }
 
+    component_labels = list(component_labels)
+    component_labels.append(
+        cm.Label(
+            name='cloud.gardener/ocm/creation-date',
+            value=datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+        ),
+    )
+
     base_descriptor_v2 = cm.ComponentDescriptor(
       meta=cm.Metadata(schemaVersion=cm.SchemaVersion.V2),
       component=cm.Component(
         name=component_name_v2,
         version=effective_version,
-        creationTime=datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
         repositoryContexts=[
           cm.OciRepositoryContext(
             baseUrl=ctx_repository_base_url,
@@ -101,7 +107,7 @@ def base_component_descriptor_v2(
         ],
         componentReferences=[], # added later
         resources=[], # added later
-        labels=list(component_labels),
+        labels=component_labels,
       ),
     )
 

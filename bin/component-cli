@@ -282,7 +282,6 @@ def image_vector(argv):
   component_descriptor_dict = dataclasses.asdict(component_descriptor)
   component_descriptor_dict.pop('signatures')
   component_dict = component_descriptor_dict['component']
-  #component_dict['creationTime'] = '2022-03-01 00:00:00'
   del component_dict['creationTime']
   if not component_dict.get('labels'):
     del component_dict['labels']
