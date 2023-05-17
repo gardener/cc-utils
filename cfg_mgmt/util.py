@@ -5,6 +5,7 @@ import os
 import typing
 
 import ruamel.yaml
+import ruamel.yaml.scalarstring
 
 import cfg_mgmt.model as cmm
 import cfg_mgmt.rotate as cmro
@@ -145,6 +146,9 @@ def write_named_element(
     # anchors)
     else:
         file_contents[cfg_element.name()] = cfg_element.raw
+
+    # use util function to convert strings to more readable block format
+    ruamel.yaml.scalarstring.walk_tree(file_contents)
 
     with open(os.path.join(cfg_dir, cfg_file_name), 'wt') as cfg_file:
         yaml.dump(file_contents, cfg_file)
