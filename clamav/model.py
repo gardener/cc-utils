@@ -5,7 +5,6 @@ import typing
 
 import gci.componentmodel as cm
 import github.compliance.model as gcm
-import saf.model
 
 
 class ScanStatus(enum.Enum):
@@ -84,11 +83,6 @@ class AggregatedScanResult:
 @dataclasses.dataclass
 class ClamAVResourceScanResult(gcm.ScanResult):
     scan_result: AggregatedScanResult
-
-
-@dataclasses.dataclass
-class MalwareScanEvidenceRequest(saf.model.EvidenceRequest):
-    EvidenceDataBinary: typing.List[ClamAVResourceScanResult]
 
 
 @dataclasses.dataclass

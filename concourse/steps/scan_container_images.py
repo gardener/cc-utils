@@ -13,12 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import dataclasses
-import datetime
 import enum
 import json
 import logging
-import tempfile
 import typing
 
 import tabulate
@@ -35,7 +32,6 @@ import github.compliance.model as gcm
 import github.compliance.report as gcrep
 import protecode.model as pm
 import protecode.report as pr
-import saf.model
 
 logger = logging.getLogger()
 
@@ -207,47 +203,3 @@ class EnumJSONEncoder(json.JSONEncoder):
         if isinstance(o, enum.Enum):
             return o.value
         return super().default(o)
-
-
-def dump_malware_scan_request(request):
-    request_dict = dataclasses.asdict(request)
-    with tempfile.NamedTemporaryFile(delete=False, mode='wt') as tmp_file:
-        tmp_file.write(json.dumps(request_dict, cls=EnumJSONEncoder))
-
-
-def prepare_evidence_request(
-    scan_results: typing.Iterable[clamav.model.ClamAVResourceScanResult],
-    evidence_id: str = 'gardener-mm6',
-    pipeline_url: str = None,
-) -> clamav.model.MalwareScanEvidenceRequest:
-    '''Prepare an evidence request for the given scan results and return it.
-
-    The returned evidence request contains the _actual_ clamav scans as payload (i.e. the contents
-    of the `scan_results` arg without component or resource information), together with meta-
-    information for every entry.
-
-    A link between meta-information and scan-results is also created by setting up the `id` attribute
-    of the meta-information entry to be the index of the correspondign scan-result.
-    '''
-    targets = []
-    clamav_scan_results = []
-    for i, scan_result in enumerate(scan_results):
-        artefact = gcm.artifact_from_node(scan_result.scanned_element)
-
-        clamav_scan_results.append(scan_result.scan_result)
-        targets.append(saf.model.ResourceTarget( # noqa
-            id=i,
-            name=artefact.name,
-            version=artefact.version,
-            extra_id=artefact.extraIdentity or None,
-        ))
-
-    return clamav.model.MalwareScanEvidenceRequest(
-        meta=saf.model.EvidenceMetadata(
-            pipeline_url=pipeline_url,
-            evidence_id=evidence_id,
-            collection_date=datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
-            targets=targets,
-        ),
-        EvidenceDataBinary=clamav_scan_results,
-    )
