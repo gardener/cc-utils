@@ -189,6 +189,7 @@ for from_ref, to_version in determine_upgrade_prs(
         githubrepobranch=githubrepobranch,
         repo_dir=REPO_ROOT,
         github_cfg_name=github_cfg_name,
+        ctx_repo=ctx_repo,
         merge_policy=merge_policy,
         merge_method=merge_method,
 % if after_merge_callback:

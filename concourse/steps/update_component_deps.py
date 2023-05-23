@@ -312,6 +312,7 @@ def create_upgrade_pr(
     githubrepobranch: GitHubRepoBranch,
     repo_dir,
     github_cfg_name,
+    ctx_repo: gci.componentmodel.OciRepositoryContext,
     merge_policy: MergePolicy,
     merge_method: MergeMethod,
     after_merge_callback=None,
@@ -328,7 +329,7 @@ def create_upgrade_pr(
             name=from_ref.componentName,
             version=from_ref.version,
         ),
-        ctx_repo=component.current_repository_ctx(),
+        ctx_repo=ctx_repo,
     )
     from_component = from_component_descriptor.component
 
