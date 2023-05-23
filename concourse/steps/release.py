@@ -1050,7 +1050,7 @@ def release_and_prepare_next_dev_cycle(
             )
             release_notes_markdown = '\n'.join(
                 str(i) for i in release_notes.markdown.render(release_note_blocks)
-            )
+            ) or 'no release notes available'
             github_helper.update_release_notes(
                 tag_name=release_version,
                 body=release_notes_markdown,
