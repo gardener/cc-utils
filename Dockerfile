@@ -23,7 +23,7 @@ COPY . /cc/utils/
 COPY --from=component-cli /component-cli /bin/component-cli
 COPY --from=builder /pkgs/usr /usr
 
-FROM FROM eu.gcr.io/gardener-project/cc/ocm-cli:0.3.0-preview as ocm-cli
+FROM eu.gcr.io/gardener-project/cc/ocm-cli:0.3.0-preview as ocm-cli
 COPY --from=ocm-cli /bin/ocm /bin/ocm
 
 # place version file into container's filesystem to make it easier to
