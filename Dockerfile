@@ -16,6 +16,7 @@ RUN cat /cc/utils/gardener-cicd-libs.apk-packages \
 
 FROM eu.gcr.io/gardener-project/component/cli:v0.54.0 AS component-cli
 FROM eu.gcr.io/gardener-project/cc/job-image-base:$BASE_IMAGE_TAG
+FROM eu.gcr.io/gardener-project/cc/ocm-cli:0.3.0-preview as ocm-cli
 
 ARG TARGETARCH
 
@@ -23,7 +24,6 @@ COPY . /cc/utils/
 COPY --from=component-cli /component-cli /bin/component-cli
 COPY --from=builder /pkgs/usr /usr
 
-FROM eu.gcr.io/gardener-project/cc/ocm-cli:0.3.0-preview as ocm-cli
 COPY --from=ocm-cli /bin/ocm /bin/ocm
 
 # place version file into container's filesystem to make it easier to
