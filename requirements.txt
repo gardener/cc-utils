@@ -41,6 +41,7 @@ pylint
 pymongo
 pytest
 python-dateutil
+python-gitlab
 python-keystoneclient
 python-magic
 python-swiftclient
