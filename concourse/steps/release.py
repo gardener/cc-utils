@@ -483,7 +483,7 @@ class NextDevCycleCommitStep(TransactionalStep):
 
         # Push commit to remote
         self.git_helper.push(
-            from_ref=self.git_helper.repo.head.commit.hexsha,
+            from_ref=next_cycle_commit.hexsha,
             to_ref=self.repository_branch,
         )
         return {
