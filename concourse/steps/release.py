@@ -470,17 +470,6 @@ class NextDevCycleCommitStep(TransactionalStep):
             parent_commits=parent_commits,
         )
 
-        if self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
-            self.git_helper.repo.head.reset(
-                commit=next_cycle_commit,
-                index=True,
-                working_tree=True,
-            )
-            upstream_commit_sha = self.git_helper.fetch_head(
-                f'refs/heads/{self.repository_branch}'
-            ).hexsha
-            self.git_helper.rebase(commit_ish=upstream_commit_sha)
-
         # Push commit to remote
         self.git_helper.push(
             from_ref=next_cycle_commit.hexsha,
