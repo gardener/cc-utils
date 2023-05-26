@@ -15,8 +15,10 @@
 
 import base64
 import json
+import logging
 import typing
 
+import ci.log
 import ci.util
 import oci.util
 import oci.auth as oa
@@ -29,6 +31,10 @@ from model.base import (
 )
 
 from ci.util import check_type
+
+
+ci.log.configure_default_logging()
+logger = logging.getLogger(__name__)
 
 
 class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
@@ -211,4 +217,7 @@ def find_config(
             )
 
     # return first match (because they are sorted, this will be the one with least privileges)
-    return matching_cfgs[0]
+    registry_cfg = matching_cfgs[0]
+    logger.info(f'found {registry_cfg.name()=} for {image_reference=}')
+
+    return registry_cfg
