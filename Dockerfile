@@ -15,7 +15,7 @@ RUN cat /cc/utils/gardener-cicd-libs.apk-packages \
   pycryptodome
 
 FROM eu.gcr.io/gardener-project/cc/ocm-cli:0.3.0-preview as ocm-cli
-FROM eu.gcr.io/gardener-project/component/cli:v0.54.0 AS component-cli
+FROM eu.gcr.io/gardener-project/component/cli:v0.55.0 AS component-cli
 FROM eu.gcr.io/gardener-project/cc/job-image-base:$BASE_IMAGE_TAG
 
 ARG TARGETARCH
