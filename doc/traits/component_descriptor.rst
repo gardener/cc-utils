@@ -174,7 +174,8 @@ Gardener-Components have a name that is by convention the github-repo-url (w/o s
 
 *Example*
 
-.. code-block::
+.. code-block:: yaml
+
    # current component: github.com/gardener/gardener
    # current version: 1.67.0
    # github-repo: github.com/gardener/gardener
@@ -186,7 +187,8 @@ Gardener-Components have a name that is by convention the github-repo-url (w/o s
 
 *Results in:*
 
-.. code-block::
+.. code-block:: yaml
+
    resources:
    - name: gardenlet # from name-attribute
      relation: local # from repository's prefix matching eu.gcr.io/gardener-project/gardener
