@@ -526,15 +526,15 @@ def enumerate_oci_resources(
     for component in components(component_descriptor, cache_dir=cache_dir):
         for resource in resources(
             component=component,
-            resource_types=[gci.componentmodel.ResourceType.OCI_IMAGE],
-            resource_access_types=[gci.componentmodel.AccessType.OCI_REGISTRY],
+            resource_types=[cm.ResourceType.OCI_IMAGE],
+            resource_access_types=[cm.AccessType.OCI_REGISTRY],
         ):
             yield (component, resource)
 
 
 def greatest_references(
-    references: typing.Iterable[gci.componentmodel.ComponentReference],
-) -> gci.componentmodel.ComponentReference:
+    references: typing.Iterable[cm.ComponentReference],
+) -> typing.Iterable[cm.ComponentReference]:
     '''
     yields the component references from the specified iterable of ComponentReference that
     have the greatest version (grouped by component name).
