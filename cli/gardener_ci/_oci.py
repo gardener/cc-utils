@@ -183,10 +183,12 @@ def manifest(
 
         if isinstance(manifest, om.OciImageManifest):
             total_size = sum(blob.size for blob in manifest.blobs())
-            manifest_digest = hashlib.sha256(manifest_raw.content).hexdigest()
+            manifest_raw_bytes = manifest_raw.content
+            manifest_size = len(manifest_raw_bytes)
+            manifest_digest = hashlib.sha256(manifest_raw_bytes).hexdigest()
 
             print()
-            print(f'{total_size=} {manifest_digest=}')
+            print(f'{total_size=} {manifest_digest=} {manifest_size=}')
         elif isinstance(manifest, om.OciImageManifestList):
             manifest_digest = hashlib.sha256(manifest_raw.content).hexdigest()
             print()
@@ -261,7 +263,17 @@ def osinfo(image_reference: str):
     oci_client = ccc.oci.oci_client()
 
     with tempfile.TemporaryFile() as tmpf:
-        manifest = oci_client.manifest(image_reference=image_reference)
+        manifest = oci_client.manifest(
+            image_reference=image_reference,
+            accept=om.MimeTypes.prefer_multiarch,
+        )
+
+        if isinstance(manifest, om.OciImageManifestList):
+            img_ref = om.OciImageReference(image_reference)
+            sub_img_ref = f'{img_ref.ref_without_tag}@{manifest.manifests[0].digest}'
+
+            manifest = oci_client.manifest(sub_img_ref)
+
         first_layer_blob = oci_client.blob(
             image_reference=image_reference,
             digest=manifest.layers[0].digest,
