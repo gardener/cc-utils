@@ -13,14 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import io
 import pytest
-import tarfile
-import typing
 
 import cnudie.util
 import gci.componentmodel as cm
-import gci.oci
 
 # functions under test
 diff_components = cnudie.util.diff_components
@@ -59,29 +55,6 @@ def comp_desc(name, version) -> cm.ComponentDescriptor:
         meta=cm.Metadata(),
         component=comp(name, version),
     )
-
-
-def create_ctf(
-    output_filename: str,
-    component_descriptors: typing.List[cm.ComponentDescriptor],
-):
-
-    with tarfile.open(output_filename, 'w|') as ctf_tar:
-
-        for component_descriptor in component_descriptors:
-            cd_filename = component_descriptor.component.name.replace('/', '_')
-            comp_fileobj = gci.oci.component_descriptor_to_tarfileobj(component_descriptor)
-
-            tinfo = tarfile.TarInfo(cd_filename)
-            comp_fileobj.seek(0, io.SEEK_END)
-            tinfo.size = comp_fileobj.tell()
-            comp_fileobj.seek(0)
-            ctf_tar.addfile(
-                tarinfo=tinfo,
-                fileobj=comp_fileobj
-            )
-
-        ctf_tar.close()
 
 
 @pytest.fixture

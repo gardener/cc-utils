@@ -18,10 +18,6 @@ component_descriptor_path = os.path.join(
     job_step.input('component_descriptor_dir'),
     cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
 )
-ctf_path = os.path.join(
-  job_step.input('component_descriptor_dir'),
-  product.v2.CTF_OUT_DIR_NAME,
-)
 %>
 import version
 import os
@@ -57,11 +53,7 @@ processed_version = version.process_version(
 
 repo_dir = ci.util.existing_dir('${repo.resource_name()}')
 
-have_ctf = os.path.exists(ctf_path := '${ctf_path}')
 have_cd = os.path.exists(component_descriptor_path := '${component_descriptor_path}')
-
-if not have_ctf ^ have_cd:
-    ci.util.fail('exactly one of component-descriptor, or ctf-archive must exist')
 
 if have_cd:
     component = cm.ComponentDescriptor.from_dict(
@@ -70,13 +62,9 @@ if have_cd:
             ),
             validation_mode=cm.ValidationMode.WARN,
     ).component
-elif have_ctf:
-    for component_descriptor in cnudie.util.component_descriptors_from_ctf_archive(ctf_path):
-        component = component_descriptor.component
-        if component.name == '${component_name}':
-            break
-    else:
-        ci.util.fail(f'did not find component-descriptor for ${component_name}')
+else:
+   print('did not find component-descriptor')
+   exit(1)
 
 github_cfg = ccc.github.github_cfg_for_repo_url(
   ci.util.urljoin(
